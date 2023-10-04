@@ -300,7 +300,7 @@ SCIP_RETCODE tryHandleDoubleLexMatrices(
    );
 
 /** helper function to test if val1 = val2 while permitting infinity-values */
-SCIP_Bool EQ(
+SCIP_Bool SCIPEQ(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
@@ -308,7 +308,7 @@ SCIP_Bool EQ(
 
 
 /** helper function to test if val1 <= val2 while permitting infinity-values */
-SCIP_Bool LE(
+SCIP_Bool SCIPLE(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
@@ -316,7 +316,7 @@ SCIP_Bool LE(
 
 
 /** helper function to test if val1 >= val2 while permitting infinity-values */
-SCIP_Bool GE(
+SCIP_Bool SCIPGE(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
@@ -324,7 +324,7 @@ SCIP_Bool GE(
 
 
 /** helper function to test if val1 < val2 while permitting infinity-values */
-SCIP_Bool LT(
+SCIP_Bool SCIPLT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
@@ -332,7 +332,7 @@ SCIP_Bool LT(
 
 
 /** helper function to test if val1 > val2 while permitting infinity-values */
-SCIP_Bool GT(
+SCIP_Bool SCIPGT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */

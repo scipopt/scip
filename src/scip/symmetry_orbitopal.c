@@ -270,9 +270,9 @@ SCIP_Bool testColumnsAreSymmetricallyEquivalent(
 
       /* if variable bounds differ: columns c and origcolid are not the same */
       if (
-         (! EQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetLbLocal(var2)))
+         (! SCIPEQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetLbLocal(var2)))
          ||
-         (! EQ(scip, SCIPvarGetUbLocal(var1), SCIPvarGetUbLocal(var2)))
+         (! SCIPEQ(scip, SCIPvarGetUbLocal(var1), SCIPvarGetUbLocal(var2)))
       )
          return FALSE;
    }
@@ -487,8 +487,8 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    {
       var1 = orbidata->vars[i * ncols + swaporigcolid];
       var2 = orbidata->vars[i * ncols + origcolid];
-      assert( EQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetLbLocal(var2)) );
-      assert( EQ(scip, SCIPvarGetUbLocal(var1), SCIPvarGetUbLocal(var2)) );
+      assert( SCIPEQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetLbLocal(var2)) );
+      assert( SCIPEQ(scip, SCIPvarGetUbLocal(var1), SCIPvarGetUbLocal(var2)) );
    }
 #endif
 
@@ -1397,8 +1397,8 @@ void assertIsOrbitopeMatrix(
          idx = rowid * ncols + colid;
          origidx = origrowid * ncols + origcolid;
          var = orbidata->vars[origidx];
-         assert( GE(scip, matrix[idx], SCIPvarGetLbLocal(var)) );
-         assert( LE(scip, matrix[idx], SCIPvarGetUbLocal(var)) );
+         assert( SCIPGE(scip, matrix[idx], SCIPvarGetLbLocal(var)) );
+         assert( SCIPLE(scip, matrix[idx], SCIPvarGetUbLocal(var)) );
       }
    }
 
@@ -1409,9 +1409,9 @@ void assertIsOrbitopeMatrix(
       for (rowid = 0; rowid < nrows; ++rowid)
       {
          /* entry is >= entry to the right */
-         assert( GE(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) );
+         assert( SCIPGE(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) );
 
-         if ( GT(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) )
+         if ( SCIPGT(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) )
          {
             /* critical row */
             break;
@@ -1424,7 +1424,7 @@ void assertIsOrbitopeMatrix(
              * due to the axioms x + epsilon > x + epsilon and x + epsilon > x.
              * Analogously, x > x - epsilon and x - epsilon > x - epsilon.
              */
-            assert( EQ(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) );
+            assert( SCIPEQ(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) );
             if ( addinfinitesimals
                ? (infinitesimal[colid] == rowid) /* left has +epsilon term */
                : (infinitesimal[colid + 1] == rowid) /* right has -epsilon term */
@@ -1629,8 +1629,8 @@ SCIP_RETCODE propagateStaticOrbitope(
             ub = SCIPvarGetUbLocal(var);
 
             /* compare to the value in the column right of it */
-            if ( LT(scip, ub, lexminface[i + 1]) ||
-               ( lexminepsrow[colid + 1] == rowid && EQ(scip, ub, lexminface[i + 1]) ) )
+            if ( SCIPLT(scip, ub, lexminface[i + 1]) ||
+               ( lexminepsrow[colid + 1] == rowid && SCIPEQ(scip, ub, lexminface[i + 1]) ) )
             {
                /* value of this column can only be strictly smaller than the value in the column to its right
                 * This may not be possible.
@@ -1639,7 +1639,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                if ( lastunfixed >= 0 )
                {
                   /* repair: return to the last row with "room", and increase the lexmin-value at that row. */
-                  assert( EQ(scip, lexminface[lastunfixed * ncols + colid],
+                  assert( SCIPEQ(scip, lexminface[lastunfixed * ncols + colid],
                      lexminface[lastunfixed * ncols + colid + 1]) );
                   othervar = orbidata->vars[getArrayEntryOrIndex(roworder, lastunfixed) * ncols + origcolid];
                   switch (SCIPvarGetType(othervar))
@@ -1652,11 +1652,11 @@ SCIP_RETCODE propagateStaticOrbitope(
                      assert( SCIPisIntegral(scip, lexminface[lastunfixed * ncols + colid]) );
                      lexminface[lastunfixed * ncols + colid] += 1.0;
                      assert( SCIPisIntegral(scip, lexminface[lastunfixed * ncols + colid]) );
-                     assert( LE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
+                     assert( SCIPLE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      break;
                   case SCIP_VARTYPE_CONTINUOUS:
                      /* continuous type, so add an infinitesimal value to the bound */
-                     assert( LE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
+                     assert( SCIPLE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      assert( lexminepsrow[colid] == -1 );
                      lexminepsrow[colid] = lastunfixed;
                      break;
@@ -1679,18 +1679,18 @@ SCIP_RETCODE propagateStaticOrbitope(
             }
             else
             {
-               assert( GE(scip, ub, lexminface[i + 1]) );
+               assert( SCIPGE(scip, ub, lexminface[i + 1]) );
                lb = SCIPvarGetLbLocal(var);
-               assert( LE(scip, lb, ub) );
+               assert( SCIPLE(scip, lb, ub) );
                lexminface[i] = MAX(lexminface[i + 1], lb);
-               assert( GE(scip, lexminface[i], lexminface[i + 1]) );
+               assert( SCIPGE(scip, lexminface[i], lexminface[i + 1]) );
 
                /* are we still equal? */
-               if ( GT(scip, lexminface[i], lexminface[i + 1]) )
+               if ( SCIPGT(scip, lexminface[i], lexminface[i + 1]) )
                   iseq = FALSE;
                else if ( lexminepsrow[colid + 1] == rowid )
                {
-                  assert( EQ(scip, lexminface[i], lexminface[i + 1]) );
+                  assert( SCIPEQ(scip, lexminface[i], lexminface[i + 1]) );
                   assert( SCIPvarGetType(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid])
                      == SCIP_VARTYPE_CONTINUOUS );
                   assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
@@ -1713,14 +1713,14 @@ SCIP_RETCODE propagateStaticOrbitope(
                   /* @todo @question Are variable bounds for SCIP_VARTYPE_IMPLINT always integral? */
                   /* @todo in principle, this can be made more tight using the hole-lists... */
                   assert( SCIPisIntegral(scip, lexminface[i]) );
-                  if ( LE(scip, lexminface[i] + 1.0, ub) )
+                  if ( SCIPLE(scip, lexminface[i] + 1.0, ub) )
                      lastunfixed = rowid;
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
                   /* continuous type: if we can add an infinitesimal value to the current lexminface[i] value,
                    * mark row as 'lastunfixed'
                    */
-                  if ( LT(scip, lexminface[i], ub) )
+                  if ( SCIPLT(scip, lexminface[i], ub) )
                      lastunfixed = rowid;
                   break;
                default:
@@ -1797,8 +1797,8 @@ SCIP_RETCODE propagateStaticOrbitope(
             lb = SCIPvarGetLbLocal(var);
 
             /* compare to the value in the column left of it */
-            if ( GT(scip, lb, lexmaxface[i - 1]) ||
-               ( lexmaxepsrow[colid - 1] == rowid && EQ(scip, lb, lexmaxface[i - 1]) ) )
+            if ( SCIPGT(scip, lb, lexmaxface[i - 1]) ||
+               ( lexmaxepsrow[colid - 1] == rowid && SCIPEQ(scip, lb, lexmaxface[i - 1]) ) )
             {
                /* value of this column can only be strictly larger than the value in the column to its left
                 * This may not be possible.
@@ -1807,7 +1807,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                if ( lastunfixed >= 0 )
                {
                   /* repair: return to the last row with "room", and decrease the lexmax-value at that row. */
-                  assert( EQ(scip, lexmaxface[lastunfixed * ncols + colid],
+                  assert( SCIPEQ(scip, lexmaxface[lastunfixed * ncols + colid],
                      lexmaxface[lastunfixed * ncols + colid - 1]) );
                   othervar = orbidata->vars[getArrayEntryOrIndex(roworder, lastunfixed) * ncols + origcolid];
                   switch (SCIPvarGetType(othervar))
@@ -1820,13 +1820,13 @@ SCIP_RETCODE propagateStaticOrbitope(
                      assert( SCIPisIntegral(scip, lexmaxface[lastunfixed * ncols + colid]) );
                      lexmaxface[lastunfixed * ncols + colid] -= 1.0;
                      assert( SCIPisIntegral(scip, lexmaxface[lastunfixed * ncols + colid]) );
-                     assert( GE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
-                     assert( LE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
+                     assert( SCIPGE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
+                     assert( SCIPLE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      break;
                   case SCIP_VARTYPE_CONTINUOUS:
                      /* continuous type, so subtract an infinitesimal value to the bound */
-                     assert( GE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
-                     assert( LE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
+                     assert( SCIPGE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
+                     assert( SCIPLE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      assert( lexmaxepsrow[colid] == -1 );
                      lexmaxepsrow[colid] = lastunfixed;
                      break;
@@ -1849,18 +1849,18 @@ SCIP_RETCODE propagateStaticOrbitope(
             }
             else
             {
-               assert( LE(scip, lb, lexmaxface[i - 1]) );
+               assert( SCIPLE(scip, lb, lexmaxface[i - 1]) );
                ub = SCIPvarGetUbLocal(var);
-               assert( LE(scip, lb, ub) );
+               assert( SCIPLE(scip, lb, ub) );
                lexmaxface[i] = MIN(lexmaxface[i - 1], ub);
-               assert( GE(scip, lexmaxface[i - 1], lexmaxface[i]) );
+               assert( SCIPGE(scip, lexmaxface[i - 1], lexmaxface[i]) );
 
                /* are we still equal? */
-               if ( GT(scip, lexmaxface[i - 1], lexmaxface[i]) )
+               if ( SCIPGT(scip, lexmaxface[i - 1], lexmaxface[i]) )
                   iseq = FALSE;
                else if ( lexmaxepsrow[colid - 1] == rowid )
                {
-                  assert( EQ(scip, lexmaxface[i - 1], lexmaxface[i]) );
+                  assert( SCIPEQ(scip, lexmaxface[i - 1], lexmaxface[i]) );
                   assert( SCIPvarGetType(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid])
                      == SCIP_VARTYPE_CONTINUOUS );
                   assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
@@ -1883,14 +1883,14 @@ SCIP_RETCODE propagateStaticOrbitope(
                   /* @todo @question Are variable bounds for SCIP_VARTYPE_IMPLINT always integral? */
                   /* @todo in principle, this can be made more tight using the hole-lists... */
                   assert( SCIPisIntegral(scip, lexmaxface[i]) );
-                  if ( GE(scip, lexmaxface[i] - 1.0, lb) )
+                  if ( SCIPGE(scip, lexmaxface[i] - 1.0, lb) )
                      lastunfixed = rowid;
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
                   /* continuous type: if we can subtract an infinitesimal value to the current lexmaxface[i] value,
                    * mark row as 'lastunfixed'
                    */
-                  if ( GT(scip, lexmaxface[i], lb) )
+                  if ( SCIPGT(scip, lexmaxface[i], lb) )
                      lastunfixed = rowid;
                   break;
                default:
@@ -1932,7 +1932,7 @@ SCIP_RETCODE propagateStaticOrbitope(
          origidx = origrowid * ncols + origcolid;
          var = orbidata->vars[origidx];
 
-         if ( EQ(scip, lexminface[i], lexmaxface[i]) )
+         if ( SCIPEQ(scip, lexminface[i], lexmaxface[i]) )
          {
             /* tighten LB and UB to same value (i.e. fixing) */
             SCIP_CALL( SCIPtightenVarLb(scip, var, lexminface[i], FALSE, infeasible, &success) );

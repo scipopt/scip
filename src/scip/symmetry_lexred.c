@@ -1313,10 +1313,10 @@ SCIP_RETCODE propagateStaticLexred(
       if ( vari == varj )
       {
          assert( lexdata->symtype == SYM_SYMTYPE_SIGNPERM );
-         assert( GE(scip, lb1, lexdata->vardomaincenter[i]) ); /* propagation enforces xi - center >= center - xi */
+         assert( SCIPGE(scip, lb1, lexdata->vardomaincenter[i]) ); /* propagation enforces xi - center >= center - xi */
 
          /* both variables can only be the same if they are fixed to the domain center */
-         if ( GT(scip, lb1, lexdata->vardomaincenter[i]) )
+         if ( SCIPGT(scip, lb1, lexdata->vardomaincenter[i]) )
             return SCIP_OKAY;
 
          SCIP_CALL( SCIPallocBufferArray(scip, &peeklbs, lexdata->nvars) );
@@ -1341,13 +1341,13 @@ SCIP_RETCODE propagateStaticLexred(
                if ( *infeasible )
                   return SCIP_OKAY;
                lb1 = lexdata->vardomaincenter[i] + 1.0;
-               assert( LE(scip, lb1, ub1) );
+               assert( SCIPLE(scip, lb1, ub1) );
                break;
             case SCIP_VARTYPE_CONTINUOUS:
                /* continuous variable type: act as if we increase the variable by a very little bit.
                 * That is only possible if we're able to increase the variable bound by a bit.
                 */
-               if ( EQ(scip, lb1, ub1) )
+               if ( SCIPEQ(scip, lb1, ub1) )
                {
                   *infeasible = TRUE;
                   goto FREEMEMORY;
@@ -1399,14 +1399,14 @@ SCIP_RETCODE propagateStaticLexred(
          }
 
          /* check whether peek is called */
-         if ( (!EQ(scip, lbi, lbj)) && (!EQ(scip, ubi, ubj)) )
+         if ( (!SCIPEQ(scip, lbi, lbj)) && (!SCIPEQ(scip, ubi, ubj)) )
             return SCIP_OKAY;
 
          SCIP_CALL( SCIPallocBufferArray(scip, &peeklbs, lexdata->nvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &peekubs, lexdata->nvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &peekbdset, lexdata->nvars) );
 
-         if ( EQ(scip, lbj, lbi) )
+         if ( SCIPEQ(scip, lbj, lbi) )
          {
             SCIP_Real fixvalj;
 
@@ -1435,13 +1435,13 @@ SCIP_RETCODE propagateStaticLexred(
                   if ( *infeasible )
                      return SCIP_OKAY;
                   lb1 = lb1 + 1.0;
-                  assert( LE(scip, lb1, ub1) );
+                  assert( SCIPLE(scip, lb1, ub1) );
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
                   /* continuous variable type: act as if we increase the variable by a very little bit.
                    * That is only possible if we're able to increase the variable bound by a bit.
                    */
-                  if ( EQ(scip, lbi, ubi) )
+                  if ( SCIPEQ(scip, lbi, ubi) )
                   {
                      *infeasible = TRUE;
                      goto FREEMEMORY;
@@ -1460,8 +1460,8 @@ SCIP_RETCODE propagateStaticLexred(
           *   Option 2: vari gets fixed to ubj. Then, we must check if feasibility is found, still.
           *     If it turns out infeasible, then we know varj cannot take value ubj, so we can decrease the upper bound.
           */
-         assert( GE(scip, ubi, ubj) );  /* this must be the case after reductions in the for-loop */
-         if ( EQ(scip, ubi, ubj) )
+         assert( SCIPGE(scip, ubi, ubj) );  /* this must be the case after reductions in the for-loop */
+         if ( SCIPEQ(scip, ubi, ubj) )
          {
             SCIP_Real fixvalj;
 
@@ -1498,12 +1498,12 @@ SCIP_RETCODE propagateStaticLexred(
                   if ( *infeasible )
                      return SCIP_OKAY;
                   ubj = ubj - 1.0;
-                  assert( LE(scip, lbj, ubj) );
+                  assert( SCIPLE(scip, lbj, ubj) );
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
                   /* continuous variable type: act as if we decrease the variable by a very little bit.
                    * that is only possible if we're able to decrease the variable bound by a bit. */
-                  if ( EQ(scip, lbj, ubj) )
+                  if ( SCIPEQ(scip, lbj, ubj) )
                   {
                      *infeasible = TRUE;
                      goto FREEMEMORY;
