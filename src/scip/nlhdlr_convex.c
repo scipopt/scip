@@ -958,7 +958,7 @@ SCIP_RETCODE constructExpr(
    SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    SCIP_Bool             assumecurvature,    /**< whether to assume that desired curvature is given (skips curvature checks) */
    SCIP_Bool*            curvsuccess         /**< pointer to store whether the curvature could be achieved
-                                                  w.r.t. the original variables (might be NULL) */
+                                              *   w.r.t. the original variables (might be NULL) */
    )
 {
    SCIP_EXPR* nlexpr;
@@ -1504,7 +1504,7 @@ SCIP_RETCODE estimateGradient(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
    SCIP_SOL*             sol,                /**< solution to use */
    SCIP_Real             auxvalue,           /**< value of nlexpr in sol - we may not be able to take this value
-                                                  from nlexpr if it was evaluated at a different sol recently */
+                                              *   from nlexpr if it was evaluated at a different sol recently */
    SCIP_ROWPREP*         rowprep,            /**< rowprep where to store estimator */
    SCIP_Bool*            success             /**< buffer to store whether successful */
    )
@@ -2410,7 +2410,6 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConcave)
 }
 
 /** includes concave nonlinear handler in nonlinear constraint handler */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrConcave(
    SCIP*                 scip                /**< SCIP data structure */
    )

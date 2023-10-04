@@ -428,7 +428,7 @@ SCIP_CUTSELDATA* SCIPcutselGetData(
 void SCIPcutselSetData(
    SCIP_CUTSEL*          cutsel,             /**< cut selector */
    SCIP_CUTSELDATA*      cutseldata          /**< new cut selector user data */
-)
+   )
 {
    assert(cutsel != NULL);
 

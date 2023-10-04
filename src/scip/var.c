@@ -6213,7 +6213,6 @@ SCIP_RETCODE SCIPvarChgType(
       assert(oldtype == (SCIP_VARTYPE)var->negatedvar->vartype
             || SCIPvarIsBinary(var) == SCIPvarIsBinary(var->negatedvar));
 
-
       var->negatedvar->vartype = vartype; /*lint !e641*/
 
       if( SCIPsetGetStage(set) > SCIP_STAGE_TRANSFORMING )

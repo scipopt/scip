@@ -2125,7 +2125,6 @@ SCIP_RETCODE freeTransforming(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);

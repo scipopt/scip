@@ -4361,7 +4361,6 @@ SCIP_DECL_CONSFREE(consFreeVarbound)
 static
 SCIP_DECL_CONSINITSOL(consInitsolVarbound)
 {  /*lint --e{715}*/
-
    /* add nlrow representation to NLP, if NLP had been constructed */
    if( SCIPisNLPConstructed(scip) )
    {
@@ -4938,7 +4937,6 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
 static
 SCIP_DECL_CONSACTIVE(consActiveVarbound)
 {  /*lint --e{715}*/
-
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
    {
       SCIP_CALL( addNlrow(scip, cons) );

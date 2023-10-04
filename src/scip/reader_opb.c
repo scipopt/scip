@@ -1614,7 +1614,6 @@ SCIP_RETCODE getMaxAndConsDim(
       }
       opbinput->linebuf[opbinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
-
       /* read characters after comment symbol */
       for( i = 0; commentchars[i] != '\0'; ++i )
       {

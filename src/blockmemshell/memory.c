@@ -843,7 +843,7 @@ int isPtrInChkmem(
 /** sanity check for a memory chunk */
 static
 void checkChunk(
-   const CHUNK*       chunk               /**< memory chunk */
+   const CHUNK*          chunk               /**< memory chunk */
    )
 {
    FREELIST* eager;
