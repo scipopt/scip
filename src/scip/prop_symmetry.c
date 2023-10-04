@@ -5981,8 +5981,28 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
       }
       else
       {
-         SCIP_CALL( handleDoublelLexMatrix(scip, propdata, cidx, lexmatrix, nrows, ncols,
-               lexrowsbegin, lexcolsbegin, nrowmatrices, ncolmatrices, &success) );
+         SCIP_Bool hasbinaryvar = FALSE;
+
+         /* check whether a binary variable is contained in the matrix */
+         for (i = 0; i < nrows && !hasbinaryvar; ++i)
+         {
+            for (p = 0; p < ncols; ++p)
+            {
+               if ( SCIPvarIsBinary(propdata->permvars[lexmatrix[i][p]]) )
+               {
+                  hasbinaryvar = TRUE;
+                  break;
+               }
+            }
+         }
+
+         if ( hasbinaryvar )
+         {
+            SCIP_CALL( handleDoublelLexMatrix(scip, propdata, cidx, lexmatrix, nrows, ncols,
+                  lexrowsbegin, lexcolsbegin, nrowmatrices, ncolmatrices, &success) );
+         }
+         else
+            success = FALSE;
       }
 
       /* free memory not needed anymore */
