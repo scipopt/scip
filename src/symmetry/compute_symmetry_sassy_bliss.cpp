@@ -940,12 +940,12 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
          {
             for (j = 0; j < nusedvars; ++j)
                ++(*degrees)[nodeshift + j];
-            (*nedges) += nsymvars;
+            (*nedges) += nusedvars / 2;
          }
          else
          {
-            for (j = 0; j < nusedvars; ++j)
-               G->add_edge((unsigned) nodeshift + j, (unsigned) nodeshift + j + nusedvars);
+            for (j = 0; j < nusedvars/2; ++j)
+               G->add_edge((unsigned) nodeshift + j, (unsigned) nodeshift + j + nusedvars/2);
          }
       }
       nodeshift = curnnodes;
