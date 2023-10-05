@@ -820,7 +820,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
             second = nusedvars + second;
 
          /* check whether edge is used for grouping */
-         if ( FALSE && ! SCIPhasGraphUniqueEdgetype(graph) && isEdgeGroupable(graph, e, groupByConstraints) )
+         if ( ! SCIPhasGraphUniqueEdgetype(graph) && isEdgeGroupable(graph, e, groupByConstraints) )
          {
             /* store edge, first becomes the cons or var node */
             comparetype = groupByConstraints ? SYM_NODETYPE_CONS : SYM_NODETYPE_VAR;
