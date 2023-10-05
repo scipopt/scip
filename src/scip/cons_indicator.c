@@ -509,6 +509,11 @@ SCIP_RETCODE addSymmetryInformation(
    rhs = SCIPgetRhsLinear(scip, lincons);
 
    /* get information about linear constraint */
+   nvars = SCIPgetNVars(scip);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
    linvars = SCIPgetVarsLinear(scip, lincons);
    linvals = SCIPgetValsLinear(scip, lincons);
    for( i = 0; i < nvarslincons; ++i )
@@ -538,11 +543,6 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, eqnodeidx, FALSE, 0.0) );
 
    /* create nodes and edges for (possibly aggregated) activation variable */
-   nvars = SCIPgetNVars(scip);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
-
    vars[0] = consdata->binvar;
    vals[0] = 1.0;
    constant = 0.0;
