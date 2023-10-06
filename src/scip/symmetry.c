@@ -114,18 +114,7 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
 
          for (p = 0; p < nperms; ++p)
          {
-            if ( curelem >= npermvars )
-            {
-               int modifiedelem;
-
-               modifiedelem = curelem - npermvars;
-               if ( perms[p][modifiedelem] < npermvars )
-                  image = npermvars + perms[p][modifiedelem];
-               else
-                  image = perms[p][modifiedelem];
-            }
-            else
-               image = perms[p][curelem];
+            image = perms[p][curelem];
 
             /* found new element of the orbit of i */
             if ( ! varadded[image] )
