@@ -51,6 +51,7 @@
  */
 SCIP_RETCODE SCIPcomputeOrbitsSym(
    SCIP*                 scip,               /**< SCIP instance */
+   SCIP_Bool             issigend,           /**< whether orbits for signed permutations shall be computed */
    SCIP_VAR**            permvars,           /**< variables considered in a permutation */
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
@@ -61,6 +62,7 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
    )
 {
    SCIP_Shortbool* varadded;
+   int permlen;
    int orbitidx = 0;
    int i;
 
@@ -73,16 +75,20 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
    assert( orbitbegins != NULL );
    assert( norbits != NULL );
 
+   permlen = npermvars;
+   if ( issigend )
+      permlen *= 2;
+
    /* init data structures*/
-   SCIP_CALL( SCIPallocBufferArray(scip, &varadded, npermvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varadded, permlen) );
 
    /* initially, every variable is contained in no orbit */
-   for (i = 0; i < npermvars; ++i)
+   for (i = 0; i < permlen; ++i)
       varadded[i] = FALSE;
 
    /* find variable orbits */
    *norbits = 0;
-   for (i = 0; i < npermvars; ++i)
+   for (i = 0; i < permlen; ++i)
    {
       int beginorbitidx;
       int j;
@@ -108,13 +114,24 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
 
          for (p = 0; p < nperms; ++p)
          {
-            image = perms[p][curelem];
+            if ( curelem >= npermvars )
+            {
+               int modifiedelem;
+
+               modifiedelem = curelem - npermvars;
+               if ( perms[p][modifiedelem] < npermvars )
+                  image = npermvars + perms[p][modifiedelem];
+               else
+                  image = perms[p][modifiedelem];
+            }
+            else
+               image = perms[p][curelem];
 
             /* found new element of the orbit of i */
             if ( ! varadded[image] )
             {
                orbits[orbitidx++] = image;
-               assert( orbitidx <= npermvars );
+               assert( orbitidx <= permlen );
                varadded[image] = TRUE;
             }
          }
@@ -129,7 +146,7 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
    }
 
    /* store end in "last" orbitbegins entry */
-   assert( *norbits < npermvars );
+   assert( *norbits < permlen );
    orbitbegins[*norbits] = orbitidx;
 
 #ifdef SCIP_OUTPUT
