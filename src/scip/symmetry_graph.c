@@ -678,6 +678,7 @@ SCIP_RETCODE SCIPaddSymgraphEdge(
  */
 static
 int compareVars(
+   SCIP*                 scip,               /**< SCIP pointer (or NULL for exact comparison) */
    SCIP_VAR*             var1,               /**< first variable for comparison */
    SCIP_VAR*             var2                /**< second variable for comparison */
    )
@@ -690,20 +691,41 @@ int compareVars(
    if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
       return 1;
 
-   if( SCIPvarGetObj(var1) < SCIPvarGetObj(var2) )
-      return -1;
-   if( SCIPvarGetObj(var1) > SCIPvarGetObj(var2) )
-      return 1;
+   /* use SCIP's comparison functions if available */
+   if( scip == NULL )
+   {
+      if( SCIPvarGetObj(var1) < SCIPvarGetObj(var2) )
+         return -1;
+      if( SCIPvarGetObj(var1) > SCIPvarGetObj(var2) )
+         return 1;
 
-   if( SCIPvarGetLbGlobal(var1) < SCIPvarGetLbGlobal(var2) )
-      return -1;
-   if( SCIPvarGetLbGlobal(var1) > SCIPvarGetLbGlobal(var2) )
-      return 1;
+      if( SCIPvarGetLbGlobal(var1) < SCIPvarGetLbGlobal(var2) )
+         return -1;
+      if( SCIPvarGetLbGlobal(var1) > SCIPvarGetLbGlobal(var2) )
+         return 1;
 
-   if( SCIPvarGetUbGlobal(var1) < SCIPvarGetUbGlobal(var2) )
-      return -1;
-   if( SCIPvarGetUbGlobal(var1) > SCIPvarGetUbGlobal(var2) )
-      return 1;
+      if( SCIPvarGetUbGlobal(var1) < SCIPvarGetUbGlobal(var2) )
+         return -1;
+      if( SCIPvarGetUbGlobal(var1) > SCIPvarGetUbGlobal(var2) )
+         return 1;
+   }
+   else
+   {
+      if( SCIPisLT(scip, SCIPvarGetObj(var1), SCIPvarGetObj(var2)) )
+         return -1;
+      if( SCIPisGT(scip, SCIPvarGetObj(var1), SCIPvarGetObj(var2)) )
+         return 1;
+
+      if( SCIPisLT(scip, SCIPvarGetLbGlobal(var1), SCIPvarGetLbGlobal(var2)) )
+         return -1;
+      if( SCIPisGT(scip, SCIPvarGetLbGlobal(var1), SCIPvarGetLbGlobal(var2)) )
+         return 1;
+
+      if( SCIPisLT(scip, SCIPvarGetUbGlobal(var1), SCIPvarGetUbGlobal(var2)) )
+         return -1;
+      if( SCIPisGT(scip, SCIPvarGetUbGlobal(var1), SCIPvarGetUbGlobal(var2)) )
+         return 1;
+   }
 
    return 0;
 }
@@ -720,6 +742,7 @@ int compareVars(
  */
 static
 int compareVarsFixed(
+   SCIP*                 scip,               /**< SCIP pointer (or NULL for exact comparison) */
    SCIP_VAR*             var1,               /**< first variable for comparison */
    SCIP_VAR*             var2,               /**< second variable for comparison */
    SCIP_Bool             isfixed1,           /**< whether var1 needs to be fixed */
@@ -734,7 +757,7 @@ int compareVarsFixed(
    if( isfixed1 && (! isfixed2) )
       return 1;
 
-   return compareVars(var1, var2);
+   return compareVars(scip, var1, var2);
 }
 
 /** sorts nodes of a permutation symmetry detection graph
@@ -763,7 +786,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortVarnodesPermsym)
    isfixedvar = graph->isfixedvar;
    assert(isfixedvar != NULL);
 
-   return compareVarsFixed(vars[ind1], vars[ind2], isfixedvar[ind1], isfixedvar[ind2]);
+   return compareVarsFixed(NULL, vars[ind1], vars[ind2], isfixedvar[ind1], isfixedvar[ind2]);
 }
 
 /** compares two variables for signed permutation symmetry detection
@@ -780,6 +803,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortVarnodesPermsym)
  */
 static
 int compareVarsSignedPerm(
+   SCIP*                 scip,               /**< SCIP pointer (or NULL for exact comparison) */
    SCIP_VAR*             var1,               /**< first variable for comparison */
    SCIP_VAR*             var2,               /**< second variable for comparison */
    SCIP_Bool             isneg1,             /**< whether var1 needs to be negated */
@@ -798,18 +822,40 @@ int compareVarsSignedPerm(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
-      return -1;
-   if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
-      return 1;
+   /* use SCIP's comparison functions if available */
+   if( scip == NULL )
+   {
+      if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
+         return -1;
+      if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
+         return 1;
+   }
+   else
+   {
+      if( SCIPisLT(scip, SCIPvarGetType(var1), SCIPvarGetType(var2)) )
+         return -1;
+      if( SCIPisGT(scip, SCIPvarGetType(var1), SCIPvarGetType(var2)) )
+         return 1;
+   }
 
    obj1 = isneg1 ? -SCIPvarGetObj(var1) : SCIPvarGetObj(var1);
    obj2 = isneg2 ? -SCIPvarGetObj(var2) : SCIPvarGetObj(var2);
 
-   if( obj1 < obj2 )
-      return -1;
-   if( obj1 > obj2 )
-      return 1;
+   /* use SCIP's comparison functions if available */
+   if( scip == NULL )
+   {
+      if( obj1 < obj2 )
+         return -1;
+      if( obj1 > obj2 )
+         return 1;
+   }
+   else
+   {
+      if( SCIPisLT(scip, obj1, obj2) )
+         return -1;
+      if( SCIPisGT(scip, obj1, obj2) )
+         return 1;
+   }
 
    /* adapt lower and upper bounds if domain is finite */
    lb1 = SCIPvarGetLbGlobal(var1);
@@ -843,15 +889,31 @@ int compareVarsSignedPerm(
       ub2 = -mid;
    }
 
-   if( lb1 < lb2 )
-      return -1;
-   if( lb1 > lb2 )
-      return 1;
+   /* use SCIP's comparison functions if available */
+   if( scip == NULL )
+   {
+      if( lb1 < lb2 )
+         return -1;
+      if( lb1 > lb2 )
+         return 1;
 
-   if( ub1 < ub2 )
-      return -1;
-   if( ub1 > ub2 )
-      return 1;
+      if( ub1 < ub2 )
+         return -1;
+      if( ub1 > ub2 )
+         return 1;
+   }
+   else
+   {
+      if( SCIPisLT(scip, lb1, lb2) )
+         return -1;
+      if( SCIPisGT(scip, lb1, lb2) )
+         return 1;
+
+      if( SCIPisLT(scip, ub1, ub2) )
+         return -1;
+      if( SCIPisGT(scip, ub1, ub2) )
+         return 1;
+   }
 
    return 0;
 }
@@ -870,6 +932,7 @@ int compareVarsSignedPerm(
  */
 static
 int compareVarsFixedSignedPerm(
+   SCIP*                 scip,               /**< SCIP pointer (or NULL for exact comparison) */
    SCIP_VAR*             var1,               /**< first variable for comparison */
    SCIP_VAR*             var2,               /**< second variable for comparison */
    SCIP_Bool             isfixed1,           /**< whether var1 needs to be fixed */
@@ -887,7 +950,7 @@ int compareVarsFixedSignedPerm(
    if( isfixed1 && (! isfixed2) )
       return 1;
 
-   return compareVarsSignedPerm(var1, var2, isneg1, isneg2, infinity);
+   return compareVarsSignedPerm(scip, var1, var2, isneg1, isneg2, infinity);
 }
 
 /** sorts nodes of a signed permutation symmetry detection graph
@@ -938,7 +1001,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortVarnodesSignedPermsym)
       locind2 -= nsymvars;
    }
 
-   return compareVarsFixedSignedPerm(vars[locind1], vars[locind2], isfixedvar[locind1], isfixedvar[locind2],
+   return compareVarsFixedSignedPerm(NULL, vars[locind1], vars[locind2], isfixedvar[locind1], isfixedvar[locind2],
       isneg1, isneg2, graph->infinity);
 }
 
@@ -1208,7 +1271,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
       {
          thisvar = graph->symvars[perm[i]];
 
-         if( graph->isfixedvar[i] || compareVars(prevvar, thisvar) != 0 )
+         if( graph->isfixedvar[i] || compareVars(scip, prevvar, thisvar) != 0 )
             ++color;
 
          graph->varcolors[perm[i]] = color;
@@ -1250,7 +1313,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
          }
 
          if( graph->isfixedvar[i % graph->nsymvars]
-            || compareVarsSignedPerm(prevvar, thisvar, previsneg, thisisneg, graph->infinity) != 0 )
+            || compareVarsSignedPerm(scip, prevvar, thisvar, previsneg, thisisneg, graph->infinity) != 0 )
             ++color;
 
          graph->varcolors[perm[i]] = color;
@@ -1296,12 +1359,10 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
          thisval = graph->vals[perm[i]];
 
          if( ! SCIPisEQ(scip, prevval, thisval) )
-         {
             ++color;
-            prevval = thisval;
-         }
 
          graph->valcolors[perm[i]] = color;
+         prevval = thisval;
       }
    }
 
@@ -1348,12 +1409,10 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
                break;
 
             if( ! SCIPisEQ(scip, prevval, thisval) )
-            {
                ++color;
-               prevval = thisval;
-            }
 
             graph->edgecolors[perm[i]] = color;
+            prevval = thisval;
          }
 
          /* check whether all edges are equivalent */
