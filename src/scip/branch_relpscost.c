@@ -910,9 +910,27 @@ SCIP_Real expectedTreeSize(
    return nexttreesize;
 }
 
+/* Decide if we continue strong branching based based on lookahead */
+static
+SCIP_Bool continueStrongBranchingLookahead(
+   SCIP*                 scip,
+   int                   i,
+   int                   ninitcands,
+   SCIP_Real             lookahead,
+   SCIP_Real             maxlookahead,
+   int                   nbdchgs,
+   int                   nbdconflicts,
+   int                   maxbdchgs,
+   SCIP_Longint          maxnsblpiterations
+      )
+   {
+      return i < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs
+                  && (i < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations);
+   }
+
 /* Decide if we continue strong branching based on the estimation of the tree size */
 static
-SCIP_Bool continueStrongBranching(
+SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    SCIP*                 scip,
    SCIP_BRANCHRULE*      branchrule,          /**< branching rule */
    SCIP_Real             lookahead,
@@ -1501,6 +1519,7 @@ SCIP_RETCODE execRelpscost(
        * search best strong branching candidate
        */
       maxlookahead = (SCIP_Real)branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
+      /* reference lookahead for the statistics. TodoSB this should be a parameter */
       maxlookaheaddefault = 9.0 * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
 
       inititer = branchruledata->inititer;
@@ -1543,9 +1562,12 @@ SCIP_RETCODE execRelpscost(
       bestuninitsbscore = -SCIPinfinity(scip);
       bestuninitsbcand = -1;
       lookahead = 0.0;
-      for( i = 0; i < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs
-                  && (i < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations)
-                  && continueStrongBranching(scip, branchrule, lookahead, maxlookaheaddefault); ++i )
+
+      if(!continueStrongBranchingLookahead(scip, 0, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations))
+         branchrule->nbeforelookahead++;
+
+      for( i = 0; continueStrongBranchingLookahead(scip, i, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations)
+               && continueStrongBranchingTreeSizeEstimation(scip, branchrule, lookahead, maxlookaheaddefault); ++i )
       {
          SCIP_Real down;
          SCIP_Real up;
@@ -1614,6 +1636,9 @@ SCIP_RETCODE execRelpscost(
                   bestuninitsbcand = c;
                   bestuninitsbscore = initcandscores[i];
                }
+               /* update statistics if we stopped before the default lookahead or if we reached it */
+               if (!continueStrongBranchingLookahead(scip, i+1, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations))
+                  branchrule->nbeforelookahead++;
                continue;
             }
          }
@@ -1663,6 +1688,8 @@ SCIP_RETCODE execRelpscost(
                   "(node %" SCIP_LONGINT_FORMAT ") error in strong branching call for variable <%s> with solution %g\n",
                   SCIPgetNNodes(scip), SCIPvarGetName(branchcands[c]), branchcandssol[c]);
             }
+            /* update statistics if we stopped before the default lookahead */
+            branchrule->nbeforelookahead++;
             break;
          }
 
@@ -1684,6 +1711,8 @@ SCIP_RETCODE execRelpscost(
                SCIPdebugMsg(scip, " -> node can be cut off (provedbound=%g, cutoff=%g)\n", provedbound, SCIPgetCutoffbound(scip));
 
                *result = SCIP_CUTOFF;
+               /* update statistics if we stopped before the default lookahead */
+               branchrule->nbeforelookahead++;
                break; /* terminate initialization loop, because node is infeasible */
             }
             /* proved bound for down child of best candidate is larger than cutoff bound
@@ -1825,6 +1854,8 @@ SCIP_RETCODE execRelpscost(
                SCIPdebugMsg(scip, " -> variable <%s> is infeasible in both directions (conflict: %u/%u)\n",
                   SCIPvarGetName(branchcands[c]), downconflict, upconflict);
                *result = SCIP_CUTOFF;
+               /* update statistics if we stopped before the default lookahead */
+               branchrule->nbeforelookahead++;
                break; /* terminate initialization loop, because node is infeasible */
             }
             else
@@ -1836,7 +1867,11 @@ SCIP_RETCODE execRelpscost(
                      (downinf ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER),
                      (downinf ? SCIPfeasCeil(scip, branchcandssol[c]) : SCIPfeasFloor(scip, branchcandssol[c]))) );
                if( nbdchgs + nbdconflicts >= maxbdchgs )
+               {
+                  /* update statistics if we stopped before the default lookahead */
+                  branchrule->nbeforelookahead++;
                   break; /* terminate initialization loop, because enough roundings are performed */
+               }
             }
          }
          else
@@ -1912,6 +1947,14 @@ SCIP_RETCODE execRelpscost(
             SCIPdebugMsg(scip, " -> variable <%s> (solval=%g, down=%g (%+g,valid=%u), up=%g (%+g,valid=%u), score=%g/ %g/%g %g/%g -> %g)\n",
                SCIPvarGetName(branchcands[c]), branchcandssol[c], down, downgain, downvalid, up, upgain, upvalid,
                pscostscore, conflictscore, conflengthscore, inferencescore, cutoffscore,  score);
+         }
+         /* update statistics if we stopped before the default lookahead or if we reached it */
+         if (!continueStrongBranchingLookahead(scip, i+1, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations))
+         {
+            if(SCIPisLT(scip, lookahead, maxlookaheaddefault))
+               branchrule->nbeforelookahead++;
+            else if(!branchruledata->exceeddefaultlookahead)
+               branchrule->nreachedlookahead++;
          }
       }
 #ifdef SCIP_DEBUG
