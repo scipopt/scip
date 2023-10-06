@@ -1987,6 +1987,8 @@ SCIP_RETCODE addSymmetryInformation(
    assert(graph != NULL);
    assert(success != NULL);
 
+   *success = TRUE;
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
