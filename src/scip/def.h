@@ -208,6 +208,7 @@ extern "C" {
 #define SCIP_INTERVAL_INFINITY (double)1e+300 /**< infinity value for interval computations */
 
 #define REALABS(x)        (fabs(x))
+#define NEGATE(x)         (-x)
 #define EPSEQ(x,y,eps)    (REALABS((x)-(y)) <= (eps))
 #define EPSLT(x,y,eps)    ((x)-(y) < -(eps))
 #define EPSLE(x,y,eps)    ((x)-(y) <= (eps))
