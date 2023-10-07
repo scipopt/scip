@@ -562,17 +562,18 @@ SCIP_RETCODE addSymmetryInformation(
       /* add nodes and edges for variables in aggregation */
       SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, opnodeidx, vars, vals, nlocvars, constant) );
    }
-   else
+   else if( nlocvars == 1 )
    {
-      switch( symtype )
+      if( symtype == SYM_SYMTYPE_SIGNPERM )
       {
-      case SYM_SYMTYPE_SIGNPERM:
-         /* add negated variable (and that lincons is disabled by it) */
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, actweight) );
+
          nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[0]);
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, -actweight) );
-         /* do not break to also add edge to non-negated variable */
-         /*lint -fallthrough*/
-      default:
+      }
+      else
+      {
          nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, actweight) );
       }
@@ -598,7 +599,7 @@ SCIP_RETCODE addSymmetryInformation(
       /* add nodes and edges for variables in aggregation */
       SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, opnodeidx, vars, vals, nlocvars, constant) );
    }
-   else
+   else if( nlocvars == 1 )
    {
       nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, slacknodeidx, nodeidx, FALSE, 0.0) );
