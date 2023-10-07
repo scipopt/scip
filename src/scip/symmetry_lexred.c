@@ -1114,11 +1114,9 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    assert( fixrow >= 0 );
    assert( fixrow < nselvars );
    assert( peekfeasible != NULL );
-   assert( varOrderGetIndex(varorder, fixrow) == fixi );
-   assert( lexdata->invperm[varOrderGetIndex(varorder, fixrow)] == fixj );
-   assert( lexdata->perm[fixj] == fixi );
    assert( fixi == varOrderGetIndex(varorder, fixrow) );
-   assert( fixj == lexdata->invperm[varOrderGetIndex(varorder, fixrow)] );
+   assert( fixj == (lexdata->invperm[varOrderGetIndex(varorder, fixrow)] % lexdata->nvars) );
+   assert( fixi == (lexdata->perm[fixj] % lexdata->nvars) );
 
    *peekfeasible = TRUE;
    issigned = lexdata->symtype == SYM_SYMTYPE_SIGNPERM ? TRUE : FALSE;
