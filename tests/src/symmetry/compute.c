@@ -79,11 +79,11 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!");
 }
 
-/* TEST SUITE */
-TestSuite(test_compute_symmetry, .init = setup, .fini = teardown);
-
-/* TEST 1 */
-Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simple example with 4 variables and 2 linear constraints")
+/** simple example with 4 variables and 2 linear constraints */
+static
+void simpleExample1(
+   SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
+   )
 {
    SCIP_VAR* var1;
    SCIP_VAR* var2;
@@ -103,6 +103,7 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    int norbits;
    int npermvars;
    int nperms;
+   int permlen;
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
@@ -150,6 +151,18 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    /* turn off subgroup detection */
    SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
 
+   /* determine symmetry type */
+   if ( detectsignedperms )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      permlen = 8;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      permlen = 4;
+   }
+
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
 
@@ -167,16 +180,36 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
    cr_assert( vartocomponent[3] == 0 );
 
    /* compute orbits */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeOrbitsSym(scip, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
-   cr_assert( norbits == 1 );
-   cr_assert( orbitbegins[0] == 0 );
-   cr_assert( orbitbegins[1] == 4 );
-   cr_assert( orbits[0] == 0 );
-   cr_assert( orbits[1] == 1 );
-   cr_assert( orbits[2] == 2 );
-   cr_assert( orbits[3] == 3 );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
+   SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
+         perms, nperms, orbits, orbitbegins, &norbits) );
+   if ( detectsignedperms )
+   {
+      printf("norbits: %d\n\n", norbits);
+      cr_assert( norbits == 2 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 4 );
+      cr_assert( orbitbegins[2] == 8 );
+      cr_assert( orbits[0] == 0 );
+      cr_assert( orbits[1] == 1 );
+      cr_assert( orbits[2] == 2 );
+      cr_assert( orbits[3] == 3 );
+      cr_assert( orbits[4] == 4 );
+      cr_assert( orbits[5] == 5 );
+      cr_assert( orbits[6] == 6 );
+      cr_assert( orbits[7] == 7 );
+   }
+   else
+   {
+      cr_assert( norbits == 1 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 4 );
+      cr_assert( orbits[0] == 0 );
+      cr_assert( orbits[1] == 1 );
+      cr_assert( orbits[2] == 2 );
+      cr_assert( orbits[3] == 3 );
+   }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
 
@@ -207,8 +240,11 @@ Test(test_compute_symmetry, basic1, .description = "compute symmetry for a simpl
 }
 
 
-/* TEST 2 */
-Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simple example with 4 variables and 4 linear constraints - before presolving")
+/** simple example with 4 variables and 4 linear constraints */
+static
+void simpleExample2(
+   SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
+   )
 {
    SCIP_VAR* var1;
    SCIP_VAR* var2;
@@ -228,6 +264,7 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    int norbits;
    int npermvars;
    int nperms;
+   int permlen;
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
@@ -293,6 +330,17 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    /* turn off subgroup detection */
    SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
 
+   if ( detectsignedperms )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      permlen = 8;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      permlen = 4;
+   }
+
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
 
@@ -310,148 +358,50 @@ Test(test_compute_symmetry, basic2, .description = "compute symmetry for a simpl
    cr_assert( vartocomponent[3] == 0 );
 
    /* compute orbits */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeOrbitsSym(scip, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
-   cr_assert( norbits == 2 );
-   cr_assert( orbitbegins[0] == 0 );
-   cr_assert( orbitbegins[1] == 2 );
-   cr_assert( orbits[0] == 0 );
-   cr_assert( orbits[1] == 1 );
-   cr_assert( orbits[2] == 2 );
-   cr_assert( orbits[3] == 3 );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
+   SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
+         perms, nperms, orbits, orbitbegins, &norbits) );
+   if ( detectsignedperms )
+   {
+      cr_assert( norbits == 4 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 2 );
+      cr_assert( orbitbegins[2] == 4 );
+      cr_assert( orbitbegins[3] == 6 );
+      cr_assert( orbits[0] == 0 );
+      cr_assert( orbits[1] == 1 );
+      cr_assert( orbits[2] == 2 );
+      cr_assert( orbits[3] == 3 );
+      cr_assert( orbits[4] == 4 );
+      cr_assert( orbits[5] == 5 );
+      cr_assert( orbits[6] == 6 );
+      cr_assert( orbits[7] == 7 );
+   }
+   else
+   {
+      cr_assert( norbits == 2 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 2 );
+      cr_assert( orbits[0] == 0 );
+      cr_assert( orbits[1] == 1 );
+      cr_assert( orbits[2] == 2 );
+      cr_assert( orbits[3] == 3 );
+   }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
 
-#ifdef SCIP_DEBUG
-   {
-      int i;
-      int j;
-
-      for (i = 0; i < nperms; ++i)
-      {
-         SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-         for (j = 0; j < npermvars; ++j)
-         {
-            if ( j == 0 )
-               SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
-            else
-               SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
-         }
-         SCIPinfoMessage(scip, NULL, ")\n");
-      }
-   }
-#endif
-
    SCIP_CALL( SCIPreleaseVar(scip, &var1) );
    SCIP_CALL( SCIPreleaseVar(scip, &var2) );
    SCIP_CALL( SCIPreleaseVar(scip, &var3) );
    SCIP_CALL( SCIPreleaseVar(scip, &var4) );
 }
 
-
-/* TEST 3 */
-Test(test_compute_symmetry, basic3, .description = "compute symmetry for a simple example with 4 variables and 4 linear constraints - after presolving")
-{
-   SCIP_VAR* var1;
-   SCIP_VAR* var2;
-   SCIP_VAR* var3;
-   SCIP_VAR* var4;
-   SCIP_CONS* cons;
-   SCIP_VAR* vars[2];
-   SCIP_Real vals[2];
-   SCIP_VAR** permvars;
-   int** perms;
-   int* components;
-   int* componentbegins;
-   int* vartocomponent;
-   int ncomponents;
-   int nperms;
-   int npermvars;
-
-   /* skip test if no symmetry can be computed */
-   if ( ! SYMcanComputeSymmetry() )
-      return;
-
-   /* setup problem:
-    * min x1 + x2 + x3 + x4
-    *     x1 + x2           =  1
-    *               x3 + x4 =  1
-    *    2x1 +           x4 <= 2
-    *         2x2 + x3      <= 2
-    *     x1, ..., x4 binary
-    */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "basic3"));
-
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   SCIP_CALL( SCIPaddVar(scip, var1) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   SCIP_CALL( SCIPaddVar(scip, var2) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   SCIP_CALL( SCIPaddVar(scip, var3) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var4, "x4", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   SCIP_CALL( SCIPaddVar(scip, var4) );
-
-   vars[0] = var1;
-   vars[1] = var2;
-   vals[0] = 1.0;
-   vals[1] = 1.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "e1", 2, vars, vals, 1.0, 1.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   vars[0] = var3;
-   vars[1] = var4;
-   vals[0] = 1.0;
-   vals[1] = 1.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "e2", 2, vars, vals, 1.0, 1.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   vars[0] = var1;
-   vars[1] = var4;
-   vals[0] = 2.0;
-   vals[1] = 1.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "i1", 2, vars, vals, -SCIPinfinity(scip), 2.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   vars[0] = var2;
-   vars[1] = var3;
-   vals[0] = 2.0;
-   vals[1] = 1.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "i2", 2, vars, vals, -SCIPinfinity(scip), 2.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
-   /* presolve problem (symmetry will be available afterwards) */
-   SCIP_CALL( SCIPpresolve(scip) );
-
-   /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
-         &components, &componentbegins, &vartocomponent, &ncomponents) );
-   cr_assert( nperms == -1 );  /* problem should be empty */
-   cr_assert( ncomponents == -1 );
-   cr_assert( components == NULL );
-   cr_assert( componentbegins == NULL );
-   cr_assert( vartocomponent == NULL );
-
-   SCIP_CALL( SCIPreleaseVar(scip, &var1) );
-   SCIP_CALL( SCIPreleaseVar(scip, &var2) );
-   SCIP_CALL( SCIPreleaseVar(scip, &var3) );
-   SCIP_CALL( SCIPreleaseVar(scip, &var4) );
-}
-
-
-/* TEST 4 */
-Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simple example with 5 variables and 2 linear constraints")
+/** simple example with 4 variables and 4 linear constraints */
+static
+void simpleExample3(
+   SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
+   )
 {
    SCIP_VAR* var1;
    SCIP_VAR* var2;
@@ -472,6 +422,7 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
    int norbits;
    int npermvars;
    int nperms;
+   int permlen;
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
@@ -525,6 +476,17 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
    /* turn off subgroup detection */
    SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
 
+   if ( detectsignedperms )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      permlen = 10;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      permlen = 5;
+   }
+
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
 
@@ -544,35 +506,28 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
    cr_assert( componentbegins[2] == 2 );
 
    /* compute orbits */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeOrbitsSym(scip, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
-   cr_assert( norbits == 2 );
-   cr_assert( orbitbegins[0] == 0 );
-   cr_assert( orbitbegins[1] == 2 );
-   cr_assert( orbitbegins[2] == 4 );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
+   SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
+         perms, nperms, orbits, orbitbegins, &norbits) );
+   if ( detectsignedperms )
+   {
+      cr_assert( norbits == 4 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 2 );
+      cr_assert( orbitbegins[2] == 4 );
+      cr_assert( orbitbegins[3] == 6 );
+      cr_assert( orbitbegins[4] == 8 );
+   }
+   else
+   {
+      cr_assert( norbits == 2 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 2 );
+      cr_assert( orbitbegins[2] == 4 );
+   }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
-
-#ifdef SCIP_DEBUG
-   {
-      int i;
-      int j;
-
-      for (i = 0; i < nperms; ++i)
-      {
-         SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-         for (j = 0; j < npermvars; ++j)
-         {
-            if ( j == 0 )
-               SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
-            else
-               SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
-         }
-         SCIPinfoMessage(scip, NULL, ")\n");
-      }
-   }
-#endif
 
    SCIP_CALL( SCIPreleaseVar(scip, &var1) );
    SCIP_CALL( SCIPreleaseVar(scip, &var2) );
@@ -581,1167 +536,931 @@ Test(test_compute_symmetry, basic4, .description = "compute symmetry for a simpl
    SCIP_CALL( SCIPreleaseVar(scip, &var5) );
 }
 
-
-/* TEST 5 */
-Test(test_compute_symmetry, basic5, .description = "compute symmetry for a simple example with bounddisjunctions")
-{
-   SCIP_VAR* var1;
-   SCIP_VAR* var2;
-   SCIP_VAR* var3;
-   SCIP_VAR* var4;
-   SCIP_CONS* cons;
-   SCIP_VAR* vars[2];
-   SCIP_BOUNDTYPE boundtypes[2];
-   SCIP_Real bounds[2];
-   SCIP_VAR** permvars;
-   int** perms;
-   int* orbits;
-   int* orbitbegins;
-   int norbits;
-   int npermvars;
-   int nperms;
-
-   /* skip test if no symmetry can be computed */
-   if ( ! SYMcanComputeSymmetry() )
-      return;
-
-   /* setup problem:
-    * min x1 + x2 + x3 + x4
-    *     BD(x1 >= 1, x2 >= 1)
-    *     BD(x3 >= 1, x4 >= 1)
-    *     x1, ..., x4 binary
-    */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "basic1"));
-
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   SCIP_CALL( SCIPaddVar(scip, var1) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   SCIP_CALL( SCIPaddVar(scip, var2) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   SCIP_CALL( SCIPaddVar(scip, var3) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var4, "x4", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   SCIP_CALL( SCIPaddVar(scip, var4) );
-
-   vars[0] = var1;
-   vars[1] = var2;
-   boundtypes[0] = SCIP_BOUNDTYPE_LOWER;
-   boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
-   bounds[0] = 1.0;
-   bounds[1] = 1.0;
-   SCIP_CALL( SCIPcreateConsBasicBounddisjunction(scip, &cons, "d1", 2, vars, boundtypes, bounds) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   vars[0] = var3;
-   vars[1] = var4;
-   boundtypes[0] = SCIP_BOUNDTYPE_LOWER;
-   boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
-   bounds[0] = 1.0;
-   bounds[1] = 1.0;
-   SCIP_CALL( SCIPcreateConsBasicBounddisjunction(scip, &cons, "d2", 2, vars, boundtypes, bounds) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   /* turn off presolving in order to avoid having trivial problem afterwards */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
-
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* turn off subgroup detection */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
-
-   /* presolve problem (symmetry will be available afterwards) */
-   SCIP_CALL( SCIPpresolve(scip) );
-
-#ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPprintTransProblem(scip, NULL, "cip", FALSE) );
-#endif
-
-   /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
-         NULL, NULL, NULL, NULL) );
-
-   /* compute orbits */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeOrbitsSym(scip, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
-   cr_assert( norbits == 1 );
-   cr_assert( orbitbegins[0] == 0 );
-   cr_assert( orbitbegins[1] == 4 );
-   cr_assert( orbits[0] == 0 );
-   cr_assert( orbits[1] == 1 );
-   cr_assert( orbits[2] == 2 );
-   cr_assert( orbits[3] == 3 );
-   SCIPfreeBufferArray(scip, &orbitbegins);
-   SCIPfreeBufferArray(scip, &orbits);
-
-#ifdef SCIP_DEBUG
-   {
-      int i;
-      int j;
-
-      for (i = 0; i < nperms; ++i)
-      {
-         SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-         for (j = 0; j < npermvars; ++j)
-         {
-            if ( j == 0 )
-               SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
-            else
-               SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
-         }
-         SCIPinfoMessage(scip, NULL, ")\n");
-      }
-   }
-#endif
-
-   SCIP_CALL( SCIPreleaseVar(scip, &var1) );
-   SCIP_CALL( SCIPreleaseVar(scip, &var2) );
-   SCIP_CALL( SCIPreleaseVar(scip, &var3) );
-   SCIP_CALL( SCIPreleaseVar(scip, &var4) );
-}
-
-
-/* TEST 6 */
-Test(test_compute_symmetry, basic6, .description = "compute symmetry for a simple example with additional bounddisjunctions")
+/** simple example with 6 variables and 3 bounddisjunction constraints */
+static
+void exampleBounddisjunction(
+   SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
+   )
 {
    SCIP_VAR* var1;
    SCIP_VAR* var2;
    SCIP_VAR* var3;
    SCIP_VAR* var4;
    SCIP_VAR* var5;
+   SCIP_VAR* var6;
    SCIP_CONS* cons;
-   SCIP_VAR* vars[3];
-   SCIP_Real vals[3];
-   SCIP_BOUNDTYPE boundtypes[2];
-   SCIP_Real bounds[2];
+   SCIP_VAR* vars[2];
+   SCIP_Real vals[2];
+   SCIP_BOUNDTYPE btypes[2];
    SCIP_VAR** permvars;
    int** perms;
    int* orbits;
    int* orbitbegins;
+   int* components;
+   int* componentbegins;
+   int* vartocomponent;
+   int ncomponents;
    int norbits;
    int npermvars;
    int nperms;
+   int permlen;
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
       return;
 
    /* setup problem:
-    * min x1 + x2 + x3 + x4
-    *     x1 + x2           + x5 =  3
-    *               x3 + x4 + x5 =  3
-    *    2x1 +           x4      <= 2
-    *         2x2 + x3           <= 2
-    *    BD(x5 <= 1, x5 >= 3)
-    *     x1, ..., x4 binary, x5 continuous
+    * min x1 - x2 + x3 - x4 + x5 - x6
+    *     BD(x1 <= -1, x2 >= 1)
+    *     BD(x3 <= 7, x4 >= 9)
+    *     BD(x5 <= -1, x6 >= 1)
     */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "basic5"));
+   SCIP_CALL( SCIPcreateProbBasic(scip, "BD"));
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", -10, 10, 1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, var1) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", -10, 10, -1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, var2) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", -10, 10, 1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, var3) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var4, "x4", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var4, "x4", -10, 10, -1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, var4) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &var5, "x5", 0.0, 5.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var5, "x5", -10, 10, 1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, var5) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var6, "x6", -10, 10, -1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var6) );
 
    vars[0] = var1;
    vars[1] = var2;
-   vars[2] = var5;
-   vals[0] = 1.0;
+   vals[0] = -1.0;
    vals[1] = 1.0;
-   vals[2] = 1.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "e1", 3, vars, vals, 3.0, 3.0) );
+   btypes[0] = SCIP_BOUNDTYPE_UPPER;
+   btypes[1] = SCIP_BOUNDTYPE_LOWER;
+   SCIP_CALL( SCIPcreateConsBasicBounddisjunction(scip, &cons, "c1", 2, vars, btypes, vals) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    vars[0] = var3;
    vars[1] = var4;
-   vars[2] = var5;
-   vals[0] = 1.0;
-   vals[1] = 1.0;
-   vals[2] = 1.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "e2", 3, vars, vals, 3.0, 3.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   vars[0] = var1;
-   vars[1] = var4;
-   vals[0] = 2.0;
-   vals[1] = 1.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "i1", 2, vars, vals, -SCIPinfinity(scip), 2.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   vars[0] = var2;
-   vars[1] = var3;
-   vals[0] = 2.0;
-   vals[1] = 1.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "i2", 2, vars, vals, -SCIPinfinity(scip), 2.0) );
+   vals[0] = 7.0;
+   vals[1] = 9.0;
+   SCIP_CALL( SCIPcreateConsBasicBounddisjunction(scip, &cons, "c2", 2, vars, btypes, vals) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    vars[0] = var5;
-   vars[1] = var5;
-   boundtypes[0] = SCIP_BOUNDTYPE_UPPER;
-   boundtypes[1] = SCIP_BOUNDTYPE_LOWER;
-   bounds[0] = 1.0;
-   bounds[1] = 3.0;
-   SCIP_CALL( SCIPcreateConsBasicBounddisjunction(scip, &cons, "d1", 2, vars, boundtypes, bounds) );
+   vars[1] = var6;
+   vals[0] = -1.0;
+   vals[1] = 1.0;
+   SCIP_CALL( SCIPcreateConsBasicBounddisjunction(scip, &cons, "c3", 2, vars, btypes, vals) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
 
    /* turn off presolving in order to avoid having trivial problem afterwards */
    SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
+   /* turn on checking of symmetries */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
+
    /* turn off subgroup detection */
    SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
+
+   /* general symmetry detection */
+   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+
+   if ( detectsignedperms )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      permlen = 12;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      permlen = 6;
+   }
 
    /* presolve problem (symmetry will be available afterwards) */
    SCIP_CALL( SCIPpresolve(scip) );
 
-#ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPprintTransProblem(scip, NULL, "cip", FALSE) );
-#endif
-
    /* get symmetry */
    SCIP_CALL( SCIPgetSymmetry(scip,
          &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
-         NULL, NULL, NULL, NULL) );
+         &components, &componentbegins, &vartocomponent, &ncomponents) );
+
+   if ( detectsignedperms )
+   {
+      cr_assert( nperms == 2 );
+      cr_assert( ncomponents == 1 );
+      cr_assert( vartocomponent[0] == vartocomponent[1] );
+      cr_assert( vartocomponent[1] == vartocomponent[4] );
+      cr_assert( vartocomponent[4] == vartocomponent[5] );
+      cr_assert( vartocomponent[2] == -1 );
+      cr_assert( vartocomponent[3] == -1 );
+      cr_assert( componentbegins[0] == 0 );
+      cr_assert( componentbegins[1] == 2 );
+   }
+   else
+   {
+      cr_assert( nperms == 1 );
+      cr_assert( ncomponents == 1 );
+      cr_assert( vartocomponent[0] == vartocomponent[1] );
+      cr_assert( vartocomponent[1] == vartocomponent[4] );
+      cr_assert( vartocomponent[4] == vartocomponent[5] );
+      cr_assert( vartocomponent[2] == -1 );
+      cr_assert( vartocomponent[3] == -1 );
+      cr_assert( componentbegins[0] == 0 );
+      cr_assert( componentbegins[1] == 1 );
+   }
 
    /* compute orbits */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeOrbitsSym(scip, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
-   cr_assert( nperms == 1 );
-   cr_assert( norbits == 2 );
-   cr_assert( orbitbegins[0] == 0 );
-   cr_assert( orbitbegins[1] == 2 );
-   cr_assert( orbits[0] == 0 );
-   cr_assert( orbits[1] == 1 );
-   cr_assert( orbits[2] == 2 );
-   cr_assert( orbits[3] == 3 );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
+   SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
+         perms, nperms, orbits, orbitbegins, &norbits) );
+   if ( detectsignedperms )
+   {
+      cr_assert( norbits == 2 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 4 );
+      cr_assert( orbitbegins[2] == 8 );
+   }
+   else
+   {
+      cr_assert( norbits == 2 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 2 );
+      cr_assert( orbitbegins[2] == 4 );
+   }
    SCIPfreeBufferArray(scip, &orbitbegins);
    SCIPfreeBufferArray(scip, &orbits);
-
-#ifdef SCIP_DEBUG
-   {
-      int i;
-      int j;
-
-      for (i = 0; i < nperms; ++i)
-      {
-         SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-         for (j = 0; j < npermvars; ++j)
-         {
-            if ( j == 0 )
-               SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
-            else
-               SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
-         }
-         SCIPinfoMessage(scip, NULL, ")\n");
-      }
-   }
-#endif
 
    SCIP_CALL( SCIPreleaseVar(scip, &var1) );
    SCIP_CALL( SCIPreleaseVar(scip, &var2) );
    SCIP_CALL( SCIPreleaseVar(scip, &var3) );
    SCIP_CALL( SCIPreleaseVar(scip, &var4) );
    SCIP_CALL( SCIPreleaseVar(scip, &var5) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var6) );
 }
 
-/* TEST 7 (subgroups) */
-Test(test_compute_symmetry, subgroups1, .description = "detect symmetric subgroups for artificial propdata")
+/** simple example with 4 variables and a cardinality constraint */
+static
+void exampleCardinality(
+   SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
+   )
 {
-   SCIP_PROPDATA propdata;
-   SCIP_VAR* dummyvar;
-   SCIP_VAR* permvars[10];
-   unsigned componentblocked = FALSE;
-   int* graphcomponents;
-   int* graphcompbegins;
-   int* compcolorbegins;
-   int* usedperms;
-   int* perms[6];
-   SCIP_Shortbool permused[6] = {FALSE};
-   int permorder1[6] = {0,1,2,3,4,5};
-   int permorder2[6] = {2,3,4,5,0,1};
-   int permorder3[6] = {5,0,1,2,3,4};
-   int perm1[10] = {1,0,2,4,3,5,6,7,8,9};
-   int perm2[10] = {0,2,1,3,5,4,6,7,8,9};
-   int perm3[10] = {0,1,2,3,4,5,7,6,8,9};
-   int perm4[10] = {0,1,2,3,4,5,6,8,7,9};
-   int perm5[10] = {0,1,2,3,4,5,6,7,9,8};
-   int perm6[10] = {6,7,2,8,9,5,0,1,3,4};
-   int components[6] = {0,1,2,3,4,5};
-   int componentbegins[2] = {0,6};
-   int expectedcomps[10] = {0,1,2,3,4,5,6,7,8,9};
-   int expectedcompbegins[4] = {0,3,6,10};
-   int expectedcolbegins[3] = {0,2,3};
-   int expectedcomps1[10] = {0,1,2,3,4,5,6,7,8,9};
-   int expectedcompbegins1[4] = {0,3,6,10};
-   int expectedcolbegins1[3] = {0,2,3};
-   int expectedcomps2[10] = {0,6,2,1,7,3,8,4,5,9};
-   int expectedcompbegins2[5] = {0,2,5,7,10};
-   int expectedcolbegins2[2] = {0,4};
-   int ngraphcomponents;
-   int ncompcolors;
-   int nusedperms;
-   int i;
-
-   SCIP_CALL( SCIPcreateProbBasic(scip, "subgroup1"));
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   SCIP_VAR* var3;
+   SCIP_VAR* var4;
+   SCIP_VAR* ind1;
+   SCIP_VAR* ind2;
+   SCIP_VAR* ind3;
+   SCIP_VAR* ind4;
+   SCIP_CONS* cons;
+   SCIP_VAR* vars[4];
+   SCIP_VAR* inds[4];
+   SCIP_Real vals[4];
+   SCIP_VAR** permvars;
+   int** perms;
+   int* orbits;
+   int* orbitbegins;
+   int* components;
+   int* componentbegins;
+   int* vartocomponent;
+   int ncomponents;
+   int norbits;
+   int npermvars;
+   int nperms;
+   int permlen;
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
       return;
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &dummyvar, "dummyvar", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   for (i = 0; i < 10; ++i)
-      permvars[i] = dummyvar;
+   /* setup problem:
+    * min x1 - x2 + x3 + x4
+    *     x1 - x2 + x3 + x4 >= 2
+    *     CARD(x1, x2, x3, x4) <= 3
+    */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "Card"));
 
-   perms[0] = perm1;
-   perms[1] = perm2;
-   perms[2] = perm3;
-   perms[3] = perm4;
-   perms[4] = perm5;
-   perms[5] = perm6;
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var1) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", -SCIPinfinity(scip), SCIPinfinity(scip), -1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var2) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var3) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var4, "x4", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var4) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &ind1, "ind1", 0, 1, 0.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, ind1) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &ind2, "ind2", 0, 1, 0.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, ind2) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &ind3, "ind3", 0, 1, 0.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, ind3) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &ind4, "ind4", 0, 1, 0.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, ind4) );
 
-   propdata.npermvars = 10;
-   propdata.nperms = 6;
-   propdata.perms = perms;
-   propdata.ncomponents = 1;
-   propdata.components = components;
-   propdata.componentbegins = componentbegins;
-   propdata.componentblocked = &componentblocked;
-   propdata.computedsymmetry = TRUE;
-   propdata.permvars = permvars;
+   vars[0] = var1;
+   vars[1] = var2;
+   vars[2] = var3;
+   vars[3] = var4;
+   vals[0] = 1.0;
+   vals[1] = -1.0;
+   vals[2] = 1.0;
+   vals[3] = 1.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "c1", 4, vars, vals, 2.0, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, 6) );
+   inds[0] = ind1;
+   inds[1] = ind2;
+   inds[2] = ind3;
+   inds[3] = ind4;
+   SCIP_CALL( SCIPcreateConsBasicCardinality(scip, &cons, "c2", 4, vars, 3, inds, NULL) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* check canonical order */
-   for (i = 0; i < 6; ++i)
-      permused[i] = FALSE;
-   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder1, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
+   /* turn off presolving in order to avoid having trivial problem afterwards */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   cr_assert( graphcomponents != NULL );
-   cr_assert( graphcompbegins != NULL );
-   cr_assert( compcolorbegins != NULL );
-   cr_assert( nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms );
-   cr_assert( ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents );
-   cr_assert( ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors );
+   /* turn on checking of symmetries */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
 
-   checkIntArraysEqual(expectedcomps, graphcomponents, 10, "components");
-   checkIntArraysEqual(expectedcompbegins, graphcompbegins, ngraphcomponents, "compbegins");
-   checkIntArraysEqual(expectedcolbegins, compcolorbegins, ncompcolors, "colorbegins");
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
 
-   SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
+   /* general symmetry detection */
+   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
 
-   /* check different order */
-   for (i = 0; i < 6; ++i)
-      permused[i] = FALSE;
-   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder2, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
+   if ( detectsignedperms )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      permlen = 16;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      permlen = 8;
+   }
 
-   cr_assert( graphcomponents != NULL );
-   cr_assert( graphcompbegins != NULL );
-   cr_assert( compcolorbegins != NULL );
-   cr_assert( nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms );
-   cr_assert( ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents );
-   cr_assert( ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors );
+   /* presolve problem (symmetry will be available afterwards) */
+   SCIP_CALL( SCIPpresolve(scip) );
 
-   checkIntArraysEqual(expectedcomps1, graphcomponents, 10, "components");
-   checkIntArraysEqual(expectedcompbegins1, graphcompbegins, ngraphcomponents, "compbegins");
-   checkIntArraysEqual(expectedcolbegins1, compcolorbegins, ncompcolors, "colorbegins");
+   /* get symmetry */
+   SCIP_CALL( SCIPgetSymmetry(scip,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+         &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
+   if ( detectsignedperms )
+   {
+      cr_assert( nperms == 3 );
+      cr_assert( ncomponents == 1 );
+      cr_assert( vartocomponent[0] == 0 );
+      cr_assert( vartocomponent[1] == 0 );
+      cr_assert( vartocomponent[2] == 0 );
+      cr_assert( vartocomponent[3] == 0 );
+      cr_assert( vartocomponent[4] == 0 );
+      cr_assert( vartocomponent[5] == 0 );
+      cr_assert( vartocomponent[6] == 0 );
+      cr_assert( vartocomponent[7] == 0 );
+   }
+   else
+   {
+      cr_assert( nperms == 2 );
+      cr_assert( ncomponents == 1 );
+      cr_assert( vartocomponent[0] == vartocomponent[2] );
+      cr_assert( vartocomponent[2] == vartocomponent[3] );
+      cr_assert( vartocomponent[1] == -1 );
+      cr_assert( componentbegins[0] == 0 );
+      cr_assert( componentbegins[1] == 2 );
+   }
 
-   /* check order that leads to trivial subgroup */
-   for (i = 0; i < 6; ++i)
-      permused[i] = FALSE;
-   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder3, 6, 0, &graphcomponents, &graphcompbegins,
-         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
+   /* compute orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
+   SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
+         perms, nperms, orbits, orbitbegins, &norbits) );
+   if ( detectsignedperms )
+   {
+      cr_assert( norbits == 4 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 4 );
+      cr_assert( orbitbegins[2] == 8 );
+      cr_assert( orbitbegins[3] == 12 );
+      cr_assert( orbitbegins[4] == 16 );
+   }
+   else
+   {
+      cr_assert( norbits == 2 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 3 );
+      cr_assert( orbitbegins[2] == 6 );
+   }
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
 
-   cr_assert( graphcomponents != NULL );
-   cr_assert( graphcompbegins != NULL );
-   cr_assert( compcolorbegins != NULL );
-   cr_assert( nusedperms == 2, "expected 2 used permutations, but got %d\n", nusedperms );
-   cr_assert( ngraphcomponents == 4, "expected 4 graph components, but got %d\n", ngraphcomponents );
-   cr_assert( ncompcolors == 1, "expected 1 component colors, but got %d\n", ncompcolors );
-
-   checkIntArraysEqual(expectedcomps2, graphcomponents, 10, "components");
-   checkIntArraysEqual(expectedcompbegins2, graphcompbegins, ngraphcomponents, "compbegins");
-   checkIntArraysEqual(expectedcolbegins2, compcolorbegins, ncompcolors, "colorbegins");
-
-   SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
-   SCIPfreeBufferArray(scip, &usedperms);
-   SCIP_CALL( SCIPreleaseVar(scip, &dummyvar) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var2) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var3) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var4) );
+   SCIP_CALL( SCIPreleaseVar(scip, &ind1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &ind2) );
+   SCIP_CALL( SCIPreleaseVar(scip, &ind3) );
+   SCIP_CALL( SCIPreleaseVar(scip, &ind4) );
 }
 
-/* TEST 8 (subgroups) */
-Test(test_compute_symmetry, subgroups2, .description = "detect symmetric subgroups for artificial propdata and different order")
+/** simple example with 6 variables and indicator constraints */
+static
+void exampleIndicator(
+   SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
+   )
 {
-   SCIP_PROPDATA propdata;
-   SCIP_VAR* dummyvar;
-   SCIP_VAR* permvars[10];
-   unsigned componentblocked = FALSE;
-   int* permorder;
-   int* graphcomponents;
-   int* graphcompbegins;
-   int* compcolorbegins;
-   int* usedperms;
-   int* perms[6];
-   SCIP_Shortbool permused[6] = {FALSE};
-   int perm1[10] = {0,2,1,3,5,4,6,7,8,9};
-   int perm2[10] = {0,1,2,3,4,5,7,6,8,9};
-   int perm3[10] = {0,1,2,3,4,5,6,8,7,9};
-   int perm4[10] = {6,7,0,8,9,5,2,1,3,4};
-   int perm5[10] = {1,0,2,4,3,5,6,7,8,9};
-   int perm6[10] = {0,1,2,3,4,5,6,7,9,8};
-   int components[6] = {0,1,2,3,4,5};
-   int componentbegins[2] = {0,6};
-   int expectedpermorder[6] = {5,1,2,4,0,3};
-   int expectedcomps[10] = {0,1,2,3,4,5,6,7,8,9};
-   int expectedcompbegins[4] = {0,3,6,10};
-   int expectedcolbegins[3] = {0,2,3};
-   int ngraphcomponents;
-   int ncompcolors;
-   int ntwocycleperms;
-   int nusedperms;
-   int i;
-
-   SCIP_CALL( SCIPcreateProbBasic(scip, "subgroup2"));
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   SCIP_VAR* var3;
+   SCIP_VAR* var4;
+   SCIP_VAR* bin1;
+   SCIP_VAR* bin2;
+   SCIP_CONS* cons;
+   SCIP_VAR* vars[4];
+   SCIP_Real vals[4];
+   SCIP_VAR** permvars;
+   int** perms;
+   int* orbits;
+   int* orbitbegins;
+   int* components;
+   int* componentbegins;
+   int* vartocomponent;
+   int ncomponents;
+   int norbits;
+   int npermvars;
+   int nperms;
+   int permlen;
 
    /* skip test if no symmetry can be computed */
    if ( ! SYMcanComputeSymmetry() )
       return;
 
-   perms[0] = perm1;
-   perms[1] = perm2;
-   perms[2] = perm3;
-   perms[3] = perm4;
-   perms[4] = perm5;
-   perms[5] = perm6;
+   /* setup problem:
+    * min x1 - x2 + x3 - x4
+    *     b1 = 1 --> x1 - x2 <= 2
+    *     b2 = 1 --> x3 - x4 <= 2
+    *     x1 - x2 + x3 - x4 >= 0
+    */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "Indicator"));
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &dummyvar, "dummyvar", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
-   for (i = 0; i < 10; ++i)
-      permvars[i] = dummyvar;
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var1) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", -SCIPinfinity(scip), SCIPinfinity(scip), -1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var2) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var3) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var4, "x4", -SCIPinfinity(scip), SCIPinfinity(scip), -1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var4) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &bin1, "bin1", 0, 1, 0.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, bin1) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &bin2, "bin2", 0, 1, 0.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, bin2) );
 
-   propdata.npermvars = 10;
-   propdata.nperms = 6;
-   propdata.perms = perms;
-   propdata.ncomponents = 1;
-   propdata.components = components;
-   propdata.componentbegins = componentbegins;
-   propdata.componentblocked = &componentblocked;
-   propdata.computedsymmetry = TRUE;
-   propdata.permvars = permvars;
-   propdata.preferlessrows = TRUE;
+   vars[0] = var1;
+   vars[1] = var2;
+   vars[2] = var3;
+   vars[3] = var4;
+   vals[0] = 1.0;
+   vals[1] = -1.0;
+   vals[2] = 1.0;
+   vals[3] = -1.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "c1", 4, vars, vals, 0.0, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, 6) );
+   SCIP_CALL( SCIPcreateConsBasicIndicator(scip, &cons, "c2", bin1, 2, vars, vals, 2.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* check sorted order */
-   SCIP_CALL( SCIPallocBufferArray(scip, &permorder, 6) );
+   vars[0] = var3;
+   vars[1] = var4;
+   SCIP_CALL( SCIPcreateConsBasicIndicator(scip, &cons, "c3", bin2, 2, vars, vals, 2.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   for (i = 0; i < 6; ++i)
-      permorder[i] = i;
+   /* turn off presolving in order to avoid having trivial problem afterwards */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
 
-   SCIP_CALL( chooseOrderOfGenerators(scip, &propdata, 0, &permorder, &ntwocycleperms) );
-   cr_assert( ntwocycleperms == 5 );
+   /* turn on checking of symmetries */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
 
-   checkIntArraysEqual(expectedpermorder, permorder, 6, "permorder");
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
 
-   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder, ntwocycleperms, 0, &graphcomponents,
-         &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
+   /* general symmetry detection */
+   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
 
-   cr_assert( graphcomponents != NULL );
-   cr_assert( graphcompbegins != NULL );
-   cr_assert( compcolorbegins != NULL );
-   cr_assert( nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms );
-   cr_assert( ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents );
-   cr_assert( ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors );
+   /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
+   if ( detectsignedperms )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      permlen = 16;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      permlen = 8;
+   }
 
-   checkIntArraysEqual(expectedcomps, graphcomponents, 10, "components");
-   checkIntArraysEqual(expectedcompbegins, graphcompbegins, ngraphcomponents, "compbegins");
-   checkIntArraysEqual(expectedcolbegins, compcolorbegins, ncompcolors, "colorbegins");
+   /* presolve problem (symmetry will be available afterwards) */
+   SCIP_CALL( SCIPpresolve(scip) );
 
-   SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
-   SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
-   SCIPfreeBufferArray(scip, &permorder);
-   SCIPfreeBufferArray(scip, &usedperms);
-   SCIP_CALL( SCIPreleaseVar(scip, &dummyvar) );
+   /* get symmetry */
+   SCIP_CALL( SCIPgetSymmetry(scip,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+         &components, &componentbegins, &vartocomponent, &ncomponents) );
+
+   if( detectsignedperms )
+   {
+      cr_assert( nperms == 3 );
+   }
+   else
+   {
+      cr_assert( nperms == 1 );
+   }
+   cr_assert( ncomponents == 1 );
+   cr_assert( vartocomponent[0] == 0 );
+   cr_assert( vartocomponent[1] == 0 );
+   cr_assert( vartocomponent[2] == 0 );
+   cr_assert( vartocomponent[3] == 0 );
+   cr_assert( vartocomponent[4] == 0 );
+   cr_assert( vartocomponent[5] == 0 );
+   cr_assert( vartocomponent[6] == 0 );
+   cr_assert( vartocomponent[7] == 0 );
+
+   /* compute orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
+   SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
+         perms, nperms, orbits, orbitbegins, &norbits) );
+   if ( detectsignedperms )
+   {
+      int orbitlens[6];
+      int i;
+
+      cr_assert( norbits == 6 );
+
+      for (i = 0; i < 6; ++i)
+         orbitlens[i] = orbitbegins[i+1] - orbitbegins[i];
+      SCIPsortInt(orbitlens, 6);
+
+      cr_assert( orbitlens[0] == 2 );
+      cr_assert( orbitlens[1] == 2 );
+      cr_assert( orbitlens[2] == 2 );
+      cr_assert( orbitlens[3] == 2 );
+      cr_assert( orbitlens[4] == 4 );
+      cr_assert( orbitlens[5] == 4 );
+   }
+   else
+   {
+      cr_assert( norbits == 4 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 2 );
+      cr_assert( orbitbegins[2] == 4 );
+      cr_assert( orbitbegins[3] == 6 );
+      cr_assert( orbitbegins[4] == 8 );
+   }
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
+
+   SCIP_CALL( SCIPreleaseVar(scip, &var1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var2) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var3) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var4) );
+   SCIP_CALL( SCIPreleaseVar(scip, &bin1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &bin2) );
+}
+
+/** simple example with 4 variables and SOS1 constraints */
+static
+void exampleSOS1(
+   SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
+   )
+{
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   SCIP_VAR* var3;
+   SCIP_VAR* var4;
+   SCIP_CONS* cons;
+   SCIP_VAR* vars[4];
+   SCIP_Real vals[4];
+   SCIP_VAR** permvars;
+   int** perms;
+   int* orbits;
+   int* orbitbegins;
+   int* components;
+   int* componentbegins;
+   int* vartocomponent;
+   int ncomponents;
+   int norbits;
+   int npermvars;
+   int nperms;
+   int permlen;
+
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+      return;
+
+   /* setup problem:
+    * min x1 - x2 + x3 - x4
+    *     SOS1(x1,x2)
+    *     SOS1(X3,x4)
+    *     x1 - x2 + x3 - x4 >= 0
+    */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "SOS1"));
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var1) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", -SCIPinfinity(scip), SCIPinfinity(scip), -1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var2) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var3) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var4, "x4", -SCIPinfinity(scip), SCIPinfinity(scip), -1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var4) );
+
+   vars[0] = var1;
+   vars[1] = var2;
+   vars[2] = var3;
+   vars[3] = var4;
+   vals[0] = 1.0;
+   vals[1] = -1.0;
+   vals[2] = 1.0;
+   vals[3] = -1.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "c1", 4, vars, vals, 0.0, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   SCIP_CALL( SCIPcreateConsBasicSOS1(scip, &cons, "c2", 2, vars, NULL) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   vars[0] = var3;
+   vars[1] = var4;
+   SCIP_CALL( SCIPcreateConsBasicSOS1(scip, &cons, "c3", 2, vars, NULL) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* turn off presolving in order to avoid having trivial problem afterwards */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+
+   /* turn on checking of symmetries */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
+
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
+
+   /* general symmetry detection */
+   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+
+   /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
+   if ( detectsignedperms )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      permlen = 8;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      permlen = 4;
+   }
+
+   /* presolve problem (symmetry will be available afterwards) */
+   SCIP_CALL( SCIPpresolve(scip) );
+
+   /* get symmetry */
+   SCIP_CALL( SCIPgetSymmetry(scip,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+         &components, &componentbegins, &vartocomponent, &ncomponents) );
+
+   {
+      int p;
+      int j;
+      for (p = 0; p < nperms; ++p)
+      {
+         SCIPinfoMessage(scip, NULL, "perm %d\n", p);
+         for (j = 0; j < permlen; ++j)
+            SCIPinfoMessage(scip, NULL, "%d -> %d\n", j, perms[p][j]);
+      }
+   }
+
+   if( detectsignedperms )
+   {
+      cr_assert( nperms == 2 );
+   }
+   else
+   {
+      cr_assert( nperms == 1 );
+   }
+   cr_assert( ncomponents == 1 );
+   cr_assert( vartocomponent[0] == 0 );
+   cr_assert( vartocomponent[1] == 0 );
+   cr_assert( vartocomponent[2] == 0 );
+   cr_assert( vartocomponent[3] == 0 );
+
+   /* compute orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
+   SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
+         perms, nperms, orbits, orbitbegins, &norbits) );
+   if ( detectsignedperms )
+   {
+      cr_assert( norbits == 2 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 4 );
+      cr_assert( orbitbegins[2] == 8 );
+   }
+   else
+   {
+      cr_assert( norbits == 2 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 2 );
+      cr_assert( orbitbegins[2] == 4 );
+   }
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
+
+   SCIP_CALL( SCIPreleaseVar(scip, &var1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var2) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var3) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var4) );
+}
+
+/** simple example with 6 variables and SOS2 constraints */
+static
+void exampleSOS2(
+   SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
+   )
+{
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   SCIP_VAR* var3;
+   SCIP_VAR* var4;
+   SCIP_VAR* var5;
+   SCIP_VAR* var6;
+   SCIP_CONS* cons;
+   SCIP_VAR* vars[6];
+   SCIP_Real vals[6];
+   SCIP_VAR** permvars;
+   int** perms;
+   int* orbits;
+   int* orbitbegins;
+   int* components;
+   int* componentbegins;
+   int* vartocomponent;
+   int ncomponents;
+   int norbits;
+   int npermvars;
+   int nperms;
+   int permlen;
+
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+      return;
+
+   /* setup problem:
+    * min x1 + x2 + x3 - x4 - x5 - x6
+    *     SOS2(x1,x2,x3)
+    *     SOS2(X4,x5,x6)
+    *     x1 + x2 + x3 - x4 -x5 -x6 >= 0
+    */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "SOS2"));
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var1) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var2) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var3) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var4, "x4", -SCIPinfinity(scip), SCIPinfinity(scip), -1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var4) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var5, "x5", -SCIPinfinity(scip), SCIPinfinity(scip), -1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var5) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var6, "x6", -SCIPinfinity(scip), SCIPinfinity(scip), -1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var6) );
+
+   vars[0] = var1;
+   vars[1] = var2;
+   vars[2] = var3;
+   vars[3] = var4;
+   vars[4] = var5;
+   vars[5] = var6;
+   vals[0] = 1.0;
+   vals[1] = 1.0;
+   vals[2] = 1.0;
+   vals[3] = -1.0;
+   vals[4] = -1.0;
+   vals[5] = -1.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "c1", 6, vars, vals, 0.0, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   SCIP_CALL( SCIPcreateConsBasicSOS2(scip, &cons, "c2", 3, vars, NULL) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   vars[0] = var4;
+   vars[1] = var5;
+   vars[2] = var6;
+   SCIP_CALL( SCIPcreateConsBasicSOS2(scip, &cons, "c3", 3, vars, NULL) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* turn off presolving in order to avoid having trivial problem afterwards */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+
+   /* turn on checking of symmetries */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
+
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
+
+   /* general symmetry detection */
+   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+
+   /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
+   if ( detectsignedperms )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      permlen = 12;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      permlen = 6;
+   }
+
+   /* presolve problem (symmetry will be available afterwards) */
+   SCIP_CALL( SCIPpresolve(scip) );
+
+   /* get symmetry */
+   SCIP_CALL( SCIPgetSymmetry(scip,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+         &components, &componentbegins, &vartocomponent, &ncomponents) );
+
+   if( detectsignedperms )
+   {
+      cr_assert( nperms == 3 );
+      cr_assert( ncomponents == 1 );
+      cr_assert( vartocomponent[0] == 0 );
+      cr_assert( vartocomponent[1] == 0 );
+      cr_assert( vartocomponent[2] == 0 );
+      cr_assert( vartocomponent[3] == 0 );
+      cr_assert( vartocomponent[4] == 0 );
+      cr_assert( vartocomponent[5] == 0 );
+   }
+   else
+   {
+      cr_assert( nperms == 2 );
+      cr_assert( ncomponents == 2 );
+      cr_assert( vartocomponent[0] == 0 );
+      cr_assert( vartocomponent[1] == -1 );
+      cr_assert( vartocomponent[2] == 0 );
+      cr_assert( vartocomponent[3] == 1 );
+      cr_assert( vartocomponent[4] == -1 );
+      cr_assert( vartocomponent[5] == 1 );
+   }
+
+   /* compute orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
+   SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
+         perms, nperms, orbits, orbitbegins, &norbits) );
+   if ( detectsignedperms )
+   {
+      int orbitlens[4];
+      int i;
+
+      cr_assert( norbits == 4 );
+
+      for (i = 0; i < 4; ++i)
+         orbitlens[i] = orbitbegins[i+1] - orbitbegins[i];
+      SCIPsortInt(orbitlens, 4);
+
+      cr_assert( orbitlens[0] == 2 );
+      cr_assert( orbitlens[1] == 2 );
+      cr_assert( orbitlens[2] == 4 );
+      cr_assert( orbitlens[3] == 4 );
+   }
+   else
+   {
+      cr_assert( norbits == 2 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 2 );
+      cr_assert( orbitbegins[2] == 4 );
+   }
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
+
+   SCIP_CALL( SCIPreleaseVar(scip, &var1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var2) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var3) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var4) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var5) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var6) );
+}
+
+/* TEST SUITE */
+TestSuite(test_compute_symmetry, .init = setup, .fini = teardown);
+
+/* TEST 1 */
+Test(test_compute_symmetry, basic1, .description = "compute permutation symmetries for a simple example with 4 variables and 2 linear constraints")
+{
+   simpleExample1(FALSE);
+}
+
+/* TEST 2 */
+Test(test_compute_symmetry, basic2, .description = "compute signed symmetries for a simple example with 4 variables and 2 linear constraints")
+{
+   simpleExample1(TRUE);
+}
+
+/* TEST 3 */
+Test(test_compute_symmetry, basic3, .description = "compute permutation symmetry for a simple example with 4 variables and 4 linear constraints")
+{
+   simpleExample2(FALSE);
 }
 
 /* TEST 4 */
-Test(test_compute_symmetry, expr1, .description = "compute symmetry for a simple example with 4 variables and 2 nonlinear constraints - before presolving")
+Test(test_compute_symmetry, basic4, .description = "compute signed permutation symmetry for a simple example with 4 variables and 4 linear constraints")
 {
-   SCIP_VAR* x;
-   SCIP_VAR* y;
-   SCIP_VAR* z;
-   SCIP_VAR* w;
-   SCIP_CONS* cons;
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_VAR** permvars;
-   SCIP_EXPR* xexpr;
-   SCIP_EXPR* yexpr;
-   SCIP_EXPR* zexpr;
-   SCIP_EXPR* wexpr;
-   SCIP_EXPR** powexprs1;
-   SCIP_EXPR** powexprs2;
-   SCIP_EXPR* sumexpr1;
-   SCIP_EXPR* sumexpr2;
-   int** perms;
-   int* orbits;
-   int* orbitbegins;
-   int norbits;
-   int npermvars;
-   int nperms;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &powexprs1, 2) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &powexprs2, 2) );
-
-   /* get nonlinear conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert(conshdlr != NULL);
-
-   /* skip test if no symmetry can be computed */
-   if( !SYMcanComputeSymmetry() )
-      return;
-
-   /* setup problem:
-    * min x1 + x2 + x3 + x4
-    *     x1^2 + x2^2               =  1
-    *                   x3^2 + x4^2 =  1
-    */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "expr1"));
-
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, x) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, y) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, z) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, w) );
-
-   SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &yexpr, y, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &zexpr, z, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &wexpr, w, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[0], xexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[1], yexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[0], zexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[1], wexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr1, 2, powexprs1, NULL, 0, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr2, 2, powexprs2, NULL, 0, NULL, NULL) );
-
-   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e1", sumexpr1, 1.0, 1.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e2", sumexpr2, 1.0, 1.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* make sure that symmetry is computed for all variable types */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 4) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/enforcecomputesymmetry", TRUE) );
-
-   /* turn off presolving in order to avoid having trivial problem afterwards */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
-
-   /* presolve problem (symmetry will be available afterwards) */
-   SCIP_CALL( SCIPpresolve(scip) );
-
-   /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
-         NULL, NULL, NULL, NULL) );
-
-   cr_assert( nperms == 3, "number of permutations: %d, but expected: 3", nperms );
-
-   /* compute orbits */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeOrbitsSym(scip, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
-   cr_assert( norbits == 1 );
-   cr_assert( orbitbegins[0] == 0 );
-   cr_assert( orbitbegins[1] == 4 );
-   cr_assert( orbits[0] == 0 );
-   cr_assert( orbits[1] == 1 );
-   cr_assert( orbits[2] == 2 );
-   cr_assert( orbits[3] == 3 );
-   SCIPfreeBufferArray(scip, &orbitbegins);
-   SCIPfreeBufferArray(scip, &orbits);
-
-#ifdef SCIP_DEBUG
-   {
-         int i;
-         int j;
-
-         for( i = 0; i < nperms; ++i )
-         {
-            SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-            for( j = 0; j < npermvars; ++j )
-            {
-               if( j == 0 )
-                  SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
-               else
-                  SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
-            }
-            SCIPinfoMessage(scip, NULL, ")\n");
-         }
-      }
-#endif
-
-   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr2) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr1) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[1]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[0]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[1]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[0]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &wexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &zexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
-   SCIP_CALL( SCIPreleaseVar(scip, &w) );
-   SCIP_CALL( SCIPreleaseVar(scip, &z) );
-   SCIP_CALL( SCIPreleaseVar(scip, &y) );
-   SCIP_CALL( SCIPreleaseVar(scip, &x) );
-
-   SCIPfreeBufferArray(scip, &powexprs1);
-   SCIPfreeBufferArray(scip, &powexprs2);
+   simpleExample2(TRUE);
 }
 
 /* TEST 5 */
-Test(test_compute_symmetry, expr2, .description = "compute symmetry for a more complex example with 5 variables and 3 nonlinear constraints - before presolving")
+Test(test_compute_symmetry, basic5, .description = "compute permutation symmetries for a simple example with 5 variables and 2 linear constraints")
 {
-   SCIP_VAR* x;
-   SCIP_VAR* y;
-   SCIP_VAR* z;
-   SCIP_VAR* w;
-   SCIP_VAR* v;
-   SCIP_CONS* cons;
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_VAR** permvars;
-   SCIP_EXPR* xexpr;
-   SCIP_EXPR* yexpr;
-   SCIP_EXPR* zexpr;
-   SCIP_EXPR* wexpr;
-   SCIP_EXPR* vexpr;
-   SCIP_EXPR** powexprs1;
-   SCIP_EXPR** powexprs2;
-   SCIP_EXPR* sumexpr1;
-   SCIP_EXPR* sumexpr2;
-   SCIP_EXPR* sumexpr3;
-   SCIP_EXPR* expexpr1;
-   SCIP_EXPR* expexpr2;
-   SCIP_EXPR* expexpr3;
-   SCIP_Real vals1[5] = {1,1,1,1,-1};
-   SCIP_Real vals2[5] = {5,5,5,5,5};
-   int** perms;
-   int* orbits;
-   int* orbitbegins;
-   int norbits;
-   int npermvars;
-   int nperms;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &powexprs1, 5) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &powexprs2, 5) );
-
-   /* get nonlinear conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert(conshdlr != NULL);
-
-   /* skip test if no symmetry can be computed */
-   if ( ! SYMcanComputeSymmetry() )
-      return;
-
-   /* setup problem:
-   * min x1 + x2 + 2x3 + x4 + x5
-   *  0 <=  exp(  x1^2 +  x2^3 +  x3^2 +  x4^2 +  x5^2 )  <=  1
-   *  0 <=  exp(  x1^2 +  x2^2 +  x3^2 +  x4^2 -  x5^2 )  <=  1
-   *  0 <=  exp( 5x1^2 + 5x2^2 + 5x3^2 + 5x4^2 + 5x5^2 )  <=  1
-   */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "expr2"));
-
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, x) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, y) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 2.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, z) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, w) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &v, "v", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, v) );
-
-   SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &yexpr, y, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &zexpr, z, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &wexpr, w, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &vexpr, v, NULL, NULL) );
-
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[0], xexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[1], yexpr, 3, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[2], zexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[3], wexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[4], vexpr, 2, NULL, NULL) );
-
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[0], xexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[1], yexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[2], zexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[3], wexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[4], vexpr, 2, NULL, NULL) );
-
-   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr1, 5, powexprs1, NULL, 0, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr2, 5, powexprs2, vals1, 0, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr3, 5, powexprs2, vals2, 0, NULL, NULL) );
-
-   SCIP_CALL( SCIPcreateExprExp(scip, &expexpr1, sumexpr1, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprExp(scip, &expexpr2, sumexpr2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprExp(scip, &expexpr3, sumexpr3, NULL, NULL) );
-
-   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e1", expexpr1, 0.0, 1.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e2", expexpr2, 0.0, 1.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e3", expexpr3, 0.0, 1.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* make sure that symmetry is computed for all variable types */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 4) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/enforcecomputesymmetry", TRUE) );
-
-   /* turn off presolving in order to avoid having trivial problem afterwards */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
-
-   /* presolve problem (symmetry will be available afterwards) */
-   SCIP_CALL( SCIPpresolve(scip) );
-
-   /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
-         NULL, NULL, NULL, NULL) );
-
-   cr_assert( nperms == 1, "number of permutations: %d, but expected: 1", nperms );
-
-   /* compute orbits */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeOrbitsSym(scip, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
-   cr_assert( norbits == 1 );
-   cr_assert( orbitbegins[0] == 0 );
-   cr_assert( orbitbegins[1] == 2 );
-   cr_assert( orbits[0] == 0 );
-   cr_assert( orbits[1] == 3 );
-   SCIPfreeBufferArray(scip, &orbitbegins);
-   SCIPfreeBufferArray(scip, &orbits);
-
-#ifdef SCIP_DEBUG
-   {
-      int i;
-      int j;
-
-      for (i = 0; i < nperms; ++i)
-      {
-         SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-         for (j = 0; j < npermvars; ++j)
-         {
-            if ( j == 0 )
-               SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
-            else
-               SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
-         }
-         SCIPinfoMessage(scip, NULL, ")\n");
-      }
-   }
-#endif
-
-   SCIP_CALL( SCIPreleaseExpr(scip, &expexpr3) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &expexpr2) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &expexpr1) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr3) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr2) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr1) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[4]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[3]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[2]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[1]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[0]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[4]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[3]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[2]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[1]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[0]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &vexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &wexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &zexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
-   SCIP_CALL( SCIPreleaseVar(scip, &v) );
-   SCIP_CALL( SCIPreleaseVar(scip, &w) );
-   SCIP_CALL( SCIPreleaseVar(scip, &z) );
-   SCIP_CALL( SCIPreleaseVar(scip, &y) );
-   SCIP_CALL( SCIPreleaseVar(scip, &x) );
-
-   SCIPfreeBufferArray(scip, &powexprs1);
-   SCIPfreeBufferArray(scip, &powexprs2);
+   simpleExample3(FALSE);
 }
 
 /* TEST 6 */
-Test(test_compute_symmetry, expr3, .description = "compute symmetry for a simple example with 4 variables, 2 nonlinear constraints and 1 linear constaint - before presolving")
+Test(test_compute_symmetry, basic6, .description = "compute signed permutation symmetries for a simple example with 5 variables and 2 linear constraints")
 {
-   SCIP_VAR* x;
-   SCIP_VAR* y;
-   SCIP_VAR* z;
-   SCIP_VAR* w;
-   SCIP_VAR* vars[4];
-   SCIP_Real vals[4];
-   SCIP_CONS* cons;
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_VAR** permvars;
-   SCIP_EXPR* xexpr;
-   SCIP_EXPR* yexpr;
-   SCIP_EXPR* zexpr;
-   SCIP_EXPR* wexpr;
-   SCIP_EXPR** powexprs1;
-   SCIP_EXPR** powexprs2;
-   SCIP_EXPR* sumexpr1;
-   SCIP_EXPR* sumexpr2;
-   int** perms;
-   int* orbits;
-   int* orbitbegins;
-   int norbits;
-   int npermvars;
-   int nperms;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &powexprs1, 2) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &powexprs2, 2) );
-
-   /* get nonlinear conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert(conshdlr != NULL);
-
-   /* skip test if no symmetry can be computed */
-   if ( ! SYMcanComputeSymmetry() )
-      return;
-
-   /* setup problem:
-    * min x1 + x2 + x3 + x4
-    *           x1^2 + x2^2               =  1
-    *                        x3^2 + x4^2  =  1
-    * -inf <=   x1 + 2x2 + x3 + 2x4      <=  2
-    */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "expr1"));
-
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, x) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, y) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, z) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, w) );
-
-   SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &yexpr, y, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &zexpr, z, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &wexpr, w, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[0], xexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs1[1], yexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[0], zexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexprs2[1], wexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr1, 2, powexprs1, NULL, 0, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr2, 2, powexprs2, NULL, 0, NULL, NULL) );
-
-   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e1", sumexpr1, 1.0, 1.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e2", sumexpr2, 1.0, 1.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   vars[0] = x;
-   vars[1] = y;
-   vars[2] = z;
-   vars[3] = w;
-   vals[0] = 1.0;
-   vals[1] = 2.0;
-   vals[2] = 1.0;
-   vals[3] = 2.0;
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "i1", 4, vars, vals, -SCIPinfinity(scip), 2.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* make sure that symmetry is computed for all variable types */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 4) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/enforcecomputesymmetry", TRUE) );
-
-   /* turn off presolving in order to avoid having trivial problem afterwards */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
-
-   /* presolve problem (symmetry will be available afterwards) */
-   SCIP_CALL( SCIPpresolve(scip) );
-
-   /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
-         NULL, NULL, NULL, NULL) );
-
-   cr_assert( nperms == 1, "number of permutations: %d, but expected: 1", nperms );
-
-   /* compute orbits */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeOrbitsSym(scip, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
-   cr_assert( norbits == 2 );
-   cr_assert( orbitbegins[0] == 0 );
-   cr_assert( orbitbegins[1] == 2 );
-   cr_assert( orbitbegins[2] == 4 );
-   cr_assert( orbits[0] == 0 );
-   cr_assert( orbits[1] == 2 );
-   cr_assert( orbits[2] == 1 );
-   cr_assert( orbits[3] == 3 );
-   SCIPfreeBufferArray(scip, &orbitbegins);
-   SCIPfreeBufferArray(scip, &orbits);
-
-   #ifdef SCIP_DEBUG
-   {
-         int i;
-         int j;
-
-         for (i = 0; i < nperms; ++i)
-         {
-            SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-            for (j = 0; j < npermvars; ++j)
-            {
-               if ( j == 0 )
-                  SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
-               else
-                  SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
-            }
-            SCIPinfoMessage(scip, NULL, ")\n");
-         }
-      }
-   #endif
-
-   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr2) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr1) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[1]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs2[0]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[1]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexprs1[0]) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &wexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &zexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
-   SCIP_CALL( SCIPreleaseVar(scip, &w) );
-   SCIP_CALL( SCIPreleaseVar(scip, &z) );
-   SCIP_CALL( SCIPreleaseVar(scip, &y) );
-   SCIP_CALL( SCIPreleaseVar(scip, &x) );
-
-   SCIPfreeBufferArray(scip, &powexprs1);
-   SCIPfreeBufferArray(scip, &powexprs2);
+   simpleExample3(TRUE);
 }
 
-/* TEST 6 */
-Test(test_compute_symmetry, expr4, .description = "compute symmetry for a simple example with 4 variables and 3 nonlinear constraints - before presolving")
+/* TEST 7 */
+Test(test_compute_symmetry, special1, .description = "compute permutation symmetries for an example containing bounddisjunction constraints")
 {
-   SCIP_VAR* x;
-   SCIP_VAR* y;
-   SCIP_VAR* z;
-   SCIP_VAR* w;
-   SCIP_Real vals[2];
-   SCIP_CONS* cons;
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_VAR** permvars;
-   SCIP_EXPR** summands;
-   SCIP_EXPR* xexpr;
-   SCIP_EXPR* yexpr;
-   SCIP_EXPR* zexpr;
-   SCIP_EXPR* wexpr;
-   SCIP_EXPR* powexpr1;
-   SCIP_EXPR* powexpr2;
-   SCIP_EXPR* prodexpr;
-   SCIP_EXPR* sumexpr1;
-   SCIP_EXPR* sumexpr2;
-   SCIP_EXPR* sumexpr3;
-   int** perms;
-   int* orbits;
-   int* orbitbegins;
-   int norbits;
-   int npermvars;
-   int nperms;
-   SCIP_Bool binvarsaffected;
+   exampleBounddisjunction(FALSE);
+}
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &summands, 3) );
+/* TEST 8 */
+Test(test_compute_symmetry, special2, .description = "compute signed permutation symmetries for an example containing bounddisjunction constraints")
+{
+   exampleBounddisjunction(TRUE);
+}
 
-   /* get nonlinear conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert(conshdlr != NULL);
+/* TEST 9 */
+Test(test_compute_symmetry, special3, .description = "compute permutation symmetries for an example containing cardinality constraints")
+{
+   exampleCardinality(FALSE);
+}
 
-   /* skip test if no symmetry can be computed */
-   if ( ! SYMcanComputeSymmetry() )
-      return;
+/* TEST 10 */
+Test(test_compute_symmetry, special4, .description = "compute signed permutation symmetries for an example containing cardinality constraints")
+{
+   exampleCardinality(TRUE);
+}
 
-   /* setup problem:
-    * min x1 + x2
-    *           x1^2 - 4x3                <=  0
-    *                        x2^2 - 4x4   <=  0
-    * x1*x2 + x1 + x2                     <=  1
-    */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "expr1"));
+/* TEST 11 */
+Test(test_compute_symmetry, special5, .description = "compute permutation symmetries for an example containing indicator constraints")
+{
+   exampleIndicator(FALSE);
+}
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 2.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, x) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 2.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, y) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, z) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPaddVar(scip, w) );
+/* TEST 12 */
+Test(test_compute_symmetry, special6, .description = "compute signed permutation symmetries for an example containing indicator constraints")
+{
+   exampleIndicator(TRUE);
+}
 
-   SCIP_CALL( SCIPcreateExprVar(scip, &xexpr, x, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &yexpr, y, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &zexpr, z, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprVar(scip, &wexpr, w, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexpr1, xexpr, 2, NULL, NULL) );
-   SCIP_CALL( SCIPcreateExprPow(scip, &powexpr2, yexpr, 2, NULL, NULL) );
-   summands[0] = xexpr;
-   summands[1] = yexpr;
-   SCIP_CALL( SCIPcreateExprProduct(scip, &prodexpr, 2, summands, 1, NULL, NULL) );
+/* TEST 13 */
+Test(test_compute_symmetry, special7, .description = "compute permutation symmetries for an example containing SOS1 constraints")
+{
+   exampleSOS1(FALSE);
+}
 
-   summands[0] = powexpr1;
-   summands[1] = zexpr;
-   vals[0] = 1.0;
-   vals[1] = -4.0;
-   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr1, 2, summands, vals, 0, NULL, NULL) );
+/* TEST 14 */
+Test(test_compute_symmetry, special8, .description = "compute signed permutation symmetries for an example containing SOS1 constraints")
+{
+   exampleSOS1(TRUE);
+}
 
-   summands[0] = powexpr2;
-   summands[1] = wexpr;
-   vals[0] = 1.0;
-   vals[1] = -4.0;
-   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr2, 2, summands, vals, 0, NULL, NULL) );
+/* TEST 15 */
+Test(test_compute_symmetry, special9, .description = "compute permutation symmetries for an example containing SOS2 constraints")
+{
+   exampleSOS2(FALSE);
+}
 
-   summands[0] = xexpr;
-   summands[1] = yexpr;
-   summands[2] = prodexpr;
-   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr3, 3, summands, NULL, 0, NULL, NULL) );
-
-   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e1", sumexpr1, -SCIPinfinity(scip), 0.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e2", sumexpr2, -SCIPinfinity(scip), 0.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "e3", sumexpr3, -SCIPinfinity(scip), 1.0) );
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   /* turn on checking of symmetries */
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
-
-   /* make sure that symmetry is computed for all variable types */
-   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 4) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/enforcecomputesymmetry", TRUE) );
-
-   /* turn off presolving in order to avoid having trivial problem afterwards */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
-
-   /* presolve problem (symmetry will be available afterwards) */
-   SCIP_CALL( SCIPpresolve(scip) );
-
-   /* get symmetry */
-   SCIP_CALL( SCIPgetSymmetry(scip,
-         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, &binvarsaffected,
-         NULL, NULL, NULL, NULL) );
-
-   cr_assert(!binvarsaffected);
-   cr_assert( nperms == 1, "number of permutations: %d, but expected: 1", nperms );
-
-   /* compute orbits */
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, npermvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, npermvars) );
-   SCIP_CALL( SCIPcomputeOrbitsSym(scip, permvars, npermvars, perms, nperms, orbits, orbitbegins, &norbits) );
-   cr_assert( norbits == 2 );
-   cr_assert( orbitbegins[0] == 0 );
-   cr_assert( orbitbegins[1] == 2 );
-   cr_assert( orbitbegins[2] == 4 );
-   cr_assert( orbits[0] == 0 );
-   cr_assert( orbits[1] == 1 );
-   cr_assert( orbits[2] == 2 );
-   cr_assert( orbits[3] == 3 );
-   SCIPfreeBufferArray(scip, &orbitbegins);
-   SCIPfreeBufferArray(scip, &orbits);
-
-#ifdef SCIP_DEBUG
-   {
-      int i;
-      int j;
-
-      for (i = 0; i < nperms; ++i)
-      {
-         SCIPinfoMessage(scip, NULL, "Permutation %d: (", i);
-         for (j = 0; j < npermvars; ++j)
-         {
-            if ( j == 0 )
-               SCIPinfoMessage(scip, NULL, "%d", perms[i][j]);
-            else
-               SCIPinfoMessage(scip, NULL, " %d", perms[i][j]);
-         }
-         SCIPinfoMessage(scip, NULL, ")\n");
-      }
-   }
-#endif
-
-   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr3) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr2) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr1) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &prodexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexpr2) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &powexpr1) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &wexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &zexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &xexpr) );
-   SCIP_CALL( SCIPreleaseVar(scip, &w) );
-   SCIP_CALL( SCIPreleaseVar(scip, &z) );
-   SCIP_CALL( SCIPreleaseVar(scip, &y) );
-   SCIP_CALL( SCIPreleaseVar(scip, &x) );
-
-   SCIPfreeBufferArray(scip, &summands);
+/* TEST 16 */
+Test(test_compute_symmetry, special10, .description = "compute signed permutation symmetries for an example containing SOS2 constraints")
+{
+   exampleSOS2(TRUE);
 }
