@@ -2365,18 +2365,25 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS2)
 
          if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[0], 1.0) )
          {
+            SCIP_Bool allownegation = FALSE;
+
+            /* a negation is allowed if it is centered around 0 */
+            if ( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(locvars[0])) == SCIPisInfinity(scip, SCIPvarGetUbGlobal(locvars[0]))
+               && (SCIPisInfinity(scip, SCIPvarGetUbGlobal(locvars[0]))
+                  || SCIPisZero(scip, (SCIPvarGetLbGlobal(locvars[0]) + SCIPvarGetUbGlobal(locvars[0]))/2)) )
+               allownegation = TRUE;
+
             nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, locvars[0]);
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, TRUE, 1.0) );
 
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
-
-            /* in case of non-aggregated variables, a sign change is allowed if the variable is centered at 0
-             * (otherwise, a reflection at the center might violate the SOS1 constraint, e.g., for domain [0,2]) */
-            if ( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(locvars[0]))
-               && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(locvars[0]))
-               && SCIPisZero(scip, (SCIPvarGetLbGlobal(locvars[0]) + SCIPvarGetUbGlobal(locvars[0]))/2) )
+            nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, locvars[0]);
+            if( allownegation )
             {
-               nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, locvars[0]);
-               SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
+               SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, TRUE, 1.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, TRUE, -1.0) );
             }
          }
          else
