@@ -699,6 +699,9 @@ SCIP_RETCODE dualPresolving(
             idx = v;
          }
 
+         if( idxnouplocks == consdata->nvars - 1 )
+            idxnouplocks = v;
+
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          ++(*nchgcoefs);
 
