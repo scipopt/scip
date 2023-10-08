@@ -3149,6 +3149,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
    SCIP_Real constant;
    SCIP_Real rhs;
    int consnodeidx;
+   int pairnodeidx;
    int nodeidx;
    int nconsvars;
    int nlocvars;
@@ -3172,6 +3173,10 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
 
    for( i = 0; i < nconsvars; ++i )
    {
+      /* connect each variable and its indicator variable with an intermediate node, which is connected with consnode */
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_CARD_TUPLE , &pairnodeidx) );
+
+      /* connect variable with pair node*/
       vars[0] = consdata->vars[i];
       vals[0] = 1.0;
       nlocvars = 1;
@@ -3188,16 +3193,45 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
 
          /* we do not need to take weights of variables into account;
           * they are only used to sort variables within the constraint */
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, nodeidx, FALSE, 0.0) );
 
          /* add nodes and edges for variables in aggregation */
          SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
       }
-      else
+      else if( nlocvars == 1 )
       {
          nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
 
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, nodeidx, FALSE, 0.0) );
+      }
+
+      /* connect indicator variable with pair node*/
+      vars[0] = consdata->indvars[i];
+      vals[0] = 1.0;
+      nlocvars = 1;
+      constant = 0.0;
+
+      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+            &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+      /* check whether variable is (multi-)aggregated or negated */
+      if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
+      {
+         /* encode aggregation by a sum-expression */
+         SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &nodeidx) ); /*lint !e641*/
+
+         /* we do not need to take weights of variables into account;
+          * they are only used to sort variables within the constraint */
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, nodeidx, FALSE, 0.0) );
+
+         /* add nodes and edges for variables in aggregation */
+         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
+      }
+      else if( nlocvars == 1 )
+      {
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
+
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, nodeidx, FALSE, 0.0) );
       }
    }
 
@@ -3217,6 +3251,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphCardinality)
    SCIP_Real constant;
    SCIP_Real rhs;
    int consnodeidx;
+   int pairnodeidx;
    int nodeidx;
    int nconsvars;
    int nlocvars;
@@ -3240,6 +3275,9 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphCardinality)
 
    for( i = 0; i < nconsvars; ++i )
    {
+      /* connect each variable and its indicator variable with an intermediate node, which is connected with consnode */
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_CARD_TUPLE , &pairnodeidx) );
+
       vars[0] = consdata->vars[i];
       vals[0] = 1.0;
       nlocvars = 1;
@@ -3261,7 +3299,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphCardinality)
 
          /* we do not need to take weights of variables into account;
           * they are only used to sort variables within the constraint */
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, sumnodeidx, FALSE, 0.0) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, sumnodeidx, FALSE, 0.0) );
 
          /* add nodes and edges for variables in aggregation, do not add edges to negated variables
           * since this might not necessarily be a symmetry of the cardinality constraint; therefore,
@@ -3280,19 +3318,59 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphCardinality)
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumnodeidx, nodeidx, FALSE, 0.0) );
          }
       }
-      else
+      else if( nlocvars == 1 )
+      {
+         SCIP_Bool allownegation = FALSE;
+
+         /* a negation is allowed if it is centered around 0 */
+         if ( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[0])) == SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[0]))
+            && (SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[0]))
+               || SCIPisZero(scip, (SCIPvarGetLbGlobal(vars[0]) + SCIPvarGetUbGlobal(vars[0]))/2)) )
+            allownegation = TRUE;
+
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, nodeidx, TRUE, 1.0) );
+
+         nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[0]);
+         if( allownegation )
+         {
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, nodeidx, TRUE, 1.0) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, nodeidx, FALSE, 0.0) );
+         }
+      }
+
+      /* connect indicator variable with pair node, do not add edges to negated variables since negating
+       * might not preserve the cardinality requirement
+       */
+      vars[0] = consdata->indvars[i];
+      vals[0] = 1.0;
+      nlocvars = 1;
+      constant = 0.0;
+
+      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+            &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+      /* check whether variable is (multi-)aggregated or negated */
+      if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
+      {
+         /* encode aggregation by a sum-expression */
+         SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &nodeidx) ); /*lint !e641*/
+
+         /* we do not need to take weights of variables into account;
+          * they are only used to sort variables within the constraint */
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, nodeidx, FALSE, 0.0) );
+
+         /* add nodes and edges for variables in aggregation */
+         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
+      }
+      else if( nlocvars == 1 )
       {
          nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
-         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
 
-         /* in case of non-aggregated variables, a sign change is allowed if the variable is centered at 0
-          * (otherwise, a reflection at the center might violate the cardinality constraint, e.g., for domain [0,2]) */
-         if ( !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(vars[0])) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(vars[0]))
-            && SCIPisZero(scip, (SCIPvarGetLbGlobal(vars[0]) + SCIPvarGetUbGlobal(vars[0]))/2) )
-         {
-            nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[0]);
-            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
-         }
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, nodeidx, FALSE, 0.0) );
       }
    }
 
