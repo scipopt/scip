@@ -46,6 +46,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
+#include "scip/intervalarith.h"
 
 #ifdef NDEBUG
 #include "scip/struct_var.h"
