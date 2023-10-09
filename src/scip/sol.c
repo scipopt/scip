@@ -1314,7 +1314,7 @@ SCIP_RETCODE SCIPsolIncVal(
 
    SCIPsetDebugMsg(set, "increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), (void*)sol, incval);
 
-   if( SCIPsetIsZero(set, incval) )
+   if( incval == 0.0 )
       return SCIP_OKAY;
 
    assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
@@ -1995,7 +1995,7 @@ SCIP_RETCODE SCIPsolRetransform(
    {
       assert(SCIPvarGetUnchangedObj(vars[v]) == SCIPvarGetObj(vars[v])); /*lint !e777*/
 
-      if( !SCIPsetIsZero(set, solvals[v]) )
+      if( solvals[v] != 0.0 )
       {
          SCIP_CALL( solSetArrayVal(sol, set, vars[v], solvals[v]) );
          if( solvals[v] != SCIP_UNKNOWN ) /*lint !e777*/
@@ -2041,7 +2041,7 @@ void SCIPsolRecomputeObj(
    for( v = 0; v < nvars; ++v )
    {
       solval = SCIPsolGetVal(sol, set, stat, vars[v]);
-      if( !SCIPsetIsZero(set, solval) && solval != SCIP_UNKNOWN ) /*lint !e777*/
+      if( solval != 0.0 && solval != SCIP_UNKNOWN ) /*lint !e777*/
       {
          sol->obj += SCIPvarGetUnchangedObj(vars[v]) * solval;
       }
