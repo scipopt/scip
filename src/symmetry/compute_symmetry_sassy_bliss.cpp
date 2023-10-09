@@ -276,6 +276,7 @@ SCIP_RETCODE addOrDetermineEffectOfGroupedEdges(
    assert( colors != NULL );
    assert( naddednodes != NULL );
    assert( naddededges != NULL );
+   assert( commonnodeidx <= *internodeid );
 
    *naddednodes = 0;
    *naddededges = 0;
@@ -296,27 +297,23 @@ SCIP_RETCODE addOrDetermineEffectOfGroupedEdges(
             SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *internodeid + 1) );
             (*degrees)[*internodeid] = 1;
             ++(*degrees)[commonnodeidx];
-         }
-         else
-         {
-            G->add_vertex((unsigned) curcolor, (*degrees)[*internodeid]);
-            G->add_edge((unsigned) commonnodeidx, (unsigned) *internodeid);
-         }
-         *naddednodes += 1;
 
-         if ( determinesize )
-         {
             for (f = curstart; f < e; ++f)
             {
+               assert( neighbors[f] <= *internodeid );
                ++(*degrees)[*internodeid];
                ++(*degrees)[neighbors[f]];
             }
          }
          else
          {
+            G->add_vertex((unsigned) curcolor, (*degrees)[*internodeid]);
+            G->add_edge((unsigned) commonnodeidx, (unsigned) *internodeid);
+
             for (f = curstart; f < e; ++f)
                (*G).add_edge((unsigned) neighbors[f], (unsigned) *internodeid);
          }
+         *naddednodes += 1;
          *naddededges += e - curstart + 1;
          ++(*internodeid);
 
@@ -335,6 +332,7 @@ SCIP_RETCODE addOrDetermineEffectOfGroupedEdges(
 
       for (f = curstart; f < nneighbors; ++f)
       {
+         assert( neighbors[f] <= *internodeid );
          ++(*degrees)[*internodeid];
          ++(*degrees)[neighbors[f]];
       }
@@ -411,7 +409,18 @@ SCIP_RETCODE createOrDetermineSizeGraph(
 
    /* possibly find number of nodes in sassy graph */
    if ( determinesize )
+   {
+      /* initialize counters */
       *nnodes = SCIPgetSymgraphNNodes(graph) + nvarnodestoadd;
+      *nedges = 0;
+
+      /* possibly allocate memory for degrees (will grow dynamically) */
+      *degrees = NULL;
+      *maxdegrees = 0;
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes + 100) );
+      for (j = 0; j < *nnodes; ++j)
+         (*degrees)[j] = 0;
+   }
    else
    {
       /* add nodes for variables */
@@ -422,20 +431,6 @@ SCIP_RETCODE createOrDetermineSizeGraph(
       for (j = 0; j < SCIPgetSymgraphNNodes(graph); ++j)
          G->add_vertex((unsigned) SCIPgetSymgraphNodeColor(graph, j), (*degrees)[nvarnodestoadd + j]);
    }
-
-   /* possibly allocate memory for degrees (will grow dynamically) */
-   if ( determinesize )
-   {
-      *degrees = NULL;
-      *maxdegrees = 0;
-      SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes + 100) );
-      for (j = 0; j < *nnodes; ++j)
-         (*degrees)[j] = 0;
-   }
-
-   /* possibly initialize counters */
-   if ( determinesize )
-      *nedges = 0;
 
    /* determine grouping depending on the number of rhs vs. variables */
    groupByConstraints = SCIPgetSymgraphNConsnodes(graph) < SCIPgetSymgraphNVars(graph);
