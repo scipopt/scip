@@ -1704,7 +1704,8 @@ SCIP_RETCODE computeSymmetryGroup(
    SCIP_CALL( SCIPcomputeSymgraphColors(scip, graph, fixedtype) );
 
    /* terminate early in case all variables are different */
-   if ( SCIPgetSymgraphNVarcolors(graph) == SCIPgetNVars(scip) )
+   if ( (symtype == SYM_SYMTYPE_PERM && SCIPgetSymgraphNVarcolors(graph) == SCIPgetNVars(scip))
+      || (symtype == SYM_SYMTYPE_SIGNPERM && SCIPgetSymgraphNVarcolors(graph) == 2 * SCIPgetNVars(scip)) )
    {
       SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
       return SCIP_OKAY;
