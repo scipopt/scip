@@ -9408,6 +9408,7 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
    SCIP_VAR***           consvars,           /**< pointer to allocated array to store temporary variables */
    SCIP_Real**           consvals,           /**< pointer to allocated arrat to store temporary values */
    int*                  maxnconsvars,       /**< pointer to maximum number consvars/consvals can hold */
+   SCIP_HASHSET*         handledexprs,       /**< hashset to store handled expressions */
    SCIP_Bool*            success             /**< pointer to store whether gadget could be added successfully */
    )
 {
@@ -9437,6 +9438,7 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
    assert(consvals != NULL);
    assert(maxnconsvars != NULL);
    assert(*maxnconsvars > 0);
+   assert(handledexprs != NULL);
    assert(success != NULL);
 
    *success = FALSE;
@@ -9484,6 +9486,10 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
    }
    assert(var1 != NULL);
    assert(var2 != NULL);
+
+   /* store the we handle the children */
+   SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) children[0]);
+   SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) children[1]);
 
    SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
    assert(symdata != NULL);
@@ -9730,6 +9736,7 @@ SCIP_RETCODE tryAddGadgetEvenOperatorSum(
    SCIP_VAR***           consvars,           /**< pointer to allocated array to store temporary variables */
    SCIP_Real**           consvals,           /**< pointer to allocated arrat to store temporary values */
    int*                  maxnconsvars,       /**< pointer to maximum number consvars/consvals can hold */
+   SCIP_HASHSET*         handledexprs,       /**< hashset to store handled expressions */
    SCIP_Bool*            success             /**< pointer to store whether gadget could be added successfully */
    )
 {
@@ -9752,6 +9759,7 @@ SCIP_RETCODE tryAddGadgetEvenOperatorSum(
    assert(consvars != NULL);
    assert(consvals != NULL);
    assert(maxnconsvars != NULL);
+   assert(handledexprs != NULL);
    assert(success != NULL);
 
    *success = FALSE;
@@ -9794,6 +9802,10 @@ SCIP_RETCODE tryAddGadgetEvenOperatorSum(
 
    /* add gadget to graph for even univariate expression that have a sum of at most two variables as child */
    *success = TRUE;
+   for( i = 0; i < SCIPexprGetNChildren(child); ++i )
+   {
+      SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) SCIPexprGetChildren(child)[i]) );
+   }
 
    SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(evenopexpr)), &optype) );
 
@@ -9907,7 +9919,7 @@ SCIP_RETCODE tryAddGadgetEvenOperator(
    else if( SCIPisExprSum(scip, child) )
    {
       SCIP_CALL( tryAddGadgetEvenOperatorSum(scip, expr, child, cons, graph, parentidx, hasparentcoef, parentcoef,
-            hasval, val, consvars, consvals, maxnconsvars, success) );
+            hasval, val, consvars, consvals, maxnconsvars, handledexprs, success) );
    }
 
    if( *success )
@@ -10459,7 +10471,7 @@ SCIP_RETCODE addSymmetryInformation(
             SCIP_Bool succ;
 
             SCIP_CALL( tryAddGadgetBilinearProductSignedPerm(scip, expr, cons, graph, parentidx, hasparentcoef,
-                  parentcoef, &consvars, &consvals, &maxnconsvars, &succ) );
+                  parentcoef, &consvars, &consvals, &maxnconsvars, handledexprs, &succ) );
 
             if( succ )
             {
