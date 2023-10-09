@@ -18148,10 +18148,10 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    if( SCIPconsIsDeleted(cons) )
       return SCIP_OKAY;
 
-   SCIPclockStart(scip->stat->exactproptime, scip->set);
    eventtype = SCIPeventGetType(event);
    var = SCIPeventGetVar(event);
-   updateActivities = ((consdata->rowexact != NULL) == eventdata->rowvar);
+   updateActivities = ((consdata->rowexact != NULL) == eventdata->rowvar) && consdata->validactivities;
+   assert(!consdata->validactivities || (consdata->validminact && consdata->validmaxact && consdata->validglbminact && consdata->validglbmaxact));
 
    if( ((eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0) && updateActivities )
    {
@@ -18215,7 +18215,6 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
                break;
             default:
                SCIPerrorMessage("invalid event type %" SCIP_EVENTTYPE_FORMAT "\n", eventtype);
-               SCIPclockStop(scip->stat->exactproptime, scip->set);
                return SCIP_INVALIDDATA;
             }
          }
@@ -18313,7 +18312,6 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    {
       consdata->varsdeleted = TRUE;
    }
-   SCIPclockStop(scip->stat->exactproptime, scip->set);
    return SCIP_OKAY;
 }
 
