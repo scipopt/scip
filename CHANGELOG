@@ -30,6 +30,8 @@ Fixed bugs
 - avoid bound tightening cycles towards huge redundancy bounds in fullDualPresolve() to avert fatal numerical trouble in representing vertices of linear relaxations with unbounded domains
 - fix problem where debug solution did not work if branching constraints are present
 - update index of dominating variable on coefficient deletion in dualPresolving() of constraint handler logicor
+- pass on flags from a redundant to the implying varbound constraint in 
+preprocessConstraintPairs() to avoid suboptimal fixings by model relaxations
 
 @section RN804 SCIP 8.0.4
 *************************
