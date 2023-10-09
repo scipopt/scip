@@ -9607,6 +9607,28 @@ SCIP_Bool isEvenOperator(
    return FALSE;
 }
 
+/** returns whether a variable is centered at 0 */
+static
+SCIP_Bool varIsCenteredAt0(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR*             var                 /**< variable to be checked */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   if( (SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
+      return FALSE;
+
+   if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+      return TRUE;
+
+   if( SCIPisEQ(scip, SCIPvarGetUbGlobal(var), -SCIPvarGetLbGlobal(var)) )
+      return TRUE;
+
+   return FALSE;
+}
+
 /** tries to add gadget for finding signed permutation of even univariate operators with variable child */
 static
 SCIP_RETCODE tryAddGadgetEvenOperatorVariable(
@@ -9663,7 +9685,7 @@ SCIP_RETCODE tryAddGadgetEvenOperatorVariable(
    if( nlocvars != 1 || !SCIPisZero(scip, constant) )
       return SCIP_OKAY;
 
-   if( (SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
+   if( !varIsCenteredAt0(scip, var) )
       return SCIP_OKAY;
 
    /* store partial information for gadget */
@@ -9760,13 +9782,13 @@ SCIP_RETCODE tryAddGadgetEvenOperatorSum(
    assert(nlocvars > 0);
 
    var = (*consvars)[0];
-   if( (SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
+   if( !varIsCenteredAt0(scip, var) )
       return SCIP_OKAY;
 
    if( nlocvars == 2 )
    {
       var = (*consvars)[1];
-      if( (SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
+      if( !varIsCenteredAt0(scip, var) )
          return SCIP_OKAY;
    }
 
