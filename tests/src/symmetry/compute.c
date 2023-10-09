@@ -1716,7 +1716,7 @@ void exampleExpr3(
    /* setup problem:
     * min x3 + 2*x4
     *     x3 + x4     >= 2
-    *     x1^2 + x2^2 == 0
+    *     x1^2 + x2^2 == 1
     */
    SCIP_CALL( SCIPcreateProbBasic(scip, "expr3"));
 
@@ -1826,6 +1826,530 @@ void exampleExpr3(
    SCIP_CALL( SCIPreleaseVar(scip, &var2) );
    SCIP_CALL( SCIPreleaseVar(scip, &var3) );
    SCIP_CALL( SCIPreleaseVar(scip, &var4) );
+}
+
+/** simple example with 2 variables and nonlinear constraints */
+static
+void exampleExpr4(
+   SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
+   )
+{
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   SCIP_VAR* var3;
+   SCIP_VAR* var4;
+   SCIP_CONS* cons;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_EXPR* varexpr1;
+   SCIP_EXPR* varexpr2;
+   SCIP_EXPR* powexpr1;
+   SCIP_EXPR* powexpr2;
+   SCIP_EXPR* sumexpr;
+   SCIP_EXPR* prodexpr;
+   SCIP_EXPR* exprs[2];
+   SCIP_VAR* vars[2];
+   SCIP_Real vals[2];
+   SCIP_VAR** permvars;
+   int** perms;
+   int* orbits;
+   int* orbitbegins;
+   int* components;
+   int* componentbegins;
+   int* vartocomponent;
+   int ncomponents;
+   int norbits;
+   int npermvars;
+   int nperms;
+   int permlen;
+
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+      return;
+
+   /* get nonlinear conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   cr_assert(conshdlr != NULL);
+
+   /* setup problem:
+    * min x3 + 2*x4
+    *     x3 + x4     >= 2
+    *     x1^2 + x2^2 == 1
+    *     x1 * x2     == 0
+    */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "expr4"));
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var1) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var2) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var3) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var4, "x4", -SCIPinfinity(scip), SCIPinfinity(scip), 2.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var4) );
+
+   /* create linear constraint */
+   vars[0] = var3;
+   vars[1] = var4;
+   vals[0] = 1.0;
+   vals[1] = 1.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "c1", 2, vars, vals, 2.0, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* create nonlinear constraints */
+   SCIP_CALL( SCIPcreateExprVar(scip, &varexpr1, var1, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &varexpr2, var2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexpr1, varexpr1, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexpr2, varexpr2, 2, NULL, NULL) );
+   exprs[0] = powexpr1;
+   exprs[1] = powexpr2;
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 2, exprs, vals, 0.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "c2", sumexpr, 1.0, 1.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   exprs[0] = varexpr1;
+   exprs[1] = varexpr2;
+   SCIP_CALL( SCIPcreateExprProduct(scip, &prodexpr, 2, exprs, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "c3", prodexpr, 0.0, 0.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* turn off presolving in order to avoid having trivial problem afterwards */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+
+   /* turn on checking of symmetries */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
+
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
+
+   /* general symmetry detection */
+   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+
+   /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
+   if ( detectsignedperms )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      permlen = 8;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      permlen = 4;
+   }
+
+   /* presolve problem (symmetry will be available afterwards) */
+   SCIP_CALL( SCIPpresolve(scip) );
+
+   /* get symmetry */
+   SCIP_CALL( SCIPgetSymmetry(scip,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+         &components, &componentbegins, &vartocomponent, &ncomponents) );
+
+   if ( detectsignedperms )
+   {
+      cr_assert( nperms == 2 );
+   }
+   else
+   {
+      cr_assert( nperms == 1 );
+   }
+   cr_assert( ncomponents == 1 );
+   cr_assert( vartocomponent[0] == 0 );
+   cr_assert( vartocomponent[1] == 0 );
+
+   /* compute orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
+   SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
+         perms, nperms, orbits, orbitbegins, &norbits) );
+
+   if ( detectsignedperms )
+   {
+      cr_assert( norbits == 1 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 4 );
+   }
+   else
+   {
+      cr_assert( norbits == 1 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 2 );
+   }
+
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &prodexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexpr1) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexpr1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var2) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var3) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var4) );
+}
+
+/** simple example with 4 variables and nonlinear constraints */
+static
+void exampleExpr5(
+   SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
+   )
+{
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   SCIP_VAR* var3;
+   SCIP_VAR* var4;
+   SCIP_CONS* cons;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_EXPR* varexpr1;
+   SCIP_EXPR* varexpr2;
+   SCIP_EXPR* cosexpr1;
+   SCIP_EXPR* cosexpr2;
+   SCIP_EXPR* sumexpr;
+   SCIP_EXPR* exprs[2];
+   SCIP_VAR* vars[2];
+   SCIP_Real vals[2];
+   SCIP_VAR** permvars;
+   int** perms;
+   int* orbits;
+   int* orbitbegins;
+   int* components;
+   int* componentbegins;
+   int* vartocomponent;
+   int ncomponents;
+   int norbits;
+   int npermvars;
+   int nperms;
+   int permlen;
+
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+      return;
+
+   /* get nonlinear conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   cr_assert(conshdlr != NULL);
+
+   /* setup problem:
+    * min x3 + 2*x4
+    *     x3 + x4           >= 2
+    *     cos(x1) + cos(x2) == 1
+    */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "expr5"));
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var1) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var2) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var3) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var4, "x4", -SCIPinfinity(scip), SCIPinfinity(scip), 2.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var4) );
+
+   /* create linear constraint */
+   vars[0] = var3;
+   vars[1] = var4;
+   vals[0] = 1.0;
+   vals[1] = 1.0;
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, "c1", 2, vars, vals, 2.0, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* create nonlinear constraints */
+   SCIP_CALL( SCIPcreateExprVar(scip, &varexpr1, var1, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &varexpr2, var2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprCos(scip, &cosexpr1, varexpr1, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprCos(scip, &cosexpr2, varexpr2, NULL, NULL) );
+   exprs[0] = cosexpr1;
+   exprs[1] = cosexpr2;
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr, 2, exprs, vals, 0.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "c2", sumexpr, 1.0, 1.0) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* turn off presolving in order to avoid having trivial problem afterwards */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+
+   /* turn on checking of symmetries */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
+
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
+
+   /* general symmetry detection */
+   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+
+   /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
+   if ( detectsignedperms )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      permlen = 8;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      permlen = 4;
+   }
+
+   /* presolve problem (symmetry will be available afterwards) */
+   SCIP_CALL( SCIPpresolve(scip) );
+
+   /* get symmetry */
+   SCIP_CALL( SCIPgetSymmetry(scip,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+         &components, &componentbegins, &vartocomponent, &ncomponents) );
+
+   if ( detectsignedperms )
+   {
+      cr_assert( nperms == 2 );
+   }
+   else
+   {
+      cr_assert( nperms == 1 );
+   }
+   cr_assert( ncomponents == 1 );
+   cr_assert( vartocomponent[0] == 0 );
+   cr_assert( vartocomponent[1] == 0 );
+
+   /* compute orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
+   SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
+         perms, nperms, orbits, orbitbegins, &norbits) );
+
+   if ( detectsignedperms )
+   {
+      cr_assert( norbits == 1 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 4 );
+   }
+   else
+   {
+      cr_assert( norbits == 1 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 2 );
+   }
+
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &cosexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &cosexpr1) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexpr1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var2) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var3) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var4) );
+}
+
+/** simple example with 5 variables and nonlinear constraints */
+static
+void exampleExpr6(
+   SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
+   )
+{
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   SCIP_VAR* var3;
+   SCIP_VAR* var4;
+   SCIP_VAR* var5;
+   SCIP_CONS* cons;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_EXPR* varexpr1;
+   SCIP_EXPR* varexpr2;
+   SCIP_EXPR* varexpr3;
+   SCIP_EXPR* varexpr4;
+   SCIP_EXPR* varexpr5;
+   SCIP_EXPR* powexpr1;
+   SCIP_EXPR* powexpr2;
+   SCIP_EXPR* powexpr3;
+   SCIP_EXPR* powexpr4;
+   SCIP_EXPR* prodexpr1;
+   SCIP_EXPR* prodexpr2;
+   SCIP_EXPR* sumexpr1;
+   SCIP_EXPR* sumexpr2;
+   SCIP_EXPR* exprs[4];
+   SCIP_Real vals[4];
+   SCIP_VAR** permvars;
+   int** perms;
+   int* orbits;
+   int* orbitbegins;
+   int* components;
+   int* componentbegins;
+   int* vartocomponent;
+   int ncomponents;
+   int norbits;
+   int npermvars;
+   int nperms;
+   int permlen;
+
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+      return;
+
+   /* get nonlinear conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   cr_assert(conshdlr != NULL);
+
+   /* setup problem:
+    * min -x5
+    *     x1^2 -2 * x1 * x2 + x2^2 >= x5
+    *     x3^2 -2 * x3 * x4 + x4^2 >= x5
+    */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "expr6"));
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", -1, 1, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var1) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", -1, 1, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var2) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", -1, 1, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var3) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var4, "x4", -1, 1, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var4) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var5, "x5", 0, 4, -1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, var5) );
+
+   /* create nonlinear constraints */
+   SCIP_CALL( SCIPcreateExprVar(scip, &varexpr1, var1, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &varexpr2, var2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &varexpr3, var3, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &varexpr4, var4, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprVar(scip, &varexpr5, var5, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexpr1, varexpr1, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexpr2, varexpr2, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexpr3, varexpr3, 2, NULL, NULL) );
+   SCIP_CALL( SCIPcreateExprPow(scip, &powexpr4, varexpr4, 2, NULL, NULL) );
+
+   exprs[0] = varexpr1;
+   exprs[1] = varexpr2;
+   SCIP_CALL( SCIPcreateExprProduct(scip, &prodexpr1, 2, exprs, 1.0, NULL, NULL) );
+
+   exprs[0] = varexpr3;
+   exprs[1] = varexpr4;
+   SCIP_CALL( SCIPcreateExprProduct(scip, &prodexpr2, 2, exprs, 1.0, NULL, NULL) );
+
+   exprs[0] = powexpr1;
+   exprs[1] = powexpr2;
+   exprs[2] = prodexpr1;
+   exprs[3] = varexpr5;
+   vals[0] = 1.0;
+   vals[1] = 1.0;
+   vals[2] = -2.0;
+   vals[3] = -1.0;
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr1, 4, exprs, vals, 0.0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "c1", sumexpr1, 0.0, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   exprs[0] = powexpr3;
+   exprs[1] = powexpr4;
+   exprs[2] = prodexpr2;
+   exprs[3] = varexpr5;
+   vals[0] = 1.0;
+   vals[1] = 1.0;
+   vals[2] = -2.0;
+   vals[3] = -1.0;
+   SCIP_CALL( SCIPcreateExprSum(scip, &sumexpr2, 4, exprs, vals, 0.0, NULL, NULL) );
+   SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, "c2", sumexpr2, 0.0, SCIPinfinity(scip)) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* turn off presolving in order to avoid having trivial problem afterwards */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+
+   /* turn on checking of symmetries */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
+
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
+
+   /* general symmetry detection */
+   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+
+   /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
+   if ( detectsignedperms )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      permlen = 10;
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      permlen = 5;
+   }
+
+   /* presolve problem (symmetry will be available afterwards) */
+   SCIP_CALL( SCIPpresolve(scip) );
+
+   /* get symmetry */
+   SCIP_CALL( SCIPgetSymmetry(scip,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+         &components, &componentbegins, &vartocomponent, &ncomponents) );
+
+   if ( detectsignedperms )
+   {
+      cr_assert( nperms == 4 );
+   }
+   else
+   {
+      cr_assert( nperms == 3 );
+   }
+   cr_assert( ncomponents == 1 );
+   cr_assert( vartocomponent[0] == 0 );
+   cr_assert( vartocomponent[1] == 0 );
+   cr_assert( vartocomponent[2] == 0 );
+   cr_assert( vartocomponent[3] == 0 );
+   cr_assert( vartocomponent[4] == -1 );
+
+   /* compute orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
+   SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
+         perms, nperms, orbits, orbitbegins, &norbits) );
+
+   if ( detectsignedperms )
+   {
+      cr_assert( norbits == 1 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 8 );
+   }
+   else
+   {
+      cr_assert( norbits == 1 );
+      cr_assert( orbitbegins[0] == 0 );
+      cr_assert( orbitbegins[1] == 4 );
+   }
+
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &sumexpr1) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &prodexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &prodexpr1) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexpr4) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexpr3) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &powexpr1) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexpr5) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexpr4) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexpr3) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexpr2) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &varexpr1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var2) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var3) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var4) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var5) );
 }
 
 /* TEST SUITE */
@@ -1961,5 +2485,41 @@ Test(test_compute_symmetry, expr5, .description = "compute permutation symmetrie
 Test(test_compute_symmetry, expr6, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr3(TRUE);
+}
+
+/* TEST 23 */
+Test(test_compute_symmetry, expr7, .description = "compute permutation symmetries for an example containing nonlinear constraints")
+{
+   exampleExpr4(FALSE);
+}
+
+/* TEST 24 */
+Test(test_compute_symmetry, expr8, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
+{
+   exampleExpr4(TRUE);
+}
+
+/* TEST 25 */
+Test(test_compute_symmetry, expr9, .description = "compute permutation symmetries for an example containing nonlinear constraints")
+{
+   exampleExpr5(FALSE);
+}
+
+/* TEST 26 */
+Test(test_compute_symmetry, expr10, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
+{
+   exampleExpr5(TRUE);
+}
+
+/* TEST 27 */
+Test(test_compute_symmetry, expr11, .description = "compute permutation symmetries for an example containing nonlinear constraints")
+{
+   exampleExpr6(FALSE);
+}
+
+/* TEST 28 */
+Test(test_compute_symmetry, expr12, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
+{
+   exampleExpr6(TRUE);
 }
 
