@@ -440,6 +440,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
          scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
 
+   /* do not consider original solutions of a benders decomposition because their cost information is incomplete */
    if( !scip->set->reopt_enable && scip->set->nactivebenders == 0 )
    {
       oldnsolsfound = scip->primal->nsolsfound;
@@ -1160,7 +1161,10 @@ SCIP_RETCODE presolveRound(
 
       scip->stat->npresolfixedvars += nlocalbdchgs;
 
-      if( !*infeasible && scip->set->nheurs > 0 )
+      /* do not call heuristics during presolving on a benders decomposition
+       * because the cost information of the retransformed original solutions would be incomplete
+       */
+      if( !*infeasible && scip->set->nheurs > 0 && scip->set->nactivebenders == 0 )
       {
          /* call primal heuristics that are applicable during presolving */
          SCIP_Bool foundsol;
@@ -1307,8 +1311,10 @@ SCIP_RETCODE presolve(
    }
    assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
 
-   /* call primal heuristics that are applicable before presolving */
-   if( scip->set->nheurs > 0 )
+   /* call primal heuristics that are applicable before presolving but not on a benders decomposition
+    * because the cost information of the retransformed original solutions would be incomplete
+    */
+   if( scip->set->nheurs > 0 && scip->set->nactivebenders == 0 )
    {
       SCIP_Bool foundsol;
 
@@ -1980,7 +1986,9 @@ SCIP_RETCODE freeTransform(
       SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );
    }
 
-   /* copy best primal solutions to original solution candidate list */
+   /* copy best primal solutions to original solution candidate list but not for a benders decomposition
+    * because their cost information would be incomplete
+    */
    if( !scip->set->reopt_enable && scip->set->limit_maxorigsol > 0 && scip->set->misc_transsolsorig && scip->set->nactivebenders == 0 )
    {
       SCIP_Bool stored;

@@ -466,11 +466,13 @@ set(instances_Or
 #
 set(pairs_Issue
     "instances/Issue/3047.lp\;20000\;dualinfer"
+    "instances/Issue/3132.lp\;0\;default"
     "instances/Issue/3499.lp\;11460\;closeobj"
     "instances/Issue/3589.cip\;-1\;default"
     "instances/Issue/3607.cip\;1\;default"
     "instances/Issue/3610.cip\;0\;default"
     "instances/Issue/3611.lp\;-1600\;default"
+    "instances/Issue/3613.lp\;993.4375\;default"
     # Test currently not working since problems with the feasibility check for unbounded problems appear: https://git.zib.de/integer/scip/-/issues/3422
     # "instances/Issue/3629.cip\;-infinity\;only_dualinfer"
 )

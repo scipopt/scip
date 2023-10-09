@@ -662,6 +662,18 @@ SCIP_RETCODE primalAddSol(
 
    sol = *solptr;
    assert(sol != NULL);
+
+   /* if the solution is added during presolving and it is not defined on original variables,
+    * presolving operations will destroy its validity, so we retransform it to the original space
+    */
+   if( set->stage < SCIP_STAGE_PRESOLVED && !SCIPsolIsOriginal(sol) )
+   {
+      SCIP_Bool hasinfval;
+
+      SCIP_CALL( SCIPsolUnlink(sol, set, transprob) );
+      SCIP_CALL( SCIPsolRetransform(sol, set, stat, origprob, transprob, &hasinfval) );
+   }
+
    obj = SCIPsolGetObj(sol, set, transprob, origprob);
 
    SCIPsetDebugMsg(set, "insert primal solution %p with obj %g at position %d (replace=%u):\n",
@@ -1042,7 +1054,7 @@ SCIP_Bool primalExistsSol(
 
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, origprob, transprob) )
       {
-         if( SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
+         if( set->stage >= SCIP_STAGE_PRESOLVED && SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
          {
             (*insertpos) = i;
             (*replace) = TRUE;
@@ -1068,7 +1080,7 @@ SCIP_Bool primalExistsSol(
 
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, origprob, transprob) )
       {
-         if( SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
+         if( set->stage >= SCIP_STAGE_PRESOLVED && SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
          {
             (*insertpos) = i;
             (*replace) = TRUE;
