@@ -20,7 +20,7 @@ Fixed bugs
 - fixed error when attempting to copy SCIP with activated pricers
 - remove integrality check for implicit integral variables in cons_integral.c, updated the definition for variable type implicit integer to be more explicit that these variables can take fractional values, and updated FAQ entry
 - updated and, or, and pseudoboolean constraint handlers to better handle fractional implicit integer variables in enforcement
-- avoid invalid strong Chvatal-Gomory cuts by ceiling with tolerance in the calculation of parameter k
+- avoid invalid strong Chvatal-Gomory cuts by ceiling with tolerance in the calculation of parameter k and flooring slack coefficients with standard epsilon tolerance as well as quad precision
 - add missing row links to columns in SCIPflushRowExtensions() required to maintain correct row norms
 - restrict separator intobj to solutions for which there can be no better feasible integral objective values to avoid cutting them off
 - delay removal of clique lists from SCIPvarRemoveCliquesImplicsVbs() into cliqueCleanup() to avoid segmentation faults by incomplete cleanups after variable conversions
