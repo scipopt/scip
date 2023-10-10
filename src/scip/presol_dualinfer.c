@@ -2212,7 +2212,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
 
    *result = SCIP_DIDNOTFIND;
 
-   if( SCIPisInfinity(scip, NEGATE(SCIPgetPseudoObjval(scip))) )
+   if( SCIPisInfinity(scip, -SCIPgetPseudoObjval(scip)) )
    {
       SCIPdebugMsg(scip, "DualInfer not executed because condition of existing dual solution is not fulfilled.\n");
       return SCIP_OKAY;
