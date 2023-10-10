@@ -1344,7 +1344,7 @@ SCIP_RETCODE propagateStaticLexred(
                if ( success )
                   *nreductions += 1;
                if ( *infeasible )
-                  return SCIP_OKAY;
+                  goto FREEMEMORY;
                lb1 = lexdata->vardomaincenter[i] + 1.0;
                assert( SCIPLE(scip, lb1, ub1) );
                break;
@@ -1438,7 +1438,7 @@ SCIP_RETCODE propagateStaticLexred(
                   if ( success )
                      *nreductions += 1;
                   if ( *infeasible )
-                     return SCIP_OKAY;
+                     goto FREEMEMORY;
                   lb1 = lb1 + 1.0;
                   assert( SCIPLE(scip, lb1, ub1) );
                   break;
@@ -1501,7 +1501,7 @@ SCIP_RETCODE propagateStaticLexred(
                   if ( success )
                      *nreductions += 1;
                   if ( *infeasible )
-                     return SCIP_OKAY;
+                     goto FREEMEMORY;
                   ubj = ubj - 1.0;
                   assert( SCIPLE(scip, lbj, ubj) );
                   break;
