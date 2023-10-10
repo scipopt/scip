@@ -669,6 +669,27 @@ SCIP_RETCODE isSolutionInNode(
             }
          }
       }
+      if( *solcontained && SCIPnodeGetNAddedConss(node) > 0 )
+      {
+         int i;
+         int naddedcons = 0;
+         SCIP_CONS** addedcons;
+
+         SCIPsetAllocBufferArray(set, &addedcons, SCIPnodeGetNAddedConss(node));
+
+         SCIPnodeGetAddedConss(node, addedcons, &naddedcons, SCIPnodeGetNAddedConss(node));
+
+         for( i = 0; i < naddedcons && *solcontained; ++i )
+         {
+            SCIP_RESULT result = SCIP_FEASIBLE;
+            SCIP_CALL( SCIPcheckCons(set->scip, addedcons[i], debugsoldata->debugsol , TRUE, TRUE, FALSE, &result) );
+
+            if( result != SCIP_FEASIBLE )
+               *solcontained = FALSE;
+         }
+
+         SCIPsetFreeBufferArray(set, &addedcons);
+      }
    }
 
    /* remember the status of the current node */

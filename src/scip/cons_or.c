@@ -1578,8 +1578,15 @@ SCIP_DECL_CONSENFOLP(consEnfolpOr)
          SCIP_Bool separated;
 
          SCIP_CALL( separateCons(scip, conss[i], NULL, &separated) );
-         assert(separated); /* because the solution is integral, the separation always finds a cut */
-         *result = SCIP_SEPARATED;
+
+         /* if the solution is integral, the separation always finds a cut
+          * if some implicit binary variable is not integral, then some other constraint needs to be enforced first
+          */
+         if( separated )
+            *result = SCIP_SEPARATED;
+         else
+            *result = SCIP_INFEASIBLE;
+
          return SCIP_OKAY;
       }
    }
@@ -1605,8 +1612,15 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOr)
          SCIP_Bool separated;
 
          SCIP_CALL( separateCons(scip, conss[i], sol, &separated) );
-         assert(separated); /* because the solution is integral, the separation always finds a cut */
-         *result = SCIP_SEPARATED;
+
+         /* if the solution is integral, the separation always finds a cut
+          * if some implicit binary variable is not integral, then some other constraint needs to be enforced first
+          */
+         if( separated )
+            *result = SCIP_SEPARATED;
+         else
+            *result = SCIP_INFEASIBLE;
+
          return SCIP_OKAY;
       }
    }
