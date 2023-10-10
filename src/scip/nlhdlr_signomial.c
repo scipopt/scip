@@ -285,14 +285,12 @@ SCIP_RETCODE storeCaptureVars(
    /* get and capture variables \f$x\f$ */
    for( c = 0; c < nlhdlrexprdata->nfactors; ++c )
    {
-      nlhdlrexprdata->vars[c] = NULL;
       nlhdlrexprdata->vars[c] = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->factors[c]);
       assert(nlhdlrexprdata->vars[c] != NULL);
       SCIP_CALL( SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]) );
    }
 
    /* get and capture variable \f$y\f$ */
-   nlhdlrexprdata->vars[c] = NULL;
    nlhdlrexprdata->vars[c] = SCIPgetExprAuxVarNonlinear(expr);
    assert(nlhdlrexprdata->vars[c] != NULL);
    SCIP_CALL( SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]) );
@@ -304,7 +302,7 @@ SCIP_RETCODE storeCaptureVars(
 
 /** get bounds of variables $x,t$ and check whether they are box constrained signomial variables */
 static
-void getCheckBds(
+void checkSignomialBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< expression data */
    SCIP_Bool*            isboxsignomial      /**< buffer to store whether variables are box constrained signomial variables */
@@ -722,7 +720,7 @@ static SCIP_RETCODE overEstimatePower(
  */
 
 /** nonlinear handler estimation callback */
-static 
+static
 SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
 { /*lint --e{715}*/
    SCIP_Bool isboxsignomial;
@@ -733,10 +731,10 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    int nundervars;
    SCIP_Real undermultiplier;
    SCIP_Real overmultiplier;
-   SCIP_Real scale;
-   SCIP_Real targetunder;
    SCIP_NLHDLRDATA *nlhdlrdata;
    SCIP_ROWPREP *rowprep;
+   SCIP_Real targetunder;
+   SCIP_Real scale;
 
    assert(conshdlr != NULL);
    assert(nlhdlr != NULL);
@@ -750,9 +748,10 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    if( !nlhdlrexprdata->isstorecapture )
       SCIP_CALL( storeCaptureVars(scip, expr, nlhdlrexprdata) );
 
-   /* check whether the expression is a signomial term */
+   /* check whether all variables have finite positive bounds, which is necessary for the expression to be a signomial term */
+   /* TODO consider allowing 0 lower bounds for u variables (and handle gradients at 0) */
    isboxsignomial = FALSE;
-   getCheckBds(scip, nlhdlrexprdata, &isboxsignomial);
+   checkSignomialBounds(scip, nlhdlrexprdata, &isboxsignomial);
 
    if( !isboxsignomial )
       return SCIP_OKAY;
@@ -760,7 +759,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
 
 
-   /* determine the sign of variables for over and under estimators, and the multiplier for estimators in the rowprep */
+   /* determine the sign of variables for over- and underestimators, and the multiplier for estimators in the rowprep */
    if( overestimate )
    {
       /* relax \f$ t \le x^a \f$, i.e., \f$ 0 \le u^f - v^g \f$, overestimate \f$ u^f \$f, underestimate \f$ v^g \f$ */
@@ -772,7 +771,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    }
    else
    {
-      /* relax \f$ x^a \le t \f$, i.e.,  \f$ u^f - v^g \le 0 \f$, underestimate \f$ u^f \f$,  overestimate \f$ v^g \f$ */
+      /* relax \f$ x^a \le t \f$, i.e.,  \f$ u^f - v^g \le 0 \f$, underestimate \f$ u^f \f$, overestimate \f$ v^g \f$ */
       oversign = FALSE;
       undersign = TRUE;
       overmultiplier = -1;
@@ -781,25 +780,29 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    }
 
    /* compute the value of the overestimator, which is a target value for computing the underestimator efficiently */
-   targetunder = 1;
+   targetunder = 1.0;
    for( i = 0; i < nlhdlrexprdata->nvars; i++ )
    {
       if( nlhdlrexprdata->signs[i] == oversign )
       {
-         scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
+         scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1.0;
          targetunder *= pow(SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[i]) / scale, nlhdlrexprdata->refexponents[i]);
       }
    }
+
 #ifdef SCIP_SIGCUT_DEBUG
+   SCIP_Real targetover = 1.0;
+
    /* print information on estimators */
    SCIP_CALL( printSignomial(scip, expr, nlhdlrexprdata));
    SCIPinfoMessage(scip, NULL, " Auxvalue: %f, targetvalue: %f, %sestimate.", auxvalue, targetvalue, overestimate ? "over" : "under");
-   SCIP_Real targetover = 1;
-   for ( int i = 0; i < nlhdlrexprdata->nvars; i++ )
+
+   targetunder = 1.0;
+   for( i = 0; i < nlhdlrexprdata->nvars; i++ )
    {
       if( nlhdlrexprdata->signs[i] == undersign )
       {
-         SCIP_Real scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
+         scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1.0;
          targetover *= pow(SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[i]) / scale, nlhdlrexprdata->refexponents[i]);
       }
    }
@@ -809,10 +812,10 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
 #endif
 
    /* create a rowprep and allocate memory for it */
-   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE));
-   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nlhdlrexprdata->nvars + 1));
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nlhdlrexprdata->nvars + 1) );
 
-   /* only underesimate a concave function, if the number of variables satisfy the criteria */
+   /* only underestimate a concave function, if the number of variables satisfy the criteria */
    if( nundervars <= nlhdlrdata->maxnundervars )
    {
       /* compute underestimator */
