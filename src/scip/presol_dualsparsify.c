@@ -1718,11 +1718,11 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
    updateFailureStatistic(presoldata, numcancel > 0);
 
+   SCIPfreeBufferArrayNull(scip, &conspairs);
    SCIPfreeBufferArray(scip, &colsparsity);
    SCIPfreeBufferArray(scip, &colidxsorted);
 
    SCIPhashtableFree(&pairtable);
-   SCIPfreeBufferArrayNull(scip, &conspairs);
 
    SCIPfreeBufferArray(scip, &isblockedvar);
    SCIPfreeBufferArray(scip, &vars);
