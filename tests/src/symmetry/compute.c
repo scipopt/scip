@@ -2523,3 +2523,284 @@ Test(test_compute_symmetry, expr12, .description = "compute signed permutation s
    exampleExpr6(TRUE);
 }
 
+/* TEST 29 (subgroups) */
+Test(test_compute_symmetry, subgroups1, .description = "detect symmetric subgroups for artificial propdata")
+{
+   SCIP_PROPDATA propdata;
+   SCIP_VAR* dummyvar;
+   SCIP_VAR* permvars[10];
+   unsigned componentblocked = FALSE;
+   int* graphcomponents;
+   int* graphcompbegins;
+   int* compcolorbegins;
+   int* usedperms;
+   int* perms[6];
+   SCIP_Shortbool permused[6] = {FALSE};
+   int permorder1[6] = {0,1,2,3,4,5};
+   int permorder2[6] = {2,3,4,5,0,1};
+   int permorder3[6] = {5,0,1,2,3,4};
+   int perm1[10] = {1,0,2,4,3,5,6,7,8,9};
+   int perm2[10] = {0,2,1,3,5,4,6,7,8,9};
+   int perm3[10] = {0,1,2,3,4,5,7,6,8,9};
+   int perm4[10] = {0,1,2,3,4,5,6,8,7,9};
+   int perm5[10] = {0,1,2,3,4,5,6,7,9,8};
+   int perm6[10] = {6,7,2,8,9,5,0,1,3,4};
+   int components[6] = {0,1,2,3,4,5};
+   int componentbegins[2] = {0,6};
+   int expectedcomps[10] = {0,1,2,3,4,5,6,7,8,9};
+   int expectedcompbegins[4] = {0,3,6,10};
+   int expectedcolbegins[3] = {0,2,3};
+   int expectedcomps1[10] = {0,1,2,3,4,5,6,7,8,9};
+   int expectedcompbegins1[4] = {0,3,6,10};
+   int expectedcolbegins1[3] = {0,2,3};
+   int expectedcomps2[10] = {0,6,2,1,7,3,8,4,5,9};
+   int expectedcompbegins2[5] = {0,2,5,7,10};
+   int expectedcolbegins2[2] = {0,4};
+   int ngraphcomponents;
+   int ncompcolors;
+   int nusedperms;
+   int i;
+
+   SCIP_CALL( SCIPcreateProbBasic(scip, "subgroup1"));
+
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+      return;
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &dummyvar, "dummyvar", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   for (i = 0; i < 10; ++i)
+      permvars[i] = dummyvar;
+
+   perms[0] = perm1;
+   perms[1] = perm2;
+   perms[2] = perm3;
+   perms[3] = perm4;
+   perms[4] = perm5;
+   perms[5] = perm6;
+
+   propdata.npermvars = 10;
+   propdata.nperms = 6;
+   propdata.perms = perms;
+   propdata.ncomponents = 1;
+   propdata.components = components;
+   propdata.componentbegins = componentbegins;
+   propdata.componentblocked = &componentblocked;
+   propdata.computedsymmetry = TRUE;
+   propdata.permvars = permvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, 6) );
+
+   /* check canonical order */
+   for (i = 0; i < 6; ++i)
+      permused[i] = FALSE;
+   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder1, 6, 0, &graphcomponents, &graphcompbegins,
+         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
+
+   cr_assert( graphcomponents != NULL );
+   cr_assert( graphcompbegins != NULL );
+   cr_assert( compcolorbegins != NULL );
+   cr_assert( nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms );
+   cr_assert( ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents );
+   cr_assert( ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors );
+
+   checkIntArraysEqual(expectedcomps, graphcomponents, 10, "components");
+   checkIntArraysEqual(expectedcompbegins, graphcompbegins, ngraphcomponents, "compbegins");
+   checkIntArraysEqual(expectedcolbegins, compcolorbegins, ncompcolors, "colorbegins");
+
+   SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
+   SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
+   SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
+
+   /* check different order */
+   for (i = 0; i < 6; ++i)
+      permused[i] = FALSE;
+   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder2, 6, 0, &graphcomponents, &graphcompbegins,
+         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
+
+   cr_assert( graphcomponents != NULL );
+   cr_assert( graphcompbegins != NULL );
+   cr_assert( compcolorbegins != NULL );
+   cr_assert( nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms );
+   cr_assert( ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents );
+   cr_assert( ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors );
+
+   checkIntArraysEqual(expectedcomps1, graphcomponents, 10, "components");
+   checkIntArraysEqual(expectedcompbegins1, graphcompbegins, ngraphcomponents, "compbegins");
+   checkIntArraysEqual(expectedcolbegins1, compcolorbegins, ncompcolors, "colorbegins");
+
+   SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
+   SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
+   SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
+
+   /* check order that leads to trivial subgroup */
+   for (i = 0; i < 6; ++i)
+      permused[i] = FALSE;
+   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder3, 6, 0, &graphcomponents, &graphcompbegins,
+         &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
+
+   cr_assert( graphcomponents != NULL );
+   cr_assert( graphcompbegins != NULL );
+   cr_assert( compcolorbegins != NULL );
+   cr_assert( nusedperms == 2, "expected 2 used permutations, but got %d\n", nusedperms );
+   cr_assert( ngraphcomponents == 4, "expected 4 graph components, but got %d\n", ngraphcomponents );
+   cr_assert( ncompcolors == 1, "expected 1 component colors, but got %d\n", ncompcolors );
+
+   checkIntArraysEqual(expectedcomps2, graphcomponents, 10, "components");
+   checkIntArraysEqual(expectedcompbegins2, graphcompbegins, ngraphcomponents, "compbegins");
+   checkIntArraysEqual(expectedcolbegins2, compcolorbegins, ncompcolors, "colorbegins");
+
+   SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
+   SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
+   SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
+   SCIPfreeBufferArray(scip, &usedperms);
+   SCIP_CALL( SCIPreleaseVar(scip, &dummyvar) );
+}
+
+/* TEST 30 (subgroups) */
+Test(test_compute_symmetry, subgroups2, .description = "detect symmetric subgroups for artificial propdata and different order")
+{
+   SCIP_PROPDATA propdata;
+   SCIP_VAR* dummyvar;
+   SCIP_VAR* permvars[10];
+   unsigned componentblocked = FALSE;
+   int* permorder;
+   int* graphcomponents;
+   int* graphcompbegins;
+   int* compcolorbegins;
+   int* usedperms;
+   int* perms[6];
+   SCIP_Shortbool permused[6] = {FALSE};
+   int perm1[10] = {0,2,1,3,5,4,6,7,8,9};
+   int perm2[10] = {0,1,2,3,4,5,7,6,8,9};
+   int perm3[10] = {0,1,2,3,4,5,6,8,7,9};
+   int perm4[10] = {6,7,0,8,9,5,2,1,3,4};
+   int perm5[10] = {1,0,2,4,3,5,6,7,8,9};
+   int perm6[10] = {0,1,2,3,4,5,6,7,9,8};
+   int components[6] = {0,1,2,3,4,5};
+   int componentbegins[2] = {0,6};
+   int expectedpermorder[6] = {5,1,2,4,0,3};
+   int expectedcomps[10] = {0,1,2,3,4,5,6,7,8,9};
+   int expectedcompbegins[4] = {0,3,6,10};
+   int expectedcolbegins[3] = {0,2,3};
+   int ngraphcomponents;
+   int ncompcolors;
+   int ntwocycleperms;
+   int nusedperms;
+   int i;
+
+   SCIP_CALL( SCIPcreateProbBasic(scip, "subgroup2"));
+
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+      return;
+
+   perms[0] = perm1;
+   perms[1] = perm2;
+   perms[2] = perm3;
+   perms[3] = perm4;
+   perms[4] = perm5;
+   perms[5] = perm6;
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &dummyvar, "dummyvar", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   for (i = 0; i < 10; ++i)
+      permvars[i] = dummyvar;
+
+   propdata.npermvars = 10;
+   propdata.nperms = 6;
+   propdata.perms = perms;
+   propdata.ncomponents = 1;
+   propdata.components = components;
+   propdata.componentbegins = componentbegins;
+   propdata.componentblocked = &componentblocked;
+   propdata.computedsymmetry = TRUE;
+   propdata.permvars = permvars;
+   propdata.preferlessrows = TRUE;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &usedperms, 6) );
+
+   /* check sorted order */
+   SCIP_CALL( SCIPallocBufferArray(scip, &permorder, 6) );
+
+   for (i = 0; i < 6; ++i)
+      permorder[i] = i;
+
+   SCIP_CALL( chooseOrderOfGenerators(scip, &propdata, 0, &permorder, &ntwocycleperms) );
+   cr_assert( ntwocycleperms == 5 );
+
+   checkIntArraysEqual(expectedpermorder, permorder, 6, "permorder");
+
+   SCIP_CALL( buildSubgroupGraph(scip, &propdata, permorder, ntwocycleperms, 0, &graphcomponents,
+         &graphcompbegins, &compcolorbegins, &ngraphcomponents, &ncompcolors, &usedperms, &nusedperms, 6, permused) );
+
+   cr_assert( graphcomponents != NULL );
+   cr_assert( graphcompbegins != NULL );
+   cr_assert( compcolorbegins != NULL );
+   cr_assert( nusedperms == 5, "expected 5 used permutations, but got %d\n", nusedperms );
+   cr_assert( ngraphcomponents == 3, "expected 3 graph components, but got %d\n", ngraphcomponents );
+   cr_assert( ncompcolors == 2, "expected 2 component colors, but got %d\n", ncompcolors );
+
+   checkIntArraysEqual(expectedcomps, graphcomponents, 10, "components");
+   checkIntArraysEqual(expectedcompbegins, graphcompbegins, ngraphcomponents, "compbegins");
+   checkIntArraysEqual(expectedcolbegins, compcolorbegins, ncompcolors, "colorbegins");
+
+   SCIPfreeBlockMemoryArray(scip, &compcolorbegins, ncompcolors + 1);
+   SCIPfreeBlockMemoryArray(scip, &graphcompbegins, ngraphcomponents + 1);
+   SCIPfreeBlockMemoryArray(scip, &graphcomponents, 10);
+   SCIPfreeBufferArray(scip, &permorder);
+   SCIPfreeBufferArray(scip, &usedperms);
+   SCIP_CALL( SCIPreleaseVar(scip, &dummyvar) );
+}
+
+/* TEST 31 (doublelex matrices) */
+Test(test_compute_symmetry, doublelex, .description = "detect action corresponding to double lex matrices")
+{
+   int perm1[20] = {1,0,2,3,5,4,6,7,9,8,10,11,13,12,14,15,17,16,18,19};
+   int perm2[20] = {0,1,3,2,4,5,7,6,8,9,11,10,12,13,15,14,16,17,19,18};
+   int perm3[20] = {4,5,6,7,0,1,2,3,8,9,10,11,12,13,14,15,16,17,18,19};
+   int perm4[20] = {0,1,2,3,8,9,10,11,4,5,6,7,12,13,14,15,16,17,18,19};
+   int perm5[20] = {0,1,2,3,4,5,6,7,8,9,10,11,16,17,18,19,12,13,14,15};
+   int* perms[5];
+   SCIP_Bool success;
+   SCIP_Bool isorbitope;
+   int** lexmatrix = NULL;
+   int* lexrowsbegin = NULL;
+   int* lexcolsbegin = NULL;
+   int nrows = -1;
+   int ncols = -1;
+   int nrowmatrices = -1;
+   int ncolmatrices = -1;
+   int i;
+
+   SCIP_CALL( SCIPcreateProbBasic(scip, "subgroup2"));
+
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+      return;
+
+   perms[0] = perm1;
+   perms[1] = perm2;
+   perms[2] = perm3;
+   perms[3] = perm4;
+   perms[4] = perm5;
+
+   SCIP_CALL( SCIPdetectSingleOrDoubleLexMatrices(scip, FALSE, perms, 5, 20,
+         &success, &isorbitope, &lexmatrix, &nrows, &ncols,
+         &lexrowsbegin, &lexcolsbegin, &nrowmatrices, &ncolmatrices) );
+
+   cr_assert( success );
+   cr_assert( lexmatrix != NULL );
+   cr_assert( lexrowsbegin != NULL );
+   cr_assert( lexcolsbegin != NULL );
+   cr_assert( nrows == 5 );
+   cr_assert( ncols == 4 );
+   cr_assert( nrowmatrices == 2 );
+   cr_assert( ncolmatrices == 2 );
+
+   SCIPfreeBlockMemoryArray(scip, &lexcolsbegin, ncolmatrices + 1);
+   SCIPfreeBlockMemoryArray(scip, &lexrowsbegin, nrowmatrices + 1);
+   for (i = 0; i < nrows; ++i)
+   {
+      SCIPfreeBlockMemoryArray(scip, &lexmatrix[i], ncols);
+   }
+   SCIPfreeBlockMemoryArray(scip, &lexmatrix, nrows);
+}
