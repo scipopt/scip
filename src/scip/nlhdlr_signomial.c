@@ -95,8 +95,6 @@ struct SCIP_NlhdlrExprData
 /** nonlinear handler data */
 struct SCIP_NlhdlrData
 {
-   int                   nexprs;             /**< the number of registered signomial expressions */
-
    /* parameters */
    int                   maxnundervars;      /**< maximum numbver of variables in underestimating a concave power function */
    SCIP_Real             mincutscale;        /**< minimum scale factor when scaling a cut */
@@ -969,14 +967,11 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          {
             SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, (*nlhdlrexprdata)->factors[c], TRUE, FALSE, TRUE, TRUE) );
          }
-
-         nlhdlrdata->nexprs++;
       }
    }
 
    if( *nlhdlrexprdata != NULL )
    {
-      /* we want to join separation, if not disabled by parameter */
       *participating = SCIP_NLHDLR_METHOD_SEPABOTH;
    }
 
@@ -1041,7 +1036,6 @@ static
 SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
 { /*lint --e{715}*/
    int c;
-   SCIP_NLHDLRDATA *nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
 
    assert(expr != NULL);
 
@@ -1063,8 +1057,6 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
 
    /* free memory */
    freeExprDataMem(scip, nlhdlrexprdata, FALSE);
-
-   nlhdlrdata->nexprs--;
 
    return SCIP_OKAY;
 }
