@@ -592,7 +592,7 @@ SCIP_RETCODE processNLPSol(
    SCIP_HEUR*            authorheur,         /**< the heuristic that should be the author of solution, if any */
    SCIP_RESULT*          result,             /**< buffer to store result FOUNDSOL if a solution has been found and accepted */
    SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
-)
+   )
 {
    SCIP_HEURDATA* heurdata;
 

@@ -7491,7 +7491,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreSetppc)
 static
 SCIP_DECL_CONSINITSOL(consInitsolSetppc)
 {  /*lint --e{715}*/
-
    /* add nlrow representation to NLP, if NLP had been constructed */
    if( SCIPisNLPConstructed(scip) )
    {

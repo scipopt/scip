@@ -206,7 +206,7 @@ Fixed bugs
 - fixed error when attempting to copy SCIP with activated pricers
 - remove integrality check for implicit integral variables in cons_integral.c, updated the definition for variable type implicit integer to be more explicit that these variables can take fractional values, and updated FAQ entry
 - updated and, or, and pseudoboolean constraint handlers to better handle fractional implicit integer variables in enforcement
-- avoid invalid strong Chvatal-Gomory cuts by ceiling with tolerance in the calculation of parameter k
+- avoid invalid strong Chvatal-Gomory cuts by ceiling with tolerance in the calculation of parameter k and flooring slack coefficients with standard epsilon tolerance as well as quad precision
 - add missing row links to columns in SCIPflushRowExtensions() required to maintain correct row norms
 - restrict separator intobj to solutions for which there can be no better feasible integral objective values to avoid cutting them off
 - delay removal of clique lists from SCIPvarRemoveCliquesImplicsVbs() into cliqueCleanup() to avoid segmentation faults by incomplete cleanups after variable conversions
@@ -215,6 +215,11 @@ Fixed bugs
 - copy quiet flag from main scip's message handler to the one of solverscip in concurrent optimization
 - avoid bound tightening cycles towards huge redundancy bounds in fullDualPresolve() to avert fatal numerical trouble in representing vertices of linear relaxations with unbounded domains
 - fix problem where debug solution did not work if branching constraints are present
+- update index of dominating variable on coefficient deletion in dualPresolving() of constraint handler logicor
+- pass on flags from a redundant to the implying varbound constraint in preprocessConstraintPairs() to avoid suboptimal fixings by model relaxations
+- apply reductions of dualinfer only if a dual solution exists (primal is bounded)
+- before presolving is finished check solutions before retransforming them including tiny values to keep check flags consistent
+- disable heuristics before and during presolving in benders decomposition to avoid messing up the objective structure in the solution store by dropping auxiliary variables in the required retransformations
 
 @section RN804 SCIP 8.0.4
 *************************

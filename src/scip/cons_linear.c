@@ -11124,7 +11124,7 @@ SCIP_RETCODE dualPresolve(
           */
          SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
 
-         /** if the multi-aggregate bestvar is integer, we need to convert implicit integers to integers because
+         /* if the multi-aggregate bestvar is integer, we need to convert implicit integers to integers because
           *  the implicitness might rely on the constraint and the integrality of bestvar
           */
          if( !infeasible && aggregated && SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER )
@@ -11133,7 +11133,7 @@ SCIP_RETCODE dualPresolve(
 
             for( j = 0; j < naggrs; ++j)
             {
-               /** If the multi-aggregation was not infeasible, then setting implicit integers to integers should not
+               /* If the multi-aggregation was not infeasible, then setting implicit integers to integers should not
                 *  lead to infeasibility
                 */
                if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_IMPLINT )
@@ -11825,7 +11825,6 @@ SCIP_RETCODE simplifyInequalities(
       SCIP_Bool numericsok;
       SCIP_Bool rredundant;
       SCIP_Bool lredundant;
-
 
       gcd = (SCIP_Longint)(REALABS(vals[v]) + feastol);
       assert(gcd >= 1);
@@ -15780,7 +15779,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
 static
 SCIP_DECL_CONSINITSOL(consInitsolLinear)
 {  /*lint --e{715}*/
-
    /* add nlrow representation to NLP, if NLP had been constructed */
    if( SCIPisNLPConstructed(scip) )
    {
