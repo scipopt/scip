@@ -6654,7 +6654,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          assert( componentsize == 1 );
 
          SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
-            propdata->permvars, propdata->npermvars, componentperms[0], &success) );
+               propdata->permvars, propdata->npermvars, componentperms[0], TRUE, &success) );
          if ( success )
          {
             propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
@@ -6728,6 +6728,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
       else
       {
          /* use orbitopal reduction for component */
+         SCIP_COLUMNORDERING columnordering;
          SCIP_VAR** orbitopevarmatrix;
          int nelem;
 
@@ -6737,9 +6738,13 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          for (i = 0; i < nelem; ++i)
             orbitopevarmatrix[i] = propdata->permvars[orbitopematrix[i]];
 
+         /* get column ordering */
+         columnordering = SCIPorbitopalReductionGetDefaultColumnOrdering(propdata->orbitopalreddata);
+
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_full_comp_%d", c);
          SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
-            orbitopevarmatrix, nrows, ncols, &success) );
+               SCIP_ROWORDERING_BRANCHING, columnordering,
+               orbitopevarmatrix, nrows, ncols, &success) );
 
          if ( success )
          {
@@ -7111,7 +7116,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
          {
             assert( componentperms[p] != NULL );
             SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
-               propdata->permvars, propdata->npermvars, componentperms[p], &success) );
+                  propdata->permvars, propdata->npermvars, componentperms[p], TRUE, &success) );
             if ( success )
                propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
          }
@@ -7185,6 +7190,15 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
 
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
+   assert( propdata->usesymmetry >= 0 );
+
+   /* if no symmetries may be handled, stop here */
+   if ( propdata->usesymmetry == 0 )
+   {
+      if ( earlyterm != NULL )
+         *earlyterm = TRUE;
+      return SCIP_OKAY;
+   }
 
    /* if constraints have already been added */
    if ( propdata->triedaddconss )
@@ -7419,6 +7433,11 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    {
       SCIP_CALL( SCIPgetIntParam(scip, "misc/usesymmetry", &propdata->usesymmetry) );
    }
+   assert( propdata->usesymmetry >= 0 );
+
+   /* terminate early if no symmetries will be handled */
+   if ( propdata->usesymmetry == 0 )
+      return SCIP_OKAY;
 
    /* add symmetry handling constraints if required  */
    if ( propdata->addconsstiming == 0 )
@@ -7453,6 +7472,10 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
+
+   /* terminate early if no symmetries will be handled */
+   if ( propdata->usesymmetry == 0 )
+      return SCIP_OKAY;
 
    /* guarantee that symmetries are computed (and handled) if the solving process has not been interrupted
     * and even if presolving has been disabled */
@@ -7515,6 +7538,10 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
    propdata = SCIPpropGetData(prop);
    assert( propdata != NULL );
    assert( propdata->usesymmetry >= 0 );
+
+   /* terminate early if no symmetries will be handled */
+   if ( propdata->usesymmetry == 0 )
+      return SCIP_OKAY;
 
    /* possibly create symmetry handling constraints */
 

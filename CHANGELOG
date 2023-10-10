@@ -77,6 +77,19 @@ Interface changes
 - SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
 - SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
 - SCIPbendersGetNLPParam()
+- new API functions SCIPlexicographicReductionGetStatistics(), SCIPlexicographicReductionPrintStatistics(),
+  SCIPlexicographicReductionPropagate(), SCIPlexicographicReductionAddPermutation(), SCIPlexicographicReductionReset(),
+  SCIPlexicographicReductionFree(), SCIPincludeLexicographicReduction(), for lexicographic reduction.
+- new API functions SCIPorbitopalReductionGetStatistics(), SCIPorbitopalReductionPrintStatistics(),
+  SCIPorbitopalReductionPropagate(), SCIPorbitopalReductionAddOrbitope(), SCIPorbitopalReductionReset(),
+  SCIPorbitopalReductionFree(), SCIPincludeOrbitopalReduction(), SCIPorbitopalReductionGetDefaultColumnOrdering(),
+  for orbitopal fixing.
+- new API functions SCIPorbitalReductionGetStatistics(), SCIPorbitalReductionPrintStatistics(),
+  SCIPorbitalReductionPropagate(), SCIPorbitalReductionAddComponent(), SCIPorbitalReductionReset(),
+  SCIPorbitalReductionFree(), SCIPincludeOrbitalReduction(), for orbital fixing.
+- new API functions SCIPgetShadowTreeEventHandlerExecutionTime(), SCIPshadowTreeGetShadowNodeFromNodeNumber(),
+  SCIPshadowTreeGetShadowNode(), SCIPgetShadowTree(), SCIPactivateShadowTree(), SCIPincludeEventHdlrShadowTree(),
+  for managing a copy of the branch-and-bound tree for symmetry handling purposes.
 - SCIPdotWriteOpening(), SCIPdotWriteNode(), SCIPdotWriteArc(), SCIPdotWriteClosing()
 
 ### Command line interface
@@ -160,6 +173,7 @@ Fixed bugs
 - Number of runs in which separation is enabled will now be correct as per "separating/maxruns" parameter. Earlier,
   separation was enabled for "maxruns + 1" number of runs, i.e., separation was enabled even when "maxruns = 0" was set.
 - add safeguard for number of selected cuts
+- use double double precision for delta in activity updates of cons_linear.c
 
 Miscellaneous
 -------------
@@ -178,6 +192,10 @@ Known bugs
 Fixed bugs
 ----------
 
+- fixed that scaling of rows in Gurobi interface (SCIPlpiScaleRow()) changed infinite sides to large finite ones (1e20) when scale factor is negative
+- check whether objective limit is truly reached in SCIPlpiIsStable()
+- if an objective limit is set and Mosek claims that it is exceeded, check that this is indeed the case in SCIPlpiIsStable()
+- the .mps file reader was extended to additionally accept .mps files with the objective sense section on one line
 - ensure that delayed cutpool separation does not happen if enough cuts have been found already
 - fixed that a Gurobi or Mosek interface (LPI) could not be freed from a thread different than the one it was created in, which lead to problems when, e.g., using the concurrent optimizer
 - in cons_varbound if both variables are fixed, instead of propagating the constraint check the feasibility of the constraint since propagating can lead to unnecessary numerical troubles
@@ -186,10 +204,17 @@ Fixed bugs
 - fixed two bugs in cons_varbound: avoid adding variable bounds if vbdcoef is infinite and unlock/lock variables if lhs/rhs/vbdcoef are changed
 - globalize constraint changes before bound changes during the effective root shift in treeSwitchPath() to correctly update variable locks by avoiding global bounds with outstanding bound change events when deleting constraints
 - fixed error when attempting to copy SCIP with activated pricers
-- remove integrality check for implicit integral variables in cons_integral.c
+- remove integrality check for implicit integral variables in cons_integral.c, updated the definition for variable type implicit integer to be more explicit that these variables can take fractional values, and updated FAQ entry
+- updated and, or, and pseudoboolean constraint handlers to better handle fractional implicit integer variables in enforcement
 - avoid invalid strong Chvatal-Gomory cuts by ceiling with tolerance in the calculation of parameter k
 - add missing row links to columns in SCIPflushRowExtensions() required to maintain correct row norms
 - restrict separator intobj to solutions for which there can be no better feasible integral objective values to avoid cutting them off
+- delay removal of clique lists from SCIPvarRemoveCliquesImplicsVbs() into cliqueCleanup() to avoid segmentation faults by incomplete cleanups after variable conversions
+- reject sub-solutions with invalid objectives in SCIPtranslateSubSols() due to contradicting infinite contributions
+- correct column index in getMinMaxActivityResiduals() to make presolver dualinfer work
+- copy quiet flag from main scip's message handler to the one of solverscip in concurrent optimization
+- avoid bound tightening cycles towards huge redundancy bounds in fullDualPresolve() to avert fatal numerical trouble in representing vertices of linear relaxations with unbounded domains
+- fix problem where debug solution did not work if branching constraints are present
 
 @section RN804 SCIP 8.0.4
 *************************
@@ -256,11 +281,6 @@ Fixed bugs
 - only consider positive slack variables as active in benders.c
 - in the feasibility check of and/or constraints, allow for fractional values in operands
 - fixed linear outer-approximation for some composite absolute-value expressions
-- fixed that scaling of rows in Gurobi interface (SCIPlpiScaleRow()) changed infinite sides to large finite ones (1e20) when scale factor is negative
-- check whether objective limit is truly reached in SCIPlpiIsStable()
-- if an objective limit is set and Mosek claims that it is exceeded, check that this is indeed the case in SCIPlpiIsStable()
-- The .mps file reader was extended to additionally accept .mps files with the objective sense section on one line.
-- use double double precision for delta in activity updates of cons_linear.c.
 
 Miscellaneous
 -------------
@@ -293,6 +313,8 @@ Build system
 - Move -I/path/to/src/amplmp/include to front of compiler flags for include directories
 
 ### Makefile
+
+- Use SYM=bliss by default, since bliss now is shipped with SCIP.
 
 Fixed bugs
 ----------
