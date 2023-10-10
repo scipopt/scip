@@ -23,7 +23,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-// #define SCIP_DEBUG
+#define SCIP_DEBUG
 // #define SCIP_MORE_DEBUG
 
 #include "blockmemshell/memory.h"
@@ -625,7 +625,7 @@ void printSingleBoundChange(
 {
       SCIP_VAR* var;
       var = SCIPbdchginfoGetVar(bdchginfo);
-      SCIPsetDebugMsgPrint(set, " \t -> Bound change <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, global bounds[%.15g,%.15g]] \n",
+      SCIPsetDebugMsgPrint(set, " \t -> Bound change <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, global bounds:[%.15g,%.15g], local bounds:[%.15g,%.15g]] \n",
       SCIPvarGetName(var),
       SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
       SCIPbdchginfoGetNewbound(bdchginfo),
@@ -636,7 +636,8 @@ void printSingleBoundChange(
          ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
          : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
             : "none")),
-            SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+            SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
+            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
 }
 /** prints all bound changes in the queue in debug mode
  */
@@ -662,7 +663,7 @@ void printAllBoundChanges(
    {
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->resbdchgqueue)[i]);
       var = bdchginfo->var;
-      SCIPsetDebugMsgPrint(set, " \t -> Bound change %d: <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, global bounds[%.15g,%.15g]] \n",
+      SCIPsetDebugMsgPrint(set, " \t -> Bound change %d: <%s> %s %.15g [status:%d, type:%d, depth:%d, pos:%d, reason:<%s>, global bounds:[%.15g,%.15g], local bounds:[%.15g,%.15g]] \n",
       i, SCIPvarGetName(var),
       SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
       SCIPbdchginfoGetNewbound(bdchginfo),
@@ -673,7 +674,8 @@ void printAllBoundChanges(
          ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
          : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
             : "none")),
-         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
+         SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
    }
    SCIPsetDebugMsgPrint(set, "End of bound changes in queue. \n");
 }
