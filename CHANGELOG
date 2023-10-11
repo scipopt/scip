@@ -48,13 +48,13 @@ Performance improvements
 
 ### Cmake
 
-- added flag option "SYM=sassy" for using sassy/bliss as a graph automorphism package
+- added flag option "SYM=sbliss" for using sassy/bliss as a graph automorphism package
 
 ### Makefile
 
 - added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
-- added flag option "sassy" for SYM variable to specify which graph automorphism package should be used
-- use SYM=sassy by default, since sassy and bliss are now shipped with SCIP
+- added flag option "sbliss" for SYM variable to specify which graph automorphism package should be used
+- use SYM=sbliss by default, since sassy and bliss are now shipped with SCIP
 
 @section RN804 SCIP 8.0.4
 *************************
@@ -132,8 +132,7 @@ Build system
 ### Cmake
 
 - New flag -DLAPACK=on for linking with Lapack (must be available in the system)
-- added flag option "SYM=sassy" for using sassy/bliss as a graph automorphism package
-- use SYM=sassy by default, since sassy and bliss are now shipped with SCIP.
+- use SYM=sbliss by default, since sassy and bliss are now shipped with SCIP.
 
 ### Makefile
 
