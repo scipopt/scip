@@ -859,10 +859,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
 static
 SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
 { /*lint --e{715}*/
-   SCIP_NLHDLRDATA *nlhdlrdata;
-   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
 
-   assert(nlhdlrdata != NULL);
    assert(expr != NULL);
    assert(enforcing != NULL);
    assert(participating != NULL);
