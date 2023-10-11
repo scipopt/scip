@@ -92,8 +92,10 @@ void teardown(void)
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
 }
 
+
 /* define the test suite */
 TestSuite(nlhdlrsignomial, .init = setup, .fini = teardown);
+
 
 /** creates a constraint and calls detection methods of nonlinear handlers */
 static
@@ -110,75 +112,11 @@ SCIP_RETCODE createAndDetect(
    return SCIP_OKAY;
 }
 
-/*
- * tests
- */
-
-/* creates and adds two nonlinear constraints and check output of SCIPgetSignomialExprsExpr */
-Test(nlhdlrsignomial, collect_product_expressions)
-{
-   SCIP_CONS* conss[3];
-   SCIP_EXPR** exprs;
-   SCIP_EXPR* expr;
-   const char* inputs[3] = {
-    "<x1> * power(<x2>, 1.0) * power(<x4>, 1.0) + power(<x3>, -2.1) * power(<x4>, 1.1)",
-    "power(<x1>, 0.8) * power(<x3>, 1.5) * power(<x4>, -1.5) * power(<x5>, -2) + power(<x2>, -2.1) * power(<x3>, 1.2) +  power(<x4>, 1.8)",
-    "power(<x1>, 0.6) * power(<x2>, -1.5) * power(<x3>, -1) * power(<x4>, 2) * power(<x5>, 0.8) + power(<x1>, -1.1) * power(<x2>, 1.2)  * power(<x3>, 0.4)"};
-   SCIP_Bool infeasible;
-   int nexprs;
-   int c;
-   int t;
-
-   /* create constraints */
-   for( c = 0; c < 3; ++c )
-   {
-      /* when parsing we do not need to pass our own owner data, since cons nonlinear is going to own the expression in
-       * SCIPcreateConsBasicNonlinear
-       */
-      SCIP_CALL( SCIPparseExpr(scip, &expr, inputs[c], NULL, NULL, NULL) );
-      SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &conss[c], "cons", expr, -100.0, 100.0) );
-      /* add and release constraint */
-      SCIP_CALL( SCIPaddCons(scip, conss[c]) );
-      SCIP_CALL( SCIPreleaseCons(scip, &conss[c]) );
-      SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   }
-
-   /* transform problem, initialize solve, initlp */
-   TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE);
-
-   SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
-
-   /* check whether all product expressions could be found */
-   exprs = SCIPgetExprsSignomial(nlhdlr);
-   cr_expect(exprs != NULL);
-   nexprs = SCIPgetNExprsSignomial(nlhdlr);
-   cr_expect(nexprs == 5);
-
-   for( c = 0; c < nexprs; ++c )
-   {
-      SCIP_EXPR* child;
-
-      cr_assert(exprs[c] != NULL);
-      cr_expect(SCIPexprGetNChildren(exprs[c]) >= 2);
-      cr_expect(SCIPgetExprAuxVarNonlinear(exprs[c]) != NULL);
-      cr_expect(SCIPisExprProduct(scip, exprs[c]));
-
-      for ( t = 0; t < SCIPgetExprAuxVarNonlinear(exprs[c]); ++t)
-      {
-         child = SCIPexprGetChildren(exprs[c])[t];
-         cr_assert(child != NULL);
-         cr_expect(SCIPgetExprAuxVarNonlinear(child) != NULL);
-      }
-   }
-}
-
-
-
 /** a probabilistic way to valid a rowprep by random sampling */
 static 
 SCIP_RETCODE validCutProb(
    SCIP*                 scip,               /**< scip pointer */ 
-   SCIP_EXPR*            expr.               /**< expr pointer */ 
+   SCIP_EXPR*            expr,               /**< expr pointer */ 
    SCIP_ROWPREP*         rowprep,            /**< rowprep pointer */ 
    int                   nsample,            /**< number of samples */ 
    SCIP_Bool*            isvalid             /**< whether the rowprep is valid */ 
@@ -240,7 +178,6 @@ SCIP_RETCODE validCutProb(
       if( SCIProwprepGetSidetype(rowprep) == SCIP_SIDETYPE_LEFT)
       {
          if( cutval < side ){
-            //SCIPdebugMsg(scip, "%d/%d, (lhs) %f <= %f \n", s, nsample, side, cutval);
             *isvalid = FALSE;
             break;
          }
@@ -248,7 +185,6 @@ SCIP_RETCODE validCutProb(
       else
       {
          if( cutval > side ){
-            //SCIPdebugMsg(scip, "%d/%d, %f <= %f (rhs) \n", s, nsample, cutval, side);
             *isvalid = FALSE;
             break;
          }
@@ -259,14 +195,179 @@ SCIP_RETCODE validCutProb(
    return SCIP_OKAY;
 }
 
+/*
+ * tests
+ */
+
+
+/* detects <x1> * power(<x2>, 1.0) * power(<x4>, 1.0) */
+Test(nlhdlrsignomial, detectandfree1, .description = "detects signomial terms 1")
+{
+   SCIP_CONS* cons;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+   int i;
+   SCIP_EXPR_OWNERDATA* ownerdata;
+
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: <x1> * power(<x2>, 1.0) * power(<x4>, 1.0)  <= 100",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* add locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
+
+   expr = SCIPgetExprNonlinear(cons);
+   ownerdata = SCIPexprGetOwnerData(expr);
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < SCIPgetExprNEnfosNonlinear(expr); ++i )
+   {
+      if( ownerdata->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = ownerdata->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_null(nlhdlrexprdata);
+
+   /* remove locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* disable cons, so it can be deleted */
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
+   ownerdata->nconss = 0; /* TODO should consDisableNonlinear take care of this instead? */
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+/*  detects  power(<x3>, -1.5) */
+Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 2")
+{
+   SCIP_CONS* cons;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+   int i;
+   SCIP_EXPR_OWNERDATA* ownerdata;
+
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>:  power(<x3>, -1.5)  <= 100",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* add locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
+
+   expr = SCIPgetExprNonlinear(cons);
+   ownerdata = SCIPexprGetOwnerData(expr);
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < SCIPgetExprNEnfosNonlinear(expr); ++i )
+   {
+      if( ownerdata->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = ownerdata->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_null(nlhdlrexprdata);
+
+   /* remove locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* disable cons, so it can be deleted */
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
+   ownerdata->nconss = 0; /* TODO should consDisableNonlinear take care of this instead? */
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
+
+/*  detects power(<x3>, 1.5) * power(<x4>, -1.5) * power(<x5>, -2) */
+Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 3")
+{
+   SCIP_CONS* cons;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
+   SCIP_EXPR* expr;
+   SCIP_Bool infeasible;
+   SCIP_Bool success;
+   int i;
+   SCIP_EXPR_OWNERDATA* ownerdata;
+
+   /* create nonlinear constraint */
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>:  power(<x3>, 1.5) * power(<x4>, -1.5) * power(<x5>, -2)  <= 100",
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+
+   /* add locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, 1, 0) );
+
+   /* call detection method -> this registers the nlhdlr */
+   SCIP_CALL( detectNlhdlrs(scip, conshdlr, &cons, 1) );
+
+   expr = SCIPgetExprNonlinear(cons);
+   ownerdata = SCIPexprGetOwnerData(expr);
+
+   /* find the nlhdlr expr data */
+   for( i = 0; i < SCIPgetExprNEnfosNonlinear(expr); ++i )
+   {
+      if( ownerdata->enfos[i]->nlhdlr == nlhdlr )
+         nlhdlrexprdata = ownerdata->enfos[i]->nlhdlrexprdata;
+   }
+   cr_assert_not_null(nlhdlrexprdata);
+
+   cr_assert(nlhdlrexprdata->nvars == 3);
+   cr_assert(nlhdlrexprdata->nposvars == 1);
+   cr_assert(nlhdlrexprdata->nnegvars == 3);
+
+   for( i = 0; i < 3; i++){
+      if( x1 == nlhdlrexprdata->vars[i] ){
+         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i] == 1.5));
+      }
+      else if( x2 == nlhdlrexprdata->vars[i] ){
+         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i] == -1.5));
+      }
+      else if( x5 == nlhdlrexprdata->vars[i] ){
+         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i] == -2));
+      }
+   }
+
+   for( i = 0; i < 3; i++){
+      if( x1 == nlhdlrexprdata->vars[i] ){
+         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[i] == 1.5 / (1.5 + 2 + 1)));
+      }
+      else if( x2 == nlhdlrexprdata->vars[i] ){
+         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i] == 1.5 / (1.5 + 2 + 1)) ));
+      }
+      else if( x5 == nlhdlrexprdata->vars[i] ){
+         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i] == 2 / (1.5 + 2 + 1))));
+      }
+   }
+
+   /* remove locks */
+   SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
+
+   /* disable cons, so it can be deleted */
+   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
+   ownerdata->nconss = 0; /* TODO should consDisableNonlinear take care of this instead? */
+
+   /* free cons */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+}
+
 
 /* adds a linear inequality to the product expression and computes a cut at a given reference point */
-Test(nlhdlrsignomial, separation_single)
+Test(nlhdlrsignomial, separation_signomial)
 {
    SCIP_ROWPREP* rowprep;
    SCIP_CONS* cons;
    SCIP_SOL* sol;
-   SCIP_ROW* row;
    SCIP_Bool success;
    SCIP_Bool overestimate;
    SCIP_Bool dummy;
@@ -291,7 +392,7 @@ Test(nlhdlrsignomial, separation_single)
    /* transform problem */
    TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE);
 
-   /* create constraint containing a single product expression */
+   /* create constraint containing a signomial product expression */
    SCIP_CALL( SCIPparseExpr(scip, &expr, "power(<t_x1>, 0.6) * power(<t_x2>, -1.5) * power(<t_x3>, -1) * power(<t_x4>, 2) * power(<t_x5>, 0.8)", NULL, NULL, NULL) );
    SCIP_CALL( createAndDetect(&cons, expr) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );

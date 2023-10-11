@@ -82,7 +82,7 @@ struct SCIP_NlhdlrExprData
    int                   nnegvars;           /**< number of negative variables  \f$v\f$ */
    SCIP_Bool*            signs;              /**< indicators for sign of variables after reformulation, TRUE for positive, FALSE for negative */
    SCIP_Real*            refexponents;       /**< exponents of \f$(x,t)\f$ after reformulation */
-   SCIP_Bool             isstorecapture;          /**< are all variables already got? */
+   SCIP_Bool             isstorecapture;     /**< are all variables already got? */
 
    /* working parameters will be modified after getting all variables */
    SCIP_VAR**            vars;               /**< variables \f$(x,y)\f$ */
