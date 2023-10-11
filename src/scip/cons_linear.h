@@ -367,6 +367,16 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
 
+/** tries to simplify a linear constraint */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsimplifyConsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< source constraint to try to convert */
+   int*                  nchgcoefs,          /**< pointer to store the amount of changed coefficients */
+   int*                  nchgsides,          /**< pointer to store the amount of changed sides */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected */
+   );
+
 /** performs linear constraint type classification as used for MIPLIB
  *
  *  iterates through all linear constraints and stores relevant statistics in the linear constraint statistics \p linconsstats.

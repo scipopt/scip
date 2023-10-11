@@ -548,6 +548,9 @@ void printConflictRow(
      case 6:
          SCIPsetDebugMsgPrint(set, "After Fixing Unresolvable Bound Change Conflict Row:  \n");
          break;
+     case 7:
+         SCIPsetDebugMsgPrint(set, "Postprocessed Conflict Row:  \n");
+         break;
       default:
          SCIPsetDebugMsgPrint(set, "Some row:  \n");
          break;
@@ -2427,6 +2430,7 @@ SCIP_RETCODE createAndAddConflictCon(
    int i;
 
    assert(vars != NULL);
+   assert(conflictrow->nnz > 0);
 
    SCIP_CALL( SCIPallocBufferArray(set->scip, &consvars, conflictrow->nnz) );
    SCIP_CALL( SCIPallocBufferArray(set->scip, &vals, conflictrow->nnz) );
@@ -2448,7 +2452,7 @@ SCIP_RETCODE createAndAddConflictCon(
               lhs, SCIPsetInfinity(set), FALSE, set->conf_separesolution, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
               FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
 
-   /* chck if the constraint is valid for the debug solution */
+   /* check if the constraint is valid for the debug solution */
    SCIP_CALL( SCIPdebugCheckAnyConss(set->scip, &cons, 1) );
 
    /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
@@ -2461,7 +2465,7 @@ SCIP_RETCODE createAndAddConflictCon(
          cons = upgdcons;
       }
    }
-   /* chck if the constraint is valid for the debug solution */
+   /* check if the constraint is valid for the debug solution */
    SCIP_CALL( SCIPdebugCheckAnyConss(set->scip, &cons, 1) );
 
 
@@ -2479,6 +2483,114 @@ SCIP_RETCODE createAndAddConflictCon(
 
    return SCIP_OKAY;
 }/*lint !e715*/
+
+/** postprocess conflict constraint */
+static
+SCIP_RETCODE postprocessConflictCon(
+   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_CONFLICTROW*     conflictrow,        /**< conflict row to add to the tree */
+   int                   insertdepth,        /**< depth level at which the conflict set should be added */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the addition was successful */
+   )
+{
+
+   SCIP_VAR** consvars;
+   SCIP_CONS* cons;
+
+   char consname[SCIP_MAXSTRLEN];
+
+   SCIP_Real* vals;
+   SCIP_Real lhs;
+   int i;
+   int arraysize;
+
+   assert(vars != NULL);
+
+   arraysize = conflictrow->nnz;
+   SCIP_CALL( SCIPallocBufferArray(set->scip, &consvars, arraysize) );
+   SCIP_CALL( SCIPallocBufferArray(set->scip, &vals, arraysize) );
+
+   lhs = conflictrow->lhs;
+
+   for( i = 0; i < conflictrow->nnz; ++i )
+   {
+      int idx;
+      idx = conflictrow->inds[i];
+      assert(conflictrow->vals[idx]);
+      consvars[i] = vars[idx];
+      vals[i] = conflictrow->vals[idx];
+   }
+
+   /* create a constraint out of the conflict set */
+   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "confres_%" SCIP_LONGINT_FORMAT, conflict->nresconfconss);
+   SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, consname, conflictrow->nnz, consvars, vals,
+              lhs, SCIPsetInfinity(set), FALSE, set->conf_separesolution, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
+              FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
+
+   int nchgcoefs;
+   int nchgsides;
+   nchgcoefs = 0;
+   nchgsides = 0;
+   *infeasible = FALSE;
+
+   SCIP_CALL(SCIPsimplifyConsLinear(set->scip, cons, &nchgcoefs, &nchgsides, infeasible));
+   if((nchgcoefs != 0 || nchgsides != 0) && !(*infeasible))
+   {
+      SCIP_ROW* postprocessedrow;
+      SCIP_COL** cols;
+      SCIP_Real* vals;
+
+      postprocessedrow = SCIPconsCreateRow(set->scip, cons);
+
+      assert(SCIProwGetNNonz(postprocessedrow) <= conflictrow->nnz);
+
+      for(i = 0; i < conflictrow->nnz; ++i)
+         conflictrow->vals[conflictrow->inds[i]] = 0.0;
+
+      conflictrow->nnz = SCIProwGetNNonz(postprocessedrow);
+      assert(conflictrow->nnz > 0);
+
+      vals = SCIProwGetVals(postprocessedrow);
+      cols = SCIProwGetCols(postprocessedrow);
+
+      conflictrow->lhs = SCIProwGetLhs(postprocessedrow) - SCIProwGetConstant(postprocessedrow);
+
+      SCIP_Bool swapside = FALSE;
+      if(SCIPsetIsInfinity(set, -conflictrow->lhs))
+      {
+         conflictrow->lhs = SCIProwGetRhs(postprocessedrow) - SCIProwGetConstant(postprocessedrow);
+         assert(!SCIPsetIsInfinity(set, conflictrow->lhs));
+         swapside = TRUE;
+      }
+      for(i = 0; i < conflictrow->nnz; ++i)
+      {
+         conflictrow->inds[i] = SCIPvarGetProbindex(SCIPcolGetVar(cols[i]));
+         if(swapside)
+            conflictrow->vals[conflictrow->inds[i]] = -vals[i];
+         else
+            conflictrow->vals[conflictrow->inds[i]] = vals[i];
+      }
+
+      SCIPdebug(printConflictRow(conflictrow, set, vars, 7));
+   }
+
+   SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(set->scip, &consvars);
+   SCIPfreeBufferArray(set->scip, &vals);
+
+   return SCIP_OKAY;
+}/*lint !e715*/
+
 
 /** create conflict constraints out of conflict rows and add them to the problem */
 SCIP_RETCODE SCIPconflictAddConflictCon(
@@ -2499,6 +2611,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    )
 {
    SCIP_VAR** vars;
+   SCIP_Bool infeasible;
    int focusdepth;
    int maxsize;
 
@@ -2521,6 +2634,20 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    /* calculate the maximal size of each accepted conflict set */
    maxsize = (int) (set->conf_maxvarsfracres * transprob->nvars);
 
+   if(set->conf_postprocessconflicts)
+   {
+      infeasible = FALSE;
+      SCIP_CALL(postprocessConflictCon(conflict, blkmem, set, stat, vars, tree, reopt, lp, cliquetable, conflictrow, focusdepth, &infeasible));
+      if(infeasible)
+      {
+         SCIPsetDebugMsgPrint(set, " \t -> postprocessing proves global infeasibility \n");
+         /* increase the number of aborts since no conflict constraint is added */
+         conflict->nknownaborts++;
+         SCIP_CALL( SCIPnodeCutoff(tree->path[conflictrow->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+         return SCIP_OKAY;
+
+      }
+   }
    /* refactortodo compute insert depth */
 
    SCIPsetDebugMsgPrint(set, "flushing %d conflict constraint at focus depth %d (id: %d, vd: %d, cd: %d, rd: %d, maxsize: %d)\n",

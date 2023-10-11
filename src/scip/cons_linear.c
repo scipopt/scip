@@ -19037,3 +19037,28 @@ SCIP_RETCODE SCIPcleanupConssLinear(
 
    return SCIP_OKAY;
 }
+
+/** tries to simplify a linear constraint */
+SCIP_EXPORT
+SCIP_RETCODE SCIPsimplifyConsLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< source constraint to try to convert */
+   int*                  nchgcoefs,          /**< pointer to store the amount of changed coefficients */
+   int*                  nchgsides,          /**< pointer to store the amount of changed sides */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected */
+   )
+{
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nchgcoefs != NULL);
+   assert(nchgsides != NULL);
+   assert(infeasible != NULL);
+
+   *nchgcoefs = 0;
+   *nchgsides = 0;
+   *infeasible = FALSE;
+
+   SCIP_CALL(simplifyInequalities(scip, cons, nchgcoefs, nchgsides, infeasible));
+   return SCIP_OKAY;
+}
