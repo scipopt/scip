@@ -81,7 +81,7 @@ struct SCIP_NlhdlrExprData
    int                   nposvars;           /**< number of positive variables \f$u\f$ */
    int                   nnegvars;           /**< number of negative variables  \f$v\f$ */
    SCIP_Bool*            signs;              /**< indicators for sign of variables after reformulation, TRUE for positive, FALSE for negative */
-   SCIP_Real*            refexponents;       /**< exponents of \f$(x,t)\f$ after reformulation */
+   SCIP_Real*            refexponents;       /**< exponents of \f$(x,t)\f$ after reformulation (always positive) */
    SCIP_Bool             isstorecapture;     /**< are all variables already got? */
 
    /* working parameters will be modified after getting all variables */
@@ -396,15 +396,15 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalPower)
  */
 static 
 SCIP_RETCODE estimateSpecialPower(
-   SCIP*                 scip,                               /**< SCIP data structure */
-   SCIP_NLHDLREXPRDATA   *nlhdlrexprdata,                    /**< nonlinear handler expression data */
-   SCIP_Bool             sign,                               /**< the sign of variables of the power function */     
-   SCIP_Real             multiplier,                         /**< the mulitplier of the estimator */ 
-   SCIP_Bool             overestimate,                       /**< whether overestimate or underestimator the power function */ 
-   SCIP_SOL*             sol,                                /**< solution \f$ w' \f$  to use in estimation */
-   SCIP_ROWPREP*         rowprep,                            /**< rowprep where to store estimator */
-   SCIP_Bool*            isspecial,                          /**< buffer to store whether this function is a special case */ 
-   SCIP_Bool*            success                             /**< buffer to store whether successful */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLREXPRDATA   *nlhdlrexprdata,    /**< nonlinear handler expression data */
+   SCIP_Bool             sign,               /**< the sign of variables of the power function */
+   SCIP_Real             multiplier,         /**< the mulitplier of the estimator */
+   SCIP_Bool             overestimate,       /**< whether overestimate or underestimator the power function */
+   SCIP_SOL*             sol,                /**< solution \f$ w' \f$  to use in estimation */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep where to store estimator */
+   SCIP_Bool*            isspecial,          /**< buffer to store whether this function is a special case */
+   SCIP_Bool*            success             /**< buffer to store whether successful */
    )
 {
    int i;
@@ -449,7 +449,7 @@ SCIP_RETCODE estimateSpecialPower(
    if( nsignvars == 0 )
    {
       /* constant case */
-      SCIProwprepAddConstant(rowprep, multiplier * 1);
+      SCIProwprepAddConstant(rowprep, multiplier);
       *success = TRUE;
    }
    else if( nsignvars == 1 )
@@ -463,7 +463,7 @@ SCIP_RETCODE estimateSpecialPower(
             SCIP_Real scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
             SCIP_VAR* var = nlhdlrexprdata->vars[i];
             SCIP_Real refexponent = nlhdlrexprdata->refexponents[i];
-            if( SCIPisEQ(scip, refexponent, 1.0) )
+            if( refexponent == 1.0 )
             {
                /* \f$ h = 1 \f$, a univariate linear function. Only rescale, no need for linearization */
                SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier / scale));
@@ -749,7 +749,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
       SCIP_CALL( storeCaptureVars(scip, expr, nlhdlrexprdata) );
 
    /* check whether all variables have finite positive bounds, which is necessary for the expression to be a signomial term */
-   /* TODO consider allowing 0 lower bounds for u variables (and handle gradients at 0) */
+   /* TODO consider allowing 0.0 lower bounds for u variables (and handle gradients at 0.0) */
    isboxsignomial = FALSE;
    checkSignomialBounds(scip, nlhdlrexprdata, &isboxsignomial);
 
@@ -815,15 +815,15 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
    SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nlhdlrexprdata->nvars + 1) );
 
-   /* only underestimate a concave function, if the number of variables satisfy the criteria */
+   /* only underestimate a concave function, if the number of variables is below a given threshold */
    if( nundervars <= nlhdlrdata->maxnundervars )
    {
       /* compute underestimator */
       isspecial = FALSE;
       /* check and compute the special case */
-      SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, undersign, undermultiplier, FALSE, sol, rowprep, &isspecial, success));
+      SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, undersign, undermultiplier, FALSE, sol, rowprep, &isspecial, success) );
       if( !isspecial )
-         SCIP_CALL( underEstimatePower(scip, conshdlr, nlhdlr, nlhdlrexprdata, undersign, undermultiplier, sol, targetunder, rowprep, success));
+         SCIP_CALL( underEstimatePower(scip, conshdlr, nlhdlr, nlhdlrexprdata, undersign, undermultiplier, sol, targetunder, rowprep, success) );
    }
 
 
@@ -835,9 +835,9 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
       SCIP_Real prevconstant =  SCIProwprepGetSide(rowprep);
       #endif
       /* check and compute the special case */
-      SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, oversign, overmultiplier, TRUE, sol, rowprep, &isspecial, success));
+      SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, oversign, overmultiplier, TRUE, sol, rowprep, &isspecial, success) );
       if( !isspecial )
-         SCIP_CALL( overEstimatePower(scip, nlhdlrexprdata, oversign, overmultiplier, sol, rowprep, success));
+         SCIP_CALL( overEstimatePower(scip, nlhdlrexprdata, oversign, overmultiplier, sol, rowprep, success) );
    }
 
 
