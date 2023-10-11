@@ -30,6 +30,8 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include "scip/scipdefplugins.h"
 #include "scip/scip.h"
+#include "scip/nlhdlr.c"
+#include "scip/cons_nonlinear.c"
 #include "scip/nlhdlr_signomial.c"
 
 #include "include/scip_test.h"
@@ -115,7 +117,6 @@ SCIP_RETCODE createAndDetect(
 /** a probabilistic way to valid a rowprep by random sampling */
 static 
 SCIP_RETCODE validCutProb(
-   SCIP*                 scip,               /**< scip pointer */ 
    SCIP_EXPR*            expr,               /**< expr pointer */ 
    SCIP_ROWPREP*         rowprep,            /**< rowprep pointer */ 
    int                   nsample,            /**< number of samples */ 
@@ -206,7 +207,6 @@ Test(nlhdlrsignomial, detectandfree1, .description = "detects signomial terms 1"
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
-   SCIP_Bool infeasible;
    SCIP_Bool success;
    int i;
    SCIP_EXPR_OWNERDATA* ownerdata;
@@ -250,7 +250,6 @@ Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 2"
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
-   SCIP_Bool infeasible;
    SCIP_Bool success;
    int i;
    SCIP_EXPR_OWNERDATA* ownerdata;
@@ -290,12 +289,11 @@ Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 2"
 
 
 /*  detects power(<x3>, 1.5) * power(<x4>, -1.5) * power(<x5>, -2) */
-Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 3")
+Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3")
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;
    SCIP_EXPR* expr;
-   SCIP_Bool infeasible;
    SCIP_Bool success;
    int i;
    SCIP_EXPR_OWNERDATA* ownerdata;
@@ -328,25 +326,25 @@ Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 3"
 
    for( i = 0; i < 3; i++){
       if( x1 == nlhdlrexprdata->vars[i] ){
-         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i] == 1.5));
+         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], 1.5));
       }
       else if( x2 == nlhdlrexprdata->vars[i] ){
-         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i] == -1.5));
+         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], -1.5));
       }
       else if( x5 == nlhdlrexprdata->vars[i] ){
-         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i] == -2));
+         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], -2));
       }
    }
 
    for( i = 0; i < 3; i++){
       if( x1 == nlhdlrexprdata->vars[i] ){
-         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[i] == 1.5 / (1.5 + 2 + 1)));
+         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[i], 1.5 / (1.5 + 2 + 1) ));
       }
       else if( x2 == nlhdlrexprdata->vars[i] ){
-         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i] == 1.5 / (1.5 + 2 + 1)) ));
+         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], 1.5 / (1.5 + 2 + 1) ));
       }
       else if( x5 == nlhdlrexprdata->vars[i] ){
-         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i] == 2 / (1.5 + 2 + 1))));
+         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], 2 / (1.5 + 2 + 1) ));
       }
    }
 
@@ -420,7 +418,7 @@ Test(nlhdlrsignomial, separation_signomial)
 
    nsample = 10000;
    rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 0);
-   SCIP_CALL( validCutProb(scip, expr, rowprep, nsample, &isvalid));
+   SCIP_CALL( validCutProb( expr, rowprep, nsample, &isvalid));
    SCIPfreeRowprep(scip, &rowprep);
 
    /* free memory */
