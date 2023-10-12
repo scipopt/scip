@@ -201,7 +201,7 @@ SCIP_RETCODE validCutProb(
  */
 
 
-/* detects <x1> * power(<x2>, 1.0) * power(<x4>, 1.0) */
+/* detects <x1> * (<x2>)^(1.0) * (<x4>)^(1.0) */
 Test(nlhdlrsignomial, detectandfree1, .description = "detects signomial terms 1")
 {
    SCIP_CONS* cons;
@@ -212,7 +212,7 @@ Test(nlhdlrsignomial, detectandfree1, .description = "detects signomial terms 1"
    SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* create nonlinear constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: <x1> * power(<x2>, 1.0) * power(<x4>, 1.0)  <= 100",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>: <x1> * (<x2>)^(1.0) * (<x4>)^(1.0)  <= 100",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -244,7 +244,7 @@ Test(nlhdlrsignomial, detectandfree1, .description = "detects signomial terms 1"
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/*  detects  power(<x3>, -1.5) */
+/*  detects  (<x3>)^(-1.5) */
 Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 2")
 {
    SCIP_CONS* cons;
@@ -255,7 +255,7 @@ Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 2"
    SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* create nonlinear constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>:  power(<x3>, -1.5)  <= 100",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>:  (<x3>)^(-1.5)  <= 100",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -288,7 +288,7 @@ Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 2"
 }
 
 
-/*  detects power(<x3>, 1.5) * power(<x4>, -1.5) * power(<x5>, -2) */
+/*  detects (<x3>)^(1.5) * (<x4>)^(-1.5) * (<x5>)^(-2)) */
 Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3")
 {
    SCIP_CONS* cons;
@@ -299,7 +299,7 @@ Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3"
    SCIP_EXPR_OWNERDATA* ownerdata;
 
    /* create nonlinear constraint */
-   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>:  power(<x3>, 1.5) * power(<x4>, -1.5) * power(<x5>, -2)  <= 100",
+   SCIP_CALL( SCIPparseCons(scip, &cons, (char*) "[nonlinear] <test>:  (<x3>)^(1.5) * (<x4>)^(-1.5) * (<x5>)^(-2)  <= 100",
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
    cr_assert(success);
 
@@ -391,7 +391,7 @@ Test(nlhdlrsignomial, separation_signomial)
    TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE);
 
    /* create constraint containing a signomial product expression */
-   SCIP_CALL( SCIPparseExpr(scip, &expr, "power(<t_x1>, 0.6) * power(<t_x2>, -1.5) * power(<t_x3>, -1) * power(<t_x4>, 2) * power(<t_x5>, 0.8)", NULL, NULL, NULL) );
+   SCIP_CALL( SCIPparseExpr(scip, &expr, "(<t_x1>)^(0.6) * (<t_x2>)^(-1.5) * (<t_x3>)^(-1) * (<t_x4>)^(2) * (<t_x5>)^(0.8)", NULL, NULL, NULL) );
    SCIP_CALL( createAndDetect(&cons, expr) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    expr = SCIPgetExprNonlinear(cons);
