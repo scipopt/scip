@@ -4768,7 +4768,6 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
    )
 {
-   SCIP_CONSDATA* consdata;
    SCIP_VAR** xorvars;
    SCIP_VAR** vars;
    SCIP_Real* vals;
@@ -4782,9 +4781,6 @@ SCIP_RETCODE addSymmetryInformation(
    assert(cons != NULL);
    assert(graph != NULL);
    assert(success != NULL);
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
 
    /* get active variables of the constraint */
    nvars = SCIPgetNVars(scip);
