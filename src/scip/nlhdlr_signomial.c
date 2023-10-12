@@ -62,14 +62,16 @@
 /**
  * nonlinear handler expression data
  * 
- * A signomial expression admits the form \f$ cx^e = y \f$, where \f$ y \f$ is an auxiliary variable representing this
- * expression. The natural fomrulation of the expression is defined as \f$ x^e = t = y/c \f$, where \f$ t \f$ is a
+ * A signomial expression admits the form \f$ cx^a = y \f$, where \f$ y \f$ is an auxiliary variable representing this
+ * expression and all \f$ x \f$ are positive.
+ *
+ * The natural formulation of the expression is defined as \f$ x^a = t = y/c \f$, where \f$ t \f$ is a
  * non-existant slack variable denoting \f$ y/c \f$. The variables in $x$ with positive exponents form positive
  * variables \f$ u \f$, and the associated exponents form positive exponents \f$ f\ f$. The variables in \f$ x \f$ with
  * negative exponents and \f$ t \f$  form negative variables \f$ v \f$, and the associated exponents form negative
  * exponents \f$ g \f$. Let \$ s =  \max(|f|,|g|) \$ be a normalization constant, where \$ || \$ denotes the L1 norm. Apply a scaling step:
- * Dividing the entries of \f$ f \f$  by \f$ s \f$, and dividing the entries of \f$ g \f$  by \f$ s \f$ as well. Then \f$ x^e = t \f$ has a reformulation 
- * \f$ u^f = v^g \f$, where \f$ u^f, v^g \$ are two concave power functions.
+ * Dividing the entries of \f$ f \f$  by \f$ s \f$, and dividing the entries of \f$ g \f$  by \f$ s \f$ as well. Then \f$ x^a = t \f$ has
+ * a reformulation \f$ u^f = v^g \f$, where \f$ u^f, v^g \$ are two concave power functions.
  */
 struct SCIP_NlhdlrExprData
 {
@@ -96,7 +98,7 @@ struct SCIP_NlhdlrExprData
 struct SCIP_NlhdlrData
 {
    /* parameters */
-   int                   maxnundervars;      /**< maximum numbver of variables in underestimating a concave power function */
+   int                   maxnundervars;      /**< maximum number of variables in underestimating a concave power function */
    SCIP_Real             mincutscale;        /**< minimum scale factor when scaling a cut */
 };
 
@@ -241,7 +243,7 @@ void reformRowprep(
    /* find auxvar's cut coefficient and set it to zero */
    auxvar = nlhdlrexprdata->vars[nlhdlrexprdata->nfactors];
    coefauxvar = 0;
-   for(i = 0; i < nvars; i++ )
+   for( i = 0; i < nvars; i++ )
    {  
       if( vars[i] == auxvar )
       {
@@ -259,7 +261,7 @@ void reformRowprep(
    /* the reformation scales the cut so that coefficients and constant are divided by the absolute value of coefauxvar */
    scale = 1 / fabs(coefauxvar);
 
-   for(i = 0; i < nvars; i++ )
+   for( i = 0; i < nvars; i++ )
    {  
       if( vars[i] == auxvar )
          continue;
@@ -379,7 +381,7 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalPower)
    {
       if( nlhdlrexprdata->signs[i] != evaldata->sign ) 
          continue;
-      /* the reformulated exponent of argrs[j] is found */
+      /* the reformulated exponent of args[j] is found */
       val *= pow(args[j], nlhdlrexprdata->refexponents[i]);
       j++;
    }
@@ -466,7 +468,7 @@ SCIP_RETCODE estimateSpecialPower(
             if( refexponent == 1.0 )
             {
                /* \f$ h = 1 \f$, a univariate linear function. Only rescale, no need for linearization */
-               SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier / scale));
+               SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier / scale) );
             }
             else
             {
@@ -491,7 +493,7 @@ SCIP_RETCODE estimateSpecialPower(
                   facetconstant = powinf - facetcoef * inf;
                }
                SCIProwprepAddConstant(rowprep,  multiplier * facetconstant);
-               SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier * facetcoef / scale));
+               SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier * facetcoef / scale) );
             }
          }
       }
@@ -554,15 +556,15 @@ SCIP_RETCODE estimateSpecialPower(
          facetconstant = fw0lw1l  - facetcoefs[0] * box[0] - facetcoefs[1] * box[2];
       }
       SCIProwprepAddConstant(rowprep,  multiplier * facetconstant);
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, vars[0], multiplier * facetcoefs[0] / scale[0]));
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, vars[1], multiplier * facetcoefs[1] / scale[1]));
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, vars[0], multiplier * facetcoefs[0] / scale[0]) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, vars[1], multiplier * facetcoefs[1] / scale[1]) );
       *success = TRUE;
    }
 
    return SCIP_OKAY;
 }
 
-/** adds an under estimator for a concave power concave function \f$ w^h \f$ to a given rowprep
+/** adds an under estimator for a multivariate concave power concave function \f$ w^h \f$ to a given rowprep
  *
  * Calls \ref SCIPcomputeFacetVertexPolyhedralNonlinear() for \f$ w^h \f$  and
  * box set to local bounds of auxiliary variables. The estimator is multiplied
@@ -604,7 +606,7 @@ SCIP_RETCODE underEstimatePower(
    /* number of variables of sign */
    nsignvars = sign ? nlhdlrexprdata->nposvars : nlhdlrexprdata->nnegvars;
 
-   /* data struture to evaluate the power function */
+   /* data structure to evaluate the power function */
    evaldata.nlhdlrexprdata = nlhdlrexprdata;
    evaldata.sign = sign;
    evaldata.nsignvars = nsignvars;
@@ -629,7 +631,7 @@ SCIP_RETCODE underEstimatePower(
    facetcoefs = nlhdlrexprdata->facetcoefs;
    /* find a facet of the underestimator */
    SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, conshdlr, FALSE, nlhdlrExprEvalPower, (void*)&evaldata, xstar, box,
-      nsignvars, targetvalue, success, facetcoefs, &facetconstant));
+      nsignvars, targetvalue, success, facetcoefs, &facetconstant) );
 
    if( !*success )
    {
@@ -645,7 +647,7 @@ SCIP_RETCODE underEstimatePower(
       if( nlhdlrexprdata->signs[i] != sign )
          continue;
       scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->vars[i], multiplier * facetcoefs[j] / scale));
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->vars[i], multiplier * facetcoefs[j] / scale) );
       j++;
    }
 
@@ -661,7 +663,7 @@ static SCIP_RETCODE overEstimatePower(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
    SCIP_Bool             sign,               /**< the sign of variables of the power function */ 
    SCIP_Real             multiplier,         /**< the mulitplier of the estimator */ 
-   SCIP_SOL*             sol,                /**< solution to use*/
+   SCIP_SOL*             sol,                /**< solution to use */
    SCIP_ROWPREP*         rowprep,            /**< rowprep where to store estimator */
    SCIP_Bool*            success             /**< buffer to store whether successful */
    )
@@ -707,7 +709,7 @@ static SCIP_RETCODE overEstimatePower(
       var = nlhdlrexprdata->vars[i];
       val = SCIPgetSolVal(scip, sol, var) / scale;
       facetcoef = nlhdlrexprdata->refexponents[i] * funcval / val;
-      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier * facetcoef / scale));
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier * facetcoef / scale) );
    }
 
    *success = TRUE;
