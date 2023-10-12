@@ -741,29 +741,39 @@ int compareSymgraphs(
    SYM_GRAPH*            G2                  /**< second graph in comparison */
    )
 {
+   int c;
+   int perm1;
+   int perm2;
+
+   /* compare the number of constraint nodes */
    if ( G1->nconsnodes < G2->nconsnodes )
       return -1;
    if ( G1->nconsnodes > G2->nconsnodes )
       return 1;
 
-   if ( G1->nconsnodes == 1 )
+   /* compare the constraint nodes of the two graphs */
+   for (c = 0; c < G1->nconsnodes; ++c)
    {
-      if ( SCIPconsGetHdlr(G1->conss[0]) < SCIPconsGetHdlr(G2->conss[0]) )
+      perm1 = G1->consnodeperm[c];
+      perm2 = G2->consnodeperm[c];
+
+      if ( SCIPconsGetHdlr(G1->conss[perm1]) < SCIPconsGetHdlr(G2->conss[perm2]) )
          return -1;
-      if ( SCIPconsGetHdlr(G1->conss[0]) > SCIPconsGetHdlr(G2->conss[0]) )
+      if ( SCIPconsGetHdlr(G1->conss[perm1]) > SCIPconsGetHdlr(G2->conss[perm2]) )
          return 1;
 
-      if ( G1->lhs[0] < G2->lhs[0] )
+      if ( G1->lhs[perm1] < G2->lhs[perm2] )
          return -1;
-      if ( G1->lhs[0] > G2->lhs[0] )
+      if ( G1->lhs[perm1] > G2->lhs[perm2] )
          return 1;
 
-      if ( G1->rhs[0] < G2->rhs[0] )
+      if ( G1->rhs[perm1] < G2->rhs[perm2] )
          return -1;
-      if ( G1->rhs[0] > G2->rhs[0] )
+      if ( G1->rhs[perm1] > G2->rhs[perm2] )
          return 1;
    }
 
+   /* compare number of remaining node types */
    if ( G1->nnodes < G2->nnodes )
       return -1;
    if ( G1->nnodes > G2->nnodes )
@@ -1532,6 +1542,11 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    /* sort graphs for quicker comparisons */
    SCIP_CALL( SCIPallocBufferArray(scip, &graphperm, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &groupbegins, nconss + 1) );
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CALL( SCIPcreateSymgraphConsnodeperm(scip, graphs[c]) );
+   }
+
    SCIPsort(graphperm, SYMsortSymgraphs, graphs, nconss);
 
    groupbegins[0] = 0;
@@ -1541,6 +1556,12 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
          groupbegins[ngroups++] = c;
    }
    groupbegins[ngroups] = nconss;
+
+   /* remove information from symmetry detection graph that is not needed anymore */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CALL( SCIPfreeSymgraphConsnodeperm(scip, graphs[c]) );
+   }
 
    /* iterate over all permutations and check whether they define symmetries */
    for (p = 0; p < nperms; ++p)

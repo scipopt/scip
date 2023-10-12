@@ -95,6 +95,7 @@ SCIP_RETCODE SCIPcreateSymgraph(
    (*graph)->uniqueedgetype = FALSE;
    (*graph)->symtype = symtype;
    (*graph)->infinity = SCIPinfinity(scip);
+   (*graph)->consnodeperm = NULL;
 
    /* to avoid reallocation, allocate memory for colors later */
    (*graph)->varcolors = NULL;
@@ -129,6 +130,7 @@ SCIP_RETCODE SCIPfreeSymgraph(
       SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->varcolors, 2 * (*graph)->nsymvars);
    }
 
+   SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->consnodeperm, (*graph)->nconsnodes);
    SCIPfreeBlockMemoryArray(scip, &(*graph)->isfixedvar, (*graph)->nsymvars);
    SCIPfreeBlockMemoryArray(scip, &(*graph)->edgevals, (*graph)->maxnedges);
    SCIPfreeBlockMemoryArray(scip, &(*graph)->edgesecond, (*graph)->maxnedges);
@@ -1626,6 +1628,62 @@ SCIP_Bool SCIPhasGraphUniqueEdgetype(
    assert(graph != NULL);
 
    return graph->uniqueedgetype;
+}
+
+/** creates consnodeperm array for symmetry detection graph
+ *
+ *  @note @p colors of symmetry detection graph must have been computed
+ */
+SCIP_RETCODE SCIPcreateSymgraphConsnodeperm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   )
+{
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(graph->islocked);
+
+   /* either there are no constraint nodes or we have already computed the permutation */
+   if( graph->nconsnodes <= 0 || graph->consnodeperm != NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->consnodeperm, graph->nconsnodes) );
+   SCIPsort(graph->consnodeperm, SYMsortConsnodes, (void*) graph, graph->nconsnodes);
+
+   return SCIP_OKAY;
+}
+
+/** frees consnodeperm array for symmetry detection graph */
+SCIP_RETCODE SCIPfreeSymgraphConsnodeperm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   )
+{
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(graph->islocked);
+
+   SCIPfreeBlockMemoryArrayNull(scip, &graph->consnodeperm, graph->nconsnodes);
+
+   return SCIP_OKAY;
+}
+
+/** returns consnodeperm array for symmetry detection graph
+ *
+ *  @note @p colors of symmetry detection graph must have been computed
+ */
+int* SCIPgetSymgraphConsnodeperm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   )
+{
+   assert(scip != NULL);
+   assert(graph != NULL);
+   assert(graph->islocked);
+
+   SCIP_CALL_ABORT( SCIPcreateSymgraphConsnodeperm(scip, graph) );
+
+   return graph->consnodeperm;
 }
 
 /** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant.

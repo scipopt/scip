@@ -65,6 +65,8 @@ struct SYM_Graph
    SYM_NODETYPE*         nodetypes;          /**< array storing each node's type */
    int*                  nodeinfopos;        /**< array assigning each node the position in the corresponding array
                                               *   containing its information (operator, variable, or value) */
+   int*                  consnodeperm;       /**< array to hold permutation to sort constraint nodes
+                                              *   (graph needs to be locked to avoid inconsistencies) */
 
    /* information-based arrays */
    int*                  ops;                /**< operators corresponding to nodes in graph */

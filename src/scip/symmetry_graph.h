@@ -321,6 +321,39 @@ SCIP_Bool SCIPhasGraphUniqueEdgetype(
    SYM_GRAPH*            graph               /**< symmetry detection graph */
    );
 
+/** creates consnodeperm array for symmetry detection graph
+ *
+ *  @note @p colors of symmetry detection graph must have been computed
+ */
+SCIP_RETCODE SCIPallocateSymgraphConsnodeperm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   );
+
+/** creates consnodeperm array for symmetry detection graph
+ *
+ *  @note @p colors of symmetry detection graph must have been computed
+ */
+SCIP_RETCODE SCIPcreateSymgraphConsnodeperm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   );
+
+/** returns consnodeperm array for symmetry detection graph
+ *
+ *  @note @p colors of symmetry detection graph must have been computed
+ */
+int* SCIPgetSymgraphConsnodeperm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   );
+
+/** frees consnodeperm array for symmetry detection graph */
+SCIP_RETCODE SCIPfreeSymgraphConsnodeperm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph               /**< symmetry detection graph */
+   );
+
 /** Transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant.
  *
  *  For permutation symmetries, active variables as encoded in SCIP are used. For signed permutation symmetries,
