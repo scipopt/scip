@@ -1693,10 +1693,9 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          assert(!doprobingind);
          continue;
       }
+
       if( SCIPvarGetUbLocal(indicator) <= 0.5 )
-      { /* this case is stronger as it implies that everything is fixed;
-         * therefore we are now happy
-         */
+      { /* this case is stronger as it implies that everything is fixed; therefore we are now happy */
          assert(!doprobingind);
          SCIPfreeBufferArrayNull(scip, &probingvars);
          SCIPfreeBufferArrayNull(scip, &probingdoms);

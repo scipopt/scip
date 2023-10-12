@@ -2147,7 +2147,6 @@ SCIP_DECL_CONSINITPRE(consInitpreLinking)
 static
 SCIP_DECL_CONSINITSOL(consInitsolLinking)
 {  /*lint --e{715}*/
-
    /* add nlrow representations to NLP, if NLP had been constructed */
    if( SCIPisNLPConstructed(scip) )
    {

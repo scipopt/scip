@@ -1639,7 +1639,6 @@ SCIP_RETCODE SCIPevalExpr(
 }
 
 /** returns a previously unused solution tag for expression evaluation */
-SCIP_EXPORT
 SCIP_Longint SCIPgetExprNewSoltag(
    SCIP*                 scip                /**< SCIP data structure */
    )

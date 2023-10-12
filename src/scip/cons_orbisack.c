@@ -703,7 +703,7 @@ SCIP_RETCODE checkFeasible(
    int                   start,              /**< at which row to start (assuming previous rows are equal) */
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected in these fixings */
    int*                  infeasiblerow       /**< pointer to store at which row a (0, 1) pattern is found */
-)
+   )
 {
    SCIP_VAR* var1;
    SCIP_VAR* var2;
