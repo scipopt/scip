@@ -26,6 +26,7 @@
  * @brief  unit tests for computing symmetry
  * @author Marc Pfetsch
  * @author Fabian Wegscheider
+ * @author Christopher Hojny
  */
 
 #include <scip/scip.h>
@@ -409,7 +410,7 @@ void simpleExample3(
       return;
 
    /* setup problem:
-    * min x1 + x2 + x3 + x4
+    * min x1 + x2 + x3 + x4 + x5
     *     x1 + x2           + x5 = 1
     *               x3 + x4 + x5 = 2
     *     x1, ..., x4, x5  binary
@@ -1197,7 +1198,7 @@ void exampleSOS2(
     * min x1 + x2 + x3 - x4 - x5 - x6
     *     SOS2(x1,x2,x3)
     *     SOS2(X4,x5,x6)
-    *     x1 + x2 + x3 - x4 -x5 -x6 >= 0
+    *     x1 + x2 + x3 - x4 - x5 - x6 >= 0
     */
    SCIP_CALL( SCIPcreateProbBasic(scip, "SOS2"));
 
