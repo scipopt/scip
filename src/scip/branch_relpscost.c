@@ -1400,9 +1400,6 @@ SCIP_RETCODE execRelpscost(
             SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchcands[c], &down, &up, NULL, NULL, NULL, &lastlpobjval) );
             downgain = MAX(down - lastlpobjval, 0.0);
             upgain = MAX(up - lastlpobjval, 0.0);
-            /* update the average gain */
-            updateMinMaxMeanGain(scip, branchrule, downgain, upgain);
-
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
             mingains[c] = MIN(downgain, upgain);
