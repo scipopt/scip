@@ -35,6 +35,7 @@ Fixed bugs
 - before presolving is finished check solutions before retransforming them including tiny values to keep check flags consistent
 - disable heuristics before and during presolving in benders decomposition to avoid messing up the objective structure in the solution store by dropping auxiliary variables in the required retransformations
 - correct local flag of singleton conflict constraints in tightenSingleVar() against invalid bound globalization
+- respect unboundedness in the computation of activity bounds in conflict.c to avoid invalid huge bounds due to small coefficients on unbounded variables
 
 @section RN804 SCIP 8.0.4
 *************************
