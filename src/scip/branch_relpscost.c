@@ -950,7 +950,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    SCIP_Real lambda;
    SCIP_Real mingain;
    SCIP_Real maxgain;
-   long int nexttreesize;
+   long long nexttreesize;
    long long sbcount;
    int currentdepth;
    long long currenttreesize;
@@ -975,7 +975,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    else
       absdualgap = SCIPinfinity(scip);
 
-   if( !SCIPisInfinity(scip, absdualgap) && !SCIPisInfinity(scip, mingain) && !SCIPisInfinity(scip, maxgain) )
+   if( !SCIPisInfinity(scip, absdualgap) && !SCIPisInfinity(scip, mingain) && !SCIPisInfinity(scip, maxgain) && SCIPisGT(scip, maxgain, 0.0) )
       gaptoclose = absdualgap;
    else
       return TRUE;
@@ -997,7 +997,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    currenttreesize = strongBranchingTreeSize(currentdepth) + 2 * sbcount;
 
    /* Compute the expected size of the tree with one more strong branching */
-   nexttreesize = expectedTreeSize(scip, gaptoclose, currentdepth, maxgain, lambda, sbcount);
+   nexttreesize = (long long) expectedTreeSize(scip, gaptoclose, currentdepth, maxgain, lambda, sbcount);
 
    if(nexttreesize < currenttreesize)
    {
@@ -1013,7 +1013,8 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    {
       branchrule->nbeforelookahead++;
    }
-   return FALSE;
+   SCIPdebugMsg(scip," -> stopped at lookahead %g, current tree size %lld, next tree size %lld\n", lookahead, currenttreesize, nexttreesize);
+      return FALSE;
 }
 
 /** execute reliability pseudo cost branching */
@@ -2301,6 +2302,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    }
    branchruledata->currmeandualgain = 0.0;
    branchruledata->currndualgains = 0;
+   SCIPdebugMsg(scip," -> mean dual gain of previous nodes: mean of %d dual gains: %g\n", branchruledata->ndualgains, branchruledata->meandualgain);
 
    /* determine whether we should run filtering */
    runfiltering = ! branchruledata->nosymmetry && branchruledata->filtercandssym && SCIPgetSubscipDepth(scip) == 0 && ! SCIPinDive(scip) && ! SCIPinProbing(scip);
