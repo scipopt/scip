@@ -706,6 +706,9 @@ SCIP_RETCODE dualPresolving(
          if( idxnouplocks == consdata->nvars - 1 )
             idxnouplocks = v;
 
+         if( indepidx == consdata->nvars - 1 )
+            indepidx = v;
+
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          ++(*nchgcoefs);
 
