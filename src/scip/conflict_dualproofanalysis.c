@@ -514,7 +514,7 @@ SCIP_RETCODE tightenSingleVar(
          }
 
          SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, conslhs, consrhs,
-               FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+               FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal, FALSE, TRUE, TRUE, FALSE) );
 
          SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, var, 1.0) );
 
