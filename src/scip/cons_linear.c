@@ -17884,6 +17884,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+   int j;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -17894,6 +17895,16 @@ SCIP_RETCODE SCIPcreateConsLinear(
    {
       SCIPerrorMessage("linear constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
+
+   for( j = 0; j < nvars; ++j )
+   {
+      if( SCIPisInfinity(scip, REALABS(vals[j])) )
+      {
+         SCIPerrorMessage("coefficient of variable <%s> is infinite.\n", SCIPvarGetName(vars[j]));
+         SCIPABORT();
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* for the solving process we need linear rows, containing only active variables; therefore when creating a linear
