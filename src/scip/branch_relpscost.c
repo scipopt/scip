@@ -785,15 +785,13 @@ SCIP_RETCODE updateMinMaxMeanGain(
    SCIP_Real             upgain              /**< gain for branching upwards */
    )
 {
-   SCIP_BRANCHRULEDATA* branchruledata;
-   SCIP_Real meangain;
-
-   branchruledata = SCIPbranchruleGetData(branchrule);
+   SCIP_BRANCHRULEDATA* branchruledata = SCIPbranchruleGetData(branchrule);
 
    /* TodoSB think about large/infinite gains */
    if (SCIPisRelGE(scip, downgain, 1.0e15) || SCIPisRelGE(scip, upgain, 1.0e15))
       return SCIP_OKAY;
 
+   SCIP_Real meangain;
    if(branchruledata->geometricmeangains)
       meangain = SQRT(downgain * upgain);
    else
@@ -922,7 +920,7 @@ SCIP_Real expectedTreeSize(
 static
 SCIP_Bool continueStrongBranchingLookahead(
    SCIP*                 scip,
-   int                   i,
+   int                   candidx,
    int                   ninitcands,
    SCIP_Real             lookahead,
    SCIP_Real             maxlookahead,
@@ -933,8 +931,8 @@ SCIP_Bool continueStrongBranchingLookahead(
       )
    {
       /* TodoSB split the termination to get statistics for each termination criterion */
-      return i < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs
-                  && (i < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations);
+      return candidx < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs
+                  && (candidx < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations);
    }
 
 /* Decide if we continue strong branching based on the estimation of the tree size */
