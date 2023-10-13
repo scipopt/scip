@@ -11424,11 +11424,10 @@ SCIP_DECL_SORTINDCOMP(consdataCompSim)
    return (value > 0 ? +1 : (value < 0 ? -1 : 0));
 }
 
-/** tries to simplify coefficients and delete variables in ranged row of the form lhs <= a^Tx <= rhs, e.g. using the greatest
- *  common divisor
+/** tries to simplify coefficients in ranged row of the form lhs <= a^Tx <= rhs
  *
- *  1. lhs <= a^Tx <= rhs, forall a_i >= lhs, a_i <= rhs, and forall pairs a_i + a_j > rhs then we can change this
- *     constraint to 1^Tx = 1
+ *  1. lhs <= a^Tx <= rhs, x binary, lhs > 0, forall a_i >= lhs, a_i <= rhs, and forall pairs a_i + a_j > rhs,
+ *     then we can change this constraint to 1^Tx = 1
  */
 static
 SCIP_RETCODE rangedRowSimplify(
@@ -11465,15 +11464,20 @@ SCIP_RETCODE rangedRowSimplify(
    if( nvars < 2 )
       return SCIP_OKAY;
 
+   lhs = consdata->lhs;
+   rhs = consdata->rhs;
+   assert(!SCIPisInfinity(scip, -lhs));
+   assert(!SCIPisInfinity(scip, rhs));
+   assert(!SCIPisNegative(scip, rhs));
+
+   /* sides must be positive to detect set partition */
+   if( !SCIPisPositive(scip, lhs) || !SCIPisPositive(scip, rhs) )
+      return SCIP_OKAY;
+
    vals = consdata->vals;
    vars = consdata->vars;
    assert(vars != NULL);
    assert(vals != NULL);
-
-   lhs = consdata->lhs;
-   rhs = consdata->rhs;
-   assert(!SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs));
-   assert(!SCIPisNegative(scip, rhs));
 
    minval = SCIP_INVALID;
    secondminval = SCIP_INVALID;
@@ -11504,7 +11508,7 @@ SCIP_RETCODE rangedRowSimplify(
       if( SCIPisEQ(scip, minval, maxval) && SCIPisEQ(scip, lhs, rhs) )
          return SCIP_OKAY;
 
-      /* check if we can and need to choose exactly one binary variable */
+      /* check if we can choose one and need to choose at most one binary variable */
       if( SCIPisGE(scip, minval, lhs) && SCIPisLE(scip, maxval, rhs) && SCIPisGT(scip, minval + secondminval, rhs) )
       {
          /* change all coefficients to 1.0 */
