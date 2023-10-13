@@ -2689,7 +2689,7 @@ SCIP_Bool bdchginfoIsInvalid(
    if( SCIPvarIsBinary(var) )
       return FALSE;
 
-   /* check if the bdchginfo is invaild since a tight/weaker bound change was already explained */
+   /* check if the bdchginfo is invalid since a tight/weaker bound change was already explained */
    if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
    {
       if( var->conflictlbcount != conflict->count || var->conflictlb != SCIPbdchginfoGetNewbound(bdchginfo) ) /*lint !e777*/
@@ -2757,7 +2757,7 @@ SCIP_RETCODE conflictsetAddBounds(
       }
       else
       {
-         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invaild -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invalid -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -2807,7 +2807,7 @@ SCIP_RETCODE conflictsetAddBounds(
       }
       else
       {
-         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invaild -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invalid -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -2937,13 +2937,13 @@ SCIP_BDCHGINFO* conflictFirstCand(
 
    if( SCIPpqueueNElems(conflict->forcedbdchgqueue) > 0 )
    {
-      /* get next potetioal candidate */
+      /* get next potential candidate */
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->forcedbdchgqueue));
 
       /* check if this candidate is valid */
       if( bdchginfoIsInvalid(conflict, bdchginfo) )
       {
-         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the force queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invalid -> pop it from the force queue\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -2962,7 +2962,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
       /* check if this candidate is valid */
       if( bdchginfo != NULL && bdchginfoIsInvalid(conflict, bdchginfo) )
       {
-         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invalid -> pop it from the queue\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -3219,7 +3219,7 @@ SCIP_RETCODE conflictResolveBound(
 
             var = infervar;
 
-            /* transform given varibale to active varibale */
+            /* transform given variable to active variable */
             SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
             assert(var == actvar);
 
@@ -3382,7 +3382,7 @@ SCIP_RETCODE convertToActiveVar(
    scalar = 1.0;
    constant = 0.0;
 
-   /* transform given varibale to active varibale */
+   /* transform given variable to active variable */
    SCIP_CALL( SCIPvarGetProbvarSum(var, set, &scalar, &constant) );
    assert(SCIPvarGetStatus(*var) == SCIP_VARSTATUS_FIXED || scalar != 0.0); /*lint !e777*/
 
