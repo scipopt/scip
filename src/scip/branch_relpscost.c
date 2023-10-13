@@ -100,7 +100,7 @@
 #define DEFAULT_SKIPBADINITCANDS TRUE        /**< should branching rule skip candidates that have a low probability to be
                                               *  better than the best strong-branching or pseudo-candidate? */
 #define DEFAULT_STARTRANDSEED    5           /**< start random seed for random number generation */
-#define DEFAULT_MINSAMPLESIZE    10          /**< minimum sample size to estimate the tree size for dynamic lookahead */
+#define DEFAULT_MINSAMPLESIZE    20          /**< minimum sample size to estimate the tree size for dynamic lookahead */
 #define DEFAULT_DYNAMICLOOKAHEAD TRUE        /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
 #define DEFAULT_GEOMETRICMEANGAINS TRUE      /**< should the geometric mean be used instead of the arithmetic mean for min and max gain? */
 
@@ -816,8 +816,10 @@ long int strongBranchingDepth(
    )
 {
    assert(maxgain >= 0.0);
-   /* TodoSB case where maxgain is 0.0? */
-   return (long int) ceil(gap / (maxgain + 1.0));
+   /* using an epsilon value if maxgain is zero */
+   long int depth = (long int) ceil(gap / MAX(maxgain, 0.00001));
+   assert(depth > 0);
+   return depth;
 }
 
 /* Compute the size of the tree with the assumption that left and right dual gains are equal */
@@ -928,6 +930,7 @@ SCIP_Bool continueStrongBranchingLookahead(
    SCIP_Longint          maxnsblpiterations
       )
    {
+      /* TodoSB split the termination to get statistics for each termination criterion */
       return i < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs
                   && (i < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations);
    }
@@ -970,7 +973,6 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    else
       absdualgap = SCIPinfinity(scip);
 
-   /*  TodoSB use absolute gap? */
    if( !SCIPisInfinity(scip, absdualgap) && !SCIPisInfinity(scip, mingain) && !SCIPisInfinity(scip, maxgain) )
       gaptoclose = absdualgap;
    else
@@ -979,7 +981,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    assert(!SCIPisInfinity(scip, -maxgain));
 
    /* update the rate for the exponential distribution */
-   /* TodoSB rethink this */
+   /* TodoSB add parameter for the weight of previous and current gains */
    if (branchruledata->ndualgains == 0)
       lambda = 1 / (branchruledata->currmeandualgain);
    else
@@ -1890,6 +1892,7 @@ SCIP_RETCODE execRelpscost(
 
             mingains[c] = MIN(downgain, upgain);
             maxgains[c] = MAX(downgain, upgain);
+
             sbdown[c] = down;
             sbup[c] = up;
             sbdownvalid[c] = downvalid;
@@ -1955,6 +1958,7 @@ SCIP_RETCODE execRelpscost(
          /* update statistics if we stopped before the default lookahead or if we reached it */
          if (!continueStrongBranchingLookahead(scip, i+1, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations))
          {
+            /* TodoSB count this in a different statistic */
             if(SCIPisLT(scip, lookahead, maxlookaheaddefault))
                branchrule->nbeforelookahead++;
             else if(!branchruledata->exceeddefaultlookahead)
@@ -2261,7 +2265,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    int* filteredlpcandsorbitidx = NULL;
    int nfilteredlpcands;
    int nlpcands;
-
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
