@@ -698,6 +698,12 @@ static
 SCIP_RETCODE detectImpliedBounds(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_TREE*            tree,               /**< tree data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_REOPT*           reopt,              /**< reoptimization data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_CONFLICTSET*     conflictset,        /**< conflict set to add to the tree */
    int*                  nbdchgs,            /**< number of global deducted bound changes due to the conflict set */
    int*                  nredvars,           /**< number of redundant and removed variables from conflict set */
@@ -888,6 +894,8 @@ SCIP_RETCODE detectImpliedBounds(
       if( glbinfeas )
       {
          SCIPsetDebugMsg(set, "conflict set (%p) led to global infeasibility\n", (void*) conflictset);
+
+         SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, prob, origprob, reopt, lp, blkmem) );
 
          /* clear the memory array before freeing it */
          BMSclearMemoryArray(redundants, nbdchginfos);
@@ -1781,7 +1789,7 @@ SCIP_RETCODE conflictAddConflictCons(
       SCIPclockStart(conflict->dIBclock, set);
 
       /* find global bound changes which can be derived from the new conflict set */
-      SCIP_CALL( detectImpliedBounds(set, transprob, conflictset, &nbdchgs, &nredvars, &redundant) );
+      SCIP_CALL( detectImpliedBounds(set, transprob, stat, tree, blkmem, origprob, reopt, lp, conflictset, &nbdchgs, &nredvars, &redundant) );
 
       /* all variables where removed, we have an infeasibility proof */
       if( conflictset->nbdchginfos == 0 )
