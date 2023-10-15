@@ -366,7 +366,8 @@ endif
 
 SYMOPTIONS	+=	sbliss
 ifeq ($(SYM),sbliss)
-SYMOBJ		=	symmetry/compute_symmetry_sassy_bliss.o
+SYMOBJ		=	symmetry/build_sassy_graph.o
+SYMOBJ		+=	symmetry/compute_symmetry_sassy_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(BLISSEXTERNAL),false)
