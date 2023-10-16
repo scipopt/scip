@@ -51,7 +51,7 @@
 #endif
 
 /* the actual include */
-#include <sassy/preprocessor.h>
+#include <sassy/graph.h>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wunused-but-set-variable"

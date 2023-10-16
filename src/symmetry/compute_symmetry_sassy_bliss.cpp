@@ -29,14 +29,43 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "build_sassy_graph.h"
 #include "compute_symmetry.h"
 
 /* include bliss */
 #include <bliss/defs.hh>
 #include <bliss/graph.hh>
 
+/* include sassy */
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4189)  // local variable is initialized but not referenced
+# pragma warning(disable: 4388)  // compare signed and unsigned expression
+# pragma warning(disable: 4456)  // shadowed variable
+# pragma warning(disable: 4430)  // missing type specifier
+#endif
+
+#include <sassy/preprocessor.h>
 #include <sassy/tools/bliss_converter.h>
+
+#ifdef __GNUC__
+#pragma GCC diagnostic warning "-Wunused-but-set-variable"
+#pragma GCC diagnostic warning "-Wsign-compare"
+#pragma GCC diagnostic warning "-Wunused-variable"
+#pragma GCC diagnostic warning "-Wshadow"
+#endif
+
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
+
+#include "build_sassy_graph.h"
 
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
@@ -315,7 +344,7 @@ SCIP_RETCODE computeAutomorphisms(
    };
 
    auto hook = [&](unsigned int n, const unsigned int* aut) {
-                  sassy.bliss_hook(NULL, n, aut);
+      sassy.bliss_hook(n, aut);
    };
 
    /* start search */
