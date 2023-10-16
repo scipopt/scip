@@ -58,6 +58,9 @@ void setup(void)
    SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
 
+   /* go to SOLVING stage */
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
+
    /* get nonlinear conshdlr */
    conshdlr = SCIPfindConshdlr(scip, "nonlinear");
    cr_assert_not_null(conshdlr);
@@ -412,6 +415,7 @@ Test(nlhdlrsignomial, separation_signomial)
 
    SCIP_CALL( nlhdlrEvalauxSignomial(scip, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), &targetval, sol));
    overestimate = FALSE;
+   SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
    SCIP_CALL( nlhdlrEstimateSignomial(scip, conshdlr, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), sol,
             -1.23, overestimate, targetval, FALSE, rowpreps, &success, &dummy) );
    cr_expect(success);
