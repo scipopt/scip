@@ -66,6 +66,7 @@ void setup(void)
 
    SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
 
    /* go to SOLVING stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
@@ -330,25 +331,25 @@ Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3"
    cr_assert(nlhdlrexprdata->nnegvars == 3);
 
    for( i = 0; i < 3; i++){
-      if( SCIPvarGetTransVar(x3) == nlhdlrexprdata->vars[i] ){
+      if( x3 == nlhdlrexprdata->vars[i] ){
          cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], 1.5));
       }
-      else if( SCIPvarGetTransVar(x4) == nlhdlrexprdata->vars[i] ){
+      else if( x4 == nlhdlrexprdata->vars[i] ){
          cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], -1.5));
       }
-      else if( SCIPvarGetTransVar(x5) == nlhdlrexprdata->vars[i] ){
+      else if( x5 == nlhdlrexprdata->vars[i] ){
          cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], -2));
       }
    }
 
    for( i = 0; i < 3; i++){
-      if( SCIPvarGetTransVar(x3) == nlhdlrexprdata->vars[i] ){
+      if( x3 == nlhdlrexprdata->vars[i] ){
          cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[i], 1.5 / (1.5 + 2 + 1) ));
       }
-      else if( SCIPvarGetTransVar(x4) == nlhdlrexprdata->vars[i] ){
+      else if( x4 == nlhdlrexprdata->vars[i] ){
          cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], 1.5 / (1.5 + 2 + 1) ));
       }
-      else if( SCIPvarGetTransVar(x5) == nlhdlrexprdata->vars[i] ){
+      else if( x5 == nlhdlrexprdata->vars[i] ){
          cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], 2 / (1.5 + 2 + 1) ));
       }
    }
@@ -360,11 +361,11 @@ Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3"
    SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
    ownerdata->nconss = 0; /* TODO should consDisableNonlinear take care of this instead? */
 
-   /* free cons */
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   /* free transformed variables */
+   SCIP_CALL( SCIPreleaseVar(scip, &x3) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x4) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x5) );
 
-   /* free nonlinear handler data */
-   SCIP_CALL(nlhdlrFreeExprDataSignomial(scip, nlhdlr, expr, &nlhdlrexprdata));
 }
 
 
@@ -395,11 +396,8 @@ Test(nlhdlrsignomial, separation_signomial)
    SCIP_CALL( SCIPchgVarLb(scip, x5, 1.5) );
    SCIP_CALL( SCIPchgVarUb(scip, x5, 12.0) );
 
-   /* transform problem */
-   TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE);
-
    /* create constraint containing a signomial product expression */
-   SCIP_CALL( SCIPparseExpr(scip, &expr, "(<t_x1>)^(0.6) * (<t_x2>)^(-1.5) * (<t_x3>)^(-1) * (<t_x4>)^(2) * (<t_x5>)^(0.8)", NULL, NULL, NULL) );
+   SCIP_CALL( SCIPparseExpr(scip, &expr, "(<x1>)^(0.6) * (<x2>)^(-1.5) * (<x3>)^(-1) * (<x4>)^(2) * (<x5>)^(0.8)", NULL, NULL, NULL) );
    SCIP_CALL( createAndDetect(&cons, expr) );
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    expr = SCIPgetExprNonlinear(cons);
@@ -415,7 +413,7 @@ Test(nlhdlrsignomial, separation_signomial)
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPvarGetTransVar(x2), 2.22) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPvarGetTransVar(x3), 3.11) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPvarGetTransVar(x4), 4.22) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPvarGetTransVar(x4), 5.22) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPvarGetTransVar(x5), 5.22) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr), -1.23) );
 
    SCIP_CALL( nlhdlrEvalauxSignomial(scip, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), &targetval, sol));
