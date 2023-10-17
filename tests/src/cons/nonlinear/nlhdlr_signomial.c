@@ -330,25 +330,25 @@ Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3"
    cr_assert(nlhdlrexprdata->nnegvars == 3);
 
    for( i = 0; i < 3; i++){
-      if( x1 == nlhdlrexprdata->vars[i] ){
+      if( SCIPvarGetTransVar(x3) == nlhdlrexprdata->vars[i] ){
          cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], 1.5));
       }
-      else if( x2 == nlhdlrexprdata->vars[i] ){
+      else if( SCIPvarGetTransVar(x4) == nlhdlrexprdata->vars[i] ){
          cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], -1.5));
       }
-      else if( x5 == nlhdlrexprdata->vars[i] ){
+      else if( SCIPvarGetTransVar(x5) == nlhdlrexprdata->vars[i] ){
          cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], -2));
       }
    }
 
    for( i = 0; i < 3; i++){
-      if( x1 == nlhdlrexprdata->vars[i] ){
+      if( SCIPvarGetTransVar(x3) == nlhdlrexprdata->vars[i] ){
          cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[i], 1.5 / (1.5 + 2 + 1) ));
       }
-      else if( x2 == nlhdlrexprdata->vars[i] ){
+      else if( SCIPvarGetTransVar(x4) == nlhdlrexprdata->vars[i] ){
          cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], 1.5 / (1.5 + 2 + 1) ));
       }
-      else if( x5 == nlhdlrexprdata->vars[i] ){
+      else if( SCIPvarGetTransVar(x5) == nlhdlrexprdata->vars[i] ){
          cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], 2 / (1.5 + 2 + 1) ));
       }
    }
@@ -362,6 +362,9 @@ Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3"
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* free nonlinear handler data */
+   SCIP_CALL(nlhdlrFreeExprDataSignomial(scip, nlhdlr, expr, &nlhdlrexprdata));
 }
 
 
