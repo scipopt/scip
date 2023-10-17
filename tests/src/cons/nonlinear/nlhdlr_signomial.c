@@ -48,25 +48,27 @@ static SCIP_NLHDLR* nlhdlr;
 static
 void setup(void)
 {
-   SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   /* include default plugins */
+   SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   /* disable heuristics so problems don't get solved; presolving and propagation so problem doesn't get modified */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   cr_assert_not_null(conshdlr);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   cr_assert_not_null(conshdlrdata);
+
+   nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, "signomial");
+   cr_assert_not_null(nlhdlr);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
    SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
    SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
 
    /* go to SOLVING stage */
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, FALSE) );
-
-   /* get nonlinear conshdlr */
-   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-   cr_assert_not_null(conshdlr);
-
-   /* create problem */
-   SCIP_CALL( SCIPcreateProbBasic(scip, "test") );
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x1, "x1", 1e-2, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &x2, "x2", 1e-2, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
@@ -79,9 +81,6 @@ void setup(void)
    SCIP_CALL( SCIPaddVar(scip, x3) );
    SCIP_CALL( SCIPaddVar(scip, x4) );
    SCIP_CALL( SCIPaddVar(scip, x5) );
-
-   nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, "signomial");
-   cr_assert_not_null(nlhdlr);
 }
 
 static
@@ -94,7 +93,10 @@ void teardown(void)
    SCIP_CALL( SCIPreleaseVar(scip, &x5) );
    SCIP_CALL( SCIPfree(&scip) );
 
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory leak!!");
+
+   BMSdisplayMemory();
+   BMScheckEmptyMemory();
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!!");
 }
 
 
