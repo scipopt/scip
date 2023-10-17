@@ -557,7 +557,11 @@ endif
 endif
 
 ifeq ($(SYM),snauty)
+ifeq ($(NAUTYEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/nauty
+endif
 CXXFLAGS	+=	$(CXX17FLAG)
 endif
 
