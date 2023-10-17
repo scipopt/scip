@@ -74,7 +74,7 @@ struct NAUTY_Data
 /* static data for nauty callback */
 static struct NAUTY_Data data_;
 
-
+#if 0
 /* ------------------- map for operator types ------------------- */
 
 /** gets the key of the given element */
@@ -1552,6 +1552,7 @@ SCIP_RETCODE fillGraphByConss(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** return whether symmetry can be computed */
 SCIP_Bool SYMcanComputeSymmetry(void)
@@ -1596,6 +1597,7 @@ const char* SYMsymmetryGetAddDesc(void)
 
 /** compute generators of symmetry group */
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
+#if 0
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
@@ -1605,8 +1607,19 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
    SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
+#else
+   SCIP*                 scip,               /**< SCIP pointer */
+   int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   int*                  nperms,             /**< pointer to store number of permutations */
+   int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
+   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
+   SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
+#endif
    )
 {
+#if 0
    SCIP_Real oldtime;
    SCIP_Bool success = FALSE;
    int* degrees;
@@ -1756,6 +1769,17 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
    /* determine log10 of symmetry group size */
    *log10groupsize = (SCIP_Real) stats.grpsize2;
-
+#endif
    return SCIP_OKAY;
+}
+
+/** returns whether two given graphs are identical */
+SCIP_Bool SYMcheckGraphsAreIdentical(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries to be checked */
+   SYM_GRAPH*            G1,                 /**< first graph */
+   SYM_GRAPH*            G2                  /**< second graph */
+   )
+{
+   return FALSE;
 }

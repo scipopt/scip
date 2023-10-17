@@ -430,7 +430,8 @@ endif
 
 SYMOPTIONS	+=	snauty
 ifeq ($(SYM),snauty)
-SYMOBJ		=	symmetry/compute_symmetry_sassy_nauty.o
+SYMOBJ		=	symmetry/build_sassy_graph.o
+SYMOBJ		+=	symmetry/compute_symmetry_sassy_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(NAUTYEXTERNAL),false)
