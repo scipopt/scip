@@ -1107,39 +1107,50 @@ SCIP_RETCODE SCIPsolSetVal(
 
          if( val != oldval )  /*lint !e777*/
          {
-            SCIP_Real obj;
-            SCIP_Real objcont;
-
             SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
-            /* update the objective value; we do not need to do this for partial solutions */
-            if( !SCIPsolIsPartial(sol) )
+            /* update the objective value; we do not need to do this for invalid objectives or partial solutions */
+            if( sol->obj != SCIP_INVALID && !SCIPsolIsPartial(sol) ) /*lint !e777*/
             {
+               SCIP_Real obj;
+               SCIP_Real oldobjcont;
+               SCIP_Real newobjcont;
+
                /* an unknown solution value does not count towards the objective */
                obj = SCIPvarGetUnchangedObj(var);
-               if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
-               {
-                  objcont = obj * oldval;
+               oldobjcont = (oldval == SCIP_UNKNOWN ? 0.0 : obj * oldval); /*lint !e777*/
+               newobjcont = (val == SCIP_UNKNOWN ? 0.0 : obj * val); /*lint !e777*/
 
-                  /* we want to use a clean infinity */
-                  if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, sol->obj-objcont) )
-                     sol->obj = SCIPsetInfinity(set);
-                  else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj-objcont)) )
-                     sol->obj = -SCIPsetInfinity(set);
-                  else
-                     sol->obj -= objcont;
+               /* we want to use a safe invalid if the contribution exchange contradicts the infinity status of the objective value */
+               if( SCIPsetIsInfinity(set, sol->obj) )
+               {
+                  if( ( SCIPsetIsInfinity(set, oldobjcont) && !SCIPsetIsInfinity(set, newobjcont) )
+                     || ( !SCIPsetIsInfinity(set, -oldobjcont) && SCIPsetIsInfinity(set, -newobjcont) ) )
+                     sol->obj = SCIP_INVALID;
                }
-               if( val != SCIP_UNKNOWN ) /*lint !e777*/
+               else if( SCIPsetIsInfinity(set, -sol->obj) )
                {
-                  objcont = obj * val;
+                  if( ( SCIPsetIsInfinity(set, -oldobjcont) && !SCIPsetIsInfinity(set, -newobjcont) )
+                     || ( !SCIPsetIsInfinity(set, oldobjcont) && SCIPsetIsInfinity(set, newobjcont) ) )
+                     sol->obj = SCIP_INVALID;
+               }
+               /* we want to use a clean infinity if the contribution exchange or the resulting objective hits the infinity bound */
+               else
+               {
+                  if( !SCIPsetIsInfinity(set, MAX(ABS(oldobjcont), ABS(newobjcont))) )
+                  {
+                     sol->obj -= oldobjcont;
+                     sol->obj += newobjcont;
 
-                  /* we want to use a clean infinity */
-                  if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, sol->obj+objcont) )
+                     if( SCIPsetIsInfinity(set, sol->obj) )
+                        sol->obj = SCIPsetInfinity(set);
+                     else if( SCIPsetIsInfinity(set, -sol->obj) )
+                        sol->obj = -SCIPsetInfinity(set);
+                  }
+                  else if( !SCIPsetIsInfinity(set, MAX(oldobjcont, -newobjcont)) )
                      sol->obj = SCIPsetInfinity(set);
-                  else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj+objcont)) )
+                  else if( !SCIPsetIsInfinity(set, MAX(-oldobjcont, newobjcont)) )
                      sol->obj = -SCIPsetInfinity(set);
-                  else
-                     sol->obj += objcont;
                }
             }
 
@@ -1158,37 +1169,51 @@ SCIP_RETCODE SCIPsolSetVal(
       oldval = solGetArrayVal(sol, var);
       if( val != oldval )  /*lint !e777*/
       {
-         SCIP_Real obj;
-         SCIP_Real objcont;
-
          SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
-         /* update objective: an unknown solution value does not count towards the objective */
-         obj = SCIPvarGetUnchangedObj(var);
-
-         if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
+         /* update the objective value; we do not need to do this for invalid objectives */
+         if( sol->obj != SCIP_INVALID ) /*lint !e777*/
          {
-            objcont = obj * oldval;
+            SCIP_Real obj;
+            SCIP_Real oldobjcont;
+            SCIP_Real newobjcont;
 
-            /* we want to use a clean infinity */
-            if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, sol->obj-objcont) )
-               sol->obj = SCIPsetInfinity(set);
-            else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj-objcont)) )
-               sol->obj = -SCIPsetInfinity(set);
-            else
-               sol->obj -= objcont;
-         }
-         if( val != SCIP_UNKNOWN ) /*lint !e777*/
-         {
-            objcont = obj * val;
+            /* an unknown solution value does not count towards the objective */
+            obj = SCIPvarGetUnchangedObj(var);
+            oldobjcont = (oldval == SCIP_UNKNOWN ? 0.0 : obj * oldval); /*lint !e777*/
+            newobjcont = (val == SCIP_UNKNOWN ? 0.0 : obj * val); /*lint !e777*/
 
-            /* we want to use a clean infinity */
-            if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, sol->obj+objcont) )
-               sol->obj = SCIPsetInfinity(set);
-            else if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, -(sol->obj+objcont)) )
-               sol->obj = -SCIPsetInfinity(set);
+            /* we want to use a safe invalid if the contribution exchange contradicts the infinity status of the objective value */
+            if( SCIPsetIsInfinity(set, sol->obj) )
+            {
+               if( ( SCIPsetIsInfinity(set, oldobjcont) && !SCIPsetIsInfinity(set, newobjcont) )
+                  || ( !SCIPsetIsInfinity(set, -oldobjcont) && SCIPsetIsInfinity(set, -newobjcont) ) )
+                  sol->obj = SCIP_INVALID;
+            }
+            else if( SCIPsetIsInfinity(set, -sol->obj) )
+            {
+               if( ( SCIPsetIsInfinity(set, -oldobjcont) && !SCIPsetIsInfinity(set, -newobjcont) )
+                  || ( !SCIPsetIsInfinity(set, oldobjcont) && SCIPsetIsInfinity(set, newobjcont) ) )
+                  sol->obj = SCIP_INVALID;
+            }
+            /* we want to use a clean infinity if the contribution exchange or the resulting objective hits the infinity bound */
             else
-               sol->obj += objcont;
+            {
+               if( !SCIPsetIsInfinity(set, MAX(ABS(oldobjcont), ABS(newobjcont))) )
+               {
+                  sol->obj -= oldobjcont;
+                  sol->obj += newobjcont;
+
+                  if( SCIPsetIsInfinity(set, sol->obj) )
+                     sol->obj = SCIPsetInfinity(set);
+                  else if( SCIPsetIsInfinity(set, -sol->obj) )
+                     sol->obj = -SCIPsetInfinity(set);
+               }
+               else if( !SCIPsetIsInfinity(set, MAX(oldobjcont, -newobjcont)) )
+                  sol->obj = SCIPsetInfinity(set);
+               else if( !SCIPsetIsInfinity(set, MAX(-oldobjcont, newobjcont)) )
+                  sol->obj = -SCIPsetInfinity(set);
+            }
          }
 
          solStamp(sol, stat, tree, FALSE);
@@ -1289,7 +1314,7 @@ SCIP_RETCODE SCIPsolIncVal(
 
    SCIPsetDebugMsg(set, "increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), (void*)sol, incval);
 
-   if( SCIPsetIsZero(set, incval) )
+   if( incval == 0.0 )
       return SCIP_OKAY;
 
    assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
@@ -1970,7 +1995,7 @@ SCIP_RETCODE SCIPsolRetransform(
    {
       assert(SCIPvarGetUnchangedObj(vars[v]) == SCIPvarGetObj(vars[v])); /*lint !e777*/
 
-      if( !SCIPsetIsZero(set, solvals[v]) )
+      if( solvals[v] != 0.0 )
       {
          SCIP_CALL( solSetArrayVal(sol, set, vars[v], solvals[v]) );
          if( solvals[v] != SCIP_UNKNOWN ) /*lint !e777*/
@@ -2016,7 +2041,7 @@ void SCIPsolRecomputeObj(
    for( v = 0; v < nvars; ++v )
    {
       solval = SCIPsolGetVal(sol, set, stat, vars[v]);
-      if( !SCIPsetIsZero(set, solval) && solval != SCIP_UNKNOWN ) /*lint !e777*/
+      if( solval != 0.0 && solval != SCIP_UNKNOWN ) /*lint !e777*/
       {
          sol->obj += SCIPvarGetUnchangedObj(vars[v]) * solval;
       }

@@ -3537,53 +3537,39 @@ SCIP_RETCODE enforceConstraint(
    SCIP_Bool cutoff;
    int i;
 
-   separated = FALSE;
-
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   *result = SCIP_FEASIBLE;
 
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
       SCIP_CALL( checkCons(scip, conss[i], sol, FALSE, FALSE, &violated) );
-      if( violated )
+      if( !violated )
+         continue;
+
+      if( !conshdlrdata->enforcecuts )
       {
-         if( conshdlrdata->enforcecuts )
-         {
-            SCIP_Bool consseparated;
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
 
-            SCIP_CALL( separateCons(scip, conss[i], sol, &consseparated, &cutoff) );
-            if ( cutoff )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-            separated = separated || consseparated;
-
-            /* following assert is wrong in the case some variables were not in relaxation (dynamic columns),
-            *
-            * e.g. the resultant, which has a negative objective value, is in the relaxation solution on its upper bound
-            * (variables with status loose are in an relaxation solution on it's best bound), but already creating a
-            * row, and thereby creating the column, changes the solution value (variable than has status column, and the
-            * initialization sets the relaxation solution value) to 0.0, and this already could lead to no violation of
-            * the rows, which then are not seperated into the lp
-            */
-#ifdef SCIP_DISABLED_CODE
-            assert(consseparated); /* because the solution is integral, the separation always finds a cut */
-#endif
-         }
-         else
-         {
-            *result = SCIP_INFEASIBLE;
-            return SCIP_OKAY;
-         }
+      SCIP_CALL( separateCons(scip, conss[i], sol, &separated, &cutoff) );
+      if( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      else if( separated )
+      {
+         *result = SCIP_SEPARATED;
+      }
+      else if( *result == SCIP_FEASIBLE )  /* do not change result separated to infeasible */
+      {
+         *result = SCIP_INFEASIBLE;
       }
    }
-
-   if( separated )
-      *result = SCIP_SEPARATED;
-   else
-      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -4639,7 +4625,6 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 static
 SCIP_DECL_CONSACTIVE(consActiveAnd)
 {  /*lint --e{715}*/
-
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
    {
       SCIP_CALL( addNlrow(scip, cons) );

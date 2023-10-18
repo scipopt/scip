@@ -337,6 +337,14 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolIntobj)
 {  /*lint --e{715}*/
    *result = SCIP_DIDNOTRUN;
 
+   /* only call separator, if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* only call separator, if there can be no feasible integral objective value at least as good */
+   if( SCIPfloor(scip, SCIPgetSolTransObj(scip, sol)) >= SCIPceil(scip, SCIPgetLocalLowerbound(scip)) )
+      return SCIP_OKAY;
+
    SCIP_CALL( separateCuts(scip, sepa, sol, result) );
 
    return SCIP_OKAY;

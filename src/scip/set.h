@@ -1044,8 +1044,8 @@ int SCIPsetGetPriceMaxvars(
    SCIP_Bool             root                /**< are we at the root node? */
    );
 
-/** returns the maximal number of cuts generated per round */
-int SCIPsetGetSepaMaxcutsGen(
+/** returns factor for the maximal number of cuts generated per round */
+SCIP_Real SCIPsetGetSepaMaxcutsGenFactor(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             root                /**< are we at the root node? */
    );

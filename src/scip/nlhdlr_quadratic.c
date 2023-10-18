@@ -1868,7 +1868,7 @@ SCIP_RETCODE computeIntercut(
    SCIP_Real             kappa,              /**< value of kappa */
    SCIP_ROWPREP*         rowprep,            /**< rowprep for the generated cut */
    SCIP_Real*            interpoints,        /**< array to store intersection points for all rays or NULL if nothing
-                                                  needs to be stored */
+                                              *   needs to be stored */
    SCIP_SOL*             sol,                /**< solution we want to separate */
    SCIP_Bool*            success             /**< if a cut candidate could be computed */
    )
@@ -2415,7 +2415,7 @@ SCIP_RETCODE setVarToNearestBound(
 static
 SCIP_RETCODE findVertexAndGetRays(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,      /**< nlhdlr expression data */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
    SCIP_SOL*             sol,                /**< solution to separate */
    SCIP_SOL*             vertex,             /**< new 'vertex' (w.r.t. bounds) solution to separate */
    SCIP_VAR*             auxvar,             /**< aux var of expr or NULL if not needed (e.g. separating real cons) */
