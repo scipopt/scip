@@ -21,6 +21,8 @@ Features
 - added dialog to display recognized permutation symmetries ("display symmetry")
 - added special presolving step for logicor and set covering/packing for constraints with two variables and one independent variable
 - increased the depth field of the tree structure from 16 to 30 bits and the max depth of the search tree from 65534 to 1073741822
+- added new branching rule based on Gomory mixed-integer cuts
+- added new branching score to the reliability pseudoc-ost branching rule
 
 Performance improvements
 ------------------------
@@ -35,6 +37,7 @@ Performance improvements
 - Use sassy/bliss as default symmetry computation package.
 - No longer linearize indicator constraints in undercover heuristic by default.
 - Deactivate pre-root heuristic zeroobj in undercover heuristic.
+- Addded new branching score tiebreaker for hybrid branching rule
 
 Examples and applications
 -------------------------
@@ -88,6 +91,8 @@ Interface changes
   SCIPshadowTreeGetShadowNode(), SCIPgetShadowTree(), SCIPactivateShadowTree(), SCIPincludeEventHdlrShadowTree(),
   for managing a copy of the branch-and-bound tree for symmetry handling purposes.
 - SCIPdotWriteOpening(), SCIPdotWriteNode(), SCIPdotWriteArc(), SCIPdotWriteClosing()
+- SCIPincludeBranchruleGomory() includes new gomory cut based branching rule
+- SCIPgetVarAvgGMIScore(), SCIPincVarGMISumScore(), SCIPgetVarLastGMIScore(), SCIPsetVarLastGMIScore() set historical values used by SCIP's default branching rule
 
 ### Command line interface
 
@@ -129,6 +134,8 @@ Interface changes
 - limits/objectivestop to interrupt the solve as soon as a primal solution is found
   that is at least as good as the given value
 - heuristics/undercover/{coverand,coverind,covernl} to control which nonlinearities to consider (by default only "and" and nonlinear constraints)
+- branching/relpscost/gmiavgeffweight specifies the weight in the relpscost branching score of the normalised  efficacy of all generated GMI cuts (for a variable)
+  branching/relpscost/gmilasteffweight specifies the weight in the elpscost branching score of the normalised efficacy of the last generated GMI cut (for a variable)
 
 ### Data structures
 
