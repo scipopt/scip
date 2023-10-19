@@ -10,8 +10,8 @@ Features
 - in expression simplification, added possibility to expand power of sum with exponents larger than 2 (simplify rule POW7)
 - in expression simplification, added possibility to expand products with sums as factor when there are more than two factors (simplify rule SP12b)
 - in expression simplification, added possibility to allow expanding power of products with fractional exponent (simplify rule POW5a)
-- Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
-  There	is an interface to Lapack in lapack_calls.
+- can now build with Lapack (used for solving nonlinear problems) explicitly; if IPOPT is used, then Lapack is accessed through it;
+  an interface to Lapack is available in lapack_calls.h
 - added support for logical constraints in binary variables and basic logical operators (and, or, not, equal) to AMPL .nl reader
 - indicator constraints now use the same slack variable for the linear constraints if binary variables are used multiple times
   for indicator constraints
@@ -67,13 +67,10 @@ Interface changes
 
 ### New API functions
 
-- new functions for interfacing with Lapack:
-  SCIPlapackIsAvailable(), SCIPlapackIsAvailable(),
-  SCIPlapackComputeEigenvalues(), and SCIPlapackSolveLinearEquations
-
+- new functions for interfacing with Lapack: SCIPlapackIsAvailable(), SCIPlapackIsAvailable(), SCIPlapackComputeEigenvalues(), and SCIPlapackSolveLinearEquations
   These functions should be used instead of SCIPisIpoptAvailableIpopt(), SCIPcallLapackDsyevIpopt(), and
-  SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations. If IPOPT is available,
-  the calls will be passed on.
+  SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations.
+  If IPOPT is available, the calls will be passed on to Ipopt's interface to Lapack.
 - SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
 - SCIPsetParam()
 - SCIPgetPrimalDualIntegral() returns the primal dual integral stored in the statistics
@@ -228,6 +225,9 @@ Fixed bugs
 - apply reductions of dualinfer only if a dual solution exists (primal is bounded)
 - before presolving is finished check solutions before retransforming them including tiny values to keep check flags consistent
 - disable heuristics before and during presolving in benders decomposition to avoid messing up the objective structure in the solution store by dropping auxiliary variables in the required retransformations
+- correct local flag of singleton conflict constraints in tightenSingleVar() against invalid bound globalization
+- respect unboundedness in the computation of activity bounds in conflict.c to avoid invalid huge bounds due to small coefficients on unbounded variables
+- ensure positive sides of a linear constraint when recognizing a set partition in rangedRowSimplify() to account for redundancy issues
 
 @section RN804 SCIP 8.0.4
 *************************
