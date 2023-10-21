@@ -112,6 +112,7 @@ NOBLKMEM	=	false
 NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
 BLISSEXTERNAL	=	false
+NAUTYEXTERNAL	=	false
 
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
 LIBEXTFORCESTATIC =	false
@@ -560,7 +561,11 @@ CXXFLAGS	+=	$(CXX17FLAG)
 endif
 
 ifeq ($(SYM),nauty)
-LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+ifeq ($(NAUTYEXTERNAL),true)
+LDFLAGS         +=      $(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS   +=      $(LIBOBJDIR)/nauty
+endif
 endif
 
 #-----------------------------------------------------------------------------
