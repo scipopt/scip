@@ -438,13 +438,10 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    /* create sassy graph */
    sassy::static_graph sassygraph;
 
-   SCIP_CALL( SYMbuildSassyGraphCheck(scip, &sassygraph, G1, G2, &success) );
+   SCIP_CALL( SYMbuildSassyGraphCheck(scip, &sassygraph, G1, G2, &nnodes, &nnodesfromG1, &success) );
 
    if ( ! success )
       return FALSE;
-
-   nnodes = SCIPgetSymgraphNVars(G1);
-   assert( SCIPgetSymgraphNVars(G2) == nnodes );
 
    /* compute symmetries */
    SCIP_CALL_ABORT( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(G1), &sassygraph, nnodes, 0,
@@ -454,7 +451,6 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
     * mapping a node from G1 to a node of G2
     */
    success = FALSE;
-   nnodesfromG1 = nnodes / 2;
    for (int p = 0; p < nperms && ! success; ++p)
    {
       for (int i = 0; i < nnodesfromG1; ++i)

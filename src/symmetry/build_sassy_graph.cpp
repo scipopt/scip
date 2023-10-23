@@ -487,6 +487,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
    int*                  nedges,             /**< pointer to store the total number of edges in graph */
    int**                 degrees,            /**< pointer to store the degrees of the nodes */
    int*                  maxdegrees,         /**< pointer to store the maximal size of the degree array */
+   int*                  nnodesfromG1,       /**< pointer to store number of nodes in sassy graph arising from G1 (or NULL) */
    SCIP_Bool*            success             /**< pointer to store whether the graph could be built */
    )
 {
@@ -609,9 +610,9 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
 
    /* collect information or generate graphs, we shift the node indices of the second graph when adding them to G */
    nodeshift = 0;
-   curnnodes = 0;
    for (i = 0; i < 2; ++i)
    {
+      curnnodes = 0;
       graph = i == 0 ? graph1 : graph2;
       ngroupedges = 0;
 
@@ -661,7 +662,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
       }
 
       /* loop through all edges of the symmetry detection graph and either get degrees of nodes or add edges */
-      internodeid = curnnodes;
+      internodeid = nodeshift + curnnodes;
       for (e = 0; e < nsymedges; ++e)
       {
          first = SCIPgetSymgraphEdgeFirst(graph, e);
@@ -807,6 +808,9 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
          }
       }
       nodeshift = curnnodes;
+
+      if ( i == 0 && nnodesfromG1 != NULL )
+         *nnodesfromG1 = curnnodes;
    }
 
    SCIPfreeBufferArray(scip, &groupcolors);
@@ -872,21 +876,26 @@ SCIP_RETCODE SYMbuildSassyGraphCheck(
    sassy::static_graph*  sassygraph,         /**< pointer to hold sassy graph being created */
    SYM_GRAPH*            G1,                 /**< first graph */
    SYM_GRAPH*            G2,                 /**< second graph */
+   int*                  nnodes,             /**< pointer to store number of nodes in sassy graph */
+   int*                  nnodesfromG1,       /**< pointer to store number of nodes in sassy graph arising from G1 */
    SCIP_Bool*            success             /**< pointer to store whether sassygraph could be built */
    )
 {
    int* degrees = NULL;
    int maxdegrees = 0;
-   int nnodes;
    int nedges;
 
    assert( scip != NULL );
    assert( sassygraph != NULL );
    assert( G1 != NULL );
    assert( G2 != NULL );
+   assert( nnodes != NULL );
+   assert( nnodesfromG1 != NULL );
    assert( success != NULL );
 
    *success = FALSE;
+   *nnodes = 0;
+   *nnodesfromG1 = 0;
 
    /* some simple checks */
    if ( G1->nnodes != G2->nnodes ||  G1->nopnodes != G2->nopnodes || G1->nvalnodes != G2->nvalnodes
@@ -895,7 +904,7 @@ SCIP_RETCODE SYMbuildSassyGraphCheck(
 
    /* determine number of nodes and edges */
    SCIP_CALL_ABORT( createOrDetermineSizeGraphCheck(scip, G1, G2, TRUE, NULL,
-         &nnodes, &nedges, &degrees, &maxdegrees, success) );
+         nnodes, &nedges, &degrees, &maxdegrees, nnodesfromG1, success) );
 
    if ( ! *success )
    {
@@ -903,7 +912,7 @@ SCIP_RETCODE SYMbuildSassyGraphCheck(
       assert( maxdegrees == 0 );
       return SCIP_OKAY;
    }
-   if ( nnodes % 2 != 0 )
+   if ( *nnodes % 2 != 0 )
    {
       assert( degrees != NULL );
       assert( maxdegrees > 0 );
@@ -913,11 +922,11 @@ SCIP_RETCODE SYMbuildSassyGraphCheck(
    }
 
    /* init graph */
-   (*sassygraph).initialize_graph((unsigned) nnodes, (unsigned) nedges);
+   (*sassygraph).initialize_graph((unsigned) *nnodes, (unsigned) nedges);
 
    /* add the nodes for linear and nonlinear constraints to the graph */
    SCIP_CALL_ABORT( createOrDetermineSizeGraphCheck(scip, G1, G2, FALSE, sassygraph,
-         &nnodes, &nedges, &degrees, &maxdegrees, success) );
+         nnodes, &nedges, &degrees, &maxdegrees, NULL, success) );
    assert( *success );
 
    SCIPfreeBlockMemoryArray(scip, &degrees, maxdegrees);

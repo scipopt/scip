@@ -89,6 +89,8 @@ SCIP_RETCODE SYMbuildSassyGraphCheck(
    sassy::static_graph*  sassygraph,         /**< pointer to hold sassy graph being created */
    SYM_GRAPH*            G1,                 /**< first graph */
    SYM_GRAPH*            G2,                 /**< second graph */
+   int*                  nnodes,             /**< pointer to store number of nodes in sassy graph */
+   int*                  nnodesfromG1,       /**< pointer to store number of nodes in sassy graph arising from G1 */
    SCIP_Bool*            success             /**< pointer to store whether sassygraph could be built */
    );
 
