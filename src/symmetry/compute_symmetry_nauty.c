@@ -721,6 +721,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
  *  The input are two graphs and the graph to be constructed consists of copies
  *  of the two input graphs, in which non-variable nodes are colored according
  *  to the colors used in symmetry detection. Each variable gets a unique color.
+ *  Finally, a dummy node is introduced that is adjacent with all remaining nodes.
  */
 static
 SCIP_RETCODE createOrDetermineSizeGraphCheck(
@@ -1101,6 +1102,29 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
          *nnodesfromgraph1 = *nnodes;
    }
 
+   /* add dummy node */
+   if ( determinesize )
+   {
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, degrees, maxdegrees, *nnodes + 1) );
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, colors, ncolors, *nnodes + 1) );
+
+      ++(*nnodes);
+      for (j = 0; j < *nnodes - 1; ++j)
+         ++(*degrees)[j];
+      (*degrees)[*nnodes - 1] = *nnodes - 1;
+      (*nedges) += *nnodes - 1;
+      (*colors)[*nnodes - 1] = 8;
+   }
+   else
+   {
+      for (j = 0; j < *nnodes - 1; ++j)
+      {
+         SG->e[pos[j]++] = *nnodes - 1;
+         SG->e[pos[*nnodes-1]++] = j;
+      }
+      SCIPfreeBlockMemoryArray(scip, &pos, *nnodes);
+   }
+
    SCIPfreeBufferArray(scip, &groupcolors);
    SCIPfreeBufferArray(scip, &groupseconds);
    SCIPfreeBufferArray(scip, &groupfirsts);
@@ -1451,7 +1475,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    data_.npermvars = SCIPgetSymgraphNVars(G1);
    data_.nperms = 0;
    data_.nmaxperms = 0;
-   data_.maxgenerators = -1;
+   data_.maxgenerators = 0;
    data_.perms = NULL;
    data_.symtype = SCIPgetSymgraphSymtype(G1);
    data_.restricttovars = FALSE;
@@ -1494,12 +1518,6 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
       SCIPfreeBlockMemoryArray(scip, &data_.perms[p], nnodes);
    }
    SCIPfreeBlockMemoryArrayNull(scip, &data_.perms, data_.nmaxperms);
-
-   SCIPfreeBufferArray(scip, &orbits);
-   SCIPfreeBufferArray(scip, &ptn);
-   SCIPfreeBufferArray(scip, &lab);
-
-   SCIPfreeBlockMemoryArray(scip, &colors, ncolors);
 
    SG_FREE(SG); /*lint !e774*/
 
