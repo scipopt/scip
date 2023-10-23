@@ -320,6 +320,7 @@ struct SCIP_ConshdlrData
                                                *   equations */
    SCIP_Bool             rangedrowartcons;   /**< should presolving and propagation extract sub-constraints from ranged rows and equations?*/
    SCIP_Bool             propcont;           /**< should bounds on continuous variables be tightened by propagation?*/
+   SCIP_Real             limitdenom;         /**< should denominator sizes for continuous variables be controlled?*/
    int                   rangedrowmaxdepth;  /**< maximum depth to apply ranged row propagation */
    int                   rangedrowfreq;      /**< frequency for applying ranged row propagation */
    SCIP_Bool             multaggrremove;     /**< should multi-aggregations only be performed if the constraint can be
@@ -7890,12 +7891,15 @@ SCIP_RETCODE tightenVarBounds(
                   SCIP_Real maxdenom;
                   RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
                   RatSetReal(tmpbound, newub);
-                  // be more strict for 0 bounds
-                  if( SCIPvarGetUbLocal(var) == 0.0 )
-                     maxdenom = 2;
-                  else
-                     maxdenom = MAX(256, RatDenominator(SCIPvarGetUbLocalExact(var)));
-                  RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
+                  if( conshdlrdata->limitdenom )
+                  {
+                     // be more strict for 0 bounds
+                     if( SCIPvarGetUbLocal(var) == 0.0 )
+                        maxdenom = 2;
+                     else
+                        maxdenom = MAX(256, RatDenominator(SCIPvarGetUbLocalExact(var)));
+                     RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
+                  }
                   if( SCIPcertificateShouldTrackBounds(scip) )
                      SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, tmpbound, false, cons, var);
                   SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos), force,
@@ -7975,11 +7979,14 @@ SCIP_RETCODE tightenVarBounds(
 
                RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
                RatSetReal(tmpbound, newlb);
-               if( SCIPvarGetLbLocal(var) == 0.0 )
-                  maxdenom = 2;
-               else
-                  maxdenom = MAX(256, RatDenominator(SCIPvarGetLbLocalExact(var)));
-               RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
+               if( conshdlrdata->limitdenom )
+               {
+                  if( SCIPvarGetLbLocal(var) == 0.0 )
+                     maxdenom = 2;
+                  else
+                     maxdenom = MAX(256, RatDenominator(SCIPvarGetLbLocalExact(var)));
+                  RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
+               }
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, tmpbound, true, cons, var);
                SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos), force,
@@ -8064,11 +8071,14 @@ SCIP_RETCODE tightenVarBounds(
                   SCIP_Real maxdenom;
                   RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
                   RatSetReal(tmpbound, newlb);
-                  if( SCIPvarGetLbLocal(var) == 0.0 )
-                     maxdenom = 2;
-                  else
-                     maxdenom = MAX(256, RatDenominator(SCIPvarGetLbLocalExact(var)));
-                  RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
+                  if( conshdlrdata->limitdenom )
+                  {
+                     if( SCIPvarGetLbLocal(var) == 0.0 )
+                        maxdenom = 2;
+                     else
+                        maxdenom = MAX(256, RatDenominator(SCIPvarGetLbLocalExact(var)));
+                     RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
+                  }
                   if( SCIPcertificateShouldTrackBounds(scip) )
                      SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_LOWER, tmpbound, false, cons, var);
                   SCIP_CALL( SCIPinferVarLbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_RHS, pos), force,
@@ -8147,11 +8157,14 @@ SCIP_RETCODE tightenVarBounds(
                SCIP_Real maxdenom;
                RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
                RatSetReal(tmpbound, newub);
-               if( SCIPvarGetUbLocal(var) == 0.0 )
-                  maxdenom = 2;
-               else
-                  maxdenom = MAX(256, RatDenominator(SCIPvarGetUbLocalExact(var)));
-               RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
+               if( conshdlrdata->limitdenom )
+               {
+                  if( SCIPvarGetUbLocal(var) == 0.0 )
+                     maxdenom = 2;
+                  else
+                     maxdenom = MAX(256, RatDenominator(SCIPvarGetUbLocalExact(var)));
+                  RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
+               }
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIPcertificatePrintActivityVarBoundEx(scip, SCIPgetCertificate(scip), NULL, SCIP_BOUNDTYPE_UPPER, tmpbound, true, cons, var);
                SCIP_CALL( SCIPinferVarUbConsExact(scip, var, tmpbound, cons, getInferInt(PROPRULE_1_LHS, pos), force,
@@ -18572,7 +18585,11 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/propcont",
          "should bounds on continuous variables be tightened by propagation?",
-         &conshdlrdata->propcont, TRUE, DEFAULT_MULTAGGRREMOVE, NULL, NULL) );
+         &conshdlrdata->propcont, TRUE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/limitdenom",
+         "should denominators on continuous variables be controlled?",
+         &conshdlrdata->limitdenom, TRUE, TRUE, NULL, NULL) );
 #ifdef SCIP_WITH_MPFR
    /* add info about using MPFR to external codes information */
    (void) SCIPsnprintf(version, sizeof(version), "MPFR %s", MPFR_VERSION_STRING);
