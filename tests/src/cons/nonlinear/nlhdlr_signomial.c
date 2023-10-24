@@ -242,10 +242,6 @@ Test(nlhdlrsignomial, detectandfree1, .description = "detects signomial terms 1"
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
-   /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
-   ownerdata->nconss = 0; /* TODO should consDisableNonlinear take care of this instead? */
-
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
@@ -284,10 +280,6 @@ Test(nlhdlrsignomial, detectandfree2, .description = "detects signomial terms 2"
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
-
-   /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
-   ownerdata->nconss = 0; /* TODO should consDisableNonlinear take care of this instead? */
 
    /* free cons */
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -357,15 +349,12 @@ Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3"
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
 
-   /* disable cons, so it can be deleted */
-   SCIP_CALL( consDisableNonlinear(scip, conshdlr, cons) );
-   ownerdata->nconss = 0; /* TODO should consDisableNonlinear take care of this instead? */
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* free transformed variables */
    SCIP_CALL( SCIPreleaseVar(scip, &x3) );
    SCIP_CALL( SCIPreleaseVar(scip, &x4) );
    SCIP_CALL( SCIPreleaseVar(scip, &x5) );
-
 }
 
 
@@ -409,11 +398,11 @@ Test(nlhdlrsignomial, separation_signomial)
 
    /* create a solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPvarGetTransVar(x1), 2.11) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPvarGetTransVar(x2), 2.22) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPvarGetTransVar(x3), 3.11) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPvarGetTransVar(x4), 4.22) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPvarGetTransVar(x5), 5.22) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x1, 2.11) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x2, 2.22) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x3, 3.11) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x4, 4.22) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x5, 5.22) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr), -1.23) );
 
    SCIP_CALL( nlhdlrEvalauxSignomial(scip, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), &targetval, sol));
