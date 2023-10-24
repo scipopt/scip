@@ -149,7 +149,7 @@ if(SYM STREQUAL "bliss")
     set(SYM_PIC_LIBRARIES libbliss)
 elseif(SYM STREQUAL "sbliss")
     message(STATUS "Support SYM: sassy+bliss")
-    set(sym symmetry/compute_symmetry_sassy_bliss.cpp)
+    set(sym symmetry/compute_symmetry_sassy_bliss.cpp symmetry/build_sassy_graph.cpp)
 
     # configure bliss
     set(BUILD_SHARED_LIBS OFF)
@@ -211,7 +211,7 @@ elseif(SYM STREQUAL "nauty")
     set(SYM_PIC_LIBRARIES libnauty)
  elseif(SYM STREQUAL "snauty")
     message(STATUS "Support SYM: sassy+nauty")
-    set(sym symmetry/compute_symmetry_sassy_nauty.cpp)
+    set(sym symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_sassy_graph.cpp)
 
     if(SHARED)
         set(PIC_FLAG "CFLAGS='-fPIC'")
