@@ -128,7 +128,7 @@ SCIP_RETCODE SCIPfreeSymgraph(
    default:
       assert((*graph)->symtype == SYM_SYMTYPE_SIGNPERM);
       SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->varcolors, 2 * (*graph)->nsymvars);
-   }
+   } /*lint !e788*/
 
    SCIPfreeBlockMemoryArrayNull(scip, &(*graph)->consnodeperm, (*graph)->nconsnodes);
    SCIPfreeBlockMemoryArray(scip, &(*graph)->isfixedvar, (*graph)->nsymvars);

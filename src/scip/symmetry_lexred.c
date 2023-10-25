@@ -1209,7 +1209,7 @@ SCIP_RETCODE propagateStaticLexred(
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nreductions         /**< pointer to store the number of found domain reductions */
    )
-{ /*lint !e771*/
+{ /*lint --e{771}*/
    int row;
    int i = -1;
    int j = -1;

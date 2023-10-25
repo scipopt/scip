@@ -1432,7 +1432,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    int**                 ncols,              /**< pointer to store number of columns of matrices in matrices */
    int*                  nmatrices           /**< pointer to store the number of matrices in matrices */
    )
-{
+{ /*lint --e{711}*/
    SCIP_DISJOINTSET* conncomps;
    SCIP_DISJOINTSET* compcolors;
    int* complastperm;
