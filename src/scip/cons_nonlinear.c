@@ -9880,7 +9880,7 @@ SCIP_RETCODE tryAddGadgetEvenOperator(
    )
 {
    SCIP_EXPR* child;
-   SCIP_Real val;
+   SCIP_Real val = 0.0;
    SCIP_Bool hasval = FALSE;
 
    assert(scip != NULL);
