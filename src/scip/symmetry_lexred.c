@@ -1017,32 +1017,35 @@ SCIP_RETCODE propagateVariablePair(
    SCIP_Bool*            peekbdset           /**< whether peek bounds have been set (or NULL) */
    )
 {
-   SCIP_Real ub1;
-   SCIP_Real ub2;
-   SCIP_Real lb1;
-   SCIP_Real lb2;
-
    assert( scip != NULL );
    assert( var1 != NULL );
    assert( var2 != NULL );
    assert( infeasible != NULL );
    assert( nreductions != NULL );
 
-   /* get bounds of shifted (and possibly negated) variables */
-   ub1 = SCIPvarGetUbLocal(var1);
-   lb1 = SCIPvarGetLbLocal(var1);
-   ub2 = SCIPvarGetUbLocal(var2);
-   lb2 = SCIPvarGetLbLocal(var2);
-
    /* perform lexicographic comparison: var1 - center1 >= +/- (var2 - center2)  */
    if ( alwaysLTshiftedVars(scip, var1, var2, center1, center2, isnegated, peekmode,
          varidx1, varidx2, peeklbs, peekubs, peekbdset) )
    {
-      *infeasible = TRUE;
+#ifdef SCIP_DEBUG
+      SCIP_Real ub1;
+      SCIP_Real ub2;
+      SCIP_Real lb1;
+      SCIP_Real lb2;
+
+      /* get bounds of shifted (and possibly negated) variables */
+      ub1 = SCIPvarGetUbLocal(var1);
+      lb1 = SCIPvarGetLbLocal(var1);
+      ub2 = SCIPvarGetUbLocal(var2);
+      lb2 = SCIPvarGetLbLocal(var2);
+
       SCIPdebugMessage("Detected infeasibility: x < y for "
          "x: lb=%5.2f, ub=%5.2f, shift=%5.2f "
          "y: lb=%5.2f, ub=%5.2f, shift=%5.2f negated=%u\n",
          lb1, ub1, center1, lb2, ub2, center2, isnegated);
+#endif
+
+      *infeasible = TRUE;
       return SCIP_OKAY;
    }
 
