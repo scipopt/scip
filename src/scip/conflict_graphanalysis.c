@@ -3413,7 +3413,7 @@ void conflictClearResolution(
    }
 }
 
-/** initializes the propagation conflict analysis by clearing the conflict candidate queue */
+/** initializes propagation and resolution conflict analysis by clearing the conflict candidate queues */
 SCIP_RETCODE SCIPconflictInit(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */

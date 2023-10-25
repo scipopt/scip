@@ -233,6 +233,7 @@ struct SCIP_Set
    int                   conf_weakenmax;      /**< maximal number of weakening steps for the reason constraint */
    int                   conf_batchcoeftight;/**< number of weakening steps for the reason before applying coef tightening
                                               *   (-1: apply once after the weakening loop) */
+   char                  conf_weakeningorder;/**< order of weakening variables 'a'scending, 'd'escending */
    int                   conf_resolutioncons;/**< number of resolution constraints to add (-1: add every conflict constraint) */
    SCIP_Bool             conf_enable;        /**< should conflict analysis be enabled? */
    SCIP_Bool             conf_cleanbnddepend;/**< should conflicts related to an old cutoff bound be removed? */
@@ -304,6 +305,7 @@ struct SCIP_Set
                                                      */
    SCIP_Bool             conf_weakenconflict;/**< should the conflict constraint be weakened? */
    SCIP_Bool             conf_weakenreason;  /**< should the reason constraint be weakened? */
+   SCIP_Bool             conf_weakenfreefirst;/**< should free variables be weakened first? */
    SCIP_Bool             conf_weakenreasonall;/**< should all variables at bounds in the reason be weakened at once? */
    SCIP_Bool             conf_applysimplemir;/**< should we apply mir with scaling 1.0 to strengthen the conflict constraints? */
    SCIP_Bool             conf_applycmir;     /**< should we apply cmir to strengthen the conflict constraints? */

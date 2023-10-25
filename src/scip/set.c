@@ -186,6 +186,7 @@
 #define SCIP_DEFAULT_CONF_WEAKENCONFLICT  FALSE /**< should the conflict constraint be weakened? */
 #define SCIP_DEFAULT_CONF_WEAKENREASON    FALSE /**< should the reason constraint be weakened? */
 #define SCIP_DEFAULT_CONF_WEAKENREASONALL FALSE /**< should all variables at bounds in the reason constraint be weakened at once? */
+#define SCIP_DEFAULT_CONF_WEAKENFREEFIRST  TRUE /**< should free variables be weakened first? */
 #define SCIP_DEFAULT_CONF_APPLYSIMPLEMIR  FALSE /**<  should we apply mir with scaling 1.0 to strengthen the conflict constraints? */
 #define SCIP_DEFAULT_CONF_APPLYCMIR       FALSE /**< should we apply cmir to strengthen the conflict constraints? */
 #define SCIP_DEFAULT_CONF_APPLYCMIRREASON FALSE /**< should we apply cmir to strengthen the reason constraints? */
@@ -200,7 +201,7 @@
                                                  *   ('o'ff, 'm'ir, 'd'ivision, coefficient 't'ightening, complemented mi'r', complemented divi's'ion)
                                                 */
 #define SCIP_DEFAULT_CONF_BATCHCOEFTIGHT      1 /**< number of weakening steps for the reason before applying coef tightening (-1: apply once after the weakening loop) */
-
+#define SCIP_DEFAULT_CONF_WEAKENINGORDER    'a' /**< order of weakening variables 'a'scending, 'd'escending */
 #define SCIP_DEFAULT_CONF_RESALLOWLOCAL   FALSE /**< should resolution conflict constraints be generated that are only valid locally? */
 #define SCIP_DEFAULT_CONF_MAXRESSTORESIZE 10000 /**< maximal size of the resolution conflict pool */
 
@@ -1483,6 +1484,11 @@ SCIP_RETCODE SCIPsetCreate(
          "number of weakening steps for the reason before applying coef tightening (-1: apply once after the weakening loop)",
          &(*set)->conf_batchcoeftight, TRUE, SCIP_DEFAULT_CONF_BATCHCOEFTIGHT, -1, INT_MAX,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "conflict/weakeningorder",
+         "order of weakening variables 'a'scending, 'd'escending",
+         &(*set)->conf_weakeningorder, TRUE, SCIP_DEFAULT_CONF_WEAKENINGORDER, "ad",
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "conflict/maxconss",
          "maximal number of conflict constraints accepted at an infeasible node (-1: use all generated conflict constraints)",
@@ -1572,6 +1578,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/weakenreason",
          "should the reason constraint be weakened?",
          &(*set)->conf_weakenreason, TRUE, SCIP_DEFAULT_CONF_WEAKENREASON,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/weakenfreefirst",
+         "should free variables be weakened first?",
+         &(*set)->conf_weakenfreefirst, TRUE, SCIP_DEFAULT_CONF_WEAKENFREEFIRST,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
       "conflict/weakenreasonall",
