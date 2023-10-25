@@ -438,7 +438,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
    int*                  ncolors,            /**< pointer to store number of different colors in graph */
    SCIP_Bool*            success             /**< pointer to store whether the construction was successful */
    )
-{
+{ /*lint !e438*/
    SYM_SYMTYPE symtype;
    SYM_NODETYPE comparetype;
    SCIP_Bool groupByConstraints;
@@ -481,7 +481,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
    default:
       assert( symtype == SYM_SYMTYPE_SIGNPERM );
       nvarnodestoadd = 2 * nsymvars;
-   }
+   } /*lint !e788*/
 
    /* possibly find number of nodes in sassy graph */
    if ( determinesize )
@@ -551,7 +551,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
       assert(second >= 0);
 
       /* check whether edge is used for grouping */
-      if ( FALSE && ! SCIPhasGraphUniqueEdgetype(symgraph) && isEdgeGroupable(symgraph, e, groupByConstraints) )
+      if ( ! SCIPhasGraphUniqueEdgetype(symgraph) && isEdgeGroupable(symgraph, e, groupByConstraints) )
       {
          /* store edge, first becomes the cons or var node */
          comparetype = groupByConstraints ? SYM_NODETYPE_CONS : SYM_NODETYPE_VAR;
@@ -699,7 +699,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
       break;
    default:
       assert( SCIPgetSymgraphSymtype(symgraph) == SYM_SYMTYPE_PERM );
-   }
+   } /*lint !e788*/
 
    if ( determinesize )
    {
@@ -808,7 +808,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
    default:
       assert( symtype == SYM_SYMTYPE_SIGNPERM );
       nvarnodestoadd = 2 * nsymvars;
-   }
+   } /*lint !e788*/
 
    /* find the variables that are contained in an edge */
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nvarused1, nvarnodestoadd) );
@@ -1332,7 +1332,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* determine log10 of symmetry group size */
    *log10groupsize = (SCIP_Real) stats.grpsize2;
 
-   return success;
+   return SCIP_OKAY;
 }
 
 /** returns whether two given graphs are identical */
@@ -1477,7 +1477,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    data_.nmaxperms = 0;
    data_.maxgenerators = 0;
    data_.perms = NULL;
-   data_.symtype = SCIPgetSymgraphSymtype(G1);
+   data_.symtype = symtype;
    data_.restricttovars = FALSE;
 
    /* call nauty/traces */

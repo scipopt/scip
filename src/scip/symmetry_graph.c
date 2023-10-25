@@ -834,9 +834,9 @@ int compareVarsSignedPerm(
    }
    else
    {
-      if( SCIPisLT(scip, SCIPvarGetType(var1), SCIPvarGetType(var2)) )
+      if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
          return -1;
-      if( SCIPisGT(scip, SCIPvarGetType(var1), SCIPvarGetType(var2)) )
+      if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
          return 1;
    }
 
@@ -1235,9 +1235,9 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
       nusedvars = graph->nsymvars;
       break;
    default:
-      assert(graph->symtype = SYM_SYMTYPE_SIGNPERM);
+      assert(graph->symtype == SYM_SYMTYPE_SIGNPERM);
       nusedvars = 2 * graph->nsymvars;
-   }
+   } /*lint !e788*/
 
    /* allocate memory for colors */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &graph->varcolors, nusedvars) );
@@ -1323,7 +1323,7 @@ SCIP_RETCODE SCIPcomputeSymgraphColors(
          previsneg = thisisneg;
       }
       graph->nvarcolors = color;
-   }
+   } /*lint !e788*/
 
    /* find colors of operator nodes */
    if( graph->nopnodes > 0 )
@@ -1536,7 +1536,7 @@ int SCIPgetSymgraphVarnodeColor(
    default:
       assert(graph->symtype == SYM_SYMTYPE_SIGNPERM);
       assert(0 <= nodeidx && nodeidx < 2 * graph->nsymvars);
-   }
+   } /*lint !e788*/
 
    return graph->varcolors[nodeidx];
 }

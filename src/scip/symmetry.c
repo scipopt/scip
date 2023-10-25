@@ -1445,8 +1445,8 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    int* perm;
    int nposdegree = 0;
    int npermstoconsider;
-   int colorrepresentative1;
-   int colorrepresentative2;
+   int colorrepresentative1 = -1;
+   int colorrepresentative2 = -1;
    int elemtomove;
    int ncurcols;
    int curcomp1;
@@ -1553,6 +1553,8 @@ SCIP_RETCODE detectOrbitopalSymmetries(
             if ( ! ((curdeg1 == degrees[v] && curdeg2 == degrees[w])
                   || (curdeg1 == degrees[w] && curdeg2 == degrees[v])) )
                break;
+            assert( colorrepresentative1 >= 0 );
+            assert( colorrepresentative2 >= 0 || curdeg2 == -1 );
 
             /* check whether all components have compatible colors */
             if ( curdeg1 > 0 && curcolor1 != colorrepresentative1 && curcolor2 != colorrepresentative1 )
@@ -1706,7 +1708,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
       /* elements moved by perm that have degree 1 are in the first column */
       for (v = 0, cnt = 0; v < permlen; ++v)
       {
-         if ( perm[v] > v )
+         if ( perm[v] > v ) /*lint !e711*/
          {
             if ( degrees[v] == 1 )
             {
@@ -1798,8 +1800,6 @@ SCIP_RETCODE isDoublelLexSym(
    int                   nrows2,             /**< number of rows of second family of matrices */
    int*                  ncols2,             /**< for each matrix in the second family, its number of columns */
    int                   nmatrices2,         /**< number of matrices in the second family */
-   int**                 perms,              /**< permutations */
-   int                   permlen,            /**< permutation length */
    int***                doublelexmatrix,    /**< pointer to store combined matrix */
    int*                  nrows,              /**< pointer to store number of rows in combined matrix */
    int*                  ncols,              /**< pointer to store number of columns in combined matrix */
@@ -2122,7 +2122,7 @@ SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
       assert( ncycs1 > 0 );
 
       SCIP_CALL( isDoublelLexSym(scip, matricestype1, ncycs1, ncolstype1, nmatricestype1,
-            matricestype2, ncycs2, ncolstype2, nmatricestype2, perms, permlen,
+            matricestype2, ncycs2, ncolstype2, nmatricestype2,
             lexmatrix, nrows, ncols, lexrowsbegin, lexcolsbegin, success) );
 
       if ( *success )

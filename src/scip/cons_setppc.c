@@ -62,7 +62,6 @@
 #include "scip/scip_var.h"
 #include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
-#include <ctype.h>
 #include <string.h>
 
 

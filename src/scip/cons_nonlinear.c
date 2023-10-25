@@ -9416,8 +9416,8 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
    SCIP_EXPR** children;
    SCIP_VAR* var1 = NULL;
    SCIP_VAR* var2 = NULL;
-   SCIP_Real val1;
-   SCIP_Real val2;
+   SCIP_Real val1 = 0.0;
+   SCIP_Real val2 = 0.0;
    SCIP_Real coef;
    SCIP_Real prodval;
    SCIP_Real constant;
@@ -9427,7 +9427,7 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
    int prodidx;
    int coefidx1;
    int coefidx2;
-   int childidx = 0;
+   int childidx;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -9488,8 +9488,8 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
    assert(var2 != NULL);
 
    /* store the we handle the children */
-   SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) children[0]);
-   SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) children[1]);
+   SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) children[0]) );
+   SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) children[1]) );
 
    SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
    assert(symdata != NULL);
@@ -9559,14 +9559,14 @@ SCIP_Bool isEvenOperator(
       /* get remaining information needed for symmetry detection */
       if( SCIPisExprSignpower(scip, expr) )
       {
-         SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
+         SCIP_CALL_ABORT( SCIPgetSymDataExpr(scip, expr, &symdata) );
          assert(symdata != NULL);
          assert(SCIPgetSymExprdataNConstants(symdata) == 1);
 
          *value = SCIPgetSymExprdataConstants(symdata)[0];
          *hasvalue = !SCIPisEQ(scip, *value, 1.0);
 
-         SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
+         SCIP_CALL_ABORT( SCIPfreeSymDataExpr(scip, &symdata) );
       }
       else
       {
@@ -9582,19 +9582,19 @@ SCIP_Bool isEvenOperator(
       int safeexponent;
 
       /* only consider expressions corresponding to an even power */
-      SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
+      SCIP_CALL_ABORT( SCIPgetSymDataExpr(scip, expr, &symdata) );
       assert(symdata != NULL);
       assert(SCIPgetSymExprdataNConstants(symdata) == 1);
 
       exponent = SCIPgetSymExprdataConstants(symdata)[0];
-      SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
+      SCIP_CALL_ABORT( SCIPfreeSymDataExpr(scip, &symdata) );
 
       /* check whether the exponent is an even integer */
       if( !SCIPisIntegral(scip, exponent) || SCIPisLE(scip, exponent, 0.0) )
          return FALSE;
 
       /* deal with numerics */
-      safeexponent = (int) exponent + 0.5;
+      safeexponent = (int) (exponent + 0.5);
       if( safeexponent % 2 != 0 )
          return FALSE;
 
@@ -10052,7 +10052,7 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
          if( powcoef == 0 )
          {
             if( SCIPisEQ(scip, sumcoefs[i], 1.0) || SCIPisEQ(scip, sumcoefs[i], -1.0) )
-               powcoef = SCIPround(scip, sumcoefs[i]);
+               powcoef = (int) SCIPround(scip, sumcoefs[i]);
          }
          else if( !SCIPisEQ(scip, (SCIP_Real) powcoef, sumcoefs[i]) )
             continue;
@@ -10088,7 +10088,7 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
          if( powcoef == 0 )
          {
             if( SCIPisEQ(scip, sumcoefs[i], 2.0) || SCIPisEQ(scip, sumcoefs[i], -2.0) )
-               powcoef = -SCIPround(scip, sumcoefs[i]);
+               powcoef = (int) -SCIPround(scip, sumcoefs[i]);
          }
          else if( !SCIPisEQ(scip, (SCIP_Real) 2 * powcoef, -sumcoefs[i]) )
             continue;
@@ -10243,7 +10243,7 @@ SCIP_RETCODE addSymmetryInformation(
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
    SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
    )
-{
+{ /*lint --e{850}*/
    SCIP_EXPRITER* it;
    SCIP_HASHSET* handledexprs;
    SCIP_EXPR* rootexpr;

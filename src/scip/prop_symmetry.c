@@ -229,8 +229,6 @@ struct SCIP_PropData
    int                   nmovedintpermvars;  /**< number of integer variables moved by any permutation */
    int                   nmovedimplintpermvars; /**< number of implicitly integer variables moved by any permutation */
    int                   nmovedcontpermvars; /**< number of continuous variables moved by any permutation */
-   SCIP_Shortbool*       nonbinpermvarcaptured; /**< array to store which non-binary variables have been captured
-                                                 *   (only necessary for SST cuts) */
    SCIP_HASHMAP*         customsymopnodetypes; /**< types of operator nodes introduced
                                                 *   by a user for symmetry detection */
    int                   nopnodetypes;       /**< current number of operator node types used for symmetry detection */
@@ -554,7 +552,7 @@ SCIP_RETCODE displaySymmetriesWithComponents(
 
       for (p = propdata->componentbegins[c], cnt = 0; p < propdata->componentbegins[c + 1]; ++p, ++cnt)
       {
-         SCIPinfoMessage(scip, NULL, "Permutation %d:\n", p);
+         SCIPinfoMessage(scip, NULL, "Permutation %d:\n", cnt);
          perm = propdata->perms[propdata->components[p]];
 
          for (i = 0; i < comppermlen; ++i)
@@ -1292,7 +1290,7 @@ SCIP_Bool conshdlrCanProvideSymInformation(
    default:
       assert( symtype == SYM_SYMTYPE_SIGNPERM );
       return SCIPconshdlrSupportsSignedPermsymDetection(conshdlr);
-   }
+   } /*lint !e788*/
 }
 
 /** returns whether all constraint handlers with constraints can provide symmetry information */
@@ -1532,7 +1530,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       default:
          assert( symtype == SYM_SYMTYPE_SIGNPERM );
          SCIP_CALL( SCIPgetConsSignedPermsymGraph(scip, conss[c], graphs[c], &success) );
-      }
+      } /*lint !e788*/
 
       SCIP_CALL( SCIPcomputeSymgraphColors(scip, graphs[c], fixedtype) );
 

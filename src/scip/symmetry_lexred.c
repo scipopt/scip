@@ -77,9 +77,7 @@
 #include "scip/struct_tree.h"
 #include "scip/symmetry.h"
 #include "scip/event_shadowtree.h"
-#include <ctype.h>
 #include <string.h>
-#include <memory.h>
 
 
 /*
@@ -670,7 +668,7 @@ SCIP_Bool alwaysLTshiftedVars(
    assert( (!peekmode) || peekubs != NULL );
    assert( (!peekmode) || peekbdset != NULL );
 
-   SCIP_CALL( getVarBounds(var1, var2, peekmode, varidx1, varidx2, peeklbs, peekubs, peekbdset,
+   SCIP_CALL_ABORT( getVarBounds(var1, var2, peekmode, varidx1, varidx2, peeklbs, peekubs, peekbdset,
          &lb1, &ub1, &lb2, &ub2) );
 
    /* for negated variables, check: var1 - shift1 < shift2 - var2 */
@@ -717,7 +715,7 @@ SCIP_Bool canGTshiftedVars(
    assert( (!peekmode) || peekubs != NULL );
    assert( (!peekmode) || peekbdset != NULL );
 
-   SCIP_CALL( getVarBounds(var1, var2, peekmode, varidx1, varidx2, peeklbs, peekubs, peekbdset,
+   SCIP_CALL_ABORT( getVarBounds(var1, var2, peekmode, varidx1, varidx2, peeklbs, peekubs, peekbdset,
          &lb1, &ub1, &lb2, &ub2) );
 
    /* for negated variables, check: var1 - shift1 > shift2 - var2 */
@@ -789,7 +787,7 @@ SCIP_RETCODE propagateLowerBoundVar(
       /* in peek mode, only store updated bounds */
       if ( peekmode )
       {
-         peeklbs[varidx1] = newbd;
+         peeklbs[varidx1] = newbd; /*lint !e644*/
          peekubs[varidx1] = ub1;
          peekbdset[varidx1] = TRUE;
       }
@@ -883,7 +881,7 @@ SCIP_RETCODE propagateUpperBoundSymVar(
       {
          if ( isnegated )
          {
-            peeklbs[varidx2] = newbd;
+            peeklbs[varidx2] = newbd; /*lint !e644*/
             peekubs[varidx2] = ub2;
             peekbdset[varidx2] = TRUE;
          }
@@ -1043,7 +1041,7 @@ SCIP_RETCODE propagateVariablePair(
       *infeasible = TRUE;
       SCIPdebugMessage("Detected infeasibility: x < y for "
          "x: lb=%5.2f, ub=%5.2f, shift=%5.2f "
-         "y: lb=%5.2f, ub=%5.2f, shift=%5.2f negated=%d\n",
+         "y: lb=%5.2f, ub=%5.2f, shift=%5.2f negated=%u\n",
          lb1, ub1, center1, lb2, ub2, center2, isnegated);
       return SCIP_OKAY;
    }
@@ -1110,7 +1108,7 @@ SCIP_RETCODE peekStaticLexredIsFeasible(
    assert( fixi < lexdata->nvars );
    assert( fixj < lexdata->nvars );
    assert( fixi != fixj || lexdata->symtype == SYM_SYMTYPE_SIGNPERM );
-   assert( fixi != fixj || fixvaluei == fixvaluej );
+   assert( fixi != fixj || fixvaluei == fixvaluej ); /*lint !e777*/
    assert( fixrow >= 0 );
    assert( fixrow < nselvars );
    assert( peekfeasible != NULL );
@@ -1208,7 +1206,7 @@ SCIP_RETCODE propagateStaticLexred(
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nreductions         /**< pointer to store the number of found domain reductions */
    )
-{
+{ /*lint !e771*/
    int row;
    int i = -1;
    int j = -1;
