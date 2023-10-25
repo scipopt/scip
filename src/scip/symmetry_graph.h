@@ -325,6 +325,7 @@ SCIP_Bool SCIPhasGraphUniqueEdgetype(
  *
  *  @note @p colors of symmetry detection graph must have been computed
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPallocateSymgraphConsnodeperm(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph               /**< symmetry detection graph */
@@ -334,6 +335,7 @@ SCIP_RETCODE SCIPallocateSymgraphConsnodeperm(
  *
  *  @note @p colors of symmetry detection graph must have been computed
  */
+SCIP_EXPORT
 SCIP_RETCODE SCIPcreateSymgraphConsnodeperm(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph               /**< symmetry detection graph */
@@ -343,12 +345,14 @@ SCIP_RETCODE SCIPcreateSymgraphConsnodeperm(
  *
  *  @note @p colors of symmetry detection graph must have been computed
  */
+SCIP_EXPORT
 int* SCIPgetSymgraphConsnodeperm(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph               /**< symmetry detection graph */
    );
 
 /** frees consnodeperm array for symmetry detection graph */
+SCIP_EXPORT
 SCIP_RETCODE SCIPfreeSymgraphConsnodeperm(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph               /**< symmetry detection graph */
