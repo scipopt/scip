@@ -1432,7 +1432,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
    int**                 ncols,              /**< pointer to store number of columns of matrices in matrices */
    int*                  nmatrices           /**< pointer to store the number of matrices in matrices */
    )
-{ /*lint --e{711}*/
+{  /*lint --e{771}*/
    SCIP_DISJOINTSET* conncomps;
    SCIP_DISJOINTSET* compcolors;
    int* complastperm;
@@ -1708,7 +1708,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
       /* elements moved by perm that have degree 1 are in the first column */
       for (v = 0, cnt = 0; v < permlen; ++v)
       {
-         if ( perm[v] > v ) /*lint !e711*/
+         if ( perm[v] > v ) /*lint !e771*/
          {
             if ( degrees[v] == 1 )
             {
