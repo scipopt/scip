@@ -8,6 +8,9 @@ backup/
 cplex.log
 
 settings/
+settings_old/
+settings_oldv2/
+check/
 
 # compiled object files
 *.[oa]
@@ -145,4 +148,4 @@ examples/*/lint
 !.github/workflows/*
 
 # avoid ignoring files in ci folder
-!ci/* 
+!ci/*

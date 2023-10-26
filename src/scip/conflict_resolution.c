@@ -2966,7 +2966,6 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
       conflict->nknownaborts++;
       conflict->nreslongconfs++;
       SCIPsetDebugMsgPrint(set, " \t -> conflict row is too long: %d > %d nnzs\n", conflictrow->nnz, maxsize);
-      return SCIP_OKAY;
    }
    /* if the conflict row is empty and the lhs positive, the node and its sub-
     * tree in the conflict row's valid depth can be cut off completely
@@ -2975,10 +2974,8 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    {
       SCIPsetDebugMsgPrint(set, " \t -> empty conflict row with lhs %f in depth %d cuts off sub tree at depth %d\n",
          conflictrow->lhs, focusdepth, conflictrow->validdepth);
-      /* increase the number of aborts since no conflict constraint is added */
-      conflict->nknownaborts++;
+      *success = TRUE;
       SCIP_CALL( SCIPnodeCutoff(tree->path[conflictrow->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
-      return SCIP_OKAY;
    }
    /* in case the conflict set contains only one bound change which is globally valid we apply that bound change
     * directly (except if we are in strong branching or diving - in this case a bound change would yield an unflushed LP
@@ -3666,7 +3663,8 @@ SCIP_RETCODE rescaleAndResolve(
 
    scale = computeScaleReason(set, conflictrow, reasonrow, residx);
 
-   if ( SCIPsetIsGE(set, scale, set->conf_generalresminmaxquot) )
+   /* refactortodo this should not be a fixed value */
+   if ( SCIPsetIsGE(set, scale, 1e+10) )
    {
       if( !conflict->haslargecoef )
       {
@@ -3921,7 +3919,6 @@ SCIP_RETCODE WeakeningBasedReduction(
                SCIPsetDebugMsg(set, "slack before division: %g \n",  previousslack);
                SCIPsetDebugMsg(set, "slack after division: %g \n", reducedreason->slack);
                SCIP_CALL( rescaleAndResolve(set, conflict, reducedreason, currbdchginfo, blkmem, residx, successresolution) );
-               assert(*successresolution);
                resolutionslack = getSlackConflict(set, vars, conflict->resolvedconflictrow, currbdchginfo, fixbounds, fixinds);
                if(SCIPsetIsLT(set, resolutionslack, 0.0))
                   reasonRowCopy(&reasonrow, blkmem, reducedreason);
@@ -3935,7 +3932,7 @@ SCIP_RETCODE WeakeningBasedReduction(
          break;
       }
    }
-   if( totaltoweaken > 0)
+   if( nvarsweakened > 0)
    {
       conflict->nreductioncalls++;
       if (set->conf_weakenreasonall)
@@ -3944,8 +3941,8 @@ SCIP_RETCODE WeakeningBasedReduction(
          conflict->weakeningsumperc += (SCIP_Real) nvarsweakened / totaltoweaken;
    }
 
-   /* apply a division cut (CG or MIR) after weakening as much as possible */
-   if ( set->conf_weakenreasonall )
+   /* apply a division cut (CG or MIR) after weakening as much as possible, or if we did not weaken at all */
+   if ( set->conf_weakenreasonall || nvarsweakened == 0 )
    {
       SCIP_REASONROW *reducedreason;
       int nchgcoefs = 0;
@@ -4047,7 +4044,7 @@ SCIP_RETCODE executeResolution(
       }
       SCIPdebug(printReasonRow(reasonrow, set, vars, REDUCED_REASON_ROWTYPE));
 
-      assert(!isBinaryReasonRow(set, vars, reasonrow) || SCIPsetIsZero(set, getSlackReason(set, vars, reasonrow, currbdchginfo, fixbounds, fixinds)));
+      assert(!(set->conf_weakenreasonall) || !isBinaryReasonRow(set, vars, reasonrow) || SCIPsetIsZero(set, getSlackReason(set, vars, reasonrow, currbdchginfo, fixbounds, fixinds)));
       idxinreason = getVarIdxInReasonRow(reasonrow, residx);
       assert(idxinreason >= 0);
       coefinreason = fabs(reasonrow->vals[idxinreason]);
