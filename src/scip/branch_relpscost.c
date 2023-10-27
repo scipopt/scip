@@ -118,7 +118,7 @@ struct SCIP_BranchruleData
    SCIP_Real             inferenceweight;    /**< weight in score calculations for inference score */
    SCIP_Real             cutoffweight;       /**< weight in score calculations for cutoff score */
    SCIP_Real             gmiavgeffweight;    /**< weight in score calculations of average GMI normed cut efficacies */
-   SCIP_Real             gmilasteffweight;   /**< weight in score calculations of last GMI cut normalised efficacy */
+   SCIP_Real             gmilasteffweight;   /**< weight in score calculations of last GMI cut normalized efficacy */
    SCIP_Real             pscostweight;       /**< weight in score calculations for pseudo cost score */
    SCIP_Real             nlscoreweight;      /**< weight in score calculations for nlcount score */
    SCIP_Real             minreliable;        /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
@@ -594,8 +594,8 @@ SCIP_Real calcScore(
    SCIP_Real             avginferencescore,  /**< average inference score */
    SCIP_Real             cutoffscore,        /**< cutoff score of current variable */
    SCIP_Real             avgcutoffscore,     /**< average cutoff score */
-   SCIP_Real             gmieffscore,        /**< normalised-eff of avg GMI cuts from row when var was frac and basic */
-   SCIP_Real             lastgmieffscore,    /**< last normalised gmieffscore when var was frac and basic  */
+   SCIP_Real             gmieffscore,        /**< normalized-eff of avg GMI cuts from row when var was frac and basic */
+   SCIP_Real             lastgmieffscore,    /**< last normalized gmieffscore when var was frac and basic  */
    SCIP_Real             pscostscore,        /**< pscost score of current variable */
    SCIP_Real             avgpscostscore,     /**< average pscost score */
    SCIP_Real             nlscore,            /**< nonlinear score of current variable between 0 and 1 */
@@ -2115,11 +2115,11 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->cutoffweight, TRUE, DEFAULT_CUTOFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
           "branching/relpscost/gmiavgeffweight",
-          "weight in score calculations for average GMI cuts normalised efficacy",
+          "weight in score calculations for average GMI cuts normalized efficacy",
           &branchruledata->gmiavgeffweight, TRUE, DEFAULT_GMIAVGEFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
           "branching/relpscost/gmilasteffweight",
-          "weight in score calculations for last GMI cuts normalised efficacy",
+          "weight in score calculations for last GMI cuts normalized efficacy",
           &branchruledata->gmilasteffweight, TRUE, DEFAULT_GMILASTEFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/pscostweight",

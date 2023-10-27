@@ -683,7 +683,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       }
    }
 
-   /* Add normalised efficacy GMI statistics to history */
+   /* Add normalized efficacy GMI statistics to history */
    maxcutefficacy = 0.0;
    for( i = 0; i < nrows; ++i )
    {

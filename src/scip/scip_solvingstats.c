@@ -2244,9 +2244,9 @@ SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, NULL, cutoffsdown, cutoffsup);
 }
 
-/** returns the average normalised efficacy of a GMI cut over all variables
+/** returns the average normalized efficacy of a GMI cut over all variables
  *
- *  @return increases the average normalised efficacy of a GMI cut over all variables
+ *  @return increases the average normalized efficacy of a GMI cut over all variables
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -2254,7 +2254,7 @@ SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
  */
 void SCIPincAvgGMIeff(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             gmieff              /**< average normalised GMI cut efficacy over all variables */
+   SCIP_Real             gmieff              /**< average normalized GMI cut efficacy over all variables */
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPincAvgGMIeff", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -2262,9 +2262,9 @@ void SCIPincAvgGMIeff(
    SCIPhistoryIncGMIeffSum(scip->stat->glbhistory, gmieff);
 }
 
-/** Increases the cumulative normalised efficacy of average (over all variables) GMI cuts
+/** Increases the cumulative normalized efficacy of average (over all variables) GMI cuts
  *
- *  @return the average normalised efficacy of a GMI cut over all variables
+ *  @return the average normalized efficacy of a GMI cut over all variables
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING

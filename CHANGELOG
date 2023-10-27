@@ -134,8 +134,8 @@ Interface changes
 - limits/objectivestop to interrupt the solve as soon as a primal solution is found
   that is at least as good as the given value
 - heuristics/undercover/{coverand,coverind,covernl} to control which nonlinearities to consider (by default only "and" and nonlinear constraints)
-- branching/relpscost/gmiavgeffweight specifies the weight in the relpscost branching score of the normalised  efficacy of all generated GMI cuts (for a variable)
-  branching/relpscost/gmilasteffweight specifies the weight in the elpscost branching score of the normalised efficacy of the last generated GMI cut (for a variable)
+- branching/relpscost/gmiavgeffweight specifies the weight in the relpscost branching score of the normalized  efficacy of all generated GMI cuts (for a variable)
+  branching/relpscost/gmilasteffweight specifies the weight in the elpscost branching score of the normalized efficacy of the last generated GMI cut (for a variable)
 
 ### Data structures
 

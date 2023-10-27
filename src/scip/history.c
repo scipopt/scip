@@ -758,7 +758,7 @@ SCIP_Real SCIPhistoryGetAvgGMIeff(
 /** increases the average efficacy value for the GMI cut produced by this variable */
 void SCIPhistoryIncGMIeffSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
-   SCIP_Real             gmieff              /**< normalised efficacy value of a cut which will increase gmieff */
+   SCIP_Real             gmieff              /**< normalized efficacy value of a cut which will increase gmieff */
 )
 {
    assert(history != NULL);
