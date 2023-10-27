@@ -168,6 +168,9 @@ SCIP_RETCODE sampleRandomPoints(
 
    for( niter = 0; niter < 3 * nmaxrndpoints && *nstored < nmaxrndpoints; ++niter )
    {
+      /* reset solution, in case the old one had infinite objective, which can give difficulties in updating the obj value */
+      SCIP_CALL( SCIPclearSol(scip, sol) );
+
       for( i = 0; i < nvars; ++i )
       {
          lb = MIN(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
