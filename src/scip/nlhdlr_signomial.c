@@ -270,7 +270,8 @@ void reformRowprep(
    }
 
    /* the reformation scales the cut so that coefficients and constant are divided by the absolute value of coefauxvar */
-   scale = 1 / fabs(coefauxvar);
+   assert(coefauxvar < 0);
+   scale = - 1 / coefauxvar;
 
    for( i = 0; i < nvars; i++ )
    {  
