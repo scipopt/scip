@@ -47,6 +47,7 @@
 #include "scip/pub_nlhdlr.h"
 #include "scip/scip_expr.h"
 #include "scip/expr_var.h"
+#include "scip/expr_pow.h"
 
 /* fundamental nonlinear handler properties */
 #define NLHDLR_NAME                    "signomial"
@@ -214,7 +215,17 @@ void freeExprDataMem(
 }
 
 /** reforms a rowprep to a standard form for nonlinear handlers
- *
+ *  
+ * The input rowprep is of the form  \f$ a_u u + a_v v + b \f$.
+ * If in the overestimate mode, then we relax \f$ t \le x^a \f$, i.e., \f$ 0 \le u^f - v^g \f$. This implies that \f$ t \f$ is in \f$ v = (v',t) \f$.
+ * Therefore, the valid inequality is \f$ 0 \le a_u u + a_v v + b \f$. As overestimate mode requires  that \f$ t \f$ is in the left hand side, 
+ * the coefficients of  \f$  t \f$ must be made negative while keeping the sign of the inequlaity, we can show that \f$  a_t \le 0 \f$, so it suffices
+ * to divide the both sides by \f$  -a_t \ge 0\f$, which yields  \f$ t \le (a_u u + a_v' v' + b) / -a_t \f$.
+ * A rowprep in standard form only contains an estimator of the expression and no auxvar.
+ * If in the underestimate mode, then we relax \f$ x^a \le t \f$, i.e.,  \f$ u^f - v^g \le 0 \f$. This implies that \f$ t \f$ is in \f$ v = (v',t) \f$.
+ * Therefore, the valid inequality is \f$ a_u u + a_v v + b  \le 0 \f$. As overestimate mode requires that \f$ t \f$ is in the left hand side, 
+ * the coefficients of  \f$  t \f$ must be made negative while keeping the sign of the inequlaity, we can show that \f$  a_t \le 0 \f$, so it suffices
+ * to divide the both sides by \f$  -a_t  \ge 0 \f$, which yields  \f$ (a_u u + a_v' v' + b) / -a_t \le t \f$.
  * A rowprep in standard form only contains an estimator of the expression and no auxvar.
  */
 static
@@ -434,8 +445,21 @@ SCIP_RETCODE estimateSpecialPower(
    /* allfixed is a special case */
    if( allfixed )
    {
-      /* SCIPcomputeFacetVertexPolyhedralNonlinear prints a warning and does not succeed if all is fixed */
-      SCIPdebugMsg(scip, "all variables fixed, skip estimate\n");
+      /* return a constant */
+      SCIP_Real funcval = 1;
+      SCIP_Real scale;
+      SCIP_Real val;
+      SCIP_Real refexponent;
+      for( i = 0; i < nlhdlrexprdata->nvars; ++i )
+      {
+         if( nlhdlrexprdata->signs[i] != sign )
+            continue;
+         scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
+         val = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[i]) / scale;
+         refexponent = nlhdlrexprdata->refexponents[i];
+         funcval *= pow(val, refexponent);
+      }
+      SCIProwprepAddConstant(rowprep,  multiplier * funcval);
       *isspecial = TRUE;
       return SCIP_OKAY;
    }
@@ -476,22 +500,10 @@ SCIP_RETCODE estimateSpecialPower(
                SCIP_Real facetconstant;
                SCIP_Real facetcoef;
                SCIP_Real val = SCIPgetSolVal(scip, sol, var) / scale;
-               if( overestimate )
-               {
-                  /* overestimate by gradient cut: \f$ w'^h + h  w'^(h-1) (w - w') =  (1- h) w'^h + h  w'^(h-1) w  \f$ */
-                  SCIP_Real funcval = pow(val, refexponent);
-                  facetconstant = (1 - refexponent) * funcval;
-                  facetcoef = refexponent * funcval / val;
-               }
-               else
-               {
-                  /* underestimate by secant approximation: \f$ ((sup^h - inf^h) / (sup - inf)) (w - inf) + inf^h \f$ */
-                  SCIP_Real inf = nlhdlrexprdata->intervals[i].inf;
-                  SCIP_Real sup = nlhdlrexprdata->intervals[i].sup;
-                  SCIP_Real powinf = pow(inf, refexponent);
-                  facetcoef = (pow(sup, refexponent) - powinf) / (sup - inf);
-                  facetconstant = powinf - facetcoef * inf;
-               }
+               // local (using bounds) depend on wether to estimate
+               SCIP_Bool islocal = !overestimate; 
+               SCIPestimateRoot(scip, refexponent, overestimate, nlhdlrexprdata->intervals[i].inf, nlhdlrexprdata->intervals[i].sup,         
+                  val, &facetconstant, &facetcoef, &islocal,  success);
                SCIProwprepAddConstant(rowprep,  multiplier * facetconstant);
                SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier * facetcoef / scale) );
             }
@@ -500,7 +512,13 @@ SCIP_RETCODE estimateSpecialPower(
       *success = TRUE;
    }
    else if( nsignvars == 2 && !overestimate ){
-      /* bivariate case, \f$ f(w) = w^h = f_0(w_0) f_1(w_1)  \f$ */
+      /* bivariate case, \f$ f(w) = w^h = f_0(w_0) f_1(w_1)  \f$. The convex under envelope is the maxmimum of
+       * two affine functions, each of which is determined by three extreme points the box bound. 
+       * One affine function is supported by three lower left points; the other affine function is
+       * supported by three upper right points. For a point xstar in the box, its corresponding affine function can be determined by
+       * which region (upper right or lower left half sapce) the point is in. Thus, we can determine the region, and use the
+       * associated three extreme point to interpolate the affine function.
+       */
       SCIP_Bool isupperright;
       SCIP_Real dw0, dw1;
       SCIP_Real f0w0l, f0w0u, f1w1l, f1w1u;
@@ -529,7 +547,7 @@ SCIP_RETCODE estimateSpecialPower(
       /* compute the box length*/
       dw0 = box[1] - box[0];
       dw1 = box[3] - box[2];
-      /* determine the location (upper right or lower left half sapce) of the xtar. 
+      /* determine the location (upper right or lower left half sapce) of the xstar. 
        * \f$ (dw1, dw0) \f$ is the direction vector to the upper right half space. */
       isupperright = ( (xstar[0] - box[0]) * dw1 + (xstar[1] - box[3]) * dw0 ) > 0;
       /* compute function values of \f$ f_0, f_1 \f$ at vetices */
