@@ -1325,6 +1325,7 @@ SCIP_RETCODE doBranchruleCreate(
    (*branchrule)->nchildren = 0;
    (*branchrule)->nreachedlookahead = 0;
    (*branchrule)->nbeforelookahead = 0;
+   (*branchrule)->nbetweenlookahead = 0;
 
    (*branchrule)->initialized = FALSE;
 
@@ -1440,6 +1441,7 @@ SCIP_RETCODE SCIPbranchruleInit(
       branchrule->nchildren = 0;
       branchrule->nreachedlookahead = 0;
       branchrule->nbeforelookahead = 0;
+      branchrule->nbetweenlookahead = 0;
    }
 
    if( branchrule->branchinit != NULL )
@@ -2192,6 +2194,17 @@ SCIP_Longint SCIPbranchruleGetNBeforeLookahead(
    assert(branchrule != NULL);
 
    return branchrule->nbeforelookahead;
+}
+
+/** number of times we stop calling strong branching between min and max lookahead allowed */
+SCIP_EXPORT
+SCIP_Longint SCIPbranchruleGetNBetweenLookahead(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->nbetweenlookahead;
 }
 
 /** is branching rule initialized? */
