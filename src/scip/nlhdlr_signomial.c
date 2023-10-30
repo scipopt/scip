@@ -501,10 +501,10 @@ SCIP_RETCODE estimateSpecialPower(
                SCIP_Real facetconstant;
                SCIP_Real facetcoef;
                SCIP_Real val = SCIPgetSolVal(scip, sol, var) / scale;
-               // local (using bounds) depend on wether to estimate
+               /* local (using bounds) depends on whether we under- or overestimate */
                SCIP_Bool islocal = !overestimate; 
                SCIPestimateRoot(scip, refexponent, overestimate, nlhdlrexprdata->intervals[i].inf, nlhdlrexprdata->intervals[i].sup,         
-                  val, &facetconstant, &facetcoef, &islocal,  success);
+                  val, &facetconstant, &facetcoef, &islocal, success);
                SCIProwprepAddConstant(rowprep,  multiplier * facetconstant);
                SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier * facetcoef / scale) );
             }
