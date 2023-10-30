@@ -172,6 +172,12 @@ SCIP_Longint SCIPbranchruleGetNBeforeLookahead(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
+/** number of times we stop calling strong branching between min and max lookahead allowed */
+SCIP_EXPORT
+SCIP_Longint SCIPbranchruleGetNBetweenLookahead(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
 /** is branching rule initialized? */
 SCIP_EXPORT
 SCIP_Bool SCIPbranchruleIsInitialized(
