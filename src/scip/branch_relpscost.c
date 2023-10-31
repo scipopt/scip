@@ -1509,8 +1509,8 @@ SCIP_RETCODE execRelpscost(
             assert(!branchruledata->usehyptestforreliability || bestpscand >= 0);
             usesb = FALSE;
             /* TodoSB: do we want to keep gains from reliable pseudocosts? */
-            if( size >= reliable)
-               updateMinMaxMeanGain(scip, branchrule, downgain, upgain, 0.0, -1.0);
+            // if( size >= reliable)
+            //    updateMinMaxMeanGain(scip, branchrule, downgain, upgain, 0.0, -1.0);
             if( size < reliable )
                usesb = TRUE;
             else if( branchruledata->userelerrorforreliability && branchruledata->usehyptestforreliability )
@@ -1608,13 +1608,13 @@ SCIP_RETCODE execRelpscost(
        * search best strong branching candidate,
        * Given the dynamiclookaheadquot we allow dynamiclookaheadquot percent more and less lookahead
        */
-      maxlookahead = (SCIP_Real)(2.0 - branchruledata->dynamiclookaheadquot) * branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
-      /* actual lookahead */
-      maxlookaheaddefault = branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
+      // maxlookahead = (SCIP_Real)(2.0 - branchruledata->dynamiclookaheadquot) * branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
+      // /* actual lookahead */
+      // maxlookaheaddefault = branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
 
-      // maxlookahead = (SCIP_Real)branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
-      // /* reference lookahead for the statistics. TodoSB this should be a parameter */
-      // maxlookaheaddefault = 9.0 * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
+      maxlookahead = (SCIP_Real)branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
+      /* reference lookahead for the statistics. TodoSB this should be a parameter */
+      maxlookaheaddefault = 9.0 * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
 
       inititer = branchruledata->inititer;
       if( inititer == 0 )
