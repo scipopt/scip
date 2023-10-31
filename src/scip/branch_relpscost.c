@@ -105,6 +105,7 @@
 #define DEFAULT_MINSAMPLESIZE    20          /**< minimum sample size to estimate the tree size for dynamic lookahead */
 #define DEFAULT_DYNAMICLOOKAHEAD TRUE        /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
 #define DEFAULT_GEOMETRICMEANGAINS TRUE      /**< should the geometric mean be used instead of the arithmetic mean for min and max gain? */
+#define DEFAULT_LOOKAHEAD_USEBAYESIAN TRUE   /**< should the update of the parameter estimation use the Bayesian rule or a simple weighted combination? */
 
 #define DEFAULT_RANDINITORDER    FALSE       /**< should slight perturbation of scores be used to break ties in the prior scores? */
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE   /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
@@ -158,6 +159,7 @@ struct SCIP_BranchruleData
    SCIP_Real             dynamiclookaheadquot; /**< apply dynamic lookahead after this fraction maxlookahead is reached */
    SCIP_Bool             dynamiclookahead;   /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
    SCIP_Bool             geometricmeangains; /**< should the geometric mean be used instead of the arithmetic mean for min and max gain? */
+   SCIP_Bool             lookaheadbayesian;  /**< should the update of the parameter estimation use the Bayesian rule or a simple convex combination */
    int                   minsamplesize;      /**< minimum sample size to estimate the tree size for dynamic lookahead */
    int                   degeneracyaware;    /**< should degeneracy be taken into account to update weights and skip strong branching? (0: off, 1: after root, 2: always) */
    int                   confidencelevel;    /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
@@ -925,7 +927,7 @@ SCIP_Real expectedTreeSize(
    return nexttreesize;
 }
 
-/* Decrease/Increase available number of SB iterations by (nmoresbs) * (average LP iterations per strong branching) */
+/* Decrease/increase available number of SB iterations by (nmoresbs) * (average LP iterations per strong branching) */
 static
 SCIP_RETCODE adjustStrongBranchingLpIterations(
    SCIP*                 scip,
@@ -1050,10 +1052,16 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
       int npreviousgains = MAX(branchruledata->minsamplesize - branchruledata->currndualgains, 0);
       int ncurrentgains = MIN(branchruledata->currndualgains, branchruledata->minsamplesize);
 
-      assert(  npreviousgains + ncurrentgains == branchruledata->minsamplesize);
+      assert( npreviousgains + ncurrentgains == branchruledata->minsamplesize );
       int total = branchruledata->minsamplesize;
-      SCIP_Real mean =  ((SCIP_Real) npreviousgains / total ) * branchruledata->meandualgain + ((SCIP_Real) ncurrentgains / total ) * branchruledata->currmeandualgain;
-      lambda = 1 / mean;
+      if ( branchruledata->lookaheadbayesian )
+      {
+         lambda = ((SCIP_Real) ncurrentgains + 1.0) / (branchruledata->meandualgain + ncurrentgains * branchruledata->currmeandualgain);
+      } else {
+         SCIP_Real oldgainfrac = (SCIP_Real) npreviousgains / total;
+         SCIP_Real mean = oldgainfrac * branchruledata->meandualgain + (1.0 - oldgainfrac) * branchruledata->currmeandualgain;
+         lambda = 1 / mean;
+      }
    }
 
    /* TodoSB too large depth can cause overflow. Set limit of 50 */
@@ -2519,6 +2527,9 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/geometricmeangains",
          "should the geometric mean be used instead of the arithmetic mean for min and max gain?",
          &branchruledata->geometricmeangains, TRUE, DEFAULT_GEOMETRICMEANGAINS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/lookaheadbayesian",
+         "should the update of the parameter estimation use the Bayesian rule or a simple convex combination?",
+         &branchruledata->lookaheadbayesian, TRUE, DEFAULT_LOOKAHEAD_USEBAYESIAN, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/initcand",
          "maximal number of candidates initialized with strong branching per node",
