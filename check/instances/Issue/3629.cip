@@ -1,0 +1,13 @@
+STATISTICS
+  Problem name     : PyomoModel
+  Variables        : 2 (0 binary, 0 integer, 0 implicit integer, 2 continuous)
+  Constraints      : 0 initial, 2 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [continuous] <x6181>: obj=-1, original bounds=[168,+inf]
+  [continuous] <x6525>: obj=0, original bounds=[1251,+inf]
+CONSTRAINTS
+  [linear] <c_e_x8815_>: 1766 <=  +18<x6181>[C] -<x6525>[C] <= 1766;
+  [linear] <c_u_x7642_>:  +4<x6181>[C] -<x6525>[C] <= 0;
+END

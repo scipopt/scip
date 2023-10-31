@@ -144,7 +144,6 @@ struct SCIP_PresolData
    SCIP_Real hugebound;                      /**< absolute bound value that is considered too huge for activitity based calculations */
 
    char* filename = NULL;                    /**< filename to store the instance before presolving */
-
 };
 
 using namespace papilo;
@@ -418,7 +417,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    if( data->enablesparsify )
       presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
 
-
    /* set tolerances */
    presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
    presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
@@ -623,7 +621,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             assert(side == res.postsolve.values[first + 2]);
             assert(res.postsolve.indices[first + 1] == 0);
             assert(res.postsolve.indices[first + 2] == 0);
-
          }
          assert( type == ReductionType::kSubstitutedCol || type == ReductionType::kSubstitutedColWithDual );
 #else
