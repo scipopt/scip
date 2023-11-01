@@ -966,8 +966,11 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
                sumrexponents -= (*nlhdlrexprdata)->exponents[c];
                (*nlhdlrexprdata)->signs[c] = FALSE;
             }
+            /* set null to working variables, meaning that they are not stored yet */
+            (*nlhdlrexprdata)->vars[c] = NULL;
          }
          (*nlhdlrexprdata)->signs[nf] = FALSE;
+         (*nlhdlrexprdata)->vars[nf] = NULL;
          (*nlhdlrexprdata)->nposvars = nposvars;
          (*nlhdlrexprdata)->nnegvars = nf - nposvars + 1;
 
@@ -1072,7 +1075,8 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
    {
       for( c = 0; c < (*nlhdlrexprdata)->nvars; c++ )
       {
-         SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->vars[c]) );
+         if((*nlhdlrexprdata)->vars[c] != NULL) 
+            SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->vars[c]) );
       }
    }
 
