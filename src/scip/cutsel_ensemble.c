@@ -67,6 +67,8 @@
 #define DEFAULT_MAXCUTDENSITY           0.425 /**< max allowed cut density if filtering dense cuts */
 #define DEFAULT_MAXNONZEROROOTROUND     4.5  /**< max nonzeros per round (root). Gets multiplied by num LP cols */
 #define DEFAULT_MAXNONZEROTREEROUND     9.5  /**< max nonzeros per round (tree). Gets multiplied by num LP cols */
+#define DEFAULT_MAXCUTS                 200  /**< maximum number of cuts that can be considered by this cut selector */
+#define DEFAULT_MAXNUMVARS              50000 /**< maximum number of variables that a problem can have while calling this cut selector */
 
 /*
  * Data structures
@@ -98,6 +100,8 @@ struct SCIP_CutselData
    SCIP_Bool             penaliselocks;      /**< whether the number of locks should be penalised instead of rewarded */
    SCIP_Bool             penaliseobjparal;   /**< whether objective parallelism should be penalised */
    int                   maxcoefratiobonus;  /**< maximum coefficient ratio for which numeric bonus is applied */
+   int                   maxcuts;            /**< maximum number of cuts that can be considered by this cut selector */
+   int                   maxnumvars;         /**< maximum number of variables that a problem can have while calling this cut selector */
 };
 
 
@@ -528,10 +532,16 @@ SCIP_DECL_CUTSELSELECT(cutselSelectEnsemble)
    assert(cutsel != NULL);
    assert(result != NULL);
 
-   *result = SCIP_SUCCESS;
-
    cutseldata = SCIPcutselGetData(cutsel);
    assert(cutseldata != NULL);
+   
+   if( ncuts > cutseldata->maxcuts || SCIPgetNVars(scip) > cutseldata->maxnumvars )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+   
+   *result = SCIP_SUCCESS;
 
    SCIP_CALL( SCIPselectCutsEnsemble(scip, cuts, forcedcuts, cutseldata, root, ncuts, nforcedcuts,
       maxnselectedcuts, nselectedcuts) );
@@ -671,13 +681,23 @@ SCIP_RETCODE SCIPincludeCutselEnsemble(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
                                "cutselection/" CUTSEL_NAME "/penaliseobjparal",
-      "should objective paralleism be penalised instead of rewarded",
+      "should objective parallelism be penalised instead of rewarded",
       &cutseldata->penaliseobjparal, TRUE, DEFAULT_PENALISEOBJPARAL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
                                "cutselection/" CUTSEL_NAME "/maxcoefratiobonus",
       "max coefficient ratio for which numeric bonus is applied.",
       &cutseldata->maxcoefratiobonus, TRUE, DEFAULT_MAXCOEFRATIOBONUS, 1, 1000000, NULL, NULL) );
+   
+   SCIP_CALL( SCIPaddIntParam(scip,
+                              "cutselection/" CUTSEL_NAME "/maxcuts",
+      "max number of cuts such that cut selector is applied.",
+      &cutseldata->maxcuts, TRUE, DEFAULT_MAXCUTS, 1, 1000000, NULL, NULL) );
+   
+   SCIP_CALL( SCIPaddIntParam(scip,
+                              "cutselection/" CUTSEL_NAME "/maxnumvars",
+      "max number of variables such that cut selector is applied.",
+      &cutseldata->maxnumvars, TRUE, DEFAULT_MAXNUMVARS, 1, 1000000, NULL, NULL) );
 
    return SCIP_OKAY;
 
