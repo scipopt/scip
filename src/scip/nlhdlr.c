@@ -96,7 +96,7 @@ void SCIPnlhdlrSetFreeHdlrData(
 void SCIPnlhdlrSetFreeExprData(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback
-                                                      (can be NULL if data does not need to be freed) */
+                                              * (can be NULL if data does not need to be freed) */
    )
 {
    assert(nlhdlr != NULL);

@@ -775,12 +775,18 @@ SCIP_RETCODE readObjsen(
 
    SCIPdebugMsg(scip, "read objective sense\n");
 
-   /* This has to be the Line with MIN or MAX. */
-   if( !mpsinputReadLine(mpsi) || (mpsinputField1(mpsi) == NULL) )
-   {
-      mpsinputSyntaxerror(mpsi);
-      return SCIP_OKAY;
+   /* Although this is not explicitly in the MPS extensions as provided by CPLEX, some other MIP solvers
+    * (in particular gurobi), put 'MIN' or 'MAX' as the input field on the same line as the section declaration */
+   if( mpsinputField1(mpsi) == NULL){
+       /* Normal Cplex extension; info should be on the next line, in field 1 */
+       /* This has to be the Line with MIN or MAX. */
+       if( !mpsinputReadLine(mpsi) || (mpsinputField1(mpsi) == NULL) )
+       {
+           mpsinputSyntaxerror(mpsi);
+           return SCIP_OKAY;
+       }
    }
+   /* Otherwise, the input should read e.g. "OBJSENSE MAX" so that MAX is also the first field */
 
    if( !strncmp(mpsinputField1(mpsi), "MIN", 3) )
       mpsinputSetObjsense(mpsi, SCIP_OBJSENSE_MINIMIZE);
@@ -2978,8 +2984,8 @@ SCIP_RETCODE getLinearCoeffs(
          if( SCIPvarGetStatus(activevars[v]) == SCIP_VARSTATUS_NEGATED )
          {
             activevars[v] = SCIPvarGetNegatedVar(activevars[v]);
+            activeconstant += activevals[v];
             activevals[v] *= -1.0;
-            activeconstant += 1.0;
          }
       }
    }

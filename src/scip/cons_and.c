@@ -301,7 +301,7 @@ SCIP_RETCODE consdataCatchEvents(
    assert(consdata != NULL);
 
    /* catch bound change events for both bounds on resultant variable */
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED, 
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->resvar, SCIP_EVENTTYPE_BOUNDCHANGED,
          eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
 
    /* catch tightening events for upper bound and relaxed events for lower bounds on operator variables */
@@ -3326,7 +3326,7 @@ SCIP_RETCODE cliquePresolve(
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyAndcons)
 {  /*lint --e{715}*/
-   /* the key is the element itself */ 
+   /* the key is the element itself */
    return elem;
 }
 
@@ -3398,8 +3398,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndcons)
    return SCIPhashFour(consdata->nvars, minidx, mididx, maxidx);
 }
 
-/** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
- *  accordingly; in contrast to removeRedundantConstraints(), it uses a hash table 
+/** compares each constraint with all other constraints for possible redundancy and removes or changes constraint
+ *  accordingly; in contrast to removeRedundantConstraints(), it uses a hash table
  */
 static
 SCIP_RETCODE detectRedundantConstraints(
@@ -3537,53 +3537,39 @@ SCIP_RETCODE enforceConstraint(
    SCIP_Bool cutoff;
    int i;
 
-   separated = FALSE;
-
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   *result = SCIP_FEASIBLE;
 
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
       SCIP_CALL( checkCons(scip, conss[i], sol, FALSE, FALSE, &violated) );
-      if( violated )
+      if( !violated )
+         continue;
+
+      if( !conshdlrdata->enforcecuts )
       {
-         if( conshdlrdata->enforcecuts )
-         {
-            SCIP_Bool consseparated;
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
 
-            SCIP_CALL( separateCons(scip, conss[i], sol, &consseparated, &cutoff) );
-            if ( cutoff )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-            separated = separated || consseparated;
-
-            /* following assert is wrong in the case some variables were not in relaxation (dynamic columns),
-            *
-            * e.g. the resultant, which has a negative objective value, is in the relaxation solution on its upper bound
-            * (variables with status loose are in an relaxation solution on it's best bound), but already creating a
-            * row, and thereby creating the column, changes the solution value (variable than has status column, and the
-            * initialization sets the relaxation solution value) to 0.0, and this already could lead to no violation of
-            * the rows, which then are not seperated into the lp
-            */
-#ifdef SCIP_DISABLED_CODE
-            assert(consseparated); /* because the solution is integral, the separation always finds a cut */
-#endif
-         }
-         else
-         {
-            *result = SCIP_INFEASIBLE;
-            return SCIP_OKAY;
-         }
+      SCIP_CALL( separateCons(scip, conss[i], sol, &separated, &cutoff) );
+      if( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      else if( separated )
+      {
+         *result = SCIP_SEPARATED;
+      }
+      else if( *result == SCIP_FEASIBLE )  /* do not change result separated to infeasible */
+      {
+         *result = SCIP_INFEASIBLE;
       }
    }
-
-   if( separated )
-      *result = SCIP_SEPARATED;
-   else
-      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -4545,7 +4531,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-         if( firstchange < nconss ) 
+         if( firstchange < nconss )
          {
             /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
             SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff, naggrvars, ndelconss) );
@@ -4639,7 +4625,6 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 static
 SCIP_DECL_CONSACTIVE(consActiveAnd)
 {  /*lint --e{715}*/
-
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
    {
       SCIP_CALL( addNlrow(scip, cons) );
@@ -4734,10 +4719,10 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
       consname = SCIPconsGetName(sourcecons);
 
    /* creates and captures a AND-constraint */
-   SCIP_CALL( SCIPcreateConsAnd(scip, cons, consname, resvar, nvars, vars, 
+   SCIP_CALL( SCIPcreateConsAnd(scip, cons, consname, resvar, nvars, vars,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
- TERMINATE:   
+ TERMINATE:
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);
 

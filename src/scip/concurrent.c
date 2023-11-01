@@ -160,7 +160,7 @@ SCIP_RETCODE SCIPfreeConcurrent(
 
    assert(scip->concurrent->varperm != NULL);
 
-   /* check if we are the SCIP that is responsible for freeing this concurent struct
+   /* check if we are the SCIP that is responsible for freeing this concurrent struct
     * or just a subscip */
    if( scip->concurrent->mainscip != scip )
    {

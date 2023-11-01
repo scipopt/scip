@@ -1031,7 +1031,7 @@ else()
    setLibProperties(libscip "scip")
 endif()
 
-target_include_directories(libscip PUBLIC
+target_include_directories(libscip BEFORE PUBLIC
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>)
@@ -1110,7 +1110,7 @@ set_target_properties(libscip PROPERTIES
     C_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN 1)
 
-target_include_directories(scip PUBLIC
+target_include_directories(scip BEFORE PUBLIC
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:include>)

@@ -36,15 +36,35 @@
 #include <bliss/graph.hh>
 
 /* include sassy */
+#ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4189)  // local variable is initialized but not referenced
+# pragma warning(disable: 4388)  // compare signed and unsigned expression
+# pragma warning(disable: 4456)  // shadowed variable
+# pragma warning(disable: 4430)  // missing type specifier
+#endif
+
+/* the actual include */
 #include <sassy/preprocessor.h>
+
+#ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wunused-but-set-variable"
 #pragma GCC diagnostic warning "-Wsign-compare"
 #pragma GCC diagnostic warning "-Wunused-variable"
 #pragma GCC diagnostic warning "-Wshadow"
+#endif
+
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
+
 #include <sassy/tools/bliss_converter.h>
 
 #include "scip/expr_var.h"
@@ -499,7 +519,9 @@ SCIP_RETCODE determineGraphSize(
       {
          SCIP_EXPR* rootexpr;
          SCIP_EXPR* expr;
+#ifndef NDEBUG
          int currentlevel = 0;
+#endif
 
          rootexpr = SCIPgetExprNonlinear(conss[i]);
 
@@ -610,7 +632,9 @@ SCIP_RETCODE determineGraphSize(
 
                      visitednodes[numvisitednodes++] = *nnodes;
                      ischildofsum[numischildofsum++] = FALSE;
+#ifndef NDEBUG
                      ++currentlevel;
+#endif
 
                      break;
                   }
@@ -710,7 +734,9 @@ SCIP_RETCODE determineGraphSize(
                   }
                }
 
+#ifndef NDEBUG
                ++currentlevel;
+#endif
                break;
             }
             /* when leaving an expression, the nodes that are not needed anymore are erased from the respective arrays */
@@ -718,7 +744,9 @@ SCIP_RETCODE determineGraphSize(
             {
                --numvisitednodes;
                --numischildofsum;
+#ifndef NDEBUG
                currentlevel--;
+#endif
 
                /* When leaving the child of a sum expression, we have to pop again to get rid of the intermediate nodes
                 * used for the coefficients of summands
@@ -840,10 +868,10 @@ SCIP_RETCODE fillGraphByConss(
    int varssize;
 #ifndef NDEBUG
    SCIP_Real oldcoef = SCIP_INVALID;
+   int m = 0;
 #endif
    int firstcolornodenumber = -1;
    int n = 0;
-   int m = 0;
    int i;
    int j;
 
@@ -928,7 +956,9 @@ SCIP_RETCODE fillGraphByConss(
             G->add_edge((unsigned) rhsnode, (unsigned) varnode);
          else
             G->add_edge((unsigned) varnode, (unsigned) rhsnode);
+#ifndef NDEBUG
          ++m;
+#endif
       }
       else
       {
@@ -970,20 +1000,28 @@ SCIP_RETCODE fillGraphByConss(
             if ( newinternode )
             {
                G->add_edge((unsigned) rhsnode, (unsigned) internode);
+#ifndef NDEBUG
                ++m;
+#endif
             }
             G->add_edge((unsigned) varnode, (unsigned) internode);
+#ifndef NDEBUG
             ++m;
+#endif
          }
          else
          {
             if ( newinternode )
             {
                G->add_edge((unsigned) varnode, (unsigned) internode);
+#ifndef NDEBUG
                ++m;
+#endif
             }
             G->add_edge((unsigned) rhsnode, (unsigned) internode);
+#ifndef NDEBUG
             ++m;
+#endif
          }
       }
    }
@@ -1138,7 +1176,9 @@ SCIP_RETCODE fillGraphByConss(
                         assert( internode < nnodes );
 
                         G->add_edge((unsigned) parentnode, (unsigned) internode);
+#ifndef NDEBUG
                         ++m;
+#endif
                         assert( m <= nedges );
 
                         /* connect the intermediate node to its corresponding variable node */
@@ -1146,7 +1186,9 @@ SCIP_RETCODE fillGraphByConss(
                         assert( node < nnodes );
 
                         G->add_edge((unsigned) node, (unsigned) internode);
+#ifndef NDEBUG
                         ++m;
+#endif
                         assert( m <= nedges );
                      }
 
@@ -1179,7 +1221,9 @@ SCIP_RETCODE fillGraphByConss(
                         assert( node < nnodes );
 
                         G->add_edge((unsigned) parentnode, (unsigned) node);
+#ifndef NDEBUG
                         ++m;
+#endif
                         assert( m <= nedges );
                      }
 
@@ -1298,7 +1342,9 @@ SCIP_RETCODE fillGraphByConss(
                   G->add_edge((unsigned) parentnode, (unsigned) node);
                else
                   G->add_edge((unsigned) node, (unsigned) parentnode);
+#ifndef NDEBUG
                ++m;
+#endif
                assert( m <= nedges );
 
                /* for sum expression, also add intermediate nodes for the coefficients */
@@ -1343,7 +1389,9 @@ SCIP_RETCODE fillGraphByConss(
                      assert( internode < nnodes );
 
                      G->add_edge((unsigned) node, (unsigned) internode);
+#ifndef NDEBUG
                      ++m;
+#endif
                      assert( m <= nedges );
                   }
 
@@ -1377,7 +1425,9 @@ SCIP_RETCODE fillGraphByConss(
                      assert( node < nnodes );
 
                      G->add_edge((unsigned) node, (unsigned) internode);
+#ifndef NDEBUG
                      ++m;
+#endif
                      assert( m <= nedges );
                   }
                }

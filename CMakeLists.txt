@@ -17,7 +17,7 @@ set(SCIP_VERSION_MAJOR 8)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 3)
 set(SCIP_VERSION_SUB 5)
-set(SCIP_VERSION_API 109)
+set(SCIP_VERSION_API 111)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
@@ -254,7 +254,7 @@ endif()
 # if changing these flags, also update GCCWARN/GXXWARN in make/make.project
 set(ADD_C_AND_CXX_FLAGS -pedantic -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow  -Wredundant-decls -Wdisabled-optimization -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter)
 set(ADD_C_FLAGS -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized)
-set(ADD_CXX_FLAGS -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow -Wno-psabi)
+set(ADD_CXX_FLAGS -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual -Wno-strict-overflow -Wno-psabi)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 # clang specific suppressions
@@ -476,6 +476,12 @@ message(STATUS "Finding Solver \"${LPS}\"")
 if(LPS STREQUAL "spx")
     message(STATUS "Finding Soplex")
     find_package(SOPLEX REQUIRED CONFIG HINTS ${SOPLEX_DIR})
+    if (DEFINED SOPLEX_WITH_PAPILO)
+        message(STATUS "SOPLEX links PAPILO")
+        if((NOT SCIP_WITH_PAPILO)) # TODO not sure how to handle AUTOBUILD
+            message(FATAL_ERROR "Please link a SOPLEX built without PAPILO to build SCIP without PAPILO.")
+        endif ()
+    endif ()
     if(LPSCHECK)
         find_package(CPLEX REQUIRED)
         set(SCIP_WITH_LPSCHECK on)

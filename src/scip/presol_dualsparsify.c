@@ -879,7 +879,7 @@ SCIP_RETCODE cancelCol(
                if( SCIPvarIsIntegral(cancelvar) )
                {
                   /* skip if the hashing variable is an integer variable and
-                   * the canceled variable is an implied integer variable
+                   * the canceled variable is an implicit integer variable
                    */
                   if( (SCIPvarGetType(hashingcolvar) != SCIP_VARTYPE_IMPLINT) &&
                      (SCIPvarGetType(cancelvar) == SCIP_VARTYPE_IMPLINT) )
@@ -1718,11 +1718,11 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
 
    updateFailureStatistic(presoldata, numcancel > 0);
 
+   SCIPfreeBufferArrayNull(scip, &conspairs);
    SCIPfreeBufferArray(scip, &colsparsity);
    SCIPfreeBufferArray(scip, &colidxsorted);
 
    SCIPhashtableFree(&pairtable);
-   SCIPfreeBufferArrayNull(scip, &conspairs);
 
    SCIPfreeBufferArray(scip, &isblockedvar);
    SCIPfreeBufferArray(scip, &vars);

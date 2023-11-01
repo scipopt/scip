@@ -1121,6 +1121,7 @@ SCIP_RETCODE createSubscip(
 
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "sepa_cgmip separating MIP (%s)", SCIPgetProbName(origscip));
    SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL , NULL , NULL , NULL , NULL , NULL) );
+   SCIPsetSubscipDepth(subscip, SCIPgetSubscipDepth(origscip) + 1);
    SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
 
    /* alloc memory for subscipdata elements */
@@ -2924,7 +2925,10 @@ SCIP_RETCODE computeCut(
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
          if ( SCIPisFeasGT(scip, val, REALABS(weight)) )
+         {
+            uselhs = FALSE;
             weight = val;
+         }
       }
 
       /* add row if weight is nonzero and lies within range */
@@ -3015,7 +3019,10 @@ SCIP_RETCODE computeCut(
 
          /* in a suboptimal solution both values may be positive - take the one with larger absolute value */
          if ( SCIPisFeasGT(scip, val, REALABS(weight)) )
+         {
+            uselhs = FALSE;
             weight = val;
+         }
       }
 
       /* add objective row if weight is nonzero and lies within range */

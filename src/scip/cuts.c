@@ -8696,7 +8696,7 @@ SCIP_RETCODE cutsRoundStrongCG(
          SCIPquadprecProdQD(cutaj, cutaj, k);
          SCIPquadprecProdQQ(cutaj, cutaj, onedivoneminusf0);
          pj = SCIPceil(scip, QUAD_TO_DBL(cutaj));
-         assert(pj >= 0); /* should be >= 1, but due to rounding bias can be 0 if fj almost equal to f0 */
+         assert(pj >= 0); /* should be >= 1, but due to rounding bias can be 0 if fj is almost equal to f0 */
          assert(pj <= k);
          SCIPquadprecDivDD(cutaj, pj, k + 1.0);
          SCIPquadprecSumQQ(cutaj, cutaj, downaj);
@@ -8856,7 +8856,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       SCIP_ROW* row;
       SCIP_Real pr;
       SCIP_Real QUAD(ar);
-      SCIP_Real downar;
+      SCIP_Real QUAD(downar);
       SCIP_Real QUAD(cutar);
       SCIP_Real QUAD(fr);
       SCIP_Real mul;
@@ -8879,22 +8879,22 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       /* calculate slack variable's coefficient a_r in the cut */
       if( row->integral )
       {
-         /* slack variable is always integral: */
-         downar = EPSFLOOR(QUAD_TO_DBL(ar), QUAD_EPSILON);
-         SCIPquadprecSumQD(fr, ar, -downar);
+         /* slack variable is always integral */
+         SCIPquadprecEpsFloorQ(downar, ar, SCIPepsilon(scip)); /*lint !e666*/
+         SCIPquadprecSumQQ(fr, ar, -downar);
 
          if( SCIPisLE(scip, QUAD_TO_DBL(fr), QUAD_TO_DBL(f0)) )
-            QUAD_ASSIGN(cutar, downar);
+            QUAD_ASSIGN_Q(cutar, downar); /* a_r */
          else
          {
             SCIPquadprecSumQQ(cutar, fr, -f0);
             SCIPquadprecProdQQ(cutar, cutar, onedivoneminusf0);
             SCIPquadprecProdQD(cutar, cutar, k);
             pr = SCIPceil(scip, QUAD_TO_DBL(cutar));
-            assert(pr >= 0); /* should be >= 1, but due to rounding bias can be 0 if fr almost equal to f0 */
+            assert(pr >= 0); /* should be >= 1, but due to rounding bias can be 0 if fr is almost equal to f0 */
             assert(pr <= k);
             SCIPquadprecDivDD(cutar, pr, k + 1.0);
-            SCIPquadprecSumQD(cutar, cutar, downar);
+            SCIPquadprecSumQQ(cutar, cutar, downar);
          }
       }
       else
@@ -9126,7 +9126,8 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIPquadprecSumDD(f0, QUAD_HI(f0), QUAD_LO(f0));
 
    SCIPquadprecDivDQ(tmp, 1.0, f0);
-   k = SCIPround(scip, ceil(QUAD_TO_DBL(tmp)) - 1.0);
+   SCIPquadprecSumQD(tmp, tmp, -1.0);
+   k = SCIPceil(scip, QUAD_TO_DBL(tmp));
 
    QUAD_ASSIGN_Q(rhs, downrhs);
 
