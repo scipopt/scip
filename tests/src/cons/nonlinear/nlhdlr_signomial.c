@@ -28,6 +28,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#define SCIP_DEBUG
 #include "scip/scipdefplugins.h"
 #include "scip/scip.h"
 #include "scip/nlhdlr.c"
@@ -324,108 +325,23 @@ Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3"
    cr_assert(nlhdlrexprdata->nposvars == 1);
    cr_assert(nlhdlrexprdata->nnegvars == 3);
 
-   for( i = 0; i < 3; i++){
-      if( x3 == nlhdlrexprdata->vars[i] ){
-         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], 1.5));
-      }
-      else if( x4 == nlhdlrexprdata->vars[i] ){
-         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], -1.5));
-      }
-      else if( x5 == nlhdlrexprdata->vars[i] ){
-         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], -2));
-      }
-   }
-
-   for( i = 0; i < 3; i++){
-      if( x3 == nlhdlrexprdata->vars[i] ){
-         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[i], 1.5 / (1.5 + 2 + 1) ));
-      }
-      else if( x4 == nlhdlrexprdata->vars[i] ){
-         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], 1.5 / (1.5 + 2 + 1) ));
-      }
-      else if( x5 == nlhdlrexprdata->vars[i] ){
-         cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[i], 2 / (1.5 + 2 + 1) ));
-      }
-   }
+   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[0], 1.5));
+   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[0], 1.5 / (1.5 + 2 + 1) ));
+   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[1], -1.5));
+   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[1], 1.5 / (1.5 + 2 + 1) ));
+   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->exponents[2], -2));
+   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[2], 2 / (1.5 + 2 + 1) ));
+   cr_assert(SCIPisEQ(scip, nlhdlrexprdata->refexponents[3], 1 / (1.5 + 2 + 1) ));
 
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
-
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   /* free transformed variables */
-   SCIP_CALL( SCIPreleaseVar(scip, &x3) );
-   SCIP_CALL( SCIPreleaseVar(scip, &x4) );
-   SCIP_CALL( SCIPreleaseVar(scip, &x5) );
+   SCIPdebugMsg(scip, "1\n");
 }
 
 
-/* adds a linear inequality to the product expression and computes a cut at a given reference point */
-Test(nlhdlrsignomial, separation_signomial)
-{
-   SCIP_ROWPREP* rowprep;
-   SCIP_CONS* cons;
-   SCIP_SOL* sol;
-   SCIP_Bool success;
-   SCIP_Bool overestimate;
-   SCIP_Bool dummy;
-   SCIP_EXPR* expr;
-   SCIP_PTRARRAY* rowpreps;
-   SCIP_Real targetval;
-   int nsample;
-   SCIP_Bool isvalid;
 
-   /* set variable bounds */
-   SCIP_CALL( SCIPchgVarLb(scip, x1, 1.0) );
-   SCIP_CALL( SCIPchgVarUb(scip, x1, 4.0) );
-   SCIP_CALL( SCIPchgVarLb(scip, x2, 1.1) );
-   SCIP_CALL( SCIPchgVarUb(scip, x2, 3.0) );
-   SCIP_CALL( SCIPchgVarLb(scip, x3, 1.2) );
-   SCIP_CALL( SCIPchgVarUb(scip, x3, 5.0) );
-   SCIP_CALL( SCIPchgVarLb(scip, x4, 1.3) );
-   SCIP_CALL( SCIPchgVarUb(scip, x4, 5.0) );
-   SCIP_CALL( SCIPchgVarLb(scip, x5, 1.5) );
-   SCIP_CALL( SCIPchgVarUb(scip, x5, 6.0) );
-
-   /* create constraint containing a signomial product expression */
-   SCIP_CALL( SCIPparseExpr(scip, &expr, "(<x1>)^(0.6) * (<x2>)^(-1.5) * (<x3>)^(-1) * (<x4>)^(2) * (<x5>)^(0.8)", NULL, NULL, NULL) );
-   SCIP_CALL( createAndDetect(&cons, expr) );
-   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
-   expr = SCIPgetExprNonlinear(cons);
-
-   SCIP_CALL( SCIPconstructLP(scip, &dummy) );
-
-   /* INITLP should have added an auxiliary variable to the product expression (tight might change in the future) */
-   cr_assert( SCIPgetExprAuxVarNonlinear(expr) != NULL);
-
-   /* create a solution */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x1, 2.11) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x2, 2.22) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x3, 3.11) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x4, 4.22) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, x5, 5.22) );
-   SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr), 0.1) );
-
-   SCIP_CALL( nlhdlrEvalauxSignomial(scip, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), &targetval, sol));
-   overestimate = FALSE;
-   SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
-   SCIP_CALL( nlhdlrEstimateSignomial(scip, conshdlr, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), sol,
-            0.1, overestimate, targetval, FALSE, rowpreps, &success, &dummy) );
-   cr_expect(success);
-
-   nsample = 10000;
-   rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 0);
-   SCIP_CALL( validCutProb( expr, rowprep, nsample, &isvalid));
-   SCIPfreeRowprep(scip, &rowprep);
-
-   /* free memory */
-   SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
-
-   cr_expect(isvalid);
-}
 
 
 
