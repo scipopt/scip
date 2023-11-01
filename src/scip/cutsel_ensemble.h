@@ -120,10 +120,10 @@ SCIP_RETCODE SCIPincludeCutselEnsemble(
  *  This is the selection method of the ensemble cut selector. It uses a weighted sum of normalised efficacy,
  *  normalised directed cutoff distance, normalised expected improvements, objective parallelism,
  *  integer support, sparsity, dynamism, pseudo-costs, and variable locks.
- *  As well as the weighted sum scoring there is optional parallelism based filtering, parallelism based penalties,
+ *  In addition to the weighted sum score, there are optionally parallelism-based filtering and penalties,
  *  and density filtering.
- *  There are also additional budget constraints on the amount of cuts that should be added.
- *  The input cuts array gets resorted s.t the selected cuts come first and the remaining ones are the end.
+ *  There are also additional budget constraints on the number of cuts that should be added.
+ *  The input cuts array gets re-sorted such that the selected cuts come first and the remaining ones are the end.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPselectCutsEnsemble(
