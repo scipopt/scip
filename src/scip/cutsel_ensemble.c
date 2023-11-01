@@ -537,7 +537,7 @@ SCIP_DECL_CUTSELSELECT(cutselSelectEnsemble)
    
    if( ncuts > cutseldata->maxcuts || SCIPgetNVars(scip) > cutseldata->maxnumvars )
    {
-      *result = SCIP_DIDNOTRUN;
+      *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
    }
    
