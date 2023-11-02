@@ -969,8 +969,8 @@ SCIP_Longint SCIPsepaGetNCutsAppliedDirect(
 
 /** increase count of applied cuts by one */
 void SCIPsepaIncNCutsApplied(
-   SCIP_SEPA*            sepa,               /**< separator */
-   SCIP_Bool             fromcutpool         /**< whether the cuts were added from the cutpool to sepastore */
+   SCIP_SEPA*            sepa,                /**< separator */
+   SCIP_Bool             fromcutpool          /**< whether the cuts were added from the cutpool to sepastore */
    )
 {
    SCIP_SEPA* parentsepa;
@@ -991,8 +991,8 @@ void SCIPsepaIncNCutsApplied(
 
 /** increase count of added cuts by one */
 void SCIPsepaIncNCutsAdded(
-   SCIP_SEPA*            sepa,               /**< separator */
-   SCIP_Bool             fromcutpool         /**< whether the cuts were added from the cutpool to sepastore */
+   SCIP_SEPA*            sepa,                /**< separator */
+   SCIP_Bool             fromcutpool          /**< whether the cuts were added from the cutpool to sepastore */
    )
 {
    SCIP_SEPA* parentsepa;
@@ -1014,8 +1014,8 @@ void SCIPsepaIncNCutsAdded(
 
 /** decrease the count of added cuts by one */
 void SCIPsepaDecNCutsAdded(
-   SCIP_SEPA*            sepa,               /**< separator */
-   SCIP_Bool             fromcutpool         /**< whether the cuts were added from the cutpool to sepastore */
+   SCIP_SEPA*            sepa,                /**< separator */
+   SCIP_Bool             fromcutpool          /**< whether the cuts were added from the cutpool to sepastore */
    )
 {
    SCIP_SEPA* parentsepa;

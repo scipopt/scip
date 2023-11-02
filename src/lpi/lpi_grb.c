@@ -1652,6 +1652,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(obj != NULL);

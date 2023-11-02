@@ -272,7 +272,6 @@ SCIP_RETCODE initConcsolver(
 
    /* create the concurrent solver's SCIP instance and set up the problem */
    SCIP_CALL( SCIPcreate(&data->solverscip) );
-   SCIPsetMessagehdlrQuiet(data->solverscip, SCIPmessagehdlrIsQuiet(SCIPgetMessagehdlr(scip)));
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(data->solverscip), data->nvars) );
    SCIP_CALL( SCIPcopy(scip, data->solverscip, varmapfw, NULL, SCIPconcsolverGetName(concsolver), TRUE, FALSE, FALSE,
          FALSE, &valid) );

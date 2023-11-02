@@ -825,7 +825,7 @@ SCIP_RETCODE checkFeasible(
    int                   numfixentriesinit,  /**< the number of virtually fixed entries */
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected in these fixings */
    int*                  infeasibleentry     /**< pointer to store at which entry a (0, 1) pattern is found */
-   )
+)
 {
    SCIP_VAR* var1;
    SCIP_VAR* var2;

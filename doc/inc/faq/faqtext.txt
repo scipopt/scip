@@ -288,14 +288,17 @@ SECTION: General Questions about SCIP
             can display a live visualization of the tree using JavaView.
         </li>
         <li>
-            <a href="https://cs.uni-koeln.de/ls-juenger/software/vbctool">vbctool</a>
+            <a href="http://www.informatik.uni-koeln.de/ls_juenger/vbctool">vbctool</a>
              comes with a viewer that has an option to uncover the nodes one-by-one (each time you
             hit the space key). Additional node information such as its lower bound, depth, and number are accessed through a
             context menu.
         </li>
         <li>
-            <a href="https://github.com/demogorgi/vbc2dot">Vbc2dot</a> is a script that generates a visualization of SCIP's branch-and-bound tree
+            <a href="https://www.uni-due.de/~si203go/#vbc">Vbc2dot</a> is a script that generates a visualization of SCIP's branch-and-bound tree
             in ps and pdf format. It is written in Ruby and requires dot (graphviz).
+        </li>
+        <li>
+            <a href="https://www.uni-due.de/~si203go/vbctool/zimplTblConverter.rb">zimplTblConverter</a> is a small Ruby-script that converts a scip solution file to a file where all names are replaced according to a zimpl tbl-file output.
         </li>
         <li>
             <a href="https://github.com/coin-or/GrUMPy">GrUMPy</a>

@@ -198,7 +198,6 @@
 -emacro(776,BMSduplicateBufferMemoryArray)
 -emacro(776,SCIPallocMemoryArray)
 -emacro(776,SCIPallocBlockMemoryArray)
--emacro(776,SCIPallocClearBlockMemoryArray)
 -emacro(776,SCIPreallocBlockMemoryArray)
 -emacro(776,SCIPfreeBlockMemoryArrayNull)
 -emacro(776,SCIPduplicateMemoryArray)

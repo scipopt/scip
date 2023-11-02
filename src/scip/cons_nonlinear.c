@@ -142,7 +142,7 @@ typedef struct
 {
    SCIP_NLHDLR*          nlhdlr;             /**< nonlinear handler */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata;     /**< data of nonlinear handler */
-   SCIP_NLHDLR_METHOD    nlhdlrparticipation;/**< methods where nonlinear handler participates */
+   SCIP_NLHDLR_METHOD nlhdlrparticipation; /**< methods where nonlinear handler participates */
    SCIP_Bool             issepainit;         /**< was the initsepa callback of nlhdlr called */
    SCIP_Real             auxvalue;           /**< auxiliary value of expression w.r.t. currently enforced solution */
    SCIP_Bool             sepabelowusesactivity;/**< whether sepabelow uses activity of some expression */
@@ -12849,7 +12849,7 @@ SCIP_RETCODE SCIPregisterExprUsageNonlinear(
    }
 
    /* increase the nactivityusedsepa counter for all variables used in the given expression */
-   if( (useactivityforsepabelow || useactivityforsepaabove) && SCIPexprGetNChildren(expr) > 0 )
+   if(( useactivityforsepabelow || useactivityforsepaabove) && SCIPexprGetNChildren(expr) > 0 )
    {
       SCIP_EXPRITER* it;
 

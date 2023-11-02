@@ -1141,8 +1141,8 @@ SCIP_RETCODE readLinearCoefs(
          assert(nlinvars[row] == 0);
 
          nterms = start[row+1] - start[row];
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &linvars[row], nterms) );
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &lincoefs[row], nterms) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvars[row], nterms) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs[row], nterms) );
 
          for( pos = start[row]; pos < start[row+1]; ++pos )
          {
@@ -1205,8 +1205,8 @@ SCIP_RETCODE readLinearCoefs(
 
             for( c = 0; c < nconss; ++c )
             {
-               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &linvars[c], nlinvars[c]) );
-               SCIP_CALL( SCIPallocBlockMemoryArray(scip, &lincoefs[c], nlinvars[c]) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &linvars[c], nlinvars[c]) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs[c], nlinvars[c]) );
 
                /* reset nlinvars[c] so it can be used for iteration k=1 */
                nlinvars[c] = 0;
@@ -1235,13 +1235,13 @@ SCIP_RETCODE readQuadraticCoefs(
    SCIP_VAR***           quadvars2,          /**< array to store for each constraint the second variables of the quadratic terms */
    SCIP_Real**           quadcoefs,          /**< array to store for each constraint the coefficients of the quadratic terms */
    int*                  nquadterms,         /**< array to store for each constraint the total number of quadratic terms */
-   int*                  termssize,          /**< pointer to store the size of quadvars1, quadvars2, and quadcoefs */
    SCIP_Bool*            doingfine           /**< buffer to indicate whether no errors occurred */
    )
 {
    const XML_NODE* quadcoef;
    const XML_NODE* qterm;
    const char* attrval;
+   int* termssize;
    SCIP_Real coef;
    int nqterms;
    int count;
@@ -1285,6 +1285,8 @@ SCIP_RETCODE readQuadraticCoefs(
 
    assert(vars != NULL);
 
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &termssize, nconss + 1) );
+
    count = 0;
    for( qterm = xmlFirstChild(quadcoef); qterm != NULL; qterm = xmlNextSibl(qterm), ++count )
    {
@@ -1293,13 +1295,13 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Expected <qTerm> node under <quadraticCoefficients> node, but got <%s>\n", xmlGetName(qterm));
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
       if( count >= nqterms )
       {
          SCIPerrorMessage("Too many quadratic terms under <quadraticCoefficients> node, expected %d many, but got at least %d.\n", nqterms, count + 1);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       /* get constraint index, or -1 for objective */
@@ -1308,7 +1310,7 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Missing \"idx\" attribute in %d'th <qTerm> node under <quadraticCoefficients> node.\n", count);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       considx = (int)strtol(attrval, (char**)&attrval, 10);
@@ -1316,7 +1318,7 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Invalid value '%s' in \"idx\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "idx"), count);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       /* get index of first variable */
@@ -1325,7 +1327,7 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Missing \"idxOne\" attribute in %d'th <qTerm> node under <quadraticCoefficients> node.\n", count);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       varidx1 = (int)strtol(attrval, (char**)&attrval, 10);
@@ -1333,7 +1335,7 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Invalid value '%s' in \"idxOne\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "idxOne"), count);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       /* get index of second variable */
@@ -1342,7 +1344,7 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Missing \"idxTwo\" attribute in %d'th <qTerm> node under <quadraticCoefficients> node.\n", count);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       varidx2 = (int)strtol(attrval, (char**)&attrval, 10);
@@ -1350,7 +1352,7 @@ SCIP_RETCODE readQuadraticCoefs(
       {
          SCIPerrorMessage("Invalid value '%s' in \"idxTwo\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "idxTwo"), count);
          *doingfine = FALSE;
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       /* get (optional) coefficient of quadratic term */
@@ -1362,7 +1364,7 @@ SCIP_RETCODE readQuadraticCoefs(
          {
             SCIPerrorMessage("Invalid value '%s' in \"coef\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "coef"), count);
             *doingfine = FALSE;
-            return SCIP_OKAY;
+            goto TERMINATE;
          }
       }
       else
@@ -1381,13 +1383,10 @@ SCIP_RETCODE readQuadraticCoefs(
 
       if( nquadterms[considx] + 1 > termssize[considx] )
       {
-         int newsize;
-
-         newsize = SCIPcalcMemGrowSize(scip, nquadterms[considx] + 1);
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &quadvars1[considx], termssize[considx], newsize) );  /*lint !e866*/
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &quadvars2[considx], termssize[considx], newsize) );  /*lint !e866*/
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &quadcoefs[considx], termssize[considx], newsize) );  /*lint !e866*/
-         termssize[considx] = newsize;
+         termssize[considx] = SCIPcalcMemGrowSize(scip, nquadterms[considx] + 1);
+         SCIP_CALL( SCIPreallocBufferArray(scip, &quadvars1[considx], termssize[considx]) );  /*lint !e866*/
+         SCIP_CALL( SCIPreallocBufferArray(scip, &quadvars2[considx], termssize[considx]) );  /*lint !e866*/
+         SCIP_CALL( SCIPreallocBufferArray(scip, &quadcoefs[considx], termssize[considx]) );  /*lint !e866*/
       }
 
       quadvars1[considx][nquadterms[considx]] = vars[varidx1];
@@ -1400,7 +1399,11 @@ SCIP_RETCODE readQuadraticCoefs(
    {
       SCIPerrorMessage("Got only %d quadratic terms under <quadraticCoefficients> node, but expected %d many.\n", count, nqterms);
       *doingfine = FALSE;
+      goto TERMINATE;
    }
+
+ TERMINATE:
+   SCIPfreeBufferArray(scip, &termssize);
 
    return SCIP_OKAY;
 }
@@ -2342,7 +2345,6 @@ SCIP_DECL_READERREAD(readerReadOsil)
    SCIP_VAR*** quadvars2 = NULL;
    SCIP_Real** quadcoefs = NULL;
    int* nquadterms = NULL;
-   int* termssize = NULL;
 
    /* nonlinear parts */
    SCIP_EXPR** nlexprs = NULL;
@@ -2422,16 +2424,15 @@ SCIP_DECL_READERREAD(readerReadOsil)
    if( !doingfine )
       goto CLEANUP;
 
-   /* allocate memory to store constraint information (use block memory, since the size have to be reallocaed) */
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &linvars, nconss + 1) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &lincoefs, nconss + 1) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &nlinvars, nconss + 1) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &quadvars1, nconss + 1) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &quadvars2, nconss + 1) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &quadcoefs, nconss + 1) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &nquadterms, nconss + 1) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &nlexprs, nconss + 1) );
-   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &termssize, nconss + 1) );
+   /* allocate memory to store constraint information */
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &linvars, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &lincoefs, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nlinvars, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &quadvars1, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &quadvars2, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &quadcoefs, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nquadterms, nconss + 1) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nlexprs, nconss + 1) );
 
    /* read linear coefficients matrix */
    SCIP_CALL_TERMINATE( retcode, readLinearCoefs(scip, data, vars, nvars, nconss, linvars, lincoefs, nlinvars, &doingfine), CLEANUP );
@@ -2440,7 +2441,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
 
    /* read quadratic coefficients */
    SCIP_CALL_TERMINATE( retcode, readQuadraticCoefs(scip, data, vars, nvars, nconss, quadvars1, quadvars2, quadcoefs,
-         nquadterms, termssize, &doingfine), CLEANUP );
+      nquadterms, &doingfine), CLEANUP );
    if( !doingfine )
       goto CLEANUP;
 
@@ -2489,23 +2490,22 @@ SCIP_DECL_READERREAD(readerReadOsil)
       }
 
       /* free quadratic parts */
-      SCIPfreeBlockMemoryArrayNull(scip, &quadcoefs[c], termssize[c]);
-      SCIPfreeBlockMemoryArrayNull(scip, &quadvars2[c], termssize[c]);
-      SCIPfreeBlockMemoryArrayNull(scip, &quadvars1[c], termssize[c]);
+      SCIPfreeBufferArrayNull(scip, &quadcoefs[c]);
+      SCIPfreeBufferArrayNull(scip, &quadvars1[c]);
+      SCIPfreeBufferArrayNull(scip, &quadvars2[c]);
 
       /* free linear parts */
-      SCIPfreeBlockMemoryArray(scip, &lincoefs[c], nlinvars[c]);
-      SCIPfreeBlockMemoryArray(scip, &linvars[c], nlinvars[c]);
+      SCIPfreeBufferArrayNull(scip, &lincoefs[c]);
+      SCIPfreeBufferArrayNull(scip, &linvars[c]);
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &termssize, nconss + 1);
-   SCIPfreeBlockMemoryArrayNull(scip, &nlexprs, nconss + 1);
-   SCIPfreeBlockMemoryArrayNull(scip, &nquadterms, nconss + 1);
-   SCIPfreeBlockMemoryArrayNull(scip, &quadcoefs, nconss + 1);
-   SCIPfreeBlockMemoryArrayNull(scip, &quadvars2, nconss + 1);
-   SCIPfreeBlockMemoryArrayNull(scip, &quadvars1, nconss + 1);
-   SCIPfreeBlockMemoryArrayNull(scip, &nlinvars, nconss + 1);
-   SCIPfreeBlockMemoryArrayNull(scip, &lincoefs, nconss + 1);
-   SCIPfreeBlockMemoryArrayNull(scip, &linvars, nconss + 1);
+   SCIPfreeBufferArrayNull(scip, &nlexprs);
+   SCIPfreeBufferArrayNull(scip, &nquadterms);
+   SCIPfreeBufferArrayNull(scip, &quadcoefs);
+   SCIPfreeBufferArrayNull(scip, &quadvars2);
+   SCIPfreeBufferArrayNull(scip, &quadvars1);
+   SCIPfreeBufferArrayNull(scip, &nlinvars);
+   SCIPfreeBufferArrayNull(scip, &lincoefs);
+   SCIPfreeBufferArrayNull(scip, &linvars);
 
    /* free variables */
    for( i = 0; i < nvars; ++i )
