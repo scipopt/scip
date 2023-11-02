@@ -198,7 +198,7 @@ SCIP_RETCODE scoring(
    }
    
    /* account for the case where maxlocks or maxpscost is 0 */
-   maxpscost = MAX(maxpscost, SCIPepsilon(scip));
+   maxpscost = MAX(maxpscost, SCIPepsilon(scip)); /*lint !e666*/
    maxlocks = MAX(maxlocks, 1);
 
    for ( int i = 0; i < ncuts; i++ )
