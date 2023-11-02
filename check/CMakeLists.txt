@@ -477,6 +477,7 @@ set(pairs_Issue
     # Test currently not working since problems with the feasibility check for unbounded problems appear: https://git.zib.de/integer/scip/-/issues/3422
     # "instances/Issue/3629.cip\;-infinity\;only_dualinfer"
     "instances/Issue/3632.cip\;0\;default"
+    "instances/Issue/3633.lp\;0\;default"
 )
 
 #

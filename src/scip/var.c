@@ -5302,8 +5302,6 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    )
 {
    SCIP_Bool easyaggr;
-   SCIP_Real maxscalar;
-   SCIP_Real absquot;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -5329,11 +5327,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    *infeasible = FALSE;
    *aggregated = FALSE;
 
-   absquot = REALABS(scalarx / scalary);
-   maxscalar = SCIPsetFeastol(set) / SCIPsetEpsilon(set);
-   maxscalar = MAX(maxscalar, 1.0);
-
-   if( absquot > maxscalar || absquot < 1 / maxscalar )
+   if( SCIPsetIsZero(set, scalarx / scalary) || SCIPsetIsZero(set, scalary / scalarx) )
       return SCIP_OKAY;
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
@@ -5361,41 +5355,35 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    /* figure out, which variable should be aggregated */
    easyaggr = FALSE;
 
-   /* check if it is an easy aggregation that means:
-    *
-    *   a*x + b*y == c -> x == -b/a * y + c/a iff |b/a| > feastol and |a/b| > feastol
-    */
-   if( !SCIPsetIsFeasZero(set, scalary/scalarx) && !SCIPsetIsFeasZero(set, scalarx/scalary) )
+   /* check if it is an easy aggregation */
+   if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) < SCIP_VARTYPE_CONTINUOUS )
    {
-      if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) < SCIP_VARTYPE_CONTINUOUS )
-      {
-         easyaggr = TRUE;
-      }
-      else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
-      {
-         easyaggr = TRUE;
-      }
-      else if( SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx) )
-      {
-         /* we have an easy aggregation if we flip the variables x and y */
-         SCIP_VAR* var;
-         SCIP_Real scalar;
+      easyaggr = TRUE;
+   }
+   else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
+   {
+      easyaggr = TRUE;
+   }
+   else if( SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx) )
+   {
+      /* we have an easy aggregation if we flip the variables x and y */
+      SCIP_VAR* var;
+      SCIP_Real scalar;
 
-         /* switch the variables, such that varx is the aggregated variable */
-         var = vary;
-         vary = varx;
-         varx = var;
-         scalar = scalary;
-         scalary = scalarx;
-         scalarx = scalar;
-         easyaggr = TRUE;
-      }
-      else if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
-      {
-         /* the aggregation is still easy if both variables are continuous */
-         assert(SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS); /* otherwise we are in the first case */
-         easyaggr = TRUE;
-      }
+      /* switch the variables, such that varx is the aggregated variable */
+      var = vary;
+      vary = varx;
+      varx = var;
+      scalar = scalary;
+      scalary = scalarx;
+      scalarx = scalar;
+      easyaggr = TRUE;
+   }
+   else if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
+   {
+      /* the aggregation is still easy if both variables are continuous */
+      assert(SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS); /* otherwise we are in the first case */
+      easyaggr = TRUE;
    }
 
    /* did we find an "easy" aggregation? */
