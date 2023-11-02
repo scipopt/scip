@@ -287,7 +287,7 @@ SCIP_RETCODE SCIPsetPresolPriority(
 /** returns the number of presolve rounds (current or last presolve) */
 int SCIPgetNPresolRounds(
    SCIP*                 scip                /**< SCIP data structure */
-   )
+)
 {
    assert(scip != NULL);
    assert(scip->stat != NULL);

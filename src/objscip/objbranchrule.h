@@ -43,7 +43,8 @@
 namespace scip
 {
 
-/** @brief C++ wrapper for branching rules
+/**
+ *  @brief C++ wrapper for branching rules
  *
  *  This class defines the interface for branching rules implemented in C++.
  *

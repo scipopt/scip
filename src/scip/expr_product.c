@@ -393,7 +393,7 @@ SCIP_RETCODE mergeProductExprlist(
    EXPRNODE*             tomerge,            /**< list to merge */
    EXPRNODE**            finalchildren,      /**< pointer to store the result of merge between tomerge and *finalchildren */
    EXPRNODE**            unsimplifiedchildren,/**< the list of children that should go to the product expression;
-                                              *   they are unsimplified when seen as children of a simplified product */
+                                               *   they are unsimplified when seen as children of a simplified product */
    SCIP_Bool*            changed,            /**< pointer to store if some term actually got simplified */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */

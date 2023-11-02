@@ -209,8 +209,8 @@ SCIP_RETCODE assignLinking(
 /** creates a sub-SCIP and sets parameters */
 static
 SCIP_RETCODE createSubscip(
-   SCIP*                 scip,               /**< main SCIP data structure */
-   SCIP**                subscip             /**< pointer to store created sub-SCIP */
+    SCIP*                scip,               /**< main SCIP data structure */
+    SCIP**               subscip             /**< pointer to store created sub-SCIP */
    )
 {
    assert(scip != NULL);
@@ -1788,7 +1788,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    /* initialize partition */
    SCIP_CALL( initCurrent(scip, linkings, blockproblem, heurdata->nlinking, &success) );
 
-   /* ------------------------------------------------------------------------ */
+   /** ------------------------------------------------------------------------ */
    SCIPdebugMsg(scip, "Start heuristik DPS\n");
    *result = SCIP_DIDNOTFIND;
 
@@ -1974,8 +1974,8 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    }
    SCIPdebugMsg(scip, "maximum number of iterations reached\n");
 
-   /* ------------------------------------------------------------------------ */
-   /* free memory */
+   /** ------------------------------------------------------------------------ */
+   /** free memory */
 TERMINATE:
    if( linkings != NULL )
    {

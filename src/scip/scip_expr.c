@@ -1638,6 +1638,7 @@ SCIP_RETCODE SCIPevalExpr(
 }
 
 /** returns a previously unused solution tag for expression evaluation */
+SCIP_EXPORT
 SCIP_Longint SCIPgetExprNewSoltag(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2110,6 +2111,7 @@ SCIP_RETCODE SCIPgetExprVarExprs(
  *
  * @see SCIP_DECL_EXPRPRINT
  */
+SCIP_EXPORT
 SCIP_DECL_EXPRPRINT(SCIPcallExprPrint)
 {
    assert(scip != NULL);
@@ -2125,6 +2127,7 @@ SCIP_DECL_EXPRPRINT(SCIPcallExprPrint)
  *
  * Returns unknown curvature if callback not implemented.
  */
+SCIP_EXPORT
 SCIP_DECL_EXPRCURVATURE(SCIPcallExprCurvature)
 {
    assert(scip != NULL);
@@ -2222,6 +2225,7 @@ SCIP_DECL_EXPRINTEVAL(SCIPcallExprInteval)
  *
  * Returns without success if callback not implemented.
  */
+SCIP_EXPORT
 SCIP_DECL_EXPRESTIMATE(SCIPcallExprEstimate)
 {
    assert(scip != NULL);
@@ -2238,6 +2242,7 @@ SCIP_DECL_EXPRESTIMATE(SCIPcallExprEstimate)
  *
  * Returns no estimators if callback not implemented.
  */
+SCIP_EXPORT
 SCIP_DECL_EXPRINITESTIMATES(SCIPcallExprInitestimates)
 {
    assert(scip != NULL);
@@ -2273,6 +2278,7 @@ SCIP_DECL_EXPRSIMPLIFY(SCIPcallExprSimplify)
  *
  * Returns unmodified childrenbounds if reverseprop callback not implemented.
  */
+SCIP_EXPORT
 SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop)
 {
    assert(scip != NULL);

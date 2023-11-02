@@ -778,11 +778,9 @@ SCIP_RETCODE readCoefficients(
    SCIP_VAR***           linvars,            /**< pointer to store the array with linear variables (must be freed by caller) */
    SCIP_Real**           lincoefs,           /**< pointer to store the array with linear coefficients (must be freed by caller) */
    int*const             nlincoefs,          /**< pointer to store the number of linear coefficients */
-   int*                  lincoefssize,       /**< pointer to store the size of linvars/lincoefs arrays */
    SCIP_VAR****          terms,              /**< pointer to store the array with nonlinear variables (must be freed by caller) */
    SCIP_Real**           termcoefs,          /**< pointer to store the array with nonlinear coefficients (must be freed by caller) */
    int**                 ntermvars,          /**< pointer to store the number of nonlinear variables in the terms (must be freed by caller) */
-   int*                  termcoefssize,      /**< pointer to store the size of terms/termcoefs */
    int*const             ntermcoefs,         /**< pointer to store the number of nonlinear coefficients */
    SCIP_Bool*const       newsection,         /**< pointer to store whether a new section was encountered */
    SCIP_Bool*const       isNonlinear,        /**< pointer to store if we have a nonlinear constraint */
@@ -798,6 +796,8 @@ SCIP_RETCODE readCoefficients(
    SCIP_Bool haveweightend;
    SCIP_Real coef;
    int coefsign;
+   int lincoefssize;
+   int termcoefssize;
    int tmpvarssize;
    int ntmpcoefs;
    int ntmpvars;
@@ -806,22 +806,18 @@ SCIP_RETCODE readCoefficients(
    assert(name != NULL);
    assert(linvars != NULL);
    assert(lincoefs != NULL);
-   assert(lincoefssize != NULL);
    assert(nlincoefs != NULL);
    assert(terms != NULL);
    assert(termcoefs != NULL);
    assert(ntermvars != NULL);
-   assert(termcoefssize != NULL);
    assert(ntermcoefs != NULL);
    assert(newsection != NULL);
 
    *linvars = NULL;
    *lincoefs = NULL;
-   *lincoefssize = 0;
    *terms = NULL;
    *termcoefs = NULL;
    *ntermvars = NULL;
-   *termcoefssize = 0;
    *name = '\0';
    *nlincoefs = 0;
    *ntermcoefs = 0;
@@ -877,15 +873,14 @@ SCIP_RETCODE readCoefficients(
    }
 
    /* initialize buffers for storing the coefficients */
-   *lincoefssize = OPB_INIT_COEFSSIZE;
-   *termcoefssize = OPB_INIT_COEFSSIZE;
+   lincoefssize = OPB_INIT_COEFSSIZE;
+   termcoefssize = OPB_INIT_COEFSSIZE;
    tmpvarssize = OPB_INIT_COEFSSIZE;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, linvars, *lincoefssize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, lincoefs, *lincoefssize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, terms, *termcoefssize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, termcoefs, *termcoefssize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, ntermvars, *termcoefssize) );
-
+   SCIP_CALL( SCIPallocBufferArray(scip, linvars, lincoefssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, lincoefs, lincoefssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, terms, termcoefssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, termcoefs, termcoefssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, ntermvars, termcoefssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, tmpvarssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpcoefs, tmpvarssize) );
 
@@ -1014,22 +1009,19 @@ SCIP_RETCODE readCoefficients(
 #endif
          if( !SCIPisZero(scip, coef) )
          {
-            assert(*ntermcoefs <= *termcoefssize);
+            assert(*ntermcoefs <= termcoefssize);
             /* resize the terms, ntermvars, and termcoefs array if needed */
-            if( *ntermcoefs >= *termcoefssize )
+            if( *ntermcoefs == termcoefssize )
             {
-               int newsize;
-
-               newsize = SCIPcalcMemGrowSize(scip, *ntermcoefs + 1);
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, terms, *termcoefssize, newsize) );
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, termcoefs, *termcoefssize, newsize) );
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, ntermvars, *termcoefssize, newsize) );
-               *termcoefssize = newsize;
+               termcoefssize = SCIPcalcMemGrowSize(scip, termcoefssize + 1);
+               SCIP_CALL( SCIPreallocBufferArray(scip, terms, termcoefssize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, termcoefs, termcoefssize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, ntermvars, termcoefssize) );
             }
-            assert(*ntermcoefs < *termcoefssize);
+            assert(*ntermcoefs < termcoefssize);
 
             /* get memory for the last term */
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*terms)[*ntermcoefs]), ntmpvars) ); /*lint !e866 */
+            SCIP_CALL( SCIPallocBufferArray(scip, &((*terms)[*ntermcoefs]), ntmpvars) ); /*lint !e866 */
 
             /* set the number of variable in this term */
             (*ntermvars)[*ntermcoefs] = ntmpvars;
@@ -1065,18 +1057,15 @@ SCIP_RETCODE readCoefficients(
          SCIPdebugMsg(scip, "(line %d) found linear term: %+g<%s>\n", opbinput->linenumber, coefsign * coef, SCIPvarGetName(tmpvars[0]));
          if( !SCIPisZero(scip, coef) )
          {
-            assert(*nlincoefs <= *lincoefssize);
+            assert(*nlincoefs <= lincoefssize);
             /* resize the vars and coefs array if needed */
-            if( *nlincoefs >= *lincoefssize )
+            if( *nlincoefs >= lincoefssize )
             {
-               int newsize;
-
-               newsize = SCIPcalcMemGrowSize(scip, *nlincoefs + 1);
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, linvars, *lincoefssize, newsize) );
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, lincoefs, *lincoefssize, newsize) );
-               *lincoefssize = newsize;
+               lincoefssize = SCIPcalcMemGrowSize(scip, lincoefssize + 1);
+               SCIP_CALL( SCIPreallocBufferArray(scip, linvars, lincoefssize) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, lincoefs, lincoefssize) );
             }
-            assert(*nlincoefs < *lincoefssize);
+            assert(*nlincoefs < lincoefssize);
 
             /* add coefficient */
             (*linvars)[*nlincoefs] = tmpvars[0];
@@ -1355,12 +1344,10 @@ SCIP_RETCODE readConstraints(
    SCIP_CONS* cons;
    SCIP_VAR** linvars;
    SCIP_Real* lincoefs;
-   int lincoefssize;
    int nlincoefs;
    SCIP_VAR*** terms;
    SCIP_Real* termcoefs;
    int* ntermvars;
-   int termcoefssize;
    int ntermcoefs;
    OPBSENSE sense;
    SCIP_RETCODE retcode;
@@ -1396,8 +1383,7 @@ SCIP_RETCODE readConstraints(
    retcode = SCIP_OKAY;
 
    /* read the objective coefficients */
-   SCIP_CALL( readCoefficients(scip, opbinput, name, &linvars, &lincoefs, &nlincoefs, &lincoefssize, &terms, &termcoefs, &ntermvars, &termcoefssize,
-         &ntermcoefs, &newsection, &isNonlinear, &issoftcons, &weight) );
+   SCIP_CALL( readCoefficients(scip, opbinput, name, &linvars, &lincoefs, &nlincoefs, &terms, &termcoefs, &ntermvars, &ntermcoefs, &newsection, &isNonlinear, &issoftcons, &weight) );
 
    if( hasError(opbinput) || opbinput->eof )
       goto TERMINATE;
@@ -1565,14 +1551,14 @@ SCIP_RETCODE readConstraints(
    for( t = ntermcoefs - 1; t >= 0; --t )
    {
       assert(terms != NULL);  /* for lint */
-      SCIPfreeBlockMemoryArray(scip, &(terms[t]), ntermvars[t]);
+      SCIPfreeBufferArrayNull(scip, &(terms[t]));
    }
 
-   SCIPfreeBlockMemoryArrayNull(scip, &ntermvars, termcoefssize);
-   SCIPfreeBlockMemoryArrayNull(scip, &termcoefs, termcoefssize);
-   SCIPfreeBlockMemoryArrayNull(scip, &terms, termcoefssize);
-   SCIPfreeBlockMemoryArrayNull(scip, &lincoefs, lincoefssize);
-   SCIPfreeBlockMemoryArrayNull(scip, &linvars, lincoefssize);
+   SCIPfreeBufferArrayNull(scip, &ntermvars);
+   SCIPfreeBufferArrayNull(scip, &termcoefs);
+   SCIPfreeBufferArrayNull(scip, &terms);
+   SCIPfreeBufferArrayNull(scip, &lincoefs);
+   SCIPfreeBufferArrayNull(scip, &linvars);
 
    SCIP_CALL( retcode );
 
@@ -1627,6 +1613,7 @@ SCIP_RETCODE getMaxAndConsDim(
          opbinput->linebufsize = newsize;
       }
       opbinput->linebuf[opbinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
+
 
       /* read characters after comment symbol */
       for( i = 0; commentchars[i] != '\0'; ++i )
@@ -2775,8 +2762,8 @@ SCIP_RETCODE printNonLinearCons(
    /* free buffer arrays */
    if( vars != NULL )
    {
-      SCIPfreeBufferArray(scip, &activevals);
       SCIPfreeBufferArray(scip, &activevars);
+      SCIPfreeBufferArray(scip, &activevals);
    }
 
    return retcode;
@@ -2966,8 +2953,8 @@ SCIP_RETCODE printLinearCons(
    /* free buffer arrays */
    if( vars != NULL )
    {
-      SCIPfreeBufferArray(scip, &activevals);
       SCIPfreeBufferArray(scip, &activevars);
+      SCIPfreeBufferArray(scip, &activevals);
    }
 
    return retcode;
@@ -3255,8 +3242,8 @@ SCIP_RETCODE printPseudobooleanCons(
    /* free buffer for linear arrays */
    if( nactivelinvars > 0 )
    {
-      SCIPfreeBufferArray(scip, &activelinvals);
       SCIPfreeBufferArray(scip, &activelinvars);
+      SCIPfreeBufferArray(scip, &activelinvals);
    }
 
    return retcode;
@@ -3628,8 +3615,8 @@ SCIP_RETCODE writeOpbConstraints(
 		     SCIPgetRhsVarbound(scip, cons), 0LL, transformed, multisymbol);
 	    }
 
-	    SCIPfreeBufferArray(scip, &consvals);
 	    SCIPfreeBufferArray(scip, &consvars);
+	    SCIPfreeBufferArray(scip, &consvals);
 	 }
 	 else if( strcmp(conshdlrname, "pseudoboolean") == 0 )
 	 {
@@ -4292,18 +4279,18 @@ SCIP_RETCODE SCIPreadOpb(
    assert(scip != NULL);  /* for lint */
    assert(reader != NULL);
 
-   /* initialize OPB input data (use block memory because order can change during execution) */
+   /* initialize OPB input data */
    opbinput.file = NULL;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &opbinput.linebuf, OPB_MAX_LINELEN) );
    opbinput.linebuf[0] = '\0';
    opbinput.linebufsize = OPB_MAX_LINELEN;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &opbinput.token, OPB_MAX_LINELEN) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.token, OPB_MAX_LINELEN) );
    opbinput.token[0] = '\0';
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &opbinput.tokenbuf, OPB_MAX_LINELEN) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.tokenbuf, OPB_MAX_LINELEN) );
    opbinput.tokenbuf[0] = '\0';
    for( i = 0; i < OPB_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(opbinput.pushedtokens[i]), OPB_MAX_LINELEN) ); /*lint !e866 */
+      SCIP_CALL( SCIPallocBufferArray(scip, &(opbinput.pushedtokens[i]), OPB_MAX_LINELEN) ); /*lint !e866 */
    }
 
    opbinput.npushedtokens = 0;
@@ -4326,10 +4313,10 @@ SCIP_RETCODE SCIPreadOpb(
    /* free dynamically allocated memory */
    for( i = OPB_MAX_PUSHEDTOKENS - 1; i >= 0; --i )
    {
-      SCIPfreeBlockMemoryArray(scip, &(opbinput.pushedtokens[i]), OPB_MAX_LINELEN);
+      SCIPfreeBufferArrayNull(scip, &(opbinput.pushedtokens[i]));
    }
-   SCIPfreeBlockMemoryArray(scip, &opbinput.tokenbuf, OPB_MAX_LINELEN);
-   SCIPfreeBlockMemoryArray(scip, &opbinput.token, OPB_MAX_LINELEN);
+   SCIPfreeBufferArrayNull(scip, &opbinput.tokenbuf);
+   SCIPfreeBufferArrayNull(scip, &opbinput.token);
    SCIPfreeBlockMemoryArray(scip, &opbinput.linebuf, opbinput.linebufsize);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
