@@ -196,9 +196,10 @@ SCIP_RETCODE scoring(
       if( pscosts[i] > maxpscost )
          maxpscost = pscosts[i];
    }
-
-   assert( ncuts == 0 || maxlocks > 0 );
-   assert( ncuts == 0 || maxpscost > 0 );
+   
+   /* account for the case where maxlocks or maxpscost is 0 */
+   maxpscost = MAX(maxpscost, SCIPepsilon(scip));
+   maxlocks = MAX(maxlocks, 1);
 
    for ( int i = 0; i < ncuts; i++ )
    {
