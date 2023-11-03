@@ -27,6 +27,11 @@
  * @brief  ensemble cut selector
  * @author Mark Turner
  *
+ * This cut selector is based on the paper:
+ * M. Turner, T. Berthold, and M. Besançon. @n
+ * A Context-Aware Cutting Plane Selection Algorithm for Mixed-Integer Programming.@n
+ * arXiv preprint arXiv:2307.07322 (2023).
+ *
  * The ensemble cut selector scores cuts by using a weighted sum of normalised efficacy,
  * normalised directed cutoff distance (only at the root node), normalised expected objective improvement,
  * objective parallelism, integer support, density, dynamism, normalised pseudo-costs, and normalised number of locks.
