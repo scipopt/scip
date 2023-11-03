@@ -201,12 +201,11 @@ void freeExprDataMem(
    if( !ispartial )
    {
       int nvars = (*nlhdlrexprdata)->nvars;
-      int n2vars = nvars + nvars;
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, nvars);
-      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, n2vars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, nvars);
    }
@@ -923,7 +922,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
 
       if( ismultilinear )
       {
-         /* if multilinear, we free memory of the expression data and do nothing */          
+         /* if multilinear, we free memory of the expression data and do nothing */
          freeExprDataMem(scip, nlhdlrexprdata, TRUE);
          return SCIP_OKAY;
       }
@@ -944,7 +943,6 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * nvars) );
 
          (*nlhdlrexprdata)->isstorecapture = FALSE;
-         SCIPcaptureExpr(expr);
 
          /* detect more information for the reformulation: we first compute the sum
           * of positive and negative exponents and determine the sign indicators
@@ -952,7 +950,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          for( c = 0; c < nf; c++ )
          {
             /* capture sub expressions */
-            SCIPcaptureExpr((*nlhdlrexprdata)->factors[c]);            
+            SCIPcaptureExpr((*nlhdlrexprdata)->factors[c]);
             if( (*nlhdlrexprdata)->exponents[c] > 0 )
             {
                /* add a positive exponent */
@@ -1061,10 +1059,7 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
 { /*lint --e{715}*/
    int c;
 
-   assert(expr != NULL);
-
    /* release expressions */
-   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
    for( c = 0; c < (*nlhdlrexprdata)->nfactors; c++ )
    {
       SCIP_CALL( SCIPreleaseExpr(scip, &(*nlhdlrexprdata)->factors[c]) );
@@ -1075,7 +1070,7 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
    {
       for( c = 0; c < (*nlhdlrexprdata)->nvars; c++ )
       {
-         if((*nlhdlrexprdata)->vars[c] != NULL) 
+         if((*nlhdlrexprdata)->vars[c] != NULL)
             SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->vars[c]) );
       }
    }
