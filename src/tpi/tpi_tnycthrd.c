@@ -331,8 +331,8 @@ SCIP_RETCODE createThreadPool(
  */
 static
 void jobQueueAddJob(
-   SCIP_THREADPOOL*      threadpool,           /**< pointer to store threadpool */
-   SCIP_JOB*             newjob                /**< pointer to new job */
+   SCIP_THREADPOOL*      threadpool,         /**< pointer to store threadpool */
+   SCIP_JOB*             newjob              /**< pointer to new job */
    )
 {
    /* @todo we want to work out what to do with a full job queue. Is there a problem if the limit is hit? */

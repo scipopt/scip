@@ -492,7 +492,7 @@ void estimateParabola(
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is,
-                                                  it depends on given bounds */
+                                              *   it depends on given bounds */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
    )
 {
@@ -552,7 +552,7 @@ void estimateSignedpower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             exponent,           /**< exponent */
    SCIP_Real             root,               /**< positive root of the polynomial (n-1) y^n + n y^(n-1) - 1,
-                                                  if xubglobal > 0 */
+                                              *   if xubglobal > 0 */
    SCIP_Bool             overestimate,       /**< should the power be overestimated? */
    SCIP_Real             xlb,                /**< lower bound on x, assumed to be non-positive */
    SCIP_Real             xub,                /**< upper bound on x */
@@ -562,9 +562,9 @@ void estimateSignedpower(
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is,
-                                                  it depends on given bounds */
+                                              *   it depends on given bounds */
    SCIP_Bool*            branchcand,         /**< buffer to indicate whether estimator would improve by branching
-                                                  on it */
+                                              *   on it */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
    )
 {
@@ -700,7 +700,7 @@ void estimateHyperbolaPositive(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             exponent,           /**< exponent */
    SCIP_Real             root,               /**< negative root of the polynomial (n-1) y^n - n y^(n-1) + 1,
-                                                  if x has mixed sign (w.r.t. global bounds?) and underestimating */
+                                              *   if x has mixed sign (w.r.t. global bounds?) and underestimating */
    SCIP_Bool             overestimate,       /**< should the power be overestimated? */
    SCIP_Real             xlb,                /**< lower bound on x */
    SCIP_Real             xub,                /**< upper bound on x */
@@ -710,9 +710,9 @@ void estimateHyperbolaPositive(
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is,
-                                                  it depends on given bounds */
+                                              *   it depends on given bounds */
    SCIP_Bool*            branchcand,         /**< buffer to indicate whether estimator would improve by branching
-                                                  on it */
+                                              *   on it */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
    )
 {
@@ -1024,7 +1024,7 @@ void estimateRoot(
    SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
    SCIP_Real*            slope,              /**< buffer to store slope of estimator */
    SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is,
-                                                  it depends on given bounds */
+                                              *   it depends on given bounds */
    SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
    )
 {
@@ -1089,9 +1089,9 @@ SCIP_RETCODE buildPowEstimator(
    SCIP_Real*            constant,           /**< pointer to store the constant of the estimator */
    SCIP_Bool*            success,            /**< pointer to store whether the estimator was built successfully */
    SCIP_Bool*            islocal,            /**< pointer to store whether the estimator is valid w.r.t. local bounds
-                                                  only */
+                                              *   only */
    SCIP_Bool*            branchcand          /**< pointer to indicate whether to consider child for branching
-                                                  (initialized to TRUE) */
+                                              *   (initialized to TRUE) */
    )
 {
    SCIP_Bool isinteger;

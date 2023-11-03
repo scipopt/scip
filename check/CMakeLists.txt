@@ -466,8 +466,10 @@ set(instances_Or
 #
 set(pairs_Issue
     "instances/Issue/3047.lp\;20000\;dualinfer"
+    "instances/Issue/3132.lp\;0\;default"
     "instances/Issue/3499.lp\;11460\;closeobj"
     "instances/Issue/3589.cip\;-1\;default"
+    "instances/Issue/3607.cip\;1\;default"
     "instances/Issue/3610.cip\;0\;default"
     "instances/Issue/3611.lp\;-1600\;default"
     "instances/Issue/3613.lp\;993.4375\;default"

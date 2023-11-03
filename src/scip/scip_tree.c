@@ -555,7 +555,7 @@ SCIP_RETCODE SCIPprintNodeRootPath(
 
    SCIPnodeGetAncestorBranchingPath(node, branchvars, branchbounds, boundtypes, &nbranchvars, branchvarssize, nodeswitches, &nnodes, nodeswitchsize );
 
-   /* if the arrays were to small, we have to reallocate them and recall SCIPnodeGetAncestorBranchingPath */
+   /* if the arrays were too small, we have to reallocate them and recall SCIPnodeGetAncestorBranchingPath */
    if( nbranchvars > branchvarssize || nnodes > nodeswitchsize )
    {
       branchvarssize = nbranchvars;

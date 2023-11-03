@@ -960,7 +960,7 @@ SCIP_RETCODE constructExpr(
    SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    SCIP_Bool             assumecurvature,    /**< whether to assume that desired curvature is given (skips curvature checks) */
    SCIP_Bool*            curvsuccess         /**< pointer to store whether the curvature could be achieved
-                                                  w.r.t. the original variables (might be NULL) */
+                                              *   w.r.t. the original variables (might be NULL) */
    )
 {
    SCIP_EXPR* nlexpr;
@@ -2571,7 +2571,6 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrConcave)
 }
 
 /** includes concave nonlinear handler in nonlinear constraint handler */
-SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrConcave(
    SCIP*                 scip                /**< SCIP data structure */
    )

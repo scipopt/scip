@@ -2609,11 +2609,17 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* if left hand side of cons0 is redundant set it to -infinity */
             else if( (lhsequal || cons0lhsred) && !SCIPisInfinity(scip, -lhs) )
             {
+               /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+               SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
+
                lhs = -SCIPinfinity(scip);
 
 	       /* if right hand side of cons1 is redundant too, set it to infinity */
 	       if( cons1rhsred && !SCIPisInfinity(scip, consdata1->rhs) )
 	       {
+                  /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+                  SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
+
 		  SCIP_CALL( chgRhs(scip, cons1, SCIPinfinity(scip)) );
 		  ++(*nchgsides);
 
@@ -2629,11 +2635,17 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* if right hand side of cons0 is redundant set it to infinity */
             else if( (rhsequal || cons0rhsred) && !SCIPisInfinity(scip, rhs) )
             {
+               /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+               SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
+
                rhs = SCIPinfinity(scip);
 
 	       /* if left hand side of cons1 is redundant too, set it to -infinity */
 	       if( cons1lhsred && !SCIPisInfinity(scip, -consdata1->lhs) )
 	       {
+                  /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+                  SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
+
 		  SCIP_CALL( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
 		  ++(*nchgsides);
 
@@ -2649,6 +2661,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* if left hand side of cons1 is redundant set it to -infinity */
             else if( cons1lhsred && !SCIPisInfinity(scip, -consdata1->lhs) )
             {
+               /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+               SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
+
 	       SCIP_CALL( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
 	       ++(*nchgsides);
 
@@ -2662,6 +2677,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* if right hand side of cons1 is redundant set it to infinity */
             else if( cons1rhsred && !SCIPisInfinity(scip, consdata1->rhs) )
             {
+               /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+               SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
+
 	       SCIP_CALL( chgRhs(scip, cons1, SCIPinfinity(scip)) );
 	       ++(*nchgsides);
 
@@ -2806,15 +2824,15 @@ SCIP_RETCODE preprocessConstraintPairs(
 	    ++(*nchgsides);
 	 }
 
-         /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-         SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
-
          SCIPdebugMsg(scip, "lead to new constraint: ");
          SCIPdebugPrintCons(scip, cons0, NULL);
 
 	 /* if cons1 is still marked for deletion, delete it */
          if( deletecons1 )
          {
+            /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
+
 	    /* delete cons1 */
 	    SCIP_CALL( SCIPdelCons(scip, cons1) );
 	    ++(*ndelconss);
@@ -4356,7 +4374,6 @@ SCIP_DECL_CONSFREE(consFreeVarbound)
 static
 SCIP_DECL_CONSINITSOL(consInitsolVarbound)
 {  /*lint --e{715}*/
-
    /* add nlrow representation to NLP, if NLP had been constructed */
    if( SCIPisNLPConstructed(scip) )
    {
@@ -4933,7 +4950,6 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
 static
 SCIP_DECL_CONSACTIVE(consActiveVarbound)
 {  /*lint --e{715}*/
-
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
    {
       SCIP_CALL( addNlrow(scip, cons) );

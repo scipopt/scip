@@ -227,7 +227,6 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    const SCIP_Real*      val                 /**< values of constraint matrix entries */
    )
 {  /*lint --e{715}*/
-
 #ifndef NDEBUG
    {
       int j;
@@ -356,7 +355,6 @@ SCIP_RETCODE SCIPlpiAddRows(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
-
    assert( lpi != NULL );
    assert( lpi->nrows >= 0 );
    assert(lhs != NULL);

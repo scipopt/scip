@@ -6654,7 +6654,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          assert( componentsize == 1 );
 
          SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
-            propdata->permvars, propdata->npermvars, componentperms[0], &success) );
+               propdata->permvars, propdata->npermvars, componentperms[0], TRUE, &success) );
          if ( success )
          {
             propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
@@ -6728,6 +6728,7 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
       else
       {
          /* use orbitopal reduction for component */
+         SCIP_COLUMNORDERING columnordering;
          SCIP_VAR** orbitopevarmatrix;
          int nelem;
 
@@ -6737,9 +6738,13 @@ SCIP_RETCODE tryAddOrbitopesDynamic(
          for (i = 0; i < nelem; ++i)
             orbitopevarmatrix[i] = propdata->permvars[orbitopematrix[i]];
 
+         /* get column ordering */
+         columnordering = SCIPorbitopalReductionGetDefaultColumnOrdering(propdata->orbitopalreddata);
+
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "orbitope_full_comp_%d", c);
          SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
-            orbitopevarmatrix, nrows, ncols, &success) );
+               SCIP_ROWORDERING_BRANCHING, columnordering,
+               orbitopevarmatrix, nrows, ncols, &success) );
 
          if ( success )
          {
@@ -7111,7 +7116,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
          {
             assert( componentperms[p] != NULL );
             SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
-               propdata->permvars, propdata->npermvars, componentperms[p], &success) );
+                  propdata->permvars, propdata->npermvars, componentperms[p], TRUE, &success) );
             if ( success )
                propdata->componentblocked[c] |= SYM_HANDLETYPE_SYMBREAK;
          }

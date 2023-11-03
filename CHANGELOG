@@ -10,8 +10,8 @@ Features
 - in expression simplification, added possibility to expand power of sum with exponents larger than 2 (simplify rule POW7)
 - in expression simplification, added possibility to expand products with sums as factor when there are more than two factors (simplify rule SP12b)
 - in expression simplification, added possibility to allow expanding power of products with fractional exponent (simplify rule POW5a)
-- Can now build with Lapack (used for solving nonlinear problems). If IPOPT is used, then Lapack is accessed through it.
-  There	is an interface to Lapack in lapack_calls.
+- can now build with Lapack (used for solving nonlinear problems) explicitly; if IPOPT is used, then Lapack is accessed through it;
+  an interface to Lapack is available in lapack_calls.h
 - added support for logical constraints in binary variables and basic logical operators (and, or, not, equal) to AMPL .nl reader
 - indicator constraints now use the same slack variable for the linear constraints if binary variables are used multiple times
   for indicator constraints
@@ -62,13 +62,10 @@ Interface changes
 
 ### New API functions
 
-- new functions for interfacing with Lapack:
-  SCIPlapackIsAvailable(), SCIPlapackIsAvailable(),
-  SCIPlapackComputeEigenvalues(), and SCIPlapackSolveLinearEquations
-
+- new functions for interfacing with Lapack: SCIPlapackIsAvailable(), SCIPlapackIsAvailable(), SCIPlapackComputeEigenvalues(), and SCIPlapackSolveLinearEquations
   These functions should be used instead of SCIPisIpoptAvailableIpopt(), SCIPcallLapackDsyevIpopt(), and
-  SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations. If IPOPT is available,
-  the calls will be passed on.
+  SCIPsolveLinearEquationsIpopt() in the context of computing eigenvalues or solving linear equations.
+  If IPOPT is available, the calls will be passed on to Ipopt's interface to Lapack.
 - SCIPmultiplyBySumExprSum(), SCIPpowerExprSum()
 - SCIPsetParam()
 - SCIPgetPrimalDualIntegral() returns the primal dual integral stored in the statistics
@@ -77,6 +74,19 @@ Interface changes
 - SCIPgetNLPNlRowsStat() to retrieve counts on linear, convex, and nonconvex rows in NLP
 - SCIPnlhdlrSetSollinearize(), SCIPnlhdlrHasSollinearize()
 - SCIPbendersGetNLPParam()
+- new API functions SCIPlexicographicReductionGetStatistics(), SCIPlexicographicReductionPrintStatistics(),
+  SCIPlexicographicReductionPropagate(), SCIPlexicographicReductionAddPermutation(), SCIPlexicographicReductionReset(),
+  SCIPlexicographicReductionFree(), SCIPincludeLexicographicReduction(), for lexicographic reduction.
+- new API functions SCIPorbitopalReductionGetStatistics(), SCIPorbitopalReductionPrintStatistics(),
+  SCIPorbitopalReductionPropagate(), SCIPorbitopalReductionAddOrbitope(), SCIPorbitopalReductionReset(),
+  SCIPorbitopalReductionFree(), SCIPincludeOrbitopalReduction(), SCIPorbitopalReductionGetDefaultColumnOrdering(),
+  for orbitopal fixing.
+- new API functions SCIPorbitalReductionGetStatistics(), SCIPorbitalReductionPrintStatistics(),
+  SCIPorbitalReductionPropagate(), SCIPorbitalReductionAddComponent(), SCIPorbitalReductionReset(),
+  SCIPorbitalReductionFree(), SCIPincludeOrbitalReduction(), for orbital fixing.
+- new API functions SCIPgetShadowTreeEventHandlerExecutionTime(), SCIPshadowTreeGetShadowNodeFromNodeNumber(),
+  SCIPshadowTreeGetShadowNode(), SCIPgetShadowTree(), SCIPactivateShadowTree(), SCIPincludeEventHdlrShadowTree(),
+  for managing a copy of the branch-and-bound tree for symmetry handling purposes.
 - SCIPdotWriteOpening(), SCIPdotWriteNode(), SCIPdotWriteArc(), SCIPdotWriteClosing()
 
 ### Command line interface
@@ -193,7 +203,7 @@ Fixed bugs
 - fixed error when attempting to copy SCIP with activated pricers
 - remove integrality check for implicit integral variables in cons_integral.c, updated the definition for variable type implicit integer to be more explicit that these variables can take fractional values, and updated FAQ entry
 - updated and, or, and pseudoboolean constraint handlers to better handle fractional implicit integer variables in enforcement
-- avoid invalid strong Chvatal-Gomory cuts by ceiling with tolerance in the calculation of parameter k
+- avoid invalid strong Chvatal-Gomory cuts by ceiling with tolerance in the calculation of parameter k and flooring slack coefficients with standard epsilon tolerance as well as quad precision
 - add missing row links to columns in SCIPflushRowExtensions() required to maintain correct row norms
 - restrict separator intobj to solutions for which there can be no better feasible integral objective values to avoid cutting them off
 - delay removal of clique lists from SCIPvarRemoveCliquesImplicsVbs() into cliqueCleanup() to avoid segmentation faults by incomplete cleanups after variable conversions

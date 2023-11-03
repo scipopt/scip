@@ -703,6 +703,12 @@ SCIP_RETCODE dualPresolving(
             idx = v;
          }
 
+         if( idxnouplocks == consdata->nvars - 1 )
+            idxnouplocks = v;
+
+         if( indepidx == consdata->nvars - 1 )
+            indepidx = v;
+
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          ++(*nchgcoefs);
 
@@ -4167,7 +4173,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
 static
 SCIP_DECL_CONSINITSOL(consInitsolLogicor)
 {  /*lint --e{715}*/
-
    /* add nlrow representation to NLP, if NLP had been constructed */
    if( SCIPisNLPConstructed(scip) )
    {
