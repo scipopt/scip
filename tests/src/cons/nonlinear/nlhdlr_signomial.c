@@ -28,7 +28,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define SCIP_DEBUG
 #include "scip/scipdefplugins.h"
 #include "scip/scip.h"
 #include "scip/nlhdlr.c"
@@ -122,12 +121,12 @@ SCIP_RETCODE createAndDetect(
 }
 
 /** a probabilistic way to valid a rowprep by random sampling */
-static 
+static
 SCIP_RETCODE validCutProb(
-   SCIP_EXPR*            expr,               /**< expr pointer */ 
-   SCIP_ROWPREP*         rowprep,            /**< rowprep pointer */ 
-   int                   nsample,            /**< number of samples */ 
-   SCIP_Bool*            isvalid             /**< whether the rowprep is valid */ 
+   SCIP_EXPR*            expr,               /**< expr pointer */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep pointer */
+   int                   nsample,            /**< number of samples */
+   SCIP_Bool*            isvalid             /**< whether the rowprep is valid */
    )
 {
    int s;
@@ -142,7 +141,7 @@ SCIP_RETCODE validCutProb(
    int nvars = SCIProwprepGetNVars(rowprep);
    SCIP_Real* coefs =  SCIProwprepGetCoefs(rowprep);
    SCIP_Real side = SCIProwprepGetSide(rowprep);
-   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata = SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr);    
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata = SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr);
    SCIP_VAR** vars = SCIProwprepGetVars(rowprep);
    SCIP_VAR* xvar;
    unsigned int seedp  = 2132;
@@ -181,7 +180,7 @@ SCIP_RETCODE validCutProb(
             ycoef = coefs[j];
             break;
          }
-      }     
+      }
       cutval += yval * ycoef;
       if( SCIProwprepGetSidetype(rowprep) == SCIP_SIDETYPE_LEFT)
       {
@@ -336,8 +335,6 @@ Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3"
    /* remove locks */
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-   SCIPdebugMsg(scip, "1\n");
 }
 
 
