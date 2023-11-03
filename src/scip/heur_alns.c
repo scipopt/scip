@@ -1370,6 +1370,11 @@ void tryAdd2variableBuffer(
    SCIP_Bool             integer             /**< is this an integer variable? */
    )
 {
+   /* todo: this assert can fail when there was a dual reduction that changed a variable to
+    * an integral type after the reference solution was found and the variable has a fractional
+    * value in this solution, e.g., for boxQP instances (spar*)
+    * implicit integer variables could also be an issue, as they can take fractional values in feasible solutions
+    */
    assert(SCIPisFeasIntegral(scip, val) || ! SCIPvarIsIntegral(var));
    assert(*nfixings < SCIPgetNVars(scip));
 
