@@ -36,7 +36,7 @@ Performance improvements
 - Use sassy/bliss as default symmetry computation package.
 - No longer linearize indicator constraints in undercover heuristic by default.
 - Deactivate pre-root heuristic zeroobj in undercover heuristic.
-- CutSelEnsemble is now cut selector with highest priority
+- CutSelEnsemble is now the cut selector with the highest priority
 
 Examples and applications
 -------------------------
