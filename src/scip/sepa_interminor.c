@@ -489,6 +489,7 @@ SCIP_RETCODE detectMinors(
       SCIPfreeBufferArrayNull(scip, &rowi);
    }
 
+
    SCIPdebugMsg(scip, "found %d principal minors in total\n", sepadata->nminors);
 
    /* free memory */
@@ -608,6 +609,7 @@ SCIP_RETCODE computeRestrictionToRay(
             norm2 += SQRT( eigenvalues[i] ) * ad[posidx] * vzlp;
             ++posidx;
          }
+
       }
       else
       {
@@ -790,6 +792,7 @@ void doBinarySearch(
    }
 
    *sol = lb;
+
 }
 
 /** checks if we are in case 4a, i.e., if
@@ -800,7 +803,7 @@ SCIP_Real isCase4a(
    SCIP_Real             tsol,               /**< t in the above formula */
    SCIP_Real*            coefs,              /**< coefficients A, B, C, D, and E of case 4a */
    SCIP_Real*            coefscondition      /**< extra coefficients needed for the evaluation of the condition:
-                                              *   num(xhat_{r+1}(zlp)) / E; w(ray); num(yhat_{s+1}(zlp)) */
+                                                num(xhat_{r+1}(zlp)) / E; w(ray); num(yhat_{s+1}(zlp)) */
    )
 {
    return (coefscondition[0] * SQRT( coefs[0] * SQR( tsol ) + coefs[1] * tsol + coefs[2] ) + coefscondition[1] *
@@ -1085,6 +1088,7 @@ SCIP_RETCODE getTableauRows(
 
             /* insert tableau row in hashmap*/
             SCIP_CALL( SCIPhashmapInsert(tableau, (void*)vars[v], (void *)densetableaurow) );
+
          }
          else if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_ZERO )
          {
@@ -1095,6 +1099,7 @@ SCIP_RETCODE getTableauRows(
          {
             SCIP_CALL( SCIPhashmapInsert(tableau, (void*)vars[v], (void *)NULL) );
          }
+
       }
 
       /* get tableau row of var */
@@ -1327,7 +1332,8 @@ SCIP_Bool raysAreDependent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            ray1,               /**< coefficients of ray 1 */
    SCIP_Real*            ray2,               /**< coefficients of ray 2 */
-   SCIP_Real*            coef                /**< pointer to store coef (s.t. r1 = coef * r2) in case rays are dependent */
+   SCIP_Real*            coef                /**< pointer to store coef (s.t. r1 = coef * r2) in case rays are
+                                                  dependent */
    )
 {
    int i;

@@ -85,6 +85,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
                                               *   only set this to TRUE when a reduction is found, never set to FALSE */
    );
 
+
 /** adds permutation for lexicographic reduction propagation */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
@@ -93,9 +94,9 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int*                  perm,               /**< permutation */
-   SCIP_Bool             usedynamicorder,    /**< whether a dynamic variable order shall be used */
    SCIP_Bool*            success             /**< to store whether the component is successfully added */
    );
+
 
 /** resets lexicographic reduction propagation (removes all permutations) */
 SCIP_EXPORT

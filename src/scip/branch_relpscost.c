@@ -105,7 +105,7 @@
 #define DEFAULT_MINSAMPLESIZE    20          /**< minimum sample size to estimate the tree size for dynamic lookahead */
 #define DEFAULT_DYNAMICLOOKAHEAD TRUE        /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
 #define DEFAULT_GEOMETRICMEANGAINS TRUE      /**< should the geometric mean be used instead of the arithmetic mean for min and max gain? */
-#define DEFAULT_LOOKAHEAD_USEBAYESIAN TRUE   /**< should the update of the parameter estimation use the Bayesian rule or a simple weighted combination? */
+#define DEFAULT_LOOKAHEAD_USEBAYESIAN FALSE   /**< should the update of the parameter estimation use the Bayesian rule or a simple weighted combination? */
 
 #define DEFAULT_RANDINITORDER    FALSE       /**< should slight perturbation of scores be used to break ties in the prior scores? */
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE   /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
@@ -1050,13 +1050,11 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    {
       /* TodoSB better use a weighted sum with branchruledata->dualgainsweight */
       int npreviousgains = MAX(branchruledata->minsamplesize - branchruledata->currndualgains, 0);
-      int ncurrentgains = MIN(branchruledata->currndualgains, branchruledata->minsamplesize);
 
-      assert( npreviousgains + ncurrentgains == branchruledata->minsamplesize );
       int total = branchruledata->minsamplesize;
       if ( branchruledata->lookaheadbayesian )
       {
-         lambda = ((SCIP_Real) ncurrentgains + 1.0) / (branchruledata->meandualgain + ncurrentgains * branchruledata->currmeandualgain);
+         lambda = ((SCIP_Real) branchruledata->currndualgains + 1.0) / (branchruledata->meandualgain + branchruledata->currndualgains * branchruledata->currmeandualgain);
       } else {
          SCIP_Real oldgainfrac = (SCIP_Real) npreviousgains / total;
          SCIP_Real mean = oldgainfrac * branchruledata->meandualgain + (1.0 - oldgainfrac) * branchruledata->currmeandualgain;

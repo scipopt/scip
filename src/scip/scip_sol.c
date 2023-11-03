@@ -2952,6 +2952,32 @@ SCIP_RETCODE SCIPaddSol(
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
+      /* if the solution is added during presolving and it is not defined on original variables,
+       * presolving operations will destroy its validity, so we retransform it to the original space
+       */
+      if( !SCIPsolIsOriginal(sol) )
+      {
+         SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+         SCIP_SOL* tmpsol = sol;
+         SCIP_Bool hasinfval;
+
+         SCIP_CALL( SCIPcreateSolCopy(scip, &tmpsol, sol) );
+
+         SCIP_CALL( SCIPsolUnlink(tmpsol, scip->set, scip->transprob) );
+         SCIP_CALL( SCIPsolRetransform(tmpsol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
+
+         SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
+               scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter,
+               &tmpsol, stored) );
+
+         if( *stored && (bestsol != SCIPgetBestSol(scip)) )
+         {
+            SCIPstoreSolutionGap(scip);
+         }
+
+         return SCIP_OKAY;
+      }
+      /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    {
@@ -3016,6 +3042,17 @@ SCIP_RETCODE SCIPaddSolFree(
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
+      /* if the solution is added during presolving and it is not defined on original variables,
+       * presolving operations will destroy its validity, so we retransform it to the original space
+       */
+      if( !SCIPsolIsOriginal(*sol) )
+      {
+         SCIP_Bool hasinfval;
+
+         SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
+         SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
+      }
+      /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    {
@@ -3125,6 +3162,17 @@ SCIP_RETCODE SCIPtrySol(
       return SCIP_INVALIDDATA;
    }
 
+   /* if the solution is added during presolving and it is not defined on original variables,
+    * presolving operations will destroy its validity, so we retransform it to the original space
+    */
+   if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(sol) )
+   {
+      SCIP_Bool hasinfval;
+
+      SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
+      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
+   }
+
    if( SCIPsolIsOriginal(sol) )
    {
       SCIP_Bool feasible;
@@ -3218,6 +3266,17 @@ SCIP_RETCODE SCIPtrySolFree(
    {
       SCIPerrorMessage("Cannot check feasibility of partial solutions.\n");
       return SCIP_INVALIDDATA;
+   }
+
+   /* if the solution is added during presolving and it is not defined on original variables,
+    * presolving operations will destroy its validity, so we retransform it to the original space
+    */
+   if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(*sol) )
+   {
+      SCIP_Bool hasinfval;
+
+      SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
+      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
    }
 
    if( SCIPsolIsOriginal(*sol) )

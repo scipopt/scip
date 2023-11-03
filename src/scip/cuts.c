@@ -8856,7 +8856,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       SCIP_ROW* row;
       SCIP_Real pr;
       SCIP_Real QUAD(ar);
-      SCIP_Real QUAD(downar);
+      SCIP_Real downar;
       SCIP_Real QUAD(cutar);
       SCIP_Real QUAD(fr);
       SCIP_Real mul;
@@ -8879,12 +8879,12 @@ SCIP_RETCODE cutsSubstituteStrongCG(
       /* calculate slack variable's coefficient a_r in the cut */
       if( row->integral )
       {
-         /* slack variable is always integral */
-         SCIPquadprecEpsFloorQ(downar, ar, SCIPepsilon(scip)); /*lint !e666*/
-         SCIPquadprecSumQQ(fr, ar, -downar);
+         /* slack variable is always integral: */
+         downar = EPSFLOOR(QUAD_TO_DBL(ar), QUAD_EPSILON);
+         SCIPquadprecSumQD(fr, ar, -downar);
 
          if( SCIPisLE(scip, QUAD_TO_DBL(fr), QUAD_TO_DBL(f0)) )
-            QUAD_ASSIGN_Q(cutar, downar); /* a_r */
+            QUAD_ASSIGN(cutar, downar);
          else
          {
             SCIPquadprecSumQQ(cutar, fr, -f0);
@@ -8894,7 +8894,7 @@ SCIP_RETCODE cutsSubstituteStrongCG(
             assert(pr >= 0); /* should be >= 1, but due to rounding bias can be 0 if fr is almost equal to f0 */
             assert(pr <= k);
             SCIPquadprecDivDD(cutar, pr, k + 1.0);
-            SCIPquadprecSumQQ(cutar, cutar, downar);
+            SCIPquadprecSumQD(cutar, cutar, downar);
          }
       }
       else

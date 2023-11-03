@@ -2738,8 +2738,8 @@ SCIP_RETCODE separateHeur(
    SCIPfreeBufferArray(scip, &graph.level);
 
    SCIPfreeBufferArray(scip, &(sepadata->mapping));
-   SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &vals);
 
    return SCIP_OKAY;
 }
@@ -3491,8 +3491,8 @@ SCIP_RETCODE separateGLS(
    SCIPfreeBufferArray(scip, &graph.outbeg);
    SCIPfreeBufferArray(scip, &incut);
    SCIPfreeBufferArray(scip, &(sepadata->mapping));
-   SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeBufferArray(scip, &vals);
 
    return SCIP_OKAY;
 }

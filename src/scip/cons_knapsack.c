@@ -12187,6 +12187,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
 static
 SCIP_DECL_CONSINITSOL(consInitsolKnapsack)
 {  /*lint --e{715}*/
+
    /* add nlrow representation to NLP, if NLP had been constructed */
    if( SCIPisNLPConstructed(scip) )
    {
@@ -13084,6 +13085,7 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 static
 SCIP_DECL_CONSACTIVE(consActiveKnapsack)
 {  /*lint --e{715}*/
+
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
    {
       SCIP_CALL( addNlrow(scip, cons) );

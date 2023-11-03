@@ -205,7 +205,7 @@ SCIP_RETCODE createExpr(
    SCIP_READERDATA*      readerdata,         /**< reader data */
    SCIP_EXPR**           expr,               /**< buffer to store expression */
    const Term*           term                /**< term to convert to expression */
-   )
+)
 {
    assert(scip != NULL);
    assert(readerdata != NULL);

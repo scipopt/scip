@@ -905,36 +905,35 @@ SCIP_Real SCIPaggrRowGetMinActivity(
       if( val > 0.0 )
       {
          SCIP_Real bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
-
-         if( SCIPsetIsInfinity(set, -bnd) )
+         if( infdelta != NULL && SCIPsetIsInfinity(set, -bnd) )
          {
-            if( infdelta != NULL )
-               *infdelta = TRUE;
-
-            return -SCIPsetInfinity(set);
+            *infdelta = TRUE;
+            goto TERMINATE;
          }
-
          SCIPquadprecProdDD(delta, val, bnd);
       }
       else
       {
          SCIP_Real bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
-
-         if( SCIPsetIsInfinity(set, bnd) )
+         if( infdelta != NULL && SCIPsetIsInfinity(set, bnd) )
          {
-            if( infdelta != NULL )
-               *infdelta = TRUE;
-
-            return -SCIPsetInfinity(set);
+            *infdelta = TRUE;
+            goto TERMINATE;
          }
-
          SCIPquadprecProdDD(delta, val, bnd);
       }
 
       /* update minimal activity */
       SCIPquadprecSumQQ(minact, minact, delta);
+
+      if( infdelta != NULL && SCIPsetIsInfinity(set, REALABS(QUAD_TO_DBL(delta))) )
+      {
+         *infdelta = TRUE;
+         goto TERMINATE;
+      }
    }
 
+  TERMINATE:
    /* check whether the minimal activity is infinite */
    if( SCIPsetIsInfinity(set, QUAD_TO_DBL(minact)) )
       return SCIPsetInfinity(set);
