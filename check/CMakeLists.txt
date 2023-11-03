@@ -470,7 +470,13 @@ set(pairs_Issue
     "instances/Issue/3589.cip\;-1\;default"
     "instances/Issue/3610.cip\;0\;default"
     "instances/Issue/3611.lp\;-1600\;default"
-    )
+    "instances/Issue/3613.lp\;993.4375\;default"
+    "instances/Issue/3625.lp\;117.75284354701\;default"
+    # Test currently not working since problems with the feasibility check for unbounded problems appear: https://git.zib.de/integer/scip/-/issues/3422
+    # "instances/Issue/3629.cip\;-infinity\;only_dualinfer"
+    "instances/Issue/3632.cip\;0\;default"
+    "instances/Issue/3633.lp\;0\;default"
+)
 
 #
 # available reader file extensions for SCIP readers

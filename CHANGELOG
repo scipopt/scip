@@ -199,6 +199,18 @@ Fixed bugs
 - delay removal of clique lists from SCIPvarRemoveCliquesImplicsVbs() into cliqueCleanup() to avoid segmentation faults by incomplete cleanups after variable conversions
 - reject sub-solutions with invalid objectives in SCIPtranslateSubSols() due to contradicting infinite contributions
 - correct column index in getMinMaxActivityResiduals() to make presolver dualinfer work
+- copy quiet flag from main scip's message handler to the one of solverscip in concurrent optimization
+- avoid bound tightening cycles towards huge redundancy bounds in fullDualPresolve() to avert fatal numerical trouble in representing vertices of linear relaxations with unbounded domains
+- fix problem where debug solution did not work if branching constraints are present
+- update index of dominating variable on coefficient deletion in dualPresolving() of constraint handler logicor
+- pass on flags from a redundant to the implying varbound constraint in preprocessConstraintPairs() to avoid suboptimal fixings by model relaxations
+- apply reductions of dualinfer only if a dual solution exists (primal is bounded)
+- before presolving is finished check solutions before retransforming them including tiny values to keep check flags consistent
+- disable heuristics before and during presolving in benders decomposition to avoid messing up the objective structure in the solution store by dropping auxiliary variables in the required retransformations
+- correct local flag of singleton conflict constraints in tightenSingleVar() against invalid bound globalization
+- respect unboundedness in the computation of activity bounds in conflict.c to avoid invalid huge bounds due to small coefficients on unbounded variables
+- ensure positive sides of a linear constraint when recognizing a set partition in rangedRowSimplify() to account for redundancy issues
+- relax numerical conditions for variable aggregations to avert invalid variable fixings
 
 @section RN804 SCIP 8.0.4
 *************************
