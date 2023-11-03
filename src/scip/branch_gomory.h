@@ -27,6 +27,12 @@
  * @brief  Gomory cut branching rule
  * @author Mark Turner
  *
+ * The approach is based on the following papers.
+ *
+ * M. Turner, T. Berthold, M. Besancon, T. Koch@n
+ * Branching via Cutting Plane Selection: Improving Hybrid Branching,@n
+ * arXiv preprint arXiv:2306.06050
+ *
  * The Gomory cut branching rule selects a candidate integer variable $j$ with a fractional solution value.
  * Each candidate variable must be a basic variable in the LP Tableau (if not then it would have to be at its bound
  * that is integer-valued)
