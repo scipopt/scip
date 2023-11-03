@@ -936,7 +936,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          /* allocate more memory for expression data */
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nvars) );
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nvars) );
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nvars) );
+         SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nvars) );
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, nvars) );
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, nvars) );
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, nvars) );
@@ -965,10 +965,8 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
                (*nlhdlrexprdata)->signs[c] = FALSE;
             }
             /* set null to working variables, meaning that they are not stored yet */
-            (*nlhdlrexprdata)->vars[c] = NULL;
          }
          (*nlhdlrexprdata)->signs[nf] = FALSE;
-         (*nlhdlrexprdata)->vars[nf] = NULL;
          (*nlhdlrexprdata)->nposvars = nposvars;
          (*nlhdlrexprdata)->nnegvars = nf - nposvars + 1;
 
