@@ -89,7 +89,8 @@ EXCLUDENODES    =       none
 SLURMACCOUNT    =       default
 GAMS		=	gams
 PYTHON  =   none
-EMPHBENCHMARK  =   true
+EMPHBENCHMARK	=	true
+CLOCKTYPE	=	1
 
 # set SCIP version here for external projects
 SCIP_VERSION_MAJOR = 8
