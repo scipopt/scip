@@ -135,14 +135,12 @@ SCIP_RETCODE validCutProb(
    SCIP_Real cutval;
    SCIP_Real xval;
    SCIP_Real yval;
-   SCIP_Real ycoef;
    SCIP_Real coef;
    SCIP_Real exponent;
    int nvars = SCIProwprepGetNVars(rowprep);
    SCIP_Real* coefs =  SCIProwprepGetCoefs(rowprep);
-   SCIP_Real side = SCIProwprepGetSide(rowprep);
-   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata = SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr);
    SCIP_VAR** vars = SCIProwprepGetVars(rowprep);
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata = SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr);
    SCIP_VAR* xvar;
    unsigned int seedp  = 2132;
    SCIP_RANDNUMGEN* randnumgen;
@@ -156,10 +154,9 @@ SCIP_RETCODE validCutProb(
    for( s = 0; s < nsample; s++ )
    {
       cutval = 0;
-      yval = nlhdlrexprdata->coef;
+      yval = 1;
       for( i = 0; i < nlhdlrexprdata->nfactors; i++ )
       {
-         xvar = nlhdlrexprdata->vars[i];
          coef = 0;
          for( j = 0; j < nvars; j++ )
          {
@@ -170,30 +167,20 @@ SCIP_RETCODE validCutProb(
          }
          xval = SCIPrandomGetReal(randnumgen, nlhdlrexprdata->intervals[i].inf, nlhdlrexprdata->intervals[i].sup);
          cutval += xval * coef;
-         exponent = nlhdlrexprdata->exponents[i];
-         yval *= pow(xval, exponent);
+         yval *= pow(xval, nlhdlrexprdata->exponents[i]);
       }
-      ycoef = 0;
-      for( j = 0; j < nvars; j++ )
-      {
-         if( vars[j] == nlhdlrexprdata->vars[nlhdlrexprdata->nfactors] ){
-            ycoef = coefs[j];
-            break;
-         }
-      }
-      cutval += yval * ycoef;
       if( SCIProwprepGetSidetype(rowprep) == SCIP_SIDETYPE_LEFT)
       {
-         if( cutval < side ){
-            //SCIPdebugMsg("%d\n",s);
+         if( cutval < yval ){
+            SCIPdebugMsg(scip, "%f %f\n", cutval, yval);
             *isvalid = FALSE;
             break;
          }
       }
       else
       {
-         if( cutval > side ){
-            //SCIPdebugMsg("%d\n",s);
+         if( cutval > yval ){
+            SCIPdebugMsg(scip, "%f %f\n", cutval, yval);
             *isvalid = FALSE;
             break;
          }
@@ -336,6 +323,77 @@ Test(nlhdlrsignomial, detectandfree3, .description = "detects signomial terms 3"
    SCIP_CALL( SCIPaddConsLocks(scip, cons, -1, 0) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
+
+
+
+/* adds a linear inequality to the product expression and computes a cut at a given reference point */
+Test(nlhdlrsignomial, separation_signomial)
+{
+   SCIP_ROWPREP* rowprep;
+   SCIP_CONS* cons;
+   SCIP_SOL* sol;
+   SCIP_Bool success;
+   SCIP_Bool overestimate;
+   SCIP_Bool dummy;
+   SCIP_EXPR* expr;
+   SCIP_PTRARRAY* rowpreps;
+   SCIP_Real targetval;
+   int nsample;
+   SCIP_Bool isvalid;
+
+   /* set variable bounds */
+   SCIP_CALL( SCIPchgVarLb(scip, x1, 1.0) );
+   SCIP_CALL( SCIPchgVarUb(scip, x1, 4.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, x2, 1.1) );
+   SCIP_CALL( SCIPchgVarUb(scip, x2, 3.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, x3, 1.2) );
+   SCIP_CALL( SCIPchgVarUb(scip, x3, 5.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, x4, 1.3) );
+   SCIP_CALL( SCIPchgVarUb(scip, x4, 5.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, x5, 1.5) );
+   SCIP_CALL( SCIPchgVarUb(scip, x5, 6.0) );
+
+   /* create constraint containing a signomial product expression */
+   SCIP_CALL( SCIPparseExpr(scip, &expr, "(<x1>)^(0.6) * (<x2>)^(-1.5) * (<x3>)^(-1) * (<x4>)^(2) * (<x5>)^(0.8)", NULL, NULL, NULL) );
+   SCIP_CALL( createAndDetect(&cons, expr) );
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   expr = SCIPgetExprNonlinear(cons);
+
+   SCIP_CALL( SCIPconstructLP(scip, &dummy) );
+
+   /* INITLP should have added an auxiliary variable to the product expression (tight might change in the future) */
+   cr_assert( SCIPgetExprAuxVarNonlinear(expr) != NULL);
+
+   /* create a solution */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x1, 2.11) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x2, 2.22) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x3, 3.11) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x4, 4.22) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, x5, 5.22) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPgetExprAuxVarNonlinear(expr), 0.1) );
+
+   SCIP_CALL( nlhdlrEvalauxSignomial(scip, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), &targetval, sol));
+   overestimate = FALSE;
+   SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
+   SCIP_CALL( nlhdlrEstimateSignomial(scip, conshdlr, nlhdlr, expr, SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr), sol,
+            0.1, overestimate, targetval, FALSE, rowpreps, &success, &dummy) );
+   cr_expect(success);
+
+   nsample = 10000;
+   rowprep = (SCIP_ROWPREP*) SCIPgetPtrarrayVal(scip, rowpreps, 0);
+   SCIP_CALL( validCutProb( expr, rowprep, nsample, &isvalid));
+   SCIPfreeRowprep(scip, &rowprep);
+
+   /* free memory */
+   SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+
+   cr_expect(isvalid);
+}
+
+
 
 
 
