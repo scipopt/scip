@@ -1,4 +1,4 @@
-name: Build And Release Docker Image
+name: Build And Push Docker Image
 
 on:
   workflow_dispatch:
@@ -9,8 +9,8 @@ on:
         type: number
 
 env:
-  IMAGE_NAME: testing #scipoptsuite
-  REPOSITORY_NAME: blevkovych #scipoptsuite
+  IMAGE_NAME: scipoptsuite
+  REPOSITORY_NAME: scipoptsuite
 
 jobs:
   build:
@@ -35,7 +35,7 @@ jobs:
       id: metadata
       uses: docker/metadata-action@v5
       with:
-        images: $REPOSITORY_NAME/$IMAGE_NAME
+        images: ${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}
         tags: |
           type=raw,value=latest
           type=raw,value=${{ github.event.inputs.version }}
