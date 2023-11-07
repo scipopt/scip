@@ -2,7 +2,7 @@ FROM debian:bullseye-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TARGETPLATFORM
-ARG TAG=8.0.4
+ARG TAG
 
 RUN apt-get update && apt-get -y install \
     build-essential \
