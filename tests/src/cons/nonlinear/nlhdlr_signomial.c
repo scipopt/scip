@@ -136,12 +136,12 @@ SCIP_RETCODE validCutProb(
    SCIP_Real xval;
    SCIP_Real yval;
    SCIP_Real coef;
-   SCIP_Real exponent;
    int nvars = SCIProwprepGetNVars(rowprep);
    SCIP_Real* coefs =  SCIProwprepGetCoefs(rowprep);
    SCIP_VAR** vars = SCIProwprepGetVars(rowprep);
+   SCIP_VAR* x_var;
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata = SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr);
-   SCIP_VAR* xvar;
+   SCIP_Bool isfound;
    unsigned int seedp  = 2132;
    SCIP_RANDNUMGEN* randnumgen;
 
@@ -153,26 +153,30 @@ SCIP_RETCODE validCutProb(
 
    for( s = 0; s < nsample; s++ )
    {
-      cutval = 0;
+      cutval = -SCIProwprepGetSide(rowprep);
       yval = 1;
       for( i = 0; i < nlhdlrexprdata->nfactors; i++ )
       {
          coef = 0;
+         isfound = false;
          for( j = 0; j < nvars; j++ )
          {
-            if( vars[j] == xvar ){
+            if( vars[j] == nlhdlrexprdata->vars[i] ){
                coef = coefs[j];
+               x_var = vars[j];
+               isfound = true;
                break;
             }
          }
-         xval = SCIPrandomGetReal(randnumgen, nlhdlrexprdata->intervals[i].inf, nlhdlrexprdata->intervals[i].sup);
+         assert(isfound);
+         xval = SCIPrandomGetReal(randnumgen, SCIPvarGetLbLocal(x_var),  SCIPvarGetUbLocal(x_var));
          cutval += xval * coef;
          yval *= pow(xval, nlhdlrexprdata->exponents[i]);
       }
       if( SCIProwprepGetSidetype(rowprep) == SCIP_SIDETYPE_LEFT)
       {
          if( cutval < yval ){
-            SCIPdebugMsg(scip, "%f %f\n", cutval, yval);
+            //SCIPdebugMsg(scip, "%d %f %f\n", s, cutval, yval);
             *isvalid = FALSE;
             break;
          }
@@ -180,7 +184,7 @@ SCIP_RETCODE validCutProb(
       else
       {
          if( cutval > yval ){
-            SCIPdebugMsg(scip, "%f %f\n", cutval, yval);
+            //SCIPdebugMsg(scip, "%d %f %f\n",s, cutval, yval);
             *isvalid = FALSE;
             break;
          }
