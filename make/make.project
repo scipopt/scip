@@ -101,7 +101,7 @@ OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
 TPI		=	none
-SYM		=	bliss
+SYM		=	sbliss
 PAPILO		=	false
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
@@ -112,6 +112,7 @@ NOBLKMEM	=	false
 NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
 BLISSEXTERNAL	=	false
+NAUTYEXTERNAL	=	false
 
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
 LIBEXTFORCESTATIC =	false
@@ -215,8 +216,9 @@ FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
 CXXFLAGS	=
-CXX14FLAG	=	-std=c++14
 CXX11FLAG	=	-std=c++0x
+CXX14FLAG	=	-std=c++14
+CXX17FLAG	=	-std=c++17
 
 ifeq ($(COMP),msvc)
 LDFLAGS		=
@@ -545,6 +547,24 @@ LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.
 else
 LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
 LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
+endif
+endif
+
+ifeq ($(SYM),sbliss)
+ifeq ($(BLISSEXTERNAL),true)
+LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
+endif
+CXXFLAGS	+=	$(CXX17FLAG)
+endif
+
+ifeq ($(SYM),nauty)
+ifeq ($(NAUTYEXTERNAL),true)
+LDFLAGS         +=      $(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS   +=      $(LIBOBJDIR)/nauty
 endif
 endif
 

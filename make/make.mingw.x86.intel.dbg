@@ -16,6 +16,7 @@ OFLAGS		+=
 CFLAGS		+=	-Zi
 CXX11FLAG	=	-Qstd=c++0x
 CXX14FLAG	=	-Qstd=c++14
+CXX17FLAG	=	-Qstd=c++17
 CXXFLAGS	+=	-Zi -EHsc -GR
 DFLAGS =
 LDFLAGS		+=	-debug -subsystem:console -incremental:no -fixed:no

@@ -377,6 +377,69 @@ LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<B
 LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
 endif
 
+SYMOPTIONS	+=	sbliss
+ifeq ($(SYM),sbliss)
+SYMOBJ		=	symmetry/compute_symmetry_sassy.o
+SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
+SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+ifeq ($(BLISSEXTERNAL),false)
+FLAGS		+=	-I$(SRCDIR)/bliss/src -I$(SRCDIR)/bliss/include
+BLISSOBJ	=	bliss/src/abstractgraph.o
+BLISSOBJ	+=	bliss/src/bliss.o
+BLISSOBJ	+=	bliss/src/bliss_C.o
+BLISSOBJ	+=	bliss/src/defs.o
+BLISSOBJ	+=	bliss/src/digraph.o
+BLISSOBJ	+=	bliss/src/graph.o
+BLISSOBJ	+=	bliss/src/orbit.o
+BLISSOBJ	+=	bliss/src/partition.o
+BLISSOBJ	+=	bliss/src/uintseqhash.o
+BLISSOBJ	+=	bliss/src/utils.o
+SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(BLISSOBJ))
+SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(BLISSOBJ:.o=.cc))
+else
+FLAGS		+=	-I$(LIBDIR)/include/
+endif
+ALLSRC		+=	$(SYMSRC)
+ifeq ($(BLISSEXTERNAL),true)
+SOFTLINKS	+=	$(LIBDIR)/include/bliss
+ifeq ($(SHARED),true)
+SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+else
+SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+endif
+endif
+LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS directory, e.g., \"<BLISS-path>\".\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.a\"\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
+endif
+
+SYMOPTIONS      +=      nauty
+ifeq ($(SYM),nauty)
+SYMOBJ          =       symmetry/compute_symmetry_nauty.o
+SYMOBJFILES     =       $(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
+SYMSRC          =       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
+ifeq ($(NAUTYEXTERNAL),false)
+FLAGS           +=      -I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
+NAUTYOBJ        =       nauty/nauty.o
+NAUTYOBJ        +=      nauty/nautil.o
+NAUTYOBJ        +=      nauty/nausparse.o
+NAUTYOBJ        +=      nauty/naugraph.o
+NAUTYOBJ        +=      nauty/schreier.o
+NAUTYOBJ        +=      nauty/naurng.o
+SYMOBJFILES     +=      $(addprefix $(LIBOBJDIR)/,$(NAUTYOBJ))
+SYMSRC          +=      $(addprefix $(SRCDIR)/,$(NAUTYOBJ:.o=.c))
+else
+FLAGS           +=      -I$(LIBDIR)/include/
+endif
+ALLSRC          +=      $(SYMSRC)
+ifeq ($(NAUTYEXTERNAL),true)
+SOFTLINKS       +=      $(LIBDIR)/include/nauty
+SOFTLINKS       +=      $(LIBDIR)/static/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+LPIINSTMSG      +=      "\n  -> \"nautyinc\" is the path to the Nauty directory, e.g., \"<Nauty-path>\".\n"
+LPIINSTMSG      +=      " -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<Nauty-path>/nauty.a\"\n"
+endif
+endif
+
 #-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------
@@ -1621,8 +1684,12 @@ ifeq ($(COMP),msvc)
 endif
 endif
 ifneq ($(SYM),bliss)
+ifneq ($(SYM),sbliss)
+ifneq ($(SYM),nauty)
 ifneq ($(SYM),none)
 		$(error invalid SYM flag selected: SYM=$(SYM). Possible options are: $(SYMOPTIONS))
+endif
+endif
 endif
 endif
 ifneq ($(PAPILO),true)
@@ -1682,7 +1749,7 @@ help:
 		@echo "  - READLINE=<true|false>: Turns support via the readline library on (default) or off."
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
-		@echo "  - SYM=<none|bliss>: To choose type of symmetry handling."
+		@echo "  - SYM=<none|bliss|nauty|sbliss>: To choose type of symmetry handling."
 		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."
 		@echo "  - THREADSAFE=<true|false>: Build thread safe."
 		@echo "  - NOBLKMEM=<true|false>: Turn off block memory or on (default)."
