@@ -104,7 +104,7 @@
  *
  * \verbinclude output.log
  *
- * @version  8.0.3.5
+ * @version  8.1.0
  *
  * \image html scippy.png
  */
