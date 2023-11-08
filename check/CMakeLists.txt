@@ -549,6 +549,7 @@ macro(add_instancetests instances settings prefix)
             #
             # treat the instance as a tuple (list) of two values
             #
+            if(NOT ((${setting} STREQUAL "convertinttobin_mostinf") AND (${basename} STREQUAL "vpm2.fzn") AND (${LPS} STREQUAL "grb")))
             if(NOT ((${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
             if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
             if(NOT ((${setting} STREQUAL "tolerance") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "xprs")))
@@ -565,6 +566,7 @@ macro(add_instancetests instances settings prefix)
             endif()  # Xpress does not keep feasibility tolerance setting, #3640
             endif()  # Gurobi gets stuck in LP solve, #2833
             endif()  # Gurobi invalid write with settings oddcycle and heurlprows, #3578; just skip this instance for all settings now
+            endif()  # Gurobi invalid write with settings mostinf on instance vpm2.fzn, #3578
         endforeach(setting)
     endforeach(instance)
 endmacro(add_instancetests)
