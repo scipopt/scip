@@ -135,6 +135,7 @@ struct SCIP_BranchruleData
    SCIP_Real             maxmeangain;        /**< maximal dual gain of all strong branchings */
    SCIP_Real             minmeangain;        /**< minimal dual gain of all strong branchings */
    SCIP_Real             sumlogmeangains;    /**< sum of logarithms of all mean dual gains */
+   SCIP_Real             nzerogains;         /**< number of zero dual gains */
    int                   ndualgains;         /**< number of dual gains used in the computation of the mean */
    int                   currndualgains;     /**< number of dual gains used in the computation of the mean from current node */
    int                   sbiterofs;          /**< additional number of allowed strong branching LP iterations */
@@ -805,9 +806,14 @@ SCIP_RETCODE updateMinMaxMeanGain(
    else
       meangain = (downgain + upgain) / 2.0;
    assert(SCIPisGE(scip, meangain, 0.0));
+   if(meangain < 1e-5)
+   {
+      branchruledata->nzerogains++;
+      return SCIP_OKAY;
+   }
+
    branchruledata->currmeandualgain = ((SCIP_Real) branchruledata->currndualgains /  (branchruledata->currndualgains + 1) ) * branchruledata->currmeandualgain + meangain / ( branchruledata->currndualgains + 1 ) ;
 
-   meangain = MAX(meangain, 1e-5);
    branchruledata->sumlogmeangains += log(meangain);
    /* update the max mean gain */
    branchruledata->maxmeangain = MAX(branchruledata->maxmeangain, meangain);
@@ -846,24 +852,24 @@ SCIP_Real strongBranchingTreeSize(
 static
 SCIP_Real cdfProbability(
    SCIP_Real             rate,
+   SCIP_Real             zeroprob,
    SCIP_Real             proposedgain,
    SCIP_Real             mingain,
    SCIP_Bool             useparetocdf
    )
 {
-
    if(useparetocdf)
    {
       if (proposedgain < mingain)
          return 0.0;
       else
-         return 1.0 - pow(mingain / proposedgain, rate);
+         return zeroprob + (1.0 - zeroprob) * (1.0 - pow(mingain / proposedgain, rate));
 
    }
    else
    {
       assert(rate >= 0.0);
-      return 1.0 - exp(-rate * proposedgain);
+      return zeroprob + (1.0 - zeroprob) * (1.0 - exp(-rate * proposedgain));
    }
 }
 
@@ -873,6 +879,7 @@ static
 SCIP_Real expectedTreeSize(
    SCIP*                 scip,
    SCIP_Real             gap,
+   SCIP_Real             zeroprob,
    SCIP_Real             currentdepth,
    SCIP_Real             lambda,
    SCIP_Real             mingain,
@@ -895,7 +902,7 @@ SCIP_Real expectedTreeSize(
    else if (depth == 2)
    {
       /* Probability of finding a better variable that would reduce the depth (smaller tree size). */
-      SCIP_Real p = 1.0 - cdfProbability(lambda, gap, mingain, useparetocdf);
+      SCIP_Real p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, useparetocdf);
       SCIPdebugMsg(scip, " -> Probability of finding a better variable that would reduce the depth: %g\n", p);
       /* Size of the improved tree. */
       improvedtree =  strongBranchingTreeSize(depth - 1);
@@ -906,9 +913,9 @@ SCIP_Real expectedTreeSize(
    else
    {
       /* Probability of not finding a better variable that would reduce the depth of the tree (size of the tree). */
-      SCIP_Real pnotbetter = cdfProbability(lambda, (gap / (depth - 1)), mingain, useparetocdf);
+      SCIP_Real pnotbetter = cdfProbability(lambda, zeroprob, (gap / (depth - 1)), mingain, useparetocdf);
       /* Probability of finding a better variable that would reduce the depth (smaller tree size). */
-      SCIP_Real pbetter = 1.0 - cdfProbability(lambda, gap / (depth - 1), mingain, useparetocdf);
+      SCIP_Real pbetter = 1.0 - cdfProbability(lambda, zeroprob, gap / (depth - 1), mingain, useparetocdf);
       SCIPdebugMsg(scip, " -> Probability of finding a better variable that would reduce the depth: %g\n", pbetter);
 
       if( pbetter < 1e-5 )
@@ -918,14 +925,14 @@ SCIP_Real expectedTreeSize(
          SCIP_Real p;
          if (depth > 2)
          {
-            p = cdfProbability(lambda, gap / (depth - 2), mingain, useparetocdf) - cdfProbability(lambda, gap / (depth - 1), mingain, useparetocdf);
+            p = cdfProbability(lambda, zeroprob, gap / (depth - 2), mingain, useparetocdf) - cdfProbability(lambda, zeroprob, gap / (depth - 1), mingain, useparetocdf);
             ptotal += p;
-            pbetter = 1.0 - cdfProbability(lambda, gap / (depth - 2), mingain, useparetocdf);
+            pbetter = 1.0 - cdfProbability(lambda, zeroprob, gap / (depth - 2), mingain, useparetocdf);
          }
 
          else if (depth == 2)
          {
-               p = 1.0 - cdfProbability(lambda, gap, mingain, useparetocdf);
+               p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, useparetocdf);
                ptotal += p;
                pbetter = 0.0;
          }
@@ -1043,10 +1050,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    //    return TRUE;
    /* if we do not have a large enough sample to estimate the rate of the exponential distribution we continue with strong branching */
    if ( branchruledata->currndualgains < 5 )
-   {
-      assert(FALSE);
       return TRUE;
-   }
 
    maxmeangain = branchruledata->maxmeangain;
    minmeangain = branchruledata->minmeangain;
@@ -1064,16 +1068,13 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
 
    assert(!SCIPisInfinity(scip, -maxmeangain));
 
-   assert(branchruledata->currndualgains >= lookahead);
-
+   SCIP_Real zeroprob = (SCIP_Real) branchruledata->nzerogains / (branchruledata->nzerogains + branchruledata->currndualgains);
    if(branchruledata->useparetodistribution)
    {
       assert(minmeangain > 0.0);
       assert(branchruledata->currndualgains > 0);
       SCIP_Real sum_for_lambda = branchruledata->sumlogmeangains - branchruledata->currndualgains * log(minmeangain);
-      /* TODOSB what values for lambda (alpha) do we want to have? */
-      assert(!SCIPisZero(scip, sum_for_lambda));
-      if(SCIPisZero(scip, sum_for_lambda))
+     if(SCIPisZero(scip, sum_for_lambda))
          return TRUE;
       lambda = branchruledata->currndualgains / sum_for_lambda;
    }
@@ -1112,7 +1113,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    currenttreesize = strongBranchingTreeSize(currentdepth);
 
    /* Compute the expected size of the tree with one more strong branching */
-   nexttreesize =  expectedTreeSize(scip, gaptoclose, currentdepth, lambda, minmeangain, branchruledata->useparetodistribution);
+   nexttreesize =  expectedTreeSize(scip, gaptoclose, zeroprob, currentdepth, lambda, minmeangain, branchruledata->useparetodistribution);
 
    if(SCIPisLE(scip, nexttreesize, currenttreesize - 1.0))
    {
@@ -2403,7 +2404,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    branchruledata->maxmeangain = -SCIPinfinity(scip);
    branchruledata->minmeangain = SCIPinfinity(scip);
    branchruledata->sumlogmeangains = 0.0;
-
+   branchruledata->nzerogains = 0;
    if( branchruledata->ndualgains + branchruledata->currndualgains > 0 )
    {
       /* update mean dual gain */
@@ -2490,6 +2491,8 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    branchruledata->maxmeangain = -SCIPinfinity(scip);
    branchruledata->minmeangain = SCIPinfinity(scip);
    branchruledata->sumlogmeangains = 0.0;
+   branchruledata->nzerogains = 0;
+
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
