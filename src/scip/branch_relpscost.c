@@ -1072,7 +1072,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
       assert(branchruledata->currndualgains > 0);
       SCIP_Real sum_for_lambda = branchruledata->sumlogmeangains - branchruledata->currndualgains * log(minmeangain);
       /* TODOSB what values for lambda (alpha) do we want to have? */
-      assert(SCIPisZero(scip, sum_for_lambda));
+      assert(!SCIPisZero(scip, sum_for_lambda));
       if(SCIPisZero(scip, sum_for_lambda))
          return TRUE;
       lambda = branchruledata->currndualgains / sum_for_lambda;
