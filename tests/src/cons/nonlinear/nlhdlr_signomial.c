@@ -141,7 +141,6 @@ SCIP_RETCODE validCutProb(
    SCIP_VAR** vars = SCIProwprepGetVars(rowprep);
    SCIP_VAR* x_var;
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata = SCIPgetNlhdlrExprDataNonlinear(nlhdlr, expr);
-   SCIP_Bool isfound;
    unsigned int seedp  = 2132;
    SCIP_RANDNUMGEN* randnumgen;
 
@@ -158,17 +157,16 @@ SCIP_RETCODE validCutProb(
       for( i = 0; i < nlhdlrexprdata->nfactors; i++ )
       {
          coef = 0;
-         isfound = false;
+         x_var = NULL;
          for( j = 0; j < nvars; j++ )
          {
             if( vars[j] == nlhdlrexprdata->vars[i] ){
                coef = coefs[j];
                x_var = vars[j];
-               isfound = true;
                break;
             }
          }
-         assert(isfound);
+         assert(x_var != NULL);
          xval = SCIPrandomGetReal(randnumgen, SCIPvarGetLbLocal(x_var),  SCIPvarGetUbLocal(x_var));
          cutval += xval * coef;
          yval *= pow(xval, nlhdlrexprdata->exponents[i]);
