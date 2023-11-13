@@ -201,11 +201,12 @@ void freeExprDataMem(
    if( !ispartial )
    {
       int nvars = (*nlhdlrexprdata)->nvars;
+      int n2vars = nvars * 2; 
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, nvars);
-      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2 * nvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, n2vars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, nvars);
    }
@@ -252,7 +253,7 @@ void reformRowprep(
 
    /* find auxvar's cut coefficient and set it to zero */
    auxvar = nlhdlrexprdata->vars[nlhdlrexprdata->nfactors];
-   coefauxvar = 0;
+   coefauxvar = 1;
    for( i = 0; i < nvars; i++ )
    {  
       if( vars[i] == auxvar )
@@ -267,20 +268,20 @@ void reformRowprep(
    {
       *success = FALSE;
    }
+   else{
+      /* the reformation scales the cut so that coefficients and constant are divided by the absolute value of coefauxvar */
+      assert(coefauxvar < 0);
+      scale = - 1 / coefauxvar;
+      for( i = 0; i < nvars; i++ )
+      {  
+         if( vars[i] == auxvar )
+            continue;
+         coefs[i] *= scale;
+      }
+      rowprep->side *= scale;
 
-   /* the reformation scales the cut so that coefficients and constant are divided by the absolute value of coefauxvar */
-   assert(coefauxvar < 0);
-   scale = - 1 / coefauxvar;
-
-   for( i = 0; i < nvars; i++ )
-   {  
-      if( vars[i] == auxvar )
-         continue;
-      coefs[i] *= scale;
+      *success = SCIPisGT(scip, scale, mincutscale);
    }
-   rowprep->side *= scale;
-
-   *success = SCIPisGT(scip, scale, mincutscale);
 }
 
 /** store and capture variables associated with the expression and its subexpressions */
