@@ -38,6 +38,7 @@ Fixed bugs
 - respect unboundedness in the computation of activity bounds in conflict.c to avoid invalid huge bounds due to small coefficients on unbounded variables
 - ensure positive sides of a linear constraint when recognizing a set partition in rangedRowSimplify() to account for redundancy issues
 - relax numerical conditions for variable aggregations to avert invalid variable fixings
+- fixed harmless read of uninitialized data when creating parameters
 
 Performance improvements
 ------------------------
@@ -65,6 +66,11 @@ Build system
 - added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
 - added flag option "sbliss" for SYM variable to specify which graph automorphism package should be used
 - use SYM=sbliss by default, since sassy and bliss are now shipped with SCIP
+
+Miscellaneous
+-------------
+
+- the parameter change callback is no longer called at the moment a parameter is created
 
 @section RN804 SCIP 8.0.4
 *************************
