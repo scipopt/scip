@@ -53,7 +53,7 @@ Interface changes
   The callback is called if option constraints/nonlinear/linearizeheursol is enabled.
 - The callback for copying problem data SCIP_DECL_PROBCOPY() now has a parameter "original" indicating whether the original
   or transformed problem should be copied. Similarly, SCIPprobCopy() in prob.h/c has such a parameter.
-- Added CONSGETPERMSYMGRAPH callback for constraint handlers, which provides symmetry information about constraints to SCIP.
+- Added CONSGETPERMSYMGRAPH and CONSGETSIGNEDPERMSYMGRAPH callback for constraint handlers, which provides symmetry information about constraints to SCIP.
 
 ### Deleted and changed API methods
 
