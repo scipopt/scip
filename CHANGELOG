@@ -44,11 +44,17 @@ Performance improvements
 
 - Use sassy/bliss as default symmetry computation package.
 
+Interface changes
+-----------------
+
 ### Interfaces to external software
 
 - added interface to nauty/traces for symmetry computation
 - added interface to sassy, a preprocessor for symmetry computation
 - The directory src/sassy contains the source code of sassy.
+
+Build system
+------------
 
 ### Cmake
 
