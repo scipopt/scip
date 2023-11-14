@@ -159,7 +159,7 @@
 #define DEFAULT_COMPRESSTHRESHOLD     0.5    /**< Compression is used if percentage of moved vars is at most the threshold. */
 #define DEFAULT_SYMFIXNONBINARYVARS FALSE    /**< Disabled parameter */
 #define DEFAULT_ENFORCECOMPUTESYMMETRY FALSE /**< always compute symmetries, even if they cannot be handled */
-#define DEFAULT_SYMTYPE (int) SYM_SYMTYPE_SIGNPERM /**< type of symmetries to be computed */
+#define DEFAULT_SYMTYPE (int) SYM_SYMTYPE_PERM /**< type of symmetries to be computed */
 
 /* default parameters for linear symmetry constraints */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
