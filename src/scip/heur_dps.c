@@ -1780,7 +1780,6 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    blockproblem = NULL;
    linkings = NULL;
    eventhdlr = NULL;
-   k = -1;
 
    *result = SCIP_DIDNOTRUN;
 
