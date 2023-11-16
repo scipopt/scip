@@ -8397,7 +8397,7 @@
  * color-preserving automorphisms correspond to symmetries of the integer program. The symmetries of
  * the graph, and thus of the integer program, are then computed by an external graph automorphism
  * library that needs to be linked to SCIP. Currently, SCIP ships with two such libraries: The graph
- * automorphism libraries bliss or nauty/traces are the basic workhorse to detect symmetries. Moreover, one can use
+ * automorphism libraries bliss or nauty/traces are the basic workhorses to detect symmetries. Moreover, one can use
  * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss or nauty/traces.
  * The latter is the current default using bliss for symmetry detection.
  *
@@ -8625,7 +8625,7 @@
  * needs to be encoded in the graph to make sure that only symmetries between equivalent constraints can be computed.
  * Among others, this can be achieved by assigning the nodes and edges appropriate colors. To make sure that the
  * colors are compatible between the different symmetry detection graphs, SCIP automatically determines the colors of
- * nodes and edges based on information that is provided by a user (or the creator of the graph).
+ * nodes and edges based on information that is provided by the user (or the creator of the graph).
  *
  * A pointer to a globally maintained symmetry detection graph is provided by the callbacks. The nodes and edges of the
  * graph of a constraint are added to this global graph.
