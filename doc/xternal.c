@@ -8399,7 +8399,7 @@
  * library that needs to be linked to SCIP. Currently, SCIP ships with two such libraries: The graph
  * automorphism libraries bliss or nauty/traces are the basic workhorses to detect symmetries. Moreover, one can use
  * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss or nauty/traces.
- * The latter is the current default using bliss for symmetry detection.
+ * The current default is to use bliss in combination with sassy for symmetry detection.
  *
  * @note To detect symmetries, SCIP needs to be built with sassy/bliss, which can be achieved
  * by using the options <code>SYM=sassy</code> and <code>-DSYM=sassy</code> in the Makefile and CMake
@@ -8627,7 +8627,7 @@
  * colors are compatible between the different symmetry detection graphs, SCIP automatically determines the colors of
  * nodes and edges based on information that is provided by the user (or the creator of the graph).
  *
- * A pointer to a globally maintained symmetry detection graph is provided by the callbacks. The nodes and edges of the
+ * A pointer to a globally maintained symmetry detection graph is provided to the callbacks. The nodes and edges of the
  * graph of a constraint are added to this global graph.
  * The nodes of the graph need to be added via the functions <code>SCIPaddSymgraphValnode()</code>
  * and <code>SCIPaddSymgraphConsnode()</code>. The first function can be used to create nodes corresponding to
