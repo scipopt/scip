@@ -955,31 +955,6 @@ SCIP_Real expectedTreeSize(
    return nexttreesize;
 }
 
-/* Decrease/increase available number of SB iterations by (nmoresbs) * (average LP iterations per strong branching) */
-static
-SCIP_RETCODE adjustStrongBranchingLpIterations(
-   SCIP*                 scip,
-   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
-   int                   nmoresbs            /**< number of additional strong branching iterations allowed */
-)
-{
-   SCIP_BRANCHRULEDATA* branchruledata;
-   SCIP_Longint nsblpiterations;
-   SCIP_Longint nsblpicalls;
-   SCIP_Longint additionaliterations;
-
-   branchruledata = SCIPbranchruleGetData(branchrule);
-
-   nsblpicalls = SCIPgetNStrongbranchs(scip);
-   nsblpiterations = SCIPgetNStrongbranchLPIterations(scip);
-
-   assert(nsblpicalls > 0);
-   additionaliterations = nmoresbs * (nsblpiterations / nsblpicalls);
-
-   branchruledata->sbiterofs = MIN(500000, MAX(50000, branchruledata->sbiterofs + additionaliterations));
-   return SCIP_OKAY;
-}
-
 /* Decide if we continue strong branching based based on lookahead */
 static
 SCIP_Bool continueStrongBranchingLookahead(
@@ -1045,10 +1020,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    if( lookahead < branchruledata->dynamiclookaheadquot * maxlookaheaddefault)
       return TRUE;
 
-   // /* if we do not have a large enough sample to estimate the rate of the exponential distribution we continue with strong branching */
-   // if (((branchruledata->ndualgains + branchruledata->currndualgains) < branchruledata->minsamplesize) && branchruledata->currndualgains >= 5 )
-   //    return TRUE;
-   /* if we do not have a large enough sample to estimate the rate of the exponential distribution we continue with strong branching */
+   /* TodoSB: if we do not have a large enough sample to estimate the rate of the exponential distribution we continue with strong branching */
    if ( branchruledata->currndualgains < 5 )
       return TRUE;
 
@@ -1117,11 +1089,6 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
 
    if(SCIPisLE(scip, nexttreesize, currenttreesize - 1.0))
    {
-      /* TodoSB Here we could update the number of strong branching LP iterations */
-      // if (SCIPisGE(scip, lookahead, maxlookaheaddefault))
-      // {
-      //    // adjustStrongBranchingLpIterations(scip, branchrule, 10.0);
-      // }
       (*dynamiclookaheadatleastonce) = TRUE;
       *dynamiclookaheaddecision = 1;
       return TRUE;
@@ -1131,9 +1098,6 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
          branchrule->nbeforelookahead++;
    else
          branchrule->nbetweenlookahead++;
-
-   /* TodoSB Here we could update the number of strong branching LP iterations */
-   // adjustStrongBranchingLpIterations(scip, branchrule, SCIPfeasCeil(scip, lookahead - maxlookaheaddefault));
 
    *dynamiclookaheaddecision = 0;
 
@@ -1704,11 +1668,6 @@ SCIP_RETCODE execRelpscost(
       for( i = 0; continueStrongBranchingLookahead(scip, branchrule, i, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations, dynamiclookaheadatleastonce)
                && continueStrongBranchingTreeSizeEstimation(scip, branchrule, lookahead, maxlookaheaddefault, &dynamiclookaheadused, &dynamiclookaheadatleastonce, &dynamiclookaheaddecision); ++i )
       {
-
-         /* if the sample is too small or the absolute gap is unknown then we restrict to the default lookahead */
-         /* TodoSB we should think of an alternative to this */
-         if(lookahead >= maxlookaheaddefault && !dynamiclookaheadused )
-            break;
 
          SCIP_Real down;
          SCIP_Real up;
