@@ -26,6 +26,9 @@
  * @ingroup DEFPLUGINS_CUTSEL
  * @brief  ensemble cut selector
  * @author Mark Turner
+ *
+ * @todo separator hard limit on density is inappropriate for MINLP. Need to relax hard limit in case of all cuts dense
+ * @todo penalising via parallelism is overly costly if many cuts. Hash cuts before and find appropriate groups?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -743,6 +746,8 @@ SCIP_RETCODE SCIPselectCutsEnsemble(
    if( cutseldata->filterdensecuts )
    {
       ncuts = filterWithDensity(scip, cuts, cutseldata->maxcutdensity, ncuts);
+      if( ncuts == 0 )
+         return SCIP_OKAY;
    }
 
    /* Initialise the score array */
