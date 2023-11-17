@@ -80,7 +80,6 @@
 #define DEFAULT_MINRELIABLE      1.0         /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_MAXRELIABLE      5.0         /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_SBITERQUOT       0.5         /**< maximal fraction of strong branching LP iterations compared to normal iterations */
-#define DEFAULT_DUALGAINSWEIGHT  0.7         /**< weight of current dual gains in dynamic lookahead */
 #define DEFAULT_DYNAMICLOOKAHEADQUOT 0.6     /**< apply dynamic lookahead after this fraction maxlookahead is reached */
 #define DEFAULT_SBITEROFS        100000      /**< additional number of allowed strong branching LP iterations */
 #define DEFAULT_MAXLOOKAHEAD     9           /**< maximal number of further variables evaluated without better score */
@@ -129,7 +128,6 @@ struct SCIP_BranchruleData
    SCIP_Real             minreliable;        /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
    SCIP_Real             maxreliable;        /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
    SCIP_Real             sbiterquot;         /**< maximal fraction of strong branching LP iterations compared to normal iterations */
-   SCIP_Real             dualgainsweight;    /**< weight of current dual gains in dynamic lookahead */
    SCIP_Real             meandualgain;       /**< mean dual gain of all strong branchings */
    SCIP_Real             currmeandualgain;   /**< current mean dual gain in current node */
    SCIP_Real             maxmeangain;        /**< maximal dual gain of all strong branchings */
@@ -1055,7 +1053,6 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
       lambda = 1 / (branchruledata->currmeandualgain);
    else
    {
-      /* TodoSB better use a weighted sum with branchruledata->dualgainsweight */
       int npreviousgains = MAX(branchruledata->minsamplesize - branchruledata->currndualgains, 0);
 
       int total = branchruledata->minsamplesize;
@@ -2502,10 +2499,6 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "branching/relpscost/sbiterquot",
          "maximal fraction of strong branching LP iterations compared to node relaxation LP iterations",
          &branchruledata->sbiterquot, FALSE, DEFAULT_SBITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/relpscost/dualgainsweight",
-         "weight of current dual gains in dynamic lookahead",
-         &branchruledata->dualgainsweight, TRUE, DEFAULT_DUALGAINSWEIGHT, 0.0, 1.0, NULL, NULL) );
   SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/dynamiclookaheadquot",
          "apply dynamic lookahead after this fraction maxlookahead is reached",
