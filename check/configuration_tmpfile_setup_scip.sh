@@ -48,6 +48,7 @@ SOLBASENAME="${17}"    # - base name for solution file
 VISUALIZE="${18}"      # - true, if the branch-and-bound search should be visualized
 SOLUFILE="${19}"       # - solu file, only necessary if ${SETCUTOFF} is 1
 EMPHBENCHMARK="${20}"  # - use set emphasis benchmark
+CLOCKTYPE="${21}"      # - clocktype (1 = CPU, 2 = wallclock)
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
@@ -124,7 +125,7 @@ echo "set limits time ${TIMELIMIT}"                              >> "${TMPFILE}"
 echo "set limits nodes ${NODELIMIT}"                             >> "${TMPFILE}"
 echo "set limits memory ${MEMLIMIT}"                             >> "${TMPFILE}"
 echo "set lp advanced threads ${THREADS}"                        >> "${TMPFILE}"
-echo "set timing clocktype 1"                                    >> "${TMPFILE}"
+echo "set timing clocktype ${CLOCKTYPE}"                         >> "${TMPFILE}"
 echo "set display freq ${DISPFREQ}"                              >> "${TMPFILE}"
 echo "set save ${SETFILE}"                                       >> "${TMPFILE}"
 

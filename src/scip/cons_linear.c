@@ -11472,8 +11472,8 @@ SCIP_RETCODE rangedRowSimplify(
    assert(!SCIPisInfinity(scip, rhs));
    assert(!SCIPisNegative(scip, rhs));
 
-   /* sides must be positive to detect set partition */
-   if( !SCIPisPositive(scip, lhs) || !SCIPisPositive(scip, rhs) )
+   /* sides must be positive and different to detect set partition */
+   if( !SCIPisPositive(scip, lhs) || !SCIPisLT(scip, lhs, rhs) )
       return SCIP_OKAY;
 
    vals = consdata->vals;
@@ -11504,36 +11504,31 @@ SCIP_RETCODE rangedRowSimplify(
          break;
    }
 
-   /* check if all variables are binary */
-   if( v == -1 )
+   /* check if all variables are binary, we can choose one, and need to choose at most one */
+   if( v == -1 && SCIPisGE(scip, minval, lhs) && SCIPisLE(scip, maxval, rhs)
+      && SCIPisGT(scip, minval + secondminval, rhs) )
    {
-      if( SCIPisEQ(scip, minval, maxval) && SCIPisEQ(scip, lhs, rhs) )
-         return SCIP_OKAY;
-
-      /* check if we can choose one and need to choose at most one binary variable */
-      if( SCIPisGE(scip, minval, lhs) && SCIPisLE(scip, maxval, rhs) && SCIPisGT(scip, minval + secondminval, rhs) )
+      /* change all coefficients to 1.0 */
+      for( v = nvars - 1; v >= 0; --v )
       {
-         /* change all coefficients to 1.0 */
-         for( v = nvars - 1; v >= 0; --v )
-         {
-            SCIP_CALL( chgCoefPos(scip, cons, v, 1.0) );
-         }
-         (*nchgcoefs) += nvars;
-
-         /* replace old right and left hand side with 1.0 */
-         SCIP_CALL( chgRhs(scip, cons, 1.0) );
-         SCIP_CALL( chgLhs(scip, cons, 1.0) );
-         (*nchgsides) += 2;
+         SCIP_CALL( chgCoefPos(scip, cons, v, 1.0) );
       }
+      (*nchgcoefs) += nvars;
+
+      /* replace old right and left hand side with 1.0 */
+      SCIP_CALL( chgRhs(scip, cons, 1.0) );
+      SCIP_CALL( chgLhs(scip, cons, 1.0) );
+      (*nchgsides) += 2;
    }
 
    return SCIP_OKAY;
 }
 
 /** tries to simplify coefficients and delete variables in constraints of the form lhs <= a^Tx <= rhs
- *  for equations @see rangedRowSimplify() will be called
  *
- *  there are several different coefficient reduction steps which will be applied
+ *  for both-sided constraints only @see rangedRowSimplify() will be called
+ *
+ *  for one-sided constraints there are several different coefficient reduction steps which will be applied
  *
  *  1. We try to determine parts of the constraint which will not change anything on (in-)feasibility of the constraint
  *
@@ -11667,7 +11662,7 @@ SCIP_RETCODE simplifyInequalities(
    SCIPdebug( oldnchgcoefs = *nchgcoefs; )
    SCIPdebug( oldnchgsides = *nchgsides; )
 
-   /* @todo also work on ranged rows */
+   /* @todo extend both-sided simplification */
    if( haslhs && hasrhs )
    {
       SCIP_CALL( rangedRowSimplify(scip, cons, nchgcoefs, nchgsides ) );

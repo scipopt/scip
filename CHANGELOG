@@ -25,6 +25,7 @@ Features
   symmetry information.
 - added special presolving step for logicor and set covering/packing for constraints with two variables and one independent variable
 - increased the depth field of the tree structure from 16 to 30 bits and the max depth of the search tree from 65534 to 1073741822
+- added new cut selector plugin called cutsel_ensemble. Performs a superset of hybrid cutsel. Implements new filtering methods and scoring options.
 
 Performance improvements
 ------------------------
@@ -93,6 +94,7 @@ Interface changes
   SCIPshadowTreeGetShadowNode(), SCIPgetShadowTree(), SCIPactivateShadowTree(), SCIPincludeEventHdlrShadowTree(),
   for managing a copy of the branch-and-bound tree for symmetry handling purposes.
 - SCIPdotWriteOpening(), SCIPdotWriteNode(), SCIPdotWriteArc(), SCIPdotWriteClosing()
+- SCIPincludeCutselEnsemble(), SCIPselectCutsEnsemble() to include cutsel_ensemble or use the selection algorithm
 
 ### Command line interface
 
@@ -134,6 +136,7 @@ Interface changes
 - limits/objectivestop to interrupt the solve as soon as a primal solution is found
   that is at least as good as the given value
 - heuristics/undercover/{coverand,coverind,covernl} to control which nonlinearities to consider (by default only "and" and nonlinear constraints)
+- cutselection/ensemble/* all parameters for new ensemble cut selector
 
 ### Data structures
 
@@ -191,7 +194,7 @@ Known bugs
 
 @page RN80 Release notes for SCIP 8.0
 
-@section RN805 SCIP 8.0.5
+@section RN805 SCIP 8.1.0
 *************************
 
 Fixed bugs
@@ -228,6 +231,40 @@ Fixed bugs
 - correct local flag of singleton conflict constraints in tightenSingleVar() against invalid bound globalization
 - respect unboundedness in the computation of activity bounds in conflict.c to avoid invalid huge bounds due to small coefficients on unbounded variables
 - ensure positive sides of a linear constraint when recognizing a set partition in rangedRowSimplify() to account for redundancy issues
+- relax numerical conditions for variable aggregations to avert invalid variable fixings
+- fixed harmless read of uninitialized data when creating parameters
+
+Performance improvements
+------------------------
+
+- Use sassy/bliss as default symmetry computation package.
+
+Interface changes
+-----------------
+
+### Interfaces to external software
+
+- added interface to nauty/traces for symmetry computation
+- added interface to sassy, a preprocessor for symmetry computation
+- The directory src/sassy contains the source code of sassy.
+
+Build system
+------------
+
+### Cmake
+
+- added flag option "SYM=sbliss" for using sassy/bliss as a graph automorphism package
+
+### Makefile
+
+- added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
+- added flag option "sbliss" for SYM variable to specify which graph automorphism package should be used
+- use SYM=sbliss by default, since sassy and bliss are now shipped with SCIP
+
+Miscellaneous
+-------------
+
+- the parameter change callback is no longer called at the moment a parameter is created
 
 @section RN804 SCIP 8.0.4
 *************************
@@ -326,8 +363,6 @@ Build system
 - Move -I/path/to/src/amplmp/include to front of compiler flags for include directories
 
 ### Makefile
-
-- Use SYM=bliss by default, since bliss now is shipped with SCIP.
 
 Fixed bugs
 ----------
