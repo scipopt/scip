@@ -2636,6 +2636,8 @@ SCIP_RETCODE priceAndCutLoop(
          assert(lp->flushed);
          assert(lp->solved);
          assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+         assert(!(*lperror));
+         assert(!(*cutoff));
 
          olddomchgcount = stat->domchgcount;
          oldninitconssadded = stat->ninitconssadded;
@@ -2657,13 +2659,14 @@ SCIP_RETCODE priceAndCutLoop(
          assert(lp->flushed);
          assert(lp->solved);
          assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-
-         /* constraint separation */
-         SCIPsetDebugMsg(set, "constraint separation\n");
+         assert(!(*lperror));
 
          /* separate constraints and LP */
-         if( !(*cutoff) && !(*lperror) && !enoughcuts && lp->solved )
+         if( !(*cutoff) && !enoughcuts )
          {
+            /* constraint and LP separation */
+            SCIPsetDebugMsg(set, "constraint and LP separation\n");
+
             /* apply a separation round */
             SCIP_CALL( separationRoundLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, transprob, primal, tree,
                   lp, sepastore, actdepth, bounddist, allowlocal, delayedsepa,
@@ -2683,7 +2686,7 @@ SCIP_RETCODE priceAndCutLoop(
          }
 
          /* call global cut pool separation again since separators may add cuts to the pool instead of the sepastore */
-         if( !(*cutoff) && !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && !enoughcuts && lp->solved )
+         if( !(*cutoff) && !(*lperror) && lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && !enoughcuts )
          {
             SCIP_CALL( cutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, FALSE, root,
                   actdepth, &enoughcuts, cutoff) );
@@ -2695,11 +2698,8 @@ SCIP_RETCODE priceAndCutLoop(
          }
 
          /* delayed global cut pool separation */
-         if( !(*cutoff) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPsepastoreGetNCuts(sepastore) == 0 &&
-               !enoughcuts )
+         if( !(*cutoff) && !(*lperror) && lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPsepastoreGetNCuts(sepastore) == 0 && !enoughcuts )
          {
-            assert( !(*lperror) );
-
             SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, TRUE,
                   root, actdepth, &enoughcuts, cutoff) );
 
@@ -2707,9 +2707,35 @@ SCIP_RETCODE priceAndCutLoop(
             {
                SCIPsetDebugMsg(set, " -> delayed global cut pool detected cutoff\n");
             }
+            assert(lp->solved);
             assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
             assert(lp->flushed);
-            assert(lp->solved);
+         }
+
+         /* delayed separation if no cuts where produced */
+         if( !(*cutoff) && !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPsepastoreGetNCuts(sepastore) == 0 && delayedsepa )
+         {
+            SCIP_CALL( separationRoundLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, transprob, primal,
+                  tree, lp, sepastore, actdepth, bounddist, allowlocal, delayedsepa,
+                  &delayedsepa, &enoughcuts, cutoff, lperror, &mustsepa, &mustprice) );
+            assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
+
+            /* call delayed cut pool separation again, since separators may add cuts to the pool instead of the sepastore */
+            if( !(*cutoff) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+            {
+               assert( !(*lperror) );
+
+               SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, TRUE,
+                     root, actdepth, &enoughcuts, cutoff) );
+
+               if( *cutoff )
+               {
+                  SCIPsetDebugMsg(set, " -> delayed global cut pool detected cutoff\n");
+               }
+               assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
+               assert(lp->flushed);
+               assert(lp->solved);
+            }
          }
 
          assert(*cutoff || *lperror || SCIPlpIsSolved(lp));
