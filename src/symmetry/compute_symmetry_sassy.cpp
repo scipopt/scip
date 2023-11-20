@@ -46,6 +46,7 @@
 #ifdef _MSC_VER
 # pragma warning(push)
 # pragma warning(disable: 4189)  // local variable is initialized but not referenced
+# pragma warning(disable: 4267)  // conversion of size_t to int (at sassy/preprocessor.h:2897)
 # pragma warning(disable: 4388)  // compare signed and unsigned expression
 # pragma warning(disable: 4456)  // shadowed variable
 # pragma warning(disable: 4430)  // missing type specifier
