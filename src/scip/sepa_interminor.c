@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -480,7 +489,6 @@ SCIP_RETCODE detectMinors(
       SCIPfreeBufferArrayNull(scip, &rowi);
    }
 
-
    SCIPdebugMsg(scip, "found %d principal minors in total\n", sepadata->nminors);
 
    /* free memory */
@@ -600,7 +608,6 @@ SCIP_RETCODE computeRestrictionToRay(
             norm2 += SQRT( eigenvalues[i] ) * ad[posidx] * vzlp;
             ++posidx;
          }
-
       }
       else
       {
@@ -783,7 +790,6 @@ void doBinarySearch(
    }
 
    *sol = lb;
-
 }
 
 /** checks if we are in case 4a, i.e., if
@@ -794,7 +800,7 @@ SCIP_Real isCase4a(
    SCIP_Real             tsol,               /**< t in the above formula */
    SCIP_Real*            coefs,              /**< coefficients A, B, C, D, and E of case 4a */
    SCIP_Real*            coefscondition      /**< extra coefficients needed for the evaluation of the condition:
-                                                num(xhat_{r+1}(zlp)) / E; w(ray); num(yhat_{s+1}(zlp)) */
+                                              *   num(xhat_{r+1}(zlp)) / E; w(ray); num(yhat_{s+1}(zlp)) */
    )
 {
    return (coefscondition[0] * SQRT( coefs[0] * SQR( tsol ) + coefs[1] * tsol + coefs[2] ) + coefscondition[1] *
@@ -1079,7 +1085,6 @@ SCIP_RETCODE getTableauRows(
 
             /* insert tableau row in hashmap*/
             SCIP_CALL( SCIPhashmapInsert(tableau, (void*)vars[v], (void *)densetableaurow) );
-
          }
          else if( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_ZERO )
          {
@@ -1090,7 +1095,6 @@ SCIP_RETCODE getTableauRows(
          {
             SCIP_CALL( SCIPhashmapInsert(tableau, (void*)vars[v], (void *)NULL) );
          }
-
       }
 
       /* get tableau row of var */
@@ -1323,8 +1327,7 @@ SCIP_Bool raysAreDependent(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            ray1,               /**< coefficients of ray 1 */
    SCIP_Real*            ray2,               /**< coefficients of ray 2 */
-   SCIP_Real*            coef                /**< pointer to store coef (s.t. r1 = coef * r2) in case rays are
-                                                  dependent */
+   SCIP_Real*            coef                /**< pointer to store coef (s.t. r1 = coef * r2) in case rays are dependent */
    )
 {
    int i;

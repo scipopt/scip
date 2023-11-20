@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -103,9 +112,6 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "tclique/tclique.h"
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
 
 
 /* constraint handler properties */
@@ -1774,7 +1780,7 @@ SCIP_RETCODE presolRoundConsSOS1(
          /* create, add, and release the logicor constraint */
          SCIP_CALL( SCIPcreateConsSetpack(scip, &setpackcons, SCIPconsGetName(cons), consdata->nvars, consdata->vars,
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-               SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), 
+               SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons),
                SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
          SCIP_CALL( SCIPaddCons(scip, setpackcons) );
          SCIP_CALL( SCIPreleaseCons(scip, &setpackcons) );
@@ -5972,9 +5978,9 @@ SCIP_RETCODE enforceConssSOS1(
       SCIP_Real w;
       int j;
       int ind;
-      int cnt;
-
-      cnt = 0;
+#ifndef NDEBUG
+      int cnt = 0;
+#endif
 
       weight1 = 0.0;
       weight2 = 0.0;
@@ -5986,8 +5992,10 @@ SCIP_RETCODE enforceConssSOS1(
          weight1 += val * (SCIP_Real) j;
          weight2 += val;
 
+#ifndef NDEBUG
          if ( ! SCIPisFeasZero(scip, val) )
             ++cnt;
+#endif
       }
 
       assert( cnt >= 2 );
@@ -6060,7 +6068,7 @@ SCIP_RETCODE enforceSOS1(
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( result != NULL );
-   
+
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -9901,43 +9909,69 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
    SCIP_CALL( SCIPcreateConsSOS1(scip, cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
 
    /* loop through string */
-   do
+   while( *s != '\0' )
    {
       /* parse variable name */
       SCIP_CALL( SCIPparseVarName(scip, s, &var, &t) );
-      s = t;
+
+      if( var == NULL )
+         break;
 
       /* skip until beginning of weight */
-      while ( *s != '\0' && *s != '(' )
-         ++s;
+      t = strchr(t, '(');
 
-      if ( *s == '\0' )
+      if( t == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected weight at input: %s\n", s);
+         SCIPerrorMessage("Syntax error: expected opening '(' at input: %s\n", s);
          *success = FALSE;
-         return SCIP_OKAY;
+         break;
       }
+
+      s = t;
+
       /* skip '(' */
       ++s;
 
       /* find weight */
       weight = strtod(s, &t);
-      if ( t == NULL )
+
+      if( t == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error during parsing of the weight: %s\n", s);
+         SCIPerrorMessage("Syntax error during parsing of the weight: %s\n", s);
          *success = FALSE;
-         return SCIP_OKAY;
+         break;
       }
+
       s = t;
 
-      /* skip white space, ',', and ')' */
-      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' || *s == ')' ) )
+      /* skip until ending of weight */
+      t = strchr(t, ')');
+
+      if( t == NULL )
+      {
+         SCIPerrorMessage("Syntax error: expected closing ')' at input %s\n", s);
+         *success = FALSE;
+         break;
+      }
+
+      s = t;
+
+      /* skip ')' */
+      ++s;
+
+      /* skip white space */
+      SCIP_CALL( SCIPskipSpace((char**)&s) );
+
+      /* skip ',' */
+      if( *s == ',' )
          ++s;
 
       /* add variable */
       SCIP_CALL( SCIPaddVarSOS1(scip, *cons, var, weight) );
    }
-   while ( *s != '\0' );
+
+   if( !*success )
+      SCIP_CALL( SCIPreleaseCons(scip, cons) );
 
    return SCIP_OKAY;
 }

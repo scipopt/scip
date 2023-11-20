@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -139,9 +148,9 @@ void SCIPexprhdlrSetReverseProp(
 /** set the estimation callbacks of an expression handler */
 SCIP_EXPORT
 void SCIPexprhdlrSetEstimate(
-   SCIP_EXPRHDLR*        exprhdlr,                /**< expression handler */
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_DECL_EXPRINITESTIMATES((*initestimates)), /**< initial estimators callback (can be NULL) */
-   SCIP_DECL_EXPRESTIMATE((*estimate))            /**< estimator callback (can be NULL) */
+   SCIP_DECL_EXPRESTIMATE((*estimate))       /**< estimator callback (can be NULL) */
 );
 
 /** gives the name of an expression handler */
@@ -470,7 +479,7 @@ SCIP_Longint SCIPexprGetEvalTag(
  */
 SCIP_EXPORT
 SCIP_Real SCIPexprGetDerivative(
-   SCIP_EXPR*     expr              /**< expression */
+   SCIP_EXPR*            expr                /**< expression */
    );
 
 /** gives the value of directional derivative from the last evaluation of a directional derivative of expression
@@ -480,7 +489,7 @@ SCIP_Real SCIPexprGetDerivative(
  */
 SCIP_EXPORT
 SCIP_Real SCIPexprGetDot(
-   SCIP_EXPR*     expr              /**< expression */
+   SCIP_EXPR*            expr                /**< expression */
    );
 
 /** gives the value of directional derivative from the last evaluation of a directional derivative of derivative
@@ -490,7 +499,7 @@ SCIP_Real SCIPexprGetDot(
  */
 SCIP_EXPORT
 SCIP_Real SCIPexprGetBardot(
-   SCIP_EXPR*     expr              /**< expression */
+   SCIP_EXPR*            expr                /**< expression */
    );
 
 /** returns the difftag stored in an expression
@@ -932,7 +941,7 @@ SCIP_EXPRITER_USERDATA SCIPexpriterGetExprUserData(
  */
 SCIP_EXPORT
 void SCIPexpriterSetCurrentUserData(
-   SCIP_EXPRITER*         iterator,          /**< expression iterator */
+   SCIP_EXPRITER*        iterator,           /**< expression iterator */
    SCIP_EXPRITER_USERDATA userdata           /**< data to be stored */
    );
 
@@ -942,8 +951,8 @@ void SCIPexpriterSetCurrentUserData(
  */
 SCIP_EXPORT
 void SCIPexpriterSetExprUserData(
-   SCIP_EXPRITER*         iterator,          /**< expression iterator */
-   SCIP_EXPR*             expr,              /**< expression where to set iterator data */
+   SCIP_EXPRITER*        iterator,           /**< expression iterator */
+   SCIP_EXPR*            expr,               /**< expression where to set iterator data */
    SCIP_EXPRITER_USERDATA userdata           /**< data to be stored in current child */
    );
 
@@ -953,7 +962,7 @@ void SCIPexpriterSetExprUserData(
  */
 SCIP_EXPORT
 void SCIPexpriterSetChildUserData(
-   SCIP_EXPRITER*         iterator,          /**< expression iterator */
+   SCIP_EXPRITER*        iterator,           /**< expression iterator */
    SCIP_EXPRITER_USERDATA userdata           /**< data to be stored in current child */
    );
 

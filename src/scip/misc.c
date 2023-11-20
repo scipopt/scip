@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -695,6 +704,55 @@ void SCIPgmlWriteClosing(
    fprintf(file, "]\n");
 }
 
+/**
+ * writes the opening line to a dot graph file, does not open a file
+ */
+void SCIPdotWriteOpening(
+   FILE*                 file                /**< file to write to */
+)
+{
+   assert(file != NULL);
+
+   fprintf(file, "digraph G {\n");
+}
+
+/** adds a node to the dot graph */
+void SCIPdotWriteNode(
+   FILE*                 file,               /**< file to write to */
+   int                   node,               /**< node id */
+   const char*           label,              /**< node label */
+   const char*           nodetype,           /**< type of the node, or NULL */
+   const char*           fillcolor,          /**< color of the node's interior, or NULL */
+   const char*           bordercolor         /**< color of the node's border, or NULL */
+)
+{
+   assert(file != NULL);
+
+   fprintf(file, "\t%d [shape=\"%s\", label=\"%s\", style=\"filled\", fillcolor=\"%s\", color=\"%s\"];\n", node, nodetype, label, fillcolor, bordercolor);
+}
+
+/** adds an arc (edge) between two nodes in the dot graph */
+void SCIPdotWriteArc(
+   FILE*                 file,               /**< file to write to */
+   int                   source,             /**< source node id of the node */
+   int                   target,             /**< target node id of the edge */
+   const char*           color               /**< color of the edge, or NULL */
+)
+{
+   assert(file != NULL);
+
+   fprintf(file, "\t%d -> %d [color=\"%s\"];\n", source, target, color);
+}
+
+/** writes the closing line to a dot graph file, does not close a file */
+void SCIPdotWriteClosing(
+   FILE* file /**< file to write to */
+)
+{
+   assert(file != NULL);
+
+   fprintf(file, "}\n");
+}
 
 /*
  * Sparse solution
@@ -2223,6 +2281,7 @@ void SCIPmultihashPrintStatistics(
       }
    }
    assert(sumslotsize == multihash->nelements);
+   SCIP_UNUSED(sumslotsize);
 
    SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " multihash entries, used %d/%d slots (%.1f%%)",
       multihash->nelements, usedslots, multihash->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(multihash->nlists));
@@ -5434,6 +5493,44 @@ SCIP_DECL_SORTPTRCOMP(SCIPsortCompInt)
    return 0;
 }
 
+/** implements argsort
+ *
+ * The data pointer is a lookup array of integers.
+ */
+SCIP_DECL_SORTINDCOMP(SCIPsortArgsortInt)
+{
+   int* args;
+   args = (int*) dataptr;
+
+   if( args[ind1] < args[ind2] )
+      return -1;
+
+   if( args[ind1] > args[ind2] )
+      return 1;
+
+   return 0;
+}
+
+
+/** implements argsort
+ *
+ * The data pointer is a lookup array, which are pointer arrays.
+ */
+SCIP_DECL_SORTINDCOMP(SCIPsortArgsortPtr)
+{
+   void** args;
+   args = (void*) dataptr;
+
+   if( args[ind1] < args[ind2] )
+      return -1;
+
+   if( args[ind1] > args[ind2] )
+      return 1;
+
+   return 0;
+}
+
+
 /* first all upwards-sorting methods */
 
 /** sort an indexed element set in non-decreasing order, resulting in a permutation index array */
@@ -8339,12 +8436,12 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
                                               *   components */
    )
 {
-   int* lowlink;
-   int* dfsidx;
-   int* stack;
+   int* lowlink = NULL;
+   int* dfsidx = NULL;
+   int* stack = NULL;
    int stacksize;
-   SCIP_Bool* unprocessed;
-   SCIP_Bool* nodeinstack;
+   SCIP_Bool* unprocessed = NULL;
+   SCIP_Bool* nodeinstack = NULL;
    int maxdfs;
    int nstorednodes;
    int i;
@@ -9661,10 +9758,16 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
  */
 #if defined(__INTEL_COMPILER) || defined(_MSC_VER)
 #pragma fenv_access (on)
-#elif defined __GNUC__
+#elif defined(__GNUC__) && !defined(__clang__)
 #pragma STDC FENV_ACCESS ON
 #endif
-
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#if defined(__clang__)
+__attribute__((optnone))
+#else
+__attribute__((optimize(0)))
+#endif
+#endif
 /** given a (usually very small) interval, tries to find a rational number with simple denominator (i.e. a small
  *  number, probably multiplied with powers of 10) out of this interval; returns TRUE iff a valid rational
  *  number inside the interval was found
@@ -9708,7 +9811,7 @@ SCIP_Bool SCIPfindSimpleRational(
 
 #if defined(__INTEL_COMPILER) || defined(_MSC_VER)
 #pragma fenv_access (off)
-#elif defined __GNUC__
+#elif defined(__GNUC__) && !defined(__clang__)
 #pragma STDC FENV_ACCESS OFF
 #endif
 
@@ -10723,7 +10826,7 @@ char* SCIPstrtok(
 #endif
 }
 
-/** translates the given string into a string where symbols ", ', and spaces are escaped with a \ prefix */
+/** translates the given string into a string where unescaped symbols ", ', and spaces are escaped with a \ prefix */
 void SCIPescapeString(
    char*                 t,                  /**< target buffer to store escaped string */
    int                   bufsize,            /**< size of buffer t */
@@ -10740,15 +10843,32 @@ void SCIPescapeString(
    len = (int)strlen(s);
    for( p = 0, i = 0; i <= len && p < bufsize; ++i, ++p )
    {
-      if( s[i] == ' ' || s[i] == '"' || s[i] == '\'' )
+      if( s[i] == '\\' )
+      {
+         t[p] = s[i];
+         ++p;
+         ++i;
+      }
+      else if( s[i] == ' ' || s[i] == '\"' || s[i] == '\'' )
       {
          t[p] = '\\';
-         p++;
+         ++p;
       }
-      if( p < bufsize )
+      if( i <= len && p < bufsize )
          t[p] = s[i];
    }
    t[bufsize-1] = '\0';
+}
+
+/** increases string pointer as long as it refers to a space character or an explicit space control sequence */
+SCIP_RETCODE SCIPskipSpace(
+   char**                s                   /**< pointer to string pointer */
+   )
+{
+   while( isspace(**s) || ( **s == '\\' && *(*s+1) != '\0' && strchr(SCIP_SPACECONTROL, *(*s+1)) ) )
+      *s += **s == '\\' ? 2 : 1;
+
+   return SCIP_OKAY;
 }
 
 /* safe version of snprintf */
@@ -10783,7 +10903,6 @@ int SCIPsnprintf(
       }
 #endif
       t[len-1] = '\0';
-      n = len-1;
    }
    return n;
 }

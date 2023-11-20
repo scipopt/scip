@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file    presol_dualinfer.c
@@ -60,7 +69,7 @@
 
 #define PRESOL_NAME             "dualinfer"
 #define PRESOL_DESC             "exploit dual information for fixings and side changes"
-#define PRESOL_PRIORITY                -3000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY                (-3000) /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS                0    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING                   SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
@@ -194,7 +203,7 @@ SCIP_RETCODE addEntry(
  */
 static
 void findNextBlock(
-   int*                  list,               /**< list of integers */
+   const int*            list,               /**< list of integers */
    int                   len,                /**< length of list */
    int*                  start,              /**< variable to contain start index of found block */
    int*                  end                 /**< variable to contain end index of found block */
@@ -710,7 +719,7 @@ static
 void getMinMaxActivityResiduals(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
-   int                   col,                /**< column index */
+   int                   withoutcol,         /**< exclude this column index */
    int                   row,                /**< row index */
    SCIP_Real*            lbs,                /**< lower bounds */
    SCIP_Real*            ubs,                /**< upper bounds */
@@ -730,6 +739,7 @@ void getMinMaxActivityResiduals(
    int nminactposinf;
    SCIP_Real maxresact;
    SCIP_Real minresact;
+   int col;
 
    assert(scip != NULL);
    assert(matrix != NULL);
@@ -754,7 +764,9 @@ void getMinMaxActivityResiduals(
 
    for( ; rowpnt < rowend; rowpnt++, valpnt++ )
    {
-      if(*rowpnt == col)
+      col = *rowpnt;
+
+      if( col == withoutcol )
          continue;
 
       coef = *valpnt;
@@ -996,8 +1008,8 @@ void calcMinColActResidual(
    SCIP_Real             val,                /**< matrix coefficient */
    SCIP_Real*            lbdual,             /**< lower bounds of the dual variables */
    SCIP_Real*            ubdual,             /**< upper bounds of the dual variables */
-   SCIP_Real*            mincolact,          /**< minimal column activities */
-   int*                  mincolactinf,       /**< number of infinite contributions to minimal column activity */
+   const SCIP_Real*      mincolact,          /**< minimal column activities */
+   const int*            mincolactinf,       /**< number of infinite contributions to minimal column activity */
    SCIP_Real*            mincolresact        /**< minimal residual column activity */
    )
 {
@@ -1178,7 +1190,7 @@ void infinityCountUpdate(
    int                   row,                /**< row index */
    SCIP_Real*            lbdual,             /**< lower bounds of dual variables */
    SCIP_Real*            ubdual,             /**< upper bounds of dual variables */
-   SCIP_Bool*            isubimplied,        /**< flags indicating of the upper bound is implied */
+   const SCIP_Bool*      isubimplied,        /**< flags indicating of the upper bound is implied */
    SCIP_Real*            mincolact,          /**< minimal column activities */
    int*                  mincolactinf,       /**< number of infinity contributions to minimal column activity */
    SCIP_Bool             ubinfchange,        /**< flag indicating if the upper bound has changed from infinity to a finite value */
@@ -2200,6 +2212,12 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
 
    *result = SCIP_DIDNOTFIND;
 
+   if( SCIPisInfinity(scip, -SCIPgetPseudoObjval(scip)) )
+   {
+      SCIPdebugMsg(scip, "DualInfer not executed because condition of existing dual solution is not fulfilled.\n");
+      return SCIP_OKAY;
+   }
+
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
@@ -2332,7 +2350,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
 
             assert(!SCIPisEQ(scip, matrixlhs, matrixrhs));
 
-            /* when creating the matrix, contraints are multiplied if necessary by (-1)
+            /* when creating the matrix, constraints are multiplied if necessary by (-1)
                * to ensure that the following representation is obtained:
                * infty >= a x >= b
                * or

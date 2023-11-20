@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -431,6 +440,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
          scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
 
+   /* do not consider original solutions of a benders decomposition because their cost information is incomplete */
    if( !scip->set->reopt_enable && scip->set->nactivebenders == 0 )
    {
       oldnsolsfound = scip->primal->nsolsfound;
@@ -1151,7 +1161,10 @@ SCIP_RETCODE presolveRound(
 
       scip->stat->npresolfixedvars += nlocalbdchgs;
 
-      if( !*infeasible && scip->set->nheurs > 0 )
+      /* do not call heuristics during presolving on a benders decomposition
+       * because the cost information of the retransformed original solutions would be incomplete
+       */
+      if( !*infeasible && scip->set->nheurs > 0 && scip->set->nactivebenders == 0 )
       {
          /* call primal heuristics that are applicable during presolving */
          SCIP_Bool foundsol;
@@ -1298,8 +1311,10 @@ SCIP_RETCODE presolve(
    }
    assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
 
-   /* call primal heuristics that are applicable before presolving */
-   if( scip->set->nheurs > 0 )
+   /* call primal heuristics that are applicable before presolving but not on a benders decomposition
+    * because the cost information of the retransformed original solutions would be incomplete
+    */
+   if( scip->set->nheurs > 0 && scip->set->nactivebenders == 0 )
    {
       SCIP_Bool foundsol;
 
@@ -1329,9 +1344,10 @@ SCIP_RETCODE presolve(
 
    *infeasible = FALSE;
    *unbounded = (*unbounded) || (SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip))));
+   *vanished = scip->transprob->nvars == 0 && scip->transprob->nconss == 0 && scip->set->nactivepricers == 0;
 
    finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds)
-         || (*unbounded) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
+         || (*unbounded) || (*vanished) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
    stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */
@@ -1378,8 +1394,9 @@ SCIP_RETCODE presolve(
 
       SCIPdebugMsg(scip, "presolving round %d returned with unbounded = %u, infeasible = %u, finished = %u\n", scip->stat->npresolrounds, *unbounded, *infeasible, finished);
 
-      /* check whether problem is infeasible or unbounded */
-      finished = finished || *unbounded || *infeasible;
+      /* check whether problem is infeasible or unbounded or vanished */
+      *vanished = scip->transprob->nvars == 0 && scip->transprob->nconss == 0 && scip->set->nactivepricers == 0;
+      finished = finished || *unbounded || *infeasible || *vanished;
 
       /* increase round number */
       scip->stat->npresolrounds++;
@@ -1435,12 +1452,12 @@ SCIP_RETCODE presolve(
 
       if( scip->set->nactivepricers == 0 )
       {
+         assert(*vanished);
+
          if( scip->primal->nlimsolsfound > 0 )
             scip->stat->status = SCIP_STATUS_OPTIMAL;
          else
             scip->stat->status = SCIP_STATUS_INFEASIBLE;
-
-         *vanished = TRUE;
       }
    }
 
@@ -1969,7 +1986,9 @@ SCIP_RETCODE freeTransform(
       SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );
    }
 
-   /* copy best primal solutions to original solution candidate list */
+   /* copy best primal solutions to original solution candidate list but not for a benders decomposition
+    * because their cost information would be incomplete
+    */
    if( !scip->set->reopt_enable && scip->set->limit_maxorigsol > 0 && scip->set->misc_transsolsorig && scip->set->nactivebenders == 0 )
    {
       SCIP_Bool stored;
@@ -2114,7 +2133,6 @@ SCIP_RETCODE freeTransforming(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);

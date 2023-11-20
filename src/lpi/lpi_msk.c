@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -59,7 +68,7 @@ typedef enum MSKoptimizertype_enum MSKoptimizertype;
 
 #define MOSEK_CALL(x)  do                                               \
                        {  /*lint --e{641}*/                                                                   \
-                          MSKrescodee _restat_;                                                               \
+                          MSKrescodee _restat_;                         \
                           _restat_ = (x);                                                                     \
                           if( (_restat_) != MSK_RES_OK && (_restat_ ) != MSK_RES_TRM_MAX_NUM_SETBACKS )       \
                           {                                                                                   \
@@ -84,6 +93,7 @@ typedef enum MSKoptimizertype_enum MSKoptimizertype;
 
 #define IS_POSINF(x) ((x) >= MSK_INFINITY)
 #define IS_NEGINF(x) ((x) <= -MSK_INFINITY)
+#define MOSEK_relDiff(val1, val2)         ( ((val1)-(val2))/(MAX3(1.0,REALABS(val1),REALABS(val2))) )
 
 #ifdef SCIP_THREADSAFE
    #if defined(_Thread_local)
@@ -153,6 +163,10 @@ static int numdualobj               =  0;
 struct SCIP_LPi
 {
    MSKenv_t              mosekenv;           /**< Mosek environment */
+#ifdef SCIP_REUSEENV
+   int*                  numlp;              /**< pointer to count on number of tasks in environment */
+   MSKenv_t*             reusemosekenv;      /**< pointer to reused Mosek environment */
+#endif
    MSKtask_t             task;               /**< Mosek task */
    int                   optimizecount;      /**< optimization counter (mainly for debugging) */
    MSKrescodee           termcode;           /**< termination code of last optimization run */
@@ -849,6 +863,10 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->mosekenv = reusemosekenv;
    (*lpi)->lpid = numlp++;
 
+   /* remember address of numlp and reusemosekenv, in case they are thread-local and SCIPlpiFree is called from different thread */
+   (*lpi)->numlp = &numlp;
+   (*lpi)->reusemosekenv = &reusemosekenv;
+
 #else
 
    MOSEK_CALL( MSK_makeenv(&(*lpi)->mosekenv, NULL) );
@@ -928,12 +946,15 @@ SCIP_RETCODE SCIPlpiFree(
    BMSfreeMemoryArrayNull(&(*lpi)->skc);
 
 #ifdef SCIP_REUSEENV
-   assert(numlp > 0);
-   numlp--;
-   if ( numlp == 0 )
+   /* decrement the numlp that belongs to the thread where SCIPlpiCreate was called */
+   assert(*(*lpi)->numlp > 0);
+   --(*(*lpi)->numlp);
+   /* if numlp reached zero, then also free the Mosek environment (that belongs to the thread where SCIPlpiCreate was called) */
+   if( *(*lpi)->numlp == 0 )
    {
-      MOSEK_CALL( MSK_deleteenv(&reusemosekenv) );
-      reusemosekenv = NULL;
+      /* free reused environment */
+      MOSEK_CALL( MSK_deleteenv((*lpi)->reusemosekenv) );
+      *(*lpi)->reusemosekenv = NULL;
    }
 #else
    MOSEK_CALL( MSK_deleteenv(&(*lpi)->mosekenv) );
@@ -1828,13 +1849,23 @@ SCIP_RETCODE getASlice(
       {
          MOSEK_CALL( MSK_getarowslicenumnz(lpi->task, first, last+1, nnonz) );
          surplus = *nnonz;
+#if MSK_VERSION_MAJOR == 9
          MOSEK_CALL( MSK_getarowslice(lpi->task, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+#else
+         MOSEK_CALL( MSK_getarowslice(lpi->task, first, last+1, *nnonz, beg, lpi->aptre, ind, val) );
+         (void)surplus;
+#endif
       }
       else
       {
          MOSEK_CALL( MSK_getacolslicenumnz(lpi->task, first, last+1, nnonz) );
          surplus = *nnonz;
+#if MSK_VERSION_MAJOR == 9
          MOSEK_CALL( MSK_getacolslice(lpi->task, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+#else
+         MOSEK_CALL( MSK_getacolslice(lpi->task, first, last+1, *nnonz, beg, lpi->aptre, ind, val) );
+         (void)surplus;
+#endif
       }
 #endif
 
@@ -2255,7 +2286,6 @@ SCIP_RETCODE SolveWSimplex(
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_MAX_ITERATIONS, 2000000000) );
 #endif
 
-
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "Begin optimize with simplex") );
 #endif
@@ -2476,7 +2506,6 @@ SCIP_RETCODE SolveWSimplex(
       }
    }
 #endif
-
 
 #if DEBUG_PRINT_STAT > 0
    SCIPdebugMessage("Max iter stat    : Count %d branchup = %d branchlo = %d primal %d dual %d\n",
@@ -3500,6 +3529,52 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi != NULL);
    assert(lpi->mosekenv != NULL);
    assert(lpi->task != NULL);
+
+   /* if an objective limit is set and Mosek claims that it is exceeded, we should check that this is indeed the case;
+    * if not this points at numerical instability; note that this aligns with an assert in lp.c */
+   if( SCIPlpiIsObjlimExc(lpi) )
+   {
+      MSKobjsensee objsen;
+      SCIP_Real objlimit;
+      SCIP_Real objvalue;
+      MSKrescodee res;
+
+      res = MSK_getobjsense(lpi->task, &objsen);
+      if ( res != MSK_RES_OK )
+         return FALSE;
+
+      if ( objsen == MSK_OBJECTIVE_SENSE_MINIMIZE )
+      {
+         res = MSK_getdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, &objlimit);
+      }
+      else /* objsen == MSK_OBJECTIVE_SENSE_MAX */
+      {
+         res = MSK_getdouparam(lpi->task, MSK_DPAR_LOWER_OBJ_CUT, &objlimit);
+      }
+      if ( res != MSK_RES_OK )
+         return FALSE;
+
+      if ( lpi->termcode == MSK_RES_TRM_OBJECTIVE_RANGE )
+      {
+         /* if we reached the objective limit, return this value */
+         res = MSK_getdouparam(lpi->task, MSK_DPAR_UPPER_OBJ_CUT, &objvalue);
+      }
+      else
+      {
+         /* otherwise get the value from Mosek */
+         res = MSK_getprimalobj(lpi->task, lpi->lastsolvetype, &objvalue);
+      }
+      if ( res != MSK_RES_OK )
+         return FALSE;
+
+      if ( objsen == MSK_OBJECTIVE_SENSE_MAXIMIZE )
+      {
+         objlimit *= -1.0;
+         objvalue *= -1.0;
+      }
+      if ( ! SCIPlpiIsInfinity(lpi, objlimit) && MOSEK_relDiff(objvalue, objlimit) < -1e-9 ) /*lint !e666*/
+         return FALSE;
+   }
 
    return ( lpi->termcode == MSK_RES_OK
       || lpi->termcode == MSK_RES_TRM_MAX_ITERATIONS

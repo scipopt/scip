@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scip.zib.de.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -22,6 +31,7 @@
 
 #include <string.h>
 
+#include "include/scip_test.h"
 /* XXX: need the consdata struct because we don't have getNlhdlrs or findNlhdlrs; I don't add those function because I'm unsure
  * we actually need them
  */
@@ -44,8 +54,6 @@
 /*
  * TEST
  */
-
-#include "include/scip_test.h"
 
 static SCIP* scip;
 static SCIP_VAR* x;
@@ -1227,7 +1235,7 @@ void testCut(
    SCIP_Real enorm;
    SCIP_Real cutnorm;
    SCIP_Real side;
-   SCIP_Real nnonz;
+   int nnonz;
    SCIP_Bool success;
 
    /* compute expected cut's norm: this norm does not have to be equal to cutnorm! */
@@ -1253,8 +1261,14 @@ void testCut(
    cols = SCIProwGetCols(cut);
    coefs = SCIProwGetVals(cut);
 
-   /* check same number of coefficients and norm not zero */
-   cr_expect_eq(nnonz, expectedncoefs);
+   SCIPprintRow(scip, cut, NULL);
+
+   /* ~~check same number of coefficients~~
+    * currently not, as with HiGHS a coef of 2e-9 is obtained, which messes up nonzero count but still passes the coef checks below
+    */
+   /* cr_expect_eq(nnonz, expectedncoefs, "expected %d coefs, but got %d\n", expectedncoefs, nnonz); */
+
+   /* check norm not zero */
    cr_assert(cutnorm > 0);
 
    /* check side */
@@ -1263,14 +1277,26 @@ void testCut(
    cr_expect_float_eq(side / cutnorm, expectedlhs / enorm, 1e-6, "expecting lhs %g, got %g\n", expectedlhs / enorm, side
          / cutnorm);
 
-   /* check coefficients */
-   for( int j = 0; j < expectedncoefs; j++ )
-      for( int i = 0; i < expectedncoefs; i++ )
+    /* check coefficients */
+   for( int j = 0; j < nnonz; j++ )
+   {
+      SCIP_Real expcoeffound = 0.0;
+       for( int i = 0; i < expectedncoefs; i++ )
+          if( SCIPcolGetVar(cols[j]) == expectedvars[i] )
+            expcoeffound = expectedcoefs[i];
+      cr_expect_float_eq(coefs[j] / cutnorm, expcoeffound / enorm, 1e-6, "expecting cut coef %g, got %g\n",
+         expcoeffound / enorm, coefs[j] / cutnorm);
+   }
+   /* and another round to check that there isn't an expected coef missing */
+   for( int i = 0; i < expectedncoefs; i++ )
+   {
+      SCIP_Real coeffound = 0.0;
+      for( int j = 0; j < nnonz; j++ )
          if( SCIPcolGetVar(cols[j]) == expectedvars[i] )
-         {
-            cr_expect_float_eq(coefs[j] / cutnorm, expectedcoefs[i] / enorm, 1e-6, "expecting cut coef %g, got %g\n",
-                  expectedcoefs[i] / enorm, coefs[j] / cutnorm);
-         }
+            coeffound = coefs[j];
+      cr_expect_float_eq(coeffound / cutnorm, expectedcoefs[i] / enorm, 1e-6, "expecting cut coef %g, got %g\n",
+         expectedcoefs[i] / enorm, coeffound / cutnorm);
+   }
 
    /* free cut */
    SCIPreleaseRow(scip, &cut);
@@ -2045,7 +2071,7 @@ Test(interCuts, testRaysAuxvar2)
    SCIP_CALL( SCIPchgVarObjProbing(scip, auxvar,  1.0/4) );
 
 
-   SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
+   /* SCIP_CALL( SCIPwriteLP(scip, "probing.lp") ); */
 
    SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
 
@@ -2593,7 +2619,7 @@ Test(interCuts, strength4ab, .description = "more complicated test strengthening
       SCIP_CALL( SCIPchgVarObjProbing(scip, z, 1.0) );
 
 
-      SCIP_CALL( SCIPwriteLP(scip, "probing.lp") );
+      /* SCIP_CALL( SCIPwriteLP(scip, "probing.lp") ); */
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
       cr_assert_not(lperror);

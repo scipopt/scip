@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -505,7 +514,7 @@ SCIP_RETCODE tightenSingleVar(
          }
 
          SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, conslhs, consrhs,
-               FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+               FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal, FALSE, TRUE, TRUE, FALSE) );
 
          SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, var, 1.0) );
 
@@ -610,6 +619,10 @@ SCIP_Real getMinActivity(
          assert(curvarlbs == NULL || !SCIPsetIsInfinity(set, -curvarlbs[v]));
 
          bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+
+         if( SCIPsetIsInfinity(set, -bnd) )
+            return -SCIPsetInfinity(set);
+
          SCIPquadprecProdDD(delta, val, bnd);
       }
       else
@@ -619,6 +632,10 @@ SCIP_Real getMinActivity(
          assert(curvarubs == NULL || !SCIPsetIsInfinity(set, curvarubs[v]));
 
          bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+
+         if( SCIPsetIsInfinity(set, bnd) )
+            return -SCIPsetInfinity(set);
+
          SCIPquadprecProdDD(delta, val, bnd);
       }
 
@@ -676,6 +693,10 @@ SCIP_Real getMaxActivity(
          assert(curvarlbs == NULL || !SCIPsetIsInfinity(set, -curvarlbs[v]));
 
          bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+
+         if( SCIPsetIsInfinity(set, -bnd) )
+            return SCIPsetInfinity(set);
+
          SCIPquadprecProdDD(delta, val, bnd);
       }
       else
@@ -685,6 +706,10 @@ SCIP_Real getMaxActivity(
          assert(curvarubs == NULL || !SCIPsetIsInfinity(set, curvarubs[v]));
 
          bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+
+         if( SCIPsetIsInfinity(set, bnd) )
+            return SCIPsetInfinity(set);
+
          SCIPquadprecProdDD(delta, val, bnd);
       }
 
@@ -1281,8 +1306,8 @@ SCIP_RETCODE separateAlternativeProofs(
    SCIP_Real* cutcoefs;
    SCIP_Real cutefficacy;
    SCIP_Real cutrhs;
-   SCIP_Real proofefficiacy;
-   SCIP_Real efficiacynorm;
+   SCIP_Real proofefficacy;
+   SCIP_Real efficacynorm;
    SCIP_Bool islocal;
    SCIP_Bool cutsuccess;
    SCIP_Bool success;
@@ -1300,15 +1325,15 @@ SCIP_RETCODE separateAlternativeProofs(
    inds = SCIPaggrRowGetInds(proofrow);
    nnz = SCIPaggrRowGetNNz(proofrow);
 
-   proofefficiacy = SCIPaggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
+   proofefficacy = SCIPaggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, &infdelta);
 
    if( infdelta )
       return SCIP_OKAY;
 
-   proofefficiacy -= SCIPaggrRowGetRhs(proofrow);
+   proofefficacy -= SCIPaggrRowGetRhs(proofrow);
 
-   efficiacynorm = SCIPaggrRowCalcEfficacyNorm(set->scip, proofrow);
-   proofefficiacy /= MAX(1e-6, efficiacynorm);
+   efficacynorm = SCIPaggrRowCalcEfficacyNorm(set->scip, proofrow);
+   proofefficacy /= MAX(1e-6, efficacynorm);
 
    /* create reference solution */
    SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
@@ -1352,7 +1377,7 @@ SCIP_RETCODE separateAlternativeProofs(
    success = (success || cutsuccess);
 
    /* replace the current proof */
-   if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficiacy * cutnnz )
+   if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficacy * cutnnz )
    {
       SCIP_PROOFSET* alternativeproofset;
       SCIP_Bool redundant;

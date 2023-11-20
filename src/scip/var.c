@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -476,11 +485,11 @@ SCIP_RETCODE varAddLbchginfo(
    int                   depth,              /**< depth in the tree, where the bound change takes place */
    int                   pos,                /**< position of the bound change in its bound change array */
    SCIP_VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
-   SCIP_CONS*            infercons,          /**< constraint that infered this bound change, or NULL */
+   SCIP_CONS*            infercons,          /**< constraint that inferred this bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_BOUNDTYPE        inferboundtype,     /**< type of bound for inference var: lower or upper bound */
-   SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or infered bound change */
+   SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or inferred bound change */
    )
 {
    assert(var != NULL);
@@ -551,11 +560,11 @@ SCIP_RETCODE varAddUbchginfo(
    int                   depth,              /**< depth in the tree, where the bound change takes place */
    int                   pos,                /**< position of the bound change in its bound change array */
    SCIP_VAR*             infervar,           /**< variable that was changed (parent of var, or var itself) */
-   SCIP_CONS*            infercons,          /**< constraint that infered this bound change, or NULL */
+   SCIP_CONS*            infercons,          /**< constraint that inferred this bound change, or NULL */
    SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change, or NULL */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_BOUNDTYPE        inferboundtype,     /**< type of bound for inference var: lower or upper bound */
-   SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or infered bound change */
+   SCIP_BOUNDCHGTYPE     boundchgtype        /**< bound change type: branching decision or inferred bound change */
    )
 {
    assert(var != NULL);
@@ -1874,10 +1883,7 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
 
    /* remove the variable from all cliques */
    if( SCIPvarIsBinary(var) )
-   {
       SCIPcliquelistRemoveFromCliques(var->cliquelist, cliquetable, var, irrelevantvar);
-      SCIPcliquelistFree(&var->cliquelist, blkmem);
-   }
 
    /**@todo variable bounds like x <= b*z + d with z general integer are not removed from x's vbd arrays, because
     *       z has no link (like in the binary case) to x
@@ -2311,9 +2317,10 @@ SCIP_RETCODE parseBounds(
 
    /* get bound type */
    SCIPstrCopySection(str, ' ', ' ', type, SCIP_MAXSTRLEN, endptr);
-   if ( strncmp(type, "original", 8) != 0 && strncmp(type, "global", 6) != 0 && strncmp(type, "local", 5) != 0 && strncmp(type, "lazy", 4) != 0 )
+   if ( *endptr == str
+        || ( strncmp(type, "original", 8) != 0 && strncmp(type, "global", 6) != 0 && strncmp(type, "local", 5) != 0 && strncmp(type, "lazy", 4) != 0 ) )
    {
-      SCIPsetDebugMsg(set, "unkown bound type <%s>\n", type);
+      SCIPsetDebugMsg(set, "unkown bound type\n");
       *endptr = NULL;
       return SCIP_OKAY;
    }
@@ -2373,7 +2380,7 @@ SCIP_RETCODE varParse(
 
    /* copy variable type */
    SCIPstrCopySection(str, '[', ']', token, SCIP_MAXSTRLEN, endptr);
-   assert(str != *endptr);
+   assert(*endptr != str);
    SCIPsetDebugMsg(set, "parsed variable type <%s>\n", token);
 
    /* get variable type */
@@ -2397,7 +2404,7 @@ SCIP_RETCODE varParse(
 
    /* get variable name */
    SCIPstrCopySection(str, '<', '>', name, SCIP_MAXSTRLEN, endptr);
-   assert(endptr != NULL);
+   assert(*endptr != str);
    SCIPsetDebugMsg(set, "parsed variable name <%s>\n", name);
 
    /* move string pointer behind variable name */
@@ -3832,7 +3839,6 @@ SCIP_RETCODE SCIPvarFix(
       assert(var->vlbs == NULL);
       assert(var->vubs == NULL);
       assert(var->implics == NULL);
-      assert(var->cliquelist == NULL);
 
       /* clear the history of the variable */
       SCIPhistoryReset(var->history);
@@ -4766,9 +4772,6 @@ SCIP_RETCODE SCIPvarAggregate(
    assert(infeasible != NULL);
    assert(aggregated != NULL);
 
-   /* check aggregation on debugging solution */
-   SCIP_CALL( SCIPdebugCheckAggregation(set, var, &aggvar, &scalar, constant, 1) ); /*lint !e506 !e774*/
-
    *infeasible = FALSE;
    *aggregated = FALSE;
 
@@ -4780,7 +4783,7 @@ SCIP_RETCODE SCIPvarAggregate(
    {
       SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventfilter,
             eventqueue, cliquetable, constant, infeasible, aggregated) );
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    /* don't perform the aggregation if the aggregation variable is multi-aggregated itself */
@@ -4817,7 +4820,7 @@ SCIP_RETCODE SCIPvarAggregate(
          SCIP_CALL( SCIPvarFix(var, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
                eventfilter, eventqueue, cliquetable, constant/(1.0-scalar), infeasible, aggregated) );
       }
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    /* tighten the bounds of aggregated and aggregation variable */
@@ -4826,14 +4829,13 @@ SCIP_RETCODE SCIPvarAggregate(
    if( *infeasible || fixed )
    {
       *aggregated = fixed;
-      return SCIP_OKAY;
+      goto TERMINATE;
    }
 
    /* delete implications and variable bounds of the aggregated variable from other variables, but keep them in the
     * aggregated variable
     */
    SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, FALSE) );
-   assert(var->cliquelist == NULL);
 
    /* set the aggregated variable's objective value to 0.0 */
    obj = var->obj;
@@ -5022,6 +5024,11 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_CALL( varEventVarFixed(var, blkmem, set, eventqueue, 1) );
 
    *aggregated = TRUE;
+
+TERMINATE:
+   /* check aggregation on debugging solution */
+   if( *infeasible || *aggregated )
+      SCIP_CALL( SCIPdebugCheckAggregation(set, var, &aggvar, &scalar, constant, 1) ); /*lint !e506 !e774*/
 
    return SCIP_OKAY;
 }
@@ -5295,8 +5302,6 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    )
 {
    SCIP_Bool easyaggr;
-   SCIP_Real maxscalar;
-   SCIP_Real absquot;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -5322,11 +5327,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    *infeasible = FALSE;
    *aggregated = FALSE;
 
-   absquot = REALABS(scalarx / scalary);
-   maxscalar = SCIPsetFeastol(set) / SCIPsetEpsilon(set);
-   maxscalar = MAX(maxscalar, 1.0);
-
-   if( absquot > maxscalar || absquot < 1 / maxscalar )
+   if( SCIPsetIsZero(set, scalarx / scalary) || SCIPsetIsZero(set, scalary / scalarx) )
       return SCIP_OKAY;
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
@@ -5354,41 +5355,35 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    /* figure out, which variable should be aggregated */
    easyaggr = FALSE;
 
-   /* check if it is an easy aggregation that means:
-    *
-    *   a*x + b*y == c -> x == -b/a * y + c/a iff |b/a| > feastol and |a/b| > feastol
-    */
-   if( !SCIPsetIsFeasZero(set, scalary/scalarx) && !SCIPsetIsFeasZero(set, scalarx/scalary) )
+   /* check if it is an easy aggregation */
+   if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) < SCIP_VARTYPE_CONTINUOUS )
    {
-      if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) < SCIP_VARTYPE_CONTINUOUS )
-      {
-         easyaggr = TRUE;
-      }
-      else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
-      {
-         easyaggr = TRUE;
-      }
-      else if( SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx) )
-      {
-         /* we have an easy aggregation if we flip the variables x and y */
-         SCIP_VAR* var;
-         SCIP_Real scalar;
+      easyaggr = TRUE;
+   }
+   else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
+   {
+      easyaggr = TRUE;
+   }
+   else if( SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx) )
+   {
+      /* we have an easy aggregation if we flip the variables x and y */
+      SCIP_VAR* var;
+      SCIP_Real scalar;
 
-         /* switch the variables, such that varx is the aggregated variable */
-         var = vary;
-         vary = varx;
-         varx = var;
-         scalar = scalary;
-         scalary = scalarx;
-         scalarx = scalar;
-         easyaggr = TRUE;
-      }
-      else if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
-      {
-         /* the aggregation is still easy if both variables are continuous */
-         assert(SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS); /* otherwise we are in the first case */
-         easyaggr = TRUE;
-      }
+      /* switch the variables, such that varx is the aggregated variable */
+      var = vary;
+      vary = varx;
+      varx = var;
+      scalar = scalary;
+      scalary = scalarx;
+      scalarx = scalar;
+      easyaggr = TRUE;
+   }
+   else if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
+   {
+      /* the aggregation is still easy if both variables are continuous */
+      assert(SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS); /* otherwise we are in the first case */
+      easyaggr = TRUE;
    }
 
    /* did we find an "easy" aggregation? */
@@ -5423,7 +5418,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       /* aggregate the variable */
       SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
             branchcand, eventfilter, eventqueue, vary, scalar, constant, infeasible, aggregated) );
-      assert(*aggregated || *infeasible);
+      assert(*aggregated || *infeasible || SCIPvarDoNotAggr(varx));
    }
    else if( (SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT)
       && (SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vary) == SCIP_VARTYPE_IMPLINT) )
@@ -5486,9 +5481,6 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    assert(aggregated != NULL);
 
    SCIPsetDebugMsg(set, "trying multi-aggregating variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
-
-   /* check multi-aggregation on debugging solution */
-   SCIP_CALL( SCIPdebugCheckAggregation(set, var, aggvars, scalars, constant, naggvars) ); /*lint !e506 !e774*/
 
    *infeasible = FALSE;
    *aggregated = FALSE;
@@ -5641,7 +5633,6 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       assert(var->vlbs == NULL);
       assert(var->vubs == NULL);
       assert(var->implics == NULL);
-      assert(var->cliquelist == NULL);
 
       /* set the aggregated variable's objective value to 0.0 */
       obj = var->obj;
@@ -5782,6 +5773,10 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
    }
+
+   /* check multi-aggregation on debugging solution */
+   if( *infeasible || *aggregated )
+      SCIP_CALL( SCIPdebugCheckAggregation(set, var, aggvars, scalars, constant, naggvars) ); /*lint !e506 !e774*/
 
    return SCIP_OKAY;
 }
@@ -6205,7 +6200,6 @@ SCIP_RETCODE SCIPvarChgType(
    {
       assert(oldtype == (SCIP_VARTYPE)var->negatedvar->vartype
             || SCIPvarIsBinary(var) == SCIPvarIsBinary(var->negatedvar));
-
 
       var->negatedvar->vartype = vartype; /*lint !e641*/
 
@@ -11253,9 +11247,6 @@ SCIP_RETCODE SCIPvarFixBinary(
             (*nbdchgs)++;
       }
    }
-
-   /* during presolving, the variable should have been removed immediately from all its cliques */
-   assert(SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING || var->cliquelist == NULL);
 
    return SCIP_OKAY;
 }

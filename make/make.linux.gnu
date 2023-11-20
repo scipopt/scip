@@ -11,3 +11,7 @@ READLINE_LDFLAGS=	-lreadline -lncurses
 CFLAGS		=	-std=c99 -D_XOPEN_SOURCE=600
 FORTRANLIBS	=	-lgfortran
 FORTRAN_NAMING_CONVENTION = LCASE_DECOR
+ifeq ($(SHARED),true)
+FLAGS		+=	-fPIC
+endif
+LINK_shared		=	-shared

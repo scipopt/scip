@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright 2002-2022 Zuse Institute Berlin                                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -176,8 +185,8 @@ SCIP_Longint SCIPconflictGetNAppliedLocalLiterals(
    return conflict->nappliedlocliterals;
 }
 
-/** compares two conflict set entries, such that bound changes infered later are
- *  ordered prior to ones that were infered earlier
+/** compares two conflict set entries, such that bound changes inferred later are
+ *  ordered prior to ones that were inferred earlier
  */
 static
 SCIP_DECL_SORTPTRCOMP(conflictBdchginfoComp)
@@ -318,7 +327,7 @@ SCIP_RETCODE SCIPconflictFree(
    assert((*conflict)->nconflictsets == 0);
    assert((*conflict)->ntmpbdchginfos == 0);
 
-#ifdef SCIP_CONFGRAPH
+#if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
    confgraphFree();
 #endif
 
@@ -896,25 +905,36 @@ SCIP_Real SCIPaggrRowGetMinActivity(
       if( val > 0.0 )
       {
          SCIP_Real bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+
+         if( SCIPsetIsInfinity(set, -bnd) )
+         {
+            if( infdelta != NULL )
+               *infdelta = TRUE;
+
+            return -SCIPsetInfinity(set);
+         }
+
          SCIPquadprecProdDD(delta, val, bnd);
       }
       else
       {
          SCIP_Real bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+
+         if( SCIPsetIsInfinity(set, bnd) )
+         {
+            if( infdelta != NULL )
+               *infdelta = TRUE;
+
+            return -SCIPsetInfinity(set);
+         }
+
          SCIPquadprecProdDD(delta, val, bnd);
       }
 
       /* update minimal activity */
       SCIPquadprecSumQQ(minact, minact, delta);
-
-      if( infdelta != NULL && SCIPsetIsInfinity(set, REALABS(QUAD_TO_DBL(delta))) )
-      {
-         *infdelta = TRUE;
-         goto TERMINATE;
-      }
    }
 
-  TERMINATE:
    /* check whether the minimal activity is infinite */
    if( SCIPsetIsInfinity(set, QUAD_TO_DBL(minact)) )
       return SCIPsetInfinity(set);
@@ -1414,12 +1434,12 @@ SCIP_RETCODE SCIPgetDualProof(
     * where lhs, rhs, lb, and ub are selected in order to maximize the feasibility of the row.
     */
 
-   /* add the objective function to the aggregation row with current cutoff bound as right-hand side
+   /* add the objective function to the aggregation row with respect to the current cutoff bound
     *
-    * use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
-    * infeasible
+    * for an integral objective the right-hand side is reduced by the cutoff bound delta to cut off up to the next
+    * possible objective value below the cutoff bound
     */
-   SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - SCIPsetSumepsilon(set), 1.0) );
+   SCIP_CALL( SCIPaggrRowAddObjectiveFunction(set->scip, farkasrow, lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0), 1.0) );
 
    /* dual row: z^T{lhs,rhs} - c* <= (-r^T - (y-z)^TA){lb,ub}
     * process rows: add z^T{lhs,rhs} to the dual row's left hand side, and -(y-z)^TA to the dual row's coefficients
@@ -1621,10 +1641,10 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    /* get temporary memory for infeasibility proof coefficients */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &pseudocoefs, nvars) );
 
-   /* use a slightly tighter cutoff bound, because solutions with equal objective value should also be declared
-    * infeasible
+   /* for an integral objective use the cutoff bound reduced by the cutoff bound delta to cut off up to the next better
+    * objective value
     */
-   pseudolhs = -(lp->cutoffbound - SCIPsetSumepsilon(set));
+   pseudolhs = -(lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0));
 
    /* store the objective values as infeasibility proof coefficients, and recalculate the pseudo activity */
    pseudoact = 0.0;

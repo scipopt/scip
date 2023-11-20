@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -66,6 +75,7 @@
 #define SCIP_DEFAULT_SLACKVARCOEF          1e+6  /** the initial objective coefficient of the slack variables in the subproblem */
 #define SCIP_DEFAULT_MAXSLACKVARCOEF       1e+9  /** the maximal objective coefficient of the slack variables in the subproblem */
 #define SCIP_DEFAULT_CHECKCONSCONVEXITY    TRUE  /** should the constraints of the subproblem be checked for convexity? */
+#define SCIP_DEFAULT_NLPITERLIMIT         10000  /** iteration limit for NLP solver */
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                   *  merge candidates */
@@ -703,7 +713,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       {
          SCIP_VARTYPE vartype;
 
-         /* set the variable type of the auxiliary variables to implied integer if the objective function of the
+         /* set the variable type of the auxiliary variables to implicit integer if the objective function of the
           * subproblem is guaranteed to be integer. This behaviour is controlled through a user parameter.
           * NOTE: It is only possible to determine if the objective function is integral if the subproblem is defined as
           * a SCIP instance, i.e. not NULL.
@@ -1059,6 +1069,7 @@ SCIP_RETCODE doBendersCreate(
    (*benders)->bendersdata = bendersdata;
    SCIP_CALL( SCIPclockCreate(&(*benders)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*benders)->bendersclock, SCIP_CLOCKTYPE_DEFAULT) );
+   (*benders)->nlpparam = SCIP_NLPPARAM_DEFAULT(set->scip);  /*lint !e446*/
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/priority", name);
@@ -1124,7 +1135,7 @@ SCIP_RETCODE doBendersCreate(
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/auxvarsimplint", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
-         "if the subproblem objective is integer, then define the auxiliary variables as implied integers?",
+         "if the subproblem objective is integer, then define the auxiliary variables as implicit integers?",
          &(*benders)->auxvarsimplint, FALSE, SCIP_DEFAULT_AUXVARSIMPLINT, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutcheck", name);
@@ -1181,6 +1192,11 @@ SCIP_RETCODE doBendersCreate(
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
          "should the constraints of the subproblems be checked for convexity?", &(*benders)->checkconsconvexity, FALSE,
          SCIP_DEFAULT_CHECKCONSCONVEXITY, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/nlpiterlimit", name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
+         "iteration limit for NLP solver", &(*benders)->nlpparam.iterlimit, FALSE,
+         SCIP_DEFAULT_NLPITERLIMIT, 0, INT_MAX, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -1602,7 +1618,7 @@ SCIP_RETCODE checkSubproblemConvexity(
    /* getting the number of integer and binary variables to determine the problem type */
    SCIP_CALL( SCIPgetVarsData(subproblem, &vars, &nvars, &nbinvars, &nintvars, &nimplintvars, NULL) );
 
-   /* if there are any binary, integer or implied integer variables, then the subproblems is marked as non-convex */
+   /* if there are any binary, integer or implicit integer variables, then the subproblems is marked as non-convex */
    if( nbinvars != 0 || nintvars != 0 || nimplintvars != 0 )
    {
       discretevar = TRUE;
@@ -1839,7 +1855,7 @@ SCIP_RETCODE createSubproblems(
                SCIP_CALL( SCIPbendersGetVar(benders, set, vars[j], &mastervar, -1) );
 
                /* if mastervar is not NULL, then the subproblem variable has a corresponding master problem variable */
-               if( mastervar != NULL && !SCIPisZero(subproblem, SCIPvarGetObj(vars[j])) )
+               if( mastervar != NULL && SCIPvarGetObj(vars[j]) != 0.0 )
                {
                   SCIPverbMessage(subproblem, SCIP_VERBLEVEL_FULL, NULL, "Benders' decomposition: Changing the objective "
                      "coefficient of copy of master problem variable <%s> in subproblem %d to zero.\n",
@@ -4737,6 +4753,16 @@ SCIP_RETCODE resetOrigSubproblemParams(
    return SCIP_OKAY;
 }
 
+/** returns NLP solver parameters used for solving NLP subproblems */
+SCIP_NLPPARAM SCIPbendersGetNLPParam(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+)
+{
+   assert(benders != NULL);
+
+   return benders->nlpparam;
+}
+
 /** solves the LP of the Benders' decomposition subproblem
  *
  *  This requires that the subproblem is in probing mode.
@@ -4793,7 +4819,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
       SCIP_SOL* nlpsol;
 #endif
 
-      SCIP_CALL( SCIPsolveNLP(subproblem) );  /*lint !e666*/
+      SCIP_CALL( SCIPsolveNLPParam(subproblem, benders->nlpparam) );
 
       nlpsolstat = SCIPgetNLPSolstat(subproblem);
       nlptermstat = SCIPgetNLPTermstat(subproblem);
@@ -4825,6 +4851,12 @@ SCIP_RETCODE SCIPbendersSolveSubproblemLP(
       }
       else if( nlptermstat == SCIP_NLPTERMSTAT_TIMELIMIT )
       {
+         (*solvestatus) = SCIP_STATUS_TIMELIMIT;
+      }
+      else if( nlptermstat == SCIP_NLPTERMSTAT_ITERLIMIT)
+      {
+         /* this is an approximation in lack of a better fitting SCIP_STATUS */
+         SCIPwarningMessage(scip, "The NLP solver stopped due to an iteration limit for Benders' decomposition subproblem %d. Consider increasing benders/%s/nlpiterlimit.\n", probnumber, SCIPbendersGetName(benders));
          (*solvestatus) = SCIP_STATUS_TIMELIMIT;
       }
       else if( nlptermstat == SCIP_NLPTERMSTAT_INTERRUPT )
@@ -5182,7 +5214,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
          SCIP_NLPSOLSTAT nlpsolstat;
          SCIP_NLPTERMSTAT nlptermstat;
 
-         SCIP_CALL( SCIPsolveNLP(subproblem) );  /*lint !e666*/
+         SCIP_CALL( SCIPsolveNLPParam(subproblem, benders->nlpparam) );
 
          nlpsolstat = SCIPgetNLPSolstat(subproblem);
          nlptermstat = SCIPgetNLPTermstat(subproblem);
@@ -5193,8 +5225,7 @@ SCIP_RETCODE SCIPbendersComputeSubproblemLowerbound(
             /* trust infeasible only if terminated "okay" */
             (*infeasible) = TRUE;
          }
-         else if( nlpsolstat == SCIP_NLPSOLSTAT_LOCOPT || nlpsolstat == SCIP_NLPSOLSTAT_GLOBOPT
-            || nlpsolstat == SCIP_NLPSOLSTAT_FEASIBLE )
+         else if( nlpsolstat == SCIP_NLPSOLSTAT_LOCOPT || nlpsolstat == SCIP_NLPSOLSTAT_GLOBOPT )
          {
             dualbound = SCIPretransformObj(subproblem, SCIPgetNLPObjval(subproblem));
          }
@@ -6238,7 +6269,7 @@ SCIP_RETCODE SCIPbendersSolSlackVarsActive(
       {
          if( strstr(SCIPvarGetName(vars[j]), SLACKVAR_NAME) != NULL )
          {
-            if( !SCIPisZero(subproblem, SCIPgetSolVal(subproblem, sol, vars[j])) )
+            if( SCIPisPositive(subproblem, SCIPgetSolVal(subproblem, sol, vars[j])) )
             {
                (*activeslack) = TRUE;
                break;

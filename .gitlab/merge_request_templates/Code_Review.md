@@ -7,6 +7,7 @@
 * [ ] The code change is correct.
 * [ ] The naming and place of new methods is clear and consistent **or** no new methods have been added.
 * [ ] Emphasis settings are up to date.
+* [ ] Ensure that new code and features use randomization where necessary to account for performance variability.
 * [ ] The code is sufficiently documented.
 * [ ] The coding style is OK, see https://scipopt.org/doc/html/CODE.php.
 
@@ -18,8 +19,9 @@
 
 ### Testing
 
-* [ ] ctest passes without errors (type some of `jenkins ctest {soplex master,soplex bugfix,cplex,gurobi,mosek,xpress}`).
-* [ ] The performance impact has been checked (type some of `jenkins performance {mip,minlp,minlplib,mip quick,minlp quick,mip continue,minlp continue}`) **or** the changed code will not be executed by default.
+* [ ] ctest passes without errors (type some of `jenkins ctest {soplex master,soplex bugfix,cplex,gurobi,mosek,xpress,highs}`).
+* [ ] The performance impact on MILP has been checked (type some of `jenkins performance {mip,mip quick,mip continue}`), **or** the changed code will not be executed for MILP instances, **or** the changed code will not be executed by default.
+* [ ] The performance impact on MINLP has been checked (type some of `jenkins performance {minlp,minlplib,minlp quick,minlp continue}`) **or** the changed code will not be executed by default.
 * [ ] The new code is sufficiently covered by tests (perhaps, new coverage settings or new unit tests have been added).
 
 ### Does this merge request introduce an API change? :warning:

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -2604,8 +2613,9 @@ SCIP_RETCODE readSolFile(
       /* there are some lines which may preceed the solution information */
       if( strncasecmp(buffer, "solution status:", 16) == 0 || strncasecmp(buffer, "objective value:", 16) == 0 ||
          strncasecmp(buffer, "Log started", 11) == 0 || strncasecmp(buffer, "Variable Name", 13) == 0 ||
-         strncasecmp(buffer, "All other variables", 19) == 0 || strncasecmp(buffer, "\n", 1) == 0 ||
-         strncasecmp(buffer, "NAME", 4) == 0 || strncasecmp(buffer, "ENDATA", 6) == 0 )    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         strncasecmp(buffer, "All other variables", 19) == 0 || strspn(buffer, " \n\r\t\f") == strlen(buffer) ||
+         strncasecmp(buffer, "NAME", 4) == 0 || strncasecmp(buffer, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         strncasecmp(buffer, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
          continue;
 
       /* parse the line */
@@ -2942,32 +2952,6 @@ SCIP_RETCODE SCIPaddSol(
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
-      /* if the solution is added during presolving and it is not defined on original variables,
-       * presolving operations will destroy its validity, so we retransform it to the original space
-       */
-      if( !SCIPsolIsOriginal(sol) )
-      {
-         SCIP_SOL* bestsol = SCIPgetBestSol(scip);
-         SCIP_SOL* tmpsol = sol;
-         SCIP_Bool hasinfval;
-
-         SCIP_CALL( SCIPcreateSolCopy(scip, &tmpsol, sol) );
-
-         SCIP_CALL( SCIPsolUnlink(tmpsol, scip->set, scip->transprob) );
-         SCIP_CALL( SCIPsolRetransform(tmpsol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
-
-         SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
-               scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter,
-               &tmpsol, stored) );
-
-         if( *stored && (bestsol != SCIPgetBestSol(scip)) )
-         {
-            SCIPstoreSolutionGap(scip);
-         }
-
-         return SCIP_OKAY;
-      }
-      /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    {
@@ -3032,17 +3016,6 @@ SCIP_RETCODE SCIPaddSolFree(
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
-      /* if the solution is added during presolving and it is not defined on original variables,
-       * presolving operations will destroy its validity, so we retransform it to the original space
-       */
-      if( !SCIPsolIsOriginal(*sol) )
-      {
-         SCIP_Bool hasinfval;
-
-         SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
-         SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
-      }
-      /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    {
@@ -3152,17 +3125,6 @@ SCIP_RETCODE SCIPtrySol(
       return SCIP_INVALIDDATA;
    }
 
-   /* if the solution is added during presolving and it is not defined on original variables,
-    * presolving operations will destroy its validity, so we retransform it to the original space
-    */
-   if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(sol) )
-   {
-      SCIP_Bool hasinfval;
-
-      SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
-      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
-   }
-
    if( SCIPsolIsOriginal(sol) )
    {
       SCIP_Bool feasible;
@@ -3256,17 +3218,6 @@ SCIP_RETCODE SCIPtrySolFree(
    {
       SCIPerrorMessage("Cannot check feasibility of partial solutions.\n");
       return SCIP_INVALIDDATA;
-   }
-
-   /* if the solution is added during presolving and it is not defined on original variables,
-    * presolving operations will destroy its validity, so we retransform it to the original space
-    */
-   if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(*sol) )
-   {
-      SCIP_Bool hasinfval;
-
-      SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
-      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
    }
 
    if( SCIPsolIsOriginal(*sol) )

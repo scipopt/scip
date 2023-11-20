@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -52,9 +61,13 @@ enum SCIP_Vartype
 {
    SCIP_VARTYPE_BINARY     = 0,         /**< binary variable: \f$ x \in \{0,1\} \f$ */
    SCIP_VARTYPE_INTEGER    = 1,         /**< integer variable: \f$ x in \{lb, \dots, ub\} \f$ */
-   SCIP_VARTYPE_IMPLINT    = 2,         /**< implicit integer variable: Integrality of this variable is implied for every optimal
-                                             solution of the remaining problem after any fixing all integer and binary variables,
-                                             without the explicit need to enforce integrality further */
+   SCIP_VARTYPE_IMPLINT    = 2,         /**< continuous variable with optional integrality restriction:
+                                             assigning a fractional value for the variable is feasible and the solver will not enforce
+                                             integrality for this variable, but it may treat the variable as if an additional integrality
+                                             restriction exists in certain cases, e.g., during boundtightening;
+                                             typically, this variable type is used for implicit integer variables, that is, variables which
+                                             are known to take an integral value in a feasible or optimal solution due to other constraints or
+                                             optimality conditions */
    SCIP_VARTYPE_CONTINUOUS = 3          /**< continuous variable: \f$ lb \leq x \leq ub \f$ */
 };
 typedef enum SCIP_Vartype SCIP_VARTYPE;

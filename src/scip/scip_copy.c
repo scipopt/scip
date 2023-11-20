@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -447,7 +456,7 @@ SCIP_RETCODE copyProb(
    targetscip->stat->subscipdepth = sourcescip->stat->subscipdepth + 1;
 
    /* create the problem by copying the source problem */
-   SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap, global) );
+   SCIP_CALL( SCIPprobCopy(&targetscip->origprob, targetscip->mem->probmem, targetscip->set, name, sourcescip, sourceprob, localvarmap, localconsmap, original, global) );
 
    /* creating the solution candidates storage */
    /**@todo copy solution of source SCIP as candidates for the target SCIP */
@@ -1476,20 +1485,25 @@ SCIP_RETCODE SCIPtranslateSubSols(
    subsols = SCIPgetSols(subscip);
    for( i = 0; i < nsubsols; ++i )
    {
-      /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
-      if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsols[i])) )
-         continue;
-
+      /* create or clear main solution */
       if( newsol == NULL )
       {
          SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
          if( solindex != NULL )
             *solindex = SCIPsolGetIndex(newsol);
       }
+      else
+         SCIP_CALL( SCIPclearSol(scip, newsol) );
 
-      /* put values from subsol into newsol */
+      /* get values from subsol */
       SCIP_CALL( translateSubSol(scip, subscip, subsols[i], subvars, solvals) );
+
+      /* put values into newsol */
       SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, solvals) );
+
+      /* reject solution with invalid objective value */
+      if( SCIPgetSolTransObj(scip, newsol) == SCIP_INVALID ) /*lint !e777*/
+         continue;
 
       /* check whether feasible */
       SCIP_CALL( SCIPcheckSol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
@@ -2748,6 +2762,9 @@ SCIP_RETCODE doCopy(
    {
       SCIP_CALL( SCIPenableConsCompression(targetscip) );
 
+      SCIPdebugMsg(sourcescip, "SCIPenableConsCompression() with nxfixedvars=%d and global=%u invalidates copy.\n",
+         nfixedvars, global);
+
       /* domain reductions yield a copy that is no longer guaranteed to be valid */
       localvalid = FALSE;
    }
@@ -2762,7 +2779,8 @@ SCIP_RETCODE doCopy(
       SCIP_CALL( SCIPcopyConss(sourcescip, targetscip, localvarmap, localconsmap, global, enablepricing, &consscopyvalid) );
    }
 
-   SCIPdebugMsg(sourcescip, "Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");
+   SCIPdebugMsg(sourcescip, "Copying%s constraints was%s valid.\n",
+      original ? " (original)" : "", consscopyvalid ? "" : " not");
 
    localvalid = localvalid && consscopyvalid;
 

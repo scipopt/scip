@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1955,7 +1964,7 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->downlocks, nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->uplocks, nvars) );
 
-      /* initialize variable lock data structure; the locks are only used if the contraint is a check constraint */
+      /* initialize variable lock data structure; the locks are only used if the constraint is a check constraint */
       initializeLocks(*consdata, check);
 
       if( linkingconss != NULL )
@@ -1988,6 +1997,14 @@ SCIP_RETCODE consdataCreate(
                assert(SCIPgetConsLinking(scip, (*consdata)->vars[v]) == (*consdata)->linkingconss[v]);
          }
       }
+
+#ifndef NDEBUG
+      /* only binary and integer variables can be used in cumulative constraints
+       * for fractional variable values, the constraint cannot be checked
+       */
+      for( v = 0; v < (*consdata)->nvars; ++v )
+         assert(SCIPvarGetType((*consdata)->vars[v]) <= SCIP_VARTYPE_INTEGER);
+#endif
    }
    else
    {
@@ -13449,6 +13466,8 @@ SCIP_DECL_CONSPARSE(consParseCumulative)
 
    SCIPdebugMsg(scip, "parse <%s> as cumulative constraint\n", str);
 
+   *success = TRUE;
+
    /* cutoff "cumulative" form the constraint string */
    SCIPstrCopySection(str, 'c', '(', strvalue, SCIP_MAXSTRLEN, &endptr);
    str = endptr;
@@ -13465,53 +13484,62 @@ SCIP_DECL_CONSPARSE(consParseCumulative)
    {
       SCIP_CALL( SCIPparseVarName(scip, str, &var, &endptr) );
 
-      if( var != NULL )
+      if( var == NULL )
       {
-         str = endptr;
+         endptr = strchr(endptr, ')');
 
-         SCIPstrCopySection(str, '(', ')', strvalue, SCIP_MAXSTRLEN, &endptr);
-         duration = atoi(strvalue);
-         str = endptr;
+         if( endptr == NULL )
+            *success = FALSE;
+         else
+            str = endptr;
 
-         SCIPstrCopySection(str, '[', ']', strvalue, SCIP_MAXSTRLEN, &endptr);
-         demand = atoi(strvalue);
-         str = endptr;
-
-         SCIPdebugMsg(scip, "parse job <%s>, duration %d, demand %d\n", SCIPvarGetName(var), duration, demand);
-
-         vars[nvars] = var;
-         demands[nvars] = demand;
-         durations[nvars] = duration;
-         nvars++;
+         break;
       }
+
+      str = endptr;
+      SCIPstrCopySection(str, '(', ')', strvalue, SCIP_MAXSTRLEN, &endptr);
+      duration = atoi(strvalue);
+      str = endptr;
+
+      SCIPstrCopySection(str, '[', ']', strvalue, SCIP_MAXSTRLEN, &endptr);
+      demand = atoi(strvalue);
+      str = endptr;
+
+      SCIPdebugMsg(scip, "parse job <%s>, duration %d, demand %d\n", SCIPvarGetName(var), duration, demand);
+
+      vars[nvars] = var;
+      demands[nvars] = demand;
+      durations[nvars] = duration;
+      nvars++;
    }
-   while( var != NULL );
+   while( *str != ')' );
 
-   /* parse effective time window */
-   SCIPstrCopySection(str, '[', ',', strvalue, SCIP_MAXSTRLEN, &endptr);
-   hmin = atoi(strvalue);
-   str = endptr;
-
-   if( SCIPstrToRealValue(str, &value, &endptr) )
+   if( *success )
    {
-      hmax = (int)(value);
+      /* parse effective time window */
+      SCIPstrCopySection(str, '[', ',', strvalue, SCIP_MAXSTRLEN, &endptr);
+      hmin = atoi(strvalue);
       str = endptr;
 
-      /* parse capacity */
-      SCIPstrCopySection(str, ')', '=', strvalue, SCIP_MAXSTRLEN, &endptr);
-      str = endptr;
-      if( SCIPstrToRealValue(str, &value, &endptr) )
+      if( SCIPparseReal(scip, str, &value, &endptr) )
       {
-         capacity = (int)value;
+         hmax = (int)(value);
+         str = endptr;
 
-         /* create cumulative constraint */
-         SCIP_CALL( SCIPcreateConsCumulative(scip, cons, name, nvars, vars, durations, demands, capacity,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         /* parse capacity */
+         SCIPstrCopySection(str, ')', '=', strvalue, SCIP_MAXSTRLEN, &endptr);
+         str = endptr;
+         if( SCIPparseReal(scip, str, &value, &endptr) )
+         {
+            capacity = (int)value;
 
-         SCIP_CALL( SCIPsetHminCumulative(scip, *cons, hmin) );
-         SCIP_CALL( SCIPsetHmaxCumulative(scip, *cons, hmax) );
+            /* create cumulative constraint */
+            SCIP_CALL( SCIPcreateConsCumulative(scip, cons, name, nvars, vars, durations, demands, capacity,
+                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
-         (*success) = TRUE;
+            SCIP_CALL( SCIPsetHminCumulative(scip, *cons, hmin) );
+            SCIP_CALL( SCIPsetHmaxCumulative(scip, *cons, hmax) );
+         }
       }
    }
 
@@ -13522,6 +13550,7 @@ SCIP_DECL_CONSPARSE(consParseCumulative)
 
    return SCIP_OKAY;
 }
+
 
 /** constraint method of constraint handler which returns the variables (if possible) */
 static

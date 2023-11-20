@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -71,8 +80,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
-#include <ctype.h>
-#include <string.h>
+
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "symresack"
@@ -817,7 +825,7 @@ SCIP_RETCODE checkFeasible(
    int                   numfixentriesinit,  /**< the number of virtually fixed entries */
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected in these fixings */
    int*                  infeasibleentry     /**< pointer to store at which entry a (0, 1) pattern is found */
-)
+   )
 {
    SCIP_VAR* var1;
    SCIP_VAR* var2;
@@ -2814,10 +2822,9 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
    s = str;
 
    /* skip white space */
-   while ( *s != '\0' && isspace((unsigned char)*s) )
-      ++s;
+   SCIP_CALL( SCIPskipSpace((char**)&s) );
 
-   if ( strncmp(s, "symresack(", 10) != 0 )
+   if( strncmp(s, "symresack(", 10) != 0 )
    {
       SCIPerrorMessage("Syntax error - expected \"symresack(\", but got '%s'", s);
       *success = FALSE;
@@ -2831,113 +2838,139 @@ SCIP_DECL_CONSPARSE(consParseSymresack)
 
    do
    {
-      if ( cnt > 1 )
+      if( cnt > 1 )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected two arrays, but got more\n");
+         SCIPerrorMessage("expected two arrays, but got more\n");
          *success = FALSE;
-
-         SCIPfreeBufferArray(scip, &perm);
-         SCIPfreeBufferArray(scip, &vars);
+         break;
       }
 
-      /* skip whitespace and ',' */
-      while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
+      /* skip whitespace */
+      SCIP_CALL( SCIPskipSpace((char**)&s) );
+
+      /* skip ',' */
+      if( *s == ',' )
          ++s;
 
-      /* if we could not find starting indicator of array */
-      if ( *s != '[' )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "expected '[' to start new array\n");
-         *success = FALSE;
+      /* skip whitespace */
+      SCIP_CALL( SCIPskipSpace((char**)&s) );
 
-         SCIPfreeBufferArray(scip, &perm);
-         SCIPfreeBufferArray(scip, &vars);
+      /* if we could not find starting indicator of array */
+      if( *s != '[' )
+      {
+         SCIPerrorMessage("expected '[' to start new array\n");
+         *success = FALSE;
+         break;
       }
       ++s;
 
       /* read array, cnt = 0: variables; cnt = 1: permutation*/
-      if ( cnt == 0 )
+      if( cnt == 0 )
       {
          do
          {
-            /* skip whitespace and ',' */
-            while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
-               ++s;
-
             /* parse variable name */
             SCIP_CALL( SCIPparseVarName(scip, s, &var, &endptr) );
-            if ( var == NULL )
+
+            if( var == NULL )
             {
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable name at '%s'\n", str);
-               *success = FALSE;
-               SCIPfreeBufferArray(scip, &vars);
-               return SCIP_OKAY;
+               endptr = strchr(endptr, ']');
+
+               if( endptr == NULL )
+               {
+                  SCIPerrorMessage("closing ']' missing\n");
+                  *success = FALSE;
+               }
+               else
+                  s = endptr;
+
+               break;
             }
+
             s = endptr;
             assert( s != NULL );
+            ++nvars;
 
-            vars[nvars++] = var;
-
-            if ( nvars >= maxnvars )
+            if( nvars > maxnvars )
             {
-               int newsize;
-
-               newsize = SCIPcalcMemGrowSize(scip, nvars + 1);
-               SCIP_CALL( SCIPreallocBufferArray(scip, &vars, newsize) );
-               SCIP_CALL( SCIPreallocBufferArray(scip, &perm, newsize) );
-               maxnvars = newsize;
+               maxnvars = SCIPcalcMemGrowSize(scip, nvars);
+               SCIP_CALL( SCIPreallocBufferArray(scip, &vars, maxnvars) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &perm, maxnvars) );
+               assert( nvars <= maxnvars );
             }
+
+            vars[nvars-1] = var;
+
+            /* skip white space */
+            SCIP_CALL( SCIPskipSpace((char**)&s) );
+
+            /* skip ',' */
+            if( *s == ',' )
+               ++s;
          }
-         while ( *s != ']' );
+         while( *s != ']' );
       }
       else
       {
          do
          {
-            /* skip whitespace and ',' */
-            while ( *s != '\0' && ( isspace((unsigned char)*s) ||  *s == ',' ) )
-               ++s;
+            /* skip whitespace */
+            SCIP_CALL( SCIPskipSpace((char**)&s) );
 
             /* parse integer value */
-            if ( ! SCIPstrToIntValue(s, &val, &endptr) )
+            if( !SCIPstrToIntValue(s, &val, &endptr) )
             {
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not extract int from string '%s'\n", str);
+               SCIPerrorMessage("could not extract int from string '%s'\n", str);
                *success = FALSE;
-               SCIPfreeBufferArray(scip, &perm);
-               SCIPfreeBufferArray(scip, &vars);
-               return SCIP_OKAY;
+               break;
             }
+
             s = endptr;
             assert( s != NULL );
+            ++nfoundpermidx;
 
-            perm[nfoundpermidx++] = val;
-
-            if ( nfoundpermidx > nvars )
+            if( nfoundpermidx > nvars )
             {
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "permutation is longer than vars array\n");
+               SCIPerrorMessage("permutation is longer than vars array\n");
                *success = FALSE;
-               SCIPfreeBufferArray(scip, &perm);
-               SCIPfreeBufferArray(scip, &vars);
-               return SCIP_OKAY;
+               break;
             }
+
+            perm[nfoundpermidx-1] = val;
+
+            /* skip whitespace */
+            SCIP_CALL( SCIPskipSpace((char**)&s) );
+
+            /* skip ',' */
+            if( *s == ',' )
+               ++s;
          }
-         while ( *s != ']' );
+         while( *s != ']' );
+
+         if( nfoundpermidx != nvars )
+         {
+            SCIPerrorMessage("length of permutation is not equal to number of given variables.\n");
+            *success = FALSE;
+            break;
+         }
       }
+
+      if( !*success )
+         break;
+
       ++s;
       ++cnt;
    }
-   while ( *s != ')' );
+   while( *s != ')' );
 
-   if ( nfoundpermidx == nvars )
+   if( *success && cnt < 2 )
    {
-      SCIP_CALL( SCIPcreateConsBasicSymresack(scip, cons, name, perm, vars, nvars, TRUE) );
-   }
-   else
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL,
-         "Length of permutation is not equal to number of given variables.\n");
+      SCIPerrorMessage("permutation is missing.\n");
       *success = FALSE;
    }
+
+   if( *success )
+      SCIP_CALL( SCIPcreateConsBasicSymresack(scip, cons, name, perm, vars, nvars, TRUE) );
 
    SCIPfreeBufferArray(scip, &perm);
    SCIPfreeBufferArray(scip, &vars);

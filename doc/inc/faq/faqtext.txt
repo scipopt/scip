@@ -8,7 +8,7 @@ SECTION: General Questions about SCIP
       and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP and MINLP.
     </p>
     <ul>
-      <li>You can use the <a href="http://scipopt.org/#download">precompiled binaries</a>
+      <li>You can use the <a href="https://scipopt.org/#download">precompiled binaries</a>
           to solve MIPs and MINLPs. Learn more about the <a href="PATHTODOC/group__FILEREADERS.LINKEXT">file formats supported by SCIP</a>,
           and get <a href="PATHTODOC/WHATPROBLEMS.LINKEXT">an overview</a>
           of the supported problem classes and additional recommendations for solving them.
@@ -34,10 +34,7 @@ SECTION: General Questions about SCIP
     LABEL:licensefaq
     ANSWER:
     <p>
-      As long as you use it for academic, non-commercial purposes: No.
-      This will not change. For the other cases, check the explanation of the
-      <a href="http://scipopt.org/#license">ZIB academic license</a> and always feel free to ask us.
-      If you want to use SCIP commercially, please write an e-mail to koch@zib.de.
+      Since November 4, 2022, and SCIP version 8.0.3, SCIP is distributed under a permissive open source license, see the <a href="https://scipopt.org/index.php#license">SCIP homepage</a>.
     </p>
 
     QUESTION: How do I get started?
@@ -46,7 +43,7 @@ SECTION: General Questions about SCIP
     <p>
       An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="PATHTODOC/SHELL.LINKEXT">here</a> for a tutorial.
       For that, you just have to use one of the installers from the
-      <a href="http://scipopt.org/#download">download section</a>, or the zipped source code and compile it
+      <a href="https://scipopt.org/#download">download section</a>, or the zipped source code and compile it
       with your favorite settings.
       Note that the coding examples are only contained in the source code bundle, but not in the precompiled packages.
       The compilation from source is described in detail in the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP main directory.
@@ -72,7 +69,7 @@ SECTION: General Questions about SCIP
       LP-solvers currently supported by SCIP are:
     </p>
     <ul>
-      <li><a href="http://soplex.zib.de/">SoPlex</a></li>
+      <li><a href="https://soplex.zib.de/">SoPlex</a></li>
       <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">IBM ILOG CPLEX</a></li>
       <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
       <li><a href="http://www.gurobi.com/">Gurobi</a> (version at least 7.0.2 required)</li>
@@ -86,10 +83,10 @@ SECTION: General Questions about SCIP
       <a href="https://projects.coin-or.org/Ipopt">Ipopt</a>). SCIP already comes with the CppAD expression interpreter (e.g., <a href="http://www.coin-or.org/CppAD/">CppAD</a>) as part of the source code.
     </p>
     <p>
-      Besides that, you might need a modeling language like <a href="http://zimpl.zib.de/">ZIMPL</a> to generate *.mps
+      Besides that, you might need a modeling language like <a href="https://zimpl.zib.de/">ZIMPL</a> to generate *.mps
       or *.lp files. ZIMPL files (.zpl extension) can also be read directly into SCIP.
       Downloading the SCIP Optimization Suite includes SCIP, SoPlex and ZIMPL, as well as GCG and UG. Find installers for different platforms
-      and the source code bundle of all versions <a href="http://scipopt.org/#download">here</a>.
+      and the source code bundle of all versions <a href="https://scipopt.org/#download">here</a>.
     </p>
 
     QUESTION: How can I build/compile SCIP?
@@ -136,7 +133,7 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>
       Read the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
-      the precompiled binaries by choosing one of the available installers from the <a href="http://scipopt.org#download">SCIP page</a> for your operating system.<br>
+      the precompiled binaries by choosing one of the available installers from the <a href="https://scipopt.org#download">SCIP page</a> for your operating system.<br>
     </p>
     <p>
       If you encounter compilation problems dealing with the <code>explicit</code> keyword you should try a newer compiler.
@@ -208,7 +205,7 @@ SECTION: General Questions about SCIP
     <p>
         Hence, if you need more, "LP specific", information than the primal solution, you are better off using an LP-Solver
         directly. If you are using the SCIP Optimization Suite, you could, e.g., use the included LP solver
-        <a href=http://soplex.zib.de>SoPlex</a>.  If you want to solve an LP not from the command line, but within your
+        <a href=https://soplex.zib.de>SoPlex</a>.  If you want to solve an LP not from the command line, but within your
         C/C++ program, you could also use SCIP's LP-Interface, see also <a href="#howtosolvelps">here</a>.
     </p>
 
@@ -287,21 +284,18 @@ SECTION: General Questions about SCIP
     </p>
     <ul>
         <li>
-            <a href="http://hydraw.zib.de/">HyDraw</a>
+            <a href="https://hydraw.zib.de/">HyDraw</a>
             can display a live visualization of the tree using JavaView.
         </li>
         <li>
-            <a href="http://www.informatik.uni-koeln.de/ls_juenger/vbctool">vbctool</a>
+            <a href="https://cs.uni-koeln.de/ls-juenger/software/vbctool">vbctool</a>
              comes with a viewer that has an option to uncover the nodes one-by-one (each time you
             hit the space key). Additional node information such as its lower bound, depth, and number are accessed through a
             context menu.
         </li>
         <li>
-            <a href="https://www.uni-due.de/~si203go/#vbc">Vbc2dot</a> is a script that generates a visualization of SCIP's branch-and-bound tree
+            <a href="https://github.com/demogorgi/vbc2dot">Vbc2dot</a> is a script that generates a visualization of SCIP's branch-and-bound tree
             in ps and pdf format. It is written in Ruby and requires dot (graphviz).
-        </li>
-        <li>
-            <a href="https://www.uni-due.de/~si203go/vbctool/zimplTblConverter.rb">zimplTblConverter</a> is a small Ruby-script that converts a scip solution file to a file where all names are replaced according to a zimpl tbl-file output.
         </li>
         <li>
             <a href="https://github.com/coin-or/GrUMPy">GrUMPy</a>
@@ -370,9 +364,53 @@ SECTION: General Questions about SCIP
             the TPI option.</li>
             <li>Second, one can use the external UG framework for shared-memory
             and distributed-memory parallelization of the tree search.  See the
-            <a href="http://ug.zib.de"></a> UG web page</a> for further
+            <a href="https://ug.zib.de"></a> UG web page</a> for further
             details.</li>
         </ul>
+    </p>
+
+    QUESTION: What are implicit-integer variables?
+    LABEL:implicitinteger
+    ANSWER:
+    <p>
+       Originally, variable type <code>SCIP_VARTYPE_IMPLINT</code> was used for continuous variables that are known to take an integral value in any feasible solution.<br/>
+       For example, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b, variable y could be declared to be implicit-integer if
+       the coefficients a<sub>i</sub> and b were integral for all i and variables x<sub>i</sub> were of type integer (or binary) for all i.
+       Algorithms in SCIP could make use of the knowledge that y can take only integral values in a feasible solution.
+       For example, if some domain propagation algorithm deduces y &ge; 0.5, then the lower bound can automatically be tightened to 1.
+       Further, cuts may be tightened when integrality for integer-implicit variables can be assumed.<br/>
+       Of course, it would also be possible to change the type of variable y to "integer" (<code>SCIP_VARTYPE_INTEGER</code>), but this would mean that SCIP may
+       try to actively enforce integrality of y, e.g., by branching on y if it takes a fractional value in a relaxations solution.
+       Thus, to express that a variable will eventually take an integral value but does not need to be branched on, variable type SCIP_VARTYPE_IMPLINT is used.
+       In fact, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b with all coefficents being integral and all variables integer,
+       SCIP may decide to change the type of variable y to implicit-integer.
+    </p>
+    <p>
+       At a later time, the meaning of variable type SCIP_VARTYPE_IMPLINT has been changed to be apply to continuous variables that are known to take an
+       integral value in at least one <b>optimal</b> solution. In addition, a check had been added to exclude solutions with fractional value in an implicit-integer variables.<br/>
+       This less restrictive definition allowed to use the variable type in additional situations.
+       For example, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y &le; b where again the coefficients a<sub>i</sub> and b were integral for all i,
+       and variables x<sub>i</sub> are of type integer (or binary) for all i, variable y could be declared to be implicit-integer if it does not appear in any other constraint
+       and its bounds are integral, since for any optimal solution where y takes a fractional solution, another optimal solution with y rounded up or down exists.
+       (Generalizations for the case where y appears in additional constraints exist, see <tt>cons_linear.c:fullDualPresolve()</tt>.)<br/>
+       Again, changing the type of a variable from continuous to implicit-integer has the advantage that algorithms can take advantage of this information, e.g.,
+       for deriving tighter bounds in domain propagation.
+    </p>
+    <p>
+       The check that excluded solutions with fractional value in an implicit-integer variable had the disadvantage that it forbids solutions which
+       would have been feasible before a continuous variable was changed to an implicit-integer one.
+       In addition, it required that primal heuristics that construct solutions had to take care of ensuring integral values for implicit-integer variables.
+       This lead to confusion when a heuristic decided that after having constructed integral values for all integer variables, it would be sufficient to check
+       all constraints other than <code>cons_integral</code> to ensure feasibility.<br/>
+       As a consequence, the check that implicit-integer variables need to have an integral value in a solution has been dropped with SCIP 8.0.5.
+       Since it is possible to use variable type SCIP_VARTYPE_IMPLINT also in the original problem formulation, this also required to update the definition
+       of this variable type again. The current formulation reads <b>continuous variable with optional integrality restriction</b>.<br/>
+       Therefore, setting the type of a variable to SCIP_VARTYPE_IMPLINT means that SCIP does not ensure that the variable will take an integral value in a solution.
+       However, it may apply reductions that prevent the variable from taking any fractional value.
+       Integrality therefore serves as a kind of "soft-constraint" here.<br/>
+       The typical use case for this variable type are variables which are known to take an integral value in all feasible or at least all optimal solutions
+       (and where one does not want to rely on SCIP to detect this).
+       For this reason, and to avoid major API changes, the variable type has not been renamed.
     </p>
 
 SECTION: Using SCIP as a standalone solver
@@ -954,56 +992,6 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
         nvars = nbinvars + ninitvars + nimplvars + ncontvars.  There is no further sorting within these sections, as well as
         there is no sorting for the rows.  But each column and each row has a unique index, which can be obtained by
         <code>SCIPcolGetIndex()</code> and <code>SCIProwGetIndex()</code>, respectively.
-    </p>
-
-    QUESTION: What is an implicit integer variable?
-    LABEL:implicitinteger
-    ANSWER:
-    <p>
-
-        A variable <code>v</code> is implicit integer if it is guaranteed to take an integer
-        solution value in every optimal solution to every remaining subproblem after
-        fixing all integer variables of the problem.
-        Implicit integer variables are represented by the
-        variable type <code>SCIP_VARTYPE_IMPLINT</code>.
-        Note that continuous as well as integer variables can be declared
-        implicit integer.
-    </p>
-    <p>
-        The solver benefits from the presence of implicit integrality
-        in several ways: Implict integer variables can be treated
-        like continuous variables for branching because it is not necessary to
-        enforce integrality. They can be treated like integer variables
-        to yield stronger propagations, better coefficients in cuts, etc.
-        <br/>
-        Another advantage of this definition is that it allows heuristics to know
-        that if a feasible point has integer values for all integer variables,
-        then either all implicit integer variables have integer values or the
-        value of an implicit integer variable can be assigned to an integer
-        without worsening the objective value.
-    </p>
-    <p>
-        Currently, SCIP identifies implicit integer variables via feasibility
-        reasoning and optimality reasoning during presolving.
-        <br/>
-        As an example of feasibility reasoning, consider the constraint
-        <code>x + y = 1</code> where both variables are integer.
-        From this constraint, either one of them could be declared implicit
-        integer.
-        This is because fixing one to an integer value forces the other to be
-        integer as well.
-        Note that you must not declare both variables implicit integer, since
-        the reasoning depends on the other variable still being of integer.
-        type
-        <br/>
-        As an example of optimality reasoning, consider the problem <code>max
-        x</code> subject to <code>x + y <= 10</code> and
-        <code>y</code> has to be integer.
-        After fixing <code>y</code> to any integer value, the optimal value of
-        <code>x</code> will be <code>10 - y</code> which is an integer.
-        Hence, <code>x</code> can be declared implicit integer.
-        Note, however, that if the constraint is <code>2*x + y <= 10</code>, then we
-        cannot conclude that <code>x</code> is implicit integer.
     </p>
 
     QUESTION: When should I use which of the numerical comparison functions?

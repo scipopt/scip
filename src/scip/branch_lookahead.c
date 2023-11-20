@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -967,7 +976,7 @@ SCIP_RETCODE level2dataStoreResult(
 typedef struct
 {
    BRANCHINGDECISION*    olddecision;        /**< The previous decision that gets used for the case that in the previous run
-                                              *   only non-violating implied binary constraints were added.*/
+                                              *   only non-violating implicit binary constraints were added.*/
    SCIP_Longint          oldnnodelpiterations; /**< node LP iterations when previous branching decision was stored */
    SCIP_Longint          oldnnodelps;        /**< node LPs when previous branching decision was stored */
    SCIP_Longint          oldntotalnodes;     /**< node at which previous branching decision was stored */
@@ -1004,7 +1013,7 @@ typedef struct
    SCIP_Bool             mergedomainreductions; /**< should domain reductions of feasible siblings should be merged? */
    SCIP_Bool             prefersimplebounds; /**<    should domain reductions only be applied if there are simple bound changes? */
    SCIP_Bool             onlyvioldomreds;    /**< Should only domain reductions that violate the LP solution be applied? */
-   SCIP_Bool             usebincons;         /**< indicates whether the data for the implied binary constraints should
+   SCIP_Bool             usebincons;         /**< indicates whether the data for the implicit binary constraints should
                                               *   be gathered and used */
    int                   addbinconsrow;      /**< should binary constraints be added as rows to the base LP?
                                               *   (0: no, 1: separate, 2: as initial rows) */
@@ -2963,7 +2972,7 @@ void createBinaryConstraintName(
 
 /**
  * Add the constraints found during the lookahead branching.
- * The implied binary bounds were found when two or more consecutive branchings of binary variables were cutoff. Then these
+ * The implicit binary bounds were found when two or more consecutive branchings of binary variables were cutoff. Then these
  * branching constraints can be combined into a single 'binary constraint'.
  */
 static
@@ -6078,7 +6087,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       if( *result != SCIP_CUTOFF /* a variable could not be branched in any direction or any of the calculated domain
                                   * reductions was infeasible */
          && *result != SCIP_REDUCEDDOM /* the domain of a variable was reduced by evaluating the calculated cutoffs */
-         && *result != SCIP_CONSADDED /* implied binary constraints were already added */
+         && *result != SCIP_CONSADDED /* implicit binary constraints were already added */
          && !status->depthtoosmall /* branching depth wasn't high enough */
          && branchingDecisionIsValid(decision)
          /*&& (0 <= bestcand && bestcand < nlpcands)*/ /* no valid candidate index could be found */

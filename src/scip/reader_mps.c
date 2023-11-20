@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -766,12 +775,18 @@ SCIP_RETCODE readObjsen(
 
    SCIPdebugMsg(scip, "read objective sense\n");
 
-   /* This has to be the Line with MIN or MAX. */
-   if( !mpsinputReadLine(mpsi) || (mpsinputField1(mpsi) == NULL) )
-   {
-      mpsinputSyntaxerror(mpsi);
-      return SCIP_OKAY;
+   /* Although this is not explicitly in the MPS extensions as provided by CPLEX, some other MIP solvers
+    * (in particular gurobi), put 'MIN' or 'MAX' as the input field on the same line as the section declaration */
+   if( mpsinputField1(mpsi) == NULL){
+       /* Normal Cplex extension; info should be on the next line, in field 1 */
+       /* This has to be the Line with MIN or MAX. */
+       if( !mpsinputReadLine(mpsi) || (mpsinputField1(mpsi) == NULL) )
+       {
+           mpsinputSyntaxerror(mpsi);
+           return SCIP_OKAY;
+       }
    }
+   /* Otherwise, the input should read e.g. "OBJSENSE MAX" so that MAX is also the first field */
 
    if( !strncmp(mpsinputField1(mpsi), "MIN", 3) )
       mpsinputSetObjsense(mpsi, SCIP_OBJSENSE_MINIMIZE);
@@ -1523,7 +1538,7 @@ SCIP_RETCODE readBounds(
           */
          if( oldvartype != SCIP_VARTYPE_CONTINUOUS )
          {
-            assert(SCIP_VARTYPE_CONTINUOUS >= SCIP_VARTYPE_IMPLINT && SCIP_VARTYPE_IMPLINT >= SCIP_VARTYPE_INTEGER && SCIP_VARTYPE_INTEGER >= SCIP_VARTYPE_BINARY); /*lint !e506*/
+            assert(SCIP_VARTYPE_CONTINUOUS >= SCIP_VARTYPE_IMPLINT && SCIP_VARTYPE_IMPLINT >= SCIP_VARTYPE_INTEGER && SCIP_VARTYPE_INTEGER >= SCIP_VARTYPE_BINARY); /*lint !e506*//*lint !e1564*/
             /* relaxing variable type */
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
          }
@@ -2362,18 +2377,11 @@ SCIP_RETCODE readIndicators(
    while( mpsinputReadLine(mpsi) )
    {
       SCIP_CONSHDLR* conshdlr;
-      SCIP_VARTYPE slackvartype;
       SCIP_CONS* cons;
       SCIP_CONS* lincons;
       SCIP_VAR* binvar;
-      SCIP_VAR* slackvar;
       SCIP_Real lhs;
       SCIP_Real rhs;
-      SCIP_Real sign;
-      SCIP_VAR** linvars;
-      SCIP_Real* linvals;
-      int nlinvars;
-      int i;
 
       /* check if next section is found */
       if( mpsinputField0(mpsi) != NULL )
@@ -2382,6 +2390,7 @@ SCIP_RETCODE readIndicators(
             mpsinputSetSection(mpsi, MPS_ENDATA);
          break;
       }
+
       if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL )
       {
          SCIPerrorMessage("empty data in a non-comment line.\n");
@@ -2453,24 +2462,26 @@ SCIP_RETCODE readIndicators(
          }
       }
 
-      /* check lhs/rhs */
+      /* get lhs/rhs */
       lhs = SCIPgetLhsLinear(scip, lincons);
       rhs = SCIPgetRhsLinear(scip, lincons);
-      nlinvars = SCIPgetNVarsLinear(scip, lincons);
-      linvars = SCIPgetVarsLinear(scip, lincons);
-      linvals = SCIPgetValsLinear(scip, lincons);
 
-      sign = -1.0;
       if( !SCIPisInfinity(scip, -lhs) )
       {
-         if( SCIPisInfinity(scip, rhs) )
-            sign = 1.0;
-         else
+         if( ! SCIPisInfinity(scip, rhs) )
          {
             /* create second indicator constraint */
             SCIP_VAR** vars;
             SCIP_Real* vals;
             SCIP_RETCODE retcode;
+            SCIP_VAR** linvars;
+            SCIP_Real* linvals;
+            int nlinvars;
+            int i;
+
+            nlinvars = SCIPgetNVarsLinear(scip, lincons);
+            linvars = SCIPgetVarsLinear(scip, lincons);
+            linvals = SCIPgetValsLinear(scip, lincons);
 
             SCIP_CALL( SCIPallocBufferArray(scip, &vars, nlinvars) );
             SCIP_CALL( SCIPallocBufferArray(scip, &vals, nlinvars) );
@@ -2502,29 +2513,6 @@ SCIP_RETCODE readIndicators(
          }
       }
 
-      /* check if slack variable can be made implicitly integer */
-      slackvartype = SCIP_VARTYPE_IMPLINT;
-      for (i = 0; i < nlinvars; ++i)
-      {
-         if( ! SCIPvarIsIntegral(linvars[i]) || ! SCIPisIntegral(scip, linvals[i]) )
-         {
-            slackvartype = SCIP_VARTYPE_CONTINUOUS;
-            break;
-         }
-      }
-
-      /* create slack variable */
-      if ( ! SCIPisInfinity(scip, -lhs) )
-         (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indslack_indrhs_%s", SCIPconsGetName(lincons));
-      else
-         (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "indslack_%s", SCIPconsGetName(lincons));
-      SCIP_CALL( SCIPcreateVar(scip, &slackvar, name, 0.0, SCIPinfinity(scip), 0.0, slackvartype, TRUE, FALSE,
-            NULL, NULL, NULL, NULL, NULL) );
-
-      /* add slack variable */
-      SCIP_CALL( SCIPaddVar(scip, slackvar) );
-      SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, sign) );
-
       /* correct linear constraint and create new name */
       if ( ! SCIPisInfinity(scip, -lhs) && ! SCIPisInfinity(scip, rhs) )
       {
@@ -2536,14 +2524,13 @@ SCIP_RETCODE readIndicators(
          (void) SCIPsnprintf(name, MPS_MAX_NAMELEN, "ind_%s", SCIPconsGetName(lincons));
 
       /* create indicator constraint */
-      SCIP_CALL( SCIPcreateConsIndicatorLinCons(scip, &cons, name, binvar, lincons, slackvar,
+      SCIP_CALL( SCIPcreateConsIndicatorLinConsPure(scip, &cons, name, binvar, lincons,
             initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMsg(scip, "created indicator constraint <%s>", mpsinputField2(mpsi));
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-      SCIP_CALL( SCIPreleaseVar(scip, &slackvar) );
    }
 
    return SCIP_OKAY;
@@ -2997,8 +2984,8 @@ SCIP_RETCODE getLinearCoeffs(
          if( SCIPvarGetStatus(activevars[v]) == SCIP_VARSTATUS_NEGATED )
          {
             activevars[v] = SCIPvarGetNegatedVar(activevars[v]);
+            activeconstant += activevals[v];
             activevals[v] *= -1.0;
-            activeconstant += 1.0;
          }
       }
    }
