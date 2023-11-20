@@ -3957,6 +3957,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
       {
          /* add element from lexorder to hashmap.
           * Use insert, as duplicate entries in lexorder is not permitted. */
+         assert((*lexorder)[k] >= 0);
          assert( ! SCIPhashmapExists(varsinlexorder, (void*) (size_t) (*lexorder)[k]) ); /* Use int as pointer */
          SCIP_CALL( SCIPhashmapInsertInt(varsinlexorder, (void*) (size_t) (*lexorder)[k], k) );
       }
@@ -3979,6 +3980,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
       graphcomp = chosencomppercolor[j];
       graphcompsize = graphcompbegins[graphcomp+1] - graphcompbegins[graphcomp];
       varidx = firstvaridxpercolor[j];
+      assert(varidx >= 0);
 
       /* if the first variable was already contained in another orbit or if there are no variables left anyway, skip the
        * component */
@@ -4077,6 +4079,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
          int varidx;
 
          varidx = orbit[activeorb][0];
+         assert(varidx >= 0);
 
          if ( *maxnvarsorder == 0 )
          {
