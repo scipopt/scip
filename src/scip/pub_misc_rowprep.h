@@ -106,6 +106,7 @@ SCIP_Real* SCIProwprepGetCoefs(
    );
 
 /** modifies coefficient idx of rowprep */
+SCIP_EXPORT
 void SCIProwprepModifyCoef(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    int                   idx,                /**< index of coef to modify */
