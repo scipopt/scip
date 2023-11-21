@@ -2067,9 +2067,6 @@ static
 SCIP_RETCODE computeMonoidalQuadCoefs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
-   SCIP_Real*            raycoefs,           /**< coefficients of ray */
-   int*                  rayidx,             /**< index of consvar the ray coef is associated to */
-   int                   raynnonz,           /**< length of raycoefs and rayidx */
    SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
    SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
    SCIP_Real*            vapex,              /**< array containing \f$v_i^T apex\f$ */
@@ -2370,8 +2367,8 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
       computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
 
       /* compute coefficients of the quadratic monoidal problem function */
-      SCIP_CALL( computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb,
-         vzlp, vapex, vray, kappa, sidefactor, &a, &b, &c) );
+      SCIP_CALL( computeMonoidalQuadCoefs(scip, nlhdlrexprdata, vb, vzlp, vapex, vray, kappa,
+         sidefactor, &a, &b, &c) );
 
       /* check if ray is in strip */
       if( SQR(b) - (4 * a * c) >= 0 )
