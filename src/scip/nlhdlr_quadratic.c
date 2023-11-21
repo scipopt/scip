@@ -2110,8 +2110,6 @@ SCIP_RETCODE computeMonoidalQuadCoefs(
    *b *= 2.0;
    *c += kappa;
 
-   assert(*a == *a);
-
    return SCIP_OKAY;
 }
 
@@ -2120,9 +2118,6 @@ SCIP_RETCODE computeMonoidalQuadCoefs(
 static
 SCIP_Bool isRayInStrip(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
-   SCIP_Real*            raycoefs,           /**< coefficients of ray */
-   int*                  rayidx,             /**< index of consvar the ray coef is associated to */
-   int                   raynnonz,           /**< length of raycoefs and rayidx */
    SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
    SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
    SCIP_Real*            vapex,              /**< array containing \f$v_i^T apex\f$ */
@@ -2222,6 +2217,7 @@ SCIP_Real findMonoidalQuadRoot(
       lb = - b / (2 * a);
       ub = sol;
       lastposval = SCIPinfinity(scip);
+      lastpossol = SCIPinfinity(scip);
       val = SCIPinfinity(scip);
       niter = 0;
       while( niter < BINSEARCH_MAXITERS && ABS(val) > 1e-10 )
@@ -2254,7 +2250,6 @@ SCIP_Real findMonoidalQuadRoot(
 
       assert( val > 0 || SCIPisZero(scip, val) );
    }
-   //assert(sol != 0);
 
    return sol;
 }
@@ -2378,8 +2373,6 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
       SCIP_CALL( computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb,
          vzlp, vapex, vray, kappa, sidefactor, &a, &b, &c) );
 
-      assert(a == a);
-
       /* check if ray is in strip */
       if( SQR(b) - (4 * a * c) >= 0 )
       {
@@ -2390,7 +2383,7 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
          //*cutcoef = MAX(*cutcoef, 0.0);
 
          /* check if ray is in strip. If not, monoidal is possible and cutcoef is the strengthened cut coef */
-         if( ! isRayInStrip(nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, vapex, vray, kappa, sidefactor, *cutcoef) )
+         if( ! isRayInStrip(nlhdlrexprdata, vb, vzlp, vapex, vray, kappa, sidefactor, *cutcoef) )
          {
             *success = TRUE;
          }
@@ -2412,13 +2405,11 @@ void sparsifyIntercut(
 {
    int i;
    int nvars;
-   int counter;
 
    /* get number of variables in rowprep */
    nvars = SCIProwprepGetNVars(rowprep);
 
    /* go though all the variables in rowprep */
-   counter = 0;
    for( i = 0; i < nvars; ++i )
    {
       SCIP_VAR* var;
@@ -2444,13 +2435,11 @@ void sparsifyIntercut(
       {
          SCIProwprepAddSide(rowprep, -coef * ub);
          SCIProwprepModifyCoef(rowprep, i, 0.0);
-         counter += 1;
       }
       else if( SCIPisZero(scip, solval - lb) && coef < 0.0 )
       {
          SCIProwprepAddSide(rowprep, -coef * lb);
          SCIProwprepModifyCoef(rowprep, i, 0.0);
-         counter += 1;
       }
    }
 
@@ -2538,6 +2527,7 @@ SCIP_RETCODE computeIntercut(
       SCIP_Bool monoidalsuccess;
 
       monoidalsuccess = FALSE;
+      cutcoef = SCIPinfinity(scip);
 
       /* if we (can) use monoidal strengthening, compute the cut coefficient with that */
       if( usemonoidal )
@@ -2626,6 +2616,7 @@ SCIP_RETCODE computeIntercut(
       /* keep track of average cut coefficient */
       counter += 1;
       avecutcoefsum += cutcoef;
+      assert( ! SCIPisInfinity(scip, cutcoef) );
 
       /* add var to cut: if variable is nonbasic at upper we have to flip sign of cutcoef */
       lppos = rays->lpposray[i];
