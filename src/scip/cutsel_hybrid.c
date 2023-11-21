@@ -73,7 +73,6 @@ struct SCIP_CutselData
    SCIP_Real             intsupportweight;   /**< weight of integral support in cut score calculation */
    SCIP_Real             minortho;           /**< minimal orthogonality for a cut to enter the LP */
    SCIP_Real             minorthoroot;       /**< minimal orthogonality for a cut to enter the LP in the root node */
-   SCIP_Bool             filterintercuts;    /**< Should intersection cuts for quadratic constraints only be applied if there is no other cut available? */
 };
 
 
@@ -267,36 +266,6 @@ int filterWithParallelism(
    return ncuts;
 }
 
-/** TODO */
-static
-int filterIntersectionCuts(
-   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
-   int                   ncuts              /**< number of cuts in given array */
-   )
-{
-  SCIP_Bool onlyIntersectionCuts = TRUE;
-  int i;
-
-  assert( ncuts == 0 || cuts != NULL );
-
-  for( i = 0; i < ncuts && onlyIntersectionCuts; i++)
-    onlyIntersectionCuts &= (strncmp(SCIProwGetName(cuts[i]), "intersection_quadratic", 22) == 0);
-
-  if( !onlyIntersectionCuts )
-  {
-    for( i = ncuts - 1; i >= 0; --i )
-    {
-      if( strncmp(SCIProwGetName(cuts[i]), "intersection_quadratic", 22) == 0 )
-      {
-        --ncuts;
-        SCIPswapPointers((void**) &cuts[i], (void**) &cuts[ncuts]);
-      }
-    }
-  }
-
-  return ncuts;
-}
-
 
 /*
  * Callback methods of cut selector
@@ -386,11 +355,6 @@ SCIP_DECL_CUTSELSELECT(cutselSelectHybrid)
    maxparall = 1.0 - minortho;
    goodmaxparall = MAX(0.5, 1.0 - minortho);
 
-   /* if we want intersection cuts for quadratic constraints only as a last resort, filter them out
-    * if there are other cuts available */
-   if( cutseldata->filterintercuts )
-      ncuts = filterIntersectionCuts(cuts, ncuts);
-
    SCIP_CALL( SCIPselectCutsHybrid(scip, cuts, forcedcuts, cutseldata->randnumgen, cutseldata->goodscore, cutseldata->badscore,
          goodmaxparall, maxparall, cutseldata->dircutoffdistweight, cutseldata->efficacyweight,
          cutseldata->objparalweight, cutseldata->intsupportweight, ncuts, nforcedcuts, maxnselectedcuts, nselectedcuts) );
@@ -459,11 +423,6 @@ SCIP_RETCODE SCIPincludeCutselHybrid(
          "cutselection/" CUTSEL_NAME "/minorthoroot",
          "minimal orthogonality for a cut to enter the LP in the root node",
          &cutseldata->minorthoroot, FALSE, DEFAULT_MINORTHOROOT, 0.0, 1.0, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "cutselection/" CUTSEL_NAME "/filterintercuts",
-         "Should intersection cuts for quadratic constraints only be applied if there is no other cut available?",
-         &cutseldata->filterintercuts, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
