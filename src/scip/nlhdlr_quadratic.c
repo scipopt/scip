@@ -1256,7 +1256,8 @@ SCIP_Real computeWRayLinear(
    return retval;
 }
 
-/* TODO: add documentation */
+/* computes the dot product of v_i and the current ray as well as of v_i and the apex where v_i
+ * is the i-th eigenvalue */
 static
 void computeVApexAndVRay(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
@@ -1312,6 +1313,7 @@ void computeVApexAndVRay(
       vapex[i] = vdotapex;
    }
 }
+
 /** calculate coefficients of restriction of the function to given ray.
  *
  * The restriction of the function representing the maximal S-free set to zlp + t * ray has the form
@@ -2251,7 +2253,7 @@ SCIP_Real findMonoidalQuadRoot(
    return sol;
 }
 
-/* TODO: add documentation */
+/* computes the apex of the S-free set (id it exists) */
 static
 void computeApex(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
@@ -2318,7 +2320,7 @@ void computeApex(
    }
 }
 
-/* TODO: add documentation */
+/* for a given ray, computes the cut coefficient using monoidal strengthening (if possible) */
 static
 SCIP_RETCODE computeMonoidalStrengthCoef(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4283,8 +4285,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
    }
 
    /* we can't build an intersection cut when the expr is the root of some constraint and also a subexpression of
-    * another constraint because we initialize data differently TODO: how differently? */
-   /* TODO: I don't think this is needed */
+    * another constraint because we initialize data differently */
    if( nlhdlrexprdata->cons != NULL && cons != nlhdlrexprdata->cons )
    {
       INTERLOG(printf("WARNING!! expr is root of one constraint and subexpr of another!\n"); )
