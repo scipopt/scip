@@ -2876,7 +2876,7 @@ Test(interCuts, minrepresentation, .description = "test negative coef for minima
       computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
 
       /* compute quadratic function of monoidal problem and check if thery are correct */
-      computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, vapex, vray, kappa, 1.0, &a, &b, &c);
+      computeMonoidalQuadCoefs(scip, nlhdlrexprdata, vb, vzlp, vapex, vray, kappa, 1.0, &a, &b, &c);
       cr_expect_float_eq(a, expectedquadcoefs[0], 1e-8, "e %g g %g\n", expectedquadcoefs[0], a);
       cr_expect_float_eq(b, expectedquadcoefs[1], 1e-8, "e %g g %g\n", expectedquadcoefs[1], b);
       cr_expect_float_eq(c, expectedquadcoefs[2], 1e-8, "e %g g %g\n", expectedquadcoefs[2], c);
@@ -2992,7 +2992,7 @@ Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
       computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
 
       /* compute quadratic function of monoidal problem and the resulting cut coef */
-      computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, vapex, vray, kappa, 1.0, &a, &b, &c);
+      computeMonoidalQuadCoefs(scip, nlhdlrexprdata, vb, vzlp, vapex, vray, kappa, 1.0, &a, &b, &c);
       cutcoef = findMonoidalQuadRoot(scip, a, b, c);
 
       /* check if coefs are correct */
@@ -3100,7 +3100,7 @@ Test(interCuts, monoidal2, .description = "test cut for monoidal strengthening")
       computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
 
       /* compute quadratic function of monoidal problem and the resulting cut coef */
-      computeMonoidalQuadCoefs(scip, nlhdlrexprdata, raycoefs, rayidx, raynnonz, vb, vzlp, vapex, vray, kappa, 1.0, &a, &b, &c);
+      computeMonoidalQuadCoefs(scip, nlhdlrexprdata, vb, vzlp, vapex, vray, kappa, 1.0, &a, &b, &c);
       cutcoef = findMonoidalQuadRoot(scip, a, b, c);
 
       /* check if coefs are correct */
