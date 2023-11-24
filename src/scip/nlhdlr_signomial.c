@@ -123,9 +123,9 @@ typedef struct
 /** print the information on a signomial term */
 static 
 SCIP_RETCODE printSignomial(
-   SCIP                 *scip,               /**< SCIP data structure */
-   SCIP_EXPR*           *expr,               /**< expression */
-   SCIP_NLHDLREXPRDATA  *nlhdlrexprdata      /**< expression data */
+   SCIP*                scip,               /**< SCIP data structure */
+   SCIP_EXPR*           expr,               /**< expression */
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata      /**< expression data */
    )
 {
    assert(expr != NULL);
@@ -350,20 +350,12 @@ void checkSignomialBounds(
    }
 
    /* compute bounds of \f$t\f$  by bounds of \f$x\f$ */
-   nlhdlrexprdata->intervals[c].inf = productinf;
-   nlhdlrexprdata->intervals[c].sup = productsup;
-
-   #ifdef SCIP_SIG_DEBUG
-      if( !SCIPisEQ(scip, productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c])) ){
-         SCIPdebugMsg(scip, "%f %f \n", productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c]));
-      }
-      if( !SCIPisEQ(scip, productsup, SCIPvarGetUbLocal(nlhdlrexprdata->vars[c])) ){
-         SCIPdebugMsg(scip, "%f %f \n", productsup, SCIPvarGetUbLocal(nlhdlrexprdata->vars[c]));
-      }
-   #endif
+   nlhdlrexprdata->intervals[c].inf = fmax(productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c]));
+   nlhdlrexprdata->intervals[c].sup = fmin(productsup, SCIPvarGetUbLocal(nlhdlrexprdata->vars[c]));
 
    *isboxsignomial = TRUE;
 }
+
 
 /** evaluate expression at solution w.r.t. auxiliary variables */
 static 
@@ -852,9 +844,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    {
       /* compute overestimator */
       isspecial = FALSE;
-      #ifdef SCIP_SIGCUT_DEBUG
-      SCIP_Real prevconstant =  SCIProwprepGetSide(rowprep);
-      #endif
       /* check and compute the special case */
       SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, oversign, overmultiplier, TRUE, sol, rowprep, &isspecial, success) );
       if( !isspecial )
