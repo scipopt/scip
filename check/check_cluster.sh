@@ -78,7 +78,7 @@ EXCLUDENODES="${30}"
 SLURMACCOUNT="${31}"
 PYTHON="${32}"
 EMPHBENCHMARK="${33}"
-CLOCKTYPE="{34}"
+CLOCKTYPE="${34}"
 
 # check if all variables defined (by checking the last one)
 if test -z "${CLOCKTYPE}"
@@ -222,7 +222,7 @@ do
                 # this may modify the EXECNAME environment variable
                 . ./"${CONFFILE}" "${INSTANCE}" "${SCIPPATH}" "${TMPFILE}" "${SETNAME}" "${SETFILE}" "${THREADS}" "${SETCUTOFF}" \
                             "${FEASTOL}" "${TIMELIMIT}" "${MEMLIMIT}" "${NODELIMIT}" "${LPS}" "${DISPFREQ}" "${REOPT}" "${OPTCOMMAND}" \
-                            "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "{$CLOCKTYPE}"
+                            "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "${CLOCKTYPE}"
 
                 JOBNAME="$(capitalize ${SOLVER})${SHORTPROBNAME}"
                 # additional environment variables needed by run.sh
