@@ -42,7 +42,6 @@
 
 #include "scip/nlhdlr_signomial.h"
 #include "scip/cons_nonlinear.h"
-#include "scip/struct_misc.h"
 #include "scip/pub_misc_rowprep.h"
 #include "scip/pub_nlhdlr.h"
 #include "scip/scip_expr.h"
@@ -283,7 +282,8 @@ void reformRowprep(
             continue;
          coefs[i] *= scale;
       }
-      rowprep->side *= scale;
+      /* set the side to scale*side by adding -side and adding scale*side */
+      SCIProwprepAddSide(rowprep, SCIProwprepGetSide(rowprep) * (-1.0 + scale));
 
       *success = SCIPisGT(scip, scale, mincutscale);
    }
