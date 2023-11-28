@@ -52,8 +52,6 @@
 #define INTERLOG(x)
 #endif
 
-#include <string.h>
-
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_nlhdlr.h"
 #include "scip/nlhdlr_quadratic.h"
@@ -1290,8 +1288,8 @@ void computeVApexAndVRay(
       offset = i * nquadexprs;
 
       /* compute v_i^T apex and v_i^T ray */
-      vdotapex = 0;
-      vdotray = 0;
+      vdotapex = 0.0;
+      vdotray = 0.0;
       k = 0;
       for( j = 0; j < nquadexprs; ++j )
       {
@@ -1370,7 +1368,7 @@ SCIP_RETCODE computeRestrictionToLine(
    assert(coefs2 != NULL);
 
    /* set all coefficients to zero */
-   memset(coefs2, 0, 5 * sizeof(SCIP_Real));
+   BMSclearMemoryArray(coefs2, 5);
 
    /* compute v_i^T apex in vapex[i] and v_i^T ray in vray[i] */
    SCIP_CALL( SCIPallocBufferArray(scip, &vapex, nquadexprs) );
@@ -1510,15 +1508,15 @@ SCIP_RETCODE computeRestrictionToRay(
    assert(coefs1234a != NULL);
 
    /* set all coefficients to zero */
-   memset(coefs1234a, 0, 5 * sizeof(SCIP_Real));
+   BMSclearMemoryArray(coefs1234a, 5);
    if( iscase4 )
    {
       assert(coefs4b != NULL);
       assert(coefscondition != NULL);
       assert(wcoefs != NULL);
 
-      memset(coefs4b, 0, 5 * sizeof(SCIP_Real));
-      memset(coefscondition, 0, 3 * sizeof(SCIP_Real));
+      BMSclearMemoryArray(coefs4b, 5);
+      BMSclearMemoryArray(coefscondition, 3);
    }
 
    a = coefs1234a;
@@ -2145,7 +2143,7 @@ SCIP_Bool isRayInStrip(
    {
       SCIP_Real dot;
 
-      if( sidefactor * eigenvalues[i] <= 0 )
+      if( sidefactor * eigenvalues[i] <= 0.0 )
          continue;
 
       dot = vzlp[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i]);
@@ -2179,7 +2177,7 @@ SCIP_Real findMonoidalQuadRoot(
    SCIP_INTERVAL bounds;
    SCIP_INTERVAL result;
 
-   assert(SQR(b) - 4 * a * c >= 0);
+   assert(SQR(b) - 4 * a * c >= 0.0);
 
    if( SCIPisZero(scip, a) )
    {
@@ -2188,7 +2186,7 @@ SCIP_Real findMonoidalQuadRoot(
    }
    else
    {
-      SCIPintervalSetBounds(&bounds, - b / (2 * a), SCIPinfinity(scip));
+      SCIPintervalSetBounds(&bounds, - b / (2.0 * a), SCIPinfinity(scip));
 
       /* find all positive x such that a x^2 + b x >= -c and x in bounds.*/
       SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(SCIP_INTERVAL_INFINITY, &result, a, b, -c, bounds);
@@ -2197,7 +2195,7 @@ SCIP_Real findMonoidalQuadRoot(
       /* if we didn't find any positive solutions, negate quadratic and find negative solutions */
       if( SCIPisInfinity(scip, sol) )
       {
-         SCIPintervalSetBounds(&bounds, b / (2 * a), SCIPinfinity(scip));
+         SCIPintervalSetBounds(&bounds, b / (2.0 * a), SCIPinfinity(scip));
 
          /* find all positive x such that a x^2 - b x >= -c and x in bounds.*/
          SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(SCIP_INTERVAL_INFINITY, &result, a, -b, -c, bounds);
@@ -2215,7 +2213,7 @@ SCIP_Real findMonoidalQuadRoot(
       SCIP_Real lastpossol;
       int niter;
 
-      lb = - b / (2 * a);
+      lb = - b / (2.0 * a);
       ub = sol;
       lastposval = SCIPinfinity(scip);
       lastpossol = SCIPinfinity(scip);
@@ -2226,16 +2224,16 @@ SCIP_Real findMonoidalQuadRoot(
          sol = (ub + lb) / 2.0;
          val = a * SQR(sol) + b * sol + c;
 
-         if( val < 0 )
+         if( val < 0.0 )
             lb = sol;
          else
             ub = sol;
 
          /* if we are close enough, return with (feasible) solution */
-         if( val > 0 && val < 10e-6 )
+         if( val > 0.0 && val < 1e-6 )
             break;
 
-         if( val > 0 && lastposval > val )
+         if( val > 0.0 && lastposval > val )
          {
             lastposval = val;
             lastpossol = sol;
@@ -2243,13 +2241,13 @@ SCIP_Real findMonoidalQuadRoot(
 
          ++niter;
       }
-      if( val < 0 && ! SCIPisZero(scip, val) )
+      if( val < 0.0 && ! SCIPisZero(scip, val) )
       {
          sol = lastpossol;
          val = lastposval;
       }
 
-      assert( val > 0 || SCIPisZero(scip, val) );
+      assert( val > 0.0 || SCIPisZero(scip, val) );
    }
 
    return sol;
@@ -2285,22 +2283,21 @@ void computeApex(
       SCIP_Real num;
       int j;
 
-      entry = 0;
-      num = 0;
-      denom = 0;
+      entry = 0.0;
+      num = 0.0;
+      denom = 0.0;
       for( j = 0; j < nquadexprs; ++j )
       {
-
          if( sidefactor * eigenvalues[j] == 0.0 )
             continue;
 
          entry -= eigenvectors[j * nquadexprs + i] * vb[j] / (2.0 * sidefactor * eigenvalues[j]);
 
-         if( sidefactor * eigenvalues[j] > 0 )
+         if( sidefactor * eigenvalues[j] > 0.0 )
          {
             SCIP_Real dot;
 
-            dot = vzlp[j] + vb[j] / (2.0 * (sidefactor * eigenvalues[j]));
+            dot = vzlp[j] + vb[j] / (2.0 * sidefactor * eigenvalues[j]);
 
             num += eigenvectors[j * nquadexprs + i] * dot;
             denom += sidefactor * eigenvalues[j] * SQR(dot);
@@ -2313,7 +2310,7 @@ void computeApex(
          *success = FALSE;
          return;
       }
-      assert(denom > 0);
+      assert(denom > 0.0);
 
       num *= -kappa;
       entry += num / denom;
@@ -2347,10 +2344,10 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
    *success = FALSE;
 
    /* check if we are in the correct case (case 2) */
-   assert(wcoefs == NULL && kappa > 0);
+   assert(wcoefs == NULL && kappa > 0.0);
 
-    cols = SCIPgetLPCols(scip);
-    rows = SCIPgetLPRows(scip);
+   cols = SCIPgetLPCols(scip);
+   rows = SCIPgetLPRows(scip);
 
    /* if var corresponding to current ray is integer, we can do monoidal */
    if( (lppos >= 0 && SCIPvarGetType(SCIPcolGetVar(cols[lppos])) != SCIP_VARTYPE_CONTINUOUS) ||
@@ -2375,7 +2372,7 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
          sidefactor, &a, &b, &c) );
 
       /* check if ray is in strip */
-      if( SQR(b) - (4 * a * c) >= 0 )
+      if( SQR(b) - (4 * a * c) >= 0.0 )
       {
          /* find smallest root of quadratic function a * x^2 + b * x + c -> this is the cut coef */
          *cutcoef = findMonoidalQuadRoot(scip, a, b, c);
@@ -2431,7 +2428,8 @@ void sparsifyIntercut(
       solval = SCIPgetSolVal(scip, NULL, var);
 
       /* if the variable is at its lower or upper bound and the coefficient has the correct sign, we can
-       * set the cutcoef to 0 */
+       * set the cutcoef to 0
+       */
       if( SCIPisZero(scip, ub - solval) && coef > 0.0 )
       {
          SCIProwprepAddSide(rowprep, -coef * ub);
@@ -2485,7 +2483,7 @@ SCIP_RETCODE computeIntercut(
    cols = SCIPgetLPCols(scip);
    rows = SCIPgetLPRows(scip);
 
-   case2 = wcoefs == NULL && kappa > 0;
+   case2 = wcoefs == NULL && kappa > 0.0;
    monoidalwasused = FALSE;
 
    counter = 0;
@@ -2580,20 +2578,20 @@ SCIP_RETCODE computeIntercut(
 
             if( cutcoef >= 0 )
                avemonoidalimprovsum += cutcoef / normalcutcoef;
-            monoidalcounter += 1;
-          }
-          else
-          {
+            ++monoidalcounter;
+         }
+         else
+         {
             /* compute cut coef */
             cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
-          }
+         }
 
-          if( cutcoef == 0.0 && case2 )
-          {
+         if( cutcoef == 0.0 && case2 )
+         {
             /* restrict phi to the line defined by ray + apex + t*(f - apex) */
             SCIP_CALL( computeRestrictionToLine(scip, nlhdlrexprdata, sidefactor,
-                     &rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
-                     rays->raysbegin[i], vb, vzlp, kappa, apex, coefs1234a, success) );
+               &rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
+               rays->raysbegin[i], vb, vzlp, kappa, apex, coefs1234a, success) );
 
             if( ! *success )
                goto TERMINATE;
@@ -2611,11 +2609,11 @@ SCIP_RETCODE computeIntercut(
             cutcoef = - computeRoot(scip, coefs1234a);
 
             assert(cutcoef <= 0.0);
-          }
+         }
       }
 
       /* keep track of average cut coefficient */
-      counter += 1;
+      ++counter;
       avecutcoefsum += cutcoef;
       assert( ! SCIPisInfinity(scip, cutcoef) );
 
@@ -2671,8 +2669,7 @@ SCIP_RETCODE computeIntercut(
       nlhdlrdata->currentavemonoidalimprovement = avemonoidalimprovsum / monoidalcounter;
 
 TERMINATE:
-   if( apex != NULL )
-      SCIPfreeBufferArray(scip, &apex);
+   SCIPfreeBufferArrayNull(scip, &apex);
 
    return SCIP_OKAY;
 }
