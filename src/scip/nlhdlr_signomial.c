@@ -38,8 +38,6 @@
 #define SCIP_DEBUG
 #endif
 
-#include <string.h>
-
 #include "scip/nlhdlr_signomial.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc_rowprep.h"

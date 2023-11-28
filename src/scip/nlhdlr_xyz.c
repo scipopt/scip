@@ -28,8 +28,6 @@
  * @author Jane Doe
  */
 
-#include <string.h>
-
 #include "scip/nlhdlr_xyz.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc_rowprep.h"
