@@ -1256,8 +1256,9 @@ SCIP_Real computeWRayLinear(
    return retval;
 }
 
-/* computes the dot product of v_i and the current ray as well as of v_i and the apex where v_i
- * is the i-th eigenvalue */
+/** computes the dot product of v_i and the current ray as well as of v_i and the apex where v_i
+ * is the i-th eigenvalue
+ */
 static
 void computeVApexAndVRay(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
@@ -2112,8 +2113,9 @@ SCIP_RETCODE computeMonoidalQuadCoefs(
    return SCIP_OKAY;
 }
 
-/* check if ray was in strip by checking if the point in the monoid corresponding to the cutcoef we just found
- * is "on the wrong side" of the hyperplane -(a - lambda^Ta lambda)^T x */
+/** check if ray was in strip by checking if the point in the monoid corresponding to the cutcoef we just found
+ * is "on the wrong side" of the hyperplane -(a - lambda^Ta lambda)^T x
+ */
 static
 SCIP_Bool isRayInStrip(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
@@ -2253,7 +2255,7 @@ SCIP_Real findMonoidalQuadRoot(
    return sol;
 }
 
-/* computes the apex of the S-free set (id it exists) */
+/** computes the apex of the S-free set (if it exists) */
 static
 void computeApex(
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
@@ -2320,7 +2322,7 @@ void computeApex(
    }
 }
 
-/* for a given ray, computes the cut coefficient using monoidal strengthening (if possible) */
+/** for a given ray, computes the cut coefficient using monoidal strengthening (if possible) */
 static
 SCIP_RETCODE computeMonoidalStrengthCoef(
    SCIP*                 scip,               /**< SCIP data structure */
