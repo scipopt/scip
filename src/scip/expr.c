@@ -4188,14 +4188,14 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
    return expr->quaddata->allexprsarevars;
 }
 
-/** returns a monomial representation of an expression
+/** returns a monomial representation of a product expression
  *
  * The array to store all factor expressions needs to be of size the number of
  * children in the expression which is given by SCIPexprGetNChildren().
  *
  * Given a non-trivial monomial expression, the function finds its representation as \f$cx^\alpha\f$, where
  * \f$c\f$ is a real coefficient, \f$x\f$ is a vector of auxiliary or original variables (where some entries can
- * be NULL is the auxuliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
+ * be NULL is the auxiliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
  *
  * A non-trivial monomial is a product of a least two expressions.
  */
