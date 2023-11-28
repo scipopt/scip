@@ -2435,12 +2435,12 @@ void sparsifyIntercut(
       if( SCIPisZero(scip, ub - solval) && coef > 0.0 )
       {
          SCIProwprepAddSide(rowprep, -coef * ub);
-         SCIProwprepModifyCoef(rowprep, i, 0.0);
+         SCIProwprepSetCoef(rowprep, i, 0.0);
       }
       else if( SCIPisZero(scip, solval - lb) && coef < 0.0 )
       {
          SCIProwprepAddSide(rowprep, -coef * lb);
-         SCIProwprepModifyCoef(rowprep, i, 0.0);
+         SCIProwprepSetCoef(rowprep, i, 0.0);
       }
    }
 

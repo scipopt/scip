@@ -105,14 +105,6 @@ SCIP_Real* SCIProwprepGetCoefs(
    SCIP_ROWPREP*         rowprep             /**< rowprep */
    );
 
-/** modifies coefficient idx of rowprep */
-SCIP_EXPORT
-void SCIProwprepModifyCoef(
-   SCIP_ROWPREP*         rowprep,            /**< rowprep */
-   int                   idx,                /**< index of coef to modify */
-   SCIP_Real             newcoef             /**< new coefficient */
-   );
-
 /** gives side of rowprep */
 SCIP_EXPORT
 SCIP_Real SCIProwprepGetSide(
@@ -153,6 +145,14 @@ SCIP_VAR** SCIProwprepGetModifiedVars(
 SCIP_EXPORT
 void SCIProwprepReset(
    SCIP_ROWPREP*         rowprep             /**< rowprep */
+   );
+
+/** sets coefficient idx of rowprep */
+SCIP_EXPORT
+void SCIProwprepSetCoef(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   int                   idx,                /**< index of coef to set */
+   SCIP_Real             newcoef             /**< new coefficient */
    );
 
 /** adds constant value to side of rowprep */
@@ -205,6 +205,7 @@ void SCIProwprepRecordModifications(
 #define SCIProwprepGetName(rowprep)   (rowprep)->name
 #define SCIProwprepGetNModifiedVars(rowprep) (rowprep)->nmodifiedvars
 #define SCIProwprepGetModifiedVars(rowprep) (rowprep)->modifiedvars
+#define SCIProwprepSetCoef(rowprep, idx, newcoef) ((rowprep)->coefs[idx] = (newcoef))
 #define SCIProwprepAddSide(rowprep, sideadd)  ((rowprep)->side += (sideadd))
 #define SCIProwprepAddConstant(rowprep, constant)  SCIProwprepAddSide(rowprep, -(constant))
 #define SCIProwprepSetSidetype(rowprep, sidetype_) (rowprep)->sidetype = sidetype_

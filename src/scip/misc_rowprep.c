@@ -547,6 +547,7 @@ void rowprepCleanupSide(
 #undef SCIProwprepGetName
 #undef SCIProwprepGetNModifiedVars
 #undef SCIProwprepGetModifiedVars
+#undef SCIProwprepSetCoef
 #undef SCIProwprepAddSide
 #undef SCIProwprepAddConstant
 #undef SCIProwprepSetSidetype
@@ -653,18 +654,6 @@ SCIP_Real* SCIProwprepGetCoefs(
    return rowprep->coefs;
 }
 
-/** modifies coefficient idx of rowprep */
-void SCIProwprepModifyCoef(
-   SCIP_ROWPREP*         rowprep,            /**< rowprep */
-   int                   idx,                /**< index of coef to modify */
-   SCIP_Real             newcoef             /**< new coefficient */
-   )
-{
-   assert(rowprep != NULL);
-
-   rowprep->coefs[idx] = newcoef;
-}
-
 /** gives side of rowprep */
 SCIP_Real SCIProwprepGetSide(
    SCIP_ROWPREP*         rowprep             /**< rowprep */
@@ -740,10 +729,17 @@ void SCIProwprepReset(
    rowprep->modifiedside = FALSE;
 }
 
-#ifdef NDEBUG
-#undef SCIProwprepAddSide
-#undef SCIProwprepAddConstant
-#endif
+/** sets coefficient idx of rowprep */
+void SCIProwprepSetCoef(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   int                   idx,                /**< index of coef to set */
+   SCIP_Real             newcoef             /**< new coefficient */
+   )
+{
+   assert(rowprep != NULL);
+
+   rowprep->coefs[idx] = newcoef;
+}
 
 /** adds constant value to side of rowprep */
 void SCIProwprepAddSide(
