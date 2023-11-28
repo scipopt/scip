@@ -969,7 +969,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    SCIP_EVENTTYPE eventtype;
    SCIP_EXPR* expr;
    SCIP_EXPR_OWNERDATA* ownerdata;
-   SCIP_Bool implintvarcase = FALSE;
+   SCIP_Bool boundtightened = FALSE;
 
    eventtype = SCIPeventGetType(event);
    assert(eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED));
@@ -989,6 +989,18 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    assert(ownerdata->nconss > 0);
    assert(ownerdata->conss != NULL);
 
+   if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
+      boundtightened = TRUE;
+
+   /* usually, if fixing a variable results in a boundchange, we should have seen a boundtightened-event as well
+    * however, if the boundchange is smaller than epsilon, such an event will be omitted
+    * but we still want to make sure the activity of the var-expr is reevaluated (mainly to avoid a failing assert) in this case
+    * since we cannot easily see whether a variable bound was actually changed in a varfixed event, we treat any varfixed event
+    * as a boundtightening (and usually it is, I would think)
+    */
+   if( eventtype & SCIP_EVENTTYPE_VARFIXED )
+      boundtightened = TRUE;
+
    /* if a variable is changed to implicit-integer and has a fractional bound, then the behavior of intEvalVarBoundTightening is changing,
     * because we will round the bounds and no longer consider relaxing them
     * we will mark corresponding constraints as not-propagated in this case to get the tightened bounds on the var-expr
@@ -997,14 +1009,14 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
     */
    if( (eventtype & SCIP_EVENTTYPE_TYPECHANGED) && (SCIPeventGetNewtype(event) == SCIP_VARTYPE_IMPLINT) &&
       (!EPSISINT(SCIPvarGetLbGlobal(SCIPeventGetVar(event)), 0.0) || !EPSISINT(SCIPvarGetUbGlobal(SCIPeventGetVar(event)), 0.0)) ) /*lint !e835*/
-      implintvarcase = TRUE;
+      boundtightened = TRUE;
 
    /* notify constraints that use this variable expression (expr) to repropagate and possibly resimplify
     * - propagation can only find something new if a bound was tightened
     * - simplify can only find something new if a var is fixed (or maybe a bound is tightened)
     *   and we look at global changes (that is, we are not looking at boundchanges in probing)
     */
-   if( (eventtype & (SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_VARFIXED)) || implintvarcase )
+   if( boundtightened )
    {
       SCIP_CONSDATA* consdata;
       int c;
@@ -1019,11 +1031,8 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
           *   that is, we don't need to repropagate x + ... <= rhs if only the upper bound of x has been tightened
           *   the locks don't help since they are not available separately for each constraint
           */
-         if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) || implintvarcase )
-         {
-            consdata->ispropagated = FALSE;
-            SCIPdebugMsg(scip, "  marked <%s> for propagate\n", SCIPconsGetName(ownerdata->conss[c]));
-         }
+         consdata->ispropagated = FALSE;
+         SCIPdebugMsg(scip, "  marked <%s> for propagate\n", SCIPconsGetName(ownerdata->conss[c]));
 
          /* if still in presolve (but not probing), then mark constraints to be unsimplified */
          if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !SCIPinProbing(scip) )
@@ -1035,7 +1044,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    }
 
    /* update curboundstag, lastboundrelax, and expr activity */
-   if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) || implintvarcase )
+   if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) || boundtightened )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_INTERVAL activity;
