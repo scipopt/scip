@@ -2396,6 +2396,8 @@ Test(interCuts, strength2, .description = "test strengthening case 2")
 
       SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usestrengthening", TRUE) );
       SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/usemonoidal", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "nlhdlr/quadratic/useminrep", FALSE) );
+
       /* we need to overestimate because simplify will multiply cons by -1 */
       testCut(nlhdlrexprdata, cons, TRUE, expectedcoefs, expectedvars, expectedlhs, expectednvars);
    }

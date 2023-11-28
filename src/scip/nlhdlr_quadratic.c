@@ -78,6 +78,7 @@
 #define DEFAULT_USEINTERCUTS           FALSE
 #define DEFAULT_USESTRENGTH            FALSE
 #define DEFAULT_USEMONOIDAL            TRUE
+#define DEFAULT_USEMINREP              TRUE
 #define DEFAULT_USEBOUNDS              FALSE
 #define BINSEARCH_MAXITERS             120
 #define DEFAULT_NCUTSROOT              20
@@ -126,6 +127,7 @@ struct SCIP_NlhdlrData
    SCIP_Bool             useintersectioncuts; /**< whether to use intersection cuts for quadratic constraints or not */
    SCIP_Bool             usestrengthening;   /**< whether the strengthening should be used */
    SCIP_Bool             usemonoidal;        /**< whether monoidal strengthening should be used */
+   SCIP_Bool             useminrep;          /**< whether the minimal representation of the S-free set should be used (instead of the gauge) */
    SCIP_Bool             useboundsasrays;    /**< use bounds of variables in quadratic as rays for intersection cuts */
    int                   ncutslimit;         /**< limit for number of cuts generated consecutively */
    int                   ncutslimitroot;     /**< limit for number of cuts generated at root node */
@@ -2586,7 +2588,7 @@ SCIP_RETCODE computeIntercut(
             cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
          }
 
-         if( cutcoef == 0.0 && case2 )
+         if( cutcoef == 0.0 && case2 && nlhdlrdata->useminrep )
          {
             /* restrict phi to the line defined by ray + apex + t*(f - apex) */
             SCIP_CALL( computeRestrictionToLine(scip, nlhdlrexprdata, sidefactor,
@@ -5071,6 +5073,10 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/usemonoidal",
          "whether monoidal strengthening should be used",
          &nlhdlrdata->usemonoidal, FALSE, DEFAULT_USEMONOIDAL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/useminrep",
+         "whether the minimal representation of the S-free set should be used (instead of the gauge)",
+         &nlhdlrdata->useminrep, FALSE, DEFAULT_USEMINREP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/useboundsasrays",
          "use bounds of variables in quadratic as rays for intersection cuts",
