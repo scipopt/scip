@@ -40,7 +40,7 @@
 
 #include <string.h>
 
-#include "nlhdlr_signomial.h"
+#include "scip/nlhdlr_signomial.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/struct_misc.h"
 #include "scip/pub_misc_rowprep.h"
@@ -60,23 +60,22 @@
 #define NLHDLR_MINCUTSCALE             1e-5  /**< minimum scale factor when scaling a cut (minimum: 1e-6) */
 
 
-/**
- * nonlinear handler expression data
+/** nonlinear handler expression data
  *
  * A signomial expression admits the form \f$ cx^a = y \f$, where \f$ y \f$ is an auxiliary variable representing this
  * expression and all \f$ x \f$ are positive.
  *
  * The natural formulation of the expression is defined as \f$ x^a = t = y/c \f$, where \f$ t \f$ is a
- * non-existant slack variable denoting \f$ y/c \f$. The variables in $x$ with positive exponents form positive
- * variables \f$ u \f$, and the associated exponents form positive exponents \f$ f\ f$. The variables in \f$ x \f$ with
+ * non-existant slack variable denoting \f$ y/c \f$. The variables in \f$x\f$ with positive exponents form positive
+ * variables \f$ u \f$, and the associated exponents form positive exponents \f$ f \f$. The variables in \f$ x \f$ with
  * negative exponents and \f$ t \f$  form negative variables \f$ v \f$, and the associated exponents form negative
- * exponents \f$ g \f$. Let \$ s =  \max(|f|,|g|) \$ be a normalization constant, where \$ || \$ denotes the L1 norm. Apply a scaling step:
+ * exponents \f$ g \f$. Let \f$ s =  \max(|f|,|g|) \f$ be a normalization constant, where \f$ |\cdot| \f$ denotes the L1 norm. Apply a scaling step:
  * Dividing the entries of \f$ f \f$  by \f$ s \f$, and dividing the entries of \f$ g \f$  by \f$ s \f$ as well. Then \f$ x^a = t \f$ has
  * a reformulation \f$ u^f = v^g \f$, where \f$ u^f, v^g \$ are two concave power functions.
  */
 struct SCIP_NlhdlrExprData
 {
-   SCIP_Real             coef;               /**< coeffcient \f$c\f$ */
+   SCIP_Real             coef;               /**< coefficient \f$c\f$ */
    SCIP_EXPR**           factors;            /**< expression factors representing \f$x\f$ */
    int                   nfactors;           /**< number of factors */
    int                   nvars;              /**< number of variables \f$(x,y)\f$ */
@@ -119,13 +118,12 @@ typedef struct
 
 #ifdef SCIP_SIGCUT_DEBUG
 
-
 /** print the information on a signomial term */
 static
 SCIP_RETCODE printSignomial(
-   SCIP*                scip,               /**< SCIP data structure */
-   SCIP_EXPR*           expr,               /**< expression */
-   SCIP_NLHDLREXPRDATA* nlhdlrexprdata      /**< expression data */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata      /**< expression data */
    )
 {
    assert(expr != NULL);
@@ -145,10 +143,12 @@ SCIP_RETCODE printSignomial(
    /* print the natural formulation of the expression */
    SCIPinfoMessage(scip, NULL, ". natural formulation c x^a = y: %.2f", nlhdlrexprdata->coef);
    for( int i = 0; i < nlhdlrexprdata->nvars - 1; i++ )
+   {
       SCIPinfoMessage(scip, NULL, "%s^%.2f", SCIPvarGetName(nlhdlrexprdata->vars[i]), nlhdlrexprdata->exponents[i]);
+   }
    SCIPinfoMessage(scip, NULL, " = %s", SCIPvarGetName(nlhdlrexprdata->vars[nlhdlrexprdata->nvars - 1]));
 
-   /* print the  reformulation of the expression */
+   /* print the reformulation of the expression */
    SCIPinfoMessage(scip, NULL, ". Reformulation u^f = v^g: ");
    if( nlhdlrexprdata->nposvars == 0 )
    {
@@ -157,10 +157,10 @@ SCIP_RETCODE printSignomial(
    else
    {
       for( int i = 0; i < nlhdlrexprdata->nvars; i++ )
-      {
          if( nlhdlrexprdata->signs[i] )
+         {
             SCIPinfoMessage(scip, NULL, "%s^%.2f", SCIPvarGetName(nlhdlrexprdata->vars[i]), nlhdlrexprdata->refexponents[i]);
-      }
+         }
    }
    SCIPinfoMessage(scip, NULL, " = ");
    if( nlhdlrexprdata->nnegvars == 0 )
@@ -174,9 +174,13 @@ SCIP_RETCODE printSignomial(
          if( !nlhdlrexprdata->signs[i] )
          {
             if( i == nlhdlrexprdata->nvars - 1 )
+            {
                SCIPinfoMessage(scip, NULL, "(%s/%.2f)^%.2f", SCIPvarGetName(nlhdlrexprdata->vars[i]), nlhdlrexprdata->coef, nlhdlrexprdata->refexponents[i]);
+            }
             else
+            {
                SCIPinfoMessage(scip, NULL, "%s^%.2f", SCIPvarGetName(nlhdlrexprdata->vars[i]), nlhdlrexprdata->refexponents[i]);
+            }
          }
       }
    }
@@ -201,12 +205,11 @@ void freeExprDataMem(
    if( !ispartial )
    {
       int nvars = (*nlhdlrexprdata)->nvars;
-      int n2vars = nvars * 2;
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->signs, nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->refexponents, nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->vars, nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->intervals, nvars);
-      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, n2vars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->box, 2*nvars);  /*lint !e647*/
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->xstar, nvars);
       SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->facetcoefs, nvars);
    }
@@ -218,14 +221,14 @@ void freeExprDataMem(
  *
  * The input rowprep is of the form  \f$ a_u u + a_v v + b \f$.
  * If in the overestimate mode, then we relax \f$ t \le x^a \f$, i.e., \f$ 0 \le u^f - v^g \f$. This implies that \f$ t \f$ is in \f$ v = (v',t) \f$.
- * Therefore, the valid inequality is \f$ 0 \le a_u u + a_v v + b \f$. As overestimate mode requires  that \f$ t \f$ is in the left hand side,
- * the coefficients of  \f$  t \f$ must be made negative while keeping the sign of the inequlaity, we can show that \f$  a_t \le 0 \f$, so it suffices
- * to divide the both sides by \f$  -a_t \ge 0\f$, which yields  \f$ t \le (a_u u + a_v' v' + b) / -a_t \f$.
+ * Therefore, the valid inequality is \f$ 0 \le a_u u + a_v v + b \f$. As overestimate mode requires that \f$ t \f$ is in the left hand side,
+ * the coefficients of \f$ t \f$ must be made negative while keeping the sign of the inequality, we can show that \f$ a_t \le 0 \f$, so it suffices
+ * to divide the both sides by \f$ -a_t \ge 0\f$, which yields  \f$ t \le (a_u u + a_v' v' + b) / -a_t \f$.
  * A rowprep in standard form only contains an estimator of the expression and no auxvar.
- * If in the underestimate mode, then we relax \f$ x^a \le t \f$, i.e.,  \f$ u^f - v^g \le 0 \f$. This implies that \f$ t \f$ is in \f$ v = (v',t) \f$.
- * Therefore, the valid inequality is \f$ a_u u + a_v v + b  \le 0 \f$. As overestimate mode requires that \f$ t \f$ is in the left hand side,
- * the coefficients of  \f$  t \f$ must be made negative while keeping the sign of the inequlaity, we can show that \f$  a_t \le 0 \f$, so it suffices
- * to divide the both sides by \f$  -a_t  \ge 0 \f$, which yields  \f$ (a_u u + a_v' v' + b) / -a_t \le t \f$.
+ * If in the underestimate mode, then we relax \f$ x^a \le t \f$, i.e., \f$ u^f - v^g \le 0 \f$. This implies that \f$ t \f$ is in \f$ v = (v',t) \f$.
+ * Therefore, the valid inequality is \f$ a_u u + a_v v + b \le 0 \f$. As overestimate mode requires that \f$ t \f$ is in the left hand side,
+ * the coefficients of \f$ t \f$ must be made negative while keeping the sign of the inequality, we can show that \f$ a_t \le 0 \f$, so it suffices
+ * to divide the both sides by \f$ -a_t \ge 0 \f$, which yields \f$ (a_u u + a_v' v' + b) / -a_t \le t \f$.
  * A rowprep in standard form only contains an estimator of the expression and no auxvar.
  */
 static
@@ -244,22 +247,23 @@ void reformRowprep(
    SCIP_Real* coefs;
    SCIP_VAR* auxvar;
    SCIP_VAR** vars;
+
    assert(rowprep != NULL);
    assert(nlhdlrexprdata != NULL);
 
-   coefs =  SCIProwprepGetCoefs(rowprep);
+   coefs = SCIProwprepGetCoefs(rowprep);
    vars = SCIProwprepGetVars(rowprep);
    nvars = SCIProwprepGetNVars(rowprep);
 
    /* find auxvar's cut coefficient and set it to zero */
    auxvar = nlhdlrexprdata->vars[nlhdlrexprdata->nfactors];
-   coefauxvar = 1;
+   coefauxvar = 1.0;
    for( i = 0; i < nvars; i++ )
    {
       if( vars[i] == auxvar )
       {
          coefauxvar = coefs[i];
-         coefs[i] = 0;
+         coefs[i] = 0.0;
          break;
       }
    }
@@ -268,10 +272,11 @@ void reformRowprep(
    {
       *success = FALSE;
    }
-   else{
+   else
+   {
       /* the reformation scales the cut so that coefficients and constant are divided by the absolute value of coefauxvar */
-      assert(coefauxvar < 0);
-      scale = - 1 / coefauxvar;
+      assert(coefauxvar < 0.0);
+      scale = -1.0 / coefauxvar;
       for( i = 0; i < nvars; i++ )
       {
          if( vars[i] == auxvar )
@@ -301,6 +306,7 @@ SCIP_RETCODE storeCaptureVars(
    {
       nlhdlrexprdata->vars[c] = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->factors[c]);
       assert(nlhdlrexprdata->vars[c] != NULL);
+
       SCIP_CALL( SCIPcaptureVar(scip, nlhdlrexprdata->vars[c]) );
    }
 
@@ -314,7 +320,7 @@ SCIP_RETCODE storeCaptureVars(
    return SCIP_OKAY;
 }
 
-/** get bounds of variables $x,t$ and check whether they are box constrained signomial variables */
+/** get bounds of variables x,t and check whether they are box constrained signomial variables */
 static
 void checkSignomialBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -332,7 +338,7 @@ void checkSignomialBounds(
 
    *isboxsignomial = FALSE;
 
-   /* get bounds of \f$x\f$ */
+   /* get bounds of x */
    for( c = 0; c < nlhdlrexprdata->nfactors; c++ )
    {
       SCIP_Real inf = SCIPvarGetLbLocal(nlhdlrexprdata->vars[c]);
@@ -341,21 +347,21 @@ void checkSignomialBounds(
       /* if the bounds of the variable are not positive and finite, then the expression is not a signomial */
       if( !SCIPisPositive(scip, inf) || !SCIPisPositive(scip, sup) || SCIPisInfinity(scip, sup) )
          return;
+
       nlhdlrexprdata->intervals[c].inf = inf;
       nlhdlrexprdata->intervals[c].sup = sup;
       powinf = pow(inf, nlhdlrexprdata->exponents[c]);
       powsup = pow(sup, nlhdlrexprdata->exponents[c]);
-      productinf *= fmin(powinf, powsup);
-      productsup *= fmax(powinf, powsup);
+      productinf *= MIN(powinf, powsup);
+      productsup *= MAX(powinf, powsup);
    }
 
-   /* compute bounds of \f$t\f$  by bounds of \f$x\f$ */
-   nlhdlrexprdata->intervals[c].inf = fmax(productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c]));
-   nlhdlrexprdata->intervals[c].sup = fmin(productsup, SCIPvarGetUbLocal(nlhdlrexprdata->vars[c]));
+   /* compute bounds of t by bounds of x */
+   nlhdlrexprdata->intervals[c].inf = MAX(productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c]));  /*lint !e666*/
+   nlhdlrexprdata->intervals[c].sup = MIN(productsup, SCIPvarGetUbLocal(nlhdlrexprdata->vars[c]));  /*lint !e666*/
 
    *isboxsignomial = TRUE;
 }
-
 
 /** evaluate expression at solution w.r.t. auxiliary variables */
 static
@@ -364,8 +370,8 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalPower)
    int i;
    int j;
    SCIP_Real val;
-   VERTEXPOLYFUN_EVALDATA *evaldata;
-   SCIP_NLHDLREXPRDATA *nlhdlrexprdata;
+   VERTEXPOLYFUN_EVALDATA* evaldata;
+   SCIP_NLHDLREXPRDATA* nlhdlrexprdata;
 
    assert(args != NULL);
 
@@ -377,11 +383,10 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalPower)
    nlhdlrexprdata = evaldata->nlhdlrexprdata;
 
 #ifdef SCIP_MORE_DEBUG
-   SCIPdebugMsg(evaldata->scip, "eval vertexpolyfun at\n");
+   SCIPdebugMsg(evaldata->scip, "eval vertexpolyfun\n");
 #endif
-   val = 1;
-   j = 0;
-   for ( i = 0 ; i < nlhdlrexprdata->nvars; ++i )
+   val = 1.0;
+   for( i = 0, j = 0; i < nlhdlrexprdata->nvars; ++i )
    {
       if( nlhdlrexprdata->signs[i] != evaldata->sign )
          continue;
@@ -393,8 +398,6 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalPower)
    return val;
 }
 
-
-
 /** determine whether a power function \f$ w^h \f$ is special and add an overunderestimator or underestimator to a given rowprep
  *
  * \f$ w^h \f$ is special, if all variables are fixed, or it is a constant to estimate, a univariate power to estimate,
@@ -403,9 +406,9 @@ SCIP_DECL_VERTEXPOLYFUN(nlhdlrExprEvalPower)
 static
 SCIP_RETCODE estimateSpecialPower(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NLHDLREXPRDATA   *nlhdlrexprdata,    /**< nonlinear handler expression data */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
    SCIP_Bool             sign,               /**< the sign of variables of the power function */
-   SCIP_Real             multiplier,         /**< the mulitplier of the estimator */
+   SCIP_Real             multiplier,         /**< the multiplier of the estimator */
    SCIP_Bool             overestimate,       /**< whether overestimate or underestimator the power function */
    SCIP_SOL*             sol,                /**< solution \f$ w' \f$  to use in estimation */
    SCIP_ROWPREP*         rowprep,            /**< rowprep where to store estimator */
@@ -431,29 +434,32 @@ SCIP_RETCODE estimateSpecialPower(
          continue;
 
       if( !SCIPisRelEQ(scip, nlhdlrexprdata->intervals[i].inf, nlhdlrexprdata->intervals[i].sup) )
+      {
          allfixed = FALSE;
+         break;
+      }
    }
-
 
    /* allfixed is a special case */
    if( allfixed )
    {
       /* return a constant */
-      SCIP_Real funcval = 1;
+      SCIP_Real funcval = 1.0;
       SCIP_Real scale;
       SCIP_Real val;
-      SCIP_Real refexponent;
+
       for( i = 0; i < nlhdlrexprdata->nvars; ++i )
       {
          if( nlhdlrexprdata->signs[i] != sign )
             continue;
-         scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
+
+         scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1.0;
          val = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[i]) / scale;
-         refexponent = nlhdlrexprdata->refexponents[i];
-         funcval *= pow(val, refexponent);
+         funcval *= pow(val, nlhdlrexprdata->refexponents[i]);
       }
-      SCIProwprepAddConstant(rowprep,  multiplier * funcval);
+      SCIProwprepAddConstant(rowprep, multiplier * funcval);
       *isspecial = TRUE;
+
       return SCIP_OKAY;
    }
 
@@ -473,18 +479,18 @@ SCIP_RETCODE estimateSpecialPower(
    }
    else if( nsignvars == 1 )
    {
-      /* univariate case, \f$ w^h \f$ */
+      /* univariate case, w^h */
       for( i = 0; i < nlhdlrexprdata->nvars; ++i )
       {
          if( nlhdlrexprdata->signs[i] == sign )
          {
-            /* the variable \f$ w \f$ is found */
+            /* the variable w is found */
             SCIP_Real scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
             SCIP_VAR* var = nlhdlrexprdata->vars[i];
             SCIP_Real refexponent = nlhdlrexprdata->refexponents[i];
             if( refexponent == 1.0 )
             {
-               /* \f$ h = 1 \f$, a univariate linear function. Only rescale, no need for linearization */
+               /* h = 1, a univariate linear function. Only rescale, no need for linearization */
                SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier / scale) );
             }
             else
@@ -504,12 +510,13 @@ SCIP_RETCODE estimateSpecialPower(
       }
       *success = TRUE;
    }
-   else if( nsignvars == 2 && !overestimate ){
-      /* bivariate case, \f$ f(w) = w^h = f_0(w_0) f_1(w_1)  \f$. The convex under envelope is the maxmimum of
+   else if( nsignvars == 2 && !overestimate )
+   {
+      /* bivariate case, f(w) = w^h = f_0(w_0) f_1(w_1). The convex under envelope is the maxmimum of
        * two affine functions, each of which is determined by three extreme points the box bound.
        * One affine function is supported by three lower left points; the other affine function is
        * supported by three upper right points. For a point xstar in the box, its corresponding affine function can be determined by
-       * which region (upper right or lower left half sapce) the point is in. Thus, we can determine the region, and use the
+       * which region (upper right or lower left half space) the point is in. Thus, we can determine the region, and use the
        * associated three extreme point to interpolate the affine function.
        */
       SCIP_Bool isupperright;
@@ -524,7 +531,8 @@ SCIP_RETCODE estimateSpecialPower(
       SCIP_Real scale[2] = {0.0, 0.0};;
       SCIP_Real box[4] = {0.0, 0.0, 0.0, 0.0};
       int j = 0;
-      /* get refexponents, xtar, scale, and box */
+
+      /* get refexponents, xstar, scale, and box */
       for( i = 0; i < nlhdlrexprdata->nvars; ++i )
       {
          if( nlhdlrexprdata->signs[i] != sign )
@@ -537,13 +545,17 @@ SCIP_RETCODE estimateSpecialPower(
          xstar[j] = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[j]) / scale[j];
          j++;
       }
+
       /* compute the box length*/
       dw0 = box[1] - box[0];
       dw1 = box[3] - box[2];
+
       /* determine the location (upper right or lower left half sapce) of the xstar.
-       * \f$ (dw1, dw0) \f$ is the direction vector to the upper right half space. */
-      isupperright = ( (xstar[0] - box[0]) * dw1 + (xstar[1] - box[3]) * dw0 ) > 0;
-      /* compute function values of \f$ f_0, f_1 \f$ at vetices */
+       * (dw1, dw0) is the direction vector to the upper right half space.
+       */
+      isupperright = ( (xstar[0] - box[0]) * dw1 + (xstar[1] - box[3]) * dw0 ) > 0.0;
+
+      /* compute function values of f_0, f_1 at vertices */
       f0w0l = pow(box[0], refexponents[0]);
       f0w0u = pow(box[1], refexponents[0]);
       f1w1l = pow(box[2], refexponents[1]);
@@ -552,7 +564,7 @@ SCIP_RETCODE estimateSpecialPower(
       fw0uw1l = f0w0u * f1w1l;
       if( isupperright )
       {
-         /* underestimator: \f$ fw0uw1u + (fw0uw1u - fw0lw1u) / (dw0) * (x0 - w0u) + (fw0uw1u - fw0uw1l) / (dw1) * (x1 - w1u) \f$ */
+         /* underestimator: fw0uw1u + (fw0uw1u - fw0lw1u) / (dw0) * (x0 - w0u) + (fw0uw1u - fw0uw1l) / (dw1) * (x1 - w1u) */
          SCIP_Real fw0uw1u = f0w0u * f1w1u;
          facetcoefs[0] = (fw0uw1u - fw0lw1u) / dw0;
          facetcoefs[1] = (fw0uw1u - fw0uw1l) / dw1;
@@ -560,7 +572,7 @@ SCIP_RETCODE estimateSpecialPower(
       }
       else
       {
-         /* underestimator: \f$ fw0lw1l + (fw0uw1l - fw0lw1l) / (dw0) * (x0 - w0l) + (fw0lw1u- fw0lw1l) / (dw1) * (x1 - w1l) \f$ */
+         /* underestimator: fw0lw1l + (fw0uw1l - fw0lw1l) / (dw0) * (x0 - w0l) + (fw0lw1u- fw0lw1l) / (dw1) * (x1 - w1l) */
          SCIP_Real fw0lw1l = f0w0l * f1w1l;
          facetcoefs[0] = (fw0uw1l - fw0lw1l) / dw0;
          facetcoefs[1] = (fw0lw1u - fw0lw1l) / dw1;
@@ -575,7 +587,7 @@ SCIP_RETCODE estimateSpecialPower(
    return SCIP_OKAY;
 }
 
-/** adds an under estimator for a multivariate concave power concave function \f$ w^h \f$ to a given rowprep
+/** adds an underestimator for a multivariate concave power function \f$ w^h \f$ to a given rowprep
  *
  * Calls \ref SCIPcomputeFacetVertexPolyhedralNonlinear() for \f$ w^h \f$  and
  * box set to local bounds of auxiliary variables. The estimator is multiplied
@@ -588,7 +600,7 @@ SCIP_RETCODE underEstimatePower(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
    SCIP_Bool             sign,               /**< the sign of variables of the power function */
-   SCIP_Real             multiplier,         /**< the mulitplier of the estimator */
+   SCIP_Real             multiplier,         /**< the multiplier of the estimator */
    SCIP_SOL*             sol,                /**< solution \f$ w' \f$ to use*/
    SCIP_Real             targetvalue,        /**< a target value to achieve; if not reachable, then can give up early */
    SCIP_ROWPREP*         rowprep,            /**< rowprep where to store estimator */
@@ -604,7 +616,6 @@ SCIP_RETCODE underEstimatePower(
    SCIP_Real* facetcoefs;
    SCIP_Real* xstar;
    VERTEXPOLYFUN_EVALDATA evaldata;
-
 
    assert(scip != NULL);
    assert(nlhdlr != NULL);
@@ -623,9 +634,9 @@ SCIP_RETCODE underEstimatePower(
    evaldata.nsignvars = nsignvars;
    evaldata.scip = scip;
 
+   /* compute box constraints and reference value of variables*/
    xstar = nlhdlrexprdata->xstar;
    box = nlhdlrexprdata->box;
-   /* compute box constraints and reference value of variables*/
    j = 0;
    for( i = 0; i < nlhdlrexprdata->nvars; ++i )
    {
@@ -634,13 +645,13 @@ SCIP_RETCODE underEstimatePower(
 
       box[2 * j] = nlhdlrexprdata->intervals[i].inf;
       box[2 * j + 1] = nlhdlrexprdata->intervals[i].sup;
-      scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
+      scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1.0;
       xstar[j] = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[i]) / scale;
       j++;
    }
 
-   facetcoefs = nlhdlrexprdata->facetcoefs;
    /* find a facet of the underestimator */
+   facetcoefs = nlhdlrexprdata->facetcoefs;
    SCIP_CALL( SCIPcomputeFacetVertexPolyhedralNonlinear(scip, conshdlr, FALSE, nlhdlrExprEvalPower, (void*)&evaldata, xstar, box,
       nsignvars, targetvalue, success, facetcoefs, &facetconstant) );
 
@@ -657,7 +668,7 @@ SCIP_RETCODE underEstimatePower(
    {
       if( nlhdlrexprdata->signs[i] != sign )
          continue;
-      scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
+      scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1.0;
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, nlhdlrexprdata->vars[i], multiplier * facetcoefs[j] / scale) );
       j++;
    }
@@ -665,15 +676,16 @@ SCIP_RETCODE underEstimatePower(
    return SCIP_OKAY;
 }
 
-/** adds an over estimator for a concave power concave function \f$ w^h \f$ to a given rowprep
+/** adds an overestimator for a concave power function \f$ w^h \f$ to a given rowprep
  *
  * The estimator is multiplied by the multiplier and stored in the rowprep.
  */
-static SCIP_RETCODE overEstimatePower(
+static
+SCIP_RETCODE overEstimatePower(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nonlinear handler expression data */
    SCIP_Bool             sign,               /**< the sign of variables of the power function */
-   SCIP_Real             multiplier,         /**< the mulitplier of the estimator */
+   SCIP_Real             multiplier,         /**< the multiplier of the estimator */
    SCIP_SOL*             sol,                /**< solution to use */
    SCIP_ROWPREP*         rowprep,            /**< rowprep where to store estimator */
    SCIP_Bool*            success             /**< buffer to store whether successful */
@@ -702,21 +714,21 @@ static SCIP_RETCODE overEstimatePower(
    {
       if( nlhdlrexprdata->signs[i] != sign )
          continue;
-      scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
+      scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1.0;
       val = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[i]) / scale;
       refexponent = nlhdlrexprdata->refexponents[i];
       sumrefexponents += refexponent;
       funcval *= pow(val, refexponent);
    }
 
-   /* overestimate by gradient cut:  \f$ w'^h + h w'^(h - 1)(w - w')  \f$ */
+   /* overestimate by gradient cut: w'^h + h w'^(h - 1)(w - w') */
    facetconstant = (1 - sumrefexponents) * funcval;
    SCIProwprepAddConstant(rowprep,  multiplier * facetconstant);
    for( i = 0; i < nlhdlrexprdata->nvars; ++i )
    {
       if( nlhdlrexprdata->signs[i] != sign )
          continue;
-      scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1;
+      scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1.0;
       var = nlhdlrexprdata->vars[i];
       val = SCIPgetSolVal(scip, sol, var) / scale;
       facetcoef = nlhdlrexprdata->refexponents[i] * funcval / val;
@@ -744,8 +756,8 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    int nundervars;
    SCIP_Real undermultiplier;
    SCIP_Real overmultiplier;
-   SCIP_NLHDLRDATA *nlhdlrdata;
-   SCIP_ROWPREP *rowprep;
+   SCIP_NLHDLRDATA* nlhdlrdata;
+   SCIP_ROWPREP* rowprep;
    SCIP_Real targetunder;
    SCIP_Real scale;
 
@@ -759,7 +771,9 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
 
    /* store and capture the vars of an expression, if the vars are not stored and captured yet */
    if( !nlhdlrexprdata->isstorecapture )
+   {
       SCIP_CALL( storeCaptureVars(scip, expr, nlhdlrexprdata) );
+   }
 
    /* check whether all variables have finite positive bounds, which is necessary for the expression to be a signomial term */
    /* TODO consider allowing 0.0 lower bounds for u variables (and handle gradients at 0.0) */
@@ -771,24 +785,23 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
 
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
 
-
    /* determine the sign of variables for over- and underestimators, and the multiplier for estimators in the rowprep */
    if( overestimate )
    {
-      /* relax \f$ t \le x^a \f$, i.e., \f$ 0 \le u^f - v^g \f$, overestimate \f$ u^f \$f, underestimate \f$ v^g \f$ */
+      /* relax t <= x^a, i.e., 0 <= u^f - v^g, overestimate u^f, underestimate v^g */
       oversign = TRUE;
       undersign = FALSE;
-      overmultiplier = 1;
-      undermultiplier = -1;
+      overmultiplier = 1.0;
+      undermultiplier = -1.0;
       nundervars = nlhdlrexprdata->nnegvars;
    }
    else
    {
-      /* relax \f$ x^a \le t \f$, i.e.,  \f$ u^f - v^g \le 0 \f$, underestimate \f$ u^f \f$, overestimate \f$ v^g \f$ */
+      /* relax x^a <= t, i.e., u^f - v^g <= 0, underestimate u^f, overestimate v^g */
       oversign = FALSE;
       undersign = TRUE;
-      overmultiplier = -1;
-      undermultiplier = 1;
+      overmultiplier = -1.0;
+      undermultiplier = 1.0;
       nundervars = nlhdlrexprdata->nposvars;
    }
 
@@ -836,9 +849,10 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
       /* check and compute the special case */
       SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, undersign, undermultiplier, FALSE, sol, rowprep, &isspecial, success) );
       if( !isspecial )
+      {
          SCIP_CALL( underEstimatePower(scip, conshdlr, nlhdlr, nlhdlrexprdata, undersign, undermultiplier, sol, targetunder, rowprep, success) );
+      }
    }
-
 
    if( *success )
    {
@@ -847,15 +861,18 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
       /* check and compute the special case */
       SCIP_CALL( estimateSpecialPower(scip, nlhdlrexprdata, oversign, overmultiplier, TRUE, sol, rowprep, &isspecial, success) );
       if( !isspecial )
+      {
          SCIP_CALL( overEstimatePower(scip, nlhdlrexprdata, oversign, overmultiplier, sol, rowprep, success) );
+      }
    }
-
 
    if( *success )
    {
       reformRowprep(scip, nlhdlrexprdata, rowprep, nlhdlrdata->mincutscale, success);
       if( *success )
-         SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep));
+      {
+         SCIP_CALL( SCIPsetPtrarrayVal(scip, rowpreps, 0, rowprep) );
+      }
    }
 
    if( !*success )
@@ -874,7 +891,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
    assert(enforcing != NULL);
    assert(participating != NULL);
 
-   /* for now, we do not care about separation if it is not required */
+   /* for now, we do not get active if separation is already (or does not need to be) provided */
    if( (*enforcing & SCIP_NLHDLR_METHOD_SEPABOTH) == SCIP_NLHDLR_METHOD_SEPABOTH )
    {
       return SCIP_OKAY;
@@ -941,7 +958,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          {
             /* capture sub expressions */
             SCIPcaptureExpr((*nlhdlrexprdata)->factors[c]);
-            if( (*nlhdlrexprdata)->exponents[c] > 0 )
+            if( (*nlhdlrexprdata)->exponents[c] > 0.0 )
             {
                /* add a positive exponent */
                sumlexponents += (*nlhdlrexprdata)->exponents[c];
@@ -961,7 +978,7 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
          (*nlhdlrexprdata)->nnegvars = nf - nposvars + 1;
 
          /* compute the normalization constant */
-         normalize = fmax(sumlexponents, sumrexponents);
+         normalize = MAX(sumlexponents, sumrexponents);
          /* normalize positive and negative exponents */
          for( c = 0; c < nf; c++ )
          {
@@ -970,9 +987,9 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
             else
                (*nlhdlrexprdata)->refexponents[c] = -(*nlhdlrexprdata)->exponents[c] / normalize;
          }
-         (*nlhdlrexprdata)->refexponents[nf] = 1 / normalize;
+         (*nlhdlrexprdata)->refexponents[nf] = 1.0 / normalize;
 
-         /* tell children that we will use their auxvar and use its activity for both estimate and domain propagation */
+         /* tell children that we will use their auxvar and use its activity for estimation */
          for( c = 0; c < nf; c++ )
          {
             SCIP_CALL( SCIPregisterExprUsageNonlinear(scip, (*nlhdlrexprdata)->factors[c], TRUE, FALSE, TRUE, TRUE) );
@@ -1004,12 +1021,15 @@ static SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxSignomial)
    int c;
    SCIP_Real val;
    SCIP_VAR* var;
+
    *auxvalue = nlhdlrexprdata->coef;
    for( c = 0; c < nlhdlrexprdata->nfactors; ++c )
    {
       assert(nlhdlrexprdata->factors[c] != NULL);
+
       var = SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->factors[c]);
       assert(var != NULL);
+
       val = SCIPgetSolVal(scip, sol, var);
       *auxvalue *= pow(val, nlhdlrexprdata->exponents[c]);
    }
@@ -1058,8 +1078,10 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSignomial)
    {
       for( c = 0; c < (*nlhdlrexprdata)->nvars; c++ )
       {
-         if((*nlhdlrexprdata)->vars[c] != NULL)
+         if( (*nlhdlrexprdata)->vars[c] != NULL )
+         {
             SCIP_CALL( SCIPreleaseVar(scip, &(*nlhdlrexprdata)->vars[c]) );
+         }
       }
    }
 
@@ -1090,7 +1112,7 @@ SCIPincludeNlhdlrSignomial(
    BMSclearMemory(nlhdlrdata);
 
    SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,
-      NLHDLR_ENFOPRIORITY, nlhdlrDetectSignomial, nlhdlrEvalauxSignomial, nlhdlrdata));
+      NLHDLR_ENFOPRIORITY, nlhdlrDetectSignomial, nlhdlrEvalauxSignomial, nlhdlrdata) );
    assert(nlhdlr != NULL);
 
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrSignomial);
