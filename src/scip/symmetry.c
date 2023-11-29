@@ -35,7 +35,7 @@
 #include "scip/scip.h"
 #include "scip/misc.h"
 #include "scip/cons_setppc.h"
-#include <symmetry/type_symmetry.h>
+#include "symmetry/type_symmetry.h"
 
 
 /** compute non-trivial orbits of symmetry group
@@ -947,7 +947,7 @@ SCIP_RETCODE SCIPcomputeComponentsSym(
    SCIPdisjointsetFree(&componentstovar, SCIPblkmem(scip));
 
 #ifdef SCIP_OUTPUT
-   printf("number of components: %d\n", propdata->ncomponents);
+   printf("number of components: %d\n", *ncomponents);
    for (i = 0; i < *ncomponents; ++i)
    {
       printf("Component %d contains the following permutations:\n\t", i);
