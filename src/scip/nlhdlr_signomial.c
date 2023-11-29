@@ -265,7 +265,7 @@ void reformRowprep(
       }
    }
 
-   if( SCIPisZero(scip, coefauxvar) )
+   if( SCIPisZero(scip, coefauxvar) || coefauxvar >= 0.0 )
    {
       *success = FALSE;
    }
@@ -342,12 +342,12 @@ void checkSignomialBounds(
       SCIP_Real inf = SCIPvarGetLbLocal(nlhdlrexprdata->vars[c]);
       SCIP_Real sup = SCIPvarGetUbLocal(nlhdlrexprdata->vars[c]);
 
-      /* if the bounds of the variable are not positive and finite, then the expression is not a signomial */
-      if( !SCIPisPositive(scip, inf) || !SCIPisPositive(scip, sup) || SCIPisInfinity(scip, sup) )
+      /* if the bounds of the variable are not positive and finite, or (bounds equal) then the expression is not a signomial */
+      if( !SCIPisPositive(scip, inf) || !SCIPisPositive(scip, sup) || SCIPisInfinity(scip, sup) || SCIPisEQ(scip, inf, sup) )
          return;
 
       nlhdlrexprdata->intervals[c].inf = inf;
-      nlhdlrexprdata->intervals[c].sup = sup;
+      nlhdlrexprdata->intervals[c].sup = MAX(sup, inf + 0.1);
       powinf = pow(inf, nlhdlrexprdata->exponents[c]);
       powsup = pow(sup, nlhdlrexprdata->exponents[c]);
       productinf *= MIN(powinf, powsup);
@@ -355,8 +355,8 @@ void checkSignomialBounds(
    }
 
    /* compute bounds of t by bounds of x */
-   nlhdlrexprdata->intervals[c].inf = MAX(productinf, SCIPvarGetLbLocal(nlhdlrexprdata->vars[c]));  /*lint !e666*/
-   nlhdlrexprdata->intervals[c].sup = MIN(productsup, SCIPvarGetUbLocal(nlhdlrexprdata->vars[c]));  /*lint !e666*/
+   nlhdlrexprdata->intervals[c].inf = productinf;
+   nlhdlrexprdata->intervals[c].sup = productsup;
 
    *isboxsignomial = TRUE;
 }
@@ -714,6 +714,7 @@ SCIP_RETCODE overEstimatePower(
          continue;
       scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1.0;
       val = SCIPgetSolVal(scip, sol, nlhdlrexprdata->vars[i]) / scale;
+      val = MAX(val, 0.1);
       refexponent = nlhdlrexprdata->refexponents[i];
       sumrefexponents += refexponent;
       funcval *= pow(val, refexponent);
@@ -729,6 +730,7 @@ SCIP_RETCODE overEstimatePower(
       scale = i == (nlhdlrexprdata->nvars - 1) ? nlhdlrexprdata->coef : 1.0;
       var = nlhdlrexprdata->vars[i];
       val = SCIPgetSolVal(scip, sol, var) / scale;
+      val = MAX(val, 0.1);
       facetcoef = nlhdlrexprdata->refexponents[i] * funcval / val;
       SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, multiplier * facetcoef / scale) );
    }
@@ -879,7 +881,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    return SCIP_OKAY;
 }
 
-
 /** callback to detect structure in expression tree */
 static
 SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
@@ -1029,7 +1030,15 @@ static SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxSignomial)
       assert(var != NULL);
 
       val = SCIPgetSolVal(scip, sol, var);
-      *auxvalue *= pow(val, nlhdlrexprdata->exponents[c]);
+      if( SCIPisPositive(scip, val) )
+      {
+         *auxvalue *= pow(val, nlhdlrexprdata->exponents[c]);
+      }
+      else
+      {
+         *auxvalue = SCIP_INVALID;
+         break;
+      }
    }
 
    return SCIP_OKAY;
