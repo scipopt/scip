@@ -23,7 +23,7 @@ Features
 - increased the depth field of the tree structure from 16 to 30 bits and the max depth of the search tree from 65534 to 1073741822
 - added new cut selector plugin called cutsel_ensemble. Performs a superset of hybrid cutsel. Implements new filtering methods and scoring options.
 - added new branching rule based on Gomory mixed-integer cuts
-- added new branching score to the reliability pseudoc-ost branching rule
+- added new branching score to the reliability pseudo-cost branching rule
 
 Performance improvements
 ------------------------
@@ -38,7 +38,7 @@ Performance improvements
 - Use sassy/bliss as default symmetry computation package.
 - No longer linearize indicator constraints in undercover heuristic by default.
 - Deactivate pre-root heuristic zeroobj in undercover heuristic.
-- Addded new branching score tiebreaker for hybrid branching rule
+- Added new branching score tiebreaker for reliability pseudo-cost branching rule
 
 Examples and applications
 -------------------------
