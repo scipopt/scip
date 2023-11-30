@@ -429,16 +429,31 @@ endif
 
 SYMOPTIONS	+=	snauty
 ifeq ($(SYM),snauty)
-FLAGS		+=	-I$(LIBDIR)/include/
 SYMOBJ		=	symmetry/compute_symmetry_sassy_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+ifeq ($(NAUTYEXTERNAL),false)
+FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
+NAUTYOBJ	=	nauty/nauty.o
+NAUTYOBJ	+=      nauty/nautil.o
+NAUTYOBJ	+=      nauty/nausparse.o
+NAUTYOBJ	+=      nauty/naugraph.o
+NAUTYOBJ	+=      nauty/schreier.o
+NAUTYOBJ	+=      nauty/naurng.o
+SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(NAUTYOBJ))
+SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(NAUTYOBJ:.o=.c))
+else
+FLAGS		+=	-I$(LIBDIR)/include/
+endif
 ALLSRC		+=	$(SYMSRC)
+ifeq ($(NAUTYEXTERNAL),true)
 SOFTLINKS	+=	$(LIBDIR)/include/nauty
 SOFTLINKS	+=	$(LIBDIR)/static/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 LPIINSTMSG	+=	"\n  -> \"nautyinc\" is the path to the Nauty directory, e.g., \"<Nauty-path>\".\n"
 LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<Nauty-path>/nauty.a\"\n"
 endif
+endif
+
 #-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------
