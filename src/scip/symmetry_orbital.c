@@ -56,7 +56,7 @@
  *
  * We have observed, and assume, that such dual reductions only take place at presolving or in the root node.
  * So, to avoid this situation, if we detect that a symmetry-breaking reduction is applied at the root node,
- * we disable orbital fixing for certain generating permutations based on the bounds of the affected globla variables,
+ * we disable orbital fixing for certain generating permutations based on the bounds of the affected global variables,
  * see identifyOrbitalSymmetriesBroken.
  *
  * With the assumption that the symmetries are actual symmetries at the root node, symmetries are broken by the
@@ -249,7 +249,7 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
 
          if ( !orbitsymbroken )
          {
-            if ( !EQ(scip, orbitglb, orcdata->globalvarlbs[j]) || !EQ(scip, orbitgub, orcdata->globalvarubs[j]) )
+            if ( !SCIPEQ(scip, orbitglb, orcdata->globalvarlbs[j]) || !SCIPEQ(scip, orbitgub, orcdata->globalvarubs[j]) )
             {
                orbitsymbroken = TRUE;
                break;
@@ -343,7 +343,7 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
    SCIP_Bool*            inbranchedvarindices, /**< array stating whether variable with index in orcdata->permvars is
                                                 *   contained in the branching decisions. */
    int                   nbranchedvarindices /**< number of branching decisions */
-)
+   )
 {
    int i;
    int p;
@@ -391,7 +391,7 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
           * a series of equalities yielding that all expressions must be the same:
           * \f$ub_i = lb_j <= ub_j = lb_{\cdots} <= \cdots = lb_j < ub_j \f$
           */
-         if ( ! EQ(scip,
+         if ( ! SCIPEQ(scip,
             varubs ? varubs[varid] : SCIPvarGetUbLocal(orcdata->permvars[varid]),
             varlbs ? varlbs[varidimage] : SCIPvarGetLbLocal(orcdata->permvars[varidimage]) )
          )
@@ -417,7 +417,7 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
          if ( varidimage == varid )
             continue;
 
-         if ( GT(scip,
+         if ( SCIPGT(scip,
             varubs ? varubs[varid] : SCIPvarGetUbLocal(orcdata->permvars[varid]),
             varlbs ? varlbs[varidimage] : SCIPvarGetLbLocal(orcdata->permvars[varidimage]) )
          )
@@ -440,12 +440,12 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
  */
 static
 int bisectSortedArrayFindFirstGEQ(
-   int*               ids,                /**< int array with entries */
-   int*               idssort,            /**< array of indices of ids that sort ids */
-   int                frameleft,          /**< search in idssort for index range [frameleft, frameright) */
-   int                frameright,         /**< search in idssort for index range [frameleft, frameright) */
-   int                findid              /**< entry value to find */
-)
+   int*                  ids,                /**< int array with entries */
+   int*                  idssort,            /**< array of indices of ids that sort ids */
+   int                   frameleft,          /**< search in idssort for index range [frameleft, frameright) */
+   int                   frameright,         /**< search in idssort for index range [frameleft, frameright) */
+   int                   findid              /**< entry value to find */
+   )
 {
    int center;
    int id;
@@ -515,7 +515,7 @@ SCIP_RETCODE applyOrbitalReductionPart(
                                               *   or NULL, if local bounds are used */
    SCIP_Real*            varubs              /**< array of upper bounds for variable array orcdata->vars to compute with
                                               *   or NULL, if local bounds are used. */
-)
+   )
 {
    int i;
    int varid;
@@ -566,20 +566,20 @@ SCIP_RETCODE applyOrbitalReductionPart(
          assert( orcdata->permvars[varid] != NULL );
 
          lb = varlbs ? varlbs[varid] : SCIPvarGetLbLocal(orcdata->permvars[varid]);
-         if ( GT(scip, lb, orbitlb) )
+         if ( SCIPGT(scip, lb, orbitlb) )
             orbitlb = lb;
          ub = varubs ? varubs[varid] : SCIPvarGetUbLocal(orcdata->permvars[varid]);
-         if ( LT(scip, ub, orbitub) )
+         if ( SCIPLT(scip, ub, orbitub) )
             orbitub = ub;
       }
 
       /* if bounds are incompatible, infeasibility is detected */
-      if ( GT(scip, orbitlb, orbitub) )
+      if ( SCIPGT(scip, orbitlb, orbitub) )
       {
          *infeasible = TRUE;
          return SCIP_OKAY;
       }
-      assert( LE(scip, orbitlb, orbitub) );
+      assert( SCIPLE(scip, orbitlb, orbitub) );
 
       /* update variable bounds to be in this range */
       for (i = orbitbegin; i < orbitend; ++i)
@@ -590,11 +590,11 @@ SCIP_RETCODE applyOrbitalReductionPart(
 
          if ( varlbs != NULL )
          {
-            assert( LE(scip, varlbs[varid], orbitlb) );
+            assert( SCIPLE(scip, varlbs[varid], orbitlb) );
             varlbs[varid] = orbitlb;
          }
          if ( !SCIPisInfinity(scip, -orbitlb) &&
-            LT(scip, SCIPvarGetLbLocal(orcdata->permvars[varid]), orbitlb) )
+            SCIPLT(scip, SCIPvarGetLbLocal(orcdata->permvars[varid]), orbitlb) )
          {
             SCIP_Bool tightened;
             SCIP_CALL( SCIPtightenVarLb(scip, orcdata->permvars[varid], orbitlb, TRUE, infeasible, &tightened) );
@@ -608,11 +608,11 @@ SCIP_RETCODE applyOrbitalReductionPart(
 
          if ( varubs != NULL )
          {
-            assert( GE(scip, varubs[varid], orbitub) );
+            assert( SCIPGE(scip, varubs[varid], orbitub) );
             varubs[varid] = orbitub;
          }
          if ( !SCIPisInfinity(scip, orbitub) &&
-            GT(scip, SCIPvarGetUbLocal(orcdata->permvars[varid]), orbitub) )
+            SCIPGT(scip, SCIPvarGetUbLocal(orcdata->permvars[varid]), orbitub) )
          {
             SCIP_Bool tightened;
             SCIP_CALL( SCIPtightenVarUb(scip, orcdata->permvars[varid], orbitub, TRUE, infeasible, &tightened) );
@@ -638,7 +638,7 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree */
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected */
    int*                  nred                /**< pointer to store the number of determined domain reductions */
-)
+   )
 {
    SCIP_NODE* focusnode;
    SCIP_NODE* parentnode;
@@ -751,21 +751,21 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
          assert( varid >= 0 );
          if ( varid < orcdata->npermvars )
          {
-            assert( LE(scip, varlbs[varid], varubs[varid]) );
+            assert( SCIPLE(scip, varlbs[varid], varubs[varid]) );
             switch (update->boundchgtype)
             {
                case SCIP_BOUNDTYPE_LOWER:
-                  assert( GE(scip, update->newbound, varlbs[varid]) );
+                  assert( SCIPGE(scip, update->newbound, varlbs[varid]) );
                   varlbs[varid] = update->newbound;
                   break;
                case SCIP_BOUNDTYPE_UPPER:
-                  assert( LE(scip, update->newbound, varubs[varid]) );
+                  assert( SCIPLE(scip, update->newbound, varubs[varid]) );
                   varubs[varid] = update->newbound;
                   break;
                default:
                   assert( FALSE );
             }
-            assert( LE(scip, varlbs[varid], varubs[varid]) );
+            assert( SCIPLE(scip, varlbs[varid], varubs[varid]) );
          }
       }
 
@@ -805,9 +805,9 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
          continue;
       assert( branchingdecisionvarid >= 0 && branchingdecisionvarid < orcdata->npermvars );
       assert( branchingdecision->boundchgtype == SCIP_BOUNDTYPE_LOWER ?
-         LE(scip, varlbs[branchingdecisionvarid], branchingdecision->newbound) :
-         GE(scip, varubs[branchingdecisionvarid], branchingdecision->newbound) );
-      assert( LE(scip, varlbs[branchingdecisionvarid], varubs[branchingdecisionvarid]) );
+         SCIPLE(scip, varlbs[branchingdecisionvarid], branchingdecision->newbound) :
+         SCIPGE(scip, varubs[branchingdecisionvarid], branchingdecision->newbound) );
+      assert( SCIPLE(scip, varlbs[branchingdecisionvarid], varubs[branchingdecisionvarid]) );
 
       /* get the generating set of permutations of a subgroup of a stabilizing symmetry subgroup.
        *
@@ -855,29 +855,29 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
        *
        * Due to the steps above, it is possible that the branching step is redundant or infeasible.
        */
-      assert( LE(scip, varlbs[branchingdecisionvarid], varubs[branchingdecisionvarid]) );
+      assert( SCIPLE(scip, varlbs[branchingdecisionvarid], varubs[branchingdecisionvarid]) );
       switch (branchingdecision->boundchgtype)
       {
          case SCIP_BOUNDTYPE_LOWER:
             /* incompatible upper bound */
-            if ( GT(scip, branchingdecision->newbound, varubs[branchingdecisionvarid]) )
+            if ( SCIPGT(scip, branchingdecision->newbound, varubs[branchingdecisionvarid]) )
             {
                *infeasible = TRUE;
                goto FREE;
             }
 
-            assert( LE(scip, varlbs[branchingdecisionvarid], branchingdecision->newbound) );
+            assert( SCIPLE(scip, varlbs[branchingdecisionvarid], branchingdecision->newbound) );
             varlbs[branchingdecisionvarid] = branchingdecision->newbound;
             break;
          case SCIP_BOUNDTYPE_UPPER:
             /* incompatible lower bound */
-            if ( LT(scip, branchingdecision->newbound, varlbs[branchingdecisionvarid]) )
+            if ( SCIPLT(scip, branchingdecision->newbound, varlbs[branchingdecisionvarid]) )
             {
                *infeasible = TRUE;
                goto FREE;
             }
 
-            assert( GE(scip, varubs[branchingdecisionvarid], branchingdecision->newbound) );
+            assert( SCIPGE(scip, varubs[branchingdecisionvarid], branchingdecision->newbound) );
             varubs[branchingdecisionvarid] = branchingdecision->newbound;
             break;
          default:
@@ -924,18 +924,18 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
           * the branching step above. After the branching step, the branching variable bounds are most restricted.
           */
          assert( SCIPisInfinity(scip, -varlbs[branchingdecisionvarid])
-            || GE(scip, varlbs[branchingdecisionvarid], varlbs[varid]) );
+            || SCIPGE(scip, varlbs[branchingdecisionvarid], varlbs[varid]) );
          assert( SCIPisInfinity(scip, varubs[branchingdecisionvarid])
-            || LE(scip, varubs[branchingdecisionvarid], varubs[varid]) );
+            || SCIPLE(scip, varubs[branchingdecisionvarid], varubs[varid]) );
          /* bound changes already made could only have tightened the variable domains we are thinking about */
-         assert( GE(scip, SCIPvarGetLbLocal(orcdata->permvars[varid]), varlbs[varid]) );
-         assert( LE(scip, SCIPvarGetUbLocal(orcdata->permvars[varid]), varubs[varid]) );
+         assert( SCIPGE(scip, SCIPvarGetLbLocal(orcdata->permvars[varid]), varlbs[varid]) );
+         assert( SCIPLE(scip, SCIPvarGetUbLocal(orcdata->permvars[varid]), varubs[varid]) );
 
          /* for branching variable x and variable y in its orbit, propagate x >= y. */
          /* modify UB of y-variables */
-         assert( GE(scip, varubs[varid], varubs[branchingdecisionvarid]) );
+         assert( SCIPGE(scip, varubs[varid], varubs[branchingdecisionvarid]) );
          varubs[varid] = varubs[branchingdecisionvarid];
-         if ( GT(scip, SCIPvarGetUbLocal(orcdata->permvars[varid]), varubs[branchingdecisionvarid]) )
+         if ( SCIPGT(scip, SCIPvarGetUbLocal(orcdata->permvars[varid]), varubs[branchingdecisionvarid]) )
          {
             SCIP_Bool tightened;
             SCIP_CALL( SCIPtightenVarUb(scip, orcdata->permvars[varid], varubs[branchingdecisionvarid], TRUE,
@@ -949,7 +949,7 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
          }
 
          /* because variable domains are initially the same, the LB of the x-variables does not need to be modified. */
-         assert( LE(scip, varlbs[varid], varlbs[branchingdecisionvarid]) );
+         assert( SCIPLE(scip, varlbs[varid], varlbs[branchingdecisionvarid]) );
       }
 
       FREE:
@@ -1005,7 +1005,7 @@ SCIP_RETCODE applyOrbitalReductionPropagations(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree */
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility is detected */
    int*                  nred                /**< pointer to store the number of determined domain reductions */
-)
+   )
 {
    SCIP_NODE* focusnode;
    SCIP_SHADOWNODE* shadowfocusnode;

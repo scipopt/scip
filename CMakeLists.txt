@@ -17,7 +17,7 @@ set(SCIP_VERSION_MAJOR 8)
 set(SCIP_VERSION_MINOR 1)
 set(SCIP_VERSION_PATCH 0)
 set(SCIP_VERSION_SUB 5)
-set(SCIP_VERSION_API 111)
+set(SCIP_VERSION_API 112)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
@@ -149,7 +149,7 @@ if(SYM STREQUAL "bliss")
     set(SYM_PIC_LIBRARIES libbliss)
 elseif(SYM STREQUAL "sbliss")
     message(STATUS "Support SYM: sassy+bliss")
-    set(sym symmetry/compute_symmetry_sassy_bliss.cpp)
+    set(sym symmetry/compute_symmetry_sassy_bliss.cpp symmetry/build_sassy_graph.cpp)
 
     # configure bliss
     set(BUILD_SHARED_LIBS OFF)
@@ -211,7 +211,7 @@ elseif(SYM STREQUAL "nauty")
     set(SYM_PIC_LIBRARIES libnauty)
  elseif(SYM STREQUAL "snauty")
     message(STATUS "Support SYM: sassy+nauty")
-    set(sym symmetry/compute_symmetry_sassy_nauty.cpp)
+    set(sym symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_sassy_graph.cpp)
 
     if(SHARED)
         set(PIC_FLAG "CFLAGS='-fPIC'")

@@ -22,82 +22,81 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   compute_symmetry_none.cpp
- * @brief  interface for no symmetry computations
- * @author Marc Pfetsch
+/**@file   build_sassy_graph.h
+ * @brief  methods to build sassy graph for symmetry detection
+ * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "compute_symmetry.h"
+#ifndef __SCIP_BUILD_SASSY_GRAPH_H_
+#define __SCIP_BUILD_SASSY_GRAPH_H_
 
-/** return whether symmetry can be computed */
-SCIP_Bool SYMcanComputeSymmetry(void)
-{
-   return FALSE;
-}
+#include "scip/scip.h"
 
-/** return name of external program used to compute generators */
-const char* SYMsymmetryGetName(void)
-{
-   return "none";
-}
+/* include sassy */
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
 
-/** return description of external program used to compute generators */
-const char* SYMsymmetryGetDesc(void)
-{
-   return "";
-}
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4189)  // local variable is initialized but not referenced
+# pragma warning(disable: 4388)  // compare signed and unsigned expression
+# pragma warning(disable: 4456)  // shadowed variable
+# pragma warning(disable: 4430)  // missing type specifier
+#endif
 
-/** return name of additional external program used for computing symmetries */
-const char* SYMsymmetryGetAddName(void)
-{
-   return "";
-}
+/* the actual include */
+#include <sassy/graph.h>
 
-/** return description of additional external program used to compute symmetries */
-const char* SYMsymmetryGetAddDesc(void)
-{
-   return "";
-}
+#ifdef __GNUC__
+#pragma GCC diagnostic warning "-Wunused-but-set-variable"
+#pragma GCC diagnostic warning "-Wsign-compare"
+#pragma GCC diagnostic warning "-Wunused-variable"
+#pragma GCC diagnostic warning "-Wshadow"
+#endif
 
-/** compute generators of symmetry group */ /*lint -e{715}*/
-SCIP_RETCODE SYMcomputeSymmetryGenerators(
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "symmetry/struct_symmetry.h"
+#include "symmetry/type_symmetry.h"
+
+/** compute generators of symmetry group */
+SCIP_EXPORT
+SCIP_RETCODE SYMbuildSassyGraph(
    SCIP*                 scip,               /**< SCIP pointer */
-   int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
+   sassy::static_graph*  sassygraph,         /**< pointer to hold sassy graph being created */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
-   int*                  nperms,             /**< pointer to store number of permutations */
-   int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
-   int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
-   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
-   )
-{  /*lint --e{715}*/
-   assert( scip != NULL );
-   assert( graph != NULL );
-   assert( nperms != NULL );
-   assert( nmaxperms != NULL );
-   assert( perms != NULL );
-   assert( log10groupsize != NULL );
-   assert( symcodetime != NULL );
+   SCIP_Bool*            success             /**< pointer to store whether sassygraph could be built */
+   );
 
-   /* init */
-   *nperms = 0;
-   *nmaxperms = 0;
-   *perms = NULL;
-   *log10groupsize = 0;
-   *symcodetime = 0.0;
-
-   return SCIP_OKAY;
-}
 
 /** returns whether two given graphs are identical */
-SCIP_Bool SYMcheckGraphsAreIdentical(
+SCIP_EXPORT
+SCIP_RETCODE SYMbuildSassyGraphCheck(
    SCIP*                 scip,               /**< SCIP pointer */
-   SYM_SYMTYPE           symtype,            /**< type of symmetries to be checked */
+   sassy::static_graph*  sassygraph,         /**< pointer to hold sassy graph being created */
    SYM_GRAPH*            G1,                 /**< first graph */
-   SYM_GRAPH*            G2                  /**< second graph */
-   )
-{
-   return FALSE;
+   SYM_GRAPH*            G2,                 /**< second graph */
+   int*                  nnodes,             /**< pointer to store number of nodes in sassy graph */
+   int*                  nnodesfromG1,       /**< pointer to store number of nodes in sassy graph arising from G1 */
+   SCIP_Bool*            success             /**< pointer to store whether sassygraph could be built */
+   );
+
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif

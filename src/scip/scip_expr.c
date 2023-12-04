@@ -958,6 +958,7 @@ SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
 #undef SCIPcallExprInitestimates
 #undef SCIPcallExprSimplify
 #undef SCIPcallExprReverseprop
+#undef SCIPcallExprGetSymData
 #endif
 
 /** creates and captures an expression with given expression data and children */
@@ -1759,7 +1760,7 @@ SCIP_RETCODE SCIPhashExpr(
    return SCIP_OKAY;
 }
 
-/* simplifies an expression (duplication of long doxygen comment omitted here) */
+/** simplifies an expression (duplication of long doxygen comment omitted here) */
 SCIP_RETCODE SCIPsimplifyExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            rootexpr,           /**< expression to be simplified */
@@ -1774,6 +1775,22 @@ SCIP_RETCODE SCIPsimplifyExpr(
    assert(scip->mem != NULL);
 
    SCIP_CALL( SCIPexprSimplify(scip->set, scip->stat, scip->mem->probmem, rootexpr, simplified, changed, infeasible, ownercreate, ownercreatedata) );
+
+   return SCIP_OKAY;
+}
+
+/** retrieves symmetry information from an expression */
+SCIP_RETCODE SCIPgetSymDataExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression from which information needs to be retrieved */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry data */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(symdata != NULL);
+
+   SCIP_CALL( SCIPexprGetSymData(scip->set, expr, symdata) );
 
    return SCIP_OKAY;
 }
@@ -2278,6 +2295,21 @@ SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop)
    assert(scip != NULL);
 
    SCIP_CALL( SCIPexprhdlrReversePropExpr(SCIPexprGetHdlr(expr), scip->set, expr, bounds, childrenbounds, infeasible) );
+
+   return SCIP_OKAY;
+}
+
+/** calls the symmetry data callback for an expression
+ *
+ * Returns no information if not implemented.
+ */
+SCIP_DECL_EXPRGETSYMDATA(SCIPcallExprGetSymData)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(symdata != NULL);
+
+   SCIP_CALL( SCIPexprGetSymData(scip->set, expr, symdata) );
 
    return SCIP_OKAY;
 }

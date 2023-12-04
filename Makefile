@@ -366,7 +366,8 @@ endif
 
 SYMOPTIONS	+=	sbliss
 ifeq ($(SYM),sbliss)
-SYMOBJ		=	symmetry/compute_symmetry_sassy_bliss.o
+SYMOBJ		=	symmetry/build_sassy_graph.o
+SYMOBJ		+=	symmetry/compute_symmetry_sassy_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(BLISSEXTERNAL),false)
@@ -429,7 +430,8 @@ endif
 
 SYMOPTIONS	+=	snauty
 ifeq ($(SYM),snauty)
-SYMOBJ		=	symmetry/compute_symmetry_sassy_nauty.o
+SYMOBJ		=	symmetry/build_sassy_graph.o
+SYMOBJ		+=	symmetry/compute_symmetry_sassy_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(NAUTYEXTERNAL),false)
@@ -932,6 +934,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/solve.o \
 			scip/stat.o \
 			scip/symmetry.o \
+			scip/symmetry_graph.o \
 			scip/symmetry_orbitopal.o \
 			scip/symmetry_orbital.o \
 			scip/symmetry_lexred.o \
@@ -1314,6 +1317,7 @@ ifneq ($(DFLAGS),)
 -include $(OBJSCIPOBJFILES:.o=.d)
 -include $(LPILIBOBJFILES:.o=.d)
 -include $(TPILIBOBJFILES:.o=.d)
+-include $(SYMOBJFILES:.o=.d)
 else
 ifeq ($(VERBOSE),true)
 $(info No compilation dependencies. If changing header files, do a make clean before building.)
