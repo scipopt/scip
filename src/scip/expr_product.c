@@ -46,6 +46,7 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
 #include "scip/nlhdlr_bilinear.h"
+#include "symmetry/struct_symmetry.h"
 
 #define EXPRHDLR_NAME         "prod"
 #define EXPRHDLR_DESC         "product expression"
@@ -2214,6 +2215,24 @@ SCIP_DECL_EXPRINTEGRALITY(integralityProduct)
    return SCIP_OKAY;
 }
 
+/** expression callback to get information for symmetry detection */
+static
+SCIP_DECL_EXPRGETSYMDATA(getSymDataProduct)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(symdata != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, symdata) );
+
+   (*symdata)->nconstants = 1;
+   (*symdata)->ncoefficients = 0;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symdata)->constants, 1) );
+   (*symdata)->constants[0] = SCIPgetCoefExprProduct(expr);
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for product expressions and includes it into SCIP */
 SCIP_RETCODE SCIPincludeExprhdlrProduct(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2243,6 +2262,7 @@ SCIP_RETCODE SCIPincludeExprhdlrProduct(
    SCIPexprhdlrSetCurvature(exprhdlr, curvatureProduct);
    SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityProduct);
    SCIPexprhdlrSetIntegrality(exprhdlr, integralityProduct);
+   SCIPexprhdlrSetGetSymdata(exprhdlr, getSymDataProduct);
 
    SCIP_CALL( SCIPaddBoolParam(scip, "expr/" EXPRHDLR_NAME "/expandalways",
       "whether to expand products of a sum and several factors in simplify",

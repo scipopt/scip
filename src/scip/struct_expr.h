@@ -68,6 +68,7 @@ struct SCIP_Exprhdlr
    SCIP_DECL_EXPRCURVATURE((*curvature));    /**< curvature detection callback (can be NULL) */
    SCIP_DECL_EXPRMONOTONICITY((*monotonicity)); /**< monotonicity detection callback (can be NULL) */
    SCIP_DECL_EXPRINTEGRALITY((*integrality));/**< integrality detection callback (can be NULL) */
+   SCIP_DECL_EXPRGETSYMDATA((*getsymdata));  /**< symmetry information callback (can be NULL) */
 
    /* statistics */
    unsigned int          ncreated;           /**< number of times expression has been created */

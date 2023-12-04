@@ -479,6 +479,28 @@ public:
       *success = FALSE;
       return SCIP_OKAY;
    }
+
+   /** constraint handler method which returns the permutation symmetry detection graph of a constraint (if possible)
+    *
+    *  @see SCIP_DECL_CONSGETPERMSYMGRAPH(x) in @ref type_cons.h
+    */
+   virtual SCIP_DECL_CONSGETPERMSYMGRAPH(scip_getpermsymgraph)
+   {  /*lint --e{715}*/
+      assert(success != NULL);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /** constraint handler method which returns the signed permutation symmetry detection graph of a constraint (if possible)
+    *
+    *  @see SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(x) in @ref type_cons.h
+    */
+   virtual SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(scip_getsignedpermsymgraph)
+   {  /*lint --e{715}*/
+      assert(success != NULL);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
 };
 
 } /* namespace scip */
