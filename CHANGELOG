@@ -26,6 +26,7 @@ Features
 - added special presolving step for logicor and set covering/packing for constraints with two variables and one independent variable
 - increased the depth field of the tree structure from 16 to 30 bits and the max depth of the search tree from 65534 to 1073741822
 - added new cut selector plugin called cutsel_ensemble. Performs a superset of hybrid cutsel. Implements new filtering methods and scoring options.
+- added monoidal strengthening to intersection cut generation of nlhdlr_quadratic
 
 Performance improvements
 ------------------------
@@ -40,6 +41,7 @@ Performance improvements
 - Use sassy/bliss as default symmetry computation package.
 - No longer linearize indicator constraints in undercover heuristic by default.
 - Deactivate pre-root heuristic zeroobj in undercover heuristic.
+- Try nearest bound if zero solution value is out of bounds in heuristic trivial.
 
 Examples and applications
 -------------------------
@@ -137,6 +139,10 @@ Interface changes
   that is at least as good as the given value
 - heuristics/undercover/{coverand,coverind,covernl} to control which nonlinearities to consider (by default only "and" and nonlinear constraints)
 - cutselection/ensemble/* all parameters for new ensemble cut selector
+- nlhdlr/quadratic/usemonoidal to enable monoidal strengthening when separating quadratics with intersection cuts
+- nlhdlr/quadratic/trackmore to collect more statistics for monoidal strengthening when separating quadratics with intersection cuts
+- nlhdlr/quadratic/useminrep to use the minimal representation to compute cut coefficients when separating quadratics with intersection cuts
+- nlhdlr/quadratic/sparsifycuts to enable sparsification of intersection cuts for quadratics
 
 ### Data structures
 
@@ -150,6 +156,7 @@ Deleted files
 
 Unit tests
 ----------
+- new unittests for nlhdlr_quadratic that test monoidal strengthening and the use of the minimal representation to compute cut coefficients
 
 Testing
 -------
