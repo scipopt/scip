@@ -187,6 +187,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurIndicatordiving(scip) );
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
    SCIP_CALL( SCIPincludeHeurFarkasdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurFeasjump(scip) );
    SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
    SCIP_CALL( SCIPincludeHeurConflictdiving(scip) );
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
