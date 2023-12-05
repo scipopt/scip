@@ -105,7 +105,7 @@
 #define DEFAULT_DYNAMICLOOKAHEAD TRUE        /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
 #define DEFAULT_GEOMETRICMEANGAINS TRUE      /**< should the geometric mean be used instead of the arithmetic mean for min and max gain? */
 #define DEFAULT_LOOKAHEAD_USEBAYESIAN FALSE  /**< should the update of the parameter estimation use the Bayesian rule or a simple weighted combination? */
-#define DEFAULT_USEPARETODISTRIBUTION FALSE  /**< should the Pareto distribution be used for the estimation of the tree size? */
+#define DEFAULT_USEPARETODISTRIBUTION TRUE   /**< should the Pareto distribution be used for the estimation of the tree size? */
 #define DEFAULT_RANDINITORDER    FALSE       /**< should slight perturbation of scores be used to break ties in the prior scores? */
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE   /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 #define DEFAULT_DYNAMICWEIGHTS   TRUE        /**< should the weights of the branching rule be adjusted dynamically during solving based
