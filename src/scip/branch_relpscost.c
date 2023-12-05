@@ -786,9 +786,7 @@ SCIP_RETCODE updateMinMaxMeanGain(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
    SCIP_Real             downgain,           /**< gain for branching downwards */
-   SCIP_Real             upgain,             /**< gain for branching upwards */
-   SCIP_Real             lookahead,          /**< lookahead value */
-   int                   dynamiclookaheaddecision /**< dynamic lookahead decision */
+   SCIP_Real             upgain              /**< gain for branching upwards */
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata = SCIPbranchruleGetData(branchrule);
@@ -818,7 +816,6 @@ SCIP_RETCODE updateMinMaxMeanGain(
    branchruledata->minmeangain = MIN(branchruledata->minmeangain, meangain);
    ++branchruledata->currndualgains;
    SCIPdebugMsg(scip, " -> downgain: %g upgain: %g minmeangain: %g maxmeangain: %g mean-of-two: %g mean-of-%d-dual-gains: %g\n",downgain, upgain, branchruledata->minmeangain, branchruledata->maxmeangain, meangain, branchruledata->currndualgains, branchruledata->currmeandualgain);
-   // SCIPdebugMsg(scip, " -> (%g,%g,%g,%g,%g,%g,%d)\n",downgain, upgain, branchruledata->maxmeangain, meangain, branchruledata->currmeandualgain, lookahead, dynamiclookaheaddecision);
 
    return SCIP_OKAY;
 }
@@ -843,7 +840,7 @@ SCIP_Real strongBranchingTreeSize(
    int                   depth_tree
    )
 {
-   return (SCIP_Real) (pow(2.0, depth_tree + 1) - 1);
+   return pow(2.0, depth_tree + 1.0) - 1.0;
 }
 
 /* Calculate the cumulative distribution function (CDF) value for an exponential distribution. */
@@ -918,9 +915,11 @@ SCIP_Real expectedTreeSize(
 
       if( pbetter < 1e-5 )
          return SCIPinfinity(scip);
+      
+      SCIP_Real p; 
+      p = 0.0;
       while (pbetter >= 1e-5 && ptotal + pnotbetter < 1.0)
       {
-         SCIP_Real p;
          if (depth > 2)
          {
             p = cdfProbability(lambda, zeroprob, gap / (depth - 2), mingain, useparetocdf) - cdfProbability(lambda, zeroprob, gap / (depth - 1), mingain, useparetocdf);
@@ -1491,7 +1490,7 @@ SCIP_RETCODE execRelpscost(
             mingains[c] = MIN(downgain, upgain);
             maxgains[c] = MAX(downgain, upgain);
             // /* TodoSB: do we want to keep the gains from previous strong branching on this node? */
-            updateMinMaxMeanGain(scip, branchrule, downgain, upgain, 0.0, -1.0);
+            SCIP_CALL( updateMinMaxMeanGain(scip, branchrule, downgain, upgain) );
             SCIPdebugMsg(scip, " -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), pscostscore=%g)\n",
                SCIPvarGetName(branchcands[c]), down, downgain, up, upgain, pscostscore);
          }
@@ -1512,7 +1511,7 @@ SCIP_RETCODE execRelpscost(
             usesb = FALSE;
             /* TodoSB: do we want to keep gains from reliable pseudocosts? */
             // if( size >= reliable)
-            //    updateMinMaxMeanGain(scip, branchrule, downgain, upgain, 0.0, -1.0);
+            //    updateMinMaxMeanGain(scip, branchrule, downgain, upgain);
             if( size < reliable )
                usesb = TRUE;
             else if( branchruledata->userelerrorforreliability && branchruledata->usehyptestforreliability )
@@ -1852,7 +1851,7 @@ SCIP_RETCODE execRelpscost(
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
-         updateMinMaxMeanGain(scip, branchrule, downgain, upgain, lookahead, dynamiclookaheaddecision);
+         SCIP_CALL( updateMinMaxMeanGain(scip, branchrule, downgain, upgain) );
 
          /* @todo: store pseudo cost only for valid bounds?
           * depending on the user parameter choice of storesemiinitcosts, pseudo costs are also updated in single directions,
