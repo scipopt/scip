@@ -907,8 +907,8 @@ SCIP_RETCODE initCurrent(
       /* LP value for each block plus part of remaining amount if sum is not equal to rhs/lhs */
       if( (heurtiming & SCIP_HEURTIMING_AFTERNODE) && (linking->hasrhs || linking->haslhs) )
       {
-         SCIP_Real sumrhs = 0;
-         SCIP_Real sumlhs = 0;
+         SCIP_Real sumrhs = 0.0;
+         SCIP_Real sumlhs = 0.0;
          for( b = 0; b < linking->nblocks; b++ )
          {
             SCIP_VAR** consvars;
@@ -928,7 +928,7 @@ SCIP_RETCODE initCurrent(
             assert(success);
 
             /* calculate value of partition variable in lp solution */
-            lpvalue = 0;
+            lpvalue = 0.0;
             for( i = 0; i < nconsvars - linking->nslacksperblock; i++ )
             {
                SCIP_VAR* origvar;
@@ -963,8 +963,9 @@ SCIP_RETCODE initCurrent(
          {
             SCIP_Real diff;
             SCIP_Real part;
-            SCIP_Real residual = 0.0;
+            SCIP_Real residual;
             diff = rhs - sumrhs;
+            residual = 0.0;
 
             for( b = 0; b < linking->nblocks; b++ )
             {
@@ -980,8 +981,9 @@ SCIP_RETCODE initCurrent(
          {
             SCIP_Real diff;
             SCIP_Real part;
-            SCIP_Real residual = 0.0;
+            SCIP_Real residual;
             diff = sumlhs - lhs; /* always positive*/
+            residual = 0.0;
 
             for( b = 0; b < linking->nblocks; b++ )
             {
