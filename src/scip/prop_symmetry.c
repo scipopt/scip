@@ -3850,8 +3850,9 @@ SCIP_RETCODE addWeakSBCsSubgroup(
       {
          /* add element from lexorder to hashmap.
           * Use insert, as duplicate entries in lexorder is not permitted. */
-         assert( ! SCIPhashmapExists(varsinlexorder, (void*) (long) (*lexorder)[k]) ); /* Use int as pointer */
-         SCIP_CALL( SCIPhashmapInsertInt(varsinlexorder, (void*) (long) (*lexorder)[k], k) );
+         assert((*lexorder)[k] >= 0);
+         assert( ! SCIPhashmapExists(varsinlexorder, (void*) (size_t) (*lexorder)[k]) ); /* Use int as pointer */
+         SCIP_CALL( SCIPhashmapInsertInt(varsinlexorder, (void*) (size_t) (*lexorder)[k], k) );
       }
    }
 
@@ -3876,6 +3877,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
       graphcomp = chosencomppercolor[j];
       graphcompsize = graphcompbegins[graphcomp+1] - graphcompbegins[graphcomp];
       varidx = firstvaridxpercolor[j];
+      assert(varidx >= 0);
 
       /* if the first variable was already contained in another orbit or if there are no variables left anyway, skip the
        * component */
@@ -3884,7 +3886,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 
       /* If varidx is in lexorder, then it must be the first entry of lexorder. */
       if ( varsinlexorder != NULL
-         && SCIPhashmapExists(varsinlexorder, (void*) (long) varidx)
+         && SCIPhashmapExists(varsinlexorder, (void*) (size_t) varidx)
          && lexorder != NULL && *lexorder != NULL && *maxnvarsorder > 0 && *nvarsorder > 0
          && (*lexorder)[0] != varidx )
          continue;
@@ -3964,6 +3966,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
          int varidx;
 
          varidx = orbit[activeorb][0];
+         assert(varidx >= 0);
 
          if ( *maxnvarsorder == 0 )
          {
@@ -3984,13 +3987,13 @@ SCIP_RETCODE addWeakSBCsSubgroup(
             if ( varidx == (*lexorder)[0] )
             {
                /* lexorder is already ok!! */
-               assert( SCIPhashmapExists(varsinlexorder, (void*) (long) varidx) );
+               assert( SCIPhashmapExists(varsinlexorder, (void*) (size_t) varidx) );
             }
             else
             {
                /* Then varidx must not be in the lexorder,
                 * We must add it at the front of the array, and maintain the current order. */
-               assert( ! SCIPhashmapExists(varsinlexorder, (void*) (long) varidx) );
+               assert( ! SCIPhashmapExists(varsinlexorder, (void*) (size_t) varidx) );
 
                ++(*maxnvarsorder);
                ++(*nvarsorder);
