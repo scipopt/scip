@@ -19,9 +19,14 @@ Features
 - updated statistics on NLP relaxation; information on convexity of NLP has been added
 - added new bandit method (EXP.3-IX) that is the new default of the ALNS heuristic
 - added dialog to display recognized permutation symmetries ("display symmetry")
+- The symmetry detection code has been completely restructured. Instead of completely encoding symmetry information in
+  prop_symmetry.c, there is a new callback for constraint handlers, which returns symmetry relevant information by
+  encoding a constraint as a node and edge colored graph. This way, also custom constraint handlers can provide
+  symmetry information.
 - added special presolving step for logicor and set covering/packing for constraints with two variables and one independent variable
 - increased the depth field of the tree structure from 16 to 30 bits and the max depth of the search tree from 65534 to 1073741822
 - added new cut selector plugin called cutsel_ensemble. Performs a superset of hybrid cutsel. Implements new filtering methods and scoring options.
+- added monoidal strengthening to intersection cut generation of nlhdlr_quadratic
 - extended heuristic dps to run after processing the node and to use strict limits for the reoptimization step
 
 Performance improvements
@@ -37,7 +42,7 @@ Performance improvements
 - Use sassy/bliss as default symmetry computation package.
 - No longer linearize indicator constraints in undercover heuristic by default.
 - Deactivate pre-root heuristic zeroobj in undercover heuristic.
-- CutSelEnsemble is now the cut selector with the highest priority
+- Try nearest bound if zero solution value is out of bounds in heuristic trivial.
 
 Examples and applications
 -------------------------
@@ -52,6 +57,7 @@ Interface changes
   The callback is called if option constraints/nonlinear/linearizeheursol is enabled.
 - The callback for copying problem data SCIP_DECL_PROBCOPY() now has a parameter "original" indicating whether the original
   or transformed problem should be copied. Similarly, SCIPprobCopy() in prob.h/c has such a parameter.
+- Added CONSGETPERMSYMGRAPH and CONSGETSIGNEDPERMSYMGRAPH callback for constraint handlers, which provides symmetry information about constraints to SCIP.
 
 ### Deleted and changed API methods
 
@@ -134,10 +140,20 @@ Interface changes
   that is at least as good as the given value
 - heuristics/undercover/{coverand,coverind,covernl} to control which nonlinearities to consider (by default only "and" and nonlinear constraints)
 - cutselection/ensemble/* all parameters for new ensemble cut selector
+<<<<<<< HEAD
 - heuristics/dps/reoptlimits to set strict limits for the reoptimization step in dps
 - heuristics/dps/timing to run dps after processing the node
+=======
+- nlhdlr/quadratic/usemonoidal to enable monoidal strengthening when separating quadratics with intersection cuts
+- nlhdlr/quadratic/trackmore to collect more statistics for monoidal strengthening when separating quadratics with intersection cuts
+- nlhdlr/quadratic/useminrep to use the minimal representation to compute cut coefficients when separating quadratics with intersection cuts
+- nlhdlr/quadratic/sparsifycuts to enable sparsification of intersection cuts for quadratics
+>>>>>>> master
 
 ### Data structures
+
+- new data structure SYM_GRAPH to encode symmetry information from a constraint
+- new data structure SYM_EXPRDATA to encode symmetry information from expressions
 
 Deleted files
 -------------
@@ -146,6 +162,7 @@ Deleted files
 
 Unit tests
 ----------
+- new unittests for nlhdlr_quadratic that test monoidal strengthening and the use of the minimal representation to compute cut coefficients
 
 Testing
 -------
@@ -228,17 +245,24 @@ Fixed bugs
 - respect unboundedness in the computation of activity bounds in conflict.c to avoid invalid huge bounds due to small coefficients on unbounded variables
 - ensure positive sides of a linear constraint when recognizing a set partition in rangedRowSimplify() to account for redundancy issues
 - relax numerical conditions for variable aggregations to avert invalid variable fixings
+- fixed harmless read of uninitialized data when creating parameters
 
 Performance improvements
 ------------------------
 
 - Use sassy/bliss as default symmetry computation package.
 
+Interface changes
+-----------------
+
 ### Interfaces to external software
 
 - added interface to nauty/traces for symmetry computation
 - added interface to sassy, a preprocessor for symmetry computation
 - The directory src/sassy contains the source code of sassy.
+
+Build system
+------------
 
 ### Cmake
 
@@ -249,6 +273,11 @@ Performance improvements
 - added flag option "nauty" for SYM variable to specify which graph automorphism package should be used
 - added flag option "sbliss" for SYM variable to specify which graph automorphism package should be used
 - use SYM=sbliss by default, since sassy and bliss are now shipped with SCIP
+
+Miscellaneous
+-------------
+
+- the parameter change callback is no longer called at the moment a parameter is created
 
 @section RN804 SCIP 8.0.4
 *************************

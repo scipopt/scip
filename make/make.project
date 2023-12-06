@@ -97,7 +97,7 @@ SCIP_VERSION_MAJOR = 8
 SCIP_VERSION_MINOR = 1
 SCIP_VERSION_PATCH = 0
 SCIP_VERSION_SUB = 5
-SCIP_VERSION_API = 111
+SCIP_VERSION_API = 112
 SCIP_VERSION = $(SCIP_VERSION_MAJOR).$(SCIP_VERSION_MINOR).$(SCIP_VERSION_PATCH).$(SCIP_VERSION_SUB)
 
 # compiling and linking parameters
@@ -551,24 +551,6 @@ endif
 
 ifeq ($(SYM),nauty)
 ifeq ($(NAUTYEXTERNAL),true)
-LDFLAGS         +=      $(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS   +=      $(LIBOBJDIR)/nauty
-endif
-endif
-
-ifeq ($(SYM),sbliss)
-ifeq ($(BLISSEXTERNAL),true)
-LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
-endif
-CXXFLAGS	+=	$(CXX17FLAG)
-endif
-
-ifeq ($(SYM),nauty)
-ifeq ($(NAUTYEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 else
 LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/nauty
@@ -576,7 +558,11 @@ endif
 endif
 
 ifeq ($(SYM),snauty)
+ifeq ($(NAUTYEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/nauty
+endif
 CXXFLAGS	+=	$(CXX17FLAG)
 endif
 

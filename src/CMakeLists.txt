@@ -371,6 +371,7 @@ set(scipsources
     scip/solve.c
     scip/stat.c
     scip/symmetry.c
+    scip/symmetry_graph.c
     scip/symmetry_orbitopal.c
     scip/symmetry_orbital.c
     scip/symmetry_lexred.c
@@ -907,6 +908,7 @@ set(scipheaders
     scip/struct_var.h
     scip/struct_visual.h
     scip/symmetry.h
+    scip/symmetry_graph.h
     scip/symmetry_orbitopal.h
     scip/symmetry_orbital.h
     scip/symmetry_lexred.h
@@ -977,6 +979,7 @@ set(scipheaders
 )
 
 set(symheaders
+  symmetry/build_sassy_graph.h
   symmetry/compute_symmetry.h
   symmetry/type_symmetry.h
 )

@@ -41,7 +41,7 @@
 
 #define CUTSEL_NAME              "ensemble"
 #define CUTSEL_DESC              "weighted sum of many terms with optional filtering and penalties"
-#define CUTSEL_PRIORITY           9000
+#define CUTSEL_PRIORITY           7000
 
 #define RANDSEED                  0x5EED
 
