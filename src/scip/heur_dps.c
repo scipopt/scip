@@ -212,8 +212,8 @@ SCIP_RETCODE assignLinking(
 /** creates a sub-SCIP and sets parameters */
 static
 SCIP_RETCODE createSubscip(
-    SCIP*                scip,               /**< main SCIP data structure */
-    SCIP**               subscip             /**< pointer to store created sub-SCIP */
+   SCIP*                 scip,               /**< main SCIP data structure */
+   SCIP**                subscip             /**< pointer to store created sub-SCIP */
    )
 {
    SCIP_Real infvalue;
@@ -974,7 +974,7 @@ SCIP_RETCODE initCurrent(
                residual = goalvalue - part;
                linking->currentrhs[b] = part;
             }
-            if( residual != 0.0 )
+            if( !SCIPisZero(scip, residual) )
                linking->currentrhs[0] += residual;
          }
          if( !SCIPisEQ(scip, lhs, sumlhs) && linking->haslhs )
@@ -992,7 +992,7 @@ SCIP_RETCODE initCurrent(
                residual = goalvalue - part;
                linking->currentlhs[b] = part;
             }
-            if( residual != 0.0 )
+            if( !SCIPisZero(scip, residual) )
                linking->currentlhs[0] += residual;
          }
       }
