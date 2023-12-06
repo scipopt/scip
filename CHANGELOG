@@ -140,15 +140,12 @@ Interface changes
   that is at least as good as the given value
 - heuristics/undercover/{coverand,coverind,covernl} to control which nonlinearities to consider (by default only "and" and nonlinear constraints)
 - cutselection/ensemble/* all parameters for new ensemble cut selector
-<<<<<<< HEAD
-- heuristics/dps/reoptlimits to set strict limits for the reoptimization step in dps
-- heuristics/dps/timing to run dps after processing the node
-=======
 - nlhdlr/quadratic/usemonoidal to enable monoidal strengthening when separating quadratics with intersection cuts
 - nlhdlr/quadratic/trackmore to collect more statistics for monoidal strengthening when separating quadratics with intersection cuts
 - nlhdlr/quadratic/useminrep to use the minimal representation to compute cut coefficients when separating quadratics with intersection cuts
 - nlhdlr/quadratic/sparsifycuts to enable sparsification of intersection cuts for quadratics
->>>>>>> master
+- heuristics/dps/reoptlimits to set strict limits for the reoptimization step in dps
+- heuristics/dps/timing to run dps after processing the node
 
 ### Data structures
 
