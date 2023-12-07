@@ -142,6 +142,8 @@ struct OrbitalReductionComponentData
    SCIP_Bool             symmetrybrokencomputed; /**< whether the symmetry broken information is computed already */
    int*                  symbrokenvarids;    /**< variables to be stabilized because the symmetry is globally broken */
    int                   nsymbrokenvarids;   /**< symbrokenvarids array length, is 0 iff symbrokenvarids is NULL */
+
+   SCIP_Bool             treewarninggiven;   /**< whether a warning is given for missing nodes in shadowtree */
 };
 typedef struct OrbitalReductionComponentData ORCDATA;
 
@@ -698,7 +700,18 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
       return SCIP_OKAY;
 
    shadowfocusnode = SCIPshadowTreeGetShadowNode(shadowtree, focusnode);
-   assert( shadowfocusnode != NULL );
+
+   /* do not apply orbital reduction if focusnode does not exist in the shadowtree */
+   if ( shadowfocusnode == NULL )
+   {
+      if ( !orcdata->treewarninggiven )
+      {
+         SCIPwarningMessage(scip, "Attempting orbital reduction on nodes not existing in the symmetry shadowtree"
+            " (and suppressing future warnings for this component)\n");
+         orcdata->treewarninggiven = TRUE;
+      }
+      return SCIP_OKAY;
+   }
 
    /* get the rooted path */
    /* @todo add depth field to shadow tree node to improve efficiency */
@@ -1369,6 +1382,9 @@ SCIP_RETCODE addComponent(
 
       orbireddata->maxncomponents = newsize;
    }
+
+   /* tree warning indicator */
+   orcdata->treewarninggiven = FALSE;
 
    /* add component */
    assert( orbireddata->ncomponents < orbireddata->maxncomponents );
