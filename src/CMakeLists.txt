@@ -35,6 +35,7 @@ set(scipsources
     scip/branch_cloud.c
     scip/branch_distribution.c
     scip/branch_fullstrong.c
+    scip/branch_gomory.c
     scip/branch_inference.c
     scip/branch_leastinf.c
     scip/branch_lookahead.c
@@ -483,6 +484,7 @@ set(scipheaders
     scip/branch_cloud.h
     scip/branch_distribution.h
     scip/branch_fullstrong.h
+    scip/branch_gomory.h
     scip/branch.h
     scip/branch_inference.h
     scip/branch_leastinf.h

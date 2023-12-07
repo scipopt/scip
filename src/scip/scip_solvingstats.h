@@ -1620,6 +1620,33 @@ SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns the average normalized efficacy of a GMI cut over all variables
+ *
+ *  @return the average normalized efficacy of a GMI cut over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetAvgGMIeff(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the average normalized efficacy of a GMI cut over all variables
+ *
+ *  @return increases the average normalized efficacy of a GMI cut over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+void SCIPincAvgGMIeff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             gmieff              /**< average normalized GMI efficacy over all variables */
+   );
+
 /** gets deterministic time number of LPs solved so far
  *
  *  @return the total number of LPs solved so far
