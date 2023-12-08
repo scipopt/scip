@@ -368,6 +368,8 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
 /** nonlinear handler under/overestimation callback
  *
  * The method tries to compute linear under- or overestimators of `expr` that are as tight as possible at a given point.
+ * Note that the cons_nonlinear handler adds an auxvar into a rowprep automatically after this callback.
+ * Therefore, the rowprep should only store the estimator in this callback.
  * If the value of the estimator in the solution is smaller (larger) than `targetvalue`
  * when underestimating (overestimating), then no estimator needs to be computed.
  * Note, that `targetvalue` can be infinite if any estimator will be accepted.

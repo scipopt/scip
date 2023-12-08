@@ -748,6 +748,32 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
 
 /**@} */
 
+/**@name Monomial expression functions */
+/**@{ */
+
+/** returns a monomial representation of a product expression
+ *
+ * The array to store all factor expressions needs to be of size the number of
+ * children in the expression which is given by SCIPexprGetNChildren().
+ *
+ * Given a non-trivial monomial expression, the function finds its representation as \f$cx^\alpha\f$, where
+ * \f$c\f$ is a real coefficient, \f$x\f$ is a vector of auxiliary or original variables (where some entries can
+ * be NULL is the auxiliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
+ *
+ * A non-trivial monomial is a product of a least two expressions.
+ */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPgetExprMonomialData() macro */
+SCIP_RETCODE SCIPexprGetMonomialData(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            coef,               /**< coefficient \f$c\f$ */
+   SCIP_Real*            exponents,          /**< exponents \f$\alpha\f$ */
+   SCIP_EXPR**           exprs               /**< expressions \f$x\f$ */
+   );
+
+/**@} */
+
 #ifdef __cplusplus
 }
 #endif

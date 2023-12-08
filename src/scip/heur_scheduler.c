@@ -3,36 +3,28 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  Licensed under the Apache License, Version 2.0 (the "License");          */
-/*  you may not use this file except in compliance with the License.         */
-/*  You may obtain a copy of the License at                                  */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*      http://www.apache.org/licenses/LICENSE-2.0                           */
-/*                                                                           */
-/*  Unless required by applicable law or agreed to in writing, software      */
-/*  distributed under the License is distributed on an "AS IS" BASIS,        */
-/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
-/*  See the License for the specific language governing permissions and      */
-/*  limitations under the License.                                           */
-/*                                                                           */
-/*  You should have received a copy of the Apache-2.0 license                */
-/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_alns.c
+/**@file   heur_scheduler.c
  * @ingroup DEFPLUGINS_HEUR
- * @brief  Adaptive large neighborhood search heuristic that orchestrates popular LNS heuristics
+ * @brief  Adaptive heuristic to schedule LNS and diving heuristics
  * @author Gregor Hendel
+ * @author Antonia Chmiela
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
-#include "scip/heur_alns.h"
+#include "scip/heur_scheduler.h"
 #include "scip/heuristics.h"
 #include "scip/pub_bandit_epsgreedy.h"
 #include "scip/pub_bandit_exp3.h"
@@ -75,19 +67,18 @@
 #include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
 #endif
 
-#define HEUR_NAME             "alns"
-#define HEUR_DESC             "Large neighborhood search heuristic that orchestrates the popular neighborhoods Local Branching, RINS, RENS, DINS etc."
+#define HEUR_NAME             "scheduler"
+#define HEUR_DESC             "Adaptive heuristic to schedule LNS and diving heuristics"
 #define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
-#define HEUR_PRIORITY         -1100500
-#define HEUR_FREQ             20
+#define HEUR_PRIORITY         -30000
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_DURINGLPLOOP
+#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define NNEIGHBORHOODS 9
-
-#define DEFAULT_SHOWNBSTATS   FALSE /**< show statistics on neighborhoods? */
+#define DIVINGHEURS_INITIALSIZE 10
 
 /*
  * limit parameters for sub-SCIPs
@@ -97,38 +88,44 @@
 #define DEFAULT_NODESOFFSET      500LL
 #define DEFAULT_NSOLSLIM         3
 #define DEFAULT_MINNODES         50LL
-#define DEFAULT_MAXNODES         5000LL
-#define DEFAULT_WAITINGNODES     25LL  /**< number of nodes since last incumbent solution that the heuristic should wait */
+#define DEFAULT_MAXNODES         500LL
+#define DEFAULT_WAITINGNODES     0LL  /**< number of nodes since last incumbent solution that the heuristic should wait */
+#define DEFAULT_INITLNSNODELIMIT 50
+#define DEFAULT_INITDIVINGNODELIMIT 500LL
 #define DEFAULT_TARGETNODEFACTOR 1.05
 #define LRATEMIN                 0.01 /**<  lower bound for learning rate for target nodes and minimum improvement */
 #define LPLIMFAC                 4.0
 #define DEFAULT_INITDURINGROOT FALSE
 #define DEFAULT_MAXCALLSSAMESOL  -1   /**< number of allowed executions of the heuristic on the same incumbent solution */
-
-/*
- * parameters for the minimum improvement
- */
-#define DEFAULT_MINIMPROVELOW    0.01
-#define DEFAULT_MINIMPROVEHIGH   0.01
-#define MINIMPROVEFAC            1.5
-#define DEFAULT_STARTMINIMPROVE  0.01
-#define DEFAULT_ADJUSTMINIMPROVE FALSE
-#define DEFAULT_ADJUSTTARGETNODES TRUE /**< should the target nodes be dynamically adjusted? */
+#define DEFAULT_HEURTIMELIMIT    60.0 /**< time limit for a single heuristic run */
 
 /*
  * bandit algorithm parameters
  */
 #define DEFAULT_BESTSOLWEIGHT  1
 #define DEFAULT_BANDITALGO     'i'  /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy, exp.3-(i)x */
-#define DEFAULT_REWARDCONTROL  0.8  /**< reward control to increase the weight of the simple solution indicator and decrease the weight of the closed gap reward */
-#define DEFAULT_SCALEBYEFFORT  TRUE /**< should the reward be scaled by the effort? */
-#define DEFAULT_RESETWEIGHTS   TRUE /**< should the bandit algorithms be reset when a new problem is read? */
+#define DEFAULT_RESETWEIGHTS   FALSE/**< should the bandit algorithms be reset when a new problem is read? */
 #define DEFAULT_SUBSCIPRANDSEEDS FALSE /**< should random seeds of sub-SCIPs be altered to increase diversification? */
-#define DEFAULT_REWARDBASELINE 0.5  /**< the reward baseline to separate successful and failed calls */
 #define DEFAULT_FIXTOL         0.1  /**< tolerance by which the fixing rate may be missed without generic fixing */
 #define DEFAULT_UNFIXTOL       0.1  /**< tolerance by which the fixing rate may be exceeded without generic unfixing */
-#define DEFAULT_USELOCALREDCOST FALSE /**< should local reduced costs be used for generic (un)fixing? */
 #define DEFAULT_BETA           0.0  /**< default reward offset between 0 and 1 at every observation for exp3 */
+#define DEFAULT_NSELECTIONS      5  /**< number of heuristics picked by the scheduler in one call (-1: number of controlled heuristics, 0: until new incumbent is found) */
+
+/*
+ * parameters to control variable fixing
+ */
+#define DEFAULT_USEREDCOST       TRUE  /**< should reduced cost scores be used for variable priorization? */
+#define DEFAULT_USEPSCOST        TRUE  /**< should pseudo cost scores be used for variable priorization? */
+#define DEFAULT_USEDISTANCES     TRUE  /**< should distances from fixed variables be used for variable priorization */
+#define DEFAULT_USELOCALREDCOST FALSE /**< should local reduced costs be used for generic (un)fixing? */
+
+/*
+ * parameters for reward computation
+ */
+#define DEFAULT_EFFORTREWARDWEIGHT 0.2
+#define DEFAULT_SOLREWARDWEIGHT 0.3
+#define DEFAULT_QUALREWARDWEIGHT 0.3
+#define DEFAULT_CONFLICTREWARDWEIGHT 0.2
 
 /*
  * the following 3 parameters have been tuned by a simulation experiment
@@ -137,20 +134,22 @@
 #define DEFAULT_EPS            0.4685844   /**< increase exploration in epsilon-greedy bandit algorithm */
 #define DEFAULT_ALPHA          0.0016      /**< parameter to increase the confidence width in UCB */
 #define DEFAULT_GAMMA          0.07041455  /**< default weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
+
+/*
+ * parameters to control solve frequency for diving heuristics
+ */
+#define SOLVEFREQ_DECAY        0.75  /**< geometric decay for solving freq adjustments */
+#define SOLVEFREQ_STARTINC     0.2   /**< initial increment value for solving frequency */
+#define MAXSOLVEFREQ           0.3   /**< maximal solving frequency */
+#define MINSOLVEFREQ           0.05  /**< minimal solving frequency */
+
 /*
  * parameters to control variable fixing
  */
-#define DEFAULT_USEREDCOST       TRUE  /**< should reduced cost scores be used for variable priorization? */
-#define DEFAULT_USEPSCOST        TRUE  /**< should pseudo cost scores be used for variable priorization? */
-#define DEFAULT_USEDISTANCES     TRUE  /**< should distances from fixed variables be used for variable priorization */
-#define DEFAULT_DOMOREFIXINGS    TRUE  /**< should the ALNS heuristic do more fixings by itself based on variable prioritization
-                                         *  until the target fixing rate is reached? */
-#define DEFAULT_ADJUSTFIXINGRATE TRUE  /**< should the heuristic adjust the target fixing rate based on the success? */
 #define FIXINGRATE_DECAY         0.75  /**< geometric decay for fixing rate adjustments */
 #define FIXINGRATE_STARTINC      0.2   /**< initial increment value for fixing rate */
 #define DEFAULT_USESUBSCIPHEURS  FALSE /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
 #define DEFAULT_COPYCUTS         FALSE /**< should cutting planes be copied to the sub-SCIP? */
-#define DEFAULT_REWARDFILENAME   "-"   /**< file name to store all rewards and the selection of the bandit */
 
 /* individual random seeds */
 #define DEFAULT_SEED 113
@@ -161,47 +160,56 @@
 #define DEFAULT_MINFIXINGRATE_RENS 0.3
 #define DEFAULT_MAXFIXINGRATE_RENS 0.9
 #define DEFAULT_ACTIVE_RENS TRUE
-#define DEFAULT_PRIORITY_RENS 1.0
+//#define DEFAULT_PRIORITY_RENS 1.0
+#define DEFAULT_PRIORITY_RENS -1100000
 
 #define DEFAULT_MINFIXINGRATE_RINS 0.3
 #define DEFAULT_MAXFIXINGRATE_RINS 0.9
 #define DEFAULT_ACTIVE_RINS TRUE
-#define DEFAULT_PRIORITY_RINS 1.0
+//#define DEFAULT_PRIORITY_RINS 1.0
+#define DEFAULT_PRIORITY_RINS -1101000
 
 #define DEFAULT_MINFIXINGRATE_MUTATION 0.3
 #define DEFAULT_MAXFIXINGRATE_MUTATION 0.9
 #define DEFAULT_ACTIVE_MUTATION TRUE
-#define DEFAULT_PRIORITY_MUTATION 1.0
+//#define DEFAULT_PRIORITY_MUTATION 1.0
+#define DEFAULT_PRIORITY_MUTATION -1103010
 
 #define DEFAULT_MINFIXINGRATE_LOCALBRANCHING 0.3
 #define DEFAULT_MAXFIXINGRATE_LOCALBRANCHING 0.9
 #define DEFAULT_ACTIVE_LOCALBRANCHING TRUE
-#define DEFAULT_PRIORITY_LOCALBRANCHING 1.0
+//#define DEFAULT_PRIORITY_LOCALBRANCHING 1.0
+#define DEFAULT_PRIORITY_LOCALBRANCHING -1102000
 
 #define DEFAULT_MINFIXINGRATE_PROXIMITY 0.3
 #define DEFAULT_MAXFIXINGRATE_PROXIMITY 0.9
 #define DEFAULT_ACTIVE_PROXIMITY TRUE
-#define DEFAULT_PRIORITY_PROXIMITY 1.0
+//#define DEFAULT_PRIORITY_PROXIMITY 1.0
+#define DEFAULT_PRIORITY_PROXIMITY -2000000
 
 #define DEFAULT_MINFIXINGRATE_CROSSOVER 0.3
 #define DEFAULT_MAXFIXINGRATE_CROSSOVER 0.9
 #define DEFAULT_ACTIVE_CROSSOVER TRUE
-#define DEFAULT_PRIORITY_CROSSOVER 1.0
+//#define DEFAULT_PRIORITY_CROSSOVER 1.0
+#define DEFAULT_PRIORITY_CROSSOVER -1104000
 
 #define DEFAULT_MINFIXINGRATE_ZEROOBJECTIVE 0.3
 #define DEFAULT_MAXFIXINGRATE_ZEROOBJECTIVE 0.9
 #define DEFAULT_ACTIVE_ZEROOBJECTIVE TRUE
-#define DEFAULT_PRIORITY_ZEROOBJECTIVE 1.0
+//#define DEFAULT_PRIORITY_ZEROOBJECTIVE 1.0
+#define DEFAULT_PRIORITY_ZEROOBJECTIVE 100
 
 #define DEFAULT_MINFIXINGRATE_DINS 0.3
 #define DEFAULT_MAXFIXINGRATE_DINS 0.9
 #define DEFAULT_ACTIVE_DINS TRUE
-#define DEFAULT_PRIORITY_DINS 1.0
+//#define DEFAULT_PRIORITY_DINS 1.0
+#define DEFAULT_PRIORITY_DINS -1105000
 
 #define DEFAULT_MINFIXINGRATE_TRUSTREGION 0.3
 #define DEFAULT_MAXFIXINGRATE_TRUSTREGION 0.9
 #define DEFAULT_ACTIVE_TRUSTREGION FALSE
-#define DEFAULT_PRIORITY_TRUSTREGION 1.0
+//#define DEFAULT_PRIORITY_TRUSTREGION 1.0
+#define DEFAULT_PRIORITY_TRUSTREGION -1102010
 
 
 #define DEFAULT_NSOLS_CROSSOVER 2 /**< parameter for the number of solutions that crossover should combine */
@@ -209,28 +217,15 @@
 #define DEFAULT_VIOLPENALTY_TRUSTREGION 100.0  /**< the penalty for violating the trust region */
 
 /* event handler properties */
-#define EVENTHDLR_NAME         "Alns"
+#define EVENTHDLR_NAME         "Scheduler"
 #define EVENTHDLR_DESC         "LP event handler for " HEUR_NAME " heuristic"
-#define SCIP_EVENTTYPE_ALNS (SCIP_EVENTTYPE_LPSOLVED | SCIP_EVENTTYPE_SOLFOUND | SCIP_EVENTTYPE_BESTSOLFOUND)
+#define SCIP_EVENTTYPE_SCHEDULER (SCIP_EVENTTYPE_LPSOLVED | SCIP_EVENTTYPE_SOLFOUND | SCIP_EVENTTYPE_BESTSOLFOUND)
 
-/* properties of the ALNS neighborhood statistics table */
-#define TABLE_NAME_NEIGHBORHOOD                  "neighborhood"
-#define TABLE_DESC_NEIGHBORHOOD                  "ALNS neighborhood statistics"
+/* properties of the scheduler neighborhood statistics table */
+#define TABLE_NAME_NEIGHBORHOOD                  "scheduler"
+#define TABLE_DESC_NEIGHBORHOOD                  "scheduler heuristics statistics"
 #define TABLE_POSITION_NEIGHBORHOOD              12500                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_NEIGHBORHOOD        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
-
-/** reward types of ALNS */
-enum RewardType {
-   REWARDTYPE_TOTAL,                         /**< combination of the other rewards */
-   REWARDTYPE_BESTSOL,                       /**< 1, if a new solution was found, 0 otherwise */
-   REWARDTYPE_CLOSEDGAP,                           /**< 0 if no solution was found, closed gap otherwise */
-   REWARDTYPE_NOSOLPENALTY,                  /**< 1 if a solution was found, otherwise between 0 and 1 depending on the effort spent  */
-   NREWARDTYPES
-};
-
-/*
- * Data structures
- */
 
 /*
  * additional neighborhood data structures
@@ -247,10 +242,13 @@ typedef struct data_trustregion DATA_TRUSTREGION; /**< trustregion neighborhood 
 
 typedef struct NH_FixingRate NH_FIXINGRATE; /** fixing rate data structure */
 
-typedef struct NH_Stats NH_STATS; /**< neighborhood statistics data structure */
+typedef struct SolveFreq SOLVEFREQ; /** diving heuristic solving frequency data structure */
+
+typedef struct Heur_Stats HEUR_STATS; /**< heuristic statistics data structure */
 
 typedef struct Nh NH;             /**< neighborhood data structure */
 
+typedef struct Diving_Heur DIVING_HEUR; /**< diving heuristic data structure */
 
 /*
  * variable priorization data structure for sorting
@@ -260,7 +258,7 @@ typedef struct VarPrio VARPRIO;
 /** callback to collect variable fixings of neighborhood */
  #define DECL_VARFIXINGS(x) SCIP_RETCODE x ( \
    SCIP*                 scip,               /**< SCIP data structure */                     \
-   NH*                   neighborhood,       /**< ALNS neighborhood data structure */         \
+   NH*                   neighborhood,       /**< neighborhood data structure */         \
    SCIP_VAR**            varbuf,             /**< buffer array to collect variables to fix */\
    SCIP_Real*            valbuf,             /**< buffer array to collect fixing values */   \
    int*                  nfixings,           /**< pointer to store the number of fixings */  \
@@ -278,7 +276,7 @@ typedef struct VarPrio VARPRIO;
 #define DECL_CHANGESUBSCIP(x) SCIP_RETCODE x (  \
    SCIP*                 sourcescip,         /**< source SCIP data structure */\
    SCIP*                 targetscip,         /**< target SCIP data structure */\
-   NH*                   neighborhood,       /**< ALNS neighborhood data structure */\
+   NH*                   neighborhood,       /**< neighborhood data structure */\
    SCIP_VAR**            subvars,            /**< array of targetscip variables in the same order as the source SCIP variables */\
    int*                  ndomchgs,           /**< pointer to store the number of performed domain changes */\
    int*                  nchgobjs,           /**< pointer to store the number of changed objective coefficients */ \
@@ -340,18 +338,24 @@ typedef enum HistIndex HISTINDEX;
 #define NHISTENTRIES 7
 
 
-/** statistics for a neighborhood */
-struct NH_Stats
+/** statistics for heuristics */
+struct Heur_Stats
 {
-   SCIP_CLOCK*           setupclock;         /**< clock for sub-SCIP setup time */
-   SCIP_CLOCK*           submipclock;        /**< clock for the sub-SCIP solve */
-   SCIP_Longint          usednodes;          /**< total number of used nodes */
-   SCIP_Real             oldupperbound;      /**< upper bound before the sub-SCIP started */
+   SCIP_Real             oldupperbound;      /**< upper bound before the heuristic started */
    SCIP_Real             newupperbound;      /**< new upper bound for allrewards mode to work correctly */
-   int                   nruns;              /**< number of runs of a neighborhood */
+   int                   nruns;              /**< number of runs of a heuristic */
    int                   nrunsbestsol;       /**< number of runs that produced a new incumbent */
    SCIP_Longint          nsolsfound;         /**< the total number of solutions found */
    SCIP_Longint          nbestsolsfound;     /**< the total number of improving solutions found */
+   SCIP_CLOCK*           setupclock;         /**< clock for setup time */
+   SCIP_CLOCK*           execclock;        /**< clock for the heuristic execution */
+   /* for diving */
+   SCIP_Longint          nbacktracks;        /**< total number of used backtracks */
+   SCIP_Longint          nconflicts;         /**< total number of conflict constraints generated */
+   SCIP_Longint          nprobnodes;         /**< total number of probing nodes used */
+   int                   divingdepth;        /**< depth of last dive */
+   /* for LNS */
+   SCIP_Longint          usednodes;          /**< total number of used nodes */
    int                   nfixings;           /**< the number of fixings in one run */
    int                   statushist[NHISTENTRIES]; /**< array to count sub-SCIP statuses */
 };
@@ -366,12 +370,22 @@ struct NH_FixingRate
    SCIP_Real             maxfixingrate;      /**< the maximum fixing rate */
 };
 
+/** solve frequency for diving heuristics */
+struct SolveFreq
+{
+   SCIP_Real             minsolvefreq;       /**< the minimum solve frequency */
+   SCIP_Real             currentsolvefreq;   /**< the current solve frequency */
+   SCIP_Real             increment;          /**< the current increment by which the solve frequency is in-/decreased */
+   SCIP_Real             maxsolvefreq;       /**< the maximum solve frequency */
+};
+
 /** neighborhood data structure with callbacks, statistics, fixing rate */
 struct Nh
 {
    char*                 name;               /**< the name of this neighborhood */
    NH_FIXINGRATE         fixingrate;         /**< fixing rate for this neighborhood */
-   NH_STATS              stats;              /**< statistics for this neighborhood */
+   HEUR_STATS            stats;              /**< statistics for this neighborhood */
+   int                   nodelimit;          /**< nodelimit for next execution */
    DECL_VARFIXINGS       ((*varfixings));    /**< variable fixings callback for this neighborhood */
    DECL_CHANGESUBSCIP    ((*changesubscip)); /**< callback for subproblem changes other than variable fixings */
    DECL_NHINIT           ((*nhinit));        /**< initialization callback when a new problem is read */
@@ -381,6 +395,7 @@ struct Nh
    DECL_NHDEACTIVATE     ((*nhdeactivate));  /**< callback function to deactivate neighborhoods on problems where they are irrelevant, or NULL if it is always active */
    SCIP_Bool             active;             /**< is this neighborhood active or not? */
    SCIP_Real             priority;           /**< positive call priority to initialize bandit algorithms */
+   int                   rootnodepriority;   /**< heuristic's priority for call at rootnode */
    union
    {
       DATA_MUTATION*     mutation;           /**< mutation data */
@@ -388,6 +403,17 @@ struct Nh
       DATA_DINS*         dins;               /**< dins data */
       DATA_TRUSTREGION*  trustregion;        /**< trustregion data */
    }                     data;               /**< data object for neighborhood specific data */
+};
+
+/** diving heuristic data structure with statistics and diveset */
+struct Diving_Heur
+{
+   SCIP_DIVESET*         diveset;            /**< publicly available divesets from diving heuristics */
+   HEUR_STATS*           stats;              /**< statistics for this diveset */
+   SCIP_Longint          nodelimit;          /**< node limit of diving heuristics for next execution */
+   SOLVEFREQ*            solvefreqdata;      /**< solve frequency data */
+   SCIP_Real             priority;           /**< positive call priority to initialize bandit algorithms */
+   int                   rootnodepriority;   /**< heuristic's priority for call at rootnode */
 };
 
 /** mutation neighborhood data structure */
@@ -418,32 +444,54 @@ struct data_trustregion
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   NH**                  neighborhoods;      /**< array of neighborhoods */
    SCIP_BANDIT*          bandit;             /**< bandit algorithm */
+   int*                  sortedindices;      /**< array of indices of heuristics sorted w.r.t. heuristic priorities */
+   int                   counter;            /**< counter to count how often the scheduler selected a heuristic in the rootnode */
    SCIP_SOL*             lastcallsol;        /**< incumbent when the heuristic was last called */
-   char*                 rewardfilename;     /**< file name to store all rewards and the selection of the bandit */
-   FILE*                 rewardfile;         /**< reward file pointer, or NULL */
+   SCIP_Longint          waitingnodes;       /**< number of nodes since last incumbent solution that the heuristic should wait */
+   SCIP_Longint          firstcallthissol;   /**< counter for the number of calls on this incumbent */
+   char                  banditalgo;         /**< the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
+   int                   maxcallssamesol;    /**< number of allowed executions of the heuristic on the same incumbent solution
+                                              *   (-1: no limit, 0: number of active neighborhoods) */
+   int                   nselections;        /**< number of heuristics picked by the scheduler in one call
+                                              *   (-1: number of controlled heuristics, 0: until new incumbent is found) */
+   int                   nskippedcalls;      /**< number of calls to heuristic we need to skip since last execution */
+   int                   nfailedcalls;       /**< number of failed calls to heursitic since last successful one */
+   SCIP_Bool             resetweights;       /**< should the bandit algorithms be reset when a new problem is read? */
+   SCIP_Bool             initduringroot;     /**< should the heuristic be executed multiple times during the root node? */
+   int                   maxnconflicts;      /**< maximum number of conflicts detected by diving heur so far */
+   SCIP_Bool             defaultroot;        /**< should the default priorities be used at the root node */
+   SCIP_Real             heurtimelimit;      /**< time limit for a single heuristic run */
+   /* bandit algorithm parameters */
+   SCIP_Real             exp3_gamma;         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
+   SCIP_Real             exp3_beta;          /**< reward offset between 0 and 1 at every observation for exp3 */
+   SCIP_Real             epsgreedy_eps;      /**< increase exploration in epsilon-greedy bandit algorithm */
+   SCIP_Bool             epsgreedy_usemod;   /**< TRUE if modified version of the epsilon-greedy bandit algorithm should be used */
+   SCIP_Real             ucb_alpha;          /**< parameter to increase the confidence width in UCB */
+   /* reward function parameters (reward is a function between 0 and 1 and thus always upper bounded by 1, even if
+    * sum of weights do not add up to 1.0) */
+   SCIP_Real             solrewardweight;    /**< weight by how much finding a new incumbent is rewarded in reward function */
+   SCIP_Real             effortrewardweight; /**< weight by how much effort is rewarded in reward function */
+   SCIP_Real             qualrewardweight;   /**< weight by how much quality of a new incumbent is rewarded in reward function */
+   SCIP_Real             conflictrewardweight;/**< weight by how much number of conflicts found by diving is rewarded in reward function */
+   /* diving data */
+   SCIP_SOL*             sol;                /**< working solution */
+   DIVING_HEUR**         divingheurs;        /**< array of diving heuristics */
+   int                   divingheurssize;    /**< array size for diving heurs array */
+   int                   ndiving;            /**< number of diving heuristics used by scheduler */
+   SCIP_Longint          initdivingnodelimit;/**< initial node limit for diving heuristics */
+   SCIP_Longint          maxdivingnodelimit; /**< maximum of node limits among all diving heurisitics */
+   /* LNS data */
+   NH**                  neighborhoods;      /**< array of neighborhoods */
    SCIP_Longint          nodesoffset;        /**< offset added to the nodes budget */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes in a single sub-SCIP */
    SCIP_Longint          targetnodes;        /**< targeted number of nodes to start a sub-SCIP */
    SCIP_Longint          minnodes;           /**< minimum number of nodes required to start a sub-SCIP */
    SCIP_Longint          usednodes;          /**< total number of nodes already spent in sub-SCIPs */
-   SCIP_Longint          waitingnodes;       /**< number of nodes since last incumbent solution that the heuristic should wait */
    SCIP_Real             nodesquot;          /**< fraction of nodes compared to the main SCIP for budget computation */
    SCIP_Real             nodesquotmin;       /**< lower bound on fraction of nodes compared to the main SCIP for budget computation */
-   SCIP_Real             startminimprove;    /**< initial factor by which ALNS should at least improve the incumbent */
-   SCIP_Real             minimprovelow;      /**< lower threshold for the minimal improvement over the incumbent */
-   SCIP_Real             minimprovehigh;     /**< upper bound for the minimal improvement over the incumbent */
-   SCIP_Real             minimprove;         /**< factor by which ALNS should at least improve the incumbent */
    SCIP_Real             lplimfac;           /**< limit fraction of LPs per node to interrupt sub-SCIP */
-   SCIP_Real             exp3_gamma;         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
-   SCIP_Real             exp3_beta;          /**< reward offset between 0 and 1 at every observation for exp3 */
-   SCIP_Real             epsgreedy_eps;      /**< increase exploration in epsilon-greedy bandit algorithm */
-   SCIP_Real             ucb_alpha;          /**< parameter to increase the confidence width in UCB */
-   SCIP_Real             rewardcontrol;      /**< reward control to increase the weight of the simple solution indicator
-                                               *  and decrease the weight of the closed gap reward */
    SCIP_Real             targetnodefactor;   /**< factor by which target node number is eventually increased */
-   SCIP_Real             rewardbaseline;     /**< the reward baseline to separate successful and failed calls */
    SCIP_Real             fixtol;             /**< tolerance by which the fixing rate may be missed without generic fixing */
    SCIP_Real             unfixtol;           /**< tolerance by which the fixing rate may be exceeded without generic unfixing */
    int                   nneighborhoods;     /**< number of neighborhoods */
@@ -453,26 +501,15 @@ struct SCIP_HeurData
    int                   seed;               /**< initial random seed for bandit algorithms and random decisions by neighborhoods */
    int                   currneighborhood;   /**< index of currently selected neighborhood */
    int                   ndelayedcalls;      /**< the number of delayed calls */
-   int                   maxcallssamesol;    /**< number of allowed executions of the heuristic on the same incumbent solution
-                                              *   (-1: no limit, 0: number of active neighborhoods) */
-   SCIP_Longint          firstcallthissol;   /**< counter for the number of calls on this incumbent */
-   char                  banditalgo;         /**< the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
+   SCIP_Bool             usesubscipheurs;    /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
+   SCIP_Bool             subsciprandseeds;   /**< should random seeds of sub-SCIPs be altered to increase diversification? */
+   SCIP_Bool             copycuts;           /**< should cutting planes be copied to the sub-SCIP? */
+   int                   initlnsnodelimit;   /**< initial node limit for LNS heuristics */
+   int                   maxlnsnodelimit;    /**< maximum of nodelimits among all LNS heuristics */
    SCIP_Bool             useredcost;         /**< should reduced cost scores be used for variable prioritization? */
    SCIP_Bool             usedistances;       /**< should distances from fixed variables be used for variable prioritization */
    SCIP_Bool             usepscost;          /**< should pseudo cost scores be used for variable prioritization? */
-   SCIP_Bool             domorefixings;      /**< should the ALNS heuristic do more fixings by itself based on variable prioritization
-                                               *  until the target fixing rate is reached? */
-   SCIP_Bool             adjustfixingrate;   /**< should the heuristic adjust the target fixing rate based on the success? */
-   SCIP_Bool             usesubscipheurs;    /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
-   SCIP_Bool             adjustminimprove;   /**< should the factor by which the minimum improvement is bound be dynamically updated? */
-   SCIP_Bool             adjusttargetnodes;  /**< should the target nodes be dynamically adjusted? */
-   SCIP_Bool             resetweights;       /**< should the bandit algorithms be reset when a new problem is read? */
-   SCIP_Bool             subsciprandseeds;   /**< should random seeds of sub-SCIPs be altered to increase diversification? */
-   SCIP_Bool             scalebyeffort;      /**< should the reward be scaled by the effort? */
-   SCIP_Bool             copycuts;           /**< should cutting planes be copied to the sub-SCIP? */
    SCIP_Bool             uselocalredcost;    /**< should local reduced costs be used for generic (un)fixing? */
-   SCIP_Bool             initduringroot;     /**< should the heuristic be executed multiple times during the root node? */
-   SCIP_Bool             shownbstats;        /**< show statistics on neighborhoods? */
 };
 
 /** event handler data */
@@ -480,11 +517,10 @@ struct SCIP_EventData
 {
    SCIP_VAR**            subvars;            /**< the variables of the subproblem */
    SCIP*                 sourcescip;         /**< original SCIP data structure */
-   SCIP_HEUR*            heur;               /**< alns heuristic structure */
+   SCIP_HEUR*            heur;               /**< scheduler heuristic structure */
    SCIP_Longint          nodelimit;          /**< node limit of the run */
    SCIP_Real             lplimfac;           /**< limit fraction of LPs per node to interrupt sub-SCIP */
-   NH_STATS*             runstats;           /**< run statistics for the current neighborhood */
-   SCIP_Bool             allrewardsmode;     /**< true if solutions should only be checked for reward comparisons */
+   HEUR_STATS*           runstats;           /**< run statistics for the current neighborhood */
 };
 
 /** represents limits for the sub-SCIP solving process */
@@ -532,17 +568,6 @@ SCIP_RETCODE resetFixingRate(
    return SCIP_OKAY;
 }
 
-/** reset the currently active neighborhood */
-static
-void resetCurrentNeighborhood(
-   SCIP_HEURDATA*        heurdata
-   )
-{
-   assert(heurdata != NULL);
-   heurdata->currneighborhood = -1;
-   heurdata->ndelayedcalls = 0;
-}
-
 /** update increment for fixing rate */
 static
 void updateFixingRateIncrement(
@@ -552,7 +577,6 @@ void updateFixingRateIncrement(
    fx->increment *= FIXINGRATE_DECAY;
    fx->increment = MAX(fx->increment, LRATEMIN);
 }
-
 
 /** increase fixing rate
  *
@@ -585,7 +609,7 @@ static
 void updateFixingRate(
    NH*                   neighborhood,       /**< neighborhood */
    SCIP_STATUS           subscipstatus,      /**< status of the sub-SCIP run */
-   NH_STATS*             runstats            /**< run statistics for this run */
+   HEUR_STATS*           runstats            /**< run statistics for this run */
    )
 {
    NH_FIXINGRATE* fx;
@@ -605,6 +629,7 @@ void updateFixingRate(
    case SCIP_STATUS_STALLNODELIMIT:
    case SCIP_STATUS_USERINTERRUPT:
    case SCIP_STATUS_TERMINATE:
+   case SCIP_STATUS_TIMELIMIT:
    case SCIP_STATUS_NODELIMIT:
       /* increase the fixing rate (make the subproblem easier) only if no solution was found */
       if( runstats->nbestsolsfound <= 0 )
@@ -613,7 +638,6 @@ void updateFixingRate(
       /* fall through cases to please lint */
    case SCIP_STATUS_UNKNOWN:
    case SCIP_STATUS_TOTALNODELIMIT:
-   case SCIP_STATUS_TIMELIMIT:
    case SCIP_STATUS_MEMLIMIT:
    case SCIP_STATUS_GAPLIMIT:
    case SCIP_STATUS_RESTARTLIMIT:
@@ -625,17 +649,15 @@ void updateFixingRate(
    updateFixingRateIncrement(fx);
 }
 
-/** increase target node limit */
+/** reset the currently active neighborhood */
 static
-void increaseTargetNodeLimit(
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+void resetCurrentNeighborhood(
+   SCIP_HEURDATA*        heurdata
    )
 {
-   heurdata->targetnodes = (SCIP_Longint)(heurdata->targetnodes * heurdata->targetnodefactor) + 1;
-
-   /* respect upper and lower parametrized bounds on targetnodes */
-   if( heurdata->targetnodes > heurdata->maxnodes )
-      heurdata->targetnodes = heurdata->maxnodes;
+   assert(heurdata != NULL);
+   heurdata->currneighborhood = -1;
+   heurdata->ndelayedcalls = 0;
 }
 
 /** reset target node limit */
@@ -647,132 +669,12 @@ void resetTargetNodeLimit(
    heurdata->targetnodes = heurdata->minnodes;
 }
 
-/** update target node limit based on the current run results */
-static
-void updateTargetNodeLimit(
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   NH_STATS*             runstats,           /**< statistics of the run */
-   SCIP_STATUS           subscipstatus       /**< status of the sub-SCIP run */
-   )
-{
-   switch (subscipstatus)
-   {
-   case SCIP_STATUS_STALLNODELIMIT:
-   case SCIP_STATUS_NODELIMIT:
-      /* the subproblem could be explored more */
-      if( runstats->nbestsolsfound == 0 )
-         increaseTargetNodeLimit(heurdata);
-      break;
-   case SCIP_STATUS_OPTIMAL:
-   case SCIP_STATUS_INFEASIBLE:
-   case SCIP_STATUS_INFORUNBD:
-   case SCIP_STATUS_SOLLIMIT:
-   case SCIP_STATUS_BESTSOLLIMIT:
-      break;
-   case SCIP_STATUS_USERINTERRUPT:
-   case SCIP_STATUS_TERMINATE:
-   case SCIP_STATUS_UNKNOWN:
-   case SCIP_STATUS_TOTALNODELIMIT:
-   case SCIP_STATUS_TIMELIMIT:
-   case SCIP_STATUS_MEMLIMIT:
-   case SCIP_STATUS_GAPLIMIT:
-   case SCIP_STATUS_RESTARTLIMIT:
-   case SCIP_STATUS_UNBOUNDED:
-      break;
-   default:
-      break;
-   }
-}
-
-/** reset the minimum improvement for the sub-SCIPs */
-static
-void resetMinimumImprovement(
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
-   )
-{
-   assert(heurdata != NULL);
-   heurdata->minimprove = heurdata->startminimprove;
-}
-
-/** increase minimum improvement for the sub-SCIPs */
-static
-void increaseMinimumImprovement(
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
-   )
-{
-   assert(heurdata != NULL);
-
-   heurdata->minimprove *= MINIMPROVEFAC;
-   heurdata->minimprove = MIN(heurdata->minimprove, heurdata->minimprovehigh);
-}
-
-/** decrease the minimum improvement for the sub-SCIPs */
-static
-void decreaseMinimumImprovement(
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
-   )
-{
-   assert(heurdata != NULL);
-
-   heurdata->minimprove /= MINIMPROVEFAC;
-   SCIPdebugMessage("%.4f", heurdata->minimprovelow);
-   heurdata->minimprove = MAX(heurdata->minimprove, heurdata->minimprovelow);
-}
-
-/** update the minimum improvement based on the status of the sub-SCIP */
-static
-void updateMinimumImprovement(
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_STATUS           subscipstatus,      /**< status of the sub-SCIP run */
-   NH_STATS*             runstats            /**< run statistics for this run */
-   )
-{
-   assert(heurdata != NULL);
-
-   /* if the sub-SCIP status was infeasible, we rather want to make the sub-SCIP easier
-    * with a smaller minimum improvement.
-    *
-    * If a solution limit was reached, we may, set it higher.
-    */
-   switch (subscipstatus)
-   {
-   case SCIP_STATUS_INFEASIBLE:
-   case SCIP_STATUS_INFORUNBD:
-      /* subproblem was infeasible, probably due to the minimum improvement -> decrease minimum improvement */
-      decreaseMinimumImprovement(heurdata);
-
-      break;
-   case SCIP_STATUS_SOLLIMIT:
-   case SCIP_STATUS_BESTSOLLIMIT:
-   case SCIP_STATUS_OPTIMAL:
-      /* subproblem could be optimally solved -> try higher minimum improvement */
-      increaseMinimumImprovement(heurdata);
-      break;
-   case SCIP_STATUS_NODELIMIT:
-   case SCIP_STATUS_STALLNODELIMIT:
-   case SCIP_STATUS_USERINTERRUPT:
-      /* subproblem was too hard, decrease minimum improvement */
-      if( runstats->nbestsolsfound <= 0 )
-         decreaseMinimumImprovement(heurdata);
-      break;
-   case SCIP_STATUS_UNKNOWN:
-   case SCIP_STATUS_TOTALNODELIMIT:
-   case SCIP_STATUS_TIMELIMIT:
-   case SCIP_STATUS_MEMLIMIT:
-   case SCIP_STATUS_GAPLIMIT:
-   case SCIP_STATUS_RESTARTLIMIT:
-   case SCIP_STATUS_UNBOUNDED:
-   case SCIP_STATUS_TERMINATE:
-   default:
-      break;
-   }
-}
-
 /** Reset neighborhood statistics */
 static
-SCIP_RETCODE neighborhoodStatsReset(
+SCIP_RETCODE heurStatsReset(
    SCIP*                 scip,               /**< SCIP data structure */
-   NH_STATS*             stats               /**< neighborhood statistics */
+   HEUR_STATS*           stats,              /**< heuristic statistics */
+   SCIP_Bool             usediving           /**< TRUE if the statistics belong to a diving heuristic */
    )
 {
    assert(scip != NULL);
@@ -784,26 +686,34 @@ SCIP_RETCODE neighborhoodStatsReset(
    stats->nsolsfound = 0;
    stats->usednodes = 0L;
    stats->nfixings = 0L;
-
-   BMSclearMemoryArray(stats->statushist, NHISTENTRIES);
+   stats->nbacktracks = 0L;
+   stats->nconflicts = 0L;
+   stats->nprobnodes = 0L;
+   stats->divingdepth = 0;
 
    SCIP_CALL( SCIPresetClock(scip, stats->setupclock) );
-   SCIP_CALL( SCIPresetClock(scip, stats->submipclock) );
+   SCIP_CALL( SCIPresetClock(scip, stats->execclock) );
+
+   /* if we use diving, these stats are not used (and memory not allocated) */
+   if( ! usediving )
+   {
+      BMSclearMemoryArray(stats->statushist, NHISTENTRIES);
+   }
 
    return SCIP_OKAY;
 }
 
-/** create a neighborhood of the specified name and include it into the ALNS heuristic */
+/** create a neighborhood of the specified name and include it into the scheduler heuristic */
 static
-SCIP_RETCODE alnsIncludeNeighborhood(
+SCIP_RETCODE schedulerIncludeNeighborhood(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the ALNS heuristic */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the scheduler heuristic */
    NH**                  neighborhood,       /**< pointer to store the neighborhood */
    const char*           name,               /**< name for this neighborhood */
    SCIP_Real             minfixingrate,      /**< default value for minfixingrate parameter of this neighborhood */
    SCIP_Real             maxfixingrate,      /**< default value for maxfixingrate parameter of this neighborhood */
    SCIP_Bool             active,             /**< default value for active parameter of this neighborhood */
-   SCIP_Real             priority,           /**< positive call priority to initialize bandit algorithms */
+   int                   priority,           /**< priority for heuristic in rootnode */
    DECL_VARFIXINGS       ((*varfixings)),    /**< variable fixing callback for this neighborhood, or NULL */
    DECL_CHANGESUBSCIP    ((*changesubscip)), /**< subscip changes callback for this neighborhood, or NULL */
    DECL_NHINIT           ((*nhinit)),        /**< initialization callback for neighborhood, or NULL */
@@ -826,7 +736,7 @@ SCIP_RETCODE alnsIncludeNeighborhood(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*neighborhood)->name, name, strlen(name)+1) );
 
    SCIP_CALL( SCIPcreateClock(scip, &(*neighborhood)->stats.setupclock) );
-   SCIP_CALL( SCIPcreateClock(scip, &(*neighborhood)->stats.submipclock) );
+   SCIP_CALL( SCIPcreateClock(scip, &(*neighborhood)->stats.execclock) );
 
    (*neighborhood)->changesubscip = changesubscip;
    (*neighborhood)->varfixings = varfixings;
@@ -836,21 +746,23 @@ SCIP_RETCODE alnsIncludeNeighborhood(
    (*neighborhood)->nhrefsol = nhrefsol;
    (*neighborhood)->nhdeactivate = nhdeactivate;
 
+   (*neighborhood)->rootnodepriority = priority;
+
    /* add parameters for this neighborhood */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/minfixingrate", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/scheduler/%s/minfixingrate", name);
    SCIP_CALL( SCIPaddRealParam(scip, paramname, "minimum fixing rate for this neighborhood",
          &(*neighborhood)->fixingrate.minfixingrate, TRUE, minfixingrate, 0.0, 1.0, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/maxfixingrate", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/scheduler/%s/maxfixingrate", name);
    SCIP_CALL( SCIPaddRealParam(scip, paramname, "maximum fixing rate for this neighborhood",
          &(*neighborhood)->fixingrate.maxfixingrate, TRUE, maxfixingrate, 0.0, 1.0, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/active", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/scheduler/%s/active", name);
    SCIP_CALL( SCIPaddBoolParam(scip, paramname, "is this neighborhood active?",
          &(*neighborhood)->active, TRUE, active, NULL, NULL) );
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/alns/%s/priority", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/scheduler/%s/priority", name);
    SCIP_CALL( SCIPaddRealParam(scip, paramname, "positive call priority to initialize bandit algorithms",
-         &(*neighborhood)->priority, TRUE, priority, 1e-2, 1.0, NULL, NULL) );
+         &(*neighborhood)->priority, TRUE, 1.0, 1e-2, 1.0, NULL, NULL) );
 
-   /* add the neighborhood to the ALNS heuristic */
+   /* add the neighborhood to heuristic */
    heurdata->neighborhoods[heurdata->nneighborhoods++] = (*neighborhood);
 
    return SCIP_OKAY;
@@ -858,7 +770,7 @@ SCIP_RETCODE alnsIncludeNeighborhood(
 
 /** release all data and free neighborhood */
 static
-SCIP_RETCODE alnsFreeNeighborhood(
+SCIP_RETCODE schedulerFreeNeighborhood(
    SCIP*                 scip,               /**< SCIP data structure */
    NH**                  neighborhood        /**< pointer to neighborhood that should be freed */
    )
@@ -879,7 +791,7 @@ SCIP_RETCODE alnsFreeNeighborhood(
    }
 
    SCIP_CALL( SCIPfreeClock(scip, &nhptr->stats.setupclock) );
-   SCIP_CALL( SCIPfreeClock(scip, &nhptr->stats.submipclock) );
+   SCIP_CALL( SCIPfreeClock(scip, &nhptr->stats.execclock) );
 
    SCIPfreeBlockMemory(scip, neighborhood);
    *neighborhood = NULL;
@@ -933,11 +845,11 @@ SCIP_RETCODE transferSolution(
 {
    SCIP*      sourcescip;         /* original SCIP data structure */
    SCIP_VAR** subvars;            /* the variables of the subproblem */
-   SCIP_HEUR* heur;               /* alns heuristic structure */
+   SCIP_HEUR* heur;               /* scheduler heuristic structure */
    SCIP_SOL*  subsol;             /* solution of the subproblem */
    SCIP_SOL*  newsol;             /* solution to be created for the original problem */
    SCIP_Bool  success;
-   NH_STATS*  runstats;
+   HEUR_STATS*  runstats;
    SCIP_SOL*  oldbestsol;
 
    assert(subscip != NULL);
@@ -959,33 +871,14 @@ SCIP_RETCODE transferSolution(
 
    oldbestsol = SCIPgetBestSol(sourcescip);
 
-   /* in the special, experimental all rewards mode, the solution is only checked for feasibility
-    * but not stored
-    */
-   if( eventdata->allrewardsmode )
+   /* try to add new solution to scip and free it immediately */
+   SCIP_CALL( SCIPtrySolFree(sourcescip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+
+   if( success )
    {
-      SCIP_CALL( SCIPcheckSol(sourcescip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
-
-      if( success )
-      {
-         runstats->nsolsfound++;
-         if( SCIPgetSolTransObj(sourcescip, newsol) < SCIPgetCutoffbound(sourcescip) )
-            runstats->nbestsolsfound++;
-      }
-
-      SCIP_CALL( SCIPfreeSol(sourcescip, &newsol) );
-   }
-   else
-   {
-      /* try to add new solution to scip and free it immediately */
-      SCIP_CALL( SCIPtrySolFree(sourcescip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
-
-      if( success )
-      {
-         runstats->nsolsfound++;
-         if( SCIPgetBestSol(sourcescip) != oldbestsol )
-            runstats->nbestsolsfound++;
-      }
+      runstats->nsolsfound++;
+      if( SCIPgetBestSol(sourcescip) != oldbestsol )
+         runstats->nbestsolsfound++;
    }
 
    /* update new upper bound for reward later */
@@ -994,7 +887,6 @@ SCIP_RETCODE transferSolution(
    return SCIP_OKAY;
 }
 
-
 /* ---------------- Callback methods of event handler ---------------- */
 
 /** execution callback of the event handler
@@ -1002,13 +894,13 @@ SCIP_RETCODE transferSolution(
  * transfer new solutions or interrupt the solving process manually
  */
 static
-SCIP_DECL_EVENTEXEC(eventExecAlns)
+SCIP_DECL_EVENTEXEC(eventExecScheduler)
 {
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
-   assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_ALNS);
+   assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_SCHEDULER);
    assert(eventdata != NULL);
 
    /* treat the different atomic events */
@@ -1034,17 +926,21 @@ SCIP_DECL_EVENTEXEC(eventExecAlns)
    return SCIP_OKAY;
 }
 
-/** initialize neighborhood statistics before the next run */
+/** initialize heuristic statistics before the next run */
 static
 void initRunStats(
    SCIP*                 scip,               /**< SCIP data structure */
-   NH_STATS*             stats               /**< run statistics */
+   HEUR_STATS*           stats               /**< run statistics */
    )
 {
    stats->nbestsolsfound = 0;
    stats->nsolsfound = 0;
    stats->usednodes = 0L;
+   stats->nprobnodes = 0L;
+   stats->nbacktracks = 0L;
+   stats->nconflicts = 0L;
    stats->nfixings = 0;
+   stats->divingdepth = 0;
    stats->oldupperbound = SCIPgetUpperbound(scip);
    stats->newupperbound = SCIPgetUpperbound(scip);
 }
@@ -1052,7 +948,7 @@ void initRunStats(
 /** update run stats after the sub SCIP was solved */
 static
 void updateRunStats(
-   NH_STATS*             stats,              /**< run statistics */
+   HEUR_STATS*           stats,              /**< run statistics */
    SCIP*                 subscip             /**< sub-SCIP instance, or NULL */
    )
 {
@@ -1101,10 +997,7 @@ void printNeighborhoodStatistics(
    int j;
    HISTINDEX statusses[] = {HIDX_OPT, HIDX_INFEAS, HIDX_NODELIM, HIDX_STALLNODE, HIDX_SOLLIM, HIDX_USR, HIDX_OTHER};
 
-   if( ! heurdata->shownbstats )
-      return;
-
-   SCIPinfoMessage(scip, file, "Neighborhoods      : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %4s %4s %4s %4s %4s %4s %4s %4s\n",
+   SCIPinfoMessage(scip, file, "LNS (Scheduler)    : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %4s %4s %4s %4s %4s %4s %4s %4s\n",
             "Calls", "SetupTime", "SolveTime", "SolveNodes", "Sols", "Best", "Exp3", "Exp3-IX", "EpsGreedy", "UCB", "TgtFixRate",
             "Opt", "Inf", "Node", "Stal", "Sol", "Usr", "Othr", "Actv");
 
@@ -1121,7 +1014,7 @@ void printNeighborhoodStatistics(
       SCIPinfoMessage(scip, file, "  %-17s:", neighborhood->name);
       SCIPinfoMessage(scip, file, " %10d", neighborhood->stats.nruns);
       SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, neighborhood->stats.setupclock) );
-      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, neighborhood->stats.submipclock) );
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, neighborhood->stats.execclock) );
       SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, neighborhood->stats.usednodes );
       SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, neighborhood->stats.nsolsfound);
       SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, neighborhood->stats.nbestsolsfound);
@@ -1132,6 +1025,78 @@ void printNeighborhoodStatistics(
       epsgreedyweight = -1.0;
 
       if( heurdata->bandit != NULL && i < heurdata->nactiveneighborhoods )
+      {
+         switch (heurdata->banditalgo)
+         {
+         case 'u':
+            ucb = SCIPgetConfidenceBoundUcb(heurdata->bandit, i + heurdata->ndiving ); /* note: we need to shift the index since LNS heuristics come after diving */
+            break;
+         case 'g':
+            epsgreedyweight = SCIPgetWeightsEpsgreedy(heurdata->bandit)[i + heurdata->ndiving];
+            break;
+         case 'e':
+            proba = SCIPgetProbabilityExp3(heurdata->bandit, i + heurdata->ndiving);
+            break;
+         case 'i':
+            probaix = SCIPgetProbabilityExp3IX(heurdata->bandit, i + heurdata->ndiving);
+            break;
+         default:
+            break;
+         }
+      }
+
+      SCIPinfoMessage(scip, file, " %10.5f", proba);
+      SCIPinfoMessage(scip, file, " %10.5f", probaix);
+      SCIPinfoMessage(scip, file, " %10.5f", epsgreedyweight);
+      SCIPinfoMessage(scip, file, " %10.5f", ucb);
+      SCIPinfoMessage(scip, file, " %10.3f", neighborhood->fixingrate.targetfixingrate);
+
+      /* loop over status histogram */
+      for( j = 0; j < NHISTENTRIES; ++j )
+         SCIPinfoMessage(scip, file, " %4d", neighborhood->stats.statushist[statusses[j]]);
+
+      SCIPinfoMessage(scip, file, " %4d", i < heurdata->nactiveneighborhoods ? 1 : 0);
+      SCIPinfoMessage(scip, file, "\n");
+   }
+}
+
+/** print diving heuristic statistics */
+static
+void printDivingHeurStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   FILE*                 file                /**< file handle, or NULL for standard out */
+   )
+{
+   int i;
+
+   SCIPinfoMessage(scip, file, "Diving (Scheduler) : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s \n",
+            "Calls", "SetupTime", "SolveTime", "SolveNodes", "Sols", "Best", "Exp3", "Exp3-IX", "EpsGreedy", "UCB", "LPResolveQuot", "MaxDiveDepth");
+
+   /* loop over neighborhoods and fill in statistics */
+   for( i = 0; i < heurdata->ndiving; ++i )
+   {
+      DIVING_HEUR* divingheur;
+      SCIP_Real proba;
+      SCIP_Real probaix;
+      SCIP_Real ucb;
+      SCIP_Real epsgreedyweight;
+
+      divingheur = heurdata->divingheurs[i];
+      SCIPinfoMessage(scip, file, "  %-17s:", SCIPdivesetGetName(divingheur->diveset));
+      SCIPinfoMessage(scip, file, " %10d", divingheur->stats->nruns);
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, divingheur->stats->setupclock) );
+      SCIPinfoMessage(scip, file, " %10.2f", SCIPgetClockTime(scip, divingheur->stats->execclock) );
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, divingheur->stats->nprobnodes );
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, divingheur->stats->nsolsfound);
+      SCIPinfoMessage(scip, file, " %10" SCIP_LONGINT_FORMAT, divingheur->stats->nbestsolsfound);
+
+      proba = 0.0;
+      probaix = 0.0;
+      ucb = 1.0;
+      epsgreedyweight = -1.0;
+
+      if( heurdata->bandit != NULL )
       {
          switch (heurdata->banditalgo)
          {
@@ -1156,41 +1121,69 @@ void printNeighborhoodStatistics(
       SCIPinfoMessage(scip, file, " %10.5f", probaix);
       SCIPinfoMessage(scip, file, " %10.5f", epsgreedyweight);
       SCIPinfoMessage(scip, file, " %10.5f", ucb);
-      SCIPinfoMessage(scip, file, " %10.3f", neighborhood->fixingrate.targetfixingrate);
+      SCIPinfoMessage(scip, file, " %10.3f", divingheur->solvefreqdata->currentsolvefreq);
+      SCIPinfoMessage(scip, file, " %10lld", divingheur->nodelimit);
 
-      /* loop over status histogram */
-      for( j = 0; j < NHISTENTRIES; ++j )
-         SCIPinfoMessage(scip, file, " %4d", neighborhood->stats.statushist[statusses[j]]);
-
-      SCIPinfoMessage(scip, file, " %4d", i < heurdata->nactiveneighborhoods ? 1 : 0);
       SCIPinfoMessage(scip, file, "\n");
    }
 }
 
-/** update the statistics of the neighborhood based on the sub-SCIP run */
+/** update the statistics of the diving heuristic based on the heuristic run */
 static
-void updateNeighborhoodStats(
-   NH_STATS*             runstats,           /**< run statistics */
-   NH*                   neighborhood,       /**< the selected neighborhood */
-   SCIP_STATUS           subscipstatus       /**< status of the sub-SCIP solve */
+void updateHeurStatsDiving(
+   HEUR_STATS*           runstats,           /**< run statistics */
+   DIVING_HEUR*          divingheur          /**< the selected diving heuristic or NULL if LNS was used */
    )
 {  /*lint --e{715}*/
-   NH_STATS* stats;
-   stats = &neighborhood->stats;
+   HEUR_STATS* stats;
 
-   /* copy run statistics into neighborhood statistics */
+   assert(divingheur != NULL);
+
+   stats = divingheur->stats;
+
+   /* update diving specific statistics */
+   stats->nprobnodes += runstats->nprobnodes;
+   stats->nbacktracks += runstats->nbacktracks;
+   stats->nconflicts += runstats->nconflicts;
+
+   /* copy run statistics into heur statistics */
    stats->nbestsolsfound += runstats->nbestsolsfound;
    stats->nsolsfound += runstats->nsolsfound;
-   stats->usednodes += runstats->usednodes;
    stats->nruns += 1;
 
    if( runstats->nbestsolsfound > 0 )
       stats->nrunsbestsol += DEFAULT_BESTSOLWEIGHT;
    else if( runstats->nsolsfound > 0 )
       stats->nrunsbestsol++;
+}
 
-   /* update the counter for the subscip status */
-   ++stats->statushist[getHistIndex(subscipstatus)];
+/** update the statistics of LNS heuristic based on the heuristic run */
+static
+void updateHeurStatsLNS(
+   HEUR_STATS*           runstats,           /**< run statistics */
+   NH*                   neighborhood,       /**< the selected neighborhood or NULL if diving was used */
+   SCIP_STATUS*          subscipstatus       /**< status of the sub-SCIP solve or NULL if diving was used */
+   )
+{  /*lint --e{715}*/
+   HEUR_STATS* stats;
+
+   assert( subscipstatus != NULL );
+
+   stats = &neighborhood->stats;
+
+   /* update LNS specific statistics */
+   stats->usednodes += runstats->usednodes;
+   ++stats->statushist[getHistIndex(*subscipstatus)]; /* update the counter for the subscip status */
+
+   /* copy run statistics into heur statistics */
+   stats->nbestsolsfound += runstats->nbestsolsfound;
+   stats->nsolsfound += runstats->nsolsfound;
+   stats->nruns += 1;
+
+   if( runstats->nbestsolsfound > 0 )
+      stats->nrunsbestsol += DEFAULT_BESTSOLWEIGHT;
+   else if( runstats->nsolsfound > 0 )
+      stats->nrunsbestsol++;
 }
 
 /** sort callback for variable pointers using the ALNS variable prioritization
@@ -1209,7 +1202,7 @@ void updateNeighborhoodStats(
  *  from the unfixed variables
  */
 static
-SCIP_DECL_SORTINDCOMP(sortIndCompAlns)
+SCIP_DECL_SORTINDCOMP(sortIndCompScheduler)
 {  /*lint --e{715}*/
    VARPRIO* varprio;
 
@@ -1370,11 +1363,6 @@ void tryAdd2variableBuffer(
    SCIP_Bool             integer             /**< is this an integer variable? */
    )
 {
-   /* todo: this assert can fail when there was a dual reduction that changed a variable to
-    * an integral type after the reference solution was found and the variable has a fractional
-    * value in this solution, e.g., for boxQP instances (spar*)
-    * implicit integer variables could also be an issue, as they can take fractional values in feasible solutions
-    */
    assert(SCIPisFeasIntegral(scip, val) || ! SCIPvarIsIntegral(var));
    assert(*nfixings < SCIPgetNVars(scip));
 
@@ -1394,33 +1382,6 @@ void tryAdd2variableBuffer(
    }
 }
 
-/** query neighborhood for a reference solution for further fixings */
-static
-SCIP_RETCODE neighborhoodGetRefsol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   NH*                   neighborhood,       /**< ALNS neighborhood data structure */
-   SCIP_SOL**            solptr              /**< solution pointer */
-   )
-{
-   assert(solptr != NULL);
-   assert(scip != NULL);
-   assert(neighborhood != NULL);
-
-   *solptr = NULL;
-   if( neighborhood->nhrefsol != NULL )
-   {
-      SCIP_RESULT result;
-      SCIP_CALL( neighborhood->nhrefsol(scip, neighborhood, solptr, &result) );
-
-      if( result == SCIP_DIDNOTFIND )
-         *solptr = NULL;
-      else
-         assert(*solptr != NULL);
-   }
-
-   return SCIP_OKAY;
-}
-
 /** fix additional variables found in feasible reference solution if the ones that the neighborhood found were not enough
  *
  *  use not always the best solution for the values, but a reference solution provided by the neighborhood itself
@@ -1430,9 +1391,9 @@ SCIP_RETCODE neighborhoodGetRefsol(
  *  the current, global variable bounds.
  */
 static
-SCIP_RETCODE alnsFixMoreVariables(
+SCIP_RETCODE LNSFixMoreVariables(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the ALNS neighborhood */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the Scheduler neighborhood */
    SCIP_SOL*             refsol,             /**< feasible reference solution for more variable fixings */
    SCIP_VAR**            varbuf,             /**< buffer array to store variables to fix */
    SCIP_Real*            valbuf,             /**< buffer array to store fixing values */
@@ -1468,10 +1429,6 @@ SCIP_RETCODE alnsFixMoreVariables(
    assert(refsol != NULL);
 
    *success = FALSE;
-
-   /* if the user parameter forbids more fixings, return immediately */
-   if( ! heurdata->domorefixings )
-      return SCIP_OKAY;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
@@ -1554,9 +1511,9 @@ SCIP_RETCODE alnsFixMoreVariables(
       solvals[nunfixedvars] = solvals[b];
       distances[nunfixedvars] = distances[b];
 
-      SCIPdebugMsg(scip, "Var <%s> scores: dist %3d, red cost %15.9g, pscost %15.9g rand %6.4f\n",
-         SCIPvarGetName(var), distances[nunfixedvars], redcostscores[nunfixedvars],
-         pscostscores[nunfixedvars], randscores[nunfixedvars]);
+      //SCIPdebugMsg(scip, "Var <%s> scores: dist %3d, red cost %15.9g, pscost %15.9g rand %6.4f\n",
+      //   SCIPvarGetName(var), distances[nunfixedvars], redcostscores[nunfixedvars],
+      //   pscostscores[nunfixedvars], randscores[nunfixedvars]);
 
       nunfixedvars++;
    }
@@ -1571,7 +1528,7 @@ SCIP_RETCODE alnsFixMoreVariables(
 
    /* select the first nvarstoadd many variables according to the score */
    if( nvarstoadd < nunfixedvars )
-      SCIPselectInd(perm, sortIndCompAlns, &varprio, nvarstoadd, nunfixedvars);
+      SCIPselectInd(perm, sortIndCompScheduler, &varprio, nvarstoadd, nunfixedvars);
 
    /* loop over the first elements of the selection defined in permutation. They represent the best variables */
    for( b = 0; b < nvarstoadd; ++b )
@@ -1607,26 +1564,29 @@ SCIP_RETCODE createBandit(
    unsigned int          initseed            /**< initial random seed */
    )
 {
+   int nactions;
+
+   nactions = heurdata->nactiveneighborhoods + heurdata->ndiving;
+
    switch (heurdata->banditalgo)
    {
    case 'u':
       SCIP_CALL( SCIPcreateBanditUcb(scip, &heurdata->bandit, priorities,
-            heurdata->ucb_alpha, heurdata->nactiveneighborhoods, initseed) );
+            heurdata->ucb_alpha, nactions, initseed) );
       break;
 
    case 'e':
       SCIP_CALL( SCIPcreateBanditExp3(scip, &heurdata->bandit, priorities,
-            heurdata->exp3_gamma, heurdata->exp3_beta, heurdata->nactiveneighborhoods, initseed) );
+            heurdata->exp3_gamma, heurdata->exp3_beta, nactions, initseed) );
       break;
 
    case 'i':
-      SCIP_CALL( SCIPcreateBanditExp3IX(scip, &heurdata->bandit, priorities,
-            heurdata->nactiveneighborhoods, initseed) );
+      SCIP_CALL( SCIPcreateBanditExp3IX(scip, &heurdata->bandit, priorities, nactions, initseed) );
       break;
 
    case 'g':
       SCIP_CALL( SCIPcreateBanditEpsgreedy(scip, &heurdata->bandit, priorities,
-            heurdata->epsgreedy_eps, FALSE, FALSE, 0.9, 0, heurdata->nactiveneighborhoods, initseed) );
+            heurdata->epsgreedy_eps, heurdata->epsgreedy_usemod, FALSE, 0.9, 0, nactions, initseed) );
       break;
 
    default:
@@ -1643,14 +1603,41 @@ SCIP_RETCODE createBandit(
 
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_HEURCOPY(heurCopyAlns)
+SCIP_DECL_HEURCOPY(heurCopyScheduler)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
    /* call inclusion method of primal heuristic */
-   SCIP_CALL( SCIPincludeHeurAlns(scip) );
+   SCIP_CALL( SCIPincludeHeurScheduler(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** query neighborhood for a reference solution for further fixings */
+static
+SCIP_RETCODE neighborhoodGetRefsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   NH*                   neighborhood,       /**< neighborhood data structure */
+   SCIP_SOL**            solptr              /**< solution pointer */
+   )
+{
+   assert(solptr != NULL);
+   assert(scip != NULL);
+   assert(neighborhood != NULL);
+
+   *solptr = NULL;
+   if( neighborhood->nhrefsol != NULL )
+   {
+      SCIP_RESULT result;
+      SCIP_CALL( neighborhood->nhrefsol(scip, neighborhood, solptr, &result) );
+
+      if( result == SCIP_DIDNOTFIND )
+         *solptr = NULL;
+      else
+         assert(*solptr != NULL);
+   }
 
    return SCIP_OKAY;
 }
@@ -1661,9 +1648,9 @@ SCIP_DECL_HEURCOPY(heurCopyAlns)
  *  and fixing it has a high reduced cost impact
  */
 static
-SCIP_RETCODE alnsUnfixVariables(
+SCIP_RETCODE LNSUnfixVariables(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the ALNS neighborhood */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data of neighborhood */
    SCIP_VAR**            varbuf,             /**< buffer array to store variables to fix */
    SCIP_Real*            valbuf,             /**< buffer array to store fixing values */
    int*                  nfixings,           /**< pointer to store the number of fixings */
@@ -1765,8 +1752,8 @@ SCIP_RETCODE alnsUnfixVariables(
       randscores[i] = SCIPrandomGetReal(rng, 0.0, 1.0);
       perm[i] = i;
 
-      SCIPdebugMsg(scip, "Var <%s> scores: dist %3d, red cost %15.9g, pscost %15.9g rand %6.4f\n",
-            SCIPvarGetName(fixedvar), fixeddistances[i], redcostscores[i], pscostscores[i], randscores[i]);
+      //SCIPdebugMsg(scip, "Var <%s> scores: dist %3d, red cost %15.9g, pscost %15.9g rand %6.4f\n",
+      //      SCIPvarGetName(fixedvar), fixeddistances[i], redcostscores[i], pscostscores[i], randscores[i]);
    }
 
    varprio.distances = fixeddistances;
@@ -1778,7 +1765,7 @@ SCIP_RETCODE alnsUnfixVariables(
    varprio.scip = scip;
 
    /* scores are assigned in such a way that variables with a smaller score should be fixed last */
-   SCIPselectDownInd(perm, sortIndCompAlns, &varprio, ntargetfixings, *nfixings);
+   SCIPselectDownInd(perm, sortIndCompScheduler, &varprio, ntargetfixings, *nfixings);
 
    /* bring the desired variables to the front of the array */
    for( i = 0; i < ntargetfixings; ++i )
@@ -1810,7 +1797,7 @@ SCIP_RETCODE alnsUnfixVariables(
 static
 SCIP_RETCODE neighborhoodFixVariables(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the ALNS neighborhood */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the scheduler neighborhood */
    NH*                   neighborhood,       /**< neighborhood data structure */
    SCIP_VAR**            varbuf,             /**< buffer array to keep variables that should be fixed */
    SCIP_Real*            valbuf,             /**< buffer array to keep fixing values */
@@ -1845,11 +1832,10 @@ SCIP_RETCODE neighborhoodFixVariables(
    else if( ntargetfixings == 0 )
    {
       *result = SCIP_SUCCESS;
-
       return SCIP_OKAY;
    }
 
-   /* compute upper and lower target fixing limits using tolerance parameters */
+      /* compute upper and lower target fixing limits using tolerance parameters */
    assert(neighborhood->varfixings == NULL || *result != SCIP_DIDNOTRUN);
    nbinintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    ntargetfixings = (int)(neighborhood->fixingrate.targetfixingrate * nbinintvars);
@@ -1872,7 +1858,7 @@ SCIP_RETCODE neighborhoodFixVariables(
       /* try to fix more variables based on the reference solution */
       if( refsol != NULL )
       {
-         SCIP_CALL( alnsFixMoreVariables(scip, heurdata, refsol, varbuf, valbuf, nfixings, ntargetfixings, &success) );
+         SCIP_CALL( LNSFixMoreVariables(scip, heurdata, refsol, varbuf, valbuf, nfixings, ntargetfixings, &success) );
       }
       else
          success = FALSE;
@@ -1890,7 +1876,7 @@ SCIP_RETCODE neighborhoodFixVariables(
    {
       SCIP_Bool success;
 
-      SCIP_CALL( alnsUnfixVariables(scip, heurdata, varbuf, valbuf, nfixings, ntargetfixings, &success) );
+      SCIP_CALL( LNSUnfixVariables(scip, heurdata, varbuf, valbuf, nfixings, ntargetfixings, &success) );
 
       assert(success);
       *result = SCIP_SUCCESS;
@@ -1969,13 +1955,12 @@ static
 SCIP_RETCODE determineLimits(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< this heuristic */
+   int                   selection,          /**< index of selected neighborhood */
    SOLVELIMITS*          solvelimits,        /**< pointer to solving limits data structure */
    SCIP_Bool*            runagain            /**< can we solve another sub-SCIP with these limits */
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_Real initfactor;
-   SCIP_Real nodesquot;
    SCIP_Bool avoidmemout;
 
    assert(scip != NULL);
@@ -1985,12 +1970,10 @@ SCIP_RETCODE determineLimits(
 
    heurdata = SCIPheurGetData(heur);
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &solvelimits->timelimit) );
-   if( ! SCIPisInfinity(scip, solvelimits->timelimit) )
-      solvelimits->timelimit -= SCIPgetSolvingTime(scip);
+   /* set time and memory */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &solvelimits->memorylimit) );
    SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
+   solvelimits->timelimit = heurdata->heurtimelimit;
 
    /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    if( ! SCIPisInfinity(scip, solvelimits->memorylimit) )
@@ -2001,172 +1984,95 @@ SCIP_RETCODE determineLimits(
 
    /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemout == FALSE)
    * to create a copy of SCIP, including external memory usage */
-   if( solvelimits->timelimit <= 0.0 || (avoidmemout && solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0) )
+   if( avoidmemout && solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+   {
+      SCIPdebugMsg(scip, "Aborting LNS heuristic call: Not enough memory or time left.\n");
       *runagain = FALSE;
+      return SCIP_OKAY;
+   }
 
-   nodesquot = heurdata->nodesquot;
-
-   /* if the heuristic is used to measure all rewards, it will always be penalized here */
-   if( heurdata->rewardfile == NULL )
-      nodesquot *= (SCIPheurGetNBestSolsFound(heur) + 1.0)/(SCIPheurGetNCalls(heur) + 1.0);
-
-   nodesquot = MAX(nodesquot, heurdata->nodesquotmin);
-
-   /* calculate the search node limit of the heuristic  */
-   solvelimits->stallnodes = (SCIP_Longint)(nodesquot * SCIPgetNNodes(scip));
-   solvelimits->stallnodes += heurdata->nodesoffset;
-   solvelimits->stallnodes -= heurdata->usednodes;
-   solvelimits->stallnodes -= 100 * SCIPheurGetNCalls(heur);
-   solvelimits->stallnodes = MIN(heurdata->maxnodes, solvelimits->stallnodes);
-
-   /* use a smaller budget if not all neighborhoods have been initialized yet */
-   assert(heurdata->ninitneighborhoods >= 0);
-   initfactor = (heurdata->nactiveneighborhoods - heurdata->ninitneighborhoods + 1.0) / (heurdata->nactiveneighborhoods + 1.0);
-   solvelimits->stallnodes = (SCIP_Longint)(solvelimits->stallnodes * initfactor);
-   solvelimits->nodelimit = (SCIP_Longint)(heurdata->maxnodes);
-
-   /* check whether we have enough nodes left to call subproblem solving */
-   if( solvelimits->stallnodes < heurdata->targetnodes )
-      *runagain = FALSE;
-
-   return SCIP_OKAY;
-}
-
-/** return the bandit algorithm that should be used */
-static
-SCIP_BANDIT* getBandit(
-   SCIP_HEURDATA*        heurdata            /**< heuristic data of the ALNS neighborhood */
-   )
-{
-   assert(heurdata != NULL);
-   return heurdata->bandit;
-}
-
-/** select a neighborhood depending on the selected bandit algorithm */
-static
-SCIP_RETCODE selectNeighborhood(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the ALNS neighborhood */
-   int*                  neighborhoodidx     /**< pointer to store the selected neighborhood index */
-   )
-{
-   SCIP_BANDIT* bandit;
-   assert(scip != NULL);
-   assert(heurdata != NULL);
-   assert(neighborhoodidx != NULL);
-
-   *neighborhoodidx = -1;
-
-   bandit = getBandit(heurdata);
-
-   SCIP_CALL( SCIPbanditSelect(bandit, neighborhoodidx) );
-   assert(*neighborhoodidx >= 0);
+   solvelimits->stallnodes = -1;
+   solvelimits->nodelimit = (SCIP_Longint) heurdata->neighborhoods[selection]->nodelimit;
 
    return SCIP_OKAY;
 }
 
 /** Calculate reward based on the selected reward measure */
 static
-SCIP_RETCODE getReward(
+SCIP_Real getReward(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the ALNS neighborhood */
-   NH_STATS*             runstats,           /**< run statistics */
-   SCIP_Real*            rewardptr           /**< array to store the computed rewards, total and individual */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the scheduler neighborhood */
+   int                   selection,          /**< index of selected heuristic */
+   HEUR_STATS*           runstats,           /**< run statistics */
+   SCIP_STATUS           subscipstatus       /**< status of the sub-SCIP if LNS was used */
    )
 {
-   SCIP_Real reward = 0.0;
-   SCIP_Real effort;
-   int ndiscretevars;
+   SCIP_Real totalreward;
+   SCIP_Real effortsaved;
+   SCIP_Real bestsolreward;
+   SCIP_Real closedgapreward;
+   SCIP_Real conflictreward;
 
-   memset(rewardptr, 0, sizeof(*rewardptr)*(int)NREWARDTYPES);
+   /* compute the effort it took to execute selected heuristic */
+   if( selection < heurdata->ndiving )
+      effortsaved = (SCIP_Real) runstats->divingdepth / (SCIP_Real)heurdata->maxdivingnodelimit;
+   else
+      effortsaved = MIN(1.0, (SCIP_Real) runstats->usednodes / (SCIP_Real)heurdata->maxlnsnodelimit);
+   effortsaved = (1.0 - effortsaved);
 
-   assert(rewardptr != NULL);
-   assert(runstats->usednodes >= 0);
-   assert(runstats->nfixings >= 0);
+   /* if LNS heuristic terminated because of the time limit, punish it */
+   if( selection > heurdata->ndiving && subscipstatus == SCIP_STATUS_TIMELIMIT )
+      effortsaved = 0.0;
 
-   effort = runstats->usednodes / 100.0;
+   assert(effortsaved >= 0.0 && effortsaved <= 1.0);
+   assert(heurdata->maxlnsnodelimit > 0);
+   assert(heurdata->maxdivingnodelimit > 0);
 
-   ndiscretevars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
-   /* assume that every fixed variable linearly reduces the subproblem complexity */
-   if( ndiscretevars > 0 )
+   /* compute reward for number of conflicts generated */
+   if( selection < heurdata->ndiving )
    {
-      effort = (1.0 - (runstats->nfixings / (SCIP_Real)ndiscretevars)) * effort;
+      if( runstats->nconflicts == 0 )
+         conflictreward = 0.0;
+      else if( heurdata->maxnconflicts > 0 )
+         conflictreward = (SCIP_Real) runstats->nconflicts / (SCIP_Real) heurdata->maxnconflicts;
+      else
+         conflictreward = 1.0;
    }
-   assert(rewardptr != NULL);
+   else
+      conflictreward = 0.0; /* LNS heuristics don't add conflict constraints */
+   assert(conflictreward >= 0.0 && conflictreward <= 1.0);
 
    /* a positive reward is only assigned if a new incumbent solution was found */
    if( runstats->nbestsolsfound > 0 )
    {
-      SCIP_Real rewardcontrol = heurdata->rewardcontrol;
-
       SCIP_Real lb;
       SCIP_Real ub;
 
       /* the indicator function is simply 1.0 */
-      rewardptr[REWARDTYPE_BESTSOL] = 1.0;
-      rewardptr[REWARDTYPE_NOSOLPENALTY] = 1.0;
+      bestsolreward = 1.0;
 
       ub = runstats->newupperbound;
       lb = SCIPgetLowerbound(scip);
 
       /* compute the closed gap reward */
-      if( SCIPisEQ(scip, ub, lb) || SCIPisInfinity(scip, runstats->oldupperbound) )
-         rewardptr[REWARDTYPE_CLOSEDGAP] = 1.0;
+      if( SCIPisEQ(scip, ub, lb) || SCIPisInfinity(scip, runstats->oldupperbound) ) // gap is closed or first primal solution was found
+         closedgapreward = 1.0;
       else
-      {
-         rewardptr[REWARDTYPE_CLOSEDGAP] = (runstats->oldupperbound - ub) / (runstats->oldupperbound - lb);
-      }
-
-      /* the reward is a convex combination of the best solution reward and the reward for the closed gap */
-      reward = rewardcontrol * rewardptr[REWARDTYPE_BESTSOL] + (1.0 - rewardcontrol) * rewardptr[REWARDTYPE_CLOSEDGAP];
-
-      /* optionally, scale the reward by the involved effort */
-      if( heurdata->scalebyeffort )
-         reward /= (effort + 1.0);
-
-      /* add the baseline and rescale the reward into the interval [baseline, 1.0] */
-      reward = heurdata->rewardbaseline + (1.0 - heurdata->rewardbaseline) * reward;
+         closedgapreward = (runstats->oldupperbound - ub) / (runstats->oldupperbound - lb);
    }
    else
    {
-      /* linearly decrease the reward based on the number of nodes spent */
-      SCIP_Real maxeffort = heurdata->targetnodes;
-      SCIP_Real usednodes = runstats->usednodes;
-
-      if( ndiscretevars > 0 )
-         usednodes *= (1.0 - (runstats->nfixings / (SCIP_Real)ndiscretevars));
-
-      rewardptr[REWARDTYPE_NOSOLPENALTY] = 1 - (usednodes / maxeffort);
-      rewardptr[REWARDTYPE_NOSOLPENALTY] = MAX(0.0, rewardptr[REWARDTYPE_NOSOLPENALTY]);
-      reward = heurdata->rewardbaseline * rewardptr[REWARDTYPE_NOSOLPENALTY];
+      bestsolreward = 0.0;
+      closedgapreward = 0.0;
    }
 
-   rewardptr[REWARDTYPE_TOTAL] = reward;
+   /* compute total reward */
+   totalreward = heurdata->effortrewardweight * effortsaved + heurdata->solrewardweight * bestsolreward
+         + heurdata->qualrewardweight * closedgapreward + heurdata->conflictrewardweight * conflictreward;
+   totalreward = MIN( totalreward, 1.0);
+   assert(totalreward >= 0.0 && totalreward <= 1.0);
 
-   return SCIP_OKAY;
-}
-
-/** update internal bandit algorithm statistics for future draws */
-static
-SCIP_RETCODE updateBanditAlgorithm(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the ALNS neighborhood */
-   SCIP_Real             reward,             /**< measured reward */
-   int                   neighborhoodidx     /**< the neighborhood that was chosen */
-   )
-{
-   SCIP_BANDIT* bandit;
-   assert(scip != NULL);
-   assert(heurdata != NULL);
-   assert(neighborhoodidx >= 0);
-   assert(neighborhoodidx < heurdata->nactiveneighborhoods);
-
-   bandit = getBandit(heurdata);
-
-   SCIPdebugMsg(scip, "Rewarding bandit algorithm action %d with reward %.2f\n", neighborhoodidx, reward);
-   SCIP_CALL( SCIPbanditUpdate(bandit, neighborhoodidx, reward) );
-
-   return SCIP_OKAY;
+   return totalreward;
 }
 
 /** set up the sub-SCIP parameters, objective cutoff, and solution limits */
@@ -2182,7 +2088,6 @@ SCIP_RETCODE setupSubScip(
 {
    SCIP_HEURDATA* heurdata;
    SCIP_Real cutoff;
-   SCIP_Real upperbound;
 
    heurdata = SCIPheurGetData(heur);
 
@@ -2195,7 +2100,7 @@ SCIP_RETCODE setupSubScip(
    /* disable statistic timing inside sub SCIP */
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 
-#ifdef ALNS_SUBSCIPOUTPUT
+#ifdef SCHEDULER_SUBSCIPOUTPUT
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
    /* enable statistic timing inside sub SCIP */
@@ -2250,33 +2155,12 @@ SCIP_RETCODE setupSubScip(
    /* add an objective cutoff */
    if( ! SCIPisInfinity(scip, SCIPgetUpperbound(scip)) )
    {
-      upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
-      if( ! SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
-      {
-         cutoff = (1 - heurdata->minimprove) * SCIPgetUpperbound(scip)
-                            + heurdata->minimprove * SCIPgetLowerbound(scip);
-      }
-      else
-      {
-         if( SCIPgetUpperbound(scip) >= 0 )
-            cutoff = (1 - heurdata->minimprove) * SCIPgetUpperbound(scip);
-         else
-            cutoff = (1 + heurdata->minimprove) * SCIPgetUpperbound(scip);
-      }
-      cutoff = MIN(upperbound, cutoff);
-
-      if( SCIPisObjIntegral(scip) )
-         cutoff = SCIPfloor(scip, cutoff);
-
-      SCIPdebugMsg(scip, "Sub-SCIP cutoff: %15.9" SCIP_REAL_FORMAT " (%15.9" SCIP_REAL_FORMAT " in original space)\n",
-         cutoff, SCIPretransformObj(scip, cutoff));
+      cutoff = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
       /* if the objective changed between the source and the target SCIP, encode the cutoff as a constraint */
       if( ! objchgd )
       {
          SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
-
-         SCIPdebugMsg(scip, "Cutoff added as Objective Limit\n");
       }
       else
       {
@@ -2300,8 +2184,6 @@ SCIP_RETCODE setupSubScip(
          }
          SCIP_CALL( SCIPaddCons(subscip, objcons) );
          SCIP_CALL( SCIPreleaseCons(subscip, &objcons) );
-
-         SCIPdebugMsg(scip, "Cutoff added as constraint\n");
       }
    }
 
@@ -2314,50 +2196,648 @@ SCIP_RETCODE setupSubScip(
       SCIP_CALL( SCIPsetIntParam(subscip, "randomization/randomseedshift", (int)SCIPheurGetNCalls(heur)) );
    }
 
-   SCIPdebugMsg(scip, "Solve Limits: %lld (%lld) nodes (stall nodes), %.1f sec., %d sols\n",
-         solvelimits->nodelimit, solvelimits->stallnodes, solvelimits->timelimit, heurdata->nsolslim);
+   return SCIP_OKAY;
+}
+
+/** initialize solving frequency */
+static
+void initSolveFreq(
+   SOLVEFREQ*            solvefreqdata       /**< diving heuristic solving freq data */
+   )
+{
+   assert(solvefreqdata != NULL);
+
+   /* initialize solve frequency data */
+   solvefreqdata->increment = SOLVEFREQ_STARTINC;
+   solvefreqdata->maxsolvefreq = MAXSOLVEFREQ;
+   solvefreqdata->minsolvefreq = MINSOLVEFREQ;
+
+   /* always start with the most conservative value */
+   solvefreqdata->currentsolvefreq = solvefreqdata->minsolvefreq;
+}
+
+/** update increment for solving frequency */
+static
+void updateSolveFreqIncrement(
+   SOLVEFREQ*            solvefreqdata       /**< diving heuristic solving freq data */
+   )
+{
+   solvefreqdata->increment *= SOLVEFREQ_DECAY;
+   solvefreqdata->increment = MAX(solvefreqdata->increment, LRATEMIN);
+}
+
+/** increase solving frequency
+ *
+ *  decrease also the rate by which the solving frequency is adjusted
+ */
+static
+void increaseSolveFreq(
+   SOLVEFREQ*            solvefreqdata       /**< diving heuristic solving freq data */
+   )
+{
+   solvefreqdata->currentsolvefreq += solvefreqdata->increment;
+   solvefreqdata->currentsolvefreq = MIN(solvefreqdata->currentsolvefreq, solvefreqdata->maxsolvefreq);
+}
+
+/** decrease solving frequency
+ *
+ *  decrease also the rate by which the solving frequency is adjusted
+ */
+static
+void decreaseSolveFreq(
+   SOLVEFREQ*            solvefreqdata       /**< diving heuristic solving freq data */
+   )
+{
+   solvefreqdata->currentsolvefreq -= solvefreqdata->increment;
+   solvefreqdata->currentsolvefreq = MAX(solvefreqdata->currentsolvefreq, solvefreqdata->minsolvefreq);
+}
+
+/** update solve frequency for diving heuristics */
+static
+void updateSolveFreq(
+   DIVING_HEUR*          divingheur,         /**< diving heuristic */
+   HEUR_STATS*           stats               /**< run statistics for this run */
+   )
+{
+   /* find out why diving heuristic terminated and adapt resolve frequency accordingly */
+   if( (int) stats->nprobnodes == divingheur->nodelimit )
+      increaseSolveFreq(divingheur->solvefreqdata);
+   else if( stats->nsolsfound == 0 )
+      decreaseSolveFreq(divingheur->solvefreqdata);
+
+   updateSolveFreqIncrement(divingheur->solvefreqdata);
+}
+
+/** find publicly available divesets and store them */
+static
+SCIP_RETCODE includeDivingHeurs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< the heuristic */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   )
+{
+   int h;
+   SCIP_HEUR** heurs;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(heurdata != NULL);
+
+   heurs = SCIPgetHeurs(scip);
+
+   heurdata->divingheurssize = DIVINGHEURS_INITIALSIZE;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->divingheurs, heurdata->divingheurssize) );
+   heurdata->ndiving = 0;
+
+   for( h = 0; h < SCIPgetNHeurs(scip); ++h )
+   {
+      int d;
+      assert(heurs[h] != NULL);
+
+      /* loop over divesets of this heuristic and check whether they are public */
+      for( d = 0; d < SCIPheurGetNDivesets(heurs[h]); ++d )
+      {
+         SCIP_DIVESET* diveset = SCIPheurGetDivesets(heurs[h])[d];
+
+         if( SCIPdivesetIsPublic(diveset) )
+         {
+            DIVING_HEUR* divingheur;
+
+            SCIPdebugMsg(scip, "Found publicly available diveset %s\n", SCIPdivesetGetName(diveset));
+
+            /* allocate memory for the diving heuristic */
+            SCIP_CALL( SCIPallocBlockMemory(scip, &divingheur) );
+            SCIP_CALL( SCIPallocBlockMemory(scip, &(divingheur->stats)) );
+            SCIP_CALL( SCIPallocBlockMemory(scip, &(divingheur->solvefreqdata)) );
+
+            /* fill struct with diving heuristic specific information */
+            divingheur->diveset = diveset;
+            divingheur->nodelimit = heurdata->initdivingnodelimit;
+            divingheur->rootnodepriority = SCIPheurGetPriority(heurs[h]);
+            divingheur->priority = 1.0;
+
+            initSolveFreq(divingheur->solvefreqdata);
+            SCIP_CALL( SCIPcreateClock(scip, &(divingheur->stats->setupclock)) );
+            SCIP_CALL( SCIPcreateClock(scip, &(divingheur->stats->execclock)) );
+            SCIP_CALL( heurStatsReset(scip, divingheur->stats, TRUE) );
+
+            if( heurdata->ndiving == heurdata->divingheurssize )
+            {
+               int newsize = 2 * heurdata->divingheurssize;
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &heurdata->divingheurs, heurdata->divingheurssize, newsize) );
+               heurdata->divingheurssize = newsize;
+            }
+            assert( heurdata->ndiving < heurdata->divingheurssize );
+
+            heurdata->divingheurs[heurdata->ndiving] = divingheur;
+            heurdata->ndiving++;
+         }
+         else
+         {
+            SCIPdebugMsg(scip, "Skipping private diveset %s\n", SCIPdivesetGetName(diveset));
+         }
+      }
+   }
+   return SCIP_OKAY;
+}
+
+/** select a heuristic depending on the selected bandit algorithm */
+static
+SCIP_RETCODE selectHeuristic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the scheduler heuristic */
+   int*                  selection           /**< pointer to store the selected heuristic index */
+   )
+{
+   SCIP_BANDIT* bandit;
+   int nactions;
+
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(selection != NULL);
+
+   *selection = -1;
+   bandit = heurdata->bandit;
+   nactions = heurdata->ndiving + heurdata->nactiveneighborhoods;
+
+   /* if we use default priorities for executing heuristics for the first time, we don't have to call
+    * the bandit to select next action */
+   if( heurdata->defaultroot && heurdata->counter < nactions )
+   {
+      *selection = heurdata->sortedindices[heurdata->counter];
+      heurdata->counter++;
+   }
+   else
+   {
+      SCIP_CALL( SCIPbanditSelect(bandit, selection) );
+   }
+   assert(*selection >= 0);
+
+   return SCIP_OKAY;
+}
+
+/** update selection strategy with observed reward for future draws */
+static
+SCIP_RETCODE updateSelectionStrategy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the scheduler heuristic */
+   SCIP_Real             reward,             /**< measured reward */
+   int                   selection           /**< the heuristic index that was chosen */
+   )
+{
+   SCIP_BANDIT* bandit;
+
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(selection >= 0);
+   assert(selection < heurdata->nneighborhoods + heurdata->ndiving);
+
+   bandit = heurdata->bandit;
+
+   SCIPdebugMsg(scip, "Rewarding bandit algorithm action %d with reward %.2f\n", selection, reward);
+   SCIP_CALL( SCIPbanditUpdate(bandit, selection, reward) );
+
+   return SCIP_OKAY;
+}
+
+/** execute diving heuristic */
+static
+SCIP_RETCODE executeDivingHeuristic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< scheduler heuristic */
+   int                   selection,          /**< the heuristic index that was chosen */
+   HEUR_STATS*           runstats,           /**< statistics of the call to selection */
+   SCIP_RESULT*          result              /**< pointer to store the result of the heuristic call */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+   DIVING_HEUR** divingheurs;
+   SCIP_DIVESET* diveset;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   divingheurs = heurdata->divingheurs;
+   assert(divingheurs != NULL);
+   assert(heurdata->ndiving > 0);
+   assert(selection < heurdata->ndiving);
+   assert(divingheurs[selection] != NULL);
+
+   diveset = divingheurs[selection]->diveset;
+   assert(diveset != NULL);
+
+   SCIPdebugMsg(scip, "Selected diving heuristic %s (idx: %d)\n", SCIPdivesetGetName(diveset), selection);
+
+   /* store some data beforehand to track all improvemnts */
+   runstats->nbacktracks = SCIPdivesetGetNBacktracks(diveset, SCIP_DIVECONTEXT_SCHEDULER);
+   runstats->nconflicts = SCIPdivesetGetNConflicts(diveset, SCIP_DIVECONTEXT_SCHEDULER);
+   runstats->nprobnodes = SCIPdivesetGetNProbingNodes(diveset, SCIP_DIVECONTEXT_SCHEDULER);
+   runstats->nsolsfound = SCIPdivesetGetNSols(diveset, SCIP_DIVECONTEXT_SCHEDULER);
+   runstats->nbestsolsfound = SCIPgetNBestSolsFound(scip);
+   runstats->oldupperbound = SCIPgetUpperbound(scip);
+
+   if( strcmp(SCIPdivesetGetName(diveset), "guideddiving") != 0 || (strcmp(SCIPdivesetGetName(diveset), "guideddiving") == 0
+         && SCIPgetNSols(scip) != 0 && !SCIPsolIsOriginal(SCIPgetBestSol(scip))) )
+   {
+      SCIP_CALL( SCIPstartClock(scip, divingheurs[selection]->stats->execclock) );
+
+      /* perform dive */
+      SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, divingheurs[selection]->diveset, heurdata->sol, heur,
+            result, FALSE, -1LL, (int) divingheurs[selection]->nodelimit,
+            divingheurs[selection]->solvefreqdata->currentsolvefreq, SCIP_DIVECONTEXT_SCHEDULER) );
+
+      SCIP_CALL( SCIPstopClock(scip, divingheurs[selection]->stats->execclock) );
+   }
+
+   /* store improvements (if solution was found, what solution was found, nconflict constraints, etc.) */
+   runstats->nbacktracks = SCIPdivesetGetNBacktracks(diveset, SCIP_DIVECONTEXT_SCHEDULER) - runstats->nbacktracks;
+   runstats->nconflicts = SCIPdivesetGetNConflicts(diveset, SCIP_DIVECONTEXT_SCHEDULER) - runstats->nconflicts;
+   runstats->nprobnodes = SCIPdivesetGetNProbingNodes(diveset, SCIP_DIVECONTEXT_SCHEDULER) - runstats->nprobnodes;
+   runstats->nsolsfound = SCIPdivesetGetNSols(diveset, SCIP_DIVECONTEXT_SCHEDULER) - runstats->nsolsfound;
+   runstats->nbestsolsfound = SCIPgetNBestSolsFound(scip) - runstats->nbestsolsfound;
+   runstats->newupperbound = SCIPgetUpperbound(scip);
+
+   /* update maximum number of conflicts found */
+   heurdata->maxnconflicts = MAX(heurdata->maxnconflicts, (int) runstats->nconflicts);
+
+   SCIPdebugMsg(scip, "Finished executing diving heuristic %s (idx: %d) with %lld sols (%lld best sols), %lld conflicts, %lld backtracks and %lld probing nodes \n",
+         SCIPdivesetGetName(diveset), selection, runstats->nsolsfound, runstats->nbestsolsfound,
+         runstats->nconflicts, runstats->nbacktracks, runstats->nprobnodes);
+
+   if( runstats->nbestsolsfound > 0 )
+      SCIPdebugMsg(scip, "Upperbound changed: %g -> %g\n", runstats->oldupperbound, runstats->newupperbound);
+
+   assert( runstats->nbestsolsfound == 0 || runstats->oldupperbound > runstats->newupperbound );
+
+   return SCIP_OKAY;
+}
+
+/** execute LNS heuristic */
+static
+SCIP_RETCODE executeLNSHeuristic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< scheduler heuristic */
+   int                   selection,          /**< the heuristic index that was chosen */
+   HEUR_STATS*           runstats,           /**< statistics of the call to selection */
+   SCIP_STATUS*          subscipstatus,      /**< pointer to store status of the sub-SCIP solve */
+   SCIP_RESULT*          result              /**< pointer to store the result of the heuristic call */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+   SCIP_VAR** varbuf;
+   SCIP_Real* valbuf;
+   SCIP_VAR** vars;
+   SCIP_VAR** subvars;
+   SCIP* subscip = NULL;
+
+   int nfixings;
+   int nvars;
+   NH* neighborhood;
+   SOLVELIMITS solvelimits;
+   SCIP_Bool success;
+   SCIP_Bool run;
+
+   SCIP_HASHMAP* varmapf;
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTDATA eventdata;
+   char probnamesuffix[SCIP_MAXSTRLEN];
+   int ndomchgs;
+   int nchgobjs;
+   int naddedconss;
+   int v;
+   SCIP_RETCODE retcode;
+   SCIP_RESULT fixresult;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+   *subscipstatus = SCIP_STATUS_UNKNOWN;
+   run = TRUE;
+
+   SCIPdebugMsg(scip, "Selected LNS heuristic %s (idx: %d)\n", heurdata->neighborhoods[selection]->name, selection + heurdata->ndiving);
+
+   /* check if budget allows a run of the next selected neighborhood */
+   SCIP_CALL( determineLimits(scip, heur, selection, &solvelimits, &run) );
+
+   if( ! run )
+      return SCIP_OKAY;
+
+   /* allocate memory for variable fixings buffer */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varbuf, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &valbuf, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+
+   neighborhood = heurdata->neighborhoods[selection];
+   SCIPdebugMsg(scip, "Running '%s' neighborhood %d\n", neighborhood->name, selection);
+
+   SCIP_CALL( SCIPstartClock(scip, neighborhood->stats.setupclock) );
+
+   /* determine variable fixings and objective coefficients of this neighborhood */
+   SCIP_CALL( neighborhoodFixVariables(scip, heurdata, neighborhood, varbuf, valbuf, &nfixings, &fixresult) );
+
+   SCIPdebugMsg(scip, "Fix %d/%d variables, result code %d\n", nfixings, nvars, fixresult);
+
+   /* Fixing was not successful, either because the fixing rate was not reached (and no additional variable
+    * prioritization was used), or the neighborhood requested a delay, e.g., because no LP relaxation solution exists
+    * at the current node
+    *
+    * The scheduler heuristic keeps a delayed neighborhood active and delays itself.
+    * TODO: handle delays
+    */
+   if( fixresult != SCIP_SUCCESS )
+   {
+      SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
+
+      SCIPdebugMsg(scip, "Aborting LNS heuristic call: Not enough variables fixed.\n");
+
+      *result = fixresult;
+      goto CLEANUP;
+   }
+
+   *result = SCIP_DIDNOTFIND;
+
+   neighborhood->stats.nfixings += nfixings;
+   runstats->nfixings = nfixings;
+
+   SCIP_CALL( SCIPcreate(&subscip) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(scip), nvars) );
+   (void) SCIPsnprintf(probnamesuffix, SCIP_MAXSTRLEN, "scheduler_%s", neighborhood->name);
+
+   /* todo later: run global propagation for this set of fixings */
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapf, probnamesuffix, varbuf, valbuf, nfixings, FALSE, heurdata->copycuts, &success, NULL) );
+
+   /* store sub-SCIP variables in array for faster access */
+   for( v = 0; v < nvars; ++v )
+   {
+      subvars[v] = (SCIP_VAR*)SCIPhashmapGetImage(varmapf, (void *)vars[v]);
+   }
+
+   SCIPhashmapFree(&varmapf);
+
+   /* let the neighborhood add additional constraints, or restrict domains */
+   SCIP_CALL( neighborhoodChangeSubscip(scip, subscip, neighborhood, subvars, &ndomchgs, &nchgobjs, &naddedconss, &success) );
+
+   if( ! success )
+   {
+      SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
+      SCIPdebugMsg(scip, "Aborting LNS heuristic call: Problems with creating subproblem.\n");
+      goto CLEANUP;
+   }
+
+   /* set up sub-SCIP parameters */
+   SCIP_CALL( setupSubScip(scip, subscip, subvars, &solvelimits, heur, nchgobjs > 0) );
+
+   /* copy the necessary data into the event data to create new solutions */
+   eventdata.nodelimit = solvelimits.nodelimit;  /*lint !e644*/
+   eventdata.lplimfac = heurdata->lplimfac;
+   eventdata.heur = heur;
+   eventdata.sourcescip = scip;
+   eventdata.subvars = subvars;
+   eventdata.runstats = runstats;
+
+   /* include an event handler to transfer solutions into the main SCIP */
+   SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecScheduler, NULL) );
+
+   /* transform the problem before catching the events */
+   SCIP_CALL( SCIPtransformProb(subscip) );
+   SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_SCHEDULER, eventhdlr, &eventdata, NULL) );
+
+   SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
+
+   SCIP_CALL( SCIPstartClock(scip, neighborhood->stats.execclock) );
+
+   /* set up sub-SCIP and run presolving */
+   retcode = SCIPpresolve(subscip);
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPwarningMessage(scip, "Error while presolving subproblem in Scheduler heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+      SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.execclock) );
+
+      SCIPABORT();  /*lint --e{527}*/
+      goto CLEANUP;
+   }
+
+   /* run sub-SCIP for the given budget, and collect statistics */
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+#ifdef SCHEDULER_SUBSCIPOUTPUT
+   SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
+#endif
+
+   SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.execclock) );
+
+   /* update statistics based on the sub-SCIP run results */
+   updateRunStats(runstats, subscip);
+   *subscipstatus = SCIPgetStatus(subscip);
+   SCIPdebugMsg(scip, "Status of sub-SCIP run: %d\n", *subscipstatus);
+
+CLEANUP:
+   if( subscip != NULL )
+   {
+      SCIP_CALL( SCIPfree(&subscip) );
+   }
+
+   SCIPfreeBufferArray(scip, &subvars);
+   SCIPfreeBufferArray(scip, &valbuf);
+   SCIPfreeBufferArray(scip, &varbuf);
+
+   if( *result != SCIP_DELAYED && *result != SCIP_DIDNOTRUN )
+   {
+      /* decrease the number of neighborhoods that have not been initialized */
+      if( neighborhood->stats.nruns == 0 )
+         --heurdata->ninitneighborhoods;
+
+      heurdata->usednodes += runstats->usednodes;
+
+      SCIPdebugMsg(scip, "Finished executing LNS heuristic %s (idx: %d) with %lld sols (%lld best sols) and %lld nodes used.\n",
+            neighborhood->name, selection + heurdata->ndiving, runstats->nsolsfound, runstats->nbestsolsfound, runstats->usednodes);
+
+      if( runstats->nbestsolsfound > 0 )
+         SCIPdebugMsg(scip, "Upperbound changed: %g -> %g\n", runstats->oldupperbound, SCIPgetUpperbound(scip));
+
+      resetCurrentNeighborhood(heurdata);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** execute selected heuristic */
+static
+SCIP_RETCODE executeHeuristic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< scheduler heuristic */
+   int                   selection,          /**< the heuristic index that was chosen */
+   HEUR_STATS*           runstats,           /**< statistics of call to selection */
+   SCIP_STATUS*          subscipstatus,      /**< pointer to store status of the sub-SCIP solve or NULL if diving was used */
+   SCIP_RESULT*          result              /**< pointer to store the result of the heuristic call */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   assert(scip != NULL);
+   assert(selection >= 0);
+   assert(selection < heurdata->nneighborhoods + heurdata->ndiving);
+
+   /* check if a diving or LNS heuristic was selected */
+   if( selection < heurdata->ndiving )
+   {
+      SCIP_CALL( executeDivingHeuristic(scip, heur, selection, runstats, result) );
+   }
+   else
+   {
+      SCIP_CALL( executeLNSHeuristic(scip, heur, selection - heurdata->ndiving, runstats, subscipstatus, result) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** reinitialize bandit algorithm since the number of actions has changed */
+static
+SCIP_RETCODE reinitBandit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   int                   nactions            /**< new number of actions */
+   )
+{
+   SCIP_Real* priorities;
+   int i;
+   unsigned int initseed;
+
+   /* allocate memory for the priorities */
+   SCIP_CALL( SCIPallocBufferArray(scip, &priorities, nactions) );
+
+   /* get the priorities */
+   for( i = 0; i < heurdata->ndiving; ++i )
+      priorities[i] = heurdata->divingheurs[i]->priority;
+   for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
+      priorities[i + heurdata->ndiving] = heurdata->neighborhoods[i]->priority;
+
+   /* free bandit if necessary */
+   if( heurdata->bandit != NULL )
+   {
+      SCIP_CALL( SCIPfreeBandit(scip, &heurdata->bandit) );
+      heurdata->bandit = NULL;
+   }
+
+   /* create bandit again */
+   initseed = (unsigned int)(heurdata->seed + SCIPgetNVars(scip));
+   SCIP_CALL( createBandit(scip, heurdata, priorities, initseed) );
+   resetTargetNodeLimit(heurdata);
+
+   /* free memory */
+   SCIPfreeBufferArray(scip, &priorities);
+
+   return SCIP_OKAY;
+}
+
+/** initializes everything that was missing because diving heuristics were not proccessed by SCIP yet. In particular,
+ * the function adds diving heuristics to heurdata, heurdata->maxdivingnodelimit,
+ * heurdata->maxlnsnodelimit and heurdata->sortedindices if heurdata->defaultroot is set to TRUE
+ */
+static
+SCIP_RETCODE initRest(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur                /**< scheduler heuristic */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+   SCIP_Real* priorities;
+   int nheurs;
+   int i;
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+
+   /* include the diving heuristics */
+   SCIP_CALL( includeDivingHeurs(scip, heur, heurdata) );
+
+   /* get number of active heuristics we can choose from */
+   nheurs = heurdata->ndiving + heurdata->nactiveneighborhoods;
+
+   /* we need to initialize the bandit method again since the number of actions has changed */
+   SCIP_CALL( reinitBandit(scip, heurdata, nheurs) );
+
+   /* set maximum of all node and diving depth limit */
+   heurdata->maxdivingnodelimit = heurdata->initdivingnodelimit;
+   heurdata->maxlnsnodelimit = heurdata->initlnsnodelimit;
+
+   /* initialize nodelimit for all LNS heursitics  */
+   for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
+      heurdata->neighborhoods[i]->nodelimit = heurdata->initlnsnodelimit;
+
+   /* initialize indices array and sort according to heuristic's priorities if we want to execute heuristics in default order
+    * at the root node*/
+   if( heurdata->defaultroot )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->sortedindices, nheurs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &priorities, nheurs) );
+      heurdata->counter = 0;
+
+      for( i = 0; i < nheurs; ++i )
+      {
+         heurdata->sortedindices[i] = i;
+
+         if( i < heurdata->ndiving )
+            priorities[i] = (SCIP_Real)-heurdata->divingheurs[i]->rootnodepriority;
+         else
+            priorities[i] = (SCIP_Real)-heurdata->neighborhoods[i - heurdata->ndiving]->rootnodepriority;
+      }
+
+      /* sort indices */
+      SCIPsortRealInt(priorities, heurdata->sortedindices, nheurs);
+
+      SCIPfreeBufferArray(scip, &priorities);
+   }
 
    return SCIP_OKAY;
 }
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecAlns)
+SCIP_DECL_HEUREXEC(heurExecScheduler)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
-   SCIP_VAR** varbuf;
-   SCIP_Real* valbuf;
-   SCIP_VAR** vars;
-   SCIP_VAR** subvars;
-   NH_STATS runstats[NNEIGHBORHOODS];
-   SCIP_STATUS subscipstatus[NNEIGHBORHOODS];
-   SCIP* subscip = NULL;
-
-   int nfixings;
-   int nvars;
-   int neighborhoodidx;
-   int ntries;
-   SCIP_Bool tryagain;
-   NH* neighborhood;
-   SOLVELIMITS solvelimits;
    SCIP_Bool success;
-   SCIP_Bool run;
-   SCIP_Bool allrewardsmode;
-   SCIP_Real rewards[NNEIGHBORHOODS][NREWARDTYPES] = {{0}};
-   int banditidx;
 
-   int i;
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+   assert(scip != NULL);
+   assert(result != NULL);
+   assert(SCIPhasCurrentNodeLP(scip));
 
+   /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   SCIPdebugMsg(scip, "Calling heurExecScheduler: depth %d sols %d inf %u node %lld \n",
+         SCIPgetDepth(scip), SCIPgetNSols(scip), nodeinfeasible, SCIPgetNNodes(scip));
 
-   if( heurdata->nactiveneighborhoods == 0 )
+   /* store diving heuristics if not done already and reset stats */
+   if( heurdata->divingheurs == NULL )
+   {
+      SCIP_CALL( initRest(scip, heur) );
+   }
+   assert( heurdata->divingheurs != NULL );
+
+   *result = SCIP_DELAYED;
+
+   /* do not call heuristic in node that was already detected to be infeasible */
+   if( nodeinfeasible )
       return SCIP_OKAY;
 
-   /* we only allow to run multiple times at a node during the root */
-   if( (heurtiming & SCIP_HEURTIMING_DURINGLPLOOP) && (SCIPgetDepth(scip) > 0 || !heurdata->initduringroot) )
+   /* only call heuristic, if an optimal LP solution is at hand */
+   if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
+   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+      return SCIP_OKAY;
+
+   /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
+   if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
    /* update internal incumbent solution */
@@ -2370,9 +2850,10 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
    /* do not run more than a user-defined number of times on each incumbent (-1: no limit) */
    if( heurdata->maxcallssamesol != -1 )
    {
-      SCIP_Longint samesollimit = (heurdata->maxcallssamesol > 0) ?
-         heurdata->maxcallssamesol :
-         heurdata->nactiveneighborhoods;
+      SCIP_Longint samesollimit;
+
+      /* either it is the user-defined limit or the number of heuristics controlled by the scheduler */
+      samesollimit = (heurdata->maxcallssamesol > 0) ? heurdata->maxcallssamesol : (SCIP_Longint) heurdata->nneighborhoods + heurdata->ndiving;
 
       if( SCIPheurGetNCalls(heur) - heurdata->firstcallthissol >= samesollimit )
       {
@@ -2389,348 +2870,80 @@ SCIP_DECL_HEUREXEC(heurExecAlns)
       return SCIP_OKAY;
    }
 
-   run = TRUE;
-   /* check if budget allows a run of the next selected neighborhood */
-   SCIP_CALL( determineLimits(scip, heur, &solvelimits, &run) );
-   SCIPdebugMsg(scip, "Budget check: %" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT ") %s\n", solvelimits.nodelimit, heurdata->targetnodes, run ? "passed" : "must wait");
-
-   if( ! run )
-      return SCIP_OKAY;
-
-   /* delay the heuristic if local reduced costs should be used for generic variable unfixing */
-   if( heurdata->uselocalredcost && (nodeinfeasible || ! SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL) )
+   /* skip this call if scheduler was too unsuccessful in the past few calls */
+   if( heurdata->nskippedcalls > 0 )
    {
-      *result = SCIP_DELAYED;
+      /* reduce counter because we need to skip one call less now */
+      heurdata->nskippedcalls--;
 
       return SCIP_OKAY;
    }
-
-   allrewardsmode = heurdata->rewardfile != NULL;
-
-   /* apply some other rules for a fair all rewards mode; in normal execution mode, neighborhoods are iterated through */
-   if( allrewardsmode )
-   {
-      /* most neighborhoods require an incumbent solution */
-      if( SCIPgetNSols(scip) < 2 )
-      {
-         SCIPdebugMsg(scip, "Not enough solutions for all rewards mode\n");
-         return SCIP_OKAY;
-      }
-
-      /* if the node is infeasible, or has no LP solution, which is required by some neighborhoods
-       * if we are not in all rewards mode, the neighborhoods delay themselves individually
-       */
-      if( nodeinfeasible || ! SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      {
-         SCIPdebugMsg(scip, "Delay ALNS heuristic until a feasible node with optimally solved LP relaxation\n");
-         *result = SCIP_DELAYED;
-         return SCIP_OKAY;
-      }
-   }
-
-   /* use the neighborhood that requested a delay or select the next neighborhood to run based on the selected bandit algorithm */
-   if( heurdata->currneighborhood >= 0 )
-   {
-      assert(! allrewardsmode);
-      banditidx = heurdata->currneighborhood;
-      SCIPdebugMsg(scip, "Select delayed neighborhood %d (was delayed %d times)\n", banditidx, heurdata->ndelayedcalls);
-   }
    else
    {
-      SCIP_CALL( selectNeighborhood(scip, heurdata, &banditidx) );
-      SCIPdebugMsg(scip, "Selected neighborhood %d with bandit algorithm\n", banditidx);
+      /* check if we need to skip calls in the future */
+      heurdata->nskippedcalls = (int) floor(exp(0.1 * (SCIP_Real) heurdata->nfailedcalls)) - 1;
    }
 
-   /* in all rewards mode, we simply loop over all heuristics */
-   if( ! allrewardsmode )
-      neighborhoodidx = banditidx;
-   else
-      neighborhoodidx = 0;
-
-   assert(0 <= neighborhoodidx && neighborhoodidx < NNEIGHBORHOODS);
-   assert(heurdata->nactiveneighborhoods > neighborhoodidx);
-
-   /* allocate memory for variable fixings buffer */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &varbuf, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &valbuf, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-
-   /* initialize neighborhood statistics for a run */
-   ntries = 1;
-   do
+   *result = SCIP_DIDNOTRUN;
+   success = FALSE;
    {
-      SCIP_HASHMAP* varmapf;
-      SCIP_EVENTHDLR* eventhdlr;
-      SCIP_EVENTDATA eventdata;
-      char probnamesuffix[SCIP_MAXSTRLEN];
-      SCIP_Real allfixingrate;
-      int ndomchgs;
-      int nchgobjs;
-      int naddedconss;
-      int v;
-      SCIP_RETCODE retcode;
-      SCIP_RESULT fixresult;
+      int selection;
+      SCIP_Real reward;
+      HEUR_STATS* stats;
+      SCIP_STATUS subscipstatus;
 
-      tryagain = FALSE;
-      neighborhood = heurdata->neighborhoods[neighborhoodidx];
-      SCIPdebugMsg(scip, "Running '%s' neighborhood %d\n", neighborhood->name, neighborhoodidx);
+      subscipstatus = SCIP_STATUS_UNKNOWN;
 
-      initRunStats(scip, &runstats[neighborhoodidx]);
-      rewards[neighborhoodidx][REWARDTYPE_TOTAL] = 0.0;
+      /* allocate memory for statistics and initialize it */
+      SCIP_CALL( SCIPallocBuffer(scip, &stats) );
+      initRunStats(scip, stats);
 
-      subscipstatus[neighborhoodidx] = SCIP_STATUS_UNKNOWN;
-      SCIP_CALL( SCIPstartClock(scip, neighborhood->stats.setupclock) );
+      /* select the heuristic based on previous success. The heuristics are sorted such that
+       * diving comes before LNS */
+      SCIP_CALL( selectHeuristic(scip, heurdata, &selection) );
 
-      /* determine variable fixings and objective coefficients of this neighborhood */
-      SCIP_CALL( neighborhoodFixVariables(scip, heurdata, neighborhood, varbuf, valbuf, &nfixings, &fixresult) );
+      /* execute selected heuristic */
+      SCIP_CALL( executeHeuristic(scip, heur, selection, stats, &subscipstatus, result) );
 
-      SCIPdebugMsg(scip, "Fix %d/%d variables, result code %d\n", nfixings, nvars,fixresult);
+      /* update global statistics */
+      if( selection < heurdata->ndiving ) /* diving was selected */
+         updateHeurStatsDiving(stats, heurdata->divingheurs[selection]);
+      else /* LNS was selected */
+         updateHeurStatsLNS(stats, heurdata->neighborhoods[selection - heurdata->ndiving], &subscipstatus);
 
-      /* Fixing was not successful, either because the fixing rate was not reached (and no additional variable
-       * prioritization was used), or the neighborhood requested a delay, e.g., because no LP relaxation solution exists
-       * at the current node
-       *
-       * The ALNS heuristic keeps a delayed neighborhood active and delays itself.
-       */
-      if( fixresult != SCIP_SUCCESS )
+      /* observe reward */
+      reward = getReward(scip, heurdata, selection, stats, subscipstatus);
+
+      /* call was successfull if solution was found */
+      if( stats->nbestsolsfound > 0 )
+         success = TRUE;
+
+      /* update either LP resolve freq or target fixing rate, depending on which heuristic was chosen */
+      if( selection < heurdata->ndiving )
       {
-         SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
-
-         /* to determine all rewards, we cannot delay neighborhoods */
-         if( allrewardsmode )
-         {
-            if( ntries == heurdata->nactiveneighborhoods )
-               break;
-
-            neighborhoodidx = (neighborhoodidx + 1) % heurdata->nactiveneighborhoods;
-            ntries++;
-            tryagain = TRUE;
-
-            continue;
-         }
-
-         /* delay the heuristic along with the selected neighborhood
-          *
-          * if the neighborhood has been delayed for too many consecutive calls, the delay is treated as a failure */
-         if( fixresult == SCIP_DELAYED )
-         {
-            if( heurdata->ndelayedcalls > (SCIPheurGetFreq(heur) / 4 + 1) )
-            {
-               resetCurrentNeighborhood(heurdata);
-
-               /* use SCIP_DIDNOTFIND to penalize the neighborhood with a bad reward */
-               fixresult = SCIP_DIDNOTFIND;
-            }
-            else if( heurdata->currneighborhood == -1 )
-            {
-               heurdata->currneighborhood = neighborhoodidx;
-               heurdata->ndelayedcalls = 1;
-            }
-            else
-            {
-               heurdata->ndelayedcalls++;
-            }
-         }
-
-         if( fixresult == SCIP_DIDNOTRUN )
-         {
-            if( ntries < heurdata->nactiveneighborhoods )
-            {
-               SCIP_CALL( updateBanditAlgorithm(scip, heurdata, 0.0, neighborhoodidx) );
-               SCIP_CALL( selectNeighborhood(scip, heurdata, &neighborhoodidx) );
-               ntries++;
-               tryagain = TRUE;
-
-               SCIPdebugMsg(scip, "Neighborhood cannot run -> try next neighborhood %d\n", neighborhoodidx);
-               continue;
-            }
-            else
-               break;
-         }
-
-         assert(fixresult == SCIP_DIDNOTFIND || fixresult == SCIP_DELAYED);
-         *result = fixresult;
-         break;
-      }
-
-      *result = SCIP_DIDNOTFIND;
-
-      neighborhood->stats.nfixings += nfixings;
-      runstats[neighborhoodidx].nfixings = nfixings;
-
-      SCIP_CALL( SCIPcreate(&subscip) );
-      SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(scip), nvars) );
-      (void) SCIPsnprintf(probnamesuffix, SCIP_MAXSTRLEN, "alns_%s", neighborhood->name);
-
-      /* todo later: run global propagation for this set of fixings */
-      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapf, probnamesuffix, varbuf, valbuf, nfixings, FALSE, heurdata->copycuts, &success, NULL) );
-
-      /* store sub-SCIP variables in array for faster access */
-      for( v = 0; v < nvars; ++v )
-      {
-         subvars[v] = (SCIP_VAR*)SCIPhashmapGetImage(varmapf, (void *)vars[v]);
-      }
-
-      SCIPhashmapFree(&varmapf);
-
-      /* let the neighborhood add additional constraints, or restrict domains */
-      SCIP_CALL( neighborhoodChangeSubscip(scip, subscip, neighborhood, subvars, &ndomchgs, &nchgobjs, &naddedconss, &success) );
-
-      if( ! success )
-      {
-         SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
-
-         if( ! allrewardsmode || ntries == heurdata->nactiveneighborhoods )
-            break;
-
-         neighborhoodidx = (neighborhoodidx + 1) % heurdata->nactiveneighborhoods;
-         ntries++;
-         tryagain = TRUE;
-
-         SCIP_CALL( SCIPfree(&subscip) );
-
-         continue;
-      }
-
-      /* set up sub-SCIP parameters */
-      SCIP_CALL( setupSubScip(scip, subscip, subvars, &solvelimits, heur, nchgobjs > 0) );
-
-      /* copy the necessary data into the event data to create new solutions */
-      eventdata.nodelimit = solvelimits.nodelimit;  /*lint !e644*/
-      eventdata.lplimfac = heurdata->lplimfac;
-      eventdata.heur = heur;
-      eventdata.sourcescip = scip;
-      eventdata.subvars = subvars;
-      eventdata.runstats = &runstats[neighborhoodidx];
-      eventdata.allrewardsmode = allrewardsmode;
-
-      /* include an event handler to transfer solutions into the main SCIP */
-      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecAlns, NULL) );
-
-      /* transform the problem before catching the events */
-      SCIP_CALL( SCIPtransformProb(subscip) );
-      SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_ALNS, eventhdlr, &eventdata, NULL) );
-
-      SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
-
-      SCIP_CALL( SCIPstartClock(scip, neighborhood->stats.submipclock) );
-
-      /* set up sub-SCIP and run presolving */
-      retcode = SCIPpresolve(subscip);
-      if( retcode != SCIP_OKAY )
-      {
-         SCIPwarningMessage(scip, "Error while presolving subproblem in ALNS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
-         SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.submipclock) );
-
-         SCIPABORT();  /*lint --e{527}*/
-         break;
-      }
-
-      /* was presolving successful enough regarding fixings? otherwise, terminate */
-      allfixingrate = (SCIPgetNOrigVars(subscip) - SCIPgetNVars(subscip)) / (SCIP_Real)SCIPgetNOrigVars(subscip);
-
-      /* additional variables added in presolving may lead to the subSCIP having more variables than the original */
-      allfixingrate = MAX(allfixingrate, 0.0);
-
-      if( allfixingrate >= neighborhood->fixingrate.targetfixingrate / 2.0 )
-      {
-         /* run sub-SCIP for the given budget, and collect statistics */
-         SCIP_CALL_ABORT( SCIPsolve(subscip) );
+         /* update resolve freq */
+         updateSolveFreq(heurdata->divingheurs[selection], stats);
       }
       else
       {
-         SCIPdebugMsg(scip, "Fixed only %.3f of all variables after presolving -> do not solve sub-SCIP\n", allfixingrate);
+         /* update target fixing rate */
+         SCIPdebugMsg(scip, "Update fixing rate: %.2f\n", heurdata->neighborhoods[selection - heurdata->ndiving]->fixingrate.targetfixingrate);
+         updateFixingRate(heurdata->neighborhoods[selection - heurdata->ndiving], subscipstatus, stats);
+         SCIPdebugMsg(scip, "New fixing rate: %.2f\n", heurdata->neighborhoods[selection - heurdata->ndiving]->fixingrate.targetfixingrate);
       }
 
-#ifdef ALNS_SUBSCIPOUTPUT
-      SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
-#endif
+      /* update selection strategy */
+      SCIP_CALL( updateSelectionStrategy(scip, heurdata, reward, selection) );
 
-      SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.submipclock) );
-
-      /* update statistics based on the sub-SCIP run results */
-      updateRunStats(&runstats[neighborhoodidx], subscip);
-      subscipstatus[neighborhoodidx] = SCIPgetStatus(subscip);
-      SCIPdebugMsg(scip, "Status of sub-SCIP run: %d\n", subscipstatus[neighborhoodidx]);
-
-      SCIP_CALL( getReward(scip, heurdata, &runstats[neighborhoodidx], rewards[neighborhoodidx]) );
-
-      /* in all rewards mode, continue with the next neighborhood */
-      if( allrewardsmode && ntries < heurdata->nactiveneighborhoods )
-      {
-         neighborhoodidx = (neighborhoodidx + 1) % heurdata->nactiveneighborhoods;
-         ntries++;
-         tryagain = TRUE;
-
-         SCIP_CALL( SCIPfree(&subscip) );
-      }
-   }
-   while( tryagain && ! SCIPisStopped(scip) );
-
-   if( subscip != NULL )
-   {
-      SCIP_CALL( SCIPfree(&subscip) );
+      /* free statistics data struct */
+      SCIPfreeBuffer(scip, &stats);
    }
 
-   SCIPfreeBufferArray(scip, &subvars);
-   SCIPfreeBufferArray(scip, &valbuf);
-   SCIPfreeBufferArray(scip, &varbuf);
-
-   /* update bandit index that may have changed unless we are in all rewards mode */
-   if( ! allrewardsmode )
-      banditidx = neighborhoodidx;
-
-   if( *result != SCIP_DELAYED )
-   {
-      /* decrease the number of neighborhoods that have not been initialized */
-      if( neighborhood->stats.nruns == 0 )
-         --heurdata->ninitneighborhoods;
-
-      heurdata->usednodes += runstats[banditidx].usednodes;
-
-      /* determine the success of this neighborhood, and update the target fixing rate for the next time */
-      updateNeighborhoodStats(&runstats[banditidx], heurdata->neighborhoods[banditidx], subscipstatus[banditidx]);
-
-      /* adjust the fixing rate for this neighborhood
-       * make no adjustments in all rewards mode, because this only affects 1 of 8 heuristics
-       */
-      if( heurdata->adjustfixingrate && ! allrewardsmode )
-      {
-         SCIPdebugMsg(scip, "Update fixing rate: %.2f\n", heurdata->neighborhoods[banditidx]->fixingrate.targetfixingrate);
-         updateFixingRate(heurdata->neighborhoods[banditidx], subscipstatus[banditidx], &runstats[banditidx]);
-         SCIPdebugMsg(scip, "New fixing rate: %.2f\n", heurdata->neighborhoods[banditidx]->fixingrate.targetfixingrate);
-      }
-      /* similarly, update the minimum improvement for the ALNS heuristic */
-      if( heurdata->adjustminimprove )
-      {
-         SCIPdebugMsg(scip, "Update Minimum Improvement: %.4f\n", heurdata->minimprove);
-         updateMinimumImprovement(heurdata, subscipstatus[banditidx], &runstats[banditidx]);
-         SCIPdebugMsg(scip, "--> %.4f\n", heurdata->minimprove);
-      }
-
-      /* update the target node limit based on the status of the selected algorithm */
-      if( heurdata->adjusttargetnodes && SCIPheurGetNCalls(heur) >= heurdata->nactiveneighborhoods )
-      {
-         updateTargetNodeLimit(heurdata, &runstats[banditidx], subscipstatus[banditidx]);
-      }
-
-      /* update the bandit algorithm by the measured reward */
-      SCIP_CALL( updateBanditAlgorithm(scip, heurdata, rewards[banditidx][REWARDTYPE_TOTAL], banditidx) );
-
-      resetCurrentNeighborhood(heurdata);
-   }
-
-   /* write single, measured rewards and the bandit index to the reward file */
-   if( allrewardsmode )
-   {
-      int j;
-      for( j = 0; j < (int)NREWARDTYPES; j++ )
-         for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
-            fprintf(heurdata->rewardfile, "%.4f,", rewards[i][j]);
-
-      fprintf(heurdata->rewardfile, "%d\n", banditidx);
-   }
+   /* count how many consecutive failed calls we had */
+   if( success )
+      heurdata->nfailedcalls = 0;
+   else
+      heurdata->nfailedcalls++;
 
    return SCIP_OKAY;
 }
@@ -3617,16 +3830,6 @@ DECL_CHANGESUBSCIP(changeSubscipTrustregion)
 {  /*lint --e{715}*/
    DATA_TRUSTREGION* data;
 
-   assert(success != NULL);
-
-   if( !SCIPgetBestSol(sourcescip) )
-   {
-      SCIPdebugMsg(sourcescip, "changeSubscipTrustregion unsuccessful, because it was called without incumbent being present\n");
-      *success = FALSE;
-
-      return SCIP_OKAY;
-   }
-
    data = neighborhood->data.trustregion;
 
    /* adding the neighborhood constraint for the trust region heuristic */
@@ -3704,7 +3907,7 @@ DECL_NHDEACTIVATE(nhDeactivateObjVars)
 static
 SCIP_RETCODE includeNeighborhoods(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< heuristic data of the ALNS heuristic */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data of the scheduler heuristic */
    )
 {
    NH* rens;
@@ -3720,27 +3923,27 @@ SCIP_RETCODE includeNeighborhoods(
    heurdata->nneighborhoods = 0;
 
    /* include the RENS neighborhood */
-   SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &rens, "rens",
+   SCIP_CALL( schedulerIncludeNeighborhood(scip, heurdata, &rens, "rens",
          DEFAULT_MINFIXINGRATE_RENS, DEFAULT_MAXFIXINGRATE_RENS, DEFAULT_ACTIVE_RENS, DEFAULT_PRIORITY_RENS,
          varFixingsRens, changeSubscipRens, NULL, NULL, NULL, NULL, nhDeactivateDiscreteVars) );
 
    /* include the RINS neighborhood */
-   SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &rins, "rins",
+   SCIP_CALL( schedulerIncludeNeighborhood(scip, heurdata, &rins, "rins",
          DEFAULT_MINFIXINGRATE_RINS, DEFAULT_MAXFIXINGRATE_RINS, DEFAULT_ACTIVE_RINS, DEFAULT_PRIORITY_RINS,
          varFixingsRins, NULL, NULL, NULL, NULL, nhRefsolIncumbent, nhDeactivateDiscreteVars) );
 
    /* include the mutation neighborhood */
-   SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &mutation, "mutation",
+   SCIP_CALL( schedulerIncludeNeighborhood(scip, heurdata, &mutation, "mutation",
          DEFAULT_MINFIXINGRATE_MUTATION, DEFAULT_MAXFIXINGRATE_MUTATION, DEFAULT_ACTIVE_MUTATION, DEFAULT_PRIORITY_MUTATION,
          varFixingsMutation, NULL, nhInitMutation, nhExitMutation, NULL, nhRefsolIncumbent, nhDeactivateDiscreteVars) );
 
    /* include the local branching neighborhood */
-   SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &localbranching, "localbranching",
+   SCIP_CALL( schedulerIncludeNeighborhood(scip, heurdata, &localbranching, "localbranching",
          DEFAULT_MINFIXINGRATE_LOCALBRANCHING, DEFAULT_MAXFIXINGRATE_LOCALBRANCHING, DEFAULT_ACTIVE_LOCALBRANCHING, DEFAULT_PRIORITY_LOCALBRANCHING,
          NULL, changeSubscipLocalbranching, NULL, NULL, NULL, nhRefsolIncumbent, nhDeactivateBinVars) );
 
    /* include the crossover neighborhood */
-   SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &crossover, "crossover",
+   SCIP_CALL( schedulerIncludeNeighborhood(scip, heurdata, &crossover, "crossover",
          DEFAULT_MINFIXINGRATE_CROSSOVER, DEFAULT_MAXFIXINGRATE_CROSSOVER, DEFAULT_ACTIVE_CROSSOVER, DEFAULT_PRIORITY_CROSSOVER,
          varFixingsCrossover, NULL,
          nhInitCrossover, nhExitCrossover, nhFreeCrossover, nhRefsolCrossover, nhDeactivateDiscreteVars) );
@@ -3750,21 +3953,21 @@ SCIP_RETCODE includeNeighborhoods(
    crossover->data.crossover->rng = NULL;
 
    /* add crossover neighborhood parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/alns/crossover/nsols", "the number of solutions that crossover should combine",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/scheduler/crossover/nsols", "the number of solutions that crossover should combine",
          &crossover->data.crossover->nsols, TRUE, DEFAULT_NSOLS_CROSSOVER, 2, 10, NULL, NULL) );
 
    /* include the Proximity neighborhood */
-   SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &proximity, "proximity",
+   SCIP_CALL( schedulerIncludeNeighborhood(scip, heurdata, &proximity, "proximity",
          DEFAULT_MINFIXINGRATE_PROXIMITY, DEFAULT_MAXFIXINGRATE_PROXIMITY, DEFAULT_ACTIVE_PROXIMITY, DEFAULT_PRIORITY_PROXIMITY,
          NULL, changeSubscipProximity, NULL, NULL, NULL, nhRefsolIncumbent, nhDeactivateBinVars) );
 
    /* include the Zeroobjective neighborhood */
-   SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &zeroobjective, "zeroobjective",
+   SCIP_CALL( schedulerIncludeNeighborhood(scip, heurdata, &zeroobjective, "zeroobjective",
          DEFAULT_MINFIXINGRATE_ZEROOBJECTIVE, DEFAULT_MAXFIXINGRATE_ZEROOBJECTIVE, DEFAULT_ACTIVE_ZEROOBJECTIVE, DEFAULT_PRIORITY_ZEROOBJECTIVE,
          NULL, changeSubscipZeroobjective, NULL, NULL, NULL, nhRefsolIncumbent, nhDeactivateObjVars) );
 
    /* include the DINS neighborhood */
-   SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &dins, "dins",
+   SCIP_CALL( schedulerIncludeNeighborhood(scip, heurdata, &dins, "dins",
          DEFAULT_MINFIXINGRATE_DINS, DEFAULT_MAXFIXINGRATE_DINS, DEFAULT_ACTIVE_DINS, DEFAULT_PRIORITY_DINS,
          varFixingsDins, changeSubscipDins, NULL, NULL, nhFreeDins, nhRefsolIncumbent, nhDeactivateBinVars) );
 
@@ -3772,12 +3975,12 @@ SCIP_RETCODE includeNeighborhoods(
    SCIP_CALL( SCIPallocBlockMemory(scip, &dins->data.dins) );
 
    /* add DINS neighborhood parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/alns/dins/npoolsols",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/scheduler/dins/npoolsols",
          "number of pool solutions where binary solution values must agree",
          &dins->data.dins->npoolsols, TRUE, DEFAULT_NPOOLSOLS_DINS, 1, 100, NULL, NULL) );
 
    /* include the trustregion neighborhood */
-   SCIP_CALL( alnsIncludeNeighborhood(scip, heurdata, &trustregion, "trustregion",
+   SCIP_CALL( schedulerIncludeNeighborhood(scip, heurdata, &trustregion, "trustregion",
          DEFAULT_MINFIXINGRATE_TRUSTREGION, DEFAULT_MAXFIXINGRATE_TRUSTREGION, DEFAULT_ACTIVE_TRUSTREGION, DEFAULT_PRIORITY_TRUSTREGION,
          NULL, changeSubscipTrustregion, NULL, NULL, nhFreeTrustregion, nhRefsolIncumbent, nhDeactivateBinVars) );
 
@@ -3793,7 +3996,7 @@ SCIP_RETCODE includeNeighborhoods(
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitAlns)
+SCIP_DECL_HEURINIT(heurInitScheduler)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    int i;
@@ -3816,24 +4019,20 @@ SCIP_DECL_HEURINIT(heurInitAlns)
 
       SCIP_CALL( resetFixingRate(scip, &neighborhood->fixingrate) );
 
-      SCIP_CALL( neighborhoodStatsReset(scip, &neighborhood->stats) );
+      SCIP_CALL( heurStatsReset(scip, &neighborhood->stats, FALSE) );
    }
 
-   /* open reward file for reading */
-   if( strncasecmp(heurdata->rewardfilename, DEFAULT_REWARDFILENAME, strlen(DEFAULT_REWARDFILENAME)) != 0 )
+   /* we clear the list of collected diving heuristics to ensure reproducability and consistent state across multiple runs
+    * within the same SCIP data structure */
+   /* note: diving heuristics data will be initialized when executing scheduler */
+   if( heurdata->divingheurs != NULL )
    {
-      heurdata->rewardfile = fopen(heurdata->rewardfilename, "w");
-
-      if( heurdata->rewardfile == NULL )
-      {
-         SCIPerrorMessage("Error: Could not open reward file <%s>\n", heurdata->rewardfilename);
-         return SCIP_FILECREATEERROR;
-      }
-
-      SCIPdebugMsg(scip, "Writing reward information to <%s>\n", heurdata->rewardfilename);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->divingheurs, heurdata->divingheurssize);
+      assert(heurdata->divingheurs == NULL);
    }
-   else
-      heurdata->rewardfile = NULL;
+
+   /* create working solution */
+   SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
    return SCIP_OKAY;
 }
@@ -3841,7 +4040,7 @@ SCIP_DECL_HEURINIT(heurInitAlns)
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
-SCIP_DECL_HEURINITSOL(heurInitsolAlns)
+SCIP_DECL_HEURINITSOL(heurInitsolScheduler)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    int i;
@@ -3855,7 +4054,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolAlns)
    assert(heurdata != NULL);
    heurdata->nactiveneighborhoods = heurdata->nneighborhoods;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &priorities, heurdata->nactiveneighborhoods) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &priorities, heurdata->ndiving + heurdata->nactiveneighborhoods) );
 
    /* init neighborhoods for new problem by resetting their statistics and fixing rate */
    for( i = heurdata->nneighborhoods - 1; i >= 0; --i )
@@ -3877,38 +4076,49 @@ SCIP_DECL_HEURINITSOL(heurInitsolAlns)
       }
    }
 
-   /* collect neighborhood priorities */
-   for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
-      priorities[i] = heurdata->neighborhoods[i]->priority;
+   /* if diving is already initialized (only happens after all diving heuristics are initialized),
+    * take the proper priorities. Otherwise, set all priorities to 1.0 */
+   if( heurdata->divingheurs != NULL )
+   {
+      /* collect diving heuristic priorities */
+      for( i = 0; i < heurdata->ndiving; ++i )
+         priorities[i] = heurdata->divingheurs[i]->priority;
+
+      /* collect neighborhood priorities */
+      for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
+         priorities[i + heurdata->ndiving] = heurdata->neighborhoods[i]->priority;
+   }
+   else
+   {
+      for( i = 0; i < heurdata->ndiving + heurdata->nactiveneighborhoods; ++i )
+         priorities[i] = 1.0;
+   }
 
    initseed = (unsigned int)(heurdata->seed + SCIPgetNVars(scip));
 
    /* active neighborhoods might change between init calls, reset functionality must take this into account */
-   if( heurdata->bandit != NULL && SCIPbanditGetNActions(heurdata->bandit) != heurdata->nactiveneighborhoods )
+   if( heurdata->bandit != NULL && SCIPbanditGetNActions(heurdata->bandit) != heurdata->ndiving + heurdata->nactiveneighborhoods )
    {
       SCIP_CALL( SCIPfreeBandit(scip, &heurdata->bandit) );
 
       heurdata->bandit = NULL;
    }
 
-   if( heurdata->nactiveneighborhoods > 0 )
+   if( heurdata->nactiveneighborhoods + heurdata->ndiving > 0 )
    {  /* create or reset bandit algorithm */
       if( heurdata->bandit == NULL )
       {
          SCIP_CALL( createBandit(scip, heurdata, priorities, initseed) );
-
-         resetMinimumImprovement(heurdata);
          resetTargetNodeLimit(heurdata);
       }
       else if( heurdata->resetweights )
       {
          SCIP_CALL( SCIPresetBandit(scip, heurdata->bandit, priorities, initseed) );
-
-         resetMinimumImprovement(heurdata);
          resetTargetNodeLimit(heurdata);
       }
    }
 
+   /* TODO: maybe do something for diving as well here? */
    heurdata->usednodes = 0;
    heurdata->ninitneighborhoods = heurdata->nactiveneighborhoods;
 
@@ -3925,7 +4135,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolAlns)
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
-SCIP_DECL_HEUREXIT(heurExitAlns)
+SCIP_DECL_HEUREXIT(heurExitScheduler)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    int i;
@@ -3944,18 +4154,15 @@ SCIP_DECL_HEUREXIT(heurExitAlns)
       SCIP_CALL( neighborhoodExit(scip, neighborhood) );
    }
 
-   if( heurdata->rewardfile != NULL )
-   {
-      fclose(heurdata->rewardfile);
-      heurdata->rewardfile = NULL;
-   }
+   /* free working solution */
+   SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
    return SCIP_OKAY;
 }
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeAlns)
+SCIP_DECL_HEURFREE(heurFreeScheduler)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    int i;
@@ -3972,10 +4179,27 @@ SCIP_DECL_HEURFREE(heurFreeAlns)
       SCIP_CALL( SCIPfreeBandit(scip, &heurdata->bandit) );
    }
 
+   /* free diving heuristics */
+   if( heurdata->divingheurs != NULL )
+   {
+      int j;
+
+      for( j = 0; j < heurdata->ndiving; ++j )
+      {
+         SCIPfreeBlockMemory(scip, &heurdata->divingheurs[j]->solvefreqdata);
+         SCIPfreeBlockMemory(scip, &heurdata->divingheurs[j]->stats);
+      }
+
+      SCIPfreeBlockMemoryArray(scip, &heurdata->divingheurs, heurdata->divingheurssize);
+
+      if( heurdata->defaultroot )
+         SCIPfreeBlockMemoryArray(scip, &heurdata->sortedindices, heurdata->ndiving + heurdata->nactiveneighborhoods);
+   }
+
    /* free neighborhoods */
    for( i = 0; i < heurdata->nneighborhoods; ++i )
    {
-      SCIP_CALL( alnsFreeNeighborhood(scip, &(heurdata->neighborhoods[i])) );
+      SCIP_CALL( schedulerFreeNeighborhood(scip, &(heurdata->neighborhoods[i])) );
    }
 
    SCIPfreeBlockMemoryArray(scip, &heurdata->neighborhoods, NNEIGHBORHOODS);
@@ -3995,7 +4219,16 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNeighborhood)
    heurdata = SCIPheurGetData(SCIPfindHeur(scip, HEUR_NAME));
    assert(heurdata != NULL);
 
+   /* print neighborhood statistics */
    printNeighborhoodStatistics(scip, heurdata, file);
+
+   /* print only diving statistics if scheduler got executed at least once (because we only then
+    * initialize the diving heuristics)
+    * Note: More Diving statistics will be printed in scip_solvingstats.c with all other stats about
+    * diving since adaptive diving and the scheudler use the same diving context
+    */
+   if( heurdata->divingheurs != NULL )
+      printDivingHeurStatistics(scip, heurdata, file);
 
    return SCIP_OKAY;
 }
@@ -4004,15 +4237,15 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNeighborhood)
  * primal heuristic specific interface methods
  */
 
-/** creates the alns primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurAlns(
+/** creates the scheduler primal heuristic and includes it in SCIP */
+SCIP_RETCODE SCIPincludeHeurScheduler(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
 
-   /* create alns primal heuristic data */
+   /* create primal heuristic data */
    heurdata = NULL;
    heur = NULL;
 
@@ -4022,30 +4255,34 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    /* TODO make this a user parameter? */
    heurdata->lplimfac = LPLIMFAC;
 
+   heurdata->nskippedcalls = 0;
+   heurdata->nfailedcalls = 0;
+   heurdata->maxnconflicts = 0;
+
+   /* allocate memory for LNS heuristics */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->neighborhoods, NNEIGHBORHOODS) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecAlns, heurdata) );
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecScheduler, heurdata) );
 
    assert(heur != NULL);
 
    /* include all neighborhoods */
+   /* note: diving heuristics will be included when executing the scheduler heuristic for
+    * the first time, because it relies on all heuristics being already added to SCIP
+    */
    SCIP_CALL( includeNeighborhoods(scip, heurdata) );
 
    /* set non fundamental callbacks via setter functions */
-   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyAlns) );
-   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeAlns) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitAlns) );
-   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolAlns) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitAlns) );
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyScheduler) );
+   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeScheduler) );
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitScheduler) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolScheduler) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitScheduler) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/shownbstats",
-         "show statistics on neighborhoods?",
-         &heurdata->shownbstats, TRUE, DEFAULT_SHOWNBSTATS, NULL, NULL) );
-
-   /* add alns primal heuristic parameters */
+   /* add scheduler primal heuristic parameters */
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes,  TRUE,DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
@@ -4062,24 +4299,21 @@ SCIP_RETCODE SCIPincludeHeurAlns(
          "number of nodes since last incumbent solution that the heuristic should wait",
          &heurdata->waitingnodes, TRUE, DEFAULT_WAITINGNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/initlnsnodelimit",
+         "initial node limit for LNS heuristics",
+         &heurdata->initlnsnodelimit, TRUE, DEFAULT_INITLNSNODELIMIT, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/initdivingnodelimit",
+         "initial node limit for diving heuristics",
+         &heurdata->initdivingnodelimit, TRUE, DEFAULT_INITDIVINGNODELIMIT, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesquot",
          "fraction of nodes compared to the main SCIP for budget computation",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesquotmin",
          "lower bound fraction of nodes compared to the main SCIP for budget computation",
          &heurdata->nodesquotmin, FALSE, DEFAULT_NODESQUOTMIN, 0.0, 1.0, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/startminimprove",
-         "initial factor by which ALNS should at least improve the incumbent",
-         &heurdata->startminimprove, TRUE, DEFAULT_STARTMINIMPROVE, 0.0, 1.0, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprovelow",
-         "lower threshold for the minimal improvement over the incumbent",
-         &heurdata->minimprovelow, TRUE, DEFAULT_MINIMPROVELOW, 0.0, 1.0, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprovehigh",
-         "upper bound for the minimal improvement over the incumbent",
-         &heurdata->minimprovehigh, TRUE, DEFAULT_MINIMPROVEHIGH, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/nsolslim",
          "limit on the number of improving solutions in a sub-SCIP call",
@@ -4087,7 +4321,7 @@ SCIP_RETCODE SCIPincludeHeurAlns(
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/banditalgo",
          "the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy, exp.3-(i)x",
-         &heurdata->banditalgo, TRUE, DEFAULT_BANDITALGO, "uegib", NULL, NULL) );
+         &heurdata->banditalgo, TRUE, DEFAULT_BANDITALGO, "uegi", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gamma",
          "weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3",
@@ -4109,22 +4343,17 @@ SCIP_RETCODE SCIPincludeHeurAlns(
          "should reduced cost scores be used for variable prioritization?",
          &heurdata->useredcost, TRUE, DEFAULT_USEREDCOST, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/domorefixings",
-         "should the ALNS heuristic do more fixings by itself based on variable prioritization "
-         "until the target fixing rate is reached?",
-         &heurdata->domorefixings, TRUE, DEFAULT_DOMOREFIXINGS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usepscost",
+         "should pseudo cost scores be used for variable priorization?",
+         &heurdata->usepscost, TRUE, DEFAULT_USEPSCOST, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/adjustfixingrate",
-         "should the heuristic adjust the target fixing rate based on the success?",
-         &heurdata->adjustfixingrate, TRUE, DEFAULT_ADJUSTFIXINGRATE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselocalredcost",
+         "should local reduced costs be used for generic (un)fixing?",
+         &heurdata->uselocalredcost, TRUE, DEFAULT_USELOCALREDCOST, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usesubscipheurs",
          "should the heuristic activate other sub-SCIP heuristics during its search?",
          &heurdata->usesubscipheurs, TRUE, DEFAULT_USESUBSCIPHEURS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/rewardcontrol",
-         "reward control to increase the weight of the simple solution indicator and decrease the weight of the closed gap reward",
-         &heurdata->rewardcontrol, TRUE, DEFAULT_REWARDCONTROL, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/targetnodefactor",
          "factor by which target node number is eventually increased",
@@ -4133,40 +4362,42 @@ SCIP_RETCODE SCIPincludeHeurAlns(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/seed",
          "initial random seed for bandit algorithms and random decisions by neighborhoods",
          &heurdata->seed, FALSE, DEFAULT_SEED, 0, INT_MAX, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxcallssamesol",
          "number of allowed executions of the heuristic on the same incumbent solution (-1: no limit, 0: number of active neighborhoods)",
          &heurdata->maxcallssamesol, TRUE, DEFAULT_MAXCALLSSAMESOL, -1, 100, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/adjustminimprove",
-         "should the factor by which the minimum improvement is bound be dynamically updated?",
-         &heurdata->adjustminimprove, TRUE, DEFAULT_ADJUSTMINIMPROVE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/adjusttargetnodes",
-         "should the target nodes be dynamically adjusted?",
-         &heurdata->adjusttargetnodes, TRUE, DEFAULT_ADJUSTTARGETNODES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/eps",
          "increase exploration in epsilon-greedy bandit algorithm",
          &heurdata->epsgreedy_eps, TRUE, DEFAULT_EPS, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/rewardbaseline",
-         "the reward baseline to separate successful and failed calls",
-         &heurdata->rewardbaseline, TRUE, DEFAULT_REWARDBASELINE, 0.0, 0.99, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/epsgreedy_usemod",
+         "TRUE if modified version of the epsilon-greedy bandit algorithm should be used",
+         &heurdata->epsgreedy_usemod, TRUE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/solrewardweight",
+         "weight by how much finding a new incumbent is rewarded in reward function",
+         &heurdata->solrewardweight, TRUE, DEFAULT_SOLREWARDWEIGHT, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/effortrewardweight",
+         "weight by how much effort is rewarded in reward function",
+         &heurdata->effortrewardweight, TRUE, DEFAULT_EFFORTREWARDWEIGHT, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/qualrewardweight",
+         "weight by how much quality of a new incumbent is rewarded in reward function",
+         &heurdata->qualrewardweight, TRUE, DEFAULT_QUALREWARDWEIGHT, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/conflictrewardweight",
+         "weight by how much number of conflicts found by diving is rewarded in reward function",
+         &heurdata->conflictrewardweight, TRUE, DEFAULT_CONFLICTREWARDWEIGHT, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/resetweights",
          "should the bandit algorithms be reset when a new problem is read?",
          &heurdata->resetweights, TRUE, DEFAULT_RESETWEIGHTS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/rewardfilename", "file name to store all rewards and the selection of the bandit",
-         &heurdata->rewardfilename, TRUE, DEFAULT_REWARDFILENAME, NULL, NULL) );
-
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/subsciprandseeds",
          "should random seeds of sub-SCIPs be altered to increase diversification?",
          &heurdata->subsciprandseeds, TRUE, DEFAULT_SUBSCIPRANDSEEDS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/scalebyeffort",
-         "should the reward be scaled by the effort?",
-         &heurdata->scalebyeffort, TRUE, DEFAULT_SCALEBYEFFORT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should cutting planes be copied to the sub-SCIP?",
@@ -4180,17 +4411,21 @@ SCIP_RETCODE SCIPincludeHeurAlns(
          "tolerance by which the fixing rate may be exceeded without generic unfixing",
          &heurdata->unfixtol, TRUE, DEFAULT_UNFIXTOL, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselocalredcost",
-         "should local reduced costs be used for generic (un)fixing?",
-         &heurdata->uselocalredcost, TRUE, DEFAULT_USELOCALREDCOST, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usepscost",
-         "should pseudo cost scores be used for variable priorization?",
-         &heurdata->usepscost, TRUE, DEFAULT_USEPSCOST, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/heurtimelimit",
+         "time limit for a single heuristic run",
+         &heurdata->heurtimelimit, TRUE, DEFAULT_HEURTIMELIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/initduringroot",
          "should the heuristic be executed multiple times during the root node?",
          &heurdata->initduringroot, TRUE, DEFAULT_INITDURINGROOT, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/defaultroot",
+         "should the default priorities be used at the root node?",
+         &heurdata->defaultroot, TRUE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/nselections",
+         "number of heuristics picked by the scheduler in one call (-1: number of controlled heuristics, 0: until new incumbent is found)",
+         &heurdata->nselections, TRUE, DEFAULT_NSELECTIONS, -1, 100, NULL, NULL) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_NEIGHBORHOOD) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NEIGHBORHOOD, TABLE_DESC_NEIGHBORHOOD, TRUE,

@@ -227,17 +227,39 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
 /** returns true if the given history contains a valid ratio */
 SCIP_Bool SCIPhistoryIsRatioValid(
    SCIP_HISTORY*         history             /**< branching and inference history */
-);
+   );
 
 /** returns the most recent ratio computed given the variable history */
 SCIP_Real SCIPhistoryGetLastRatio(
    SCIP_HISTORY*         history             /**< branching and inference history */
-);
+   );
 
 /** returns the most recent value of r/l used to compute this variable's ratio */
 SCIP_Real SCIPhistoryGetLastBalance(
    SCIP_HISTORY*         history             /**< branching and inference history */
-);
+   );
+
+/** returns the average efficacy value for the GMI cut produced by this variable */
+SCIP_Real SCIPhistoryGetAvgGMIeff(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+   );
+
+/** increases the average efficacy value for the GMI cut produced by this variable */
+void SCIPhistoryIncGMIeffSum(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             gmieff              /**< normalized efficacy value of a cut which will increase gmieff */
+   );
+
+/** returns the most recent efficacy value for the GMI cut produced by this variable */
+SCIP_Real SCIPhistoryGetLastGMIeff(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+   );
+
+/** sets the new most recent efficacy value for the GMI cut produced by this variable */
+void SCIPhistorySetLastGMIeff(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             gmieff              /**< Efficacy of GMI cut produced from simplex tableau row of this var */
+   );
 
 /** sets the ratio history for a particular variable */
 void SCIPhistorySetRatioHistory(
@@ -245,7 +267,7 @@ void SCIPhistorySetRatioHistory(
    SCIP_Bool             valid,              /**< True iff the ratio computed is valid */
    SCIP_Real             ratio,              /**< Ratio of the characteristic polynomial with gains (1, rightgain/leftgain) */
    SCIP_Real             balance             /**< The value of rightgain/leftgain */
-);
+   );
 
 #ifdef NDEBUG
 
@@ -289,6 +311,12 @@ void SCIPhistorySetRatioHistory(
 #define SCIPhistorySetRatioHistory(history,newvalid,newratio,newbalance) (history)->ratiovalid = newvalid, \
     (history)->ratio = newratio, (history)->balance = newbalance
 #define SCIPhistoryGetLastBalance(history) ((history)->balance)
+#define SCIPhistoryGetLastGMIeff(history) ((history)->gmieff)
+#define SCIPhistorySetLastGMIeff(history,newgmieff) (history)->gmieff = newgmieff
+#define SCIPhistoryGetAvgGMIeff(history) ((history)->ngmi > 0 \
+      ? (SCIP_Real)(history)->gmieffsum/(SCIP_Real)(history)->ngmi : 0.0)
+#define SCIPhistoryIncGMIeffSum(history, newgmieff) { (history)->gmieffsum += newgmieff; \
+      (history)->ngmi += 1; }
 
 #endif
 

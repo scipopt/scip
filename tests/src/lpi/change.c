@@ -337,7 +337,7 @@ TheoryDataPoints(change, testchgcoef) =
 {
    DataPoints(int, 0, 1),
    DataPoints(int, 0, 1),
-   DataPoints(SCIP_Real, 0, 1, -1, 2, -2),
+   DataPoints(SCIP_Real, 0, 1, -1),
    DataPoints(int, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
 };
 

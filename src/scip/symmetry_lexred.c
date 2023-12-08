@@ -112,6 +112,7 @@ struct SCIP_LexRedData
    int                   nred;               /**< total number of reductions */
    int                   ncutoff;            /**< total number of cutoffs */
    SCIP_Bool             hasdynamicperm;     /**< whether there exists a permutation that is treated dynamically */
+   SCIP_Bool             treewarninggiven;   /**< whether a warning is given for missing nodes in shadowtree */
 };
 
 
@@ -1663,7 +1664,8 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
    SCIP_VAR**            branchvars,         /**< array to populate with variables branched on */
    int*                  nbranchvars,        /**< number of elements in branchvars array */
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to shadow tree structure */
-   SCIP_NODE*            focusnode           /**< focusnode to which the rooted path is evaluated */
+   SCIP_NODE*            focusnode,          /**< focusnode to which the rooted path is evaluated */
+   SCIP_Bool*            inforesolved        /**< pointer to store whether information is successfully resolved */
    )
 {
    SCIP_SHADOWNODE* shadownode;
@@ -1684,9 +1686,22 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
    assert( nbranchvars != NULL );
    assert( shadowtree != NULL );
    assert( focusnode != NULL );
+   assert( inforesolved != NULL );
 
    shadownode = SCIPshadowTreeGetShadowNode(shadowtree, focusnode);
-   assert( shadownode != NULL );
+
+   if ( shadownode == NULL )
+   {
+      /* the arrays to fill are unchanged, so they remain clean */
+      *inforesolved = FALSE;
+      if ( !masterdata->treewarninggiven )
+      {
+         SCIPwarningMessage(scip, "Attempting lexicographic reduction on nodes not existing in the symmetry shadowtree"
+            " (and suppressing future warnings)\n");
+         masterdata->treewarninggiven = TRUE;
+      }
+      return SCIP_OKAY;
+   }
    shadowdepth = SCIPnodeGetDepth(focusnode);
 
    /* branchvars array is initially empty */
@@ -1751,6 +1766,7 @@ SCIP_RETCODE shadowtreeFillNodeDepthBranchIndices(
    /* In the last iteration, we handled the branching decisions at the root node, so shadowdepth must have value 0. */
    assert( shadowdepth == 0 );
 
+   *inforesolved = TRUE;
    return SCIP_OKAY;
 }
 
@@ -1921,6 +1937,7 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
    NODEDEPTHBRANCHINDEX* nodedepthbranchindices = NULL;
    SCIP_VAR** branchvars = NULL;
    int nbranchvars = 0;
+   SCIP_Bool inforesolved;
 
    assert( scip != NULL );
    assert( masterdata != NULL );
@@ -1958,7 +1975,16 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &nodedepthbranchindices, masterdata->nsymvars) );
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &branchvars, masterdata->nsymvars) );
       SCIP_CALL( shadowtreeFillNodeDepthBranchIndices(scip, masterdata, nodedepthbranchindices,
-            branchvars, &nbranchvars, shadowtree, focusnode) );
+            branchvars, &nbranchvars, shadowtree, focusnode, &inforesolved) );
+
+      /* if the information cannot be resolved because a node is missing from the shadowtree, do not propagate */
+      if ( !inforesolved )
+      {
+         /* shadowtreeFillNodeDepthBranchIndices keeps the input arrays clean if it terminates early */
+         SCIPfreeCleanBufferArray(scip, &branchvars);
+         SCIPfreeCleanBufferArray(scip, &nodedepthbranchindices);
+         return SCIP_OKAY;
+      }
       /* ... Do everything using this nodedepthbranchindices structure */
    }
 
@@ -2155,6 +2181,7 @@ SCIP_RETCODE SCIPincludeLexicographicReduction(
    (*masterdata)->nred = 0;
    (*masterdata)->ncutoff = 0;
    (*masterdata)->hasdynamicperm = FALSE;
+   (*masterdata)->treewarninggiven = FALSE;
 
    return SCIP_OKAY;
 }

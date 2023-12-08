@@ -26,8 +26,12 @@ Features
 - added special presolving step for logicor and set covering/packing for constraints with two variables and one independent variable
 - increased the depth field of the tree structure from 16 to 30 bits and the max depth of the search tree from 65534 to 1073741822
 - added new cut selector plugin called cutsel_ensemble. Performs a superset of hybrid cutsel. Implements new filtering methods and scoring options.
+- added new branching rule based on Gomory mixed-integer cuts
+- added new branching score to the reliability pseudo-cost branching rule
 - added monoidal strengthening to intersection cut generation of nlhdlr_quadratic
 - extended heuristic dps to run after processing the node and to use strict limits for the reoptimization step
+- added new heuristic heur_scheduler that models the selection of LNS and diving heuristics as a multi-armed bandit problem
+- added nonlinear handler for signomial expressions: adds cuts based on a difference of convex functions representation
 
 Performance improvements
 ------------------------
@@ -42,6 +46,7 @@ Performance improvements
 - Use sassy/bliss as default symmetry computation package.
 - No longer linearize indicator constraints in undercover heuristic by default.
 - Deactivate pre-root heuristic zeroobj in undercover heuristic.
+- Added new branching score tiebreaker for reliability pseudo-cost branching rule
 - Try nearest bound if zero solution value is out of bounds in heuristic trivial.
 
 Examples and applications
@@ -98,6 +103,11 @@ Interface changes
   for managing a copy of the branch-and-bound tree for symmetry handling purposes.
 - SCIPdotWriteOpening(), SCIPdotWriteNode(), SCIPdotWriteArc(), SCIPdotWriteClosing()
 - SCIPincludeCutselEnsemble(), SCIPselectCutsEnsemble() to include cutsel_ensemble or use the selection algorithm
+- SCIPincludeBranchruleGomory() includes new gomory cut based branching rule
+- SCIPgetVarAvgGMIScore(), SCIPincVarGMISumScore(), SCIPgetVarLastGMIScore(), SCIPsetVarLastGMIScore() set historical values used by SCIP's default branching rule
+- SCIPincludeNlhdlrSignomial() includes the signomial nonlinear handler
+- SCIPgetExprMonomialData() returns a monomial representation of a product expression
+- SCIPestimateRoot() computes estimators for roots with exponent in [0,1]
 
 ### Command line interface
 
@@ -140,12 +150,16 @@ Interface changes
   that is at least as good as the given value
 - heuristics/undercover/{coverand,coverind,covernl} to control which nonlinearities to consider (by default only "and" and nonlinear constraints)
 - cutselection/ensemble/* all parameters for new ensemble cut selector
+- branching/relpscost/gmiavgeffweight specifies the weight in the relpscost branching score of the normalized  efficacy of all generated GMI cuts (for a variable)
+  branching/relpscost/gmilasteffweight specifies the weight in the elpscost branching score of the normalized efficacy of the last generated GMI cut (for a variable)
 - nlhdlr/quadratic/usemonoidal to enable monoidal strengthening when separating quadratics with intersection cuts
 - nlhdlr/quadratic/trackmore to collect more statistics for monoidal strengthening when separating quadratics with intersection cuts
 - nlhdlr/quadratic/useminrep to use the minimal representation to compute cut coefficients when separating quadratics with intersection cuts
 - nlhdlr/quadratic/sparsifycuts to enable sparsification of intersection cuts for quadratics
 - heuristics/dps/reoptlimits to set strict limits for the reoptimization step in dps
 - heuristics/dps/timing to run dps after processing the node
+- heuristics/scheduler/* all parameters for new scheduler heuristic
+- nlhdlr/signomial/enabled, nlhdlr/signomial/maxnundervars, nlhdlr/signomial/mincutscale: parameters for the signomial nonlinear handler
 
 ### Data structures
 
@@ -160,6 +174,7 @@ Deleted files
 Unit tests
 ----------
 - new unittests for nlhdlr_quadratic that test monoidal strengthening and the use of the minimal representation to compute cut coefficients
+- unittests for nlhdlr_signomial
 
 Testing
 -------
@@ -298,6 +313,7 @@ Features
 ### Interfaces to external software
 
 - updated XPRESS interface to work with XPRESS 41 as well
+- new interface to LP solver HiGHS (lpi_highs.cpp)
 
 ### Changed parameters
 

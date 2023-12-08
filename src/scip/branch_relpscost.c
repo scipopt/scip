@@ -73,6 +73,8 @@
 #define DEFAULT_CONFLENGTHWEIGHT 0.0         /**< weight in score calculations for conflict length score*/
 #define DEFAULT_INFERENCEWEIGHT  0.0001      /**< weight in score calculations for inference score */
 #define DEFAULT_CUTOFFWEIGHT     0.0001      /**< weight in score calculations for cutoff score */
+#define DEFAULT_GMIAVGEFFWEIGHT  0.0         /**< weight in score calculations of average GMI cut normed efficacies */
+#define DEFAULT_GMILASTEFFWEIGHT 0.00001     /**< weight in score calculations of last GMI cut normed efficacy */
 #define DEFAULT_PSCOSTWEIGHT     1.0         /**< weight in score calculations for pseudo cost score */
 #define DEFAULT_NLSCOREWEIGHT    0.1         /**< weight in score calculations for nlcount score */
 #define DEFAULT_MINRELIABLE      1.0         /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
@@ -115,6 +117,8 @@ struct SCIP_BranchruleData
    SCIP_Real             conflengthweight;   /**< weight in score calculations for conflict length score */
    SCIP_Real             inferenceweight;    /**< weight in score calculations for inference score */
    SCIP_Real             cutoffweight;       /**< weight in score calculations for cutoff score */
+   SCIP_Real             gmiavgeffweight;    /**< weight in score calculations of average GMI normed cut efficacies */
+   SCIP_Real             gmilasteffweight;   /**< weight in score calculations of last GMI cut normalized efficacy */
    SCIP_Real             pscostweight;       /**< weight in score calculations for pseudo cost score */
    SCIP_Real             nlscoreweight;      /**< weight in score calculations for nlcount score */
    SCIP_Real             minreliable;        /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
@@ -590,6 +594,8 @@ SCIP_Real calcScore(
    SCIP_Real             avginferencescore,  /**< average inference score */
    SCIP_Real             cutoffscore,        /**< cutoff score of current variable */
    SCIP_Real             avgcutoffscore,     /**< average cutoff score */
+   SCIP_Real             gmieffscore,        /**< normalized-eff of avg GMI cuts from row when var was frac and basic */
+   SCIP_Real             lastgmieffscore,    /**< last normalized gmieffscore when var was frac and basic  */
    SCIP_Real             pscostscore,        /**< pscost score of current variable */
    SCIP_Real             avgpscostscore,     /**< average pscost score */
    SCIP_Real             nlscore,            /**< nonlinear score of current variable between 0 and 1 */
@@ -615,7 +621,8 @@ SCIP_Real calcScore(
    score = dynamicfactor * (branchruledata->conflictweight * (1.0 - 1.0/(1.0+conflictscore/avgconflictscore))
             + branchruledata->conflengthweight * (1.0 - 1.0/(1.0+conflengthscore/avgconflengthscore))
             + branchruledata->inferenceweight * (1.0 - 1.0/(1.0+inferencescore/avginferencescore))
-            + branchruledata->cutoffweight * (1.0 - 1.0/(1.0+cutoffscore/avgcutoffscore)))
+            + branchruledata->cutoffweight * (1.0 - 1.0/(1.0+cutoffscore/avgcutoffscore))
+            + branchruledata->gmiavgeffweight * gmieffscore + branchruledata->gmilasteffweight * lastgmieffscore)
          + branchruledata->pscostweight / dynamicfactor * (1.0 - 1.0/(1.0+pscostscore/avgpscostscore))
          + branchruledata->nlscoreweight * nlscore;
 
@@ -1032,6 +1039,8 @@ SCIP_RETCODE execRelpscost(
             SCIP_Real conflengthscore;
             SCIP_Real inferencescore;
             SCIP_Real cutoffscore;
+            SCIP_Real gmieffscore;
+            SCIP_Real lastgmieffscore;
             SCIP_Real pscostscore;
             SCIP_Real nlscore;
             SCIP_Real score;
@@ -1040,6 +1049,8 @@ SCIP_RETCODE execRelpscost(
             conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
             inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
             cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+            gmieffscore = SCIPgetVarAvgGMIScore(scip, branchcands[c]);
+            lastgmieffscore = SCIPgetVarLastGMIScore(scip, branchcands[c]);
             nlscore = calcNlscore(scip, branchruledata->nlcount, branchruledata->nlcountmax, SCIPvarGetProbindex(branchcands[c]));
             pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
 
@@ -1065,8 +1076,8 @@ SCIP_RETCODE execRelpscost(
             }
 
             score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c],
-               degeneracyfactor);
+               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, gmieffscore, lastgmieffscore,
+               pscostscore, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);
 
             /* check for better score of candidate */
             if( SCIPisSumGE(scip, score, bestpsscore) )
@@ -1095,6 +1106,8 @@ SCIP_RETCODE execRelpscost(
          SCIP_Real conflengthscore;
          SCIP_Real inferencescore;
          SCIP_Real cutoffscore;
+         SCIP_Real gmieffscore;
+         SCIP_Real lastgmieffscore;
          SCIP_Real pscostscore;
          SCIP_Real nlscore;
          SCIP_Real score;
@@ -1122,6 +1135,8 @@ SCIP_RETCODE execRelpscost(
          conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
          inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
          cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+         gmieffscore = SCIPgetVarAvgGMIScore(scip, branchcands[c]);
+         lastgmieffscore = SCIPgetVarLastGMIScore(scip, branchcands[c]);
          nlscore = calcNlscore(scip, branchruledata->nlcount, branchruledata->nlcountmax, SCIPvarGetProbindex(branchcands[c]));
          pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
          usesb = FALSE;
@@ -1193,14 +1208,16 @@ SCIP_RETCODE execRelpscost(
 
          /* combine the five score values */
          scoresfrompc[c] =  calcScore(scip, branchruledata, 0.0, avgconflictscore, 0.0, avgconflengthscore,
-                                      0.0, avginferencescore, 0.0, avgcutoffscore, pscostscore, avgpscostscore, 0.0, branchcandsfrac[c], degeneracyfactor);
+                                      0.0, avginferencescore, 0.0, avgcutoffscore, 0.0, 0.0,
+                                      pscostscore, avgpscostscore, 0.0, branchcandsfrac[c], degeneracyfactor);
          scoresfromothers[c] = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-                                         inferencescore, avginferencescore, cutoffscore, avgcutoffscore, 0.0, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);
+                                         inferencescore, avginferencescore, cutoffscore, avgcutoffscore, gmieffscore, lastgmieffscore,
+                                         0.0, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);
          score = scoresfrompc[c] + scoresfromothers[c];
          scores[c] = score;
          /*score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c],
-            degeneracyfactor);*/
+            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, gmieffscore, lastgmieffscore,
+            pscostscore, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);*/
          if( usesb )
          {
             int j;
@@ -1599,6 +1616,8 @@ SCIP_RETCODE execRelpscost(
             SCIP_Real conflengthscore;
             SCIP_Real inferencescore;
             SCIP_Real cutoffscore;
+            SCIP_Real gmieffscore;
+            SCIP_Real lastgmieffscore;
             SCIP_Real pscostscore;
             SCIP_Real nlscore;
             SCIP_Real score;
@@ -1623,17 +1642,22 @@ SCIP_RETCODE execRelpscost(
             inferencescore = branchruledata->usesblocalinfo ? SCIPgetBranchScore(scip, branchcands[c], (SCIP_Real)ndomredsdown, (SCIP_Real)ndomredsup)
                   : SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
             cutoffscore = branchruledata->usesblocalinfo ? 0.0 : SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+            gmieffscore = branchruledata->usesblocalinfo ? 0.0 : SCIPgetVarAvgGMIScore(scip, branchcands[c]);
+            lastgmieffscore = branchruledata->usesblocalinfo ? 0.0 : SCIPgetVarLastGMIScore(scip, branchcands[c]);
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
             scoresfrompc[c] =  calcScore(scip, branchruledata, 0.0, avgconflictscore, 0.0, avgconflengthscore,
-                                         0.0, avginferencescore, 0.0, avgcutoffscore, pscostscore, avgpscostscore, 0.0, branchcandsfrac[c], degeneracyfactor);
+                                         0.0, avginferencescore, 0.0, avgcutoffscore, 0.0, 0.0, pscostscore,
+                                         avgpscostscore, 0.0, branchcandsfrac[c], degeneracyfactor);
             scoresfromothers[c] = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-                                            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, 0.0, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);
+                                            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, gmieffscore,
+                                            lastgmieffscore, 0.0, avgpscostscore, nlscore, branchcandsfrac[c],
+                                            degeneracyfactor);
             score = scoresfrompc[c] + scoresfromothers[c];
             scores[c] = score;
             /*score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c],
-               degeneracyfactor);*/
+               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, gmieffscore, lastgmieffscore,
+               pscostscore, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);*/
 
             if( SCIPisSumGE(scip, score, bestsbscore) )
             {
@@ -1664,9 +1688,9 @@ SCIP_RETCODE execRelpscost(
             else
                lookahead += 1.0;
 
-            SCIPdebugMsg(scip, " -> variable <%s> (solval=%g, down=%g (%+g,valid=%u), up=%g (%+g,valid=%u), score=%g/ %g/%g %g/%g -> %g)\n",
+            SCIPdebugMsg(scip, " -> variable <%s> (solval=%g, down=%g (%+g,valid=%u), up=%g (%+g,valid=%u), score=%g/ %g/%g %g/%g %g -> %g)\n",
                SCIPvarGetName(branchcands[c]), branchcandssol[c], down, downgain, downvalid, up, upgain, upvalid,
-               pscostscore, conflictscore, conflengthscore, inferencescore, cutoffscore,  score);
+               pscostscore, conflictscore, conflengthscore, inferencescore, cutoffscore, gmieffscore, score);
          }
       }
 #ifdef SCIP_DEBUG
@@ -2089,6 +2113,14 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "branching/relpscost/cutoffweight",
          "weight in score calculations for cutoff score",
          &branchruledata->cutoffweight, TRUE, DEFAULT_CUTOFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+          "branching/relpscost/gmiavgeffweight",
+          "weight in score calculations for average GMI cuts normalized efficacy",
+          &branchruledata->gmiavgeffweight, TRUE, DEFAULT_GMIAVGEFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+          "branching/relpscost/gmilasteffweight",
+          "weight in score calculations for last GMI cuts normalized efficacy",
+          &branchruledata->gmilasteffweight, TRUE, DEFAULT_GMILASTEFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/pscostweight",
          "weight in score calculations for pseudo cost score",

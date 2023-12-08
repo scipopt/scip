@@ -130,6 +130,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleCloud(scip) );
    SCIP_CALL( SCIPincludeBranchruleDistribution(scip) );
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
+   SCIP_CALL( SCIPincludeBranchruleGomory(scip) );
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );
    SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
    SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
@@ -190,6 +191,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurRins(scip) );
    SCIP_CALL( SCIPincludeHeurRootsoldiving(scip) );
    SCIP_CALL( SCIPincludeHeurRounding(scip) );
+   SCIP_CALL( SCIPincludeHeurScheduler(scip) );
    SCIP_CALL( SCIPincludeHeurShiftandpropagate(scip) );
    SCIP_CALL( SCIPincludeHeurShifting(scip) );
    SCIP_CALL( SCIPincludeHeurSimplerounding(scip) );
@@ -259,6 +261,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNlhdlrPerspective(scip) );
    SCIP_CALL( SCIPincludeNlhdlrQuadratic(scip) );
    SCIP_CALL( SCIPincludeNlhdlrQuotient(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrSignomial(scip) );
    SCIP_CALL( SCIPincludeNlhdlrSoc(scip) );
    SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverFilterSQP(scip) );

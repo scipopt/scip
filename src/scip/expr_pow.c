@@ -986,93 +986,6 @@ void estimateHyperbolaMixed(
    /* else: x has mixed sign -> pole is within domain -> cannot estimate */
 }
 
-/** Separation for roots with exponent in [0,1]
- *
- * - x^0.5 with x >= 0
- <pre>
-  8 +----------------------------------------------------------------------+
-    |             +             +              +             +             |
-  7 |-+                                                     x**0.5 ********|
-    |                                                             *********|
-    |                                                      ********        |
-  6 |-+                                             ********             +-|
-    |                                         ******                       |
-  5 |-+                                 ******                           +-|
-    |                             ******                                   |
-    |                        *****                                         |
-  4 |-+                  ****                                            +-|
-    |               *****                                                  |
-  3 |-+          ****                                                    +-|
-    |         ***                                                          |
-    |      ***                                                             |
-  2 |-+  **                                                              +-|
-    |  **                                                                  |
-  1 |**                                                                  +-|
-    |*                                                                     |
-    |*            +             +              +             +             |
-  0 +----------------------------------------------------------------------+
-    0             10            20             30            40            50
- </pre>
- */
-static
-void estimateRoot(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             exponent,           /**< exponent */
-   SCIP_Bool             overestimate,       /**< should the power be overestimated? */
-   SCIP_Real             xlb,                /**< lower bound on x */
-   SCIP_Real             xub,                /**< upper bound on x */
-   SCIP_Real             xref,               /**< reference point (where to linearize) */
-   SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
-   SCIP_Real*            slope,              /**< buffer to store slope of estimator */
-   SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is,
-                                              *   it depends on given bounds */
-   SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
-   )
-{
-   assert(scip != NULL);
-   assert(constant != NULL);
-   assert(slope != NULL);
-   assert(islocal != NULL);
-   assert(success != NULL);
-   assert(exponent > 0.0);
-   assert(exponent < 1.0);
-   assert(xlb >= 0.0);
-
-   if( !overestimate )
-   {
-      /* underestimate -> secant */
-      computeSecant(scip, FALSE, exponent, xlb, xub, constant, slope, success);
-      *islocal = TRUE;
-   }
-   else
-   {
-      /* overestimate -> tangent */
-
-      /* need to linearize right of 0 */
-      if( xref < 0.0 )
-         xref = 0.0;
-
-      if( SCIPisZero(scip, xref) )
-      {
-         if( SCIPisZero(scip, xub) )
-         {
-            *success = FALSE;
-            *islocal = FALSE;
-            return;
-         }
-
-         /* if xref is 0 (then xlb=0 probably), then slope is infinite, then try to move away from 0 */
-         if( xub < 0.2 )
-            xref = 0.5 * xlb + 0.5 * xub;
-         else
-            xref = 0.1;
-      }
-
-      computeTangent(scip, FALSE, exponent, xref, constant, slope, success);
-      *islocal = FALSE;
-   }
-}
-
 /** builds an estimator for a power function */
 static
 SCIP_RETCODE buildPowEstimator(
@@ -1197,7 +1110,7 @@ SCIP_RETCODE buildPowEstimator(
       assert(exponent < 1.0); /* the only case that should be left */
       assert(exponent > 0.0); /* should hold due to previous if */
 
-      estimateRoot(scip, exponent, overestimate, childlb, childub, refpoint, constant, coef, islocal, success);
+      SCIPestimateRoot(scip, exponent, overestimate, childlb, childub, refpoint, constant, coef, islocal, success);
 
       /* if estimate is locally valid, then we computed a secant, and so branching can improve it */
       *branchcand = *islocal;
@@ -3449,6 +3362,92 @@ void SCIPaddSquareSecant(
 
    *lincoef     += coef;
    *linconstant += constant;
+}
+
+/** Separation for roots with exponent in [0,1]
+ *
+ * - x^0.5 with x >= 0
+ <pre>
+  8 +----------------------------------------------------------------------+
+    |             +             +              +             +             |
+  7 |-+                                                     x**0.5 ********|
+    |                                                             *********|
+    |                                                      ********        |
+  6 |-+                                             ********             +-|
+    |                                         ******                       |
+  5 |-+                                 ******                           +-|
+    |                             ******                                   |
+    |                        *****                                         |
+  4 |-+                  ****                                            +-|
+    |               *****                                                  |
+  3 |-+          ****                                                    +-|
+    |         ***                                                          |
+    |      ***                                                             |
+  2 |-+  **                                                              +-|
+    |  **                                                                  |
+  1 |**                                                                  +-|
+    |*                                                                     |
+    |*            +             +              +             +             |
+  0 +----------------------------------------------------------------------+
+    0             10            20             30            40            50
+ </pre>
+ */
+void SCIPestimateRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_Bool             overestimate,       /**< should the power be overestimated? */
+   SCIP_Real             xlb,                /**< lower bound on x */
+   SCIP_Real             xub,                /**< upper bound on x */
+   SCIP_Real             xref,               /**< reference point (where to linearize) */
+   SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
+   SCIP_Real*            slope,              /**< buffer to store slope of estimator */
+   SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is,
+                                                  it depends on given bounds */
+   SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
+   )
+{
+   assert(scip != NULL);
+   assert(constant != NULL);
+   assert(slope != NULL);
+   assert(islocal != NULL);
+   assert(success != NULL);
+   assert(exponent > 0.0);
+   assert(exponent < 1.0);
+   assert(xlb >= 0.0);
+
+   if( !overestimate )
+   {
+      /* underestimate -> secant */
+      computeSecant(scip, FALSE, exponent, xlb, xub, constant, slope, success);
+      *islocal = TRUE;
+   }
+   else
+   {
+      /* overestimate -> tangent */
+
+      /* need to linearize right of 0 */
+      if( xref < 0.0 )
+         xref = 0.0;
+
+      if( SCIPisZero(scip, xref) )
+      {
+         if( SCIPisZero(scip, xub) )
+         {
+            *success = FALSE;
+            *islocal = FALSE;
+            return;
+         }
+
+         /* if xref is 0 (then xlb=0 probably), then slope is infinite, then try to move away from 0 */
+         if( xub < 0.2 )
+            xref = 0.5 * xlb + 0.5 * xub;
+         else
+            xref = 0.1;
+      }
+
+      computeTangent(scip, FALSE, exponent, xref, constant, slope, success);
+      *islocal = FALSE;
+   }
 }
 
 /* from pub_expr.h */

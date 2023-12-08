@@ -35,6 +35,7 @@ set(scipsources
     scip/branch_cloud.c
     scip/branch_distribution.c
     scip/branch_fullstrong.c
+    scip/branch_gomory.c
     scip/branch_inference.c
     scip/branch_leastinf.c
     scip/branch_lookahead.c
@@ -147,6 +148,7 @@ set(scipsources
     scip/heur_rins.c
     scip/heur_rootsoldiving.c
     scip/heur_rounding.c
+    scip/heur_scheduler.c
     scip/heur_shiftandpropagate.c
     scip/heur_shifting.c
     scip/heur_simplerounding.c
@@ -169,6 +171,7 @@ set(scipsources
     scip/nlhdlr_perspective.c
     scip/nlhdlr_quadratic.c
     scip/nlhdlr_quotient.c
+    scip/nlhdlr_signomial.c
     scip/nlhdlr_soc.c
     scip/nlpi_all.c
     ${nlpi}
@@ -483,6 +486,7 @@ set(scipheaders
     scip/branch_cloud.h
     scip/branch_distribution.h
     scip/branch_fullstrong.h
+    scip/branch_gomory.h
     scip/branch.h
     scip/branch_inference.h
     scip/branch_leastinf.h
@@ -618,6 +622,7 @@ set(scipheaders
     scip/heur_rins.h
     scip/heur_rootsoldiving.h
     scip/heur_rounding.h
+    scip/heur_scheduler.h
     scip/heur_shiftandpropagate.h
     scip/heur_shifting.h
     scip/heur_simplerounding.h
@@ -649,6 +654,7 @@ set(scipheaders
     scip/nlhdlr_perspective.h
     scip/nlhdlr_quadratic.h
     scip/nlhdlr_quotient.h
+    scip/nlhdlr_signomial.h
     scip/nlhdlr_soc.h
     scip/nlhdlr.h
     scip/nlp.h

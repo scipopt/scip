@@ -17,7 +17,7 @@ set(SCIP_VERSION_MAJOR 8)
 set(SCIP_VERSION_MINOR 1)
 set(SCIP_VERSION_PATCH 0)
 set(SCIP_VERSION_SUB 5)
-set(SCIP_VERSION_API 112)
+set(SCIP_VERSION_API 113)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
@@ -103,7 +103,7 @@ set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create th
 set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values GUI will offer for the variable
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
-set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso none )  #define list of values GUI will offer for the variable
+set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso highs none )  #define list of values GUI will offer for the variable
 
 set(SYM sbliss CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss sbliss nauty snauty none )  #define list of values GUI will offer for the variable
@@ -505,6 +505,13 @@ elseif(LPS STREQUAL "xprs")
     find_package(XPRESS REQUIRED)
 elseif(LPS STREQUAL "msk")
     find_package(MOSEK REQUIRED)
+elseif(LPS STREQUAL "highs")
+    find_package(HIGHS REQUIRED CONFIG)
+    find_package(Threads REQUIRED)
+    find_package(OpenMP)
+    if(OPENMP_FOUND)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    endif()
 elseif(LPS STREQUAL "none")
     set(lpi lpi/lpi_none.c)
 else()
@@ -593,6 +600,16 @@ if(MOSEK_FOUND)
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 else()
     message(STATUS "Support MOSEK: OFF")
+endif()
+
+if(HIGHS_FOUND)
+    include_directories(${HIGHS_INCLUDE_DIRS})
+    if(LPS STREQUAL "highs")
+        set(lpi lpi/lpi_highs.cpp)
+    endif()
+    set(LPS_LIBRARIES ${LPS_LIBRARIES} ${HIGHS_LIBRARIES} Threads::Threads)
+    set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} ${HIGHS_LIBRARIES} Threads::Threads)
+    message(WARNING "EXPERIMENTAL: You are using the experimental HiGHS interface. Please report any issues on https://github.com/scipopt/scip.")
 endif()
 
 if(QSO_FOUND)

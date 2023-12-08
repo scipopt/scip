@@ -3828,11 +3828,22 @@ SCIP_RETCODE SCIPvarFix(
       SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, fixedval) );
       SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, fixedval) );
 
-      /* explicitly set variable's bounds, even if the fixed value is in epsilon range of the old bound */
-      var->glbdom.lb = fixedval;
-      var->glbdom.ub = fixedval;
-      var->locdom.lb = fixedval;
-      var->locdom.ub = fixedval;
+      if( var->glbdom.lb != var->glbdom.ub )  /*lint !e777*/
+      {
+         /* explicitly set variable's bounds if the fixed value was in epsilon range of the old bound (so above call didn't set bound) */
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         {
+            /* if not continuous variable, then make sure variable is fixed to integer value */
+            assert(SCIPsetIsIntegral(set, fixedval));
+            fixedval = SCIPsetRound(set, fixedval);
+         }
+         var->glbdom.lb = fixedval;
+         var->glbdom.ub = fixedval;
+      }
+
+      /* ensure local domain is fixed to same value as global domain */
+      var->locdom.lb = var->glbdom.lb;
+      var->locdom.ub = var->glbdom.ub;
 
       /* delete implications and variable bounds information */
       SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, TRUE) );
@@ -16344,6 +16355,173 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
    }
 }
 
+/** returns the variable's average GMI efficacy score value generated from simplex tableau rows of this variable */
+SCIP_Real SCIPvarGetAvgGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat                /**< problem statistics */
+)
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.original.transvar == NULL )
+            return 0.0;
+         else
+            return SCIPvarGetAvgGMIScore(var->data.original.transvar, stat);
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         return SCIPhistoryGetAvgGMIeff(var->history);
+
+      case SCIP_VARSTATUS_FIXED:
+         return 0.0;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         return SCIPvarGetAvgGMIScore(var->data.aggregate.var, stat);
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         return 0.0;
+
+      case SCIP_VARSTATUS_NEGATED:
+         return SCIPvarGetAvgGMIScore(var->negatedvar, stat);
+
+      default:
+      SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return 0.0; /*lint !e527*/
+   }
+}
+
+/** increase the variable's GMI efficacy scores generated from simplex tableau rows of this variable */
+SCIP_RETCODE SCIPvarIncGMIeffSum(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
+)
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+   assert(gmieff >= 0);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.original.transvar != NULL )
+            SCIP_CALL( SCIPvarIncGMIeffSum(var->data.original.transvar, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         SCIPhistoryIncGMIeffSum(var->history, gmieff);
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_FIXED:
+         return SCIP_INVALIDDATA;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         SCIP_CALL( SCIPvarIncGMIeffSum(var->data.aggregate.var, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_NEGATED:
+         SCIP_CALL( SCIPvarIncGMIeffSum(var->negatedvar, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         return SCIP_INVALIDDATA;
+
+      default:
+      SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
+   }
+}
+
+/** returns the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
+SCIP_Real SCIPvarGetLastGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat                /**< problem statistics */
+)
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.original.transvar != NULL )
+            return SCIPvarGetLastGMIScore(var->data.original.transvar, stat);
+         return 0.0;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         return SCIPhistoryGetLastGMIeff(var->history);
+
+      case SCIP_VARSTATUS_FIXED:
+         return 0.0;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         return SCIPvarGetLastGMIScore(var->data.aggregate.var, stat);
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         return 0.0;
+
+      case SCIP_VARSTATUS_NEGATED:
+         return SCIPvarGetLastGMIScore(var->negatedvar, stat);
+
+      default:
+      SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return 0.0; /*lint !e527*/
+   }
+}
+
+
+/** sets the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
+SCIP_RETCODE SCIPvarSetLastGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
+)
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+   assert(gmieff >= 0);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.original.transvar != NULL )
+            SCIP_CALL( SCIPvarSetLastGMIScore(var->data.original.transvar, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         SCIPhistorySetLastGMIeff(var->history, gmieff);
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_FIXED:
+         return SCIP_INVALIDDATA;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         SCIP_CALL( SCIPvarSetLastGMIScore(var->data.aggregate.var, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_NEGATED:
+         SCIP_CALL( SCIPvarSetLastGMIScore(var->negatedvar, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         return SCIP_INVALIDDATA;
+
+      default:
+      SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
+   }
+}
 
 
 

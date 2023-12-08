@@ -70,6 +70,7 @@ SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
    SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< parameter to increase probability for exploration between all actions */
+   SCIP_Bool             usemodification,    /**< TRUE if modified eps greedy should be used */
    SCIP_Bool             preferrecent,       /**< should the weights be updated in an exponentially decaying way? */
    SCIP_Real             decayfactor,        /**< the factor to reduce the weight of older observations if exponential decay is enabled */
    int                   avglim,             /**< nonnegative limit on observation number before the exponential decay starts,
