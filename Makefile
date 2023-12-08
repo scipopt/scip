@@ -692,6 +692,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_rins.o \
 			scip/heur_rootsoldiving.o \
 			scip/heur_rounding.o \
+			scip/heur_scheduler.o \
 			scip/heur_shiftandpropagate.o \
 			scip/heur_shifting.o \
 			scip/heur_simplerounding.o \

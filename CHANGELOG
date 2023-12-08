@@ -29,6 +29,7 @@ Features
 - added new branching rule based on Gomory mixed-integer cuts
 - added new branching score to the reliability pseudo-cost branching rule
 - added monoidal strengthening to intersection cut generation of nlhdlr_quadratic
+- added new heuristic heur_scheduler that models the selection of LNS and diving heuristics as a multi-armed bandit problem
 - added nonlinear handler for signomial expressions: adds cuts based on a difference of convex functions representation
 
 Performance improvements
@@ -154,6 +155,7 @@ Interface changes
 - nlhdlr/quadratic/trackmore to collect more statistics for monoidal strengthening when separating quadratics with intersection cuts
 - nlhdlr/quadratic/useminrep to use the minimal representation to compute cut coefficients when separating quadratics with intersection cuts
 - nlhdlr/quadratic/sparsifycuts to enable sparsification of intersection cuts for quadratics
+- heuristics/scheduler/* all parameters for new scheduler heuristic
 - nlhdlr/signomial/enabled, nlhdlr/signomial/maxnundervars, nlhdlr/signomial/mincutscale: parameters for the signomial nonlinear handler
 
 ### Data structures
