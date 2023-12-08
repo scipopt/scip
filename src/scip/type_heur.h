@@ -67,7 +67,8 @@ enum SCIP_DiveContext
 {
    SCIP_DIVECONTEXT_TOTAL  = 0,                   /**< all contexts combined */
    SCIP_DIVECONTEXT_SINGLE = 1,                   /**< single heuristic context */
-   SCIP_DIVECONTEXT_ADAPTIVE = 2                  /**< within adaptive diving */
+   SCIP_DIVECONTEXT_ADAPTIVE = 2,                 /**< within adaptive diving */
+   SCIP_DIVECONTEXT_SCHEDULER = 3                 /**< within the scheduler heuristic */
 };
 typedef enum SCIP_DiveContext SCIP_DIVECONTEXT;
 

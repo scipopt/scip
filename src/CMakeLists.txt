@@ -148,6 +148,7 @@ set(scipsources
     scip/heur_rins.c
     scip/heur_rootsoldiving.c
     scip/heur_rounding.c
+    scip/heur_scheduler.c
     scip/heur_shiftandpropagate.c
     scip/heur_shifting.c
     scip/heur_simplerounding.c
@@ -621,6 +622,7 @@ set(scipheaders
     scip/heur_rins.h
     scip/heur_rootsoldiving.h
     scip/heur_rounding.h
+    scip/heur_scheduler.h
     scip/heur_shiftandpropagate.h
     scip/heur_shifting.h
     scip/heur_simplerounding.h

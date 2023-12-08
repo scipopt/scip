@@ -3249,15 +3249,24 @@ void SCIPprintHeuristicStatistics(
    if ( ndivesets > 0 && scip->set->misc_showdivingstats )
    {
       int c;
-      SCIP_DIVECONTEXT divecontexts[] = {SCIP_DIVECONTEXT_SINGLE, SCIP_DIVECONTEXT_ADAPTIVE};
+      SCIP_DIVECONTEXT divecontexts[] = {SCIP_DIVECONTEXT_SINGLE, SCIP_DIVECONTEXT_ADAPTIVE, SCIP_DIVECONTEXT_SCHEDULER};
 
-      /* print statistics for both contexts individually */
-      for( c = 0; c < 2; ++c )
+      /* print statistics for all three contexts individually */
+      for( c = 0; c < 3; ++c )
       {
          SCIP_DIVECONTEXT divecontext = divecontexts[c];
-         SCIPmessageFPrintInfo(scip->messagehdlr, file,
-            "Diving %-12s:      Calls      Nodes   LP Iters Backtracks  Conflicts   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n",
-            divecontext == SCIP_DIVECONTEXT_SINGLE ? "(single)" : "(adaptive)");
+
+         if( divecontext == SCIP_DIVECONTEXT_SINGLE )
+         {
+            SCIPmessageFPrintInfo(scip->messagehdlr, file,
+               "Diving %-12s:      Calls      Nodes   LP Iters Backtracks  Conflicts   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n", "(single)");
+         }
+         else
+         {
+            SCIPmessageFPrintInfo(scip->messagehdlr, file,
+               "Diving %-12s:      Calls      Nodes   LP Iters Backtracks  Conflicts   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n",
+               divecontext == SCIP_DIVECONTEXT_ADAPTIVE ? "(adaptive)" : "(scheduler)");
+         }
 
          for( i = 0; i < scip->set->nheurs; ++i )
          {
