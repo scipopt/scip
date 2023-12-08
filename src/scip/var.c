@@ -3828,11 +3828,22 @@ SCIP_RETCODE SCIPvarFix(
       SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, fixedval) );
       SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, fixedval) );
 
-      /* explicitly set variable's bounds, even if the fixed value is in epsilon range of the old bound */
-      var->glbdom.lb = fixedval;
-      var->glbdom.ub = fixedval;
-      var->locdom.lb = fixedval;
-      var->locdom.ub = fixedval;
+      if( var->glbdom.lb != var->glbdom.ub )  /*lint !e777*/
+      {
+         /* explicitly set variable's bounds if the fixed value was in epsilon range of the old bound (so above call didn't set bound) */
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         {
+            /* if not continuous variable, then make sure variable is fixed to integer value */
+            assert(SCIPsetIsIntegral(set, fixedval));
+            fixedval = SCIPsetRound(set, fixedval);
+         }
+         var->glbdom.lb = fixedval;
+         var->glbdom.ub = fixedval;
+      }
+
+      /* ensure local domain is fixed to same value as global domain */
+      var->locdom.lb = var->glbdom.lb;
+      var->locdom.ub = var->glbdom.ub;
 
       /* delete implications and variable bounds information */
       SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, TRUE) );
