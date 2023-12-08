@@ -232,6 +232,16 @@ SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 LPIINSTMSG	=	"  -> \"clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)\" is the path to the Clp installation directory, i.e., \"<Clp-path>/include/coin/ClpModel.hpp\" should exist.\n"
 endif
 
+LPSOPTIONS	+=	highs
+ifeq ($(LPS),highs)
+LINKER		=	CPP
+FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/highs.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/
+LPILIBOBJ	=	lpi/lpi_highs.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBSRC	=	$(SRCDIR)/lpi/lpi_highs.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/highs.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+LPIINSTMSG	=	"  -> \"highs.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)\" is the path to the HiGHS directory containing headers and libhighs.so.\n"
+endif
+
 LPSOPTIONS	+=	qso
 ifeq ($(LPS),qso)
 FLAGS         	+=      -I$(LIBDIR)/include/qsinc
