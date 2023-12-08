@@ -626,6 +626,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_components.o \
 			scip/cutsel_ensemble.o \
 			scip/cutsel_hybrid.o \
+			scip/cutsel_dynamic.o \
 			scip/dialog_default.o \
 			scip/event_softtimelimit.o \
 			scip/disp_default.o \

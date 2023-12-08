@@ -82,6 +82,7 @@ set(scipsources
     scip/cons_xor.c
     scip/cutsel_ensemble.c
     scip/cutsel_hybrid.c
+    scip/cutsel_dynamic.c
     scip/dcmp.c
     scip/dialog_default.c
     scip/event_globalbnd.c
@@ -547,6 +548,7 @@ set(scipheaders
     scip/cutsel.h
     scip/cutsel_ensemble.h
     scip/cutsel_hybrid.h
+    scip/cutsel_dynamic.h
     scip/dbldblarith.h
     scip/debug.h
     scip/dcmp.h

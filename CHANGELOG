@@ -28,6 +28,7 @@ Features
 - added new cut selector plugin called cutsel_ensemble. Performs a superset of hybrid cutsel. Implements new filtering methods and scoring options.
 - added new branching rule based on Gomory mixed-integer cuts
 - added new branching score to the reliability pseudo-cost branching rule
+- added new cut selector plugin called cutsel_dynamic. Performs a superset of hybrid cutsel. Implements new filtering methods and scoring options.
 - added monoidal strengthening to intersection cut generation of nlhdlr_quadratic
 - added new heuristic heur_scheduler that models the selection of LNS and diving heuristics as a multi-armed bandit problem
 - added nonlinear handler for signomial expressions: adds cuts based on a difference of convex functions representation
@@ -107,6 +108,7 @@ Interface changes
 - SCIPincludeNlhdlrSignomial() includes the signomial nonlinear handler
 - SCIPgetExprMonomialData() returns a monomial representation of a product expression
 - SCIPestimateRoot() computes estimators for roots with exponent in [0,1]
+- SCIPincludeCutselDynamic(), SCIPselectCutsDynamic() to include cutsel_dynamic or use the selection algorithm
 
 ### Command line interface
 
@@ -149,6 +151,7 @@ Interface changes
   that is at least as good as the given value
 - heuristics/undercover/{coverand,coverind,covernl} to control which nonlinearities to consider (by default only "and" and nonlinear constraints)
 - cutselection/ensemble/* all parameters for new ensemble cut selector
+- cutselection/dynamic/* all parameters for new dynamic cut selector
 - branching/relpscost/gmiavgeffweight specifies the weight in the relpscost branching score of the normalized  efficacy of all generated GMI cuts (for a variable)
   branching/relpscost/gmilasteffweight specifies the weight in the elpscost branching score of the normalized efficacy of the last generated GMI cut (for a variable)
 - nlhdlr/quadratic/usemonoidal to enable monoidal strengthening when separating quadratics with intersection cuts
