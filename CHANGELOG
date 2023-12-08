@@ -29,6 +29,7 @@ Features
 - added new branching rule based on Gomory mixed-integer cuts
 - added new branching score to the reliability pseudo-cost branching rule
 - added monoidal strengthening to intersection cut generation of nlhdlr_quadratic
+- extended obbt propagator to handle variables of the linear constraints corresponding to indicator constraints
 - added new heuristic heur_scheduler that models the selection of LNS and diving heuristics as a multi-armed bandit problem
 - added nonlinear handler for signomial expressions: adds cuts based on a difference of convex functions representation
 
