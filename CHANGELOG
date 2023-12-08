@@ -29,6 +29,7 @@ Features
 - added new branching rule based on Gomory mixed-integer cuts
 - added new branching score to the reliability pseudo-cost branching rule
 - added monoidal strengthening to intersection cut generation of nlhdlr_quadratic
+- added nonlinear handler for signomial expressions: adds cuts based on a difference of convex functions representation
 
 Performance improvements
 ------------------------
@@ -102,6 +103,9 @@ Interface changes
 - SCIPincludeCutselEnsemble(), SCIPselectCutsEnsemble() to include cutsel_ensemble or use the selection algorithm
 - SCIPincludeBranchruleGomory() includes new gomory cut based branching rule
 - SCIPgetVarAvgGMIScore(), SCIPincVarGMISumScore(), SCIPgetVarLastGMIScore(), SCIPsetVarLastGMIScore() set historical values used by SCIP's default branching rule
+- SCIPincludeNlhdlrSignomial() includes the signomial nonlinear handler
+- SCIPgetExprMonomialData() returns a monomial representation of a product expression
+- SCIPestimateRoot() computes estimators for roots with exponent in [0,1]
 
 ### Command line interface
 
@@ -150,6 +154,7 @@ Interface changes
 - nlhdlr/quadratic/trackmore to collect more statistics for monoidal strengthening when separating quadratics with intersection cuts
 - nlhdlr/quadratic/useminrep to use the minimal representation to compute cut coefficients when separating quadratics with intersection cuts
 - nlhdlr/quadratic/sparsifycuts to enable sparsification of intersection cuts for quadratics
+- nlhdlr/signomial/enabled, nlhdlr/signomial/maxnundervars, nlhdlr/signomial/mincutscale: parameters for the signomial nonlinear handler
 
 ### Data structures
 
@@ -164,6 +169,7 @@ Deleted files
 Unit tests
 ----------
 - new unittests for nlhdlr_quadratic that test monoidal strengthening and the use of the minimal representation to compute cut coefficients
+- unittests for nlhdlr_signomial
 
 Testing
 -------

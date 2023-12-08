@@ -1048,7 +1048,7 @@ void SCIPfreeExprQuadratic(
 
 /** evaluates quadratic term in a solution
  *
- * \note This requires that every expressiion used in the quadratic data is a variable expression.
+ * \note This requires that every expression used in the quadratic data is a variable expression.
  */
 SCIP_EXPORT
 SCIP_Real SCIPevalExprQuadratic(
@@ -1088,6 +1088,35 @@ SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(
 #define SCIPcheckExprQuadratic(scip, expr, isquadratic)  SCIPexprCheckQuadratic((scip)->set, (scip)->mem->probmem, expr, isquadratic)
 #define SCIPfreeExprQuadratic(scip, expr)                SCIPexprFreeQuadratic((scip)->mem->probmem, expr)
 #define SCIPcomputeExprQuadraticCurvature(scip, expr, curv, assumevarfixed, storeeigeninfo)  SCIPexprComputeQuadraticCurvature((scip)->set, (scip)->mem->probmem, (scip)->mem->buffer, (scip)->messagehdlr, expr, curv, assumevarfixed, storeeigeninfo)
+#endif
+
+/** @} */
+
+/**@name Monomial Expressions */
+/**@{ */
+
+/** returns a monomial representation of a product expression
+ *
+ * The array to store all factor expressions needs to be of size the number of
+ * children in the expression which is given by SCIPexprGetNChildren().
+ *
+ * Given a non-trivial monomial expression, the function finds its representation as \f$cx^\alpha\f$, where
+ * \f$c\f$ is a real coefficient, \f$x\f$ is a vector of auxiliary or original variables (where some entries can
+ * be NULL is the auxiliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
+ *
+ * A non-trivial monomial is a product of a least two expressions.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetExprMonomialData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            coef,               /**< coefficient \f$c\f$ */
+   SCIP_Real*            exponents,          /**< exponents \f$\alpha\f$ */
+   SCIP_EXPR**           factors             /**< factor expressions \f$x\f$ */
+   );
+
+#ifdef NDEBUG
+#define SCIPgetExprMonomialData(scip, expr, coef, exponents, factors)  SCIPexprGetMonomialData((scip)->set, (scip)->mem->probmem, expr, coef, exponents, factors)
 #endif
 
 /** @} */

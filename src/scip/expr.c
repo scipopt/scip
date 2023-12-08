@@ -4239,4 +4239,59 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
    return expr->quaddata->allexprsarevars;
 }
 
+/** returns a monomial representation of a product expression
+ *
+ * The array to store all factor expressions needs to be of size the number of
+ * children in the expression which is given by SCIPexprGetNChildren().
+ *
+ * Given a non-trivial monomial expression, the function finds its representation as \f$cx^\alpha\f$, where
+ * \f$c\f$ is a real coefficient, \f$x\f$ is a vector of auxiliary or original variables (where some entries can
+ * be NULL is the auxiliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
+ *
+ * A non-trivial monomial is a product of a least two expressions.
+ */
+SCIP_RETCODE SCIPexprGetMonomialData(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            coef,               /**< coefficient \f$c\f$ */
+   SCIP_Real*            exponents,          /**< exponents \f$\alpha\f$ */
+   SCIP_EXPR**           factors             /**< factor expressions \f$x\f$ */
+   )
+{
+   SCIP_EXPR* child;
+   int c;
+   int nexprs;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(coef != NULL);
+   assert(exponents != NULL);
+   assert(factors != NULL);
+
+   assert(SCIPexprIsProduct(set, expr));
+
+   *coef = SCIPgetCoefExprProduct(expr);
+   nexprs = SCIPexprGetNChildren(expr);
+
+   for( c = 0; c < nexprs; ++c )
+   {
+      child = SCIPexprGetChildren(expr)[c];
+
+      if( SCIPexprIsPower(set, child) )
+      {
+         exponents[c] = SCIPgetExponentExprPow(child);
+         factors[c] = SCIPexprGetChildren(child)[0];
+      }
+      else
+      {
+         exponents[c] = 1.0;
+         factors[c] = child;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /**@} */

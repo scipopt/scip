@@ -703,6 +703,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/nlhdlr_perspective.o \
 			scip/nlhdlr_quadratic.o \
 			scip/nlhdlr_quotient.o \
+			scip/nlhdlr_signomial.o \
 			scip/nlhdlr_soc.o \
 			scip/nlpi_all.o \
 			scip/nodesel_bfs.o \
