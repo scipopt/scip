@@ -756,6 +756,14 @@ SCIP_RETCODE SCIPsimplifyExpr(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
+/** retrieves symmetry information from an expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetSymDataExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression from which information needs to be retrieved */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry data */
+   );
+
 /** replaces common sub-expressions in a given expression graph by using a hash key for each expression
  *
  *  The algorithm consists of two steps:
@@ -944,6 +952,13 @@ SCIP_DECL_EXPRSIMPLIFY(SCIPcallExprSimplify);
 SCIP_EXPORT
 SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop);
 
+/** calls the symmetry information callback for an expression
+ *
+ * Returns NULL pointer if not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRGETSYMDATA(SCIPcallExprGetSymData);
+
 #ifdef NDEBUG
 #define SCIPappendExprChild(scip, expr, child)               SCIPexprAppendChild((scip)->set, (scip)->mem->probmem, expr, child)
 #define SCIPreplaceExprChild(scip, expr, childidx, newchild) SCIPexprReplaceChild((scip)->set, (scip)->stat, (scip)->mem->probmem, expr, childidx, newchild)
@@ -974,6 +989,7 @@ SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop);
 #define SCIPcallExprInitestimates(scip, expr, bounds, overestimate, coefs, constant, nreturned)  SCIPexprhdlrInitEstimatesExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, bounds, overestimate, coefs, constant, nreturned)
 #define SCIPcallExprSimplify(scip, expr, simplifiedexpr, ownercreate, ownercreatedata)  SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, simplifiedexpr, ownercreate, ownercreatedata)
 #define SCIPcallExprReverseprop(scip, expr, bounds, childrenbounds, infeasible) SCIPexprhdlrReversePropExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, bounds, childrenbounds, infeasible)
+#define SCIPcallExprGetSymData(scip, expr, symdata) SCIPexprhdlrGetSymdata(SCIPexprGetHdlr(expr), (scip)->set, expr, symdata)
 #endif
 
 /** @} */

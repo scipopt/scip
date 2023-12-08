@@ -73,6 +73,28 @@ int SCIPgetSymmetryNGenerators(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** creates new operator node type (used for symmetry detection) and returns its representation
+ *
+ *  If the operator node already exists, the function terminates with SCIP_INVALIDDATA.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateSymOpNodeType(
+   SCIP*                 scip,               /**< SCIP pointer */
+   const char*           opnodename,         /**< name of new operator node type */
+   int*                  nodetype            /**< pointer to store the new node type */
+   );
+
+/** returns representation of an operator node type.
+ *
+ *  If the node type does not already exist, a new node type will be created.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetSymOpNodeType(
+   SCIP*                 scip,               /**< SCIP pointer */
+   const char*           opnodename,         /**< name of new operator node type */
+   int*                  nodetype            /**< pointer to store the node type */
+   );
+
 #ifdef __cplusplus
 }
 #endif

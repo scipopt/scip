@@ -366,7 +366,8 @@ endif
 
 SYMOPTIONS	+=	sbliss
 ifeq ($(SYM),sbliss)
-SYMOBJ		=	symmetry/compute_symmetry_sassy_bliss.o
+SYMOBJ		=	symmetry/build_sassy_graph.o
+SYMOBJ		+=	symmetry/compute_symmetry_sassy_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(BLISSEXTERNAL),false)
@@ -429,16 +430,32 @@ endif
 
 SYMOPTIONS	+=	snauty
 ifeq ($(SYM),snauty)
-FLAGS		+=	-I$(LIBDIR)/include/
-SYMOBJ		=	symmetry/compute_symmetry_sassy_nauty.o
+SYMOBJ		=	symmetry/build_sassy_graph.o
+SYMOBJ		+=	symmetry/compute_symmetry_sassy_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+ifeq ($(NAUTYEXTERNAL),false)
+FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
+NAUTYOBJ	=	nauty/nauty.o
+NAUTYOBJ	+=      nauty/nautil.o
+NAUTYOBJ	+=      nauty/nausparse.o
+NAUTYOBJ	+=      nauty/naugraph.o
+NAUTYOBJ	+=      nauty/schreier.o
+NAUTYOBJ	+=      nauty/naurng.o
+SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(NAUTYOBJ))
+SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(NAUTYOBJ:.o=.c))
+else
+FLAGS		+=	-I$(LIBDIR)/include/
+endif
 ALLSRC		+=	$(SYMSRC)
+ifeq ($(NAUTYEXTERNAL),true)
 SOFTLINKS	+=	$(LIBDIR)/include/nauty
 SOFTLINKS	+=	$(LIBDIR)/static/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 LPIINSTMSG	+=	"\n  -> \"nautyinc\" is the path to the Nauty directory, e.g., \"<Nauty-path>\".\n"
 LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<Nauty-path>/nauty.a\"\n"
 endif
+endif
+
 #-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------
@@ -552,6 +569,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/branch_cloud.o \
 			scip/branch_distribution.o \
 			scip/branch_fullstrong.o \
+			scip/branch_gomory.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
 			scip/branch_lookahead.o \
@@ -918,6 +936,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/solve.o \
 			scip/stat.o \
 			scip/symmetry.o \
+			scip/symmetry_graph.o \
 			scip/symmetry_orbitopal.o \
 			scip/symmetry_orbital.o \
 			scip/symmetry_lexred.o \
@@ -1300,6 +1319,7 @@ ifneq ($(DFLAGS),)
 -include $(OBJSCIPOBJFILES:.o=.d)
 -include $(LPILIBOBJFILES:.o=.d)
 -include $(TPILIBOBJFILES:.o=.d)
+-include $(SYMOBJFILES:.o=.d)
 else
 ifeq ($(VERBOSE),true)
 $(info No compilation dependencies. If changing header files, do a make clean before building.)

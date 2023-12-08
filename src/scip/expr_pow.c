@@ -45,6 +45,7 @@
 #include "scip/expr_sum.h"
 #include "scip/expr_exp.h"
 #include "scip/expr_abs.h"
+#include "symmetry/struct_symmetry.h"
 
 #define POWEXPRHDLR_NAME         "pow"
 #define POWEXPRHDLR_DESC         "power expression"
@@ -1758,6 +1759,29 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
    return SCIP_OKAY;
 }
 
+/** expression callback to get information for symmetry detection */
+static
+SCIP_DECL_EXPRGETSYMDATA(getSymDataPow)
+{  /*lint --e{715}*/
+   SCIP_EXPRDATA* exprdata;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   exprdata = SCIPexprGetData(expr);
+   assert(exprdata != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, symdata) );
+
+   (*symdata)->nconstants = 1;
+   (*symdata)->ncoefficients = 0;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symdata)->constants, 1) );
+   (*symdata)->constants[0] = exprdata->exponent;
+
+   return SCIP_OKAY;
+}
+
 /** expression handler copy callback */
 static
 SCIP_DECL_EXPRCOPYHDLR(copyhdlrPow)
@@ -3118,6 +3142,7 @@ SCIP_RETCODE SCIPincludeExprhdlrPow(
    SCIPexprhdlrSetCurvature(exprhdlr, curvaturePow);
    SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityPow);
    SCIPexprhdlrSetIntegrality(exprhdlr, integralityPow);
+   SCIPexprhdlrSetGetSymdata(exprhdlr, getSymDataPow);
 
    SCIP_CALL( SCIPaddRealParam(scip, "expr/" POWEXPRHDLR_NAME "/minzerodistance",
       "minimal distance from zero to enforce for child in bound tightening",
@@ -3159,6 +3184,7 @@ SCIP_RETCODE SCIPincludeExprhdlrSignpower(
    SCIPexprhdlrSetCurvature(exprhdlr, curvatureSignpower);
    SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicitySignpower);
    SCIPexprhdlrSetIntegrality(exprhdlr, integralityPow);
+   SCIPexprhdlrSetGetSymdata(exprhdlr, getSymDataPow);
 
    return SCIP_OKAY;
 }

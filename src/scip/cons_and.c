@@ -76,6 +76,9 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
+#include <string.h>
 
 
 /* constraint handler properties */
@@ -3781,6 +3784,63 @@ SCIP_RETCODE preprocessConstraintPairs(
    return SCIP_OKAY;
 }
 
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** andvars;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = SCIPgetNVarsAnd(scip, cons);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   andvars = SCIPgetVarsAnd(scip, cons);
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      vars[i] = andvars[i];
+      vals[i] = 1.0;
+   }
+
+   assert(SCIPgetResultantAnd(scip, cons) != NULL);
+   vars[nlocvars] = SCIPgetResultantAnd(scip, cons);
+   vals[nlocvars++] = 2.0;
+   assert(nlocvars <= nvars);
+
+   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals,
+         nlocvars, cons, constant, constant, success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of constraint handler
  */
@@ -4876,6 +4936,23 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsAnd)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphAnd)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphAnd)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of event handler
@@ -4956,6 +5033,8 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransAnd) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxAnd) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphAnd) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphAnd) );
 
    /* add AND-constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

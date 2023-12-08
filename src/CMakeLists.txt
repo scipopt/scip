@@ -35,6 +35,7 @@ set(scipsources
     scip/branch_cloud.c
     scip/branch_distribution.c
     scip/branch_fullstrong.c
+    scip/branch_gomory.c
     scip/branch_inference.c
     scip/branch_leastinf.c
     scip/branch_lookahead.c
@@ -372,6 +373,7 @@ set(scipsources
     scip/solve.c
     scip/stat.c
     scip/symmetry.c
+    scip/symmetry_graph.c
     scip/symmetry_orbitopal.c
     scip/symmetry_orbital.c
     scip/symmetry_lexred.c
@@ -483,6 +485,7 @@ set(scipheaders
     scip/branch_cloud.h
     scip/branch_distribution.h
     scip/branch_fullstrong.h
+    scip/branch_gomory.h
     scip/branch.h
     scip/branch_inference.h
     scip/branch_leastinf.h
@@ -909,6 +912,7 @@ set(scipheaders
     scip/struct_var.h
     scip/struct_visual.h
     scip/symmetry.h
+    scip/symmetry_graph.h
     scip/symmetry_orbitopal.h
     scip/symmetry_orbital.h
     scip/symmetry_lexred.h
@@ -979,6 +983,7 @@ set(scipheaders
 )
 
 set(symheaders
+  symmetry/build_sassy_graph.h
   symmetry/compute_symmetry.h
   symmetry/type_symmetry.h
 )

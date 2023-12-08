@@ -130,6 +130,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleCloud(scip) );
    SCIP_CALL( SCIPincludeBranchruleDistribution(scip) );
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
+   SCIP_CALL( SCIPincludeBranchruleGomory(scip) );
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );
    SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
    SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );

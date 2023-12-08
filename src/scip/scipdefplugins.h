@@ -42,6 +42,7 @@
 #include "scip/branch_cloud.h"
 #include "scip/branch_distribution.h"
 #include "scip/branch_fullstrong.h"
+#include "scip/branch_gomory.h"
 #include "scip/branch_inference.h"
 #include "scip/branch_leastinf.h"
 #include "scip/branch_lookahead.h"
