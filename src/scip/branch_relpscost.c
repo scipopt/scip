@@ -939,10 +939,7 @@ SCIP_Real expectedTreeSize(
             improvedtree = strongBranchingTreeSize(depth - 1) * p;
          }
          else
-         {
             improvedtree = 0.0;
-            break;
-         }
          depth--;
          totalimprovedtree += improvedtree;
       }
