@@ -869,7 +869,6 @@ SCIP_Real cdfProbability(
 }
 
 /* Calculate the expected size of a tree with one more iteration of strong branching */
-/* TodoSB check the code since it is just translated from the python script */
 static
 SCIP_Real expectedTreeSize(
    SCIP*                 scip,
@@ -885,7 +884,7 @@ SCIP_Real expectedTreeSize(
    SCIP_Real ptotal = 0.0;
    SCIP_Real totalimprovedtree = 0.0;
 
-   int depth = currentdepth;
+   int depth = (int) currentdepth;
    SCIP_Real currenttreesize = strongBranchingTreeSize(currentdepth);
    SCIP_Real nexttreesize;
    SCIP_Real improvedtree;
