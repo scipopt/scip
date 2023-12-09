@@ -1045,7 +1045,9 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    }
    /* update the rate for the exponential distribution */
    else if (branchruledata->ndualgains == 0 || branchruledata->currndualgains >= branchruledata->minsamplesize )
+   {
       lambda = 1 / (branchruledata->currmeandualgain);
+   }
    else
    {
       int npreviousgains = MAX(branchruledata->minsamplesize - branchruledata->currndualgains, 0);
