@@ -33,6 +33,7 @@ Features
 - extended obbt propagator to handle variables of the linear constraints corresponding to indicator constraints
 - added new heuristic heur_scheduler that models the selection of LNS and diving heuristics as a multi-armed bandit problem
 - added nonlinear handler for signomial expressions: adds cuts based on a difference of convex functions representation
+- Delayed separators are now called if no other cuts have been found. Previously, such separators were only called near stalling or when the separation rounds limit was reached.
 
 Performance improvements
 ------------------------
