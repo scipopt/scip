@@ -187,19 +187,31 @@ SCIP_RETCODE checkSolOrig(
          break;
    }
 
+   /* sort original constraint according to check priority */
+   SCIPprobSortConssCheck(scip->origprob);
+
    /* check original constraints
     *
     * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
     * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
     * have to be checked;
     */
+#ifndef NDEBUG
+   v = INT_MAX;
+#endif
    for( c = 0; c < scip->origprob->nconss; ++c )
    {
-      if( SCIPconsIsChecked(scip->origprob->conss[c]) && (checkmodifiable || !SCIPconsIsModifiable(scip->origprob->conss[c])) )
+      SCIP_CONS* cons;
+
+      cons = scip->origprob->conss[c];
+#ifndef NDEBUG
+      assert( SCIPconshdlrGetCheckPriority(SCIPconsGetHdlr(cons)) <= v );
+      v = SCIPconshdlrGetCheckPriority(SCIPconsGetHdlr(cons));
+#endif
+      if( SCIPconsIsChecked(cons) && (checkmodifiable || !SCIPconsIsModifiable(cons)) )
       {
          /* check solution */
-         SCIP_CALL( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol,
-               checkintegrality, checklprows, printreason, &result) );
+         SCIP_CALL( SCIPconsCheck(cons, scip->set, sol, checkintegrality, checklprows, printreason, &result) );
 
          if( result != SCIP_FEASIBLE )
          {
