@@ -249,6 +249,7 @@ set(scipsources
     scip/sepa_impliedbounds.c
     scip/sepa_interminor.c
     scip/sepa_intobj.c
+    scip/sepa_lagromory.c
     scip/sepa_mcf.c
     scip/sepa_minor.c
     scip/sepa_mixing.c
@@ -851,6 +852,7 @@ set(scipheaders
     scip/sepa_impliedbounds.h
     scip/sepa_interminor.h
     scip/sepa_intobj.h
+    scip/sepa_lagromory.h
     scip/sepa_mcf.h
     scip/sepa_minor.h
     scip/sepa_mixing.h
