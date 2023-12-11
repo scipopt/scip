@@ -185,6 +185,7 @@ set(settings_BendersQP
 
 set(settings_Decomp
    "decompheurs"
+   "decompheurs_dps"
   )
 
 set(settings_Indicator
