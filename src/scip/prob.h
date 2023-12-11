@@ -181,6 +181,10 @@ void SCIPprobResortVars(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** sort the constraints according to check priorties */
+void SCIPprobSortConssCheck(
+   SCIP_PROB*            prob                /**< problem data */
+   );
 
 /*
  * problem modification

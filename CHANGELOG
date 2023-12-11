@@ -116,6 +116,7 @@ Interface changes
 - SCIPestimateRoot() computes estimators for roots with exponent in [0,1]
 - SCIPincludeCutselDynamic(), SCIPselectCutsDynamic() to include cutsel_dynamic or use the selection algorithm
 - SCIPincludeSepaLagromory() to include the new Lagromory separator
+- SCIPconsCompCheck() to compare two constraints based on their check priority
 
 ### Command line interface
 

@@ -335,6 +335,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->transformed = transformed;
    (*prob)->nlpenabled = FALSE;
    (*prob)->permuted = FALSE;
+   (*prob)->consschecksorted = FALSE;
    (*prob)->conscompression = FALSE;
 
    return SCIP_OKAY;
@@ -703,6 +704,25 @@ void SCIPprobResortVars(
    }
 }
 
+/** sort the constraints according to check priorties */
+void SCIPprobSortConssCheck(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   int c;
+
+   if( prob->consschecksorted )
+      return;
+
+   /* sort original constraint according to check priority */
+   SCIPsortPtr((void**)prob->conss, SCIPconsCompCheck, prob->nconss);
+
+   /* reset positions */
+   for( c = 0; c < prob->nconss; ++c)
+      prob->conss[c]->addarraypos = c;
+
+   prob->consschecksorted = TRUE;
+}
 
 
 /*
@@ -1316,6 +1336,7 @@ SCIP_RETCODE SCIPprobAddCons(
    prob->conss[prob->nconss] = cons;
    prob->nconss++;
    prob->maxnconss = MAX(prob->maxnconss, prob->nconss);
+   prob->consschecksorted = FALSE;
    stat->nactiveconssadded++;
 
    /* undelete constraint, if it was globally deleted in the past */
@@ -1398,6 +1419,7 @@ SCIP_RETCODE SCIPprobDelCons(
    assert(prob->conss[arraypos]->addconssetchg == NULL);
    prob->conss[arraypos]->addarraypos = arraypos;
    prob->nconss--;
+   prob->consschecksorted = FALSE;
 
    /* mark the constraint to be no longer in the problem */
    cons->addarraypos = -1;
