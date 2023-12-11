@@ -238,6 +238,7 @@
 #include "scip/sepa_impliedbounds.h"
 #include "scip/sepa_interminor.h"
 #include "scip/sepa_intobj.h"
+#include "scip/sepa_lagromory.h"
 #include "scip/sepa_mcf.h"
 #include "scip/sepa_minor.h"
 #include "scip/sepa_mixing.h"

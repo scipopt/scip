@@ -414,12 +414,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    assert(result != NULL);
 
    SCIPdebugMsg(scip, "Execlp method of Gomory branching in node %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
-   
+
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
    {
       *result = SCIP_DIDNOTRUN;
       SCIPdebugMsg(scip, "Could not apply Gomory branching, as the current LP was not solved to optimality.\n");
-      
+
       return SCIP_OKAY;
    }
 

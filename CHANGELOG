@@ -34,6 +34,9 @@ Features
 - added new heuristic heur_scheduler that models the selection of LNS and diving heuristics as a multi-armed bandit problem
 - added nonlinear handler for signomial expressions: adds cuts based on a difference of convex functions representation
 - Delayed separators are now called if no other cuts have been found. Previously, such separators were only called near stalling or when the separation rounds limit was reached.
+- added a new separator sepa_lagromory to generate Lagromory cuts in a relax-and-cut framework, i.e., GMI cuts generated
+  at different bases that are explored in the process of solving the Lagrangian dual problem at a node. This separator
+  is OFF by default.
 
 Performance improvements
 ------------------------
@@ -111,6 +114,7 @@ Interface changes
 - SCIPgetExprMonomialData() returns a monomial representation of a product expression
 - SCIPestimateRoot() computes estimators for roots with exponent in [0,1]
 - SCIPincludeCutselDynamic(), SCIPselectCutsDynamic() to include cutsel_dynamic or use the selection algorithm
+- SCIPincludeSepaLagromory() to include the new Lagromory separator
 
 ### Command line interface
 
@@ -162,6 +166,21 @@ Interface changes
 - nlhdlr/quadratic/sparsifycuts to enable sparsification of intersection cuts for quadratics
 - heuristics/scheduler/* all parameters for new scheduler heuristic
 - nlhdlr/signomial/enabled, nlhdlr/signomial/maxnundervars, nlhdlr/signomial/mincutscale: parameters for the signomial nonlinear handler
+- separating/lagromory/freq to denote the frequency for calling Lagromory separator
+- separating/lagromory/away to denote the minimal integrality violation of a basis variable to try separation
+- separating/lagromory/dynamiccuts to denote whether the generated cuts be removed from LP if they are no longer tight
+- separating/lagromory/maxroundsroot to denote the maximal number of separation rounds in the root node
+- separating/lagromory/maxrounds to denote the maximal number of separation rounds in a non-root node
+- separating/lagromory/nmaxcutsperlproot to denote, in the root node, the maximal number of Lagromory cuts that can be
+  separated per explored basis of the Lagrangian dual
+- separating/lagromory/nmaxcutsperlp to denote, in a non-root node, the maximal number of Lagromory cuts that can be
+  separated per explored basis of the Lagrangian dual
+- separating/lagromory/perroundnmaxlpiters to denote the maximal number of separating LP iterations that are allowed per
+  separation round
+- separating/lagromory/dualdegeneracyratethreshold to denote the minimum dual degeneracy rate for the separator execution
+- separating/lagromory/varconsratiothreshold to denote the minimum variable-constraint ratio on the optimal face for the
+  separator execution
+- many other advanced parameters for the Lagromory separator, which are also mentioned under separating/lagromory/*
 
 ### Data structures
 
