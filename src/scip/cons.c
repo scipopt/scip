@@ -1952,19 +1952,19 @@ SCIP_RETCODE conshdlrAddUpdateCons(
    return SCIP_OKAY;
 }
 
-/** compares two constraint handlers w. r. to their separation priority */
+/** compares two constraint handlers w.r.t. their separation priority */
 SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompSepa)
 {  /*lint --e{715}*/
    return ((SCIP_CONSHDLR*)elem2)->sepapriority - ((SCIP_CONSHDLR*)elem1)->sepapriority;
 }
 
-/** compares two constraint handlers w. r. to their enforcing priority */
+/** compares two constraint handlers w.r.t. their enforcing priority */
 SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompEnfo)
 {  /*lint --e{715}*/
    return ((SCIP_CONSHDLR*)elem2)->enfopriority - ((SCIP_CONSHDLR*)elem1)->enfopriority;
 }
 
-/** compares two constraint handlers w. r. to their feasibility check priority */
+/** compares two constraint handlers w.r.t. their feasibility check priority */
 SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompCheck)
 {  /*lint --e{715}*/
    return ((SCIP_CONSHDLR*)elem2)->checkpriority - ((SCIP_CONSHDLR*)elem1)->checkpriority;

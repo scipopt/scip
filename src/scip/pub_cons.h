@@ -55,15 +55,15 @@ extern "C" {
  * @{
  */
 
-/** compares two constraint handlers w. r. to their separation priority */
+/** compares two constraint handlers w.r.t. their separation priority */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompSepa);
 
-/** compares two constraint handlers w. r. to their enforcing priority */
+/** compares two constraint handlers w.r.t. their enforcing priority */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompEnfo);
 
-/** compares two constraint handlers w. r. to their feasibility check priority */
+/** compares two constraint handlers w.r.t. their feasibility check priority */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompCheck);
 
