@@ -4545,7 +4545,7 @@ SCIP_RETCODE SCIPparamSetBool(
    if( initialize || (param->data.boolparam.valueptr != NULL && *param->data.boolparam.valueptr != value)
       || (param->data.boolparam.valueptr == NULL && param->data.boolparam.curvalue != value) )
    {
-      SCIP_Bool oldvalue;
+      SCIP_Bool oldvalue = FALSE;
 
       /* check if the parameter is not fixed */
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
@@ -4569,9 +4569,9 @@ SCIP_RETCODE SCIPparamSetBool(
          if( retcode == SCIP_PARAMETERWRONGVAL )
          {
             if( param->data.boolparam.valueptr != NULL )
-               *param->data.boolparam.valueptr = oldvalue;  /*lint !e644*/
+               *param->data.boolparam.valueptr = oldvalue;
             else
-               param->data.boolparam.curvalue = oldvalue;  /*lint !e644*/
+               param->data.boolparam.curvalue = oldvalue;
          }
          else
          {
@@ -4607,7 +4607,7 @@ SCIP_RETCODE SCIPparamSetInt(
    if( initialize || (param->data.intparam.valueptr != NULL && *param->data.intparam.valueptr != value)
       || (param->data.intparam.valueptr == NULL && param->data.intparam.curvalue != value) )
    {
-      int oldvalue;
+      int oldvalue = 0;
 
       /* check if the parameter is not fixed */
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
@@ -4631,9 +4631,9 @@ SCIP_RETCODE SCIPparamSetInt(
          if( retcode == SCIP_PARAMETERWRONGVAL )
          {
             if( param->data.intparam.valueptr != NULL )
-               *param->data.intparam.valueptr = oldvalue;  /*lint !e644*/
+               *param->data.intparam.valueptr = oldvalue;
             else
-               param->data.intparam.curvalue = oldvalue;  /*lint !e644*/
+               param->data.intparam.curvalue = oldvalue;
          }
          else
          {
@@ -4669,7 +4669,7 @@ SCIP_RETCODE SCIPparamSetLongint(
    if( initialize ||  (param->data.longintparam.valueptr != NULL && *param->data.longintparam.valueptr != value)
       || (param->data.longintparam.valueptr == NULL && param->data.longintparam.curvalue != value) )
    {
-      SCIP_Longint oldvalue;
+      SCIP_Longint oldvalue = 0L;
 
       /* check if the parameter is not fixed */
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
@@ -4693,9 +4693,9 @@ SCIP_RETCODE SCIPparamSetLongint(
          if( retcode == SCIP_PARAMETERWRONGVAL )
          {
             if( param->data.longintparam.valueptr != NULL )
-               *param->data.longintparam.valueptr = oldvalue;  /*lint !e644*/
+               *param->data.longintparam.valueptr = oldvalue;
             else
-               param->data.longintparam.curvalue = oldvalue;  /*lint !e644*/
+               param->data.longintparam.curvalue = oldvalue;
          }
          else
          {
@@ -4733,7 +4733,7 @@ SCIP_RETCODE SCIPparamSetReal(
    if( initialize || (param->data.realparam.valueptr != NULL && *param->data.realparam.valueptr != value) /*lint !e777*/
       || (param->data.realparam.valueptr == NULL && param->data.realparam.curvalue != value) ) /*lint !e777*/
    {
-      SCIP_Real oldvalue;
+      SCIP_Real oldvalue = 0.0;
 
       /* check if the parameter is not fixed */
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
@@ -4757,9 +4757,9 @@ SCIP_RETCODE SCIPparamSetReal(
          if( retcode == SCIP_PARAMETERWRONGVAL )
          {
             if( param->data.realparam.valueptr != NULL )
-               *param->data.realparam.valueptr = oldvalue;  /*lint !e644*/
+               *param->data.realparam.valueptr = oldvalue;
             else
-               param->data.realparam.curvalue = oldvalue;  /*lint !e644*/
+               param->data.realparam.curvalue = oldvalue;
          }
          else
          {
@@ -4795,7 +4795,7 @@ SCIP_RETCODE SCIPparamSetChar(
    if( initialize || (param->data.charparam.valueptr != NULL && *param->data.charparam.valueptr != value)
       || (param->data.charparam.valueptr == NULL && param->data.charparam.curvalue != value) )
    {
-      char oldvalue;
+      char oldvalue = '\0';
 
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
@@ -4818,9 +4818,9 @@ SCIP_RETCODE SCIPparamSetChar(
          if( retcode == SCIP_PARAMETERWRONGVAL )
          {
             if( param->data.charparam.valueptr != NULL )
-               *param->data.charparam.valueptr = oldvalue;  /*lint !e644*/
+               *param->data.charparam.valueptr = oldvalue;
             else
-               param->data.charparam.curvalue = oldvalue;  /*lint !e644*/
+               param->data.charparam.curvalue = oldvalue;
          }
          else
          {
