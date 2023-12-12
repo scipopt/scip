@@ -2753,7 +2753,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
    /* LP conflict analysis is only valid, if all variables are known */
    assert( SCIPprobAllColsInLP(transprob, set, lp) );
    assert( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
-      || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff == 1) );
+	   || (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && (set->lp_disablecutoff == 1 || set->exact_enabled)) );
 
    /* save status */
    storedsolvals.lpsolstat = lp->lpsolstat;
@@ -2791,7 +2791,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
       else
       {
          assert( lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT ||
-            (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && set->lp_disablecutoff == 1) );
+	    (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && (set->lp_disablecutoff == 1 || set->exact_enabled)) );
          storedrowsolvals[r].dualsol = row->dualsol;
       }
       storedrowsolvals[r].activity = row->activity;

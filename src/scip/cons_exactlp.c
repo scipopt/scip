@@ -320,7 +320,7 @@ struct SCIP_ConshdlrData
                                                *   equations */
    SCIP_Bool             rangedrowartcons;   /**< should presolving and propagation extract sub-constraints from ranged rows and equations?*/
    SCIP_Bool             propcont;           /**< should bounds on continuous variables be tightened by propagation?*/
-   SCIP_Real             limitdenom;         /**< should denominator sizes for continuous variables be controlled?*/
+   SCIP_Bool             limitdenom;         /**< should denominator sizes for continuous variables be controlled?*/
    int                   rangedrowmaxdepth;  /**< maximum depth to apply ranged row propagation */
    int                   rangedrowfreq;      /**< frequency for applying ranged row propagation */
    SCIP_Bool             multaggrremove;     /**< should multi-aggregations only be performed if the constraint can be
