@@ -198,8 +198,8 @@ SCIP_Bool SYMcanComputeSymmetry(void)
 }
 
 /** return name of external program used to compute generators */
-char*
-initStaticSymmetryName( )
+static
+char* initStaticSymmetryName(void)
 {
    char* nautyname = new char[100];
 #ifdef NAUTY
@@ -211,8 +211,8 @@ initStaticSymmetryName( )
 }
 
 /** return name of external program used to compute generators */
-char*
-initStaticSymmetryAddName( )
+static
+char* initStaticSymmetryAddName(void)
 {
    char* sassyname = new char[100];
    (void) SCIPsnprintf(sassyname, 100, "sassy %d.%d", SASSY_VERSION_MAJOR, SASSY_VERSION_MINOR);
@@ -232,9 +232,9 @@ const char* SYMsymmetryGetName(void)
 const char* SYMsymmetryGetDesc(void)
 {
 #ifdef NAUTY
-   return "Computing Graph Automorphism Groups by Brendan D. McKay (https://users.cecs.anu.edu.au/~bdm/nauty/)";
+   return "Computing Graph Automorphism Groups by Brendan D. McKay (users.cecs.anu.edu.au/~bdm/nauty)";
 #else
-   return "Computing Graph Automorphism Groups by Adolfo Piperno (https://pallini.di.uniroma1.it/)";
+   return "Computing Graph Automorphism Groups by Adolfo Piperno (pallini.di.uniroma1.it)";
 #endif
 }
 

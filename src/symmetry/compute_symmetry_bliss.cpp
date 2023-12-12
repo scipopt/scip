@@ -151,8 +151,8 @@ SCIP_Bool SYMcanComputeSymmetry(void)
 }
 
 /** return name of external program used to compute generators */
-char*
-initStaticBlissName( )
+static
+char* initStaticBlissName(void)
 {
    char* blissname = new char[100];
 #ifdef BLISS_PATCH_PRESENT
@@ -175,7 +175,7 @@ const char* SYMsymmetryGetName(void)
 /** return description of external program used to compute generators */
 const char* SYMsymmetryGetDesc(void)
 {
-   return "Computing Graph Automorphism Groups by T. Junttila and P. Kaski (www.tcs.hut.fi/Software/bliss/)";
+   return "Computing Graph Automorphism Groups by T. Junttila and P. Kaski (users.aalto.fi/~tjunttil/bliss)";
 }
 
 /** return name of additional external program used for computing symmetries */
