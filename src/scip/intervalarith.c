@@ -2853,7 +2853,7 @@ void SCIPintervalCos(
    }
 
    /* back to original operand using cos(x + k pi) = (-1)^k cos(x) */
-   if( (int)k % 2 != 0 )
+   if( fmod(k, 2.0) != 0.0 )
    {
       SCIP_Real tmp = -resultant->sup;
       resultant->sup = -resultant->inf;
