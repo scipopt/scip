@@ -3601,7 +3601,8 @@ void SCIPexprFreeQuadratic(
    BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->lincoefs, expr->quaddata->nlinexprs);
    BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->bilinexprterms, expr->quaddata->nbilinexprterms);
    BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvalues, n);
-   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvectors, n * n);  /*lint !e647*/
+   if( expr->quaddata->eigenvectors != NULL )  /* check for NULL here before calculating n*n to avoid (harmless) overflow in case of large n */
+      BMSfreeBlockMemoryArray(blkmem, &expr->quaddata->eigenvectors, n * n);  /*lint !e647*/
 
    for( i = 0; i < n; ++i )
    {

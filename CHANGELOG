@@ -243,6 +243,18 @@ Known bugs
 
 @page RN80 Release notes for SCIP 8.0
 
+@section RN811 SCIP 8.1.1
+*************************
+
+Fixed bugs
+----------
+
+Build system
+------------
+
+Miscellaneous
+-------------
+
 @section RN805 SCIP 8.1.0
 *************************
 
