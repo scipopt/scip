@@ -352,7 +352,7 @@ SCIP_Longint SCIPgetNLPs(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_EXPORT
-int SCIPgetNExactLP(
+SCIP_Longint SCIPgetNExactLP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -375,7 +375,7 @@ int SCIPgetNExactLP(
  *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_EXPORT
-int SCIPgetNExactSol(
+SCIP_Longint SCIPgetNExactSol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

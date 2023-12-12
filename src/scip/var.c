@@ -1972,7 +1972,7 @@ void overwriteMultAggrWithExactData(
 {
    int i;
 
-   if( !set->exact_enabled || var->varstatus != SCIP_VARSTATUS_MULTAGGR )
+   if( !set->exact_enabled || SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
       return;
 
    var->data.multaggr.constant = RatApproxReal(var->exactdata->multaggr.constant);
@@ -2600,7 +2600,7 @@ SCIP_RETCODE SCIPvarAddExactData(
    var->exactdata->glbdom.lbcertificateidx = -1;
    var->exactdata->glbdom.ubcertificateidx = -1;
    var->exactdata->colexact = NULL;
-   var->exactdata->varstatusexact = var->varstatus;
+   var->exactdata->varstatusexact = SCIPvarGetStatus(var);
    var->exactdata->certificateindex = -1;
    var->exactdata->multaggr.scalars = NULL;
    var->exactdata->multaggr.constant = NULL;
@@ -2614,7 +2614,6 @@ SCIP_RETCODE SCIPvarAddExactData(
  * can't be integrated into varCopy because it is needed, e.g., when transforming vars
  */
 SCIP_RETCODE SCIPvarCopyExactData(
-   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             targetvar,          /**< variable that gets the exact data */
    SCIP_VAR*             sourcevar,          /**< variable the data gets copied from */
@@ -3287,7 +3286,7 @@ SCIP_RETCODE varFreeExactData(
    {
       if( SCIPvarGetStatusExact(var) ==  SCIP_VARSTATUS_COLUMN )
       {
-         SCIP_CALL( SCIPcolExactFree(&(var->exactdata->colexact), blkmem, set, eventqueue, lp) );
+         SCIP_CALL( SCIPcolExactFree(&(var->exactdata->colexact), blkmem) );
       }
 
       if( var->exactdata->aggregate.scalar != NULL )
@@ -5379,9 +5378,10 @@ SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
          /* x = a*y + c */
          if( nactivevars >= activevarssize )
          {
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, 2 * activevarssize) );
-            SCIP_CALL( RatReallocBufferArray(set->buffer, &activescalars, activevarssize, 2 * activevarssize) );
-            activevarssize *= 2;
+            int newactivevarssize = activevarssize * 2;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, newactivevarssize) );
+            SCIP_CALL( RatReallocBufferArray(set->buffer, &activescalars, activevarssize, newactivevarssize) );
+            activevarssize = newactivevarssize;
             assert(nactivevars < activevarssize);
          }
          activevars[nactivevars] = var;
@@ -5754,21 +5754,21 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
          assert( multrequiredsize <= multvarssize );
       }
 
-        /**@note After the flattening the multi aggregation might resolve to be in fact an aggregation (or even a fixing?).
-          * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause troubles. However, one
-          * may loose performance hereby, since aggregated variables are easier to handle.
-          *
-          * Note, that there are two cases where SCIPvarFlattenAggregationGraph() is called: The easier one is that it is
-          * called while installing the multi-aggregation. in principle, the described issue could be handled straightforward
-          * in this case by aggregating or fixing the variable instead.  The more complicated case is the one, when the
-          * multi-aggregation is used, e.g., in linear presolving (and the variable is already declared to be multi-aggregated).
-          *
-          * By now, it is not allowed to fix or aggregate multi-aggregated variables which would be necessary in this case.
-          *
-          * The same issue appears in the SCIPvarGetProbvar...() methods.
-          */
+      /**@note After the flattening the multi aggregation might resolve to be in fact an aggregation (or even a fixing?).
+       * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause troubles. However, one
+       * may loose performance hereby, since aggregated variables are easier to handle.
+       *
+       * Note, that there are two cases where SCIPvarFlattenAggregationGraph() is called: The easier one is that it is
+       * called while installing the multi-aggregation. in principle, the described issue could be handled straightforward
+       * in this case by aggregating or fixing the variable instead.  The more complicated case is the one, when the
+       * multi-aggregation is used, e.g., in linear presolving (and the variable is already declared to be multi-aggregated).
+       *
+       * By now, it is not allowed to fix or aggregate multi-aggregated variables which would be necessary in this case.
+       *
+       * The same issue appears in the SCIPvarGetProbvar...() methods.
+       */
 
-         var->data.multaggr.constant = multconstant;
+      var->data.multaggr.constant = multconstant;
    }
    else
    {
@@ -6689,7 +6689,7 @@ SCIP_RETCODE SCIPvarAggregateExact(
 
    /* set the aggregated variable's objective value to 0.0 */
    RatSet(obj, var->exactdata->obj);
-   RatSetReal(tmpval, 0);
+   RatSetReal(tmpval, 0.0);
    SCIP_CALL( SCIPvarChgObjExact(var, blkmem, set, transprob, primal, lp->lpexact, eventqueue, tmpval) );
 
    RatFreeBuffer(set->buffer, &tmpval);
@@ -7105,10 +7105,10 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    SCIP_Rational* tmprat2;
    SCIP_Rational* tmprat3;
    char aggvarname[SCIP_MAXSTRLEN];
-   SCIP_Longint scalarxn = 0;
-   SCIP_Longint scalarxd = 0;
-   SCIP_Longint scalaryn = 0;
-   SCIP_Longint scalaryd = 0;
+   SCIP_Longint scalarxn;
+   SCIP_Longint scalarxd;
+   SCIP_Longint scalaryn;
+   SCIP_Longint scalaryd;
    SCIP_Longint a;
    SCIP_Longint b;
    SCIP_Longint c;
@@ -7119,8 +7119,6 @@ SCIP_RETCODE tryAggregateIntVarsExact(
    SCIP_Longint xsol;
    SCIP_Longint ysol;
    SCIP_VARTYPE vartype;
-
-#define MAXDNOM 1000000LL
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -7293,14 +7291,14 @@ SCIP_RETCODE tryAggregateIntVarsExact(
 
    RatSetString(tmprat1, "-inf");
    RatSetString(tmprat2, "inf");
-   RatSetInt(tmprat3, 0, 0);
+   RatSetInt(tmprat3, 0L, 0L);
 
    SCIP_CALL( SCIPvarAddExactData(aggvar, blkmem, tmprat1, tmprat2, tmprat3) );
 
    SCIP_CALL( SCIPprobAddVar(transprob, blkmem, set, lp, branchcand, eventfilter, eventqueue, aggvar) );
 
-   RatSetInt(tmprat1, -b, 1);
-   RatSetInt(tmprat2, xsol, 1);
+   RatSetInt(tmprat1, -b, 1L);
+   RatSetInt(tmprat2, xsol, 1L);
 
    SCIP_CALL( SCIPvarAggregateExact(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
          branchcand, eventfilter, eventqueue, aggvar, tmprat1, tmprat2, infeasible, aggregated) );
@@ -8567,7 +8565,7 @@ SCIP_RETCODE varNegateExactData(
 
    constant = negvar->data.negate.constant;
 
-   SCIPvarCopyExactData(set, blkmem, negvar, origvar, FALSE);
+   SCIPvarCopyExactData(blkmem, negvar, origvar, FALSE);
 
    RatDiffReal(negvar->exactdata->glbdom.ub, origvar->exactdata->glbdom.lb, constant);
    RatNegate(negvar->exactdata->glbdom.ub, negvar->exactdata->glbdom.ub);
@@ -13305,8 +13303,8 @@ void SCIPvarGetMultaggrLbLocalExact(
    assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
-   RatCreateBuffer(set->buffer, &lb);
-   RatCreateBuffer(set->buffer, &bnd);
+   (void) RatCreateBuffer(set->buffer, &lb);
+   (void) RatCreateBuffer(set->buffer, &bnd);
 
    posinf = FALSE;
    neginf = FALSE;
@@ -13451,8 +13449,8 @@ void SCIPvarGetMultaggrUbLocalExact(
    assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
-   RatCreateBuffer(set->buffer, &ub);
-   RatCreateBuffer(set->buffer, &bnd);
+   (void) RatCreateBuffer(set->buffer, &ub);
+   (void) RatCreateBuffer(set->buffer, &bnd);
 
    posinf = FALSE;
    neginf = FALSE;
@@ -18442,7 +18440,7 @@ void SCIPvarGetLPSolExact_rec(
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
 
-      RatCreate(&tmp);
+      (void) RatCreate(&tmp);
       /* Due to method SCIPvarFlattenAggregationGraph(), this assert is no longer correct
        * assert(var->data.multaggr.nvars >= 2);
        */
@@ -19787,7 +19785,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       {
          SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
          RatMult(tmp, val, var->exactdata->glbdom.lb);
-         SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
+         SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
          RatFreeBuffer(set->buffer, &tmp);
          break;;
       }
@@ -19811,7 +19809,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
       RatMult(tmp, val, var->exactdata->locdom.lb);
-      SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
+      SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
 
       RatFreeBuffer(set->buffer, &tmp);
 
@@ -19825,7 +19823,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       SCIP_CALL( SCIPvarAddToRowExact(var->data.aggregate.var, blkmem, set, stat, eventqueue, prob, lpexact,
             rowexact, tmp) );
       RatMult(tmp, var->exactdata->aggregate.constant, val);
-      SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
+      SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
       RatFreeBuffer(set->buffer, &tmp);
       return SCIP_OKAY;
 
@@ -19845,7 +19843,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
                rowexact, tmp) );
       }
       RatMult(tmp, var->exactdata->multaggr.constant, val);
-      SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
+      SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
 
       RatFreeBuffer(set->buffer, &tmp);
       return SCIP_OKAY;
@@ -19861,7 +19859,7 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       SCIP_CALL( SCIPvarAddToRowExact(var->negatedvar, blkmem, set, stat, eventqueue, prob, lpexact, rowexact, tmp) );
 
       RatMultReal(tmp, val, var->data.negate.constant);
-      SCIP_CALL( SCIProwExactAddConstant(rowexact, blkmem, set, stat, eventqueue, lpexact, tmp) );
+      SCIP_CALL( SCIProwExactAddConstant(rowexact, set, stat, lpexact, tmp) );
 
       RatFreeBuffer(set->buffer, &tmp);
 

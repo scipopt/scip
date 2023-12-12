@@ -83,7 +83,7 @@ SCIP_DECL_HASHGETKEY(hashGetKeyAssignment)
 /** returns TRUE iff both keys are equal */
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqAssignment)
-{
+{ /*lint --e{715}*/
    int i;
    SOLINTASSIGNMENT* sol1;
    SOLINTASSIGNMENT* sol2;
@@ -109,7 +109,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqAssignment)
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(hashKeyValAssignment)
-{
+{ /*lint --e{715}*/
    SOLINTASSIGNMENT* sol;
    uint64_t signature;
    int i;
@@ -163,7 +163,7 @@ void clearSoluBuffer(
 
    for( i = 0; i < conshdlrdata->nbufferedsols; i++ )
    {
-      SCIPfreeSol(scip, &conshdlrdata->solubuffer[i]);
+      SCIP_CALL_ABORT( SCIPfreeSol(scip, &conshdlrdata->solubuffer[i]) );
    }
 
    conshdlrdata->nbufferedsols = 0;
@@ -176,7 +176,7 @@ void solCreateSolAssignment(
    SCIP_SOL*             sol,                /**< solution to create assignment for */
    SOLINTASSIGNMENT**    assignment          /**< address of assignment */
    )
-{
+{ /*lint --e{522, 776}*/
    int nvars;
    int i;
    int solsize;
@@ -198,9 +198,9 @@ void solCreateSolAssignment(
       if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_INTEGER && SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
          continue;
 
-       (*assignment)->vals[solsize] = (SCIP_Longint) SCIPround(scip, SCIPgetSolVal(scip, sol, vars[i]));
-       (*assignment)->idx[solsize] = SCIPvarGetIndex(vars[i]);
-       solsize++;
+      (*assignment)->vals[solsize] = (SCIP_Longint) SCIPround(scip, SCIPgetSolVal(scip, sol, vars[i]));
+      (*assignment)->idx[solsize] = SCIPvarGetIndex(vars[i]);
+      solsize++;
    }
 
    (*assignment)->len = solsize;
@@ -263,7 +263,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    SCIP_Bool lperror;
    SCIP_Bool checkfpfeasibility;
    int nintvars;
-   int nfixedvars;
    int nconsprob;
    int i;
    int c;
@@ -395,7 +394,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       conshdlrdata->hashedassignments[conshdlrdata->nhashedassignments] = assignment;
       conshdlrdata->nhashedassignments++;
 
-      SCIPhashtableInsert(conshdlrdata->solhash, assignment);
+      SCIP_CALL( SCIPhashtableInsert(conshdlrdata->solhash, assignment) );
    }
 
    /* next, check if we should buffer the solution instead of checking it right now */
@@ -443,7 +442,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       /* set the bounds of the variables: fixed for integers, global bounds for continuous */
       vars = SCIPgetVars(scip);
       nintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
-      nfixedvars = 0;
 
       for( i = 0; i < nintvars; ++i )
       {
@@ -459,7 +457,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
             {
                SCIP_Rational* newbound;
 
-               RatCreateBuffer(SCIPbuffer(scip), &newbound);
+               SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &newbound) );
 
                /* create rational solval and round it to the nearest integer */
                RatSetReal(newbound, solval);
@@ -470,8 +468,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
                SCIP_CALL( SCIPchgVarLbExactDive(scip, vars[i], newbound) );
                SCIP_CALL( SCIPchgVarUbExactDive(scip, vars[i], newbound) );
-
-               nfixedvars++;
 
                RatFreeBuffer(SCIPbuffer(scip), &newbound);
             }
@@ -523,13 +519,13 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
          }
          else
          {
-            SCIPfreeSol(scip, &worksol);
+            SCIP_CALL( SCIPfreeSol(scip, &worksol) );
             conshdlrdata->nbufferedsols--;
          }
       }
       else
       {
-         SCIPfreeSol(scip, &worksol);
+         SCIP_CALL( SCIPfreeSol(scip, &worksol) );
          conshdlrdata->nbufferedsols--;
       }
    }
@@ -587,7 +583,7 @@ SCIP_DECL_CONSFREE(consFreeExactSol)
 /** initialization method of constraint handler (called after problem was transformed) */
 static
 SCIP_DECL_CONSINIT(consInitExactSol)
-{  /*lint --e{715}*/
+{  /*lint --e{715, 522}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);
@@ -614,7 +610,7 @@ SCIP_DECL_CONSINIT(consInitExactSol)
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 static
 SCIP_DECL_CONSEXIT(consExitExactSol)
-{  /*lint --e{715}*/
+{  /*lint --e{715, 866}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
 
@@ -639,7 +635,7 @@ SCIP_DECL_CONSEXIT(consExitExactSol)
    /* free solubuffer */
    for( i = 0; i < conshdlrdata->nbufferedsols; i++ )
    {
-      SCIPfreeSol(scip, &conshdlrdata->solubuffer[i]);
+      SCIP_CALL( SCIPfreeSol(scip, &conshdlrdata->solubuffer[i]) );
    }
    SCIPfreeBlockMemoryArray(scip, &conshdlrdata->solubuffer, conshdlrdata->lensolubuffer);
    conshdlrdata->nbufferedsols = 0;

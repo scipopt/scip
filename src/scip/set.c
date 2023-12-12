@@ -518,7 +518,7 @@
 #define SCIP_DEFAULT_EXACT_WEAKENCUTS     FALSE /**< should cuts be weakened in exact mode? */
 #define SCIP_DEFAULT_CUTMAXDENOMSIZE     131072 /**< maximal denominator in cut coefficient, leading to slightly weaker (default is 2^17)
                                                  *   but numerically better cuts (0: disabled) */
-#define SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL 10000 /**< maximal absolute bound value for wich cut coefficient should
+#define SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL 10000L /**< maximal absolute bound value for wich cut coefficient should
                                                  *   be approximated with bounded denominator (0: no restriction) */
 
 /* certificate output */
@@ -2728,7 +2728,6 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
 
    /* exact SCIP parameters */
-#ifdef SCIP_WITH_BOOST
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "exact/enabled",
          "should the problem be solved exactly (without numerical tolerances)?",
@@ -2765,12 +2764,11 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "exact/cutmaxdenomsize",
          "maximal denominator in cut coefficient, leading to slightly weaker but numerically better cuts (0: disabled)",
-         &(*set)->exact_cutmaxdenomsize, FALSE, SCIP_DEFAULT_CUTMAXDENOMSIZE, 0, SCIP_LONGINT_MAX, NULL, NULL) );
+         &(*set)->exact_cutmaxdenomsize, FALSE, SCIP_DEFAULT_CUTMAXDENOMSIZE, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "exact/curapproxmaxboundval",
          "maximal absolute bound value for wich cut coefficient should be approximated with bounded denominator (0: no restriction)",
-         &(*set)->exact_cutapproxmaxboundval, FALSE, SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL, 0, SCIP_LONGINT_MAX, NULL, NULL) );
-#endif
+         &(*set)->exact_cutapproxmaxboundval, FALSE, SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
 
    /* CERTIFICATE tool parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,

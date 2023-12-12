@@ -308,7 +308,7 @@ SCIP_RETCODE primalSetCutoffbound(
    {
       SCIP_Rational* tmp;
 
-      RatCreateBuffer(set->buffer, &tmp);
+      SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
       RatSetReal(tmp, primal->cutoffbound);
       if( RatIsGT(primal->cutoffboundexact, tmp) )
          RatSet(primal->cutoffboundexact, tmp);
@@ -907,12 +907,28 @@ SCIP_RETCODE primalAddSol(
    assert(sol != NULL);
    obj = SCIPsolGetObj(sol, set, transprob, origprob);
 
-   if( set->exact_enabled && !SCIPsolIsExact(sol) )
+   if( set->exact_enabled )
    {
-       SCIP_CALL( SCIPsolMakeExact(sol, blkmem, set, stat, transprob) );
-       SCIP_CALL( primalAddSolExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-            tree, reopt, lp->lpexact, eventqueue, eventfilter, solptr, insertpos, replace) );
-       return SCIP_OKAY;
+       if( !SCIPsolIsExact(sol) )
+       {
+          SCIP_CALL( SCIPsolMakeExact(sol, blkmem, set, stat, transprob) );
+	  SCIP_CALL( primalAddSolExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
+               tree, reopt, lp->lpexact, eventqueue, eventfilter, solptr, insertpos, replace) );
+
+	  return SCIP_OKAY;
+       }
+       else
+       {
+	  SCIP_Rational* objexact;
+
+	  SCIP_CALL( RatCreateBuffer(set->buffer, &objexact) );
+	  SCIPsolGetObjExact(sol, set, transprob, origprob, objexact);
+
+	  RatMIN(primal->cutoffboundexact, primal->cutoffboundexact, objexact);
+	  RatMIN(primal->upperboundexact, primal->upperboundexact, objexact);
+
+	  RatFreeBuffer(set->buffer, &objexact);
+       }
    }
 
 
@@ -1428,7 +1444,7 @@ SCIP_Bool solOfInterest(
    {
       SCIP_Rational* tmpobj;
 
-      SCIP_CALL( RatCreateBuffer(set->buffer, &tmpobj) );
+      SCIP_CALL_ABORT( RatCreateBuffer(set->buffer, &tmpobj) );
       SCIPsolGetObjExact(sol, set, transprob, origprob, tmpobj);
       solisbetterexact = RatIsLT(tmpobj, primal->cutoffboundexact);
 

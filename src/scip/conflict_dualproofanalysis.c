@@ -323,7 +323,10 @@ SCIP_RETCODE proofsetAddAggrrow(
 
    for( i = 0; i < nnz; i++ )
    {
-      vals[i] = SCIPaggrRowGetProbvarValue(aggrrow, inds[i]);
+      if( !set->exact_enabled )
+         vals[i] = SCIPaggrRowGetProbvarValue(aggrrow, inds[i]);
+      else
+         vals[i] = aggrrow->vals[inds[i]];
    }
 
    SCIP_CALL( proofsetAddSparseData(proofset, blkmem, vals, inds, nnz, SCIPaggrRowGetRhs(aggrrow)) );

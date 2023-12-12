@@ -239,10 +239,10 @@ SCIP_RETCODE SCIPvalidateSolveExact(
    assert(scip != NULL);
    assert(SCIPisExactSolve(scip));
 
-   RatCreate(&primviol);
-   RatCreate(&dualviol);
-   RatCreate(&pb);
-   RatCreate(&db);
+   SCIP_CALL( RatCreate(&primviol) );
+   SCIP_CALL( RatCreate(&dualviol) );
+   SCIP_CALL( RatCreate(&pb) );
+   SCIP_CALL( RatCreate(&db) );
 
    /* if no problem exists, there is no need for validation */
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
@@ -275,8 +275,8 @@ SCIP_RETCODE SCIPvalidateSolveExact(
       localfeasible = TRUE;
    }
 
-   RatSetInt(primviol, 0, 1);
-   RatSetInt(dualviol, 0, 1);
+   RatSetInt(primviol, 0L, 1L);
+   RatSetInt(dualviol, 0L, 1L);
 
    /* check the primal and dual bounds computed by SCIP against the external reference values within reference tolerance */
    /* solution for an infeasible problem */
@@ -308,6 +308,8 @@ SCIP_RETCODE SCIPvalidateSolveExact(
 
    if( !quiet )
    {
+      int len;
+
       SCIPinfoMessage(scip, NULL, "Validation         : ");
       if( ! localfeasible )
          SCIPinfoMessage(scip, NULL, "Fail (infeasible)");
@@ -319,11 +321,27 @@ SCIP_RETCODE SCIPvalidateSolveExact(
          SCIPinfoMessage(scip, NULL, "Success");
       SCIPinfoMessage(scip, NULL, "\n");
       SCIPinfoMessage(scip, NULL, "  %-17s: %10u\n", "cons violation", !localfeasible);
-      RatToString(primviol, rationalstring1, SCIP_MAXSTRLEN);
-      RatToString(dualreference, rationalstring2, SCIP_MAXSTRLEN);
+      len = RatToString(primviol, rationalstring1, SCIP_MAXSTRLEN);
+      if( len == SCIP_MAXSTRLEN )
+      {
+         SCIPerrorMessage("rational too long to be converted to string \n");
+      }
+      len = RatToString(dualreference, rationalstring2, SCIP_MAXSTRLEN);
+      if( len == SCIP_MAXSTRLEN )
+      {
+         SCIPerrorMessage("rational too long to be converted to string \n");
+      }
       SCIPinfoMessage(scip, NULL, "  %-17s: %s (reference: %s)\n", "primal violation", rationalstring1, rationalstring2);
-      RatToString(dualviol, rationalstring1, SCIP_MAXSTRLEN);
-      RatToString(primalreference, rationalstring2, SCIP_MAXSTRLEN);
+      len = RatToString(dualviol, rationalstring1, SCIP_MAXSTRLEN);
+      if( len == SCIP_MAXSTRLEN )
+      {
+         SCIPerrorMessage("rational too long to be converted to string \n");
+      }
+      len = RatToString(primalreference, rationalstring2, SCIP_MAXSTRLEN);
+      if( len == SCIP_MAXSTRLEN )
+      {
+         SCIPerrorMessage("rational too long to be converted to string \n");
+      }
       SCIPinfoMessage(scip, NULL, "  %-17s: %s (reference: %s)\n", "dual violation", rationalstring1, rationalstring2);
    }
 

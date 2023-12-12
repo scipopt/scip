@@ -296,8 +296,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
    SCIP_Bool onlyversion;
    SCIP_Real primalreference = SCIP_UNKNOWN;
    SCIP_Real dualreference = SCIP_UNKNOWN;
-   SCIP_Rational* primalreferencerational;
-   SCIP_Rational* dualreferencerational;
+   SCIP_Rational* primalreferencerational = NULL;
+   SCIP_Rational* dualreferencerational = NULL;
    const char* dualrefstring;
    const char* primalrefstring;
    int i;
@@ -540,8 +540,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
             {
                SCIP_Bool error;
 
-               RatCreateBlock(SCIPblkmem(scip), &primalreferencerational);
-               RatCreateBlock(SCIPblkmem(scip), &dualreferencerational);
+               SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &primalreferencerational) );
+               SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &dualreferencerational) );
 
                error = !SCIPparseRational(scip, primalrefstring, primalreferencerational, &endptr) ||
                        !SCIPparseRational(scip, primalrefstring, dualreferencerational, &endptr);

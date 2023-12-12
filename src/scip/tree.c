@@ -2176,6 +2176,8 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    SCIP_Bool useglobal;
 
    useglobal = (int) node->depth <= tree->effectiverootdepth;
+   newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
+
    if( useglobal )
    {
       oldlb = SCIPvarGetLbGlobalExact(var);
@@ -2297,8 +2299,6 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    if( node->active )
    {
       int conflictingdepth;
-
-      newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
 
       /** @todo exip: do we need this exact as well? */
       conflictingdepth = SCIPvarGetConflictingBdchgDepth(var, set, boundtype, newboundreal);
@@ -2874,9 +2874,9 @@ SCIP_RETCODE SCIPnodeUpdateExactLowerboundLP(
       SCIPABORT();
    }
 
-   RatCreateBuffer(set->buffer, &lpobjval);
+   SCIP_CALL( RatCreateBuffer(set->buffer, &lpobjval) );
 
-   SCIPlpExactGetObjval(lp->lpexact, set, transprob, lpobjval);
+   SCIPlpExactGetObjval(lp->lpexact, set, lpobjval);
    SCIPnodeUpdateExactLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
 
    RatFreeBuffer(set->buffer, &lpobjval);
@@ -2918,7 +2918,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    {
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
-      SCIPnodeUpdateExactLowerboundLP(node, set, stat, tree, transprob, origprob, lp);
+      SCIP_CALL( SCIPnodeUpdateExactLowerboundLP(node, set, stat, tree, transprob, origprob, lp) );
       SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, node, transprob, usefarkas) );
    }
 
@@ -6220,11 +6220,11 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
       /* print branching information to certificate, if certificate is active */
-      if( downub == SCIP_INVALID )
+      if( downub == SCIP_INVALID ) /*lint !e777*/
       {
          SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
       }
-      else if( uplb == SCIP_INVALID )
+      else if( uplb == SCIP_INVALID ) /*lint !e777*/
       {
          SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
       }

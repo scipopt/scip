@@ -884,6 +884,90 @@ SCIP_Bool checkDualFeasibility(
 }
 
 /** calculates the minimal activity of a given aggregation row */
+static
+SCIP_Real aggrRowGetMinActivitySafely(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables (or NULL for global bounds) */
+   SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables (or NULL for global bounds) */
+   SCIP_Bool*            infdelta            /**< pointer to store whether at least one variable contributes with an infinite value */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real minact;
+   int* inds;
+   int nnz;
+   int i;
+   SCIP_ROUNDMODE roundmode;
+
+   vars = SCIPprobGetVars(transprob);
+   assert(vars != NULL);
+
+   nnz = SCIPaggrRowGetNNz(aggrrow);
+   inds = SCIPaggrRowGetInds(aggrrow);
+
+   minact = 0;
+
+   roundmode = SCIPintervalGetRoundingMode();
+   SCIPintervalSetRoundingModeDownwards();
+
+   if( infdelta != NULL )
+      *infdelta = FALSE;
+
+   for( i = 0; i < nnz; i++ )
+   {
+      SCIP_Real val;
+      SCIP_Real delta;
+      int v = inds[i];
+
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+
+      val = aggrrow->vals[v];
+
+      if( val > 0.0 )
+      {
+         SCIP_Real bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+         if( infdelta != NULL && SCIPsetIsInfinity(set, -bnd) )
+         {
+            *infdelta = TRUE;
+            goto TERMINATE;
+         }
+         delta += val * bnd;
+      }
+      else
+      {
+         SCIP_Real bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         if( infdelta != NULL && SCIPsetIsInfinity(set, bnd) )
+         {
+            *infdelta = TRUE;
+            goto TERMINATE;
+         }
+         delta += val * bnd;
+      }
+
+      /* update minimal activity */
+      minact += delta;
+
+      if( infdelta != NULL && SCIPsetIsInfinity(set, REALABS(delta)) )
+      {
+         *infdelta = TRUE;
+         goto TERMINATE;
+      }
+   }
+
+  TERMINATE:
+   SCIPintervalSetRoundingMode(roundmode);
+   /* check whether the minimal activity is infinite */
+   if( SCIPsetIsInfinity(set, minact) )
+      return SCIPsetInfinity(set);
+   if( SCIPsetIsInfinity(set, -minact) )
+      return -SCIPsetInfinity(set);
+
+   return minact;
+}
+
+/** calculates the minimal activity of a given aggregation row */
 SCIP_Real SCIPaggrRowGetMinActivity(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem data */
@@ -898,6 +982,9 @@ SCIP_Real SCIPaggrRowGetMinActivity(
    int* inds;
    int nnz;
    int i;
+
+   if( set->exact_enabled )
+      return aggrRowGetMinActivitySafely(set, transprob, aggrrow, curvarlbs, curvarubs, infdelta);
 
    vars = SCIPprobGetVars(transprob);
    assert(vars != NULL);
@@ -1579,7 +1666,10 @@ SCIP_RETCODE SCIPgetDualProof(
    }
 
    /* clear the proof */
-   SCIPaggrRowClear(farkasrow);
+   if( set->exact_enabled )
+      SCIPaggrRowClearSafe(farkasrow);
+   else
+      SCIPaggrRowClear(farkasrow);
 
    /* Let y be the dual solution and r be the reduced cost vector. Let z be defined as
     *    z_i := y_i if i is a global row,

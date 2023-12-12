@@ -188,6 +188,12 @@ void SCIPaggrRowClear(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
+/** version for use in exact solvig mode of SCIPaggrRowClear */
+SCIP_EXPORT
+void SCIPaggrRowClearSafe(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
 /** aggregate rows using the given weights; the current content of the aggregation
  *  row, \p aggrrow, gets overwritten
  */
@@ -267,6 +273,16 @@ SCIP_Real SCIPaggrRowGetValue(
    QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
 
    return QUAD_TO_DBL(val);
+}
+
+/** gets the non-zero value for the given non-zero index */
+static INLINE
+SCIP_Real SCIPaggrRowGetValueSafely(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int                   i                   /**< non-zero index; must be between 0 and SCIPaggrRowGetNNz(aggrrow) - 1 */
+   )
+{
+   return aggrrow->vals[aggrrow->inds[i]];
 }
 
 /** gets the non-zero value for the given problem index of a variable */

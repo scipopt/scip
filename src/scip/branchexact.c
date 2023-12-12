@@ -132,7 +132,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
    branchcand->npriolpcands = 0;
    branchcand->npriolpbins = 0;
 
-   RatCreateBuffer(set->buffer, &tmp);
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
    for( c = 0; c < ncols; ++c )
    {
@@ -170,6 +170,9 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
 
       if( RatIsIntegral(tmp) )
          continue;
+
+      RatGetFrac(tmp, tmp);
+      frac = RatApproxReal(tmp);
 
       /* insert candidate in candidate list */
       branchpriority = SCIPvarGetBranchPriority(var);
@@ -528,7 +531,6 @@ SCIP_RETCODE SCIPbranchExecLPexact(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
@@ -581,7 +583,7 @@ SCIP_RETCODE SCIPbranchExecLPexact(
          SCIP_Rational* tmp;
          SCIP_Real branchval;
 
-         RatCreateBuffer(set->buffer, &tmp);
+         SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
          branchval = branchcand->lpcandssol[i];
          RatSetReal(tmp, branchval);
          assert(!RatIsIntegral(tmp));

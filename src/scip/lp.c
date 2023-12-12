@@ -10445,7 +10445,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
    }
 
    if( !lp->diving && !lp->probing )
-      SCIPlpExactSetCutoffbound(lp->lpexact, set, prob, cutoffbound);
+      SCIPlpExactSetCutoffbound(lp->lpexact, set, cutoffbound);
 
    lp->cutoffbound = cutoffbound;
 
@@ -12747,7 +12747,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          }
 
          SCIP_CALL( SCIPlpExactComputeSafeBound(lp, lp->lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
-               prob, itlim, lperror, SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE, &(lp->lpobjval), &primalfeasible, &dualfeasible ) );
+               prob, lperror, SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE, &(lp->lpobjval), &primalfeasible, &dualfeasible ) );
 
          /* handle error case in objlimit */
          if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && !lp->hasprovedbound )

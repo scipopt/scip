@@ -454,7 +454,7 @@ SCIP_Longint SCIPgetNLPs(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-int SCIPgetNExactLP(
+SCIP_Longint SCIPgetNExactLP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -481,7 +481,7 @@ int SCIPgetNExactLP(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
-int SCIPgetNExactSol(
+SCIP_Longint SCIPgetNExactSol(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1435,7 +1435,7 @@ void SCIPgetDualboundExact(
    )
 {
    SCIP_Rational* tmpval;
-   RatCreateBuffer(SCIPbuffer(scip), &tmpval);
+   (void) RatCreateBuffer(SCIPbuffer(scip), &tmpval);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDualboundExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
@@ -3671,7 +3671,7 @@ void SCIPprintLPStatistics(
       else
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT "          -          -\n", scip->stat->nfailexlpinf);
 
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  inf failed       : %10.2f %10" SCIP_LONGINT_FORMAT " \n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  inf failed       : %10.2f %10" SCIP_LONGINT_FORMAT " \n",
          scip->stat->timefailexlpinf, scip->stat->nfailexlpinf);
 
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  boundshift feas  : %10.2f %10" SCIP_LONGINT_FORMAT "          -          -          - %10" SCIP_LONGINT_FORMAT " %.4e %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",

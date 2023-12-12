@@ -47,25 +47,20 @@ extern "C" {
 /** creates separation storage */
 SCIP_RETCODE SCIPsepastoreExactCreate(
    SCIP_SEPASTOREEXACT** sepastoreexact,     /**< pointer to store separation storage */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** frees separation storage */
 SCIP_RETCODE SCIPsepastoreExactFree(
-   SCIP_SEPASTOREEXACT** sepastoreexact,     /**< pointer to store separation storage */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP_SEPASTOREEXACT** sepastoreexact      /**< pointer to store separation storage */
    );
 
 
 /** adds cut to separation storage and captures it */
 SCIP_RETCODE SCIPsepastoreExactAddCut(
    SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPEXACT*         lp,                 /**< LP data */
    SCIP_ROWEXACT*        cut                 /**< separated cut */
    );
 
@@ -74,9 +69,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
    SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LPEXACT*         lp,                 /**< LP data */
-   SCIP_PROB*            prob,               /**< scip prob structure */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
 
@@ -85,7 +78,6 @@ SCIP_RETCODE SCIPsepastoreExactClearCuts(
    SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPEXACT*         lp                  /**< LP data */
    );
 
