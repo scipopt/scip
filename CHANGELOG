@@ -1,6 +1,6 @@
-@page RN Release notes for SCIP NEXT
+@page RN90 Release notes for SCIP 9
 
-@section RNNEXT SCIP NEXT
+@section RN900 SCIP 9.0.0
 *************************
 
 Features
@@ -242,18 +242,6 @@ Known bugs
 ----------
 
 @page RN80 Release notes for SCIP 8.0
-
-@section RN811 SCIP 8.1.1
-*************************
-
-Fixed bugs
-----------
-
-Build system
-------------
-
-Miscellaneous
--------------
 
 @section RN805 SCIP 8.1.0
 *************************
