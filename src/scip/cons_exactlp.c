@@ -1871,6 +1871,8 @@ void consdataUpdateActivities(
             lastactivity = &(consdata->lastglbminactivity);
             activityposinf = &(consdata->glbminactivityposinf);
             activityneginf = &(consdata->glbminactivityneginf);
+            activityposhuge = &(consdata->glbminactivityposhuge);
+            activityneghuge = &(consdata->glbminactivityneghuge);
             validact = consdata->validglbminact;
             SCIPintervalSetRoundingModeDownwards();
             val = valrange.inf;
@@ -1881,6 +1883,8 @@ void consdataUpdateActivities(
             lastactivity = &(consdata->lastglbmaxactivity);
             activityposinf = &(consdata->glbmaxactivityneginf);
             activityneginf = &(consdata->glbmaxactivityposinf);
+            activityposhuge = &(consdata->glbmaxactivityposhuge);
+            activityneghuge = &(consdata->glbmaxactivityneghuge);
             validact = consdata->validglbmaxact;
             SCIPintervalSetRoundingModeUpwards();
             val = valrange.sup;
@@ -1894,6 +1898,8 @@ void consdataUpdateActivities(
             lastactivity = &(consdata->lastglbmaxactivity);
             activityposinf = &(consdata->glbmaxactivityposinf);
             activityneginf = &(consdata->glbmaxactivityneginf);
+            activityposhuge = &(consdata->glbmaxactivityposhuge);
+            activityneghuge = &(consdata->glbmaxactivityneghuge);
             validact = consdata->validglbmaxact;
             SCIPintervalSetRoundingModeUpwards();
             val = valrange.sup;
@@ -1904,6 +1910,8 @@ void consdataUpdateActivities(
             lastactivity = &(consdata->lastglbminactivity);
             activityposinf = &(consdata->glbminactivityneginf);
             activityneginf = &(consdata->glbminactivityposinf);
+            activityposhuge = &(consdata->glbminactivityposhuge);
+            activityneghuge = &(consdata->glbminactivityneghuge);
             validact = consdata->validglbminact;
             SCIPintervalSetRoundingModeDownwards();
             val = valrange.inf;
@@ -1927,6 +1935,8 @@ void consdataUpdateActivities(
             lastactivity = &(consdata->lastminactivity);
             activityposinf = &(consdata->minactivityposinf);
             activityneginf = &(consdata->minactivityneginf);
+            activityposhuge = &(consdata->minactivityposhuge);
+            activityneghuge = &(consdata->minactivityneghuge);
             validact = consdata->validminact;
             SCIPintervalSetRoundingModeDownwards();
             val = valrange.inf;
@@ -1937,6 +1947,8 @@ void consdataUpdateActivities(
             lastactivity = &(consdata->lastmaxactivity);
             activityposinf = &(consdata->maxactivityneginf);
             activityneginf = &(consdata->maxactivityposinf);
+            activityposhuge = &(consdata->maxactivityposhuge);
+            activityneghuge = &(consdata->maxactivityneghuge);
             validact = consdata->validmaxact;
             SCIPintervalSetRoundingModeUpwards();
             val = valrange.sup;
@@ -1950,6 +1962,8 @@ void consdataUpdateActivities(
             lastactivity = &(consdata->lastmaxactivity);
             activityposinf = &(consdata->maxactivityposinf);
             activityneginf = &(consdata->maxactivityneginf);
+            activityposhuge = &(consdata->maxactivityposhuge);
+            activityneghuge = &(consdata->maxactivityneghuge);
             validact = consdata->validmaxact;
             SCIPintervalSetRoundingModeUpwards();
             val = valrange.sup;
@@ -1960,6 +1974,8 @@ void consdataUpdateActivities(
             lastactivity = &(consdata->lastminactivity);
             activityposinf = &(consdata->minactivityneginf);
             activityneginf = &(consdata->minactivityposinf);
+            activityposhuge = &(consdata->minactivityposhuge);
+            activityneghuge = &(consdata->minactivityneghuge);
             validact = consdata->validminact;
             SCIPintervalSetRoundingModeDownwards();
             val = valrange.inf;

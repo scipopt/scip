@@ -190,7 +190,6 @@ void Rational::fromString(const char* num)
    std::string s = std::string(num);
 
    assert(num != NULL);
-   assert(strlen(num) <  32);
 
    // Skip initial whitespace
    while(isspace(*num))
