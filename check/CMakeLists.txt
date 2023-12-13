@@ -197,6 +197,7 @@ set(settings_Indicator
     "indicatorconflict"
     "indicatoralterlp"
     "indicatorupgrade"
+    "indicatorobbt"
    )
 
 set(settings_reopt
