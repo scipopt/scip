@@ -483,28 +483,25 @@ SCIP_RETCODE createLPWithHardCuts(
    SCIP_Real* rowval;
    SCIP_COL** rowcols;
    SCIP_LPI* wslpi;
+   SCIP_LPISTATE* lpistate;
+   BMS_BLKMEM* blkmem;
+   SCIP_Real pinf;
+   SCIP_Real ninf;
    int nrows;
    int ncols;
    int nrownonz;
    int collppos;
    int* rowcolinds;
    int* rowbegs;
-   int* cstat;
-   int* rstat;
 
    assert(scip != NULL);
    assert(sepadata != NULL);
 
    SCIP_LPI** lpi = &(sepadata->lpiwithhardcuts);
-   SCIP_Real pinf = SCIPinfinity(scip);
-   SCIP_Real ninf = -SCIPinfinity(scip);
+   blkmem = SCIPblkmem(scip);
 
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-   /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &cstat, ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rstat, nrows + ncuts) );
 
    /* if this function is called for the first time in this separation round, then create an LPI and add cols & rows */
    if( ncuts == 0 )
@@ -558,6 +555,8 @@ SCIP_RETCODE createLPWithHardCuts(
       SCIP_CALL( SCIPallocBufferArray(scip, &rowrhs, nrows) );
       /* gather required row information */
       rowbegs[0] = 0;
+      pinf = SCIPlpiInfinity(*lpi);
+      ninf = -SCIPlpiInfinity(*lpi);
       for( int i = 0; i < nrows; ++i )
       {
          nrownonz = SCIProwGetNLPNonz(rows[i]);
@@ -585,7 +584,7 @@ SCIP_RETCODE createLPWithHardCuts(
 
       /* get warm starting info */
       SCIP_CALL( SCIPgetLPI(scip, &wslpi) );
-      SCIP_CALL( SCIPlpiGetBase(wslpi, cstat, rstat) );
+      SCIP_CALL( SCIPlpiGetState(wslpi, blkmem, &lpistate) );
    }
    /* if there are any cuts, then add the cuts that were not added earlier to the LPI */
    else
@@ -594,10 +593,12 @@ SCIP_RETCODE createLPWithHardCuts(
 
       /* get warm starting info */
       wslpi = *lpi;
-      SCIP_CALL( SCIPlpiGetBase(wslpi, cstat, rstat) );
+      SCIP_CALL( SCIPlpiGetState(wslpi, blkmem, &lpistate) );
 
       /* find number of nonzeros in cuts and allocate memory */
       nrownonz = 0;
+      pinf = SCIPlpiInfinity(*lpi);
+      ninf = -SCIPlpiInfinity(*lpi);
       for( int i = sepadata->nrowsinhardcutslp - nrows; i < ncuts; ++i )
       {
          assert(!(SCIPisInfinity(scip, -SCIProwGetLhs(cuts[i])) && SCIPisInfinity(scip, SCIProwGetRhs(cuts[i]))));
@@ -637,8 +638,6 @@ SCIP_RETCODE createLPWithHardCuts(
             rowcolinds[rowbegs[i - sepadata->nrowsinhardcutslp + nrows] + j] = collppos;
             rowvals[rowbegs[i - sepadata->nrowsinhardcutslp + nrows] + j] = rowval[j];
          }
-
-         rstat[nrows + i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
       }
 
       /* add cuts */
@@ -647,14 +646,12 @@ SCIP_RETCODE createLPWithHardCuts(
    }
 
    /* set warm starting basis */
-   SCIP_CALL( SCIPlpiSetBase(*lpi, cstat, rstat) );
+   SCIP_CALL( SCIPlpiSetState(*lpi, blkmem, lpistate) );
 
    /* reset remaining sepadata values */
    sepadata->nrowsinhardcutslp = nrows + ncuts;
 
    /* free memory */
-   SCIPfreeBufferArray(scip, &rstat);
-   SCIPfreeBufferArray(scip, &cstat);
    SCIPfreeBufferArray(scip, &rowrhs);
    SCIPfreeBufferArray(scip, &rowlhs);
    SCIPfreeBufferArray(scip, &rowbegs);
