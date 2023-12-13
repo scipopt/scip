@@ -188,7 +188,7 @@ SCIP_RETCODE checkSolOrig(
    }
 
    /* sort original constraint according to check priority */
-   SCIPprobSortConssCheck(scip->origprob);
+   SCIP_CALL( SCIPprobSortConssCheck(scip->origprob) );
 
    /* check original constraints
     *
@@ -203,7 +203,7 @@ SCIP_RETCODE checkSolOrig(
    {
       SCIP_CONS* cons;
 
-      cons = scip->origprob->conss[c];
+      cons = scip->origprob->origcheckconss[c];
 #ifndef NDEBUG
       assert( SCIPconshdlrGetCheckPriority(SCIPconsGetHdlr(cons)) <= v );
       v = SCIPconshdlrGetCheckPriority(SCIPconsGetHdlr(cons));

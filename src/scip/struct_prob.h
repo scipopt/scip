@@ -66,6 +66,7 @@ struct SCIP_Prob
    SCIP_VAR**            deletedvars;        /**< array to temporarily store deleted variables */
    SCIP_HASHTABLE*       consnames;          /**< hash table storing constraints' names */
    SCIP_CONS**           conss;              /**< array with constraints of the problem */
+   SCIP_CONS**           origcheckconss;     /**< array to store original constraints sorted w.r.t. check priority (or NULL) */
    int                   varssize;           /**< available slots in vars array */
    int                   nvars;              /**< number of active variables in the problem (used slots in vars array) */
    int                   nbinvars;           /**< number of binary variables */

@@ -154,6 +154,11 @@ SCIP_RETCODE probEnsureConssMem(
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
       SCIP_ALLOC( BMSreallocMemoryArray(&prob->conss, newsize) );
+      /* resize sorted original constraints if they exist */
+      if( prob->origcheckconss != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&prob->origcheckconss, newsize) );
+      }
       prob->consssize = newsize;
    }
    assert(num <= prob->consssize);
@@ -321,6 +326,7 @@ SCIP_RETCODE SCIPprobCreate(
    else
       (*prob)->consnames = NULL;
    (*prob)->conss = NULL;
+   (*prob)->origcheckconss = NULL;
    (*prob)->consssize = 0;
    (*prob)->nconss = 0;
    (*prob)->maxnconss = 0;
@@ -450,6 +456,7 @@ SCIP_RETCODE SCIPprobFree(
    }
 
    /* free constraint array */
+   BMSfreeMemoryArrayNull(&(*prob)->origcheckconss);
    BMSfreeMemoryArrayNull(&(*prob)->conss);
 
    /* free user problem data */
@@ -704,24 +711,33 @@ void SCIPprobResortVars(
    }
 }
 
-/** sort the constraints according to check priorties */
-void SCIPprobSortConssCheck(
+/** possibly create and sort the constraints according to check priorties */
+SCIP_RETCODE SCIPprobSortConssCheck(
    SCIP_PROB*            prob                /**< problem data */
    )
 {
    int c;
 
-   if( prob->consschecksorted )
-      return;
+   if( prob->consschecksorted || prob->transformed )
+      return SCIP_OKAY;
 
-   /* sort original constraint according to check priority */
-   SCIPsortPtr((void**)prob->conss, SCIPconsCompCheck, prob->nconss);
+   if( prob->nconss > 0 )
+   {
+      /* possibly create and copy constraints */
+      if( prob->origcheckconss == NULL )
+      {
+         SCIP_ALLOC( BMSallocMemoryArray(&prob->origcheckconss, prob->consssize) );
+         for( c = 0; c < prob->nconss; ++c)
+            prob->origcheckconss[c] = prob->conss[c];
+      }
+      assert( prob->origcheckconss != NULL );
 
-   /* reset positions */
-   for( c = 0; c < prob->nconss; ++c)
-      prob->conss[c]->addarraypos = c;
-
+      /* sort original constraint according to check priority */
+      SCIPsortPtr((void**)prob->origcheckconss, SCIPconsCompCheck, prob->nconss);
+   }
    prob->consschecksorted = TRUE;
+
+   return SCIP_OKAY;
 }
 
 
@@ -1334,6 +1350,8 @@ SCIP_RETCODE SCIPprobAddCons(
    /* add the constraint to the problem's constraint array */
    SCIP_CALL( probEnsureConssMem(prob, set, prob->nconss+1) );
    prob->conss[prob->nconss] = cons;
+   if( prob->origcheckconss != NULL )
+      prob->origcheckconss[prob->nconss] = cons;
    prob->nconss++;
    prob->maxnconss = MAX(prob->maxnconss, prob->nconss);
    prob->consschecksorted = FALSE;
@@ -1420,6 +1438,10 @@ SCIP_RETCODE SCIPprobDelCons(
    prob->conss[arraypos]->addarraypos = arraypos;
    prob->nconss--;
    prob->consschecksorted = FALSE;
+
+   /* if we delete constraints then delete array origcheckconss to be sure */
+   if( prob->origcheckconss != NULL )
+      BMSfreeMemoryArray(&prob->origcheckconss);
 
    /* mark the constraint to be no longer in the problem */
    cons->addarraypos = -1;
