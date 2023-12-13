@@ -111,6 +111,9 @@ SCIP_RETCODE checkSolOrig(
    )
 {
    SCIP_RESULT result;
+#ifndef NDEBUG
+   int oldpriority;
+#endif
    int v;
    int c;
    int h;
@@ -163,10 +166,36 @@ SCIP_RETCODE checkSolOrig(
       }
    }
 
-   /* call constraint handlers with positive or zero check priority that don't need constraints */
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
+   /* sort original constraint according to check priority */
+   SCIP_CALL( SCIPprobSortConssCheck(scip->origprob) );
+
+   /* check original constraints
+    *
+    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
+    * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
+    * have to be checked;
+    */
+#ifndef NDEBUG
+   oldpriority = INT_MAX;
+#endif
+   h = 0;
+   for( c = 0; c < scip->origprob->nconss; ++c )
    {
-      if( SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= 0 )
+      SCIP_CONS* cons;
+      int priority;
+
+      cons = scip->origprob->origcheckconss[c];
+      assert( SCIPconsGetHdlr(cons) != NULL );
+      priority = SCIPconshdlrGetCheckPriority(SCIPconsGetHdlr(cons));
+
+#ifndef NDEBUG
+      assert( priority <= oldpriority );
+      oldpriority = priority;
+#endif
+
+      /* check constraints handlers without constraints that have a with check priority at least as high as current
+       * constraint */
+      while( SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= priority )
       {
          if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
          {
@@ -181,57 +210,14 @@ SCIP_RETCODE checkSolOrig(
                   return SCIP_OKAY;
             }
          }
+         ++h;
       }
-      /* constraint handlers are sorted by priority, so we can break when reaching the first one with negative priority */
-      else
-         break;
-   }
 
-   /* sort original constraint according to check priority */
-   SCIP_CALL( SCIPprobSortConssCheck(scip->origprob) );
-
-   /* check original constraints
-    *
-    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
-    * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
-    * have to be checked;
-    */
-#ifndef NDEBUG
-   v = INT_MAX;
-#endif
-   for( c = 0; c < scip->origprob->nconss; ++c )
-   {
-      SCIP_CONS* cons;
-
-      cons = scip->origprob->origcheckconss[c];
-#ifndef NDEBUG
-      assert( SCIPconshdlrGetCheckPriority(SCIPconsGetHdlr(cons)) <= v );
-      v = SCIPconshdlrGetCheckPriority(SCIPconsGetHdlr(cons));
-#endif
+      /* now check constraint */
       if( SCIPconsIsChecked(cons) && (checkmodifiable || !SCIPconsIsModifiable(cons)) )
       {
          /* check solution */
          SCIP_CALL( SCIPconsCheck(cons, scip->set, sol, checkintegrality, checklprows, printreason, &result) );
-
-         if( result != SCIP_FEASIBLE )
-         {
-            *feasible = FALSE;
-
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
-
-   /* call constraint handlers with negative check priority that don't need constraints;
-    * continue with the first constraint handler with negative priority which caused us to break in the above loop */
-   for( ; h < scip->set->nconshdlrs; ++h )
-   {
-      assert(SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) < 0);
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
-      {
-         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-               checkintegrality, checklprows, printreason, completely, &result) );
 
          if( result != SCIP_FEASIBLE )
          {
