@@ -2219,6 +2219,8 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    SCIP_CALL( RatCreateBuffer(set->buffer, &oldbound) );
 
    SCIP_CALL( SCIPvarGetProbvarBoundExact(&var, newbound, &boundtype) );
+   newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
+
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {

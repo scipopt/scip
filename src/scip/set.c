@@ -510,7 +510,7 @@
 #define SCIP_DEFAULT_EXACT_ENABLED        FALSE /**< should the problem be solved exactly (without numerical tolerances)? */
 #define SCIP_DEFAULT_EXACT_SAFEDBMETHOD     'a' /**< method for computing safe dual bounds
                                                  *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
-#define SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY 3 /**< frequency at which safe dual bounding method is interleaved with exact LP
+#define SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY 1 /**< frequency at which safe dual bounding method is interleaved with exact LP
                                                  *   solve (-1: never, 0: automatic, n > 0: every n-th node) */
 #define SCIP_DEFAULT_EXACT_PSDUALCOLSELECTION 1 /**< strategy to select which dual columns to use for lp to compute interior point
                                                  *   (0: no sel, 1: active rows of inexact primal LP, 2: Active rows of exact primal LP) */
