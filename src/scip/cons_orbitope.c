@@ -2096,7 +2096,7 @@ SCIP_RETCODE resolvePropagation(
 
 #ifdef SCIP_DEBUG
             (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", p1, p2);
-            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN-1);
 #endif
 
             if ( cases[p1][p2] == 3 )
@@ -2168,7 +2168,7 @@ SCIP_RETCODE resolvePropagation(
 
 #ifdef SCIP_DEBUG
                   (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", p1, p2);
-                  (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+                  (void) strncat(str, tmpstr, SCIP_MAXSTRLEN-1);
 #endif
                }
 #ifndef NDEBUG
@@ -2195,7 +2195,7 @@ SCIP_RETCODE resolvePropagation(
             /* partitioning case */
 #ifdef SCIP_DEBUG
             (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, "  before bar: ");
-            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN-1);
 #endif
             /* add variables before the bar in the partitioning case */
             for (k = 0; k < j; ++k)
@@ -2205,7 +2205,7 @@ SCIP_RETCODE resolvePropagation(
                *result = SCIP_SUCCESS;
 #ifdef SCIP_DEBUG
                (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", i, k);
-               (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+               (void) strncat(str, tmpstr, SCIP_MAXSTRLEN-1);
 #endif
             }
 
