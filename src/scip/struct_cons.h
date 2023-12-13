@@ -185,7 +185,7 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSGETNVARS((*consgetnvars));  /**< constraint get number of variable method */
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)); /**< constraint handler diving solution enforcement method */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
-   SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed inactive
+   SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones precede inactive
                                               *   ones; a constraint is active if it is global and was not removed
                                               *   during presolving or it was added locally (in that case the local flag
                                               *   is TRUE) and the current node belongs to the corresponding sub tree */
