@@ -55,6 +55,7 @@
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
 #include "scip/relax.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
@@ -588,6 +589,9 @@ SCIP_RETCODE SCIPpropagateProbing(
    SCIP_Real* objchgvals;
    SCIP_Bool changedobj;
    int nobjchg;
+
+   if( SCIPisExactSolve(scip) )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpropagateProbing", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 

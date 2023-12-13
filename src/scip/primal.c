@@ -507,6 +507,7 @@ SCIP_RETCODE primalSetUpperboundExact(
 
       RatRound(cutoffbound, primal->upperboundexact, SCIP_R_ROUND_DOWNWARDS);
       RatAddReal(cutoffbound, cutoffbound, delta);
+      /** @todo: exip We can probably stop adding the delta */
    }
    else
       RatSet(cutoffbound, upperbound);

@@ -27,6 +27,7 @@
  * @brief  internal methods for dual proof conflict analysis
  * @author Timo Berthold
  * @author Jakob Witzig
+ * @autor  Sander Borst
  *
  * In dual proof analysis, an infeasible LP relaxation is analysed.
  * Using the dual solution, a valid constraint is derived that is violated

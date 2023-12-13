@@ -2822,7 +2822,6 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_SOLVING:
          /* reset display */
          SCIPstatResetDisplay(scip->stat);
-         SCIP_CALL( SCIPcertificateInitTransFile(scip) );
 
          /* remember cutpool statistics after restart */
          if( transferstatistics )

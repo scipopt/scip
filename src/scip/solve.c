@@ -68,6 +68,7 @@
 #include "scip/reopt.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_mem.h"
+#include "scip/scip_lp.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
@@ -615,7 +616,7 @@ SCIP_RETCODE propagateDomains(
    *postpone = FALSE;
    propround = 0;
    propagain = TRUE;
-   while( propagain && !(*cutoff) && !(*postpone) && propround < maxproprounds && !SCIPsolveIsStopped(set, stat, FALSE) && !set->exact_enabled )
+   while( propagain && !(*cutoff) && !(*postpone) && propround < maxproprounds && !SCIPsolveIsStopped(set, stat, FALSE))
    {
       propround++;
 
@@ -2991,7 +2992,7 @@ SCIP_RETCODE applyBounding(
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set, transprob, FALSE, -1, -1L, pseudoobjval) );
       }
       /* check for infeasible node by bounding */
-      if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)
+      if( (!set->exact_enabled && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound))
             || (set->exact_enabled && RatIsGE(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact)) )
       {
          if( set->exact_enabled && RatIsLT(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact) && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
@@ -5131,6 +5132,15 @@ SCIP_RETCODE SCIPsolveCIP(
          /* focus selected node */
          SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt,
                lp, branchcand, conflict, conflictstore, eventfilter, eventqueue, cliquetable, &cutoff, FALSE, FALSE) );
+         if( SCIPisCertificateActive(set->scip) )
+         {
+            if( !SCIPisLPConstructed(set->scip))
+            {
+               SCIP_CALL( SCIPconstructLP(set->scip, &cutoff) );
+               assert(!cutoff);
+               SCIP_CALL( SCIPcertificateInitTransFile(set->scip) );
+            }
+         }
          if( cutoff )
             stat->ndelayedcutoffs++;
 

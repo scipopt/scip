@@ -66,7 +66,7 @@ SCIP_RETCODE SCIPstatCreate(
    assert(set != NULL);
 
    SCIP_ALLOC( BMSallocMemory(stat) );
-
+   SCIP_CALL( SCIPclockCreate(&(*stat)->exactproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -520,7 +520,7 @@ void SCIPstatUpdatePrimalDualIntegrals(
    assert(stat != NULL);
    assert(set != NULL);
 
-   solvingtime = SCIPclockGetTime(stat->solvingtime);
+   solvingtime = MAX(SCIPclockGetTime(stat->solvingtime), stat->previntegralevaltime);
    assert(solvingtime >= stat->previntegralevaltime);
 
    if( !SCIPsetIsInfinity(set, upperbound) ) /*lint !e777*/

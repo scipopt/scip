@@ -129,8 +129,8 @@ echo "set lp advanced threads ${THREADS}"                        >> "${TMPFILE}"
 echo "set display freq ${DISPFREQ}"                              >> "${TMPFILE}"
 if test "${WITHCERTIFICATE}" = true
 then
-    echo "set certificate filename $CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.vipr" >> $TMPFILE
-    echo "set certificate maxfilesize 100240 >> $TMPFILE"
+    echo "set certificate filename $CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.vipr" >> "${TMPFILE}"
+    echo "set certificate maxfilesize 100240" >> "${TMPFILE}"
 fi
 
 echo "set memory savefac 1.0"                                    >> "${TMPFILE}"

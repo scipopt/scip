@@ -28,6 +28,7 @@
 
 #include "scip/def.h"
 #include "scip/type_certificate.h"
+#include "scip/type_var.h"
 #include "scip/type_misc.h"
 
 #ifdef __cplusplus
@@ -37,10 +38,12 @@ extern "C" {
 /** data structure for hashing bounds of variables in a certificate file */
 struct SCIP_CertificateBound
 {
-   int                   varindex;           /**< index of the variable */
+   int                   varindex;           /**< index of this bound in the certificate file */
    SCIP_Rational*        boundval;           /**< value of the bound */
    SCIP_BOUNDTYPE        boundtype;          /**< is it the upper bound? */
    SCIP_Bool             isbound;            /**< is the last printed index a bound? if it is not, the other information is not useful */
+   SCIP_Bool             isglobal;           /**< is the bound global? */
+   SCIP_Longint          certificateindex;   /**< index of the bound in the certificate file */
 };
 
 /** data structure for storing necessary information to print verified aggregation of rows */
@@ -120,9 +123,11 @@ struct SCIP_Certificate
    SCIP_Longint          indexcounter;       /**< counter for line indices in file */
    SCIP_Longint          indexcounter_ori;   /**< counter for line indices in origial problem vipr file */
    SCIP_Longint          conscounter;        /**< counter for line indices in constraint section */
+   SCIP_Longint          lastboundindex;     /**< place to store the last bound index to avoid having to add it to the signature of SCIPvarChgUbLocal, varProcessChgUbLocal */
    SCIP_FILE*            origfile;           /**< file to store original problem definition */
    SCIP_FILE*            transfile;          /**< file to store transformed problem (after presolving) */
    SCIP_FILE*            derivationfile;     /**< file to store derivations temporarily */
+   SCIP_Bool             transfile_initialized; /**< boolean to store if the transfile has been initialized */
    char*                 derivationfilename; /**< name of the derivation file */
    char*                 origfilename;       /**< name of the original problem file */
    SCIP_Real             filesize;           /**< size of derivation file in MB */

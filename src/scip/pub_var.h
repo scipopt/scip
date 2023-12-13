@@ -46,6 +46,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
+#include "scip/intervalarith.h"
 
 #ifdef NDEBUG
 #include "scip/struct_var.h"
@@ -735,6 +736,12 @@ SCIP_Real SCIPvarGetObj(
 /** gets objective function value of variable */
 SCIP_EXPORT
 SCIP_Rational* SCIPvarGetObjExact(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets exact objective function value of variable */
+SCIP_EXPORT
+SCIP_INTERVAL SCIPvarGetObjInterval(
    SCIP_VAR*             var                 /**< problem variable */
    );
 

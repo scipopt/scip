@@ -59,6 +59,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_tree.h"
 #include "scip/type_var.h"
+#include "scip/intervalarith.h"
 
 #ifndef NDEBUG
 #include "scip/struct_var.h"
@@ -169,6 +170,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
    SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_Rational*        newboundexact,      /**< new value for exact bound, or NULL if not needed */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound for var: lower or upper bound */
    SCIP_BOUNDCHGTYPE     boundchgtype,       /**< type of bound change: branching decision or inference */
    SCIP_Real             lpsolval,           /**< solval of variable in last LP on path to node, or SCIP_INVALID if unknown */
@@ -906,6 +908,13 @@ void SCIPvarAdjustLbExact(
    SCIP_Rational*        lb                  /**< pointer to lower bound to adjust */
    );
 
+/** adjust lower bound to integral value, if variable is integral */
+void SCIPvarAdjustLbExactFloat(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            lb                  /**< pointer to lower bound to adjust */
+   );
+
 /** adjust upper bound to integral value, if variable is integral */
 void SCIPvarAdjustUb(
    SCIP_VAR*             var,                /**< problem variable */
@@ -918,6 +927,13 @@ void SCIPvarAdjustUbExact(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Rational*        ub                  /**< pointer to lower bound to adjust */
+   );
+
+/** adjust lower bound to integral value, if variable is integral */
+void SCIPvarAdjustUbExactFloat(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            ub                  /**< pointer to upper bound to adjust */
    );
 
 /** adjust lower or upper bound to integral value, if variable is integral */
@@ -1911,6 +1927,29 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
 /** return the index of the original variable */
 int SCIPvarGetOrigIndex(
    SCIP_VAR*             var                 /**< scip variable */
+   );
+
+/** Get the tightest local lower bound (from the exact and the real bound) */
+void SCIPvarGetLbLocalExactMaximal(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Rational*        output              /**< output rational */
+   );
+/** Get the tightest local uppper bound (from the exact and the real bound) */
+void SCIPvarGetUbLocalExactMinimal(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Rational*        output              /**< output rational */
+   );
+
+/** sets index of variable in vipr-certificate */
+void SCIPvarSetUbCertificateIndexLocal(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   SCIP_Longint          index               /**< the index */
+   );
+
+/** sets index of variable in vipr-certificate */
+void SCIPvarSetLbCertificateIndexLocal(
+   SCIP_VAR*             var,                /**< variable to set index for */
+   SCIP_Longint          index               /**< the index */
    );
 
 #ifdef NDEBUG

@@ -148,6 +148,16 @@ SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
    SCIP_Real             scale               /**< scalar */
    );
 
+/** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row
+ *  variant of SCIPaggrRowAddObjectiveFunction that is safe to use in exact mode */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaggrRowAddObjectiveFunctionSafely(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real             rhs,                /**< right-hand side of the artificial row */
+   SCIP_Real             scale               /**< scalar */
+   );
+
 /** add weighted constraint to the aggregation row */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaggrRowAddCustomCons(
@@ -263,6 +273,16 @@ SCIP_Real SCIPaggrRowGetValue(
    QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
 
    return QUAD_TO_DBL(val);
+}
+
+/** gets the non-zero value for the given non-zero index */
+static INLINE
+SCIP_Real SCIPaggrRowGetValueSafely(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   int                   i                   /**< non-zero index; must be between 0 and SCIPaggrRowGetNNz(aggrrow) - 1 */
+   )
+{
+   return aggrrow->vals[aggrrow->inds[i]];
 }
 
 /** gets the non-zero value for the given problem index of a variable */

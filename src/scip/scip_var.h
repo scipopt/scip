@@ -2200,6 +2200,64 @@ SCIP_RETCODE SCIPinferBinvarCons(
    SCIP_Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
    );
 
+/** changes upper bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  than the current bound; if possible, adjusts bound to integral value;
+ *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the bound change
+ *
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
+ *           SCIPgetVars()) gets resorted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_RETCODE SCIPinferVarUbConsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
+/** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  than the current bound; if possible, adjusts bound to integral value;
+ *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
+ *  for the deduction of the bound change
+ *
+ *  @warning If SCIP is in presolving stage, it can happen that the internal variable array (which can be accessed via
+ *           SCIPgetVars()) gets resorted.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note During presolving, an integer variable whose bound changes to {0,1} is upgraded to a binary variable.
+ */
+SCIP_RETCODE SCIPinferVarLbConsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Rational*        newbound,           /**< new value for bound */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
 /** fixes variable in preprocessing or in the current node, if the new bound is tighter (w.r.t. bound strengthening
  *  epsilon) than the current bound; if possible, adjusts bound to integral value; the given inference constraint is
  *  stored, such that the conflict analysis is able to find out the reason for the deduction of the bound change

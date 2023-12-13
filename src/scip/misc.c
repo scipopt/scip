@@ -3225,6 +3225,42 @@ SCIP_RETCODE SCIPhashmapInsertInt(
  *
  *  @note multiple insertion of same element is checked and results in an error
  */
+SCIP_RETCODE SCIPhashmapInsertLong(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   long                  image               /**< new image for origin */
+   )
+{
+   uint32_t hashval;
+   SCIP_HASHMAPIMAGE img;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_LONG);
+
+#ifndef NDEBUG
+   if( hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN )
+      hashmap->hashmaptype = SCIP_HASHMAPTYPE_LONG;
+#endif
+
+   SCIP_CALL( hashmapCheckLoad(hashmap) );
+
+   /* get the hash value */
+   hashval = hashvalue((size_t)origin);
+
+   /* append origin->image pair to hash map */
+   img.long_val = image;
+   SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** inserts new origin->image pair in hash map
+ *
+ *  @note multiple insertion of same element is checked and results in an error
+ */
 SCIP_RETCODE SCIPhashmapInsertReal(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
@@ -3295,6 +3331,26 @@ int SCIPhashmapGetImageInt(
       return hashmap->slots[pos].image.integer;
 
    return INT_MAX;
+}
+
+/** retrieves image of given origin from the hash map, or LONG_MAX if no image exists */
+long SCIPhashmapGetImageLong(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
+   )
+{
+   uint32_t pos;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+   assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_LONG);
+
+   if( hashmapLookup(hashmap, origin, &pos) )
+      return hashmap->slots[pos].image.long_val;
+
+   return LONG_MAX;
 }
 
 /** retrieves image of given origin from the hash map, or SCIP_INVALID if no image exists */

@@ -734,9 +734,9 @@ void RatDiff(
    if( op1->isinf || op2->isinf )
    {
       op1->isinf ? RatSet(res, op1) : RatNegate(res, op2);
-      if( op1->val.sign() != op2->val.sign() && op1->isinf && op2->isinf )
+      if( op1->val.sign() == op2->val.sign() && op1->isinf && op2->isinf )
       {
-         SCIPerrorMessage("addition of pos and neg infinity not supported \n");
+         SCIPerrorMessage("subtraction of two infinities with same sign not supported \n");
          SCIPABORT();
       }
    }
@@ -1312,7 +1312,7 @@ SCIP_Bool RatIsGEReal(
 
    if( rat->isinf )
    {
-      return RatApproxReal(rat) == real;
+      return RatApproxReal(rat) >= real;
    }
    else
    {
@@ -1348,7 +1348,7 @@ SCIP_Bool RatIsLEReal(
 
    if( rat->isinf )
    {
-      return RatApproxReal(rat) == real;
+      return RatApproxReal(rat) <= real;
    }
    else
    {
@@ -1550,8 +1550,9 @@ void RatPrint(
    SCIP_Rational*        rational            /**< the rational to print */
    )
 {
-   assert(rational != NULL);
-   if( rational->isinf )
+   if( rational == NULL)
+      std::cout << "NULL" << std::flush;
+   else if( rational->isinf )
       std::cout << rational->val.sign() << "inf" << std::flush;
    else
       std::cout << rational->val << std::flush;
@@ -2115,11 +2116,19 @@ void RatComputeApproximationLong(
       /* if value is almost integer, we use the next best integer (while still adhering to <=/>= requirements) */
       if( temp  < td / (maxdenom * 1.0) )
       {
-         res->val = a0 * sign;
-         if( forcegreater == 1 && res->val < src->val )
+	 // do not immediately set res to a0 * sign since res and src might be the same pointer
+         if( forcegreater == 1 && a0 * sign < src->val )
+	 {
+	    res->val = a0 * sign;
             res->val += Rational(1,maxdenom);
-         if( forcegreater == -1 && res->val > src->val )
+	 }
+         else if( forcegreater == -1 && a0 * sign > src->val )
+	 {
+	    res->val = a0 * sign;
             res->val -= Rational(1,maxdenom);
+	 }
+	 else
+	    res->val = a0 * sign;
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 
@@ -2275,7 +2284,7 @@ void RatComputeApproximation(
    {
 
       if( forcegreater == -1 )
-         RatSetInt(res, 1, maxdenom);
+         RatSetInt(res, -1, maxdenom);
       else
          RatSetReal(res, 0.0);
 
@@ -2312,11 +2321,18 @@ void RatComputeApproximation(
       /* if value is almost integer, we use the next best integer (while still adhering to <=/>= requirements) */
       if( temp * maxdenom < td )
       {
-         res->val = a0 * sign;
-         if( forcegreater == 1 && res->val < src->val )
+         if( forcegreater == 1 && a0 * sign < src->val )
+	 {
+	    res->val = a0 * sign;
             res->val += Rational(1,maxdenom);
-         if( forcegreater == -1 && res->val > src->val )
+	 }
+         else if( forcegreater == -1 && a0 * sign > src->val )
+	 {
+	    res->val = a0 * sign;
             res->val -= Rational(1,maxdenom);
+	 }
+	 else
+	    res->val = a0 * sign;	    
          res->isinf = FALSE;
          res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 

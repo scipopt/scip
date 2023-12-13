@@ -2434,7 +2434,7 @@ SCIP_RETCODE solCheckExact(
                {
                   if( printreason )
                   {
-                     SCIPmessagePrintInfo(messagehdlr, "infinite solution value %g for variable  <%s> with obj %g implies objective value +infinity\n",
+                     RatDebugMessage("infinite solution value %q for variable  <%s> with obj %q implies objective value +infinity\n",
                         RatApproxReal(solval), SCIPvarGetName(var), SCIPvarGetUnchangedObj(var));
                   }
 #ifdef SCIP_DEBUG

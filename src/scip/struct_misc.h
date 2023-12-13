@@ -124,6 +124,7 @@ typedef union {
    void*                 ptr;                /**< pointer image */
    int                   integer;            /**< integer image */
    SCIP_Real             real;               /**< real image */
+   long                  long_val;           /**< long image */
 } SCIP_HASHMAPIMAGE;
 
 /** hash map entry */

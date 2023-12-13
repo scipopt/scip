@@ -10444,7 +10444,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
       lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
    }
 
-   if( !lp->diving )
+   if( !lp->diving && !lp->probing )
       SCIPlpExactSetCutoffbound(lp->lpexact, set, cutoffbound);
 
    lp->cutoffbound = cutoffbound;

@@ -3212,6 +3212,7 @@ SCIP_RETCODE SCIProwExactCreate(
          var = cols[i]->var;
          (*row)->cols_index[i] = cols[i]->index;
          (*row)->linkpos[i] = -1;
+         SCIPintervalSetRational(&(*row)->valsinterval[i], vals[i]);
 
          if( RatIsIntegral((*row)->vals[i]) )
             (*row)->integral = (*row)->integral && SCIPvarIsIntegral(var);
@@ -3256,7 +3257,9 @@ SCIP_RETCODE SCIProwExactCreate(
    (*row)->nonlpcolssorted = (len <= 1);
    (*row)->delaysort = FALSE;
    (*row)->fprelaxable = isfprelaxable;
-
+   (*row)->rhsreal = RatRoundReal((*row)->rhs, SCIP_R_ROUND_UPWARDS);
+   (*row)->lhsreal = RatRoundReal((*row)->lhs, SCIP_R_ROUND_DOWNWARDS);
+   SCIPintervalSet(&(*row)->constantreal, 0);
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -5436,6 +5439,7 @@ SCIP_RETCODE SCIProwExactChgConstant(
       }
 
       RatSet(row->constant, constant);
+      SCIPintervalSetRational(&row->constantreal, constant);
    }
 
    return SCIP_OKAY;
@@ -6993,14 +6997,6 @@ SCIP_RETCODE SCIPlpExactGetSol(
          RatAddProd(primalbound, lpicols[c]->primsol, lpicols[c]->obj);
       }
 
-      /* if dual feasibility check is disabled, set reduced costs of basic variables to 0 */
-      if( dualfeasible == NULL && lpicols[c]->basisstatus == (unsigned int) SCIP_BASESTAT_BASIC )
-      {
-         RatSetReal(lpicols[c]->redcost, 0.0);
-         if( overwritefplp )
-            lp->fplp->lpicols[c]->redcost = 0;
-      }
-
       /* complementary slackness means that if a variable is not at its lower or upper bound, its reduced costs
          * must be non-positive or non-negative, respectively; in particular, if a variable is strictly within its
          * bounds, its reduced cost must be zero
@@ -7613,7 +7609,8 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       RatSetString(lpicols[c]->redcost, "inf");
       lpicols[c]->validredcostlp = -1L;
       lpicols[c]->validfarkaslp = -1L;
-      RatSet(lpicols[c]->farkascoef, farkascoefs[c]);
+      if( farkascoefs != NULL )
+	      RatSet(lpicols[c]->farkascoef, farkascoefs[c]);
 
       if( overwritefplp )
       {
@@ -8393,6 +8390,7 @@ SCIP_RETCODE SCIProwExactChgLhs(
    if( !RatIsEqual(rowexact->lhs, lhs) )
    {
       RatSet(rowexact->lhs, lhs);
+      rowexact->lhsreal = RatRoundReal(rowexact->lhs, SCIP_R_ROUND_DOWNWARDS);
       SCIP_CALL( rowExactSideChanged(rowexact, set, lpexact, SCIP_SIDETYPE_LEFT) );
    }
 
@@ -8413,6 +8411,7 @@ SCIP_RETCODE SCIProwExactChgRhs(
    if( !RatIsEqual(rowexact->rhs, rhs) )
    {
       RatSet(rowexact->rhs, rhs);
+      rowexact->rhsreal = RatRoundReal(rowexact->rhs, SCIP_R_ROUND_UPWARDS);
       SCIP_CALL( rowExactSideChanged(rowexact, set, lpexact, SCIP_SIDETYPE_RIGHT) );
    }
 

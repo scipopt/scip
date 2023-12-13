@@ -3642,6 +3642,8 @@ void SCIPprintLPStatistics(
    if( scip->set->exact_enabled )
    {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Exact LP           :       Time      Calls Iterations  Iter/call   Iter/sec     Nfails   AvgError   NObjlim  NObjlimF \n");
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact propagat.  : %10.2f \n",
+         SCIPclockGetTime(scip->stat->exactproptime));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp feas    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
          SCIPclockGetTime(scip->stat->provedfeaslptime),
          scip->stat->nexlp,

@@ -33,6 +33,7 @@
 #include "scip/type_certificate.h"
 #include "scip/type_sol.h"
 #include "scip/type_lpexact.h"
+#include "scip/type_cons.h"
 #include "scip/type_var.h"
 #include "scip/pub_fileio.h"
 #include "scip/type_prob.h"
@@ -78,12 +79,6 @@ void SCIPcertificateExit(
    );
 
 /** returns whether the certificate output is activated? */
-SCIP_Bool SCIPcertificateIsActive(
-   SCIP_SET*             set,                /**< SCIP settings */
-   SCIP_CERTIFICATE*     certificate         /**< certificate information */
-   );
-
-/** returns whether the certificate output is activated? */
 SCIP_Bool SCIPsetCertificateEnabled(
    SCIP_SET*             set                 /**< SCIP settings */
    );
@@ -104,7 +99,8 @@ SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_VAR*             var,                /**< variable that gets changed */
    SCIP_BOUNDTYPE        boundtype,          /**< lb or ub changed? */
-   SCIP_Real             newbound            /**< new bound */
+   SCIP_Real             newbound,           /**< new bound */
+   SCIP_Bool             needsglobal         /**< if the bound needs to be global */
    );
 #endif
 
@@ -230,6 +226,14 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
    int                   naggrrows           /**< length of the arrays */
    );
 
+/** Print cutoff bound for objective value **/
+SCIP_RETCODE SCIPcertificatePrintCutoffBound(
+   SCIP* scip,
+   SCIP_CERTIFICATE* certificate,
+   SCIP_Rational* bound,
+   unsigned long* certificateline
+   );
+
 /** create a new node data structure for the current node */
 SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_SET*             set,                /**< general SCIP settings */
@@ -240,7 +244,8 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_ROW**            aggrrows,           /**< array of rows used fo the aggregation */
    SCIP_Real*            weights,            /**< array of weights */
    int                   naggrrows,          /**< length of the arrays */
-   SCIP_Bool             local               /**< true if local bound information can be used */
+   SCIP_Bool             local,              /**< true if local bound information can be used */
+   unsigned long*        certificateline     /**< pointer to store the certificate line index or NULL */
    );
 
 /** prints a variable bound to the problem section of the certificate file and returns line index */
@@ -417,6 +422,58 @@ SCIP_RETCODE SCIPcertificateSetInheritanceData(
    SCIP_NODE*            node,               /**< node data structure */
    SCIP_Longint          fileindex,          /**< index of new bound */
    SCIP_Rational*        newbound            /**< the inherited bound */
+   );
+
+/** sets the last bound index for the certificate */
+SCIP_RETCODE SCIPcertificateSetLastBoundIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   SCIP_Longint          index               /**< index of new bound */
+   );
+
+/** returns the last bound index for the certificate */
+SCIP_Longint SCIPcertificateGetLastBoundIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CERTIFICATE*     certificate         /**< certificate data structure */
+   );
+
+/** checks that the state of the certificate is correct */
+void SCIPcertificateAssertStateCorrect(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to check */
+   );
+
+/** returns the index for a row in the certificate */
+unsigned long SCIPcertificateGetRowIndex(
+   SCIP_CERTIFICATE* certificate,            /**< certificate data structure */
+   SCIP_ROWEXACT* row,                       /**< row to consider */
+   SCIP_Bool rhs                             /**< whether we want the index for the rhs or the lhs */
+   );
+
+/** prints a proof that boundchange is leads to infeasibility */
+SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_Rational*        lb,                 /**< lower bound */
+   SCIP_Rational*        ub,                 /**< upper bound */
+   SCIP_Longint          lbindex,            /**< index of the lower bound */
+   SCIP_Longint          ubindex             /**< index of the upper bound */
+   );
+
+/** prints a proof for a new global bound */
+SCIP_RETCODE SCIPcertificatePrintGlobalBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_BOUNDTYPE        boundtype,          /**< Whether we have an upper bound or a lower bound */
+   SCIP_Rational*        value,              /**< value of the bound */
+   SCIP_Longint          certificateindex    /**< index in the certificate */
+   );
+
+/** should the certificate track bound changes? */
+SCIP_Bool SCIPcertificateShouldTrackBounds(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

@@ -2884,14 +2884,12 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    )
 {
    SCIP_Real sideval;
+   SCIP_Real sidevalchg;
    SCIP_Bool uselhs;
    SCIP_ROW* userow;
    SCIP_ROWEXACT* rowexact;
    SCIP_ROUNDMODE previousroundmode;
-   SCIP_Real sidevalchg;
    int i;
-
-   assert(row->lppos >= 0);
 
    /* update local flag */
    aggrrow->local = aggrrow->local || row->local;
@@ -2911,6 +2909,7 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    }
    aggrrow->rowsinds[i] = SCIProwGetLPPos(row);
    aggrrow->rowweights[i] = weight;
+   aggrrow->slacksign[i] = uselhs ? -1 : 1;
 
    if( sidetype == -1 )
    {
@@ -2935,10 +2934,10 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    rowexact = SCIProwGetRowExact(row);
    if( !SCIProwExactHasFpRelax(rowexact) )
    {
-      SCIPerrorMessage("cannot aggregate row that admits no fp relaxation");
-      SCIPABORT();
+      *success = FALSE;
+      return SCIP_OKAY;
    }
-   else if( SCIProwExactGetRowRhs(rowexact) != NULL && !uselhs )
+   else if( SCIProwExactGetRowRhs(rowexact) != NULL && weight >= 0.0 )
       userow = SCIProwExactGetRowRhs(rowexact);
    else
       userow = row;
@@ -2948,27 +2947,30 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    if( uselhs )
    {
       SCIPintervalSetRoundingModeDownwards();
-      aggrrow->slacksign[i] = -1;
       sideval = userow->lhs - userow->constant;
-      if( row->integral )
-         sideval = ceil(sideval); /* row is integral: round left hand side up */
+      /** @todo exip: we can't certify this yet so we have to disable it, if enabled change also in cutsSubstituteMIRSafe */
+      // if( userow->integral )
+      //    sideval = ceil(sideval)
    }
    else
    {
       SCIPintervalSetRoundingModeUpwards();
-      aggrrow->slacksign[i] = +1;
       sideval = userow->rhs - userow->constant;
-      if( row->integral )
-         sideval = floor(sideval); /* row is integral: round right hand side up */
+      /** @todo exip: we can't certify this yet so we have to disable it */
+      // if( userow->integral )
+      //    sideval = floor(sideval);
    }
 
    SCIPintervalSetRoundingModeUpwards();
-   SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, weight * sideval);
+   sidevalchg = QUAD_TO_DBL(aggrrow->rhs);
+   sidevalchg += sideval * weight;
+   QUAD_ASSIGN(aggrrow->rhs, sidevalchg);
 
    /* add up coefficients */
    SCIP_CALL( varVecAddScaledRowCoefsSafely(scip, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, userow, weight, &sidevalchg, success) );
 
-   SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, sidevalchg);
+   sidevalchg += QUAD_TO_DBL(aggrrow->rhs);
+   QUAD_ASSIGN(aggrrow->rhs, sidevalchg);
 
    SCIPintervalSetRoundingMode(previousroundmode);
 
@@ -3441,9 +3443,10 @@ SCIP_RETCODE addOneRowSafely(
 
    SCIPintervalSetRoundingModeUpwards();
 
-   sidevalchg = sideval * weight;
+   sidevalchg = QUAD_TO_DBL(aggrrow->rhs);
+   sidevalchg += sideval * weight;
+   QUAD_ASSIGN(aggrrow->rhs, sidevalchg);
 
-   SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, sidevalchg);
    aggrrow->rank = MAX(aggrrow->rank, userow->rank);
    aggrrow->local = aggrrow->local || userow->local;
 
@@ -3467,7 +3470,8 @@ SCIP_RETCODE addOneRowSafely(
    /* add up coefficients */
    SCIP_CALL( varVecAddScaledRowCoefsSafely(scip, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, userow, weight, &sidevalchg, success) );
 
-   SCIPquadprecSumQD(aggrrow->rhs, aggrrow->rhs, sidevalchg);
+   sidevalchg += QUAD_TO_DBL(aggrrow->rhs);
+   QUAD_ASSIGN(aggrrow->rhs, sidevalchg);
 
    /* check if row is too long now */
    if( aggrrow->nnz > maxaggrlen )
