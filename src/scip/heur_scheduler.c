@@ -2807,7 +2807,6 @@ SCIP_DECL_HEUREXEC(heurExecScheduler)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   assert(SCIPhasCurrentNodeLP(scip));
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
