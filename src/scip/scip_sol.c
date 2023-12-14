@@ -2987,7 +2987,7 @@ SCIP_RETCODE SCIPtrySol(
 
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints */
-      SCIP_CALL( checkSolOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+      SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
             printreason, completely, checkbounds, checkintegrality, checklprows, TRUE, &feasible) );
       if( feasible )
       {
@@ -3016,7 +3016,7 @@ SCIP_RETCODE SCIPtrySol(
          {
 #ifdef SCIP_DEBUG_ABORTATORIGINFEAS
             SCIP_Bool feasible;
-            SCIP_CALL( checkSolOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
+            SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
             if( ! feasible )
             {
@@ -3084,7 +3084,7 @@ SCIP_RETCODE SCIPtrySolFree(
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints
        */
-      SCIP_CALL( checkSolOrig(*sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+      SCIP_CALL( SCIPsolCheckOrig(*sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
             printreason, completely, checkbounds, checkintegrality, checklprows, TRUE, &feasible) );
 
       if( feasible )
@@ -3117,7 +3117,7 @@ SCIP_RETCODE SCIPtrySolFree(
          {
 #ifdef SCIP_DEBUG_ABORTATORIGINFEAS
             SCIP_Bool feasible;
-            SCIP_CALL( checkSolOrig(SCIPgetBestSol(scip), scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+            SCIP_CALL( SCIPsolCheckOrig(SCIPgetBestSol(scip), scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
                   TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
             if( ! feasible )
@@ -3172,7 +3172,7 @@ SCIP_RETCODE SCIPtryCurrentSol(
       {
 #ifdef SCIP_DEBUG_ABORTATORIGINFEAS
          SCIP_Bool feasible;
-         SCIP_CALL( checkSolOrig(SCIPgetBestSol(scip), scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+         SCIP_CALL( SCIPsolCheckOrig(SCIPgetBestSol(scip), scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
                TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
          if( ! feasible )
@@ -3277,7 +3277,7 @@ SCIP_RETCODE SCIPcheckSol(
    if( SCIPsolIsOriginal(sol) )
    {
       /* SCIPsolCheck() can only be called on transformed solutions */
-      SCIP_CALL( checkSolOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+      SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
             printreason, completely, checkbounds, checkintegrality, checklprows, FALSE, feasible) );
    }
    else
@@ -3331,7 +3331,7 @@ SCIP_RETCODE SCIPcheckSolOrig(
       completely = FALSE;
 
    /* check solution in original problem; that includes bounds, integrality, and non modifiable constraints */
-   SCIP_CALL( checkSolOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+   SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
          printreason, completely, TRUE, TRUE, TRUE, FALSE, feasible) );
 
    return SCIP_OKAY;

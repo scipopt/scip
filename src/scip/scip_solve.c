@@ -312,7 +312,7 @@ SCIP_RETCODE SCIPtransformProb(
          /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
           * including modifiable constraints
           */
-         SCIP_CALL( checkSolOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+         SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
                (scip->set->disp_verblevel >= SCIP_VERBLEVEL_HIGH ? scip->set->misc_printreason : FALSE),
                FALSE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 

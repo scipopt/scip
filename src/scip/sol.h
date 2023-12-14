@@ -337,7 +337,7 @@ SCIP_RETCODE SCIPsolMarkPartial(
  *  We first check the variable bounds. Then we loop over all constraint handlers and constraints, checking each in the
  *  order of their check priority.
  */
-SCIP_RETCODE checkSolOrig(
+SCIP_RETCODE SCIPsolCheckOrig(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
