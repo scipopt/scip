@@ -2372,6 +2372,7 @@ SCIP_RETCODE selectHeuristic(
       SCIP_CALL( SCIPbanditSelect(bandit, selection) );
    }
    assert(*selection >= 0);
+   assert(*selection < heurdata->nactiveneighborhoods + heurdata->ndiving);
 
    return SCIP_OKAY;
 }
@@ -2773,7 +2774,7 @@ SCIP_RETCODE initRest(
     * at the root node*/
    if( heurdata->defaultroot )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->sortedindices, nheurs) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->sortedindices, heurdata->ndiving + heurdata->nneighborhoods) );
       SCIP_CALL( SCIPallocBufferArray(scip, &priorities, nheurs) );
       heurdata->counter = 0;
 
@@ -4098,9 +4099,31 @@ SCIP_DECL_HEURINITSOL(heurInitsolScheduler)
    /* active neighborhoods might change between init calls, reset functionality must take this into account */
    if( heurdata->bandit != NULL && SCIPbanditGetNActions(heurdata->bandit) != heurdata->ndiving + heurdata->nactiveneighborhoods )
    {
-      SCIP_CALL( SCIPfreeBandit(scip, &heurdata->bandit) );
+      SCIP_Real* initpriorities;
+      int nheurs;
 
+      SCIP_CALL( SCIPfreeBandit(scip, &heurdata->bandit) );
       heurdata->bandit = NULL;
+
+      /* since the number of active heursitics has changed, we have to update
+       * how heuristics are sorted by priority */
+      nheurs = heurdata->nactiveneighborhoods + heurdata->ndiving;
+      SCIP_CALL( SCIPallocBufferArray(scip, &initpriorities, nheurs) );
+      heurdata->counter = 0;
+
+      for( i = 0; i < nheurs; ++i )
+      {
+         heurdata->sortedindices[i] = i;
+
+         if( i < heurdata->ndiving )
+            initpriorities[i] = (SCIP_Real)-heurdata->divingheurs[i]->rootnodepriority;
+         else
+            initpriorities[i] = (SCIP_Real)-heurdata->neighborhoods[i - heurdata->ndiving]->rootnodepriority;
+      }
+
+      SCIPsortRealInt(initpriorities, heurdata->sortedindices, nheurs);
+
+      SCIPfreeBufferArray(scip, &initpriorities);
    }
 
    if( heurdata->nactiveneighborhoods + heurdata->ndiving > 0 )
@@ -4192,7 +4215,7 @@ SCIP_DECL_HEURFREE(heurFreeScheduler)
       SCIPfreeBlockMemoryArray(scip, &heurdata->divingheurs, heurdata->divingheurssize);
 
       if( heurdata->defaultroot )
-         SCIPfreeBlockMemoryArray(scip, &heurdata->sortedindices, heurdata->ndiving + heurdata->nactiveneighborhoods);
+         SCIPfreeBlockMemoryArray(scip, &heurdata->sortedindices, heurdata->ndiving + heurdata->nneighborhoods);
    }
 
    /* free neighborhoods */
