@@ -89,164 +89,6 @@
 #include "scip/tree.h"
 #include "xml/xml.h"
 
-/** checks solution for feasibility in original problem without adding it to the solution store
- *
- *  We first check the variable bounds. Then we loop over all constraint handlers and constraints, checking each in the
- *  order of their check priority.
- */
-static
-SCIP_RETCODE checkSolOrig(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
-   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
-   SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
-   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
-   SCIP_Bool             checkmodifiable     /**< have modifiable constraint to be checked? */
-   )
-{
-   SCIP_RESULT result;
-#ifndef NDEBUG
-   int oldpriority;
-#endif
-   int v;
-   int c;
-   int h;
-
-   assert(scip != NULL);
-   assert(sol != NULL);
-   assert(feasible != NULL);
-
-   SCIP_CALL( SCIPcheckStage(scip, "checkSolOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   *feasible = TRUE;
-
-   SCIPsolResetViolations(sol);
-
-   if( !printreason )
-      completely = FALSE;
-
-   /* check bounds */
-   if( checkbounds )
-   {
-      for( v = 0; v < scip->origprob->nvars; ++v )
-      {
-         SCIP_VAR* var;
-         SCIP_Real solval;
-         SCIP_Real lb;
-         SCIP_Real ub;
-
-         var = scip->origprob->vars[v];
-         solval = SCIPsolGetVal(sol, scip->set, scip->stat, var);
-
-         lb = SCIPvarGetLbOriginal(var);
-         ub = SCIPvarGetUbOriginal(var);
-
-         SCIPupdateSolBoundViolation(scip, sol, lb - solval, SCIPrelDiff(lb, solval));
-         SCIPupdateSolBoundViolation(scip, sol, solval - ub, SCIPrelDiff(solval, ub));
-
-         if( SCIPsetIsFeasLT(scip->set, solval, lb) || SCIPsetIsFeasGT(scip->set, solval, ub) )
-         {
-            *feasible = FALSE;
-
-            if( printreason )
-            {
-               SCIPmessagePrintInfo(scip->messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
-                  SCIPvarGetName(var), lb, ub, solval);
-            }
-
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
-
-   /* sort original constraint according to check priority */
-   SCIP_CALL( SCIPprobSortConssCheck(scip->origprob) );
-
-   /* check original constraints
-    *
-    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
-    * the original problem; however, if the solution comes from a heuristic during presolving, modifiable constraints
-    * have to be checked;
-    */
-#ifndef NDEBUG
-   oldpriority = INT_MAX;
-#endif
-   h = 0;
-   for( c = 0; c < scip->origprob->nconss; ++c )
-   {
-      SCIP_CONS* cons;
-      int priority;
-
-      cons = scip->origprob->origcheckconss[c];
-      assert( SCIPconsGetHdlr(cons) != NULL );
-      priority = SCIPconshdlrGetCheckPriority(SCIPconsGetHdlr(cons));
-
-#ifndef NDEBUG
-      assert( priority <= oldpriority );
-      oldpriority = priority;
-#endif
-
-      /* check constraints handlers without constraints that have a check priority at least as high as current
-       * constraint */
-      while( h < scip->set->nconshdlrs && SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= priority )
-      {
-         if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
-         {
-            SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-                  checkintegrality, checklprows, printreason, completely, &result) );
-
-            if( result != SCIP_FEASIBLE )
-            {
-               *feasible = FALSE;
-
-               if( !completely )
-                  return SCIP_OKAY;
-            }
-         }
-         ++h;
-      }
-
-      /* now check constraint */
-      if( SCIPconsIsChecked(cons) && (checkmodifiable || !SCIPconsIsModifiable(cons)) )
-      {
-         /* check solution */
-         SCIP_CALL( SCIPconsCheck(cons, scip->set, sol, checkintegrality, checklprows, printreason, &result) );
-
-         if( result != SCIP_FEASIBLE )
-         {
-            *feasible = FALSE;
-
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
-
-   /* one final loop over the remaining constraints handlers without constraints */
-   while( h < scip->set->nconshdlrs )
-   {
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
-      {
-         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-               checkintegrality, checklprows, printreason, completely, &result) );
-
-         if( result != SCIP_FEASIBLE )
-         {
-            *feasible = FALSE;
-
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-      ++h;
-   }
-
-   return SCIP_OKAY;
-}
 
 /** update integrality violation of a solution */
 void SCIPupdateSolIntegralityViolation(
@@ -3145,7 +2987,8 @@ SCIP_RETCODE SCIPtrySol(
 
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints */
-      SCIP_CALL( checkSolOrig(scip, sol, &feasible, printreason, completely, checkbounds, checkintegrality, checklprows, TRUE) );
+      SCIP_CALL( checkSolOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+            printreason, completely, checkbounds, checkintegrality, checklprows, TRUE, &feasible) );
       if( feasible )
       {
          SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
@@ -3173,7 +3016,7 @@ SCIP_RETCODE SCIPtrySol(
          {
 #ifdef SCIP_DEBUG_ABORTATORIGINFEAS
             SCIP_Bool feasible;
-            SCIP_CALL( checkSolOrig(scip, sol, &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+            SCIP_CALL( checkSolOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
             if( ! feasible )
             {
@@ -3241,7 +3084,8 @@ SCIP_RETCODE SCIPtrySolFree(
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints
        */
-      SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, completely, checkbounds, checkintegrality, checklprows, TRUE) );
+      SCIP_CALL( checkSolOrig(*sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+            printreason, completely, checkbounds, checkintegrality, checklprows, TRUE, &feasible) );
 
       if( feasible )
       {
@@ -3273,7 +3117,8 @@ SCIP_RETCODE SCIPtrySolFree(
          {
 #ifdef SCIP_DEBUG_ABORTATORIGINFEAS
             SCIP_Bool feasible;
-            SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+            SCIP_CALL( checkSolOrig(SCIPgetBestSol(scip), scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+                  TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
             if( ! feasible )
             {
@@ -3327,7 +3172,8 @@ SCIP_RETCODE SCIPtryCurrentSol(
       {
 #ifdef SCIP_DEBUG_ABORTATORIGINFEAS
          SCIP_Bool feasible;
-         SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+         SCIP_CALL( checkSolOrig(SCIPgetBestSol(scip), scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+               TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
          if( ! feasible )
          {
@@ -3431,7 +3277,8 @@ SCIP_RETCODE SCIPcheckSol(
    if( SCIPsolIsOriginal(sol) )
    {
       /* SCIPsolCheck() can only be called on transformed solutions */
-      SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, completely, checkbounds, checkintegrality, checklprows, FALSE) );
+      SCIP_CALL( checkSolOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+            printreason, completely, checkbounds, checkintegrality, checklprows, FALSE, feasible) );
    }
    else
    {
@@ -3484,7 +3331,8 @@ SCIP_RETCODE SCIPcheckSolOrig(
       completely = FALSE;
 
    /* check solution in original problem; that includes bounds, integrality, and non modifiable constraints */
-   SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, completely, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkSolOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+         printreason, completely, TRUE, TRUE, TRUE, FALSE, feasible) );
 
    return SCIP_OKAY;
 }
