@@ -1694,7 +1694,6 @@ SCIP_RETCODE SCIPsolCheckOrig(
    int h;
 
    assert(sol != NULL);
-   assert(SCIPsolIsOriginal(sol) || sol->solorigin == SCIP_SOLORIGIN_ZERO);
    assert(set != NULL);
    assert(prob != NULL);
    assert(!prob->transformed);
