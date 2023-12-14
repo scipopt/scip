@@ -89,13 +89,10 @@
 #include "scip/tree.h"
 #include "xml/xml.h"
 
-/** checks solution for feasibility in original problem without adding it to the solution store; to improve the
- *  performance we use the following order when checking for violations:
+/** checks solution for feasibility in original problem without adding it to the solution store
  *
- *  1. variable bounds
- *  2. constraint handlers with positive or zero priority that don't need constraints (e.g. integral constraint handler)
- *  3. original constraints
- *  4. constraint handlers with negative priority that don't need constraints (e.g. Benders' decomposition constraint handler)
+ *  We first check the variable bounds. Then we loop over all constraint handlers and constraints, checking each in the
+ *  order of their check priority.
  */
 static
 SCIP_RETCODE checkSolOrig(
