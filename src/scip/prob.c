@@ -716,8 +716,6 @@ SCIP_RETCODE SCIPprobSortConssCheck(
    SCIP_PROB*            prob                /**< problem data */
    )
 {
-   int c;
-
    if( prob->consschecksorted || prob->transformed )
       return SCIP_OKAY;
 
@@ -726,9 +724,7 @@ SCIP_RETCODE SCIPprobSortConssCheck(
       /* possibly create and copy constraints */
       if( prob->origcheckconss == NULL )
       {
-         SCIP_ALLOC( BMSallocMemoryArray(&prob->origcheckconss, prob->consssize) );
-         for( c = 0; c < prob->nconss; ++c)
-            prob->origcheckconss[c] = prob->conss[c];
+         SCIP_ALLOC( BMSduplicateMemoryArray(&prob->origcheckconss, prob->conss, prob->consssize) );
       }
       assert( prob->origcheckconss != NULL );
 
