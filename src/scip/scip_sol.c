@@ -226,6 +226,25 @@ SCIP_RETCODE checkSolOrig(
       }
    }
 
+   /* one final loop over the remaining constraints handlers without constraints */
+   while( h < scip->set->nconshdlrs )
+   {
+      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
+               checkintegrality, checklprows, printreason, completely, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+      ++h;
+   }
+
    return SCIP_OKAY;
 }
 
