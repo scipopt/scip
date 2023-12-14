@@ -172,7 +172,7 @@ SCIP_RETCODE checkSolOrig(
    /* check original constraints
     *
     * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
-    * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
+    * the original problem; however, if the solution comes from a heuristic during presolving, modifiable constraints
     * have to be checked;
     */
 #ifndef NDEBUG
@@ -193,9 +193,9 @@ SCIP_RETCODE checkSolOrig(
       oldpriority = priority;
 #endif
 
-      /* check constraints handlers without constraints that have a with check priority at least as high as current
+      /* check constraints handlers without constraints that have a check priority at least as high as current
        * constraint */
-      while( SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= priority )
+      while( h < scip->set->nconshdlrs && SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= priority )
       {
          if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
          {

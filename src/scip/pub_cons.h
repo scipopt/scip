@@ -67,7 +67,7 @@ SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompEnfo);
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompCheck);
 
-/** compares two constraintss w.r.t. their feasibility check priority */
+/** compares two constraints w.r.t. their feasibility check priority */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPconsCompCheck);
 

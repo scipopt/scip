@@ -1970,7 +1970,7 @@ SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompCheck)
    return ((SCIP_CONSHDLR*)elem2)->checkpriority - ((SCIP_CONSHDLR*)elem1)->checkpriority;
 }
 
-/** compares two constraintss w.r.t. their feasibility check priority */
+/** compares two constraints w.r.t. their feasibility check priority */
 SCIP_DECL_SORTPTRCOMP(SCIPconsCompCheck)
 {  /*lint --e{715}*/
    return ((SCIP_CONS*)elem2)->conshdlr->checkpriority - ((SCIP_CONS*)elem1)->conshdlr->checkpriority;
