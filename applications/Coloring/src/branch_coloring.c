@@ -131,19 +131,19 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
 
    bestcand = -1;
 
-   /* search the least fractional candidate */
-   bestfractionality = 1;
-   for( i = 0; i < nlpcands; ++i )
-   {
-      assert(lpcands[i] != NULL);
+   /* search the most fractional candidate */
+   bestfractionality = 0;
+   for(int i = 0; i < nlpcands; ++i ) {
+      assert(lpcands[i] != nullptr);
       fractionality = lpcandsfrac[i];
-      fractionality = MIN( fractionality, 1.0-fractionality );
-      if ( fractionality < bestfractionality )
+      fractionality = MIN(fractionality, 1.0-fractionality);
+      if(fractionality > bestfractionality)
       {
          bestfractionality = fractionality;
          bestcand = i;
       }
    }
+
 
    assert(bestcand >= 0);
    assert(SCIPisFeasPositive(scip, bestfractionality));
