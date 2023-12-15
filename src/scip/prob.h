@@ -181,6 +181,10 @@ void SCIPprobResortVars(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** possibly create and sort the constraints according to check priorties */
+SCIP_RETCODE SCIPprobSortConssCheck(
+   SCIP_PROB*            prob                /**< problem data */
+   );
 
 /*
  * problem modification
