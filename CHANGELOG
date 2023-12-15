@@ -1,6 +1,6 @@
-@page RN Release notes for SCIP NEXT
+@page RN90 Release notes for SCIP 9
 
-@section RNNEXT SCIP NEXT
+@section RN900 SCIP 9.0.0
 *************************
 
 Features
@@ -116,6 +116,7 @@ Interface changes
 - SCIPestimateRoot() computes estimators for roots with exponent in [0,1]
 - SCIPincludeCutselDynamic(), SCIPselectCutsDynamic() to include cutsel_dynamic or use the selection algorithm
 - SCIPincludeSepaLagromory() to include the new Lagromory separator
+- SCIPconsCompCheck() to compare two constraints based on their check priority
 
 ### Command line interface
 
@@ -231,6 +232,7 @@ Fixed bugs
   separation was enabled for "maxruns + 1" number of runs, i.e., separation was enabled even when "maxruns = 0" was set.
 - add safeguard for number of selected cuts
 - use double double precision for delta in activity updates of cons_linear.c
+- sort constraints in checkSolOrig() to keep the logic of constraint handlers intact
 
 Miscellaneous
 -------------
@@ -241,19 +243,7 @@ Miscellaneous
 Known bugs
 ----------
 
-@page RN80 Release notes for SCIP 8.0
-
-@section RN811 SCIP 8.1.1
-*************************
-
-Fixed bugs
-----------
-
-Build system
-------------
-
-Miscellaneous
--------------
+@page RN80 Release notes for SCIP 8.1
 
 @section RN805 SCIP 8.1.0
 *************************
@@ -326,6 +316,8 @@ Miscellaneous
 -------------
 
 - the parameter change callback is no longer called at the moment a parameter is created
+
+@page RN80 Release notes for SCIP 8.0
 
 @section RN804 SCIP 8.0.4
 *************************
