@@ -4099,31 +4099,34 @@ SCIP_DECL_HEURINITSOL(heurInitsolScheduler)
    /* active neighborhoods might change between init calls, reset functionality must take this into account */
    if( heurdata->bandit != NULL && SCIPbanditGetNActions(heurdata->bandit) != heurdata->ndiving + heurdata->nactiveneighborhoods )
    {
-      SCIP_Real* initpriorities;
-      int nheurs;
-
       SCIP_CALL( SCIPfreeBandit(scip, &heurdata->bandit) );
       heurdata->bandit = NULL;
 
       /* since the number of active heursitics has changed, we have to update
-       * how heuristics are sorted by priority */
-      nheurs = heurdata->nactiveneighborhoods + heurdata->ndiving;
-      SCIP_CALL( SCIPallocBufferArray(scip, &initpriorities, nheurs) );
-      heurdata->counter = 0;
-
-      for( i = 0; i < nheurs; ++i )
+       * how heuristics are sorted by priority, if we already initialized the data */
+      if( heurdata->divingheurs != NULL )
       {
-         heurdata->sortedindices[i] = i;
+         SCIP_Real* initpriorities;
+         int nheurs;
 
-         if( i < heurdata->ndiving )
-            initpriorities[i] = (SCIP_Real)-heurdata->divingheurs[i]->rootnodepriority;
-         else
-            initpriorities[i] = (SCIP_Real)-heurdata->neighborhoods[i - heurdata->ndiving]->rootnodepriority;
+	 nheurs = heurdata->nactiveneighborhoods + heurdata->ndiving;
+         SCIP_CALL( SCIPallocBufferArray(scip, &initpriorities, nheurs) );
+         heurdata->counter = 0;
+
+         for( i = 0; i < nheurs; ++i )
+         {
+            heurdata->sortedindices[i] = i;
+
+            if( i < heurdata->ndiving )
+               initpriorities[i] = (SCIP_Real)-heurdata->divingheurs[i]->rootnodepriority;
+            else
+               initpriorities[i] = (SCIP_Real)-heurdata->neighborhoods[i - heurdata->ndiving]->rootnodepriority;
+         }
+
+         SCIPsortRealInt(initpriorities, heurdata->sortedindices, nheurs);
+
+         SCIPfreeBufferArray(scip, &initpriorities);
       }
-
-      SCIPsortRealInt(initpriorities, heurdata->sortedindices, nheurs);
-
-      SCIPfreeBufferArray(scip, &initpriorities);
    }
 
    if( heurdata->nactiveneighborhoods + heurdata->ndiving > 0 )
