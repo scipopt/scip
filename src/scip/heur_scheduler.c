@@ -4211,6 +4211,9 @@ SCIP_DECL_HEURFREE(heurFreeScheduler)
 
       for( j = 0; j < heurdata->ndiving; ++j )
       {
+         SCIP_CALL( SCIPfreeClock(scip, &(heurdata->divingheurs[j]->stats->setupclock)) );
+         SCIP_CALL( SCIPfreeClock(scip, &(heurdata->divingheurs[j]->stats->execclock)) );
+
          SCIPfreeBlockMemory(scip, &heurdata->divingheurs[j]->solvefreqdata);
          SCIPfreeBlockMemory(scip, &heurdata->divingheurs[j]->stats);
       }
