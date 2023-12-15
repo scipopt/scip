@@ -4216,7 +4216,7 @@ SCIP_DECL_HEURFREE(heurFreeScheduler)
 
          SCIPfreeBlockMemory(scip, &heurdata->divingheurs[j]->solvefreqdata);
          SCIPfreeBlockMemory(scip, &heurdata->divingheurs[j]->stats);
-         SCIPfreeBlockMemory(scip, &heurdata->divingheurs[j]);
+         SCIPfreeBlockMemory(scip, &(heurdata->divingheurs[j]));
       }
 
       SCIPfreeBlockMemoryArray(scip, &heurdata->divingheurs, heurdata->divingheurssize);
