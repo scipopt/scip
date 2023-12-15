@@ -1351,7 +1351,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
    SCIP_CALL( handleNlpParam(scip, nlpi, par, param) );
 
 #ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPnlpiOraclePrintProblem(problem->oracle, nlpidata->messagehdlr, NULL) );
+   SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, problem->oracle, NULL) );
 #endif
 
    /* set initial guess (if available) */
