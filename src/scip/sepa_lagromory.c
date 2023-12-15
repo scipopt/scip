@@ -652,6 +652,7 @@ SCIP_RETCODE createLPWithHardCuts(
    sepadata->nrowsinhardcutslp = nrows + ncuts;
 
    /* free memory */
+   SCIP_CALL( SCIPlpiFreeState(*lpi, blkmem, &lpistate) );
    SCIPfreeBufferArray(scip, &rowrhs);
    SCIPfreeBufferArray(scip, &rowlhs);
    SCIPfreeBufferArray(scip, &rowbegs);
