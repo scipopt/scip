@@ -51,6 +51,7 @@ Fixed bugs
 - ensure positive sides of a linear constraint when recognizing a set partition in rangedRowSimplify() to account for redundancy issues
 - relax numerical conditions for variable aggregations to avert invalid variable fixings
 - fixed harmless read of uninitialized data when creating parameters
+- fix call of SCIPnlpiOraclePrintProblem in nlpi_worhp
 
 Performance improvements
 ------------------------
