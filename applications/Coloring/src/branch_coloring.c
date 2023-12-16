@@ -60,6 +60,23 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
+#define BRANCHRULE_STRATEGIES          "ml" /**< possible variable selection strategies m=most fractional, l=least fractional */
+#define BRANCHRULE_STRATEGY_DEFAULT     'l' /**< default variable selection strategy */
+
+
+/*
+ * Data structures
+ */
+
+/** branching rule data */
+struct SCIP_BranchruleData
+{
+   char strategy;                /* determines the variable selection,
+                                    l: for least fractional variable,
+                                    m: for most fractional variable */
+};
+
+
 /*
  * Callback methods of branching rule
  */
@@ -71,14 +88,14 @@ SCIP_DECL_BRANCHCOPY(branchCopyColoring)
    assert(scip != NULL);
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
- 
+
    return SCIP_OKAY;
 }
 
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
-{  
+{
    /* array of candidates for branching + fractionalities of candidates + length of array */
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandsfrac;
@@ -111,6 +128,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
    SCIP_CONS* consdiffer;
    /* the constraint of the processed b&b-node */
    SCIP_CONS* currentcons;
+   /* the variable selection strategy */
+   char strategy;
+   /* the branching rule data */
+   SCIP_BRANCHRULEDATA*  branchruledata;
 
    int i;
    int j;
@@ -129,19 +150,43 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
 
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   strategy = branchruledata->strategy;
+
    bestcand = -1;
 
-   /* search the most fractional candidate */
-   bestfractionality = 0;
-   for(int i = 0; i < nlpcands; ++i ) {
-      assert(lpcands[i] != nullptr);
-      fractionality = lpcandsfrac[i];
-      fractionality = MIN(fractionality, 1.0-fractionality);
-      if(fractionality > bestfractionality)
+   switch( strategy )
+   {
+   case 'l':
+      /* search the least fractional candidate */
+      bestfractionality = 1;
+      for( i = 0; i < nlpcands; ++i )
       {
-         bestfractionality = fractionality;
-         bestcand = i;
+         assert(lpcands[i] != NULL);
+         fractionality = lpcandsfrac[i];
+         fractionality = MIN( fractionality, 1.0-fractionality );
+         if ( fractionality < bestfractionality )
+         {
+            bestfractionality = fractionality;
+            bestcand = i;
+         }
       }
+      break;
+
+   case 'm':
+      /* search the most fractional candidate */
+      bestfractionality = 0;
+      for(int i = 0; i < nlpcands; ++i ) {
+         assert(lpcands[i] != nullptr);
+         fractionality = lpcandsfrac[i];
+         fractionality = MIN( fractionality, 1.0-fractionality );
+         if ( fractionality > bestfractionality )
+         {
+            bestfractionality = fractionality;
+            bestcand = i;
+         }
+      }
+      break;
    }
 
 
@@ -158,7 +203,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
    node1 = -1;
    node2 = -1;
    s2 = NULL;
-   /* search for two nodes node1, node2 and column s2 (s2 != s1) such that: 
+   /* search for two nodes node1, node2 and column s2 (s2 != s1) such that:
       the node1-constraint is covered by s1 and s2
       the node2-constraint is covered by exactly one of the columns s1,s2 */
    for ( i = 0; ((i < setlength1) && (node2 == -1)); i++ )
@@ -238,7 +283,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
             if ( node2 != -1 )
             {
                break;  /* for j */
-            }  
+            }
          }
       }
    }
@@ -267,7 +312,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
    /* release constraints */
    SCIP_CALL( SCIPreleaseCons(scip, &conssame) );
    SCIP_CALL( SCIPreleaseCons(scip, &consdiffer) );
-      
+
    *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;
@@ -277,7 +322,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
 /** branching execution method for not completely fixed pseudo solutions */
 static
 SCIP_DECL_BRANCHEXECPS(branchExecpsColoring)
-{  
+{
    /* the 2 nodes, for which the branching is done by DIFFER and SAME */
    int node1;
    int node2;
@@ -297,7 +342,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsColoring)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* search for two nodes node1, node2 such that: 
+   /* search for two nodes node1, node2 such that:
       node1 and node2 are neither in the same union nor adjacent */
    for ( node1 = 0; node1 < COLORprobGetNNodes(scip); ++node1 )
    {
@@ -316,32 +361,83 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsColoring)
             /* create the b&b-tree child-nodes of the current node */
             SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalTransEstimate(scip)) );
             SCIP_CALL( SCIPcreateChild(scip, &childdiffer, 0.0, SCIPgetLocalTransEstimate(scip)) );
-            
+
             /* create corresponding constraints */
             currentcons = COLORconsGetActiveStoreGraphCons(scip);
             SCIP_CALL( COLORcreateConsStoreGraph(scip, &conssame,   "same",   currentcons, COLOR_CONSTYPE_SAME,   node1, node2, childsame) );
             SCIP_CALL( COLORcreateConsStoreGraph(scip, &consdiffer, "differ", currentcons, COLOR_CONSTYPE_DIFFER, node1, node2, childdiffer) );
-            
+
             /* add constraints to nodes */
             SCIP_CALL( SCIPaddConsNode(scip, childsame, conssame, NULL) );
             SCIP_CALL( SCIPaddConsNode(scip, childdiffer, consdiffer, NULL) );
-            
+
             /* release constraints */
             SCIP_CALL( SCIPreleaseCons(scip, &conssame) );
             SCIP_CALL( SCIPreleaseCons(scip, &consdiffer) );
-            
+
             *result = SCIP_BRANCHED;
 
             return SCIP_OKAY;
          }
-      }      
+      }
    }
 
    SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalTransEstimate(scip)) );
    *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;
+}
+
+
+/** destructor of branching rule to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_BRANCHFREE(branchFreeColoring)
+{
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* free branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   SCIPfreeBlockMemory(scip, &branchruledata);
+   SCIPbranchruleSetData(branchrule, NULL);
+
+   return SCIP_OKAY;
+}
+
+
+/** initialization method of branching rule (called after problem was transformed) */
+static
+SCIP_DECL_BRANCHINIT(branchInitColoring)
+{
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* get memory */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &(branchruledata->strategy));
+
+   return SCIP_OKAY;
+}
+
+
+/** deinitialization method of branching rule (called before transformed problem is freed) */
+static
+SCIP_DECL_BRANCHEXIT(branchExitColoring)
+{
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* free parameters */
+   SCIPfreeBlockMemory(scip, &(branchruledata->strategy));
+
+   return SCIP_OKAY;
 }/*lint !e715*/
+
+
 
 /*
  * branching rule specific interface methods
@@ -358,15 +454,24 @@ SCIP_RETCODE SCIPincludeBranchruleColoring(
    assert(scip != NULL);
 
    /* create branching rule data */
-   branchruledata = NULL;
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
+
    branchrule = NULL;
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH,
 	 BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+   assert(branchrule != NULL);
 
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpColoring) );
-   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyColoring) );
    SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsColoring) );
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyColoring) );
+   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitColoring) );
+   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitColoring) );
+   SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeColoring) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "branching/" BRANCHRULE_NAME "/strategy",
+         "variable selection strategy, 'l'east fractional or 'm'ost fractional variable",
+         &branchruledata->strategy, FALSE, BRANCHRULE_STRATEGY_DEFAULT, BRANCHRULE_STRATEGIES, NULL, NULL) );
 
    return SCIP_OKAY;
 
