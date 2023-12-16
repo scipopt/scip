@@ -6,6 +6,8 @@
 Fixed bugs
 ----------
 
+- flush changes at the end of SCIPlpiSetBase() in lpi_grb.c to apply the newly set basis correctly
+
 Build system
 ------------
 
