@@ -81,17 +81,6 @@ struct SCIP_BranchruleData
  * Callback methods of branching rule
  */
 
-/** copy method for branchrule plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_BRANCHCOPY(branchCopyColoring)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(branchrule != NULL);
-   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
-
-   return SCIP_OKAY;
-}
-
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
@@ -389,16 +378,13 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsColoring)
 }
 
 
-/** destructor of branching rule to free user data (called when SCIP is exiting) */
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_BRANCHFREE(branchFreeColoring)
-{
-   SCIP_BRANCHRULEDATA* branchruledata;
-
-   /* free branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   SCIPfreeBlockMemory(scip, &branchruledata);
-   SCIPbranchruleSetData(branchrule, NULL);
+SCIP_DECL_BRANCHCOPY(branchCopyColoring)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
 
    return SCIP_OKAY;
 }
@@ -435,7 +421,22 @@ SCIP_DECL_BRANCHEXIT(branchExitColoring)
    SCIPfreeBlockMemory(scip, &(branchruledata->strategy));
 
    return SCIP_OKAY;
-}/*lint !e715*/
+}
+
+
+/** destructor of branching rule to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_BRANCHFREE(branchFreeColoring)
+   {
+      SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* free branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   SCIPfreeBlockMemory(scip, &branchruledata);
+   SCIPbranchruleSetData(branchrule, NULL);
+
+   return SCIP_OKAY;
+   }/*lint !e715*/
 
 
 
