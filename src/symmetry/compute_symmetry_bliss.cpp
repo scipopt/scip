@@ -982,25 +982,13 @@ SCIP_Bool SYMcanComputeSymmetry(void)
 }
 
 /** return name of external program used to compute generators */
-static
-char* initStaticBlissName(void)
-{
-   char* name = new char[100];
-#ifdef BLISS_PATCH_PRESENT
-   (void) SCIPsnprintf(name, 100, "bliss %sp", bliss::version);
-#else
-   (void) SCIPsnprintf(name, 100, "bliss %s", bliss::version);
-#endif
-   return name;
-}
-
-/* static name for bliss */
-static char* blissname = initStaticBlissName();
-
-/** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
 {
-   return blissname;
+#ifdef BLISS_PATCH_PRESENT
+   return "bliss " BLISS_VERSION "p";
+#else
+   return "bliss " BLISS_VERSION;
+#endif
 }
 
 /** return description of external program used to compute generators */

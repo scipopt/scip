@@ -1496,34 +1496,13 @@ SCIP_Bool SYMcanComputeSymmetry(void)
 }
 
 /** return name of external program used to compute generators */
-static
-char* initStaticSymmetryName(void)
-{
-   char* blissname = new char[100];
-#ifdef BLISS_PATCH_PRESENT
-   (void) SCIPsnprintf(blissname, 100, "bliss %sp", bliss::version);
-#else
-   (void) SCIPsnprintf(blissname, 100, "bliss %s", bliss::version);
-#endif
-   return blissname;
-}
-
-/** return name of external program used to compute generators */
-static
-char* initStaticSymmetryAddName(void)
-{
-   char* sassyname = new char[100];
-   (void) SCIPsnprintf(sassyname, 100, "sassy %d.%d", SASSY_VERSION_MAJOR, SASSY_VERSION_MINOR);
-   return sassyname;
-}
-
-static const char* symmetryname = initStaticSymmetryName();
-static const char* symmetryaddname = initStaticSymmetryAddName();
-
-/** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
 {
-   return symmetryname;
+#ifdef BLISS_PATCH_PRESENT
+   return "bliss " BLISS_VERSION "p";
+#else
+   return "bliss " BLISS_VERSION;
+#endif
 }
 
 /** return description of external program used to compute generators */
@@ -1532,10 +1511,13 @@ const char* SYMsymmetryGetDesc(void)
    return "Computing Graph Automorphisms by T. Junttila and P. Kaski (users.aalto.fi/~tjunttil/bliss)";
 }
 
+#define STR(x) #x
+#define XSTR(x) STR(x)
+
 /** return name of additional external program used for computing symmetries */
 const char* SYMsymmetryGetAddName(void)
 {
-   return symmetryaddname;
+   return "sassy " XSTR(SASSY_VERSION_MAJOR) "." XSTR(SASSY_VERSION_MINOR);
 }
 
 /** return description of additional external program used to compute symmetries */
