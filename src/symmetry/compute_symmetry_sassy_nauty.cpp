@@ -202,9 +202,9 @@ SCIP_Bool SYMcanComputeSymmetry(void)
 const char* SYMsymmetryGetName(void)
 {
 #ifdef NAUTY
-   return "Nauty "NAUTYVERSION;
+   return "Nauty " NAUTYVERSION;
 #else
-   return "Traces "NAUTYVERSION;
+   return "Traces " NAUTYVERSION;
 #endif
 }
 
