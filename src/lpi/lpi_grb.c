@@ -4656,6 +4656,9 @@ SCIP_RETCODE SCIPlpiSetBase(
    CHECK_ZERO( lpi->messagehdlr, GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_CBASIS, 0, nrows, lpi->rstat) );
    CHECK_ZERO( lpi->messagehdlr, GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_VBASIS, 0, ncols+lpi->nrngrows, lpi->cstat) );
 
+   /* flush model changes */
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
+
    return SCIP_OKAY;
 }
 
