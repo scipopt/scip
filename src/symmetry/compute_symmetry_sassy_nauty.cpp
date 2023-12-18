@@ -197,35 +197,15 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
-/** return name of external program used to compute generators */
-static
-char* initStaticSymmetryName(void)
-{
-   char* nautyname = new char[100];
-#ifdef NAUTY
-   (void) SCIPsnprintf(nautyname, 100, "Nauty %d", NAUTYVERSION);
-#else
-   (void) SCIPsnprintf(nautyname, 100, "Traces %d", NAUTYVERSION);
-#endif
-   return nautyname;
-}
-
-/** return name of external program used to compute generators */
-static
-char* initStaticSymmetryAddName(void)
-{
-   char* sassyname = new char[100];
-   (void) SCIPsnprintf(sassyname, 100, "sassy %d.%d", SASSY_VERSION_MAJOR, SASSY_VERSION_MINOR);
-   return sassyname;
-}
-
-static const char* symmetryname = initStaticSymmetryName();
-static const char* symmetryaddname = initStaticSymmetryAddName();
 
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
 {
-   return symmetryname;
+#ifdef NAUTY
+   return "Nauty " NAUTYVERSION;
+#else
+   return "Traces " NAUTYVERSION;
+#endif
 }
 
 /** return description of external program used to compute generators */
@@ -238,10 +218,13 @@ const char* SYMsymmetryGetDesc(void)
 #endif
 }
 
+#define STR(x) #x
+#define XSTR(x) STR(x)
+
 /** return name of additional external program used for computing symmetries */
 const char* SYMsymmetryGetAddName(void)
 {
-   return symmetryaddname;
+   return "sassy " XSTR(SASSY_VERSION_MAJOR) "." XSTR(SASSY_VERSION_MINOR);
 }
 
 /** return description of additional external program used to compute symmetries */
