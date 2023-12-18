@@ -887,6 +887,30 @@ SCIP_RETCODE transferSolution(
    return SCIP_OKAY;
 }
 
+/** release all data and free diving heuristic */
+static
+SCIP_RETCODE schedulerFreeDivingHeur(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DIVING_HEUR**         divingheur          /**< pointer to diving heuristic that should be freed */
+   )
+{
+   DIVING_HEUR* divingheurptr;
+   assert(scip != NULL);
+   assert(divingheur != NULL);
+
+   divingheurptr = *divingheur;
+   assert(divingheurptr != NULL);
+
+   SCIP_CALL( SCIPfreeClock(scip, &divingheurptr->stats->setupclock) );
+   SCIP_CALL( SCIPfreeClock(scip, &divingheurptr->stats->execclock) );
+
+   SCIPfreeBlockMemory(scip, &divingheurptr->solvefreqdata);
+   SCIPfreeBlockMemory(scip, &divingheurptr->stats);
+   SCIPfreeBlockMemory(scip, divingheur);
+
+   return SCIP_OKAY;
+}
+
 /* ---------------- Callback methods of event handler ---------------- */
 
 /** execution callback of the event handler
@@ -4211,12 +4235,7 @@ SCIP_DECL_HEURFREE(heurFreeScheduler)
 
       for( j = 0; j < heurdata->ndiving; ++j )
       {
-         SCIP_CALL( SCIPfreeClock(scip, &(heurdata->divingheurs[j]->stats->setupclock)) );
-         SCIP_CALL( SCIPfreeClock(scip, &(heurdata->divingheurs[j]->stats->execclock)) );
-
-         SCIPfreeBlockMemory(scip, &heurdata->divingheurs[j]->solvefreqdata);
-         SCIPfreeBlockMemory(scip, &heurdata->divingheurs[j]->stats);
-         SCIPfreeBlockMemory(scip, &(heurdata->divingheurs[j]));
+         SCIP_CALL( schedulerFreeDivingHeur(scip, &(heurdata->divingheurs[j])) );
       }
 
       SCIPfreeBlockMemoryArray(scip, &heurdata->divingheurs, heurdata->divingheurssize);
