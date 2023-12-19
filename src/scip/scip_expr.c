@@ -574,18 +574,27 @@ SCIP_RETCODE parseExpr(
          {
             SCIP_CALL( SCIPskipSpace((char**)newpos) );
 
-            if( **newpos != '*' )
+            if( **newpos == '<' )
             {
-               /* no '*', so fall back to parsing term after sign */
-               coef = (*expr == '+') ? 1.0 : -1.0;
-               ++expr;
+               /* found variable name ('*' is considered optional);
+                * keep coefficient in coef and continue parsing term after coefficient
+                */
+               expr = *newpos;
+
+               SCIP_CALL( SCIPskipSpace((char**)&expr) );
             }
-            else
+            else if( **newpos == '*' )
             {
                /* keep coefficient in coef and continue parsing term after coefficient */
                expr = (*newpos)+1;
 
                SCIP_CALL( SCIPskipSpace((char**)&expr) );
+            }
+            else
+            {
+               /* term consists of single value; let parseTerm() below parse it */
+               coef = (*expr == '+') ? 1.0 : -1.0;
+               ++expr;
             }
          }
          else
@@ -1358,7 +1367,7 @@ SCIP_RETCODE SCIPcopyExpr(
  *
  * The actual definition:
  * <pre>
- * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
+ * Expression -> ["+" | "-"] Term { [ ("+" | "-" | "number *") Term | ("number" <varname>) ] }
  * Term       -> Factor { ("*" | "/" ) Factor }
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
