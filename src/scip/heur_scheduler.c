@@ -887,6 +887,30 @@ SCIP_RETCODE transferSolution(
    return SCIP_OKAY;
 }
 
+/** release all data and free diving heuristic */
+static
+SCIP_RETCODE schedulerFreeDivingHeur(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DIVING_HEUR**         divingheur          /**< pointer to diving heuristic that should be freed */
+   )
+{
+   DIVING_HEUR* divingheurptr;
+   assert(scip != NULL);
+   assert(divingheur != NULL);
+
+   divingheurptr = *divingheur;
+   assert(divingheurptr != NULL);
+
+   SCIP_CALL( SCIPfreeClock(scip, &divingheurptr->stats->setupclock) );
+   SCIP_CALL( SCIPfreeClock(scip, &divingheurptr->stats->execclock) );
+
+   SCIPfreeBlockMemory(scip, &divingheurptr->solvefreqdata);
+   SCIPfreeBlockMemory(scip, &divingheurptr->stats);
+   SCIPfreeBlockMemory(scip, divingheur);
+
+   return SCIP_OKAY;
+}
+
 /* ---------------- Callback methods of event handler ---------------- */
 
 /** execution callback of the event handler
@@ -2372,6 +2396,7 @@ SCIP_RETCODE selectHeuristic(
       SCIP_CALL( SCIPbanditSelect(bandit, selection) );
    }
    assert(*selection >= 0);
+   assert(*selection < heurdata->nactiveneighborhoods + heurdata->ndiving);
 
    return SCIP_OKAY;
 }
@@ -2773,7 +2798,7 @@ SCIP_RETCODE initRest(
     * at the root node*/
    if( heurdata->defaultroot )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->sortedindices, nheurs) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->sortedindices, heurdata->ndiving + heurdata->nneighborhoods) );
       SCIP_CALL( SCIPallocBufferArray(scip, &priorities, nheurs) );
       heurdata->counter = 0;
 
@@ -2807,7 +2832,6 @@ SCIP_DECL_HEUREXEC(heurExecScheduler)
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   assert(SCIPhasCurrentNodeLP(scip));
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
@@ -4100,8 +4124,33 @@ SCIP_DECL_HEURINITSOL(heurInitsolScheduler)
    if( heurdata->bandit != NULL && SCIPbanditGetNActions(heurdata->bandit) != heurdata->ndiving + heurdata->nactiveneighborhoods )
    {
       SCIP_CALL( SCIPfreeBandit(scip, &heurdata->bandit) );
-
       heurdata->bandit = NULL;
+
+      /* since the number of active heursitics has changed, we have to update
+       * how heuristics are sorted by priority, if we already initialized the data */
+      if( heurdata->divingheurs != NULL )
+      {
+         SCIP_Real* initpriorities;
+         int nheurs;
+
+	 nheurs = heurdata->nactiveneighborhoods + heurdata->ndiving;
+         SCIP_CALL( SCIPallocBufferArray(scip, &initpriorities, nheurs) );
+         heurdata->counter = 0;
+
+         for( i = 0; i < nheurs; ++i )
+         {
+            heurdata->sortedindices[i] = i;
+
+            if( i < heurdata->ndiving )
+               initpriorities[i] = (SCIP_Real)-heurdata->divingheurs[i]->rootnodepriority;
+            else
+               initpriorities[i] = (SCIP_Real)-heurdata->neighborhoods[i - heurdata->ndiving]->rootnodepriority;
+         }
+
+         SCIPsortRealInt(initpriorities, heurdata->sortedindices, nheurs);
+
+         SCIPfreeBufferArray(scip, &initpriorities);
+      }
    }
 
    if( heurdata->nactiveneighborhoods + heurdata->ndiving > 0 )
@@ -4186,14 +4235,13 @@ SCIP_DECL_HEURFREE(heurFreeScheduler)
 
       for( j = 0; j < heurdata->ndiving; ++j )
       {
-         SCIPfreeBlockMemory(scip, &heurdata->divingheurs[j]->solvefreqdata);
-         SCIPfreeBlockMemory(scip, &heurdata->divingheurs[j]->stats);
+         SCIP_CALL( schedulerFreeDivingHeur(scip, &(heurdata->divingheurs[j])) );
       }
 
       SCIPfreeBlockMemoryArray(scip, &heurdata->divingheurs, heurdata->divingheurssize);
 
       if( heurdata->defaultroot )
-         SCIPfreeBlockMemoryArray(scip, &heurdata->sortedindices, heurdata->ndiving + heurdata->nactiveneighborhoods);
+         SCIPfreeBlockMemoryArray(scip, &heurdata->sortedindices, heurdata->ndiving + heurdata->nneighborhoods);
    }
 
    /* free neighborhoods */
