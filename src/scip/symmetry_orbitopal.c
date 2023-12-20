@@ -1297,8 +1297,6 @@ SCIP_RETCODE getColumnOrder(
    SCIP*                 scip,               /**< SCIP data structure */
    ORBITOPEDATA*         orbidata,           /**< orbitope data */
    SCIP_NODE*            eventnode,          /**< node where this should be determined at */
-   int*                  roworder,           /**< array with the row order, of size nselrows */
-   int                   nselrows,           /**< number of rows (required to be positive) */
    int**                 colorder,           /**< array to populate with column order, of size ncols */
    int**                 colorderinv         /**< array to populate with inverse column order, of size ncols */
    )
@@ -1312,8 +1310,6 @@ SCIP_RETCODE getColumnOrder(
    assert( scip != NULL );
    assert( orbidata != NULL );
    assert( eventnode != NULL );
-   assert( roworder != NULL );
-   assert( nselrows > 0 );
    assert( colorder != NULL );
    assert( colorderinv != NULL );
 
@@ -2067,7 +2063,7 @@ SCIP_RETCODE propagateOrbitope(
       goto FREEROWS;
 
    /* get column order */
-   SCIP_CALL( getColumnOrder(scip, orbidata, focusnode, roworder, nselrows, &colorder, &colorderinv) );
+   SCIP_CALL( getColumnOrder(scip, orbidata, focusnode, &colorder, &colorderinv) );
 
 #ifndef NDEBUG
    /* DEBUG: if propagation is repeated in the same node, the same column order and row order is needed */
