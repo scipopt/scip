@@ -33,6 +33,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
+#include "scip/type_certificate.h"
 #include "scip/rational.h"
 
 #ifdef __cplusplus
@@ -392,6 +393,17 @@ SCIP_RETCODE SCIPclassifyConstraintTypesExactLinear(
    SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint type classification */
    );
 
+SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
+   SCIP*                 scip,
+   SCIP_CONSHDLR*        conshdlr,
+   SCIP_CONS*            cons
+   );
+
+SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
+   SCIP*                 scip,
+   SCIP_CONSHDLR*        conshdlr,
+   SCIP_CONS*            cons
+   );
 
 /* @} */
 

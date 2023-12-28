@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License.             */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -18,22 +27,27 @@
  * @author Andreas Bley
  * @author Marc Pfetsch
  *
- * We want to solve the vehicle routing problem on a graph G = (V,E) with
- * V = J cup {d}, where d is the depot and the distances are given by the
- * length function l_e: E -> R_{>= 0}.
+ * We want to solve the vehicle routing problem on a graph \f$G = (V,E)\f$ with
+ * \f$V = J \cup \{d\}\f$, where d is the depot and the distances are given by the
+ * length function \f$l_e: E \rightarrow R_{\geq 0}\f$.
  *
  * Consider the MIP formulation
  *
- *   min  sum_{e in E} l_e y_e
- *   s.t. -y_e + sum_{t in T_k} a^t_e x_t <= 0,   for all e in E
- *               sum_{t in T_k} a^t_j x_t == 1,   for all j in J
- *         y(delta(j))                     == 2,   for all j in J
- *         y_e                       in {0,1,2},   for all e in E
- *                              x_t  in [0,1],     for all t in T_k
+ * \f[
+ *  \begin{array}[t]{rll}
+ *    \min &  \displaystyle \sum_{e \in E} l_e y_e \\
+ *         & & \\
+ *   s.t.  & -y_e + \sum_{t \in T_k} a^t_e x_t  \leq 0, &  \forall e \in E\\
+ *         &  \displaystyle \sum_{t \in T_k} a^t_j x_t = 1, &  \forall j \in J \\
+ *         &  y(\delta(j)) = 2, &  \forall j \in J \\
+ *         &  y_e \in \{0,1,2\},  & \forall e \in E \\
+ *         &  x_t  \in [0,1], & \forall t \in T_k
+ *  \end{array}
+ * \f]
  *
- * where T_k is the set of tours visiting at most k customers
- * with repetitions of customers allowed and a^t_e (a^t_j) counts how often
- * edge e (node j) is traversed in t in T_k.
+ * where \f$T_k\f$ is the set of tours visiting at most k customers
+ * with repetitions of customers allowed and \f$a^t_e\f$ (\f$a^t_j\f$) counts how often
+ * edge e (node j) is traversed in \f$t \in T_k\f$.
  *
  * Examples and the file format are given at https://neo.lcc.uma.es/vrp/vrp-instances/capacitated-vrp-instances/.
  */

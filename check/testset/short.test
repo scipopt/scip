@@ -21,7 +21,6 @@ instances/MIP/stein27.fzn
 instances/MIP/stein27_inf.lp
 instances/MIP/vpm2.fzn
 instances/MINLP/bip_cross_min.10.10.10.1.pip
-instances/MINLP/ex1224.nl
 instances/MINLP/ex1266.nl
 instances/MINLP/ex1266.mps
 instances/MINLP/gastrans.nl
@@ -49,3 +48,6 @@ instances/SOS/tpesc.lp
 instances/Symmetry/packorb_1-FullIns_3.cip
 instances/Symmetry/partorb_1-FullIns_3.cip
 instances/CP/disj_conj_rail.cip
+instances/Logic/logic1.nl
+instances/Logic/logic2.nl
+instances/Logic/logic3.nl

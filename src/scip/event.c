@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -1383,6 +1392,29 @@ SCIP_Real SCIPeventGetNewbound(
    }  /*lint !e788*/
 }
 
+/** gets new bound for a bound change event */
+SCIP_Rational* SCIPeventGetOldboundExact(
+   SCIP_EVENT*           event               /**< event */
+   )
+{
+   assert(event != NULL);
+   switch( event->eventtype )
+   {
+   case SCIP_EVENTTYPE_GLBCHANGED:
+   case SCIP_EVENTTYPE_GUBCHANGED:
+   case SCIP_EVENTTYPE_LBTIGHTENED:
+   case SCIP_EVENTTYPE_LBRELAXED:
+   case SCIP_EVENTTYPE_UBTIGHTENED:
+   case SCIP_EVENTTYPE_UBRELAXED:
+      return event->data.eventbdchg.oldboundexact;
+
+   default:
+      SCIPerrorMessage("event is not a bound change event\n");
+      SCIPABORT();
+      return NULL;
+   }  /*lint !e788*/
+}
+
 /** gets old variable type for a variable type change event */
 SCIP_VARTYPE SCIPeventGetOldtype(
    SCIP_EVENT*           event               /**< event */
@@ -1800,7 +1832,7 @@ SCIP_RETCODE SCIPeventProcess(
          {
             SCIP_CALL( SCIPcolExactChgObj(SCIPvarGetColExact(var), set, lp->lpexact, newobj) );
          }
-         SCIP_CALL( SCIPlpExactUpdateVarObj(lp->lpexact, set, var, oldobj, newobj) );
+         SCIP_CALL( SCIPlpExactUpdateVarObj(set, lp->lpexact, var, oldobj, newobj) );
 
          if( event->data.eventobjchg.newobjexact == NULL )
          {
@@ -1882,19 +1914,22 @@ SCIP_RETCODE SCIPeventProcess(
          SCIP_CALL( SCIPlpUpdateVarLb(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
 
-         if( event->data.eventbdchg.newboundexact != NULL )
+         if( !lp->probing )
          {
-            if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+            if( event->data.eventbdchg.newboundexact != NULL )
             {
-               SCIP_CALL( SCIPcolExactChgLb(SCIPvarGetColExact(var), set, lp->lpexact, event->data.eventbdchg.newboundexact) );
-            }
+               if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+               {
+                  SCIP_CALL( SCIPcolExactChgLb(SCIPvarGetColExact(var), set, lp->lpexact, event->data.eventbdchg.newboundexact) );
+               }
 
-            SCIP_CALL( SCIPlpExactUpdateVarLb(lp->lpexact, set, var, event->data.eventbdchg.oldboundexact,
-                  event->data.eventbdchg.newboundexact) );
-         }
-         else
-         {
-            SCIP_CALL( updateLpExactBoundChange(var, lp->lpexact, set, event, FALSE, FALSE) );
+               SCIP_CALL( SCIPlpExactUpdateVarLb(lp->lpexact, set, var, event->data.eventbdchg.oldboundexact,
+                        event->data.eventbdchg.newboundexact) );
+            }
+            else
+            {
+               SCIP_CALL( updateLpExactBoundChange(var, lp->lpexact, set, event, FALSE, FALSE) );
+            }
          }
 
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
@@ -1921,19 +1956,22 @@ SCIP_RETCODE SCIPeventProcess(
          SCIP_CALL( SCIPlpUpdateVarUb(lp, set, var, event->data.eventbdchg.oldbound,
                event->data.eventbdchg.newbound) );
 
-         if( event->data.eventbdchg.newboundexact != NULL )
+         if( !lp->probing )
          {
-            if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+            if( event->data.eventbdchg.newboundexact != NULL )
             {
-               SCIP_CALL( SCIPcolExactChgUb(SCIPvarGetColExact(var), set, lp->lpexact, event->data.eventbdchg.newboundexact) );
-            }
+               if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+               {
+                  SCIP_CALL( SCIPcolExactChgUb(SCIPvarGetColExact(var), set, lp->lpexact, event->data.eventbdchg.newboundexact) );
+               }
 
-            SCIP_CALL( SCIPlpExactUpdateVarUb(lp->lpexact, set, var, event->data.eventbdchg.oldboundexact,
-                  event->data.eventbdchg.newboundexact) );
-         }
-         else
-         {
-            SCIP_CALL( updateLpExactBoundChange(var, lp->lpexact, set, event, TRUE, FALSE) );
+               SCIP_CALL( SCIPlpExactUpdateVarUb(lp->lpexact, set, var, event->data.eventbdchg.oldboundexact,
+                        event->data.eventbdchg.newboundexact) );
+            }
+            else
+            {
+               SCIP_CALL( updateLpExactBoundChange(var, lp->lpexact, set, event, TRUE, FALSE) );
+            }
          }
 
          SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
@@ -2573,6 +2611,26 @@ SCIP_RETCODE SCIPeventqueueAdd(
                qevent->data.eventbdchg.newbound);
 
             qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;
+
+            /* possibly update exact bound */
+            if( (*event)->data.eventbdchg.newboundexact != NULL )
+            {
+               if( qevent->data.eventbdchg.newboundexact == NULL )
+               {
+                  SCIP_CALL( SCIPeventAddExactBdChg(qevent, blkmem, (*event)->data.eventbdchg.oldboundexact, (*event)->data.eventbdchg.newboundexact) );
+               }
+               else
+                  RatSet(qevent->data.eventbdchg.newboundexact, (*event)->data.eventbdchg.newboundexact);
+            }
+            else
+            {
+               if( qevent->data.eventbdchg.newboundexact != NULL )
+               {
+                  RatFreeBlock(blkmem, &(qevent->data.eventbdchg.newboundexact));
+                  RatFreeBlock(blkmem, &(qevent->data.eventbdchg.oldboundexact));
+               }
+            }
+
             /*if( SCIPsetIsLT(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound) )*/
             if( qevent->data.eventbdchg.newbound < qevent->data.eventbdchg.oldbound )
                qevent->eventtype = SCIP_EVENTTYPE_LBRELAXED;
@@ -2622,6 +2680,26 @@ SCIP_RETCODE SCIPeventqueueAdd(
                qevent->data.eventbdchg.newbound);
 
             qevent->data.eventbdchg.newbound = (*event)->data.eventbdchg.newbound;
+
+            /* possibly update exact bound */
+            if( (*event)->data.eventbdchg.newboundexact != NULL )
+            {
+               if( qevent->data.eventbdchg.newboundexact == NULL )
+               {
+                  SCIP_CALL( SCIPeventAddExactBdChg(qevent, blkmem, (*event)->data.eventbdchg.oldboundexact, (*event)->data.eventbdchg.newboundexact) );
+               }
+               else
+                  RatSet(qevent->data.eventbdchg.newboundexact, (*event)->data.eventbdchg.newboundexact);
+            }
+            else
+            {
+               if( qevent->data.eventbdchg.newboundexact != NULL )
+               {
+                  RatFreeBlock(blkmem, &(qevent->data.eventbdchg.newboundexact));
+                  RatFreeBlock(blkmem, &(qevent->data.eventbdchg.oldboundexact));
+               }
+            }
+
             /*if( SCIPsetIsLT(set, qevent->data.eventbdchg.newbound, qevent->data.eventbdchg.oldbound) )*/
             if( qevent->data.eventbdchg.newbound < qevent->data.eventbdchg.oldbound )
                qevent->eventtype = SCIP_EVENTTYPE_UBTIGHTENED;

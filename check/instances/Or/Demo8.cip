@@ -1,0 +1,62 @@
+STATISTICS
+  Problem name     : model
+  Variables        : 38 (38 binary, 0 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 15 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <x0>: obj=1, original bounds=[0,1]
+  [binary] <x1>: obj=0, original bounds=[0,1]
+  [binary] <x2>: obj=1, original bounds=[0,1]
+  [binary] <x3>: obj=1, original bounds=[0,1]
+  [binary] <x4>: obj=1, original bounds=[0,1]
+  [binary] <x5>: obj=1, original bounds=[0,1]
+  [binary] <x6>: obj=1, original bounds=[0,1]
+  [binary] <x7>: obj=1, original bounds=[0,1]
+  [binary] <x8>: obj=1, original bounds=[0,1]
+  [binary] <x9>: obj=1, original bounds=[0,1]
+  [binary] <x10>: obj=1, original bounds=[0,1]
+  [binary] <x11>: obj=1, original bounds=[0,1]
+  [binary] <x12>: obj=1, original bounds=[0,1]
+  [binary] <x13>: obj=1, original bounds=[0,1]
+  [binary] <x14>: obj=0, original bounds=[0,1]
+  [binary] <x15>: obj=0, original bounds=[0,1]
+  [binary] <x16>: obj=0, original bounds=[0,1]
+  [binary] <x17>: obj=0, original bounds=[0,1]
+  [binary] <x18>: obj=0, original bounds=[0,1]
+  [binary] <x19>: obj=0, original bounds=[0,1]
+  [binary] <x20>: obj=0, original bounds=[0,1]
+  [binary] <x21>: obj=0, original bounds=[0,1]
+  [binary] <x22>: obj=0, original bounds=[0,1]
+  [binary] <x23>: obj=0, original bounds=[0,1]
+  [binary] <x24>: obj=0, original bounds=[0,1]
+  [binary] <x25>: obj=0, original bounds=[0,1]
+  [binary] <x26>: obj=0, original bounds=[0,1]
+  [binary] <x27>: obj=0, original bounds=[0,1]
+  [binary] <x28>: obj=0, original bounds=[0,1]
+  [binary] <x29>: obj=0, original bounds=[0,1]
+  [binary] <x30>: obj=0, original bounds=[0,1]
+  [binary] <x31>: obj=0, original bounds=[0,1]
+  [binary] <x32>: obj=0, original bounds=[0,1]
+  [binary] <x33>: obj=0, original bounds=[0,1]
+  [binary] <x34>: obj=0, original bounds=[0,1]
+  [binary] <x35>: obj=0, original bounds=[0,1]
+  [binary] <x36>: obj=0, original bounds=[0,1]
+  [binary] <x37>: obj=0, original bounds=[0,0]
+CONSTRAINTS
+  [xor] <c0>: xor(<x1>[B],<x14>[B],<x15>[B],<x18>[B],<x19>[B],<x20>[B],<x21>[B],<x22>[B],<x23>[B],<x24>[B],<x25>[B],<x26>[B],<x27>[B],<x28>[B],<x29>[B],<x30>[B],<x31>[B],<x34>[B],<x35>[B],<x36>[B]) = 1 (intvar = <x37>[B]);
+  [xor] <c1>: xor(<x16>[B],<x18>[B],<x19>[B]) = 0 (intvar = <x6>[B]);
+  [xor] <c2>: xor(<x17>[B],<x18>[B],<x19>[B]) = 0 (intvar = <x5>[B]);
+  [xor] <c3>: xor(<x26>[B],<x27>[B],<x30>[B],<x36>[B]) = 0 (intvar = <x12>[B]);
+  [xor] <c4>: xor(<x28>[B],<x29>[B],<x30>[B],<x31>[B]) = 0 (intvar = <x13>[B]);
+  [xor] <c5>: xor(<x25>[B],<x26>[B],<x28>[B],<x36>[B]) = 0 (intvar = <x10>[B]);
+  [linear] <c6>:  -2<x11>[B] +<x25>[B] +<x27>[B] +<x29>[B] +<x31>[B] +<x32>[B] +<x33>[B] == 0;
+  [linear] <c7>:  -2<x4>[B] +<x14>[B] +<x15>[B] +<x16>[B] == 0;
+  [linear] <c8>:  -2<x7>[B] +<x20>[B] +<x21>[B] +<x22>[B] +<x23>[B] +<x34>[B] == 0;
+  [linear] <c9>:  -2<x8>[B] +<x21>[B] +<x22>[B] +<x24>[B] +<x32>[B] +<x34>[B] +<x35>[B] == 0;
+  [linear] <c10>: <x0>[B] +<x1>[B] -2<x2>[B] +<x14>[B] +<x17>[B] == 0;
+  [linear] <c11>: <x0>[B] +<x1>[B] -2<x3>[B] +<x15>[B] == 0;
+  [linear] <c12>:  -2<x9>[B] +<x20>[B] +<x23>[B] +<x24>[B] +<x33>[B] +<x35>[B] == 0;
+  [linear] <c13>:  +0.25<x7>[B] +0.25<x8>[B] +0.25<x9>[B] +0.25<x11>[B] +<x32>[B] +<x33>[B] +<x34>[B] +<x35>[B] <= 1.5;
+  [logicor] <c14>: logicor(<~x2>[B],<~x3>[B],<~x4>[B],<~x14>[B]);
+END

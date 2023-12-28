@@ -1881,7 +1881,7 @@ void for_sparse_hes(
 	// modify hessian in calling routine
 	for(size_t i = 0; i < n; i++)
 	{	for(size_t j = 0; j < n; j++)
-		{	if( (x_index[i] > 0) & (x_index[j] > 0) )
+		{	if( (x_index[i] > 0) && (x_index[j] > 0) )  //SV
 			{	bool flag = false;
 				switch( sparsity_ )
 				{	case pack_sparsity_enum:

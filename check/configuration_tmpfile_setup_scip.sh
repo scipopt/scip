@@ -4,13 +4,22 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            *
-#*                            fuer Informationstechnik Berlin                *
+#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic License.         *
+#*  Licensed under the Apache License, Version 2.0 (the "License");          *
+#*  you may not use this file except in compliance with the License.         *
+#*  You may obtain a copy of the License at                                  *
 #*                                                                           *
-#*  You should have received a copy of the ZIB Academic License              *
-#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*      http://www.apache.org/licenses/LICENSE-2.0                           *
+#*                                                                           *
+#*  Unless required by applicable law or agreed to in writing, software      *
+#*  distributed under the License is distributed on an "AS IS" BASIS,        *
+#*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. *
+#*  See the License for the specific language governing permissions and      *
+#*  limitations under the License.                                           *
+#*                                                                           *
+#*  You should have received a copy of the Apache-2.0 license                *
+#*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
@@ -38,7 +47,8 @@ CLIENTTMPDIR="${16}"   # - directory for temporary files
 SOLBASENAME="${17}"    # - base name for solution file
 VISUALIZE="${18}"      # - true, if the branch-and-bound search should be visualized
 SOLUFILE="${19}"       # - solu file, only necessary if ${SETCUTOFF} is 1
-WITHCERTIFICATE="${20}" # - true, if a certificate file should be created
+EMPHBENCHMARK="${20}"  # - use set emphasis benchmark
+WITHCERTIFICATE="${21}" # - true, if a certificate file should be created
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
@@ -102,12 +112,15 @@ do
     INSTANCENAME=${INSTANCENAME%%.${i}}
 done
 INSTANCESETTINGSFILE="${INSTANCENAME}.set"
+
 if test -f "${INSTANCESETTINGSFILE}"
 then
     echo set load "${INSTANCESETTINGSFILE}"                      >> "${TMPFILE}"
 fi
 
-echo "set emphasis benchmark"                                    >> "${TMPFILE}" # avoid switching to dfs etc. - better abort with memory error; this has to be first
+if  [ "${EMPHBENCHMARK}" = true ] ; then
+    echo "set emphasis benchmark"                                >> "${TMPFILE}" # avoid switching to dfs etc. - better abort with memory error; this has to be first
+fi
 echo "set limits time ${TIMELIMIT}"                              >> "${TMPFILE}"
 echo "set limits nodes ${NODELIMIT}"                             >> "${TMPFILE}"
 echo "set limits memory ${MEMLIMIT}"                             >> "${TMPFILE}"
@@ -116,8 +129,8 @@ echo "set lp advanced threads ${THREADS}"                        >> "${TMPFILE}"
 echo "set display freq ${DISPFREQ}"                              >> "${TMPFILE}"
 if test "${WITHCERTIFICATE}" = true
 then
-    echo "set certificate filename $CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.vipr" >> $TMPFILE
-    echo "set certificate maxfilesize 100240 >> $TMPFILE"
+    echo "set certificate filename $CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.vipr" >> "${TMPFILE}"
+    echo "set certificate maxfilesize 100240" >> "${TMPFILE}"
 fi
 
 echo "set memory savefac 1.0"                                    >> "${TMPFILE}"

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -49,7 +58,8 @@ enum SCIP_Hashmaptype
    SCIP_HASHMAPTYPE_UNKNOWN = 0,    /**< the hashmap did not store a single element yet, type unknown */
    SCIP_HASHMAPTYPE_POINTER = 1,    /**< the hashmap stores pointers % */
    SCIP_HASHMAPTYPE_REAL    = 2,    /**< the hashmap stores reals */
-   SCIP_HASHMAPTYPE_INT     = 3     /**< the hashmap stores ints */
+   SCIP_HASHMAPTYPE_INT     = 3,    /**< the hashmap stores ints */
+   SCIP_HASHMAPTYPE_LONG    = 4     /**< the hashmap stores long ints */
 };
 typedef enum SCIP_Hashmaptype SCIP_HASHMAPTYPE;
 

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -203,6 +212,7 @@ SCIP_RETCODE SCIPprobCopy(
                                               *   target variables */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints */
+   SCIP_Bool             original,           /**< copy original or transformed problem? */
    SCIP_Bool             global              /**< create a global or a local copy? */
    )
 {
@@ -223,7 +233,7 @@ SCIP_RETCODE SCIPprobCopy(
    /* call user copy callback method */
    if( sourceprob->probdata != NULL && sourceprob->probcopy != NULL )
    {
-      SCIP_CALL( sourceprob->probcopy(set->scip, sourcescip, sourceprob->probdata, varmap, consmap, &targetdata, global, &result) );
+      SCIP_CALL( sourceprob->probcopy(set->scip, sourcescip, sourceprob->probdata, varmap, consmap, &targetdata, original, global, &result) );
 
       /* evaluate result */
       if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
@@ -577,7 +587,7 @@ SCIP_RETCODE SCIPprobTransform(
    {
       SCIP_CALL( SCIPvarTransform(source->vars[v], blkmem, set, stat, source->objsense, &targetvar) );
       /* if in exact mode copy the exact data */
-      SCIP_CALL( SCIPvarCopyExactData(set, blkmem, targetvar, source->vars[v], source->objsense == SCIP_OBJSENSE_MAXIMIZE) );
+      SCIP_CALL( SCIPvarCopyExactData(blkmem, targetvar, source->vars[v], source->objsense == SCIP_OBJSENSE_MAXIMIZE) );
 
       SCIP_CALL( SCIPprobAddVar(*target, blkmem, set, lp, branchcand, eventfilter, eventqueue, targetvar) );
       SCIP_CALL( SCIPvarRelease(&targetvar, blkmem, set, eventqueue, NULL) );
@@ -2280,7 +2290,7 @@ void SCIPprobExternObjvalExact(
    assert(transprob->objscale > 0.0);
    assert(set->exact_enabled);
 
-   RatCreateBuffer(set->buffer, &tmpval);
+   (void) RatCreateBuffer(set->buffer, &tmpval);
 
    if( RatIsAbsInfinity(objval) )
    {
@@ -2338,7 +2348,7 @@ void SCIPprobInternObjvalExact(
    assert(transprob->objscale > 0.0);
    assert(set->exact_enabled);
 
-   RatCreateBuffer(set->buffer, &tmpval);
+   (void) RatCreateBuffer(set->buffer, &tmpval);
 
    if( RatIsAbsInfinity(objval) )
    {
@@ -2686,7 +2696,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegralExact(
       return SCIP_OKAY;
 
    /* if the objective value offset is fractional, the value itself is possibly fractional */
-   if( !EPSISINT(transprob->objoffset, 0.0) )
+   if( !EPSISINT(transprob->objoffset, 0.0) ) /*lint !e835*/
       return SCIP_OKAY;
 
    /* scan through the variables */

@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -249,6 +258,7 @@ SCIP_RETCODE addSCVarIndicator(
    /* move entries if needed */
    for( i = scvdata->nbnds; i > pos; --i )
    {
+      /* coverity[forward_null] */
       scvdata->bvars[i] = scvdata->bvars[i-1];
       scvdata->vals0[i] = scvdata->vals0[i-1];
       scvdata->lbs1[i] = scvdata->lbs1[i-1];
@@ -409,6 +419,7 @@ SCIP_RETCODE varIsSemicontinuous(
    assert(vubvars != NULL || nvubs == 0);
    for( c = 0; c < nvubs; ++c )
    {
+      /* coverity[forward_null] */
       if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY )  /*lint !e613*/
          continue;
 
@@ -744,15 +755,24 @@ SCIP_RETCODE computeOffValues(
                         nlhdlrexprdata->indicators[i], &pos);
                   issc = scvdata != NULL;
                }
-               else
+               else if( SCIPisExprSum(scip, curexpr) && curexpr == expr )
                {
-                  /* curexpr is a non-variable expression, so it belongs to the non-linear part of expr
-                   * since the non-linear part of expr must be semicontinuous with respect to
-                   * nlhdlrexprdata->indicators[i], curexpr must be semicontinuous
+                  /* if expr itself is a sum, this is an exception since a sum with nonlinear terms is
+                   * allowed to have both semicontinuous and non-semicontinuous variables; we skip it here
+                   * and then analyse it term by term
                    */
-                  issc = TRUE;
+                  issc = FALSE;
+               }
 
 #ifndef NDEBUG
+               if( !SCIPisExprVar(scip, curexpr) && (!SCIPisExprSum(scip, curexpr) || curexpr != expr) )
+               {
+                  /* curexpr is a non-variable expression and does not fit the sum special case,
+                   * so it belongs to the non-linear part of expr.
+                   * Since the non-linear part of expr must be semicontinuous with respect to
+                   * nlhdlrexprdata->indicators[i], curexpr must be semicontinuous
+                   */
+
                   SCIP_CALL( SCIPallocBufferArray(scip, &childvarexprs, norigvars) );
                   SCIP_CALL( SCIPgetExprVarExprs(scip, curexpr, childvarexprs, &nchildvarexprs) );
 
@@ -767,8 +787,8 @@ SCIP_RETCODE computeOffValues(
                   }
 
                   SCIPfreeBufferArray(scip, &childvarexprs);
-#endif
                }
+#endif
             }
 
             if( issc )
@@ -1015,7 +1035,7 @@ SCIP_RETCODE analyseVarOnoffBounds(
          if( indvalue == 0 )
          {
             assert(sclb == scub); /*lint !e777*/
-            SCIP_CALL( SCIPfixVar(scip, var, sclb, infeas, &bndchgsuccess) );
+            SCIP_CALL( SCIPfixVar(scip, var, scub, infeas, &bndchgsuccess) );
          }
          else
          {
@@ -1393,8 +1413,9 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectPerspective)
       SCIPinfoMessage(scip, NULL, "\n");
 #endif
    }
-   else if( *nlhdlrexprdata != NULL )
+   else
    {
+      assert(*nlhdlrexprdata != NULL);
       SCIP_CALL( nlhdlrFreeExprDataPerspective(scip, nlhdlr, expr, nlhdlrexprdata) );
    }
 
@@ -1677,6 +1698,8 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          * therefore we are now happy
          */
          assert(!doprobingind);
+         SCIPfreeBufferArrayNull(scip, &probingvars);
+         SCIPfreeBufferArrayNull(scip, &probingdoms);
          goto TERMINATE;
       }
 
@@ -1709,14 +1732,15 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIPfreeBufferArray(scip, &solvals);
 #endif
 
+         SCIPfreeBufferArrayNull(scip, &probingvars);
+         SCIPfreeBufferArrayNull(scip, &probingdoms);
+
          if( propagate )
          { /* we are in the root node and startProbing did propagation */
             /* probing propagation might have detected infeasibility */
             if( cutoff_probing )
             {
                /* indicator == 1 is infeasible -> set indicator to 0 */
-               SCIPfreeBufferArrayNull(scip, &probingvars);
-               SCIPfreeBufferArrayNull(scip, &probingdoms);
 
                SCIP_CALL( SCIPendProbing(scip) );
 
@@ -1791,17 +1815,18 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          {
             SCIP_CALL( SCIPnlhdlrEvalaux(scip, nlhdlr2, expr, nlhdlr2exprdata, &nlhdlr2auxvalue, soladj) );
 
+            /* coverity[copy_paste_error] */
             SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr2, expr,
                   nlhdlr2exprdata, soladj,
                   nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
-                  addbranchscores, rowpreps2, &success2, &addedbranchscores2j) );
+                  FALSE, rowpreps2, &success2, &addedbranchscores2j) );
          }
          else
          {
             SCIP_CALL( SCIPnlhdlrEstimate(scip, conshdlr, nlhdlr2, expr,
                   nlhdlr2exprdata, solcopy,
                   nlhdlr2auxvalue, overestimate, SCIPgetSolVal(scip, solcopy, auxvar),
-                  addbranchscores, rowpreps2, &success2, &addedbranchscores2j) );
+                  FALSE, rowpreps2, &success2, &addedbranchscores2j) );
          }
 
          minidx = SCIPgetPtrarrayMinIdx(scip, rowpreps2);
@@ -1910,7 +1935,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          (void) strcat(SCIProwprepGetName(rowprep), SCIPvarGetName(indicator));
 
          SCIP_CALL( SCIPprocessRowprepNonlinear(scip, nlhdlr, cons, expr, rowprep, overestimate, auxvar, auxvalue,
-               allowweakcuts, SCIPgetBoolarrayVal(scip, addedbranchscores2, r), addbranchscores, solcopy, &resultr) );
+               allowweakcuts, SCIPgetBoolarrayVal(scip, addedbranchscores2, r), FALSE, solcopy, &resultr) );
 
          if( resultr == SCIP_SEPARATED )
             *result = SCIP_SEPARATED;
@@ -1938,8 +1963,6 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
          SCIPfreeRowprep(scip, &rowprep);
       }
 
-      SCIPfreeBufferArrayNull(scip, &probingvars);
-      SCIPfreeBufferArrayNull(scip, &probingdoms);
       SCIP_CALL( SCIPclearPtrarray(scip, rowpreps) );
    }
 

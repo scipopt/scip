@@ -50,11 +50,11 @@ static void setup(void)
    blkmem = BMScreateBlockMemory(1, 10);
    buffmem = BMScreateBufferMemory(1.2, 4, FALSE);
 
-   RatCreateBuffer(buffmem, &rbuf);
-   RatCreateBlock(blkmem, &r1);
+   (void) RatCreateBuffer(buffmem, &rbuf);
+   (void) RatCreateBlock(blkmem, &r1);
    RatCopy(blkmem, &r2, r1);
 
-   RatCreateBlockArray(blkmem, &ratpt, 10);
+   (void) RatCreateBlockArray(blkmem, &ratpt, 10);
    SCIPrationalarrayCreate(&ratar, blkmem);
 }
 
@@ -78,10 +78,10 @@ TestSuite(rationals, .init = setup, .fini = teardown);
 Test(rationals, create_and_free)
 {
    SCIP_Rational** buffer;
-   int nusedbuffers;
+   size_t nusedbuffers;
    nusedbuffers = BMSgetNUsedBufferMemory(buffmem);
 
-   RatCreateBufferArray(buffmem, &buffer, 5);
+   (void) RatCreateBufferArray(buffmem, &buffer, 5);
    RatReallocBufferArray(buffmem, &buffer, 5, 10);
    RatFreeBufferArray(buffmem, &buffer, 10);
    cr_assert_eq(nusedbuffers, BMSgetNUsedBufferMemory(buffmem));
@@ -98,7 +98,7 @@ Test(rationals, setting, .description = "tests all the different methods to set/
    mpq_set_d(gmpr, 1.2345);
 
    /* create some rationals with different methods*/
-   RatCreateGMP(blkmem, &testr, gmpr);
+   (void) RatCreateGMP(blkmem, &testr, gmpr);
 
    /* test setter methods */
    RatSetInt(r1, testint, 1);

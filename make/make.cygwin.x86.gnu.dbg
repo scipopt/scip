@@ -1,7 +1,7 @@
 FLAGS		+=      #-DSCIP_ROUNDING_FE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)
-CXXFLAGS	+=	$(GXXWARN) -std=c++0x
+CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs
 LDFLAGS		+=
 ZLIB_FLAGS	=
@@ -10,3 +10,7 @@ GMP_FLAGS	=
 GMP_LDFLAGS 	=	-lgmp
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline
+ifeq ($(SHARED),true)
+FLAGS		+=	-fPIC
+endif
+LINK_shared		=	-shared

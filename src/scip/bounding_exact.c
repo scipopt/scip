@@ -19,8 +19,6 @@
  *
  */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#ifndef __SCIP_BOUNDING_EXACT_C__
-#define __SCIP_BOUNDING_EXACT_C__
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
@@ -45,12 +43,9 @@
 #include "scip/struct_scip.h"
 #include "rectlu/rectlu.h"
 
-#define PSBIGM                      100
-#define PSWARMSTARTAUXPROB         TRUE
-#define PSPOSTPROCESSDUALSOL       TRUE
-
-
 #ifdef SCIP_WITH_BOOST
+
+#define PSBIGM                      100
 
 /** checks if number is a power of two (negative numbers are reported as false);
  *
@@ -183,7 +178,7 @@ SCIP_RETCODE projectShiftChooseDualSubmatrix(
        * constraints are active at the solution of the exact LP at the root node)
        */
 
-      SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, prob, 100,
+      SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, prob, 100,
                &lperror, FALSE) );
 
       SCIP_CALL( RatCreateBufferArray(set->buffer, &rootprimal, ncols) );
@@ -1064,7 +1059,7 @@ SCIP_RETCODE constructProjectShiftDataLPIExact(
    SCIP_CALL( RatCreateBlock(blkmem, &projshiftdata->commonslack) );
 
    /* process the bound changes */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    assert(lpexact->nrows > 0);
@@ -1274,7 +1269,7 @@ SCIP_RETCODE projectShift(
 
    /* flush exact lp */
    /* set up the exact lpi for the current node */
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );
    SCIP_CALL( SCIPlpExactFlush(lp->lpexact, blkmem, set, eventqueue) );
 
    nextendedrows = projshiftdata->nextendedrows;
@@ -2027,6 +2022,9 @@ SCIP_RETCODE boundShift(
    assert(set != NULL);
    assert(safebound != NULL);
 
+   lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+   lpexact->solved = 0;
+
    if( !SCIPlpExactBSpossible(lpexact) )
       return SCIP_OKAY;
 
@@ -2048,7 +2046,7 @@ SCIP_RETCODE boundShift(
 
    SCIPdebugMessage("calling proved bound for %s LP\n", usefarkas ? "infeasible" : "feasible");
 
-   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, stat, lpexact, prob, eventqueue) );
+   SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );
    SCIP_CALL( SCIPlpExactLink(lpexact, blkmem, set, eventqueue) );
 
    /* reset proved bound status */
@@ -2210,12 +2208,7 @@ SCIP_RETCODE boundShift(
          SCIPintervalSet(&obj[j], 0);
       else
       {
-         if( RatIsFpRepresentable(SCIPvarGetObjExact(SCIPcolGetVar(col))) )
-            SCIPintervalSet(&obj[j], col->obj);
-         else
-         {
-            SCIPintervalSetRational(&obj[j], SCIPvarGetObjExact(SCIPcolGetVar(col)));
-         }
+         obj[j] = SCIPvarGetObjInterval(SCIPcolGetVar(col));
       }
 
       assert(SCIPcolGetLb(col) <= RatRoundReal(SCIPvarGetLbLocalExact(col->var), SCIP_R_ROUND_DOWNWARDS));
@@ -2363,17 +2356,17 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Longint          itlim,              /**< maximal number of LP iterations to perform, or -1 for no limit */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
    SCIP_Bool             usefarkas,          /**< should infeasiblity be proven? */
    SCIP_Real*            safebound,          /**< pointer to store the calculated safe bound */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    )
-{
+{  /*lint --e{715}*/
+#ifdef SCIP_WITH_BOOST
    char dualboundmethod;
    char lastboundmethod;
-   SCIP_Bool abort;
+   SCIP_Bool shouldabort;
    int nattempts;
 
    /* if we are not in exact solving mode, just return */
@@ -2381,10 +2374,9 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       return SCIP_OKAY;
 
    lastboundmethod = 'u';
-   abort = FALSE;
+   shouldabort = FALSE;
    nattempts = 0;
 
-#ifdef SCIP_WITH_BOOST
    assert(set->exact_enabled);
    assert(!lp->hasprovedbound);
 
@@ -2396,7 +2388,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
             blkmem) );
    }
 
-   while( (!lp->hasprovedbound && !abort) || lpexact->allowexactsolve )
+   while( (!lp->hasprovedbound && !shouldabort) || lpexact->allowexactsolve )
    {
       dualboundmethod = chooseBoundingMethod(lpexact, set, stat, prob, lastboundmethod);
       SCIPdebugMessage("Computing safe bound for LP with status %d using bounding method %c\n",
@@ -2424,7 +2416,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       #endif
          case 'e':
             /* exact LP */
-            SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
+            SCIP_CALL( SCIPlpExactSolveAndEval(lpexact, lp, set, messagehdlr, blkmem, stat, eventqueue,
                   prob, set->lp_iterlim, lperror, usefarkas) );
             if( *lperror )
             {
@@ -2453,7 +2445,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
           || lpexact->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
       {
          SCIPdebugMessage("failed save bounding call after %d attempts to compute safe bound\n", nattempts);
-         abort = TRUE;
+         shouldabort = TRUE;
          *lperror = TRUE;
       }
    }
@@ -2469,5 +2461,3 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
 
    return SCIP_OKAY;
 }
-
-#endif

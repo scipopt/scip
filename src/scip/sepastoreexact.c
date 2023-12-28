@@ -70,7 +70,6 @@ SCIP_RETCODE sepastoreExactEnsureCutsMem(
 /** creates separation storage */
 SCIP_RETCODE SCIPsepastoreExactCreate(
    SCIP_SEPASTOREEXACT** sepastoreexact,     /**< pointer to store separation storage */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -95,8 +94,7 @@ SCIP_RETCODE SCIPsepastoreExactCreate(
 
 /** frees separation storage */
 SCIP_RETCODE SCIPsepastoreExactFree(
-   SCIP_SEPASTOREEXACT** sepastoreexact,     /**< pointer to store separation storage */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP_SEPASTOREEXACT** sepastoreexact      /**< pointer to store separation storage */
    )
 {
    assert(sepastoreexact != NULL);
@@ -138,11 +136,8 @@ void SCIPsepastoreExactEndInitialLP(
 /** adds cut to separation storage and captures it */
 SCIP_RETCODE SCIPsepastoreExactAddCut(
    SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_LPEXACT*         lp,                 /**< LP data */
    SCIP_ROWEXACT*        cut                 /**< separated cut */
    )
 {
@@ -189,9 +184,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
    SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LPEXACT*         lpexact,            /**< LP data */
-   SCIP_PROB*            prob,               /**< scip prob structure */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
@@ -201,7 +194,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
    int nrowsfp;
    int nrowsex;
    int i;
-   SCIP_Bool remove;
+   SCIP_Bool removecut;
 
    if( !set->exact_enabled )
       return SCIP_OKAY;
@@ -215,7 +208,7 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowdset, lpexact->nrows) );
 
-   remove = FALSE;
+   removecut = FALSE;
 
    /* this method should sync the fp-lp withe the exact lp */
 
@@ -224,16 +217,16 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
    {
       SCIP_ROW* fprow = lpexact->rows[i]->fprow;
 
-      if( fprow == NULL || !SCIProwIsInLP(fprow) || fprow->lppos != i || remove )
+      if( fprow == NULL || !SCIProwIsInLP(fprow) || fprow->lppos != i || removecut )
       {
-         remove = TRUE;
+         removecut = TRUE;
          rowdset[i] = 1;
       }
       else
          rowdset[i] = 0;
    }
 
-   SCIP_CALL( SCIPlpExactDelRowset(lpexact, blkmem, set, eventqueue, rowdset) );
+   SCIP_CALL( SCIPlpExactDelRowset(lpexact, blkmem, set, rowdset) );
 
    for( i = 0; i < nrowsfp; ++i )
    {
@@ -244,16 +237,15 @@ SCIP_RETCODE SCIPsepastoreExactSyncLPs(
          if( !SCIProwExactIsInLP(rowexact) )
          {
             /* add the exact row to the exact lp */
-            SCIP_CALL( SCIPlpExactAddRow(lpexact, blkmem, set, eventqueue,
-                rowexact, 0) );
+            SCIP_CALL( SCIPlpExactAddRow(lpexact, set, rowexact) );
          }
       }
       else
       {
          assert(SCIProwGetOriginSepa(fplp->rows[i]) != NULL);
 
-         SCIP_CALL( SCIPsepastoreExactAddCut(sepastoreexact, blkmem, set, stat, eventqueue, lpexact, rowexact) );
-         SCIP_CALL( SCIPlpExactAddRow(lpexact, blkmem, set, eventqueue, rowexact, SCIProwGetLPDepth(fplp->rows[i])) );
+         SCIP_CALL( SCIPsepastoreExactAddCut(sepastoreexact, set, eventqueue, rowexact) );
+         SCIP_CALL( SCIPlpExactAddRow(lpexact, set,rowexact) );
          SCIP_CALL( SCIProwExactRelease(&rowexact, blkmem, set, lpexact) );
       }
    }
@@ -270,7 +262,6 @@ SCIP_RETCODE SCIPsepastoreExactClearCuts(
    SCIP_SEPASTOREEXACT*  sepastoreexact,     /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_LPEXACT*         lp                  /**< LP data */
    )
 {

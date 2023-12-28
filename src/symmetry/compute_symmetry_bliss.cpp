@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2021 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -41,6 +50,7 @@
 #include "scip/cons_linear.h"
 
 using std::vector;
+
 
 /** struct for bliss callback */
 struct BLISS_Data
@@ -105,8 +115,8 @@ SCIP_DECL_HASHKEYVAL(SYMhashKeyValOptype)
    else
       exponent = 1.0;
 
-   return SCIPhashTwo(SCIPrealHashCode(exponent), k->level),
-      (uint64_t) SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr));
+   return SCIPhashThree(SCIPrealHashCode(exponent), k->level,
+      SCIPhashKeyValString(NULL, static_cast<void*>(const_cast<char*>(SCIPexprhdlrGetName(SCIPexprGetHdlr(k->expr))))));
 }
 
 /* ------------------- map for constant types ------------------- */
@@ -260,15 +270,14 @@ SCIP_RETCODE createVariableNodes(
    SCIP*                 scip,               /**< SCIP instance */
    bliss::Graph*         G,                  /**< Graph to be constructed */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix (also contains the relevant variables) */
-   int&                  nnodes,             /**< buffer to store number of nodes in graph */
-   const int&            nedges,             /**< buffer to store number of edges in graph */
-   int&                  nusedcolors         /**< buffer to store number of used colors */
+   int&                  nnodes,             /**< returns number of nodes in graph */
+   int&                  nusedcolors         /**< returns number of used colors */
    )
 {
    assert( scip != NULL );
    assert( G != NULL );
+   assert( matrixdata != NULL );
    assert( nnodes == 0 );
-   assert( nedges == 0 );
    assert( nusedcolors == 0 );
    SCIPdebugMsg(scip, "Creating graph with colored nodes for variables.\n");
 
@@ -312,9 +321,9 @@ SCIP_RETCODE fillGraphByLinearConss(
    SCIP*                 scip,               /**< SCIP instance */
    bliss::Graph*         G,                  /**< Graph to be constructed */
    SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
-   int&                  nnodes,             /**< buffer to store number of nodes in graph */
-   int&                  nedges,             /**< buffer to store number of edges in graph */
-   int&                  nusedcolors,        /**< buffer to store number of used colors */
+   int&                  nnodes,             /**< number of nodes in graph */
+   int&                  nedges,             /**< number of edges in graph */
+   int&                  nusedcolors,        /**< number of used colors */
    SCIP_Bool&            success             /**< whether the construction was successful */
    )
 {
@@ -335,7 +344,7 @@ SCIP_RETCODE fillGraphByLinearConss(
       int node = (int) G->add_vertex((unsigned) (nusedcolors + color));
       assert( node == matrixdata->npermvars + c );
 #else
-      (void) G->add_vertex((unsigned) (matrixdata->nuniquevars + color));
+      (void) G->add_vertex((unsigned) (nusedcolors + color));
 #endif
 
       ++nnodes;
@@ -421,13 +430,17 @@ SCIP_RETCODE fillGraphByLinearConss(
             varrhsidx = matrixdata->matvaridx[idx];
          assert( 0 <= varrhsidx && varrhsidx < ninternodes );
 
+         SCIP_Bool newinternode = FALSE;
          if ( internodes[varrhsidx] < firstcolornodenumber )
          {
             internodes[varrhsidx] = (int) G->add_vertex((unsigned) (nusedcolors + color));
             ++nnodes;
+            newinternode = TRUE;
          }
-         assert( internodes[varrhsidx] >= matrixdata->npermvars + matrixdata->nrhscoef );
-         assert( internodes[varrhsidx] >= firstcolornodenumber );
+         int internode = internodes[varrhsidx];
+         assert( internode >= matrixdata->npermvars + matrixdata->nrhscoef );
+         assert( internode >= firstcolornodenumber );
+         assert( internode < nnodes );
 
          /* determine whether graph would be too large for bliss (can only handle int) */
          if ( nnodes >= INT_MAX/2 )
@@ -436,9 +449,26 @@ SCIP_RETCODE fillGraphByLinearConss(
             break;
          }
 
-         G->add_edge((unsigned) varnode, (unsigned) internodes[varrhsidx]);
-         G->add_edge((unsigned) rhsnode, (unsigned) internodes[varrhsidx]);
-         nedges += 2;
+         if ( groupByConstraints )
+         {
+            if ( newinternode )
+            {
+               G->add_edge((unsigned) rhsnode, (unsigned) internode);
+               ++nedges;
+            }
+            G->add_edge((unsigned) varnode, (unsigned) internode);
+            ++nedges;
+         }
+         else
+         {
+            if ( newinternode )
+            {
+               G->add_edge((unsigned) varnode, (unsigned) internode);
+               ++nedges;
+            }
+            G->add_edge((unsigned) rhsnode, (unsigned) internode);
+            ++nedges;
+         }
       }
    }
 
@@ -474,9 +504,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP*                 scip,               /**< SCIP instance */
    bliss::Graph*         G,                  /**< Graph to be constructed */
    SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
-   int&                  nnodes,             /**< buffer to store number of nodes in graph */
-   int&                  nedges,             /**< buffer to store number of edges in graph */
-   int&                  nusedcolors,        /**< number of used colors ind the graph so far */
+   int&                  nnodes,             /**< number of nodes in graph */
+   int&                  nedges,             /**< number of edges in graph */
+   int&                  nusedcolors,        /**< number of colors in the graph so far */
    SCIP_Bool&            success             /**< whether the construction was successful */
    )
 {
@@ -490,6 +520,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SYM_RHSTYPE* uniquerhsarray = NULL;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** conss;
+   SCIP_VAR** vars = NULL;
+   SCIP_Real* vals = NULL;
+   int varssize;
    int nconss;
    int nuniqueops = 0;
    int nuniqueconsts = 0;
@@ -539,6 +572,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sumcoefarray, coefarraysize) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &uniquerhsarray, rhsarraysize) );
 
+   /* get number of variables */
+   varssize = SCIPgetNVars(scip);
+
    SCIP_EXPRITER* it;
    SCIP_CALL( SCIPcreateExpriter(scip, &it) );
 
@@ -557,9 +593,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
       for (SCIP_EXPR* expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it)) /*lint !e441*/ /*lint !e440*/
       {
+         /* upon entering an expression, check its type and add nodes and edges if neccessary */
          switch( SCIPexpriterGetStageDFS(it) )
          {
-            /* upon entering an expression, check its type and add nodes and edges if neccessary */
             case SCIP_EXPRITER_ENTEREXPR:
             {
                int node = -1;
@@ -582,35 +618,30 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   }
                   else
                   {
-                     SCIP_VAR** vars = NULL;
-                     SCIP_Real* vals = NULL;
-                     SCIP_Real constant = 0;
-                     int varsize = 1;
+                     SCIP_Real constant = 0.0;
+                     int nvars;
                      int requiredsize;
                      int k;
 
-                     SCIP_CALL( SCIPallocBufferArray(scip, &vars, varsize) );
-                     SCIP_CALL( SCIPallocBufferArray(scip, &vals, varsize) );
+                     if ( vars == NULL )
+                     {
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, varssize) );
+                        SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vals, varssize) );
+                     }
+                     assert( vars != NULL && vals != NULL );
 
                      vars[0] = var;
                      vals[0] = 1.0;
+                     nvars = 1;
 
-                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, varsize, &constant, &requiredsize, TRUE) );
-
-                     if ( requiredsize > varsize )
-                     {
-                        SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
-                        SCIP_CALL( SCIPreallocBufferArray(scip, &vals, requiredsize) );
-
-                        SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &varsize, requiredsize, &constant, &requiredsize, TRUE) );
-                        assert( requiredsize <= varsize );
-                     }
+                     SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, vals, &nvars, varssize, &constant, &requiredsize, TRUE) );
+                     assert( requiredsize <= varssize );
 
                      parentnode = visitednodes[visitednodes.size() - 1];
                      assert( parentnode < (int) G->get_nof_vertices() );
 
                      /* create nodes for all aggregation variables and coefficients and connect them to the parent node */
-                     for ( k = 0; k < requiredsize; ++k )
+                     for ( k = 0; k < nvars; ++k )
                      {
                         SYM_CONSTTYPE* ct;
                         int internode;
@@ -622,7 +653,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                         ct = &sumcoefarray[nuniquecoefs];
                         ct->value = vals[k];
 
-                        if ( !SCIPhashtableExists(sumcoefmap, (void *) ct) )
+                        if ( ! SCIPhashtableExists(sumcoefmap, (void *) ct) )
                         {
                            SCIP_CALL( SCIPhashtableInsert(sumcoefmap, (void *) ct) );
                            ct->color = nusedcolors++;
@@ -640,7 +671,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                         assert( internode < (int) G->get_nof_vertices() );
 
-                        G->add_edge((unsigned) internode, (unsigned) parentnode);
+                        G->add_edge((unsigned) parentnode, (unsigned) internode);
                         ++nedges;
 
                         /* connect the intermediate node to its corresponding variable node */
@@ -657,20 +688,13 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                         SYM_CONSTTYPE* ct;
 
                         /* check whether we have to resize */
-                        if ( nuniqueconsts >= constarraysize )
-                        {
-                           int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
-                           assert( newsize >= 0 );
-                           SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize, newsize) );
-                           constarraysize = newsize;
-                        }
-
+                        SCIP_CALL( SCIPensureBlockMemoryArray(scip, &uniqueconstarray, &constarraysize, nuniqueconsts+1) );
                         assert( nuniqueconsts < constarraysize );
 
                         ct = &uniqueconstarray[nuniqueconsts];
                         ct->value = constant;
 
-                        if ( !SCIPhashtableExists(consttypemap, (void *) ct) )
+                        if ( ! SCIPhashtableExists(consttypemap, (void *) ct) )
                         {
                            SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                            ct->color = nusedcolors++;
@@ -688,12 +712,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                         assert( node < (int) G->get_nof_vertices() );
 
-                        G->add_edge((unsigned) node, (unsigned) parentnode);
+                        G->add_edge((unsigned) parentnode, (unsigned) node);
                         ++nedges;
                      }
-
-                     SCIPfreeBufferArray(scip, &vals);
-                     SCIPfreeBufferArray(scip, &vars);
 
                      /* add a filler node since it will be removed in the next iteration anyway */
                      visitednodes.push_back(nnodes);
@@ -713,7 +734,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   ct = &uniqueconstarray[nuniqueconsts];
                   ct->value = SCIPgetValueExprValue(expr);
 
-                  if ( !SCIPhashtableExists(consttypemap, (void *) ct) )
+                  if ( ! SCIPhashtableExists(consttypemap, (void *) ct) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                      ct->color = nusedcolors++;
@@ -737,7 +758,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   ot->expr = expr;
                   ot->level = currentlevel;
 
-                  if ( !SCIPhashtableExists(optypemap, (void *) ot) )
+                  if ( ! SCIPhashtableExists(optypemap, (void *) ot) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(optypemap, (void *) ot) );
                      ot->color = nusedcolors++;
@@ -763,7 +784,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                   rt->lhs = SCIPgetLhsNonlinear(conss[i]);
                   rt->rhs = SCIPgetRhsNonlinear(conss[i]);
 
-                  if ( !SCIPhashtableExists(rhstypemap, (void *) rt) )
+                  if ( ! SCIPhashtableExists(rhstypemap, (void *) rt) )
                   {
                      SCIP_CALL( SCIPhashtableInsert(rhstypemap, (void *) rt) );
                      rt->color = nusedcolors++;
@@ -823,7 +844,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      ct = &sumcoefarray[nuniquecoefs];
                      ct->value = coefs[j];
 
-                     if ( !SCIPhashtableExists(sumcoefmap, (void *) ct) )
+                     if ( ! SCIPhashtableExists(sumcoefmap, (void *) ct) )
                      {
                         SCIP_CALL( SCIPhashtableInsert(sumcoefmap, (void *) ct) );
                         ct->color = nusedcolors++;
@@ -843,7 +864,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                      assert( internode < (int) G->get_nof_vertices() );
 
-                     G->add_edge((unsigned) internode, (unsigned) node);
+                     G->add_edge((unsigned) node, (unsigned) internode);
                      ++nedges;
                   }
 
@@ -854,20 +875,13 @@ SCIP_RETCODE fillGraphByNonlinearConss(
                      SYM_CONSTTYPE* ct;
 
                      /* check whether we have to resize */
-                     if ( nuniqueconsts >= constarraysize )
-                     {
-                        int newsize = SCIPcalcMemGrowSize(scip, nuniqueconsts+1);
-                        assert( newsize >= 0 );
-                        SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &uniqueconstarray, constarraysize, newsize) );
-                        constarraysize = newsize;
-                     }
-
+                     SCIP_CALL( SCIPensureBlockMemoryArray(scip, &uniqueconstarray, &constarraysize, nuniqueconsts + 1) );
                      assert( nuniqueconsts < constarraysize );
 
                      ct = &uniqueconstarray[nuniqueconsts];
                      ct->value = constval;
 
-                     if ( !SCIPhashtableExists(consttypemap, (void *) ct) )
+                     if ( ! SCIPhashtableExists(consttypemap, (void *) ct) )
                      {
                         SCIP_CALL( SCIPhashtableInsert(consttypemap, (void *) ct) );
                         ct->color = nusedcolors++;
@@ -885,7 +899,7 @@ SCIP_RETCODE fillGraphByNonlinearConss(
 
                      assert( node < (int) G->get_nof_vertices() );
 
-                     G->add_edge((unsigned) internode, (unsigned) node);
+                     G->add_edge((unsigned) node, (unsigned) internode);
                      ++nedges;
                   }
                }
@@ -932,6 +946,9 @@ SCIP_RETCODE fillGraphByNonlinearConss(
    }
 
    /* free everything */
+   SCIPfreeBlockMemoryArrayNull(scip, &vals, varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, varssize);
+
    SCIPfreeExpriter(&it);
    SCIPfreeBlockMemoryArrayNull(scip, &uniquerhsarray, rhsarraysize);
    SCIPfreeBlockMemoryArrayNull(scip, &sumcoefarray, coefarraysize);
@@ -951,24 +968,44 @@ SCIP_Bool SYMcanComputeSymmetry(void)
    return TRUE;
 }
 
-/** static variable for holding the name of bliss */
-static char blissname[100];
+/** return name of external program used to compute generators */
+char*
+initStaticBlissName( )
+{
+   char* name = new char[100];
+#ifdef BLISS_PATCH_PRESENT
+   (void) SCIPsnprintf(name, 100, "bliss %sp", bliss::version);
+#else
+   (void) SCIPsnprintf(name, 100, "bliss %s", bliss::version);
+#endif
+   return name;
+}
+
+/* static name for bliss */
+static char* blissname = initStaticBlissName();
 
 /** return name of external program used to compute generators */
 const char* SYMsymmetryGetName(void)
 {
-#ifdef BLISS_PATCH_PRESENT
-   (void) snprintf(blissname, 100, "bliss %sp", bliss::version);
-#else
-   (void) snprintf(blissname, 100, "bliss %s", bliss::version);
-#endif
    return blissname;
 }
 
 /** return description of external program used to compute generators */
 const char* SYMsymmetryGetDesc(void)
 {
-   return "Computing Graph Automorphism Groups by T. Junttila and P. Kaski (www.tcs.hut.fi/Software/bliss/)";
+   return "Computing Graph Automorphism Groups by T. Junttila and P. Kaski (https://users.aalto.fi/~tjunttil/bliss/)";
+}
+
+/** return name of additional external program used for computing symmetries */
+const char* SYMsymmetryGetAddName(void)
+{
+   return NULL;
+}
+
+/** return description of additional external program used to compute symmetries */
+const char* SYMsymmetryGetAddDesc(void)
+{
+   return NULL;
 }
 
 /** compute generators of symmetry group */
@@ -980,9 +1017,12 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
-   SCIP_Real*            log10groupsize      /**< pointer to store size of group */
+   SCIP_Real*            log10groupsize,     /**< pointer to store size of group */
+   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
    )
 {
+   SCIP_Real oldtime;
+
    assert( scip != NULL );
    assert( matrixdata != NULL );
    assert( exprdata != NULL );
@@ -991,12 +1031,14 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    assert( perms != NULL );
    assert( log10groupsize != NULL );
    assert( maxgenerators >= 0 );
+   assert( symcodetime != NULL );
 
    /* init */
    *nperms = 0;
    *nmaxperms = 0;
    *perms = NULL;
    *log10groupsize = 0;
+   *symcodetime = 0.0;
 
    int nnodes = 0;
    int nedges = 0;
@@ -1007,7 +1049,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    bliss::Graph G(0);
 
    /* create nodes corresponding to variables */
-   SCIP_CALL( createVariableNodes(scip, &G, matrixdata, nnodes, nedges, nusedcolors) );
+   SCIP_CALL( createVariableNodes(scip, &G, matrixdata, nnodes, nusedcolors) );
 
    assert( nnodes == matrixdata->npermvars );
    assert( nusedcolors == matrixdata->nuniquevars );
@@ -1034,6 +1076,17 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    G.write_dot("debug.dot");
 #endif
 
+#if SCIP_DISABLED_CODE
+   char filename[SCIP_MAXSTRLEN];
+   (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.dimacs", SCIPgetProbName(scip));
+   FILE* fp = fopen(filename, "w");
+   if ( fp )
+   {
+      G.write_dimacs(fp);
+      fclose(fp);
+   }
+#endif
+
    SCIPdebugMsg(scip, "Symmetry detection graph has %u nodes.\n", G.get_nof_vertices());
 
    /* compute automorphisms */
@@ -1058,6 +1111,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    G.set_search_limits(0, (unsigned) maxgenerators);
 #endif
 
+   oldtime = SCIPgetSolvingTime(scip);
 #if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
    /* lambda function to have access to data and pass it to the blisshook above */
    auto reportglue = [&](unsigned int n, const unsigned int* aut) {
@@ -1075,7 +1129,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    /* start search */
    G.find_automorphisms(stats, blisshook, (void*) &data);
 #endif
-
+   *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
 
 #ifdef SCIP_OUTPUT
    (void) stats.print(stdout);
