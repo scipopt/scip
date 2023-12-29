@@ -2904,10 +2904,26 @@ SCIP_RETCODE readBinaries(
       if( SCIPvarGetLbGlobal(var) < 0.0 )
       {
          SCIP_CALL( SCIPchgVarLb(scip, var, 0.0) );
+         if( SCIPisExactSolve(scip) )
+         {
+            SCIP_Rational* tmp;
+            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
+            RatSetReal(tmp, 0.0);
+            SCIP_CALL( SCIPchgVarLbExact(scip, var, tmp) );
+            RatFreeBuffer(SCIPbuffer(scip), &tmp);
+         }
       }
       if( SCIPvarGetUbGlobal(var) > 1.0 )
       {
          SCIP_CALL( SCIPchgVarUb(scip, var, 1.0) );
+         if( SCIPisExactSolve(scip) )
+         {
+            SCIP_Rational* tmp;
+            SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
+            RatSetReal(tmp, 1.0);
+            SCIP_CALL( SCIPchgVarUbExact(scip, var, tmp) );
+            RatFreeBuffer(SCIPbuffer(scip), &tmp);
+         }
       }
       SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
       /* don't assert feasibility here because the presolver will and should detect a infeasibility */
