@@ -1487,6 +1487,10 @@ endif
 		@echo "LAST_LPS=\"$(LPS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_IPOPT=\"$(IPOPT)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
+ifneq ($(SANITIZE),$(LAST_SANITIZE))
+		# touch all files if SANITIZE is changed; this is necessary since some files (e.g., dijkstra, ...) do not depend on the buildflags
+		@-touch -c $(ALLSRC)
+endif
 
 $(SCIPBUILDFLAGSFILE) :
 		@mkdir -p $(@D)
