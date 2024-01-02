@@ -2793,6 +2793,13 @@ Test(interCuts, minrepresentation, .description = "test negative coef for minima
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>^2 - <y>^2 <= -1.0");
 
+   /* skip if detection wasn't successful (happens if IPOPT isn't used) */
+   if( nlhdlrexprdata == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
+
    /* skip if eigenvalue decomposition does not exist */
    SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
    if( eigenvalues == NULL )
@@ -2916,6 +2923,13 @@ Test(interCuts, monoidal, .description = "test cut for monoidal strengthening")
    SCIP_Real* eigenvalues;
 
    simplifyAndDetect(&cons, &nlhdlrexprdata, "[nonlinear] <test>: <x>^2 - <y>^2 <= -1.0");
+
+   /* skip if detection wasn't successful (happens if IPOPT isn't used) */
+   if( nlhdlrexprdata == NULL )
+   {
+      registerAndFree(cons, nlhdlrexprdata);
+      return;
+   }
 
    /* skip if eigenvalue decomposition does not exist */
    SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, NULL, NULL, &eigenvalues, NULL);
