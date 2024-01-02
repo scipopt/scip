@@ -3753,7 +3753,7 @@ SCIP_RETCODE nodeToLeaf(
 #endif
 
    /* if node is good enough to keep, put it on the node queue */
-   if( SCIPsetIsLT(set, (*node)->lowerbound, cutoffbound) )
+   if( !SCIPsetIsInfinity(set, (*node)->lowerbound) && SCIPsetIsLT(set, (*node)->lowerbound, cutoffbound) )
    {
       /* insert leaf in node queue */
       SCIP_CALL( SCIPnodepqInsert(tree->leaves, set, *node) );
