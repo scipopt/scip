@@ -232,6 +232,16 @@ SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 LPIINSTMSG	=	"  -> \"clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)\" is the path to the Clp installation directory, i.e., \"<Clp-path>/include/coin/ClpModel.hpp\" should exist.\n"
 endif
 
+LPSOPTIONS	+=	highs
+ifeq ($(LPS),highs)
+LINKER		=	CPP
+FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/highs.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/
+LPILIBOBJ	=	lpi/lpi_highs.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBSRC	=	$(SRCDIR)/lpi/lpi_highs.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/highs.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+LPIINSTMSG	=	"  -> \"highs.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)\" is the path to the HiGHS directory containing headers and libhighs.so.\n"
+endif
+
 LPSOPTIONS	+=	qso
 ifeq ($(LPS),qso)
 FLAGS         	+=      -I$(LIBDIR)/include/qsinc
@@ -366,7 +376,8 @@ endif
 
 SYMOPTIONS	+=	sbliss
 ifeq ($(SYM),sbliss)
-SYMOBJ		=	symmetry/compute_symmetry_sassy_bliss.o
+SYMOBJ		=	symmetry/build_sassy_graph.o
+SYMOBJ		+=	symmetry/compute_symmetry_sassy_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(BLISSEXTERNAL),false)
@@ -429,16 +440,32 @@ endif
 
 SYMOPTIONS	+=	snauty
 ifeq ($(SYM),snauty)
-FLAGS		+=	-I$(LIBDIR)/include/
-SYMOBJ		=	symmetry/compute_symmetry_sassy_nauty.o
+SYMOBJ		=	symmetry/build_sassy_graph.o
+SYMOBJ		+=	symmetry/compute_symmetry_sassy_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+ifeq ($(NAUTYEXTERNAL),false)
+FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
+NAUTYOBJ	=	nauty/nauty.o
+NAUTYOBJ	+=      nauty/nautil.o
+NAUTYOBJ	+=      nauty/nausparse.o
+NAUTYOBJ	+=      nauty/naugraph.o
+NAUTYOBJ	+=      nauty/schreier.o
+NAUTYOBJ	+=      nauty/naurng.o
+SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(NAUTYOBJ))
+SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(NAUTYOBJ:.o=.c))
+else
+FLAGS		+=	-I$(LIBDIR)/include/
+endif
 ALLSRC		+=	$(SYMSRC)
+ifeq ($(NAUTYEXTERNAL),true)
 SOFTLINKS	+=	$(LIBDIR)/include/nauty
 SOFTLINKS	+=	$(LIBDIR)/static/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 LPIINSTMSG	+=	"\n  -> \"nautyinc\" is the path to the Nauty directory, e.g., \"<Nauty-path>\".\n"
 LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<Nauty-path>/nauty.a\"\n"
 endif
+endif
+
 #-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------
@@ -552,6 +579,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/branch_cloud.o \
 			scip/branch_distribution.o \
 			scip/branch_fullstrong.o \
+			scip/branch_gomory.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
 			scip/branch_lookahead.o \
@@ -596,7 +624,9 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_varbound.o \
 			scip/cons_xor.o \
 			scip/cons_components.o \
+			scip/cutsel_ensemble.o \
 			scip/cutsel_hybrid.o \
+			scip/cutsel_dynamic.o \
 			scip/dialog_default.o \
 			scip/event_softtimelimit.o \
 			scip/disp_default.o \
@@ -663,6 +693,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_rins.o \
 			scip/heur_rootsoldiving.o \
 			scip/heur_rounding.o \
+			scip/heur_scheduler.o \
 			scip/heur_shiftandpropagate.o \
 			scip/heur_shifting.o \
 			scip/heur_simplerounding.o \
@@ -684,6 +715,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/nlhdlr_perspective.o \
 			scip/nlhdlr_quadratic.o \
 			scip/nlhdlr_quotient.o \
+			scip/nlhdlr_signomial.o \
 			scip/nlhdlr_soc.o \
 			scip/nlpi_all.o \
 			scip/nodesel_bfs.o \
@@ -756,6 +788,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_interminor.o \
 			scip/sepa_intobj.o \
+			scip/sepa_lagromory.o \
 			scip/sepa_mcf.o \
 			scip/sepa_minor.o \
 			scip/sepa_mixing.o \
@@ -917,6 +950,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/solve.o \
 			scip/stat.o \
 			scip/symmetry.o \
+			scip/symmetry_graph.o \
 			scip/symmetry_orbitopal.o \
 			scip/symmetry_orbital.o \
 			scip/symmetry_lexred.o \
@@ -1138,7 +1172,7 @@ test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(EXECUTABLE) $(SETTINGS) $(BINID) $(OUTPUTDIR) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
 		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
-                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON);
+                $(SEEDS) $(GLBSEEDSHIFT) $(STARTPERM) $(PYTHON) $(EMPHBENCHMARK) $(CLOCKTYPE);
 
 .PHONY: testcount
 testcount:
@@ -1299,6 +1333,7 @@ ifneq ($(DFLAGS),)
 -include $(OBJSCIPOBJFILES:.o=.d)
 -include $(LPILIBOBJFILES:.o=.d)
 -include $(TPILIBOBJFILES:.o=.d)
+-include $(SYMOBJFILES:.o=.d)
 else
 ifeq ($(VERBOSE),true)
 $(info No compilation dependencies. If changing header files, do a make clean before building.)
@@ -1448,10 +1483,15 @@ ifneq ($(subst \\n,\n,$(BUILDFLAGS)),$(LAST_BUILDFLAGS))
 		@rm -f $(SCIPCONFIGHFILE)
 		@$(MAKE) $(SCIPCONFIGHFILE)
 endif
+ifneq ($(SANITIZE),$(LAST_SANITIZE))
+		# touch all files if SANITIZE is changed; this is necessary since some files (e.g., dijkstra, ...) do not depend on the buildflags
+		@-touch -c $(ALLSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_LPS=\"$(LPS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_IPOPT=\"$(IPOPT)\"" >> $(LASTSETTINGS)
+		@echo "LAST_SANITIZE=$(SANITIZE)" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
 
 $(SCIPBUILDFLAGSFILE) :

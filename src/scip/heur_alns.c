@@ -1370,6 +1370,11 @@ void tryAdd2variableBuffer(
    SCIP_Bool             integer             /**< is this an integer variable? */
    )
 {
+   /* todo: this assert can fail when there was a dual reduction that changed a variable to
+    * an integral type after the reference solution was found and the variable has a fractional
+    * value in this solution, e.g., for boxQP instances (spar*)
+    * implicit integer variables could also be an issue, as they can take fractional values in feasible solutions
+    */
    assert(SCIPisFeasIntegral(scip, val) || ! SCIPvarIsIntegral(var));
    assert(*nfixings < SCIPgetNVars(scip));
 
@@ -1621,7 +1626,7 @@ SCIP_RETCODE createBandit(
 
    case 'g':
       SCIP_CALL( SCIPcreateBanditEpsgreedy(scip, &heurdata->bandit, priorities,
-            heurdata->epsgreedy_eps, FALSE, 0.9, 0, heurdata->nactiveneighborhoods, initseed) );
+            heurdata->epsgreedy_eps, FALSE, FALSE, 0.9, 0, heurdata->nactiveneighborhoods, initseed) );
       break;
 
    default:
@@ -4082,7 +4087,7 @@ SCIP_RETCODE SCIPincludeHeurAlns(
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/banditalgo",
          "the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy, exp.3-(i)x",
-         &heurdata->banditalgo, TRUE, DEFAULT_BANDITALGO, "uegi", NULL, NULL) );
+         &heurdata->banditalgo, TRUE, DEFAULT_BANDITALGO, "uegib", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gamma",
          "weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3",

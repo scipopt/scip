@@ -35,6 +35,7 @@ set(scipsources
     scip/branch_cloud.c
     scip/branch_distribution.c
     scip/branch_fullstrong.c
+    scip/branch_gomory.c
     scip/branch_inference.c
     scip/branch_leastinf.c
     scip/branch_lookahead.c
@@ -79,7 +80,9 @@ set(scipsources
     scip/cons_symresack.c
     scip/cons_varbound.c
     scip/cons_xor.c
+    scip/cutsel_ensemble.c
     scip/cutsel_hybrid.c
+    scip/cutsel_dynamic.c
     scip/dcmp.c
     scip/dialog_default.c
     scip/event_globalbnd.c
@@ -146,6 +149,7 @@ set(scipsources
     scip/heur_rins.c
     scip/heur_rootsoldiving.c
     scip/heur_rounding.c
+    scip/heur_scheduler.c
     scip/heur_shiftandpropagate.c
     scip/heur_shifting.c
     scip/heur_simplerounding.c
@@ -168,6 +172,7 @@ set(scipsources
     scip/nlhdlr_perspective.c
     scip/nlhdlr_quadratic.c
     scip/nlhdlr_quotient.c
+    scip/nlhdlr_signomial.c
     scip/nlhdlr_soc.c
     scip/nlpi_all.c
     ${nlpi}
@@ -244,6 +249,7 @@ set(scipsources
     scip/sepa_impliedbounds.c
     scip/sepa_interminor.c
     scip/sepa_intobj.c
+    scip/sepa_lagromory.c
     scip/sepa_mcf.c
     scip/sepa_minor.c
     scip/sepa_mixing.c
@@ -371,6 +377,7 @@ set(scipsources
     scip/solve.c
     scip/stat.c
     scip/symmetry.c
+    scip/symmetry_graph.c
     scip/symmetry_orbitopal.c
     scip/symmetry_orbital.c
     scip/symmetry_lexred.c
@@ -482,6 +489,7 @@ set(scipheaders
     scip/branch_cloud.h
     scip/branch_distribution.h
     scip/branch_fullstrong.h
+    scip/branch_gomory.h
     scip/branch.h
     scip/branch_inference.h
     scip/branch_leastinf.h
@@ -541,7 +549,9 @@ set(scipheaders
     scip/cutpool.h
     scip/cuts.h
     scip/cutsel.h
+    scip/cutsel_ensemble.h
     scip/cutsel_hybrid.h
+    scip/cutsel_dynamic.h
     scip/dbldblarith.h
     scip/debug.h
     scip/dcmp.h
@@ -617,6 +627,7 @@ set(scipheaders
     scip/heur_rins.h
     scip/heur_rootsoldiving.h
     scip/heur_rounding.h
+    scip/heur_scheduler.h
     scip/heur_shiftandpropagate.h
     scip/heur_shifting.h
     scip/heur_simplerounding.h
@@ -648,6 +659,7 @@ set(scipheaders
     scip/nlhdlr_perspective.h
     scip/nlhdlr_quadratic.h
     scip/nlhdlr_quotient.h
+    scip/nlhdlr_signomial.h
     scip/nlhdlr_soc.h
     scip/nlhdlr.h
     scip/nlp.h
@@ -842,6 +854,7 @@ set(scipheaders
     scip/sepa_impliedbounds.h
     scip/sepa_interminor.h
     scip/sepa_intobj.h
+    scip/sepa_lagromory.h
     scip/sepa_mcf.h
     scip/sepa_minor.h
     scip/sepa_mixing.h
@@ -907,6 +920,7 @@ set(scipheaders
     scip/struct_var.h
     scip/struct_visual.h
     scip/symmetry.h
+    scip/symmetry_graph.h
     scip/symmetry_orbitopal.h
     scip/symmetry_orbital.h
     scip/symmetry_lexred.h
@@ -977,6 +991,7 @@ set(scipheaders
 )
 
 set(symheaders
+  symmetry/build_sassy_graph.h
   symmetry/compute_symmetry.h
   symmetry/type_symmetry.h
 )

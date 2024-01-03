@@ -234,7 +234,6 @@ SCIP_RETCODE findAndStoreDivesets(
    return SCIP_OKAY;
 }
 
-
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
 SCIP_DECL_HEURINIT(heurInitAdaptivediving) /*lint --e{715}*/
@@ -512,6 +511,7 @@ SCIP_DECL_HEUREXEC(heurExecAdaptivediving) /*lint --e{715}*/
    SCIP_Longint lpiterlimit;
    int selection;
 
+
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
    assert(scip != NULL);
@@ -579,7 +579,7 @@ SCIP_DECL_HEUREXEC(heurExecAdaptivediving) /*lint --e{715}*/
    SCIPdebugMsg(scip, "Selected diveset %s\n", SCIPdivesetGetName(diveset));
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible,
-         lpiterlimit, SCIP_DIVECONTEXT_ADAPTIVE) );
+         lpiterlimit, -1, -1.0, SCIP_DIVECONTEXT_ADAPTIVE) );
 
    if( *result == SCIP_FOUNDSOL )
    {

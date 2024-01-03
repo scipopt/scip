@@ -679,7 +679,7 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-   return "Linear Programming Solver developed by FICO (www.fico.com/xpress)";
+   return "Linear Programming Solver developed by FICO (www.fico.com/en/products/fico-xpress-optimization)";
 }
 
 /** gets pointer for LP solver - use only with great care

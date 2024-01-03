@@ -98,6 +98,9 @@ void SCIPhistoryReset(
    history->ratio = 0.0;
    history->ratiovalid = FALSE;
    history->balance = 0.0;
+   history->ngmi = 0;
+   history->gmieff = 0.0;
+   history->gmieffsum = 0.0;
    history->nactiveconflicts[0] = 0;
    history->nactiveconflicts[1] = 0;
    history->nbranchings[0] = 0;
@@ -425,6 +428,10 @@ SCIP_Real* SCIPvaluehistoryGetValues(
 #undef SCIPhistoryGetLastRatio
 #undef SCIPhistorySetRatioHistory
 #undef SCIPhistoryGetLastBalance
+#undef SCIPhistorySetLastGMIeff
+#undef SCIPhistoryGetLastGMIeff
+#undef SCIPhistoryIncGMIeffSum
+#undef SCIPhistoryGetAvgGMIeff
 
 /** returns the opposite direction of the given branching direction */
 SCIP_BRANCHDIR SCIPbranchdirOpposite(
@@ -736,6 +743,50 @@ SCIP_Real SCIPhistoryGetLastBalance(
    assert(history->ratiovalid);
 
    return history->balance;
+}
+
+/** returns the average efficacy value for the GMI cut produced by this variable */
+SCIP_Real SCIPhistoryGetAvgGMIeff(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+)
+{
+   assert(history != NULL);
+
+   return history->ngmi > 0 ? history->gmieffsum / history->ngmi : 0.0;
+}
+
+/** increases the average efficacy value for the GMI cut produced by this variable */
+void SCIPhistoryIncGMIeffSum(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             gmieff              /**< normalized efficacy value of a cut which will increase gmieff */
+)
+{
+   assert(history != NULL);
+   assert(gmieff >= 0.0);
+
+   history->gmieffsum += gmieff;
+   history->ngmi += 1;
+}
+
+/** returns the most recent efficacy value for the GMI cut produced by this variable */
+SCIP_Real SCIPhistoryGetLastGMIeff(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+)
+{
+   assert(history != NULL);
+
+   return history->gmieff;
+}
+
+/** sets the new most recent efficacy value for the GMI cut produced by this variable */
+void SCIPhistorySetLastGMIeff(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             gmieff              /**< Efficacy of GMI cut produced from simplex tableau row of this var */
+)
+{
+   assert(history != NULL);
+
+   history->gmieff = gmieff;
 }
 
 /** sets the ratio history for a particular variable */

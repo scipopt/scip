@@ -3830,11 +3830,22 @@ SCIP_RETCODE SCIPvarFix(
       SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, fixedval) );
       SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, fixedval) );
 
-      /* explicitly set variable's bounds, even if the fixed value is in epsilon range of the old bound */
-      var->glbdom.lb = fixedval;
-      var->glbdom.ub = fixedval;
-      var->locdom.lb = fixedval;
-      var->locdom.ub = fixedval;
+      if( var->glbdom.lb != var->glbdom.ub )  /*lint !e777*/
+      {
+         /* explicitly set variable's bounds if the fixed value was in epsilon range of the old bound (so above call didn't set bound) */
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         {
+            /* if not continuous variable, then make sure variable is fixed to integer value */
+            assert(SCIPsetIsIntegral(set, fixedval));
+            fixedval = SCIPsetRound(set, fixedval);
+         }
+         var->glbdom.lb = fixedval;
+         var->glbdom.ub = fixedval;
+      }
+
+      /* ensure local domain is fixed to same value as global domain */
+      var->locdom.lb = var->glbdom.lb;
+      var->locdom.ub = var->glbdom.ub;
 
       /* delete implications and variable bounds information */
       SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, TRUE) );
@@ -5304,8 +5315,6 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    )
 {
    SCIP_Bool easyaggr;
-   SCIP_Real maxscalar;
-   SCIP_Real absquot;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -5331,11 +5340,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    *infeasible = FALSE;
    *aggregated = FALSE;
 
-   absquot = REALABS(scalarx / scalary);
-   maxscalar = SCIPsetFeastol(set) / SCIPsetEpsilon(set);
-   maxscalar = MAX(maxscalar, 1.0);
-
-   if( absquot > maxscalar || absquot < 1 / maxscalar )
+   if( SCIPsetIsZero(set, scalarx / scalary) || SCIPsetIsZero(set, scalary / scalarx) )
       return SCIP_OKAY;
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
@@ -5363,41 +5368,35 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    /* figure out, which variable should be aggregated */
    easyaggr = FALSE;
 
-   /* check if it is an easy aggregation that means:
-    *
-    *   a*x + b*y == c -> x == -b/a * y + c/a iff |b/a| > feastol and |a/b| > feastol
-    */
-   if( !SCIPsetIsFeasZero(set, scalary/scalarx) && !SCIPsetIsFeasZero(set, scalarx/scalary) )
+   /* check if it is an easy aggregation */
+   if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) < SCIP_VARTYPE_CONTINUOUS )
    {
-      if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) < SCIP_VARTYPE_CONTINUOUS )
-      {
-         easyaggr = TRUE;
-      }
-      else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
-      {
-         easyaggr = TRUE;
-      }
-      else if( SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx) )
-      {
-         /* we have an easy aggregation if we flip the variables x and y */
-         SCIP_VAR* var;
-         SCIP_Real scalar;
+      easyaggr = TRUE;
+   }
+   else if( SCIPsetIsFeasIntegral(set, scalary/scalarx) )
+   {
+      easyaggr = TRUE;
+   }
+   else if( SCIPsetIsFeasIntegral(set, scalarx/scalary) && SCIPvarGetType(vary) == SCIPvarGetType(varx) )
+   {
+      /* we have an easy aggregation if we flip the variables x and y */
+      SCIP_VAR* var;
+      SCIP_Real scalar;
 
-         /* switch the variables, such that varx is the aggregated variable */
-         var = vary;
-         vary = varx;
-         varx = var;
-         scalar = scalary;
-         scalary = scalarx;
-         scalarx = scalar;
-         easyaggr = TRUE;
-      }
-      else if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
-      {
-         /* the aggregation is still easy if both variables are continuous */
-         assert(SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS); /* otherwise we are in the first case */
-         easyaggr = TRUE;
-      }
+      /* switch the variables, such that varx is the aggregated variable */
+      var = vary;
+      vary = varx;
+      varx = var;
+      scalar = scalary;
+      scalary = scalarx;
+      scalarx = scalar;
+      easyaggr = TRUE;
+   }
+   else if( SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS )
+   {
+      /* the aggregation is still easy if both variables are continuous */
+      assert(SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS); /* otherwise we are in the first case */
+      easyaggr = TRUE;
    }
 
    /* did we find an "easy" aggregation? */
@@ -6214,7 +6213,6 @@ SCIP_RETCODE SCIPvarChgType(
    {
       assert(oldtype == (SCIP_VARTYPE)var->negatedvar->vartype
             || SCIPvarIsBinary(var) == SCIPvarIsBinary(var->negatedvar));
-
 
       var->negatedvar->vartype = vartype; /*lint !e641*/
 
@@ -16359,6 +16357,173 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
    }
 }
 
+/** returns the variable's average GMI efficacy score value generated from simplex tableau rows of this variable */
+SCIP_Real SCIPvarGetAvgGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat                /**< problem statistics */
+)
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.original.transvar == NULL )
+            return 0.0;
+         else
+            return SCIPvarGetAvgGMIScore(var->data.original.transvar, stat);
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         return SCIPhistoryGetAvgGMIeff(var->history);
+
+      case SCIP_VARSTATUS_FIXED:
+         return 0.0;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         return SCIPvarGetAvgGMIScore(var->data.aggregate.var, stat);
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         return 0.0;
+
+      case SCIP_VARSTATUS_NEGATED:
+         return SCIPvarGetAvgGMIScore(var->negatedvar, stat);
+
+      default:
+      SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return 0.0; /*lint !e527*/
+   }
+}
+
+/** increase the variable's GMI efficacy scores generated from simplex tableau rows of this variable */
+SCIP_RETCODE SCIPvarIncGMIeffSum(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
+)
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+   assert(gmieff >= 0);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.original.transvar != NULL )
+            SCIP_CALL( SCIPvarIncGMIeffSum(var->data.original.transvar, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         SCIPhistoryIncGMIeffSum(var->history, gmieff);
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_FIXED:
+         return SCIP_INVALIDDATA;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         SCIP_CALL( SCIPvarIncGMIeffSum(var->data.aggregate.var, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_NEGATED:
+         SCIP_CALL( SCIPvarIncGMIeffSum(var->negatedvar, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         return SCIP_INVALIDDATA;
+
+      default:
+      SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
+   }
+}
+
+/** returns the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
+SCIP_Real SCIPvarGetLastGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat                /**< problem statistics */
+)
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.original.transvar != NULL )
+            return SCIPvarGetLastGMIScore(var->data.original.transvar, stat);
+         return 0.0;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         return SCIPhistoryGetLastGMIeff(var->history);
+
+      case SCIP_VARSTATUS_FIXED:
+         return 0.0;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         return SCIPvarGetLastGMIScore(var->data.aggregate.var, stat);
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         return 0.0;
+
+      case SCIP_VARSTATUS_NEGATED:
+         return SCIPvarGetLastGMIScore(var->negatedvar, stat);
+
+      default:
+      SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return 0.0; /*lint !e527*/
+   }
+}
+
+
+/** sets the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
+SCIP_RETCODE SCIPvarSetLastGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
+)
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+   assert(gmieff >= 0);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.original.transvar != NULL )
+            SCIP_CALL( SCIPvarSetLastGMIScore(var->data.original.transvar, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         SCIPhistorySetLastGMIeff(var->history, gmieff);
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_FIXED:
+         return SCIP_INVALIDDATA;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         SCIP_CALL( SCIPvarSetLastGMIScore(var->data.aggregate.var, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_NEGATED:
+         SCIP_CALL( SCIPvarSetLastGMIScore(var->negatedvar, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         return SCIP_INVALIDDATA;
+
+      default:
+      SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
+   }
+}
 
 
 

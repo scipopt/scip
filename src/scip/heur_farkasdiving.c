@@ -434,7 +434,7 @@ SCIP_DECL_HEUREXEC(heurExecFarkasdiving)
 
    if( success )
    {
-      SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, SCIP_DIVECONTEXT_SINGLE) );
+      SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible, -1L, -1, -1.0, SCIP_DIVECONTEXT_SINGLE) );
 
       if( heurdata->rootsuccess && SCIPgetDepth(scip) == 0 && SCIPdivesetGetNSols(diveset, SCIP_DIVECONTEXT_SINGLE) > 0 )
          heurdata->foundrootsol = TRUE;

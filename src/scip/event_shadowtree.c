@@ -212,7 +212,11 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
    assert( shadowtree != NULL );
 
    eventshadownode = SCIPshadowTreeGetShadowNode(shadowtree, eventnode);
-   assert( eventshadownode != NULL );
+
+   /* only add children to the shadowtree if eventnode is in the shadowtree */
+   if ( eventshadownode == NULL )
+      return SCIP_OKAY;
+
    assert( eventshadownode->nchildren == 0 );
    assert( eventshadownode->children == NULL );
 

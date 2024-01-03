@@ -3622,7 +3622,7 @@ SCIP_RETCODE SCIPsetChgStringParam(
    assert(set != NULL);
    assert(param != NULL);
 
-   retcode = SCIPparamSetString(param, set, messagehdlr, value, TRUE);
+   retcode = SCIPparamSetString(param, set, messagehdlr, value, FALSE, TRUE);
 
    if( retcode != SCIP_PARAMETERWRONGVAL )
    {

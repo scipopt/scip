@@ -113,151 +113,6 @@
 #include "scip/var.h"
 #include "scip/visual.h"
 
-/** checks solution for feasibility in original problem without adding it to the solution store; to improve the
- *  performance we use the following order when checking for violations:
- *
- *  1. variable bounds
- *  2. constraint handlers with positive or zero priority that don't need constraints (e.g. integral constraint handler)
- *  3. original constraints
- *  4. constraint handlers with negative priority that don't need constraints (e.g. Benders' decomposition constraint handler)
- */
-static
-SCIP_RETCODE checkSolOrig(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
-   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
-   SCIP_Bool             completely,         /**< Should all violations be checked? */
-   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
-   SCIP_Bool             checkmodifiable     /**< have modifiable constraint to be checked? */
-   )
-{
-   SCIP_RESULT result;
-   int v;
-   int c;
-   int h;
-
-   assert(scip != NULL);
-   assert(sol != NULL);
-   assert(feasible != NULL);
-
-   SCIP_CALL( SCIPcheckStage(scip, "checkSolOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   *feasible = TRUE;
-
-   SCIPsolResetViolations(sol);
-
-   if( !printreason )
-      completely = FALSE;
-
-   /* check bounds */
-   if( checkbounds )
-   {
-      for( v = 0; v < scip->origprob->nvars; ++v )
-      {
-         SCIP_VAR* var;
-         SCIP_Real solval;
-         SCIP_Real lb;
-         SCIP_Real ub;
-
-         var = scip->origprob->vars[v];
-         solval = SCIPsolGetVal(sol, scip->set, scip->stat, var);
-
-         lb = SCIPvarGetLbOriginal(var);
-         ub = SCIPvarGetUbOriginal(var);
-
-         SCIPupdateSolBoundViolation(scip, sol, lb - solval, SCIPrelDiff(lb, solval));
-         SCIPupdateSolBoundViolation(scip, sol, solval - ub, SCIPrelDiff(solval, ub));
-
-         if( SCIPsetIsFeasLT(scip->set, solval, lb) || SCIPsetIsFeasGT(scip->set, solval, ub) )
-         {
-            *feasible = FALSE;
-
-            if( printreason )
-            {
-               SCIPmessagePrintInfo(scip->messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
-                  SCIPvarGetName(var), lb, ub, solval);
-            }
-
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
-
-   /* call constraint handlers with positive or zero check priority that don't need constraints */
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
-   {
-      if( SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= 0 )
-      {
-         if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
-         {
-            SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-                  checkintegrality, checklprows, printreason, completely, &result) );
-
-            if( result != SCIP_FEASIBLE )
-            {
-               *feasible = FALSE;
-
-               if( !completely )
-                  return SCIP_OKAY;
-            }
-         }
-      }
-      /* constraint handlers are sorted by priority, so we can break when reaching the first one with negative priority */
-      else
-         break;
-   }
-
-   /* check original constraints
-    *
-    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
-    * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
-    * have to be checked;
-    */
-   for( c = 0; c < scip->origprob->nconss; ++c )
-   {
-      if( SCIPconsIsChecked(scip->origprob->conss[c]) && (checkmodifiable || !SCIPconsIsModifiable(scip->origprob->conss[c])) )
-      {
-         /* check solution */
-         SCIP_CALL( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol,
-               checkintegrality, checklprows, printreason, &result) );
-
-         if( result != SCIP_FEASIBLE )
-         {
-            *feasible = FALSE;
-
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
-
-   /* call constraint handlers with negative check priority that don't need constraints;
-    * continue with the first constraint handler with negative priority which caused us to break in the above loop */
-   for( ; h < scip->set->nconshdlrs; ++h )
-   {
-      assert(SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) < 0);
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
-      {
-         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-               checkintegrality, checklprows, printreason, completely, &result) );
-
-         if( result != SCIP_FEASIBLE )
-         {
-            *feasible = FALSE;
-
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /** calculates number of nonzeros in problem */
 static
 SCIP_RETCODE calcNonZeros(
@@ -440,6 +295,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
          scip->eventqueue, scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
 
+   /* do not consider original solutions of a benders decomposition because their cost information is incomplete */
    if( !scip->set->reopt_enable && scip->set->nactivebenders == 0 )
    {
       oldnsolsfound = scip->primal->nsolsfound;
@@ -456,9 +312,9 @@ SCIP_RETCODE SCIPtransformProb(
          /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
           * including modifiable constraints
           */
-         SCIP_CALL( checkSolOrig(scip, sol, &feasible,
+         SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
                (scip->set->disp_verblevel >= SCIP_VERBLEVEL_HIGH ? scip->set->misc_printreason : FALSE),
-               FALSE, TRUE, TRUE, TRUE, TRUE) );
+               FALSE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
          if( feasible )
          {
@@ -1160,7 +1016,10 @@ SCIP_RETCODE presolveRound(
 
       scip->stat->npresolfixedvars += nlocalbdchgs;
 
-      if( !*infeasible && scip->set->nheurs > 0 )
+      /* do not call heuristics during presolving on a benders decomposition
+       * because the cost information of the retransformed original solutions would be incomplete
+       */
+      if( !*infeasible && scip->set->nheurs > 0 && scip->set->nactivebenders == 0 )
       {
          /* call primal heuristics that are applicable during presolving */
          SCIP_Bool foundsol;
@@ -1307,8 +1166,10 @@ SCIP_RETCODE presolve(
    }
    assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
 
-   /* call primal heuristics that are applicable before presolving */
-   if( scip->set->nheurs > 0 )
+   /* call primal heuristics that are applicable before presolving but not on a benders decomposition
+    * because the cost information of the retransformed original solutions would be incomplete
+    */
+   if( scip->set->nheurs > 0 && scip->set->nactivebenders == 0 )
    {
       SCIP_Bool foundsol;
 
@@ -1980,7 +1841,9 @@ SCIP_RETCODE freeTransform(
       SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );
    }
 
-   /* copy best primal solutions to original solution candidate list */
+   /* copy best primal solutions to original solution candidate list but not for a benders decomposition
+    * because their cost information would be incomplete
+    */
    if( !scip->set->reopt_enable && scip->set->limit_maxorigsol > 0 && scip->set->misc_transsolsorig && scip->set->nactivebenders == 0 )
    {
       SCIP_Bool stored;
@@ -2125,7 +1988,6 @@ SCIP_RETCODE freeTransforming(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);

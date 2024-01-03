@@ -73,6 +73,10 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/dbldblarith.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
+#include <ctype.h>
+#include <string.h>
 
 
 /**@name Constraint handler properties
@@ -2609,11 +2613,17 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* if left hand side of cons0 is redundant set it to -infinity */
             else if( (lhsequal || cons0lhsred) && !SCIPisInfinity(scip, -lhs) )
             {
+               /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+               SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
+
                lhs = -SCIPinfinity(scip);
 
 	       /* if right hand side of cons1 is redundant too, set it to infinity */
 	       if( cons1rhsred && !SCIPisInfinity(scip, consdata1->rhs) )
 	       {
+                  /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+                  SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
+
 		  SCIP_CALL( chgRhs(scip, cons1, SCIPinfinity(scip)) );
 		  ++(*nchgsides);
 
@@ -2629,11 +2639,17 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* if right hand side of cons0 is redundant set it to infinity */
             else if( (rhsequal || cons0rhsred) && !SCIPisInfinity(scip, rhs) )
             {
+               /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+               SCIP_CALL( SCIPupdateConsFlags(scip, cons1, cons0) );
+
                rhs = SCIPinfinity(scip);
 
 	       /* if left hand side of cons1 is redundant too, set it to -infinity */
 	       if( cons1lhsred && !SCIPisInfinity(scip, -consdata1->lhs) )
 	       {
+                  /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+                  SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
+
 		  SCIP_CALL( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
 		  ++(*nchgsides);
 
@@ -2649,6 +2665,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* if left hand side of cons1 is redundant set it to -infinity */
             else if( cons1lhsred && !SCIPisInfinity(scip, -consdata1->lhs) )
             {
+               /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+               SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
+
 	       SCIP_CALL( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
 	       ++(*nchgsides);
 
@@ -2662,6 +2681,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* if right hand side of cons1 is redundant set it to infinity */
             else if( cons1rhsred && !SCIPisInfinity(scip, consdata1->rhs) )
             {
+               /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+               SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
+
 	       SCIP_CALL( chgRhs(scip, cons1, SCIPinfinity(scip)) );
 	       ++(*nchgsides);
 
@@ -2806,15 +2828,15 @@ SCIP_RETCODE preprocessConstraintPairs(
 	    ++(*nchgsides);
 	 }
 
-         /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
-         SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
-
          SCIPdebugMsg(scip, "lead to new constraint: ");
          SCIPdebugPrintCons(scip, cons0, NULL);
 
 	 /* if cons1 is still marked for deletion, delete it */
          if( deletecons1 )
          {
+            /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( SCIPupdateConsFlags(scip, cons0, cons1) );
+
 	    /* delete cons1 */
 	    SCIP_CALL( SCIPdelCons(scip, cons1) );
 	    ++(*ndelconss);
@@ -3121,7 +3143,8 @@ SCIP_RETCODE applyFixings(
       /* apply aggregation on x */
       if( SCIPisZero(scip, varscalar) )
       {
-         if( SCIPvarGetStatus(vbdvar) == SCIP_VARSTATUS_FIXED )
+         /* the variable being fixed or corresponding to an aggregation might lead to numerical difficulties */
+         if( SCIPisZero(scip, consdata->vbdcoef * vbdvarscalar) )
          {
             SCIPdebugMsg(scip, "variable bound constraint <%s>: variable <%s> is fixed to %.15g\n",
                SCIPconsGetName(cons), SCIPvarGetName(consdata->var), varconstant);
@@ -3135,12 +3158,12 @@ SCIP_RETCODE applyFixings(
          /* cannot change bounds on multi-aggregated variables */
          else if( SCIPvarGetStatus(vbdvar) != SCIP_VARSTATUS_MULTAGGR )
          {
+            assert( consdata->vbdcoef != 0.0 );
+            assert( vbdvarscalar != 0.0 );
+
             /* x is fixed to varconstant: update bounds of y and delete the variable bound constraint */
             if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
             {
-               assert( !SCIPisZero(scip, consdata->vbdcoef) );
-               assert( SCIPisEQ(scip, ABS(vbdvarscalar), 1.0) );
-
                if( consdata->vbdcoef > 0.0 )
                {
                   SCIP_Bool tightened;
@@ -3168,9 +3191,6 @@ SCIP_RETCODE applyFixings(
             }
             if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
             {
-               assert( !SCIPisZero(scip, consdata->vbdcoef) );
-               assert( SCIPisEQ(scip, REALABS(vbdvarscalar), 1.0) );
-
                if( consdata->vbdcoef > 0.0 )
                {
                   SCIP_Bool tightened;
@@ -3284,21 +3304,21 @@ SCIP_RETCODE applyFixings(
       }
 
       /* apply aggregation on y */
-      if( SCIPisZero(scip, vbdvarscalar) )
+      if( SCIPisZero(scip, consdata->vbdcoef * vbdvarscalar) )
       {
          SCIPdebugMsg(scip, "variable bound constraint <%s>: vbd variable <%s> is fixed to %.15g\n",
             SCIPconsGetName(cons), SCIPvarGetName(consdata->vbdvar), vbdvarconstant);
 
          /* cannot change bounds on multi-aggregated variables */
-         if( !redundant && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+         if( !(*cutoff) && !redundant && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
          {
+            assert( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED );
+            assert( !SCIPisZero(scip, varscalar) );
+
             /* y is fixed to vbdvarconstant: update bounds of x and delete the variable bound constraint */
-            if( !SCIPisInfinity(scip, -consdata->lhs) && !(*cutoff) )
+            if( !SCIPisInfinity(scip, -consdata->lhs) )
             {
                SCIP_Bool tightened;
-
-               assert( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED );
-               assert( !SCIPisZero(scip, varscalar) );
 
                SCIP_CALL( SCIPtightenVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * vbdvarconstant,
                      TRUE, cutoff, &tightened) );
@@ -3308,12 +3328,9 @@ SCIP_RETCODE applyFixings(
                   (*nchgbds)++;
                }
             }
-            if( !SCIPisInfinity(scip, consdata->rhs) && !(*cutoff) )
+            if( !SCIPisInfinity(scip, consdata->rhs) )
             {
                SCIP_Bool tightened;
-
-               assert( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED );
-               assert( !SCIPisZero(scip, varscalar) );
 
                SCIP_CALL( SCIPtightenVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * vbdvarconstant,
                      TRUE, cutoff, &tightened) );
@@ -4312,6 +4329,54 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
    return SCIP_OKAY;
 }
 
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int nlocvars;
+   int nvars;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = 2;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   vars[0] = SCIPgetVarVarbound(scip, cons);
+   vars[1] = SCIPgetVbdvarVarbound(scip, cons);
+   vals[0] = 1.0;
+   vals[1] = SCIPgetVbdcoefVarbound(scip, cons);
+
+   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   lhs = SCIPgetLhsVarbound(scip, cons) - constant;
+   rhs = SCIPgetRhsVarbound(scip, cons) - constant;
+
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         cons, lhs, rhs, success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 
@@ -4361,7 +4426,6 @@ SCIP_DECL_CONSFREE(consFreeVarbound)
 static
 SCIP_DECL_CONSINITSOL(consInitsolVarbound)
 {  /*lint --e{715}*/
-
    /* add nlrow representation to NLP, if NLP had been constructed */
    if( SCIPisNLPConstructed(scip) )
    {
@@ -4938,7 +5002,6 @@ SCIP_DECL_CONSLOCK(consLockVarbound)
 static
 SCIP_DECL_CONSACTIVE(consActiveVarbound)
 {  /*lint --e{715}*/
-
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
    {
       SCIP_CALL( addNlrow(scip, cons) );
@@ -5196,6 +5259,24 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsVarbound)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphVarbound)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphVarbound)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
 /*
  * Event Handler
  */
@@ -5277,6 +5358,8 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransVarbound) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxVarbound) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphVarbound) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphVarbound) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {

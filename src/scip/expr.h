@@ -373,7 +373,7 @@ SCIP_RETCODE SCIPexprCreate(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_EXPRDATA*        exprdata,           /**< expression data (expression assumes ownership) */
    int                   nchildren,          /**< number of children */
-   SCIP_EXPR**           children,            /**< children (can be NULL if nchildren is 0) */
+   SCIP_EXPR**           children,           /**< children (can be NULL if nchildren is 0) */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
@@ -651,6 +651,18 @@ SCIP_RETCODE SCIPexprSimplify(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
+
+/** retrieves symmetry information from an expression
+ *
+ * @see SCIPgetSymDataExpr
+ */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPgetSymdataExpr() macro */
+SCIP_RETCODE SCIPexprGetSymData(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression from which information is retrieved */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry information */
+   );
+
 #ifdef NDEBUG
 #define SCIPexprCapture(expr) ++(expr)->nuses
 #define SCIPexprIsVar(set, expr)     ((expr)->exprhdlr == (set)->exprhdlrvar)
@@ -732,6 +744,32 @@ SCIP_RETCODE SCIPexprComputeQuadraticCurvature(
    SCIP_EXPRCURV*        curv,               /**< pointer to store the curvature of quadratics */
    SCIP_HASHMAP*         assumevarfixed,     /**< hashmap containing variables that should be assumed to be fixed, or NULL */
    SCIP_Bool             storeeigeninfo      /**< whether the eigenvalues and eigenvectors should be stored */
+   );
+
+/**@} */
+
+/**@name Monomial expression functions */
+/**@{ */
+
+/** returns a monomial representation of a product expression
+ *
+ * The array to store all factor expressions needs to be of size the number of
+ * children in the expression which is given by SCIPexprGetNChildren().
+ *
+ * Given a non-trivial monomial expression, the function finds its representation as \f$cx^\alpha\f$, where
+ * \f$c\f$ is a real coefficient, \f$x\f$ is a vector of auxiliary or original variables (where some entries can
+ * be NULL is the auxiliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
+ *
+ * A non-trivial monomial is a product of a least two expressions.
+ */
+SCIP_EXPORT  /* need SCIP_EXPORT here, because func is exposed in API via SCIPgetExprMonomialData() macro */
+SCIP_RETCODE SCIPexprGetMonomialData(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            coef,               /**< coefficient \f$c\f$ */
+   SCIP_Real*            exponents,          /**< exponents \f$\alpha\f$ */
+   SCIP_EXPR**           exprs               /**< expressions \f$x\f$ */
    );
 
 /**@} */

@@ -88,6 +88,8 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
 #include "scip/dbldblarith.h"
 
 
@@ -11124,7 +11126,7 @@ SCIP_RETCODE dualPresolve(
           */
          SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
 
-         /** if the multi-aggregate bestvar is integer, we need to convert implicit integers to integers because
+         /* if the multi-aggregate bestvar is integer, we need to convert implicit integers to integers because
           *  the implicitness might rely on the constraint and the integrality of bestvar
           */
          if( !infeasible && aggregated && SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER )
@@ -11133,7 +11135,7 @@ SCIP_RETCODE dualPresolve(
 
             for( j = 0; j < naggrs; ++j)
             {
-               /** If the multi-aggregation was not infeasible, then setting implicit integers to integers should not
+               /* If the multi-aggregation was not infeasible, then setting implicit integers to integers should not
                 *  lead to infeasibility
                 */
                if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_IMPLINT )
@@ -11424,11 +11426,10 @@ SCIP_DECL_SORTINDCOMP(consdataCompSim)
    return (value > 0 ? +1 : (value < 0 ? -1 : 0));
 }
 
-/** tries to simplify coefficients and delete variables in ranged row of the form lhs <= a^Tx <= rhs, e.g. using the greatest
- *  common divisor
+/** tries to simplify coefficients in ranged row of the form lhs <= a^Tx <= rhs
  *
- *  1. lhs <= a^Tx <= rhs, forall a_i >= lhs, a_i <= rhs, and forall pairs a_i + a_j > rhs then we can change this
- *     constraint to 1^Tx = 1
+ *  1. lhs <= a^Tx <= rhs, x binary, lhs > 0, forall a_i >= lhs, a_i <= rhs, and forall pairs a_i + a_j > rhs,
+ *     then we can change this constraint to 1^Tx = 1
  */
 static
 SCIP_RETCODE rangedRowSimplify(
@@ -11465,15 +11466,20 @@ SCIP_RETCODE rangedRowSimplify(
    if( nvars < 2 )
       return SCIP_OKAY;
 
+   lhs = consdata->lhs;
+   rhs = consdata->rhs;
+   assert(!SCIPisInfinity(scip, -lhs));
+   assert(!SCIPisInfinity(scip, rhs));
+   assert(!SCIPisNegative(scip, rhs));
+
+   /* sides must be positive and different to detect set partition */
+   if( !SCIPisPositive(scip, lhs) || !SCIPisLT(scip, lhs, rhs) )
+      return SCIP_OKAY;
+
    vals = consdata->vals;
    vars = consdata->vars;
    assert(vars != NULL);
    assert(vals != NULL);
-
-   lhs = consdata->lhs;
-   rhs = consdata->rhs;
-   assert(!SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs));
-   assert(!SCIPisNegative(scip, rhs));
 
    minval = SCIP_INVALID;
    secondminval = SCIP_INVALID;
@@ -11498,36 +11504,31 @@ SCIP_RETCODE rangedRowSimplify(
          break;
    }
 
-   /* check if all variables are binary */
-   if( v == -1 )
+   /* check if all variables are binary, we can choose one, and need to choose at most one */
+   if( v == -1 && SCIPisGE(scip, minval, lhs) && SCIPisLE(scip, maxval, rhs)
+      && SCIPisGT(scip, minval + secondminval, rhs) )
    {
-      if( SCIPisEQ(scip, minval, maxval) && SCIPisEQ(scip, lhs, rhs) )
-         return SCIP_OKAY;
-
-      /* check if we can and need to choose exactly one binary variable */
-      if( SCIPisGE(scip, minval, lhs) && SCIPisLE(scip, maxval, rhs) && SCIPisGT(scip, minval + secondminval, rhs) )
+      /* change all coefficients to 1.0 */
+      for( v = nvars - 1; v >= 0; --v )
       {
-         /* change all coefficients to 1.0 */
-         for( v = nvars - 1; v >= 0; --v )
-         {
-            SCIP_CALL( chgCoefPos(scip, cons, v, 1.0) );
-         }
-         (*nchgcoefs) += nvars;
-
-         /* replace old right and left hand side with 1.0 */
-         SCIP_CALL( chgRhs(scip, cons, 1.0) );
-         SCIP_CALL( chgLhs(scip, cons, 1.0) );
-         (*nchgsides) += 2;
+         SCIP_CALL( chgCoefPos(scip, cons, v, 1.0) );
       }
+      (*nchgcoefs) += nvars;
+
+      /* replace old right and left hand side with 1.0 */
+      SCIP_CALL( chgRhs(scip, cons, 1.0) );
+      SCIP_CALL( chgLhs(scip, cons, 1.0) );
+      (*nchgsides) += 2;
    }
 
    return SCIP_OKAY;
 }
 
 /** tries to simplify coefficients and delete variables in constraints of the form lhs <= a^Tx <= rhs
- *  for equations @see rangedRowSimplify() will be called
  *
- *  there are several different coefficient reduction steps which will be applied
+ *  for both-sided constraints only @see rangedRowSimplify() will be called
+ *
+ *  for one-sided constraints there are several different coefficient reduction steps which will be applied
  *
  *  1. We try to determine parts of the constraint which will not change anything on (in-)feasibility of the constraint
  *
@@ -11661,7 +11662,7 @@ SCIP_RETCODE simplifyInequalities(
    SCIPdebug( oldnchgcoefs = *nchgcoefs; )
    SCIPdebug( oldnchgsides = *nchgsides; )
 
-   /* @todo also work on ranged rows */
+   /* @todo extend both-sided simplification */
    if( haslhs && hasrhs )
    {
       SCIP_CALL( rangedRowSimplify(scip, cons, nchgcoefs, nchgsides ) );
@@ -11825,7 +11826,6 @@ SCIP_RETCODE simplifyInequalities(
       SCIP_Bool numericsok;
       SCIP_Bool rredundant;
       SCIP_Bool lredundant;
-
 
       gcd = (SCIP_Longint)(REALABS(vals[v]) + feastol);
       assert(gcd >= 1);
@@ -15225,6 +15225,75 @@ SCIP_RETCODE enforceConstraint(
    return SCIP_OKAY;
 }
 
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = consdata->nvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   for( i = 0; i < nlocvars; ++i )
+   {
+      vars[i] = consdata->vars[i];
+      vals[i] = consdata->vals[i];
+   }
+
+   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   lhs = consdata->lhs - constant;
+   rhs = consdata->rhs - constant;
+
+   /* if rhs is infinite, normalize rhs to be finite to make sure that different encodings
+    * of the same constraint are rated as equal
+    */
+   if ( SCIPisInfinity(scip, rhs) )
+   {
+      SCIP_Real tmp;
+      assert(!SCIPisInfinity(scip, -lhs));
+
+      for( i = 0; i < nlocvars; ++i )
+         vals[i] *= -1;
+      tmp = rhs;
+      rhs = -lhs;
+      lhs = -tmp;
+   }
+
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         cons, lhs, rhs, success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of constraint handler
  */
@@ -15780,7 +15849,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
 static
 SCIP_DECL_CONSINITSOL(consInitsolLinear)
 {  /*lint --e{715}*/
-
    /* add nlrow representation to NLP, if NLP had been constructed */
    if( SCIPisNLPConstructed(scip) )
    {
@@ -17256,6 +17324,24 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsLinear)
 }
 /**! [Callback for the number of variables]*/
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphLinear)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphLinear)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of event handler
  */
@@ -17662,6 +17748,8 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinear) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLinear) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphLinear) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphLinear) );
 
    if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
    {
@@ -17886,6 +17974,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+   int j;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -17896,6 +17985,16 @@ SCIP_RETCODE SCIPcreateConsLinear(
    {
       SCIPerrorMessage("linear constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
+   }
+
+   for( j = 0; j < nvars; ++j )
+   {
+      if( SCIPisInfinity(scip, REALABS(vals[j])) )
+      {
+         SCIPerrorMessage("coefficient of variable <%s> is infinite.\n", SCIPvarGetName(vars[j]));
+         SCIPABORT();
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* for the solving process we need linear rows, containing only active variables; therefore when creating a linear

@@ -1,0 +1,22 @@
+# SCIP version 8.1.0.5
+
+# frequency for calling primal heuristic <dps> (-1: never, 0: only at depth freqofs)
+# [type: int, advanced: FALSE, range: [-1,1073741822], default: -1]
+heuristics/dps/freq = 0
+
+# should the problem get reoptimized with the original objective function?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+heuristics/dps/reoptimize = TRUE
+
+# should solutions get reused in subproblems?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: FALSE]
+heuristics/dps/reuse = TRUE
+
+# should strict limits for reoptimization be set?
+# [type: bool, advanced: FALSE, range: {TRUE,FALSE}, default: TRUE]
+heuristics/dps/reoptlimits = FALSE
+
+# should the heuristic run before or after the processing of the node? (0: before, 1: after, 2: both)
+# [type: int, advanced: FALSE, range: [0,2], default: 0]
+heuristics/dps/timing = 1
+

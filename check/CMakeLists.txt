@@ -185,6 +185,7 @@ set(settings_BendersQP
 
 set(settings_Decomp
    "decompheurs"
+   "decompheurs_dps"
   )
 
 set(settings_Indicator
@@ -196,6 +197,7 @@ set(settings_Indicator
     "indicatorconflict"
     "indicatoralterlp"
     "indicatorupgrade"
+    "indicatorobbt"
    )
 
 set(settings_reopt
@@ -466,12 +468,19 @@ set(instances_Or
 #
 set(pairs_Issue
     "instances/Issue/3047.lp\;20000\;dualinfer"
+    "instances/Issue/3132.lp\;0\;default"
     "instances/Issue/3499.lp\;11460\;closeobj"
     "instances/Issue/3589.cip\;-1\;default"
     "instances/Issue/3607.cip\;1\;default"
     "instances/Issue/3610.cip\;0\;default"
     "instances/Issue/3611.lp\;-1600\;default"
-    )
+    "instances/Issue/3613.lp\;993.4375\;default"
+    "instances/Issue/3625.lp\;117.75284354701\;default"
+    # Test currently not working since problems with the feasibility check for unbounded problems appear: https://git.zib.de/integer/scip/-/issues/3422
+    # "instances/Issue/3629.cip\;-infinity\;only_dualinfer"
+    "instances/Issue/3632.cip\;0\;default"
+    "instances/Issue/3633.lp\;0\;default"
+)
 
 #
 # available reader file extensions for SCIP readers
@@ -542,8 +551,7 @@ macro(add_instancetests instances settings prefix)
             #
             # treat the instance as a tuple (list) of two values
             #
-            if(NOT ((${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
-            if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
+            if(NOT ((${setting} STREQUAL "tolerance") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "xprs")))
             add_test(NAME ${prefix}-${setting}-${basename}
                     COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
                     )
@@ -554,8 +562,7 @@ macro(add_instancetests instances settings prefix)
                                     FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
-            endif()  # Gurobi gets stuck in LP solve, #2833
-            endif()  # Gurobi invalid write with settings oddcycle and heurlprows, #3578; just skip this instance for all settings now
+            endif()  # Xpress does not keep feasibility tolerance setting, #3640
         endforeach(setting)
     endforeach(instance)
 endmacro(add_instancetests)

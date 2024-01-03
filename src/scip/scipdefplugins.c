@@ -130,6 +130,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleCloud(scip) );
    SCIP_CALL( SCIPincludeBranchruleDistribution(scip) );
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
+   SCIP_CALL( SCIPincludeBranchruleGomory(scip) );
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );
    SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
    SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
@@ -190,6 +191,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurRins(scip) );
    SCIP_CALL( SCIPincludeHeurRootsoldiving(scip) );
    SCIP_CALL( SCIPincludeHeurRounding(scip) );
+   SCIP_CALL( SCIPincludeHeurScheduler(scip) );
    SCIP_CALL( SCIPincludeHeurShiftandpropagate(scip) );
    SCIP_CALL( SCIPincludeHeurShifting(scip) );
    SCIP_CALL( SCIPincludeHeurSimplerounding(scip) );
@@ -225,6 +227,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
    SCIP_CALL( SCIPincludeSepaInterminor(scip) );
    SCIP_CALL( SCIPincludeSepaIntobj(scip) );
+   SCIP_CALL( SCIPincludeSepaLagromory(scip) );
    SCIP_CALL( SCIPincludeSepaMcf(scip) );
    SCIP_CALL( SCIPincludeSepaMinor(scip) );
    SCIP_CALL( SCIPincludeSepaMixing(scip) );
@@ -237,7 +240,9 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
    SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
    SCIP_CALL( SCIPincludeBendersDefault(scip) );
+   SCIP_CALL( SCIPincludeCutselEnsemble(scip) );
    SCIP_CALL( SCIPincludeCutselHybrid(scip) );
+   SCIP_CALL( SCIPincludeCutselDynamic(scip) );
    SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
    SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
    SCIP_CALL( SCIPincludeExprhdlrEntropy(scip) );
@@ -258,6 +263,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNlhdlrPerspective(scip) );
    SCIP_CALL( SCIPincludeNlhdlrQuadratic(scip) );
    SCIP_CALL( SCIPincludeNlhdlrQuotient(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrSignomial(scip) );
    SCIP_CALL( SCIPincludeNlhdlrSoc(scip) );
    SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverFilterSQP(scip) );

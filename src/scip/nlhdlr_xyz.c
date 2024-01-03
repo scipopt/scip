@@ -28,8 +28,6 @@
  * @author Jane Doe
  */
 
-#include <string.h>
-
 #include "scip/nlhdlr_xyz.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc_rowprep.h"
@@ -268,7 +266,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropXyz)
  * nonlinear handler specific interface methods
  */
 
-/** includes Xyz nonlinear handler to consexpr */
+/** includes Xyz nonlinear handler in nonlinear constraint handler */
 SCIP_RETCODE SCIPincludeNlhdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )

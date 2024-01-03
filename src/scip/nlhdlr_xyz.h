@@ -54,7 +54,7 @@ extern "C" {
   * @}
   */
 
-/** includes xyz nonlinear handler to nonlinear constraint handler
+/** includes xyz nonlinear handler in nonlinear constraint handler
  *
  * @ingroup NlhdlrIncludes
  */
