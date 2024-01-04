@@ -38,6 +38,9 @@ Features
 - added a new separator sepa_lagromory to generate Lagromory cuts in a relax-and-cut framework, i.e., GMI cuts generated
   at different bases that are explored in the process of solving the Lagrangian dual problem at a node. This separator
   is OFF by default.
+- when parsing nonlinear constraints from CIP files, the * after the number in a term is now optional if followed by a variable,
+  i.e., instead of 3*<x>*<y>, now also 3<x>*<y> can be read, but 3<x><y> is not supported;
+  this allows to read some CIP files that were written with SCIP < 8
 
 Performance improvements
 ------------------------
@@ -205,6 +208,8 @@ Testing
 -------
 - changed `set lim obj` to `set lim objective` in ctest since `obj` is no longer unambiguous
 
+- flush changes at the end of SCIPlpiSetBase() in lpi_grb.c to apply the newly set basis correctly
+
 Build system
 ------------
 
@@ -284,6 +289,7 @@ Fixed bugs
 - ensure positive sides of a linear constraint when recognizing a set partition in rangedRowSimplify() to account for redundancy issues
 - relax numerical conditions for variable aggregations to avert invalid variable fixings
 - fixed harmless read of uninitialized data when creating parameters
+- fix call of SCIPnlpiOraclePrintProblem in nlpi_worhp
 
 Performance improvements
 ------------------------

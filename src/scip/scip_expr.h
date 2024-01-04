@@ -277,7 +277,7 @@ SCIP_RETCODE SCIPcopyExpr(
  *
  * The actual definition:
  * <pre>
- * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
+ * Expression -> ["+" | "-"] Term { [ ("+" | "-" | "number *") Term | ("number" <varname>) ] }
  * Term       -> Factor { ("*" | "/" ) Factor }
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
