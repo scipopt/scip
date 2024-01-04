@@ -1099,12 +1099,16 @@ SCIP_RETCODE l1BallProjection(
 
          for( int i = 0; i < temp1len; i++ )
          {
+            /* @note: the third condition (temp1len - ntemp1removed > 0) is true as long as the first condition
+             * (temp1inds[i] >= 0) is true.
+             */
             if( (temp1inds[i] >= 0) && SCIPisLE(scip, temp1vals[i], pivotparam) )
             {
                temp1inds[i] = -1;
                temp1changed = TRUE;
                ntemp1removed++;
                assert(temp1len - ntemp1removed > 0);
+               /* coverity[divide_by_zero] */
                pivotparam += ((pivotparam - temp1vals[i]) / (temp1len - ntemp1removed));
             }
          }
@@ -1638,7 +1642,7 @@ SCIP_RETCODE solveLPWithHardCuts(
    }
 
    /* solve the LP */
-   SCIPlpiSolvePrimal(sepadata->lpiwithhardcuts);  /*lint !e534*/
+   SCIP_CALL( SCIPlpiSolvePrimal(sepadata->lpiwithhardcuts) );
 
    /* get the solution if primal feasible */
    if( SCIPlpiIsPrimalFeasible(sepadata->lpiwithhardcuts) )
