@@ -35,6 +35,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_SQRT2 on Windows */  /*lint !750 */
+
 #include <assert.h>
 #include <string.h>
 #include <stdarg.h>
@@ -42,6 +44,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "scip/def.h"
 #include "scip/pub_message.h"
@@ -56,8 +59,6 @@
 /*
  * methods for statistical tests
  */
-
-#define SQRTOFTWO                  1.4142136 /**< the square root of 2 with sufficient precision */
 
 /**< contains all critical values for a one-sided two sample t-test up to 15 degrees of freedom
  *   a critical value represents a threshold for rejecting the null-hypothesis in hypothesis testing at
@@ -219,7 +220,7 @@ SCIP_Real SCIPnormalCDF(
    assert( std != 0.0 ); /* for lint */
 
    /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for SCIPerf() function */
-   normvalue = (value - mean)/(std * SQRTOFTWO);
+   normvalue = (value - mean)/(std * M_SQRT2);
 
    SCIPdebugMessage(" Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
 

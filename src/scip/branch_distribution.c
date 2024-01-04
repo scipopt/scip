@@ -66,6 +66,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_SQRT2 on Windows */  /*lint !750 */
+
 #include "scip/branch_distribution.h"
 #include "scip/pub_branch.h"
 #include "scip/pub_event.h"
@@ -85,6 +87,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include <string.h>
+#include <math.h>
 
 
 #define BRANCHRULE_NAME            "distribution"
@@ -96,7 +99,6 @@
 #define SCOREPARAM_VALUES          "dhlvw"
 #define DEFAULT_SCOREPARAM         'v'
 #define DEFAULT_PRIORITY           2.0
-#define SQRTOFTWO                  1.4142136
 #define SQUARED(x) ((x) * (x))
 #define DEFAULT_ONLYACTIVEROWS     FALSE     /**< should only rows which are active at the current node be considered? */
 #define DEFAULT_USEWEIGHTEDSCORE   FALSE     /**< should the branching score weigh up- and down-scores of a variable */
@@ -330,7 +332,7 @@ SCIP_Real SCIPcalcCumulativeDistribution(
    assert( std != 0.0 ); /* for lint */
 
    /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for SCIPerf() function */
-   normvalue = (value - mean)/(std * SQRTOFTWO);
+   normvalue = (value - mean)/(std * M_SQRT2);
 
    SCIPdebugMsg(scip, " Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
 
