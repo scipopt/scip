@@ -212,7 +212,6 @@
 
 #ifndef SQR
 #define SQR(x)        ((x)*(x))
-#define SQRT(x)       (sqrt(x))
 #endif
 
 /* platform-dependent specification of the log1p, which is numerically more stable around x = 0.0 */
@@ -233,7 +232,7 @@
 #endif
 
 #ifndef ABS
-#define ABS(x)        ((x) >= 0 ? (x) : -(x))
+#define ABS(x)    ((x) >= 0 ? (x) : -(x))
 #endif
 
 #ifndef MAX

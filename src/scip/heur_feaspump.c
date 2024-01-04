@@ -952,7 +952,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    /* scale distance function and original objective to the same norm */
    objnorm = SCIPgetObjNorm(scip);
    objnorm = MAX(objnorm, 1.0);
-   scalingfactor = SQRT((SCIP_Real)(nbinvars + nintvars)) / objnorm;
+   scalingfactor = sqrt((SCIP_Real)(nbinvars + nintvars)) / objnorm;
 
    /* data initialization */
    alpha = heurdata->alpha;

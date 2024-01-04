@@ -384,7 +384,7 @@ SCIP_RETCODE solCutIsViolated(
                cutsqrnorm += SQR(cutcoefs[j]);
             }
          }
-         norm = SQRT(cutsqrnorm);
+         norm = sqrt(cutsqrnorm);
 
          SCIPfreeBufferArray(scip, &cutcoefs);
       }  /*lint !e438*/
@@ -407,7 +407,7 @@ SCIP_RETCODE solCutIsViolated(
                   cutsqrnorm += SQR(val);
                }
             }
-            norm = SQRT(cutsqrnorm);
+            norm = sqrt(cutsqrnorm);
             break;
          case 'm':
             for (j = 0; j < mipdata->ncols; ++j)
@@ -680,7 +680,7 @@ SCIP_RETCODE storeCutInArrays(
             cutvals[len++] = val;
          }
       }
-      norm = SQRT(cutsqrnorm);
+      norm = sqrt(cutsqrnorm);
       break;
    case 'm':
       for (v = 0; v < nvars; ++v)

@@ -1650,7 +1650,7 @@ SCIP_Bool SCIPlpIsFeasNegative(
 #define SCIPlpGetNNewcols(lp)           ((lp)->ncols - (lp)->firstnewcol)
 #define SCIPlpGetNewrows(lp)            (&((lp)->rows[(lp)->firstnewrow]))
 #define SCIPlpGetNNewrows(lp)           ((lp)->nrows - (lp)->firstnewrow)
-#define SCIPlpGetObjNorm(lp)            (SQRT((lp)->objsqrnorm))
+#define SCIPlpGetObjNorm(lp)            (sqrt((lp)->objsqrnorm))
 #define SCIPlpGetRootObjval(lp)         (MIN((lp)->rootlpobjval + (lp)->rootlooseobjval, SCIP_INVALID))
 #define SCIPlpGetRootColumnObjval(lp)   ((lp)->rootlpobjval)
 #define SCIPlpGetRootLooseObjval(lp)    ((lp)->rootlooseobjval)

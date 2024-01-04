@@ -465,8 +465,8 @@ SCIP_Real reoptSimilarity(
    }
 
    /* divide similarity by norms of the objective vectors */
-   norm_obj1 = SQRT(norm_obj1);
-   norm_obj2 = SQRT(norm_obj2);
+   norm_obj1 = sqrt(norm_obj1);
+   norm_obj2 = sqrt(norm_obj2);
 
    if( !SCIPsetIsZero(set, norm_obj1) && !SCIPsetIsZero(set, norm_obj2) )
       similarity /= (norm_obj1 * norm_obj2);

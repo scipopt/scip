@@ -234,9 +234,9 @@ SCIP_RETCODE computeProjectionScore(
       *score = -SCIPinfinity(scip);
    else
    {
-      *score = SQRT(currentbestefficacy * currentbestefficacy + efficacy * efficacy
-                       - 2 * fabs(currentbestefficacy) * fabs(efficacy) * cosineangle)
-         / SQRT((1 - (cosineangle * cosineangle)));
+      *score = sqrt(currentbestefficacy * currentbestefficacy + efficacy * efficacy
+                       - 2.0 * fabs(currentbestefficacy) * fabs(efficacy) * cosineangle)
+         / sqrt((1.0 - (cosineangle * cosineangle)));
       *score -= currentbestefficacy;
    }
    SCIPdebugMsg(scip, "Projectionscore[%s] = %g\n", SCIProwGetName(cut), *score);
