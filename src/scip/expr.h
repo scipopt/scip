@@ -38,6 +38,7 @@
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_clock.h"
+#include "scip/type_message.h"
 #include "blockmemshell/memory.h"
 
 #ifdef NDEBUG

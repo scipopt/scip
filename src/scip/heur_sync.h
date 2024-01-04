@@ -44,6 +44,7 @@
 #include "scip/type_sol.h"
 #include "scip/type_scip.h"
 #include "scip/type_heur.h"
+#include "scip/type_retcode.h"
 
 #ifdef __cplusplus
 extern "C" {

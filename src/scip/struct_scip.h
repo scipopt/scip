@@ -42,6 +42,7 @@
 #include "scip/type_event.h"
 #include "scip/type_interrupt.h"
 #include "scip/type_mem.h"
+#include "scip/type_message.h"
 #include "scip/type_lp.h"
 #include "scip/type_nlp.h"
 #include "scip/type_implics.h"

@@ -50,6 +50,7 @@
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
 #include "scip/type_conflictstore.h"
+#include "scip/type_message.h"
 
 #include "scip/struct_prob.h"
 

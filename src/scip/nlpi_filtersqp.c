@@ -49,6 +49,7 @@
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_message.h"
 
 /* fallback to non-thread version for windows, because pthread does not exist */
 #if defined(_MSC_VER) && defined(SCIP_THREADSAFE)

@@ -43,6 +43,7 @@
 #include "scip/type_lp.h"
 #include "scip/type_tree.h"
 #include "scip/type_reopt.h"
+#include "scip/type_message.h"
 #include "scip/pub_nodesel.h"
 
 #ifdef __cplusplus

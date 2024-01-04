@@ -39,6 +39,7 @@
 #include "scip/def.h"
 #include "scip/type_retcode.h"
 #include "scip/type_disp.h"
+#include "scip/type_message.h"
 
 #ifdef __cplusplus
 extern "C" {

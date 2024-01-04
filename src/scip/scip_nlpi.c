@@ -47,6 +47,7 @@
 #include "scip/pub_expr.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_var.h"
+#include "scip/pub_message.h"
 #include "scip/expr_varidx.h"
 #include "scip/debug.h"
 #include "scip/nlpi.h"

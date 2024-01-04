@@ -35,6 +35,7 @@
 #include "scip/mem.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_dcmp.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_var.h"
 #include "scip/scip_cons.h"

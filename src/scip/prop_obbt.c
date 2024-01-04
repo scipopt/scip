@@ -2580,7 +2580,7 @@ SCIP_RETCODE applyObbtBilinear(
          /* add inequality to quadratic constraint handler if it separates (xt,yt) */
          if( !SCIPisHugeValue(scip, xcoef)  && !SCIPisFeasZero(scip, xcoef)
             && REALABS(ycoef) < 1e+3 && REALABS(ycoef) > 1e-3 /* TODO add a parameter for this */
-            && SCIPisFeasGT(scip, (xcoef*xt - ycoef*yt - constant) / SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)), 1e-2) )
+            && SCIPisFeasGT(scip, (xcoef*xt - ycoef*yt - constant) / sqrt(SQR(xcoef) + SQR(ycoef) + SQR(constant)), 1e-2) )
          {
             SCIP_Bool success;
 
@@ -2593,7 +2593,7 @@ SCIP_RETCODE applyObbtBilinear(
             {
                *result = SCIP_REDUCEDDOM;
                SCIPdebugMsg(scip, "   found %g x <= %g y + %g with violation %g\n", xcoef, ycoef, constant,
-                  (xcoef*xt - ycoef*yt - constant) / SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)));
+                  (xcoef*xt - ycoef*yt - constant) / sqrt(SQR(xcoef) + SQR(ycoef) + SQR(constant)));
 
                /* create a linear constraint that is only used for propagation */
                if( propdata->createlincons && nnonzduals > 1 )

@@ -221,7 +221,7 @@ Test(propagate, product)
 
    /* new bounds of x */
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(x), 1.0), "Expecting %g and got %g\n", 1.0, SCIPvarGetLbLocal(x));
-   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), SQRT(8)));
+   cr_expect(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(x), sqrt(8.0)));
 
    /* new bounds of y */
    cr_expect(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(y), 2.0));

@@ -34,6 +34,7 @@
 
 #include "tpi/tpi.h"
 #include "blockmemshell/memory.h"
+#include "scip/pub_message.h"
 #include <omp.h>
 
 /* macros for direct access */

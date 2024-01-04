@@ -313,7 +313,7 @@ SCIP_RETCODE generateAverageRay(
          if( SCIPisFeasZero(scip, rownorm[i]) )
             continue;
          else
-            rownorm[i] = SQRT(rownorm[i]);
+            rownorm[i] = sqrt(rownorm[i]);
 
          if( weighted )
          {
@@ -359,7 +359,7 @@ SCIP_RETCODE generateAverageRay(
             continue;
          }
          else
-            rownorm[r] = SQRT(rownorm[r]);
+            rownorm[r] = sqrt(rownorm[r]);
 
          if( weighted )
          {
@@ -491,7 +491,7 @@ SCIP_RETCODE generateAverageNBRay(
       else
       {
          assert(rownorm > 0);
-         rownorm = SQRT(rownorm);
+         rownorm = sqrt(rownorm);
       }
 
       for( j = nnonz - 1; j >= 0; --j )

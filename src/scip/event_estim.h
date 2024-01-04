@@ -52,6 +52,7 @@
 
 
 #include "scip/type_scip.h"
+#include "scip/type_retcode.h"
 #include "scip/def.h"
 
 #ifdef __cplusplus

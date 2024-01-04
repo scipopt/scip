@@ -41,6 +41,7 @@
 #include "scip/type_set.h"
 #include "scip/type_benderscut.h"
 #include "scip/type_benders.h"
+#include "scip/type_message.h"
 #include "scip/pub_benderscut.h"
 
 #ifdef __cplusplus
