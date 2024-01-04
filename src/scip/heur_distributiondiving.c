@@ -66,7 +66,6 @@
 #define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
 #define DIVESET_ISPUBLIC      FALSE  /**< is this dive set publicly available (ie., can be used by other primal heuristics?) */
 
-#define SQUARED(x) ((x) * (x))
 /*
  * Default parameter settings
  */
@@ -349,7 +348,7 @@ void rowCalculateGauss(
       *mu += colval * varmean;
 
       /* the variance contribution of a variable is c^2 * (u - l)^2 / 12.0 for continuous and c^2 * ((u - l + 1)^2 - 1) / 12.0 for integer */
-      squarecoeff = SQUARED(colval);
+      squarecoeff = SQR(colval);
       *sigma2 += squarecoeff * varvariance;
 
       assert(!SCIPisFeasNegative(scip, *sigma2));
@@ -490,7 +489,7 @@ SCIP_RETCODE calcBranchScore(
             rowinfinitiesdown, rowinfinitiesup);
 
       /* get variable's current expected contribution to row activity */
-      squaredcoeff = SQUARED(rowval);
+      squaredcoeff = SQR(rowval);
 
       /* first, get the probability change for the row if the variable is branched on upwards. The probability
        * can only be affected if the variable upper bound is finite
@@ -766,7 +765,7 @@ SCIP_RETCODE varProcessBoundChanges(
          assert(heurdata->rowvariances[rowpos] != SCIP_INVALID && SCIPisFeasGE(scip, heurdata->rowvariances[rowpos], 0.0)); /*lint !e777 */
 
          coeff = colvals[r];
-         coeffsquared = SQUARED(coeff);
+         coeffsquared = SQR(coeff);
 
          /* update variable contribution to row activity distribution */
          heurdata->rowmeans[rowpos] += coeff * (newmean - oldmean);

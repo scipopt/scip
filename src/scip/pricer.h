@@ -40,6 +40,7 @@
 #include "scip/type_result.h"
 #include "scip/type_set.h"
 #include "scip/type_lp.h"
+#include "scip/type_message.h"
 #include "scip/type_prob.h"
 #include "scip/type_pricestore.h"
 #include "scip/type_pricer.h"

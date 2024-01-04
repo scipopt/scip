@@ -31,6 +31,7 @@
  */
 
 #include "scip/pub_expr.h"
+#include "scip/pub_message.h"
 
 /** curvature names as strings */
 static

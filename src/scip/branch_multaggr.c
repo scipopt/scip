@@ -939,8 +939,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
 
                      SCIP_CALL( ensureArraySize(scip, branchruledata) );
 
-                     gfractbranch= SQRT(MAX(fdowngain,1e-06) * MAX(fupgain,1e-06));
-                     gmultaggrbranch = SQRT(MAX(downgain,1e-06) * MAX(upgain,1e-06));
+                     gfractbranch= sqrt(MAX(fdowngain,1e-06) * MAX(fupgain,1e-06));
+                     gmultaggrbranch = sqrt(MAX(downgain,1e-06) * MAX(upgain,1e-06));
 
                      nmultaggrbranch = branchruledata->nmultaggrbranch;
 

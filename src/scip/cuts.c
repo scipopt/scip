@@ -294,7 +294,7 @@ SCIP_Real calcEfficacy(
          activity += cutcoefs[i] * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
          norm += SQR(cutcoefs[i]);
       }
-      norm = SQRT(norm);
+      norm = sqrt(norm);
       break;
    case 'm':
       for( i = 0; i < cutnnz; ++i )
@@ -353,7 +353,7 @@ SCIP_Real calcEfficacyNormQuad(
          QUAD_ARRAY_LOAD(coef, vals, inds[i]);
          norm += SQR(QUAD_TO_DBL(coef));
       }
-      norm = SQRT(norm);
+      norm = sqrt(norm);
       break;
    case 'm':
       for( i = 0; i < nnz; ++i )
@@ -424,7 +424,7 @@ SCIP_Real calcEfficacyDenseStorageQuad(
          activity += QUAD_TO_DBL(coef) * SCIPgetSolVal(scip, sol, vars[cutinds[i]]);
          norm += SQR(QUAD_TO_DBL(coef));
       }
-      norm = SQRT(norm);
+      norm = sqrt(norm);
       break;
    case 'm':
       for( i = 0; i < cutnnz; ++i )
@@ -4194,7 +4194,7 @@ SCIP_Real computeMIREfficacy(
       norm += SQR(floorai);
    }
 
-   norm = SQRT(norm);
+   norm = sqrt(norm);
 
    return - rhs / MAX(norm, 1e-6);
 }

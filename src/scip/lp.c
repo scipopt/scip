@@ -6779,7 +6779,7 @@ SCIP_Real SCIProwGetLPSolCutoffDistance(
 
       if( scale > 0.0 )
       {
-         scale = 1.0 / SQRT(scale);
+         scale = 1.0 / sqrt(scale);
 
          for( k = 0; k < lp->ncols; ++k )
             lp->soldirection[k] *= scale;
@@ -7820,7 +7820,7 @@ SCIP_Real SCIProwGetObjParallelism(
 
    prod = row->sqrnorm * lp->objsqrnorm;
 
-   parallelism = SCIPsetIsPositive(set, prod) ? REALABS(row->objprod) / SQRT(prod) : 0.0;
+   parallelism = SCIPsetIsPositive(set, prod) ? REALABS(row->objprod) / sqrt(prod) : 0.0;
    assert(SCIPsetIsSumGE(set, parallelism, 0.0));
    assert(SCIPsetIsSumLE(set, parallelism, 1.0));
    parallelism = MIN(parallelism, 1.0);
@@ -17712,7 +17712,7 @@ SCIP_Real SCIPlpGetObjNorm(
    assert(!lp->objsqrnormunreliable);
    assert(lp->objsqrnorm >= 0.0);
 
-   return SQRT(lp->objsqrnorm);
+   return sqrt(lp->objsqrnorm);
 }
 
 /** sets whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */

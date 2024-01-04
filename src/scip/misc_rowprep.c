@@ -35,6 +35,7 @@
 #include "scip/pub_misc_rowprep.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
+#include "scip/pub_message.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"

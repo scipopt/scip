@@ -1164,7 +1164,7 @@ void l2BallProjection(
    {
       l2norm += SQR(dualvector[i]);
    }
-   l2norm = SQRT(l2norm);
+   l2norm = sqrt(l2norm);
    factor = radius/(1.0 + l2norm);
 
    /* if the vector of Lagrangian multipliers is outside the L2-norm ball, then do the projection */

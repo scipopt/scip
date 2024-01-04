@@ -141,7 +141,7 @@ SCIP_Real SCIPcomputeGamma(
    int                   t                   /**< current iteration */
    )
 {
-   return SQRT(log((SCIP_Real)nactions) / (4.0 * (SCIP_Real)t * (SCIP_Real)nactions) );
+   return sqrt(log((SCIP_Real)nactions) / (4.0 * (SCIP_Real)t * (SCIP_Real)nactions));
 }
 
 /** update callback for bandit algorithm */

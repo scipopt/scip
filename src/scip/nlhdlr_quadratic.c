@@ -1318,7 +1318,7 @@ void computeVApexAndVRay(
 /** calculate coefficients of restriction of the function to given ray.
  *
  * The restriction of the function representing the maximal S-free set to zlp + t * ray has the form
- * SQRT(A t^2 + B t + C) - (D t + E) for cases 1, 2, and 3.
+ * sqrt(A t^2 + B t + C) - (D t + E) for cases 1, 2, and 3.
  * For case 4 it is a piecewise defined function and each piece is of the aforementioned form.
  *
  * This function computes the coefficients A, B, C, D, E for the given ray.
@@ -1410,7 +1410,7 @@ SCIP_RETCODE computeRestrictionToLine(
       }
    }
 
-   norm = SQRT(norm / kappa + 1.0);
+   norm = sqrt(norm / kappa + 1.0);
    *a /= kappa;
    *b /= kappa;
    *c /= kappa;
@@ -1421,10 +1421,10 @@ SCIP_RETCODE computeRestrictionToLine(
    /* In theory, the function at 0 must be negative. Because of bad numerics this might not always hold, so we abort
     * the generation of the cut in this case.
     */
-   if( SQRT( *c ) - *e >= 0 )
+   if( sqrt(*c) - *e >= 0 )
    {
       /* check if it's really a numerical problem */
-      assert(SQRT( *c ) > 10e+15 || *e > 10e+15 || SQRT( *c ) - *e < 10e+9);
+      assert(sqrt(*c) > 10e+15 || *e > 10e+15 || sqrt(*c) - *e < 10e+9);
 
       INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
       *success = FALSE;
@@ -1451,7 +1451,7 @@ TERMINATE:
 /** calculate coefficients of restriction of the function to given ray.
  *
  * The restriction of the function representing the maximal S-free set to zlp + t * ray has the form
- * SQRT(A t^2 + B t + C) - (D t + E) for cases 1, 2, and 3.
+ * sqrt(A t^2 + B t + C) - (D t + E) for cases 1, 2, and 3.
  * For case 4 it is a piecewise defined function and each piece is of the aforementioned form.
  *
  * This function computes the coefficients A, B, C, D, E for the given ray.
@@ -1584,7 +1584,7 @@ SCIP_RETCODE computeRestrictionToRay(
 
       /* finish computation of D and E */
       assert(*e > 0);
-      *e = SQRT( *e );
+      *e = sqrt(*e);
       *d /= *e;
 
       /* some sanity checks only applicable to these cases (more at the end) */
@@ -1593,10 +1593,10 @@ SCIP_RETCODE computeRestrictionToRay(
       /* In theory, the function at 0 must be negative. Because of bad numerics this might not always hold, so we abort
        * the generation of the cut in this case.
        */
-      if( SQRT( *c ) - *e >= 0 )
+      if( sqrt(*c) - *e >= 0 )
       {
          /* check if it's really a numerical problem */
-         assert(SQRT( *c ) > 10e+15 || *e > 10e+15 || SQRT( *c ) - *e < 10e+9);
+         assert(sqrt(*c) > 10e+15 || *e > 10e+15 || sqrt(*c) - *e < 10e+9);
 
          INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
          *success = FALSE;
@@ -1609,7 +1609,7 @@ SCIP_RETCODE computeRestrictionToRay(
       SCIP_Real xextra;
       SCIP_Real yextra;
 
-      norm = SQRT( 1 + SQR( kappa ) );
+      norm = sqrt(1.0 + SQR( kappa ));
       xextra = wzlp + kappa + norm;
       yextra = wzlp + kappa - norm;
 
@@ -1636,8 +1636,8 @@ SCIP_RETCODE computeRestrictionToRay(
          coefs4b[2] = (*c);
 
          /* finish D and E */
-         coefs4b[3] = *d / SQRT( *e );
-         coefs4b[4] = SQRT( *e ) + (xextra / (2.0 * SQRT( *e )));
+         coefs4b[3] = *d / sqrt(*e);
+         coefs4b[4] = sqrt(*e) + (xextra / (2.0 * sqrt(*e)));
       }
 
       /*
@@ -1650,7 +1650,7 @@ SCIP_RETCODE computeRestrictionToRay(
 
       /* finish D and E */
       *e +=  SQR( xextra ) / (4.0 * norm);
-      *e = SQRT( *e );
+      *e = sqrt(*e);
 
       *d += xextra * (wray) / (4.0 * norm);
       *d /= *e;
@@ -1696,7 +1696,7 @@ SCIP_RETCODE computeRestrictionToRay(
    return SCIP_OKAY;
 }
 
-/** returns phi(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E) */
+/** returns phi(zlp + t * ray) = sqrt(A t^2 + B t + C) - (D t + E) */
 static
 SCIP_Real evalPhiAtRay(
    SCIP_Real             t,                  /**< argument of phi restricted to ray */
@@ -1748,7 +1748,7 @@ SCIP_Real evalPhiAtRay(
 
    return  QUAD_TO_DBL(tmp);
 #else
-   return SQRT( a * t * t + b * t + c ) - ( d * t + e );
+   return sqrt(a * t * t + b * t + c) - ( d * t + e );
 #endif
 }
 
@@ -1769,7 +1769,7 @@ SCIP_Real isCase4a(
                                               *   \f$num(\hat x_{r+1}(zlp)) / E\f$; \f$w(ray)\f$; \f$num(\hat y_{s+1}(zlp))\f$ */
    )
 {
-   return (coefscondition[0] * SQRT( coefs4a[0] * SQR( tsol ) + coefs4a[1] * tsol + coefs4a[2] ) + coefscondition[1] *
+   return (coefscondition[0] * sqrt(coefs4a[0] * SQR( tsol ) + coefs4a[1] * tsol + coefs4a[2]) + coefscondition[1] *
          tsol + coefscondition[2]) <= 0.0;
 }
 
@@ -1834,10 +1834,10 @@ SCIP_Real computeRoot(
    SCIP_Real d = coefs[3];
    SCIP_Real e = coefs[4];
 
-   /* there is an intersection point if and only if SQRT(A) > D: here we are beliving in math, this might cause
+   /* there is an intersection point if and only if sqrt(A) > D: here we are beliving in math, this might cause
     * numerical issues
     */
-   if( SQRT( a ) <= d )
+   if( sqrt(a) <= d )
    {
       sol = SCIPinfinity(scip);
       return sol;
@@ -2002,7 +2002,7 @@ SCIP_Bool areCoefsNumericsGood(
    /* check at phi at 0 is negative (note; this could be checked before restricting to the ray) also, if this
     * succeeds for one ray, it should suceed for every ray
     */
-   if( SQRT( coefs1234a[2] ) - coefs1234a[4] >= 0.0 )
+   if( sqrt(coefs1234a[2]) - coefs1234a[4] >= 0.0 )
    {
       INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
       nlhdlrdata->nphinonneg++;

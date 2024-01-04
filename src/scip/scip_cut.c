@@ -164,7 +164,7 @@ SCIP_Real SCIPgetVectorEfficacyNorm(
    case 'e':
       for( i = 0; i < nvals; ++i )
          norm += SQR(vals[i]);
-      norm = SQRT(norm);
+      norm = sqrt(norm);
       break;
    case 'm':
       for( i = 0; i < nvals; ++i )

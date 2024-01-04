@@ -38,6 +38,7 @@
 #include "scip/type_set.h"
 #include "scip/type_concsolver.h"
 #include "scip/type_syncstore.h"
+#include "scip/type_message.h"
 
 #ifdef __cplusplus
 extern "C" {

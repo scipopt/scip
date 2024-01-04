@@ -177,7 +177,7 @@ Test(normaldistribution, checkcdftable, .description = "compare cumulative densi
                probability = 0.5 + negative * probtable[i];
 
                /* multiply and shift value to sigma * val + mu to account for distribution parameters */
-               val = SQRT(sigma2) * val + mu;
+               val = sqrt(sigma2) * val + mu;
 
                /* compute cumulative density for the specified distribution between - infinity and value */
                cdf = SCIPnormalCDF(mu, sigma2, val);

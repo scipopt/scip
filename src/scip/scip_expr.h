@@ -37,6 +37,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
+#include "scip/type_message.h"
 
 #ifdef NDEBUG
 #include "scip/struct_scip.h"

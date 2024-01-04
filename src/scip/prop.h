@@ -41,6 +41,7 @@
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_lp.h"
+#include "scip/type_message.h"
 #include "scip/type_var.h"
 #include "scip/type_prop.h"
 #include "scip/pub_prop.h"

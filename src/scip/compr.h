@@ -41,6 +41,7 @@
 #include "scip/type_result.h"
 #include "scip/type_set.h"
 #include "scip/type_compr.h"
+#include "scip/type_message.h"
 #include "scip/pub_compr.h"
 
 #ifdef __cplusplus
