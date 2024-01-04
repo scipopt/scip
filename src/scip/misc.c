@@ -8200,6 +8200,7 @@ TERMINATE:
    {
       SCIPdigraphFreeComponents(digraph);
    }
+   /* coverity[uninit_use_in_call] */
    BMSfreeMemoryArrayNull(&ndirectedsuccessors);
    BMSfreeMemoryArrayNull(&stackadjvisited);
    BMSfreeMemoryArrayNull(&dfsstack);
