@@ -49,6 +49,7 @@
 #include "scip/type_prob.h"
 #include "scip/type_sol.h"
 #include "scip/type_branch.h"
+#include "scip/type_message.h"
 #include "scip/pub_lp.h"
 
 #include "scip/struct_lp.h"

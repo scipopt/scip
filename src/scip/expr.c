@@ -40,6 +40,7 @@
 #include "scip/clock.h"
 #include "scip/set.h"
 #include "scip/pub_var.h"
+#include "scip/pub_message.h"
 #include "scip/sol.h"
 #include "scip/tree.h"
 #include "scip/struct_set.h"

@@ -40,6 +40,7 @@
 #include "scip/type_result.h"
 #include "scip/type_set.h"
 #include "scip/type_presol.h"
+#include "scip/type_message.h"
 #include "scip/pub_presol.h"
 
 #ifdef __cplusplus

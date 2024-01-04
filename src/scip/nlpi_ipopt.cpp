@@ -53,6 +53,7 @@
 #include "scip/scip_copy.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_paramset.h"
+#include "scip/pub_message.h"
 
 #include <new>      /* for std::bad_alloc */
 #include <sstream>

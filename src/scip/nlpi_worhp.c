@@ -46,6 +46,7 @@
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_message.h"
 
 #include <stdio.h>
 #include <stdlib.h>

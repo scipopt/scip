@@ -132,16 +132,6 @@
 #endif
 
 
-
-#include "scip/type_retcode.h"
-#include "scip/type_message.h"
-#include "scip/pub_message.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 #define SCIP_VERSION     (100*SCIP_VERSION_MAJOR + 10*SCIP_VERSION_MINOR + SCIP_VERSION_PATCH) /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION  SCIP_VERSION_SUB  /**< SCIP sub version number */
 #define SCIP_APIVERSION  SCIP_VERSION_API  /**< SCIP API version number */
@@ -451,10 +441,6 @@ extern "C" {
 #else
 #  define SCIP_DEPRECATED
 #endif
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #endif

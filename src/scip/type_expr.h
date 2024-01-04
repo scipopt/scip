@@ -49,6 +49,7 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 #include "scip/type_tree.h"
+#include "scip/type_retcode.h"
 
 typedef struct SCIP_ExprData  SCIP_EXPRDATA;     /**< expression data, e.g., coefficients */
 typedef struct SCIP_Expr      SCIP_EXPR;         /**< expression */

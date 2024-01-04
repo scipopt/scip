@@ -32,6 +32,7 @@
  */
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/pub_nlhdlr.h"
 #include "scip/nlhdlr.h"
@@ -40,6 +41,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_param.h"
 #include "scip/scip_message.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 
 /**@addtogroup PublicNlhdlrInterfaceMethods

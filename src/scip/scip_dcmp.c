@@ -50,6 +50,7 @@
 #include "scip/scip_var.h"
 #include "scip/scip_datastructures.h"
 #include "scip/scip_message.h"
+#include "scip/pub_message.h"
 
 
 #define LABEL_UNASSIGNED INT_MIN /* label constraints or variables as unassigned. Only for internal use */

@@ -52,6 +52,7 @@
 #include "scip/type_cons.h"
 #include "scip/type_branch.h"
 #include "scip/type_reopt.h"
+#include "scip/type_message.h"
 #include "scip/pub_cons.h"
 
 #ifndef NDEBUG

@@ -40,6 +40,8 @@
 
 #include <stdio.h>
 
+#include "scip/type_retcode.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

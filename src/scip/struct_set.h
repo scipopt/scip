@@ -62,6 +62,7 @@
 #include "scip/type_concsolver.h"
 #include "scip/type_benders.h"
 #include "scip/type_expr.h"
+#include "scip/type_message.h"
 #include "scip/debug.h"
 
 #ifdef __cplusplus

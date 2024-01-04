@@ -35,6 +35,7 @@
 #include "tpi/tpi.h"
 #include "blockmemshell/memory.h"
 #include "tinycthread/tinycthread.h"
+#include "scip/pub_message.h"
 
 /* macros for direct access */
 

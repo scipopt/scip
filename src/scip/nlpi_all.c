@@ -34,6 +34,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_numerics.h"
 #include "scip/scip_nlpi.h"
+#include "scip/pub_message.h"
 
 #include <string.h>
 
