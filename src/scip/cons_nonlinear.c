@@ -4199,6 +4199,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CALL( SCIPallocBufferArray(scip, &name, nchildren * (SCIP_MAXSTRLEN + 1) + 20) );
 
    /* prepare the names of the variable and the constraints */
+   /* coverity[secure_coding] */
    strcpy(name, "binreform");
    for( i = 0; i < nchildren; ++i )
    {
@@ -12814,6 +12815,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          else if( !SCIPisEQ(scip, auxvalue, estimateval) )
          {
             char gap[40];
+            /* coverity[secure_coding] */
             (void) sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
             strcat(SCIProwprepGetName(rowprep), gap);
          }
