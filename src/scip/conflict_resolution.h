@@ -110,6 +110,11 @@ SCIP_Longint SCIPconflictGetNResUnkTerm(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets the number of unresolvable bound changes */
+SCIP_Longint SCIPconflictGetNUnresolvable(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** create resolution constraints out of resolution sets and add them to the problem */
 SCIP_RETCODE SCIPconflictAddConflictCon(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
