@@ -23,18 +23,42 @@
 #ifndef MP_ERROR_H_
 #define MP_ERROR_H_
 
+#include <cstdlib>
+
 #include "mp/format.h"
 
 namespace mp {
 
 #ifndef MP_ASSERT
-# define MP_ASSERT(condition, message) assert((condition) && message)
+  /// Debug assert
+  #define MP_ASSERT(condition, message) \
+    assert((condition) && message)
 #endif
 
-#define MP_RAISE(msg) throw std::runtime_error(msg)
-#define MP_WARNING(msg) Print(msg)
-// A general error.
+/// Assert even for Release
+#define MP_ASSERT_ALWAYS(condition, message) \
+  do { if (!(condition)) MP_RAISE(message); } while(0)
+
+/// Use this to raise UnsupportedError
+#define MP_UNSUPPORTED(name) \
+  throw MakeUnsupportedError( name )
+
+/// Raise error
+#define MP_RAISE(msg) throw mp::Error(msg)
+
+/// Raise with exit code
+#define MP_RAISE_WITH_CODE(exit_code, msg) \
+  throw mp::Error(msg, exit_code)
+
+/// Raise infeasibility
+#define MP_INFEAS(msg) \
+  MP_RAISE_WITH_CODE(200, std::string("Model infeasible: ") + msg)
+
+/// Silence unused parameter warnings
+#define MP_UNUSED(x) (void)(x)
+/// A general error.
 class Error : public fmt::internal::RuntimeError {
+  int exit_code_ = EXIT_FAILURE;
  protected:
   Error() {}
 
@@ -48,22 +72,37 @@ class Error : public fmt::internal::RuntimeError {
   }
 
  public:
+  /// Costruct from message formatting arguments?
   FMT_VARIADIC_(char, , Error, init, fmt::CStringRef)
-  ~Error() throw() {}
+
+  /// Construct from message and optional exit code
+  Error(fmt::CStringRef msg, int c=-1) : exit_code_(c)
+  { SetMessage(msg.c_str()); }
+
+  /// The exit code
+  int exit_code() const { return exit_code_; }
 };
 
-// The operation is not supported by the object.
+/// The operation is not supported by the object.
 class UnsupportedError : public Error {
  public:
   FMT_VARIADIC_(char, , UnsupportedError, init, fmt::CStringRef)
 };
 
-// Makes UnsupportedError with prefix "unsupported: ".
+/// Makes UnsupportedError with prefix "unsupported: ".
+/// Use via macro MP_UNSUPPORTED
 inline UnsupportedError MakeUnsupportedError(
     fmt::CStringRef format_str, fmt::ArgList args) {
   return UnsupportedError("unsupported: {}", fmt::format(format_str, args));
 }
 FMT_VARIADIC(UnsupportedError, MakeUnsupportedError, fmt::CStringRef)
+
+/// An option error
+class OptionError : public Error {
+public:
+  explicit OptionError(fmt::CStringRef message) : Error(message) {}
+};
+
 }  // namespace mp
 
 #endif  // MP_ERROR_H_

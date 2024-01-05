@@ -996,6 +996,10 @@ public:
                }
                break;
 
+            case mp::suf::Kind::CON_BIT:
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown constraint bit suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
+               break;
+
             case mp::suf::Kind::VAR:
             {
                if( strncmp(name.data(), "initial", name.size()) == 0 )
@@ -1023,12 +1027,24 @@ public:
                }
                break;
 
+            case mp::suf::Kind::VAR_BIT:
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown variable bit suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
+               break;
+
             case mp::suf::Kind::OBJ:
                SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown objective suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
                break;
 
+            case mp::suf::Kind::OBJ_BIT:
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown objective bit suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
+               break;
+
             case mp::suf::Kind::PROBLEM:
                SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown problem suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
+               break;
+
+            case mp::suf::Kind::PROB_BIT:
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown problem bit suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
                break;
             }
          }
@@ -1801,7 +1817,7 @@ SCIP_RETCODE SCIPincludeReaderNl(
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyNl) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
 
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 4e2d45c4", "AMPL .nl file reader library (github.com/ampl/mp)") );
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 690e9e7", "AMPL .nl file reader library (github.com/ampl/mp)") );
 
    return SCIP_OKAY;
 }
