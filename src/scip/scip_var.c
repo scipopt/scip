@@ -1049,7 +1049,9 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          break;
       }
 
+      /* coverity[dead_error_line] */
       case SCIPPARSEPOLYNOMIAL_STATE_END:
+      /* coverity[dead_error_line] */
       case SCIPPARSEPOLYNOMIAL_STATE_ERROR:
       default:
          SCIPerrorMessage("unexpected state\n");
