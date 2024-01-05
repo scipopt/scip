@@ -2112,12 +2112,6 @@ SCIP_RETCODE tightenAuxVarBounds(
 
    *cutoff = FALSE;
 
-   /* do not tighten variable in problem stage (important for unittests)
-    * TODO put some kind of #ifdef UNITTEST around this
-    */
-   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) > SCIP_STAGE_SOLVING )
-      return SCIP_OKAY;
-
    var = SCIPgetExprAuxVarNonlinear(expr);
    if( var == NULL )
       return SCIP_OKAY;
