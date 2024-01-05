@@ -1647,7 +1647,7 @@ SCIP_RETCODE createSepaData(
           SCIPvarIsRelaxationOnly(bilinterms[i].y)) )
          continue;
 
-      /* coverity[forward_null] */
+      /* coverity[var_deref_model] */
       SCIP_CALL( addProductVars(scip, sepadata, bilinterms[i].x, bilinterms[i].y, varmap,
             bilinterms[i].nlockspos + bilinterms[i].nlocksneg) );
    }
@@ -1656,7 +1656,7 @@ SCIP_RETCODE createSepaData(
    {
       int oldnterms = sepadata->nbilinterms;
 
-      /* coverity[forward_null] */
+      /* coverity[var_deref_model] */
       SCIP_CALL( detectHiddenProducts(scip, sepadata, varmap) );
 
       /* update nbilinterms and bilinterms, as detectHiddenProducts might have found new terms */
@@ -2081,6 +2081,7 @@ SCIP_RETCODE addRltTerm(
    if( !SCIPisZero(scip, coefauxvar) )
    {
       assert(auxvar != NULL);
+      /* coverity[var_deref_model] */
       SCIP_CALL( SCIPaddVarToRow(scip, cut, auxvar, coefauxvar) );
    }
 
