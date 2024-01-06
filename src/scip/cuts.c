@@ -9019,16 +9019,14 @@ SCIP_RETCODE SCIPcalcStrongCG(
 
    *success = FALSE;
 
-   /* check whether a negative continuous slack variable in a non-integral row is present in the aggregation, since then
-    * no strongcg cut can be generated */
-   for( i = 0; i < aggrrow->nrows; ++i )
-   {
-      if( aggrrow->rowweights[i] * aggrrow->slacksign[i] < 0.0 && !scip->lp->rows[aggrrow->rowsinds[i]]->integral )
-         return SCIP_OKAY;
-   }
-
    /* determine value from which fractionalities are no longer reliable within tolerance */
    large = SCIPgetHugeValue(scip) * SCIPepsilon(scip);
+
+   /* terminate if an integral slack fractionality is unreliable or a negative continuous slack variable is present */
+   for( i = 0; i < aggrrow->nrows; ++i )
+      if( ( scip->lp->rows[aggrrow->rowsinds[i]]->integral && ABS(aggrrow->rowweights[i] * scale) > large )
+         || ( !scip->lp->rows[aggrrow->rowsinds[i]]->integral && aggrrow->rowweights[i] * aggrrow->slacksign[i] < 0.0 ) )
+         return SCIP_OKAY;
 
    /* allocate temporary memory */
    nvars = SCIPgetNVars(scip);
@@ -9043,6 +9041,8 @@ SCIP_RETCODE SCIPcalcStrongCG(
 
    if( *cutnnz > 0 )
    {
+      int firstcontvar;
+
       BMScopyMemoryArray(cutinds, aggrrow->inds, *cutnnz);
 
       for( i = 0; i < *cutnnz; ++i )
@@ -9083,8 +9083,10 @@ SCIP_RETCODE SCIPcalcStrongCG(
       if( freevariable )
          goto TERMINATE;
 
-      /* terminate if a coefficient fractionality is unreliable */
-      for( i = 0; i < *cutnnz; ++i )
+      firstcontvar = nvars - SCIPgetNContVars(scip);
+
+      /* terminate if an integral coefficient fractionality is unreliable */
+      for( i = *cutnnz - 1; i >= 0 && cutinds[i] < firstcontvar; --i )
       {
          SCIP_Real QUAD(coef);
 
