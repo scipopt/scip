@@ -280,7 +280,6 @@ struct SCIP_Conflict
    int                   nconflictrows;      /**< number of available resolution sets */
    int                   conflictrowssize;   /**< size of conflictrows array */
    SCIP_Real             weakeningsumperc;   /**< sum of percentages of variables weakened in resolution sets */
-   SCIP_Real             lengthsumperc;      /**< sum of percentages of nonzeros compared to initial conflict */
    SCIP_Bool             bdchgonlyconfqueue; /**< if true we add bound changes only in graph conflict queues */
    SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only in generalized resolution queues */
    SCIP_Bool             haslargecoef;       /**< if true we have a large coefficient in the conflict constraint */

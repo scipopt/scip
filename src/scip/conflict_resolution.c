@@ -522,18 +522,6 @@ SCIP_Real SCIPconflictGetWeakeningPercentage(
       return 100.0 * conflict->weakeningsumperc / conflict->nreductioncalls;
 }
 
-/** gets the percentage of length growth compared to the initial conflict */
-SCIP_Real SCIPconflictResGetLengthGrowthPerc(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-   if ( SCIPconflictGetNResConflictConss(conflict) == 0 )
-      return 0.0;
-   else
-   return 100.0 * conflict->lengthsumperc / SCIPconflictGetNResConflictConss(conflict);
-}
-
 /** gets number of calls that resolution conflict analysis stopped for an unknown reason */
 SCIP_Longint SCIPconflictGetNResUnkTerm(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -2575,8 +2563,6 @@ SCIP_RETCODE checkConflictDebugSol(
 
    SCIP_VAR** consvars;
    SCIP_CONS* cons;
-   SCIP_CONS* upgdcons;
-
    char consname[SCIP_MAXSTRLEN];
 
    SCIP_Real* vals;
@@ -2604,16 +2590,6 @@ SCIP_RETCODE checkConflictDebugSol(
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, consname, conflictrow->nnz, consvars, vals,
               lhs, SCIPsetInfinity(set), FALSE, set->conf_separesolution, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
               FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
-   /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
-   if (set->conf_upgrade)
-   {
-      SCIP_CALL( SCIPupgradeConsLinear(set->scip, cons, &upgdcons) );
-      if( upgdcons != NULL )
-      {
-         SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
-         cons = upgdcons;
-      }
-   }
 
    /* check if the constraint is valid for the debug solution before upgrade */
    SCIP_CALL( SCIPdebugCheckAnyConss(set->scip, &cons, 1) );
@@ -4599,7 +4575,6 @@ SCIP_RETCODE addClauseConflict(
    SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
    SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
    int*                  fixinds,            /**< dense array of indices of fixed variables */
-   int                   initialnnzs,        /**< number of non-zeros in the initial conflict */
    int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
    int*                  nconfvars           /**< pointer to store the number of variables in generated conflict constraints */
    )
@@ -4621,12 +4596,15 @@ SCIP_RETCODE addClauseConflict(
          conflict->nknownaborts++;
       return SCIP_OKAY;
    }
+
+   if(SCIPdebugSolIsEnabled(set->scip))
+      checkConflictDebugSol(conflict, blkmem, set, transprob->vars, stat, tree, conflict->conflictrow);
+
    SCIP_CALL(SCIPconflictAddConflictCon(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, &success));
 
    if (success)
    {
       (*nconss)++;
-      conflict->lengthsumperc += conflict->conflictrow->nnz / (SCIP_Real) initialnnzs;
       (*nconfvars) += conflict->conflictrow->nnz;
    }
    return SCIP_OKAY;
@@ -4647,7 +4625,6 @@ SCIP_RETCODE addConflictRows(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    int                   nconstoadd,         /**< number of conflict constraints to add */
-   int                   initialnnzs,        /**< number of non-zeros in the initial conflict */
    int*                  nconss,             /**< pointer to store the number of generated conflict constraints */
    int*                  nconfvars           /**< pointer to store the number of variables in generated conflict constraints */
    )
@@ -4665,12 +4642,15 @@ SCIP_RETCODE addConflictRows(
       {
 
          SCIP_Bool success;
+
+         if(SCIPdebugSolIsEnabled(set->scip))
+            checkConflictDebugSol(conflict, blkmem, set, transprob->vars, stat, tree, conflict->conflictrow);
+
          SCIP_CALL( SCIPconflictAddConflictCon(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
                lp, branchcand, eventqueue, cliquetable, conflictrowtoadd, &success) );
          if( success )
          {
             (*nconss)++;
-            conflict->lengthsumperc += conflictrowtoadd->nnz / (SCIP_Real) initialnnzs;
             (*nconfvars) += conflictrowtoadd->nnz;
          }
       }
@@ -4725,7 +4705,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_Bool usescutoffbound;
    int nvars;
    int i;
-   int initialnnzs;
 
    SCIP_VAR** vars;
    SCIP_VAR* vartoresolve;
@@ -4892,9 +4871,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    for( i = 0; i < nvars; ++i )
       fixinds[i] = 0;
 
-   /* needed for some statistics */
-   initialnnzs = conflictrow->nnz;
-
    /** main loop: All-FUIP RESOLUTION
     * --------------------------------
     * - we start with the initial conflict row and the first bound change to
@@ -4905,13 +4881,14 @@ SCIP_RETCODE conflictAnalyzeResolution(
     *   next bound change. We have to ignore all other bound changes for
     *   this variable (resolve with no-good)
     * - if the bound change is resolvable:
-    *   * get the reason row for the bound change
-    *   * apply CG/MIR/Coef.Tightening reduction to the reason
-    *   * take the linear combination of the conflict row and the reason row
-    *   * apply coefficient tightening to the resolved row (maybe also cMIR?)
+    *    - get the reason row for the bound change
+    *    - apply CG/MIR/Coef.Tightening reduction to the reason
+    *    - take the linear combination of the conflict row and the reason row
+    *    - apply coefficient tightening to the resolved row (maybe also cMIR?)
     * - if there is no other bound change in the queue from the same depth level
-    *         then we are at a UIP -> keep this constraint and either terminate
-    *         1-FUIP resolution or continue with the next bound change
+    *   then we are at a UIP
+    *    - keep this constraint and either terminate 1-FUIP resolution or continue
+    *      with the next bound change
     */
    while( TRUE )  /*lint !e716*/
    {
@@ -5194,8 +5171,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    confgraphAddRow(conflict, CONFLICT_ROW);
    endSubgraph();
 #endif
-      if(SCIPdebugSolIsEnabled(set->scip))
-         checkConflictDebugSol(conflict, blkmem, set, vars, stat, tree, conflictrow);
 
    SCIPsetDebugMsgPrint(set, "Total number of conflict rows found %d\n", conflict->nconflictrows);
    SCIPsetDebugMsgPrint(set, "Total number of FUIPS found %d\n", nfuips);
@@ -5209,11 +5184,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
       if (set->conf_addclauseonly)
       {
          if(bdchginfo != NULL)
-            SCIP_CALL(addClauseConflict(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, bdchginfo, fixbounds, fixinds, initialnnzs, nconss, nconfvars));
+            SCIP_CALL(addClauseConflict(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, bdchginfo, fixbounds, fixinds, nconss, nconfvars));
 
          nconstoadd = 0;
       }
-      SCIP_CALL(addConflictRows(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, nconstoadd, initialnnzs, nconss, nconfvars));
+      SCIP_CALL(addConflictRows(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, nconstoadd, nconss, nconfvars));
    }
 
    freeConflictResources(conflict, blkmem, set, cutcoefs, cutinds,fixbounds, fixinds );

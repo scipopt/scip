@@ -3004,8 +3004,8 @@ void SCIPprintConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0,
       SCIPconflictGetNDualproofsInfLocal(scip->conflict) + SCIPconflictGetNDualproofsBndLocal(scip->conflict));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Resolution CA      :       Time      Calls    Success  Conflicts  LargeCoef  LongConfs   WeakPer GrowthPer    Length     Useful    Useless      Fails Unresolvab \n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  resolution prop  : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT  "%10.1f" "%10.1f" "%10.1f" " %10" SCIP_LONGINT_FORMAT  " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Resolution CA      :       Time      Calls    Success  Conflicts  LargeCoef  LongConfs   WeakPer    Length     Useful    Useless      Fails Unresolvab \n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  resolution prop  : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.1f" "%10.1f" " %10" SCIP_LONGINT_FORMAT  " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPconflictGetResTime(scip->conflict),
       SCIPconflictGetNResCalls(scip->conflict),
       SCIPconflictGetNResSuccess(scip->conflict),
@@ -3013,7 +3013,6 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNResLargeCoefs(scip->conflict),
       SCIPconflictGetNResLongConflicts(scip->conflict),
       SCIPconflictGetWeakeningPercentage(scip->conflict),
-      SCIPconflictResGetLengthGrowthPerc(scip->conflict),
       SCIPconflictGetNResConflictConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNResConflictVars(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNResConflictConss(scip->conflict) : 0,
@@ -3023,14 +3022,13 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNUnresolvable(scip->conflict)
       );
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  graph prop       : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.1f" "%10.1f" "%10.1f" " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  graph prop       : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.1f" "%10.1f" " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPconflictGetPropTime(scip->conflict),
       SCIPconflictGetNPropCalls(scip->conflict),
       SCIPconflictGetNPropSuccess(scip->conflict),
       SCIPconflictGetNPropConflictConss(scip->conflict),
       (long long) 0,(long long) 0,
-      100.0, SCIPconflictGraphGetLengthGrowthPerc(scip->conflict),
-      SCIPconflictGetNPropConflictConss(scip->conflict) > 0
+      100.0, SCIPconflictGetNPropConflictConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNPropConflictLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNPropConflictConss(scip->conflict) : 0,
       scip->stat->nusefulpropconflicts,

@@ -383,7 +383,6 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->nknownaborts = 0;
    (*conflict)->nunresolvable = 0;
    (*conflict)->weakeningsumperc = 0.0;
-   (*conflict)->lengthsumperc = 0.0;
    (*conflict)->bdchgonlyresqueue = FALSE;
    (*conflict)->bdchgonlyconfqueue = FALSE;
    (*conflict)->haslargecoef = FALSE;
@@ -569,19 +568,6 @@ SCIP_Longint SCIPconflictGetNPropConflictConss(
 
    return conflict->npropconfconss;
 }
-
-/** gets the percentage of length growth compared to the initial conflict */
-SCIP_Real SCIPconflictGraphGetLengthGrowthPerc(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-   if ( SCIPconflictGetNPropConflictConss(conflict) == 0 )
-      return 0.0;
-   else
-   return 100.0 * conflict->lengthsumperc / SCIPconflictGetNPropConflictConss(conflict);
-}
-
 
 /** gets total number of literals in conflict constraints created in propagation conflict analysis */
 SCIP_Longint SCIPconflictGetNPropConflictLiterals(
