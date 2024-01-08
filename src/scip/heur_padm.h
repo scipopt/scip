@@ -24,11 +24,13 @@
 
 /**@file   heur_padm.h
  * @ingroup PRIMALHEURISTICS
- * @brief  PADM primal heuristic based on ideas published in the paper
- *         "A Decomposition Heuristic for Mixed-Integer Supply Chain Problems"
- *         by Martin Schmidt, Lars Schewe, and Dieter Weninger
+ * @brief  PADM primal heuristic
  * @author Dieter Weninger
  * @author Katrin Halbig
+ *
+ * Primal heuristic based on ideas published in the papers
+ * "A Decomposition Heuristic for Mixed-Integer Supply Chain Problems" by Martin Schmidt, Lars Schewe, and Dieter Weninger,
+ * and "Exploiting user-supplied Decompositions inside Heuristics" by Katrin Halbig, Adrian Göß and Dieter Weninger.
  *
  * The penalty alternating direction method (PADM) heuristic is a construction heuristic which additionally needs a
  * user decomposition with linking variables only.
