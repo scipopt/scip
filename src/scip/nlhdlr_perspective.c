@@ -258,7 +258,7 @@ SCIP_RETCODE addSCVarIndicator(
    /* move entries if needed */
    for( i = scvdata->nbnds; i > pos; --i )
    {
-      /* coverity[forward_null] */
+      /* coverity[var_deref_op] */
       scvdata->bvars[i] = scvdata->bvars[i-1];
       scvdata->vals0[i] = scvdata->vals0[i-1];
       scvdata->lbs1[i] = scvdata->lbs1[i-1];
@@ -419,7 +419,7 @@ SCIP_RETCODE varIsSemicontinuous(
    assert(vubvars != NULL || nvubs == 0);
    for( c = 0; c < nvubs; ++c )
    {
-      /* coverity[forward_null] */
+      /* coverity[var_deref_op] */
       if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY )  /*lint !e613*/
          continue;
 
