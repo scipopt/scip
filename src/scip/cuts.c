@@ -2909,7 +2909,6 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
    }
    aggrrow->rowsinds[i] = SCIProwGetLPPos(row);
    aggrrow->rowweights[i] = weight;
-   aggrrow->slacksign[i] = uselhs ? -1 : 1;
 
    if( sidetype == -1 )
    {
@@ -2941,6 +2940,8 @@ SCIP_RETCODE SCIPaggrRowAddRowSafely(
       userow = SCIProwExactGetRowRhs(rowexact);
    else
       userow = row;
+
+   aggrrow->slacksign[i] = uselhs ? -1 : 1;
 
    previousroundmode = SCIPintervalGetRoundingMode();
 

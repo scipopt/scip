@@ -924,6 +924,7 @@ SCIP_Real aggrRowGetMinActivitySafely(
       assert(SCIPvarGetProbindex(vars[v]) == v);
 
       val = aggrrow->vals[v];
+      delta = 0.0;
 
       if( val > 0.0 )
       {
@@ -956,7 +957,7 @@ SCIP_Real aggrRowGetMinActivitySafely(
       }
    }
 
-  TERMINATE:
+   TERMINATE:
    SCIPintervalSetRoundingMode(roundmode);
    /* check whether the minimal activity is infinite */
    if( SCIPsetIsInfinity(set, minact) )
