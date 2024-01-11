@@ -1584,9 +1584,11 @@ SCIP_RETCODE detectOrbitopalSymmetries(
             continue;
          w = perm[v];
 
+#ifndef NDEBUG
          curcomp1 = SCIPdisjointsetFind(conncomps, v);
          curcomp2 = SCIPdisjointsetFind(conncomps, w);
          assert( curcomp1 != curcomp2 );
+#endif
 
          /* add edge */
          SCIPdisjointsetUnion(conncomps, v, w, FALSE);
@@ -1599,6 +1601,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
 
          if ( curcolor1 != curcolor2 )
          {
+            /* coverity[negative_returns] */
             SCIPdisjointsetUnion(compcolors, colorrepresentative1, v, TRUE);
             SCIPdisjointsetUnion(compcolors, colorrepresentative1, w, TRUE);
          }

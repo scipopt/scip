@@ -1817,6 +1817,7 @@ SCIP_RETCODE shadowtreeUndoNodeDepthBranchIndices(
    assert( *nbranchvars == 0 );
 
    /* we start looking one level lower, because we consider the branching decisions each time */
+   /* coverity[dereference] */
    shadownode = shadownode->parent;
 
    /* now, walk from the leaf to the root. Each time look at all the children of the node considered,

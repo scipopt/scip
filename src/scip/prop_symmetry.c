@@ -4724,6 +4724,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
                continue;
 
             assert( varconflicts[varidx].orbitidx == i );
+            /* coverity[var_deref_op] */
             curcriterion = varconflicts[varidx].nconflictinorbit;
          }
 
@@ -4805,6 +4806,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
             continue;
 
          /* skip variables not affected by symmetry */
+         /* coverity[var_deref_op] */
          if ( varconflicts[i].orbitidx == -1 )
             continue;
 
