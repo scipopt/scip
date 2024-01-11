@@ -1741,6 +1741,7 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    else
       localvargraph = FALSE;
 
+   /* coverity[var_deref_op] */
    SCIPhashtableRemoveAll(vargraph->visitedconss);
 
    /* initialize distances to -1 */
