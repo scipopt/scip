@@ -344,6 +344,7 @@ SCIP_RETCODE addSCVarIndicator(
    /* move entries if needed */
    for( i = scvdata->nbnds; i > pos; --i )
    {
+      /* coverity[var_deref_op] */
       scvdata->bvars[i] = scvdata->bvars[i-1];
       scvdata->vals0[i] = scvdata->vals0[i-1];
       scvdata->lbs1[i] = scvdata->lbs1[i-1];
@@ -469,6 +470,7 @@ SCIP_RETCODE varIsSemicontinuous(
    assert(vubvars != NULL || nvubs == 0);
    for( c = 0; c < nvubs; ++c )
    {
+      /* coverity[var_deref_op] */
       if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY )  /*lint !e613*/
          continue;
 
@@ -1058,6 +1060,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       case ROUNDING_AGGRESSIVE:
          fixconstant = (*score <= (1 - heurdata->roundingfrac) * 100);
          break;
+      default:
+         assert(FALSE);
       }
 
       switch( heurdata->semicontscoremode )
@@ -1087,6 +1091,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
     * - indicator constraint: roundup == fix to constant
     * - varbound constraint: roundup == push to range
     */
+   /* coverity[uninit_use] */
    *roundup = isindicatorvar ? fixconstant : !fixconstant; /*lint !e644*/
 
    /* free memory */
