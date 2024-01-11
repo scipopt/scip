@@ -3760,7 +3760,7 @@ SCIP_RETCODE resolveClauses(
       assert(SCIPsetIsRelEQ(set, getSlackConflict(set, vars, conflictrow, currbdchginfo, fixbounds, fixinds), -1.0));
       conflictrow->slack = -1.0;
       /* get reason clause by resolving propagation */
-      SCIP_CALL( getReasonClause(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), 0, &successclause) );
+      SCIP_CALL( getReasonClause(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), 0, &successclause) );
       if (successclause)
       {
          SCIPdebug(printReasonRow(reasonrow, set, vars, CLAUSAL_REASON_ROWTYPE));
@@ -4275,7 +4275,7 @@ SCIP_RETCODE getReasonRow(
          /* in case of orbitope-, orbisack-, and-constaints we construct a linearized clause as reason */
          if( reasonlprow == NULL || set->conf_clausegenres)
          {
-               SCIP_CALL( getReasonClause(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
+               SCIP_CALL( getReasonClause(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), validdepth, success) );
                if (*success)
                {
                   assert(SCIPsetIsZero(set, getSlackReason(set, vars, reasonrow, currbdchginfo, fixbounds, fixinds)));
@@ -4300,7 +4300,7 @@ SCIP_RETCODE getReasonRow(
          else if(SCIPsetIsInfinity(set, -reasonrow->lhs) || SCIPsetIsInfinity(set, reasonrow->lhs))
          {
             /* to be able to continue we construct a linearized clause as reason */
-            SCIP_CALL( getReasonClause(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
+            SCIP_CALL( getReasonClause(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), validdepth, success) );
             if (*success)
             {
                assert(SCIPsetIsZero(set, getSlackReason(set, vars, reasonrow, currbdchginfo, fixbounds, fixinds)));
@@ -4333,7 +4333,7 @@ SCIP_RETCODE getReasonRow(
             {
 
                assert( (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "knapsack") == 0) || (strcmp(SCIPconshdlrGetName(reasoncon->conshdlr), "linear") == 0) );
-               SCIP_CALL( getReasonClause(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
+               SCIP_CALL( getReasonClause(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), validdepth, success) );
                if (*success)
                {
                   assert(SCIPsetIsZero(set, getSlackReason(set, vars, reasonrow, currbdchginfo, fixbounds, fixinds)));
@@ -4345,7 +4345,7 @@ SCIP_RETCODE getReasonRow(
    }
    else if (bdchginfoIsResolvable(currbdchginfo) && SCIPbdchginfoGetChgtype(currbdchginfo) == SCIP_BOUNDCHGTYPE_PROPINFER)
    {
-      SCIP_CALL( getReasonClause(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetRelaxedBound(currbdchginfo), validdepth, success) );
+      SCIP_CALL( getReasonClause(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), validdepth, success) );
       if (*success)
       {
          assert(SCIPsetIsZero(set, getSlackReason(set, vars, reasonrow, currbdchginfo, fixbounds, fixinds)));
