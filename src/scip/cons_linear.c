@@ -4275,7 +4275,6 @@ SCIP_RETCODE normalizeCons(
    int nposcoeffs;
    int nnegcoeffs;
    int i;
-   int v;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -4316,43 +4315,24 @@ SCIP_RETCODE normalizeCons(
    if( SCIPisZero(scip, minabsval/maxabsval) )
       return SCIP_OKAY;
 
-   /* check if all coefficients are in absolute value equal, and not 1.0 */
+   /* check if the maximum absolute coefficient is not near 1.0 */
    if( !SCIPisEQ(scip, maxabsval, 1.0) )
    {
-      SCIP_Bool abscoefsequ;
+      SCIP_Real scalar;
 
-      abscoefsequ = TRUE;
+      /* calculate scale of the average minimum and maximum absolute coefficient to 1.0 */
+      scalar = 2.0 / (minabsval + maxabsval);
 
-      for( v = nvars - 1; v >= 0; --v )
-      {
-         if( !SCIPisEQ(scip, REALABS(vals[v]), maxabsval) )
-         {
-            abscoefsequ = FALSE;
-            break;
-         }
-      }
-
-      /* all coefficients are in absolute value equal, so change them to (-)1.0 */
-      if( abscoefsequ )
+      /* check if all scaled absolute coefficients are near 1.0 */
+      if( SCIPisEQ(scip, scalar * maxabsval, 1.0) )
       {
          SCIPdebugMsg(scip, "divide linear constraint with %g, because all coefficients are in absolute value the same\n", maxabsval);
          SCIPdebugPrintCons(scip, cons, NULL);
-         SCIP_CALL( scaleCons(scip, cons, 1/maxabsval) );
+         SCIP_CALL( scaleCons(scip, cons, scalar) );
 
-         if( consdata->validmaxabsval )
-         {
-            if( !SCIPisEQ(scip, consdata->maxabsval, 1.0) )
-               consdata->maxabsval = 1.0;
-            if( !SCIPisEQ(scip, consdata->minabsval, 1.0) )
-               consdata->minabsval = 1.0;
-
-            maxabsval = 1.0;
-         }
-         else
-         {
-            /* get maximal absolute coefficient */
-            maxabsval = consdataGetMaxAbsval(consdata);
-         }
+         /* get maximal and minimal absolute coefficient */
+         maxabsval = consdataGetMaxAbsval(consdata);
+         minabsval = consdataGetMinAbsval(consdata);
 
          /* get new consdata information, because scaleCons() might have deleted variables */
          vals = consdata->vals;
