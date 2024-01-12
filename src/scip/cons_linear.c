@@ -4307,7 +4307,7 @@ SCIP_RETCODE normalizeCons(
 
    assert(vals != NULL);
 
-   /* get maximal and minimal absolute coefficient */
+   /* get maximum and minimum absolute coefficient */
    maxabsval = consdataGetMaxAbsval(consdata);
    minabsval = consdataGetMinAbsval(consdata);
 
@@ -4360,11 +4360,14 @@ SCIP_RETCODE normalizeCons(
    if( !consdata->hasnonbinvalid )
       consdataCheckNonbinvar(consdata);
 
+   /* get maximum absolute coefficient */
+   maxabsval = consdataGetMaxAbsval(consdata);
+
    /* if all variables are of integral type we will allow a greater multiplier */
    if( !consdata->hascontvar )
-      maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER / MAX(consdataGetMaxAbsval(consdata), 1.0))); /*lint !e835*/
+      maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEFINTEGER / MAX(maxabsval, 1.0))); /*lint !e835*/
    else
-      maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEF / MAX(consdataGetMaxAbsval(consdata), 1.0))); /*lint !e835*/
+      maxmult = MIN(maxmult, (SCIP_Longint) (MAXSCALEDCOEF / MAX(maxabsval, 1.0))); /*lint !e835*/
 
    /*
     * multiplication with +1 or -1
