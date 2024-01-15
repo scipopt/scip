@@ -5132,12 +5132,12 @@ SCIP_RETCODE SCIPsolveCIP(
          /* focus selected node */
          SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt,
                lp, branchcand, conflict, conflictstore, eventfilter, eventqueue, cliquetable, &cutoff, FALSE, FALSE) );
-         if( SCIPisCertificateActive(set->scip) )
+         if( SCIPisExactSolve(set->scip) && !SCIPisLPConstructed(set->scip) )
          {
-            if( !SCIPisLPConstructed(set->scip))
+            SCIP_CALL( SCIPconstructLP(set->scip, &cutoff) );
+            assert(!cutoff);
+            if ( SCIPisCertificateActive(set->scip) )
             {
-               SCIP_CALL( SCIPconstructLP(set->scip, &cutoff) );
-               assert(!cutoff);
                SCIP_CALL( SCIPcertificateInitTransFile(set->scip) );
             }
          }

@@ -3579,12 +3579,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    consdata = SCIPconsGetData(cons);
    row = SCIPgetRowexExactLinear(scip, cons);
 
-   if (row == NULL)
-   {
-      createRows(scip, cons);
-      row = SCIPgetRowexExactLinear(scip, cons);
-      assert(row != NULL);
-   }
+   assert(row != NULL);
 
    image = SCIPhashmapGetImageLong(certificate->rowdatahash, row);
    /* add row to hashmap */
