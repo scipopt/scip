@@ -565,13 +565,13 @@ SCIP_RETCODE SCIPstartExactDive(
  *
  *  @note In parallel to exact LP diving, this method also starts the regular LP diving mode by calling SCIPstartDive().
  */
-SCIP_RETCODE SCIPisExactDivePossible(
+SCIP_Bool SCIPisExactDivePossible(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPisExactDivePossible", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPisExactDivePossible", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
    assert(SCIPnodeGetType(SCIPgetCurrentNode(scip)) == SCIP_NODETYPE_FOCUSNODE);
 
    if( SCIPlpExactDiving(scip->lpexact) )
@@ -583,7 +583,7 @@ SCIP_RETCODE SCIPisExactDivePossible(
    if( SCIPtreeProbing(scip->tree) )
       return FALSE;
 
-   if( SCIPlpIsSolved(scip->lp) )
+   if( !SCIPlpIsSolved(scip->lp) )
       return FALSE;
 
    return TRUE;

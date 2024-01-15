@@ -523,7 +523,6 @@
 
 /* certificate output */
 #define SCIP_DEFAULT_CERTIFICATE_FILENAME   "-" /**< name of the certificate output file, or "-" if no output should be created */
-#define SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE 1e+3 /**< limit for uncompressed certificate file size in MB */
 
 /* Reading */
 
@@ -2775,11 +2774,6 @@ SCIP_RETCODE SCIPsetCreate(
          "certificate/filename",
          "name of the CERTIFICATE Tool output file, or - if no CERTIFICATE Tool output should be created",
          &(*set)->certificate_filename, FALSE, SCIP_DEFAULT_CERTIFICATE_FILENAME,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "certificate/maxfilesize",
-         "limit for certificate file size in KB",
-         &(*set)->certificate_maxfilesize, FALSE, SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
 
    /* Reading parameters */

@@ -632,7 +632,6 @@ struct SCIP_Set
 
    /* CERTIFICATE tool settings */
    char*                 certificate_filename; /**< name of the CERTIFICATE Tool output file, or - if no output should be created */
-   SCIP_Real             certificate_maxfilesize; /**< limit for uncompressed certificate file size in MB */
 
    /* Reading */
    SCIP_Bool             read_initialconss;  /**< should model constraints be marked as initial? */

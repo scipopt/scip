@@ -5132,7 +5132,7 @@ SCIP_RETCODE SCIPsolveCIP(
          /* focus selected node */
          SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt,
                lp, branchcand, conflict, conflictstore, eventfilter, eventqueue, cliquetable, &cutoff, FALSE, FALSE) );
-         if( SCIPisCertificateActive(set->scip) )
+         if( set->exact_enabled )
          {
             if( !SCIPisLPConstructed(set->scip))
             {

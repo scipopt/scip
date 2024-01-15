@@ -418,7 +418,7 @@ SCIP_RETCODE SCIPstartExactDive(
  *  @note In parallel to exact LP diving, this method also starts the regular LP diving mode by calling SCIPstartDive().
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPisExactDivePossible(
+SCIP_Bool SCIPisExactDivePossible(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
