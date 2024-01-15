@@ -12842,7 +12842,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   SCIPsetIsLT(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
                {
                   SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
-                  if( !(lperror) && (fastmip > 0) && simplex )
+                  if( !(*lperror) && (fastmip > 0) && simplex )
                   {
                      fastmip = 0;
                      SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, -1, -1,
