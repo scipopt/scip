@@ -1163,6 +1163,7 @@ SCIP_RETCODE calculateShift(
        */
       for( v = 0; v < linking->nblocks - *nviolatedblocksrhs; v++ )
       {
+         /* coverity[uninit_use] */
          part = linking->currentrhs[nonviolatedblocksrhs[v]] - residual/(linking->nblocks - *nviolatedblocksrhs - v);
          part = MIN(MAX(part, linking->minactivity[nonviolatedblocksrhs[v]]), linking->maxactivity[nonviolatedblocksrhs[v]]);
          shift_tmp = part - linking->currentrhs[nonviolatedblocksrhs[v]];
@@ -1193,6 +1194,7 @@ SCIP_RETCODE calculateShift(
        */
       for( v = 0; v < linking->nblocks - *nviolatedblockslhs; v++ )
       {
+         /* coverity[uninit_use] */
          part = linking->currentlhs[nonviolatedblockslhs[v]] - residual/(linking->nblocks - *nviolatedblockslhs - v);
          part = MIN(MAX(part, linking->minactivity[nonviolatedblockslhs[v]]), linking->maxactivity[nonviolatedblockslhs[v]]);
          shift_tmp = part - linking->currentlhs[nonviolatedblockslhs[v]];
