@@ -4108,11 +4108,11 @@ SCIP_RETCODE printLinearCons(
    SCIP_Bool             mayhavefloats       /**< may there be continuous variables in the constraint? */
    )
 {
-   SCIP_VAR** activevars;                    /* active problem variables of a constraint */
-   SCIP_Real* activevals;                    /* coefficients in the active representation */
+   SCIP_VAR** activevars = NULL;              /* active problem variables of a constraint */
+   SCIP_Real* activevals = NULL;              /* coefficients in the active representation */
 
-   SCIP_Real activeconstant;                 /* offset (e.g., due to fixings) in the active representation */
-   int nactivevars;                          /* number of active problem variables */
+   SCIP_Real activeconstant = 0.0;            /* offset (e.g., due to fixings) in the active representation */
+   int nactivevars = 0;                      /* number of active problem variables */
    int v;                                    /* variable counter */
 
    char buffer[FZN_BUFFERLEN];
@@ -4127,35 +4127,30 @@ SCIP_RETCODE printLinearCons(
       return SCIP_OKAY;
 
    /* duplicate variable and value array */
-   nactivevars = nvars;
-   hasfloats = FALSE;
-   activevars = NULL;
-   activeconstant = 0.0;
-
-   if( vars != NULL )
+   if( nvars > 0 )
    {
+      nactivevars = nvars;
+
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
-   }
 
-   if( vals != NULL )
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
-   else
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
+      if( vals != NULL )
+      {
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
 
-      for( v = 0; v < nactivevars; ++v )
-         activevals[v] = 1.0;
-   }
+         for( v = 0; v < nactivevars; ++v )
+            activevals[v] = 1.0;
+      }
 
-   /* retransform given variables to active variables */
-   if( nactivevars > 0 )
-   {
-      assert( activevars != NULL );
-      assert( activevals != NULL );
+      /* retransform given variables to active variables */
       SCIP_CALL( getActiveVariables(scip, &activevars, &activevals, &nactivevars, &activeconstant, transformed) );
    }
 
    /* If there may be continuous variables or coefficients in the constraint, scan for them */
+   hasfloats = FALSE;
    if( mayhavefloats )
    {
       /* fractional sides trigger a constraint to be of float type */
@@ -4229,9 +4224,8 @@ SCIP_RETCODE printLinearCons(
    }
 
    /* free buffer arrays */
-   if( activevars != NULL )
-      SCIPfreeBufferArray(scip, &activevars);
-   SCIPfreeBufferArray(scip, &activevals);
+   SCIPfreeBufferArrayNull(scip, &activevars);
+   SCIPfreeBufferArrayNull(scip, &activevals);
 
    return SCIP_OKAY;
 }

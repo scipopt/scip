@@ -597,7 +597,7 @@ SCIP_RETCODE generateCutSolSOC(
    SCIProwprepAddSide(*rowprep, cutrhs);
 
    /* set name */
-   (void) SCIPsnprintf(SCIProwprepGetName(*rowprep), SCIP_MAXSTRLEN, "soc%d_%p_%d", nterms, (void*) expr, SCIPgetNLPs(scip));
+   (void) SCIPsnprintf(SCIProwprepGetName(*rowprep), SCIP_MAXSTRLEN, "soc%d_%p_%" SCIP_LONGINT_FORMAT, nterms, (void*) expr, SCIPgetNLPs(scip));
 
    return SCIP_OKAY;
 }
@@ -753,7 +753,7 @@ SCIP_RETCODE generateCutSolDisagg(
    }
 
    /* set name */
-   (void) SCIPsnprintf(SCIProwprepGetName(*rowprep), SCIP_MAXSTRLEN, "soc_%p_%d_%d", (void*) expr, disaggidx, SCIPgetNLPs(scip));
+   (void) SCIPsnprintf(SCIProwprepGetName(*rowprep), SCIP_MAXSTRLEN, "soc_%p_%d_%" SCIP_LONGINT_FORMAT, (void*) expr, disaggidx, SCIPgetNLPs(scip));
 
    return SCIP_OKAY;
 }
