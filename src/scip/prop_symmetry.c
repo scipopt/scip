@@ -234,6 +234,7 @@ struct SCIP_PropData
    int                   nopnodetypes;       /**< current number of operator node types used for symmetry detection */
    SCIP_Real*            permvardomaincenter; /**< center of variable domains (needed for signed permutations) */
    int                   symtype;             /**< type of symmetries to be computed */
+   SCIP_Bool*            isproperperm;        /**< stores for every symmetry whether it is a proper permutation */
 
    /* components of symmetry group */
    int                   ncomponents;        /**< number of components of symmetry group */
@@ -857,6 +858,7 @@ SCIP_Bool checkSymmetryDataFree(
    assert( propdata->nmovedvars == -1 );
    assert( propdata->binvaraffected == FALSE );
    assert( propdata->isnonlinvar == NULL );
+   assert( propdata->isproperperm == NULL );
 
    assert( propdata->componenthassignedperm == NULL );
    assert( propdata->componentblocked == NULL );
@@ -1044,6 +1046,7 @@ SCIP_RETCODE freeSymmetryData(
       }
 
       SCIPfreeBlockMemoryArrayNull(scip, &propdata->isnonlinvar, propdata->npermvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &propdata->isproperperm, propdata->nperms);
 
       propdata->npermvars = 0;
       propdata->nbinpermvars = 0;
@@ -1123,6 +1126,7 @@ SCIP_RETCODE setSymmetryData(
    int*                  npermvars,          /**< pointer to store number of permvars */
    int*                  nbinpermvars,       /**< pointer to store number of binary permvars */
    SCIP_Real**           permvardomaincenter, /**< pointer to store center points of variable domains */
+   SCIP_Bool**           isproperperm,       /**< pointer to store whether symmetries are proper permutations */
    int**                 perms,              /**< permutations matrix (nperms x nvars) */
    int                   nperms,             /**< number of permutations */
    int*                  nmovedvars,         /**< pointer to store number of vars affected by symmetry (if usecompression) or NULL */
@@ -1143,6 +1147,7 @@ SCIP_RETCODE setSymmetryData(
    assert( permvars != NULL );
    assert( npermvars != NULL );
    assert( nbinpermvars != NULL );
+   assert( isproperperm != NULL );
    assert( perms != NULL );
    assert( nperms > 0 );
    assert( binvaraffected != NULL );
@@ -1269,6 +1274,24 @@ SCIP_RETCODE setSymmetryData(
       lb = SCIPvarGetLbGlobal((*permvars)[i]);
 
       (*permvardomaincenter)[i] = 0.5 * (ub + lb);
+   }
+
+   /* store whether symmetries are proper permutations */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, isproperperm, nperms) );
+   for (p = 0; p < nperms; ++p)
+   {
+      (*isproperperm)[p] = TRUE;
+      if ( symtype == SYM_SYMTYPE_SIGNPERM )
+      {
+         for (i = 0; i < *npermvars; ++i)
+         {
+            if ( perms[p][i] >= *npermvars )
+            {
+               (*isproperperm)[p] = FALSE;
+               break;
+            }
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -1624,6 +1647,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int*                  npermvars,          /**< pointer to store number of permvars */
    int*                  nbinpermvars,       /**< pointer to store number of binary permvars */
    SCIP_Real**           permvardomaincenter, /**< pointer to store center points of variable domains */
+   SCIP_Bool**           isproperperm,       /**< pointer to store whether symmetries are proper permutations */
    int***                perms,              /**< pointer to store permutation matrix (nperms x nvars) */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations
@@ -1751,7 +1775,7 @@ SCIP_RETCODE computeSymmetryGroup(
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, SCIPgetVars(scip), nvars) ); /*lint !e666*/
 
       SCIP_CALL( setSymmetryData(scip, symtype, vars, nvars, SCIPgetNBinVars(scip), permvars, npermvars, nbinpermvars,
-            permvardomaincenter, *perms, *nperms, nmovedvars, binvaraffected,
+            permvardomaincenter, isproperperm, *perms, *nperms, nmovedvars, binvaraffected,
             compresssymmetries, compressthreshold, compressed) );
    }
 
@@ -2175,7 +2199,7 @@ SCIP_RETCODE determineSymmetry(
          propdata->compresssymmetries, propdata->compressthreshold,
          maxgenerators, symspecrequirefixed, propdata->checksymmetries, &propdata->permvars,
          &propdata->npermvars, &propdata->nbinpermvars, &propdata->permvardomaincenter,
-         &propdata->perms, &propdata->nperms, &propdata->nmaxperms,
+         &propdata->isproperperm, &propdata->perms, &propdata->nperms, &propdata->nmaxperms,
          &propdata->nmovedvars, &propdata->binvaraffected, &propdata->compressed,
          &propdata->log10groupsize, &symcodetime, &successful) );
 
