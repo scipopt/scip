@@ -946,8 +946,6 @@ SCIP_RETCODE freeSymmetryData(
    /* free data of added orbitope/orbisack/symresack constraints */
    if ( propdata->genorbconss != NULL )
    {
-      assert( propdata->ngenorbconss > 0 );
-
       /* release constraints */
       while ( propdata->ngenorbconss > 0 )
       {
