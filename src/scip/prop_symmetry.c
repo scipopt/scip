@@ -5891,6 +5891,7 @@ SCIP_RETCODE handleOrbitope(
    int                   ncols,              /**< number of columns of matrix */
    char*                 partialname,        /**< partial name to be extended by constraints */
    SCIP_Bool             issignedorbitope,   /**< whether the orbitope is signed */
+   SCIP_Bool             handlestatically,   /**< whether the orbitope shall be handled statically */
    SCIP_Bool*            success             /**< pointer to store whether orbitope could be added successfully */
    )
 {
@@ -5903,7 +5904,7 @@ SCIP_RETCODE handleOrbitope(
 
    *success = FALSE;
 
-   if ( issignedorbitope )
+   if ( handlestatically )
    {
       char name[SCIP_MAXSTRLEN];
       SCIP_VAR** orbitopevarmatrix;
@@ -5951,16 +5952,19 @@ SCIP_RETCODE handleOrbitope(
          SCIP_CALL( SCIPaddCons(scip, cons) );
       }
 
-      /* the last variable in the first row is in the upper half of its domain */
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_flip", partialname);
-      consvars[0] = orbitopevarmatrix[ncols - 1];
-      consvals[0] = 1.0;
+      if ( issignedorbitope )
+      {
+         /* the last variable in the first row is in the upper half of its domain */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_flip", partialname);
+         consvars[0] = orbitopevarmatrix[ncols - 1];
+         consvals[0] = 1.0;
 
-      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 1, consvars, consvals,
-            propdata->permvardomaincenter[varidxmatrix[0][ncols - 1]], SCIPinfinity(scip),
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      propdata->genlinconss[propdata->ngenlinconss++] = cons;
-      SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 1, consvars, consvals,
+               propdata->permvardomaincenter[varidxmatrix[0][ncols - 1]], SCIPinfinity(scip),
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         propdata->genlinconss[propdata->ngenlinconss++] = cons;
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+      }
 
       SCIPfreeBufferArray(scip, &consvals);
       SCIPfreeBufferArray(scip, &consvars);
@@ -6122,7 +6126,8 @@ SCIP_RETCODE handleDoublelLexMatrix(
          for (j = 0, jj = colsbegin[p]; jj < colsbegin[p + 1]; ++j, ++jj)
             orbitopematrix[i][j] = varidxmatrix[i][jj];
       }
-      SCIP_CALL( handleOrbitope(scip, propdata, id, orbitopematrix, nrows, j, partialname, issignedorbitope, success) );
+      SCIP_CALL( handleOrbitope(scip, propdata, id, orbitopematrix, nrows, j, partialname,
+            issignedorbitope, TRUE, success) );
    }
 
    /* add orbitopes corresponding to row blocks of doublelexmatrix */
@@ -6164,7 +6169,8 @@ SCIP_RETCODE handleDoublelLexMatrix(
          for (j = 0; j < ncols; ++j)
             orbitopematrix[j][i] = varidxmatrix[ii][j];
       }
-      SCIP_CALL( handleOrbitope(scip, propdata, id, orbitopematrix, ncols, i, partialname, issignedorbitope, success) );
+      SCIP_CALL( handleOrbitope(scip, propdata, id, orbitopematrix, ncols, i, partialname,
+            issignedorbitope, TRUE, success) );
    }
 
    SCIPfreeBufferArray(scip, &consvals);
@@ -6260,6 +6266,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
       if ( isorbitope )
       {
          SCIP_Bool issignedorbitope = FALSE;
+         SCIP_Bool handlestatically;
          char partialname[SCIP_MAXSTRLEN];
 
          /* signed permutations can only handle the orbitope if all variables per row have the same domain center */
@@ -6299,8 +6306,9 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
          }
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d", cidx);
 
+         handlestatically = issignedorbitope;
          SCIP_CALL( handleOrbitope(scip, propdata, cidx, lexmatrix, nrows, ncols, partialname,
-               issignedorbitope, &success) );
+               issignedorbitope, handlestatically, &success) );
       }
       else
       {
