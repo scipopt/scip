@@ -138,6 +138,7 @@ Interface changes
     `option scip_options 'limits/time 10 display/verblevel 1';`.
   String values should not be quoted and spaces in string values are not supported.
 - sassy can be used now as preprocessor for nauty/traces
+- The solution status codes written to AMPL solution files now match those from https://mp.ampl.com/details.html#_CPPv4N2mp3sol6StatusE.
 
 ### Changed parameters
 

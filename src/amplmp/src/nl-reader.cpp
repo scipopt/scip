@@ -172,6 +172,7 @@ void mp::internal::TextReader<Locale>::ReadHeader(NLHeader &header) {
   // Read the format (text or binary).
   switch (ReadChar()) {
   case 'g':
+    header.format = NLHeader::TEXT;
     break;
   case 'b':
     header.format = NLHeader::BINARY;
@@ -186,7 +187,11 @@ void mp::internal::TextReader<Locale>::ReadHeader(NLHeader &header) {
   if (header.num_ampl_options > MAX_AMPL_OPTIONS)
     ReportError("too many options");
   for (int i = 0; i < header.num_ampl_options; ++i) {
-    if (!ReadOptionalInt(header.ampl_options[i]))
+    double tmp;
+    if (!ReadOptionalDouble(tmp))
+      break;
+    header.ampl_options[i] = (long)tmp;
+    if (header.ampl_options[i] != tmp)
       break;
   }
   if (header.ampl_options[USE_VBTOL_OPTION] == READ_VBTOL)
@@ -235,7 +240,7 @@ void mp::internal::TextReader<Locale>::ReadHeader(NLHeader &header) {
   if (ReadOptionalUInt(arith_kind)) {
     if (arith_kind > arith::LAST)
       ReportError("unknown floating-point arithmetic kind");
-    header.arith_kind = static_cast<arith::Kind>(arith_kind);
+    header.arith_kind = arith_kind;
     ReadOptionalUInt(header.flags);
   }
   ReadTillEndOfLine();
@@ -282,7 +287,7 @@ void mp::internal::BinaryReaderBase::ReportError(
 
 template <typename File>
 void mp::internal::NLFileReader<File>::Open(fmt::CStringRef filename) {
-  file_ = File(filename, fmt::File::RDONLY);
+  file_ = File(filename, fmt::File::RDONLY | fmt::File::BINARY);
   size_ = ConvertFileToMmapSize(file_.size(), filename);
   // Round size up to a multiple of page_size. The remainded of the last
   // partial page is zero-filled both on POSIX and Windows so the resulting
@@ -302,5 +307,77 @@ void mp::internal::NLFileReader<File>::Read(
   array[size_] = 0;
 }
 
+
+namespace internal {
+
+class NameHandler {
+ private:
+  std::vector<const char *> &names_;
+  fmt::StringRef name_;
+
+ public:
+  explicit NameHandler(std::vector<const char *> &names)
+    : names_(names), name_("") {}
+
+  void OnName(fmt::StringRef name) {
+    name_ = name;
+    names_.push_back(name.data());
+  }
+
+  fmt::StringRef name() const { return name_; }
+};
+
+}  // namespace internal
+
+
+mp::NameProvider::NameProvider(
+    fmt::CStringRef filename, fmt::CStringRef gen_name, std::size_t num_items)
+  : gen_name_(gen_name.c_str()) {
+  ReadNames(filename, num_items);
+}
+
+mp::NameProvider::NameProvider(fmt::CStringRef gen_name)
+  : gen_name_(gen_name.c_str()) { }
+
+void mp::NameProvider::ReadNames(
+    fmt::CStringRef filename, std::size_t num_items) {
+  ::internal::NameHandler handler(names_);
+  names_.reserve(num_items + 1);
+  try {
+    reader_.Read(filename, handler);
+  } catch (const fmt::SystemError &) {
+    return; // System error, ignore the file and use generated names.
+  }
+  fmt::StringRef last_name = handler.name();
+  names_.push_back(last_name.data() + last_name.size() + 1);
+}
+
+fmt::StringRef mp::NameProvider::name(std::size_t index) {
+  if (index + 1 < names_.size()) {
+    const char *name = names_[index];
+    const auto* pos1past = names_[index + 1] - 1;
+    assert( ('\n' == *pos1past) || ('\r' == *pos1past));
+    if ('\r' == *(pos1past-1))            // Windows
+      --pos1past;
+    return fmt::StringRef(name, pos1past - name);
+  }
+  writer_.clear();
+  writer_ << gen_name_ << '[' << (index + 1) << ']';
+  return fmt::StringRef(writer_.c_str(), writer_.size());
+}
+
+size_t mp::NameProvider::number_read() const {
+  return (names_.size() ? names_.size()-1 : 0);
+}
+
+std::vector<std::string> mp::NameProvider::get_names(size_t n) {
+  std::vector<std::string> result;
+  result.reserve(n);
+  for (size_t i=0; i<n; ++i)
+    result.push_back(name(i));
+  return result;
+}
+
+// Instantiate
 template class mp::internal::TextReader<>;
 template class mp::internal::NLFileReader<>;
