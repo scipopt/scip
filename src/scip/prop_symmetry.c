@@ -6904,6 +6904,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    propdata->nsymresacks = 0;
    propdata->norbitopes = 0;
    propdata->isnonlinvar = NULL;
+   propdata->isproperperm = NULL;
 
    propdata->nmovedpermvars = -1;
    propdata->nmovedbinpermvars = 0;
