@@ -51,6 +51,7 @@
               pkgs.blas
               pkgs.bison
               pkgs.flex
+              pkgs.libamplsolver
             ];
 
           in
@@ -83,25 +84,25 @@
                 name = "scip";
                 src = scip-src;
                 cmakeFlags = [
-                  "-DAMPL=on"
-                  "-DAUTOBUILD=off" # by no means in nix can use internet and scan outer host system
-                  "-DCMAKE_BUILD_TYPE=Release"
-                  "-DCMAKE_CXX_COMPILER_ID=GNU"
-                  "-DCOVERAGE=off"
-                  "-DDEBUGSOL=on"
-                  "-DGMP=on"
-                  "-DIPOPT=on" # really it has no NLP parts, which all behind auth/name/pay-walls even to download as of now
-                  "-DLPS=spx"
-                  "-DLPSCHECK=off"
-                  "-DOPT=opt"
-                  "-DPAPILO=on"
-                  "-DREADLINE=on"
-                  "-DSTATIC_GMP=on"
-                  "-DTBB_DIR=${tbb-all-cmake}"
-                  "-DTHREADSAFE=off"
-                  "-DWORHP=off"
-                  "-DZIMPL_DIR=${zimpl}"
-                  "-DZLIB=on"
+                  "-D AMPL=on"
+                  "-D AUTOBUILD=off" # by no means in nix can use internet and scan outer host system
+                  "-D CMAKE_BUILD_TYPE=Release"
+                  "-D CMAKE_CXX_COMPILER_ID=GNU"
+                  "-D COVERAGE=off"
+                  "-D DEBUGSOL=on"
+                  "-D GMP=on"
+                  "-D IPOPT=on" # really it has no NLP parts, which all behind auth/name/pay-walls even to download as of now
+                  "-D LPS=spx"
+                  "-D LPSCHECK=off"
+                  "-D OPT=opt"
+                  "-D PAPILO=on"
+                  "-D READLINE=on"
+                  "-D STATIC_GMP=on"
+                  "-D TBB_DIR=${tbb-all-cmake}"
+                  "-D THREADSAFE=off"
+                  "-D WORHP=off"
+                  "-D ZIMPL_DIR=${zimpl}"
+                  "-D ZLIB=on"
                 ];
                 dontFixCmake = true;
                 dontUseCmakeConfigure = false;
