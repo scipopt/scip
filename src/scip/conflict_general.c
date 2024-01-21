@@ -429,7 +429,8 @@ SCIP_RETCODE SCIPconflictFree(
    SCIPconflictsetFree(&(*conflict)->conflictset, blkmem);
    SCIPconflictRowFree(&(*conflict)->conflictrow, blkmem);
    SCIPconflictRowFree(&(*conflict)->resolvedconflictrow, blkmem);
-   SCIPreasonRowFree(&(*conflict)->reasonrow, blkmem);
+   SCIPconflictRowFree(&(*conflict)->reasonrow, blkmem);
+   SCIPconflictRowFree(&(*conflict)->reducedreasonrow, blkmem);
    SCIPproofsetFree(&(*conflict)->proofset, blkmem);
 
    BMSfreeMemoryArrayNull(&(*conflict)->conflictsets);

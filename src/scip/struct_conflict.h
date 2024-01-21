@@ -98,27 +98,6 @@ struct SCIP_ProofSet
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP */
 };
 
-/** refactortodo: Completely remove this struct and use SCIP_ConflictRow instead
- * set of conflicting bound changes
- * @todo change the conflictype to infeasible LP, bound exceeding LP, propagation
- */
-struct SCIP_ResolutionSet
-{
-   SCIP_Real*            vals;
-   int*                  inds;
-   SCIP_Real             lhs;
-   SCIP_Real             slack;
-   SCIP_Real             coefquotient;
-   int                   nnz;
-   int                   size;
-   int                   validdepth;
-   int                   conflictdepth;
-   int                   repropdepth;
-   int                   insertdepth;
-   unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
-   unsigned int          isbinary:1;         /**< is the constraint binary? */
-   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, resolution */
-};
 
 /** conflict row of type lhs <= a^Tx, semi-sparse representation */
 struct SCIP_ConflictRow
@@ -138,19 +117,6 @@ struct SCIP_ConflictRow
    unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
    unsigned int          isbinary:1;         /**< is the constraint binary? */
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, resolution */
-};
-
-/** reason row of type lhs <= a^Tx, sparse representation */
-struct SCIP_ReasonRow
-{
-   SCIP_Real*            vals;
-   int*                  inds;
-   SCIP_Real             lhs;
-   SCIP_Real             slack;
-   SCIP_Real             coefquotient;
-   int                   nnz;
-   int                   size;
-   unsigned int          isbinary:1;         /**< is the constraint binary? */
 };
 
 
@@ -263,8 +229,9 @@ struct SCIP_Conflict
    SCIP_PROOFSET*        proofset;           /**< proof sets found at the current node */
    SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
    SCIP_CONFLICTROW*     conflictrow;        /**< conflict row for the current conflict */
-   SCIP_REASONROW*       reasonrow;          /**< reason row for the latest bound change */
    SCIP_CONFLICTROW*     resolvedconflictrow;/**< conflict row for for current the conflict */
+   SCIP_CONFLICTROW*     reasonrow;          /**< reason row for the latest bound change */
+   SCIP_CONFLICTROW*     reducedreasonrow;   /**< reason row for the latest bound change */
    SCIP_CONFLICTROW**    conflictrows;       /**< conflict rows found at the current node */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
    SCIP_CONFLICTSET**    conflictsets;       /**< conflict sets found at the current node */
