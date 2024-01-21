@@ -1015,7 +1015,7 @@ void conflictRowRemoveZeroVar(
 /* Removes all variables with zero coefficient (< 1e-09) in the generalized resolution row */
 static
 void conflictRowRemoveZeroVars(
-   SCIP_CONFLICTROW*     row,        /**< generalized resolution row */
+   SCIP_CONFLICTROW*     row,                /**< generalized resolution row */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
@@ -1949,13 +1949,14 @@ void freeConflictResources(
 static
 void conflictRowClear(
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_CONFLICTROW*     row,        /**< generalized resolution row */
+   SCIP_CONFLICTROW*     row,                /**< generalized resolution row */
    int                   nvars               /**< number of variables in the problem */
    )
 {
    int i;
    assert(row != NULL);
 
+   /* this is necesseary to avoid memory leaks if the number of variables in the problem changes */
    if(row->vals != NULL && row->nvars != nvars)
       BMSfreeBlockMemoryArrayNull(blkmem, &row->vals, row->nvars);
    if(row->vals == NULL)
@@ -1981,7 +1982,7 @@ void conflictRowClear(
 /** weaken variable in a generalized resolution row */
 static
 void weakenVarConflictRow(
-   SCIP_CONFLICTROW*     row,        /**< generalized resolution row */
+   SCIP_CONFLICTROW*     row,                /**< generalized resolution row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable to weaken */
    int                   pos                 /**< position in array of indices */
@@ -3201,9 +3202,11 @@ SCIP_RETCODE getReasonClause(
 
       if( isbinary )
       {
+         for( int i = 0; i < reasonrow->nnz; i++ )
+            reasonrow->vals[reasonrow->inds[i]] = 0.0;
+
          reasonrow->nnz = SCIPpqueueNElems(conflict->separatebdchgqueue) + 1;
          reasonrow->lhs = lhs;
-         assert(reasonrow->vals == NULL);
 
          if( reasonrow->size == 0 )
          {
@@ -3387,9 +3390,20 @@ SCIP_RETCODE resolveClauses(
       SCIP_CALL( getReasonClause(conflict, blkmem,  set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), 0, &successclause) );
       if (successclause)
       {
+         int newsize;
+
          SCIPdebug(printConflictRow(reasonrow, set, vars, CLAUSAL_REASON_ROWTYPE));
          assert(SCIPsetIsRelEQ(set, getSlackConflictRow(set, vars, reasonrow, currbdchginfo, fixbounds, fixinds), 0.0));
          reasonrow->slack = 0.0;
+
+         /* make sure enough memory is allocated for the resolved conflict row */
+         newsize = conflictrow->nnz + reasonrow->nnz;
+         if ( conflictrow->size < newsize )
+         {
+            SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictrow->inds, conflictrow->size, newsize ) );
+            conflictrow->size = newsize;
+         }
+
          SCIP_CALL( linearCombConflictReason(set, conflictrow, reasonrow, 1.0) );
          conflictRowRemoveZeroVars(conflictrow, set);
 
