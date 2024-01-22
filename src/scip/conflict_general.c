@@ -1173,6 +1173,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
    SCIP_ROW* row;
    int* localrowinds;
    int* localrowdepth;
+   SCIP_Real large;
    SCIP_Bool infdelta;
    int nlocalrows;
    int nrows;
@@ -1201,7 +1202,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
     */
    if( !SCIPlpiHasDualRay(lpi) )
    {
-      *valid = FALSE;
+      (*valid) = FALSE;
       return SCIP_OKAY;
    }
 
@@ -1210,13 +1211,23 @@ SCIP_RETCODE SCIPgetFarkasProof(
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, nrows) );
    BMSclearMemoryArray(dualfarkas, nrows);
+   localrowinds = NULL;
+   localrowdepth = NULL;
+   nlocalrows = 0;
 
    /* get dual Farkas values of rows */
    SCIP_CALL( SCIPlpiGetDualfarkas(lpi, dualfarkas) );
 
-   localrowinds = NULL;
-   localrowdepth = NULL;
-   nlocalrows = 0;
+   /* check whether the Farkas solution is numerically stable */
+   large = 1.0 / SCIPsetEpsilon(set);
+   for( r = 0; r < nrows; ++r )
+   {
+      if( ABS(dualfarkas[r]) > large )
+      {
+         (*valid) = FALSE;
+         goto TERMINATE;
+      }
+   }
 
    /* calculate the Farkas row */
    (*valid) = TRUE;
@@ -1347,7 +1358,7 @@ SCIP_RETCODE SCIPgetDualProof(
    SCIP_Real* redcosts;
    int* localrowinds;
    int* localrowdepth;
-   SCIP_Real maxabsdualsol;
+   SCIP_Real large;
    SCIP_Bool infdelta;
    int nlocalrows;
    int nrows;
@@ -1399,20 +1410,14 @@ SCIP_RETCODE SCIPgetDualProof(
 #endif
 
    /* check whether the dual solution is numerically stable */
-   maxabsdualsol = 0;
-   for( r = 0; r < nrows; r++ )
+   large = 1.0 / SCIPsetEpsilon(set);
+   for( r = 0; r < nrows; ++r )
    {
-      SCIP_Real absdualsol = REALABS(dualsols[r]);
-
-      if( absdualsol > maxabsdualsol )
-         maxabsdualsol = absdualsol;
-   }
-
-   /* don't consider dual solution with maxabsdualsol > 1e+07, this would almost cancel out the objective constraint */
-   if( maxabsdualsol > 1e+07 )
-   {
-      (*valid) = FALSE;
-      goto TERMINATE;
+      if( ABS(dualsols[r]) > large )
+      {
+         (*valid) = FALSE;
+         goto TERMINATE;
+      }
    }
 
    /* clear the proof */
