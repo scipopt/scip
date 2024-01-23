@@ -1219,7 +1219,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
    SCIP_CALL( SCIPlpiGetDualfarkas(lpi, dualfarkas) );
 
    /* check whether the Farkas solution is numerically stable */
-   large = 1.0 / SCIPsetEpsilon(set);
+   large = 1.0 / SCIPsetSumepsilon(set);
    for( r = 0; r < nrows; ++r )
    {
       if( ABS(dualfarkas[r]) > large )
@@ -1410,7 +1410,7 @@ SCIP_RETCODE SCIPgetDualProof(
 #endif
 
    /* check whether the dual solution is numerically stable */
-   large = 1.0 / SCIPsetEpsilon(set);
+   large = 1.0 / SCIPsetSumepsilon(set);
    for( r = 0; r < nrows; ++r )
    {
       if( ABS(dualsols[r]) > large )
