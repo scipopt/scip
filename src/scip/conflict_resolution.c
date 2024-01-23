@@ -4342,12 +4342,7 @@ SCIP_RETCODE executeResolutionStep(
       resolvedconflictrow->slack = getSlackConflictRow(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds);
       if(resolvedconflictrow->slack > 0.0)
       {
-         SCIP_CALL( getReasonClause(conflict, blkmem, set, currbdchginfo, SCIPbdchginfoGetNewbound(currbdchginfo), validdepth, successresolution) );
-         if (*successresolution)
-         {
-            assert(SCIPsetIsZero(set, getSlackConflictRow(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds)));
-            resolvedconflictrow->slack = 0.0;
-         }
+         assert(FALSE);
          return SCIP_OKAY;
       }
    }
