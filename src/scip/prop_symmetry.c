@@ -6106,6 +6106,8 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             nactiverows = ((int) (nactiverows / 2)) + (nactiverows % 2);
          }
          assert( nactiverows >= 1 );
+
+         nsortconss += nactiverows - 1;
       }
       else
          nsortconss += nrows - 1;
@@ -6202,6 +6204,28 @@ SCIP_RETCODE handleDoubleLexOrbitope(
                SCIP_CALL( SCIPaddCons(scip, cons) );
             }
          }
+
+         /* within the remaining active rows, the rows can be sorted */
+         if ( nactiverows > 1 )
+         {
+            consvals[0] = -1.0;
+            consvals[1] = 1.0;
+
+            for (i = 0; i < nactiverows - 1; ++i)
+            {
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_sortfirstactive_%d", partialname, i);
+
+               consvars[0] = propdata->permvars[varidxmatrix[i][0]];
+               consvars[1] = propdata->permvars[varidxmatrix[i + 1][0]];
+
+               SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, consvars, consvals,
+                     -SCIPinfinity(scip), 0.0,
+                     TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+               propdata->genlinconss[propdata->ngenlinconss++] = cons;
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+            }
+         }
+         assert( propdata->ngenlinconss <= propdata->genlinconsssize );
       }
       else
       {
