@@ -6734,8 +6734,11 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
          }
 
          /* if we have not handled the orbitope yet, handle it as unsigned orbitope */
-         SCIP_CALL( handleOrbitope(scip, propdata, cidx, lexmatrix, nrows, ncols, partialname,
-               FALSE, FALSE, &success) );
+         if ( ! success )
+         {
+            SCIP_CALL( handleOrbitope(scip, propdata, cidx, lexmatrix, nrows, ncols, partialname,
+                  FALSE, FALSE, &success) );
+         }
       }
       else
       {
