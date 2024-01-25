@@ -6226,6 +6226,17 @@ SCIP_RETCODE handleDoubleLexOrbitope(
                propdata->genlinconss[propdata->ngenlinconss++] = cons;
                SCIP_CALL( SCIPaddCons(scip, cons) );
             }
+
+            /* also apply orbitopal reduction */
+            for (j = 0, pos = 0; j < ncols; ++j)
+            {
+               for (i = 0; i < nactiverows; ++i)
+                  orbitopevarmatrix[pos++] = propdata->permvars[varidxmatrix[i][j]];
+            }
+            SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
+                  SCIP_ROWORDERING_NONE, SCIP_COLUMNORDERING_NONE,
+                  orbitopevarmatrix, ncols, nactiverows, success) );
+
          }
          assert( propdata->ngenlinconss <= propdata->genlinconsssize );
       }
