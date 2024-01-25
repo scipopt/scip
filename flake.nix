@@ -53,7 +53,10 @@
               pkgs.flex
               pkgs.libamplsolver
             ];
-
+            cmake-gmp = [
+              "-D GMP=on"
+              "-D STATIC_GMP=on"
+            ];
           in
           rec {
             soplex = pkgs.stdenv.mkDerivation {
@@ -62,12 +65,16 @@
               buildInputs = build-inputs;
               nativeBuildInputs = build-inputs;
               doCheck = false;
+              cmakeFlags =
+                [ "-D PAPILO=off" ] ++
+                cmake-gmp;
             };
             papilo = pkgs.stdenv.mkDerivation {
               name = "papilo";
               src = inputs.papilo-src;
               nativeBuildInputs = build-inputs;
               buildInputs = build-inputs ++ [ tbb-all-cmake soplex ];
+
               doCheck = false;
             };
             zimpl = pkgs.stdenv.mkDerivation {
@@ -90,20 +97,18 @@
                   "-D CMAKE_CXX_COMPILER_ID=GNU"
                   "-D COVERAGE=off"
                   "-D DEBUGSOL=on"
-                  "-D GMP=on"
                   "-D IPOPT=on" # really it has no NLP parts, which all behind auth/name/pay-walls even to download as of now
                   "-D LPS=spx"
                   "-D LPSCHECK=off"
                   "-D OPT=opt"
                   "-D PAPILO=on"
                   "-D READLINE=on"
-                  "-D STATIC_GMP=on"
                   "-D TBB_DIR=${tbb-all-cmake}"
                   "-D THREADSAFE=off"
                   "-D WORHP=off"
                   "-D ZIMPL_DIR=${zimpl}"
                   "-D ZLIB=on"
-                ];
+                ] ++ cmake-gmp;
                 dontFixCmake = true;
                 dontUseCmakeConfigure = false;
                 nativeBuildInputs = build-inputs ++ [ papilo soplex tbb-all-cmake pkgs.criterion ];
