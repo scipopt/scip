@@ -3569,7 +3569,6 @@ SCIP_RETCODE WeakeningBasedReduction(
    )
 {
    SCIP_Real previousslack;
-   SCIP_Real resolutionslack;
    SCIP_CONFLICTROW* conflictrow;
    SCIP_CONFLICTROW* resolvedconflictrow;
    SCIP_CONFLICTROW* reducedreason;
@@ -3602,14 +3601,12 @@ SCIP_RETCODE WeakeningBasedReduction(
    coefinreason = fabs(rowtoreduce->vals[residx]);
    assert(!SCIPsetIsZero(set, coefinreason));
 
-   resolutionslack = conflict->resolvedconflictrow->slack;
-
-   if( SCIPsetIsGE(set, resolutionslack, 0.0) )
+   if( SCIPsetIsGE(set, resolvedconflictrow->slack, 0.0) )
    {
       SCIP_CALL( reasonRowSortWeakeningOrder(rowtoreduce, set, vars, currbdchgidx, residx, &totaltoweaken, set->conf_reductiontechnique == 'c' ? FALSE : TRUE, coefinreason) );
    }
    int nnzs = rowtoreduce->nnz;
-   while ( SCIPsetIsGE(set, resolutionslack, 0.0) && nvarsweakened < totaltoweaken )
+   while ( SCIPsetIsGE(set, resolvedconflictrow->slack, 0.0) && nvarsweakened < totaltoweaken )
    {
       SCIP_VAR* vartoweaken;
 
