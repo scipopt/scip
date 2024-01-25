@@ -4980,10 +4980,6 @@ SCIP_RETCODE addSSTConss(
    if ( componentblocked[cidx] )
       return SCIP_OKAY;
 
-   /* skip component if it has signed permutations */
-   if ( propdata->componenthassignedperm[cidx] )
-      return SCIP_OKAY;
-
    leaderrule = propdata->sstleaderrule;
    tiebreakrule = propdata->ssttiebreakrule;
    leadervartype = propdata->sstleadervartype;
@@ -5081,7 +5077,25 @@ SCIP_RETCODE addSSTConss(
       for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
       {
          if ( c == cidx )
+         {
             inactiveperms[components[p]] = FALSE;
+
+            /* possibly filter signed permutations */
+            if ( propdata->componenthassignedperm[cidx] )
+            {
+               int pidx;
+
+               assert( propdata->symtype == SYM_SYMTYPE_SIGNPERM );
+
+               pidx = components[p];
+               for (i = 0; i < propdata->npermvars && !inactiveperms[pidx]; ++i)
+               {
+                  /* symmetry is a signed permutation */
+                  if ( propdata->perms[pidx][i] >= propdata->npermvars )
+                     inactiveperms[pidx] = TRUE;
+               }
+            }
+         }
          else
             inactiveperms[components[p]] = TRUE;
       }
