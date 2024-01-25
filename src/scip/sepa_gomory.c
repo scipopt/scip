@@ -80,7 +80,6 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/sepa_gomory.h"
-#include "struct_history.h"
 #include <string.h>
 
 #define SEPA_NAME              "gomory"
