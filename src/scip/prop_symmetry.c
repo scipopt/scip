@@ -5078,23 +5078,11 @@ SCIP_RETCODE addSSTConss(
       {
          if ( c == cidx )
          {
-            inactiveperms[components[p]] = FALSE;
-
             /* possibly filter signed permutations */
             if ( propdata->componenthassignedperm[cidx] )
-            {
-               int pidx;
-
-               assert( propdata->symtype == SYM_SYMTYPE_SIGNPERM );
-
-               pidx = components[p];
-               for (i = 0; i < propdata->npermvars && !inactiveperms[pidx]; ++i)
-               {
-                  /* symmetry is a signed permutation */
-                  if ( propdata->perms[pidx][i] >= propdata->npermvars )
-                     inactiveperms[pidx] = TRUE;
-               }
-            }
+               inactiveperms[components[p]] = ! propdata->isproperperm[components[p]];
+            else
+               inactiveperms[components[p]] = FALSE;
          }
          else
             inactiveperms[components[p]] = TRUE;
@@ -6385,10 +6373,6 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
    *success = FALSE;
 
-   /* ensure that we can store orbitope constraints in probdata */
-   SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
-         &propdata->genorbconsssize, propdata->ngenorbconss + nrowblocks + ncolblocks) );
-
    maxdim = MAX(nrows, ncols);
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitopematrix, maxdim) );
    for (i = 0; i < maxdim; ++i)
@@ -6525,6 +6509,10 @@ SCIP_RETCODE handleDoublelLexMatrix(
    /* if no symmetries have been handled yet, handle column and row symmetries without signed permutations */
    if ( !(*success) )
    {
+      /* ensure that we can store orbitope constraints in probdata */
+      SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
+            &propdata->genorbconsssize, propdata->ngenorbconss + nrowblocks + ncolblocks) );
+
       /* handle column symmetries via original column and row ordering */
       for (p = 0; p < ncolblocks; ++p)
       {
