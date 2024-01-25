@@ -63,7 +63,7 @@
 #include "scip/scip_numerics.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_tree.h"
-#include "scip_param.h"
+#include "scip/scip_param.h"
 #include "scip/branch_relpscost.h"
 #include <string.h>
 #include <assert.h>
