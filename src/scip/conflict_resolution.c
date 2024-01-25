@@ -3746,8 +3746,7 @@ SCIP_RETCODE reduceReason(
    SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change to resolve */
    int                   residx,             /**< index of variable to resolve */
    SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
-   int*                  fixinds,            /**< array of indices of fixed variables */
-   SCIP_Bool*            infeasible          /**< reduced reason is infeasible */
+   int*                  fixinds             /**< array of indices of fixed variables */
 )
 {
    assert(conflict != NULL);
@@ -3759,7 +3758,6 @@ SCIP_RETCODE reduceReason(
 
    coefinrow = fabs(rowtoreduce->vals[residx]);
 
-   *infeasible = FALSE;
    if (set->conf_reductiontechnique == 's')
    {
       SCIPsetDebugMsgPrint(set, "Apply Complemented 0-1 Chvatal-Gomory since slack of resolved row: %f >= 0 \n", conflict->resolvedconflictrow->slack);
@@ -3783,12 +3781,6 @@ SCIP_RETCODE reduceReason(
    SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixinds) );
    /* check that when we weaken as much as possible and the reason row is binary, the slack is at most zero */
    assert(!(set->conf_weakenreasonall) || !isBinaryConflictRow(set, vars, rowtoreduce) || SCIPsetIsLE(set, rowtoreduce->slack, 0.0));
-
-   if( SCIPsetIsLT(set, rowtoreduce->slack, 0.0) )
-   {
-      SCIPsetDebugMsgPrint(set, "The reduced reason row is infeasible after reduction; slack = %g \n", rowtoreduce->slack);
-      *infeasible = TRUE;
-   }
 
    SCIPdebug(printConflictRow(rowtoreduce, set, vars, REDUCED_REASON_ROWTYPE));
 
@@ -4274,7 +4266,6 @@ SCIP_RETCODE executeResolutionStep(
    /* if the resolvent is not infeasible under the local domain, try to reduce the reason row */
    if( SCIPsetIsGE(set, resolvedconflictrow->slack, 0.0) )
    {
-      SCIP_Bool infeasiblereason;
       /* if we do not want to apply any reduction to the reason we just abort */
       if( set->conf_reductiontechnique == 'o' )
          return SCIP_OKAY;
@@ -4283,14 +4274,8 @@ SCIP_RETCODE executeResolutionStep(
       conflictRowReplace(reducedreasonrow, blkmem, reasonrow);
 
       /* apply reduction to the reason row */
-      SCIP_CALL( reduceReason(conflict, set, blkmem, vars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds, &infeasiblereason) );
+      SCIP_CALL( reduceReason(conflict, set, blkmem, vars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds) );
 
-      /* if the reason row is infeasible, we have a new conflict constraint */
-      if( infeasiblereason )
-      {
-         conflictRowReplace(resolvedconflictrow, blkmem, reducedreasonrow);
-         return SCIP_OKAY;
-      }
       /* MixedBinaryTodo add some flag if the reduction really did something so that we avoid some of the calculations below */
       /* after reduction resolve again */
       SCIPsetDebugMsgPrint(set, "Resolve %s after reducing the reason row \n", SCIPvarGetName(vars[residx]));
@@ -4366,13 +4351,8 @@ SCIP_RETCODE executeResolutionStep(
          /* after the loop we can weaken all continuous variables with their global bounds */
          SCIP_CALL( weakenContinuousVarsConflictRow(reducedreasonrow, set, vars, residx) );
          /* apply reduction to the reason row */
-         SCIP_CALL( reduceReason(conflict, set, blkmem, vars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds, &infeasiblereason) );
-         /* if the reason row is infeasible, we have a new conflict constraint */
-         if( infeasiblereason )
-         {
-            conflictRowReplace(resolvedconflictrow, blkmem, reducedreasonrow);
-            return SCIP_OKAY;
-         }
+         SCIP_CALL( reduceReason(conflict, set, blkmem, vars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds) );
+
       }
       SCIPsetDebugMsgPrint(set, "Resolve %s after reducing the reason row \n", SCIPvarGetName(vars[residx]));
 
