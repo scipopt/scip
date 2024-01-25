@@ -99,7 +99,7 @@
                   "-D CMAKE_CXX_COMPILER_ID=GNU"
                   "-D COVERAGE=off"
                   "-D DEBUGSOL=on"
-                  "-D IPOPT=on" # really it has no NLP parts, which all behind auth/name/pay-walls even to download as of now
+                  "-D IPOPT=on"
                   "-D LPS=spx"
                   "-D LPSCHECK=off"
                   "-D OPT=opt"
