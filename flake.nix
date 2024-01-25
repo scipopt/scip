@@ -74,7 +74,9 @@
               src = inputs.papilo-src;
               nativeBuildInputs = build-inputs;
               buildInputs = build-inputs ++ [ tbb-all-cmake soplex ];
-
+              cmakeFlags = [
+                "-D GMP=on"
+              ];
               doCheck = false;
             };
             zimpl = pkgs.stdenv.mkDerivation {
