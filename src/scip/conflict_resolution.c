@@ -19,7 +19,11 @@
  * analysis
  * @author Gioni Mexi
  *
- * @todo Description of the algorithm
+ * @todo avoid copying the array of values in conflictRowCopy() and conflictRowReplace() by using the indices of the nonzero entries
+ * @todo slack update during coefficient tightening/MIR
+ * @todo extend MIR for continuous and general integer variables (how do we complement? Can we use SCIPcalcMIR?)
+ * @todo vsids and branching statistics updates
+ * @todo apply cmir after each iteration to strengthen the conflict constraint (choose this constraint if it is violated more)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -718,7 +722,6 @@ SCIP_RETCODE tightenCoefs(
    SCIP_Bool*            redundant           /**< pointer to store whether the row is redundant */
    )
 {
-   /* @todo slack update during coefficient tightening */
    int i;
    int nintegralvars;
    SCIP_Real* absvals;
@@ -741,7 +744,7 @@ SCIP_RETCODE tightenCoefs(
    if (redundant != NULL)
       *redundant = FALSE;
 
-   /* refactortodo compute activity in a seperate method */
+   /* compute activity of the row and get the absolute values of the coefficients */
    for( i = 0; i < *rownnz; ++i )
    {
       SCIP_VAR* var;
@@ -1000,6 +1003,33 @@ SCIP_Bool isBinaryConflictRow(
    return TRUE;
 }
 
+/* check if a generalized resolution has general integer variables */
+static
+SCIP_Bool isGeneralIntegerConflictRow(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_CONFLICTROW*     row                 /**< generalized resolution row */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(vars != NULL);
+   assert(row != NULL);
+
+   for( i = 0; i < row->nnz; ++i )
+   {
+      SCIP_VAR* var;
+
+      var = vars[row->inds[i]];
+      assert(var != NULL);
+
+      if( SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) != SCIP_VARTYPE_IMPLINT )
+         return FALSE;
+   }
+   return TRUE;
+}
+
 /* Removes a variable with zero coefficient in the generalized resolution row */
 static
 void conflictRowRemoveZeroVar(
@@ -1158,7 +1188,7 @@ SCIP_RETCODE NormalizedMirLhs(
 
    SCIP_Real fraclhs;
    SCIP_Real normalizationtermlhs;
-   // TODO: make this work also for continuous variables: Complement s.t. the bounds are positive
+
    assert(set != NULL);
    assert(vars != NULL);
    assert(reasonrow != NULL);
@@ -1168,7 +1198,6 @@ SCIP_RETCODE NormalizedMirLhs(
 
    assert(SCIPsetIsGT(set, divisor, 0.0));
 
-   /* todo extend MIR for continuous and general integer variables */
    if (!isBinaryConflictRow(set, vars, reasonrow))
    {
       *cutfound = FALSE;
@@ -1295,7 +1324,6 @@ SCIP_RETCODE ComplementedMirLhs(
 
    assert(SCIPsetIsGT(set, divisor, 0.0));
 
-   /* todo we can use MIR for general constraints */
    if (!isBinaryConflictRow(set, vars, reasonrow))
       return SCIP_OKAY;
 
@@ -1445,7 +1473,6 @@ SCIP_RETCODE ComplementedChvatalGomoryLhs(
 
    assert(SCIPsetIsGT(set, divisor, 0.0));
 
-   /* todo extend Chvatal-Gomory for constraints with general integer variables */
    if (!isBinaryConflictRow(set, vars, reasonrow))
       return SCIP_OKAY;
 
@@ -2405,7 +2432,6 @@ SCIP_RETCODE checkConflictDebugSol(
    return SCIP_OKAY;
 }/*lint !e715*/
 
-/* refactortodo: Check the updates */
 /** increases the conflict score of the variable in the given direction */
 static
 SCIP_RETCODE incVSIDS(
@@ -3581,8 +3607,9 @@ SCIP_RETCODE WeakeningBasedReduction(
 
    conflictrow = conflict->conflictrow;
    resolvedconflictrow = conflict->resolvedconflictrow;
-   /* the reducedreason is our working row and replaces rowtoreduce only if resolution is guarranteed */
-   conflictRowCreate(&reducedreason, blkmem);
+
+   /* the reducedreason is our working row and replaces rowtoreduce only if resolution
+      with the conflict row is guarranteed */
    conflictRowCopy(&reducedreason, blkmem, rowtoreduce);
 
    i = 0;
@@ -3659,7 +3686,6 @@ SCIP_RETCODE WeakeningBasedReduction(
                SCIP_CALL( tightenCoefs(set, vars, FALSE, reducedreason->vals, reducedreason->inds,
                               &reducedreason->nnz, &reducedreason->lhs, &nchgcoefs, TRUE, NULL) );
             }
-            /* todo the update of the slack should be done in the coefTight/Division/MIR algorithm */
             if(cutfound || nchgcoefs > 0)
             {
                SCIP_Bool successresolution;
@@ -4342,7 +4368,7 @@ SCIP_RETCODE executeResolutionStep(
       resolvedconflictrow->slack = getSlackConflictRow(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds);
       if(resolvedconflictrow->slack > 0.0)
       {
-         assert(FALSE);
+         assert(isGeneralIntegerConflictRow(set, vars, resolvedconflictrow));
          return SCIP_OKAY;
       }
    }
@@ -4971,8 +4997,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          /* if we reached this point the conflict constraint must have negative slack */
          assert(SCIPsetIsLT(set, conflictrow->slack, 0.0));
-
-         /* TODO Apply cmir after each iteration to strengthen the conflict constraint */
 
          /* terminate after at most nressteps resolution iterations */
          /* By default conf_maxnumressteps is -1 and hence no limit is set on the number of resolution steps */
