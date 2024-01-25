@@ -4288,7 +4288,7 @@ SCIP_RETCODE executeResolutionStep(
       SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
 
       /* mixed binary case reduction */
-      if( SCIPsetIsGE(set, resolvedconflictrow->slack, 0.0) )
+      if( set->conf_mbreduction && SCIPsetIsGE(set, resolvedconflictrow->slack, 0.0) )
       {
          SCIP_BDCHGINFO* continuousbdchginfo;
          SCIP_Bool successgetreason;
@@ -4352,21 +4352,17 @@ SCIP_RETCODE executeResolutionStep(
          SCIP_CALL( weakenContinuousVarsConflictRow(reducedreasonrow, set, vars, residx) );
          /* apply reduction to the reason row */
          SCIP_CALL( reduceReason(conflict, set, blkmem, vars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds) );
+         SCIPsetDebugMsgPrint(set, "Resolve %s after reducing the reason row \n", SCIPvarGetName(vars[residx]));
+
+         /* after all reductions resolve one final time */
+         SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reducedreasonrow, resolvedconflictrow, currbdchginfo, blkmem,
+                              residx, successresolution) );
+         SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
 
       }
-      SCIPsetDebugMsgPrint(set, "Resolve %s after reducing the reason row \n", SCIPvarGetName(vars[residx]));
 
-      /* after all reductions resolve one final time */
-      SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reducedreasonrow, resolvedconflictrow, currbdchginfo, blkmem,
-                           residx, successresolution) );
-      SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
-
-      if(SCIPsetIsGE(set, resolvedconflictrow->slack, 0.0))
-      {
-         /* The resolved conflict row may not be infeasible under the local domain if the reduced reason row is not binary */
-         assert(!isBinaryConflictRow(set, vars, reducedreasonrow));
-         return SCIP_OKAY;
-      }
+      /* The resolved conflict row may not be infeasible under the local domain if the reduced reason row is not binary */
+      assert(SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0) || !isBinaryConflictRow(set, vars, reducedreasonrow));
    }
 
    return SCIP_OKAY;
