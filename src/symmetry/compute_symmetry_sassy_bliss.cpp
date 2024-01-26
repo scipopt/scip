@@ -315,7 +315,7 @@ SCIP_RETCODE computeAutomorphisms(
 #if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
    /* lambda function to have access to data and terminate the search if maxgenerators are reached */
    auto term = [&]() {
-      return (data.nperms >= maxgenerators); /* check the number of generators that we have created so far */
+      return (maxgenerators != 0 && data.nperms >= maxgenerators); /* check the number of generators that we have created so far */
    };
 
    auto hook = [&](unsigned int n, const unsigned int* aut) {
