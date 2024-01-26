@@ -1037,10 +1037,12 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       fixconstant = TRUE;
    }
    /* Case: Variable is between constant and lb1 */
-   else if( SCIPisGT(scip, lpsolsemicontinuous, scdata->vals0[idxbvars]) && SCIPisLT(scip, lpsolsemicontinuous, scdata->lbs1[idxbvars]) )
+   else
    {
       SCIP_Real shiftedlpsolsemicontinuous = lpsolsemicontinuous;
       SCIP_Real shiftedlbs1 = scdata->lbs1[idxbvars];
+
+      assert(SCIPisGT(scip, lpsolsemicontinuous, scdata->vals0[idxbvars]) && SCIPisLT(scip, lpsolsemicontinuous, scdata->lbs1[idxbvars]));
 
       /* handle case if constant of semicont. var is not zero -> shift values */
       if( !SCIPisZero(scip, scdata->vals0[idxbvars]) )
@@ -1061,7 +1063,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
          fixconstant = (*score <= (1 - heurdata->roundingfrac) * 100);
          break;
       default:
-         assert(FALSE);
+         return SCIP_INVALIDDATA;
       }
 
       switch( heurdata->semicontscoremode )
@@ -1082,16 +1084,11 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       }
       assert(*score>0);
    }
-   else
-   {
-      assert(FALSE);
-   }
 
    /* Set roundup depending on whether we have an indicator constraint or a varbound constraint:
     * - indicator constraint: roundup == fix to constant
     * - varbound constraint: roundup == push to range
     */
-   /* coverity[uninit_use] */
    *roundup = isindicatorvar ? fixconstant : !fixconstant; /*lint !e644*/
 
    /* free memory */
