@@ -938,10 +938,12 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       issemicont = SCIPisInfinity(scip, -SCIPconsGetLhs(scip, lincons, &success)); /* TODO: allow also indicators for lower bounds */
       side = rhs;
    }
-   else if( isvbdvar )
+   else
    {
       SCIP_Real rhs;
       SCIP_Real lhs;
+
+      assert(isvbdvar);
 
       lincons = varboundcons;
       nonoptionvar = SCIPgetVbdvarVarbound(scip, varboundcons);
@@ -949,10 +951,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       lhs = SCIPconsGetLhs(scip, lincons, &success);
       side = SCIPisInfinity(scip, rhs) ? lhs : rhs;
       assert(!SCIPisInfinity(scip, side));
-   }
-   else
-   {
-      assert(FALSE);
    }
    SCIPdebugPrintCons(scip, lincons, NULL);
 
