@@ -10228,11 +10228,13 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
          {
             SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) powexprs[j]) );
             powexprused[j] = TRUE;
+            var1found = TRUE;
          }
          else if( !var2found && powvars[j] == prodvars[cnt - 1] )
          {
             SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) powexprs[j]) );
             powexprused[j] = TRUE;
+            var2found = TRUE;
          }
       }
    }
