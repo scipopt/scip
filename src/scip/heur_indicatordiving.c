@@ -216,7 +216,7 @@ SCIP_RETCODE releaseSCHashmap(
  *  new probing node, it checks whether there are violated but not fixed indicator constraints
  */
 static
-SCIP_RETCODE checkAndGetIndicator(
+void checkAndGetIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             cand,               /**< candidate variable */
    SCIP_HASHMAP*         map,                /**< pointer to hashmap containing indicator conss */
@@ -261,8 +261,6 @@ SCIP_RETCODE checkAndGetIndicator(
             break;
       }
    }
-
-   return SCIP_OKAY;
 }
 
 /** checks if variable is binary variable of varbound constraint and stores corresponding varbound constraint */
@@ -890,8 +888,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       heurdata->gotoindconss = FALSE;
 
    /* check if candidate variable is indicator variable */
-   SCIP_CALL( checkAndGetIndicator(scip, cand, heurdata->indicatormap, &indicatorcons, &isindicatorvar,
-         &heurdata->containsviolindconss, heurdata->newnode, heurdata->sol, heurdata->indicatorconshdlr) );
+   checkAndGetIndicator(scip, cand, heurdata->indicatormap, &indicatorcons, &isindicatorvar,
+      &heurdata->containsviolindconss, heurdata->newnode, heurdata->sol, heurdata->indicatorconshdlr);
 
    /* skip candidate in next calls since we have violated indicator constraints but current candidate is not determined
     * by the indicator constraint handler */
