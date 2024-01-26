@@ -267,7 +267,7 @@ SCIP_RETCODE checkAndGetIndicator(
 
 /** checks if variable is binary variable of varbound constraint and stores corresponding varbound constraint */
 static
-SCIP_RETCODE checkAndGetVarbound(
+void checkAndGetVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             cand,               /**< candidate variable */
    SCIP_HASHMAP*         map,                /**< pointer to hashmap containing varbound conss */
@@ -285,13 +285,11 @@ SCIP_RETCODE checkAndGetVarbound(
    *isvarbound = FALSE;
 
    if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
-      return SCIP_OKAY;
+      return;
 
    *cons = (SCIP_CONS*) SCIPhashmapGetImage(map, cand);
    if( *cons != NULL )
       *isvarbound = TRUE;
-
-   return SCIP_OKAY;
 }
 
 /** adds an indicator to the data of a semicontinuous variable */
@@ -909,7 +907,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    /* check if candidate variable is bounding variable */
    if( heurdata->usevarbounds && !isindicatorvar )
    {
-      SCIP_CALL( checkAndGetVarbound(scip, cand, heurdata->varboundmap, &varboundcons, &isvbdvar) );
+      checkAndGetVarbound(scip, cand, heurdata->varboundmap, &varboundcons, &isvbdvar);
    }
 
    /* Return
