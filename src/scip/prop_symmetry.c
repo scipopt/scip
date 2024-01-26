@@ -6605,6 +6605,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
    int i;
    int permidx;
    int nonpermidx = -1;
+   SCIP_Real percentageunsigned;
    SCIP_Bool isorbitope;
    SCIP_Bool success = FALSE;
    int nselectedperms = 0;
@@ -6628,6 +6629,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
       else
          nonpermidx = i;
    }
+   percentageunsigned = (SCIP_Real) nselectedperms / (SCIP_Real) compsize;
 
    SCIP_CALL( SCIPdetectSingleOrDoubleLexMatrices(scip, detectsinglelex, perms, nselectedperms, propdata->npermvars,
          &success, &isorbitope, &lexmatrix, &nrows, &ncols,
@@ -6667,6 +6669,8 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
          int** orbitopematrix;
          SCIP_Bool issignedorbitope = FALSE;
          char partialname[SCIP_MAXSTRLEN];
+
+         success = FALSE;
 
          /* signed permutations can only handle the orbitope if all variables per row have the same domain center */
          if ( propdata->symtype != SYM_SYMTYPE_PERM )
@@ -6733,8 +6737,8 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
             SCIPfreeBufferArray(scip, &flipablerows);
          }
 
-         /* if we have not handled the orbitope yet, handle it as unsigned orbitope */
-         if ( ! success )
+         /* if we have not handled the orbitope yet, handle it as unsigned orbitope and the orbitope is large */
+         if ( (!success) && percentageunsigned > 0.8 )
          {
             SCIP_CALL( handleOrbitope(scip, propdata, cidx, lexmatrix, nrows, ncols, partialname,
                   FALSE, FALSE, &success) );
