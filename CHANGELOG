@@ -41,6 +41,7 @@ Features
 - when parsing nonlinear constraints from CIP files, the * after the number in a term is now optional if followed by a variable,
   i.e., instead of 3*<x>*<y>, now also 3<x>*<y> can be read, but 3<x><y> is not supported;
   this allows to read some CIP files that were written with SCIP < 8
+- when running bliss, we now limit the number of actually created generators and not the ones considered by bliss
 
 Performance improvements
 ------------------------

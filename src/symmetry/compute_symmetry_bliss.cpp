@@ -345,11 +345,6 @@ SCIP_RETCODE computeAutomorphisms(
    /* disable component recursion as advised by Tommi Junttila from bliss */
    G->set_component_recursion(false);
 
-   /* do not use a node limit, but set generator limit */
-#ifdef BLISS_PATCH_PRESENT
-   G->set_search_limits(0, (unsigned) maxgenerators);
-#endif
-
    oldtime = SCIPgetSolvingTime(scip);
 #if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
    /* lambda function to have access to data and pass it to the blisshook above */
@@ -357,17 +352,23 @@ SCIP_RETCODE computeAutomorphisms(
       blisshook((void*)&data, n, aut);
    };
 
-   /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
-   long unsigned int terminatesearch = INT_MAX;
-   if ( maxgenerators != 0 )
-      terminatesearch = (long unsigned int) maxgenerators;
+   /* lambda function to have access to data and terminate the search if maxgenerators are reached */
    auto term = [&]() {
-      return (stats.get_nof_generators() >= terminatesearch);
+      return (data.nperms >= maxgenerators); /* check the number of generators that we have created so far */
    };
 
    /* start search */
    G->find_automorphisms(stats, reportglue, term);
 #else
+
+   /* Older bliss versions do not allow to terminate with a limit on the number of generators unless patched. */
+#ifdef BLISS_PATCH_PRESENT
+   /* If patch is present, do not use a node limit, but set generator limit. This approach is not very accurate, since
+    * it limits the generators considered in bliss and not the ones that we generate (the ones that work on the variable
+    * set). */
+   G->set_search_limits(0, (unsigned) maxgenerators);
+#endif
+
    /* start search */
    G->find_automorphisms(stats, blisshook, (void*) &data);
 #endif
