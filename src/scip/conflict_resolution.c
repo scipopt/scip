@@ -23,7 +23,11 @@
  * @todo slack update during coefficient tightening/MIR
  * @todo extend MIR for continuous and general integer variables (how do we complement? Can we use SCIPcalcMIR?)
  * @todo vsids and branching statistics updates
+ * @todo add a separate conflict store for the generalized resolution conflicts
+ * @todo insert depth / repropagation depth
  * @todo apply cmir after each iteration to strengthen the conflict constraint (choose this constraint if it is violated more)
+ * @todo applying generalized resolution to the dual proof does not seem to be a good idea. But we can use generalized resolution
+ *       for pseudo objective cutoffs.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3396,9 +3400,9 @@ SCIP_RETCODE rescaleAndResolve(
 
    scale = computeScaleReason(set, row1, row2, residx);
 
-   /* refactortodo this should not be a fixed value */
-   if ( SCIPsetIsGE(set, scale, 1e+10) )
+   if ( SCIPsetIsGE(set, scale, set->conf_generalresminmaxquot) )
    {
+      SCIPsetDebugMsgPrint(set, "Scale %f exceeds max allowed scale %f", scale, set->conf_generalresminmaxquot);
       if( !conflict->haslargecoef )
       {
          conflict->haslargecoef = TRUE;
@@ -4362,7 +4366,7 @@ SCIP_RETCODE executeResolutionStep(
       }
 
       /* The resolved conflict row may not be infeasible under the local domain if the reduced reason row is not binary */
-      assert(SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0) || !isBinaryConflictRow(set, vars, reducedreasonrow));
+      assert(!successresolution || SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0) || !isBinaryConflictRow(set, vars, reducedreasonrow));
    }
 
    return SCIP_OKAY;
@@ -4923,9 +4927,13 @@ SCIP_RETCODE conflictAnalyzeResolution(
                conflict->nknownaborts++;
                goto TERMINATE_RESOLUTION_LOOP;
             }
+#ifdef SCIP_DEBUG
+            SCIP_Real oldslack;
+            oldslack = conflictrow->slack;
+            SCIP_CALL( computeSlack(set, vars, conflictrow, bdchginfo, fixbounds, fixinds) );
+            assert(SCIPsetIsEQ(set, conflictrow->slack, oldslack));
+#endif
          }
-
-         SCIP_CALL( computeSlack(set, vars, conflictrow, bdchginfo, fixbounds, fixinds) );
 
          SCIPsetDebugMsgPrint(set, "Slack of resolved row: %f \n", conflictrow->slack);
 
