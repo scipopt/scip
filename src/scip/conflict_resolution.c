@@ -3402,7 +3402,7 @@ SCIP_RETCODE rescaleAndResolve(
 
    if ( SCIPsetIsGE(set, scale, set->conf_generalresminmaxquot) )
    {
-      SCIPsetDebugMsgPrint(set, "Scale %f exceeds max allowed scale %f", scale, set->conf_generalresminmaxquot);
+      SCIPsetDebugMsgPrint(set, "Scale %f exceeds max allowed scale %f \n", scale, set->conf_generalresminmaxquot);
       if( !conflict->haslargecoef )
       {
          conflict->haslargecoef = TRUE;
@@ -4888,9 +4888,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIPsetDebugMsgPrint(set, " Applying resolution with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
          SCIP_CALL( executeResolutionStep(conflict, set, vars, blkmem, bdchginfo, residx, validdepth, fixbounds, fixinds, &successresolution ) );
 
+         if (successresolution)
+            SCIP_CALL( conflictRowReplace(conflictrow, blkmem, resolvedconflictrow) );
          /* if resolution was unsuccessful we can resolve clauses for the binary
           * case. This is called only if the clause fallback parameter is true */
-         if (!successresolution)
+         else
          {
             resolveClauses(set, conflict, vars, bdchginfo, blkmem, residx, nvars, fixbounds, fixinds, &successresolution);
             if (!successresolution)
@@ -4910,8 +4912,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
             assert(SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_UPPER);
             vars[residx]->conflictresub = SCIP_REAL_MAX;
          }
-
-         SCIP_CALL( conflictRowReplace(conflictrow, blkmem, resolvedconflictrow) );
 
 #ifdef SCIP_CONFGRAPH_DOT
          confgraphAddRow(conflict, RESOLVED_ROW);
