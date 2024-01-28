@@ -199,6 +199,7 @@
 #define SCIP_DEFAULT_CONF_REDUCTION        'o'  /**< which tightening reduction should be used?
                                                  *   ('o'ff, 'm'ir, 'd'ivision, coefficient 't'ightening, complemented mi'r', complemented divi's'ion)
                                                 */
+#define SCIP_DEFAULT_CONF_MBREDUCTION     TRUE  /**< should apply the mixed binary reduction? */
 #define SCIP_DEFAULT_CONF_WEAKENINGORDER   'a' /**< order of weakening variables 'a'scending, 'd'escending */
 #define SCIP_DEFAULT_CONF_RESALLOWLOCAL   FALSE /**< should resolution conflict constraints be generated that are only valid locally? */
 #define SCIP_DEFAULT_CONF_MAXRESSTORESIZE 10000 /**< maximal size of the resolution conflict pool */
@@ -1411,6 +1412,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/reductiontechnique",
          "which tightening reduction should be used? ('o'ff, 'm'ir, 'd'ivision, 'c'oefficient tightening, complemented mi'r', complemented divi's'ion)",
          &(*set)->conf_reductiontechnique, FALSE, SCIP_DEFAULT_CONF_REDUCTION, "omdcrs",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/mbreduction",
+         "should apply the mixed binary reduction?",
+         &(*set)->conf_mbreduction, TRUE, SCIP_DEFAULT_CONF_MBREDUCTION,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/usesb",
