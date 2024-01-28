@@ -2024,7 +2024,7 @@ void weakenVarConflictRow(
 
 /* weaken generalized resolution row by setting variables to their global bounds */
 static
-SCIP_RETCODE weakenConflictRow(
+void weakenConflictRow(
    SCIP_CONFLICTROW*     row,                /**< generalized resolution row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< array of variables */
@@ -2078,8 +2078,6 @@ SCIP_RETCODE weakenConflictRow(
    }
 
    SCIPdebugMessage("weakened %d variables in the conflict row \n", nvarsweakened);
-
-   return SCIP_OKAY;
 }
 
 /* weaken all continuous variables in a generalized resolution row */
@@ -4703,7 +4701,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    if( !infeasibleLP && !pseudoobj )
    {
       /* sets the initial conflict row for the bound change directly in conflict->conflictrow */
-      getConflictRow(conflict, blkmem, set, transprob, initialconflictrow, bdchginfo, residx, maxsize, &successgetconflict);
+      SCIP_CALL( getConflictRow(conflict, blkmem, set, transprob, initialconflictrow, bdchginfo, residx, maxsize, &successgetconflict) );
       /* if we could not get the conflict row, then we abort */
       if( !successgetconflict )
       {
