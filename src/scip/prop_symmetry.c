@@ -4515,6 +4515,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
    char name[SCIP_MAXSTRLEN];
    SCIP_VAR* vars[2];
    SCIP_Real vals[2];
+   SCIP_Real rhs = 0.0;
    int orbitsize;
    int posleader;
    int poscur;
@@ -4599,6 +4600,10 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
       }
 #endif
 
+      /* for signed permutations, we need to adapt the rhs of SST cuts (artifically center variables at 0 ) */
+      if ( propdata->symtype == SYM_SYMTYPE_SIGNPERM )
+         rhs = propdata->permvardomaincenter[orbits[poscur]] - propdata->permvardomaincenter[orbits[posleader]];
+
       /* if the i-th variable in the orbit is in a conflict with the leader, fix it to 0 */
       if ( varconflicts != NULL )
       {
@@ -4625,7 +4630,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
          else if ( addcuts )
          {
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SSTcut_%d_%d", orbits[posleader], orbits[poscur]);
-            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, - SCIPinfinity(scip), 0.0,
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, - SCIPinfinity(scip), rhs,
                   FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
             SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -4635,7 +4640,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
       else if ( addcuts )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SSTcut_%d_%d", orbits[posleader], orbits[poscur]);
-         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, - SCIPinfinity(scip), 0.0,
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, - SCIPinfinity(scip), rhs,
                FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
