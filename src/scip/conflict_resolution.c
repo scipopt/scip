@@ -1277,7 +1277,6 @@ SCIP_RETCODE ComplementedMirLhs(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_CONFLICTROW*     reasonrow,          /**< reason row */
-   SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
    int*                  fixinds,             /**< dense array of indices of fixed variables */
    SCIP_BDCHGIDX*        currbdchgidx,       /**< current bound change index */
    int                   idxreason,          /**< index in the reason */
@@ -1428,7 +1427,6 @@ SCIP_RETCODE ComplementedChvatalGomoryLhs(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_CONFLICTROW*     reasonrow,          /**< reason row */
-   SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
    int*                  fixinds,             /**< dense array of indices of fixed variables */
    SCIP_BDCHGIDX*        currbdchgidx,       /**< current bound change index */
    int                   idxreason,          /**< index in the reason */
@@ -1861,7 +1859,7 @@ SCIP_Bool SCIPconflictResolutionApplicable(
    )
 {
    /* check, if generalized resolution conflict analysis is enabled */
-  if( !set->conf_enable || !set->conf_usegeneralres )
+   if( !set->conf_enable || !set->conf_usegeneralres )
       return FALSE;
 
    return TRUE;
@@ -2292,7 +2290,6 @@ SCIP_RETCODE updateBdchgQueue(
 static
 SCIP_RETCODE slackReducingContinuousBdchgQueue(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_CONFLICTROW*     row,                /**< conflict row */
    SCIP_BDCHGIDX*        inferbdchgidx       /**< bound change index of latest continuous bound change */
@@ -3371,7 +3368,6 @@ SCIP_RETCODE rescaleAndResolve(
    SCIP_CONFLICTROW*     row1,               /**< conflict row */
    SCIP_CONFLICTROW*     row2,               /**< reason conflict row */
    SCIP_CONFLICTROW*     resolvedrow,        /**< resolved conflict row */
-   SCIP_BDCHGINFO*       currbdchginfo,      /**< bound change to resolve */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   residx,             /**< index of variable to resolve */
    SCIP_Bool*            success             /**< apply resolution */
@@ -3584,7 +3580,7 @@ SCIP_RETCODE WeakeningBasedReduction(
 
    /* the reducedreason is our working row and replaces rowtoreduce only if resolution
       with the conflict row is guarranteed */
-   conflictRowCopy(&reducedreason, blkmem, rowtoreduce);
+   SCIP_CALL( conflictRowCopy(&reducedreason, blkmem, rowtoreduce) );
 
    nvarsweakened = 0;
    totaltoweaken = 0;
@@ -3658,14 +3654,14 @@ SCIP_RETCODE WeakeningBasedReduction(
             SCIPsetDebugMsg(set, "Slack before reduction: %g \n",  previousslack);
             SCIPsetDebugMsg(set, "Slack after reduction: %g \n", reducedreason->slack);
 #endif
-            SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reducedreason, resolvedconflictrow, currbdchginfo, blkmem, residx, &successresolution) );
+            SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reducedreason, resolvedconflictrow, blkmem, residx, &successresolution) );
             SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
             if(SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0))
                SCIP_CALL( conflictRowReplace(rowtoreduce, blkmem, reducedreason) );
          }
       }
    }
-   if( nvarsweakened > 0)
+   if( nvarsweakened > 0 && totaltoweaken > 0 )
    {
       conflict->nreductioncalls++;
       if (set->conf_weakenreasonall)
@@ -3742,18 +3738,18 @@ SCIP_RETCODE reduceReason(
    if (set->conf_reductiontechnique == 's')
    {
       SCIPsetDebugMsgPrint(set, "Apply Complemented 0-1 Chvatal-Gomory since slack of resolved row: %f >= 0 \n", conflict->resolvedconflictrow->slack);
-      SCIP_CALL( ComplementedChvatalGomoryLhs(set, vars, rowtoreduce, fixbounds, fixinds, currbdchgidx, residx, coefinrow) );
+      SCIP_CALL( ComplementedChvatalGomoryLhs(set, vars, rowtoreduce, fixinds, currbdchgidx, residx, coefinrow) );
    }
 
    else if(set->conf_reductiontechnique == 'r')
    {
       SCIPsetDebugMsgPrint(set, "Apply Complemented 0-1 MIR since slack of resolved row: %f >= 0 \n", conflict->resolvedconflictrow->slack);
-      SCIP_CALL( ComplementedMirLhs(set, vars, rowtoreduce, fixbounds, fixinds, currbdchgidx, residx, coefinrow) );
+      SCIP_CALL( ComplementedMirLhs(set, vars, rowtoreduce, fixinds, currbdchgidx, residx, coefinrow) );
    }
 
    else
    {
-      WeakeningBasedReduction(conflict, set, vars, blkmem, rowtoreduce, currbdchginfo, residx, fixbounds, fixinds);
+      SCIP_CALL( WeakeningBasedReduction(conflict, set, vars, blkmem, rowtoreduce, currbdchginfo, residx, fixbounds, fixinds) );
    }
 
    /* check that the variable we are resolving is still in the reason row */
@@ -4235,7 +4231,7 @@ SCIP_RETCODE executeResolutionStep(
 
    /* try to resolve without reducing the reason row */
    SCIPsetDebugMsgPrint(set, "Resolve %s without reducing the reason row \n", SCIPvarGetName(vars[residx]));
-   SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reasonrow, resolvedconflictrow, currbdchginfo, blkmem,
+   SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reasonrow, resolvedconflictrow, blkmem,
                         residx, successresolution) );
 
    if (!(*successresolution))
@@ -4260,7 +4256,7 @@ SCIP_RETCODE executeResolutionStep(
       /* MixedBinaryTodo add some flag if the reduction really did something so that we avoid some of the calculations below */
       /* after reduction resolve again */
       SCIPsetDebugMsgPrint(set, "Resolve %s after reducing the reason row \n", SCIPvarGetName(vars[residx]));
-      SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reducedreasonrow, resolvedconflictrow, currbdchginfo, blkmem,
+      SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reducedreasonrow, resolvedconflictrow, blkmem,
                               residx, successresolution) );
 
       if (!(*successresolution))
@@ -4280,7 +4276,7 @@ SCIP_RETCODE executeResolutionStep(
 
          coefresidx = reducedreasonrow->vals[residx];
          /* In the following the reducedreasonrow is the aggregation of the different reasonrows of continuous bound changes */
-         SCIP_CALL( slackReducingContinuousBdchgQueue(conflict, set, vars, reducedreasonrow, SCIPbdchginfoGetIdx(currbdchginfo)) );
+         SCIP_CALL( slackReducingContinuousBdchgQueue(conflict, vars, reducedreasonrow, SCIPbdchginfoGetIdx(currbdchginfo)) );
          /** MixedBinaryTodo: reduce the reason again after removing all continuous variables
           * - Check if the reason contrains the variable we are resolving
           * - Also check the case where the reason becomes infeasible and hence can be considered as the conflict constraint
@@ -4310,7 +4306,7 @@ SCIP_RETCODE executeResolutionStep(
 
             SCIPsetDebugMsgPrint(set, "Resolve slack-reducing continuous variable %s \n", SCIPvarGetName(vars[varidx]));
             /* resolve the continuous variable */
-            SCIP_CALL( rescaleAndResolve(set, conflict, reducedreasonrow, reasonrow, resolvedconflictrow, currbdchginfo, blkmem,
+            SCIP_CALL( rescaleAndResolve(set, conflict, reducedreasonrow, reasonrow, resolvedconflictrow, blkmem,
                                  varidx, successresolution) );
 
             /* if the coefficient of the variable we are resolving changed sign, then we have a new conflict constraint */
@@ -4327,7 +4323,7 @@ SCIP_RETCODE executeResolutionStep(
 
             SCIPdebug(printConflictRow(reducedreasonrow, set, vars, REDUCED_REASON_ROWTYPE));
 
-            SCIP_CALL( slackReducingContinuousBdchgQueue(conflict, set, vars, reducedreasonrow, SCIPbdchginfoGetIdx(continuousbdchginfo)) );
+            SCIP_CALL( slackReducingContinuousBdchgQueue(conflict, vars, reducedreasonrow, SCIPbdchginfoGetIdx(continuousbdchginfo)) );
          }
          /* after the loop we can weaken all continuous variables with their global bounds */
          SCIP_CALL( weakenContinuousVarsConflictRow(reducedreasonrow, set, vars, residx) );
@@ -4336,7 +4332,7 @@ SCIP_RETCODE executeResolutionStep(
          SCIPsetDebugMsgPrint(set, "Resolve %s after reducing the reason row \n", SCIPvarGetName(vars[residx]));
 
          /* after all reductions resolve one final time */
-         SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reducedreasonrow, resolvedconflictrow, currbdchginfo, blkmem,
+         SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reducedreasonrow, resolvedconflictrow, blkmem,
                               residx, successresolution) );
          SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
 
@@ -4495,7 +4491,7 @@ SCIP_RETCODE addClauseConflict(
    if(SCIPdebugSolIsEnabled(set->scip))
       checkConflictDebugSol(conflict, blkmem, set, transprob->vars, stat, tree, conflict->conflictrow);
 
-   SCIP_CALL(SCIPconflictAddConflictCon(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, &success));
+   SCIP_CALL( SCIPconflictAddConflictCon(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, &success));
 
    if (success)
    {
