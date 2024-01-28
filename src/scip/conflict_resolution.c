@@ -2643,8 +2643,8 @@ SCIP_RETCODE postprocessConflictCon(
    if((nchgcoefs != 0 || nchgsides != 0) && !(*infeasible))
    {
       SCIP_ROW* postprocessedrow;
-      SCIP_COL** cols;
-      SCIP_Real* vals;
+      SCIP_COL** colspostprocessed;
+      SCIP_Real* valspostprocessed;
 
       postprocessedrow = SCIPconsCreateRow(set->scip, cons);
 
@@ -2656,8 +2656,8 @@ SCIP_RETCODE postprocessConflictCon(
       conflictrow->nnz = SCIProwGetNNonz(postprocessedrow);
       assert(conflictrow->nnz > 0);
 
-      vals = SCIProwGetVals(postprocessedrow);
-      cols = SCIProwGetCols(postprocessedrow);
+      valspostprocessed = SCIProwGetVals(postprocessedrow);
+      colspostprocessed = SCIProwGetCols(postprocessedrow);
 
       conflictrow->lhs = SCIProwGetLhs(postprocessedrow) - SCIProwGetConstant(postprocessedrow);
 
@@ -2670,11 +2670,11 @@ SCIP_RETCODE postprocessConflictCon(
       }
       for(i = 0; i < conflictrow->nnz; ++i)
       {
-         conflictrow->inds[i] = SCIPvarGetProbindex(SCIPcolGetVar(cols[i]));
+         conflictrow->inds[i] = SCIPvarGetProbindex(SCIPcolGetVar(colspostprocessed[i]));
          if(swapside)
-            conflictrow->vals[conflictrow->inds[i]] = -vals[i];
+            conflictrow->vals[conflictrow->inds[i]] = -valspostprocessed[i];
          else
-            conflictrow->vals[conflictrow->inds[i]] = vals[i];
+            conflictrow->vals[conflictrow->inds[i]] = valspostprocessed[i];
       }
 
       SCIPdebug(printConflictRow(conflictrow, set, vars, POSTPROCESSED_CONFLICT_ROWTYPE));
@@ -3315,6 +3315,8 @@ SCIP_RETCODE getReasonClause(
 
       if( isbinary )
       {
+         int idx;
+
          for( int i = 0; i < reasonrow->nnz; i++ )
             reasonrow->vals[reasonrow->inds[i]] = 0.0;
 
@@ -3336,7 +3338,7 @@ SCIP_RETCODE getReasonClause(
          }
          /* add the variable we are resolving and update lhs */
          reasonrow->inds[0] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(currbdchginfo));
-         int idx = reasonrow->inds[0];
+         idx = reasonrow->inds[0];
          reasonrow->vals[idx] = SCIPbdchginfoGetNewbound(currbdchginfo) > 0.5 ? 1.0 : -1.0;
 
          reasonrow->lhs += SCIPbdchginfoGetNewbound(currbdchginfo) > 0.5 ? 0.0 : -1.0;
@@ -3346,7 +3348,7 @@ SCIP_RETCODE getReasonClause(
             SCIP_BDCHGINFO* bdchginfo;
             bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->separatebdchgqueue)[i]);
             reasonrow->inds[i+1] = SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo));
-            int idx = reasonrow->inds[i+1];
+            idx = reasonrow->inds[i+1];
             reasonrow->vals[idx] = SCIPbdchginfoGetNewbound(bdchginfo) > 0.5 ? -1.0 : 1.0;
 
 
