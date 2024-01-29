@@ -5077,6 +5077,7 @@ SCIP_RETCODE addSSTConss(
       *nchgbds = 0;
 
    /* initialize array indicating whether permutations shall not be considered for orbit permutations */
+   ninactiveperms = 0;
    for (c = 0; c < ncomponents; ++c)
    {
       for (p = componentbegins[c]; p < componentbegins[c + 1]; ++p)
@@ -5085,15 +5086,21 @@ SCIP_RETCODE addSSTConss(
          {
             /* possibly filter signed permutations */
             if ( propdata->componenthassignedperm[cidx] )
+            {
                inactiveperms[components[p]] = ! propdata->isproperperm[components[p]];
+               if ( inactiveperms[components[p]] )
+                  ++ninactiveperms;
+            }
             else
                inactiveperms[components[p]] = FALSE;
          }
          else
+         {
             inactiveperms[components[p]] = TRUE;
+            ++ninactiveperms;
+         }
       }
    }
-   ninactiveperms = nperms - componentbegins[cidx + 1] + componentbegins[cidx];
 
    /* as long as the stabilizer is non-trivial, add Schreier Sims constraints */
    norbitleadercomponent = 0;
