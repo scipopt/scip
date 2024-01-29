@@ -5250,7 +5250,7 @@ SCIP_RETCODE addOrbitopesDynamic(
             &propdata->genlinconsssize, propdata->ngenlinconss + ncols - 1) );
       for (i = 0; i < ncols - 1; ++i)
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_1row_comp_%d_col%d", partialname, i);
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_1row_comp_%d_col%d", partialname, componentid, i);
 
          consvars[0] = propdata->permvars[varidxmatrix[0][i]];
          consvars[1] = propdata->permvars[varidxmatrix[0][i + 1]];
