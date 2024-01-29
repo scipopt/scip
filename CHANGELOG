@@ -11,6 +11,8 @@ Fixed bugs
 Build system
 ------------
 
+- fixed make install when SHARED=no and make uninstall
+
 Miscellaneous
 -------------
 

@@ -109,7 +109,12 @@ ifneq ($(INSTALLDIR),)
 		@echo "-> remove binary from INSTALLDIR <$(INSTALLDIR)>"
 		@-(cd $(INSTALLDIR) && rm -vf $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK));
 		@echo "-> remove libraries from INSTALLDIR <$(INSTALLDIR)>"
-		@-(cd $(INSTALLDIR) && rm -vf $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBFILE) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK));
+		-(cd $(INSTALLDIR)/$(LIBDIR) && rm -vf $(notdir $(LPILIBFILE)) $(notdir $(LPILIBLINK)) $(notdir $(LPILIBSHORTLINK)) $(notdir $(TPILIBFILE)) $(notdir $(OBJSCIPLIBFILE)) $(notdir $(OBJSCIPLIBLINK)) $(notdir $(OBJSCIPLIBSHORTLINK)));
+ifeq ($(SHARED),true)
+		@-(cd $(INSTALLDIR)/$(LIBDIR) && rm -vf $(notdir $(SCIPLIBFILE)) $(notdir $(SCIPLIBLINK)) $(notdir $(SCIPLIBSHORTLINK)));
+else
+		@-(cd $(INSTALLDIR)/$(LIBDIR) && rm -vf $(notdir $(SCIPLIBBASEFILE)) $(notdir $(SCIPLIBBASELINK)) $(notdir $(SCIPLIBBASESHORTLINK)));
+endif
 ifeq ($(DELHEADERS), true)
 		@echo "-> remove scip headers from INSTALLDIR <$(INSTALLDIR)>"
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/scip
