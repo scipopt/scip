@@ -240,6 +240,7 @@ Fixed bugs
 - add safeguard for number of selected cuts
 - use double double precision for delta in activity updates of cons_linear.c
 - sort constraints in checkSolOrig() to keep the logic of constraint handlers intact
+- fixed make install when SHARED=no and make uninstall
 
 Miscellaneous
 -------------

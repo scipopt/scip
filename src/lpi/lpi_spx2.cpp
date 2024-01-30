@@ -91,6 +91,7 @@
 /* compile the SoPlex header with visibility=default because the SoPlex lib has been compiled that way */
 #ifdef __GNUC__
 #pragma GCC visibility push(default)
+#pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
 #endif
 
 /* include SoPlex solver */
