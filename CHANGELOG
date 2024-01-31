@@ -242,6 +242,7 @@ Fixed bugs
 - use double double precision for delta in activity updates of cons_linear.c
 - sort constraints in checkSolOrig() to keep the logic of constraint handlers intact
 - fixed make install when SHARED=no and make uninstall
+- check absolute coefficients relative to extremal average to avoid invalid unifications in normalizeCons()
 
 Miscellaneous
 -------------
