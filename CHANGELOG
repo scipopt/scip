@@ -84,6 +84,8 @@ Interface changes
 - SCIPsnprintf() now returns the required string length in case reallocation is necessary.
 - SCIPcomputeCoverUndercover() receives three more arguments which nonlinearities to cover
 - removed definition of SQRT
+- SCIPincludeObjConshdlr(), SCIPincludeConshdlr(), SCIPconshdlrCreate() receive two more arguments for the
+  conshdlr callbacks CONSGETPERMSYMGRAPH and CONSGETSIGNEDPERMSYMGRAPH
 
 ### New API functions
 
@@ -122,6 +124,16 @@ Interface changes
 - SCIPincludeCutselDynamic(), SCIPselectCutsDynamic() to include cutsel_dynamic or use the selection algorithm
 - SCIPincludeSepaLagromory() to include the new Lagromory separator
 - SCIPconsCompCheck() to compare two constraints based on their check priority
+- SCIPconsGetPermsymGraph() and SCIPconsGetSignedPermsymGraph() to access the (signed) permutation symmetry detection graph of a constraint
+- SCIPconshdlrSetGetPermsymGraph() and SCIPconshdlrSetGetSignedPermsymGraph() to set the (signed) permutation symmetry detection graph of a constraint
+- SCIPconshdlrSupportsPermsymDetection() and SCIPconshdlrSupportsSignedPermsymDetection() to access whether a conshdlr supports detection of (signed) permutation symmetries
+- new API functions for creating and manipulating a symmetry detection graph: SCIPcreateSymgraph(), SCIPfreeSymgraph(), SCIPcopySymgraph(), SCIPextendPermsymDetectionGraphLinear(),
+  SCIPaddSymgraphVarAggegration(), SCIPaddSymgraphOpnode(), SCIPaddSymgraphValnode(), SCIPaddSymgraphConsnode(), SCIPgetSymgraphVarnodeidx(), SCIPgetSymgraphNegatedVarnodeidx(),
+  SCIPupdateSymgraphLhs(), SCIPupdateSymgraphRhs(), SCIPfixSymgraphVarnode(), SCIPaddSymgraphEdge(), SCIPcomputeSymgraphColors(), SCIPgetSymgraphSymtype(), SCIPgetSymgraphVars(),
+  SCIPgetSymgraphNVars(), SCIPgetSymgraphNConsnodes(), SCIPgetSymgraphNNodes(), SCIPgetSymgraphNEdges(), SCIPgetSymgraphEdgeFirst(), SCIPgetSymgraphEdgeSecond(),
+  SCIPgetSymgraphVarnodeColor(), SCIPgetSymgraphNodeType(), SCIPgetSymgraphNodeColor(), SCIPisSymgraphEdgeColored(), SCIPgetSymgraphEdgeColor(), SCIPgetSymgraphNVarcolors(),
+  SCIPhasGraphUniqueEdgetype(), SCIPallocateSymgraphConsnodeperm(), SCIPcreateSymgraphConsnodeperm(), SCIPgetSymgraphConsnodeperm(), SCIPfreeSymgraphConsnodeperm(),
+  SCIPgetActiveVariables(), SCIPfreeSymDataExpr(), SCIPgetSymExprdataNConstants(), SCIPgetSymExprdataConstants(), SCIPgetCoefSymData()
 
 ### Command line interface
 
