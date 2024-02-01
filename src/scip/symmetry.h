@@ -64,7 +64,7 @@ extern "C" {
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeOrbitsSym(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_Bool             issigend,           /**< whether orbits for signed permutations shall be computed */
+   SCIP_Bool             issigned,           /**< whether orbits for signed permutations shall be computed */
    SCIP_VAR**            permvars,           /**< variables considered in a permutation array */
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
@@ -284,24 +284,8 @@ SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
    int*                  ncolmatrices        /**< pointer to store number of single lex column matrices in rows */
    );
 
-/** tries to handle variable matrices with lex ordered rows and columns */
-SCIP_EXPORT
-SCIP_RETCODE tryHandleDoubleLexMatrices(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_VAR**            vars,               /**< variables on which permutations act */
-   int**                 perms,              /**< array of permutations */
-   int                   nperms,             /**< number of permutations in perms */
-   int                   permlen,            /**< number of original (non-negated) variables in a permutation */
-   SCIP_Bool             issignedperm,       /**< whether permutations are encoded as signed */
-   SCIP_Bool*            success,            /**< pointer to store whether symmetries are handled */
-   int                   cidx,               /**< identifier of component to be handled by double lex matrices */
-   SCIP_CONS***          genorbconss,        /**< pointer to store generated orbitope constraints */
-   int*                  ngenorbconss,       /**< pointer to store number of generated orbitope constraints */
-   int*                  genorbconsssize     /**< pointer to store size genorbconss */
-   );
-
 /** helper function to test if val1 = val2 while permitting infinity-values */
-SCIP_Bool SCIPEQ(
+SCIP_Bool SCIPsymEQ(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
@@ -309,7 +293,7 @@ SCIP_Bool SCIPEQ(
 
 
 /** helper function to test if val1 <= val2 while permitting infinity-values */
-SCIP_Bool SCIPLE(
+SCIP_Bool SCIPsymLE(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
@@ -317,7 +301,7 @@ SCIP_Bool SCIPLE(
 
 
 /** helper function to test if val1 >= val2 while permitting infinity-values */
-SCIP_Bool SCIPGE(
+SCIP_Bool SCIPsymGE(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
@@ -325,7 +309,7 @@ SCIP_Bool SCIPGE(
 
 
 /** helper function to test if val1 < val2 while permitting infinity-values */
-SCIP_Bool SCIPLT(
+SCIP_Bool SCIPsymLT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
@@ -333,7 +317,7 @@ SCIP_Bool SCIPLT(
 
 
 /** helper function to test if val1 > val2 while permitting infinity-values */
-SCIP_Bool SCIPGT(
+SCIP_Bool SCIPsymGT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */

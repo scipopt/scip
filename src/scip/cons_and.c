@@ -3830,7 +3830,7 @@ SCIP_RETCODE addSymmetryInformation(
    vals[nlocvars++] = 2.0;
    assert(nlocvars <= nvars);
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals,
          nlocvars, cons, constant, constant, success) );

@@ -2056,7 +2056,7 @@ SCIP_RETCODE addSymmetryInformation(
    vars[consdata->nbinvars] = consdata->linkvar;
    vals[consdata->nbinvars] = -1.0;
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
          cons, -constant, -constant, success) );
