@@ -2013,7 +2013,8 @@ SCIP_RETCODE addSymmetryInformation(
       nlocvars = 1;
       constant = 0.0;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant,
+            SCIPisTransformed(scip)) );
 
       /* add node and edge for bound on literal (bound adapted by constant) */
       bound = consdata->boundtypes[i] == SCIP_BOUNDTYPE_UPPER ? consdata->bounds[i] : -consdata->bounds[i];

@@ -367,7 +367,7 @@ SCIP_RETCODE SCIPfreeSymgraphConsnodeperm(
  *  @note @p constant needs to be initialized!
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgetActiveVariables(
+SCIP_RETCODE SCIPgetSymActiveVariables(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_SYMTYPE           symtype,            /**< type of symmetries for which variables are required */
    SCIP_VAR***           vars,               /**< pointer to vars array to get active variables for */

@@ -9477,7 +9477,7 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
       nlocvars = 1;
       constant = 0.0;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars,
             &constant, SCIPconsIsTransformed(cons)) );
 
       if( nlocvars != 1 || !SCIPisZero(scip, constant) )
@@ -9699,7 +9699,7 @@ SCIP_RETCODE tryAddGadgetEvenOperatorVariable(
    nlocvars = 1;
 
    SCIP_CALL( ensureLocVarsArraySize(scip, consvars, consvals, nlocvars, maxnconsvars) );
-   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars, &constant,
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars, &constant,
          SCIPconsIsTransformed(cons)) );
 
    /* skip multi-aggregated variables or variables with domain not centered at 0 */
@@ -9796,7 +9796,7 @@ SCIP_RETCODE tryAddGadgetEvenOperatorSum(
    }
    constant = SCIPgetConstantExprSum(child);
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars, &constant,
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars, &constant,
          SCIPconsIsTransformed(cons)) );
 
    /* we can only handle the case without constant and two variables with domain centered at origin */
@@ -10163,7 +10163,7 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
       constant = 0.0;
       nlocvars = 1;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals,
             &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
 
       if( nlocvars != 1 )
@@ -10179,7 +10179,7 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
       constant2 = 0.0;
       nlocvars = 1;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals,
             &nlocvars, &constant2, SCIPconsIsTransformed(cons)) );
 
       if( nlocvars != 1 )
@@ -10393,7 +10393,7 @@ SCIP_RETCODE addSymmetryInformation(
          consvals[0] = 1.0;
          constant = 0.0;
 
-         SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &consvars, &consvals,
+         SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &consvars, &consvals,
                &nconsvars, &constant, SCIPconsIsTransformed(cons)) );
 
          /* check whether variable is aggregated */
@@ -10460,7 +10460,7 @@ SCIP_RETCODE addSymmetryInformation(
 
             constant = SCIPgetConstantExprSum(expr);
 
-            SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &consvars, &consvals,
+            SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &consvars, &consvals,
                   &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
 
             SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );

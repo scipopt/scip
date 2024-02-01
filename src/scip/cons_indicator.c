@@ -524,7 +524,7 @@ SCIP_RETCODE addSymmetryInformation(
    nlocvars = nvarslincons;
 
    constant = 0.0;
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    /* update lhs/rhs due to possible variable aggregation */
    lhs -= constant;
@@ -548,7 +548,7 @@ SCIP_RETCODE addSymmetryInformation(
    constant = 0.0;
    nlocvars = 1;
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    /* activation of a constraint is modeled as weight of the edge to the activation variable */
    actweight = consdata->activeone ? 1.0 : -1.0;
@@ -588,7 +588,7 @@ SCIP_RETCODE addSymmetryInformation(
    constant = 0.0;
    nlocvars = 1;
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
    {

@@ -3182,7 +3182,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
       nlocvars = 1;
       constant = 0.0;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
             &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       /* check whether variable is (multi-)aggregated or negated */
@@ -3211,7 +3211,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
       nlocvars = 1;
       constant = 0.0;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
             &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       /* check whether variable is (multi-)aggregated or negated */
@@ -3285,7 +3285,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphCardinality)
 
       /* use SYM_SYMTYPE_PERM here to NOT center variable domains at 0, as the latter might not preserve
        * cardinality constraints */
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
             &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       /* check whether variable is (multi-) aggregated or negated */
@@ -3350,7 +3350,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphCardinality)
       nlocvars = 1;
       constant = 0.0;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
             &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       /* check whether variable is (multi-)aggregated or negated */
