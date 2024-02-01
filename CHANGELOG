@@ -90,6 +90,7 @@ Interface changes
 - new parameter issigend for SCIPcomputeOrbitsSym()
 - new parameter symtype for SCIPcomputeComponentsSym()
 - new parameter symtype and permvardomaincenter for SCIPlexicographicReductionAddPermutation()
+- replaced parameters matrixdata and exprdata of SYMcomputeSymmetryGenerators() by graph
 
 ### New API functions
 
@@ -177,7 +178,6 @@ Interface changes
 - Disabled "propagating/symmetry/performpresolving" since running orbital reduction during presolving is not effective.
 - Repurposed "propagating/symmetry/usedynamicprop" since it now also applies to lexicographic reduction.
 - Changed default value of parameter "propagating/symmetry/addsymresacks" from FALSE to TRUE.
-- replaced parameters matrixdata and exprdata of SYMcomputeSymmetryGenerators() by graph
 
 ### New parameters
 
