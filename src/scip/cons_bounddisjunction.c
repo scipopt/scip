@@ -2032,7 +2032,7 @@ SCIP_RETCODE addSymmetryInformation(
       }
 
       /* add nodes and edges for variables in aggregation (ignore constant, has been treated above) */
-      SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, vars, vals, nlocvars, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, nodeidx, vars, vals, nlocvars, 0.0) );
    }
 
    SCIPfreeBufferArray(scip, &vals);

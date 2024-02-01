@@ -51,7 +51,7 @@
  */
 SCIP_RETCODE SCIPcomputeOrbitsSym(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_Bool             issigend,           /**< whether orbits for signed permutations shall be computed */
+   SCIP_Bool             issigned,           /**< whether orbits for signed permutations shall be computed */
    SCIP_VAR**            permvars,           /**< variables considered in a permutation */
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
@@ -76,7 +76,7 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
    assert( norbits != NULL );
 
    permlen = npermvars;
-   if ( issigend )
+   if ( issigned )
       permlen *= 2;
 
    /* init data structures*/

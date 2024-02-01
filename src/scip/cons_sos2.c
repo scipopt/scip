@@ -2298,7 +2298,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
          {
             SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &nodeidx) ); /*lint !e641*/
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opnodeidx, nodeidx, FALSE, 0.0) );
-            SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, locvars, locvals, nlocvars, constant) );
+            SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, nodeidx, locvars, locvals, nlocvars, constant) );
          }
       }
    }
@@ -2396,7 +2396,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS2)
 
             /* add nodes and edges for variables in aggregation, do not add edges to negated variables
              * since this might not necessarily be a symmetry of the SOS1 constraint; therefore,
-             * do not use SCIPaddSymgraphVarAggegration() */
+             * do not use SCIPaddSymgraphVarAggregation() */
             for( k = 0; k < nlocvars; ++k )
             {
                nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, locvars[k]);

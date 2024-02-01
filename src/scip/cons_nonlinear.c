@@ -10406,7 +10406,7 @@ SCIP_RETCODE addSymmetryInformation(
 
             parentidx = thisidx;
          }
-         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, parentidx, consvars, consvals,
+         SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, parentidx, consvars, consvals,
                nconsvars, constant) );
       }
       else if( SCIPisExprValue(scip, expr) )
@@ -10469,7 +10469,7 @@ SCIP_RETCODE addSymmetryInformation(
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, sumidx, hasparentcoef, parentcoef) );
 
             /* add the linear part of the sum */
-            SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, sumidx, consvars, consvals, nlocvars, constant) );
+            SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, sumidx, consvars, consvals, nlocvars, constant) );
 
             SCIP_CALL( ensureOpenArraySizeSymdetect(scip, &openidx, nopenidx + 1, &maxnopenidx) );
 

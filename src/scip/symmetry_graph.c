@@ -291,7 +291,7 @@ SCIP_RETCODE SCIPextendPermsymDetectionGraphLinear(
  *  For signed permutation symmetries, also edges connecting the root node and the negated variable
  *  nodes are added, these edges are colored by the negative coefficients.
  */
-SCIP_RETCODE SCIPaddSymgraphVarAggegration(
+SCIP_RETCODE SCIPaddSymgraphVarAggregation(
    SCIP*                 scip,               /**< SCIP data structure */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
    int                   rootidx,            /**< index of root node of the aggegration */

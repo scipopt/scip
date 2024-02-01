@@ -536,7 +536,7 @@ SCIP_RETCODE addSymmetryInformation(
    SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
 
    /* add nodes/edes for variables in linear constraint */
-   SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, opnodeidx, vars, vals, nlocvars, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, opnodeidx, vars, vals, nlocvars, 0.0) );
 
    /* create nodes and edges for activation of constraint */
    SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_EQ, &eqnodeidx) ); /*lint !e641*/
@@ -560,7 +560,7 @@ SCIP_RETCODE addSymmetryInformation(
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, opnodeidx, TRUE, actweight) );
 
       /* add nodes and edges for variables in aggregation */
-      SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, opnodeidx, vars, vals, nlocvars, constant) );
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, opnodeidx, vars, vals, nlocvars, constant) );
    }
    else if( nlocvars == 1 )
    {
@@ -597,7 +597,7 @@ SCIP_RETCODE addSymmetryInformation(
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, slacknodeidx, opnodeidx, FALSE, 0.0) );
 
       /* add nodes and edges for variables in aggregation */
-      SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, opnodeidx, vars, vals, nlocvars, constant) );
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, opnodeidx, vars, vals, nlocvars, constant) );
    }
    else if( nlocvars == 1 )
    {
