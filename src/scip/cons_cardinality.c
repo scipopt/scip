@@ -3182,7 +3182,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
       nlocvars = 1;
       constant = 0.0;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
             &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       /* check whether variable is (multi-)aggregated or negated */
@@ -3196,7 +3196,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, nodeidx, FALSE, 0.0) );
 
          /* add nodes and edges for variables in aggregation */
-         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
+         SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
       }
       else if( nlocvars == 1 )
       {
@@ -3211,7 +3211,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
       nlocvars = 1;
       constant = 0.0;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
             &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       /* check whether variable is (multi-)aggregated or negated */
@@ -3225,7 +3225,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, nodeidx, FALSE, 0.0) );
 
          /* add nodes and edges for variables in aggregation */
-         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
+         SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
       }
       else if( nlocvars == 1 )
       {
@@ -3285,7 +3285,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphCardinality)
 
       /* use SYM_SYMTYPE_PERM here to NOT center variable domains at 0, as the latter might not preserve
        * cardinality constraints */
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
             &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       /* check whether variable is (multi-) aggregated or negated */
@@ -3303,7 +3303,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphCardinality)
 
          /* add nodes and edges for variables in aggregation, do not add edges to negated variables
           * since this might not necessarily be a symmetry of the cardinality constraint; therefore,
-          * do not use SCIPaddSymgraphVarAggegration() */
+          * do not use SCIPaddSymgraphVarAggregation() */
          for( j = 0; j < nlocvars; ++j )
          {
             nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[j]);
@@ -3350,7 +3350,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphCardinality)
       nlocvars = 1;
       constant = 0.0;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_PERM, &vars, &vals,
             &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       /* check whether variable is (multi-)aggregated or negated */
@@ -3364,7 +3364,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphCardinality)
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, pairnodeidx, nodeidx, FALSE, 0.0) );
 
          /* add nodes and edges for variables in aggregation */
-         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
+         SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, nodeidx, vars, vals, nlocvars, constant) );
       }
       else if( nlocvars == 1 )
       {

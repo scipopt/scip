@@ -15266,7 +15266,7 @@ SCIP_RETCODE addSymmetryInformation(
       vals[i] = consdata->vals[i];
    }
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
    lhs = consdata->lhs - constant;
    rhs = consdata->rhs - constant;
 

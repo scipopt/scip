@@ -4081,7 +4081,7 @@ SCIP_RETCODE addSymmetryInformation(
       vals[i] = 1.0;
    }
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
          cons, 1.0 - constant, SCIPinfinity(scip), success) );

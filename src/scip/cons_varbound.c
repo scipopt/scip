@@ -4364,7 +4364,7 @@ SCIP_RETCODE addSymmetryInformation(
    vals[0] = 1.0;
    vals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
    lhs = SCIPgetLhsVarbound(scip, cons) - constant;
    rhs = SCIPgetRhsVarbound(scip, cons) - constant;
 
