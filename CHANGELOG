@@ -128,18 +128,19 @@ Interface changes
 - SCIPincludeCutselDynamic(), SCIPselectCutsDynamic() to include cutsel_dynamic or use the selection algorithm
 - SCIPincludeSepaLagromory() to include the new Lagromory separator
 - SCIPconsCompCheck() to compare two constraints based on their check priority
-- SCIPconsGetPermsymGraph() and SCIPconsGetSignedPermsymGraph() to access the (signed) permutation symmetry detection graph of a constraint
-- SCIPconshdlrSetGetPermsymGraph() and SCIPconshdlrSetGetSignedPermsymGraph() to set the (signed) permutation symmetry detection graph of a constraint
+- SCIPgetConsPermsymGraph() and SCIPgetConsSignedPermsymGraph() to access the (signed) permutation symmetry detection graph of a constraint
+- SCIPsetConshdlrGetPermsymGraph() and SCIPsetConshdlrGetSignedPermsymGraph() to set the (signed) permutation symmetry detection graph of a constraint
 - SCIPconshdlrSupportsPermsymDetection() and SCIPconshdlrSupportsSignedPermsymDetection() to access whether a conshdlr supports detection of (signed) permutation symmetries
 - new API functions for creating and manipulating a symmetry detection graph: SCIPcreateSymgraph(), SCIPfreeSymgraph(), SCIPcopySymgraph(), SCIPextendPermsymDetectionGraphLinear(),
   SCIPaddSymgraphVarAggegration(), SCIPaddSymgraphOpnode(), SCIPaddSymgraphValnode(), SCIPaddSymgraphConsnode(), SCIPgetSymgraphVarnodeidx(), SCIPgetSymgraphNegatedVarnodeidx(),
   SCIPupdateSymgraphLhs(), SCIPupdateSymgraphRhs(), SCIPfixSymgraphVarnode(), SCIPaddSymgraphEdge(), SCIPcomputeSymgraphColors(), SCIPgetSymgraphSymtype(), SCIPgetSymgraphVars(),
   SCIPgetSymgraphNVars(), SCIPgetSymgraphNConsnodes(), SCIPgetSymgraphNNodes(), SCIPgetSymgraphNEdges(), SCIPgetSymgraphEdgeFirst(), SCIPgetSymgraphEdgeSecond(),
+  SCIPgetSymgraphVarnodeColor(), SCIPgetSymgraphNodeType(), SCIPgetSymgraphNodeColor(), SCIPisSymgraphEdgeColored(), SCIPgetSymgraphEdgeColor(), SCIPgetSymgraphNVarcolors(),
+  SCIPhasGraphUniqueEdgetype(), SCIPallocateSymgraphConsnodeperm(), SCIPcreateSymgraphConsnodeperm(), SCIPgetSymgraphConsnodeperm(), SCIPfreeSymgraphConsnodeperm(),
+  SCIPgetActiveVariables(), SCIPfreeSymDataExpr(), SCIPgetSymExprdataNConstants(), SCIPgetSymExprdataConstants(), SCIPgetCoefSymData(),
   SCIPcreateSymOpNodeType(), SCIPgetSymOpNodeType()
 - SCIPexprhdlrSetGetSymdata(), SCIPexprhdlrHasGetSymData(), SCIPgetSymDataExpr(), SCIPcallExprGetSymData() to access symmetry data of expressions
 - SYMcheckGraphsAreIdentical() to check whether two symmetry detection graphs are identical
-- SCIPgetConsPermsymGraph() and SCIPgetConsSignedPermsymGraph() to access the (signed) permutation symmetry detection graph of a constraint
-- SCIPsetConshdlrGetPermsymGraph() and SCIPsetConshdlrGetSignedPermsymGraph() to set the (signed) permutation symmetry detection graph of a constraint
 - new functions SYMbuildSassyGraph(), SYMbuildSassyGraphCheck()
 - new type SYM_GRAPH
 - new definitions SCIP_DECL_CONSGETPERMSYMGRAPH, SCIP_DECL_EXPRGETSYMDATA
