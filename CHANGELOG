@@ -148,7 +148,7 @@ Interface changes
 - new member SYM_NODETYPE_CONS in SYM_NODETYPE enum
 - new members SYM_CONSOPTYPE_SUM, SYM_CONSOPTYPE_SLACK, SYM_CONSOPTYPE_COEF, SYM_CONSOPTYPE_RHS, SYM_CONSOPTYPE_LAST in SYM_CONSOPTYPE enum
 - new defintion SCIP_DECL_EXPRGETSYMDATA
-- new functions SCIPdetectSingleOrDoubleLexMatrices() and tryHandleDoubleLexMatrices()
+- new function SCIPdetectSingleOrDoubleLexMatrices()
 
 ### Command line interface
 
