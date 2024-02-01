@@ -86,6 +86,10 @@ Interface changes
 - removed definition of SQRT
 - SCIPincludeObjConshdlr(), SCIPincludeConshdlr(), SCIPconshdlrCreate() receive two more arguments for the
   conshdlr callbacks CONSGETPERMSYMGRAPH and CONSGETSIGNEDPERMSYMGRAPH
+- removed SYM_VARTYPE, SYM_OPTYPE, SYM_CONSTTYPE, SYM_RHSTYPE, SYM_MATRIXDATA
+- new parameter issigend for SCIPcomputeOrbitsSym()
+- new parameter symtype for SCIPcomputeComponentsSym()
+- new parameter symtype and permvardomaincenter for SCIPlexicographicReductionAddPermutation()
 
 ### New API functions
 
@@ -131,8 +135,18 @@ Interface changes
   SCIPaddSymgraphVarAggegration(), SCIPaddSymgraphOpnode(), SCIPaddSymgraphValnode(), SCIPaddSymgraphConsnode(), SCIPgetSymgraphVarnodeidx(), SCIPgetSymgraphNegatedVarnodeidx(),
   SCIPupdateSymgraphLhs(), SCIPupdateSymgraphRhs(), SCIPfixSymgraphVarnode(), SCIPaddSymgraphEdge(), SCIPcomputeSymgraphColors(), SCIPgetSymgraphSymtype(), SCIPgetSymgraphVars(),
   SCIPgetSymgraphNVars(), SCIPgetSymgraphNConsnodes(), SCIPgetSymgraphNNodes(), SCIPgetSymgraphNEdges(), SCIPgetSymgraphEdgeFirst(), SCIPgetSymgraphEdgeSecond(),
+  SCIPcreateSymOpNodeType(), SCIPgetSymOpNodeType()
+- SCIPexprhdlrSetGetSymdata(), SCIPexprhdlrHasGetSymData(), SCIPgetSymDataExpr(), SCIPcallExprGetSymData() to access symmetry data of expressions
+- SYMcheckGraphsAreIdentical() to check whether two symmetry detection graphs are identical
 - SCIPgetConsPermsymGraph() and SCIPgetConsSignedPermsymGraph() to access the (signed) permutation symmetry detection graph of a constraint
 - SCIPsetConshdlrGetPermsymGraph() and SCIPsetConshdlrGetSignedPermsymGraph() to set the (signed) permutation symmetry detection graph of a constraint
+- new functions SYMbuildSassyGraph(), SYMbuildSassyGraphCheck()
+- new type SYM_GRAPH
+- new definitions SCIP_DECL_CONSGETPERMSYMGRAPH, SCIP_DECL_EXPRGETSYMDATA
+- new member SYM_NODETYPE_CONS in SYM_NODETYPE enum
+- new members SYM_CONSOPTYPE_SUM, SYM_CONSOPTYPE_SLACK, SYM_CONSOPTYPE_COEF, SYM_CONSOPTYPE_RHS, SYM_CONSOPTYPE_LAST in SYM_CONSOPTYPE enum
+- new defintion SCIP_DECL_EXPRGETSYMDATA
+- new functions SCIPdetectSingleOrDoubleLexMatrices() and tryHandleDoubleLexMatrices()
 
 ### Command line interface
 
@@ -162,6 +176,7 @@ Interface changes
 - Disabled "propagating/symmetry/performpresolving" since running orbital reduction during presolving is not effective.
 - Repurposed "propagating/symmetry/usedynamicprop" since it now also applies to lexicographic reduction.
 - Changed default value of parameter "propagating/symmetry/addsymresacks" from FALSE to TRUE.
+- replaced parameters matrixdata and exprdata of SYMcomputeSymmetryGenerators() by graph
 
 ### New parameters
 
@@ -207,6 +222,7 @@ Interface changes
 
 - new data structure SYM_GRAPH to encode symmetry information from a constraint
 - new data structure SYM_EXPRDATA to encode symmetry information from expressions
+- replaced enum SYM_SYMTYPE by a complete new one; removed SYM_RHSSENSE, added SYM_NODETYPE and SYM_CONSOPTYPE
 
 Deleted files
 -------------
