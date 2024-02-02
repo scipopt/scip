@@ -2494,8 +2494,8 @@ SCIP_DECL_READERREAD(readerReadOsil)
       SCIPfreeBlockMemoryArrayNull(scip, &quadvars1[c], termssize[c]);
 
       /* free linear parts */
-      SCIPfreeBlockMemoryArray(scip, &lincoefs[c], nlinvars[c]);
-      SCIPfreeBlockMemoryArray(scip, &linvars[c], nlinvars[c]);
+      SCIPfreeBlockMemoryArrayNull(scip, &lincoefs[c], nlinvars[c]);
+      SCIPfreeBlockMemoryArrayNull(scip, &linvars[c], nlinvars[c]);
    }
    SCIPfreeBlockMemoryArrayNull(scip, &termssize, nconss + 1);
    SCIPfreeBlockMemoryArrayNull(scip, &nlexprs, nconss + 1);
