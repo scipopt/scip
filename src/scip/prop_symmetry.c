@@ -6571,7 +6571,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d_doublelex_row_%d", id, p);
 
-         SCIP_CALL( handleOrbitope(scip, propdata, id, orbitopematrix, i, ncols, partialname, FALSE, TRUE, &tmpsuccess) );
+         SCIP_CALL( handleOrbitope(scip, propdata, id, orbitopematrix, ncols, i, partialname, FALSE, TRUE, &tmpsuccess) );
          *success = *success || tmpsuccess;
       }
    }
