@@ -74,6 +74,14 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
+/* parameters for MIR */
+#define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
+#define POSTPROCESS               FALSE /**< apply postprocessing after MIR calculation - see SCIPcalcMIR() */
+#define USEVBDS                   FALSE /**< use variable bounds - see SCIPcalcMIR() */
+#define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcalcMIR() */
+#define MINFRAC                   0.05  /**< minimal fractionality of floor(rhs) - see cuts.c */
+#define MAXFRAC                   0.999 /**< maximal fractionality of floor(rhs) - see cuts.c */
+
 #define EPS                       1e-06
 
 // #define SCIP_CONFGRAPH_DOT
@@ -610,6 +618,36 @@ void printConflictRow(
          }
       }
       assert(nnzs == row->nnz);
+}
+
+/** print aggregated row */
+static
+void printAggrrow(
+   SCIP_AGGRROW*         aggrrow,
+   SCIP_SET*             set,
+   SCIP_VAR**            vars                /**< array of variables */
+   )
+{
+   int i;
+   SCIP_Real QUAD(rhs);
+   SCIP_Real QUAD(val);
+   assert(aggrrow != NULL);
+
+   assert(vars != NULL);
+   SCIPquadprecProdQD(rhs, aggrrow->rhs, 1.0);
+
+   SCIPsetDebugMsgPrint(set, "Aggregated Row: ");
+   for( i = 0; i < aggrrow->nnz; i++ )
+   {
+      QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
+      if( SCIPvarGetType(vars[aggrrow->inds[i]]) == SCIP_VARTYPE_BINARY )
+         SCIPsetDebugMsgPrint(set, " %+g<%s>[B]", QUAD_TO_DBL(val), SCIPvarGetName(vars[aggrrow->inds[i]]));
+      else if( SCIPvarGetType(vars[aggrrow->inds[i]]) == SCIP_VARTYPE_INTEGER )
+         SCIPsetDebugMsgPrint(set, " %+g<%s>[I]", QUAD_TO_DBL(val), SCIPvarGetName(vars[aggrrow->inds[i]]));
+      else
+         SCIPsetDebugMsgPrint(set, " %+g<%s>[C]", QUAD_TO_DBL(val), SCIPvarGetName(vars[aggrrow->inds[i]]));
+   }
+   SCIPsetDebugMsgPrint(set, " <= %+.15g\n",  QUAD_TO_DBL(rhs));
 }
 
 /** print a single bound change in debug mode
@@ -1305,7 +1343,7 @@ SCIP_RETCODE ComplementedMirLhs(
    if (!isBinaryConflictRow(set, vars, reasonrow))
       return SCIP_OKAY;
 
-   SCIPsetDebugMsgPrint(set, "Stronger MIR on constraint with LHS %f and divisor %f\n" , reasonrow->lhs, divisor);
+   SCIPsetDebugMsgPrint(set, "MIR on 0-1 constraint with LHS %f and divisor %f\n" , reasonrow->lhs, divisor);
 
    /* complement and apply MIR to the reason constraint lhs <= a^T x
     * say the idxreason is k, and a_k > 0 (so this reason constraint fixes x_k to 1).
@@ -1981,6 +2019,128 @@ void conflictRowClear(
    row->conflicttype = SCIP_CONFTYPE_RESOLUTION;
    row->usescutoffbound = FALSE;
    row->isbinary = FALSE;
+}
+
+static
+SCIP_RETCODE MirReduction(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_VAR**            vars,               /**< array of variables */
+   int                   nvars,              /**< number of variables */
+   SCIP_CONFLICTROW*     reasonrow,          /**< reason row */
+   int*                  fixinds,             /**< dense array of indices of fixed variables */
+   SCIP_BDCHGIDX*        currbdchgidx,       /**< current bound change index */
+   int                   varidx,             /**< index of the variable to resolve */
+   SCIP_Real             divisor             /**< the divisor of the row */
+   )
+{
+   SCIP_AGGRROW* aggrrow;
+   int* cutinds;
+   SCIP_Real* cutcoefs;
+   int* rowinds;
+   SCIP_Real* rowvals;
+
+   int cutnnz;
+   int rownnz;
+   SCIP_Real cutrhs;
+   SCIP_Real rowrhs;
+
+   int* boundsfortrans;
+   SCIP_BOUNDTYPE* boundtypesfortrans;
+
+   assert(set != NULL);
+   assert(vars != NULL);
+   assert(reasonrow != NULL);
+   assert(reasonrow->inds != NULL);
+   assert(reasonrow->vals != NULL);
+   assert(reasonrow->nnz > 0);
+
+   assert(SCIPsetIsGT(set, divisor, 0.0));
+
+   if(!SCIPvarIsIntegral(vars[varidx]))
+      return SCIP_OKAY;
+
+   SCIPsetDebugMsgPrint(set, "Apply MIR on general constraint with LHS %f and divisor %f\n" , reasonrow->lhs, divisor);
+
+   /* creating the aggregation row. There will be only a single row in this aggregation, since it is only used to
+    * compute the MIR coefficients
+    */
+   SCIP_CALL( SCIPaggrRowCreate(set->scip, &aggrrow) );
+   /* initialize arrays for cut indices, cut coefficients, row indices, row values, and bounds for the transformation */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &cutinds, reasonrow->nnz) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &cutcoefs, reasonrow->nnz) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, reasonrow->nnz) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowvals, reasonrow->nnz) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &boundsfortrans, nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtypesfortrans, nvars) );
+
+
+   for( int i = 0; i < nvars; ++i )
+   {
+      boundsfortrans[i] = -1;
+      boundtypesfortrans[i] = SCIP_BOUNDTYPE_LOWER;
+   }
+
+   /* create a sparse row of the form ax <= b from the reason */
+   rowrhs = -reasonrow->lhs;
+   rownnz = reasonrow->nnz;
+   for( int i = 0; i < rownnz; ++i )
+   {
+      int idx;
+      SCIP_Real coef;
+      idx = reasonrow->inds[i];
+      coef = reasonrow->vals[idx];
+      rowinds[i] = idx;
+      rowvals[i] = -coef;
+      /* We complement binary variables:
+       *   - if a_i > 0 and x_i is not fixed to 0
+       *   - if a_i < 0 and x_i is fixed to 1
+       */
+      if(SCIPvarIsBinary(vars[idx]))
+      {
+         if ( (coef > 0.0 && (SCIPgetVarUbAtIndex(set->scip, vars[idx], currbdchgidx, TRUE) > 0.5 && fixinds[idx] != 1) ) ||
+            (coef < 0.0 && (SCIPgetVarLbAtIndex(set->scip, vars[idx], currbdchgidx, TRUE) > 0.5 || fixinds[idx] == -1 )) )
+            boundtypesfortrans[idx] = SCIP_BOUNDTYPE_UPPER;
+      }
+   }
+
+   SCIP_Real cutefficacy;
+   int cutrank;
+   SCIP_Bool cutislocal;
+   SCIP_Bool success;
+
+   SCIP_CALL( SCIPaggrRowAddCustomCons(set->scip, aggrrow, rowinds, rowvals, rownnz, rowrhs, 1.0 / divisor, 1, FALSE) );
+
+   SCIPdebug(printAggrrow(aggrrow, set, vars));
+
+   /* apply MIR */
+   SCIP_CALL( SCIPcalcMIR(set->scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, FALSE, FIXINTEGRALRHS, TRUE, boundsfortrans,
+   boundtypesfortrans, MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy,
+   &cutrank, &cutislocal, &success) );
+
+   if(success)
+   {
+      conflictRowClear(blkmem, reasonrow, nvars);
+      reasonrow->nnz = cutnnz;
+      reasonrow->lhs = -cutrhs;
+      for (int i = 0; i < cutnnz; ++i)
+      {
+         reasonrow->inds[i] = cutinds[i];
+         reasonrow->vals[cutinds[i]] = -cutcoefs[i];
+      }
+   }
+
+   /* remove variables with zero coefficient. Loop backwards */
+   conflictRowRemoveZeroVars(reasonrow, set);
+
+   SCIPsetFreeBufferArray(set, &cutinds);
+   SCIPsetFreeBufferArray(set, &cutcoefs);
+   SCIPsetFreeBufferArray(set, &rowinds);
+   SCIPsetFreeBufferArray(set, &rowvals);
+   SCIPsetFreeBufferArray(set, &boundsfortrans);
+   SCIPsetFreeBufferArray(set, &boundtypesfortrans);
+
+   return SCIP_OKAY;
 }
 
 /** weaken variable in a generalized resolution row */
@@ -3715,6 +3875,7 @@ SCIP_RETCODE reduceReason(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_VAR**            vars,               /**< array of variables */
+   int                   nvars,              /**< number of variables */
    SCIP_CONFLICTROW*     rowtoreduce,         /**< the row to reduce */
    SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change to resolve */
    int                   residx,             /**< index of variable to resolve */
@@ -3739,8 +3900,10 @@ SCIP_RETCODE reduceReason(
 
    else if(set->conf_reductiontechnique == 'r')
    {
-      SCIPsetDebugMsgPrint(set, "Apply Complemented 0-1 MIR since slack of resolved row: %f >= 0 \n", conflict->resolvedconflictrow->slack);
-      SCIP_CALL( ComplementedMirLhs(set, vars, rowtoreduce, fixinds, currbdchgidx, residx, coefinrow) );
+      if(isBinaryConflictRow(set, vars, rowtoreduce))
+         SCIP_CALL( ComplementedMirLhs(set, vars, rowtoreduce, fixinds, currbdchgidx, residx, coefinrow) );
+      else
+         SCIP_CALL( MirReduction(set, blkmem, vars, nvars, rowtoreduce, fixinds, currbdchgidx, residx, coefinrow) );
    }
 
    else
@@ -4246,7 +4409,7 @@ SCIP_RETCODE executeResolutionStep(
       SCIP_CALL( conflictRowReplace(reducedreasonrow, blkmem, reasonrow) );
 
       /* apply reduction to the reason row */
-      SCIP_CALL( reduceReason(conflict, set, blkmem, vars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds) );
+      SCIP_CALL( reduceReason(conflict, set, blkmem, vars, nvars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds) );
 
       /* todo add some flag if the reduction really did something so that we avoid some of the calculations below */
       /* after reduction resolve again */
@@ -4280,6 +4443,8 @@ SCIP_RETCODE executeResolutionStep(
             SCIPsetDebugMsgPrint(set, "Slack-reducing continuous variables in the reason row \n");
             SCIPdebug(printConflictRow(reducedreasonrow, set, vars, REASON_ROWTYPE));
          }
+         else
+            return SCIP_OKAY;
 
          while( SCIPpqueueNElems(conflict->continuousbdchgqueue) > 0 )
          {
@@ -4324,7 +4489,7 @@ SCIP_RETCODE executeResolutionStep(
          /* after the loop we can weaken all continuous variables with their global bounds */
          SCIP_CALL( weakenContinuousVarsConflictRow(reducedreasonrow, set, vars, residx) );
          /* apply reduction to the reason row */
-         SCIP_CALL( reduceReason(conflict, set, blkmem, vars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds) );
+         SCIP_CALL( reduceReason(conflict, set, blkmem, vars, nvars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds) );
 
          SCIPsetDebugMsgPrint(set, "Resolve %s after reducing the reason row \n", SCIPvarGetName(vars[residx]));
          /* after all reductions resolve one final time */
