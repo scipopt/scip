@@ -99,6 +99,7 @@
  */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_OUTPUT_COMPONENT */
+/* #define SCIP_DISPLAY_SYM_CHECK */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -1518,6 +1519,10 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    int p;
    int c;
    int g;
+#ifdef SCIP_DISPLAY_SYM_CHECK
+   int permlen;
+   SCIP_Bool* covered;
+#endif
 
    assert( scip != NULL );
    assert( perms != NULL );
@@ -1578,23 +1583,50 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       SCIP_CALL( SCIPfreeSymgraphConsnodeperm(scip, graphs[c]) );
    }
 
+#ifdef SCIP_DISPLAY_SYM_CHECK
+   permlen = symtype == SYM_SYMTYPE_SIGNPERM ? 2 * npermvars : npermvars;
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, permlen) );
+#endif
+
    /* iterate over all permutations and check whether they define symmetries */
    for (p = 0; p < nperms; ++p)
    {
       SYM_GRAPH* graph;
       SCIP_Bool found = TRUE;
       int d;
+#ifdef SCIP_DISPLAY_SYM_CHECK
+      int i;
+
+      SCIPinfoMessage(scip, NULL, "Check whether permutation %d is a symmetry:\n", p);
+      for (i = 0; i < permlen; ++i)
+      {
+         SCIP_CALL( displayCycleOfSymmetry(scip, perms[p], symtype, i, covered, npermvars, SCIPgetVars(scip)) );
+      }
+
+      for (i = 0; i < permlen; ++i)
+         covered[i] = FALSE;
+      SCIPinfoMessage(scip, NULL, "Check whether every constraint has a symmetric counterpart.\n");
+#endif
 
       /* for every constraint, create permuted graph by copying nodes and edges */
       for (g = 0; g < ngroups; ++g)
       {
          for (c = groupbegins[g]; c < groupbegins[g+1]; ++c)
          {
+#ifdef SCIP_DISPLAY_SYM_CHECK
+            SCIPinfoMessage(scip, NULL, "Check whether constraint %d has a symmetric counterpart:\n",
+               graphperm[c]);
+            SCIP_CALL( SCIPprintCons(scip, conss[graphperm[c]], NULL) );
+            SCIPinfoMessage(scip, NULL, "\n");
+#endif
             SCIP_CALL( SCIPcopySymgraph(scip, &graph, graphs[graphperm[c]], perms[p], fixedtype) );
 
             /* if adapted graph is equivalent to original graph, we don't need to check further graphs */
             if ( SYMcheckGraphsAreIdentical(scip, symtype, graph, graphs[graphperm[c]]) )
             {
+#ifdef SCIP_DISPLAY_SYM_CHECK
+               SCIPinfoMessage(scip, NULL, "\tconstraint is symmetric to itself\n");
+#endif
                SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
                continue;
             }
@@ -1602,18 +1634,33 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             /* check whether graph has an isomorphic counterpart */
             found = FALSE;
             for (d = groupbegins[g]; d < groupbegins[g+1] && ! found; ++d)
+            {
                found = SYMcheckGraphsAreIdentical(scip, symtype, graph, graphs[graphperm[d]]);
+
+#ifdef SCIP_DISPLAY_SYM_CHECK
+               SCIPinfoMessage(scip, NULL, "\tconstraint is %ssymmetric to constraint %d\n\t", !found ? "not " : "", d);
+               SCIP_CALL( SCIPprintCons(scip, conss[graphperm[d]], NULL) );
+               SCIPinfoMessage(scip, NULL, "\n");
+#endif
+            }
 
             SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
 
             if ( ! found )
             {
+#ifdef SCIP_DISPLAY_SYM_CHECK
+               SCIPfreeBufferArray(scip, &covered);
+#endif
                SCIPerrorMessage("permutation %d is not a symmetry\n", p);
                return SCIP_ERROR;
             }
          }
       }
    }
+
+#ifdef SCIP_DISPLAY_SYM_CHECK
+   SCIPfreeBufferArray(scip, &covered);
+#endif
 
    SCIPfreeBufferArray(scip, &groupbegins);
    SCIPfreeBufferArray(scip, &graphperm);
