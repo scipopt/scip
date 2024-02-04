@@ -735,6 +735,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortGraphCompVars)
  */
 static
 int compareSymgraphs(
+   SCIP*                 scip,               /**< SCIP pointer (or NULL) */
    SYM_GRAPH*            G1,                 /**< first graph in comparison */
    SYM_GRAPH*            G2                  /**< second graph in comparison */
    )
@@ -760,15 +761,31 @@ int compareSymgraphs(
       if ( SCIPconsGetHdlr(G1->conss[perm1]) > SCIPconsGetHdlr(G2->conss[perm2]) )
          return 1;
 
-      if ( G1->lhs[perm1] < G2->lhs[perm2] )
-         return -1;
-      if ( G1->lhs[perm1] > G2->lhs[perm2] )
-         return 1;
+      /* compare using SCIP functions when SCIP is available */
+      if ( scip != NULL )
+      {
+         if ( SCIPisLT(scip, G1->lhs[perm1], G2->lhs[perm2]) )
+            return -1;
+         if ( SCIPisGT(scip, G1->lhs[perm1], G2->lhs[perm2]) )
+            return 1;
 
-      if ( G1->rhs[perm1] < G2->rhs[perm2] )
-         return -1;
-      if ( G1->rhs[perm1] > G2->rhs[perm2] )
-         return 1;
+         if ( SCIPisLT(scip, G1->rhs[perm1], G2->rhs[perm2]) )
+            return -1;
+         if ( SCIPisGT(scip, G1->rhs[perm1], G2->rhs[perm2]) )
+            return 1;
+      }
+      else
+      {
+         if ( G1->lhs[perm1] < G2->lhs[perm2] )
+            return -1;
+         if ( G1->lhs[perm1] > G2->lhs[perm2] )
+            return 1;
+
+         if ( G1->rhs[perm1] < G2->rhs[perm2] )
+            return -1;
+         if ( G1->rhs[perm1] > G2->rhs[perm2] )
+            return 1;
+      }
    }
 
    /* compare number of remaining node types */
@@ -817,7 +834,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortSymgraphs)
    G1 = data[ind1];
    G2 = data[ind2];
 
-   return compareSymgraphs(G1, G2);
+   return compareSymgraphs(NULL, G1, G2);
 }
 
 /*
@@ -1550,7 +1567,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    groupbegins[0] = 0;
    for (c = 1; c < nconss; ++c)
    {
-      if ( compareSymgraphs(graphs[graphperm[c]], graphs[graphperm[c-1]]) != 0 )
+      if ( compareSymgraphs(scip, graphs[graphperm[c]], graphs[graphperm[c-1]]) != 0 )
          groupbegins[ngroups++] = c;
    }
    groupbegins[ngroups] = nconss;
