@@ -602,9 +602,14 @@ void printConflictRow(
       {
          v = row->inds[i];
          assert(SCIPvarGetProbindex(vars[v]) == v);
-         SCIPsetDebugMsgPrint(set, " %f<%s>", row->vals[v], SCIPvarGetName(vars[v]));
-         if ((i + 1) % dbgelementsoneline == 0)
-            SCIPsetDebugMsgPrint(set, "\n");
+      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY )
+         SCIPsetDebugMsgPrint(set, " %f<%s>[B]", row->vals[v], SCIPvarGetName(vars[v]));
+      else if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT )
+         SCIPsetDebugMsgPrint(set, " %f<%s>[I]", row->vals[v], SCIPvarGetName(vars[v]));
+      else
+         SCIPsetDebugMsgPrint(set, " %f<%s>[C]", row->vals[v], SCIPvarGetName(vars[v]));
+      if ((i + 1) % dbgelementsoneline == 0)
+         SCIPsetDebugMsgPrint(set, "\n");
       }
       SCIPsetDebugMsgPrint(set, " >= %f\n", row->lhs);
 
@@ -4476,7 +4481,7 @@ SCIP_RETCODE executeResolutionStep(
 #ifndef SCIP_DEBUG
                SCIPsetDebugMsgPrint(set, "The sign of the coefficient of the variable we are resolving changed \n");
                SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
-               assert(SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0));
+               assert(SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0) || !isBinaryConflictRow(set, vars, reducedreasonrow));
 #endif
                return SCIP_OKAY;
             }
@@ -4489,20 +4494,25 @@ SCIP_RETCODE executeResolutionStep(
 
          /* after the loop we can weaken all continuous variables with their global bounds */
          SCIP_CALL( weakenContinuousVarsConflictRow(reducedreasonrow, set, vars, residx) );
-         /* apply reduction to the reason row */
-         SCIP_CALL( reduceReason(conflict, set, blkmem, vars, nvars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds) );
 
-         SCIPsetDebugMsgPrint(set, "Resolve %s after reducing the reason row \n", SCIPvarGetName(vars[residx]));
-         /* after all reductions resolve one final time */
-         SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reducedreasonrow, resolvedconflictrow, blkmem,
-                              residx, successresolution) );
+         /* after resolving the continuous variables we resolve once more if the constraint is binary */
+         if(isBinaryConflictRow(set, vars, reducedreasonrow))
+         {
+            /* apply reduction to the reason row */
+            SCIP_CALL( reduceReason(conflict, set, blkmem, vars, nvars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds) );
 
-         SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
+            SCIPsetDebugMsgPrint(set, "Resolve %s after reducing the reason row \n", SCIPvarGetName(vars[residx]));
+            /* after all reductions resolve one final time */
+            SCIP_CALL( rescaleAndResolve(set, conflict, conflictrow, reducedreasonrow, resolvedconflictrow, blkmem,
+                                 residx, successresolution) );
 
+            SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
+
+            /* The resolved conflict row may not be infeasible under the local domain if the reduced reason row is not binary */
+            assert(!successresolution || SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0));
+         }
       }
 
-      /* The resolved conflict row may not be infeasible under the local domain if the reduced reason row is not binary */
-      assert(!successresolution || SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0) || !isBinaryConflictRow(set, vars, reducedreasonrow));
    }
 
    return SCIP_OKAY;
