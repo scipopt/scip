@@ -2133,6 +2133,7 @@ SCIP_RETCODE MirReduction(
    /* remove variables with zero coefficient. Loop backwards */
    conflictRowRemoveZeroVars(reasonrow, set);
 
+   SCIPaggrRowFree(set->scip, &aggrrow);
    SCIPsetFreeBufferArray(set, &cutinds);
    SCIPsetFreeBufferArray(set, &cutcoefs);
    SCIPsetFreeBufferArray(set, &rowinds);
