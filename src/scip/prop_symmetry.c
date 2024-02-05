@@ -6643,6 +6643,12 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
    }
    percentageunsigned = (SCIP_Real) nselectedperms / (SCIP_Real) compsize;
 
+   if ( nselectedperms == 0 )
+   {
+      SCIPfreeBufferArray(scip, &perms);
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( SCIPdetectSingleOrDoubleLexMatrices(scip, detectsinglelex, perms, nselectedperms, propdata->npermvars,
          &success, &isorbitope, &lexmatrix, &nrows, &ncols,
          &lexrowsbegin, &lexcolsbegin, &nrowmatrices, &ncolmatrices) );
