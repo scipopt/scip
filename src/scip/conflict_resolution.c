@@ -2493,15 +2493,23 @@ SCIP_RETCODE slackReducingContinuousBdchgQueue(
 
       if( coef > 0.0 )
       {
-         SCIP_BDCHGINFO* bdchginfo = SCIPvarGetUbchgInfo(vars[v], inferbdchgidx, TRUE);
+         SCIP_BDCHGINFO* bdchginfo = SCIPvarGetUbchgInfo(vars[v], inferbdchgidx, FALSE);
          if (bdchginfo != NULL)
+         {
+            assert((SCIPbdchginfoGetDepth(bdchginfo) < SCIPbdchgidxGetDepth(inferbdchgidx)) ||
+            (SCIPbdchginfoGetDepth(bdchginfo) == SCIPbdchgidxGetDepth(inferbdchgidx) && SCIPbdchginfoGetPos(bdchginfo) < SCIPbdchgidxGetPos(inferbdchgidx)));
             SCIP_CALL( SCIPpqueueInsert(continuousbdchgqueue, (void*)bdchginfo) );
+         }
       }
       else
       {
-         SCIP_BDCHGINFO* bdchginfo = SCIPvarGetLbchgInfo(vars[v], inferbdchgidx, TRUE);
+         SCIP_BDCHGINFO* bdchginfo = SCIPvarGetLbchgInfo(vars[v], inferbdchgidx, FALSE);
          if (bdchginfo != NULL)
+         {
+            assert((SCIPbdchginfoGetDepth(bdchginfo) < SCIPbdchgidxGetDepth(inferbdchgidx)) ||
+            (SCIPbdchginfoGetDepth(bdchginfo) == SCIPbdchgidxGetDepth(inferbdchgidx) && SCIPbdchginfoGetPos(bdchginfo) < SCIPbdchgidxGetPos(inferbdchgidx)));
             SCIP_CALL( SCIPpqueueInsert(continuousbdchgqueue, (void*)bdchginfo) );
+         }
       }
    }
    return SCIP_OKAY;
@@ -4474,6 +4482,9 @@ SCIP_RETCODE executeResolutionStep(
             /* resolve the continuous variable */
             SCIP_CALL( rescaleAndResolve(set, conflict, reducedreasonrow, reasonrow, resolvedconflictrow, blkmem,
                                  varidx, successresolution) );
+
+            if (!(*successresolution))
+               return SCIP_OKAY;
 
             /* if the coefficient of the variable we are resolving changed sign, then we have a new conflict constraint */
             if( SCIPsetIsLE(set, coefresidx * resolvedconflictrow->vals[residx], 0.0) )

@@ -1574,6 +1574,11 @@ int SCIPbdchgidxGetPos(
    SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
    );
 
+/** returns the depth of the bound change index */
+int SCIPbdchgidxGetDepth(
+   SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
+   );
+
 /** removes (redundant) cliques, implications and variable bounds of variable from all other variables' implications and variable
  *  bounds arrays, and optionally removes them also from the variable itself
  */
@@ -1600,7 +1605,7 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
 #define SCIPvarGetVSIDS(var, stat, dir)    ((var)->varstatus == SCIP_VARSTATUS_LOOSE || (var)->varstatus == SCIP_VARSTATUS_COLUMN ? \
       SCIPhistoryGetVSIDS(var->history, dir)/stat->vsidsweight : SCIPvarGetVSIDS_rec(var, stat, dir))
 #define SCIPbdchgidxGetPos(bdchgidx) ((bdchgidx)->pos)
-
+#define SCIPbdchgidxGetDepth(bdchgidx) ((bdchgidx)->depth)
 #endif
 
 /*
