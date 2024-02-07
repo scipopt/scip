@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1320,10 +1320,10 @@ SCIP_RETCODE propagateStaticLexred(
       if ( vari == varj )
       {
          assert( lexdata->symtype == SYM_SYMTYPE_SIGNPERM );
-         assert( SCIPGE(scip, lb1, lexdata->vardomaincenter[i]) ); /* propagation enforces xi - center >= center - xi */
+         assert( SCIPsymGE(scip, lb1, lexdata->vardomaincenter[i]) ); /* propagation enforces xi - center >= center - xi */
 
          /* both variables can only be the same if they are fixed to the domain center */
-         if ( SCIPGT(scip, lb1, lexdata->vardomaincenter[i]) )
+         if ( SCIPsymGT(scip, lb1, lexdata->vardomaincenter[i]) )
             return SCIP_OKAY;
 
          SCIP_CALL( SCIPallocBufferArray(scip, &peeklbs, lexdata->nvars) );
@@ -1348,13 +1348,13 @@ SCIP_RETCODE propagateStaticLexred(
                if ( *infeasible )
                   goto FREEMEMORY;
                lb1 = lexdata->vardomaincenter[i] + 1.0;
-               assert( SCIPLE(scip, lb1, ub1) );
+               assert( SCIPsymLE(scip, lb1, ub1) );
                break;
             case SCIP_VARTYPE_CONTINUOUS:
                /* continuous variable type: act as if we increase the variable by a very little bit.
                 * This is only possible if we're able to increase the variable bound by a bit.
                 */
-               if ( SCIPEQ(scip, lb1, ub1) )
+               if ( SCIPsymEQ(scip, lb1, ub1) )
                {
                   *infeasible = TRUE;
                   goto FREEMEMORY;
@@ -1406,14 +1406,14 @@ SCIP_RETCODE propagateStaticLexred(
          }
 
          /* check whether peek is called */
-         if ( (!SCIPEQ(scip, lbi, lbj)) && (!SCIPEQ(scip, ubi, ubj)) )
+         if ( (!SCIPsymEQ(scip, lbi, lbj)) && (!SCIPsymEQ(scip, ubi, ubj)) )
             return SCIP_OKAY;
 
          SCIP_CALL( SCIPallocBufferArray(scip, &peeklbs, lexdata->nvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &peekubs, lexdata->nvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &peekbdset, lexdata->nvars) );
 
-         if ( SCIPEQ(scip, lbj, lbi) )
+         if ( SCIPsymEQ(scip, lbj, lbi) )
          {
             SCIP_Real fixvalj;
 
@@ -1442,13 +1442,13 @@ SCIP_RETCODE propagateStaticLexred(
                   if ( *infeasible )
                      goto FREEMEMORY;
                   lb1 = lb1 + 1.0;
-                  assert( SCIPLE(scip, lb1, ub1) );
+                  assert( SCIPsymLE(scip, lb1, ub1) );
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
                   /* continuous variable type: act as if we increase the variable by a very little bit.
                    * That is only possible if we're able to increase the variable bound by a bit.
                    */
-                  if ( SCIPEQ(scip, lbi, ubi) )
+                  if ( SCIPsymEQ(scip, lbi, ubi) )
                   {
                      *infeasible = TRUE;
                      goto FREEMEMORY;
@@ -1467,8 +1467,8 @@ SCIP_RETCODE propagateStaticLexred(
           *   Option 2: vari gets fixed to ubj. Then, we must check if feasibility is found, still.
           *     If it turns out infeasible, then we know varj cannot take value ubj, so we can decrease the upper bound.
           */
-         assert( SCIPGE(scip, ubi, ubj) );  /* this must be the case after reductions in the for-loop */
-         if ( SCIPEQ(scip, ubi, ubj) )
+         assert( SCIPsymGE(scip, ubi, ubj) );  /* this must be the case after reductions in the for-loop */
+         if ( SCIPsymEQ(scip, ubi, ubj) )
          {
             SCIP_Real fixvalj;
 
@@ -1505,12 +1505,12 @@ SCIP_RETCODE propagateStaticLexred(
                   if ( *infeasible )
                      goto FREEMEMORY;
                   ubj = ubj - 1.0;
-                  assert( SCIPLE(scip, lbj, ubj) );
+                  assert( SCIPsymLE(scip, lbj, ubj) );
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
                   /* continuous variable type: act as if we decrease the variable by a very little bit.
                    * that is only possible if we're able to decrease the variable bound by a bit. */
-                  if ( SCIPEQ(scip, lbj, ubj) )
+                  if ( SCIPsymEQ(scip, lbj, ubj) )
                   {
                      *infeasible = TRUE;
                      goto FREEMEMORY;

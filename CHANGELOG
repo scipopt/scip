@@ -84,6 +84,13 @@ Interface changes
 - SCIPsnprintf() now returns the required string length in case reallocation is necessary.
 - SCIPcomputeCoverUndercover() receives three more arguments which nonlinearities to cover
 - removed definition of SQRT
+- SCIPincludeObjConshdlr(), SCIPincludeConshdlr(), SCIPconshdlrCreate() receive two more arguments for the
+  conshdlr callbacks CONSGETPERMSYMGRAPH and CONSGETSIGNEDPERMSYMGRAPH
+- removed SYM_VARTYPE, SYM_OPTYPE, SYM_CONSTTYPE, SYM_RHSTYPE, SYM_MATRIXDATA
+- new parameter issigned for SCIPcomputeOrbitsSym()
+- new parameter symtype for SCIPcomputeComponentsSym()
+- new parameter symtype and permvardomaincenter for SCIPlexicographicReductionAddPermutation()
+- replaced parameters matrixdata and exprdata of SYMcomputeSymmetryGenerators() by graph
 
 ### New API functions
 
@@ -122,6 +129,26 @@ Interface changes
 - SCIPincludeCutselDynamic(), SCIPselectCutsDynamic() to include cutsel_dynamic or use the selection algorithm
 - SCIPincludeSepaLagromory() to include the new Lagromory separator
 - SCIPconsCompCheck() to compare two constraints based on their check priority
+- SCIPgetConsPermsymGraph() and SCIPgetConsSignedPermsymGraph() to access the (signed) permutation symmetry detection graph of a constraint
+- SCIPsetConshdlrGetPermsymGraph() and SCIPsetConshdlrGetSignedPermsymGraph() to set the (signed) permutation symmetry detection graph of a constraint
+- SCIPconshdlrSupportsPermsymDetection() and SCIPconshdlrSupportsSignedPermsymDetection() to access whether a conshdlr supports detection of (signed) permutation symmetries
+- new API functions for creating and manipulating a symmetry detection graph: SCIPcreateSymgraph(), SCIPfreeSymgraph(), SCIPcopySymgraph(), SCIPextendPermsymDetectionGraphLinear(),
+  SCIPaddSymgraphVarAggregation(), SCIPaddSymgraphOpnode(), SCIPaddSymgraphValnode(), SCIPaddSymgraphConsnode(), SCIPgetSymgraphVarnodeidx(), SCIPgetSymgraphNegatedVarnodeidx(),
+  SCIPupdateSymgraphLhs(), SCIPupdateSymgraphRhs(), SCIPfixSymgraphVarnode(), SCIPaddSymgraphEdge(), SCIPcomputeSymgraphColors(), SCIPgetSymgraphSymtype(), SCIPgetSymgraphVars(),
+  SCIPgetSymgraphNVars(), SCIPgetSymgraphNConsnodes(), SCIPgetSymgraphNNodes(), SCIPgetSymgraphNEdges(), SCIPgetSymgraphEdgeFirst(), SCIPgetSymgraphEdgeSecond(),
+  SCIPgetSymgraphVarnodeColor(), SCIPgetSymgraphNodeType(), SCIPgetSymgraphNodeColor(), SCIPisSymgraphEdgeColored(), SCIPgetSymgraphEdgeColor(), SCIPgetSymgraphNVarcolors(),
+  SCIPhasGraphUniqueEdgetype(), SCIPallocateSymgraphConsnodeperm(), SCIPcreateSymgraphConsnodeperm(), SCIPgetSymgraphConsnodeperm(), SCIPfreeSymgraphConsnodeperm(),
+  SCIPgetSymActiveVariables(), SCIPfreeSymDataExpr(), SCIPgetSymExprdataNConstants(), SCIPgetSymExprdataConstants(), SCIPgetCoefSymData(),
+  SCIPcreateSymOpNodeType(), SCIPgetSymOpNodeType()
+- SCIPexprhdlrSetGetSymdata(), SCIPexprhdlrHasGetSymData(), SCIPgetSymDataExpr(), SCIPcallExprGetSymData() to access symmetry data of expressions
+- SYMcheckGraphsAreIdentical() to check whether two symmetry detection graphs are identical
+- new functions SYMbuildSassyGraph(), SYMbuildSassyGraphCheck()
+- new type SYM_GRAPH
+- new definitions SCIP_DECL_CONSGETPERMSYMGRAPH, SCIP_DECL_EXPRGETSYMDATA
+- new member SYM_NODETYPE_CONS in SYM_NODETYPE enum
+- new members SYM_CONSOPTYPE_SUM, SYM_CONSOPTYPE_SLACK, SYM_CONSOPTYPE_COEF, SYM_CONSOPTYPE_RHS, SYM_CONSOPTYPE_LAST in SYM_CONSOPTYPE enum
+- new defintion SCIP_DECL_EXPRGETSYMDATA
+- new function SCIPdetectSingleOrDoubleLexMatrices()
 
 ### Command line interface
 
@@ -196,6 +223,7 @@ Interface changes
 
 - new data structure SYM_GRAPH to encode symmetry information from a constraint
 - new data structure SYM_EXPRDATA to encode symmetry information from expressions
+- replaced enum SYM_SYMTYPE by a complete new one; removed SYM_RHSSENSE, added SYM_NODETYPE and SYM_CONSOPTYPE
 
 Deleted files
 -------------
@@ -242,6 +270,7 @@ Fixed bugs
 - use double double precision for delta in activity updates of cons_linear.c
 - sort constraints in checkSolOrig() to keep the logic of constraint handlers intact
 - fixed make install when SHARED=no and make uninstall
+- check absolute coefficients relative to extremal average to avoid invalid unifications in normalizeCons()
 - enforce and check symmetry-based constraints to take their locks (in dual reductions) into account
 
 Miscellaneous
