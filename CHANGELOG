@@ -271,6 +271,7 @@ Fixed bugs
 - sort constraints in checkSolOrig() to keep the logic of constraint handlers intact
 - fixed make install when SHARED=no and make uninstall
 - check absolute coefficients relative to extremal average to avoid invalid unifications in normalizeCons()
+- enforce and check symmetry-based constraints to take their locks (in dual reductions) into account
 
 Miscellaneous
 -------------
