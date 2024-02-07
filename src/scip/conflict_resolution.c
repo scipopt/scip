@@ -21,7 +21,6 @@
  *
  * @todo avoid copying the array of values in conflictRowCopy() and conflictRowReplace() by using the indices of the nonzero entries
  * @todo slack update during coefficient tightening/MIR
- * @todo extend MIR for continuous and general integer variables (how do we complement? Can we use SCIPcalcMIR?)
  * @todo vsids and branching statistics updates
  * @todo add a separate conflict store for the generalized resolution conflicts
  * @todo insert depth / repropagation depth
@@ -2026,6 +2025,82 @@ void conflictRowClear(
    row->isbinary = FALSE;
 }
 
+/** calculates the slack (maxact - rhs) for a generalized resolution row given a set of bounds and coefficients */
+static
+SCIP_RETCODE computeSlack(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_CONFLICTROW*     row,                /**< generalized resolution row */
+   SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change */
+   SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
+   int*                  fixinds             /**< dense array of indices of fixed variables */
+   )
+{
+   SCIP_BDCHGIDX * currbdchgidx;
+   SCIP_Real QUAD(slack);
+   int i;
+
+   assert(vars != NULL);
+
+#ifdef SCIP_MORE_DEBUG
+   SCIPsetDebugMsgPrint(set, "Calculating slack for row at depth %d position %d \n", SCIPbdchginfoGetDepth(currbdchginfo), SCIPbdchginfoGetPos(currbdchginfo));
+#endif
+   QUAD_ASSIGN(slack, 0.0);
+   currbdchgidx = SCIPbdchginfoGetIdx(currbdchginfo);
+   for( i = 0; i < row->nnz; i++ )
+   {
+      SCIP_Real coef;
+      SCIP_Real bound;
+      SCIP_Real QUAD(delta);
+      int v;
+      v = row->inds[i];
+
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+
+      coef = row->vals[v];
+
+      /* get the latest bound change before currbdchgidx */
+      if( coef > 0.0 )
+      {
+         if ( fixinds != NULL && fixinds[v] == 1 ) /* if the variable is fixed */
+         {
+            bound = fixbounds[v];
+         }
+         else
+         {
+            bound = SCIPgetVarUbAtIndex(set->scip, vars[v], currbdchgidx, TRUE);
+         }
+         SCIPquadprecProdDD(delta, coef, bound);
+      }
+      else
+      {
+         if (fixinds != NULL && fixinds[v] == -1) /* if the variable is fixed */
+         {
+            bound = fixbounds[v];
+         }
+         else
+         {
+            bound = SCIPgetVarLbAtIndex(set->scip, vars[v], currbdchgidx, TRUE);
+         }
+         SCIPquadprecProdDD(delta, coef, bound);
+      }
+      SCIPquadprecSumQQ(slack, slack, delta);
+#ifdef SCIP_MORE_DEBUG
+      SCIPsetDebugMsgPrint(set, "var: %s, coef: %f, bound: %f global bounds:[%.15g,%.15g], current bounds:[%.15g,%.15g] \n",
+                           SCIPvarGetName(vars[v]), coef, bound, SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v]),
+                           SCIPgetVarLbAtIndex(set->scip, vars[v], currbdchgidx, TRUE), SCIPgetVarUbAtIndex(set->scip, vars[v],
+                           currbdchgidx, TRUE));
+      SCIPsetDebugMsgPrint(set, "slack: %f \n",QUAD_TO_DBL(slack) );
+#endif
+   }
+   SCIPquadprecSumQD(slack, slack, -row->lhs);
+#ifdef SCIP_MORE_DEBUG
+   SCIPsetDebugMsgPrint(set, "Row slack: %f \n",QUAD_TO_DBL(slack) );
+#endif
+   row->slack = QUAD_TO_DBL(slack);
+   return SCIP_OKAY;
+}
+
 static
 SCIP_RETCODE MirReduction(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2034,12 +2109,14 @@ SCIP_RETCODE MirReduction(
    int                   nvars,              /**< number of variables */
    SCIP_CONFLICTROW*     reasonrow,          /**< reason row */
    int*                  fixinds,             /**< dense array of indices of fixed variables */
-   SCIP_BDCHGIDX*        currbdchgidx,       /**< current bound change index */
+   SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change to resolve */
    int                   varidx,             /**< index of the variable to resolve */
    SCIP_Real             divisor             /**< the divisor of the row */
    )
 {
+   SCIP_SOL* refsol;
    SCIP_AGGRROW* aggrrow;
+   SCIP_BDCHGIDX* currbdchgidx;
    int* cutinds;
    SCIP_Real* cutcoefs;
    int* rowinds;
@@ -2049,9 +2126,6 @@ SCIP_RETCODE MirReduction(
    int rownnz;
    SCIP_Real cutrhs;
    SCIP_Real rowrhs;
-
-   int* boundsfortrans;
-   SCIP_BOUNDTYPE* boundtypesfortrans;
 
    assert(set != NULL);
    assert(vars != NULL);
@@ -2067,24 +2141,23 @@ SCIP_RETCODE MirReduction(
 
    SCIPsetDebugMsgPrint(set, "Apply MIR on general constraint with LHS %f and divisor %f\n" , reasonrow->lhs, divisor);
 
+   currbdchgidx = SCIPbdchginfoGetIdx(currbdchginfo);
    /* creating the aggregation row. There will be only a single row in this aggregation, since it is only used to
     * compute the MIR coefficients
     */
    SCIP_CALL( SCIPaggrRowCreate(set->scip, &aggrrow) );
-   /* initialize arrays for cut indices, cut coefficients, row indices, row values, and bounds for the transformation */
+
+   SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
+
+   /* initialize arrays for cut indices, cut coefficients, row indices, row values */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cutinds, reasonrow->nnz) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &cutcoefs, reasonrow->nnz) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, reasonrow->nnz) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowvals, reasonrow->nnz) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &boundsfortrans, nvars) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtypesfortrans, nvars) );
 
-
+   /* todo change this: set all variables to some dummy value */
    for( int i = 0; i < nvars; ++i )
-   {
-      boundsfortrans[i] = -1;
-      boundtypesfortrans[i] = SCIP_BOUNDTYPE_LOWER;
-   }
+      SCIPsetSolVal(set->scip, refsol, vars[i], 0.0);
 
    /* create a sparse row of the form ax <= b from the reason */
    rowrhs = -reasonrow->lhs;
@@ -2097,15 +2170,28 @@ SCIP_RETCODE MirReduction(
       coef = reasonrow->vals[idx];
       rowinds[i] = idx;
       rowvals[i] = -coef;
-      /* We complement binary variables:
-       *   - if a_i > 0 and x_i is not fixed to 0
-       *   - if a_i < 0 and x_i is fixed to 1
+      /* We set the solution to the values used in propagation.
+       * todo for the variable to resolve (varidx), we should set it to the propagating fractional value
        */
-      if(SCIPvarIsBinary(vars[idx]))
+      if( idx == varidx )
       {
-         if ( (coef > 0.0 && (SCIPgetVarUbAtIndex(set->scip, vars[idx], currbdchgidx, TRUE) > 0.5 && fixinds[idx] != 1) ) ||
-            (coef < 0.0 && (SCIPgetVarLbAtIndex(set->scip, vars[idx], currbdchgidx, TRUE) > 0.5 || fixinds[idx] == -1 )) )
-            boundtypesfortrans[idx] = SCIP_BOUNDTYPE_UPPER;
+         SCIP_Real fracval;
+         computeSlack(set, vars, reasonrow, currbdchginfo, NULL, NULL);
+         if(coef > 0.0)
+            fracval = SCIPvarGetUbAtIndex(vars[idx], currbdchgidx, FALSE) - reasonrow->slack / coef;
+         else
+         {
+            assert(coef < 0.0);
+            fracval = SCIPvarGetLbAtIndex(vars[idx], currbdchgidx, FALSE) - reasonrow->slack / coef;
+         }
+            SCIPsetSolVal(set->scip, refsol, vars[idx], fracval);
+      }
+      else
+      {
+         if( coef > 0.0 )
+            SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetUbAtIndex(vars[idx], currbdchgidx, FALSE));
+         else
+            SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetLbAtIndex(vars[idx], currbdchgidx, FALSE));
       }
    }
 
@@ -2119,8 +2205,8 @@ SCIP_RETCODE MirReduction(
    SCIPdebug(printAggrrow(aggrrow, set, vars));
 
    /* apply MIR */
-   SCIP_CALL( SCIPcalcMIR(set->scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, FALSE, FIXINTEGRALRHS, TRUE, boundsfortrans,
-   boundtypesfortrans, MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy,
+   SCIP_CALL( SCIPcalcMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, FALSE, FIXINTEGRALRHS, TRUE, NULL,
+   NULL, MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy,
    &cutrank, &cutislocal, &success) );
 
    if(success)
@@ -2139,12 +2225,11 @@ SCIP_RETCODE MirReduction(
    conflictRowRemoveZeroVars(reasonrow, set);
 
    SCIPaggrRowFree(set->scip, &aggrrow);
+   SCIPfreeSol(set->scip, &refsol);
    SCIPsetFreeBufferArray(set, &cutinds);
    SCIPsetFreeBufferArray(set, &cutcoefs);
    SCIPsetFreeBufferArray(set, &rowinds);
    SCIPsetFreeBufferArray(set, &rowvals);
-   SCIPsetFreeBufferArray(set, &boundsfortrans);
-   SCIPsetFreeBufferArray(set, &boundtypesfortrans);
 
    return SCIP_OKAY;
 }
@@ -2319,83 +2404,6 @@ SCIP_Real getQuotLargestSmallestCoef(
       }
       return REALABS(maxval / minval);
    }
-
-/** calculates the slack (maxact - rhs) for a generalized resolution row given a set of bounds and coefficients */
-static
-SCIP_RETCODE computeSlack(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_VAR**            vars,               /**< array of variables */
-   SCIP_CONFLICTROW*     row,                /**< generalized resolution row */
-   SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change */
-   SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
-   int*                  fixinds             /**< dense array of indices of fixed variables */
-   )
-{
-   SCIP_BDCHGIDX * currbdchgidx;
-   SCIP_Real QUAD(slack);
-   int i;
-
-   assert(vars != NULL);
-
-#ifdef SCIP_MORE_DEBUG
-   SCIPsetDebugMsgPrint(set, "Calculating slack for row at depth %d position %d \n", SCIPbdchginfoGetDepth(currbdchginfo), SCIPbdchginfoGetPos(currbdchginfo));
-#endif
-   QUAD_ASSIGN(slack, 0.0);
-   currbdchgidx = SCIPbdchginfoGetIdx(currbdchginfo);
-   for( i = 0; i < row->nnz; i++ )
-   {
-      SCIP_Real coef;
-      SCIP_Real bound;
-      SCIP_Real QUAD(delta);
-      int v;
-      v = row->inds[i];
-
-      assert(SCIPvarGetProbindex(vars[v]) == v);
-
-      coef = row->vals[v];
-
-      /* get the latest bound change before currbdchgidx */
-      if( coef > 0.0 )
-      {
-         if ( fixinds != NULL && fixinds[v] == 1 ) /* if the variable is fixed */
-         {
-            bound = fixbounds[v];
-         }
-         else
-         {
-            bound = SCIPgetVarUbAtIndex(set->scip, vars[v], currbdchgidx, TRUE);
-         }
-         SCIPquadprecProdDD(delta, coef, bound);
-      }
-      else
-      {
-         if (fixinds != NULL && fixinds[v] == -1) /* if the variable is fixed */
-         {
-            bound = fixbounds[v];
-         }
-         else
-         {
-            bound = SCIPgetVarLbAtIndex(set->scip, vars[v], currbdchgidx, TRUE);
-         }
-         SCIPquadprecProdDD(delta, coef, bound);
-      }
-      SCIPquadprecSumQQ(slack, slack, delta);
-#ifdef SCIP_MORE_DEBUG
-      SCIPsetDebugMsgPrint(set, "var: %s, coef: %f, bound: %f global bounds:[%.15g,%.15g], current bounds:[%.15g,%.15g] \n",
-                           SCIPvarGetName(vars[v]), coef, bound, SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v]),
-                           SCIPgetVarLbAtIndex(set->scip, vars[v], currbdchgidx, TRUE), SCIPgetVarUbAtIndex(set->scip, vars[v],
-                           currbdchgidx, TRUE));
-      SCIPsetDebugMsgPrint(set, "slack: %f \n",QUAD_TO_DBL(slack) );
-#endif
-   }
-   SCIPquadprecSumQD(slack, slack, -row->lhs);
-#ifdef SCIP_MORE_DEBUG
-   SCIPsetDebugMsgPrint(set, "Row slack: %f \n",QUAD_TO_DBL(slack) );
-#endif
-   row->slack = QUAD_TO_DBL(slack);
-   return SCIP_OKAY;
-}
-
 
 /** for every variable in the row, except the inferred variable, add bound changes */
 static
@@ -3917,7 +3925,7 @@ SCIP_RETCODE reduceReason(
       if(isBinaryConflictRow(set, vars, rowtoreduce))
          SCIP_CALL( ComplementedMirLhs(set, vars, rowtoreduce, fixinds, currbdchgidx, residx, coefinrow) );
       else
-         SCIP_CALL( MirReduction(set, blkmem, vars, nvars, rowtoreduce, fixinds, currbdchgidx, residx, coefinrow) );
+         SCIP_CALL( MirReduction(set, blkmem, vars, nvars, rowtoreduce, fixinds, currbdchginfo, residx, coefinrow) );
    }
 
    else

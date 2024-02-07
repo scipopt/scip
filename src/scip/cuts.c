@@ -1810,7 +1810,14 @@ void SCIPaggrRowPrint(
 
       QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
       assert(SCIPvarGetProbindex(vars[aggrrow->inds[i]]) == aggrrow->inds[i]);
-      SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s> ", QUAD_TO_DBL(val), SCIPvarGetName(vars[aggrrow->inds[i]]));
+      if( SCIPvarGetType(vars[aggrrow->inds[i]]) == SCIP_VARTYPE_BINARY )
+         SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s>[B] ", QUAD_TO_DBL(val), SCIPvarGetName(vars[aggrrow->inds[i]]));
+      else if( SCIPvarGetType(vars[aggrrow->inds[i]]) == SCIP_VARTYPE_INTEGER )
+         SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s>[I] ", QUAD_TO_DBL(val), SCIPvarGetName(vars[aggrrow->inds[i]]));
+      else
+         SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s>[C] ", QUAD_TO_DBL(val), SCIPvarGetName(vars[aggrrow->inds[i]]));
+
+
    }
 
    /* print right hand side */
@@ -3927,7 +3934,8 @@ SCIP_RETCODE SCIPcalcMIR(
 
    *success = FALSE;
 
-   SCIPdebug( aggrrowPrint(aggrrow, scip->set, scip) );
+   SCIPdebugMsg(scip, "Aggregated row:\n");
+   SCIPdebug( SCIPaggrRowPrint(scip, aggrrow, NULL) );
    /* allocate temporary memory */
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
