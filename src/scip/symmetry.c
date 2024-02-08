@@ -1879,6 +1879,7 @@ SCIP_RETCODE isDoublelLexSym(
    SCIP_CALL( SCIPallocBufferArray(scip, &idxtocol1, nidx) );
    SCIP_CALL( SCIPallocBufferArray(scip, &idxtocol2, nidx) );
 
+   /* use separate loops for efficiency reasons */
    for (i = 0; i < nsymvars; ++i)
       idxtomatrix1[i] = -1;
    for (i = 0; i < nsymvars; ++i)
