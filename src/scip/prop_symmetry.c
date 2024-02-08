@@ -5088,7 +5088,7 @@ SCIP_RETCODE addSSTConss(
             if ( propdata->componenthassignedperm[cidx] )
             {
                inactiveperms[components[p]] = ! propdata->isproperperm[components[p]];
-               if ( inactiveperms[components[p]] )
+               if ( ! propdata->isproperperm[components[p]] )
                   ++ninactiveperms;
             }
             else
@@ -6578,7 +6578,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d_doublelex_row_%d", id, p);
 
-         SCIP_CALL( handleOrbitope(scip, propdata, id, orbitopematrix, i, ncols, partialname, FALSE, TRUE, &tmpsuccess) );
+         SCIP_CALL( handleOrbitope(scip, propdata, id, orbitopematrix, ncols, i, partialname, FALSE, TRUE, &tmpsuccess) );
          *success = *success || tmpsuccess;
       }
    }
@@ -6642,6 +6642,12 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
          nonpermidx = i;
    }
    percentageunsigned = (SCIP_Real) nselectedperms / (SCIP_Real) compsize;
+
+   if ( nselectedperms == 0 )
+   {
+      SCIPfreeBufferArray(scip, &perms);
+      return SCIP_OKAY;
+   }
 
    SCIP_CALL( SCIPdetectSingleOrDoubleLexMatrices(scip, detectsinglelex, perms, nselectedperms, propdata->npermvars,
          &success, &isorbitope, &lexmatrix, &nrows, &ncols,
@@ -6771,11 +6777,11 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
          SCIPfreeBlockMemoryArray(scip, &lexmatrix, nrows);
          if ( ncolmatrices > 0 )
          {
-            SCIPfreeBlockMemoryArray(scip, &lexcolsbegin, ncolmatrices);
+            SCIPfreeBlockMemoryArray(scip, &lexcolsbegin, ncolmatrices + 1);
          }
          if ( nrowmatrices > 0 )
          {
-            SCIPfreeBlockMemoryArray(scip, &lexrowsbegin, nrowmatrices);
+            SCIPfreeBlockMemoryArray(scip, &lexrowsbegin, nrowmatrices + 1);
          }
    }
    SCIPfreeBufferArray(scip, &perms);
