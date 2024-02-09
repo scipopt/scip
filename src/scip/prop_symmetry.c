@@ -174,6 +174,7 @@
 #define DEFAULT_USEDYNAMICPROP       TRUE    /**< whether dynamic propagation should be used for full orbitopes */
 #define DEFAULT_PREFERLESSROWS       TRUE    /**< Shall orbitopes with less rows be preferred in detection? */
 #define DEFAULT_HANDLESIGNEDORBITOPES TRUE   /**< Should orbitopes on which proper signed permutations act be handled?" */
+#define DEFAULT_HANDLESIMPLESIGNEDCOMPONENT TRUE /**< Should components consisting of a single full reflection be handled? */
 
 /* default parameters for symmetry computation */
 #define DEFAULT_SYMCOMPTIMING           2    /**< timing of symmetry computation (0 = before presolving, 1 = during presolving, 2 = at first call) */
@@ -291,6 +292,7 @@ struct SCIP_PropData
    SCIP_Bool             usedynamicprop;     /**< whether dynamic propagation should be used for full orbitopes */
    SCIP_Bool             preferlessrows;     /**< Shall orbitopes with less rows be preferred in detection? */
    SCIP_Bool             handlesignedorbitopes; /**< Should orbitopes on which proper signed permutations act be handled?" */
+   SCIP_Bool             handlesimplesignedcomponent; /**< Should components consisting of a single full reflection be handled? */
 
    /* data necessary for symmetry computation order */
    int                   recomputerestart;   /**< Recompute symmetries after a restart has occurred? (0 = never, 1 = always, 2 = if symmetry reduction found) */
@@ -5088,7 +5090,7 @@ SCIP_RETCODE addSSTConss(
             if ( propdata->componenthassignedperm[cidx] )
             {
                inactiveperms[components[p]] = ! propdata->isproperperm[components[p]];
-               if ( ! propdata->isproperperm[components[p]] )
+               if ( inactiveperms[components[p]] )
                   ++ninactiveperms;
             }
             else
@@ -5718,6 +5720,58 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
                (SYM_SYMTYPE) propdata->symtype, propdata->permvardomaincenter, TRUE, &success) );
          if ( success )
             propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
+      }
+   }
+   else if ( propdata->handlesimplesignedcomponent )
+   {
+      /* if there is only one signed permutation in the component that reflects all variables */
+      if ( componentsize == 1 && propdata->componenthassignedperm[cidx] )
+      {
+         for (p = 0; p < propdata->npermvars; ++p)
+         {
+            if ( componentperms[0][p] != propdata->npermvars + p && componentperms[0][p] != p )
+               break;
+         }
+
+         /* if the loop has not terminated early, the permutation reflects all variables */
+         if ( p == propdata->npermvars )
+         {
+            char name[SCIP_MAXSTRLEN];
+            SCIP_CONS* cons;
+            SCIP_VAR** vars;
+            SCIP_Real* vals;
+            SCIP_Real lhs = 0.0;
+            int nvars = 0;
+
+            /* handle symmetries by enforcing that sum of variables is in upper domain */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "component%d_fullreflection", cidx);
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &vars, propdata->npermvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &vals, propdata->npermvars) );
+
+            for (p = 0; p < propdata->npermvars; ++p)
+            {
+               if ( componentperms[0][p] == propdata->npermvars + p )
+               {
+                  vars[nvars] = propdata->permvars[p];
+                  vals[nvars++] = 1.0;
+                  lhs += propdata->permvardomaincenter[p];
+               }
+            }
+
+            SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
+                  &propdata->genlinconsssize, propdata->ngenlinconss + 1) );
+
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nvars, vars, vals, lhs, SCIPinfinity(scip),
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            propdata->genlinconss[propdata->ngenlinconss++] = cons;
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+
+            SCIPfreeBufferArray(scip, &vals);
+            SCIPfreeBufferArray(scip, &vars);
+
+            propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
+         }
       }
    }
 
@@ -7654,6 +7708,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/handlesignedorbitopes",
          "Should orbitopes on which proper signed permutations act be handled?",
          &propdata->handlesignedorbitopes, TRUE, DEFAULT_HANDLESIGNEDORBITOPES, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/handlesimplesignedcomponent",
+         "Should components consisting of a single full reflection be handled?",
+         &propdata->handlesimplesignedcomponent, TRUE, DEFAULT_HANDLESIMPLESIGNEDCOMPONENT, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
