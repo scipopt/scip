@@ -170,7 +170,7 @@ SCIP_RETCODE addOrDetermineEffectOfGroupedEdges(
          }
          else
          {
-            (voi) G->add_vertex((unsigned) curcolor, (*degrees)[*internodeid]);
+            (void) G->add_vertex((unsigned) curcolor, (*degrees)[*internodeid]);
             G->add_edge((unsigned) commonnodeidx, (unsigned) *internodeid);
 
             for (f = curstart; f < e; ++f)
