@@ -1693,7 +1693,7 @@ SCIP_DECL_EVENTEXEC(eventExecDps)
    assert(event != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
 
-   SCIPdebugMsg(scip, "dual bound: %0.2f\n", SCIPgetDualbound(scip));
+   SCIPdebugMsg(scip, "dual bound: %.2f\n", SCIPgetDualbound(scip));
 
    if( SCIPisFeasGT(scip, SCIPgetDualbound(scip), 0.0) && SCIPgetNSols(scip) >= 1 )
    {

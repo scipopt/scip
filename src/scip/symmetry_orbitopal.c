@@ -930,7 +930,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
             colorderinv, branchvars[i], &tmpcolswap) );
 
          /* skip trivial swaps of columns */
-         if ( tmpcolswap.from == tmpcolswap.to )
+         if ( tmpcolswap.from == tmpcolswap.to ) /*lint !e644*/
             continue;
 
          /* mark that this row index is the new one in the node */
@@ -946,8 +946,8 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
                newnodeinfo->ncolswaps + 1) );
          }
          thiscolswap = &(newnodeinfo->colswaps[newnodeinfo->ncolswaps++]);
-         thiscolswap->from = tmpcolswap.from;
-         thiscolswap->to = tmpcolswap.to;
+         thiscolswap->from = tmpcolswap.from; /*lint !e644*/
+         thiscolswap->to = tmpcolswap.to; /*lint !e644*/
       }
 
       SCIPfreeBufferArray(scip, &colorder);
