@@ -2036,6 +2036,7 @@ SCIP_Bool areCoefsNumericsGood(
       {
          max = 0.0;
          min = SCIPinfinity(scip);
+         assert(coefs4b != NULL);
          for( j = 0; j < 3; ++j )
          {
             SCIP_Real absval;

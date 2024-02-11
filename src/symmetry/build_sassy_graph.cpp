@@ -286,6 +286,8 @@ SCIP_RETCODE createOrDetermineSizeGraph(
    }
    else
    {
+      assert( G != NULL );
+
       /* add nodes for variables */
       for (j = 0; j < nvarnodestoadd; ++j)
          (void) G->add_vertex((unsigned) SCIPgetSymgraphVarnodeColor(graph, j), (*degrees)[j]);
@@ -364,6 +366,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
             else
             {
                assert( internodeid < *nnodes );
+               assert( G != NULL );
 
                color = SCIPgetSymgraphEdgeColor(graph, e);
                (void) G->add_vertex((unsigned) color, (unsigned) (*degrees)[internodeid]);
@@ -382,6 +385,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
             }
             else
             {
+               assert( G != NULL );
                if ( first < second )
                   G->add_edge((unsigned) first, (unsigned) second);
                else
@@ -451,6 +455,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
       }
       else
       {
+         assert( G != NULL );
          for (j = 0; j < nsymvars; ++j)
             G->add_edge((unsigned) j, (unsigned) j + nsymvars);
       }
@@ -642,6 +647,8 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
       }
       else
       {
+         assert( G != NULL );
+
          /* add nodes for variables, each variable gets a unique color */
          for (j = 0; j < nvarnodestoadd; ++j)
          {
@@ -718,6 +725,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
                else
                {
                   assert( internodeid < *nnodes );
+                  assert( G != NULL );
 
                   color = SCIPgetSymgraphEdgeColor(graph, e);
                   G->add_vertex((unsigned) nusedvars + color, (unsigned) (*degrees)[internodeid]);
@@ -737,6 +745,8 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
                }
                else
                {
+                  assert( G != NULL );
+
                   if ( first < second )
                      G->add_edge((unsigned) nodeshift + first, (unsigned) nodeshift + second);
                   else
@@ -803,6 +813,8 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
          }
          else
          {
+            assert( G != NULL );
+
             for (j = 0; j < nusedvars/2; ++j)
                G->add_edge((unsigned) nodeshift + j, (unsigned) nodeshift + j + nusedvars/2);
          }
