@@ -1353,14 +1353,14 @@ SCIP_RETCODE updateDualVector(
       /* update Lagrangian multipliers */
       for( int i = 0; i < ncuts; i++ )
       {
-         assert( subgradient != NULL ); /* for lint */
+         assert(subgradient != NULL); /* for lint */
          dualvector1[i] += steplength * subgradient[i];
       }
 
       /* projection onto non-negative orthant */
       for( int i = 0; i < ncuts; i++ )
       {
-         assert( dualvector1 != NULL ); /* for lint */
+         assert(dualvector1 != NULL); /* for lint */
          dualvector1[i] = MAX(dualvector1[i], 0.0);
       }
 
