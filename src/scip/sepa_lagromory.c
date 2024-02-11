@@ -1207,8 +1207,7 @@ void linfBallProjection(
  * the terminology related to best Lagrangian multipliers)
  */
 static
-SCIP_RETCODE weightedDualVector(
-   SCIP*                 scip,               /**< SCIP data structure */
+void weightedDualVector(
    SCIP_SEPADATA*        sepadata,           /**< separator data structure */
    SCIP_Real*            dualvector,         /**< Lagrangian multipliers */
    int                   dualvectorlen,      /**< length of the Lagrangian multipliers vector */
@@ -1296,8 +1295,7 @@ SCIP_RETCODE stabilizeDualVector(
    if( sepadata->stabilitycentertype == 1 )
    {
       /* weighted Lagrangian multipliers based on best Langrangian multipliers as stability center */
-      SCIP_CALL( weightedDualVector(scip, sepadata, dualvector, dualvectorlen, bestdualvector,
-               bestdualvectorlen, nbestdualupdates, totaliternum) );
+      weightedDualVector(sepadata, dualvector, dualvectorlen, bestdualvector, bestdualvectorlen, nbestdualupdates, totaliternum);
    }
 
    return SCIP_OKAY;
