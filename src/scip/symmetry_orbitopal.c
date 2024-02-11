@@ -382,18 +382,18 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
          case SCIP_COLUMNORDERING_FIRST:
             /* only swap with c if c is earlier in column order than swaporigcolid */
             if ( colorderinv[c] >= colorderinv[swaporigcolid] )
-               goto CONDITIONFAIL;
+               continue;
             break;
          case SCIP_COLUMNORDERING_LAST:
             /* only swap with c if c is later in column order than swaporigcolid */
             if ( colorderinv[c] <= colorderinv[swaporigcolid] )
-               goto CONDITIONFAIL;
+               continue;
             break;
          case SCIP_COLUMNORDERING_CENTRE:
             /* if the column is not more central than swaporigcolid, ignore */
             if ( ABS(colorderinv[c] - middlecolumn) >=
                ABS(colorderinv[swaporigcolid] - middlecolumn) )
-               goto CONDITIONFAIL;
+               continue;
             break;
          default:
             return SCIP_ERROR;
@@ -405,9 +405,6 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
 
          /* the variable domain reductions in c and origcolid are the same */
          swaporigcolid = c;
-
-      CONDITIONFAIL:
-         ;  /* no-op for going to the next iteration */
       }
 
       /* end switch */
