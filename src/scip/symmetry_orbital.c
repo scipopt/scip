@@ -776,7 +776,7 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
                varubs[varid] = update->newbound;
                break;
             default:
-               assert( FALSE );
+               SCIPABORT();
             }
             assert( SCIPsymLE(scip, varlbs[varid], varubs[varid]) );
          }
@@ -894,7 +894,7 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
          varubs[branchingdecisionvarid] = branchingdecision->newbound;
          break;
       default:
-         assert( FALSE );
+         SCIPABORT();
       }
 
       /* 3. propagate that branching variable is >= the variables in its orbit
