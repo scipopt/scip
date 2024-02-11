@@ -170,7 +170,7 @@ SCIP_RETCODE addOrDetermineEffectOfGroupedEdges(
          }
          else
          {
-            (void) G->add_vertex((unsigned) curcolor, (*degrees)[*internodeid]);
+            (void) G->add_vertex(curcolor, (*degrees)[*internodeid]);
             G->add_edge((unsigned) commonnodeidx, (unsigned) *internodeid);
 
             for (f = curstart; f < e; ++f)
@@ -202,7 +202,7 @@ SCIP_RETCODE addOrDetermineEffectOfGroupedEdges(
    }
    else
    {
-      (void) G->add_vertex((unsigned) curcolor, (unsigned) (*degrees)[*internodeid]);
+      (void) G->add_vertex(curcolor, (*degrees)[*internodeid]);
       G->add_edge((unsigned) commonnodeidx, (unsigned) *internodeid);
 
       for (f = curstart; f < nneighbors; ++f)
@@ -290,11 +290,11 @@ SCIP_RETCODE createOrDetermineSizeGraph(
 
       /* add nodes for variables */
       for (j = 0; j < nvarnodestoadd; ++j)
-         (void) G->add_vertex((unsigned) SCIPgetSymgraphVarnodeColor(graph, j), (*degrees)[j]);
+         (void) G->add_vertex(SCIPgetSymgraphVarnodeColor(graph, j), (*degrees)[j]);
 
       /* add nodes for remaining nodes of graph */
       for (j = 0; j < SCIPgetSymgraphNNodes(graph); ++j)
-         (void) G->add_vertex((unsigned) SCIPgetSymgraphNodeColor(graph, j), (*degrees)[nvarnodestoadd + j]);
+         (void) G->add_vertex(SCIPgetSymgraphNodeColor(graph, j), (*degrees)[nvarnodestoadd + j]);
    }
 
    /* determine grouping depending on the number of rhs vs. variables */
@@ -369,7 +369,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
                assert( G != NULL );
 
                color = SCIPgetSymgraphEdgeColor(graph, e);
-               (void) G->add_vertex((unsigned) color, (unsigned) (*degrees)[internodeid]);
+               (void) G->add_vertex(color, (*degrees)[internodeid]);
 
                G->add_edge((unsigned) first, (unsigned) internodeid);
                G->add_edge((unsigned) second, (unsigned) internodeid++);
@@ -654,7 +654,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
          {
             if ( varlabel[j] >= 0 )
             {
-               (void) G->add_vertex((unsigned) j, (*degrees)[nodeshift + varlabel[j]]);
+               (void) G->add_vertex(j, (*degrees)[nodeshift + varlabel[j]]);
                ++curnnodes;
             }
          }
@@ -662,7 +662,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
          /* add nodes for remaining nodes of graph, ensure that colors do not conflict with variable colors */
          for (j = 0; j < SCIPgetSymgraphNNodes(graph); ++j)
          {
-            (void) G->add_vertex((unsigned) nusedvars + SCIPgetSymgraphNodeColor(graph, j),
+            (void) G->add_vertex(nusedvars + SCIPgetSymgraphNodeColor(graph, j),
                (*degrees)[nodeshift + nusedvars + j]);
             ++curnnodes;
          }
@@ -728,7 +728,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
                   assert( G != NULL );
 
                   color = SCIPgetSymgraphEdgeColor(graph, e);
-                  (void) G->add_vertex((unsigned) nusedvars + color, (unsigned) (*degrees)[internodeid]);
+                  (void) G->add_vertex(nusedvars + color, (*degrees)[internodeid]);
                   G->add_edge((unsigned) nodeshift + first, (unsigned) internodeid);
                   G->add_edge((unsigned) nodeshift + second, (unsigned) internodeid);
                }
