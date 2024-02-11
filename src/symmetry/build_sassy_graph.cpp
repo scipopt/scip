@@ -728,7 +728,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
                   assert( G != NULL );
 
                   color = SCIPgetSymgraphEdgeColor(graph, e);
-                  G->add_vertex((unsigned) nusedvars + color, (unsigned) (*degrees)[internodeid]);
+                  (void) G->add_vertex((unsigned) nusedvars + color, (unsigned) (*degrees)[internodeid]);
                   G->add_edge((unsigned) nodeshift + first, (unsigned) internodeid);
                   G->add_edge((unsigned) nodeshift + second, (unsigned) internodeid);
                }
