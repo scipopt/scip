@@ -379,24 +379,24 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
           */
          switch (orbidata->columnordering)
          {
-            case SCIP_COLUMNORDERING_FIRST:
-               /* only swap with c if c is earlier in column order than swaporigcolid */
-               if ( colorderinv[c] >= colorderinv[swaporigcolid] )
-                  goto CONDITIONFAIL;
-               break;
-            case SCIP_COLUMNORDERING_LAST:
-               /* only swap with c if c is later in column order than swaporigcolid */
-               if ( colorderinv[c] <= colorderinv[swaporigcolid] )
-                  goto CONDITIONFAIL;
-               break;
-            case SCIP_COLUMNORDERING_CENTRE:
-               /* if the column is not more central than swaporigcolid, ignore */
-               if ( ABS(colorderinv[c] - middlecolumn) >=
-                     ABS(colorderinv[swaporigcolid] - middlecolumn) )
-                  goto CONDITIONFAIL;
-               break;
-            default:
-               return SCIP_ERROR;
+         case SCIP_COLUMNORDERING_FIRST:
+            /* only swap with c if c is earlier in column order than swaporigcolid */
+            if ( colorderinv[c] >= colorderinv[swaporigcolid] )
+               continue;
+            break;
+         case SCIP_COLUMNORDERING_LAST:
+            /* only swap with c if c is later in column order than swaporigcolid */
+            if ( colorderinv[c] <= colorderinv[swaporigcolid] )
+               continue;
+            break;
+         case SCIP_COLUMNORDERING_CENTRE:
+            /* if the column is not more central than swaporigcolid, ignore */
+            if ( ABS(colorderinv[c] - middlecolumn) >=
+               ABS(colorderinv[swaporigcolid] - middlecolumn) )
+               continue;
+            break;
+         default:
+            return SCIP_ERROR;
          }
 
          /* test: are c and origcolid the same columns w.r.t. the variable domain restrictions? */
@@ -405,9 +405,6 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
 
          /* the variable domain reductions in c and origcolid are the same */
          swaporigcolid = c;
-
-      CONDITIONFAIL:
-         ;  /* no-op for going to the next iteration */
       }
 
       /* end switch */
@@ -930,7 +927,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
             colorderinv, branchvars[i], &tmpcolswap) );
 
          /* skip trivial swaps of columns */
-         if ( tmpcolswap.from == tmpcolswap.to )
+         if ( tmpcolswap.from == tmpcolswap.to ) /*lint !e644*/
             continue;
 
          /* mark that this row index is the new one in the node */
@@ -946,8 +943,8 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
                newnodeinfo->ncolswaps + 1) );
          }
          thiscolswap = &(newnodeinfo->colswaps[newnodeinfo->ncolswaps++]);
-         thiscolswap->from = tmpcolswap.from;
-         thiscolswap->to = tmpcolswap.to;
+         thiscolswap->from = tmpcolswap.from; /*lint !e644*/
+         thiscolswap->to = tmpcolswap.to; /*lint !e644*/
       }
 
       SCIPfreeBufferArray(scip, &colorder);

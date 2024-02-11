@@ -1207,8 +1207,7 @@ void linfBallProjection(
  * the terminology related to best Lagrangian multipliers)
  */
 static
-SCIP_RETCODE weightedDualVector(
-   SCIP*                 scip,               /**< SCIP data structure */
+void weightedDualVector(
    SCIP_SEPADATA*        sepadata,           /**< separator data structure */
    SCIP_Real*            dualvector,         /**< Lagrangian multipliers */
    int                   dualvectorlen,      /**< length of the Lagrangian multipliers vector */
@@ -1238,8 +1237,6 @@ SCIP_RETCODE weightedDualVector(
    {
       dualvector[i] = alpha * dualvector[i];
    }
-
-   return SCIP_OKAY;
 }
 
 /** stabilize Lagrangian multipliers */
@@ -1296,8 +1293,7 @@ SCIP_RETCODE stabilizeDualVector(
    if( sepadata->stabilitycentertype == 1 )
    {
       /* weighted Lagrangian multipliers based on best Langrangian multipliers as stability center */
-      SCIP_CALL( weightedDualVector(scip, sepadata, dualvector, dualvectorlen, bestdualvector,
-               bestdualvectorlen, nbestdualupdates, totaliternum) );
+      weightedDualVector(sepadata, dualvector, dualvectorlen, bestdualvector, bestdualvectorlen, nbestdualupdates, totaliternum);
    }
 
    return SCIP_OKAY;
@@ -1357,12 +1353,14 @@ SCIP_RETCODE updateDualVector(
       /* update Lagrangian multipliers */
       for( int i = 0; i < ncuts; i++ )
       {
+         assert(subgradient != NULL); /* for lint */
          dualvector1[i] += steplength * subgradient[i];
       }
 
       /* projection onto non-negative orthant */
       for( int i = 0; i < ncuts; i++ )
       {
+         assert(dualvector1 != NULL); /* for lint */
          dualvector1[i] = MAX(dualvector1[i], 0.0);
       }
 
