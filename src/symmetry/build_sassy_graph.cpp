@@ -298,7 +298,10 @@ SCIP_RETCODE createOrDetermineSizeGraph(
    }
 
    /* determine grouping depending on the number of rhs vs. variables */
-   groupByConstraints = SCIPgetSymgraphNConsnodes(graph) < SCIPgetSymgraphNVars(graph);
+   if ( SCIPgetSymgraphNConsnodes(graph) < SCIPgetSymgraphNVars(graph) )
+      groupByConstraints = TRUE;
+   else
+      groupByConstraints = FALSE;
 
    /* allocate arrays to collect edges to be grouped */
    nsymedges = SCIPgetSymgraphNEdges(graph);
@@ -606,7 +609,10 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
    }
 
    /* determine grouping depending on the number of rhs vs. variables */
-   groupByConstraints = SCIPgetSymgraphNConsnodes(graph1) < SCIPgetSymgraphNVars(graph1);
+   if ( SCIPgetSymgraphNConsnodes(graph1) < SCIPgetSymgraphNVars(graph1) )
+      groupByConstraints = TRUE;
+   else
+      groupByConstraints = FALSE;
 
    /* allocate arrays to collect edges to be grouped */
    SCIP_CALL( SCIPallocBufferArray(scip, &groupfirsts, nsymedges) );
