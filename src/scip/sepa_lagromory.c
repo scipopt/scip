@@ -1237,8 +1237,6 @@ void weightedDualVector(
    {
       dualvector[i] = alpha * dualvector[i];
    }
-
-   return SCIP_OKAY;
 }
 
 /** stabilize Lagrangian multipliers */
