@@ -78,7 +78,7 @@
 #define CONSHDLR_DELAYPROP         TRUE /**< should propagation method be delayed, if other propagators found reductions? */
 
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FINAL  /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
-#define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler*/
+#define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
 
 #define DEFAULT_MAXDEPTH             -1      /**< maximum depth of a node to run components detection (-1: disable component detection during solving) */
 #define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
@@ -184,7 +184,7 @@ SCIP_DECL_SORTPTRCOMP(componentSort)
    else if( comp2->ncalls == 0 )
       return 1;
 
-   /* the main sorting criterion is the absolute gap; however, we devide it by the number of solving calls for this
+   /* the main sorting criterion is the absolute gap; however, we divide it by the number of solving calls for this
     * component to diversify the search if one component does not improve
     * @todo investigate other sorting criteria
     */
@@ -371,7 +371,7 @@ SCIP_RETCODE componentSetupWorkingSol(
             assert(SCIPisZero(subscip, SCIPvarGetObj(subvar)) ||
                SCIPisEQ(subscip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar)));
 
-            /* variable is gloablly fixed in sub-SCIP, so it was locally fixed in the main-SCIP */
+            /* variable is globally fixed in sub-SCIP, so it was locally fixed in the main-SCIP */
             if( SCIPisEQ(subscip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar)) )
             {
                assert(SCIPisEQ(scip, SCIPvarGetLbLocal(sourcevars[v]), SCIPvarGetUbLocal(sourcevars[v])));
@@ -683,7 +683,7 @@ SCIP_RETCODE solveSubscip(
       timelimit += SCIPgetSolvingTime(subscip);
    }
 
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   /* subtract the memory already used by the main SCIP and the estimated memory usage of external software */
    /* @todo count memory of other components */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
@@ -699,12 +699,12 @@ SCIP_RETCODE solveSubscip(
     * to create a copy of SCIP, including external memory usage */
    if( avoidmemout && memorylimit <= 0.0 )
    {
-      SCIPdebugMessage("--> not solved (not enough memory left)\n");
+      SCIPdebugMsg(scip, "--> not solved (not enough memory left)\n");
       return SCIP_OKAY;
    }
    else if( timelimit <= 0.0 )
    {
-      SCIPdebugMessage("--> not solved (not enough time left)\n");
+      SCIPdebugMsg(scip, "--> not solved (not enough time left)\n");
       return SCIP_OKAY;
    }
 
@@ -802,7 +802,7 @@ SCIP_RETCODE solveAndEvalSubscip(
       SCIP_CALL( SCIPcheckSolOrig(subscip, sol, &feasible, FALSE, FALSE) );
 #endif
 
-      SCIPdebugMessage("--> solved to optimality: time=%.2f, solution is%s feasible\n", SCIPgetSolvingTime(subscip), feasible ? "" : " not");
+      SCIPdebugMsg(scip, "--> solved to optimality: time = %.2f, solution is%s feasible\n", SCIPgetSolvingTime(subscip), feasible ? "" : " not");
 
       SCIP_CALL( SCIPallocBufferArray(scip, &fixvals, nvars) );
 
@@ -836,14 +836,14 @@ SCIP_RETCODE solveAndEvalSubscip(
                 */
                if( SCIPisGT(scip, fixvals[i], gub) )
                {
-                  SCIPdebugMessage("variable <%s> fixval: %f violates global upperbound: %f\n",
+                  SCIPdebugMsg(scip, "variable <%s> fixval: %f violates global upperbound: %f\n",
                      SCIPvarGetName(var), fixvals[i], gub);
                   fixvals[i] = gub;
                   feasible = FALSE;
                }
                else if( SCIPisLT(scip, fixvals[i], glb) )
                {
-                  SCIPdebugMessage("variable <%s> fixval: %f violates global lowerbound: %f\n",
+                  SCIPdebugMsg(scip, "variable <%s> fixval: %f violates global lowerbound: %f\n",
                      SCIPvarGetName(var), fixvals[i], glb);
                   fixvals[i] = glb;
                   feasible = FALSE;
@@ -877,7 +877,7 @@ SCIP_RETCODE solveAndEvalSubscip(
          {
             SCIP_Real origobj;
 
-            SCIPdebugMessage("solution violates bounds by more than epsilon, check the corrected solution...\n");
+            SCIPdebugMsg(scip, "solution violates bounds by more than epsilon, check the corrected solution...\n");
 
             origobj = SCIPgetSolOrigObj(subscip, SCIPgetBestSol(subscip));
 
@@ -906,11 +906,11 @@ SCIP_RETCODE solveAndEvalSubscip(
             }
 #endif
 
-            SCIPdebugMessage("--> corrected solution is%s feasible\n", feasible ? "" : " not");
+            SCIPdebugMsg(scip, "--> corrected solution is%s feasible\n", feasible ? "" : " not");
 
             if( !SCIPisFeasEQ(subscip, SCIPsolGetOrigObj(sol), origobj) )
             {
-               SCIPdebugMessage("--> corrected solution has a different objective value (old=%16.9g, corrected=%16.9g)\n",
+               SCIPdebugMsg(scip, "--> corrected solution has a different objective value (old = %.9g, corrected = %.9g)\n",
                   origobj, SCIPsolGetOrigObj(sol));
 
                feasible = FALSE;
@@ -962,7 +962,7 @@ SCIP_RETCODE solveAndEvalSubscip(
    }
    else
    {
-      SCIPdebugMessage("--> solving interrupted (status=%d, time=%.2f)\n",
+      SCIPdebugMsg(scip, "--> solving interrupted (status = %d, time = %.2f)\n",
          SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip));
 
       /* transfer global fixings to the original problem; we can only do this, if we did not find a solution in the
@@ -1000,7 +1000,7 @@ SCIP_RETCODE solveAndEvalSubscip(
 
          *ntightenedbounds += ntightened;
 
-         SCIPdebugMessage("--> tightened %d bounds of variables due to global bounds in the sub-SCIP\n", ntightened);
+         SCIPdebugMsg(scip, "--> tightened %d bounds of variables due to global bounds in the sub-SCIP\n", ntightened);
       }
    }
 
@@ -1037,7 +1037,7 @@ SCIP_RETCODE solveComponent(
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebugMessage("solve component <%s> (ncalls=%d, absgap=%.9g)\n",
+   SCIPdebugMsg(scip, "solve component <%s> (ncalls = %d, absgap = %.9g)\n",
       SCIPgetProbName(subscip), component->ncalls, component->lastprimalbound - component->lastdualbound);
 
    bestsol = SCIPgetBestSol(scip);
@@ -1075,7 +1075,7 @@ SCIP_RETCODE solveComponent(
       {
          SCIP_Bool feasible;
 
-         SCIPdebugMessage("checking new solution in component <%s> inherited from problem <%s>: primal bound %.9g --> %.9g\n",
+         SCIPdebugMsg(scip, "checking new solution in component <%s> inherited from problem <%s>: primal bound %.9g --> %.9g\n",
             SCIPgetProbName(subscip), problem->name,
             SCIPgetStage(subscip) == SCIP_STAGE_PROBLEM ? SCIPinfinity(subscip) : SCIPgetPrimalbound(subscip),
             SCIPgetSolOrigObj(subscip, compsol));
@@ -1083,7 +1083,7 @@ SCIP_RETCODE solveComponent(
          SCIP_CALL( SCIPcheckSolOrig(subscip, compsol, &feasible, FALSE, FALSE) );
          if( feasible )
          {
-            SCIPdebugMessage("... feasible, adding solution.\n");
+            SCIPdebugMsg(scip,"... feasible, adding solution.\n");
 
             SCIP_CALL( SCIPaddSol(subscip, compsol, &feasible) );
          }
@@ -1107,7 +1107,7 @@ SCIP_RETCODE solveComponent(
 
             if( SCIPisSumLT(subscip, newcutoffbound, SCIPgetCutoffbound(subscip)) )
             {
-               SCIPdebugMessage("update cutoff bound to %16.9g\n", newcutoffbound);
+               SCIPdebugMsg(scip, "update cutoff bound to %.9g\n", newcutoffbound);
 
                SCIP_CALL( SCIPupdateCutoffbound(subscip, newcutoffbound) );
             }
@@ -1117,7 +1117,7 @@ SCIP_RETCODE solveComponent(
 
    assert(component->laststatus != SCIP_STATUS_OPTIMAL);
 
-   SCIPdebugMsg(scip, "solve sub-SCIP for component <%s> (ncalls=%d, absgap=%16.9g)\n",
+   SCIPdebugMsg(scip, "solve sub-SCIP for component <%s> (ncalls = %d, absgap = %.9g)\n",
       SCIPgetProbName(component->subscip), component->ncalls, component->lastprimalbound - component->lastdualbound);
 
    if( component->ncalls == 0 )
@@ -1165,7 +1165,7 @@ SCIP_RETCODE solveComponent(
    component->laststatus = status;
    ++component->ncalls;
 
-   SCIPdebugMsg(scip, "--> (status=%d, nodes=%lld, time=%.2f): gap: %12.5g%% absgap: %16.9g\n",
+   SCIPdebugMsg(scip, "--> (status = %d, nodes = %lld, time = %.2f): gap = %.5g%%, absgap = %.9g\n",
       status, SCIPgetNNodes(subscip), SCIPgetSolvingTime(subscip), 100.0*SCIPgetGap(subscip),
       SCIPgetPrimalbound(subscip) - SCIPgetDualbound(subscip));
 
@@ -1248,7 +1248,7 @@ SCIP_RETCODE solveComponent(
          /* update problem dual bound if all problem components have a finite dual bound */
          if( problem->nlowerboundinf == 0 )
          {
-            SCIPdebugMessage("component <%s>: dual bound increased from %16.9g to %16.9g, new dual bound of problem <%s>: %16.9g (gap: %16.9g, absgap: %16.9g)\n",
+            SCIPdebugMsg(scip, "component <%s>: dual bound increased from %.9g to %.9g, new dual bound of problem <%s>: %.9g (gap = %.9g, absgap = %.9g)\n",
                SCIPgetProbName(subscip), component->lastdualbound, newdualbound, problem->name,
                SCIPretransformObj(scip, problem->lowerbound),
                problem->nfeascomps == problem->ncomponents ?
@@ -1302,7 +1302,7 @@ SCIP_RETCODE solveComponent(
 #endif
             SCIP_CALL( SCIPaddSol(scip, problem->bestsol, &feasible) );
 
-            SCIPdebugMessage("component <%s>: primal bound decreased from %16.9g to %16.9g, new primal bound of problem <%s>: %16.9g (gap: %16.9g, absgap: %16.9g)\n",
+            SCIPdebugMsg(scip, "component <%s>: primal bound decreased from %.9g to %.9g, new primal bound of problem <%s>: %.9g (gap = %.9g, absgap = %.9g)\n",
                SCIPgetProbName(subscip), component->lastprimalbound, SCIPgetPrimalbound(subscip), problem->name,
                SCIPgetSolOrigObj(scip, problem->bestsol),
                problem->nfeascomps == problem->ncomponents ?
@@ -1392,7 +1392,7 @@ SCIP_RETCODE initProblem(
       }
    }
 
-   SCIPdebugMessage("initialized problem <%s>\n", (*problem)->name);
+   SCIPdebugMsg(scip, "initialized problem <%s>\n", (*problem)->name);
 
    return SCIP_OKAY;
 }
@@ -1452,7 +1452,7 @@ SCIP_RETCODE createConsComponents(
 {
    SCIP_CONSHDLR* conshdlr;
 
-   /* find the samediff constraint handler */
+   /* find the components constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
@@ -2195,7 +2195,7 @@ SCIP_DECL_CONSPROP(consPropComponents)
       {
          SCIP_CONS* cons;
 
-         SCIPdebugMsg(scip, "found %d components (%d fulfulling the minsize requirement) at node %lld at depth %d (%d)\n",
+         SCIPdebugMsg(scip, "found %d components (%d fulfilling the minsize requirement) at node %lld at depth %d (%d)\n",
             ncomponents, ncompsminsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip),
             SCIPgetDepth(scip) + conshdlrdata->subscipdepth);
 
@@ -2520,7 +2520,7 @@ SCIP_DECL_CONSDELETE(consDeleteComponents)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxComponents)
 {  /*lint --e{715}*/
-   assert(result != NULL );
+   assert(result != NULL);
 
    /* no enforcement is performed, but the callback is needed for all constraint handlers with needscons = FALSE */
    *result = SCIP_FEASIBLE;
@@ -2558,7 +2558,7 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
 
-   /* create components propagator data */
+   /* create components constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->subscipdepth = 0;
 
