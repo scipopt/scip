@@ -802,7 +802,7 @@ SCIP_RETCODE solveAndEvalSubscip(
       SCIP_CALL( SCIPcheckSolOrig(subscip, sol, &feasible, FALSE, FALSE) );
 #endif
 
-      SCIPdebugMessage("--> solved to optimality: time=%.2f, solution is%s feasible\n", SCIPgetSolvingTime(subscip), feasible ? "" : " not");
+      SCIPdebugMessage("--> solved to optimality: time = %.2f, solution is%s feasible\n", SCIPgetSolvingTime(subscip), feasible ? "" : " not");
 
       SCIP_CALL( SCIPallocBufferArray(scip, &fixvals, nvars) );
 
@@ -910,7 +910,7 @@ SCIP_RETCODE solveAndEvalSubscip(
 
             if( !SCIPisFeasEQ(subscip, SCIPsolGetOrigObj(sol), origobj) )
             {
-               SCIPdebugMessage("--> corrected solution has a different objective value (old=%16.9g, corrected=%16.9g)\n",
+               SCIPdebugMessage("--> corrected solution has a different objective value (old = %.9g, corrected = %.9g)\n",
                   origobj, SCIPsolGetOrigObj(sol));
 
                feasible = FALSE;
@@ -962,7 +962,7 @@ SCIP_RETCODE solveAndEvalSubscip(
    }
    else
    {
-      SCIPdebugMessage("--> solving interrupted (status=%d, time=%.2f)\n",
+      SCIPdebugMessage("--> solving interrupted (status = %d, time = %.2f)\n",
          SCIPgetStatus(subscip), SCIPgetSolvingTime(subscip));
 
       /* transfer global fixings to the original problem; we can only do this, if we did not find a solution in the
@@ -1037,7 +1037,7 @@ SCIP_RETCODE solveComponent(
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebugMessage("solve component <%s> (ncalls=%d, absgap=%.9g)\n",
+   SCIPdebugMessage("solve component <%s> (ncalls = %d, absgap = %.9g)\n",
       SCIPgetProbName(subscip), component->ncalls, component->lastprimalbound - component->lastdualbound);
 
    bestsol = SCIPgetBestSol(scip);
@@ -1107,7 +1107,7 @@ SCIP_RETCODE solveComponent(
 
             if( SCIPisSumLT(subscip, newcutoffbound, SCIPgetCutoffbound(subscip)) )
             {
-               SCIPdebugMessage("update cutoff bound to %16.9g\n", newcutoffbound);
+               SCIPdebugMessage("update cutoff bound to %.9g\n", newcutoffbound);
 
                SCIP_CALL( SCIPupdateCutoffbound(subscip, newcutoffbound) );
             }
@@ -1117,7 +1117,7 @@ SCIP_RETCODE solveComponent(
 
    assert(component->laststatus != SCIP_STATUS_OPTIMAL);
 
-   SCIPdebugMsg(scip, "solve sub-SCIP for component <%s> (ncalls=%d, absgap=%16.9g)\n",
+   SCIPdebugMsg(scip, "solve sub-SCIP for component <%s> (ncalls = %d, absgap = %.9g)\n",
       SCIPgetProbName(component->subscip), component->ncalls, component->lastprimalbound - component->lastdualbound);
 
    if( component->ncalls == 0 )
@@ -1165,7 +1165,7 @@ SCIP_RETCODE solveComponent(
    component->laststatus = status;
    ++component->ncalls;
 
-   SCIPdebugMsg(scip, "--> (status=%d, nodes=%lld, time=%.2f): gap: %12.5g%% absgap: %16.9g\n",
+   SCIPdebugMsg(scip, "--> (status = %d, nodes = %lld, time = %.2f): gap = %.5g%%, absgap = %.9g\n",
       status, SCIPgetNNodes(subscip), SCIPgetSolvingTime(subscip), 100.0*SCIPgetGap(subscip),
       SCIPgetPrimalbound(subscip) - SCIPgetDualbound(subscip));
 
@@ -1248,7 +1248,7 @@ SCIP_RETCODE solveComponent(
          /* update problem dual bound if all problem components have a finite dual bound */
          if( problem->nlowerboundinf == 0 )
          {
-            SCIPdebugMessage("component <%s>: dual bound increased from %16.9g to %16.9g, new dual bound of problem <%s>: %16.9g (gap: %16.9g, absgap: %16.9g)\n",
+            SCIPdebugMessage("component <%s>: dual bound increased from %.9g to %.9g, new dual bound of problem <%s>: %.9g (gap = %.9g, absgap = %.9g)\n",
                SCIPgetProbName(subscip), component->lastdualbound, newdualbound, problem->name,
                SCIPretransformObj(scip, problem->lowerbound),
                problem->nfeascomps == problem->ncomponents ?
@@ -1302,7 +1302,7 @@ SCIP_RETCODE solveComponent(
 #endif
             SCIP_CALL( SCIPaddSol(scip, problem->bestsol, &feasible) );
 
-            SCIPdebugMessage("component <%s>: primal bound decreased from %16.9g to %16.9g, new primal bound of problem <%s>: %16.9g (gap: %16.9g, absgap: %16.9g)\n",
+            SCIPdebugMessage("component <%s>: primal bound decreased from %.9g to %.9g, new primal bound of problem <%s>: %.9g (gap = %.9g, absgap = %.9g)\n",
                SCIPgetProbName(subscip), component->lastprimalbound, SCIPgetPrimalbound(subscip), problem->name,
                SCIPgetSolOrigObj(scip, problem->bestsol),
                problem->nfeascomps == problem->ncomponents ?
