@@ -78,7 +78,7 @@
 #define CONSHDLR_DELAYPROP         TRUE /**< should propagation method be delayed, if other propagators found reductions? */
 
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FINAL  /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
-#define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler*/
+#define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
 
 #define DEFAULT_MAXDEPTH             -1      /**< maximum depth of a node to run components detection (-1: disable component detection during solving) */
 #define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
@@ -371,7 +371,7 @@ SCIP_RETCODE componentSetupWorkingSol(
             assert(SCIPisZero(subscip, SCIPvarGetObj(subvar)) ||
                SCIPisEQ(subscip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar)));
 
-            /* variable is gloablly fixed in sub-SCIP, so it was locally fixed in the main-SCIP */
+            /* variable is globally fixed in sub-SCIP, so it was locally fixed in the main-SCIP */
             if( SCIPisEQ(subscip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar)) )
             {
                assert(SCIPisEQ(scip, SCIPvarGetLbLocal(sourcevars[v]), SCIPvarGetUbLocal(sourcevars[v])));
@@ -2520,7 +2520,7 @@ SCIP_DECL_CONSDELETE(consDeleteComponents)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxComponents)
 {  /*lint --e{715}*/
-   assert(result != NULL );
+   assert(result != NULL);
 
    /* no enforcement is performed, but the callback is needed for all constraint handlers with needscons = FALSE */
    *result = SCIP_FEASIBLE;
@@ -2558,7 +2558,7 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
 
-   /* create components propagator data */
+   /* create components constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->subscipdepth = 0;
 
