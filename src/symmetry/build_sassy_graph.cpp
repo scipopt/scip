@@ -460,7 +460,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
       {
          assert( G != NULL );
          for (j = 0; j < nsymvars; ++j)
-            G->add_edge((unsigned) j, (unsigned) j + nsymvars);
+            G->add_edge((unsigned) j, (unsigned) (j + nsymvars));
       }
       break;
    default:
@@ -735,8 +735,8 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
 
                   color = SCIPgetSymgraphEdgeColor(graph, e);
                   (void) G->add_vertex(nusedvars + color, (*degrees)[internodeid]);
-                  G->add_edge((unsigned) nodeshift + first, (unsigned) internodeid);
-                  G->add_edge((unsigned) nodeshift + second, (unsigned) internodeid);
+                  G->add_edge((unsigned) (nodeshift + first), (unsigned) internodeid);
+                  G->add_edge((unsigned) (nodeshift + second), (unsigned) internodeid);
                }
                ++internodeid;
                ++curnnodes;
@@ -754,9 +754,9 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
                   assert( G != NULL );
 
                   if ( first < second )
-                     G->add_edge((unsigned) nodeshift + first, (unsigned) nodeshift + second);
+                     G->add_edge((unsigned) (nodeshift + first), (unsigned) (nodeshift + second));
                   else
-                     G->add_edge((unsigned) nodeshift + second, (unsigned) nodeshift + first);
+                     G->add_edge((unsigned) (nodeshift + second), (unsigned) (nodeshift + first));
                }
             }
          }
@@ -822,7 +822,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
             assert( G != NULL );
 
             for (j = 0; j < nusedvars/2; ++j)
-               G->add_edge((unsigned) nodeshift + j, (unsigned) nodeshift + j + nusedvars/2);
+               G->add_edge((unsigned) (nodeshift + j), (unsigned) (nodeshift + j + nusedvars / 2));
          }
       }
       nodeshift = curnnodes;
