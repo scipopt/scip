@@ -13281,7 +13281,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       /* try to parse coefficient, and use 1 if not successful */
       weight = 1;
       nread = 0;
-      sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread);
+      (void) sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread);
       str += nread;
 
       /* parse variable name */

@@ -518,7 +518,7 @@ SCIP_RETCODE tightenSingleVar(
 
          SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, var, 1.0) );
 
-         if( applyglobal )
+         if( applyglobal ) /*lint !e774*/
          {
             SCIP_CALL( SCIPprobAddCons(transprob, set, stat, cons) );
          }

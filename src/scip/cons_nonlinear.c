@@ -10435,7 +10435,7 @@ SCIP_RETCODE addSymmetryInformation(
             SCIP_EXPR** children;
             int sumidx;
             int optype;
-            int childidx = 0;
+            int childidx;
 
             /* sums are handled by a special gadget */
             usedefaultgadget = FALSE;

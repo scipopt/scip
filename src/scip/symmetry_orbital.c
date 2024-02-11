@@ -767,16 +767,16 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
             assert( SCIPsymLE(scip, varlbs[varid], varubs[varid]) );
             switch (update->boundchgtype)
             {
-               case SCIP_BOUNDTYPE_LOWER:
-                  assert( SCIPsymGE(scip, update->newbound, varlbs[varid]) );
-                  varlbs[varid] = update->newbound;
-                  break;
-               case SCIP_BOUNDTYPE_UPPER:
-                  assert( SCIPsymLE(scip, update->newbound, varubs[varid]) );
-                  varubs[varid] = update->newbound;
-                  break;
-               default:
-                  assert( FALSE );
+            case SCIP_BOUNDTYPE_LOWER:
+               assert( SCIPsymGE(scip, update->newbound, varlbs[varid]) );
+               varlbs[varid] = update->newbound;
+               break;
+            case SCIP_BOUNDTYPE_UPPER:
+               assert( SCIPsymLE(scip, update->newbound, varubs[varid]) );
+               varubs[varid] = update->newbound;
+               break;
+            default:
+               SCIPABORT();
             }
             assert( SCIPsymLE(scip, varlbs[varid], varubs[varid]) );
          }
@@ -871,30 +871,30 @@ SCIP_RETCODE applyOrbitalBranchingPropagations(
       assert( SCIPsymLE(scip, varlbs[branchingdecisionvarid], varubs[branchingdecisionvarid]) );
       switch (branchingdecision->boundchgtype)
       {
-         case SCIP_BOUNDTYPE_LOWER:
-            /* incompatible upper bound */
-            if ( SCIPsymGT(scip, branchingdecision->newbound, varubs[branchingdecisionvarid]) )
-            {
-               *infeasible = TRUE;
-               goto FREE;
-            }
+      case SCIP_BOUNDTYPE_LOWER:
+         /* incompatible upper bound */
+         if ( SCIPsymGT(scip, branchingdecision->newbound, varubs[branchingdecisionvarid]) )
+         {
+            *infeasible = TRUE;
+            goto FREE;
+         }
 
-            assert( SCIPsymLE(scip, varlbs[branchingdecisionvarid], branchingdecision->newbound) );
-            varlbs[branchingdecisionvarid] = branchingdecision->newbound;
-            break;
-         case SCIP_BOUNDTYPE_UPPER:
-            /* incompatible lower bound */
-            if ( SCIPsymLT(scip, branchingdecision->newbound, varlbs[branchingdecisionvarid]) )
-            {
-               *infeasible = TRUE;
-               goto FREE;
-            }
+         assert( SCIPsymLE(scip, varlbs[branchingdecisionvarid], branchingdecision->newbound) );
+         varlbs[branchingdecisionvarid] = branchingdecision->newbound;
+         break;
+      case SCIP_BOUNDTYPE_UPPER:
+         /* incompatible lower bound */
+         if ( SCIPsymLT(scip, branchingdecision->newbound, varlbs[branchingdecisionvarid]) )
+         {
+            *infeasible = TRUE;
+            goto FREE;
+         }
 
-            assert( SCIPsymGE(scip, varubs[branchingdecisionvarid], branchingdecision->newbound) );
-            varubs[branchingdecisionvarid] = branchingdecision->newbound;
-            break;
-         default:
-            assert( FALSE );
+         assert( SCIPsymGE(scip, varubs[branchingdecisionvarid], branchingdecision->newbound) );
+         varubs[branchingdecisionvarid] = branchingdecision->newbound;
+         break;
+      default:
+         SCIPABORT();
       }
 
       /* 3. propagate that branching variable is >= the variables in its orbit

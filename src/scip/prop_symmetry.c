@@ -4278,7 +4278,7 @@ SCIP_RETCODE createConflictGraphSST(
       assert( cliquevars != NULL );
       assert( ncliquevars > 0 );
 
-      SCIPdebugMsg(scip, "\tIdentify edges for clique ID: %d; Index: %d).\n", SCIPcliqueGetId(clique),
+      SCIPdebugMsg(scip, "\tIdentify edges for clique ID: %u; Index: %d).\n", SCIPcliqueGetId(clique),
          SCIPcliqueGetIndex(clique));
 
       /* for all variables, list which cliques it is part of */
@@ -4321,7 +4321,7 @@ SCIP_RETCODE createConflictGraphSST(
       assert( cliquevars != NULL );
       assert( ncliquevars > 0 );
 
-      SCIPdebugMsg(scip, "\tAdd edges for clique ID: %d; Index: %d).\n", SCIPcliqueGetId(clique),
+      SCIPdebugMsg(scip, "\tAdd edges for clique ID: %u; Index: %d).\n", SCIPcliqueGetId(clique),
          SCIPcliqueGetIndex(clique));
 
       /* for all variables, list which cliques it is part of */
