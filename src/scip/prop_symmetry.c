@@ -5641,8 +5641,10 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    )
 {
    int componentsize;
-   int** componentperms;
+   int** componentperms = NULL;
+   int** properperms = NULL;
    int p;
+   int nproperperms;
 
    SCIP_Bool checkorbired;
    SCIP_Bool checklexred;
@@ -5651,12 +5653,6 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
 
    assert( scip != NULL );
    assert( propdata != NULL );
-   assert( ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
-      || (
-         ISSYMRETOPESACTIVE(propdata->usesymmetry)
-         && propdata->usedynamicprop
-         && propdata->addsymresacks
-      ) );
    assert( propdata->nperms > 0 );
    assert( 0 <= cidx && cidx < propdata->ncomponents );
    assert( propdata->componentblocked != NULL );
@@ -5668,16 +5664,34 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    /* in this function orbital reduction or dynamic lexicographic reduction propagation must be enabled */
    checkorbired = ISORBITALREDUCTIONACTIVE(propdata->usesymmetry);
    checklexred = ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks;
-   assert( checkorbired || checklexred );
 
-   SCIP_CALL( ensureSymmetryMovedpermvarscountsComputed(scip, propdata) );
-   assert( propdata->nmovedpermvars );
+   if ( checkorbired || checklexred )
+   {
+      SCIP_CALL( ensureSymmetryMovedpermvarscountsComputed(scip, propdata) );
+      assert( propdata->nmovedpermvars );
+   }
 
    /* collect the permutations of this component */
    componentsize = propdata->componentbegins[cidx + 1] - propdata->componentbegins[cidx];
-   SCIP_CALL( SCIPallocBufferArray(scip, &componentperms, componentsize) );
-   for (p = 0; p < componentsize; ++p)
-      componentperms[p] = propdata->perms[propdata->components[propdata->componentbegins[cidx] + p]];
+   nproperperms = 0;
+
+   if ( checkorbired || checklexred )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &properperms, componentsize) );
+      for (p = 0; p < componentsize; ++p)
+      {
+         if ( propdata->isproperperm[p] )
+            properperms[nproperperms++] = propdata->perms[propdata->components[propdata->componentbegins[cidx] + p]];
+      }
+
+      /* possibly collect also signed permutations */
+      if ( propdata->componenthassignedperm[cidx] )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &componentperms, componentsize) );
+         for (p = 0; p < componentsize; ++p)
+            componentperms[p] = propdata->perms[propdata->components[propdata->componentbegins[cidx] + p]];
+      }
+   }
 
    /* check if many component permutations contain many packing partitioning orbisacks
     *
@@ -5687,10 +5701,12 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
     * Packing-partitioning orbitopes are only implemented for binary orbitopes, so binary variables must be moved.
     */
    checkpporbisack = SCIPgetParam(scip, "constraints/orbisack/checkpporbisack");
-   if ( ( checkpporbisack == NULL || SCIPparamGetBool(checkpporbisack) == TRUE ) && propdata->nmovedbinpermvars > 0 )
+   if ( checklexred && ( checkpporbisack == NULL || SCIPparamGetBool(checkpporbisack) == TRUE )
+      && propdata->nmovedbinpermvars > 0 )
    {
+      assert( properperms != NULL );
       SCIP_CALL( componentPackingPartitioningOrbisackUpgrade(scip, propdata,
-            componentperms, componentsize, propdata->componenthassignedperm[cidx], &success) );
+            properperms, nproperperms, FALSE /* we filter proper permutations */, &success) );
 
       if ( success )
       {
@@ -5700,10 +5716,10 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    }
 
    /* handle component permutations with orbital reduction */
-   if ( checkorbired && !propdata->componenthassignedperm[cidx] )
+   if ( checkorbired )
    {
       SCIP_CALL( SCIPorbitalReductionAddComponent(scip, propdata->orbitalreddata,
-            propdata->permvars, propdata->npermvars, componentperms, componentsize, &success) );
+            propdata->permvars, propdata->npermvars, properperms, nproperperms, &success) );
       if ( success )
          propdata->componentblocked[cidx] |= SYM_HANDLETYPE_ORBITALREDUCTION;
    }
@@ -5711,30 +5727,42 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    /* handle component permutations with the dynamic lexicographic reduction propagator */
    if ( checklexred )
    {
+      assert( componentperms != NULL || componentsize == nproperperms );
+
       /* handle every permutation in the component with the dynamic lexicographic reduction propagator */
       for (p = 0; p < componentsize; ++p)
       {
-         assert( componentperms[p] != NULL );
          SCIP_CALL( SCIPlexicographicReductionAddPermutation(scip, propdata->lexreddata,
-               propdata->permvars, propdata->npermvars, componentperms[p],
+               propdata->permvars, propdata->npermvars, componentperms != NULL ? componentperms[p] : properperms[p],
                (SYM_SYMTYPE) propdata->symtype, propdata->permvardomaincenter, TRUE, &success) );
          if ( success )
             propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
       }
    }
-   else if ( propdata->handlesimplesignedcomponent )
+   else if ( propdata->handlesimplesignedcomponent && ! propdata->componentblocked[cidx] )
    {
-      /* if there is only one signed permutation in the component that reflects all variables */
-      if ( componentsize == 1 && propdata->componenthassignedperm[cidx] )
+      /* check if there is a signed permutation in the component that reflects all variables */
+      if ( propdata->componenthassignedperm[cidx] )
       {
-         for (p = 0; p < propdata->npermvars; ++p)
+         int* perm;
+         int v;
+         SCIP_Bool found = FALSE;
+
+         for (p = propdata->componentbegins[cidx]; p < propdata->componentbegins[cidx + 1] && !found; ++p)
          {
-            if ( componentperms[0][p] != propdata->npermvars + p && componentperms[0][p] != p )
-               break;
+            perm = propdata->perms[propdata->components[p]];
+            for (v = 0; v < propdata->npermvars; ++v)
+            {
+               if ( perm[v] != propdata->npermvars + v && perm[v] != v )
+                  break;
+            }
+
+            /* we have found a signed permutation that reflects all variables (the identity is not in perms) */
+            if ( v == propdata->npermvars )
+               found = TRUE;
          }
 
-         /* if the loop has not terminated early, the permutation reflects all variables */
-         if ( p == propdata->npermvars )
+         if ( found )
          {
             char name[SCIP_MAXSTRLEN];
             SCIP_CONS* cons;
@@ -5751,7 +5779,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
 
             for (p = 0; p < propdata->npermvars; ++p)
             {
-               if ( componentperms[0][p] == propdata->npermvars + p )
+               if ( perm[p] == propdata->npermvars + p )
                {
                   vars[nvars] = propdata->permvars[p];
                   vals[nvars++] = 1.0;
@@ -5780,7 +5808,8 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    if ( propdata->componentblocked[cidx] )
       ++propdata->ncompblocked;
 
-   SCIPfreeBufferArray(scip, &componentperms);
+   SCIPfreeBufferArrayNull(scip, &componentperms);
+   SCIPfreeBufferArrayNull(scip, &properperms);
 
    return SCIP_OKAY;
 }
@@ -6922,10 +6951,6 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
    if ( propdata->componentblocked[cidx] )
       return SCIP_OKAY;
 
-   /* detect if orbital reduction or lexicographic reduction shall be applied */
-   useorbitalredorlexred = ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
-      || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks );
-
    /* try to apply symmetry handling methods */
    if ( propdata->detectdoublelex || propdata->detectorbitopes )
    {
@@ -6940,10 +6965,7 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
    {
       SCIP_CALL( addSSTConss(scip, propdata, useorbitalredorlexred, nchgbds, cidx) );
    }
-   if ( useorbitalredorlexred )
-   {
-      SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata, cidx) );
-   }
+   SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata, cidx) );
    SCIP_CALL( addSymresackConss(scip, propdata, cidx) );
 
    return SCIP_OKAY;
