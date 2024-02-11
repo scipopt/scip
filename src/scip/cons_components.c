@@ -184,7 +184,7 @@ SCIP_DECL_SORTPTRCOMP(componentSort)
    else if( comp2->ncalls == 0 )
       return 1;
 
-   /* the main sorting criterion is the absolute gap; however, we devide it by the number of solving calls for this
+   /* the main sorting criterion is the absolute gap; however, we divide it by the number of solving calls for this
     * component to diversify the search if one component does not improve
     * @todo investigate other sorting criteria
     */
@@ -683,7 +683,7 @@ SCIP_RETCODE solveSubscip(
       timelimit += SCIPgetSolvingTime(subscip);
    }
 
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   /* subtract the memory already used by the main SCIP and the estimated memory usage of external software */
    /* @todo count memory of other components */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )
@@ -1452,7 +1452,7 @@ SCIP_RETCODE createConsComponents(
 {
    SCIP_CONSHDLR* conshdlr;
 
-   /* find the samediff constraint handler */
+   /* find the components constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
@@ -2195,7 +2195,7 @@ SCIP_DECL_CONSPROP(consPropComponents)
       {
          SCIP_CONS* cons;
 
-         SCIPdebugMsg(scip, "found %d components (%d fulfulling the minsize requirement) at node %lld at depth %d (%d)\n",
+         SCIPdebugMsg(scip, "found %d components (%d fulfilling the minsize requirement) at node %lld at depth %d (%d)\n",
             ncomponents, ncompsminsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip),
             SCIPgetDepth(scip) + conshdlrdata->subscipdepth);
 
