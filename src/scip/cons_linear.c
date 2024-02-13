@@ -4116,7 +4116,7 @@ SCIP_RETCODE scaleCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->row == NULL);
-   assert(!SCIPisEQ(scip, scalar, 1.0));
+   assert(scalar != 1.0);
 
    if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -consdata->lhs * scalar))
       || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, consdata->rhs * scalar)) )
@@ -4315,16 +4315,18 @@ SCIP_RETCODE normalizeCons(
    if( SCIPisZero(scip, minabsval/maxabsval) )
       return SCIP_OKAY;
 
-   /* check if the maximum absolute coefficient is not near 1.0 */
-   if( !SCIPisEQ(scip, maxabsval, 1.0) )
+   /* check if not all absolute coefficients are near 1.0 but scaling could do */
+   if( SCIPisLT(scip, minabsval, 1.0) != SCIPisGT(scip, maxabsval, 1.0) )
    {
       SCIP_Real scalar;
 
       /* calculate scale of the average minimum and maximum absolute coefficient to 1.0 */
       scalar = 2.0 / (minabsval + maxabsval);
 
-      /* check if all scaled absolute coefficients are near 1.0 */
-      if( SCIPisEQ(scip, scalar * maxabsval, 1.0) )
+      /* check if all scaled absolute coefficients are near 1.0
+       * we can relax EQ(x,1.0) to LE(x,1.0), as LT(x,1.0) is not possible
+       */
+      if( SCIPisLE(scip, scalar * maxabsval, 1.0) )
       {
          SCIPdebugMsg(scip, "divide linear constraint with %g, because all coefficients are in absolute value the same\n", maxabsval);
          SCIPdebugPrintCons(scip, cons, NULL);
