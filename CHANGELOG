@@ -1,5 +1,19 @@
 @page RN90 Release notes for SCIP 9
 
+@section RN901 SCIP 9.0.1
+*************************
+
+Fixed bugs
+----------
+
+- fixed bug in detection of double lex matrices due to wrong memory allocation
+
+
+Miscellaneous
+-------------
+
+
+
 @section RN900 SCIP 9.0.0
 *************************
 
@@ -272,7 +286,6 @@ Fixed bugs
 - fixed make install when SHARED=no and make uninstall
 - check absolute coefficients relative to extremal average to avoid invalid unifications in normalizeCons()
 - enforce and check symmetry-based constraints to take their locks (in dual reductions) into account
-- fixed bug in detection of double lex matrices due to wrong memory allocation
 
 Miscellaneous
 -------------
