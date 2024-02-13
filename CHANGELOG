@@ -1,5 +1,49 @@
 @page RN90 Release notes for SCIP 9
 
+@section RN910 SCIP 9.1.0
+*************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Fixed bugs
+----------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New callbacks
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+### New parameters
+
+### New data structures
+
+Build system
+------------
+
+### Makefile
+
+### Cmake
+
+Testing
+-------
+
+Miscellaneous
+-------------
+
+
 @section RN901 SCIP 9.0.1
 *************************
 
