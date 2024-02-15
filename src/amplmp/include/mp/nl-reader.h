@@ -48,7 +48,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
-#include <limits>
+#include <cmath>
 #include <string>
 
 namespace mp {
@@ -110,132 +110,10 @@ class BinaryReadError : public Error {
   std::size_t offset() const { return offset_; }
 };
 
-enum {
-  /** Maximum number of options reserved for AMPL use in NL and SOL formats. */
-  MAX_AMPL_OPTIONS = 9
-};
-
-namespace arith {
-
-/** Floating-point arithmetic kind. */
-enum Kind {
-
-  /** Unknown floating-point arithmetic. */
-  UNKNOWN = 0,
-
-  /**
-    \rst
-    Standard `IEEE-754 floating point
-    <http://en.wikipedia.org/wiki/IEEE_floating_point>`_ - little endian.
-    \endrst
-   */
-  IEEE_LITTLE_ENDIAN = 1,
-
-  /** Standard IEEE-754 floating point - big endian. */
-  IEEE_BIG_ENDIAN = 2,
-
-  /**
-    \rst
-    `IBM floating point
-    <http://en.wikipedia.org/wiki/IBM_Floating_Point_Architecture>`_.
-    \endrst
-   */
-  IBM = 3,
-
-  /** VAX floating point (legacy). */
-  VAX = 4,
-
-  /** Cray floating point. */
-  CRAY = 5,
-
-  /** Last floating point. */
-  LAST = CRAY
-};
-
-// Returns floating-point arithmetic kind used on the current system.
-Kind GetKind();
-
-inline bool IsIEEE(arith::Kind k) {
-  return k == IEEE_LITTLE_ENDIAN || k == IEEE_BIG_ENDIAN;
-}
-}  // namespace arith
-
-/**
-  \rst
-  An NL `header <http://en.wikipedia.org/wiki/Header_(computing)>`_
-  which contains information about problem dimensions, such as the number of
-  variables and constraints, and the input format.
-
-  Base class: `mp::ProblemInfo`
-  \endrst
- */
-struct NLHeader : ProblemInfo {
-  /** Input/output format */
-  enum Format {
-    /**
-      Text format. The text format is fully portable meaning that an .nl file
-      can be written on a machine of one architecture and then read on a
-      machine of a different architecture.
-     */
-    TEXT = 0,
-
-    /**
-      Binary format. The binary format is not generally portable and should
-      normally be used on a single machine.
-     */
-    BINARY = 1
-  };
-
-  /** Input/output format. */
-  Format format;
-
-  /** The number of options reserved for AMPL use. */
-  int num_ampl_options;
-
-  /**
-    Values of options reserved for AMPL use. Leave the default values if not
-    using AMPL.
-   */
-  int ampl_options[MAX_AMPL_OPTIONS];
-
-  /**
-    Extra info for writing a solution reserved for AMPL use. Leave the default
-    value if not using AMPL.
-   */
-  double ampl_vbtol;
-
-  /**
-    \rst
-    Floating-point arithmetic kind used with binary format to check
-    if an .nl file is written using a compatible representation of
-    floating-point numbers. It is not used with the text format and normally
-    set to `mp::arith::UNKNOWN` there.
-    \endrst
-   */
-  arith::Kind arith_kind;
-
-  /** Flags. */
-  enum {
-    /** Flag that specifies whether to write output suffixes to a .sol file. */
-    WANT_OUTPUT_SUFFIXES = 1
-  };
-
-  /**
-    \rst
-    Flags. Can be either 0 or `mp::NLHeader::WANT_OUTPUT_SUFFIXES`.
-    \endrst
-   */
-  int flags;
-
-  NLHeader()
-    : ProblemInfo(), format(TEXT), num_ampl_options(0), ampl_vbtol(0),
-      arith_kind(arith::UNKNOWN), flags(0) {
-    std::fill(ampl_options, ampl_options + MAX_AMPL_OPTIONS, 0);
-  }
-};
 
 /** Writes NLHeader in the NL format. */
 fmt::Writer &operator<<(fmt::Writer &w, const NLHeader &h);
+
 
 /**
   \rst
@@ -1064,8 +942,8 @@ class TextReader : public ReaderBase {
   };
   CopyableLocale locale_;
 
-  // Reads an integer without a sign.
-  // Int: signed or unsigned integer type.
+  /// Reads an integer without a sign.
+  /// Int: signed or unsigned integer type.
   template <typename Int>
   bool ReadIntWithoutSign(Int& value) {
     char c = *ptr_;
@@ -1104,8 +982,8 @@ class TextReader : public ReaderBase {
     return true;
   }
 
-  // Reads a nonnegative integer and checks that adding it to accumulator
-  // doesn't overflow.
+  /// Reads a nonnegative integer and checks that adding it to accumulator
+  /// doesn't overflow.
   int ReadUInt(int &accumulator) {
     int value = ReadUInt();
     if (accumulator > std::numeric_limits<int>::max() - value)
@@ -1187,22 +1065,22 @@ class TextReader : public ReaderBase {
 
   fmt::StringRef ReadString();
 
-  // Reads a function or suffix name.
+  /// Reads a function or suffix name.
   fmt::StringRef ReadName();
 
-  // Reads an .nl file header. The header is always in text format, so this
-  // function doesn't have a counterpart in BinaryReader.
+  /// Reads an .nl file header. The header is always in text format, so this
+  /// function doesn't have a counterpart in BinaryReader.
   void ReadHeader(NLHeader &header);
 };
 
-// Converter that doesn't change the input.
+/// Converter that doesn't change the input.
 class IdentityConverter {
  public:
   template <typename T>
   T Convert(T value) { return value; }
 };
 
-// Converter that changes the input endianness.
+/// Converter that changes the input endianness.
 class EndiannessConverter {
  private:
   void Convert(char *data, std::size_t size) {
@@ -1221,7 +1099,7 @@ class BinaryReaderBase : public ReaderBase {
  protected:
   explicit BinaryReaderBase(const ReaderBase &base) : ReaderBase(base) {}
 
-  // Reads length chars.
+  /// Reads length chars.
   const char *Read(int length) {
     if (end_ - ptr_ < length) {
       token_ = end_;
@@ -1241,7 +1119,7 @@ class BinaryReaderBase : public ReaderBase {
   }
 };
 
-// Binary reader.
+/// Binary reader.
 template <typename InputConverter = IdentityConverter>
 class BinaryReader : private InputConverter, public BinaryReaderBase {
  public:
@@ -1274,12 +1152,12 @@ class BinaryReader : private InputConverter, public BinaryReaderBase {
     return fmt::StringRef(length != 0 ? Read(length) : 0, length);
   }
 
-  // Reads a function or suffix name.
+  /// Reads a function or suffix name.
   fmt::StringRef ReadName() { return ReadString(); }
 };
 
-// An NLHandler that forwards notification of variable bounds to another
-// handler and ignores all other notifications.
+/// An NLHandler that forwards notification of variable bounds to another
+/// handler and ignores all other notifications.
 template <typename Handler>
 class VarBoundHandler : public NullNLHandler<typename Handler::Expr> {
  private:
@@ -1293,14 +1171,15 @@ class VarBoundHandler : public NullNLHandler<typename Handler::Expr> {
   }
 };
 
-// Linear expression handler that ignores input.
+/// Linear expression handler that ignores input.
 struct NullLinearExprHandler {
   void AddTerm(int, double) {}
 };
 
-// An NL reader.
-// Handler: a class implementing the NLHandler concept that receives
-//          notifications of NL constructs
+
+/// An NL reader.
+/// Handler: a class implementing the NLHandler concept that receives
+///          notifications of NL constructs
 template <typename Reader, typename Handler>
 class NLReader {
  private:
@@ -1318,8 +1197,8 @@ class NLReader {
   double ReadConstant(char code);
   double ReadConstant() { return ReadConstant(reader_.ReadChar()); }
 
-  // Reads a nonnegative integer and checks that it is less than ub.
-  // ub is unsigned so that it can hold value INT_MAX + 1u.
+  /// Reads a nonnegative integer and checks that it is less than ub.
+  /// ub is unsigned so that it can hold value INT_MAX + 1u.
   int ReadUInt(unsigned ub) {
     int value = reader_.ReadUInt();
     unsigned unsigned_value = value;
@@ -1328,7 +1207,7 @@ class NLReader {
     return value;
   }
 
-  // Reads a nonnegative integer and checks that it is in the range [lb, ub).
+  /// Reads a nonnegative integer and checks that it is in the range [lb, ub).
   int ReadUInt(unsigned lb, unsigned ub) {
     int value = reader_.ReadUInt();
     unsigned unsigned_value = value;
@@ -1337,8 +1216,8 @@ class NLReader {
     return value;
   }
 
-  // Minimum number of arguments for an iterated expression that has a
-  // binary counterpart. Examples: sum (+), forall (&&), exists (||).
+  /// Minimum number of arguments for an iterated expression that has a
+  /// binary counterpart. Examples: sum (+), forall (&&), exists (||).
   enum {MIN_ITER_ARGS = 3};
 
   int ReadNumArgs(int min_args = MIN_ITER_ARGS) {
@@ -1348,7 +1227,7 @@ class NLReader {
     return num_args;
   }
 
-  // Reads a variable or a common expression reference.
+  /// Reads a variable or a common expression reference.
   Reference DoReadReference() {
     int index = ReadUInt(num_vars_and_exprs_);
     reader_.ReadTillEndOfLine();
@@ -1357,7 +1236,7 @@ class NLReader {
           handler_.OnCommonExprRef(index - header_.num_vars);
   }
 
-  // Reads a variable or a common expression reference.
+  /// Reads a variable or a common expression reference.
   Reference ReadReference() {
     if (reader_.ReadChar() != 'v')
       reader_.ReportError("expected reference");
@@ -1392,9 +1271,9 @@ class NLReader {
     return handler_.EndCount(args);
   }
 
-  // Helper structs to provide a uniform interface to Read{Numeric,Logical}Expr
-  // since it is not possible to overload on expression type as NumericExpr
-  // and LogicalExpr can be the same type.
+  /// Helper structs to provide a uniform interface to Read{Numeric,Logical}Expr
+  /// since it is not possible to overload on expression type as NumericExpr
+  /// and LogicalExpr can be the same type.
   struct NumericExprReader {
     typedef NumericExpr Expr;
     Expr Read(NLReader &r) const { return r.ReadNumericExpr(); }
@@ -1408,11 +1287,11 @@ class NLReader {
     Expr Read(NLReader &r) const { return r.ReadSymbolicExpr(); }
   };
 
-  // A helper struct used to make sure that the arguments to a binary
-  // expression are read in the correct order and avoid errors of the form:
-  //   MakeBinary(opcode, ReadNumericExpr(), ReadNumericExpr())
-  // The above code is incorrect as the order of evaluation of arguments is
-  // unspecified.
+  /// A helper struct used to make sure that the arguments to a binary
+  /// expression are read in the correct order and avoid errors of the form:
+  ///   MakeBinary(opcode, ReadNumericExpr(), ReadNumericExpr())
+  /// The above code is incorrect as the order of evaluation of arguments is
+  /// unspecified.
   template <typename ExprReader = NumericExprReader>
   struct BinaryArgReader {
     typename ExprReader::Expr lhs;
@@ -1421,18 +1300,18 @@ class NLReader {
       : lhs(ExprReader().Read(r)), rhs(ExprReader().Read(r)) {}
   };
 
-  // Reads a numeric or string expression.
+  /// Reads a numeric or string expression.
   Expr ReadSymbolicExpr();
 
-  // Reads a numeric expression.
-  // ignore_zero: if true, zero constants are ignored
+  /// Reads a numeric expression.
+  /// ignore_zero: if true, zero constants are ignored
   NumericExpr ReadNumericExpr(bool ignore_zero = false) {
     return ReadNumericExpr(reader_.ReadChar(), ignore_zero);
   }
   NumericExpr ReadNumericExpr(char code, bool ignore_zero);
   NumericExpr ReadNumericExpr(int opcode);
 
-  // Reads a logical expression.
+  /// Reads a logical expression.
   LogicalExpr ReadLogicalExpr();
   LogicalExpr ReadLogicalExpr(int opcode);
 
@@ -1466,7 +1345,7 @@ class NLReader {
 
     int num_items() const { return this->reader_.header_.num_objs; }
 
-    // Returns true if objective expression should be skipped.
+    /// Returns true if objective expression should be skipped.
     bool SkipExpr(int obj_index) const {
       return !this->reader_.handler_.NeedObj(obj_index);
     }
@@ -1489,23 +1368,23 @@ class NLReader {
   struct ProblemHandler : ItemHandler<PROB> {
     explicit ProblemHandler(NLReader &r) : ItemHandler<PROB>(r) {}
 
-    // An NL input always contains one problem.
+    /// An NL input always contains one problem.
     int num_items() const { return 1; }
   };
 
-  // Reads the linear part of an objective or constraint expression.
+  /// Reads the linear part of an objective or constraint expression.
   template <typename LinearHandler>
   void ReadLinearExpr();
 
   template <typename LinearHandler>
   void ReadLinearExpr(int num_terms, LinearHandler linear_expr);
 
-  // Reads column sizes, numbers of nonzeros in the first num_var − 1
-  // columns of the Jacobian sparsity matrix.
+  /// Reads column sizes, numbers of nonzeros in the first num_var − 1
+  /// columns of the Jacobian sparsity matrix.
   template <bool CUMULATIVE>
   void ReadColumnSizes();
 
-  // Reads initial values for primal or dual variables.
+  /// Reads initial values for primal or dual variables.
   template <typename ValueHandler>
   void ReadInitialValues();
 
@@ -1535,13 +1414,13 @@ class NLReader {
     : reader_(reader), header_(header), handler_(handler), flags_(flags),
       num_vars_and_exprs_(0) {}
 
-  // Algebraic constraint handler.
+  /// Algebraic constraint handler.
   struct AlgebraicConHandler : ItemHandler<CON> {
     explicit AlgebraicConHandler(NLReader &r) : ItemHandler<CON>(r) {}
 
     int num_items() const { return this->reader_.header_.num_algebraic_cons; }
 
-    // Returns false because constraint expressions are always read.
+    /// Returns false because constraint expressions are always read.
     bool SkipExpr(int) const { return false; }
 
     typename Handler::LinearConHandler OnLinearExpr(int index, int num_terms) {
@@ -1556,11 +1435,11 @@ class NLReader {
     }
   };
 
-  // Reads variable or constraint bounds.
+  /// Reads variable or constraint bounds.
   template <typename BoundHandler>
   void ReadBounds();
 
-  // bound_reader: a reader after variable bounds section input
+  /// bound_reader: a reader after variable bounds section input
   void Read(Reader *bound_reader);
 
   void Read();
@@ -1822,7 +1701,7 @@ void NLReader<Reader, Handler>::ReadBounds() {
   double lb = 0, ub = 0;
   BoundHandler bh(*this);
   int num_bounds = bh.num_items();
-  double infinity = std::numeric_limits<double>::infinity();
+  double infinity = INFINITY;
   for (int i = 0; i < num_bounds; ++i) {
     switch (reader_.ReadChar() - '0') {
     case RANGE:
@@ -2086,7 +1965,7 @@ void NLReader<Reader, Handler>::Read() {
   handler_.EndInput();
 }
 
-// An .nl file reader.
+/// An .nl file reader.
 template <typename File = fmt::File>
 class NLFileReader {
  private:
@@ -2096,7 +1975,7 @@ class NLFileReader {
 
   void Open(fmt::CStringRef filename);
 
-  // Reads the file into an array.
+  /// Reads the file into an array.
   void Read(fmt::internal::MemoryBuffer<char, 1> &array);
 
  public:
@@ -2104,7 +1983,7 @@ class NLFileReader {
 
   const File &file() { return file_; }
 
-  // Opens and reads the file.
+  /// Opens and reads the file.
   template <typename Handler>
   void Read(fmt::CStringRef filename, Handler &handler, int flags) {
     Open(filename);
@@ -2130,17 +2009,27 @@ void ReadBinary(TextReader<> &reader, const NLHeader &header,
         bin_reader, header, handler, flags).Read();
 }
 
+
+/// Reads names from the string *data* sending the names to the *handler*
+/// object by calling ``handler.OnName(name)``. The name argument to
+/// ``OnName`` is a ``fmt::StringRef`` object and the string it refers to
+/// is not null-terminated.
+/// Each name in the input string/file should be on a separate line
+/// ended with a newline character ('\n') or "\r\n" (on Windows).
 template <typename NameHandler>
 void ReadNames(fmt::CStringRef filename, fmt::StringRef data,
                NameHandler &handler) {
+  bool in_win_newline = false;
   int line = 1;
   const char *start = data.data();
   const char *end = start + data.size();
   for (const char *ptr = start; ptr != end; ++ptr) {
+    if (*ptr == '\r') in_win_newline = true;
     if (*ptr == '\n') {
-      handler.OnName(fmt::StringRef(start, ptr - start));
+      handler.OnName(fmt::StringRef(start, ptr - start - in_win_newline));
       start = ptr + 1;
       ++line;
+      in_win_newline = false;
     }
   }
   if (start != end) {
@@ -2149,28 +2038,31 @@ void ReadNames(fmt::CStringRef filename, fmt::StringRef data,
   }
 }
 
-// A name file reader.
+
+/// A name file reader.
 class NameReader {
  private:
   MemoryMappedFile<> mapped_file_;
 
  public:
-  // Reads names from the file *filename* sending the names to the *handler*
-  // object by calling ``handler.OnName(name)``. The name argument to
-  // ``OnName`` is a ``fmt::StringRef`` object and the string it refers to
-  // is not null-terminated.
-  // Each name in the input file should be on a separate line ended with a
-  // newline character ('\n').
+  /// Reads names from file *filename*
+  /// by passing its contents to ReadNames().
   template <typename NameHandler>
   void Read(fmt::CStringRef filename, NameHandler &handler) {
-    fmt::File file(filename, fmt::File::RDONLY);
-    mapped_file_.map(file, filename);
+    try {
+      fmt::File file(filename, fmt::File::RDONLY);
+      mapped_file_.map(file, filename);
+    } catch (...) {
+      return;           // ignore if not provided
+    }
     fmt::StringRef data(mapped_file_.start(), mapped_file_.size());
     ReadNames(filename, data, handler);
   }
 };
 
-// An NL handler that constructs an optimization problem using ProblemBuilder.
+
+/// An NL handler that constructs an optimization problem
+/// using ProblemBuilder.
 template <typename ProblemBuilder>
 class NLProblemBuilder {
  public:
@@ -2190,7 +2082,7 @@ class NLProblemBuilder {
     obj.set_nonlinear_expr(expr);
   }
 
-  // Sets bounds on a problem item (objective or constraint).
+  /// Sets bounds on a problem item (objective or constraint).
   template <typename Item>
   void SetBounds(const Item &item, double lb, double ub) {
     item.set_lb(lb);
@@ -2205,21 +2097,24 @@ class NLProblemBuilder {
   }
 
  public:
+  /// Constructor
   explicit NLProblemBuilder(ProblemBuilder &builder): builder_(builder) {}
 
+  /// Destructor. We have virtual functions
+  virtual ~NLProblemBuilder() = default;
+
+  /// Get builder
   ProblemBuilder &builder() { return builder_; }
 
+  /// OnHeader event
   void OnHeader(const NLHeader &h) {
     builder_.SetInfo(h);
 
     // As nl-benchmark shows, adding problem components at once and then
     // updating them is faster than adding them incrementally. The latter
-    // requires additional checks to make sure that prolbem components are
+    // requires additional checks to make sure that problem components are
     // in the correct order.
-    if (int n = h.num_continuous_vars())
-      builder_.AddVars(n, var::CONTINUOUS);
-    if (int n = h.num_integer_vars())
-      builder_.AddVars(n, var::INTEGER);
+    AddVariables(h);
     if (int n = h.num_common_exprs())
       builder_.AddCommonExprs(n);
     int n_objs = resulting_nobj( h.num_objs );
@@ -2233,16 +2128,73 @@ class NLProblemBuilder {
       builder_.AddFunctions(h.num_funcs);
   }
 
+  /// Add variables
+  void AddVariables(const NLHeader& h) {
+    // Distinguish NL variable order
+    // See D.M.Gay, Hooking Your Solver to AMPL; and Writing .NL Files,
+    // and, e.g.,
+    // github.com/jump-dev/MathOptInterface.jl/blob/master/src/FileFormats/NL/README.md
+    int k=0;                             // current block position
+    const int num_nl_vars = std::max(h.num_nl_vars_in_cons,
+                                     h.num_nl_vars_in_objs);
+    if (num_nl_vars) {
+      DoAddVars(h.num_nl_vars_in_both - h.num_nl_integer_vars_in_both,
+              var::CONTINUOUS, k);
+      DoAddVars(h.num_nl_integer_vars_in_both,
+              var::INTEGER, k);
+      DoAddVars(h.num_nl_vars_in_cons -
+              (h.num_nl_vars_in_both + h.num_nl_integer_vars_in_cons),
+              var::CONTINUOUS, k);
+      DoAddVars(h.num_nl_integer_vars_in_cons,
+              var::INTEGER, k);
+      int num_nl_vars_in_objs_only =
+          std::max(0, h.num_nl_vars_in_objs - h.num_nl_vars_in_cons);
+      if (num_nl_vars_in_objs_only) {
+        DoAddVars(num_nl_vars_in_objs_only - h.num_nl_integer_vars_in_objs,
+                var::CONTINUOUS, k);
+        DoAddVars(h.num_nl_integer_vars_in_objs,
+                var::INTEGER, k);
+      }
+    }
+    MP_ASSERT_ALWAYS(num_nl_vars == k, "NLProblemBuilder: num_nl_vars mismatch");
+    DoAddVars(h.num_vars -
+            (num_nl_vars +
+             h.num_linear_integer_vars + h.num_linear_binary_vars),
+            var::CONTINUOUS, k);
+    DoAddVars(h.num_linear_integer_vars + h.num_linear_binary_vars,
+            var::INTEGER, k);
+    MP_ASSERT_ALWAYS(h.num_vars == k, "NLProblemBuilder: num_vars mismatch");
+  }
+
+  /// DoAddVars: update counter \a k
+  void DoAddVars(int n, var::Type t, int& k) {
+    builder_.AddVars(n, t);
+    k += n;
+  }
+
+  /// objno(). virtual, so that SolverNLHandler can override
   virtual int objno() const { return 1; }
+
+  /// multiobj(). virtual, so that SolverNLHandler can override
   virtual bool multiobj() const { return true; }
 
+  /// notify_obj_added(). virtual, so that SolverNLHandler can override
+  virtual void notify_obj_added() const { }
+
+  /// Actual N objectives
   int resulting_nobj(int nobj_header) const {
     return multiobj() ? nobj_header :
                         std::min( (objno()>0), (nobj_header>0) );
   }
+
+  /// Whether need this objective
   bool NeedObj(int obj_index) const {
     return multiobj() || objno()-1==obj_index;
   }
+
+  /// Final obj index for a given original index.
+  /// For multiobj, it's the same.
+  /// Otherwise it's 0 (1st objective).
   int resulting_obj_index(int index) const {
     if (multiobj())
       return index;
@@ -2252,6 +2204,7 @@ class NLProblemBuilder {
 
   void OnObj(int index, obj::Type type, NumericExpr expr) {
     SetObj(builder_.obj(index), type, expr);
+    notify_obj_added();
   }
 
   void OnAlgebraicCon(int index, NumericExpr expr) {
@@ -2499,7 +2452,7 @@ struct NLAdapter<Handler, true> {
 #pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
 #endif
 
-// Checks if T has a member type Builder.
+/// Checks if T has a member type Builder.
 template <typename T>
 class HasBuilder {
  private:
@@ -2534,7 +2487,8 @@ void ReadNLString(NLStringRef str, Handler &handler,
       ReadBinary<internal::IdentityConverter>(reader, header, adapter, flags);
       break;
     }
-    if (!IsIEEE(arith_kind) || !IsIEEE(header.arith_kind))
+    if (!IsIEEE(arith_kind)
+        || !IsIEEE((arith::Kind)header.arith_kind))
       throw ReadError(name, 0, 0, "unsupported floating-point arithmetic");
     ReadBinary<internal::EndiannessConverter>(reader, header, adapter, flags);
     break;
@@ -2546,6 +2500,41 @@ template <typename Handler>
 inline void ReadNLFile(fmt::CStringRef filename, Handler &handler, int flags) {
   internal::NLFileReader<>().Read(filename, handler, flags);
 }
+
+
+/// A variable or constraint name provider.
+/// Caters for possible missing names.
+class NameProvider {
+public:
+  /// Construct and read
+  NameProvider(fmt::CStringRef filename,
+               fmt::CStringRef gen_name,
+               std::size_t num_items);
+
+  /// Construct without reading (generic names can be provided)
+  NameProvider(fmt::CStringRef gen_name);
+
+  /// Read names
+  void ReadNames(fmt::CStringRef filename,
+                 std::size_t num_items);
+
+  /// Number of names read from file
+  size_t number_read() const;
+
+  /// Returns the name of the item at specified index.
+  fmt::StringRef name(std::size_t index);
+
+  /// Return vector of names, length n.
+  /// If number_read() < n, generic names are filled.
+  std::vector<std::string> get_names(size_t n);
+
+private:
+  std::vector<const char *> names_;
+  std::string gen_name_;
+  internal::NameReader reader_;
+  fmt::MemoryWriter writer_;
+};
+
 }  // namespace mp
 
 #endif  // MP_NL_READER_H_

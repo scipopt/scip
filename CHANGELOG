@@ -1,4 +1,116 @@
+@section RN1000 SCIP 10.0.0
+***************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+### Data structures
+
+Deleted files
+-------------
+
+Testing
+-------
+
+Build system
+------------
+
+### Makefile
+
+### Cmake
+
+Fixed bugs
+----------
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
+
 @page RN90 Release notes for SCIP 9
+
+@section RN910 SCIP 9.1.0
+*************************
+
+Features
+--------
+
+Performance improvements
+------------------------
+
+Fixed bugs
+----------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New callbacks
+
+### New API functions
+
+### Command line interface
+
+### Interfaces to external software
+
+### New parameters
+
+### New data structures
+
+Build system
+------------
+
+### Makefile
+
+### Cmake
+
+Testing
+-------
+
+Miscellaneous
+-------------
+
+
+@section RN901 SCIP 9.0.1
+*************************
+
+Fixed bugs
+----------
+
+- fixed bug in detection of double lex matrices due to wrong memory allocation
+
+
+Miscellaneous
+-------------
+
+
 
 @section RN900 SCIP 9.0.0
 *************************
@@ -41,6 +153,7 @@ Features
 - when parsing nonlinear constraints from CIP files, the * after the number in a term is now optional if followed by a variable,
   i.e., instead of 3*<x>*<y>, now also 3<x>*<y> can be read, but 3<x><y> is not supported;
   this allows to read some CIP files that were written with SCIP < 8
+- when running bliss, we now limit the number of actually created generators and not the ones considered by bliss
 
 Performance improvements
 ------------------------
@@ -83,6 +196,13 @@ Interface changes
 - SCIPsnprintf() now returns the required string length in case reallocation is necessary.
 - SCIPcomputeCoverUndercover() receives three more arguments which nonlinearities to cover
 - removed definition of SQRT
+- SCIPincludeObjConshdlr(), SCIPincludeConshdlr(), SCIPconshdlrCreate() receive two more arguments for the
+  conshdlr callbacks CONSGETPERMSYMGRAPH and CONSGETSIGNEDPERMSYMGRAPH
+- removed SYM_VARTYPE, SYM_OPTYPE, SYM_CONSTTYPE, SYM_RHSTYPE, SYM_MATRIXDATA
+- new parameter issigned for SCIPcomputeOrbitsSym()
+- new parameter symtype for SCIPcomputeComponentsSym()
+- new parameter symtype and permvardomaincenter for SCIPlexicographicReductionAddPermutation()
+- replaced parameters matrixdata and exprdata of SYMcomputeSymmetryGenerators() by graph
 
 ### New API functions
 
@@ -121,6 +241,26 @@ Interface changes
 - SCIPincludeCutselDynamic(), SCIPselectCutsDynamic() to include cutsel_dynamic or use the selection algorithm
 - SCIPincludeSepaLagromory() to include the new Lagromory separator
 - SCIPconsCompCheck() to compare two constraints based on their check priority
+- SCIPgetConsPermsymGraph() and SCIPgetConsSignedPermsymGraph() to access the (signed) permutation symmetry detection graph of a constraint
+- SCIPsetConshdlrGetPermsymGraph() and SCIPsetConshdlrGetSignedPermsymGraph() to set the (signed) permutation symmetry detection graph of a constraint
+- SCIPconshdlrSupportsPermsymDetection() and SCIPconshdlrSupportsSignedPermsymDetection() to access whether a conshdlr supports detection of (signed) permutation symmetries
+- new API functions for creating and manipulating a symmetry detection graph: SCIPcreateSymgraph(), SCIPfreeSymgraph(), SCIPcopySymgraph(), SCIPextendPermsymDetectionGraphLinear(),
+  SCIPaddSymgraphVarAggregation(), SCIPaddSymgraphOpnode(), SCIPaddSymgraphValnode(), SCIPaddSymgraphConsnode(), SCIPgetSymgraphVarnodeidx(), SCIPgetSymgraphNegatedVarnodeidx(),
+  SCIPupdateSymgraphLhs(), SCIPupdateSymgraphRhs(), SCIPfixSymgraphVarnode(), SCIPaddSymgraphEdge(), SCIPcomputeSymgraphColors(), SCIPgetSymgraphSymtype(), SCIPgetSymgraphVars(),
+  SCIPgetSymgraphNVars(), SCIPgetSymgraphNConsnodes(), SCIPgetSymgraphNNodes(), SCIPgetSymgraphNEdges(), SCIPgetSymgraphEdgeFirst(), SCIPgetSymgraphEdgeSecond(),
+  SCIPgetSymgraphVarnodeColor(), SCIPgetSymgraphNodeType(), SCIPgetSymgraphNodeColor(), SCIPisSymgraphEdgeColored(), SCIPgetSymgraphEdgeColor(), SCIPgetSymgraphNVarcolors(),
+  SCIPhasGraphUniqueEdgetype(), SCIPallocateSymgraphConsnodeperm(), SCIPcreateSymgraphConsnodeperm(), SCIPgetSymgraphConsnodeperm(), SCIPfreeSymgraphConsnodeperm(),
+  SCIPgetSymActiveVariables(), SCIPfreeSymDataExpr(), SCIPgetSymExprdataNConstants(), SCIPgetSymExprdataConstants(), SCIPgetCoefSymData(),
+  SCIPcreateSymOpNodeType(), SCIPgetSymOpNodeType()
+- SCIPexprhdlrSetGetSymdata(), SCIPexprhdlrHasGetSymData(), SCIPgetSymDataExpr(), SCIPcallExprGetSymData() to access symmetry data of expressions
+- SYMcheckGraphsAreIdentical() to check whether two symmetry detection graphs are identical
+- new functions SYMbuildSassyGraph(), SYMbuildSassyGraphCheck()
+- new type SYM_GRAPH
+- new definitions SCIP_DECL_CONSGETPERMSYMGRAPH, SCIP_DECL_EXPRGETSYMDATA
+- new member SYM_NODETYPE_CONS in SYM_NODETYPE enum
+- new members SYM_CONSOPTYPE_SUM, SYM_CONSOPTYPE_SLACK, SYM_CONSOPTYPE_COEF, SYM_CONSOPTYPE_RHS, SYM_CONSOPTYPE_LAST in SYM_CONSOPTYPE enum
+- new defintion SCIP_DECL_EXPRGETSYMDATA
+- new function SCIPdetectSingleOrDoubleLexMatrices()
 
 ### Command line interface
 
@@ -138,6 +278,7 @@ Interface changes
     `option scip_options 'limits/time 10 display/verblevel 1';`.
   String values should not be quoted and spaces in string values are not supported.
 - sassy can be used now as preprocessor for nauty/traces
+- The solution status codes written to AMPL solution files now match those from https://mp.ampl.com/details.html#_CPPv4N2mp3sol6StatusE.
 
 ### Changed parameters
 
@@ -194,6 +335,7 @@ Interface changes
 
 - new data structure SYM_GRAPH to encode symmetry information from a constraint
 - new data structure SYM_EXPRDATA to encode symmetry information from expressions
+- replaced enum SYM_SYMTYPE by a complete new one; removed SYM_RHSSENSE, added SYM_NODETYPE and SYM_CONSOPTYPE
 
 Deleted files
 -------------
@@ -239,6 +381,9 @@ Fixed bugs
 - add safeguard for number of selected cuts
 - use double double precision for delta in activity updates of cons_linear.c
 - sort constraints in checkSolOrig() to keep the logic of constraint handlers intact
+- fixed make install when SHARED=no and make uninstall
+- check absolute coefficients relative to extremal average to avoid invalid unifications in normalizeCons()
+- enforce and check symmetry-based constraints to take their locks (in dual reductions) into account
 
 Miscellaneous
 -------------

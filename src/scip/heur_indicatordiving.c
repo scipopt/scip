@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -216,7 +216,7 @@ SCIP_RETCODE releaseSCHashmap(
  *  new probing node, it checks whether there are violated but not fixed indicator constraints
  */
 static
-SCIP_RETCODE checkAndGetIndicator(
+void checkAndGetIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             cand,               /**< candidate variable */
    SCIP_HASHMAP*         map,                /**< pointer to hashmap containing indicator conss */
@@ -261,13 +261,11 @@ SCIP_RETCODE checkAndGetIndicator(
             break;
       }
    }
-
-   return SCIP_OKAY;
 }
 
 /** checks if variable is binary variable of varbound constraint and stores corresponding varbound constraint */
 static
-SCIP_RETCODE checkAndGetVarbound(
+void checkAndGetVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             cand,               /**< candidate variable */
    SCIP_HASHMAP*         map,                /**< pointer to hashmap containing varbound conss */
@@ -285,13 +283,11 @@ SCIP_RETCODE checkAndGetVarbound(
    *isvarbound = FALSE;
 
    if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
-      return SCIP_OKAY;
+      return;
 
    *cons = (SCIP_CONS*) SCIPhashmapGetImage(map, cand);
    if( *cons != NULL )
       *isvarbound = TRUE;
-
-   return SCIP_OKAY;
 }
 
 /** adds an indicator to the data of a semicontinuous variable */
@@ -892,8 +888,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       heurdata->gotoindconss = FALSE;
 
    /* check if candidate variable is indicator variable */
-   SCIP_CALL( checkAndGetIndicator(scip, cand, heurdata->indicatormap, &indicatorcons, &isindicatorvar,
-         &heurdata->containsviolindconss, heurdata->newnode, heurdata->sol, heurdata->indicatorconshdlr) );
+   checkAndGetIndicator(scip, cand, heurdata->indicatormap, &indicatorcons, &isindicatorvar,
+      &heurdata->containsviolindconss, heurdata->newnode, heurdata->sol, heurdata->indicatorconshdlr);
 
    /* skip candidate in next calls since we have violated indicator constraints but current candidate is not determined
     * by the indicator constraint handler */
@@ -909,7 +905,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
    /* check if candidate variable is bounding variable */
    if( heurdata->usevarbounds && !isindicatorvar )
    {
-      SCIP_CALL( checkAndGetVarbound(scip, cand, heurdata->varboundmap, &varboundcons, &isvbdvar) );
+      checkAndGetVarbound(scip, cand, heurdata->varboundmap, &varboundcons, &isvbdvar);
    }
 
    /* Return
@@ -942,10 +938,12 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       issemicont = SCIPisInfinity(scip, -SCIPconsGetLhs(scip, lincons, &success)); /* TODO: allow also indicators for lower bounds */
       side = rhs;
    }
-   else if( isvbdvar )
+   else
    {
       SCIP_Real rhs;
       SCIP_Real lhs;
+
+      assert(isvbdvar);
 
       lincons = varboundcons;
       nonoptionvar = SCIPgetVbdvarVarbound(scip, varboundcons);
@@ -953,10 +951,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       lhs = SCIPconsGetLhs(scip, lincons, &success);
       side = SCIPisInfinity(scip, rhs) ? lhs : rhs;
       assert(!SCIPisInfinity(scip, side));
-   }
-   else
-   {
-      assert(FALSE);
    }
    SCIPdebugPrintCons(scip, lincons, NULL);
 
@@ -1037,10 +1031,12 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       fixconstant = TRUE;
    }
    /* Case: Variable is between constant and lb1 */
-   else if( SCIPisGT(scip, lpsolsemicontinuous, scdata->vals0[idxbvars]) && SCIPisLT(scip, lpsolsemicontinuous, scdata->lbs1[idxbvars]) )
+   else
    {
       SCIP_Real shiftedlpsolsemicontinuous = lpsolsemicontinuous;
       SCIP_Real shiftedlbs1 = scdata->lbs1[idxbvars];
+
+      assert(SCIPisGT(scip, lpsolsemicontinuous, scdata->vals0[idxbvars]) && SCIPisLT(scip, lpsolsemicontinuous, scdata->lbs1[idxbvars]));
 
       /* handle case if constant of semicont. var is not zero -> shift values */
       if( !SCIPisZero(scip, scdata->vals0[idxbvars]) )
@@ -1061,7 +1057,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
          fixconstant = (*score <= (1 - heurdata->roundingfrac) * 100);
          break;
       default:
-         assert(FALSE);
+         return SCIP_INVALIDDATA;
       }
 
       switch( heurdata->semicontscoremode )
@@ -1082,16 +1078,11 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
       }
       assert(*score>0);
    }
-   else
-   {
-      assert(FALSE);
-   }
 
    /* Set roundup depending on whether we have an indicator constraint or a varbound constraint:
     * - indicator constraint: roundup == fix to constant
     * - varbound constraint: roundup == push to range
     */
-   /* coverity[uninit_use] */
    *roundup = isindicatorvar ? fixconstant : !fixconstant; /*lint !e644*/
 
    /* free memory */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -312,18 +312,10 @@ SCIP_RETCODE computeAutomorphisms(
    /* disable component recursion as advised by Tommi Junttila from bliss */
    blissgraph.set_component_recursion(false);
 
-   /* do not use a node limit, but set generator limit */
-#ifdef BLISS_PATCH_PRESENT
-   blissgraph.set_search_limits(0, (unsigned) maxgenerators);
-#endif
-
 #if BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76
-   /* lambda function to have access to stats and terminate the search if maxgenerators are reached */
-   long unsigned int terminatesearch = INT_MAX;
-   if ( maxgenerators != 0 )
-      terminatesearch = (long unsigned int) maxgenerators;
+   /* lambda function to have access to data and terminate the search if maxgenerators are reached */
    auto term = [&]() {
-      return (stats.get_nof_generators() >= terminatesearch);
+      return (maxgenerators != 0 && data.nperms >= maxgenerators); /* check the number of generators that we have created so far */
    };
 
    auto hook = [&](unsigned int n, const unsigned int* aut) {
@@ -333,6 +325,15 @@ SCIP_RETCODE computeAutomorphisms(
    /* start search */
    blissgraph.find_automorphisms(stats, hook, term);
 #else
+
+   /* Older bliss versions do not allow to terminate with a limit on the number of generators unless patched. */
+#ifdef BLISS_PATCH_PRESENT
+   /* If patch is present, do not use a node limit, but set generator limit. This approach is not very accurate, since
+    * it limits the generators considered in bliss and not the ones that we generate (the ones that work on the variable
+    * set). */
+   G->set_search_limits(0, (unsigned) maxgenerators);
+#endif
+
    /* start search */
    blissgraph.find_automorphisms(stats, sassy::preprocessor::bliss_hook, (void*) &sassy);
 #endif

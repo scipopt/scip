@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1693,7 +1693,7 @@ SCIP_DECL_EVENTEXEC(eventExecDps)
    assert(event != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
 
-   SCIPdebugMsg(scip, "dual bound: %0.2f\n", SCIPgetDualbound(scip));
+   SCIPdebugMsg(scip, "dual bound: %.2f\n", SCIPgetDualbound(scip));
 
    if( SCIPisFeasGT(scip, SCIPgetDualbound(scip), 0.0) && SCIPgetNSols(scip) >= 1 )
    {
