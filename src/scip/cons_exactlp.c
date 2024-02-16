@@ -292,6 +292,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             rangedrowartcons;   /**< should presolving and propagation extract sub-constraints from ranged rows and equations?*/
    SCIP_Bool             propcont;           /**< should bounds on continuous variables be tightened by propagation?*/
    SCIP_Bool             limitdenom;         /**< should denominator sizes for continuous variables be controlled?*/
+   SCIP_Longint          maxdenom;           /**< maximal denominator size for continuous variables */
    int                   rangedrowmaxdepth;  /**< maximum depth to apply ranged row propagation */
    int                   rangedrowfreq;      /**< frequency for applying ranged row propagation */
    SCIP_Bool             multaggrremove;     /**< should multi-aggregations only be performed if the constraint can be
@@ -7422,6 +7423,8 @@ SCIP_RETCODE tightenVarBounds(
                      maxdenom = 2;
                   else
                      maxdenom = MAX(256, RatDenominator(SCIPvarGetUbLocalExact(var)));
+
+                  maxdenom = conshdlrdata->maxdenom;
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
                }
 
@@ -7499,6 +7502,8 @@ SCIP_RETCODE tightenVarBounds(
                      maxdenom = 2;
                   else
                      maxdenom = MAX(256, RatDenominator(SCIPvarGetLbLocalExact(var)));
+
+                  maxdenom = conshdlrdata->maxdenom;
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
                }
                if( SCIPcertificateShouldTrackBounds(scip) )
@@ -7579,6 +7584,8 @@ SCIP_RETCODE tightenVarBounds(
                      maxdenom = 2;
                   else
                      maxdenom = MAX(256, RatDenominator(SCIPvarGetLbLocalExact(var)));
+
+                  maxdenom = conshdlrdata->maxdenom;
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
                }
                if( SCIPcertificateShouldTrackBounds(scip) )
@@ -7654,6 +7661,8 @@ SCIP_RETCODE tightenVarBounds(
                      maxdenom = 2;
                   else
                      maxdenom = MAX(256, RatDenominator(SCIPvarGetUbLocalExact(var)));
+
+                  maxdenom = conshdlrdata->maxdenom;
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
                }
                if( SCIPcertificateShouldTrackBounds(scip) )
@@ -18052,6 +18061,10 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
          "constraints/" CONSHDLR_NAME "/limitdenom",
          "should denominators on continuous variables be controlled?",
          &conshdlrdata->limitdenom, TRUE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddLongintParam(scip,
+         "constraints/" CONSHDLR_NAME "/maxdenom",
+         "maximal denominator on continuous variables after propagation?",
+         &conshdlrdata->maxdenom, TRUE, 256, 1, SCIP_LONGINT_MAX, NULL, NULL) );
 #ifdef SCIP_WITH_MPFR
    {
       char version[20];

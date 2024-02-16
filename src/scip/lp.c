@@ -12750,7 +12750,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                prob, lperror, SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE, &(lp->lpobjval), &primalfeasible, &dualfeasible ) );
 
          /* handle error case in objlimit */
-         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && !lp->hasprovedbound )
+         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT && !lp->hasprovedbound && !(lp->probing || lp->diving) )
          {
             /* if safe bounding did fail, we have not managed to get a dual bound exceeding the cutoffbound, therefore just disable cutoffbound
              * and resolve the lp with another bounding step */
