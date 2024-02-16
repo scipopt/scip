@@ -3713,6 +3713,16 @@ void SCIPprintLPStatistics(
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "Running error ana  :   Ncalls %10" SCIP_LONGINT_FORMAT " Nsuccess %10" SCIP_LONGINT_FORMAT "  Naborts %10" SCIP_LONGINT_FORMAT "  \n",
             ncalls, nsuccess, naborts);
       }
+      {
+         SCIP_Longint npropagationsinitial;
+         SCIP_Longint npropagationsconflict;
+         SCIP_Real avgnonzerospropinitial;
+         SCIP_Real avgnonzerospropconflict;
+
+         SCIPgetPropStatsExactLinear(scip, &npropagationsinitial, &npropagationsconflict, &avgnonzerospropinitial, &avgnonzerospropconflict);
+         SCIPmessageFPrintInfo(scip->messagehdlr, file, "Prop exact linear  :   Nprop init (%lld) Nprop conf (%lld) Avg Nonzeros init (%.2f) Avg Nonzeros conf (%.2f) \n",
+            npropagationsinitial, npropagationsconflict, avgnonzerospropinitial, avgnonzerospropconflict);
+      }
    }
 }
 

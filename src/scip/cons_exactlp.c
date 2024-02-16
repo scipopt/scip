@@ -267,6 +267,10 @@ struct SCIP_ConshdlrData
    SCIP_Longint          ncheckserrorbound;  /**< number of times running error analyis activity computation was called */
    SCIP_Longint          nsuccesserrorbound; /**< number of times running error analyis activity computation could determine feasibility */
    SCIP_Longint          nabotserrorbound;    /**< number of times running error analysis activity computation not appliccable (e.g. row->len != fprow->len) */
+   SCIP_Longint          nconsprop;         /**< number of times a constraint was propagated */
+   SCIP_Longint          nconspropnoninit;  /**< number of times a non-initial (conflict) constraint was propagated */
+   SCIP_Longint          propnonzeros;       /**< number of nonzeros in propagated rows */
+   SCIP_Longint          propnonzerosnoninit;/**< number of nonzeros in propagated rows in non-initial (conflict) propagations */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             separateall;        /**< should all constraints be subject to cardinality cut generation instead of only
@@ -528,6 +532,10 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->ncheckserrorbound = 0;
    (*conshdlrdata)->nabotserrorbound = 0;
    (*conshdlrdata)->nsuccesserrorbound = 0;
+   (*conshdlrdata)->nconsprop = 0;
+   (*conshdlrdata)->nconspropnoninit = 0;
+   (*conshdlrdata)->propnonzeros = 0;
+   (*conshdlrdata)->propnonzerosnoninit = 0;
    SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxaggrnormscale) );
    SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxcardbounddist) );
    SCIP_CALL( RatCreateBlock(SCIPblkmem(scip), &(*conshdlrdata)->maxeasyactivitydelta) );
@@ -3580,12 +3588,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    consdata = SCIPconsGetData(cons);
    row = SCIPgetRowexExactLinear(scip, cons);
 
-   if (row == NULL)
-   {
-      createRows(scip, cons);
-      row = SCIPgetRowexExactLinear(scip, cons);
-      assert(row != NULL);
-   }
+   assert(row != NULL);
 
    image = SCIPhashmapGetImageLong(certificate->rowdatahash, row);
    /* add row to hashmap */
@@ -8250,6 +8253,26 @@ SCIP_RETCODE propagateCons(
    /* we can only infer activity bounds of the linear constraint, if it is not modifiable */
    if( !SCIPconsIsModifiable(cons) )
    {
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert(conshdlr != NULL);
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+
+      if( !SCIPconsIsInitial(cons) )
+      {
+         conshdlrdata->nconspropnoninit++;
+         conshdlrdata->propnonzerosnoninit += consdata->nvars;
+      }
+      else
+      {
+         conshdlrdata->nconsprop++;
+         conshdlrdata->propnonzeros += consdata->nvars;
+      }
+
       /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
       if( !SCIPinRepropagation(scip) )
       {
@@ -19068,6 +19091,33 @@ void SCIPgetRunningErrorStatsExactLinear(
    *ncalls = conshdlrdata->ncheckserrorbound;
    *nsuccess = conshdlrdata->nsuccesserrorbound;
    *naborts = conshdlrdata->nabotserrorbound;
+}
+
+void SCIPgetPropStatsExactLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint*         npropagations,      /**< stores number of propagations of initial constraints */
+   SCIP_Longint*         npropagationsconflict, /**< stores number of conflict constraint propagations */
+   SCIP_Real*            avgnonzerosprop,    /**< stores average number of nonzeros in the propagated rows */
+   SCIP_Real*            avgnonzerospropconflict /**< stores maximum number of nonzeros in the propagated rows */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+
+   conshdlr = SCIPfindConshdlr(scip, "linear-exact");
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   assert(conshdlrdata != NULL);
+
+   *npropagations = conshdlrdata->nconsprop;
+   *npropagationsconflict = conshdlrdata->nconspropnoninit;
+   *avgnonzerosprop = (SCIP_Real) conshdlrdata->propnonzeros / conshdlrdata->nconsprop;
+   *avgnonzerospropconflict = (SCIP_Real) conshdlrdata->propnonzerosnoninit / conshdlrdata->nconspropnoninit;
 }
 
 #ifdef SCIP_DISABLED_CODE
