@@ -379,6 +379,15 @@ void SCIPgetRunningErrorStatsExactLinear(
    SCIP_Longint*         naborts             /**< stores number of times running error analysis had to abort */
    );
 
+SCIP_EXPORT
+void SCIPgetPropStatsExactLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint*         npropagations,      /**< stores number of propagations */
+   SCIP_Longint*         npropagationsconflict, /**< stores number of conflict constraint propagations */
+   SCIP_Real*            avgnonzerosprop,    /**< stores average number of nonzeros in the propagated rows */
+   SCIP_Real*            avgnonzerospropconflict /**< stores maximum number of nonzeros in the propagated rows */
+   );
+
 /** performs linear constraint type classification as used for MIPLIB
  *
  *  iterates through all linear constraints and stores relevant statistics in the linear constraint statistics \p linconsstats.
