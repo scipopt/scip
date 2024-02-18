@@ -12,6 +12,12 @@ Fixed bugs
 Miscellaneous
 -------------
 
+Build system
+------------
+
+### Cmake
+
+- A file cmake.log containing the changed options is written to the cmake build directory.
 
 
 @section RN900 SCIP 9.0.0
