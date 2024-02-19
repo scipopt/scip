@@ -56,6 +56,12 @@ Fixed bugs
 Miscellaneous
 -------------
 
+Build system
+------------
+
+### Cmake
+
+- removed replacement of the settings of RelWithDebInfo
 
 
 @section RN900 SCIP 9.0.0
