@@ -120,6 +120,7 @@
 // is likely uninitialized
 -emacro(530,va_*)
 -ecall(530,vsnprintf)
+-emacro(530,SCIPalloc*)
 
 // ignoring return value of function
 -esym(534,printf,fprintf,fclose,fputs,fputc,fseek,fflush,strcat,strcpy,SCIPfclose,SCIPfseek,memset,memcpy,memmove)
