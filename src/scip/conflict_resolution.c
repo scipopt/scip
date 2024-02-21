@@ -22,7 +22,6 @@
  * @todo avoid copying the array of values in conflictRowCopy() and conflictRowReplace() by using the indices of the nonzero entries
  * @todo slack update during coefficient tightening/MIR
  * @todo vsids and branching statistics updates
- * @todo add a separate conflict store for the generalized resolution conflicts
  * @todo insert depth / repropagation depth
  * @todo apply cmir after each iteration to strengthen the conflict constraint (choose this constraint if it is violated more)
  * @todo applying generalized resolution to the dual proof does not seem to be a good idea. But we can use generalized resolution
@@ -74,7 +73,7 @@
 #endif
 
 /* parameters for MIR */
-#define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
+#define BOUNDSWITCH                0.51 /**< threshold for bound switching - see cuts.c */
 #define POSTPROCESS               FALSE /**< apply postprocessing after MIR calculation - see SCIPcalcMIR() */
 #define USEVBDS                   FALSE /**< use variable bounds - see SCIPcalcMIR() */
 #define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcalcMIR() */
@@ -2178,11 +2177,15 @@ SCIP_RETCODE MirReduction(
          SCIP_Real fracval;
          computeSlack(set, vars, reasonrow, currbdchginfo, NULL, NULL);
          if(coef > 0.0)
+         {
             fracval = SCIPvarGetUbAtIndex(vars[idx], currbdchgidx, FALSE) - reasonrow->slack / coef;
+            fracval = MIN(fracval, SCIPvarGetUbGlobal(vars[idx]));
+         }
          else
          {
             assert(coef < 0.0);
             fracval = SCIPvarGetLbAtIndex(vars[idx], currbdchgidx, FALSE) - reasonrow->slack / coef;
+            fracval = MAX(fracval, SCIPvarGetLbGlobal(vars[idx]));
          }
             SCIPsetSolVal(set->scip, refsol, vars[idx], fracval);
       }
