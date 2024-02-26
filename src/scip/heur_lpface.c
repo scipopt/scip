@@ -475,6 +475,8 @@ SCIP_RETCODE setSubscipLimits(
    /* set also the other two limits */
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+   /* disable objective stop */
+   SCIP_CALL( SCIPresetParam(subscip, "limits/objectivestop") );
 
    return SCIP_OKAY;
 }
