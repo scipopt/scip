@@ -988,6 +988,9 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(sourcescip, subscip) );
 
+      /* disable objective stop in subscip since objective might be changed */
+      SCIP_CALL( SCIPresetParam(subscip, "limits/objectivestop") );
+
       /* create linear constraints from LP rows of the source problem */
       SCIP_CALL( createRows(sourcescip, subscip, varmap) );
    }

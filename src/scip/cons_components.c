@@ -494,6 +494,7 @@ SCIP_RETCODE createSubscip(
       /* disable solution limits */
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/solutions", -1) );
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/bestsol", -1) );
+      SCIP_CALL( SCIPresetParam(*subscip, "limits/objectivestop") );
 
       /* reduce the effort spent for hash tables; however, if the debug solution is enabled and valid in this subtree,
        * hash tables are needed for installing the debug solution

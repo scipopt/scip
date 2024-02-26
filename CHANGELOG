@@ -7,6 +7,7 @@ Fixed bugs
 ----------
 
 - fixed bug in detection of double lex matrices due to wrong memory allocation
+- fixed bug where parameter `limits/objectivestop` was copied to subscips in plugins which have different objectives
 
 
 Miscellaneous
