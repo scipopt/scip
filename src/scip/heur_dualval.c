@@ -971,6 +971,9 @@ SCIP_RETCODE createSubSCIP(
    /* copy parameter settings */
    SCIP_CALL( SCIPcopyParamSettings(scip, heurdata->subscip) );
 
+   /* disable objective stop in subscip */
+   SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/objectivestop") );
+
    /* create problem in sub-SCIP */
 
    /* get name of the original problem and add "dualval" */
