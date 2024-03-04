@@ -184,7 +184,7 @@
 #define SCIP_DEFAULT_CONF_CLAUSEFALLBACK   TRUE /**< should the clause version of generalized resolution conflict analysis be used as a fallback? */
 
 #define SCIP_DEFAULT_CONF_WEAKENCONFLICT  FALSE /**< should the conflict constraint be weakened? */
-#define SCIP_DEFAULT_CONF_WEAKENREASONALL FALSE /**< should all variables at bounds in the reason constraint be weakened at once? */
+#define SCIP_DEFAULT_CONF_WEAKENREASONALL  TRUE /**< should all variables at bounds in the reason constraint be weakened at once? */
 #define SCIP_DEFAULT_CONF_WEAKENFREEFIRST  TRUE /**< should free variables be weakened first? */
 #define SCIP_DEFAULT_CONF_APPLYSIMPLEMIR  FALSE /**< should we apply mir with scaling 1.0 to strengthen the conflict constraints? */
 #define SCIP_DEFAULT_CONF_APPLYCMIR       FALSE /**< should we apply cmir to strengthen the conflict constraints? */

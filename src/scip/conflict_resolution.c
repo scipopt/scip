@@ -19,6 +19,7 @@
  * analysis
  * @author Gioni Mexi
  *
+ * @todo repropagate node for long conflicts
  * @todo avoid copying the array of values in conflictRowCopy() and conflictRowReplace() by using the indices of the nonzero entries
  * @todo slack update during coefficient tightening/MIR
  * @todo vsids and branching statistics updates
