@@ -3926,23 +3926,32 @@ SCIP_RETCODE reduceReason(
 
    else if(set->conf_reductiontechnique == 'r')
    {
-      if(isBinaryConflictRow(set, vars, rowtoreduce))
+      SCIP_Bool isbinaryreason = isBinaryConflictRow(set, vars, rowtoreduce);
+      if(isbinaryreason)
+      {
          SCIP_CALL( ComplementedMirLhs(set, vars, rowtoreduce, fixinds, currbdchgidx, residx, coefinrow) );
+         SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixinds) );
+         assert(SCIPsetIsLE(set, rowtoreduce->slack, EPS));
+      }
       else
+      {
+         /* todo: check that if the slack is always zero if general integers and continuous variables are not at local bounds */
+         /* in this case there is no guarrantee that after MIR we get a reason with zero slack */
          SCIP_CALL( MirReduction(set, blkmem, vars, nvars, rowtoreduce, fixinds, currbdchginfo, residx, coefinrow) );
+         SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixinds) );
+      }
    }
 
    else
    {
       SCIP_CALL( WeakeningBasedReduction(conflict, set, vars, blkmem, rowtoreduce, currbdchginfo, residx, fixbounds, fixinds) );
+      SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixinds) );
+      /* check that when we weaken as much as possible and the reason row is binary, the slack is at most zero */
+      assert(!(set->conf_weakenreasonall) || !isBinaryConflictRow(set, vars, rowtoreduce) || SCIPsetIsLE(set, rowtoreduce->slack, EPS));
    }
 
    /* check that the variable we are resolving is still in the reason row */
    assert( !SCIPsetIsZero(set, rowtoreduce->vals[residx]) );
-
-   SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixinds) );
-   /* check that when we weaken as much as possible and the reason row is binary, the slack is at most zero */
-   assert(!(set->conf_weakenreasonall) || !isBinaryConflictRow(set, vars, rowtoreduce) || SCIPsetIsLE(set, rowtoreduce->slack, 0.0));
 
    SCIPdebug(printConflictRow(rowtoreduce, set, vars, REDUCED_REASON_ROWTYPE));
 
@@ -4532,7 +4541,7 @@ SCIP_RETCODE executeResolutionStep(
             SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
 
             /* The resolved conflict row may not be infeasible under the local domain if the reduced reason row is not binary */
-            assert(!successresolution || SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0));
+            assert(!(*successresolution) || SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0));
          }
       }
 
