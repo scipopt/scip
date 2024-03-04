@@ -4494,7 +4494,10 @@ SCIP_RETCODE executeResolutionStep(
             SCIP_CALL( getReasonRow(conflict, blkmem, vars, set, continuousbdchginfo, reasonrow, varidx, validdepth, fixbounds, fixinds,
                                     &successgetreason) );
             if (!successgetreason)
+            {
+               (*successresolution) = FALSE;
                return SCIP_OKAY;
+            }
 
             SCIPdebug(printConflictRow(reasonrow, set, vars, CONTINUOUS_REASON_ROWTYPE));
 
