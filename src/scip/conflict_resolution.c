@@ -19,6 +19,7 @@
  * analysis
  * @author Gioni Mexi
  *
+ * @todo carefully check that the mixed binary reduction does not take too long
  * @todo repropagate node for long conflicts
  * @todo avoid copying the array of values in conflictRowCopy() and conflictRowReplace() by using the indices of the nonzero entries
  * @todo slack update during coefficient tightening/MIR
@@ -754,6 +755,23 @@ void printNonResolvableReasonType(
 }
 
 #endif
+
+static
+/** calculates the maximal size of conflict sets to be used */
+int conflictCalcResMaxsize(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   int maxsize;
+
+   assert(set != NULL);
+   assert(prob != NULL);
+
+   maxsize = (int)(set->conf_maxvarsfracres * (prob->nvars - prob->ncontvars));
+   maxsize = MAX(maxsize, set->conf_minmaxvars);
+   return maxsize;
+}
 
 /** perform activity based coefficient tightening on a semi-sparse or sparse row defined with a left hand side */
 static
@@ -2908,7 +2926,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    assert(SCIPtreeGetCurrentDepth(tree) == tree->pathlen-1);
 
    /* calculate the maximal size of each accepted conflict set */
-   maxsize = (int) (set->conf_maxvarsfracres * transprob->nvars);
+   maxsize = 2 * conflictCalcResMaxsize(set, transprob);
 
    if(set->conf_postprocessconflicts)
    {
@@ -4398,6 +4416,7 @@ SCIP_RETCODE executeResolutionStep(
    SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change to resolve */
    int                   residx,             /**< index of variable to resolve */
    int                   validdepth,         /**< minimal depth level at which the conflict is valid */
+   int                   maxsize,            /**< maximal size of conflict rows */
    SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
    int*                  fixinds,            /**< array of indices of fixed variables */
    SCIP_Bool*            successresolution   /**< pointer to store whether the resolution was successful */
@@ -4481,8 +4500,17 @@ SCIP_RETCODE executeResolutionStep(
          else
             return SCIP_OKAY;
 
+         int nresconts = 0;
+
          while( SCIPpqueueNElems(conflict->continuousbdchgqueue) > 0 )
          {
+            nresconts++;
+            if( nresconts > maxsize / 2 || reducedreasonrow->nnz > maxsize )
+            {
+               (*successresolution) = FALSE;
+               conflict->nreslongconfs++;
+               return SCIP_OKAY;
+            }
             SCIPdebug(printAllBoundChanges(conflict, set, TRUE));
             continuousbdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueRemove(conflict->continuousbdchgqueue));
             assert(continuousbdchginfo != NULL);
@@ -4900,7 +4928,8 @@ SCIP_RETCODE conflictAnalyzeResolution(
    assert(SCIPvarIsActive(vartoresolve));
 
    /* calculate the maximal size of each accepted conflict set */
-   maxsize = (int) (set->conf_maxvarsfracres * SCIPprobGetNVars(transprob));
+   maxsize = 2 * conflictCalcResMaxsize(set, transprob);
+      // (int) (set->conf_maxvarsfracres * SCIPprobGetNVars(transprob));
 
    if( !infeasibleLP && !pseudoobj )
    {
@@ -5054,7 +5083,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          /* call resolution */
          SCIPsetDebugMsgPrint(set, " Applying resolution with resolving variable <%s>\n", SCIPvarGetName(vartoresolve));
-         SCIP_CALL( executeResolutionStep(conflict, set, vars, blkmem, bdchginfo, residx, validdepth, fixbounds, fixinds, &successresolution ) );
+         SCIP_CALL( executeResolutionStep(conflict, set, vars, blkmem, bdchginfo, residx, validdepth, maxsize, fixbounds, fixinds, &successresolution ) );
 
          if (successresolution)
             SCIP_CALL( conflictRowReplace(conflictrow, blkmem, resolvedconflictrow) );
