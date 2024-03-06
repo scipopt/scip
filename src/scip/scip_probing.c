@@ -745,7 +745,8 @@ SCIP_RETCODE solveProbingLP(
    /* load the LP state (if necessary) */
    SCIP_CALL( SCIPtreeLoadProbingLPState(scip->tree, scip->mem->probmem, scip->set, scip->transprob, scip->eventqueue, scip->lp) );
 
-   SCIPlpSetIsRelax(scip->lp, TRUE);
+   /* the LP is a relaxation if and only if the objective has not been changed */
+   SCIPlpSetIsRelax(scip->lp, !scip->tree->probingobjchanged);
 
    /* solve probing LP */
    SCIP_CALL( SCIPlpSolveAndEval(scip->lp, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat,

@@ -10,6 +10,7 @@ Fixed bugs
 - fixed bug where parameter `limits/objectivestop` was copied to subscips in plugins which have different objectives
 - in count mode respect empty solution when problem is solved in presolving
 - in SCIPsolveProbingLP() when objective has been changed do not return cutoff due to exceeding the cutoff bound
+- set probing LP to be a relaxation only when objective has not been changed
 
 Miscellaneous
 -------------
