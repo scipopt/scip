@@ -5106,7 +5106,7 @@ SCIP_RETCODE SCIPreoptCreate(
    SCIP_CALL( createReopttree((*reopt)->reopttree, set, blkmem) );
 
    /* create a random number generator */
-   SCIP_CALL( SCIPrandomCreate(&(*reopt)->randnumgen, blkmem, (unsigned int)SCIPsetInitializeRandomSeed(set, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPrandomCreate(&(*reopt)->randnumgen, blkmem, SCIPsetInitializeRandomSeed(set, DEFAULT_RANDSEED)) );
 
    /* create event handler for node events */
    eventhdlr = NULL;
