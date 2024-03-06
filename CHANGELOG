@@ -10,6 +10,7 @@ Fixed bugs
 - fixed bug where parameter `limits/objectivestop` was copied to subscips in plugins which have different objectives
 - in count mode respect empty solution when problem is solved in presolving
 - fixed that SCIP may have tried to pass a negative random seed to an LP solver
+- fixed bug where conflict analysis in strong branching tried to analyze an unsuccessful LP solve
 
 Miscellaneous
 -------------
