@@ -785,7 +785,7 @@ SCIP_RETCODE solveProbingLP(
    /* the LP is infeasible or the objective limit was reached */
    if( !(*lperror) && (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
          || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT ||
-         (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OPTIMAL
+         (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OPTIMAL && !scip->tree->probingobjchanged
             && SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))) )
    {
       /* analyze the infeasible LP (only if all columns are in the LP and no external pricers exist) */
