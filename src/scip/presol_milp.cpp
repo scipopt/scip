@@ -87,11 +87,11 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "papilo/core/ProblemBuilder.hpp"
 #include "papilo/Config.hpp"
 
-#define PRESOL_NAME            "milp"
-#define PRESOL_DESC            "MILP specific presolving methods"
-#define PRESOL_PRIORITY        9999999 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
-#define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
+#define PRESOL_NAME               "milp"
+#define PRESOL_DESC               "MILP specific presolving methods"
+#define PRESOL_PRIORITY            9999999   /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
+#define PRESOL_MAXROUNDS           -1        /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_TIMING              SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
 /* default parameter values */
 #define DEFAULT_THREADS            1         /**< maximum number of threads presolving may use (0: automatic) */
@@ -100,6 +100,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_DETECTLINDEP       0         /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
 #define DEFAULT_MAXBADGESIZE_SEQ   15000     /**< the max badge size in Probing if PaPILO is executed in sequential mode*/
 #define DEFAULT_MAXBADGESIZE_PAR   -1        /**< the max badge size in Probing if PaPILO is executed in parallel mode*/
+#define DEFAULT_INTERNAL_MAXROUNDS -1        /**< internal max rounds in PaPILO (-1: no limit)*/
 #define DEFAULT_RANDOMSEED         0         /**< the random seed used for randomization of tie breaking */
 #define DEFAULT_MODIFYCONSFAC      0.8       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
@@ -127,6 +128,7 @@ struct SCIP_PresolData
    int maxfillinpersubstitution;             /**< maximal possible fillin for substitutions to be considered */
    int maxbadgesizeseq;                      /**< the max badge size in Probing if PaPILO is called in sequential mode*/
    int maxbadgesizepar;                      /**< the max badge size in Probing if PaPILO is called in parallel mode */
+   int internalmaxrounds;                    /**< internal max rounds in PaPILO (-1: no limit)*/
    int maxshiftperrow;                       /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
    int detectlineardependency;               /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
    int randomseed;                           /**< the random seed used for randomization of tie breaking */
@@ -341,6 +343,11 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                       "PaPILO can utilize only multiple threads if it is build with TBB.\n");
    presolve.getPresolveOptions().threads = 1;
+#endif
+
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
+
+   presolve.getPresolveOptions().maxrounds = data->internalmaxrounds;
 #endif
 
 
@@ -934,6 +941,14 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #else
    presoldata->maxbadgesizeseq = DEFAULT_MAXBADGESIZE_SEQ;
    presoldata->maxbadgesizepar = DEFAULT_MAXBADGESIZE_PAR;
+#endif
+
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
+   SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/internalmaxrounds",
+         "(internal) maxrounds in milp presolving",
+         &presoldata->internalmaxrounds, FALSE, DEFAULT_INTERNAL_MAXROUNDS, -1, INT_MAX, NULL, NULL));
+#else
+   presoldata->internalmaxrounds = DEFAULT_INTERNAL_MAXROUNDS;
 #endif
 
    SCIP_CALL( SCIPaddBoolParam(scip,

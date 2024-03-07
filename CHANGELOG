@@ -28,6 +28,9 @@ Interface changes
 
 ### New parameters
 
+- presolving/milp/internalmaxrounds to control the maximal rounds of the milp presolver (PaPILO)
+
+
 ### New data structures
 
 Build system
