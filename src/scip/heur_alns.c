@@ -4087,7 +4087,7 @@ SCIP_RETCODE SCIPincludeHeurAlns(
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/banditalgo",
          "the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy, exp.3-(i)x",
-         &heurdata->banditalgo, TRUE, DEFAULT_BANDITALGO, "uegib", NULL, NULL) );
+         &heurdata->banditalgo, TRUE, DEFAULT_BANDITALGO, "uegi", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gamma",
          "weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3",
