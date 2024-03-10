@@ -54,6 +54,7 @@ Fixed bugs
 - fixed bug where parameter `limits/objectivestop` was copied to subscips in plugins which have different objectives
 - in count mode respect empty solution when problem is solved in presolving
 - fixed that SCIP may have tried to pass a negative random seed to an LP solver
+- fixed bug where conflict analysis in strong branching tried to analyze an unsuccessful LP solve
 
 Miscellaneous
 -------------
@@ -298,14 +299,14 @@ Deleted files
 
 Unit tests
 ----------
+
 - new unittests for nlhdlr_quadratic that test monoidal strengthening and the use of the minimal representation to compute cut coefficients
 - unittests for nlhdlr_signomial
 
 Testing
 -------
-- changed `set lim obj` to `set lim objective` in ctest since `obj` is no longer unambiguous
 
-- flush changes at the end of SCIPlpiSetBase() in lpi_grb.c to apply the newly set basis correctly
+- changed `set lim obj` to `set lim objective` in ctest since `obj` is no longer unambiguous
 
 Build system
 ------------
@@ -338,6 +339,7 @@ Fixed bugs
 - fixed make install when SHARED=no and make uninstall
 - check absolute coefficients relative to extremal average to avoid invalid unifications in normalizeCons()
 - enforce and check symmetry-based constraints to take their locks (in dual reductions) into account
+- flush changes at the end of SCIPlpiSetBase() in lpi_grb.c to apply the newly set basis correctly
 
 Miscellaneous
 -------------
@@ -347,8 +349,6 @@ Miscellaneous
 - fixed that scip/def.h, the header for C preprocessor definition (#define's), included headers for some SCIP type and function definitions
   (scip/type_retcode.h, scip/type_message.h, scip/pub_message.h)
 
-Known bugs
-----------
 
 @page RN80 Release notes for SCIP 8.1
 

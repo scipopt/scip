@@ -2210,7 +2210,10 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          if( retcode != SCIP_LPERROR )
          {
             SCIP_CALL( retcode );
+         }
 
+         if( retcode != SCIP_LPERROR && SCIPlpiIsStable(lp->lpi) )
+         {
             /* count number of LP iterations */
             SCIP_CALL( SCIPlpiGetIterations(lp->lpi, &iter) );
             stat->nconflictlps++;
@@ -2274,7 +2277,10 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          if( retcode != SCIP_LPERROR )
          {
             SCIP_CALL( retcode );
+         }
 
+         if( retcode != SCIP_LPERROR && SCIPlpiIsStable(lp->lpi) )
+         {
             /* count number of LP iterations */
             SCIP_CALL( SCIPlpiGetIterations(lp->lpi, &iter) );
             stat->nconflictlps++;
