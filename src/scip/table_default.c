@@ -162,6 +162,11 @@
 #define TABLE_POSITION_CONC              21000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CONC        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
+#define TABLE_NAME_STATS                 "summary stats"
+#define TABLE_DESC_STATS                 "summary stats"
+#define TABLE_POSITION_STATS             22000                  /**< the position of the statistics table */
+#define TABLE_EARLIEST_STAGE_STATS       SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
+
 /*
  * Callback methods of statistics table
  */
@@ -434,6 +439,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSol)
    return SCIP_OKAY;
 }
 
+/** Hacky output method of statistics */
+static
+SCIP_DECL_TABLEOUTPUT(tableOutputStats)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIPprintSummaryStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputConc)
@@ -650,6 +667,9 @@ SCIP_RETCODE SCIPincludeTableDefault(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONC, TABLE_DESC_CONC, TRUE,
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConc,
          NULL, TABLE_POSITION_CONC, TABLE_EARLIEST_STAGE_CONC) );
-
+   assert(SCIPfindTable(scip, TABLE_NAME_STATS) == NULL);
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_STATS, TABLE_DESC_STATS, TRUE,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputStats,
+         NULL, TABLE_POSITION_STATS, TABLE_EARLIEST_STAGE_STATS) );
    return SCIP_OKAY;
 }
