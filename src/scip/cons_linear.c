@@ -16856,7 +16856,11 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             continue;
 
          consdata->upgradetried = TRUE;
-         if( SCIPconsIsActive(cons) )
+
+         SCIP_Bool upgradeconf;
+         SCIP_CALL( SCIPgetBoolParam(scip, "conflict/upgrade", &upgradeconf) );
+
+         if( SCIPconsIsActive(cons) && (!SCIPconsIsConflict(cons) || upgradeconf) )
          {
             SCIP_CONS* upgdcons;
 

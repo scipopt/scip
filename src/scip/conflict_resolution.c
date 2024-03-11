@@ -2751,14 +2751,11 @@ SCIP_RETCODE createAndAddConflictCon(
    SCIP_CALL( SCIPdebugCheckAnyConss(set->scip, &cons, 1) );
 
    /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
-   if (set->conf_upgrade)
+   SCIP_CALL( SCIPupgradeConsLinear(set->scip, cons, &upgdcons) );
+   if( upgdcons != NULL )
    {
-      SCIP_CALL( SCIPupgradeConsLinear(set->scip, cons, &upgdcons) );
-      if( upgdcons != NULL )
-      {
-         SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
-         cons = upgdcons;
-      }
+      SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+      cons = upgdcons;
    }
    /* check if the constraint is valid for the debug solution */
    SCIP_CALL( SCIPdebugCheckAnyConss(set->scip, &cons, 1) );

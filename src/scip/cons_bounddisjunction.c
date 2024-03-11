@@ -2571,8 +2571,12 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
          }
          else
          {
-            /* try to upgrade the bounddisjunction constraint */
-            SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
+            SCIP_Bool upgradeconf;
+            SCIP_CALL( SCIPgetBoolParam(scip, "conflict/upgrade", &upgradeconf) );
+
+            if( !SCIPconsIsConflict(cons) || upgradeconf )
+               /* try to upgrade the bounddisjunction constraint */
+               SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
          }
       }
    }
