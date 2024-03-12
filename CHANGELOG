@@ -28,8 +28,7 @@ Interface changes
 
 ### New parameters
 
-- presolving/milp/internalmaxrounds to control the maximal rounds of the milp presolver (PaPILO)
-
+- presolving/milp/internalmaxrounds to control the maximal rounds for each call of the milp presolver (PaPILO)
 
 ### New data structures
 
