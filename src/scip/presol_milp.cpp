@@ -346,7 +346,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #endif
 
 #if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
-
    presolve.getPresolveOptions().maxrounds = data->internalmaxrounds;
 #endif
 
