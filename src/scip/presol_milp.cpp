@@ -100,7 +100,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_DETECTLINDEP       0         /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
 #define DEFAULT_MAXBADGESIZE_SEQ   15000     /**< the max badge size in Probing if PaPILO is executed in sequential mode*/
 #define DEFAULT_MAXBADGESIZE_PAR   -1        /**< the max badge size in Probing if PaPILO is executed in parallel mode*/
-#define DEFAULT_INTERNAL_MAXROUNDS -1        /**< internal max rounds in PaPILO (-1: no limit)*/
+#define DEFAULT_INTERNAL_MAXROUNDS -1        /**< internal max rounds in PaPILO (-1: no limit, 0: model cleanup)*/
 #define DEFAULT_RANDOMSEED         0         /**< the random seed used for randomization of tie breaking */
 #define DEFAULT_MODIFYCONSFAC      0.8       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
@@ -128,7 +128,7 @@ struct SCIP_PresolData
    int maxfillinpersubstitution;             /**< maximal possible fillin for substitutions to be considered */
    int maxbadgesizeseq;                      /**< the max badge size in Probing if PaPILO is called in sequential mode*/
    int maxbadgesizepar;                      /**< the max badge size in Probing if PaPILO is called in parallel mode */
-   int internalmaxrounds;                    /**< internal max rounds in PaPILO (-1: no limit)*/
+   int internalmaxrounds;                    /**< internal max rounds in PaPILO (-1: no limit, 0: model cleanup)*/
    int maxshiftperrow;                       /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
    int detectlineardependency;               /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
    int randomseed;                           /**< the random seed used for randomization of tie breaking */
@@ -943,7 +943,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 #if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
    SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/internalmaxrounds",
-         "internal maxrounds for each milp presolving",
+         "internal maxrounds for each milp presolving (-1: no limit, 0: model cleanup)",
          &presoldata->internalmaxrounds, FALSE, DEFAULT_INTERNAL_MAXROUNDS, -1, INT_MAX, NULL, NULL));
 #else
    presoldata->internalmaxrounds = DEFAULT_INTERNAL_MAXROUNDS;
