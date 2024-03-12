@@ -943,7 +943,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 #if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
    SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/internalmaxrounds",
-         "(internal) maxrounds in milp presolving",
+         "internal maxrounds for each milp presolving",
          &presoldata->internalmaxrounds, FALSE, DEFAULT_INTERNAL_MAXROUNDS, -1, INT_MAX, NULL, NULL));
 #else
    presoldata->internalmaxrounds = DEFAULT_INTERNAL_MAXROUNDS;
