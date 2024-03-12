@@ -349,7 +349,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    presolve.getPresolveOptions().maxrounds = data->internalmaxrounds;
 #endif
 
-
    /* disable dual reductions that are not permitted */
    if( !complete )
       presolve.getPresolveOptions().dualreds = 0;
