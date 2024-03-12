@@ -126,9 +126,9 @@ struct SCIP_PresolData
    int lastnrows;                            /**< the number of rows from the last call */
    int threads;                              /**< maximum number of threads presolving may use (0: automatic) */
    int maxfillinpersubstitution;             /**< maximal possible fillin for substitutions to be considered */
-   int maxbadgesizeseq;                      /**< the max badge size in Probing if PaPILO is called in sequential mode*/
+   int maxbadgesizeseq;                      /**< the max badge size in Probing if PaPILO is called in sequential mode */
    int maxbadgesizepar;                      /**< the max badge size in Probing if PaPILO is called in parallel mode */
-   int internalmaxrounds;                    /**< internal max rounds in PaPILO (-1: no limit, 0: model cleanup)*/
+   int internalmaxrounds;                    /**< internal max rounds in PaPILO (-1: no limit, 0: model cleanup) */
    int maxshiftperrow;                       /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
    int detectlineardependency;               /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
    int randomseed;                           /**< the random seed used for randomization of tie breaking */
