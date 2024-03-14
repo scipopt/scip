@@ -971,8 +971,9 @@ SCIP_RETCODE createSubSCIP(
    /* copy parameter settings */
    SCIP_CALL( SCIPcopyParamSettings(scip, heurdata->subscip) );
 
-   /* disable objective stop in subscip */
-   SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/objectivestop") );
+   /* disable bound limits */
+   SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/primal", SCIP_INVALID) );
+   SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/dual", SCIP_INVALID) );
 
    /* create problem in sub-SCIP */
 

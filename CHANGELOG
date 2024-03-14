@@ -28,7 +28,12 @@ Interface changes
 
 ### New parameters
 
+- limits/primal to terminate the solve as soon as the primal bound is at least as good as this value, same as limits/objectivestop (deprecated)
+- limits/dual to terminate the solve as soon as the dual bound is at least as good as this value
+
 ### New data structures
+
+- SCIP_Status is extended by SCIP_STATUS_PRIMALLIMIT and SCIP_STATUS_DUALLIMIT to indicate termination at limits/primal and limits/dual respectively
 
 Build system
 ------------
