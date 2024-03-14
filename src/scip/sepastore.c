@@ -106,7 +106,7 @@ SCIP_RETCODE SCIPsepastoreCreate(
    (*sepastore)->initiallp = FALSE;
    (*sepastore)->forcecuts = FALSE;
 
-   SCIP_CALL( SCIPrandomCreate(&(*sepastore)->randnumgen, blkmem, (unsigned int)SCIPsetInitializeRandomSeed(set, 0x5EED)) );
+   SCIP_CALL( SCIPrandomCreate(&(*sepastore)->randnumgen, blkmem, SCIPsetInitializeRandomSeed(set, 0x5EED)) );
 
    return SCIP_OKAY;
 }

@@ -938,10 +938,11 @@ SCIP_RETCODE applyRepair(
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   SCIP_CALL( SCIPsetObjlimit(subscip,1.0) );
+   SCIP_CALL( SCIPsetObjlimit(subscip, 1.0) );
 
-   /* disable objective stop */
-   SCIP_CALL( SCIPresetParam(subscip, "limits/objectivestop") );
+   /* disable bound limits */
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/primal", SCIP_INVALID) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/dual", SCIP_INVALID) );
 
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
