@@ -188,6 +188,10 @@ SCIP_Bool SCIPsolveIsStopped(
       && (SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap)
          || SCIPsetIsLT(set, (SCIPgetUpperbound(set->scip) - SCIPgetLowerbound(set->scip)) * SCIPgetTransObjscale(set->scip), set->limit_absgap )) )
       stat->status = SCIP_STATUS_GAPLIMIT;
+   else if( set->limit_primal != SCIP_INVALID && !SCIPsetIsPositive(set, (int)SCIPgetObjsense(set->scip) * (SCIPgetPrimalbound(set->scip) - set->limit_primal)) ) /*lint !e777*/
+      stat->status = SCIP_STATUS_PRIMALLIMIT;
+   else if( set->limit_dual != SCIP_INVALID && !SCIPsetIsNegative(set, (int)SCIPgetObjsense(set->scip) * (SCIPgetDualbound(set->scip) - set->limit_dual)) ) /*lint !e777*/
+      stat->status = SCIP_STATUS_DUALLIMIT;
    else if( set->limit_solutions >= 0 && set->stage >= SCIP_STAGE_PRESOLVING
       && SCIPgetNLimSolsFound(set->scip) >= set->limit_solutions )
       stat->status = SCIP_STATUS_SOLLIMIT;

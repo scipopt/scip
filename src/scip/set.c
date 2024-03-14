@@ -69,6 +69,7 @@
 #include "scip/nlpi.h"
 #include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
+#include "scip/struct_paramset.h" /* for objectivestop deprecation */
 
 /*
  * Default settings
@@ -199,11 +200,12 @@
 /* Limits */
 
 #define SCIP_DEFAULT_LIMIT_TIME           1e+20 /**< maximal time in seconds to run */
-#define SCIP_DEFAULT_LIMIT_MEMORY SCIP_MEM_NOLIMIT/**< maximal memory usage in MB */
+#define SCIP_DEFAULT_LIMIT_MEMORY SCIP_MEM_NOLIMIT /**< maximal memory usage in MB */
 #define SCIP_DEFAULT_LIMIT_GAP              0.0 /**< solving stops, if the gap is below the given value */
 #define SCIP_DEFAULT_LIMIT_ABSGAP           0.0 /**< solving stops, if the absolute difference between primal and dual
                                                  *   bound reaches this value */
-#define SCIP_DEFAULT_LIMIT_OBJSTOP SCIP_INVALID /**< solving stops, if solution is found that is at least as good as given value */
+#define SCIP_DEFAULT_LIMIT_PRIMAL  SCIP_INVALID /**< solving stops, if primal bound is at least as good as given value */
+#define SCIP_DEFAULT_LIMIT_DUAL    SCIP_INVALID /**< solving stops, if dual bound is at least as good as given value */
 #define SCIP_DEFAULT_LIMIT_NODES           -1LL /**< maximal number of nodes to process (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_STALLNODES      -1LL /**< solving stops, if the given number of nodes was processed since the
                                                  *   last improvement of the primal solution value (-1: no limit) */
@@ -214,7 +216,6 @@
 #define SCIP_DEFAULT_LIMIT_MAXORIGSOL        10 /**< maximal number of solutions candidates to store in the solution storage of the original problem */
 #define SCIP_DEFAULT_LIMIT_RESTARTS          -1 /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_AUTORESTARTNODES  -1 /**< if solve exceeds this number of nodes, an automatic restart is triggered (-1: no automatic restart)*/
-
 
 /* LP */
 
@@ -1655,8 +1656,20 @@ SCIP_RETCODE SCIPsetCreate(
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/objectivestop",
-         "solving stops, if solution is found that is at least as good as given value",
-         &(*set)->limit_objstop, FALSE, SCIP_DEFAULT_LIMIT_OBJSTOP, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         "solving stops, if primal bound is at least as good as given value (deprecated primal)",
+         &(*set)->limit_primal, FALSE, SCIP_DEFAULT_LIMIT_PRIMAL, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         SCIPparamChgdLimit, NULL) );
+   /* drop deprecated objectivestop */
+   --(*set)->paramset->nparams;
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "limits/primal",
+         "solving stops, if primal bound is at least as good as given value (alias objectivestop)",
+         &(*set)->limit_primal, FALSE, SCIP_DEFAULT_LIMIT_PRIMAL, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "limits/dual",
+         "solving stops, if dual bound is at least as good as given value",
+         &(*set)->limit_dual, FALSE, SCIP_DEFAULT_LIMIT_DUAL, SCIP_REAL_MIN, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "limits/solutions",
@@ -1683,7 +1696,6 @@ SCIP_RETCODE SCIPsetCreate(
          "solving stops, if the given number of restarts was triggered (-1: no limit)",
          &(*set)->limit_restarts, FALSE, SCIP_DEFAULT_LIMIT_RESTARTS, -1, INT_MAX,
          SCIPparamChgdLimit, NULL) );
-
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "limits/autorestartnodes",
          "if solve exceeds this number of nodes for the first time, an automatic restart is triggered (-1: no automatic restart)",

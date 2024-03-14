@@ -551,6 +551,12 @@ SCIP_RETCODE SCIPprintStatus(
    case SCIP_STATUS_GAPLIMIT:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "gap limit reached");
       break;
+   case SCIP_STATUS_PRIMALLIMIT:
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "primal limit reached");
+      break;
+   case SCIP_STATUS_DUALLIMIT:
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "dual limit reached");
+      break;
    case SCIP_STATUS_SOLLIMIT:
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "solution limit reached");
       break;
