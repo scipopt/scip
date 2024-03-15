@@ -5766,7 +5766,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
     */
    checkpporbisack = SCIPgetParam(scip, "constraints/orbisack/checkpporbisack");
    if ( checklexred && ( checkpporbisack == NULL || SCIPparamGetBool(checkpporbisack) == TRUE )
-      && propdata->nmovedbinpermvars > 0 )
+      && nproperperms > 0 && propdata->nmovedbinpermvars > 0 )
    {
       assert( properperms != NULL );
       SCIP_CALL( componentPackingPartitioningOrbisackUpgrade(scip, propdata,
@@ -5780,7 +5780,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    }
 
    /* handle component permutations with orbital reduction */
-   if ( checkorbired )
+   if ( checkorbired && nproperperms > 0 )
    {
       SCIP_CALL( SCIPorbitalReductionAddComponent(scip, propdata->orbitalreddata,
             propdata->permvars, propdata->npermvars, properperms, nproperperms, &success) );
