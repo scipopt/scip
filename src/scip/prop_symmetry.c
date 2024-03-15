@@ -6325,8 +6325,8 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             {
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_sort_col_%d_row_%d", partialname, j, i);
 
-               consvars[0] = propdata->permvars[varidxmatrix[i][j]];
-               consvars[1] = propdata->permvars[varidxmatrix[i + 1][j]];
+               consvars[0] = propdata->permvars[varidxmatrix[i][0]];
+               consvars[1] = propdata->permvars[varidxmatrix[i + 1][0]];
 
                SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, consvars, consvals,
                      -SCIPinfinity(scip), 0.0,
@@ -6338,14 +6338,14 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             /* we can also sort the second half of rows by orbitopal reduction */
             if ( nactrowsprev - nactiverows > 1 )
             {
-               for (k = j, pos = 0; k < ncols; ++k)
+               for (k = 0, pos = 0; k < ncols; ++k)
                {
                   for (i = nactiverows; i < nactrowsprev; ++i)
                      orbitopevarmatrix[pos++] = propdata->permvars[varidxmatrix[i][k]];
                }
                SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
                      SCIP_ROWORDERING_NONE, SCIP_COLUMNORDERING_NONE,
-                     orbitopevarmatrix, ncols - j, nactrowsprev - nactiverows, success) );
+                     orbitopevarmatrix, ncols, nactrowsprev - nactiverows, success) );
             }
             nactrowsprev = nactiverows;
 
