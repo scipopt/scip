@@ -53,6 +53,7 @@
 #include "scip/pub_lp.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_var.h"
+#include "scip/pub_message.h"
 #include "scip/scip_conflict.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_prob.h"
