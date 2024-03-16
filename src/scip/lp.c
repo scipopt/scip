@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -6779,7 +6779,7 @@ SCIP_Real SCIProwGetLPSolCutoffDistance(
 
       if( scale > 0.0 )
       {
-         scale = 1.0 / SQRT(scale);
+         scale = 1.0 / sqrt(scale);
 
          for( k = 0; k < lp->ncols; ++k )
             lp->soldirection[k] *= scale;
@@ -7820,7 +7820,7 @@ SCIP_Real SCIProwGetObjParallelism(
 
    prod = row->sqrnorm * lp->objsqrnorm;
 
-   parallelism = SCIPsetIsPositive(set, prod) ? REALABS(row->objprod) / SQRT(prod) : 0.0;
+   parallelism = SCIPsetIsPositive(set, prod) ? REALABS(row->objprod) / sqrt(prod) : 0.0;
    assert(SCIPsetIsSumGE(set, parallelism, 0.0));
    assert(SCIPsetIsSumLE(set, parallelism, 1.0));
    parallelism = MIN(parallelism, 1.0);
@@ -11668,7 +11668,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetConditionLimit(lp, set->lp_conditionlimit, &success) );
    SCIP_CALL( lpSetMarkowitz(lp, set->lp_markowitz, &success) );
    SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
-   SCIP_CALL( lpSetRandomseed(lp, (int) SCIPsetInitializeRandomSeed(set, (unsigned) set->random_randomseed), &success) );
+   SCIP_CALL( lpSetRandomseed(lp, (int) (SCIPsetInitializeRandomSeed(set, (unsigned) set->random_randomseed) % INT_MAX), &success) );
    SCIP_CALL( lpSetSolutionPolishing(lp, usepolishing, &success) );
    SCIP_CALL( lpSetRefactorInterval(lp, set->lp_refactorinterval, &success) );
 
@@ -12842,7 +12842,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   SCIPsetIsLT(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
                {
                   SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
-                  if( !(lperror) && (fastmip > 0) && simplex )
+                  if( !(*lperror) && (fastmip > 0) && simplex )
                   {
                      fastmip = 0;
                      SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, -1, -1,
@@ -17712,7 +17712,7 @@ SCIP_Real SCIPlpGetObjNorm(
    assert(!lp->objsqrnormunreliable);
    assert(lp->objsqrnorm >= 0.0);
 
-   return SQRT(lp->objsqrnorm);
+   return sqrt(lp->objsqrnorm);
 }
 
 /** sets whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */

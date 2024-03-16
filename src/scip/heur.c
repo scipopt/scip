@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -144,7 +144,7 @@ SCIP_RETCODE SCIPdivesetReset(
    }
 
    /* reset the random number generator */
-   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed));
+   SCIPrandomSetSeed(diveset->randnumgen, SCIPsetInitializeRandomSeed(set, diveset->initialseed));
 
    return SCIP_OKAY;
 }
@@ -1741,6 +1741,7 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    else
       localvargraph = FALSE;
 
+   /* coverity[var_deref_op] */
    SCIPhashtableRemoveAll(vargraph->visitedconss);
 
    /* initialize distances to -1 */

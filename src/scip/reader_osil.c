@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2494,8 +2494,8 @@ SCIP_DECL_READERREAD(readerReadOsil)
       SCIPfreeBlockMemoryArrayNull(scip, &quadvars1[c], termssize[c]);
 
       /* free linear parts */
-      SCIPfreeBlockMemoryArray(scip, &lincoefs[c], nlinvars[c]);
-      SCIPfreeBlockMemoryArray(scip, &linvars[c], nlinvars[c]);
+      SCIPfreeBlockMemoryArrayNull(scip, &lincoefs[c], nlinvars[c]);
+      SCIPfreeBlockMemoryArrayNull(scip, &linvars[c], nlinvars[c]);
    }
    SCIPfreeBlockMemoryArrayNull(scip, &termssize, nconss + 1);
    SCIPfreeBlockMemoryArrayNull(scip, &nlexprs, nconss + 1);

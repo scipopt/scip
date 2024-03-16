@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -99,6 +99,7 @@
  */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_OUTPUT_COMPONENT */
+/* #define SCIP_DISPLAY_SYM_CHECK */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -735,6 +736,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortGraphCompVars)
  */
 static
 int compareSymgraphs(
+   SCIP*                 scip,               /**< SCIP pointer (or NULL) */
    SYM_GRAPH*            G1,                 /**< first graph in comparison */
    SYM_GRAPH*            G2                  /**< second graph in comparison */
    )
@@ -760,15 +762,31 @@ int compareSymgraphs(
       if ( SCIPconsGetHdlr(G1->conss[perm1]) > SCIPconsGetHdlr(G2->conss[perm2]) )
          return 1;
 
-      if ( G1->lhs[perm1] < G2->lhs[perm2] )
-         return -1;
-      if ( G1->lhs[perm1] > G2->lhs[perm2] )
-         return 1;
+      /* compare using SCIP functions when SCIP is available */
+      if ( scip != NULL )
+      {
+         if ( SCIPisLT(scip, G1->lhs[perm1], G2->lhs[perm2]) )
+            return -1;
+         if ( SCIPisGT(scip, G1->lhs[perm1], G2->lhs[perm2]) )
+            return 1;
 
-      if ( G1->rhs[perm1] < G2->rhs[perm2] )
-         return -1;
-      if ( G1->rhs[perm1] > G2->rhs[perm2] )
-         return 1;
+         if ( SCIPisLT(scip, G1->rhs[perm1], G2->rhs[perm2]) )
+            return -1;
+         if ( SCIPisGT(scip, G1->rhs[perm1], G2->rhs[perm2]) )
+            return 1;
+      }
+      else
+      {
+         if ( G1->lhs[perm1] < G2->lhs[perm2] )
+            return -1;
+         if ( G1->lhs[perm1] > G2->lhs[perm2] )
+            return 1;
+
+         if ( G1->rhs[perm1] < G2->rhs[perm2] )
+            return -1;
+         if ( G1->rhs[perm1] > G2->rhs[perm2] )
+            return 1;
+      }
    }
 
    /* compare number of remaining node types */
@@ -817,7 +835,7 @@ SCIP_DECL_SORTINDCOMP(SYMsortSymgraphs)
    G1 = data[ind1];
    G2 = data[ind2];
 
-   return compareSymgraphs(G1, G2);
+   return compareSymgraphs(NULL, G1, G2);
 }
 
 /*
@@ -1501,6 +1519,10 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    int p;
    int c;
    int g;
+#ifdef SCIP_DISPLAY_SYM_CHECK
+   int permlen;
+   SCIP_Bool* covered;
+#endif
 
    assert( scip != NULL );
    assert( perms != NULL );
@@ -1550,7 +1572,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    groupbegins[0] = 0;
    for (c = 1; c < nconss; ++c)
    {
-      if ( compareSymgraphs(graphs[graphperm[c]], graphs[graphperm[c-1]]) != 0 )
+      if ( compareSymgraphs(scip, graphs[graphperm[c]], graphs[graphperm[c-1]]) != 0 )
          groupbegins[ngroups++] = c;
    }
    groupbegins[ngroups] = nconss;
@@ -1561,23 +1583,50 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
       SCIP_CALL( SCIPfreeSymgraphConsnodeperm(scip, graphs[c]) );
    }
 
+#ifdef SCIP_DISPLAY_SYM_CHECK
+   permlen = symtype == SYM_SYMTYPE_SIGNPERM ? 2 * npermvars : npermvars;
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, permlen) );
+#endif
+
    /* iterate over all permutations and check whether they define symmetries */
    for (p = 0; p < nperms; ++p)
    {
       SYM_GRAPH* graph;
       SCIP_Bool found = TRUE;
       int d;
+#ifdef SCIP_DISPLAY_SYM_CHECK
+      int i;
+
+      SCIPinfoMessage(scip, NULL, "Check whether permutation %d is a symmetry:\n", p);
+      for (i = 0; i < permlen; ++i)
+      {
+         SCIP_CALL( displayCycleOfSymmetry(scip, perms[p], symtype, i, covered, npermvars, SCIPgetVars(scip)) );
+      }
+
+      for (i = 0; i < permlen; ++i)
+         covered[i] = FALSE;
+      SCIPinfoMessage(scip, NULL, "Check whether every constraint has a symmetric counterpart.\n");
+#endif
 
       /* for every constraint, create permuted graph by copying nodes and edges */
       for (g = 0; g < ngroups; ++g)
       {
          for (c = groupbegins[g]; c < groupbegins[g+1]; ++c)
          {
+#ifdef SCIP_DISPLAY_SYM_CHECK
+            SCIPinfoMessage(scip, NULL, "Check whether constraint %d has a symmetric counterpart:\n",
+               graphperm[c]);
+            SCIP_CALL( SCIPprintCons(scip, conss[graphperm[c]], NULL) );
+            SCIPinfoMessage(scip, NULL, "\n");
+#endif
             SCIP_CALL( SCIPcopySymgraph(scip, &graph, graphs[graphperm[c]], perms[p], fixedtype) );
 
             /* if adapted graph is equivalent to original graph, we don't need to check further graphs */
             if ( SYMcheckGraphsAreIdentical(scip, symtype, graph, graphs[graphperm[c]]) )
             {
+#ifdef SCIP_DISPLAY_SYM_CHECK
+               SCIPinfoMessage(scip, NULL, "\tconstraint is symmetric to itself\n");
+#endif
                SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
                continue;
             }
@@ -1585,18 +1634,33 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
             /* check whether graph has an isomorphic counterpart */
             found = FALSE;
             for (d = groupbegins[g]; d < groupbegins[g+1] && ! found; ++d)
+            {
                found = SYMcheckGraphsAreIdentical(scip, symtype, graph, graphs[graphperm[d]]);
+
+#ifdef SCIP_DISPLAY_SYM_CHECK
+               SCIPinfoMessage(scip, NULL, "\tconstraint is %ssymmetric to constraint %d\n\t", !found ? "not " : "", d);
+               SCIP_CALL( SCIPprintCons(scip, conss[graphperm[d]], NULL) );
+               SCIPinfoMessage(scip, NULL, "\n");
+#endif
+            }
 
             SCIP_CALL( SCIPfreeSymgraph(scip, &graph) );
 
             if ( ! found )
             {
+#ifdef SCIP_DISPLAY_SYM_CHECK
+               SCIPfreeBufferArray(scip, &covered);
+#endif
                SCIPerrorMessage("permutation %d is not a symmetry\n", p);
                return SCIP_ERROR;
             }
          }
       }
    }
+
+#ifdef SCIP_DISPLAY_SYM_CHECK
+   SCIPfreeBufferArray(scip, &covered);
+#endif
 
    SCIPfreeBufferArray(scip, &groupbegins);
    SCIPfreeBufferArray(scip, &graphperm);
@@ -3072,7 +3136,7 @@ SCIP_RETCODE addStrongSBCsSubgroup(
 
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
             SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
-            FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
 
@@ -3254,7 +3318,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
 
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, vars, vals, 0.0,
                SCIPinfinity(scip), propdata->conssaddlp, propdata->conssaddlp, TRUE,
-               FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+               TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
@@ -4214,7 +4278,7 @@ SCIP_RETCODE createConflictGraphSST(
       assert( cliquevars != NULL );
       assert( ncliquevars > 0 );
 
-      SCIPdebugMsg(scip, "\tIdentify edges for clique ID: %d; Index: %d).\n", SCIPcliqueGetId(clique),
+      SCIPdebugMsg(scip, "\tIdentify edges for clique ID: %u; Index: %d).\n", SCIPcliqueGetId(clique),
          SCIPcliqueGetIndex(clique));
 
       /* for all variables, list which cliques it is part of */
@@ -4257,7 +4321,7 @@ SCIP_RETCODE createConflictGraphSST(
       assert( cliquevars != NULL );
       assert( ncliquevars > 0 );
 
-      SCIPdebugMsg(scip, "\tAdd edges for clique ID: %d; Index: %d).\n", SCIPcliqueGetId(clique),
+      SCIPdebugMsg(scip, "\tAdd edges for clique ID: %u; Index: %d).\n", SCIPcliqueGetId(clique),
          SCIPcliqueGetIndex(clique));
 
       /* for all variables, list which cliques it is part of */
@@ -4724,6 +4788,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
                continue;
 
             assert( varconflicts[varidx].orbitidx == i );
+            /* coverity[var_deref_op] */
             curcriterion = varconflicts[varidx].nconflictinorbit;
          }
 
@@ -4805,6 +4870,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
             continue;
 
          /* skip variables not affected by symmetry */
+         /* coverity[var_deref_op] */
          if ( varconflicts[i].orbitidx == -1 )
             continue;
 
@@ -5216,7 +5282,7 @@ SCIP_RETCODE addOrbitopesDynamic(
 
          /* enforce, but do not check */
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, consvars, conscoefs, -SCIPinfinity(scip), 0.0,
-               propdata->conssaddlp, propdata->conssaddlp, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+               propdata->conssaddlp, propdata->conssaddlp, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
          propdata->genlinconss[propdata->ngenlinconss++] = cons;

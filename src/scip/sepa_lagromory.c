@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1099,12 +1099,16 @@ SCIP_RETCODE l1BallProjection(
 
          for( int i = 0; i < temp1len; i++ )
          {
+            /* @note: the third condition (temp1len - ntemp1removed > 0) is true as long as the first condition
+             * (temp1inds[i] >= 0) is true.
+             */
             if( (temp1inds[i] >= 0) && SCIPisLE(scip, temp1vals[i], pivotparam) )
             {
                temp1inds[i] = -1;
                temp1changed = TRUE;
                ntemp1removed++;
                assert(temp1len - ntemp1removed > 0);
+               /* coverity[divide_by_zero] */
                pivotparam += ((pivotparam - temp1vals[i]) / (temp1len - ntemp1removed));
             }
          }
@@ -1160,7 +1164,7 @@ void l2BallProjection(
    {
       l2norm += SQR(dualvector[i]);
    }
-   l2norm = SQRT(l2norm);
+   l2norm = sqrt(l2norm);
    factor = radius/(1.0 + l2norm);
 
    /* if the vector of Lagrangian multipliers is outside the L2-norm ball, then do the projection */
@@ -1203,8 +1207,7 @@ void linfBallProjection(
  * the terminology related to best Lagrangian multipliers)
  */
 static
-SCIP_RETCODE weightedDualVector(
-   SCIP*                 scip,               /**< SCIP data structure */
+void weightedDualVector(
    SCIP_SEPADATA*        sepadata,           /**< separator data structure */
    SCIP_Real*            dualvector,         /**< Lagrangian multipliers */
    int                   dualvectorlen,      /**< length of the Lagrangian multipliers vector */
@@ -1234,8 +1237,6 @@ SCIP_RETCODE weightedDualVector(
    {
       dualvector[i] = alpha * dualvector[i];
    }
-
-   return SCIP_OKAY;
 }
 
 /** stabilize Lagrangian multipliers */
@@ -1292,8 +1293,7 @@ SCIP_RETCODE stabilizeDualVector(
    if( sepadata->stabilitycentertype == 1 )
    {
       /* weighted Lagrangian multipliers based on best Langrangian multipliers as stability center */
-      SCIP_CALL( weightedDualVector(scip, sepadata, dualvector, dualvectorlen, bestdualvector,
-               bestdualvectorlen, nbestdualupdates, totaliternum) );
+      weightedDualVector(sepadata, dualvector, dualvectorlen, bestdualvector, bestdualvectorlen, nbestdualupdates, totaliternum);
    }
 
    return SCIP_OKAY;
@@ -1353,12 +1353,14 @@ SCIP_RETCODE updateDualVector(
       /* update Lagrangian multipliers */
       for( int i = 0; i < ncuts; i++ )
       {
+         assert(subgradient != NULL); /* for lint */
          dualvector1[i] += steplength * subgradient[i];
       }
 
       /* projection onto non-negative orthant */
       for( int i = 0; i < ncuts; i++ )
       {
+         assert(dualvector1 != NULL); /* for lint */
          dualvector1[i] = MAX(dualvector1[i], 0.0);
       }
 
@@ -1638,7 +1640,7 @@ SCIP_RETCODE solveLPWithHardCuts(
    }
 
    /* solve the LP */
-   SCIPlpiSolvePrimal(sepadata->lpiwithhardcuts);  /*lint !e534*/
+   SCIP_CALL( SCIPlpiSolvePrimal(sepadata->lpiwithhardcuts) );
 
    /* get the solution if primal feasible */
    if( SCIPlpiIsPrimalFeasible(sepadata->lpiwithhardcuts) )

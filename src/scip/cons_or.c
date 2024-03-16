@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1444,7 +1444,7 @@ SCIP_RETCODE addSymmetryInformation(
    vals[nlocvars++] = 2.0;
    assert(nlocvars <= nvars);
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    /* represent the OR constraint via the gadget for linear constraints and use the constant as lhs/rhs to
     * distinguish different OR constraints (OR constraints do not have an intrinsic right-hand side)

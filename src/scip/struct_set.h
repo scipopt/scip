@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -62,6 +62,7 @@
 #include "scip/type_concsolver.h"
 #include "scip/type_benders.h"
 #include "scip/type_expr.h"
+#include "scip/type_message.h"
 #include "scip/debug.h"
 
 #ifdef __cplusplus
@@ -344,7 +345,8 @@ struct SCIP_Set
    SCIP_Real             limit_gap;          /**< solving stops, if the given gap is reached */
    SCIP_Real             limit_absgap;       /**< solving stops, if the absolute difference between primal and dual bound
                                               *   reaches this value */
-   SCIP_Real             limit_objstop;      /**< solving stops, if solution is found that is at least as good as given value */
+   SCIP_Real             limit_primal;       /**< solving stops, if primal bound is at least as good as given value */
+   SCIP_Real             limit_dual;         /**< solving stops, if dual bound is at least as good as given value */
    SCIP_Longint          limit_nodes;        /**< maximal number of nodes to process (-1: no limit) */
    SCIP_Longint          limit_totalnodes;   /**< maximal number of total nodes (incl. restarts) to process (-1: no limit) */
    SCIP_Longint          limit_stallnodes;   /**< solving stops, if the given number of nodes was processed since the
@@ -355,8 +357,7 @@ struct SCIP_Set
    int                   limit_maxsol;       /**< maximal number of solutions to store in the solution storage */
    int                   limit_maxorigsol;   /**< maximal number of solutions candidates to store in the solution storage of the original problem */
    int                   limit_restarts;     /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
-   int                   limit_autorestartnodes;/**< nodes to trigger automatic restart */
-
+   int                   limit_autorestartnodes; /**< nodes to trigger automatic restart */
    SCIP_Bool             istimelimitfinite;  /**< is the time limit finite */
 
    /* LP settings */

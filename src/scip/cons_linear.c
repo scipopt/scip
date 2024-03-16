@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -4116,7 +4116,7 @@ SCIP_RETCODE scaleCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->row == NULL);
-   assert(!SCIPisEQ(scip, scalar, 1.0));
+   assert(scalar != 1.0);
 
    if( (!SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -consdata->lhs * scalar))
       || (!SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, consdata->rhs * scalar)) )
@@ -4275,7 +4275,6 @@ SCIP_RETCODE normalizeCons(
    int nposcoeffs;
    int nnegcoeffs;
    int i;
-   int v;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -4308,7 +4307,7 @@ SCIP_RETCODE normalizeCons(
 
    assert(vals != NULL);
 
-   /* get maximal and minimal absolute coefficient */
+   /* get maximum and minimum absolute coefficient */
    maxabsval = consdataGetMaxAbsval(consdata);
    minabsval = consdataGetMinAbsval(consdata);
 
@@ -4316,43 +4315,22 @@ SCIP_RETCODE normalizeCons(
    if( SCIPisZero(scip, minabsval/maxabsval) )
       return SCIP_OKAY;
 
-   /* check if all coefficients are in absolute value equal, and not 1.0 */
-   if( !SCIPisEQ(scip, maxabsval, 1.0) )
+   /* check if not all absolute coefficients are near 1.0 but scaling could do */
+   if( SCIPisLT(scip, minabsval, 1.0) != SCIPisGT(scip, maxabsval, 1.0) )
    {
-      SCIP_Bool abscoefsequ;
+      SCIP_Real scalar;
 
-      abscoefsequ = TRUE;
+      /* calculate scale of the average minimum and maximum absolute coefficient to 1.0 */
+      scalar = 2.0 / (minabsval + maxabsval);
 
-      for( v = nvars - 1; v >= 0; --v )
-      {
-         if( !SCIPisEQ(scip, REALABS(vals[v]), maxabsval) )
-         {
-            abscoefsequ = FALSE;
-            break;
-         }
-      }
-
-      /* all coefficients are in absolute value equal, so change them to (-)1.0 */
-      if( abscoefsequ )
+      /* check if all scaled absolute coefficients are near 1.0
+       * we can relax EQ(x,1.0) to LE(x,1.0), as LT(x,1.0) is not possible
+       */
+      if( SCIPisLE(scip, scalar * maxabsval, 1.0) )
       {
          SCIPdebugMsg(scip, "divide linear constraint with %g, because all coefficients are in absolute value the same\n", maxabsval);
          SCIPdebugPrintCons(scip, cons, NULL);
-         SCIP_CALL( scaleCons(scip, cons, 1/maxabsval) );
-
-         if( consdata->validmaxabsval )
-         {
-            if( !SCIPisEQ(scip, consdata->maxabsval, 1.0) )
-               consdata->maxabsval = 1.0;
-            if( !SCIPisEQ(scip, consdata->minabsval, 1.0) )
-               consdata->minabsval = 1.0;
-
-            maxabsval = 1.0;
-         }
-         else
-         {
-            /* get maximal absolute coefficient */
-            maxabsval = consdataGetMaxAbsval(consdata);
-         }
+         SCIP_CALL( scaleCons(scip, cons, scalar) );
 
          /* get new consdata information, because scaleCons() might have deleted variables */
          vals = consdata->vals;
@@ -4383,6 +4361,9 @@ SCIP_RETCODE normalizeCons(
 
    if( !consdata->hasnonbinvalid )
       consdataCheckNonbinvar(consdata);
+
+   /* get maximum absolute coefficient */
+   maxabsval = consdataGetMaxAbsval(consdata);
 
    /* if all variables are of integral type we will allow a greater multiplier */
    if( !consdata->hascontvar )
@@ -15266,7 +15247,7 @@ SCIP_RETCODE addSymmetryInformation(
       vals[i] = consdata->vals[i];
    }
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
    lhs = consdata->lhs - constant;
    rhs = consdata->rhs - constant;
 

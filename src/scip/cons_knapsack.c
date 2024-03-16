@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -12059,7 +12059,7 @@ SCIP_RETCODE addSymmetryInformation(
       vals[i] = (SCIP_Real) consdata->weights[i];
    }
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
    rhs = (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons) - constant;
 
    SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
@@ -13281,7 +13281,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       /* try to parse coefficient, and use 1 if not successful */
       weight = 1;
       nread = 0;
-      sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread);
+      (void) sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread);
       str += nread;
 
       /* parse variable name */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -51,7 +51,7 @@
  */
 SCIP_RETCODE SCIPcomputeOrbitsSym(
    SCIP*                 scip,               /**< SCIP instance */
-   SCIP_Bool             issigend,           /**< whether orbits for signed permutations shall be computed */
+   SCIP_Bool             issigned,           /**< whether orbits for signed permutations shall be computed */
    SCIP_VAR**            permvars,           /**< variables considered in a permutation */
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
@@ -76,7 +76,7 @@ SCIP_RETCODE SCIPcomputeOrbitsSym(
    assert( norbits != NULL );
 
    permlen = npermvars;
-   if ( issigend )
+   if ( issigned )
       permlen *= 2;
 
    /* init data structures*/
@@ -1584,9 +1584,11 @@ SCIP_RETCODE detectOrbitopalSymmetries(
             continue;
          w = perm[v];
 
+#ifndef NDEBUG
          curcomp1 = SCIPdisjointsetFind(conncomps, v);
          curcomp2 = SCIPdisjointsetFind(conncomps, w);
          assert( curcomp1 != curcomp2 );
+#endif
 
          /* add edge */
          SCIPdisjointsetUnion(conncomps, v, w, FALSE);
@@ -1599,6 +1601,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
 
          if ( curcolor1 != curcolor2 )
          {
+            /* coverity[negative_returns] */
             SCIPdisjointsetUnion(compcolors, colorrepresentative1, v, TRUE);
             SCIPdisjointsetUnion(compcolors, colorrepresentative1, w, TRUE);
          }
@@ -1792,6 +1795,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
 static
 SCIP_RETCODE isDoublelLexSym(
    SCIP*                 scip,               /**< SCIP pointer */
+   int                   nsymvars,           /**< number of variables on which symmetries act */
    int***                matrices1,          /**< first list of matrices associated with orbitopal symmetries */
    int                   nrows1,             /**< number of rows of first family of matrices */
    int*                  ncols1,             /**< for each matrix in the first family, its number of columns */
@@ -1828,6 +1832,7 @@ SCIP_RETCODE isDoublelLexSym(
    int j;
 
    assert( scip != NULL );
+   assert( nsymvars >= 0 );
    assert( matrices1 != NULL );
    assert( nrows1 > 0 );
    assert( ncols1 != NULL );
@@ -1874,6 +1879,20 @@ SCIP_RETCODE isDoublelLexSym(
    SCIP_CALL( SCIPallocBufferArray(scip, &idxtocol1, nidx) );
    SCIP_CALL( SCIPallocBufferArray(scip, &idxtocol2, nidx) );
 
+   /* use separate loops for efficiency reasons */
+   for (i = 0; i < nsymvars; ++i)
+      idxtomatrix1[i] = -1;
+   for (i = 0; i < nsymvars; ++i)
+      idxtomatrix2[i] = -1;
+   for (i = 0; i < nsymvars; ++i)
+      idxtorow1[i] = -1;
+   for (i = 0; i < nsymvars; ++i)
+      idxtorow2[i] = -1;
+   for (i = 0; i < nsymvars; ++i)
+      idxtocol1[i] = -1;
+   for (i = 0; i < nsymvars; ++i)
+      idxtocol2[i] = -1;
+
    for (c = 0; c < nmatrices1; ++c)
    {
       for (i = 0; i < nrows1; ++i)
@@ -1896,6 +1915,16 @@ SCIP_RETCODE isDoublelLexSym(
             idxtorow2[matrices2[c][i][j]] = i;
             idxtocol2[matrices2[c][i][j]] = j;
          }
+      }
+   }
+
+   /* check whether the variables of the two orbitopes coincide */
+   for (i = 0; i < nsymvars; ++i)
+   {
+      if ( (idxtomatrix1[i] == -1) != (idxtomatrix2[i] == -1) )
+      {
+         *success = FALSE;
+         goto FREEINITMEMORY;
       }
    }
 
@@ -1988,13 +2017,6 @@ SCIP_RETCODE isDoublelLexSym(
  FREEMEMORY:
    SCIPfreeBufferArray(scip, &sortvals);
 
-   SCIPfreeBufferArray(scip, &idxtocol2);
-   SCIPfreeBufferArray(scip, &idxtocol1);
-   SCIPfreeBufferArray(scip, &idxtorow2);
-   SCIPfreeBufferArray(scip, &idxtorow1);
-   SCIPfreeBufferArray(scip, &idxtomatrix2);
-   SCIPfreeBufferArray(scip, &idxtomatrix1);
-
    if ( !(*success) )
    {
       for (i = *nrows - 1; i >= 0; --i)
@@ -2008,6 +2030,14 @@ SCIP_RETCODE isDoublelLexSym(
       *rowsbegin = NULL;
       *colsbegin = NULL;
    }
+
+ FREEINITMEMORY:
+   SCIPfreeBufferArray(scip, &idxtocol2);
+   SCIPfreeBufferArray(scip, &idxtocol1);
+   SCIPfreeBufferArray(scip, &idxtorow2);
+   SCIPfreeBufferArray(scip, &idxtorow1);
+   SCIPfreeBufferArray(scip, &idxtomatrix2);
+   SCIPfreeBufferArray(scip, &idxtomatrix1);
 
    return SCIP_OKAY;
 }
@@ -2121,7 +2151,7 @@ SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
    {
       assert( ncycs1 > 0 );
 
-      SCIP_CALL( isDoublelLexSym(scip, matricestype1, ncycs1, ncolstype1, nmatricestype1,
+      SCIP_CALL( isDoublelLexSym(scip, permlen, matricestype1, ncycs1, ncolstype1, nmatricestype1,
             matricestype2, ncycs2, ncolstype2, nmatricestype2,
             lexmatrix, nrows, ncols, lexrowsbegin, lexcolsbegin, success) );
 
@@ -2186,7 +2216,7 @@ SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
 
 
 /** helper function to test if val1 = val2 while permitting infinity-values */
-SCIP_Bool SCIPEQ(
+SCIP_Bool SCIPsymEQ(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
@@ -2220,7 +2250,7 @@ SCIP_Bool SCIPEQ(
 
 
 /** helper function to test if val1 <= val2 while permitting infinity-values */
-SCIP_Bool SCIPLE(
+SCIP_Bool SCIPsymLE(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
@@ -2258,7 +2288,7 @@ SCIP_Bool SCIPLE(
 
 
 /** helper function to test if val1 >= val2 while permitting infinity-values */
-SCIP_Bool SCIPGE(
+SCIP_Bool SCIPsymGE(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
@@ -2296,7 +2326,7 @@ SCIP_Bool SCIPGE(
 
 
 /** helper function to test if val1 < val2 while permitting infinity-values */
-SCIP_Bool SCIPLT(
+SCIP_Bool SCIPsymLT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */
@@ -2334,7 +2364,7 @@ SCIP_Bool SCIPLT(
 
 
 /** helper function to test if val1 > val2 while permitting infinity-values */
-SCIP_Bool SCIPGT(
+SCIP_Bool SCIPsymGT(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val1,               /**< left-hand side value */
    SCIP_Real             val2                /**< right-hand side value */

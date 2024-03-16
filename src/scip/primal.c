@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -812,24 +812,6 @@ SCIP_RETCODE primalAddSol(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
       primal->nbestsolsfound++;
       stat->bestsolnode = stat->nnodes;
-
-      if( set->limit_objstop != SCIP_INVALID ) /*lint !e777*/
-      {
-         SCIP_Real origobj;
-
-         if( !SCIPsolIsOriginal(sol) )
-         {
-            SCIP_Bool hasinfval;
-            SCIP_CALL( SCIPsolRetransform(sol, set, stat, origprob, transprob, &hasinfval) );
-         }
-         origobj = SCIPsolGetOrigObj(sol);
-
-         if( SCIPsetIsLE(set, origobj * (int) origprob->objsense, set->limit_objstop * (int) origprob->objsense) )
-         {
-            SCIPmessagePrintInfo(messagehdlr, "interrupting solve because objective stop was reached. \n");
-            stat->userinterrupt = TRUE;
-         }
-      }
    }
    else
    {
