@@ -5742,10 +5742,10 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    if ( checkorbired || checklexred )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &properperms, componentsize) );
-      for (p = 0; p < componentsize; ++p)
+      for (p = propdata->componentbegins[cidx]; p < propdata->componentbegins[cidx] + componentsize; ++p)
       {
-         if ( propdata->isproperperm[p] )
-            properperms[nproperperms++] = propdata->perms[propdata->components[propdata->componentbegins[cidx] + p]];
+         if ( propdata->isproperperm[propdata->components[p]] )
+            properperms[nproperperms++] = propdata->perms[propdata->components[p]];
       }
 
       /* possibly collect also signed permutations */
