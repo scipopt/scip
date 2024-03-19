@@ -84,6 +84,7 @@ Interface changes
 
 - limits/primal to terminate the solve as soon as the primal bound is at least as good as this value, same as limits/objectivestop (deprecated)
 - limits/dual to terminate the solve as soon as the dual bound is at least as good as this value
+- presolving/milp/internalmaxrounds to control the maximal rounds for each call of the milp presolver (PaPILO)
 
 ### New data structures
 
