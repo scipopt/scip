@@ -11,6 +11,7 @@ Fixed bugs
 - in count mode respect empty solution when problem is solved in presolving
 - fixed that SCIP may have tried to pass a negative random seed to an LP solver
 - fixed bug where conflict analysis in strong branching tried to analyze an unsuccessful LP solve
+- enable parameter limits/restarts by allowing to reach the restart limit in restartAllowed()
 
 Miscellaneous
 -------------
