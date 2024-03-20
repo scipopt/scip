@@ -27,5 +27,6 @@
 ### Does this merge request introduce an API change? :warning:
 
 * [ ] No, **or** as far as possible, the code ensures backwards compatibility.
-* [ ] No, **or** the `SCIP_APIVERSION` is updated (use label 'public SCIP API'; in particular if new `SCIP_EXPORT` methods have been added).
+* [ ] No, **or** the `SCIP_APIVERSION` will be updated (use label 'public SCIP API'; in particular if new `SCIP_EXPORT` methods have been added).
+  To update `SCIP_APIVERSION`, run `scripts/updateversion.py -a` on branch **master** after the changes of this MR have arrived in the master branch (if this is a merge into vX-minor, then first merge vX-minor into master or wait for the Jenkins job that does that).
 * [ ] No parameter was added/deleted/changed **or** the MR is tagged with the label 'default parameter'. (This includes the addition of parameters by adding/deleting a plugin.)
