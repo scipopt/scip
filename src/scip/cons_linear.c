@@ -2456,7 +2456,7 @@ void getMinActivity(
    }
    else
    {
-      SCIP_Real tmpactivity;
+      SCIP_Real QUAD(tmpactivity);
 
       /* recompute minactivity if it is not valid */
       if( global )
@@ -2465,7 +2465,7 @@ void getMinActivity(
             consdataRecomputeGlbMinactivity(scip, consdata);
          assert(consdata->validglbminact);
 
-         tmpactivity = QUAD_TO_DBL(consdata->glbminactivity);
+         QUAD_ASSIGN_Q(tmpactivity, consdata->glbminactivity);
       }
       else
       {
@@ -2473,26 +2473,27 @@ void getMinActivity(
             consdataRecomputeMinactivity(scip, consdata);
          assert(consdata->validminact);
 
-         tmpactivity = QUAD_TO_DBL(consdata->minactivity);
+         QUAD_ASSIGN_Q(tmpactivity, consdata->minactivity);
       }
 
-      /* we have no infinite and no neg. huge contributions, but pos. huge contributions;
-       * a feasible relaxation of the minactivity is the number of positive huge contributions
-       * times the minimum value counting as "huge" plus finite (and non-huge) part of minactivity - delta
+      /* calculate residual minactivity */
+      SCIPquadprecSumQD(tmpactivity, tmpactivity, -delta);
+
+      /* we have no infinite and no neg. huge contributions, but pos. huge contributions; a feasible relaxation of the
+       * minactivity is given by adding the number of positive huge contributions times the huge value
        */
       if( poshuge > 0 )
       {
-         *minactivity = 1.0 * poshuge * SCIPgetHugeValue(scip) + (tmpactivity - delta);
-         *issettoinfinity = FALSE;
+         SCIPquadprecSumQD(tmpactivity, tmpactivity, poshuge * SCIPgetHugeValue(scip));
          *isrelax = TRUE;
       }
-      /* all counters are zero, so the minactivity is just stored and we subtract the delta */
+      /* all counters are zero, so the minactivity is complete */
       else
-      {
-         *minactivity = tmpactivity - delta;
-         *issettoinfinity = FALSE;
          *isrelax = FALSE;
-      }
+
+      /* round residual minactivity */
+      *minactivity = QUAD_TO_DBL(tmpactivity);
+      *issettoinfinity = FALSE;
    }
 }
 
@@ -2557,7 +2558,7 @@ void getMaxActivity(
    }
    else
    {
-      SCIP_Real tmpactivity;
+      SCIP_Real QUAD(tmpactivity);
 
       /* recompute maxactivity if it is not valid */
       if( global )
@@ -2566,7 +2567,7 @@ void getMaxActivity(
             consdataRecomputeGlbMaxactivity(scip, consdata);
          assert(consdata->validglbmaxact);
 
-         tmpactivity = QUAD_TO_DBL(consdata->glbmaxactivity);
+         QUAD_ASSIGN_Q(tmpactivity, consdata->glbmaxactivity);
       }
       else
       {
@@ -2574,26 +2575,27 @@ void getMaxActivity(
             consdataRecomputeMaxactivity(scip, consdata);
          assert(consdata->validmaxact);
 
-         tmpactivity = QUAD_TO_DBL(consdata->maxactivity);
+         QUAD_ASSIGN_Q(tmpactivity, consdata->maxactivity);
       }
 
-      /* we have no infinite, and no pos. huge contributions, but neg. huge contributions;
-       * a feasible relaxation of the maxactivity is minus the number of negative huge contributions
-       * times the minimum value counting as "huge" plus the finite (and non-huge) part of maxactivity minus delta
+      /* calculate residual maxactivity */
+      SCIPquadprecSumQD(tmpactivity, tmpactivity, -delta);
+
+      /* we have no infinite and no pos. huge contributions, but neg. huge contributions; a feasible relaxation of the
+       * maxactivity is given by subtracting the number of negative huge contributions times the huge value
        */
       if( neghuge > 0 )
       {
-         *maxactivity = -1.0 * neghuge * SCIPgetHugeValue(scip) + tmpactivity - delta;
-         *issettoinfinity = FALSE;
+         SCIPquadprecSumQD(tmpactivity, tmpactivity, -neghuge * SCIPgetHugeValue(scip));
          *isrelax = TRUE;
       }
-      /* all counters are zero, so the maxactivity is just stored and we subtract the delta */
+      /* all counters are zero, so the maxactivity is complete */
       else
-      {
-         *maxactivity = tmpactivity - delta;
-         *issettoinfinity = FALSE;
          *isrelax = FALSE;
-      }
+
+      /* round residual maxactivity */
+      *maxactivity = QUAD_TO_DBL(tmpactivity);
+      *issettoinfinity = FALSE;
    }
 }
 
@@ -4313,6 +4315,12 @@ SCIP_RETCODE normalizeCons(
 
    /* return if scaling by maxval will eliminate coefficients */
    if( SCIPisZero(scip, minabsval/maxabsval) )
+      return SCIP_OKAY;
+
+   /* return if scaling by maxval will eliminate or generate non-zero sides */
+   if( !SCIPisInfinity(scip, consdata->lhs) && SCIPisFeasZero(scip, consdata->lhs) != SCIPisFeasZero(scip, consdata->lhs/maxabsval) )
+      return SCIP_OKAY;
+   if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisFeasZero(scip, consdata->rhs) != SCIPisFeasZero(scip, consdata->rhs/maxabsval) )
       return SCIP_OKAY;
 
    /* check if not all absolute coefficients are near 1.0 but scaling could do */
@@ -11351,7 +11359,6 @@ SCIP_RETCODE aggregateVariables(
             return SCIP_OKAY;
          }
 
-         /* normalize constraint */
          SCIP_CALL( normalizeCons(scip, cons, &infeasible) );
 
          if( infeasible )
@@ -11615,7 +11622,6 @@ SCIP_RETCODE simplifyInequalities(
     */
    consdata->normalized = FALSE;
 
-   /* normalize constraint */
    SCIP_CALL( normalizeCons(scip, cons, infeasible) );
    assert(nvars == consdata->nvars);
 
@@ -11992,7 +11998,6 @@ SCIP_RETCODE simplifyInequalities(
 
          oldcoef = vals[w];
 
-         /* normalize constraint */
          SCIP_CALL( normalizeCons(scip, cons, infeasible) );
          assert(vars == consdata->vars);
          assert(vals == consdata->vals);
@@ -12223,7 +12228,6 @@ SCIP_RETCODE simplifyInequalities(
 
             if( !notchangable )
             {
-               /* normalize constraint */
                SCIP_CALL( normalizeCons(scip, cons, infeasible) );
                assert(vars == consdata->vars);
                assert(vals == consdata->vals);
@@ -12469,7 +12473,6 @@ SCIP_RETCODE simplifyInequalities(
          }
       }
 
-      /* normalize constraint */
       SCIP_CALL( normalizeCons(scip, cons, infeasible) );
       assert(vars == consdata->vars);
       assert(vals == consdata->vals);
@@ -13047,7 +13050,6 @@ SCIP_RETCODE aggregateConstraints(
       /* copy the upgraded flag from the old cons0 to the new constraint */
       newconsdata->upgraded = consdata0->upgraded;
 
-      /* normalize the new constraint */
       SCIP_CALL( normalizeCons(scip, newcons, infeasible) );
 
       if( *infeasible )
@@ -16498,7 +16500,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          consdata->presolved = TRUE;
          SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
-         /* normalize constraint */
          SCIP_CALL( normalizeCons(scip, cons, &infeasible) );
 
          if( infeasible )
@@ -18899,7 +18900,6 @@ SCIP_RETCODE SCIPupgradeConsLinear(
       }
    }
 
-   /* normalize constraint */
    SCIP_CALL( normalizeCons(scip, cons, &infeasible) );
 
    /* normalizeCons() can only detect infeasibility when scaling with the gcd. in that case, the scaling was
