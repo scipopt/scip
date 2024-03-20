@@ -6083,7 +6083,7 @@ SCIP_RETCODE handleOrbitope(
       SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix, nelem) );
       for (i = 0, pos = 0; i < nrows; ++i)
       {
-         for (j = 0; j < ncols; ++j; ++pos)
+         for (j = 0; j < ncols; ++j, ++pos)
             orbitopevarmatrix[pos] = propdata->permvars[varidxmatrix[i][j]];
       }
 
@@ -6686,8 +6686,8 @@ SCIP_RETCODE handleDoublelLexMatrix(
       /* handle column symmetries via original column and row ordering */
       for (p = 0; p < ncolblocks; ++p)
       {
-         int j = 0;
          int jj;
+         j = 0;
 
          /* we can only handle the orbitope if all variables in a row have the same domain center */
          if ( ! isEquallyCenteredOrbitope(scip, propdata->permvardomaincenter, varidxmatrix, 0, nrows,
