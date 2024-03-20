@@ -5843,7 +5843,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
 
             for (p = 0; p < propdata->npermvars; ++p)
             {
-               if ( perm[p] == propdata->npermvars + p )
+               if ( perm[p] == propdata->npermvars + p ) /*lint !e771*/
                {
                   vars[nvars] = propdata->permvars[p];
                   vals[nvars++] = 1.0;
@@ -6083,8 +6083,8 @@ SCIP_RETCODE handleOrbitope(
       SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix, nelem) );
       for (i = 0, pos = 0; i < nrows; ++i)
       {
-         for (j = 0; j < ncols; ++j)
-            orbitopevarmatrix[pos++] = propdata->permvars[varidxmatrix[i][j]];
+         for (j = 0; j < ncols; ++j; ++pos)
+            orbitopevarmatrix[pos] = propdata->permvars[varidxmatrix[i][j]];
       }
 
       SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
@@ -6107,7 +6107,6 @@ SCIP_RETCODE handleOrbitope(
       consvals[1] = 1.0;
 
       /* sort variables in first row */
-      pos = propdata->ngenlinconss;
       for (j = 0; j < ncols - 1; ++j)
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_sort_%d", partialname, j);
@@ -6127,6 +6126,8 @@ SCIP_RETCODE handleOrbitope(
          for (j = 0; j < ncols; ++j)
          {
             consvars[0] = orbitopevarmatrix[j];
+
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upperdomain_%d", partialname, j);
 
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 1, consvars, consvals,
                   propdata->permvardomaincenter[varidxmatrix[0][j]], SCIPinfinity(scip),
@@ -6284,7 +6285,6 @@ SCIP_RETCODE handleDoubleLexOrbitope(
       consvals[1] = 1.0;
 
       /* sort variables in first row */
-      pos = propdata->ngenlinconss;
       for (j = 0; j < ncols - 1; ++j)
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_sort_%d", partialname, j);
@@ -6686,6 +6686,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
       /* handle column symmetries via original column and row ordering */
       for (p = 0; p < ncolblocks; ++p)
       {
+         int j = 0;
          int jj;
 
          /* we can only handle the orbitope if all variables in a row have the same domain center */
@@ -6838,7 +6839,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
          success = FALSE;
 
          /* signed permutations can only handle the orbitope if all variables per row have the same domain center */
-         if ( propdata->symtype != SYM_SYMTYPE_PERM )
+         if ( propdata->symtype != (int) SYM_SYMTYPE_PERM )
          {
             if ( ! isEquallyCenteredOrbitope(scip, propdata->permvardomaincenter, lexmatrix, 0, nrows, 0, ncols, TRUE) )
                goto FREEMEMORY;
@@ -6862,7 +6863,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
             }
 
             /* possibly flip rows to be able to handle signed orbitopes */
-            if ( nflipablerows > 0 )
+            if ( issignedorbitope && nflipablerows > 0 )
             {
                int j;
                int isigned = 0;
@@ -7004,8 +7005,6 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL)*/
    )
 {
-   SCIP_Bool useorbitalredorlexred;
-
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( propdata->ncomponents >= 0 );
@@ -7027,7 +7026,12 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
    SCIP_CALL( tryHandleSubgroups(scip, propdata, cidx) );
    if ( ISSSTACTIVE(propdata->usesymmetry) )
    {
-      SCIP_CALL( addSSTConss(scip, propdata, useorbitalredorlexred, nchgbds, cidx) );
+      SCIP_Bool sstonlycontvars;
+
+      /* only run SST cuts on continuous variables orbital reduction or lexicographic reduction is active */
+      sstonlycontvars = ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
+         || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks );
+      SCIP_CALL( addSSTConss(scip, propdata, sstonlycontvars, nchgbds, cidx) );
    }
    SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata, cidx) );
    SCIP_CALL( addSymresackConss(scip, propdata, cidx) );
