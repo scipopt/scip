@@ -1860,6 +1860,14 @@ void* BMSallocBlockMemory_work(
       (*chkmemptr)->line = line;
 #endif
    }
+#ifndef NDEBUG
+   else
+   {
+      BMSfreeMemoryArrayNull(&(*chkmemptr)->filename);
+      BMSduplicateMemoryArray(&(*chkmemptr)->filename, filename, strlen(filename) + 1);
+      (*chkmemptr)->line = line;
+   }
+#endif
 
    /* get memory inside the chunk block */
    ptr = allocChkmemElement(*chkmemptr, &blkmem->memallocated);
