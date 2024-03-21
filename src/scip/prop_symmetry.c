@@ -6833,7 +6833,6 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
       if ( isorbitope )
       {
          int** orbitopematrix;
-         SCIP_Bool issignedorbitope = FALSE;
          char partialname[SCIP_MAXSTRLEN];
 
          success = FALSE;
@@ -6850,20 +6849,24 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
          if ( propdata->handlesignedorbitopes )
          {
             int* flipablerows;
-            int nflipablerows;
+            int nflipablerows = 0;
             int p;
 
             SCIP_CALL( SCIPallocBufferArray(scip, &flipablerows, nrows) );
 
-            /* check whether the signed permutations flip entries within a single column of the orbitope matrix */
-            for (p = 0; p < nselectedperms && ! issignedorbitope; ++p)
+            /* check whether the signed permutations flip entries within a single column of the orbitope matrix
+             *
+             * It is sufficient to find one such signed permutations, because only one row will incorporate
+             * information about the sign change.
+             */
+            for (p = 0; p < nselectedperms && nflipablerows == 0; ++p)
             {
                SCIP_CALL( hasOrbitopeColumnFlip(lexmatrix, 0, nrows, 0, ncols, perms[p], propdata->npermvars, FALSE,
                      flipablerows, &nflipablerows) );
             }
 
             /* possibly flip rows to be able to handle signed orbitopes */
-            if ( issignedorbitope && nflipablerows > 0 )
+            if ( nflipablerows > 0 )
             {
                int j;
                int isigned = 0;
