@@ -64,6 +64,8 @@ Fixed bugs
 - enable parameter limits/restarts by allowing to reach the restart limit in restartAllowed()
 - handle normalizing linear constraints in presolving with more caution to avoid numerical difficulties for integer variables with large coefficients
 - use quad precision to calculate residual activity bounds to reduce numerical errors for large variable bounds in cons_linear.c
+- in SCIPsolveProbingLP() when objective has been changed do not return cutoff due to exceeding the cutoff bound
+- set probing LP to be a relaxation only when objective has not been changed
 
 Miscellaneous
 -------------
