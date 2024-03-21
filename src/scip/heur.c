@@ -144,7 +144,7 @@ SCIP_RETCODE SCIPdivesetReset(
    }
 
    /* reset the random number generator */
-   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed));
+   SCIPrandomSetSeed(diveset->randnumgen, SCIPsetInitializeRandomSeed(set, diveset->initialseed));
 
    return SCIP_OKAY;
 }
