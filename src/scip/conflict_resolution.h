@@ -116,8 +116,9 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_CONFLICTROW*     conflictrow,      /**< conflict row to add to the tree */
-   SCIP_Bool*            success             /**< true if the conflict is added to the problem */
+   SCIP_CONFLICTROW*     conflictrow,        /**< conflict row to add to the tree */
+   SCIP_Bool*            success,            /**< true if the conflict is added to the problem */
+   SCIP_Bool*            mirsuccess          /**< true if the MIR conflict is added to the problem */
    );
 
 /** creates and clears the conflict rowsS */

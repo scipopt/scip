@@ -2065,7 +2065,10 @@ SCIP_RETCODE computeSlack(
    SCIPsetDebugMsgPrint(set, "Calculating slack for row at depth %d position %d \n", SCIPbdchginfoGetDepth(currbdchginfo), SCIPbdchginfoGetPos(currbdchginfo));
 #endif
    QUAD_ASSIGN(slack, 0.0);
-   currbdchgidx = SCIPbdchginfoGetIdx(currbdchginfo);
+   if (currbdchginfo == NULL)
+      currbdchgidx = NULL;
+   else
+      currbdchgidx = SCIPbdchginfoGetIdx(currbdchginfo);
    for( i = 0; i < row->nnz; i++ )
    {
       SCIP_Real coef;
@@ -2117,6 +2120,111 @@ SCIP_RETCODE computeSlack(
    SCIPsetDebugMsgPrint(set, "Row slack: %f \n",QUAD_TO_DBL(slack) );
 #endif
    row->slack = QUAD_TO_DBL(slack);
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE MirConflict(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
+   SCIP_VAR**            vars,               /**< array of variables */
+   int                   nvars,              /**< number of variables */
+   SCIP_CONFLICTROW*     conflictrow,        /**< reason row */
+   SCIP_Bool*            success             /**< whether a mir conflict was found */
+   )
+{
+   SCIP_SOL* refsol;
+   SCIP_AGGRROW* aggrrow;
+   int* cutinds;
+   SCIP_Real* cutcoefs;
+   int* rowinds;
+   SCIP_Real* rowvals;
+
+   int cutnnz;
+   int rownnz;
+   SCIP_Real cutrhs;
+   SCIP_Real rowrhs;
+
+   assert(set != NULL);
+   assert(vars != NULL);
+   assert(conflictrow != NULL);
+   assert(conflictrow->inds != NULL);
+   assert(conflictrow->vals != NULL);
+   assert(conflictrow->nnz > 0);
+
+
+   SCIPsetDebugMsgPrint(set, "Apply MIR on Conflict\n");
+
+   /* creating the aggregation row. There will be only a single row in this aggregation, since it is only used to
+    * compute the MIR coefficients
+    */
+   SCIP_CALL( SCIPaggrRowCreate(set->scip, &aggrrow) );
+
+   SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
+
+   /* initialize arrays for cut indices, cut coefficients, row indices, row values */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &cutinds, conflictrow->nnz) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &cutcoefs, conflictrow->nnz) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, conflictrow->nnz) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowvals, conflictrow->nnz) );
+
+   /* todo change this: set all variables to some dummy value */
+   for( int i = 0; i < nvars; ++i )
+      SCIPsetSolVal(set->scip, refsol, vars[i], 0.0);
+
+   /* create a sparse row of the form ax <= b from the reason */
+   rowrhs = -conflictrow->lhs;
+   rownnz = conflictrow->nnz;
+   for( int i = 0; i < rownnz; ++i )
+   {
+      int idx;
+      SCIP_Real coef;
+      idx = conflictrow->inds[i];
+      coef = conflictrow->vals[idx];
+      rowinds[i] = idx;
+      rowvals[i] = -coef;
+
+      if( coef > 0.0 )
+         SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetUbLocal(vars[idx]));
+      else
+         SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetLbLocal(vars[idx]));
+   }
+
+   SCIP_Real cutefficacy;
+   int cutrank;
+   SCIP_Bool cutislocal;
+
+   SCIP_CALL( SCIPaggrRowAddCustomCons(set->scip, aggrrow, rowinds, rowvals, rownnz, rowrhs, 1.0, 1, FALSE) );
+
+   SCIPdebug(printAggrrow(aggrrow, set, vars));
+
+   /* apply MIR */
+   SCIP_CALL( SCIPcalcMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, FALSE, FIXINTEGRALRHS, TRUE, NULL,
+   NULL, MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy,
+   &cutrank, &cutislocal, success) );
+
+   if(*success)
+   {
+      conflictRowClear(blkmem, conflictrow, nvars);
+      conflictrow->nnz = cutnnz;
+      conflictrow->lhs = -cutrhs;
+      for (int i = 0; i < cutnnz; ++i)
+      {
+         conflictrow->inds[i] = cutinds[i];
+         conflictrow->vals[cutinds[i]] = -cutcoefs[i];
+      }
+   }
+
+   /* remove variables with zero coefficient. Loop backwards */
+   conflictRowRemoveZeroVars(conflictrow, set);
+
+   SCIPaggrRowFree(set->scip, &aggrrow);
+   SCIPfreeSol(set->scip, &refsol);
+   SCIPsetFreeBufferArray(set, &cutinds);
+   SCIPsetFreeBufferArray(set, &cutcoefs);
+   SCIPsetFreeBufferArray(set, &rowinds);
+   SCIPsetFreeBufferArray(set, &rowvals);
+
    return SCIP_OKAY;
 }
 
@@ -2899,7 +3007,8 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_CONFLICTROW*     conflictrow,        /**< conflict row to add to the tree */
-   SCIP_Bool*            success             /**< true if the conflict is added to the problem */
+   SCIP_Bool*            success,            /**< true if the conflict is added to the problem */
+   SCIP_Bool*            mirsuccess          /**< true if the MIR was successful */
    )
 {
    SCIP_VAR** vars;
@@ -2945,6 +3054,7 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
       1, focusdepth, conflictrow->insertdepth, conflictrow->validdepth, conflictrow->conflictdepth, conflictrow->repropdepth, maxsize);
 
    *success = FALSE;
+   *mirsuccess = FALSE;
    /* do not add long conflicts */
    if( conflictrow->nnz > maxsize )
    {
@@ -3031,6 +3141,20 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
                      SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
                      conflictrow->insertdepth, conflictrow->validdepth, conflictrow->conflictdepth,
                      conflictrow->repropdepth, conflictrow->nnz);
+      if(set->conf_applysimplemir)
+      {
+         MirConflict(set, blkmem, vars, SCIPprobGetNVars(transprob), conflictrow, mirsuccess);
+         if ( *mirsuccess )
+         {
+            SCIP_CALL( createAndAddConflictCon(conflict, blkmem, set, stat, vars, \
+                           tree, reopt, lp, cliquetable, conflictrow, conflictrow->insertdepth, success) );
+            conflict->nappliedglbresconss++;
+            SCIPsetDebugMsgPrint(set, " \t -> MIR row added (cdpt:%d, fdpt:%d, insert:%d, valid:%d, conf: %d, reprop: %d, len:%d):\n",
+                           SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
+                           conflictrow->insertdepth, conflictrow->validdepth, conflictrow->conflictdepth,
+                           conflictrow->repropdepth, conflictrow->nnz);
+         }
+      }
    }
    else
    {
@@ -4704,6 +4828,7 @@ SCIP_RETCODE addClauseConflict(
    )
 {
    SCIP_Bool success;
+   SCIP_Bool mirsuccess;
 
    SCIP_CALL( getConflictClause(conflict, blkmem, set, transprob->vars, currbdchginfo, &success, fixbounds, fixinds, transprob->nvars, FALSE) );
 
@@ -4725,9 +4850,15 @@ SCIP_RETCODE addClauseConflict(
    if(SCIPdebugSolIsEnabled(set->scip))
       checkConflictDebugSol(conflict, blkmem, set, transprob->vars, stat, tree, conflict->conflictrow);
 
-   SCIP_CALL( SCIPconflictAddConflictCon(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, &success));
+   mirsuccess = FALSE;
+   SCIP_CALL( SCIPconflictAddConflictCon(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, conflict->conflictrow, &success, &mirsuccess) );
 
    if (success)
+   {
+      (*nconss)++;
+      (*nconfvars) += conflict->conflictrow->nnz;
+   }
+   if (mirsuccess)
    {
       (*nconss)++;
       (*nconfvars) += conflict->conflictrow->nnz;
@@ -4767,13 +4898,19 @@ SCIP_RETCODE addConflictRows(
       {
 
          SCIP_Bool success;
-
+         SCIP_Bool mirsuccess;
          if(SCIPdebugSolIsEnabled(set->scip))
             checkConflictDebugSol(conflict, blkmem, set, transprob->vars, stat, tree, conflict->conflictrow);
 
+         mirsuccess = FALSE;
          SCIP_CALL( SCIPconflictAddConflictCon(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
-               lp, branchcand, eventqueue, cliquetable, conflictrowtoadd, &success) );
+               lp, branchcand, eventqueue, cliquetable, conflictrowtoadd, &success, &mirsuccess) );
          if( success )
+         {
+            (*nconss)++;
+            (*nconfvars) += conflictrowtoadd->nnz;
+         }
+         if( mirsuccess )
          {
             (*nconss)++;
             (*nconfvars) += conflictrowtoadd->nnz;
