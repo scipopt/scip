@@ -31,6 +31,11 @@
 
 #include "compute_symmetry.h"
 
+/* possibly turn on the dejavu debug mode */
+#ifdef SCIP_DEBUG
+#define DEJDEBUG
+#endif
+
 #include "build_dejavu_graph.h"   /* also includes dejavu */
 
 #include "scip/expr_var.h"
