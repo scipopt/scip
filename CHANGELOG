@@ -60,6 +60,8 @@ Known bugs
 Features
 --------
 
+- Dejavu can be used to compute symmetries; the source code is shipped with SCIP and incorporates sassy
+
 Performance improvements
 ------------------------
 
@@ -95,13 +97,19 @@ Build system
 
 ### Makefile
 
+- new option SYM=dejavu to choose Dejavu for computing symmetries
+
 ### Cmake
+
+- new option SYM=dejavu to choose Dejavu for computing symmetries
 
 Testing
 -------
 
 Miscellaneous
 -------------
+
+- We now use sassy as shipped with dejavu.
 
 
 @section RN901 SCIP 9.0.1
