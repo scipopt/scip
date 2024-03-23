@@ -989,6 +989,7 @@ set(scipheaders
 )
 
 set(symheaders
+  symmetry/build_dejavu_graph.h
   symmetry/build_sassy_graph.h
   symmetry/compute_symmetry.h
   symmetry/type_symmetry.h

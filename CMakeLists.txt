@@ -106,7 +106,7 @@ set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso highs none )  #define list of values GUI will offer for the variable
 
 set(SYM sbliss CACHE STRING "options for symmetry computation")  #create the variable
-set_property(CACHE SYM PROPERTY STRINGS bliss sbliss nauty snauty none )  #define list of values GUI will offer for the variable
+set_property(CACHE SYM PROPERTY STRINGS bliss sbliss nauty snauty dejavu none )  #define list of values GUI will offer for the variable
 
 if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
     message(FATAL_ERROR "You have not selected a valid CMAKE_BUILD_TYPE. Please select 'Release' or 'Debug'.")
@@ -244,6 +244,18 @@ elseif(SYM STREQUAL "nauty")
     set(NAUTY_TARGET libnauty)
     set(SYM_LIBRARIES libnauty)
     set(SYM_PIC_LIBRARIES libnauty)
+elseif(SYM STREQUAL "dejavu")
+    message(STATUS "Support SYM: dejavu")
+    set(sym symmetry/compute_symmetry_dejavu.cpp symmetry/build_dejavu_graph.cpp)
+
+    # dejavu needs C++-17
+    set(CMAKE_CXX_STANDARD 17)
+
+    if(NOT DEJAVU_INCLUDE_DIR)
+      find_path(DEJAVU_INCLUDE_DIR
+	NAMES dejavu/dejavu.hh
+	PATH_SUFFIXES include src)
+    endif()
 elseif(SYM STREQUAL "none")
     message(STATUS "Support SYM: OFF")
     set(sym symmetry/compute_symmetry_none.cpp)
