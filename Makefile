@@ -466,6 +466,22 @@ LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<N
 endif
 endif
 
+SYMOPTIONS	+=	dejavu
+ifeq ($(SYM),dejavu)
+SYMOBJ		=	symmetry/build_dejavu_graph.o
+SYMOBJ		+=	symmetry/compute_symmetry_dejavu.o
+SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
+SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+ifeq ($(DEJAVUEXTERNAL),false)
+FLAGS		+=	-I$(SRCDIR)/dejavu
+else
+FLAGS		+=	-I$(LIBDIR)/include/dejavuinc
+SOFTLINKS	+=	$(LIBDIR)/include/dejavuinc
+LPIINSTMSG	+=	"\n  -> \"dejavuinc\" is the path to the dejavu source directory, e.g., \"<DEJAVU-path>\".\n"
+endif
+ALLSRC		+=	$(SYMSRC)
+endif
+
 #-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------
@@ -1701,8 +1717,10 @@ ifneq ($(SYM),bliss)
 ifneq ($(SYM),sbliss)
 ifneq ($(SYM),nauty)
 ifneq ($(SYM),snauty)
+ifneq ($(SYM),dejavu)
 ifneq ($(SYM),none)
 		$(error invalid SYM flag selected: SYM=$(SYM). Possible options are: $(SYMOPTIONS))
+endif
 endif
 endif
 endif
