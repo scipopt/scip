@@ -233,6 +233,8 @@ SCIP_RETCODE computeAutomorphisms(
    /* set up dejavu */
    dejavu::solver dejavu;
 
+   dejavu.set_prefer_dfs(true);
+
 #ifndef SCIP_DEBUG
    dejavu.set_print(false);
 #endif
