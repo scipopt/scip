@@ -3650,7 +3650,7 @@ namespace dejavu {
 #if defined(BLISS_VERSION_MAJOR) && defined(BLISS_VERSION_MINOR)
 #if ( BLISS_VERSION_MAJOR >= 1 || BLISS_VERSION_MINOR >= 76 )
         void bliss_hook(unsigned int n, const unsigned int *aut) {
-          auto p = preprocessor::save_preprocessor;
+           auto p = save_preprocessor;
           p->pre_hook_buffered(n, (const int *) aut, -1, nullptr, p->saved_hook);
        }
 #else
