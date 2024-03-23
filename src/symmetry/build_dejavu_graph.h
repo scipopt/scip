@@ -37,6 +37,7 @@
 
 /* include dejavu */
 #ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #pragma GCC diagnostic ignored "-Wshadow"
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wsign-compare"
@@ -44,6 +45,7 @@
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wdeprecated-copy"
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#pragma GCC diagnostic ignored "-Wunused-private-field"
 #endif
 
 #ifdef _MSC_VER
@@ -65,6 +67,7 @@
 #pragma GCC diagnostic warning "-Wpedantic"
 #pragma GCC diagnostic warning "-Wdeprecated-copy"
 #pragma GCC diagnostic warning "-Wnon-virtual-dtor"
+#pragma GCC diagnostic warning "-Wunused-private-field"
 #endif
 
 #ifdef _MSC_VER
