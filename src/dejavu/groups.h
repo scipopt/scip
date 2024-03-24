@@ -128,6 +128,17 @@ namespace dejavu {
             }
 
             /**
+             * Returns where `point` is mapped to under currently stored automorphism.
+             * @param point
+             * @return
+             */
+            inline int &operator[](int point) const {
+                dej_assert(point >= 0);
+                dej_assert(point < domain_size);
+                return automorphism[point];
+            }
+
+            /**
              * If 0/1 support is activated, this automorphism_workspace will only track whether the support of the
              * underlying automorphism is trivial (=0) or non-trivial (>=1). Some operations are more efficient, if
              * 0/1 support is used (e.g., \a apply)
@@ -642,6 +653,13 @@ namespace dejavu {
             }
 
             orbit() = default;
+            orbit(const orbit& other)  {
+                sz = other.sz;
+                map_arr = other.map_arr;
+                orb_sz = other.orb_sz;
+            }
+
+
 
             bool operator==(orbit& other_orbit) {
                 bool comp = (other_orbit.sz == sz) ;
@@ -833,6 +851,10 @@ namespace dejavu {
         public:
             int s_stored_sparse = 0; /**< how many generators are stored in a sparse manner */
             int s_stored_dense = 0;  /**< how many generators are stored in a dense manner */
+
+            generating_set() = default;
+            generating_set(const generating_set&) = delete;
+            generating_set& operator=(const generating_set&) = delete;
 
             /**
              * Set up this generating set.

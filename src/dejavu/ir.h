@@ -1857,9 +1857,6 @@ namespace dejavu {
                 this->data = _data;
                 this->next = _next;
                 this->owns_data = ownsdata;
-                if(_next == nullptr) {
-                    _next = this; // TODO supposed to be this->next?
-                }
                 this->parent = _parent;
             }
 

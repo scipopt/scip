@@ -516,8 +516,8 @@ namespace dejavu {
                 std::vector<int> base_sizes;  /*< current size of colors on base_vertex */
 
                 // local modules and workspace, to be used by other modules
-                ir::cell_selector_factory m_selectors; /*< cell selector creation */
-                ir::refinement        m_refinement;    /*< workspace for color refinement and other utilities */
+                ir::cell_selector_factory m_selectors;  /*< cell selector creation */
+                ir::refinement            m_refinement; /*< workspace for color refinement and other utilities */
                 groups::domain_compressor m_compress;/*< can compress a workspace of vertices to a subset of vertices */
                 groups::automorphism_workspace automorphism(g->v_size); /*< workspace to keep an automorphism */
                 groups::schreier_workspace     schreierw(g->v_size);    /*< workspace for Schreier-Sims */
@@ -672,15 +672,11 @@ namespace dejavu {
                     sh_tree.reset(base_vertex, &root_save, can_keep_previous);
                     if (s_inprocessed) sh_tree.clear_leaves();
 
-                    s_inprocessed = false; /*< tracks whether we changed the root of IR tree since we've initialized BFS
-                                            *  and Schreier last time */
-
                     // we add the leaf of the base_vertex to the IR tree
                     search_strategy::random_ir::specific_walk(g, sh_tree, local_state, base_vertex);
 
                     s_last_bfs_pruned = false;
                     s_any_bfs_pruned  = false;
-                    int s_bfs_next_level_nodes = search_strategy::bfs_ir::next_level_estimate(sh_tree, selector);
                     int h_rand_fail_lim_total = 0;
                     int h_rand_fail_lim_now   = 0;
                     double s_path_fail1_avg   = 0;
@@ -703,7 +699,8 @@ namespace dejavu {
                         // here are our decision heuristics (AKA dark magic)
 
                         // first, we update our estimations / statistics
-                        s_bfs_next_level_nodes = search_strategy::bfs_ir::next_level_estimate(sh_tree, selector);
+                        const int s_bfs_next_level_nodes =
+                                search_strategy::bfs_ir::next_level_estimate(sh_tree, selector);
 
                         const bool s_have_rand_estimate = (m_rand.s_paths >= 4);  /*< for some estimations, we need a
                                                                                    *  few random paths */
@@ -716,13 +713,11 @@ namespace dejavu {
                         }
 
                         // using this data, we now make a decision
-                        next_routine = restart; /*< undecided? do a restart -- (not really) */
+                        next_routine = random_ir; /*< don't have an estimate? let's poke a bit with random! */
                         double score_rand, score_bfs;
 
-                        if (!s_have_rand_estimate) { /*< don't have an estimate, so let's poke a bit with random! */
-                            next_routine = random_ir; /*< need to gather more information */
-                        } else {
-                            // now that we have some data, we attempt to model how effective and costly random search
+                        if (s_have_rand_estimate) {
+                            // if we have some data, we attempt to model how effective and costly random search
                             // and BFS is, to then make an informed decision of what to do next
                             const double reset_cost_rand = g->v_size;
                             const double reset_cost_bfs = std::min(s_trace_cost1_avg, (double) g->v_size);
@@ -924,7 +919,6 @@ namespace dejavu {
                     // inprocessing might finish the graph, in which case we terminate
                     if (root_save.get_coloring()->cells == g->v_size) {
                         s_term = t_inproc;
-                        finished_symmetries = true;
                         break;
                     }
                 } // end of restart loop

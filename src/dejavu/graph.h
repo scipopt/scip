@@ -190,7 +190,7 @@ namespace dejavu {
         }
 
         void sanity_check() {
-#ifndef NDEBUG
+#if defined(DEJDEBUG) &&  !defined(NDEBUG)
             for(int i = 0; i < v_size; ++i) {
                 dej_assert(d[i]>0?v[i] < e_size:true);
                 dej_assert(d[i]>0?v[i] >= 0:true);

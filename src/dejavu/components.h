@@ -9,7 +9,8 @@
 #include "coloring.h"
 #include "ds.h"
 
-namespace dejavu::ir {
+namespace dejavu {
+namespace ir {
 
     /**
      * Compute the quotient components of graph \p g colored with vertex coloring \p c.
@@ -256,6 +257,6 @@ namespace dejavu::ir {
             return components_coloring[i];
         }
     };
-}
+} }
 
 #endif //DEJAVU_COMPONENTS_H

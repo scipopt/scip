@@ -95,7 +95,6 @@ namespace dejavu {
              */
             void alloc(const int size) {
                 dealloc();
-                //arr = (T *) malloc(sizeof(T) * size);
                 arr = new T[size];
                 arr_sz = size;
             }
@@ -112,6 +111,20 @@ namespace dejavu {
              */
             worklist_t() = default;
 
+            worklist_t(const worklist_t<T>& other) {
+                copy(&other);
+            }
+
+            worklist_t(const worklist_t<T>&& other) {
+                swap(other);
+            }
+
+            worklist_t<T>& operator=(const worklist_t<T>& other) {
+                if(other.arr == arr) return *this;
+                copy(&other);
+                return *this;
+            }
+
             /**
              * Constructor that allocates the internal array with size \p size. The allocated memory is not
              * initialized.
@@ -123,7 +136,19 @@ namespace dejavu {
                 allocate(size);
             }
 
-            void copy(worklist_t<T>* other) {
+            void swap(worklist_t<T>& other) {
+                auto swap_arr = arr;
+                auto swap_arr_sz = arr_sz;
+                auto swap_cur_pos = cur_pos;
+                arr = other.arr;
+                arr_sz = other.arr_sz;
+                cur_pos = other.cur_pos;
+                other.arr = swap_arr;
+                other.arr_sz = swap_arr_sz;
+                other.cur_pos = swap_cur_pos;
+            }
+
+            void copy(const worklist_t<T>* other) {
                 alloc(other->arr_sz);
                 for(int i = 0; i < other->arr_sz; ++i) {
                     arr[i] = other->arr[i];
@@ -332,13 +357,34 @@ namespace dejavu {
                 allocate(size);
             }
 
-            void copy(workspace* other) {
-                alloc(other->arr_sz);
-                memcpy(arr, other->arr, other->arr_sz  * sizeof(int));
-                /*for(int i = 0; i < other->arr_sz; ++i) {
-                    arr[i] = other->arr[i];
-                }*/
-                arr_sz  = other->arr_sz;
+            workspace(const workspace& other)  {
+                copy(other);
+            }
+
+            workspace& operator=(const workspace& other) {
+                if(other.arr == arr) return *this;
+                copy(other);
+                return *this;
+            }
+
+            workspace& operator=(workspace&& other) {
+                swap(other);
+                return *this;
+            }
+
+            void swap(workspace& other) {
+                auto swap_arr = arr;
+                auto swap_arr_sz = arr_sz;
+                arr = other.arr;
+                arr_sz = other.arr_sz;
+                other.arr = swap_arr;
+                other.arr_sz = swap_arr_sz;
+            }
+
+            void copy(const workspace& other) {
+                alloc(other.arr_sz);
+                memcpy(arr, other.arr, other.arr_sz  * sizeof(int));
+                arr_sz  = other.arr_sz;
             }
 
             /**
@@ -511,8 +557,19 @@ namespace dejavu {
              * Initializes a set of size 0
              */
             markset() = default;
+
             markset(const markset& other)  {
                 copy(&other);
+            }
+
+            markset(markset&& other)  {
+                swap(other);
+            }
+
+            markset& operator=(const markset& other) {
+                if(other.s == s) return *this;
+                copy(&other);
+                return *this;
             }
 
             /**
@@ -577,6 +634,18 @@ namespace dejavu {
             void reset() {
                 if(mark == -1) full_reset();
                 ++mark;
+            }
+
+            void swap(markset& other) {
+                auto swap_s = s;
+                auto swap_mark = mark;
+                auto swap_sz = sz;
+                s = other.s;
+                mark = other.mark;
+                sz = other.sz;
+                other.s = swap_s;
+                other.mark = swap_mark;
+                other.sz = swap_sz;
             }
 
             void copy(const markset* other) {
