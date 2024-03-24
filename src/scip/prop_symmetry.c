@@ -5047,6 +5047,9 @@ SCIP_RETCODE addSSTConss(
    assert( ncomponents > 0 );
    assert( 0 <= cidx && cidx < ncomponents );
 
+   if ( nchgbds != NULL )
+      *nchgbds = 0;
+
    /* exit if component is blocked */
    if ( componentblocked[cidx] )
       return SCIP_OKAY;
@@ -5138,9 +5141,6 @@ SCIP_RETCODE addSSTConss(
 
    SCIPdebugMsg(scip, "Start selection of orbits and leaders for Schreier Sims constraints.\n");
    SCIPdebugMsg(scip, "orbitidx\tleaderidx\torbitsize\n");
-
-   if ( nchgbds != NULL )
-      *nchgbds = 0;
 
    /* initialize array indicating whether permutations shall not be considered for orbit permutations */
    ninactiveperms = 0;
@@ -6053,7 +6053,8 @@ SCIP_RETCODE handleOrbitope(
    char*                 partialname,        /**< partial name to be extended by constraints */
    SCIP_Bool             issigned,           /**< whether the first row of the orbitope can be sign-flipped */
    SCIP_Bool             handlestatically,   /**< whether the orbitope shall be handled statically */
-   SCIP_Bool*            success             /**< pointer to store whether orbitope could be added successfully */
+   SCIP_Bool*            success,            /**< pointer to store whether orbitope could be added successfully */
+   int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 {
    assert( scip != NULL );
@@ -6068,10 +6069,10 @@ SCIP_RETCODE handleOrbitope(
    if ( handlestatically )
    {
       char name[SCIP_MAXSTRLEN];
+      SCIP_Real consvals[2] = {-1.0, 1.0};
+      SCIP_VAR* consvars[2];
       SCIP_VAR** orbitopevarmatrix;
       SCIP_CONS* cons;
-      SCIP_VAR** consvars;
-      SCIP_Real* consvals;
       int nconss;
       int nelem;
       int pos;
@@ -6100,12 +6101,6 @@ SCIP_RETCODE handleOrbitope(
       SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
             &propdata->genlinconsssize, propdata->ngenlinconss + nconss) );
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
-
-      consvals[0] = -1.0;
-      consvals[1] = 1.0;
-
       /* sort variables in first row */
       for (j = 0; j < ncols - 1; ++j)
       {
@@ -6121,24 +6116,24 @@ SCIP_RETCODE handleOrbitope(
 
       if ( issigned )
       {
+         SCIP_VAR* var;
+         SCIP_Real bound;
+
          /* the first row is contained in the upper half of the variable domain */
-         consvals[0] = 1.0;
          for (j = 0; j < ncols; ++j)
          {
-            consvars[0] = orbitopevarmatrix[j];
+            var = orbitopevarmatrix[j];
+            bound = propdata->permvardomaincenter[varidxmatrix[0][j]];
 
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_upperdomain_%d", partialname, j);
+            if ( SCIPisLT(scip, SCIPvarGetLbLocal(var), bound) )
+            {
+               SCIP_CALL( SCIPchgVarLb(scip, var, bound) );
 
-            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 1, consvars, consvals,
-                  propdata->permvardomaincenter[varidxmatrix[0][j]], SCIPinfinity(scip),
-                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-            propdata->genlinconss[propdata->ngenlinconss++] = cons;
-            SCIP_CALL( SCIPaddCons(scip, cons) );
+               if( nchgbds != NULL )
+                  ++(*nchgbds);
+            }
          }
       }
-
-      SCIPfreeBufferArray(scip, &consvals);
-      SCIPfreeBufferArray(scip, &consvars);
       SCIPfreeBufferArray(scip, &orbitopevarmatrix);
 
       *success = TRUE;
@@ -6217,7 +6212,8 @@ SCIP_RETCODE handleDoubleLexOrbitope(
    char*                 partialname,        /**< partial name to be extended by constraints */
    int                   nsignedrows,        /**< the first number of rows that can be sign-flipped */
    SCIP_Bool             handlestatically,   /**< whether the orbitope shall be handled statically */
-   SCIP_Bool*            success             /**< pointer to store whether orbitope could be added successfully */
+   SCIP_Bool*            success,            /**< pointer to store whether orbitope could be added successfully */
+   int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 {
    assert( scip != NULL );
@@ -6311,8 +6307,6 @@ SCIP_RETCODE handleDoubleLexOrbitope(
          {
             /* ceil(nactiverows / 2) */
             nactiverows = (int) ((nactiverows + 1) / 2);
-            consvals[0] = -1.0;
-            consvals[1] = 1.0;
 
             /* the second half of active rows can be sorted by linear inequalities */
             for (i = nactiverows; i < nactrowsprev - 1; ++i)
@@ -6344,28 +6338,25 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             nactrowsprev = nactiverows;
 
             /* the first half of the active rows are in the upper part of the variable domain */
-            consvals[0] = 1.0;
-
             for (i = 0; i < nactiverows; ++i)
             {
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_flip_col_%d_row_%d", partialname, j, i);
+               SCIP_Real bound;
 
                consvars[0] = propdata->permvars[varidxmatrix[i][j]];
+               bound = propdata->permvardomaincenter[varidxmatrix[i][j]];
 
-               SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 1, consvars, consvals,
-                     propdata->permvardomaincenter[varidxmatrix[i][j]], SCIPinfinity(scip),
-                     TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-               propdata->genlinconss[propdata->ngenlinconss++] = cons;
-               SCIP_CALL( SCIPaddCons(scip, cons) );
+               if ( SCIPisLT(scip, SCIPvarGetLbLocal(consvars[0]), bound) )
+               {
+                  SCIP_CALL( SCIPchgVarLb(scip, consvars[0], bound) );
+                  if ( nchgbds != NULL )
+                     ++(*nchgbds);
+               }
             }
          }
 
          /* within the remaining active rows, the rows can be sorted */
          if ( nactiverows > 1 )
          {
-            consvals[0] = -1.0;
-            consvals[1] = 1.0;
-
             for (i = 0; i < nactiverows - 1; ++i)
             {
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_sortfirstactive_%d", partialname, i);
@@ -6395,9 +6386,6 @@ SCIP_RETCODE handleDoubleLexOrbitope(
       }
       else
       {
-         consvals[0] = -1.0;
-         consvals[1] = 1.0;
-
          /* sort first column */
          for (i = 0; i < nrows - 1; ++i)
          {
@@ -6505,7 +6493,8 @@ SCIP_RETCODE handleDoublelLexMatrix(
    int                   ncolblocks,         /**< number of column blocks */
    int**                 signedperms,        /**< array of proper signed permutations */
    int                   nsignedperms,       /**< number of proper signed permutations */
-   SCIP_Bool*            success             /**< pointer to store whether orbitope could be added successfully */
+   SCIP_Bool*            success,            /**< pointer to store whether orbitope could be added successfully */
+   int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 {
    char partialname[SCIP_MAXSTRLEN];
@@ -6632,7 +6621,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d_doublelex_col_0", id);
 
          SCIP_CALL( handleDoubleLexOrbitope(scip, propdata, id, orbitopematrix, nrows, ncols, partialname,
-               nflipableidx, TRUE, &tmpsuccess) );
+               nflipableidx, TRUE, &tmpsuccess, nchgbds) );
          *success = *success || tmpsuccess;
       }
       else if ( hasrowflip )
@@ -6663,7 +6652,7 @@ SCIP_RETCODE handleDoublelLexMatrix(
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d_doublelex_row_0", id);
 
          SCIP_CALL( handleDoubleLexOrbitope(scip, propdata, id, orbitopematrix, ncols, nrows, partialname,
-               nflipableidx, TRUE, &tmpsuccess) );
+               nflipableidx, TRUE, &tmpsuccess, nchgbds) );
          *success = *success || tmpsuccess;
       }
    }
@@ -6695,7 +6684,8 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d_doublelex_col_%d", id, p);
 
-         SCIP_CALL( handleOrbitope(scip, propdata, id, orbitopematrix, nrows, j, partialname, FALSE, TRUE, &tmpsuccess) );
+         SCIP_CALL( handleOrbitope(scip, propdata, id, orbitopematrix, nrows, j, partialname, FALSE, TRUE,
+               &tmpsuccess, nchgbds) );
          *success = *success || tmpsuccess;
       }
 
@@ -6718,7 +6708,8 @@ SCIP_RETCODE handleDoublelLexMatrix(
 
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d_doublelex_row_%d", id, p);
 
-         SCIP_CALL( handleOrbitope(scip, propdata, id, orbitopematrix, ncols, i, partialname, FALSE, TRUE, &tmpsuccess) );
+         SCIP_CALL( handleOrbitope(scip, propdata, id, orbitopematrix, ncols, i, partialname, FALSE, TRUE,
+               &tmpsuccess, nchgbds) );
          *success = *success || tmpsuccess;
       }
    }
@@ -6742,7 +6733,8 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
    SCIP_Bool             detectsinglelex,    /**< whether single lex matrices shall be detected */
-   int                   cidx                /**< index of component */
+   int                   cidx,               /**< index of component */
+   int*                  nchgbds             /**< pointer to store number of bound changes (or NULL) */
    )
 {
    int** lexmatrix = NULL;
@@ -6765,6 +6757,9 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( 0 <= cidx && cidx < propdata->ncomponents );
+
+   if ( nchgbds != NULL )
+      nchgbds = 0;
 
    /* exit if component is already blocked */
    if ( propdata->componentblocked[cidx] )
@@ -6887,7 +6882,7 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
                assert( iunsigned == nrows );
 
                SCIP_CALL( handleOrbitope(scip, propdata, cidx, orbitopematrix, nrows, ncols, partialname,
-                     TRUE, TRUE, &success) );
+                     TRUE, TRUE, &success, nchgbds) );
 
                for (i = nrows - 1; i >= 0; --i)
                {
@@ -6902,13 +6897,13 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
          if ( (!success) && percentageunsigned > 0.8 )
          {
             SCIP_CALL( handleOrbitope(scip, propdata, cidx, lexmatrix, nrows, ncols, partialname,
-                  FALSE, FALSE, &success) );
+                  FALSE, FALSE, &success, nchgbds) );
          }
       }
       else
       {
          SCIP_CALL( handleDoublelLexMatrix(scip, propdata, cidx, lexmatrix, nrows, ncols,
-               lexrowsbegin, lexcolsbegin, nrowmatrices, ncolmatrices, perms, nselectedperms, &success) );
+               lexrowsbegin, lexcolsbegin, nrowmatrices, ncolmatrices, perms, nselectedperms, &success, nchgbds) );
       }
 
       FREEMEMORY:
@@ -7000,6 +6995,8 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
    int*                  nchgbds             /**< pointer to store number of bound changes (or NULL)*/
    )
 {
+   int nlocchgs;
+
    assert( scip != NULL );
    assert( propdata != NULL );
    assert( propdata->ncomponents >= 0 );
@@ -7016,7 +7013,10 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
 
       detectsinglelex = propdata->detectdoublelex ? FALSE : TRUE;
 
-      SCIP_CALL( tryHandleSingleOrDoubleLexMatricesComponent(scip, propdata, detectsinglelex, cidx) );
+      nlocchgs = 0;
+      SCIP_CALL( tryHandleSingleOrDoubleLexMatricesComponent(scip, propdata, detectsinglelex, cidx, &nlocchgs) );
+
+      (*nchgbds) += nlocchgs;
    }
    SCIP_CALL( tryHandleSubgroups(scip, propdata, cidx) );
    if ( ISSSTACTIVE(propdata->usesymmetry) )
@@ -7026,7 +7026,10 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
       /* only run SST cuts on continuous variables orbital reduction or lexicographic reduction is active */
       sstonlycontvars = ISORBITALREDUCTIONACTIVE(propdata->usesymmetry)
          || ( ISSYMRETOPESACTIVE(propdata->usesymmetry) && propdata->usedynamicprop && propdata->addsymresacks );
-      SCIP_CALL( addSSTConss(scip, propdata, sstonlycontvars, nchgbds, cidx) );
+      nlocchgs = 0;
+      SCIP_CALL( addSSTConss(scip, propdata, sstonlycontvars, &nlocchgs, cidx) );
+
+      (*nchgbds) += nlocchgs;
    }
    SCIP_CALL( tryAddOrbitalRedLexRed(scip, propdata, cidx) );
    SCIP_CALL( addSymresackConss(scip, propdata, cidx) );
