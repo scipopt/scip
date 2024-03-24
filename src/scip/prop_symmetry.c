@@ -6101,13 +6101,14 @@ SCIP_RETCODE handleOrbitope(
       SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
             &propdata->genlinconsssize, propdata->ngenlinconss + nconss) );
 
-      /* sort variables in first row */
+      /* handle symmetries by enforcing sorted variables in first row */
       for (j = 0; j < ncols - 1; ++j)
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_sort_%d", partialname, j);
          consvars[0] = orbitopevarmatrix[j];
          consvars[1] = orbitopevarmatrix[j + 1];
 
+         /* enforce constraints to be in LP since this seems to have a positive impact for orbitopes with cont. vars */
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, consvars, consvals, -SCIPinfinity(scip), 0.0,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          propdata->genlinconss[propdata->ngenlinconss++] = cons;
@@ -6287,7 +6288,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
          SCIP_CALL( SCIPaddCons(scip, cons) );
       }
 
-      /* sort columns by orbitopal reduction */
+      /* handle symmetries by enforcing sorted columns via orbitopal reduction */
       for (i = 0, pos = 0; i < nrows; ++i)
       {
          for (j = 0; j < ncols; ++j)
