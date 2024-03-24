@@ -1,0 +1,110 @@
+{
+  "nodes": {
+    "flake-parts": {
+      "inputs": {
+        "nixpkgs-lib": "nixpkgs-lib"
+      },
+      "locked": {
+        "lastModified": 1704982712,
+        "narHash": "sha256-2Ptt+9h8dczgle2Oo6z5ni5rt/uLMG47UFTR1ry/wgg=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "07f6395285469419cf9d078f59b5b49993198c00",
+        "type": "github"
+      },
+      "original": {
+        "id": "flake-parts",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1705496572,
+        "narHash": "sha256-rPIe9G5EBLXdBdn9ilGc0nq082lzQd0xGGe092R/5QE=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "842d9d80cfd4560648c785f8a4e6f3b096790e19",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs-lib": {
+      "locked": {
+        "dir": "lib",
+        "lastModified": 1703961334,
+        "narHash": "sha256-M1mV/Cq+pgjk0rt6VxoyyD+O8cOUiai8t9Q6Yyq4noY=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "b0d36bd0a420ecee3bc916c91886caca87c894e9",
+        "type": "github"
+      },
+      "original": {
+        "dir": "lib",
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "papilo-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1705048944,
+        "narHash": "sha256-E0J9bQucEoea4xWsEj+cSOB0zbd4Ra28M0HrvUzdHIk=",
+        "owner": "scipopt",
+        "repo": "papilo",
+        "rev": "e0c6df4dc6f6ddea615dba57e38352e592fc8a2a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "scipopt",
+        "repo": "papilo",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "flake-parts": "flake-parts",
+        "nixpkgs": "nixpkgs",
+        "papilo-src": "papilo-src",
+        "soplex-src": "soplex-src",
+        "suite-src": "suite-src"
+      }
+    },
+    "soplex-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1705653601,
+        "narHash": "sha256-S6f8I2i0MsY2MY/jYymvKvltkfmwMeg0qnRF2jXO0V4=",
+        "owner": "scipopt",
+        "repo": "soplex",
+        "rev": "b10b149cddfd4f5e424c2986e53ce01dd815cdb8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "scipopt",
+        "repo": "soplex",
+        "type": "github"
+      }
+    },
+    "suite-src": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-UjEYFcKsfBbBN25xxWFRIdZzenUk2Ooev8lz2eQtzTk=",
+        "type": "tarball",
+        "url": "https://scipopt.org/download/release/scipoptsuite-8.1.0.tgz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://scipopt.org/download/release/scipoptsuite-8.1.0.tgz"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
