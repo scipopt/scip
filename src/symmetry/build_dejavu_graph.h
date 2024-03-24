@@ -69,6 +69,8 @@
 #pragma GCC diagnostic warning "-Wdeprecated-copy"
 #pragma GCC diagnostic warning "-Wnon-virtual-dtor"
 #pragma GCC diagnostic warning "-Wunused-private-field"
+#pragma GCC diagnostic warning "-Wunknown-pragmas"
+#pragma GCC diagnostic warning "-Wpragmas"
 #endif
 
 #ifdef _MSC_VER
