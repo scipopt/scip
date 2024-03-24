@@ -36,6 +36,7 @@
 #define DEJDEBUG
 #endif
 
+#include <string>                 /* for dejvu */
 #include "build_dejavu_graph.h"   /* also includes dejavu */
 
 #include "scip/expr_var.h"
