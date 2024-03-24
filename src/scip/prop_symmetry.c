@@ -5812,7 +5812,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
          int v;
          SCIP_Bool found = FALSE;
 
-         for (p = propdata->componentbegins[cidx]; p < propdata->componentbegins[cidx + 1] && !found; ++p)
+         for (p = propdata->componentbegins[cidx]; p < propdata->componentbegins[cidx + 1] && ! found; ++p)
          {
             perm = propdata->perms[propdata->components[p]];
             for (v = 0; v < propdata->npermvars; ++v)
