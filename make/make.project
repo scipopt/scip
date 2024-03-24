@@ -547,7 +547,7 @@ else
 LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
 LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
 endif
-CXXFLAGS	+=	$(CXX17FLAG)
+CXXFLAGS	+=	$(CXX14FLAG)
 endif
 
 ifeq ($(SYM),nauty)
@@ -564,11 +564,11 @@ LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.
 else
 LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/nauty
 endif
-CXXFLAGS	+=	$(CXX17FLAG)
+CXXFLAGS	+=	$(CXX14FLAG)
 endif
 
 ifeq ($(SYM),dejavu)
-CXXFLAGS	+=	$(CXX17FLAG)
+CXXFLAGS	+=	$(CXX14FLAG)
 endif
 
 #-----------------------------------------------------------------------------

@@ -169,8 +169,8 @@ elseif(SYM STREQUAL "sbliss")
     set(SYM_LIBRARIES libbliss)
     set(SYM_PIC_LIBRARIES libbliss)
 
-    # sassy needs C++-17
-    set(CMAKE_CXX_STANDARD 17)
+    # sassy needs C++-14
+    set(CMAKE_CXX_STANDARD 14)
 
     if(NOT BLISS_INCLUDE_DIR OR NOT BLISS_LIBRARY)
       find_path(BLISS_INCLUDE_DIR
@@ -220,8 +220,8 @@ elseif(SYM STREQUAL "nauty")
     endif()
     file(GLOB files ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/*)
 
-    # sassy needs C++-17
-    set(CMAKE_CXX_STANDARD 17)
+    # sassy needs C++-14
+    set(CMAKE_CXX_STANDARD 14)
 
     # add custom command to build the library using configure and make
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
@@ -248,8 +248,8 @@ elseif(SYM STREQUAL "dejavu")
     message(STATUS "Support SYM: dejavu")
     set(sym symmetry/compute_symmetry_dejavu.cpp symmetry/build_dejavu_graph.cpp)
 
-    # dejavu needs C++-17
-    set(CMAKE_CXX_STANDARD 17)
+    # dejavu needs C++-14
+    set(CMAKE_CXX_STANDARD 14)
 
     if(NOT DEJAVU_INCLUDE_DIR)
       find_path(DEJAVU_INCLUDE_DIR
