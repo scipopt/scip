@@ -18,9 +18,9 @@
 #include "inprocess.h"
 #include "components.h"
 
-#if ((defined(_MSVC_LANG) && _MSVC_LANG < 201402L) || __cplusplus < 201402L)
-#  error "dejavu requires to be compiled with C++ 2014 or newer"
-#endif
+//#if ((defined(_MSVC_LANG) && _MSVC_LANG < 201402L) || __cplusplus < 201402L)
+//#  error "dejavu requires to be compiled with C++ 2014 or newer"
+//#endif
 
 // structures for testing
 #if defined(DEJDEBUG) &&  !defined(NDEBUG)
