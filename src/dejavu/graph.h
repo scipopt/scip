@@ -14,19 +14,19 @@ namespace dejavu {
      */
     class sgraph {
         struct vertexComparator {
-            vertexComparator(const sgraph &g) : g(g) {}
+            explicit vertexComparator(const sgraph &g) : graph(g) {}
 
-            const sgraph &g;
+            const sgraph &graph;
 
             bool operator()(const int &v1, const int &v2) const {
-                return g.d[v1] < g.d[v2];
+                return graph.d[v1] < graph.d[v2];
             }
         };
 
         struct vertexComparatorColor {
-            vertexComparatorColor(const sgraph &g, const int *vertex_to_col) : g(g), vertex_to_col(vertex_to_col) {}
+            vertexComparatorColor(const sgraph &g, const int *vtocol) : graph(g), vertex_to_col(vtocol) {}
 
-            const sgraph &g;
+            const sgraph &graph;
             const int *vertex_to_col;
 
             bool operator()(const int &v1, const int &v2) const {
@@ -189,7 +189,7 @@ namespace dejavu {
             c->cells = cells;
         }
 
-        [[maybe_unused]] void sanity_check() {
+        void sanity_check() {
 #ifndef NDEBUG
             for(int i = 0; i < v_size; ++i) {
                 dej_assert(d[i]>0?v[i] < e_size:true);
@@ -251,7 +251,7 @@ namespace dejavu {
             e_size = g->e_size;
         }
 
-        [[maybe_unused]] void sort_edgelist() const {
+        void sort_edgelist() const {
             for (int i = 0; i < v_size; ++i) {
                 const int estart = v[i];
                 const int eend = estart + d[i];
@@ -312,7 +312,7 @@ namespace dejavu {
             }
         }
     public:
-        [[maybe_unused]] static_graph(const int nv, const int ne) {
+        static_graph(const int nv, const int ne) {
             if(nv <= 0) throw std::out_of_range("number of vertices must be positive");
             if(ne <= 0) throw std::out_of_range("number of edges must be positive");
             g.initialize(nv, 2*ne);
@@ -335,7 +335,7 @@ namespace dejavu {
                 delete[] edge_cnt;
         }
 
-        [[maybe_unused]] void initialize_graph(const unsigned int nv, const unsigned int ne) {
+        void initialize_graph(const unsigned int nv, const unsigned int ne) {
             if(initialized || finalized)
                 throw std::logic_error("can not initialize a graph that is already initialized");
             initialized = true;
@@ -348,7 +348,7 @@ namespace dejavu {
                 edge_cnt[i] = 0;
         };
 
-        [[maybe_unused]] unsigned int add_vertex(const int color, const int deg) {
+        unsigned int add_vertex(const int color, const int deg) {
             if(!initialized)
                 throw std::logic_error("uninitialized graph");
             if(finalized)
@@ -364,7 +364,7 @@ namespace dejavu {
             return vertex;
         };
 
-        [[maybe_unused]] void add_edge(const unsigned int v1, const unsigned int v2) {
+        void add_edge(const unsigned int v1, const unsigned int v2) {
             if(!initialized)
                 throw std::logic_error("uninitialized graph");
             if(finalized)
@@ -400,7 +400,7 @@ namespace dejavu {
             g.sanity_check();
         }
 
-        [[maybe_unused]] void dump_dimacs(const std::string& filename) {
+        void dump_dimacs(const std::string& filename) {
             finalize();
             std::ofstream dumpfile;
             dumpfile.open (filename, std::ios::out);
@@ -433,7 +433,7 @@ namespace dejavu {
     };
 }
 
-[[maybe_unused]] static void parse_dimacs(const std::string& filename, dejavu::sgraph* g, int** colmap, bool silent=true,
+static inline void parse_dimacs(const std::string& filename, dejavu::sgraph* g, int** colmap, bool silent=true,
                          int seed_permute=0) {
     std::chrono::high_resolution_clock::time_point timer = std::chrono::high_resolution_clock::now();
     std::ifstream infile(filename);
@@ -525,14 +525,14 @@ namespace dejavu {
 
     int maxd = 0;
 
-    for(auto & i : incidence_list) {
+    for(auto & incident : incidence_list) {
         g->v[vpos] = epos;
-        g->d[vpos] = (int) i.size();
+        g->d[vpos] = (int) incident.size();
         //degrees.insert(g->d[vpos]);
         if(g->d[vpos] > maxd)
             maxd = g->d[vpos];
         vpos += 1;
-        for(int j : i) {
+        for(int j : incident) {
             g->e[epos] = j;
             epos += 1;
         }

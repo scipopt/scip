@@ -97,17 +97,17 @@ namespace dejavu {
             /**
              * Initializes the stored automorphism to the identity.
              *
-             * @param domain_size Size of the domain on which automorphisms operate
+             * @param domain_sz Size of the domain on which automorphisms operate
              */
-            explicit automorphism_workspace(int domain_size = 0) {
-                automorphism.allocate(domain_size);
-                for (int i = 0; i < domain_size; ++i) {
+            explicit automorphism_workspace(int domain_sz = 0) {
+                automorphism.allocate(domain_sz);
+                for (int i = 0; i < domain_sz; ++i) {
                     automorphism[i] = i;
                 }
-                automorphism_supp.allocate(domain_size);
-                inverse_automorphism.allocate(domain_size);
+                automorphism_supp.allocate(domain_sz);
+                inverse_automorphism.allocate(domain_sz);
                 invalidate_inverse_automorphism();
-                this->domain_size = domain_size;
+                this->domain_size = domain_sz;
             }
 
             /**
@@ -182,7 +182,7 @@ namespace dejavu {
              * @param other Automorphism in sparse notation that is applied to this automorphism in.
              * @param pwr Power with which \p other is applied to this automorphism.
              */
-            [[maybe_unused]] void apply(automorphism_workspace& other, int pwr = 1) {
+            void apply(automorphism_workspace& other, int pwr = 1) {
                 thread_local worklist scratch_apply1;
                 thread_local worklist scratch_apply2;
                 thread_local markset  scratch_apply3;
@@ -205,7 +205,7 @@ namespace dejavu {
              * @param other Automorphism in sparse notation that is applied to this automorphism in.
              * @param pwr Power with which \p other is applied to this automorphism.
              */
-            [[maybe_unused]] void apply(worklist &scratch_apply1, worklist &scratch_apply2, markset &scratch_apply3,
+            void apply(worklist &scratch_apply1, worklist &scratch_apply2, markset &scratch_apply3,
                                         automorphism_workspace& other, int pwr = 1) {
                 if(!other.support01 && other.nsupp() <= domain_size / 4) {
                     apply_sparse(scratch_apply1, scratch_apply2, scratch_apply3, other.p(), other.supp(),
@@ -463,21 +463,21 @@ namespace dejavu {
             /**
              * @return Integer array \p p describing the stored automorphism, where point v is mapped to \p p[v].
              */
-            [[nodiscard]] int *p() const {
+            dej_nodiscard int *p() const {
                 return automorphism.get_array();
             }
 
             /**
              * @return Integer array which contains all vertices in the support of the contained automorphism.
              */
-            [[nodiscard]] int* supp() const {
+            dej_nodiscard int* supp() const {
                 return automorphism_supp.get_array();
             }
 
             /**
              * @return Size of the support.
              */
-            [[nodiscard]] int nsupp() const {
+            dej_nodiscard int nsupp() const {
                 return automorphism_supp.cur_pos;
             }
         };
@@ -530,7 +530,7 @@ namespace dejavu {
              * @param v Vertex of the specified domain.
              * @return Whether \p v is the representative of the orbit of \p v.
              */
-            [[nodiscard]] bool represents_orbit(const int v) const {
+            dej_nodiscard bool represents_orbit(const int v) const {
                 return v == map_arr[v];
             }
 
@@ -905,7 +905,7 @@ namespace dejavu {
              * @param num Identifier of a generator.
              * @return A pointer to the generator which corresponds to the identifier.
              */
-            [[nodiscard]] stored_automorphism* get_generator(const size_t num) const {
+            dej_nodiscard stored_automorphism* get_generator(const size_t num) const {
                 return generators[num];
             }
 
@@ -916,7 +916,7 @@ namespace dejavu {
             /**
              * @return number of stored generators
              */
-            [[nodiscard]] int size() const {
+            dej_nodiscard int size() const {
                 return static_cast<int>(generators.size());
             }
 
@@ -1017,7 +1017,7 @@ namespace dejavu {
             /**
              * @return Size of the transversal.
              */
-            [[nodiscard]] int size() const {
+            dej_nodiscard int size() const {
                 return (int) fixed_orbit.size();
             }
 
@@ -1025,7 +1025,7 @@ namespace dejavu {
                 sz_upb = new_sz_upb;
             }
 
-            [[nodiscard]] int get_size_upper_bound() const {
+            dej_nodiscard int get_size_upper_bound() const {
                 return sz_upb;
             }
             /**
@@ -1034,7 +1034,7 @@ namespace dejavu {
              * @param p Point to check.
              * @return Position of point \p in transversal, or -1 if not contained.
              */
-            [[nodiscard]] int find_point(const int p) const {
+            dej_nodiscard int find_point(const int p) const {
                 for (size_t i = 0; i < fixed_orbit.size(); ++i) {
                     if (p == fixed_orbit[i]) {
                         return (int) i;
@@ -1068,22 +1068,22 @@ namespace dejavu {
             /**
              * @return Whether size of this transversal matches the given upper bound.
              */
-            [[nodiscard]] bool is_finished() const {
+            dej_nodiscard bool is_finished() const {
                 return finished;
             }
 
             /**
              * @return Point fixed by this transversal.
              */
-            [[nodiscard]] int get_fixed_point() const {
+            dej_nodiscard int get_fixed_point() const {
                 return fixed;
             }
 
-            [[nodiscard]] const std::vector<int>& get_fixed_orbit() {
+            dej_nodiscard const std::vector<int>& get_fixed_orbit() {
                 return fixed_orbit;
             }
 
-            [[nodiscard]] const std::vector<int>& get_generators() {
+            dej_nodiscard const std::vector<int>& get_generators() {
                 return fixed_orbit_to_perm;
             }
 
@@ -1212,14 +1212,14 @@ namespace dejavu {
             /**
              * @return Number of stored generators using a sparse data structure.
              */
-            [[nodiscard]] int s_sparsegen() const {
+            dej_nodiscard int s_sparsegen() const {
                 return generators.s_stored_sparse;
             }
 
             /**
              * @return Number of stored generators using a dense data structure.
              */
-            [[nodiscard]] int s_densegen() const {
+            dej_nodiscard int s_densegen() const {
                 return generators.s_stored_dense;
             }
 
@@ -1371,14 +1371,14 @@ namespace dejavu {
              * @param pos Position in base.
              * @return Vertex fixed at position \p pos in base.
              */
-            [[nodiscard]] int base_point(int pos) const {
+            dej_nodiscard int base_point(int pos) const {
                 return transversals[pos].get_fixed_point();
             }
 
             /**
              * @return Size of base of this Schreier structure.
              */
-            [[nodiscard]] int base_size() const {
+            dej_nodiscard int base_size() const {
                 return static_cast<int>(transversals.size());
             }
 
@@ -1414,7 +1414,7 @@ namespace dejavu {
                 return stabilized_generators;
             }
 
-            [[nodiscard]]int get_fixed_orbit_size(const int base_pos) {
+            dej_nodiscard int get_fixed_orbit_size(const int base_pos) {
                 if (base_pos >= static_cast<int>(transversals.size())) return 0;
                 return transversals[base_pos].size();
             }
@@ -1437,7 +1437,7 @@ namespace dejavu {
              * @param base_pos Position in base.
              * @return Bool that indicates whether the transversal at position \p s_base_pos matches its size upper bound.
              */
-            [[nodiscard]] bool is_finished(const int base_pos) const {
+            dej_nodiscard bool is_finished(const int base_pos) const {
                 return transversals[base_pos].is_finished();
             }
 
@@ -1573,14 +1573,14 @@ namespace dejavu {
             /**
              * @return Whether the probabilistic abort criterion allows termination or not.
              */
-            [[nodiscard]] bool probabilistic_abort_criterion() const {
+            dej_nodiscard bool probabilistic_abort_criterion() const {
                 return (s_consecutive_success > h_error_bound);
             }
 
             /**
              * @return Whether the deterministic abort criterion allows termination or not.
              */
-            [[nodiscard]] bool deterministic_abort_criterion() const {
+            dej_nodiscard bool deterministic_abort_criterion() const {
                 return (finished_up_to_level() + 1 == base_size());
             }
 
@@ -1588,7 +1588,7 @@ namespace dejavu {
              * @return Level up to which Schreier structure is guaranteed to be complete according to given upper bounds.
              *         -1 indicates no level has been finished.
              */
-            [[nodiscard]] int finished_up_to_level() const {
+            dej_nodiscard int finished_up_to_level() const {
                 return finished_up_to;
             }
 
@@ -1628,7 +1628,7 @@ namespace dejavu {
             /**
              * @return Number of stored generators using a sparse data structure.
              */
-            [[nodiscard]] int get_number_of_generators() const {
+            dej_nodiscard int get_number_of_generators() const {
                 return schreier.s_sparsegen() + schreier.s_densegen();
             }
 
@@ -1681,7 +1681,7 @@ namespace dejavu {
             /**
              * @return Size of base of this Schreier structure.
              */
-            [[nodiscard]] int base_size() const {
+            dej_nodiscard int base_size() const {
                 return schreier.base_size();
             }
 
@@ -1689,7 +1689,7 @@ namespace dejavu {
              * @param pos Position in base.
              * @return Vertex fixed at position \p pos in base.
              */
-            [[nodiscard]] int get_fixed_point(int pos) const {
+            dej_nodiscard int get_fixed_point(int pos) const {
                 return schreier.base_point(pos);
             }
 
@@ -1709,7 +1709,7 @@ namespace dejavu {
              * @param base_pos position of base to look at
              * @return the orbit size
              */
-            [[nodiscard]]int get_fixed_orbit_size(const int base_pos) {
+            dej_nodiscard int get_fixed_orbit_size(const int base_pos) {
                 return schreier.get_fixed_orbit_size(base_pos);
             }
 
@@ -1876,14 +1876,14 @@ namespace dejavu {
             /**
              * @return how large the compressed domain is
              */
-            [[nodiscard]] int compressed_domain_size() const {
+            dej_nodiscard int compressed_domain_size() const {
                 return s_vertices_active;
             }
 
             /**
              * @return how large the original domain is
              */
-            [[nodiscard]] int decompressed_domain_size() const {
+            dej_nodiscard int decompressed_domain_size() const {
                 return domain_size;
             }
 
@@ -1928,14 +1928,14 @@ namespace dejavu {
             /**
              * @return Number of stored generators using a sparse data structure.
              */
-            [[nodiscard]] int s_sparsegen() const {
+            dej_nodiscard int s_sparsegen() const {
                 return internal_schreier.s_sparsegen();
             }
 
             /**
              * @return Number of stored generators using a dense data structure.
              */
-            [[nodiscard]] int s_densegen() const {
+            dej_nodiscard int s_densegen() const {
                 return internal_schreier.s_densegen();
             }
 
@@ -2010,7 +2010,7 @@ namespace dejavu {
              * @param pos Position in base.
              * @return Vertex fixed at position \p pos in base.
              */
-            [[nodiscard]] int base_point(int pos) const {
+            dej_nodiscard int base_point(int pos) const {
                 if(compressor != nullptr) {
                     return original_base[pos];
                 } else {
@@ -2021,7 +2021,7 @@ namespace dejavu {
             /**
              * @return Size of base of this Schreier structure.
              */
-            [[nodiscard]] int base_size() const {
+            dej_nodiscard int base_size() const {
                 return internal_schreier.base_size();
             }
 
@@ -2120,21 +2120,21 @@ namespace dejavu {
             /**
              * @return Whether the probabilistic abort criterion allows termination or not.
              */
-            [[nodiscard]] bool probabilistic_abort_criterion() const {
+            dej_nodiscard bool probabilistic_abort_criterion() const {
                 return internal_schreier.probabilistic_abort_criterion();
             }
 
             /**
              * @return Whether the deterministic abort criterion allows termination or not.
              */
-            [[nodiscard]] bool deterministic_abort_criterion() const {
+            dej_nodiscard bool deterministic_abort_criterion() const {
                 return internal_schreier.deterministic_abort_criterion();
             }
 
             /**
              * @return Whether any abort criterion allows termination or not.
              */
-            [[nodiscard]] bool any_abort_criterion() const {
+            dej_nodiscard bool any_abort_criterion() const {
                 return internal_schreier.probabilistic_abort_criterion() ||
                        internal_schreier.deterministic_abort_criterion();
             }
@@ -2143,11 +2143,11 @@ namespace dejavu {
                 internal_schreier.h_error_bound = error_bound;
             }
 
-            [[nodiscard]] int get_consecutive_success() const {
+            dej_nodiscard int get_consecutive_success() const {
                 return internal_schreier.s_consecutive_success;
             }
 
-            [[nodiscard]] big_number get_group_size() const {
+            dej_nodiscard big_number get_group_size() const {
                 return internal_schreier.s_grp_sz;
             }
 
@@ -2155,7 +2155,7 @@ namespace dejavu {
              * @return Level up to which Schreier structure is guaranteed to be complete according to given upper bounds.
              *         -1 indicates no level has been finished.
              */
-            [[nodiscard]] int finished_up_to_level() const {
+            dej_nodiscard int finished_up_to_level() const {
                 return internal_schreier.finished_up_to_level();
             }
 

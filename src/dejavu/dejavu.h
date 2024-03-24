@@ -18,18 +18,22 @@
 #include "inprocess.h"
 #include "components.h"
 
-// structures for testing
-// extern dejavu::ir::refinement test_r;
-// extern dejavu::sgraph dej_test_graph;
-// extern int*           dej_test_col;
+#if ((defined(_MSVC_LANG) && _MSVC_LANG < 201402L) || __cplusplus < 201402L)
+#  error "dejavu requires to be compiled with C++ 2014 or newer"
+#endif
 
+// structures for testing
+#if defined(DEJDEBUG) &&  !defined(NDEBUG)
+extern dejavu::ir::refinement test_r;
+extern dejavu::sgraph dej_test_graph;
+#endif
 
 namespace dejavu {
-    [[maybe_unused]] static void test_hook([[maybe_unused]] int n, [[maybe_unused]] const int *p,
-                                           [[maybe_unused]] int nsupp, [[maybe_unused]] const int *supp) {
-        //assert(test_r.certify_automorphism_sparse(&dej_test_graph, p, nsupp, supp));
+    #if defined(DEJDEBUG) &&  !defined(NDEBUG)
+    static inline void test_hook(int, const int *p, int nsupp, const int *supp) {
+        assert(test_r.certify_automorphism_sparse(&dej_test_graph, p, nsupp, supp));
     }
-
+    #endif
 
     /**
      * \brief A collection of dejavu hooks
@@ -39,6 +43,7 @@ namespace dejavu {
         class hook_interface {
         public:
             virtual dejavu_hook* get_hook() = 0;
+            virtual ~hook_interface() = default;
         };
 
         /**
@@ -64,7 +69,7 @@ namespace dejavu {
                 hooks.clear();
             }
 
-            [[nodiscard]] size_t size() const {
+            dej_nodiscard size_t size() const {
                 return hooks.size();
             }
 
@@ -254,7 +259,7 @@ namespace dejavu {
          *
          * @param error_bound the new error bound
          */
-        [[maybe_unused]] void set_error_bound(int error_bound = 10) {
+        void set_error_bound(int error_bound = 10) {
             h_error_bound = error_bound;
         }
 
@@ -264,7 +269,7 @@ namespace dejavu {
          *
          * @return the currently configured error bound
          */
-        [[nodiscard]] int get_error_bound() const {
+        int get_error_bound() const {
             return h_error_bound;
         }
 
@@ -274,7 +279,7 @@ namespace dejavu {
          *
          * @param use_true_random (`=true`) whether to use true random number generation
          */
-        [[maybe_unused]] void set_true_random(bool use_true_random = true) {
+        void set_true_random(bool use_true_random = true) {
             h_random_use_true_random = use_true_random;
         }
 
@@ -284,7 +289,7 @@ namespace dejavu {
          *
          * @param prefer_dfs (`=true`) whether to prefer depth-first search
          */
-        [[maybe_unused]] void set_prefer_dfs(bool prefer_dfs = true) {
+        void set_prefer_dfs(bool prefer_dfs = true) {
             h_prefer_dfs = prefer_dfs;
         }
 
@@ -294,7 +299,7 @@ namespace dejavu {
          *
          * @param use_pseudo_random (`=true`) whether to use pseudo random number generation
          */
-        [[maybe_unused]] void set_pseudo_random(bool use_pseudo_random = true) {
+        void set_pseudo_random(bool use_pseudo_random = true) {
             h_random_use_true_random = !use_pseudo_random;
         }
 
@@ -302,7 +307,7 @@ namespace dejavu {
          * Seed to use for pseudo random number generation.
          * @param seed the seed
          */
-        [[maybe_unused]] void set_seed(int seed = 0) {
+        void set_seed(int seed = 0) {
             h_random_seed = seed;
         }
 
@@ -311,7 +316,7 @@ namespace dejavu {
          *
          * @param use_strong_certification whether to use strong certification
          */
-        [[maybe_unused]] void set_strong_certification(bool use_strong_certification = true) {
+        void set_strong_certification(bool use_strong_certification = true) {
             h_strong_certification = use_strong_certification;
         }
 
@@ -320,7 +325,7 @@ namespace dejavu {
          *
          * @param may_alter_graph whether the solver is allowed to alter the graph
          */
-        [[maybe_unused]] void set_disallow_alteration(bool may_alter_graph = false) {
+        void set_disallow_alteration(bool may_alter_graph = false) {
             h_destructive = may_alter_graph;
         }
 
@@ -337,7 +342,7 @@ namespace dejavu {
          * Use 'true random' number generation to set the seed.
          *
          */
-        [[maybe_unused]] void randomize_seed() {
+        void randomize_seed() {
             std::random_device rd;
             h_random_seed = static_cast<int>(rd());
         }
@@ -347,7 +352,7 @@ namespace dejavu {
          *
          * @param print (`=true`) whether to print
          */
-        [[maybe_unused]] void set_print(bool print=true) {
+        void set_print(bool print=true) {
             h_silent = !print;
         }
 
@@ -355,7 +360,7 @@ namespace dejavu {
          * How large was the automorphism group computed?
          * @return the automorphism group size
          */
-        [[maybe_unused]] [[nodiscard]] big_number get_automorphism_group_size() const {
+        dej_nodiscard big_number get_automorphism_group_size() const {
             return s_grp_sz;
         }
 
@@ -363,7 +368,7 @@ namespace dejavu {
          * Did the solver terminate deterministically, i.e., is the automorphism group guaranteed to be complete?
          * @return whether the solver terminated without potential error
          */
-        [[maybe_unused]] [[nodiscard]] bool get_deterministic_termination() const {
+        dej_nodiscard bool get_deterministic_termination() const {
             return s_deterministic_termination;
         }
 

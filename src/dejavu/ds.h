@@ -178,7 +178,7 @@ namespace dejavu {
             /**
              * @return Whether `cur_pos == 0`.
              */
-            [[nodiscard]] bool empty() const {
+            dej_nodiscard bool empty() const {
                 return cur_pos == 0;
             }
 
@@ -194,7 +194,7 @@ namespace dejavu {
             /**
              * @return The current position \a cur_pos.
              */
-            [[nodiscard]] int size() const {
+            dej_nodiscard int size() const {
                 return cur_pos;
             }
 
@@ -272,8 +272,8 @@ namespace dejavu {
                 struct comparator_map {
                     T *map;
 
-                    explicit comparator_map(T *map) {
-                        this->map = map;
+                    explicit comparator_map(T *m) {
+                        this->map = m;
                     }
 
                     bool operator()(const T &a, const T &b) {
@@ -388,7 +388,7 @@ namespace dejavu {
             /**
              * @return A pointer to the internal memory.
              */
-            [[nodiscard]] inline int* get_array() const {
+            dej_nodiscard inline int* get_array() const {
                 return arr;
             }
 
@@ -593,13 +593,13 @@ namespace dejavu {
             }
         };
 
-        [[maybe_unused]] static void bucket_sort(worklist& list,  markset& buckets, int limit) {
-            buckets.reset();
-            for(int i = 0; i < list.size(); ++i) buckets.set(list[i]);
-            list.reset();
-            for(int i = 0; i <= limit; ++i) if(buckets.get(i)) list.push_back(i);
-            buckets.reset();
-        }
+//        static void bucket_sort(worklist& list,  markset& buckets, int limit) {
+//            buckets.reset();
+//            for(int i = 0; i < list.size(); ++i) buckets.set(list[i]);
+//            list.reset();
+//            for(int i = 0; i <= limit; ++i) if(buckets.get(i)) list.push_back(i);
+//            buckets.reset();
+//        }
     }
 }
 

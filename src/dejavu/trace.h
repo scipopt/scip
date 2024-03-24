@@ -106,7 +106,7 @@ namespace dejavu {
              * Records the start of a refinement with respect to a color.
              * @param color The color in respect to which the coloring is refined.
              */
-            void op_refine_cell_start([[maybe_unused]] int color) {
+            void op_refine_cell_start(int) {
                 dej_assert(!comp || !assert_cell_act);
                 write_compare_no_limit(TRACE_MARKER_REFINE_CELL_START);
                 //write_compare(color);
@@ -156,7 +156,7 @@ namespace dejavu {
              * @return Determines whether in the stored trace, the next color in respect to which was refined created new colors
              * (i.e., whether the next color is splitting).
              */
-            [[maybe_unused]] bool blueprint_is_next_cell_active() {
+            dej_nodiscard bool blueprint_is_next_cell_active() {
                 if (!compare || !comp || position > static_cast<int>(compare_trace->data.size())) return true;
 
                 dej_assert(compare_trace);
@@ -177,7 +177,7 @@ namespace dejavu {
              * Skips the \a position to the start of the next refinement with respect to a color. To be used after
              * \a blueprint_is_next_cell_active() determined the current color to be non-splitting.
              */
-            [[maybe_unused]] void blueprint_skip_to_next_cell() {
+            void blueprint_skip_to_next_cell() {
                 while (position < static_cast<int>(compare_trace->data.size()) &&
                        compare_trace->data[position] != TRACE_MARKER_REFINE_CELL_END) {
                     dej_assert(compare_trace->data.size() > (size_t) position);
@@ -190,7 +190,7 @@ namespace dejavu {
             /**
              * Rewinds the \a position to the previous individualization.
              */
-            [[maybe_unused]] void rewind_to_individualization() {
+            void rewind_to_individualization() {
                 assert_cell_act = false;
                 assert_refine_act = false;
                 if (record) {
@@ -250,7 +250,7 @@ namespace dejavu {
             /**
              * @return A hash value summarizing the operations recorded in this trace.
              */
-            [[nodiscard]] unsigned long get_hash() const {
+            dej_nodiscard unsigned long get_hash() const {
                 return hash;
             }
 
@@ -265,7 +265,7 @@ namespace dejavu {
             /**
              * @return Whether the recorded operations deviated from the stored trace in \a compare_trace.
              */
-            [[nodiscard]] bool trace_equal() const {
+            dej_nodiscard bool trace_equal() const {
                 return comp;
             }
 
@@ -309,7 +309,7 @@ namespace dejavu {
                 dej_assert(record?static_cast<int>(data.size())==position:true);
             }
 
-            [[nodiscard]] int get_position() const {
+            dej_nodiscard int get_position() const {
                 return position;
             }
         };

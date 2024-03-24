@@ -150,7 +150,7 @@ namespace dejavu { namespace ds {
             alloc(new_domain_size);
         }
 
-        [[maybe_unused]] void check() const {
+        void check() const {
             bool comp = true;
 
             for (int i = 0; i < domain_size; ++i) {
@@ -158,13 +158,11 @@ namespace dejavu { namespace ds {
                 comp = comp && (lab[vertex_to_lab[i]] == i);
             }
 
-            [[maybe_unused]] int last_col = -1;
             int counter = 1;
             for (int i = 0; i < domain_size; ++i) {
                 --counter;
                 if (counter == 0) {
                     counter = ptn[i] + 1;
-                    last_col = i;
                     dej_assert(ptn[i] >= 0 && ptn[i] < domain_size);
                 }
             }

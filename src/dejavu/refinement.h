@@ -470,11 +470,11 @@ namespace dejavu {
                     }
                 }
 
-                [[nodiscard]] bool empty() const {
+                dej_nodiscard bool empty() const {
                     return (cur_pos == 0);
                 }
 
-                [[nodiscard]] int size() const {
+                dej_nodiscard int size() const {
                     return cur_pos;
                 }
 

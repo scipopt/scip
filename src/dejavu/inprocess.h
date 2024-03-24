@@ -98,9 +98,9 @@ namespace dejavu { namespace search_strategy {
                 std::vector<unsigned long> *map;
                 int* colmap;
 
-                explicit comparator_map(std::vector<unsigned long> *map, int* colmap) {
-                    this->map = map;
-                    this->colmap = colmap;
+                explicit comparator_map(std::vector<unsigned long> *m, int* vertex_to_col) {
+                    this->map = m;
+                    this->colmap = vertex_to_col;
                 }
 
                 bool operator()(const int &a, const int &b) const {
@@ -150,9 +150,9 @@ namespace dejavu { namespace search_strategy {
                 unsigned long *map;
                 int* colmap;
 
-                explicit comparator_map(unsigned long *map, int* colmap) {
-                    this->map = map;
-                    this->colmap = colmap;
+                explicit comparator_map(unsigned long *m, int* vertex_to_col) {
+                    this->map = m;
+                    this->colmap = vertex_to_col;
                 }
 
                 bool operator()(const int &a, const int &b) const {
@@ -267,7 +267,7 @@ namespace dejavu { namespace search_strategy {
          * @return whether any of the inprocessing techniques succeeded
          */
         bool inprocess(sgraph *g, ir::shared_tree &tree, groups::compressed_schreier &group, ir::controller &local_state,
-                       ir::limited_save &root_save, [[maybe_unused]] int budget, bool use_bfs_inprocess,
+                       ir::limited_save &root_save, int, bool use_bfs_inprocess,
                        bool use_shallow_inprocess, bool use_shallow_quadratic_inprocess, groups::orbit& orbit_partition) {
             local_state.load_reduced_state(root_save);
 
