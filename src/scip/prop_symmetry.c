@@ -175,7 +175,7 @@
 #define DEFAULT_USEDYNAMICPROP       TRUE    /**< whether dynamic propagation should be used for full orbitopes */
 #define DEFAULT_PREFERLESSROWS       TRUE    /**< Shall orbitopes with less rows be preferred in detection? */
 #define DEFAULT_HANDLESIGNEDORBITOPES TRUE   /**< Should orbitopes on which proper signed permutations act be handled?" */
-#define DEFAULT_HANDLESIMPLESIGNEDCOMPONENT TRUE /**< Should components consisting of a single full reflection be handled? */
+#define DEFAULT_USESIMPLESGNCOMP     TRUE /**< Should components consisting of a single full reflection be handled? */
 
 /* default parameters for symmetry computation */
 #define DEFAULT_SYMCOMPTIMING           2    /**< timing of symmetry computation (0 = before presolving, 1 = during presolving, 2 = at first call) */
@@ -237,7 +237,7 @@ struct SCIP_PropData
    int                   nopnodetypes;       /**< current number of operator node types used for symmetry detection */
    SCIP_Real*            permvardomaincenter; /**< center of variable domains (needed for signed permutations) */
    int                   symtype;             /**< type of symmetries to be computed */
-   SCIP_Bool*            isproperperm;        /**< stores for every symmetry whether it is a proper permutation */
+   SCIP_Bool*            isproperperm;        /**< stores for every generator whether it is a proper permutation */
 
    /* components of symmetry group */
    int                   ncomponents;        /**< number of components of symmetry group */
@@ -293,7 +293,7 @@ struct SCIP_PropData
    SCIP_Bool             usedynamicprop;     /**< whether dynamic propagation should be used for full orbitopes */
    SCIP_Bool             preferlessrows;     /**< Shall orbitopes with less rows be preferred in detection? */
    SCIP_Bool             handlesignedorbitopes; /**< Should orbitopes on which proper signed permutations act be handled?" */
-   SCIP_Bool             handlesimplesignedcomponent; /**< Should components consisting of a single full reflection be handled? */
+   SCIP_Bool             usesimplesgncomp;   /**< Should components consisting of a single full reflection be handled? */
 
    /* data necessary for symmetry computation order */
    int                   recomputerestart;   /**< Recompute symmetries after a restart has occurred? (0 = never, 1 = always, 2 = if symmetry reduction found) */
@@ -1146,7 +1146,7 @@ SCIP_RETCODE setSymmetryData(
    int*                  npermvars,          /**< pointer to store number of permvars */
    int*                  nbinpermvars,       /**< pointer to store number of binary permvars */
    SCIP_Real**           permvardomaincenter, /**< pointer to store center points of variable domains */
-   SCIP_Bool**           isproperperm,       /**< pointer to store whether symmetries are proper permutations */
+   SCIP_Bool**           isproperperm,       /**< pointer to store whether generators are proper permutations */
    int**                 perms,              /**< permutations matrix (nperms x nvars) */
    int                   nperms,             /**< number of permutations */
    int*                  nmovedvars,         /**< pointer to store number of vars affected by symmetry (if usecompression) or NULL */
@@ -1713,7 +1713,7 @@ SCIP_RETCODE computeSymmetryGroup(
    int*                  npermvars,          /**< pointer to store number of permvars */
    int*                  nbinpermvars,       /**< pointer to store number of binary permvars */
    SCIP_Real**           permvardomaincenter, /**< pointer to store center points of variable domains */
-   SCIP_Bool**           isproperperm,       /**< pointer to store whether symmetries are proper permutations */
+   SCIP_Bool**           isproperperm,       /**< pointer to store whether generators are proper permutations */
    int***                perms,              /**< pointer to store permutation matrix (nperms x nvars) */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations
@@ -2048,7 +2048,7 @@ SCIP_RETCODE ensureSymmetryPermstransComputed(
 
 /** ensures that movedpermvarscounts is initialized */
 static
-SCIP_RETCODE ensureSymmetryMovedpermvarscountsComputed(
+SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
    SCIP*                 scip,               /**< SCIP instance */
    SCIP_PROPDATA*        propdata            /**< propagator data */
    )
@@ -4666,7 +4666,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
       }
 #endif
 
-      /* for signed permutations, we need to adapt the rhs of SST cuts (artifically center variables at 0 ) */
+      /* for signed permutations, we need to adapt the rhs of SST cuts (artificially center variables at 0) */
       if ( propdata->symtype == SYM_SYMTYPE_SIGNPERM )
          rhs = propdata->permvardomaincenter[orbits[poscur]] - propdata->permvardomaincenter[orbits[posleader]];
 
@@ -5057,7 +5057,7 @@ SCIP_RETCODE addSSTConss(
    mixedcomponents = propdata->sstmixedcomponents;
 
    /* if not already computed, get number of affected vars */
-   SCIP_CALL( ensureSymmetryMovedpermvarscountsComputed(scip, propdata) );
+   SCIP_CALL( ensureSymmetryMovedPermvarsCountsComputed(scip, propdata) );
    nmovedpermvars = propdata->nmovedpermvars;
    nmovedbinpermvars = propdata->nmovedbinpermvars;
    nmovedintpermvars = propdata->nmovedintpermvars;
@@ -5731,7 +5731,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
 
    if ( checkorbired || checklexred )
    {
-      SCIP_CALL( ensureSymmetryMovedpermvarscountsComputed(scip, propdata) );
+      SCIP_CALL( ensureSymmetryMovedPermvarsCountsComputed(scip, propdata) );
       assert( propdata->nmovedpermvars );
    }
 
@@ -5803,7 +5803,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
             propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
       }
    }
-   else if ( propdata->handlesimplesignedcomponent && ! propdata->componentblocked[cidx] )
+   else if ( propdata->usesimplesgncomp && ! propdata->componentblocked[cidx] )
    {
       /* check if there is a signed permutation in the component that reflects all variables */
       if ( propdata->componenthassignedperm[cidx] )
@@ -5931,9 +5931,9 @@ SCIP_RETCODE SCIPdisplaySymmetryStatistics(
 static
 SCIP_RETCODE hasOrbitopeColumnFlip(
    int**                 varidxmatrix,       /**< matrix containing variable indices of orbitope */
-   int                   startrow,           /**< row of varidxmatrix in which orbitope begins */
+   int                   startrow,           /**< row of varidxmatrix in which orbitope starts */
    int                   endrow,             /**< row of varidxmatrix after which orbitope ends */
-   int                   startcol,           /**< column of varidxmatrix in which orbitope begins */
+   int                   startcol,           /**< column of varidxmatrix in which orbitope starts */
    int                   endcol,             /**< column of varidxmatrix after which orbitope ends */
    int*                  signedperm,         /**< signed permutation to be checked */
    int                   npermvars,          /**< number of variables symmetries act on */
@@ -6002,14 +6002,14 @@ SCIP_Bool isEquallyCenteredOrbitope(
    SCIP_Bool             equalrowcenters     /**< whether rows are centered equally (otherwise, columns) */
    )
 {
+   int i;
+   int j;
+
    assert( scip != NULL );
    assert( vardomaincenter != NULL );
    assert( varidxmatrix != NULL );
    assert( 0 <= startrow && startrow < endrow );
    assert( 0 <= startcol && startrow < endcol );
-
-   int i;
-   int j;
 
    if ( equalrowcenters )
    {
@@ -6145,7 +6145,7 @@ SCIP_RETCODE handleOrbitope(
    }
 
    /* if symmetries have not been handled yet */
-   if ( ! *success )
+   if ( ! (*success) )
    {
       /* dynamic propagation */
       if ( propdata->usedynamicprop )
@@ -6192,11 +6192,11 @@ SCIP_RETCODE handleOrbitope(
             ++propdata->norbitopes;
 
             *success = TRUE;
-         }
 
-         for (i = nbinrows - 1; i >= 0; --i)
-         {
-            SCIPfreeBufferArray(scip, &orbitopematrix[i]);
+            for (i = nbinrows - 1; i >= 0; --i)
+            {
+               SCIPfreeBufferArray(scip, &orbitopematrix[i]);
+            }
          }
          SCIPfreeBufferArray(scip, &orbitopematrix);
       }
@@ -6233,10 +6233,10 @@ SCIP_RETCODE handleDoubleLexOrbitope(
    if ( handlestatically )
    {
       char name[SCIP_MAXSTRLEN];
+      SCIP_Real consvals[2] = {-1.0, 1.0};
+      SCIP_VAR* consvars[2];
       SCIP_VAR** orbitopevarmatrix;
       SCIP_CONS* cons;
-      SCIP_VAR** consvars;
-      SCIP_Real* consvals;
       int nsignedconss;
       int nsortconss;
       int nactiverows;
@@ -6265,7 +6265,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             nactrowsprev = nactiverows;
 
             /* ceil(nactiverows / 2) */
-            nactiverows = ((int) (nactiverows / 2)) + (nactiverows % 2);
+            nactiverows = (int) ((nactiverows + 1) / 2);
          }
          assert( nactiverows >= 1 );
 
@@ -6277,12 +6277,6 @@ SCIP_RETCODE handleDoubleLexOrbitope(
       /* create linear constraints */
       SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
             &propdata->genlinconsssize, propdata->ngenlinconss + nsortconss + nsignedconss) );
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
-
-      consvals[0] = -1.0;
-      consvals[1] = 1.0;
 
       /* sort variables in first row */
       for (j = 0; j < ncols - 1; ++j)
@@ -6316,11 +6310,11 @@ SCIP_RETCODE handleDoubleLexOrbitope(
          for (j = 0; j < ncols; ++j)
          {
             /* ceil(nactiverows / 2) */
-            nactiverows = ((int) (nactiverows / 2)) + (nactiverows % 2);
-
-            /* the second half of active rows can be sorted by linear inequalities */
+            nactiverows = (int) ((nactiverows + 1) / 2);
             consvals[0] = -1.0;
             consvals[1] = 1.0;
+
+            /* the second half of active rows can be sorted by linear inequalities */
             for (i = nactiverows; i < nactrowsprev - 1; ++i)
             {
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_sort_col_%d_row_%d", partialname, j, i);
@@ -6430,8 +6424,6 @@ SCIP_RETCODE handleDoubleLexOrbitope(
                orbitopevarmatrix, ncols, nrows, success) );
       }
 
-      SCIPfreeBufferArray(scip, &consvals);
-      SCIPfreeBufferArray(scip, &consvars);
       SCIPfreeBufferArray(scip, &orbitopevarmatrix);
 
       *success = TRUE;
@@ -7803,9 +7795,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          &propdata->handlesignedorbitopes, TRUE, DEFAULT_HANDLESIGNEDORBITOPES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/" PROP_NAME "/handlesimplesignedcomponent",
+         "propagating/" PROP_NAME "/usesimplesgncomp",
          "Should components consisting of a single full reflection be handled?",
-         &propdata->handlesimplesignedcomponent, TRUE, DEFAULT_HANDLESIMPLESIGNEDCOMPONENT, NULL, NULL) );
+         &propdata->usesimplesgncomp, TRUE, DEFAULT_USESIMPLESGNCOMP, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
