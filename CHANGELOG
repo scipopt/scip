@@ -16,9 +16,12 @@ Fixed bugs
 - use quad precision to calculate residual activity bounds to reduce numerical errors for large variable bounds in cons_linear.c
 - in SCIPsolveProbingLP() when objective has been changed do not return cutoff due to exceeding the cutoff bound
 - set probing LP to be a relaxation only when objective has not been changed
+- declare contradicting infinities in getMinActivity() and getMaxActivity() as non-tight
 
 Miscellaneous
 -------------
+
+- redefine isrelax to istight in cons_linear.c
 
 Build system
 ------------
