@@ -940,6 +940,9 @@ SCIP_RETCODE applyRepair(
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
    SCIP_CALL( SCIPsetObjlimit(subscip,1.0) );
 
+   /* disable objective stop */
+   SCIP_CALL( SCIPresetParam(subscip, "limits/objectivestop") );
+
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
