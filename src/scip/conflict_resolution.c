@@ -2044,6 +2044,30 @@ void conflictRowClear(
    row->isbinary = FALSE;
 }
 
+static
+SCIP_Real twoNormOfCoefs(
+   SCIP_CONFLICTROW*     row                 /**< generalized resolution row */
+   )
+{
+   SCIP_Real norm;
+   int i;
+
+   assert(row != NULL);
+
+   norm = 0.0;
+   for( i = 0; i < row->nnz; i++ )
+   {
+      SCIP_Real coef;
+      int v;
+      v = row->inds[i];
+      coef = row->vals[v];
+      norm += coef * coef;
+   }
+   norm = sqrt(norm);
+
+   return norm;
+}
+
 /** calculates the slack (maxact - rhs) for a generalized resolution row given a set of bounds and coefficients */
 static
 SCIP_RETCODE computeSlack(
@@ -2125,11 +2149,15 @@ SCIP_RETCODE computeSlack(
 
 static
 SCIP_RETCODE MirConflict(
+   SCIP_CONFLICT*        conflict,
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
    SCIP_VAR**            vars,               /**< array of variables */
    int                   nvars,              /**< number of variables */
    SCIP_CONFLICTROW*     conflictrow,        /**< reason row */
+   SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
+   int*                  fixinds,             /**< dense array of indices of fixed variables */
+   SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change to resolve */
    SCIP_Bool*            success             /**< whether a mir conflict was found */
    )
 {
@@ -2139,7 +2167,6 @@ SCIP_RETCODE MirConflict(
    SCIP_Real* cutcoefs;
    int* rowinds;
    SCIP_Real* rowvals;
-
    int cutnnz;
    int rownnz;
    SCIP_Real cutrhs;
@@ -2152,7 +2179,7 @@ SCIP_RETCODE MirConflict(
    assert(conflictrow->vals != NULL);
    assert(conflictrow->nnz > 0);
 
-
+   conflict->nresmircalls++;
    SCIPsetDebugMsgPrint(set, "Apply MIR on Conflict\n");
 
    /* creating the aggregation row. There will be only a single row in this aggregation, since it is only used to
@@ -2175,6 +2202,10 @@ SCIP_RETCODE MirConflict(
    /* create a sparse row of the form ax <= b from the reason */
    rowrhs = -conflictrow->lhs;
    rownnz = conflictrow->nnz;
+
+   SCIP_BDCHGIDX* currbdchgidx;
+   if(currbdchginfo != NULL)
+      currbdchgidx = SCIPbdchginfoGetIdx(currbdchginfo);
    for( int i = 0; i < rownnz; ++i )
    {
       int idx;
@@ -2185,9 +2216,15 @@ SCIP_RETCODE MirConflict(
       rowvals[i] = -coef;
 
       if( coef > 0.0 )
-         SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetUbLocal(vars[idx]));
+         if (currbdchginfo == NULL)
+            SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetUbLocal(vars[idx]));
+         else
+            SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPgetVarUbAtIndex(set->scip, vars[idx], currbdchgidx, TRUE));
       else
-         SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetLbLocal(vars[idx]));
+         if (currbdchginfo == NULL)
+            SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetLbLocal(vars[idx]));
+         else
+            SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPgetVarLbAtIndex(set->scip, vars[idx], currbdchgidx, TRUE));
    }
 
    SCIP_Real cutefficacy;
@@ -2203,20 +2240,30 @@ SCIP_RETCODE MirConflict(
    NULL, MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy,
    &cutrank, &cutislocal, success) );
 
+
    if(*success)
    {
-      conflictRowClear(blkmem, conflictrow, nvars);
-      conflictrow->nnz = cutnnz;
-      conflictrow->lhs = -cutrhs;
+      SCIP_CONFLICTROW* mirconflictrow;
+      SCIP_CALL( conflictRowCopy(&mirconflictrow, blkmem, conflictrow) );
+
+      mirconflictrow->nnz = cutnnz;
+      mirconflictrow->lhs = -cutrhs;
       for (int i = 0; i < cutnnz; ++i)
       {
-         conflictrow->inds[i] = cutinds[i];
-         conflictrow->vals[cutinds[i]] = -cutcoefs[i];
+         mirconflictrow->inds[i] = cutinds[i];
+         mirconflictrow->vals[cutinds[i]] = -cutcoefs[i];
       }
-   }
+      /* remove variables with zero coefficient. Loop backwards */
+      conflictRowRemoveZeroVars(mirconflictrow, set);
 
-   /* remove variables with zero coefficient. Loop backwards */
-   conflictRowRemoveZeroVars(conflictrow, set);
+      computeSlack(set, vars, mirconflictrow, currbdchginfo, fixbounds, fixinds);
+      if (mirconflictrow->slack / twoNormOfCoefs(mirconflictrow) <= (conflictrow->slack / twoNormOfCoefs(conflictrow)))
+      {
+         conflict->nresmir++;
+         conflictRowReplace(conflictrow, blkmem, mirconflictrow);
+      }
+      SCIPconflictRowFree(&mirconflictrow, blkmem);
+   }
 
    SCIPaggrRowFree(set->scip, &aggrrow);
    SCIPfreeSol(set->scip, &refsol);
@@ -3141,20 +3188,6 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
                      SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
                      conflictrow->insertdepth, conflictrow->validdepth, conflictrow->conflictdepth,
                      conflictrow->repropdepth, conflictrow->nnz);
-      if(set->conf_applysimplemir)
-      {
-         MirConflict(set, blkmem, vars, SCIPprobGetNVars(transprob), conflictrow, mirsuccess);
-         if ( *mirsuccess )
-         {
-            SCIP_CALL( createAndAddConflictCon(conflict, blkmem, set, stat, vars, \
-                           tree, reopt, lp, cliquetable, conflictrow, conflictrow->insertdepth, success) );
-            conflict->nappliedglbresconss++;
-            SCIPsetDebugMsgPrint(set, " \t -> MIR row added (cdpt:%d, fdpt:%d, insert:%d, valid:%d, conf: %d, reprop: %d, len:%d):\n",
-                           SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
-                           conflictrow->insertdepth, conflictrow->validdepth, conflictrow->conflictdepth,
-                           conflictrow->repropdepth, conflictrow->nnz);
-         }
-      }
    }
    else
    {
@@ -5221,7 +5254,16 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIP_CALL( executeResolutionStep(conflict, set, vars, blkmem, bdchginfo, residx, validdepth, maxsize, fixbounds, fixinds, &successresolution ) );
 
          if (successresolution)
+         {
             SCIP_CALL( conflictRowReplace(conflictrow, blkmem, resolvedconflictrow) );
+            if(set->conf_applysimplemir)
+            {
+               SCIP_Bool mirsuccess;
+               MirConflict(conflict, set, blkmem, vars, nvars, conflictrow, fixbounds, fixinds, bdchginfo, &mirsuccess);
+            }
+         }
+
+
          /* if resolution was unsuccessful we can resolve clauses for the binary
           * case. This is called only if the clause fallback parameter is true */
          else
