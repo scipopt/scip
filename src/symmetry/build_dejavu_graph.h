@@ -35,48 +35,7 @@
 
 #include "scip/scip.h"
 
-/* include dejavu */
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wsign-compare"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#pragma GCC diagnostic ignored "-Wpedantic"
-#pragma GCC diagnostic ignored "-Wdeprecated-copy"
-#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
-#pragma GCC diagnostic ignored "-Wunused-private-field"
-#endif
-
-#ifdef _MSC_VER
-# pragma warning(push)
-# pragma warning(disable: 4189)  // local variable is initialized but not referenced
-# pragma warning(disable: 4388)  // compare signed and unsigned expression
-# pragma warning(disable: 4456)  // shadowed variable
-# pragma warning(disable: 4430)  // missing type specifier
-#endif
-
-/* the actual include */
 #include <dejavu/dejavu.h>
-
-#ifdef __GNUC__
-#pragma GCC diagnostic warning "-Wunused-but-set-variable"
-#pragma GCC diagnostic warning "-Wsign-compare"
-#pragma GCC diagnostic warning "-Wunused-variable"
-#pragma GCC diagnostic warning "-Wshadow"
-#pragma GCC diagnostic warning "-Wpedantic"
-#pragma GCC diagnostic warning "-Wdeprecated-copy"
-#pragma GCC diagnostic warning "-Wnon-virtual-dtor"
-#pragma GCC diagnostic warning "-Wunused-private-field"
-#pragma GCC diagnostic warning "-Wunknown-pragmas"
-#pragma GCC diagnostic warning "-Wpragmas"
-#endif
-
-#ifdef _MSC_VER
-# pragma warning(pop)
-#endif
-
 
 #ifdef __cplusplus
 extern "C" {
