@@ -4,6 +4,8 @@
 Features
 --------
 
+- added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
+
 Performance improvements
 ------------------------
 
@@ -26,6 +28,9 @@ Interface changes
 ### Changed parameters
 
 ### New parameters
+
+- new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
+- new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
 
 ### Data structures
 
