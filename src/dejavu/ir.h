@@ -2151,7 +2151,7 @@ namespace dejavu {
                 return tree_data_jump_map[level][num];
             }
 
-            [[nodiscard]] int get_finished_up_to() const {
+            dej_nodiscard int get_finished_up_to() const {
                 return finished_up_to;
             }
 
