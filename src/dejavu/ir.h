@@ -1076,7 +1076,7 @@ namespace dejavu {
             std::function<type_selector_hook> dynamic_seletor;
             markset test_set;
             std::vector<int> candidates;
-            big_number ir_tree_size_estimate;;
+            big_number ir_tree_size_estimate;
 
             int color_score(sgraph *g, controller *state, int color) {
                 test_set.reset();
