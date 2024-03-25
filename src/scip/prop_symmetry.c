@@ -6085,8 +6085,8 @@ SCIP_RETCODE handleOrbitope(
       SCIP_CALL( SCIPallocBufferArray(scip, &orbitopevarmatrix, nelem) );
       for (i = 0, pos = 0; i < nrows; ++i)
       {
-         for (j = 0; j < ncols; ++j, ++pos)
-            orbitopevarmatrix[pos] = propdata->permvars[varidxmatrix[i][j]];
+         for (j = 0; j < ncols; ++j)
+            orbitopevarmatrix[pos++] = propdata->permvars[varidxmatrix[i][j]];
       }
 
       SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
