@@ -8576,15 +8576,10 @@
  * @subsection SYMTIMING Controlling the timing of symmetry computation
  *
  * Since presolving might both remove and introduce formulation symmetries, the timing of computing symmetries
- * can be changed via the parameters <code>propagating/symmetry/addconsstiming</code> and
- * <code>propagating/symmetry/ofsymcomptiming</code>.
- * The first specifies the moment at which symmetries handling methods must be determined.
- * The second specifies the moment at which the symmetries must be computed.
- * If the second is triggered at a later moment than the first, the symmetries are computed just before determining
- * the symmetry handling methods, so the first parameter is the dominant parameter.
- * Both parameters take values 0, 1, or 2, corresponding to computing symmetries before presolving,
- * during presolving, or when the symmetry handling methods are applied first, respectively.
- *
+ * can be changed via the parameter <code>propagating/symmetry/symtiming</code>.
+ * The parameter takes value 0, 1, or 2, corresponding to computing symmetries before presolving,
+ * during presolving, or at the end of presolving, respectively.
+ * Based on the computed symmetries, SCIP enables some symmetry handling methods as explained above.
  *
  * @subsection SYMDETECTCUSTOM Symmetry detection for customized constraints
  *
