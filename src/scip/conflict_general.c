@@ -1173,7 +1173,6 @@ SCIP_RETCODE SCIPgetFarkasProof(
    SCIP_ROW* row;
    int* localrowinds;
    int* localrowdepth;
-   SCIP_Real large;
    SCIP_Bool infdelta;
    int nlocalrows;
    int nrows;
@@ -1202,7 +1201,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
     */
    if( !SCIPlpiHasDualRay(lpi) )
    {
-      (*valid) = FALSE;
+      *valid = FALSE;
       return SCIP_OKAY;
    }
 
@@ -1219,19 +1218,18 @@ SCIP_RETCODE SCIPgetFarkasProof(
    SCIP_CALL( SCIPlpiGetDualfarkas(lpi, dualfarkas) );
 
    /* check whether the Farkas solution is numerically stable */
-   large = 1.0 / SCIPsetSumepsilon(set);
    for( r = 0; r < nrows; ++r )
    {
-      if( ABS(dualfarkas[r]) > large )
+      if( REALABS(dualfarkas[r]) > 1e+7 )
       {
-         (*valid) = FALSE;
+         *valid = FALSE;
          goto TERMINATE;
       }
    }
 
    /* calculate the Farkas row */
-   (*valid) = TRUE;
-   (*validdepth) = 0;
+   *valid = TRUE;
+   *validdepth = 0;
 
    for( r = 0; r < nrows; ++r )
    {
@@ -1265,7 +1263,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
             /* due to numerical reasons we want to stop */
             if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
             {
-               (*valid) = FALSE;
+               *valid = FALSE;
                goto TERMINATE;
             }
          }
@@ -1321,7 +1319,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
       }
       else
       {
-         (*valid) = FALSE;
+         *valid = FALSE;
          SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
       }
    }
@@ -1358,7 +1356,6 @@ SCIP_RETCODE SCIPgetDualProof(
    SCIP_Real* redcosts;
    int* localrowinds;
    int* localrowdepth;
-   SCIP_Real large;
    SCIP_Bool infdelta;
    int nlocalrows;
    int nrows;
@@ -1397,7 +1394,7 @@ SCIP_RETCODE SCIPgetDualProof(
    retcode = SCIPlpiGetSol(lpi, NULL, primsols, dualsols, NULL, redcosts);
    if( retcode == SCIP_LPERROR ) /* on an error in the LP solver, just abort the conflict analysis */
    {
-      (*valid) = FALSE;
+      *valid = FALSE;
       goto TERMINATE;
    }
    SCIP_CALL( retcode );
@@ -1410,12 +1407,11 @@ SCIP_RETCODE SCIPgetDualProof(
 #endif
 
    /* check whether the dual solution is numerically stable */
-   large = 1.0 / SCIPsetSumepsilon(set);
    for( r = 0; r < nrows; ++r )
    {
-      if( ABS(dualsols[r]) > large )
+      if( REALABS(dualsols[r]) > 1e+7 )
       {
-         (*valid) = FALSE;
+         *valid = FALSE;
          goto TERMINATE;
       }
    }
@@ -1482,7 +1478,7 @@ SCIP_RETCODE SCIPgetDualProof(
             /* due to numerical reasons we want to stop */
             if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
             {
-               (*valid) = FALSE;
+               *valid = FALSE;
                goto TERMINATE;
             }
          }
@@ -1538,7 +1534,7 @@ SCIP_RETCODE SCIPgetDualProof(
       }
       else
       {
-         (*valid) = FALSE;
+         *valid = FALSE;
          SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
       }
    }
