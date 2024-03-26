@@ -6387,7 +6387,7 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
       return SCIP_OKAY;
 
    /* compute and handle symmetries if required  */
-   if ( propdata->symtiming == 0 )
+   if ( propdata->symtiming == SYM_COMPUTETIMING_BEFOREPRESOLVING )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Symmetry computation before presolving:\n");
 
@@ -6478,7 +6478,7 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
 
    /* possibly create symmetry handling constraints */
 
-   /* skip presolving if we are not at the end if symtiming == 2 */
+   /* skip presolving if we are not at the end and if symtiming == SYM_COMPUTETIMING_DURINGPRESOL */
    assert( 0 <= propdata->symtiming && propdata->symtiming <= SYM_COMPUTETIMING_AFTERPRESOL );
    if ( propdata->symtiming > SYM_COMPUTETIMING_DURINGPRESOL && ! SCIPisPresolveFinished(scip) )
       return SCIP_OKAY;
