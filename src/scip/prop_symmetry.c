@@ -265,12 +265,12 @@ struct SCIP_PropData
    SCIP_Bool             usecolumnsparsity;  /**< Should the number of conss a variable is contained in be exploited in symmetry detection? */
    SCIP_Bool             doubleequations;    /**< Double equations to positive/negative version? */
    SCIP_Bool             enforcecomputesymmetry; /**< always compute symmetries, even if they cannot be handled */
+   int                   symtiming;          /**< timing of computing and handling symmetries (0 = before presolving, 1 = during presolving, 2 = after presolving) */
 
    /* for symmetry constraints */
    SCIP_Bool             triedaddsymmethods; /**< whether we already tried to add symmetry handling methods */
    SCIP_Bool             conssaddlp;         /**< Should the symmetry breaking constraints be added to the LP? */
    SCIP_Bool             addsymresacks;      /**< Add symresack constraints for each generator? */
-   int                   addconsstiming;     /**< timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) */
    SCIP_CONS**           genorbconss;        /**< list of generated orbitope/orbisack/symresack constraints */
    SCIP_CONS**           genlinconss;        /**< list of generated linear constraints */
    int                   ngenorbconss;       /**< number of generated orbitope/orbisack/symresack constraints */
@@ -292,7 +292,6 @@ struct SCIP_PropData
 
    /* data necessary for symmetry computation order */
    int                   recomputerestart;   /**< Recompute symmetries after a restart has occurred? (0 = never, 1 = always, 2 = if symmetry reduction found) */
-   int                   symcomptiming;      /**< timing for computation symmetries (0 = before presolving, 1 = during presolving, 2 = at first call) */
    int                   lastrestart;        /**< last restart for which symmetries have been computed */
    SCIP_Bool             symfoundreduction;  /**< whether symmetry handling propagation has found a reduction since the last time computing symmetries */
 
@@ -6387,18 +6386,12 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    if ( propdata->usesymmetry == 0 )
       return SCIP_OKAY;
 
-   /* add symmetry handling constraints if required  */
-   if ( propdata->addconsstiming == 0 )
-   {
-      SCIPdebugMsg(scip, "Try to add symmetry handling constraints before presolving.\n");
-
-      SCIP_CALL( tryAddSymmetryHandlingMethods(scip, prop, NULL, NULL) );
-   }
-   else if ( propdata->symcomptiming == 0 )
+   /* compute and handle symmetries if required  */
+   if ( propdata->symtiming == 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Symmetry computation before presolving:\n");
 
-      SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
+      SCIP_CALL( tryAddSymmetryHandlingMethods(scip, prop, NULL, NULL) );
    }
 
    return SCIP_OKAY;
@@ -6430,14 +6423,6 @@ SCIP_DECL_PROPEXITPRE(propExitpreSymmetry)
    if ( SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
    {
       SCIP_CALL( tryAddSymmetryHandlingMethods(scip, prop, NULL, NULL) );
-   }
-
-   /* if timing requests it, guarantee that symmetries are computed even if presolving is disabled */
-   if ( propdata->symcomptiming <= 1 && SCIPgetStatus(scip) == SCIP_STATUS_UNKNOWN )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Symmetry computation at end of presolving:\n");
-
-      SCIP_CALL( determineSymmetry(scip, propdata, SYM_SPEC_BINARY | SYM_SPEC_INTEGER | SYM_SPEC_REAL, 0) );
    }
 
    return SCIP_OKAY;
@@ -6493,9 +6478,9 @@ SCIP_DECL_PROPPRESOL(propPresolSymmetry)
 
    /* possibly create symmetry handling constraints */
 
-   /* skip presolving if we are not at the end if addconsstiming == 2 */
-   assert( 0 <= propdata->addconsstiming && propdata->addconsstiming <= SYM_COMPUTETIMING_AFTERPRESOL );
-   if ( propdata->addconsstiming > SYM_COMPUTETIMING_DURINGPRESOL && ! SCIPisPresolveFinished(scip) )
+   /* skip presolving if we are not at the end if symtiming == 2 */
+   assert( 0 <= propdata->symtiming && propdata->symtiming <= SYM_COMPUTETIMING_AFTERPRESOL );
+   if ( propdata->symtiming > SYM_COMPUTETIMING_DURINGPRESOL && ! SCIPisPresolveFinished(scip) )
       return SCIP_OKAY;
 
    /* possibly stop */
@@ -6873,14 +6858,14 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/addconsstiming",
-         "timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving)",
-         &propdata->addconsstiming, TRUE, DEFAULT_ADDCONSSTIMING, 0, 2, NULL, NULL) );
+         "timing of adding constraints (0 = before presolving, 1 = during presolving, 2 = after presolving) [disabled parameter]",
+         NULL, TRUE, DEFAULT_ADDCONSSTIMING, 0, 2, NULL, NULL) );
 
    /* add parameters for orbital reduction */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/ofsymcomptiming",
-         "timing of symmetry computation (0 = before presolving, 1 = during presolving, 2 = at first call)",
-         &propdata->symcomptiming, TRUE, DEFAULT_SYMCOMPTIMING, 0, 2, NULL, NULL) );
+         "timing of symmetry computation (0 = before presolving, 1 = during presolving, 2 = at first call) [disabled parameter]",
+         NULL, TRUE, DEFAULT_SYMCOMPTIMING, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/performpresolving",
@@ -6972,6 +6957,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/symtype",
          "Type of symmetries that shall be computed?",
          &propdata->symtype, TRUE, DEFAULT_SYMTYPE, 0, 1, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "propagating/" PROP_NAME "/symtiming",
+         "timing of symmetry computation and handling (0 = before presolving, 1 = during presolving, 2 = after presolving)",
+         &propdata->symtiming, TRUE, DEFAULT_SYMCOMPTIMING, 0, 2, NULL, NULL) );
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
