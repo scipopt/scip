@@ -94,6 +94,10 @@
  * 2^53 = 9007199254740992
  */
 #define NUMSTOP 9007199254740992.0
+/* because row violations might be magnified, we stop the infeasibility analysis if a dual weight is bigger than
+ * 10^7 = 10000000
+ */
+#define SOLSTOP 10000000.0
 
 /** returns the current number of conflict sets in the conflict set storage */
 int SCIPconflictGetNConflicts(
@@ -1220,7 +1224,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
    /* check whether the Farkas solution is numerically stable */
    for( r = 0; r < nrows; ++r )
    {
-      if( REALABS(dualfarkas[r]) > 1e+7 )
+      if( REALABS(dualfarkas[r]) > SOLSTOP )
       {
          *valid = FALSE;
          goto TERMINATE;
@@ -1409,7 +1413,7 @@ SCIP_RETCODE SCIPgetDualProof(
    /* check whether the dual solution is numerically stable */
    for( r = 0; r < nrows; ++r )
    {
-      if( REALABS(dualsols[r]) > 1e+7 )
+      if( REALABS(dualsols[r]) > SOLSTOP )
       {
          *valid = FALSE;
          goto TERMINATE;
