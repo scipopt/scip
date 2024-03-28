@@ -822,11 +822,11 @@ SCIP_RETCODE checkCons(
    /* check feasibility of constraint if necessary */
    if( mustcheck )
    {
+      SCIP_Real maxsolval = 0.0;
+      SCIP_Real sumsolval = 0.0;
       SCIP_Real solval;
-      SCIP_Real maxsolval;
-      SCIP_Real sumsolval;
       SCIP_Real viol;
-      int maxsolind;
+      int maxsolind = 0;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -837,16 +837,12 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
-      maxsolind = 0;
-      maxsolval = 0.0;
-      sumsolval = 0.0;
-
       /* evaluate operator variables */
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
 
-         if( solval > maxsolval )
+         if( maxsolval < solval )
          {
             maxsolind = i;
             maxsolval = solval;
@@ -878,18 +874,15 @@ SCIP_RETCODE checkCons(
             SCIPinfoMessage(scip, NULL, "violation:");
 
             if( SCIPisFeasPositive(scip, maxsolval - solval) )
-            {
                SCIPinfoMessage(scip, NULL, " operand <%s> = TRUE and resultant <%s> = FALSE\n",
                   SCIPvarGetName(consdata->vars[maxsolind]), SCIPvarGetName(consdata->resvar));
-            }
             else
-            {
                SCIPinfoMessage(scip, NULL, " all operands are FALSE and resultant <%s> = TRUE\n",
                   SCIPvarGetName(consdata->resvar));
-            }
          }
       }
 
+      /* update constraint violation in solution */
       if( sol != NULL )
          SCIPupdateSolConsViolation(scip, sol, viol, viol);
    }

@@ -403,17 +403,6 @@ SCIP_RETCODE consdataCreate(
       }
    }
 
-#ifndef NDEBUG
-   /* assert that all variables are explicit binary variables
-    * xor-check cannot handle fractional values for implicit binary variables
-    */
-   for( int v = 0; v < (*consdata)->nvars; ++v )
-   {
-      assert(SCIPvarIsBinary((*consdata)->vars[v]));
-      assert(SCIPvarGetType((*consdata)->vars[v]) != SCIP_VARTYPE_IMPLINT);
-   }
-#endif
-
    if( (*consdata)->intvar != NULL )
    {
       /* capture artificial variable */
@@ -1857,9 +1846,13 @@ SCIP_RETCODE checkCons(
    /* check feasibility of constraint if necessary */
    if( checklprows || !allRowsInLP(consdata) )
    {
+      SCIP_Real maxcenval = 0.0;
+      SCIP_Real sumcenval = 0.0;
+      SCIP_Real sumsolval = 0.0;
+      SCIP_Real cenval;
       SCIP_Real solval;
-      SCIP_Bool odd;
-      int ones;
+      SCIP_Real viol;
+      SCIP_Bool odd = consdata->rhs;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -1870,43 +1863,55 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
-      /* check, if all variables and the rhs sum up to an even value */
-      odd = consdata->rhs;
-      ones = 0;
+      /* evaluate operator variables */
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
-         assert(SCIPisFeasIntegral(scip, solval));
-         odd = (odd != (solval > 0.5));
 
          if( solval > 0.5 )
-            ++ones;
+         {
+            odd = !odd;
+            cenval = 1.0 - solval;
+         }
+         else
+            cenval = solval;
+
+         if( maxcenval < cenval )
+            maxcenval = cenval;
+
+         sumcenval += cenval;
+         sumsolval += solval;
       }
-      if( odd )
+
+      /* the center value sum is the additive distance to the nearest integral solution infeasible if odd
+       * and otherwise the additive distance to the next nearest integral solution infeasible must be at least one
+       * see separateCons() for further intuition
+       */
+      viol = MAX(0.0, (odd ? 1.0 : 2.0 * maxcenval) - sumcenval);
+
+      /* additionally check linear feasibility of an existing integrality variable */
+      if( consdata->intvar != NULL )
+      {
+         solval = REALABS(sumsolval - 2 * SCIPgetSolVal(scip, sol, consdata->intvar) - (SCIP_Real)consdata->rhs);
+
+         if( viol < solval )
+            viol = solval;
+      }
+
+      if( SCIPisFeasPositive(scip, viol) )
       {
          *violated = TRUE;
 
          /* only reset constraint age if we are in enforcement */
          if( sol == NULL )
+         {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
-      }
-      else if( consdata->intvar != NULL )
-      {
-         solval = SCIPgetSolVal(scip, sol, consdata->intvar);
-         assert(SCIPisFeasIntegral(scip, solval));
-
-         if( !SCIPisFeasEQ(scip, ones - 2 * solval, (SCIP_Real) consdata->rhs) )
-            *violated = TRUE;
+         }
       }
 
-      /* only reset constraint age if we are in enforcement */
-      if( *violated && sol == NULL )
-      {
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
-      }
       /* update constraint violation in solution */
-      else if ( *violated && sol != NULL )
-         SCIPupdateSolConsViolation(scip, sol, 1.0, 1.0);
+      if( sol != NULL )
+         SCIPupdateSolConsViolation(scip, sol, viol, viol);
    }
 
    return SCIP_OKAY;

@@ -6,7 +6,8 @@
 Features
 --------
 
-- Added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem.
+- added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem
+- allow for implicit integer variables in xor constraints
 
 Performance improvements
 ------------------------
