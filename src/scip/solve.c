@@ -2903,11 +2903,7 @@ SCIP_RETCODE priceAndCutLoop(
    }
 
    /* update lower bound w.r.t. the LP solution */
-   if( *cutoff )
-   {
-      SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
-   }
-   else if( !(*lperror) )
+   if( !(*cutoff) && !(*lperror) )
    {
       assert(lp->flushed);
       assert(lp->solved);
@@ -2939,14 +2935,18 @@ SCIP_RETCODE priceAndCutLoop(
          *cutoff = TRUE;
       }
    }
+
    /* check for unboundedness */
    if( !(*lperror) )
-   {
       *unbounded = (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-      /* assert(!(*unbounded) || root); */ /* unboundedness can only happen in the root node; no, of course it can also happens in the tree if a branching did not help to resolve unboundedness */
-   }
 
    lp->installing = FALSE;
+
+   /* check for cutoff */
+   if( *cutoff )
+   {
+      SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+   }
 
    SCIPsetDebugMsg(set, " -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
       SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp),
