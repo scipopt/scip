@@ -1243,49 +1243,52 @@ SCIP_RETCODE SCIPnodeCutoff(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_Real oldbound;
+   SCIP_NODETYPE nodetype = SCIPnodeGetType(node);
 
-   assert(node != NULL);
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
-
-   if( set->reopt_enable )
-   {
-      assert(reopt != NULL);
-      /* check if the node should be stored for reoptimization */
-      SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
-            tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
-   }
-
-   oldbound = node->lowerbound;
-   node->cutoff = TRUE;
-   node->lowerbound = SCIPsetInfinity(set);
-   node->estimate = SCIPsetInfinity(set);
-   if( node->active )
-      tree->cutoffdepth = MIN(tree->cutoffdepth, (int)node->depth);
-
-   /* update primal integral */
-   if( node->depth == 0 )
-   {
-      stat->rootlowerbound = SCIPsetInfinity(set);
-      if( set->misc_calcintegral )
-         SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), SCIPsetInfinity(set));
-   }
-   else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) )
-   {
-      SCIP_Real lowerbound;
-      lowerbound = SCIPtreeGetLowerbound(tree, set);
-
-      /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
-      if( lowerbound > stat->lastlowerbound )
-         SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), SCIPsetInfinity(set));
-   }
-
-   SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
+   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE) || !set->misc_calcintegral || SCIPtreeGetLowerbound(tree, set) == stat->lastlowerbound); /*lint !e777*/
 
    SCIPsetDebugMsg(set, "cutting off %s node #%" SCIP_LONGINT_FORMAT " at depth %d (cutoffdepth: %d)\n",
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
+
+   /* check if the node should be stored for reoptimization */
+   if( set->reopt_enable )
+   {
+      SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
+         SCIPlpGetSolstat(lp), tree->root == node, tree->focusnode == node, node->lowerbound,
+         tree->effectiverootdepth) );
+   }
+
+   assert(nodetype != SCIP_NODETYPE_LEAF);
+
+   node->cutoff = TRUE;
+   node->lowerbound = SCIPsetInfinity(set);
+   node->estimate = SCIPsetInfinity(set);
+
+   if( node->active && tree->cutoffdepth > node->depth )
+      tree->cutoffdepth = node->depth;
+
+   if( node->depth == 0 )
+      stat->rootlowerbound = SCIPsetInfinity(set);
+
+   if( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING )
+   {
+      /* update primal-dual integrals */
+      if( set->misc_calcintegral )
+      {
+         SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
+
+         assert(lowerbound <= SCIPsetInfinity(set));
+
+         /* updating the primal integral is only necessary if lower bound has increased since last evaluation */
+         if( lowerbound > stat->lastlowerbound )
+            SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
+      }
+
+      SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
+   }
 
    return SCIP_OKAY;
 }
@@ -2382,35 +2385,36 @@ void SCIPnodeUpdateLowerbound(
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    )
 {
-   assert(node != NULL);
    assert(stat != NULL);
+   assert(set != NULL);
+   assert(!SCIPsetIsInfinity(set, newbound));
+   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE) || !set->misc_calcintegral || SCIPtreeGetLowerbound(tree, set) == stat->lastlowerbound); /*lint !e777*/
 
-   if( newbound > node->lowerbound )
+   if( SCIPnodeGetLowerbound(node) < newbound )
    {
-      SCIP_Real oldbound;
+      SCIP_NODETYPE nodetype = SCIPnodeGetType(node);
 
-      oldbound = node->lowerbound;
+      assert(nodetype != SCIP_NODETYPE_LEAF);
+
       node->lowerbound = newbound;
-      node->estimate = MAX(node->estimate, newbound);
+
+      if( node->estimate < newbound )
+         node->estimate = newbound;
 
       if( node->depth == 0 )
-      {
          stat->rootlowerbound = newbound;
-         if( set->misc_calcintegral )
-            SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), newbound);
-         SCIPvisualLowerbound(stat->visual, set, stat, newbound);
-      }
-      else if ( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+
+      if( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING )
       {
-         SCIP_Real lowerbound;
+         SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
 
-         lowerbound = SCIPtreeGetLowerbound(tree, set);
-         assert(newbound >= lowerbound);
-         SCIPvisualLowerbound(stat->visual, set, stat, lowerbound);
+         assert(lowerbound <= newbound);
 
-         /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
-         if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) && lowerbound > stat->lastlowerbound )
+         /* updating the primal integral is only necessary if lower bound has increased since last evaluation */
+         if( set->misc_calcintegral && lowerbound > stat->lastlowerbound )
             SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
+
+         SCIPvisualLowerbound(stat->visual, set, stat, lowerbound);
       }
    }
 }
