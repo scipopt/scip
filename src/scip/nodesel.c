@@ -656,7 +656,9 @@ SCIP_RETCODE SCIPnodepqBound(
 
    SCIPsetDebugMsg(set, "bounding node queue of length %d with cutoffbound=%g\n", nodepq->len, cutoffbound);
 
-   for( pos = nodepq->len - 1; pos >= 0; --pos )
+   pos = nodepq->len - 1;
+
+   while( pos >= 0 )
    {
       assert(pos < nodepq->len);
       node = nodepq->slots[pos];
@@ -690,10 +692,10 @@ SCIP_RETCODE SCIPnodepqBound(
           * - if the slot was occupied by the parent, we have to check this slot (the parent) again; unfortunately,
           *   we will check the node which occupied the parent's slot again, even though it cannot be cut off;
           * - otherwise, the slot was the last slot or it was occupied by a node with a position greater than
-          *   the current position; this node was already checked and we can consider the next position
+          *   the current position; this node was already checked and we can decrease the position
           */
-         if( nodepqDelPos(nodepq, set, pos) )
-            ++pos;
+         if( !nodepqDelPos(nodepq, set, pos) )
+            --pos;
 
          node->cutoff = TRUE;
 
@@ -717,12 +719,15 @@ SCIP_RETCODE SCIPnodepqBound(
          /* free node memory */
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
       }
+      else
+         --pos;
    }
 
    SCIPsetDebugMsg(set, " -> bounded node queue has length %d\n", nodepq->len);
 
    return SCIP_OKAY;
 }
+
 
 /*
  * node selector methods 
