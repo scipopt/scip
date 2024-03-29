@@ -308,6 +308,11 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
    SCIP_CALL( SYMbuildDejavuGraph(scip, &dejavugraph, graph, &success) );
 
+#ifdef WRITE_GRAPH
+   std::string filename = std::string(SCIPgetProbName(scip)) + std::string(".dimacs");
+   dejavugraph.dump_dimacs(filename);
+#endif
+
    /* compute symmetries */
    SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(graph), &dejavugraph, SCIPgetSymgraphNVars(graph),
          maxgenerators, perms, nperms, nmaxperms, log10groupsize, TRUE, symcodetime) );
