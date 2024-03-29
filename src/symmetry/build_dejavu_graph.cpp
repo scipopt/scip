@@ -109,7 +109,7 @@ SCIP_Bool isEdgeGroupable(
 static
 SCIP_RETCODE addOrDetermineEffectOfGroupedEdges(
    SCIP*                 scip,               /**< SCIP pointer */
-   dejavu::static_graph*  G,                  /**< graph which gets extended */
+   dejavu::static_graph* G,                  /**< graph which gets extended */
    SCIP_Bool             determinesize,      /**< whether only the effect of grouping on the graph shall be checked */
    int*                  internodeid,        /**< (initialized) pointer to store the ID of the next intermediate node */
    int**                 degrees,            /**< pointer to array of degrees for nodes in G */
@@ -223,7 +223,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
    SCIP*                 scip,               /**< SCIP instance */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
    SCIP_Bool             determinesize,      /**< whether only the size of the graph shall be determined */
-   dejavu::static_graph*  G,                  /**< graph to be constructed */
+   dejavu::static_graph* G,                  /**< graph to be constructed */
    int*                  nnodes,             /**< pointer to store the total number of nodes in graph */
    int*                  nedges,             /**< pointer to store the total number of edges in graph */
    int**                 degrees,            /**< pointer to store the degrees of the nodes */
@@ -492,7 +492,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
    SYM_GRAPH*            graph1,             /**< first symmetry detection graph */
    SYM_GRAPH*            graph2,             /**< second symmetry detection graph */
    SCIP_Bool             determinesize,      /**< whether only the size of the graph shall be determined */
-   dejavu::static_graph*  G,                  /**< graph to be constructed */
+   dejavu::static_graph* G,                  /**< graph to be constructed */
    int*                  nnodes,             /**< pointer to store the total number of nodes in graph */
    int*                  nedges,             /**< pointer to store the total number of edges in graph */
    int**                 degrees,            /**< pointer to store the degrees of the nodes */
@@ -850,7 +850,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
 /** compute generators of symmetry group */
 SCIP_RETCODE SYMbuildDejavuGraph(
    SCIP*                 scip,               /**< SCIP pointer */
-   dejavu::static_graph*  dejavugraph,         /**< pointer to hold dejavu graph being created */
+   dejavu::static_graph* dejavugraph,        /**< pointer to hold dejavu graph being created */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
    SCIP_Bool*            success             /**< pointer to store whether dejavugraph could be built */
    )
@@ -893,7 +893,7 @@ SCIP_RETCODE SYMbuildDejavuGraph(
 /** returns whether two given graphs are identical */
 SCIP_RETCODE SYMbuildDejavuGraphCheck(
    SCIP*                 scip,               /**< SCIP pointer */
-   dejavu::static_graph*  dejavugraph,         /**< pointer to hold dejavu graph being created */
+   dejavu::static_graph* dejavugraph,        /**< pointer to hold dejavu graph being created */
    SYM_GRAPH*            G1,                 /**< first graph */
    SYM_GRAPH*            G2,                 /**< second graph */
    int*                  nnodes,             /**< pointer to store number of nodes in dejavu graph */
