@@ -4504,9 +4504,12 @@ void SCIPstoreSolutionGap(
    if( scip->primal->nsols == 1 )
       scip->stat->firstsolgap = scip->stat->lastsolgap;
 
-   if( scip->set->stage == SCIP_STAGE_SOLVING && scip->set->misc_calcintegral )
+   if( scip->set->misc_calcintegral )
    {
-      SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
+      SCIP_Real upperbound = SCIPgetUpperbound(scip);
+
+      if( upperbound < scip->stat->lastupperbound )
+         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, upperbound, -SCIPinfinity(scip));
    }
 }
 
