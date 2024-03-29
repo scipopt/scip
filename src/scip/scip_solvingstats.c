@@ -1429,10 +1429,7 @@ SCIP_Real SCIPgetDualboundRoot(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDualboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
-      return SCIPgetPrimalbound(scip);
-   else
-      return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, scip->stat->rootlowerbound);
+   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPgetLowerboundRoot(scip));
 }
 
 /** gets lower (dual) bound in transformed problem of the root node
@@ -1453,10 +1450,7 @@ SCIP_Real SCIPgetLowerboundRoot(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLowerboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
-      return SCIPgetUpperbound(scip);
-   else
-      return scip->stat->rootlowerbound;
+   return scip->stat->rootlowerbound;
 }
 
 /** gets dual bound for the original problem obtained by the first LP solve at the root node
