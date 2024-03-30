@@ -4354,8 +4354,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsAnd)
    return SCIP_OKAY;
 }
 
-
-/** feasibility check method of constraint handler for integral solutions */
+/** feasibility check method of constraint handler and */
 static
 SCIP_DECL_CONSCHECK(consCheckAnd)
 {  /*lint --e{715}*/
@@ -4364,8 +4363,7 @@ SCIP_DECL_CONSCHECK(consCheckAnd)
 
    *result = SCIP_FEASIBLE;
 
-   /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
+   for( i = 0; i < nconss && ( *result == SCIP_FEASIBLE || completely ); ++i )
    {
       SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
       if( violated )
@@ -4374,7 +4372,6 @@ SCIP_DECL_CONSCHECK(consCheckAnd)
 
    return SCIP_OKAY;
 }
-
 
 /** domain propagation method of constraint handler */
 static

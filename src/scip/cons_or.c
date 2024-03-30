@@ -1707,29 +1707,24 @@ SCIP_DECL_CONSENFOPS(consEnfopsOr)
    return SCIP_OKAY;
 }
 
-
-/** feasibility check method of constraint handler for integral solutions */
+/** feasibility check method of constraint handler or */
 static
 SCIP_DECL_CONSCHECK(consCheckOr)
 {  /*lint --e{715}*/
+   SCIP_Bool violated;
    int i;
 
    *result = SCIP_FEASIBLE;
 
-   /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
+   for( i = 0; i < nconss && ( *result == SCIP_FEASIBLE || completely ); ++i )
    {
-      SCIP_Bool violated = FALSE;
-
       SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
-
       if( violated )
          *result = SCIP_INFEASIBLE;
    }
 
    return SCIP_OKAY;
 }
-
 
 /** domain propagation method of constraint handler */
 static

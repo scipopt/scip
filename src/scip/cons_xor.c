@@ -1831,6 +1831,7 @@ SCIP_RETCODE checkCons(
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -1853,6 +1854,7 @@ SCIP_RETCODE checkCons(
       SCIP_Real solval;
       SCIP_Real viol;
       SCIP_Bool odd = consdata->rhs;
+      int ones = 0;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -1871,6 +1873,7 @@ SCIP_RETCODE checkCons(
          if( solval > 0.5 )
          {
             odd = !odd;
+            ++ones;
             cenval = 1.0 - solval;
          }
          else
@@ -1889,7 +1892,7 @@ SCIP_RETCODE checkCons(
        */
       viol = MAX(0.0, (odd ? 1.0 : 2.0 * maxcenval) - sumcenval);
 
-      /* additionally check linear feasibility of an existing integrality variable */
+      /* additionally check linear feasibility of an existing integer variable */
       if( consdata->intvar != NULL )
       {
          solval = REALABS(sumsolval - 2 * SCIPgetSolVal(scip, sol, consdata->intvar) - (SCIP_Real)consdata->rhs);
@@ -1906,6 +1909,18 @@ SCIP_RETCODE checkCons(
          if( sol == NULL )
          {
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         }
+
+         if( printreason )
+         {
+            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
+            SCIPinfoMessage(scip, NULL, "violation: %d operands are set to TRUE ", ones);
+
+            if( consdata->intvar == NULL )
+               SCIPinfoMessage(scip, NULL, "and all sum up to %g\n", sumsolval);
+            else
+               SCIPinfoMessage(scip, NULL, "but integer variable is %g\n", SCIPgetSolVal(scip, sol, consdata->intvar));
          }
       }
 
@@ -5024,7 +5039,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpXor)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, FALSE, &violated) );
       if( violated )
       {
          SCIP_Bool separated;
@@ -5061,7 +5076,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxXor)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      SCIP_CALL( checkCons(scip, conss[i], sol, FALSE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], sol, FALSE, FALSE, &violated) );
       if( violated )
       {
          SCIP_Bool separated;
@@ -5093,7 +5108,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsXor)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      SCIP_CALL( checkCons(scip, conss[i], NULL, TRUE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], NULL, TRUE, FALSE, &violated) );
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
@@ -5105,8 +5120,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsXor)
    return SCIP_OKAY;
 }
 
-
-/** feasibility check method of constraint handler for integral solutions */
+/** feasibility check method of constraint handler xor */
 static
 SCIP_DECL_CONSCHECK(consCheckXor)
 {  /*lint --e{715}*/
@@ -5115,46 +5129,15 @@ SCIP_DECL_CONSCHECK(consCheckXor)
 
    *result = SCIP_FEASIBLE;
 
-   /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
+   for( i = 0; i < nconss && ( *result == SCIP_FEASIBLE || completely ); ++i )
    {
-      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
       if( violated )
-      {
          *result = SCIP_INFEASIBLE;
-
-         if( printreason )
-         {
-            int v;
-            int sum = 0;
-            SCIP_CONSDATA* consdata;
-
-            consdata = SCIPconsGetData(conss[i]);
-            assert( consdata != NULL );
-
-            SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
-
-            for( v = 0; v < consdata->nvars; ++v )
-            {
-               if( SCIPgetSolVal(scip, sol, consdata->vars[v]) > 0.5 )
-                  sum++;
-            }
-
-            if( consdata->intvar != NULL )
-            {
-               SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE but integer variable has value of %g\n", sum, SCIPgetSolVal(scip, sol, consdata->intvar));
-            }
-            else
-            {
-               SCIPinfoMessage(scip, NULL, ";\nviolation: %d operands are set to TRUE\n", sum );
-            }
-         }
-      }
    }
 
    return SCIP_OKAY;
 }
-
 
 /** domain propagation method of constraint handler */
 static
