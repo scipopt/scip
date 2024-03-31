@@ -14374,7 +14374,7 @@ const char* historypath="."; /* allows for user-defined path; use '.' for callin
 #endif
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
- *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the in the LP's objective value
+ *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the LP's objective value
  */
 SCIP_RETCODE SCIPvarUpdatePseudocost(
    SCIP_VAR*             var,                /**< problem variable */
@@ -14473,6 +14473,71 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    }
 }
 
+/** updates the ancestral pseudo costs of the given variable and the global ancestral pseudo costs after a change of
+ *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the LP's objective value
+ */
+SCIP_RETCODE SCIPvarUpdateAncPseudocost(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   SCIP_Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   SCIP_Real             weight              /**< weight in (0,1] of this update in discounted pseudo cost sum */
+   )
+{
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert(stat != NULL);
+
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+      {
+         SCIPerrorMessage("cannot update ancestral pseudo costs of original untransformed variable\n");
+         return SCIP_INVALIDDATA;
+      }
+      SCIP_CALL( SCIPvarUpdateAncPseudocost(var->data.original.transvar, set, stat, solvaldelta, objdelta, weight) );
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      /* update history */
+      SCIPhistoryUpdateAncPseudocost(var->history, set, solvaldelta, objdelta, weight);
+      SCIPhistoryUpdateAncPseudocost(var->historycrun, set, solvaldelta, objdelta, weight);
+      SCIPhistoryUpdateAncPseudocost(stat->glbhistory, set, solvaldelta, objdelta, weight);
+      SCIPhistoryUpdateAncPseudocost(stat->glbhistorycrun, set, solvaldelta, objdelta, weight);
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_FIXED:
+      SCIPerrorMessage("cannot update ancestral pseudo cost values of a fixed variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
+      SCIP_CALL( SCIPvarUpdateAncPseudocost(var->data.aggregate.var, set, stat,
+            solvaldelta/var->data.aggregate.scalar, objdelta, weight) );
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot update ancestral pseudo cost values of a multi-aggregated variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED:
+      SCIP_CALL( SCIPvarUpdateAncPseudocost(var->negatedvar, set, stat, -solvaldelta, objdelta, weight) );
+      return SCIP_OKAY;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+}
+
 /** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value */
 SCIP_Real SCIPvarGetPseudocost(
    SCIP_VAR*             var,                /**< problem variable */
@@ -14512,6 +14577,53 @@ SCIP_Real SCIPvarGetPseudocost(
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetPseudocost(var->negatedvar, stat, -solvaldelta);
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return 0.0; /*lint !e527*/
+   }
+}
+
+/** gets the variable's ancestral pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value */
+SCIP_Real SCIPvarGetAncPseudocost(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   SCIP_BRANCHDIR dir;
+
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return SCIPhistoryGetAncPseudocost(stat->glbhistory, solvaldelta);
+      else
+         return SCIPvarGetAncPseudocost(var->data.original.transvar, stat, solvaldelta);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      dir = (solvaldelta >= 0.0 ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
+
+      return SCIPhistoryGetAncPseudocostCount(var->history, dir) > 0.0
+         ? SCIPhistoryGetAncPseudocost(var->history, solvaldelta)
+         : SCIPhistoryGetAncPseudocost(stat->glbhistory, solvaldelta);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0.0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      return SCIPvarGetAncPseudocost(var->data.aggregate.var, stat, var->data.aggregate.scalar * solvaldelta);
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0.0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetAncPseudocost(var->negatedvar, stat, -solvaldelta);
 
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -14649,6 +14761,51 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetPseudocostCountCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return 0.0; /*lint !e527*/
+   }
+}
+
+/** gets the variable's (possible fractional) number of ancestor pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ */
+SCIP_Real SCIPvarGetAncPseudocostCountCurrentRun(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   assert(var != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return 0.0;
+      else
+         return SCIPvarGetAncPseudocostCountCurrentRun(var->data.original.transvar, dir);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPhistoryGetAncPseudocostCount(var->historycrun, dir);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0.0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetAncPseudocostCountCurrentRun(var->data.aggregate.var, dir);
+      else
+         return SCIPvarGetAncPseudocostCountCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0.0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetAncPseudocostCountCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
 
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -17196,6 +17353,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
  */
 
 #undef SCIPboundchgGetNewbound
+#undef SCIPboundchgGetLPSolVal
 #undef SCIPboundchgGetVar
 #undef SCIPboundchgGetBoundchgtype
 #undef SCIPboundchgGetBoundtype
@@ -17320,6 +17478,16 @@ SCIP_Real SCIPboundchgGetNewbound(
    assert(boundchg != NULL);
 
    return boundchg->newbound;
+}
+
+/** returns the lp solution value in the branching data of the bound change data */
+SCIP_Real SCIPboundchgGetLPSolVal(
+   SCIP_BOUNDCHG*        boundchg            /**< bound change data */
+   )
+{
+   assert(boundchg != NULL);
+
+   return boundchg->data.branchingdata.lpsolval;
 }
 
 /** returns the variable of the bound change in the bound change data */
