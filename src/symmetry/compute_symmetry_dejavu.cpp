@@ -168,7 +168,7 @@ const char* SYMsymmetryGetName(void)
 /** return description of external program used to compute generators */
 const char* SYMsymmetryGetDesc(void)
 {
-   return "Monte Carlo symmetry computation library by Markus Anders (github.com/markusa4/dejavu)";
+   return "Monte Carlo symmetry computation library by M. Anders (github.com/markusa4/dejavu)";
 }
 
 /** return name of additional external program used for computing symmetries */
