@@ -67,6 +67,7 @@ Fixed bugs
 - in SCIPsolveProbingLP() when objective has been changed do not return cutoff due to exceeding the cutoff bound
 - set probing LP to be a relaxation only when objective has not been changed
 - declare contradicting infinities in getMinActivity() and getMaxActivity() as non-tight
+- reject farkas solution with large values to bound magnification of errors in SCIPgetFarkasProof()
 
 Miscellaneous
 -------------
