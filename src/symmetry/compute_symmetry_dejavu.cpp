@@ -268,7 +268,7 @@ SCIP_RETCODE computeAutomorphisms(
 
    /* determine log10 of symmetry group size */
    dejavu::big_number size = dejavu.get_automorphism_group_size();
-   *log10groupsize = (SCIP_Real) size.exponent;
+   *log10groupsize = (SCIP_Real) size.exponent + log10(size.mantissa);
 
    return SCIP_OKAY;
 }
