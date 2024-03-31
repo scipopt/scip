@@ -3,6 +3,7 @@
 
 Features
 --------
+- Added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
 
 Performance improvements
 ------------------------
@@ -19,6 +20,12 @@ Interface changes
 
 ### New API functions
 
+- SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
+- SCIPhistoryGetAncPseudocost(), SCIPhistoryGetAncPseudocostCount(), SCIPhistoryIsAncPseudocostEmpty(), SCIPgetVarAncPseudocostVal(),
+  SCIPvarGetAncPseudocost() for retrieving the values related to ancestral pseudo cost fields in variable history
+- SCIPgetAvgDPseudocostScore(), SCIPgetVarDPseudocostScore() for computing the discounted pseudo cost scores using ancestral pseudo costs
+- SCIPboundchgGetLPSolVal() for accessing the LP solution value in the branching data of the bound change
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -26,6 +33,9 @@ Interface changes
 ### Changed parameters
 
 ### New parameters
+
+- branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
+- branching/discountedpscost to enable/disable recording ancestral pseudo costs
 
 ### Data structures
 
