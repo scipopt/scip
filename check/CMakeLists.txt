@@ -482,6 +482,7 @@ set(pairs_Issue
     "instances/Issue/3633.lp\;0\;default"
     "instances/Issue/3662_1.cip\;0\;default"
     "instances/Issue/3662_2.cip\;0\;default"
+    "instances/Issue/3681.cip\;0\;default"
 )
 
 #
