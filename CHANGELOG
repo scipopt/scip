@@ -132,6 +132,7 @@ Fixed bugs
 - set probing LP to be a relaxation only when objective has not been changed
 - declare contradicting infinities in getMinActivity() and getMaxActivity() as non-tight
 - reject farkas solution with large values to bound magnification of errors in SCIPgetFarkasProof()
+- if all variables are fixed, apply relative feasibility tolerance to avoid invalid infeasibility in applyFixings() of cons_linear.c
 
 Miscellaneous
 -------------
