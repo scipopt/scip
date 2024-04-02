@@ -5684,7 +5684,7 @@ SCIP_RETCODE SCIPcleanupConssLogicor(
    SCIP_CALL( SCIPallocBufferArray(scip, &entries, nentries) );
 
    /* loop backwards since then deleted constraints do not interfere with the loop */
-   for( i = nconss - 1; i > 0; --i )
+   for( i = nconss - 1; i >= 0; --i )
    {
       SCIP_CONS* cons;
       SCIP_Bool redundant;
