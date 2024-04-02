@@ -603,7 +603,7 @@ SCIP_RETCODE SCIPmatrixCreate(
       }
    }
 
-   SCIP_CALL( SCIPcleanupConssLinear(scip, TRUE, infeasible) );
+   SCIP_CALL( SCIPcleanupConssLinear(scip, TRUE, infeasible, ndelconss) );
    if( *infeasible )
       return SCIP_OKAY;
 

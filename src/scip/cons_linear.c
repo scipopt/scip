@@ -19006,11 +19006,13 @@ SCIP_RETCODE SCIPupgradeConsLinear(
 SCIP_RETCODE SCIPcleanupConssLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
-   SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether the problem was detected to be infeasible */
+   int*                  ndelconss           /**< pointer to count number of deleted constraints */
    )
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** conss;
+   SCIP_CONSDATA* consdata;
    int nconss;
    int i;
 
@@ -19030,6 +19032,12 @@ SCIP_RETCODE SCIPcleanupConssLinear(
 
       if( *infeasible )
          break;
+      consdata = SCIPconsGetData(conss[i]);
+      if( consdata->nvars == 0 )
+      {
+         SCIP_CALL(SCIPdelCons(scip, conss[i]));
+         (*ndelconss)++;
+      }
    }
 
    return SCIP_OKAY;
