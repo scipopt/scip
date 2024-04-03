@@ -127,6 +127,7 @@ SCIP_RETCODE SCIPstatFree(
    assert(stat != NULL);
    assert(*stat != NULL);
 
+   SCIPclockFree(&(*stat)->exactproptime);
    SCIPclockFree(&(*stat)->solvingtime);
    SCIPclockFree(&(*stat)->solvingtimeoverall);
    SCIPclockFree(&(*stat)->presolvingtime);
