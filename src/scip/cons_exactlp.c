@@ -18079,14 +18079,14 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/propcont",
          "should bounds on continuous variables be tightened by propagation?",
-         &conshdlrdata->propcont, TRUE, FALSE, NULL, NULL) );
+         &conshdlrdata->propcont, TRUE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/limitdenom",
          "should denominators on continuous variables be controlled?",
-         &conshdlrdata->limitdenom, TRUE, TRUE, NULL, NULL) );
+         &conshdlrdata->limitdenom, TRUE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip,
          "constraints/" CONSHDLR_NAME "/maxdenom",
-         "maximal denominator on continuous variables after propagation?",
+         "maximal denominator on continuous variables after propagation (if limitdenom = TRUE)?",
          &conshdlrdata->maxdenom, TRUE, 256, 1, SCIP_LONGINT_MAX, NULL, NULL) );
 #ifdef SCIP_WITH_MPFR
    {
