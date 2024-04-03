@@ -17,8 +17,8 @@ FLAGS		+=	-fPIC
 endif
 LINK_shared		=	-shared
 
-CXXFLAGS	=	-fno-stack-check
-CFLAGS		=	-std=c99 -fno-stack-check -D_XOPEN_SOURCE=600
+CXXFLAGS	=	-ffp-contract=off -fno-stack-check
+CFLAGS		=	-ffp-contract=off -std=c99 -fno-stack-check -D_XOPEN_SOURCE=600
 
 FORTRANLIBS	=	-lgfortran
 FORTRAN_NAMING_CONVENTION = LCASE_DECOR
