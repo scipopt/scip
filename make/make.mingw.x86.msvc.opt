@@ -12,9 +12,9 @@ LINKCXX_l	=	lib
 LINKCXX_o	=	-out:
 LINK_shared		=	-dll
 FLAGS	+=	-DSCIP_NO_SIGACTION -DNO_RAND_R -DSCIP_NO_STRTOK_R -DNDEBUG -DNO_STRERROR_R -DSCIP_ROUNDING_MS -D_CRT_SECURE_NO_WARNINGS -wd4274
-OFLAGS	+=	
-CFLAGS	+=	-Ox -Oi -fp:precise
-CXXFLAGS	+=	-Ox -Oi -fp:precise -EHsc -GR
+OFLAGS		+=	-Ox -Oi -fp:precise
+CFLAGS		+=
+CXXFLAGS	+=	-EHsc -GR
 CXX11FLAG	=
 CXX14FLAG	=	-std:c++14
 # C++-17 may not be available:
