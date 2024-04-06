@@ -16,6 +16,7 @@
 * [ ] The CHANGELOG is up to date (including API changes if present in this MR).
 * [ ] The user documentation is up to date (doc/xternal.c, doc/inc/faq/, installation instructions, ...).
 * [ ] Both build systems and makedist.sh are up to date. Especially, newly added, renamed or removed source files have been added to, renamed in or removed from src/CMakeLists.txt.
+* [ ] If new CMake options have been added, non-default values are written to the log (see `# write log file of non-default parameter settings` in `CMakeLists.txt`).
 
 ### Testing
 
@@ -23,6 +24,7 @@
 * [ ] The performance impact on MILP has been checked (type some of `jenkins performance {mip,mip quick,mip continue}`), **or** the changed code will not be executed for MILP instances, **or** the changed code will not be executed by default.
 * [ ] The performance impact on MINLP has been checked (type some of `jenkins performance {minlp,minlplib,minlp quick,minlp continue}`) **or** the changed code will not be executed by default.
 * [ ] The new code is sufficiently covered by tests (perhaps, new coverage settings or new unit tests have been added).
+* Consider a debug run (type some of `jenkins debug {short,minlp,mip}` (for `mip` monitor rubberband since the notification in the MR may fail)).
 
 ### Does this merge request introduce an API change? :warning:
 

@@ -3472,20 +3472,22 @@ SCIP_RETCODE chgLhs(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(!SCIPisInfinity(scip, lhs));
 
-   /* adjust value to not be smaller than -inf */
-   if ( SCIPisInfinity(scip, -lhs) )
+   /* adjust value to be not beyond infinity */
+   if( SCIPisInfinity(scip, -lhs) )
       lhs = -SCIPinfinity(scip);
+   else if( SCIPisInfinity(scip, lhs) )
+      lhs = SCIPinfinity(scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || (consdata->vars != NULL && consdata->vals != NULL));
-   assert(!SCIPisInfinity(scip, consdata->lhs));
 
    /* check whether the side is not changed */
    if( SCIPisEQ(scip, consdata->lhs, lhs) )
       return SCIP_OKAY;
+
+   assert(!SCIPisInfinity(scip, ABS(consdata->lhs)) || !SCIPisInfinity(scip, ABS(lhs)));
 
    /* ensure that rhs >= lhs is satisfied without numerical tolerance */
    if( SCIPisEQ(scip, lhs, consdata->rhs) )
@@ -3554,7 +3556,7 @@ SCIP_RETCODE chgLhs(
    }
 
    /* check whether the left hand side is increased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
-   if( !SCIPisInfinity(scip, -lhs) && SCIPisGT(scip, lhs, consdata->lhs) )
+   if( !SCIPisInfinity(scip, ABS(lhs)) && SCIPisGT(scip, lhs, consdata->lhs) )
    {
       consdata->boundstightened = 0;
       consdata->presolved = FALSE;
@@ -3598,20 +3600,22 @@ SCIP_RETCODE chgRhs(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(!SCIPisInfinity(scip, -rhs));
 
-   /* adjust value to not be larger than inf */
-   if ( SCIPisInfinity(scip, rhs) )
+   /* adjust value to be not beyond infinity */
+   if( SCIPisInfinity(scip, rhs) )
       rhs = SCIPinfinity(scip);
+   else if( SCIPisInfinity(scip, -rhs) )
+      rhs = -SCIPinfinity(scip);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || (consdata->vars != NULL && consdata->vals != NULL));
-   assert(!SCIPisInfinity(scip, -consdata->rhs));
 
    /* check whether the side is not changed */
    if( SCIPisEQ(scip, consdata->rhs, rhs) )
       return SCIP_OKAY;
+
+   assert(!SCIPisInfinity(scip, ABS(consdata->rhs)) || !SCIPisInfinity(scip, ABS(rhs)));
 
    /* ensure that rhs >= lhs is satisfied without numerical tolerance */
    if( SCIPisEQ(scip, rhs, consdata->lhs) )
@@ -3682,7 +3686,7 @@ SCIP_RETCODE chgRhs(
    }
 
    /* check whether the right hand side is decreased, if and only if that's the case we maybe can propagate, tighten and add more cliques */
-   if( !SCIPisInfinity(scip, rhs) && SCIPisLT(scip, rhs, consdata->rhs) )
+   if( !SCIPisInfinity(scip, ABS(rhs)) && SCIPisLT(scip, rhs, consdata->rhs) )
    {
       consdata->boundstightened = 0;
       consdata->presolved = FALSE;
@@ -4707,22 +4711,20 @@ SCIP_RETCODE applyFixings(
             {
                if( SCIPisInfinity(scip, ABS(fixedval)) )
                {
-                  if( val * fixedval > 0.0 )
+                  /* if lhs gets infinity it means that the problem is infeasible */
+                  if( ( val > 0.0 ) != ( fixedval > 0.0 ) )
                   {
-                     SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
-                  }
-                  else
-                  {
+                     SCIP_CALL( chgLhs(scip, cons, SCIPinfinity(scip)) );
+
                      if( infeasible != NULL )
                      {
-                        /* if lhs gets infinity it means that the problem is infeasible */
                         *infeasible = TRUE;
                         return SCIP_OKAY;
                      }
-                     else
-                     {
-                        SCIP_CALL( chgLhs(scip, cons, SCIPinfinity(scip)) );
-                     }
+                  }
+                  else
+                  {
+                     SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
                   }
                }
                else
@@ -4732,17 +4734,15 @@ SCIP_RETCODE applyFixings(
             {
                if( SCIPisInfinity(scip, ABS(fixedval)) )
                {
-                  if( val * fixedval > 0.0 )
+                  /* if rhs gets -infinity it means that the problem is infeasible */
+                  if( ( val > 0.0 ) == ( fixedval > 0.0 ) )
                   {
+                     SCIP_CALL( chgRhs(scip, cons, -SCIPinfinity(scip)) );
+
                      if( infeasible != NULL )
                      {
-                        /* if rhs gets -infinity it means that the problem is infeasible */
                         *infeasible = TRUE;
                         return SCIP_OKAY;
-                     }
-                     else
-                     {
-                        SCIP_CALL( chgRhs(scip, cons, -SCIPinfinity(scip)) );
                      }
                   }
                   else
@@ -4757,31 +4757,31 @@ SCIP_RETCODE applyFixings(
             break;
 
          case SCIP_VARSTATUS_AGGREGATED:
-	 {
-	    SCIP_VAR* activevar = SCIPvarGetAggrVar(var);
-	    SCIP_Real activescalar = val * SCIPvarGetAggrScalar(var);
-	    SCIP_Real activeconstant = val * SCIPvarGetAggrConstant(var);
+         {
+            SCIP_VAR* activevar = SCIPvarGetAggrVar(var);
+            SCIP_Real activescalar = val * SCIPvarGetAggrScalar(var);
+            SCIP_Real activeconstant = val * SCIPvarGetAggrConstant(var);
 
-	    assert(activevar != NULL);
-	    SCIP_CALL( SCIPgetProbvarSum(scip, &activevar, &activescalar, &activeconstant) );
-	    assert(activevar != NULL);
+            assert(activevar != NULL);
+            SCIP_CALL( SCIPgetProbvarSum(scip, &activevar, &activescalar, &activeconstant) );
+            assert(activevar != NULL);
 
-	    if( !SCIPisZero(scip, activescalar) )
-	    {
-	       SCIP_CALL( addCoef(scip, cons, activevar, activescalar) );
-	    }
+            if( !SCIPisZero(scip, activescalar) )
+            {
+               SCIP_CALL( addCoef(scip, cons, activevar, activescalar) );
+            }
 
-	    if( !SCIPisZero(scip, activeconstant) )
-	    {
-	       if( !SCIPisInfinity(scip, -consdata->lhs) )
-		  lhssubtrahend += activeconstant;
-	       if( !SCIPisInfinity(scip, consdata->rhs) )
-		  rhssubtrahend += activeconstant;
-	    }
+            if( !SCIPisZero(scip, activeconstant) )
+            {
+               if( !SCIPisInfinity(scip, -consdata->lhs) )
+                  lhssubtrahend += activeconstant;
+               if( !SCIPisInfinity(scip, consdata->rhs) )
+                  rhssubtrahend += activeconstant;
+            }
 
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
-	 }
+         }
          case SCIP_VARSTATUS_MULTAGGR:
             SCIP_CALL( SCIPflattenVarAggregationGraph(scip, var) );
             naggrvars = SCIPvarGetMultaggrNVars(var);
@@ -4822,12 +4822,28 @@ SCIP_RETCODE applyFixings(
 
       if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisInfinity(scip, consdata->lhs) )
       {
-         /* for large numbers that are relatively equal, substraction can lead to cancellation,
-          * causing wrong fixings of other variables --> better use a real zero here;
-          * for small numbers, polishing the difference might lead to wrong results -->
-          * better use the exact difference in this case
+         /* check left hand side of unmodifiable empty constraint with former feasibility tolerance */
+         if( !SCIPconsIsModifiable(cons) && consdata->nvars == 0 )
+         {
+            if( SCIPisFeasLT(scip, lhssubtrahend, consdata->lhs) )
+            {
+               SCIP_CALL( chgLhs(scip, cons, SCIPinfinity(scip)) );
+
+               if( infeasible != NULL )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
+            }
+            else
+            {
+               SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
+            }
+         }
+         /* for large numbers that are relatively equal, subtraction can lead to cancellation,
+          * causing wrong fixings of other variables --> better use a real zero here
           */
-         if( SCIPisEQ(scip, lhssubtrahend, consdata->lhs) && SCIPisFeasGE(scip, REALABS(lhssubtrahend), 1.0) )
+         else if( SCIPisEQ(scip, lhssubtrahend, consdata->lhs) )
          {
             SCIP_CALL( chgLhs(scip, cons, 0.0) );
          }
@@ -4836,14 +4852,30 @@ SCIP_RETCODE applyFixings(
             SCIP_CALL( chgLhs(scip, cons, consdata->lhs - lhssubtrahend) );
          }
       }
-      if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, -consdata->rhs))
+      if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, -consdata->rhs) )
       {
+         /* check right hand side of unmodifiable empty constraint with former feasibility tolerance */
+         if( !SCIPconsIsModifiable(cons) && consdata->nvars == 0 )
+         {
+            if( SCIPisFeasGT(scip, rhssubtrahend, consdata->rhs) )
+            {
+               SCIP_CALL( chgRhs(scip, cons, -SCIPinfinity(scip)) );
+
+               if( infeasible != NULL )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
+            }
+            else
+            {
+               SCIP_CALL( chgRhs(scip, cons, SCIPinfinity(scip)) );
+            }
+         }
          /* for large numbers that are relatively equal, substraction can lead to cancellation,
-          * causing wrong fixings of other variables --> better use a real zero here;
-          * for small numbers, polishing the difference might lead to wrong results -->
-          * better use the exact difference in this case
+          * causing wrong fixings of other variables --> better use a real zero here
           */
-         if( SCIPisEQ(scip, rhssubtrahend, consdata->rhs ) && SCIPisFeasGE(scip, REALABS(rhssubtrahend), 1.0) )
+         else if( SCIPisEQ(scip, rhssubtrahend, consdata->rhs) )
          {
             SCIP_CALL( chgRhs(scip, cons, 0.0) );
          }
@@ -11347,7 +11379,7 @@ SCIP_RETCODE aggregateVariables(
          }
       }
    }
-   while( success );
+   while( success && consdata->nvars >= 1 );
 
    return SCIP_OKAY;
 }

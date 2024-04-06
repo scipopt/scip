@@ -17,6 +17,10 @@ Fixed bugs
 - in SCIPsolveProbingLP() when objective has been changed do not return cutoff due to exceeding the cutoff bound
 - set probing LP to be a relaxation only when objective has not been changed
 - declare contradicting infinities in getMinActivity() and getMaxActivity() as non-tight
+- reject farkas solution with large values to bound magnification of errors in SCIPgetFarkasProof()
+- if all variables are fixed, apply relative feasibility tolerance to avoid invalid infeasibility in applyFixings() of cons_linear.c
+- delete empty redundant knapsack and linear constraints after cleanup in SCIPmatrixCreate()
+- cleanup first constraints in SCIPcleanupConssVarbound(), SCIPcleanupConssSetppc(), and SCIPcleanupConssLogicor()
 - symmetry handling methods have not been added immediately after computing symmetries, which has been fixed
 
 Miscellaneous
@@ -31,7 +35,11 @@ Build system
 
 - A file cmake.log containing the changed options is written to the cmake build directory.
 - removed replacement of the settings of RelWithDebInfo
+- add compile option -ffp-contract=off or /fp:precise to enhance reproducibility across different systems
 
+### Makefile
+
+- add flags -ffp-contract=off and /fp:precise to enhance reproducibility across different systems
 
 @section RN900 SCIP 9.0.0
 *************************
