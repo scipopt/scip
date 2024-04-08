@@ -436,7 +436,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    if( 0 != strncmp(data->filename, DEFAULT_FILENAME_PROBLEM, strlen(DEFAULT_FILENAME_PROBLEM)) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                      "   writing problem to %s before calling milp presolving (does not contain enforced constraints)\n", data->filename);
+                      "   writing transformed problem to %s (only enforced constraints)\n", data->filename);
       SCIP_CALL(SCIPwriteTransProblem(scip, data->filename, NULL, FALSE));
    }
 
