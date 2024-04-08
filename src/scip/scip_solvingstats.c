@@ -2303,7 +2303,7 @@ void SCIPincAvgGMIeff(
  */
 SCIP_Real SCIPgetAvgGMIeff(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetAvgGMIeff", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 

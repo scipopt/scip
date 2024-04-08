@@ -10009,9 +10009,8 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
 SCIP_Real SCIPgetVarAvgGMIScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
-)
+   )
 {
-
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarAvgGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
@@ -10038,7 +10037,7 @@ SCIP_RETCODE SCIPincVarGMISumScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             gmieff              /**< Efficacy of last GMI cut generated from when var was basic /frac */
-)
+   )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPincVarGMISumScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
@@ -10065,9 +10064,8 @@ SCIP_RETCODE SCIPincVarGMISumScore(
 SCIP_Real SCIPgetVarLastGMIScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
-)
+   )
 {
-
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarLastGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
@@ -10093,7 +10091,7 @@ SCIP_RETCODE SCIPsetVarLastGMIScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             gmieff              /**< efficacy of GMI cut from tableau row when variable is basic / frac */
-)
+   )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPsetVarLastGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 

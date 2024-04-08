@@ -154,7 +154,7 @@ void SCIPnlhdlrSetSepa(
 void SCIPnlhdlrSetSollinearize(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRSOLLINEARIZE((*sollinearize)) /**< solution linearization callback */
-)
+   )
 {
    assert(nlhdlr != NULL);
    assert(sollinearize != NULL);
@@ -285,7 +285,7 @@ SCIP_Bool SCIPnlhdlrHasEstimate(
 /** returns whether nonlinear handler implements the solution linearization callback */
 SCIP_Bool SCIPnlhdlrHasSollinearize(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 

@@ -873,7 +873,7 @@ SCIP_Real SCIPhistoryGetLastBalance(
 /** returns the average efficacy value for the GMI cut produced by this variable */
 SCIP_Real SCIPhistoryGetAvgGMIeff(
    SCIP_HISTORY*         history             /**< branching and inference history */
-)
+   )
 {
    assert(history != NULL);
 
@@ -884,7 +884,7 @@ SCIP_Real SCIPhistoryGetAvgGMIeff(
 void SCIPhistoryIncGMIeffSum(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_Real             gmieff              /**< normalized efficacy value of a cut which will increase gmieff */
-)
+   )
 {
    assert(history != NULL);
    assert(gmieff >= 0.0);
@@ -896,7 +896,7 @@ void SCIPhistoryIncGMIeffSum(
 /** returns the most recent efficacy value for the GMI cut produced by this variable */
 SCIP_Real SCIPhistoryGetLastGMIeff(
    SCIP_HISTORY*         history             /**< branching and inference history */
-)
+   )
 {
    assert(history != NULL);
 
@@ -907,7 +907,7 @@ SCIP_Real SCIPhistoryGetLastGMIeff(
 void SCIPhistorySetLastGMIeff(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_Real             gmieff              /**< Efficacy of GMI cut produced from simplex tableau row of this var */
-)
+   )
 {
    assert(history != NULL);
 

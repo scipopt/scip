@@ -521,7 +521,7 @@ static
 int getArrayEntryOrIndex(
    int*                  arr,                /**< array */
    int                   idx                 /**< index */
-)
+   )
 {
    assert( idx >= 0 );
    if ( arr == NULL )
@@ -535,8 +535,8 @@ void freeRowOrder(
    SCIP*                 scip,               /**< SCIP data structure */
    ORBITOPEDATA*         orbidata,           /**< orbitope data */
    int**                 roworder            /**< roworder array that is initialized with the roworder in the dynamic
-                                               *  case, and NULL in the static case */
-)
+                                              *   case, and NULL in the static case */
+   )
 {
    assert( scip != NULL );
    assert( orbidata != NULL );
@@ -1262,9 +1262,9 @@ void freeColumnOrder(
    SCIP*                 scip,               /**< SCIP data structure */
    ORBITOPEDATA*         orbidata,           /**< orbitope data */
    int**                 colorder,           /**< colorder array that is initialized with the colorder in the dynamic
-                                               *  case, of size ncols, and NULL in the static case */
+                                              *   case, of size ncols, and NULL in the static case */
    int**                 colorderinv         /**< array with the inverse column order, of size ncols */
-)
+   )
 {
    assert( scip != NULL );
    assert( orbidata != NULL );
