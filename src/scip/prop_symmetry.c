@@ -5280,7 +5280,6 @@ SCIP_RETCODE addOrbitopesDynamic(
          consvars[0] = propdata->permvars[varidxmatrix[0][i]];
          consvars[1] = propdata->permvars[varidxmatrix[0][i + 1]];
 
-         /* enforce, but do not check */
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, 2, consvars, conscoefs, -SCIPinfinity(scip), 0.0,
                propdata->conssaddlp, propdata->conssaddlp, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
 
