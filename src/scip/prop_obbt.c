@@ -107,7 +107,7 @@
 #define DEFAULT_ONLYNONCONVEXVARS       TRUE /**< only apply obbt on non-convex variables */
 #define DEFAULT_INDICATORS             FALSE /**< apply obbt on variables of indicator constraints? (independent of convexity) */
 #define DEFAULT_INDICATORTHRESHOLD       1e6 /**< variables of indicator constraints with smaller upper bound are not considered
-                                                  and upper bound is tightened only if new bound is smaller */
+                                              *   and upper bound is tightened only if new bound is smaller */
 #define DEFAULT_TIGHTINTBOUNDSPROBING   TRUE /**< should bounds of integral variables be tightened during
                                               *   the probing mode? */
 #define DEFAULT_TIGHTCONTBOUNDSPROBING FALSE /**< should bounds of continuous variables be tightened during

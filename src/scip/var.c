@@ -16359,7 +16359,7 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
 SCIP_Real SCIPvarGetAvgGMIScore(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat                /**< problem statistics */
-)
+   )
 {
    assert(var != NULL);
    assert(stat != NULL);
@@ -16400,7 +16400,7 @@ SCIP_RETCODE SCIPvarIncGMIeffSum(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
-)
+   )
 {
    assert(var != NULL);
    assert(stat != NULL);
@@ -16443,7 +16443,7 @@ SCIP_RETCODE SCIPvarIncGMIeffSum(
 SCIP_Real SCIPvarGetLastGMIScore(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat                /**< problem statistics */
-)
+   )
 {
    assert(var != NULL);
    assert(stat != NULL);
@@ -16484,7 +16484,7 @@ SCIP_RETCODE SCIPvarSetLastGMIScore(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
-)
+   )
 {
    assert(var != NULL);
    assert(stat != NULL);

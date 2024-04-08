@@ -196,7 +196,6 @@ void freeExprDataMem(
    SCIP_Bool             ispartial           /**< free the partially allocated memory or the fully allocated memory? */
    )
 {
-
    SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrexprdata)->factors, (*nlhdlrexprdata)->nfactors);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->nfactors);
    if( !ispartial )
@@ -235,7 +234,7 @@ void reformRowprep(
    SCIP_ROWPREP*         rowprep,            /**< cut to be reformulated */
    SCIP_Real             mincutscale,        /**< min scaling factor for the cut in rowprep */
    SCIP_Bool*            success             /**< pointer to store whether the reformulating was successful */
-)
+   )
 {
    int i;
    int nvars;
@@ -885,7 +884,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
 static
 SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
 { /*lint --e{715}*/
-
    assert(expr != NULL);
    assert(enforcing != NULL);
    assert(participating != NULL);
