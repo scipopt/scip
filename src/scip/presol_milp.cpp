@@ -969,7 +969,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
          &presoldata->enablesparsify, TRUE, DEFAULT_ENABLESPARSIFY, NULL, NULL) );
 
    SCIP_CALL( SCIPaddStringParam(scip, "presolving/" PRESOL_NAME "/probfilename",
-         "filename to store the problem before MILP presolving starts (does not contain enforced constraints)",
+         "filename to store the problem before MILP presolving starts (only enforced constraints)",
          &presoldata->filename, TRUE, DEFAULT_FILENAME_PROBLEM, NULL, NULL) );
 
    SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/verbosity",
