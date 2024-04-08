@@ -4756,7 +4756,7 @@ SCIP_RETCODE resetOrigSubproblemParams(
 /** returns NLP solver parameters used for solving NLP subproblems */
 SCIP_NLPPARAM SCIPbendersGetNLPParam(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
-)
+   )
 {
    assert(benders != NULL);
 

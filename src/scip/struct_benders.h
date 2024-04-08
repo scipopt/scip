@@ -172,7 +172,6 @@ struct SCIP_Benders
    SCIP_BENDERSCUTCUT**  storedcuts;         /**< array to store the data required to form a cut/constraint */
    int                   storedcutssize;     /**< the size of the added cuts array */
    int                   nstoredcuts;        /**< the number of the added cuts */
-
 };
 
 /** statistics for solving the subproblems. Used for prioritising the solving of the subproblem */

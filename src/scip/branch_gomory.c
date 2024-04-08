@@ -332,7 +332,6 @@ SCIP_Bool getGMIFromRow(
             assert( SCIPisFeasZero(scip, rowact - rowlhs) );
             *cutrhs -= cutelem * (rowlhs - SCIProwGetConstant(row));
          }
-
       }
    }
 
@@ -406,6 +405,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    int lppos;
    int ninds;
    int bestcand;
+   int i;
+   int j;
 
    name = (char *) "test";
 
@@ -471,12 +472,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
 
    /* Create basis indices mapping (from the column position to LP tableau rox index) */
-   for( int i = 0; i < ncols; ++i )
+   for( i = 0; i < ncols; ++i )
    {
       basicvarpos2tableaurow[i] = -1;
    }
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
-   for( int i = 0; i < nrows; ++i )
+   for( i = 0; i < nrows; ++i )
    {
       if( basisind[i] >= 0 )
          basicvarpos2tableaurow[basisind[i]] = i;
@@ -488,8 +489,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
    ninds = -1;
 
    /* Iterate over candidates and get best cut score */
-   for( int i = 0; i < maxncands; i++ ) {
-
+   for( i = 0; i < maxncands; i++ )
+   {
       /* Initialise the score of the cut */
       score = 0;
 
@@ -514,7 +515,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
          cut = NULL;
          SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &cut, name, -SCIPinfinity(scip), cutrhs, TRUE,
                    FALSE, TRUE) );
-         for( int j = 0; j < ncols; ++j )
+         for( j = 0; j < ncols; ++j )
          {
             if( !SCIPisZero(scip, cutcoefs[j]) )
             {
@@ -566,7 +567,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpGomory)
 /** creates the Gomory cut branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleGomory(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_BRANCHRULE* branchrule;
@@ -576,7 +577,7 @@ SCIP_RETCODE SCIPincludeBranchruleGomory(
 
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
-                                         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
+         BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
 
    assert(branchrule != NULL);
 
