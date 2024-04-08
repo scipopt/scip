@@ -131,9 +131,9 @@
  *
  * @todo for bases on optimal face only, aggregate to get a new basis and separate it.
  *
- * @todo generate other separators in addition to GMI cuts (0-1/2)
+ * @todo generate other separators in addition to GMI cuts (0-1/2).
  *
- * @todo: convert iters from int to SCIP_Longint
+ * @todo convert iters from int to SCIP_Longint.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -166,20 +166,20 @@
 #define DEFAULT_DUALDEGENERACYRATETHRESHOLD            0.5 /**< minimum dual degeneracy rate for separator execution */
 #define DEFAULT_VARCONSRATIOTHRESHOLD                  1.0 /**< minimum variable-constraint ratio on optimal face for separator execution */
 #define DEFAULT_MINRESTART                               1 /**< minimum restart round for separator execution (0: from beginning of the
-                                                             instance solving, >= n with n >= 1: from restart round n) */
+                                                            *   instance solving, >= n with n >= 1: from restart round n) */
 #define DEFAULT_PERLPMAXCUTSROOT                        50 /**< maximal number of cuts separated per Lagromory LP in the root node */
 #define DEFAULT_PERLPMAXCUTS                            10 /**< maximal number of cuts separated per Lagromory LP in the non-root node */
 #define DEFAULT_PERROUNDLPITERLIMITFACTOR             -1.0 /**< factor w.r.t. root node LP iterations for maximal separating LP iterations
-                                                             per separation round (negative for no limit) */
+                                                            *   per separation round (negative for no limit) */
 #define DEFAULT_ROOTLPITERLIMITFACTOR                 -1.0 /**< factor w.r.t. root node LP iterations for maximal separating LP iterations
-                                                             in the root node (negative for no limit) */
+                                                            *   in the root node (negative for no limit) */
 #define DEFAULT_TOTALLPITERLIMITFACTOR                -1.0 /**< factor w.r.t. root node LP iterations for maximal separating LP iterations
-                                                             in the tree (negative for no limit) */
+                                                            *   in the tree (negative for no limit) */
 #define DEFAULT_PERROUNDMAXLPITERS                   50000 /**< maximal number of separating LP iterations per separation round (-1: unlimited) */
 #define DEFAULT_PERROUNDCUTSFACTORROOT                 1.0 /**< factor w.r.t. number of integer columns for number of cuts separated per
-                                                             separation round in root node */
+                                                            *   separation round in root node */
 #define DEFAULT_PERROUNDCUTSFACTOR                     0.5 /**< factor w.r.t. number of integer columns for number of cuts separated per
-                                                             separation round at a non-root node */
+                                                            *   separation round at a non-root node */
 #define DEFAULT_TOTALCUTSFACTOR                       50.0 /**< factor w.r.t. number of integer columns for total number of cuts separated */
 #define DEFAULT_MAXMAINITERS                             4 /**< maximal number of main loop iterations of the relax-and-cut algorithm */
 #define DEFAULT_MAXSUBGRADIENTITERS                      6 /**< maximal number of subgradient loop iterations of the relax-and-cut algorithm */
@@ -190,39 +190,40 @@
 #define DEFAULT_MUPARAMLB                              0.0 /**< lower bound for the mu parameter (factor for step length) */
 #define DEFAULT_MUPARAMUB                              2.0 /**< upper bound for the mu parameter (factor for step length) */
 #define DEFAULT_MUBACKTRACKFACTOR                      0.5 /**< factor of mu while backtracking the mu parameter (factor for step length) -
-                                                             see updateMuSteplengthParam() */
+                                                            *   see updateMuSteplengthParam() */
 #define DEFAULT_MUSLAB1FACTOR                         10.0 /**< factor of mu parameter (factor for step length) for larger increment - see
-                                                             updateMuSteplengthParam() */
+                                                            *   updateMuSteplengthParam() */
 #define DEFAULT_MUSLAB2FACTOR                          2.0 /**< factor of mu parameter (factor for step length) for smaller increment - see
-                                                             updateMuSteplengthParam() */
+                                                            *   updateMuSteplengthParam() */
 #define DEFAULT_MUSLAB3FACTOR                          0.5 /**< factor of mu parameter (factor for step length) for reduction - see
-                                                             updateMuSteplengthParam() */
+                                                            *   updateMuSteplengthParam() */
 #define DEFAULT_DELTASLAB1UB                         0.001 /**< factor of delta deciding larger increment of mu parameter (factor for step
-                                                             length) - see updateMuSteplengthParam() */
+                                                            *   length) - see updateMuSteplengthParam() */
 #define DEFAULT_DELTASLAB2UB                          0.01 /**< factor of delta deciding smaller increment of mu parameter (factor for step
-                                                             length) - see updateMuSteplengthParam() */
+                                                            *   length) - see updateMuSteplengthParam() */
 #define DEFAULT_UBPARAMPOSFACTOR                       2.0 /**< factor for positive upper bound used as an estimate for the optimal
-                                                             Lagrangian dual value */
+                                                            *   Lagrangian dual value */
 #define DEFAULT_UBPARAMNEGFACTOR                       0.5 /**< factor for negative upper bound used as an estimate for the optimal
-                                                             Lagrangian dual value */
+                                                            *   Lagrangian dual value */
 #define DEFAULT_MAXLAGRANGIANVALSFORAVG                  2 /**< maximal number of iterations for rolling average of Lagrangian value */
 #define DEFAULT_MAXCONSECITERSFORMUUPDATE               10 /**< consecutive number of iterations used to determine if mu needs to be backtracked */
 #define DEFAULT_PERROOTLPITERFACTOR                    0.2 /**< factor w.r.t. root node LP iterations for iteration limit of each separating
-                                                             LP (negative for no limit) */
+                                                            *   LP (negative for no limit) */
 #define DEFAULT_PERLPITERFACTOR                        0.1 /**< factor w.r.t. non-root node LP iterations for iteration limit of each
-                                                             separating LP (negative for no limit) */
+                                                            *   separating LP (negative for no limit) */
 #define DEFAULT_CUTGENFREQ                               1 /**< frequency of subgradient iterations for generating cuts */
 #define DEFAULT_CUTADDFREQ                               1 /**< frequency of subgradient iterations for adding cuts to objective function */
 #define DEFAULT_CUTSFILTERFACTOR                       1.0 /**< fraction of generated cuts per explored basis to accept from separator */
 #define DEFAULT_OPTIMALFACEPRIORITY                      2 /**< priority of the optimal face for separator execution (0: low priority, 1:
-                                                             medium priority, 2: high priority) */
+                                                            *   medium priority, 2: high priority) */
 #define DEFAULT_AGGREGATECUTS                         TRUE /**< aggregate all generated cuts using the Lagrangian multipliers? */
+
 /* parameters for stabilization of the Lagrangian multipliers */
 #define DEFAULT_PROJECTIONTYPE                           2 /**< the ball into which the Lagrangian multipliers are projected for
-                                                             stabilization (0: no projection, 1: L1-norm ball projection, 2: L2-norm ball
-                                                             projection, 3: L_inf-norm ball projection) */
+                                                            *   stabilization (0: no projection, 1: L1-norm ball projection, 2: L2-norm ball
+                                                            *   projection, 3: L_inf-norm ball projection) */
 #define DEFAULT_STABILITYCENTERTYPE                      1 /**< type of stability center for taking weighted average of Lagrangian multipliers for
-                                                             stabilization (0: no weighted stabilization, 1: best Lagrangian multipliers) */
+                                                            *   stabilization (0: no weighted stabilization, 1: best Lagrangian multipliers) */
 #define DEFAULT_RADIUSINIT                             0.5 /**< initial radius of the ball used in stabilization of Lagrangian multipliers */
 #define DEFAULT_RADIUSMAX                             20.0 /**< maximum radius of the ball used in stabilization of Lagrangian multipliers */
 #define DEFAULT_RADIUSMIN                             1e-6 /**< minimum radius of the ball used in stabilization of Lagrangian multipliers */
@@ -271,20 +272,20 @@ struct SCIP_SepaData
    SCIP_Real             dualdegeneracyratethreshold; /**< minimum dual degeneracy rate for separator execution */
    SCIP_Real             varconsratiothreshold;       /**< minimum variable-constraint ratio on optimal face for separator execution */
    int                   minrestart;                  /**< minimum restart round for separator execution (0: from beginning of the instance
-                                                        solving, >= n with n >= 1: from restart round n) */
+                                                       *   solving, >= n with n >= 1: from restart round n) */
    int                   nmaxcutsperlproot;           /**< maximal number of cuts separated per Lagromory LP in the root node */
    int                   nmaxcutsperlp;               /**< maximal number of cuts separated per Lagromory LP in the non-root node */
    SCIP_Real             perroundlpiterlimitfactor;   /**< factor w.r.t. root node LP iterations for maximal separating LP iterations per
-                                                        separation round (negative for no limit) */
+                                                       *   separation round (negative for no limit) */
    SCIP_Real             rootlpiterlimitfactor;       /**< factor w.r.t. root node LP iterations for maximal separating LP iterations in the
-                                                        root node (negative for no limit) */
+                                                       *   root node (negative for no limit) */
    SCIP_Real             totallpiterlimitfactor;      /**< factor w.r.t. root node LP iterations for maximal separating LP iterations in the
-                                                        tree (negative for no limit) */
+                                                       *   tree (negative for no limit) */
    int                   perroundnmaxlpiters;         /**< maximal number of separating LP iterations per separation round (-1: unlimited) */
    SCIP_Real             perroundcutsfactorroot;      /**< factor w.r.t. number of integer columns for number of cuts separated per
-                                                        separation round in root node */
+                                                       *   separation round in root node */
    SCIP_Real             perroundcutsfactor;          /**< factor w.r.t. number of integer columns for number of cuts separated per
-                                                        separation round at a non-root node */
+                                                       *   separation round at a non-root node */
    SCIP_Real             totalcutsfactor;             /**< factor w.r.t. number of integer columns for total number of cuts separated */
    int                   nmaxmainiters;               /**< maximal number of main loop iterations of the relax-and-cut algorithm */
    int                   nmaxsubgradientiters;        /**< maximal number of subgradient loop iterations of the relax-and-cut algorithm */
@@ -304,39 +305,39 @@ struct SCIP_SepaData
    SCIP_Real             muparamlb;                   /**< lower bound for the mu parameter (factor for step length) */
    SCIP_Real             muparamub;                   /**< upper bound for the mu parameter (factor for step length) */
    SCIP_Real             mubacktrackfactor;           /**< factor of mu while backtracking the mu parameter (factor for step length) - see
-                                                        updateMuSteplengthParam() */
+                                                       *   updateMuSteplengthParam() */
    SCIP_Real             muslab1factor;               /**< factor of mu parameter (factor for step length) for larger increment - see
-                                                        updateMuSteplengthParam() */
+                                                       *   updateMuSteplengthParam() */
    SCIP_Real             muslab2factor;               /**< factor of mu parameter (factor for step length) for smaller increment - see
-                                                        updateMuSteplengthParam() */
+                                                       *   updateMuSteplengthParam() */
    SCIP_Real             muslab3factor;               /**< factor of mu parameter (factor for step length) for reduction - see updateMuSteplengthParam() */
    SCIP_Real             deltaslab1ub;                /**< factor of delta deciding larger increment of mu parameter (factor for step
-                                                        length) - see updateMuSteplengthParam() */
+                                                       *   length) - see updateMuSteplengthParam() */
    SCIP_Real             deltaslab2ub;                /**< factor of delta deciding smaller increment of mu parameter (factor for step
-                                                        length) - see updateMuSteplengthParam() */
+                                                       *   length) - see updateMuSteplengthParam() */
    SCIP_Real             ubparamposfactor;            /**< factor for positive upper bound used as an estimate for the optimal Lagrangian
-                                                        dual value */
+                                                       *   dual value */
    SCIP_Real             ubparamnegfactor;            /**< factor for negative upper bound used as an estimate for the optimal Lagrangian
-                                                        dual value */
+                                                       *   dual value */
    int                   nmaxlagrangianvalsforavg;    /**< maximal number of iterations for rolling average of Lagrangian value */
    int                   nmaxconsecitersformuupdate;  /**< consecutive number of iterations used to determine if mu needs to be backtracked */
    SCIP_Real             perrootlpiterfactor;         /**< factor w.r.t. root node LP iterations for iteration limit of each separating LP
-                                                        (negative for no limit) */
+                                                       *   (negative for no limit) */
    SCIP_Real             perlpiterfactor;             /**< factor w.r.t. non-root node LP iterations for iteration limit of each separating
-                                                        LP (negative for no limit) */
+                                                       *   LP (negative for no limit) */
    int                   cutgenfreq;                  /**< frequency of subgradient iterations for generating cuts */
    int                   cutaddfreq;                  /**< frequency of subgradient iterations for adding cuts to objective function */
    SCIP_Real             cutsfilterfactor;            /**< fraction of generated cuts per explored basis to accept from separator */
    int                   optimalfacepriority;         /**< priority of the optimal face for separator execution (0: low priority, 1: medium
-                                                        priority, 2: high priority) */
+                                                       *   priority, 2: high priority) */
    SCIP_Bool             aggregatecuts;               /**< aggregate all generated cuts using the Lagrangian multipliers? */
 
    /* for stabilization of Lagrangian multipliers */
    int                   projectiontype;              /**< the ball into which the Lagrangian multipliers are projected for stabilization
-                                                        (0: no projection, 1: L1-norm ball projection, 2: L2-norm ball projection, 3:
-                                                        L_inf-norm ball projection) */
+                                                       *   (0: no projection, 1: L1-norm ball projection, 2: L2-norm ball projection, 3:
+                                                       *   L_inf-norm ball projection) */
    int                   stabilitycentertype;         /**< type of stability center for taking weighted average of Lagrangian multipliers for
-                                                        stabilization (0: no weighted stabilization, 1: best Lagrangian multipliers) */
+                                                       *   stabilization (0: no weighted stabilization, 1: best Lagrangian multipliers) */
    SCIP_Real             radiusinit;                  /**< initial radius of the ball used in stabilization of Lagrangian multipliers */
    SCIP_Real             radiusmax;                   /**< maximum radius of the ball used in stabilization of Lagrangian multipliers */
    SCIP_Real             radiusmin;                   /**< minimum radius of the ball used in stabilization of Lagrangian multipliers */
@@ -350,7 +351,7 @@ struct SCIP_SepaData
  */
 
 /** start the diving mode for solving LPs corresponding to the Lagrangian dual with fixed multipliers in the subgradient
- * loop of the separator, and update some sepadata values */
+ *  loop of the separator, and update some sepadata values */
 static
 SCIP_RETCODE createLPWithSoftCuts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -365,6 +366,7 @@ SCIP_RETCODE createLPWithSoftCuts(
    int ncols;
    unsigned int nintcols;
    SCIP_Longint nrootlpiters;
+   int i;
 
    assert(scip != NULL);
    assert(sepadata != NULL);
@@ -389,46 +391,31 @@ SCIP_RETCODE createLPWithSoftCuts(
 
       /* calculate maximum number of LP iterations allowed for all separation calls in the root node */
       if( (sepadata->rootlpiterlimitfactor >= 0.0) && !SCIPisInfinity(scip, sepadata->rootlpiterlimitfactor) )
-      {
          sepadata->nmaxrootlpiters = (int)(sepadata->rootlpiterlimitfactor * nrootlpiters);
-      }
       else
-      {
          sepadata->nmaxrootlpiters = -1; /* no finite limit */
-      }
 
       /* calculate maximum number of LP iterations allowed for all separation calls in the entire tree */
       if( (sepadata->totallpiterlimitfactor >= 0.0) && !SCIPisInfinity(scip, sepadata->totallpiterlimitfactor) )
-      {
          sepadata->nmaxtotallpiters = (int)(sepadata->totallpiterlimitfactor * nrootlpiters);
-      }
       else
-      {
          sepadata->nmaxtotallpiters = -1; /* no finite limit */
-      }
 
       /* calculate maximum number of LP iterations allowed per separation call */
       if( (sepadata->perroundlpiterlimitfactor >= 0.0) && !SCIPisInfinity(scip, sepadata->perroundlpiterlimitfactor) )
-      {
          sepadata->nmaxperroundlpiters = (int)(sepadata->perroundlpiterlimitfactor * nrootlpiters);
-      }
       else
-      {
          sepadata->nmaxperroundlpiters = -1; /* no finite limit */
-      }
 
       /* update maximum number of LP iterations allowed per separation call using absolute limits */
       if( sepadata->perroundnmaxlpiters > 0 )
-      {
          sepadata->nmaxperroundlpiters = ((sepadata->nmaxperroundlpiters >= 0) ? MIN(sepadata->nmaxperroundlpiters,
                   sepadata->perroundnmaxlpiters) : sepadata->perroundnmaxlpiters);
-      }
 
       /* set maximum number of cuts allowed to generate per round in root and non-root nodes as well as the total tree */
-      for( int i = 0; i < ncols; ++i )
-      {
+      for( i = 0; i < ncols; ++i )
          nintcols += SCIPcolIsIntegral(cols[i]);
-      }
+
       sepadata->nmaxperroundcutsroot = (int)(sepadata->perroundcutsfactorroot * nintcols);
       sepadata->nmaxperroundcuts = (int)(sepadata->perroundcutsfactor * nintcols);
 
@@ -461,8 +448,8 @@ SCIP_RETCODE deleteLPWithSoftCuts(
 }
 
 /** set up LP interface to solve LPs in the (outer) main loop of the relax-and-cut algorithm; these LPs are built by
- * adding all the generated cuts to the node relaxation */
-/* @todo add lpi iters to global statistics */
+ *  adding all the generated cuts to the node relaxation */
+/*  @todo add lpi iters to global statistics */
 static
 SCIP_RETCODE createLPWithHardCuts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -493,6 +480,8 @@ SCIP_RETCODE createLPWithHardCuts(
    int collppos;
    int* rowcolinds;
    int* rowbegs;
+   int i;
+   int j;
 
    assert(scip != NULL);
    assert(sepadata != NULL);
@@ -515,20 +504,17 @@ SCIP_RETCODE createLPWithHardCuts(
 
       /* create an LPI with appropriate objective sense */
       if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
-      {
          SCIP_CALL( SCIPlpiCreate(lpi, SCIPgetMessagehdlr(scip), "node LP with generated cuts", SCIP_OBJSEN_MAXIMIZE) );
-      }
       else
-      {
          SCIP_CALL( SCIPlpiCreate(lpi, SCIPgetMessagehdlr(scip), "node LP with generated cuts", SCIP_OBJSEN_MINIMIZE) );
-      }
 
       /* add cols to the LP interface */
       SCIP_CALL( SCIPallocBufferArray(scip, &colobj, ncols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &collb, ncols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &colub, ncols) );
+
       /* gather required column information */
-      for( int i = 0; i < ncols; ++i )
+      for( i = 0; i < ncols; ++i )
       {
          colobj[i] = SCIPcolGetObj(cols[i]);
          collb[i] = SCIPcolGetLb(cols[i]);
@@ -543,7 +529,7 @@ SCIP_RETCODE createLPWithHardCuts(
       /* add rows to the LP interface */
       /* find number of nonzeroes in rows */
       nrownonz = 0;
-      for( int i = 0; i < nrows; ++i )
+      for( i = 0; i < nrows; ++i )
       {
          assert(!(SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) && SCIPisInfinity(scip, SCIProwGetRhs(rows[i]))));
          nrownonz += SCIProwGetNLPNonz(rows[i]);
@@ -553,11 +539,12 @@ SCIP_RETCODE createLPWithHardCuts(
       SCIP_CALL( SCIPallocBufferArray(scip, &rowbegs, nrows + 1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &rowlhs, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &rowrhs, nrows) );
+
       /* gather required row information */
       rowbegs[0] = 0;
       pinf = SCIPlpiInfinity(*lpi);
       ninf = -SCIPlpiInfinity(*lpi);
-      for( int i = 0; i < nrows; ++i )
+      for( i = 0; i < nrows; ++i )
       {
          nrownonz = SCIProwGetNLPNonz(rows[i]);
          assert(nrownonz <= ncols);
@@ -569,7 +556,7 @@ SCIP_RETCODE createLPWithHardCuts(
          rowlhs[i] = SCIPisInfinity(scip, -SCIProwGetLhs(rows[i])) ? ninf : SCIProwGetLhs(rows[i]) - rowconst;
          rowrhs[i] = SCIPisInfinity(scip, SCIProwGetRhs(rows[i])) ? pinf : SCIProwGetRhs(rows[i]) - rowconst;
 
-         for( int j = 0; j < nrownonz; ++j )
+         for( j = 0; j < nrownonz; ++j )
          {
             collppos = SCIPcolGetLPPos(rowcols[j]);
             assert(collppos >= 0);
@@ -579,6 +566,7 @@ SCIP_RETCODE createLPWithHardCuts(
             rowvals[rowbegs[i] + j] = rowval[j];
          }
       }
+
       /* add rows */
       SCIP_CALL( SCIPlpiAddRows(*lpi, nrows, rowlhs, rowrhs, NULL, rowbegs[nrows], rowbegs, rowcolinds, rowvals) );
 
@@ -599,7 +587,8 @@ SCIP_RETCODE createLPWithHardCuts(
       nrownonz = 0;
       pinf = SCIPlpiInfinity(*lpi);
       ninf = -SCIPlpiInfinity(*lpi);
-      for( int i = sepadata->nrowsinhardcutslp - nrows; i < ncuts; ++i )
+
+      for( i = sepadata->nrowsinhardcutslp - nrows; i < ncuts; ++i )
       {
          assert(!(SCIPisInfinity(scip, -SCIProwGetLhs(cuts[i])) && SCIPisInfinity(scip, SCIProwGetRhs(cuts[i]))));
          assert(SCIPisInfinity(scip, -SCIProwGetLhs(cuts[i])));
@@ -614,7 +603,7 @@ SCIP_RETCODE createLPWithHardCuts(
 
       /* gather required cut information */
       rowbegs[0] = 0;
-      for( int i = sepadata->nrowsinhardcutslp - nrows; i < ncuts; ++i )
+      for( i = sepadata->nrowsinhardcutslp - nrows; i < ncuts; ++i )
       {
          nrownonz = SCIProwGetNNonz(cuts[i]);
          assert(nrownonz <= ncols);
@@ -629,7 +618,7 @@ SCIP_RETCODE createLPWithHardCuts(
          rowrhs[i - sepadata->nrowsinhardcutslp + nrows] = SCIPisInfinity(scip, SCIProwGetRhs(cuts[i])) ? pinf :
             SCIProwGetRhs(cuts[i]) - rowconst;
 
-         for( int j = 0; j < nrownonz; ++j )
+         for( j = 0; j < nrownonz; ++j )
          {
             collppos = SCIPcolGetLPPos(rowcols[j]);
             assert(collppos >= 0);
@@ -642,7 +631,7 @@ SCIP_RETCODE createLPWithHardCuts(
 
       /* add cuts */
       SCIP_CALL( SCIPlpiAddRows(*lpi, (ncuts - sepadata->nrowsinhardcutslp + nrows), rowlhs, rowrhs, NULL,
-               rowbegs[(ncuts - sepadata->nrowsinhardcutslp + nrows)], rowbegs, rowcolinds, rowvals) );
+            rowbegs[(ncuts - sepadata->nrowsinhardcutslp + nrows)], rowbegs, rowcolinds, rowvals) );
    }
 
    /* set warm starting basis */
@@ -697,9 +686,8 @@ SCIP_RETCODE sepadataFree(
 }
 
 /** update mu parameter which is used as a factor in the step length calculation; refer to the top of the file for a
- * description of the formula.
- */
-/* @todo some adaptive strategy like constant after certain changes? */
+ *  description of the formula. */
+/*  @todo some adaptive strategy like constant after certain changes? */
 static
 SCIP_RETCODE updateMuSteplengthParam(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -722,6 +710,8 @@ SCIP_RETCODE updateMuSteplengthParam(
    int maxiters;
    int i;
 
+   assert( backtrack != NULL );
+
    *backtrack = FALSE;
 
    /* update the mu parameter only if it is not set to be a constant value */
@@ -730,6 +720,7 @@ SCIP_RETCODE updateMuSteplengthParam(
       delta = ubparam - bestlagrangianval;
       deltaslab1ub = MIN(sepadata->deltaslab1ub, sepadata->deltaslab2ub);
       deltaslab2ub = MAX(sepadata->deltaslab1ub, sepadata->deltaslab2ub);
+
       /* ensure that the ordering of different user input parameters is as expected */
       if( SCIPisPositive(scip, sepadata->muslab1factor - sepadata->muslab2factor) )
       {
@@ -818,27 +809,29 @@ SCIP_RETCODE updateMuSteplengthParam(
    return SCIP_OKAY;
 }
 
-/** update subgradient, i.e., residuals of generated cuts */
-/* @note: assumed that \f$i^{th}\f$ cut is of the form \f${\alpha^i}^T x \leq {\alpha^i_0}\f$ */
+/** update subgradient, i.e., residuals of generated cuts
+ *  @note assuming that \f$i^{th}\f$ cut is of the form \f${\alpha^i}^T x \leq {\alpha^i_0}\f$.
+ */
 static
 void updateSubgradient(
-   SCIP*                 scip,                     /**< SCIP data structure */
-   SCIP_SOL*             sol,                      /**< LP solution used in updating subgradient vector */
-   SCIP_ROW**            cuts,                     /**< cuts generated so far */
-   int                   ncuts,                    /**< number of cuts generated so far */
-   SCIP_Real*            subgradient,              /**< vector of subgradients to be updated */
-   SCIP_Real*            dualvector,               /**< Lagrangian multipliers */
-   SCIP_Bool*            subgradientzero,          /**< whether the subgradient vector is all zero */
-   int*                  ncutviols,                /**< number of violations of generated cuts */
-   SCIP_Real*            maxcutviol,               /**< maximum violation of generated cuts */
-   int*                  nnzsubgradientdualprod,   /**< number of nonzero products of subgradient vector and Lagrangian multipliers (i.e.,
-                                                     number of complementarity slackness violations) */
-   SCIP_Real*            maxnzsubgradientdualprod  /**< maximum value of nonzero products of subgradient vector and Lagrangian multipliers
-                                                     (i.e., maximum value of complementarity slackness violations) */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< LP solution used in updating subgradient vector */
+   SCIP_ROW**            cuts,               /**< cuts generated so far */
+   int                   ncuts,              /**< number of cuts generated so far */
+   SCIP_Real*            subgradient,        /**< vector of subgradients to be updated */
+   SCIP_Real*            dualvector,         /**< Lagrangian multipliers */
+   SCIP_Bool*            subgradientzero,    /**< whether the subgradient vector is all zero */
+   int*                  ncutviols,          /**< number of violations of generated cuts */
+   SCIP_Real*            maxcutviol,         /**< maximum violation of generated cuts */
+   int*                  nnzsubgradientdualprod, /**< number of nonzero products of subgradient vector and Lagrangian multipliers (i.e.,
+                                                  *   number of complementarity slackness violations) */
+   SCIP_Real*            maxnzsubgradientdualprod /**< maximum value of nonzero products of subgradient vector and Lagrangian multipliers
+                                                   *   (i.e., maximum value of complementarity slackness violations) */
    )
 {
    int nzerosubgradient;
    SCIP_Real term;
+   int i;
 
    assert(subgradientzero != NULL);
    assert(ncutviols != NULL);
@@ -854,11 +847,12 @@ void updateSubgradient(
    *subgradientzero = FALSE;
 
    /* for each cut, calculate the residual along with various violation metrics */
-   for( int i = 0; i < ncuts; i++ )
+   for( i = 0; i < ncuts; i++ )
    {
       assert(SCIPisInfinity(scip, -SCIProwGetLhs(cuts[i])));
       assert(!SCIPisInfinity(scip, SCIProwGetRhs(cuts[i])));
       subgradient[i] = SCIPgetRowSolActivity(scip, cuts[i], sol) + SCIProwGetConstant(cuts[i]) - SCIProwGetRhs(cuts[i]);
+
       if( SCIPisFeasZero(scip, subgradient[i]) )
       {
          subgradient[i] = 0.0;
@@ -885,9 +879,7 @@ void updateSubgradient(
 
    /* indicator for all zero subgradient vector */
    if( nzerosubgradient == ncuts )
-   {
       *subgradientzero = TRUE;
-   }
 }
 
 /** update Lagrangian value, i.e., optimal value of the Lagrangian dual with fixed multipliers */
@@ -901,9 +893,13 @@ void updateLagrangianValue(
    SCIP_Real*            lagrangianval       /**< Lagrangian value to be updated */
    )
 {
+   int i;
+
+   assert(lagrangianval != NULL);
+
    *lagrangianval = objval;
 
-   for( int i = 0; i < ncuts; i++ )
+   for( i = 0; i < ncuts; i++ )
    {
       assert(SCIPisInfinity(scip, -SCIProwGetLhs(cuts[i])));
       assert(!SCIPisInfinity(scip, SCIProwGetRhs(cuts[i])));
@@ -924,16 +920,13 @@ void updateStepLength(
    )
 {
    SCIP_Real normsquared = 0.0;
+   int i;
 
-   for( int i = 0; i < ncuts; i++ )
-   {
+   for( i = 0; i < ncuts; i++ )
       normsquared += SQR(subgradient[i]);
-   }
 
    if( !SCIPisFeasZero(scip, normsquared) )
-   {
       *steplength = (muparam * (ubparam - lagrangianval))/(normsquared); /*lint !e795*/
-   }
 }
 
 /** update the ball radius (based on various violation metrics) that is used for stabilization of Lagrangian multipliers */
@@ -942,15 +935,15 @@ void updateBallRadius(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data structure */
    SCIP_Real             maxviolscore,       /**< weighted average of maximum value of generated cut violations and maximum value of
-                                               complementarity slackness violations, in the current iteration */
+                                              *   complementarity slackness violations, in the current iteration */
    SCIP_Real             maxviolscoreold,    /**< weighted average of maximum value of generated cut violations and maximum value of
-                                               complementarity slackness violations, in the previous iteration */
+                                              *   complementarity slackness violations, in the previous iteration */
    SCIP_Real             nviolscore,         /**< weighted average of number of generated cut violations and number of complementarity
-                                               slackness violations, in the current iteration */
+                                              *   slackness violations, in the current iteration */
    SCIP_Real             nviolscoreold,      /**< weighted average of number of generated cut violations and number of complementarity
-                                               slackness violations, in the previous iteration */
+                                              *   slackness violations, in the previous iteration */
    int                   nlpiters,           /**< number of LP iterations taken for solving the Lagrangian dual with fixed multipliers in
-                                               current iteration */
+                                              *   current iteration */
    SCIP_Real*            ballradius          /**< norm ball radius to be updated */
    )
 {
@@ -999,11 +992,11 @@ void updateBallRadius(
    }
 }
 
-/** projection of Lagrangian multipliers onto L1-norm ball. This algorithm is based on the following article.
+/** projection of Lagrangian multipliers onto L1-norm ball. This algorithm is based on the following article
  *
- * Condat L. (2016).@n
- * Fast projection onto the simplex and the \f$l_1\f$ ball.@n
- * Mathematical Programming, 158, 1-2, 575-585.
+ *  Condat L. (2016).@n
+ *  Fast projection onto the simplex and the \f$l_1\f$ ball.@n
+ *  Mathematical Programming, 158, 1-2, 575-585.
  *
  */
 static
@@ -1025,14 +1018,15 @@ SCIP_RETCODE l1BallProjection(
    int* temp2inds;
    int temp1len;
    int temp2len;
+   int i;
+   int j;
 
    assert(!SCIPisNegative(scip, radius));
    val = REALABS(dualvector[0]);
+
    /* calculate the L1-norm of the Lagrangian multipliers */
-   for( int i = 1; i < dualvectorlen; i++ )
-   {
+   for( i = 1; i < dualvectorlen; i++ )
       val += REALABS(dualvector[i]);
-   }
 
    /* if the vector of Lagrangian multipliers lies outside the L1-norm ball, then do the projection */
    if( SCIPisGT(scip, val, radius) )
@@ -1041,7 +1035,7 @@ SCIP_RETCODE l1BallProjection(
       SCIP_CALL( SCIPallocCleanBufferArray(scip, &temp2vals, dualvectorlen) );
       SCIP_CALL( SCIPallocBufferArray(scip, &temp1inds, dualvectorlen) );
       SCIP_CALL( SCIPallocBufferArray(scip, &temp2inds, dualvectorlen) );
-      for( int i = 0; i < dualvectorlen; i++ )
+      for( i = 0; i < dualvectorlen; i++ )
       {
          temp1inds[i] = -1;
          temp2inds[i] = -1;
@@ -1053,7 +1047,7 @@ SCIP_RETCODE l1BallProjection(
       temp1len = 1;
       pivotparam = REALABS(dualvector[0]) - radius;
 
-      for( int i = 1; i < dualvectorlen; i++ )
+      for( i = 1; i < dualvectorlen; i++ )
       {
          if( SCIPisGT(scip, REALABS(dualvector[i]), pivotparam) )
          {
@@ -1066,7 +1060,7 @@ SCIP_RETCODE l1BallProjection(
             }
             else
             {
-               for( int j = 0; j < temp1len; j++ )
+               for( j = 0; j < temp1len; j++ )
                {
                   temp2vals[temp2len + j] = temp1vals[j];
                   temp2inds[temp2len + j] = temp1inds[j];
@@ -1080,7 +1074,7 @@ SCIP_RETCODE l1BallProjection(
          }
       }
 
-      for( int i = 0; i < temp2len; i++ )
+      for( i = 0; i < temp2len; i++ )
       {
          if( SCIPisGT(scip, temp2vals[i], pivotparam) )
          {
@@ -1097,9 +1091,9 @@ SCIP_RETCODE l1BallProjection(
       {
          temp1changed = FALSE;
 
-         for( int i = 0; i < temp1len; i++ )
+         for( i = 0; i < temp1len; i++ )
          {
-            /* @note: the third condition (temp1len - ntemp1removed > 0) is true as long as the first condition
+            /* @note the third condition (temp1len - ntemp1removed > 0) is true as long as the first condition
              * (temp1inds[i] >= 0) is true.
              */
             if( (temp1inds[i] >= 0) && SCIPisLE(scip, temp1vals[i], pivotparam) )
@@ -1114,7 +1108,7 @@ SCIP_RETCODE l1BallProjection(
          }
       }
 
-      for( int i = 0; i < dualvectorlen; i++ )
+      for( i = 0; i < dualvectorlen; i++ )
       {
          term = REALABS(dualvector[i]);
          val = MAX(term - pivotparam, 0.0);
@@ -1130,7 +1124,7 @@ SCIP_RETCODE l1BallProjection(
       }
 
       /* free memory */
-      for( int i = 0; i < dualvectorlen; i++ )
+      for( i = 0; i < dualvectorlen; i++ )
       {
          temp2vals[i] = 0.0;
          temp1vals[i] = 0.0;
@@ -1155,25 +1149,23 @@ void l2BallProjection(
 {
    SCIP_Real l2norm;
    SCIP_Real factor;
+   int i;
 
    assert(!SCIPisNegative(scip, radius));
 
    l2norm = 0.0;
+
    /* calculate the L2-norm of the Lagrangian multipliers */
-   for( int i = 0; i < dualvectorlen; i++ )
-   {
+   for( i = 0; i < dualvectorlen; i++ )
       l2norm += SQR(dualvector[i]);
-   }
    l2norm = sqrt(l2norm);
    factor = radius/(1.0 + l2norm);
 
    /* if the vector of Lagrangian multipliers is outside the L2-norm ball, then do the projection */
    if( SCIPisGT(scip, l2norm, radius) && SCIPisLT(scip, factor, 1.0) )
    {
-      for( int i = 0; i < dualvectorlen; i++ )
-      {
+      for( i = 0; i < dualvectorlen; i++ )
          dualvector[i] *= factor;
-      }
    }
 }
 
@@ -1186,25 +1178,23 @@ void linfBallProjection(
    SCIP_Real             radius              /**< radius of the L_infinity-norm ball */
    )
 {
+   int i;
+
    assert(!SCIPisNegative(scip, radius));
 
    /* if the vector of Lagrangian multipliers is outside the L_infinity-norm ball, then do the projection */
-   for( int i = 0; i < dualvectorlen; i++ )
+   for( i = 0; i < dualvectorlen; i++ )
    {
       if( SCIPisLT(scip, dualvector[i], -radius) )
-      {
          dualvector[i] = -radius;
-      }
       else if( SCIPisGT(scip, dualvector[i], radius) )
-      {
          dualvector[i] = radius;
-      }
    }
 }
 
 /** weighted Lagrangian multipliers based on a given vector as stability center */
-/* @todo calculate weight outside this function and pass it (so that this function becomes generic and independent of
- * the terminology related to best Lagrangian multipliers)
+/*  @todo calculate weight outside this function and pass it (so that this function becomes generic and independent of
+ *  the terminology related to best Lagrangian multipliers)
  */
 static
 void weightedDualVector(
@@ -1220,8 +1210,10 @@ void weightedDualVector(
    SCIP_Real constant;
    SCIP_Real weight;
    SCIP_Real alpha;
+   int i;
 
    constant = MAX(2.0, sepadata->constant);
+
    /* weight factor from the literature on Dantzig-Wolfe decomposition stabilization schemes */
    weight = MIN(constant, (totaliternum + 1 + nbestdualupdates) / 2.0);
    alpha = 1.0 / weight;
@@ -1229,14 +1221,11 @@ void weightedDualVector(
    assert(dualvectorlen >= stabilitycenterlen);
 
    /* weighted Lagrangian multipliers */
-   for( int i = 0; i < stabilitycenterlen; i++ )
-   {
+   for( i = 0; i < stabilitycenterlen; i++ )
       dualvector[i] = alpha * dualvector[i] + (1 - alpha) * stabilitycenter[i];
-   }
-   for( int i = stabilitycenterlen; i < dualvectorlen; i++ )
-   {
+
+   for( i = stabilitycenterlen; i < dualvectorlen; i++ )
       dualvector[i] = alpha * dualvector[i];
-   }
 }
 
 /** stabilize Lagrangian multipliers */
@@ -1252,15 +1241,15 @@ SCIP_RETCODE stabilizeDualVector(
    int                   subgradientiternum, /**< iteration number of the subgradient algorithm */
    int                   totaliternum,       /**< total number of iterations of the relax-and-cut algorithm performed so far */
    SCIP_Real             maxviolscore,       /**< weighted average of maximum value of generated cut violations and maximum value of
-                                               complementarity slackness violations, in the current iteration */
+                                              *   complementarity slackness violations, in the current iteration */
    SCIP_Real             maxviolscoreold,    /**< weighted average of maximum value of generated cut violations and maximum value of
-                                               complementarity slackness violations, in the previous iteration */
+                                              *   complementarity slackness violations, in the previous iteration */
    SCIP_Real             nviolscore,         /**< weighted average of number of generated cut violations and number of complementarity
-                                               slackness violations, in the current iteration */
+                                              *   slackness violations, in the current iteration */
    SCIP_Real             nviolscoreold,      /**< weighted average of number of generated cut violations and number of complementarity
-                                               slackness violations, in the previous iteration */
+                                              *   slackness violations, in the previous iteration */
    int                   nlpiters,           /**< number of LP iterations taken for solving the Lagrangian dual with fixed multipliers in
-                                               current iteration */
+                                              *   current iteration */
    SCIP_Real*            ballradius          /**< norm ball radius */
    )
 {
@@ -1270,7 +1259,7 @@ SCIP_RETCODE stabilizeDualVector(
       {
          /* update the ball radius */
          updateBallRadius(scip, sepadata, maxviolscore, maxviolscoreold, nviolscore, nviolscoreold, nlpiters,
-               ballradius);
+            ballradius);
       }
 
       if( sepadata->projectiontype == 1 )
@@ -1315,32 +1304,32 @@ SCIP_RETCODE updateDualVector(
    int                   ncuts,              /**< number of generated cuts so far */
    SCIP_Bool             backtrack,          /**< whether the Lagrangian multipliers need to be backtracked */
    SCIP_Real             maxviolscore,       /**< weighted average of maximum value of generated cut violations and maximum value of
-                                               complementarity slackness violations, in the current iteration */
+                                              *   complementarity slackness violations, in the current iteration */
    SCIP_Real             maxviolscoreold,    /**< weighted average of maximum value of generated cut violations and maximum value of
-                                               complementarity slackness violations, in the previous iteration */
+                                              *   complementarity slackness violations, in the previous iteration */
    SCIP_Real             nviolscore,         /**< weighted average of number of generated cut violations and number of complementarity
-                                               slackness violations, in the current iteration */
+                                              *   slackness violations, in the current iteration */
    SCIP_Real             nviolscoreold,      /**< weighted average of number of generated cut violations and number of complementarity
-                                               slackness violations, in the previous iteration */
+                                              *   slackness violations, in the previous iteration */
    int                   nlpiters,           /**< number of LP iterations taken for solving the Lagrangian dual with fixed multipliers in
-                                               current iteration */
+                                              *   current iteration */
    SCIP_Bool*            dualvecsdiffer,     /**< whether the updated Lagrangian multipliers differ from the old one */
    SCIP_Real*            ballradius          /**< norm ball radius */
    )
 {
    SCIP_Real* dualvector1copy;
+   int i;
 
    assert(dualvector2len <= ncuts);
    assert(dualvecsdiffer != NULL);
 
    *dualvecsdiffer = FALSE;
+
    /* @todo do allocation and free operations outside only once instead of every time this function is called? */
    /* copy of the Lagrangian multipliers to be used to check if the updated vector is different than this */
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &dualvector1copy, ncuts) );
-   for( int i = 0; i < ncuts; i++ )
-   {
+   for( i = 0; i < ncuts; i++ )
       dualvector1copy[i] = dualvector1[i];
-   }
 
    /* if backtracking was not identified at the time of the mu parameter update, then update the Lagrangian multipliers
     * based on the given subgradient vector
@@ -1351,14 +1340,14 @@ SCIP_RETCODE updateDualVector(
       assert(subgradientiternum >= 0);
 
       /* update Lagrangian multipliers */
-      for( int i = 0; i < ncuts; i++ )
+      for( i = 0; i < ncuts; i++ )
       {
          assert(subgradient != NULL); /* for lint */
          dualvector1[i] += steplength * subgradient[i];
       }
 
       /* projection onto non-negative orthant */
-      for( int i = 0; i < ncuts; i++ )
+      for( i = 0; i < ncuts; i++ )
       {
          assert(dualvector1 != NULL); /* for lint */
          dualvector1[i] = MAX(dualvector1[i], 0.0);
@@ -1366,33 +1355,27 @@ SCIP_RETCODE updateDualVector(
 
       /* stabilization of Lagrangian multipliers */
       SCIP_CALL( stabilizeDualVector(scip, sepadata, dualvector1, ncuts, dualvector2, dualvector2len,
-               ndualvector2updates, subgradientiternum, totaliternum, maxviolscore, maxviolscoreold, nviolscore,
-               nviolscoreold, nlpiters, ballradius) );
+            ndualvector2updates, subgradientiternum, totaliternum, maxviolscore, maxviolscoreold, nviolscore,
+            nviolscoreold, nlpiters, ballradius) );
 
       /* projection onto non-negative orthant again in case stabilization changed some components negative*/
-      for( int i = 0; i < ncuts; i++ )
-      {
+      for( i = 0; i < ncuts; i++ )
          dualvector1[i] = MAX(dualvector1[i], 0.0);
-      }
    }
    /* if backtracking was identified at the time of the mu parameter update, then backtrack the Lagrangian multipliers
     * based on the given backtracking multipliers
     */
    else
    {
-      for( int i = 0; i < dualvector2len; i++ )
-      {
+      for( i = 0; i < dualvector2len; i++ )
          dualvector1[i] = dualvector2[i];
-      }
 
-      for( int i = dualvector2len; i < ncuts; i++ )
-      {
+      for( i = dualvector2len; i < ncuts; i++ )
          dualvector1[i] = 0.0;
-      }
    }
 
    /* identify if the vector of Lagrangian multipliers is indeed different after updating */
-   for( int i = 0; i < ncuts; i++ )
+   for( i = 0; i < ncuts; i++ )
    {
       if( !SCIPisEQ(scip, dualvector1[i], dualvector1copy[i]) )
       {
@@ -1402,33 +1385,32 @@ SCIP_RETCODE updateDualVector(
    }
 
    /* free memory */
-   for( int i = 0; i < ncuts; i++ )
-   {
+   for( i = 0; i < ncuts; i++ )
       dualvector1copy[i] = 0.0;
-   }
+
    SCIPfreeCleanBufferArray(scip, &dualvector1copy);
 
    return SCIP_OKAY;
 }
 
-/** check different termination criteria */
-/* @note: the criterion based on objvecsdiffer assumes deterministic solving process (i.e., we would get same LP solution
- * for "Lagrangian dual with fixed Lagrangian multipliers" when the objective vector remains the same across iterations).
+/** check different termination criteria
+ *  @note the criterion based on objvecsdiffer assumes deterministic solving process (i.e., we would get same LP solution
+ *  for "Lagrangian dual with fixed Lagrangian multipliers" when the objective vector remains the same across iterations).
  */
-/* @todo nlpssolved criterion? */
+/*  @todo nlpssolved criterion? */
 static
 SCIP_RETCODE checkLagrangianDualTermination(
-   SCIP_SEPADATA*        sepadata,                 /**< separator data structure */
-   int                   nnewaddedsoftcuts,        /**< number of cuts that were recently penalized and added to the Lagrangian dual's
-                                                     objective function */
-   int                   nyettoaddsoftcuts,        /**< number of cuts that are yet to be penalized and added to the Lagrangian dual's
-                                                     objective function */
-   SCIP_Bool             objvecsdiffer,            /**< whether the Lagrangian dual's objective function has changed */
-   int                   ngeneratedcurrroundcuts,  /**< number of cuts generated in the current separation round */
-   int                   nmaxgeneratedperroundcuts,/**< maximal number of cuts allowed to generate per separation round */
-   int                   ncurrroundlpiters,        /**< number of separating LP iterations in the current separation round */
-   int                   depth,                    /**< depth of the current node */
-   SCIP_Bool*            terminate                 /**< whether to terminate the subgradient algorithm loop */
+   SCIP_SEPADATA*        sepadata,           /**< separator data structure */
+   int                   nnewaddedsoftcuts,  /**< number of cuts that were recently penalized and added to the Lagrangian dual's
+                                              *   objective function */
+   int                   nyettoaddsoftcuts,  /**< number of cuts that are yet to be penalized and added to the Lagrangian dual's
+                                              *   objective function */
+   SCIP_Bool             objvecsdiffer,      /**< whether the Lagrangian dual's objective function has changed */
+   int                   ngeneratedcurrroundcuts, /**< number of cuts generated in the current separation round */
+   int                   nmaxgeneratedperroundcuts, /**< maximal number of cuts allowed to generate per separation round */
+   int                   ncurrroundlpiters,  /**< number of separating LP iterations in the current separation round */
+   int                   depth,              /**< depth of the current node */
+   SCIP_Bool*            terminate           /**< whether to terminate the subgradient algorithm loop */
    )
 {
    *terminate = FALSE;
@@ -1474,7 +1456,7 @@ SCIP_RETCODE solveLagromoryLP(
    SCIP_Real*            solvals,            /**< values of the LP optimal solution, if found */
    SCIP_Real*            objval,             /**< optimal objective value of the LP optimal solution, if found */
    int*                  ncurrroundlpiters   /**< number of LP iterations taken for solving Lagrangian dual problems with fixed multipliers
-                                               in the current separator round */
+                                              *   in the current separator round */
    )
 {
    SCIP_Real timelimit;
@@ -1514,7 +1496,8 @@ SCIP_RETCODE solveLagromoryLP(
          SCIPdebugMsg(scip, "skip Lagromory cut generation since no time left\n");
          goto TERMINATE;
       }
-      /* @note: the following direct LPI call is being used because of the lack of an equivalent function call in
+
+      /* @note the following direct LPI call is being used because of the lack of an equivalent function call in
        * scip_lp.c (lpSetRealpar exists in lp.c though)
        */
       SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_LPTILIM, timelimit) );
@@ -1536,22 +1519,16 @@ SCIP_RETCODE solveLagromoryLP(
       if( sepadata->nmaxperroundlpiters - *ncurrroundlpiters >= 0 )
       {
          if( iterlimit >= 0 )
-         {
             iterlimit = MIN(iterlimit, sepadata->nmaxperroundlpiters - *ncurrroundlpiters);
-         }
          else
-         {
             iterlimit = sepadata->nmaxperroundlpiters - *ncurrroundlpiters;
-         }
       }
       else
-      {
          iterlimit = 0;
-      }
    }
    /* @todo impose a finite iteration limit only when the dualvector changes from zero to non-zero for the first time because
     * many simplex pivots are performed in this case even with warm starting (compared to the case when the
-    * dualvector changes from non-zero to non-zero).
+    * dualvector changes from non-zero to non-zero)
     */
 
    /* solve the LP with an iteration limit and get number of simplex iterations taken */
@@ -1563,18 +1540,21 @@ SCIP_RETCODE solveLagromoryLP(
 
    /* get the solution and objective value if optimal */
    stat = SCIPgetLPSolstat(scip);
+
    /* @todo is there any way to accept terminations due to iterlimit and timelimit as well? It is not possible
     * currently because primal sol is not saved in these cases.
     */
-   /* @note: ideally, only primal feasibility is sufficient. But, there is no such option with SCIPgetLPSolstat. */
+   /* @note ideally, only primal feasibility is sufficient. But, there is no such option with SCIPgetLPSolstat. */
    if( stat == SCIP_LPSOLSTAT_OPTIMAL )
    {
       if( SCIPisLPSolBasic(scip) )
       {
+         int i;
+
          *solfound = TRUE;
 
          /* update sol */
-         for( int i = 0; i < ncols; ++i )
+         for( i = 0; i < ncols; ++i )
          {
             col = cols[i];
             assert(col != NULL);
@@ -1592,9 +1572,8 @@ SCIP_RETCODE solveLagromoryLP(
 
    /* update some statistics */
    if( depth == 0 )
-   {
       sepadata->nrootlpiters += (int)nlpiters;
-   }
+
    sepadata->ntotallpiters += (int)nlpiters;
    *ncurrroundlpiters += (int)nlpiters;
 
@@ -1645,11 +1624,13 @@ SCIP_RETCODE solveLPWithHardCuts(
    /* get the solution if primal feasible */
    if( SCIPlpiIsPrimalFeasible(sepadata->lpiwithhardcuts) )
    {
+      int i;
+
       *solfound = TRUE;
       SCIP_CALL( SCIPlpiGetSol(sepadata->lpiwithhardcuts, NULL, solvals, NULL, NULL, NULL) );
 
       /* update sol */
-      for( int i = 0; i < ncols; ++i )
+      for( i = 0; i < ncols; ++i )
       {
          col = cols[i];
          assert(col != NULL);
@@ -1667,24 +1648,24 @@ TERMINATE:
 /** construct a cut based on the input cut coefficients, sides, etc */
 static
 SCIP_RETCODE constructCutRow(
-   SCIP*                 scip,                     /**< SCIP data structure */
-   SCIP_SEPA*            sepa,                     /**< pointer to the separator */
-   SCIP_SEPADATA*        sepadata,                 /**< separator data structure */
-   int                   mainiternum,              /**< iteration number of the outer loop of the relax-and-cut algorithm */
-   int                   subgradientiternum,       /**< iteration number of the subgradient algorithm */
-   int                   cutnnz,                   /**< number of nonzeros in cut */
-   int*                  cutinds,                  /**< column indices in cut */
-   SCIP_Real*            cutcoefs,                 /**< cut cofficients */
-   SCIP_Real             cutefficacy,              /**< cut efficacy */
-   SCIP_Real             cutrhs,                   /**< RHS of cut */
-   SCIP_Bool             cutislocal,               /**< whether cut is local */
-   int                   cutrank,                  /**< rank of cut */
-   SCIP_ROW**            generatedcuts,            /**< array of generated cuts */
-   SCIP_Real*            generatedcutefficacies,   /**< array of generated cut efficacies w.r.t. the respective LP bases used for cut
-                                                     generations */
-   int                   ngeneratedcurrroundcuts,  /**< number of cuts generated until the previous basis in the current separation round */
-   int*                  ngeneratednewcuts,        /**< number of new cuts generated using the current basis */
-   SCIP_Bool*            cutoff                    /**< should the current node be cutoff? */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< pointer to the separator */
+   SCIP_SEPADATA*        sepadata,           /**< separator data structure */
+   int                   mainiternum,        /**< iteration number of the outer loop of the relax-and-cut algorithm */
+   int                   subgradientiternum, /**< iteration number of the subgradient algorithm */
+   int                   cutnnz,             /**< number of nonzeros in cut */
+   int*                  cutinds,            /**< column indices in cut */
+   SCIP_Real*            cutcoefs,           /**< cut cofficients */
+   SCIP_Real             cutefficacy,        /**< cut efficacy */
+   SCIP_Real             cutrhs,             /**< RHS of cut */
+   SCIP_Bool             cutislocal,         /**< whether cut is local */
+   int                   cutrank,            /**< rank of cut */
+   SCIP_ROW**            generatedcuts,      /**< array of generated cuts */
+   SCIP_Real*            generatedcutefficacies, /**< array of generated cut efficacies w.r.t. the respective LP bases used for cut
+                                                  *   generations */
+   int                   ngeneratedcurrroundcuts, /**< number of cuts generated until the previous basis in the current separation round */
+   int*                  ngeneratednewcuts,  /**< number of new cuts generated using the current basis */
+   SCIP_Bool*            cutoff              /**< should the current node be cutoff? */
    )
 {
    SCIP_COL** cols;
@@ -1719,17 +1700,17 @@ SCIP_RETCODE constructCutRow(
       if( subgradientiternum >= 0 )
       {
          (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%" SCIP_LONGINT_FORMAT "_%d" "_%d" "_%d", SCIPsepaGetName(sepa),
-               sepadata->ncalls, mainiternum, subgradientiternum, ngeneratedcurrroundcuts + *ngeneratednewcuts);
+            sepadata->ncalls, mainiternum, subgradientiternum, ngeneratedcurrroundcuts + *ngeneratednewcuts);
       }
       else
       {
          (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_%" SCIP_LONGINT_FORMAT "_%d" "_%d", SCIPsepaGetName(sepa),
-               sepadata->ncalls, mainiternum, ngeneratedcurrroundcuts + *ngeneratednewcuts);
+            sepadata->ncalls, mainiternum, ngeneratedcurrroundcuts + *ngeneratednewcuts);
       }
 
       /* create empty cut */
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE,
-               sepadata->dynamiccuts) );
+            sepadata->dynamiccuts) );
 
       /* set cut rank */
       SCIProwChgRank(cut, cutrank); /*lint !e644*/
@@ -1778,7 +1759,7 @@ SCIP_RETCODE constructCutRow(
             maxactivity = SCIPgetRowMaxActivity(scip, cut);
 
             if( (!SCIPisInfinity(scip,  rhs) && SCIPisFeasPositive(scip, minactivity - rhs)) ||
-                  (!SCIPisInfinity(scip, -lhs) && SCIPisFeasNegative(scip, maxactivity - lhs)) )
+                (!SCIPisInfinity(scip, -lhs) && SCIPisFeasNegative(scip, maxactivity - lhs)) )
             {
                SCIPdebugMsg(scip, "cut <%s> is infeasible (sides=[%g,%g], act=[%g,%g])\n",
                      SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
@@ -1810,7 +1791,7 @@ SCIP_RETCODE aggregateGeneratedCuts(
    SCIP_Bool*            cutoff              /**< should the current node be cutoff? */
    )
 {
-   SCIP_Real* cutvals;           /**< cut cofficients */
+   SCIP_Real* cutvals;           /* cut cofficients */
    SCIP_COL** cutcols;
    SCIP_COL** cols;
    SCIP_VAR* var;
@@ -1835,14 +1816,16 @@ SCIP_RETCODE aggregateGeneratedCuts(
    SCIP_Real QUAD(tmpcutrhs);
    SCIP_Real QUAD(quadprod);
    char aggrcutname[SCIP_MAXSTRLEN];
-   int cutnnz;             /**< number of nonzeros in cut */
+   int cutnnz;             /* number of nonzeros in cut */
    int aggrcutnnz;
-   int* aggrcutinds;            /**< column indices in cut */
-   int aggrcutrank;            /**< rank of cut */
+   int* aggrcutinds;           /* column indices in cut */
+   int aggrcutrank;            /* rank of cut */
    int cutrank;
    int ncols;
    int collppos;
    int nlocalcuts;
+   int i;
+   int j;
 
    assert(scip != NULL);
    assert(naggrcuts != NULL);
@@ -1866,7 +1849,7 @@ SCIP_RETCODE aggregateGeneratedCuts(
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrcutinds, ncols) );
 
    /* aggregate cuts based on the input Lagrangian multipliers */
-   for( int i = 0; i < bestdualvectorlen; i++ )
+   for( i = 0; i < bestdualvectorlen; i++ )
    {
       multiplier = bestdualvector[i];
       if( SCIPisGE(scip, multiplier, 1e-4) )
@@ -1881,7 +1864,7 @@ SCIP_RETCODE aggregateGeneratedCuts(
          cutcols = SCIProwGetCols(cut);
          cutconst = SCIProwGetConstant(cut);
 
-         for( int j = 0; j < cutnnz; j++ )
+         for( j = 0; j < cutnnz; j++ )
          {
             collppos = SCIPcolGetLPPos(cutcols[j]);
             assert(collppos >= 0);
@@ -1914,7 +1897,7 @@ SCIP_RETCODE aggregateGeneratedCuts(
       aggrcutrhs = QUAD_TO_DBL(tmpcutrhs);
 
       /* build sparse representation of the aggregated cut */
-      for( int i = 0; i < ncols; i++ )
+      for( i = 0; i < ncols; i++ )
       {
          QUAD_ARRAY_LOAD(quadterm, tmpcutvals, i);
          aggrcutvals[i] = QUAD_TO_DBL(quadterm);
@@ -1935,11 +1918,11 @@ SCIP_RETCODE aggregateGeneratedCuts(
 
       /* construct aggregated cut name */
       (void) SCIPsnprintf(aggrcutname, SCIP_MAXSTRLEN, "%s_%" SCIP_LONGINT_FORMAT "_aggregated", SCIPsepaGetName(sepa),
-            sepadata->ncalls);
+         sepadata->ncalls);
 
       /* create empty cut */
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &aggrcut, sepa, aggrcutname, aggrcutlhs - aggrcutconst, aggrcutrhs -
-               aggrcutconst, aggrcutislocal, FALSE, sepadata->dynamiccuts) );
+            aggrcutconst, aggrcutislocal, FALSE, sepadata->dynamiccuts) );
 
       /* set cut rank */
       SCIProwChgRank(aggrcut, aggrcutrank); /*lint !e644*/
@@ -1948,7 +1931,7 @@ SCIP_RETCODE aggregateGeneratedCuts(
       SCIP_CALL( SCIPcacheRowExtensions(scip, aggrcut) );
 
       /* collect all non-zero coefficients */
-      for( int i = 0; i < aggrcutnnz; i++ )
+      for( i = 0; i < aggrcutnnz; i++ )
       {
          var = SCIPcolGetVar(cols[aggrcutinds[i]]);
          SCIP_CALL( SCIPaddVarToRow(scip, aggrcut, var, aggrcutcoefs[i]) );
@@ -1986,10 +1969,10 @@ SCIP_RETCODE aggregateGeneratedCuts(
             maxactivity = SCIPgetRowMaxActivity(scip, aggrcut);
 
             if( (!SCIPisInfinity(scip, cutrhs) && SCIPisFeasPositive(scip, minactivity - cutrhs)) ||
-                  (!SCIPisInfinity(scip, -cutlhs) && SCIPisFeasNegative(scip, maxactivity - cutlhs)) )
+                (!SCIPisInfinity(scip, -cutlhs) && SCIPisFeasNegative(scip, maxactivity - cutlhs)) )
             {
                SCIPdebugMsg(scip, "cut <%s> is infeasible (sides=[%g,%g], act=[%g,%g])\n",
-                     SCIProwGetName(aggrcut), cutlhs, cutrhs, minactivity, maxactivity);
+                  SCIProwGetName(aggrcut), cutlhs, cutrhs, minactivity, maxactivity);
                *cutoff = TRUE;
             }
          }
@@ -2000,7 +1983,7 @@ SCIP_RETCODE aggregateGeneratedCuts(
       }
 
       QUAD_ASSIGN(quadterm, 0.0);
-      for( int i = 0; i < ncols; i++ )
+      for( i = 0; i < ncols; i++ )
       {
          aggrcutvals[i] = 0.0;
          QUAD_ARRAY_STORE(tmpcutvals, i, quadterm);
@@ -2020,22 +2003,22 @@ TERMINATE:
 /** main method: LP solution separation method of separator */
 static
 SCIP_RETCODE generateGMICuts(
-   SCIP*                 scip,                     /**< SCIP data structure */
-   SCIP_SEPA*            sepa,                     /**< pointer to the separator */
-   SCIP_SEPADATA*        sepadata,                 /**< separator data structure */
-   int                   mainiternum,              /**< iteration number of the outer loop of the relax-and-cut algorithm */
-   int                   subgradientiternum,       /**< iteration number of the subgradient algorithm */
-   SCIP_SOL*             sol,                      /**< LP solution to be used for cut generation */
-   SCIP_Real*            solvals,                  /**< values of the LP solution to be used for cut generation */
-   int                   nmaxgeneratedperroundcuts,/**< maximal number of cuts allowed to generate per separation round */
-   SCIP_Bool             allowlocal,               /**< should locally valid cuts be generated? */
-   SCIP_ROW**            generatedcurrroundcuts,   /**< cuts generated in the current separation round */
-   SCIP_Real*            generatedcutefficacies,   /**< array of generated cut efficacies w.r.t. the respective LP bases used for cut
-                                                     generations */
-   int                   ngeneratedcurrroundcuts,  /**< number of cuts generated until the previous basis in the current separation round */
-   int*                  ngeneratednewcuts,        /**< number of new cuts generated using the current basis */
-   int                   depth,                    /**< depth of the current node in the tree */
-   SCIP_Bool*            cutoff                    /**< should the current node be cutoff? */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< pointer to the separator */
+   SCIP_SEPADATA*        sepadata,           /**< separator data structure */
+   int                   mainiternum,        /**< iteration number of the outer loop of the relax-and-cut algorithm */
+   int                   subgradientiternum, /**< iteration number of the subgradient algorithm */
+   SCIP_SOL*             sol,                /**< LP solution to be used for cut generation */
+   SCIP_Real*            solvals,            /**< values of the LP solution to be used for cut generation */
+   int                   nmaxgeneratedperroundcuts, /**< maximal number of cuts allowed to generate per separation round */
+   SCIP_Bool             allowlocal,         /**< should locally valid cuts be generated? */
+   SCIP_ROW**            generatedcurrroundcuts, /**< cuts generated in the current separation round */
+   SCIP_Real*            generatedcutefficacies, /**< array of generated cut efficacies w.r.t. the respective LP bases used for cut
+                                              *   generations */
+   int                   ngeneratedcurrroundcuts, /**< number of cuts generated until the previous basis in the current separation round */
+   int*                  ngeneratednewcuts,  /**< number of new cuts generated using the current basis */
+   int                   depth,              /**< depth of the current node in the tree */
+   SCIP_Bool*            cutoff              /**< should the current node be cutoff? */
    )
 {
    SCIP_Real minfrac;
@@ -2065,6 +2048,7 @@ SCIP_RETCODE generateGMICuts(
    int c;
    int ninds;
    int nmaxcutsperlp;
+   int i;
 
    assert(ngeneratednewcuts != NULL);
 
@@ -2088,7 +2072,7 @@ SCIP_RETCODE generateGMICuts(
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
 
    /* check if the rows of the simplex tableau are suitable for cut generation and build an array of fractions */
-   for( int i = 0; i < nrows; ++i )
+   for( i = 0; i < nrows; ++i )
    {
       frac = 0.0;
 
@@ -2143,11 +2127,11 @@ SCIP_RETCODE generateGMICuts(
    }
 
    /* for all basic columns belonging to integer variables, try to generate a GMI cut */
-   for( int i = 0; i < nrows && !SCIPisStopped(scip) && !*cutoff; ++i )
+   for( i = 0; i < nrows && !SCIPisStopped(scip) && !*cutoff; ++i )
    {
       if( (ngeneratedcurrroundcuts + *ngeneratednewcuts >= nmaxgeneratedperroundcuts) ||
-            (sepadata->ntotalcuts + *ngeneratednewcuts >= sepadata->nmaxtotalcuts) ||
-            (*ngeneratednewcuts >= nmaxcutsperlp) )
+          (sepadata->ntotalcuts + *ngeneratednewcuts >= sepadata->nmaxtotalcuts) ||
+          (*ngeneratednewcuts >= nmaxcutsperlp) )
          break;
 
       ninds = -1;
@@ -2168,7 +2152,7 @@ SCIP_RETCODE generateGMICuts(
       SCIP_CALL( SCIPgetLPBInvRow(scip, k, binvrow, inds, &ninds) );
 
       SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds, sepadata->sidetypebasis, allowlocal, 2,
-               (int) MAXAGGRLEN(ncols), &success) );
+            (int) MAXAGGRLEN(ncols), &success) );
 
       if( !success )
          continue;
@@ -2180,16 +2164,16 @@ SCIP_RETCODE generateGMICuts(
 
       /* try to create GMI cut out of the aggregation row */
       SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL,
-               NULL, minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank,
-               &cutislocal, &success) );
+            NULL, minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank,
+            &cutislocal, &success) );
 
       if( success )
       {
          assert(allowlocal || !cutislocal); /*lint !e644*/
 
          SCIP_CALL( constructCutRow(scip, sepa, sepadata, mainiternum, subgradientiternum, cutnnz, cutinds, cutcoefs,
-                  cutefficacy, cutrhs, cutislocal, cutrank, generatedcurrroundcuts, generatedcutefficacies,
-                  ngeneratedcurrroundcuts, ngeneratednewcuts, cutoff));
+               cutefficacy, cutrhs, cutislocal, cutrank, generatedcurrroundcuts, generatedcutefficacies,
+               ngeneratedcurrroundcuts, ngeneratednewcuts, cutoff));
       }
    }
 
@@ -2227,6 +2211,8 @@ SCIP_RETCODE updateObjectiveVector(
    int cutnnz;
    int collppos;
    int ncols;
+   int i;
+   int j;
 
    assert(objvecsdiffer != NULL);
    assert(ncuts > 0);
@@ -2240,7 +2226,7 @@ SCIP_RETCODE updateObjectiveVector(
    *objvecsdiffer = FALSE;
 
    /* find the product of Lagrangian multipliers and cut coefficients */
-   for( int i = 0; i < ncuts; i++ )
+   for( i = 0; i < ncuts; i++ )
    {
       if( !SCIPisZero(scip, dualvector[i]) )
       {
@@ -2253,7 +2239,7 @@ SCIP_RETCODE updateObjectiveVector(
          cutvals = SCIProwGetVals(cuts[i]);
          cutcols = SCIProwGetCols(cuts[i]);
 
-         for( int j = 0; j < cutnnz; ++j )
+         for( j = 0; j < cutnnz; ++j )
          {
             collppos = SCIPcolGetLPPos(cutcols[j]);
             assert(collppos >= 0);
@@ -2265,7 +2251,7 @@ SCIP_RETCODE updateObjectiveVector(
    }
 
    /* change objective coefficients */
-   for( int i = 0; i < ncols; i++ )
+   for( i = 0; i < ncols; i++ )
    {
       var = SCIPcolGetVar(cols[i]);
       oldobjvals[i] = SCIPgetVarObjDive(scip, var);
@@ -2278,10 +2264,8 @@ SCIP_RETCODE updateObjectiveVector(
          *objvecsdiffer = TRUE;
    }
 
-   for( int i = 0; i < ncols; i++)
-   {
+   for( i = 0; i < ncols; i++)
       prod[i] = 0.0;
-   }
 
    /* free memory  */
    SCIPfreeCleanBufferArray(scip, &prod);
@@ -2297,14 +2281,16 @@ SCIP_RETCODE addGMICutsAsSoftConss(
    SCIP_Real*            dualvector,         /**< Lagrangian multipliers vector */
    int                   ngeneratedcuts,     /**< number of cuts generated so far in the current separation round */
    int*                  naddedcuts,         /**< number of cuts added so far in the current separation round to the Lagrangian dual problem
-                                               upon penalization */
+                                              *   upon penalization */
    int*                  nnewaddedsoftcuts   /**< number of cuts added newly to the Lagrangian dual problem upon penalization */
    )
 {
+   int i;
+
    assert(*naddedcuts <= ngeneratedcuts);
 
    /* set the initial penalty of the newly penalized cuts as zero */
-   for( int i = *naddedcuts; i < ngeneratedcuts; i++ )
+   for( i = *naddedcuts; i < ngeneratedcuts; i++ )
       dualvector[i] = 0.0;
 
    *nnewaddedsoftcuts = ngeneratedcuts - *naddedcuts;
@@ -2316,36 +2302,36 @@ SCIP_RETCODE addGMICutsAsSoftConss(
 /** solve the Lagrangian dual problem */
 static
 SCIP_RETCODE solveLagrangianDual(
-   SCIP*                 scip,                     /**< SCIP data structure */
-   SCIP_SEPA*            sepa,                     /**< pointer to the separator */
-   SCIP_SEPADATA*        sepadata,                 /**< separator data structure */
-   SCIP_SOL*             sol,                      /**< data structure to store an LP solution upon solving a Lagrangian dual problem with
-                                                     fixed Lagrangian multipliers */
-   SCIP_Real*            solvals,                  /**< values of the LP solution obtained upon solving a Lagrangian dual problem with fixed
-                                                     Lagrangian multipliers */
-   int                   mainiternum,              /**< iteration number of the outer loop of the relax-and-cut algorithm */
-   SCIP_Real             ubparam,                  /**< estimate of the optimal Lagrangian dual value */
-   int                   depth,                    /**< depth of the current node in the tree */
-   SCIP_Bool             allowlocal,               /**< should locally valid cuts be generated? */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< pointer to the separator */
+   SCIP_SEPADATA*        sepadata,           /**< separator data structure */
+   SCIP_SOL*             sol,                /**< data structure to store an LP solution upon solving a Lagrangian dual problem with
+                                              *   fixed Lagrangian multipliers */
+   SCIP_Real*            solvals,            /**< values of the LP solution obtained upon solving a Lagrangian dual problem with fixed
+                                              *   Lagrangian multipliers */
+   int                   mainiternum,        /**< iteration number of the outer loop of the relax-and-cut algorithm */
+   SCIP_Real             ubparam,            /**< estimate of the optimal Lagrangian dual value */
+   int                   depth,              /**< depth of the current node in the tree */
+   SCIP_Bool             allowlocal,         /**< should locally valid cuts be generated? */
    int                   nmaxgeneratedperroundcuts,/**< maximal number of cuts allowed to generate per separation round */
-   SCIP_Real*            origobjcoefs,             /**< original objective function coefficients of the node linear relaxation */
-   SCIP_Real             origobjoffset,            /**< original objective function offset of the node linear relaxation */
-   SCIP_Real*            dualvector,               /**< Lagrangian multipliers vector */
-   int*                  nsoftcuts,                /**< number of generated cuts that were penalized and added to the Lagrangian dual problem */
-   SCIP_ROW**            generatedcurrroundcuts,   /**< cuts generated in the current separation round */
-   SCIP_Real*            generatedcutefficacies,   /**< array of generated cut efficacies w.r.t. the respective LP bases used for cut
-                                                     generations */
-   int*                  ngeneratedcutsperiter,    /**< number of cuts generated per subgradient iteration in the current separation round */
-   int*                  ngeneratedcurrroundcuts,  /**< number of cuts generated so far in the current separation round */
-   int*                  ncurrroundlpiters,        /**< number of LP iterations taken for solving Lagrangian dual problems with fixed
-                                                     multipliers in the current separator round */
-   SCIP_Bool*            cutoff,                   /**< should the current node be cutoff? */
-   SCIP_Real*            bestlagrangianval,        /**< best Lagrangian value found so far */
-   SCIP_Real*            bestdualvector,           /**< Lagrangian multipliers corresponding to the best Lagrangian value found so far */
-   int*                  bestdualvectorlen,        /**< length of the Lagrangian multipliers corresponding to the best Lagrangian value
-                                                     found so far */
-   int*                  nbestdualupdates,         /**< number of best Lagrangian values found so far */
-   int*                  totaliternum              /**< total number of iterations of the relax-and-cut algorithm performed so far */
+   SCIP_Real*            origobjcoefs,       /**< original objective function coefficients of the node linear relaxation */
+   SCIP_Real             origobjoffset,      /**< original objective function offset of the node linear relaxation */
+   SCIP_Real*            dualvector,         /**< Lagrangian multipliers vector */
+   int*                  nsoftcuts,          /**< number of generated cuts that were penalized and added to the Lagrangian dual problem */
+   SCIP_ROW**            generatedcurrroundcuts, /**< cuts generated in the current separation round */
+   SCIP_Real*            generatedcutefficacies, /**< array of generated cut efficacies w.r.t. the respective LP bases used for cut
+                                                  *   generations */
+   int*                  ngeneratedcutsperiter, /**< number of cuts generated per subgradient iteration in the current separation round */
+   int*                  ngeneratedcurrroundcuts, /**< number of cuts generated so far in the current separation round */
+   int*                  ncurrroundlpiters,  /**< number of LP iterations taken for solving Lagrangian dual problems with fixed
+                                              *   multipliers in the current separator round */
+   SCIP_Bool*            cutoff,             /**< should the current node be cutoff? */
+   SCIP_Real*            bestlagrangianval,  /**< best Lagrangian value found so far */
+   SCIP_Real*            bestdualvector,     /**< Lagrangian multipliers corresponding to the best Lagrangian value found so far */
+   int*                  bestdualvectorlen,  /**< length of the Lagrangian multipliers corresponding to the best Lagrangian value
+                                              *   found so far */
+   int*                  nbestdualupdates,   /**< number of best Lagrangian values found so far */
+   int*                  totaliternum        /**< total number of iterations of the relax-and-cut algorithm performed so far */
    )
 {
    SCIP_Real* subgradient;
@@ -2376,6 +2362,8 @@ SCIP_RETCODE solveLagrangianDual(
    int nnewaddedsoftcuts;
    int nsoftcutviols;
    int nnzsubgradientdualprod;
+   int i;
+   int j;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lagrangianvals, sepadata->nmaxsubgradientiters) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &subgradient, nmaxgeneratedperroundcuts) );
@@ -2407,10 +2395,10 @@ SCIP_RETCODE solveLagrangianDual(
 
    /* termination check */
    SCIP_CALL( checkLagrangianDualTermination(sepadata, -1, -1, FALSE, *ngeneratedcurrroundcuts,
-            nmaxgeneratedperroundcuts, *ncurrroundlpiters, depth, &terminate) );
+         nmaxgeneratedperroundcuts, *ncurrroundlpiters, depth, &terminate) );
 
    /* the subgradient algorithm loop */
-   for( int i = 0; i < sepadata->nmaxsubgradientiters && !SCIPisStopped(scip) && !terminate; i++ )
+   for( i = 0; i < sepadata->nmaxsubgradientiters && !SCIPisStopped(scip) && !terminate; i++ )
    {
       solfound = FALSE;
       subgradientzero = FALSE;
@@ -2424,7 +2412,7 @@ SCIP_RETCODE solveLagrangianDual(
       {
          /* solve Lagrangian dual for fixed Lagrangian multipliers */
          SCIP_CALL( solveLagromoryLP(scip, sepadata, depth, origobjoffset, &solfound, sol, solvals, &objval,
-                  ncurrroundlpiters) );
+               ncurrroundlpiters) );
       }
       nlpiters = *ncurrroundlpiters - ncurrroundlpiterslast;
 
@@ -2436,8 +2424,8 @@ SCIP_RETCODE solveLagrangianDual(
          {
             ngeneratednewcuts = 0;
             SCIP_CALL( generateGMICuts(scip, sepa, sepadata, mainiternum, i, sol, solvals,
-                     nmaxgeneratedperroundcuts, allowlocal, generatedcurrroundcuts, generatedcutefficacies,
-                     *ngeneratedcurrroundcuts, &ngeneratednewcuts, depth, cutoff));
+                  nmaxgeneratedperroundcuts, allowlocal, generatedcurrroundcuts, generatedcutefficacies,
+                  *ngeneratedcurrroundcuts, &ngeneratednewcuts, depth, cutoff));
             sepadata->ntotalcuts += ngeneratednewcuts;
             *ngeneratedcurrroundcuts += ngeneratednewcuts;
             ngeneratedcutsperiter[mainiternum * sepadata->nmaxsubgradientiters + i + 1] = ngeneratednewcuts;
@@ -2445,30 +2433,28 @@ SCIP_RETCODE solveLagrangianDual(
 
          /* update subgradient, i.e., find the residuals of the penalized cuts, and determine various violations */
          updateSubgradient(scip, sol, generatedcurrroundcuts, *nsoftcuts, subgradient, dualvector, &subgradientzero,
-               &nsoftcutviols, &maxsoftcutviol, &nnzsubgradientdualprod, &maxnzsubgradientdualprod);
+            &nsoftcutviols, &maxsoftcutviol, &nnzsubgradientdualprod, &maxnzsubgradientdualprod);
 
          /* calculate Lagrangian value for the fixed Lagrangian multipliers, and update best and avg values */
          updateLagrangianValue(scip, objval, dualvector, generatedcurrroundcuts, *nsoftcuts, &lagrangianval);
          if( SCIPisPositive(scip, lagrangianval - *bestlagrangianval) )
          {
             *bestlagrangianval = lagrangianval;
-            for( int j = 0; j < *nsoftcuts; j++ )
-            {
+
+            for( j = 0; j < *nsoftcuts; j++ )
                bestdualvector[j] = dualvector[j];
-            }
+
             *bestdualvectorlen = *nsoftcuts;
             (*nbestdualupdates)++;
          }
          lagrangianvals[i] = lagrangianval;
          if( i < sepadata->nmaxlagrangianvalsforavg )
-         {
             avglagrangianval = (avglagrangianval * i + lagrangianval)/(i+1);
-         }
          else
          {
             avglagrangianval = (avglagrangianval * sepadata->nmaxlagrangianvalsforavg -
-                  lagrangianvals[i - sepadata->nmaxlagrangianvalsforavg] +
-                  lagrangianval)/(sepadata->nmaxlagrangianvalsforavg);
+               lagrangianvals[i - sepadata->nmaxlagrangianvalsforavg] +
+               lagrangianval)/(sepadata->nmaxlagrangianvalsforavg);
          }
 
          /* if the subgradient vector is non-zero, then update the mu parameter and the Lagrangian multipliers */
@@ -2476,7 +2462,7 @@ SCIP_RETCODE solveLagrangianDual(
          {
             /* update mu param */
             SCIP_CALL( updateMuSteplengthParam(scip, sepadata, i, ubparam, lagrangianvals, *bestlagrangianval, avglagrangianval,
-                     &muparam, &backtrack) );
+                  &muparam, &backtrack) );
 
             /* update step length */
             updateStepLength(scip, muparam, ubparam, lagrangianval, subgradient, *nsoftcuts, &steplength);
@@ -2489,8 +2475,8 @@ SCIP_RETCODE solveLagrangianDual(
 
             /* update Lagrangian multipliers */
             SCIP_CALL( updateDualVector(scip, sepadata, dualvector, bestdualvector, *bestdualvectorlen,
-                     *nbestdualupdates, i, *totaliternum, steplength, subgradient, *nsoftcuts, backtrack, maxviolscore,
-                     maxviolscoreold, nviolscore, nviolscoreold, nlpiters, &dualvecsdiffer, &ballradius) );
+                  *nbestdualupdates, i, *totaliternum, steplength, subgradient, *nsoftcuts, backtrack, maxviolscore,
+                  maxviolscoreold, nviolscore, nviolscoreold, nlpiters, &dualvecsdiffer, &ballradius) );
 
             /* update objective vector based on updated Lagrangian multipliers */
             if( dualvecsdiffer )
@@ -2505,7 +2491,6 @@ SCIP_RETCODE solveLagrangianDual(
             dualvecsdiffer = FALSE;
             objvecsdiffer = FALSE;
          }
-
 
          /* add generated GMI cuts to the objective function of the Lagrangian dual problem by introducing new
           * Lagrangian multipliers */
@@ -2529,8 +2514,8 @@ SCIP_RETCODE solveLagrangianDual(
 
       /* termination check */
       SCIP_CALL( checkLagrangianDualTermination(sepadata, nnewaddedsoftcuts, *ngeneratedcurrroundcuts - *nsoftcuts,
-               objvecsdiffer, *ngeneratedcurrroundcuts, nmaxgeneratedperroundcuts, *ncurrroundlpiters, depth,
-               &terminate) );
+            objvecsdiffer, *ngeneratedcurrroundcuts, nmaxgeneratedperroundcuts, *ncurrroundlpiters, depth,
+            &terminate) );
 
       (*totaliternum)++;
    }
@@ -2543,10 +2528,9 @@ SCIP_RETCODE solveLagrangianDual(
    }
 
    /* free memory */
-   for( int i = 0; i < nmaxgeneratedperroundcuts; i++)
-   {
+   for( i = 0; i < nmaxgeneratedperroundcuts; i++)
       subgradient[i] = 0.0;
-   }
+
    SCIPfreeCleanBufferArray(scip, &subgradient);
    SCIPfreeBufferArray(scip, &lagrangianvals);
 
@@ -2556,21 +2540,21 @@ SCIP_RETCODE solveLagrangianDual(
 /** generates initial cut pool before solving the Lagrangian dual */
 static
 SCIP_RETCODE generateInitCutPool(
-   SCIP*                 scip,                     /**< SCIP data structure */
-   SCIP_SEPA*            sepa,                     /**< separator */
-   SCIP_SEPADATA*        sepadata,                 /**< separator data structure */
-   int                   mainiternum,              /**< iteration number of the outer loop of the relax-and-cut algorithm */
-   SCIP_SOL*             sol,                      /**< LP solution to be used for cut generation */
-   SCIP_Real*            solvals,                  /**< values of the LP solution to be used for cut generation */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SEPADATA*        sepadata,           /**< separator data structure */
+   int                   mainiternum,        /**< iteration number of the outer loop of the relax-and-cut algorithm */
+   SCIP_SOL*             sol,                /**< LP solution to be used for cut generation */
+   SCIP_Real*            solvals,            /**< values of the LP solution to be used for cut generation */
    int                   nmaxgeneratedperroundcuts,/**< maximal number of cuts allowed to generate per separation round */
-   SCIP_Bool             allowlocal,               /**< should locally valid cuts be generated? */
-   SCIP_ROW**            generatedcurrroundcuts,   /**< cuts generated in the current separation round */
-   SCIP_Real*            generatedcutefficacies,   /**< array of generated cut efficacies w.r.t. the respective LP bases used for cut
-                                                     generations */
-   int*                  ngeneratedcutsperiter,    /**< number of cuts generated per subgradient iteration in the current separation round */
-   int*                  ngeneratedcurrroundcuts,  /**< number of cuts generated so far in the current separation round */
-   int                   depth,                    /**< depth of the current node in the tree */
-   SCIP_Bool*            cutoff                    /**< should the current node be cutoff? */
+   SCIP_Bool             allowlocal,         /**< should locally valid cuts be generated? */
+   SCIP_ROW**            generatedcurrroundcuts, /**< cuts generated in the current separation round */
+   SCIP_Real*            generatedcutefficacies, /**< array of generated cut efficacies w.r.t. the respective LP bases used for cut
+                                                  *   generations */
+   int*                  ngeneratedcutsperiter, /**< number of cuts generated per subgradient iteration in the current separation round */
+   int*                  ngeneratedcurrroundcuts, /**< number of cuts generated so far in the current separation round */
+   int                   depth,              /**< depth of the current node in the tree */
+   SCIP_Bool*            cutoff              /**< should the current node be cutoff? */
    )
 {
    int ngeneratednewcuts;
@@ -2579,8 +2563,8 @@ SCIP_RETCODE generateInitCutPool(
 
    /* generate initial set of cuts */
    SCIP_CALL( generateGMICuts(scip, sepa, sepadata, mainiternum, -1, sol, solvals, nmaxgeneratedperroundcuts,
-            allowlocal, generatedcurrroundcuts, generatedcutefficacies, *ngeneratedcurrroundcuts, &ngeneratednewcuts,
-            depth, cutoff) );
+         allowlocal, generatedcurrroundcuts, generatedcutefficacies, *ngeneratedcurrroundcuts, &ngeneratednewcuts,
+         depth, cutoff) );
 
    /* update certain statistics */
    sepadata->ntotalcuts += ngeneratednewcuts;
@@ -2605,6 +2589,7 @@ SCIP_RETCODE addCuts(
 {
    SCIP_ROW* cut;
    SCIP_Bool madeintegral;
+   int i;
 
    assert(scip != NULL);
    assert(sepadata != NULL);
@@ -2614,7 +2599,7 @@ SCIP_RETCODE addCuts(
    *cutoff = FALSE;
    madeintegral = FALSE;
 
-   for( int i = 0; i < ncuts && !*cutoff; i++ )
+   for( i = 0; i < ncuts && !*cutoff; i++ )
    {
       cut = cuts[i];
 
@@ -2631,7 +2616,7 @@ SCIP_RETCODE addCuts(
          {
             /* try to scale the cut to integral values */
             SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-                     maxdnom, maxscale, MAKECONTINTEGRAL, &madeintegral) );
+                  maxdnom, maxscale, MAKECONTINTEGRAL, &madeintegral) );
 
             /* if RHS = plus infinity (due to scaling), the cut is useless, so we are not adding it */
             if( madeintegral && SCIPisInfinity(scip, SCIProwGetRhs(cut)) )
@@ -2666,19 +2651,19 @@ SCIP_RETCODE addCuts(
 }
 
 /** check different termination criteria */
-/* @todo nlpssolved criterion? */
+/*  @todo nlpssolved criterion? */
 static
 SCIP_RETCODE checkMainLoopTermination(
-   SCIP_SEPADATA*        sepadata,                 /**< separator data structure */
-   SCIP_Bool             cutoff,                   /**< should the current node be cutoff? */
-   SCIP_Bool             dualvecsdiffer,           /**< whether the updated Lagrangian multipliers differ from the old one */
-   int                   ngeneratedcurrroundcuts,  /**< number of cuts generated in the current separation round */
-   int                   nsoftcuts,                /**< number of generated cuts that were penalized and added to the Lagrangian dual problem */
-   int                   nmaxgeneratedperroundcuts,/**< maximal number of cuts allowed to generate per separation round */
-   int                   ncurrroundlpiters,        /**< number of LP iterations taken for solving Lagrangian dual problems with fixed
-                                                     multipliers in the current separator round */
-   int                   depth,                    /**< depth of the current node in the tree */
-   SCIP_Bool*            terminate                 /**< whether to terminate the relax-and-cut algorithm */
+   SCIP_SEPADATA*        sepadata,           /**< separator data structure */
+   SCIP_Bool             cutoff,             /**< should the current node be cutoff? */
+   SCIP_Bool             dualvecsdiffer,     /**< whether the updated Lagrangian multipliers differ from the old one */
+   int                   ngeneratedcurrroundcuts, /**< number of cuts generated in the current separation round */
+   int                   nsoftcuts,          /**< number of generated cuts that were penalized and added to the Lagrangian dual problem */
+   int                   nmaxgeneratedperroundcuts, /**< maximal number of cuts allowed to generate per separation round */
+   int                   ncurrroundlpiters,  /**< number of LP iterations taken for solving Lagrangian dual problems with fixed
+                                              *   multipliers in the current separator round */
+   int                   depth,              /**< depth of the current node in the tree */
+   SCIP_Bool*            terminate           /**< whether to terminate the relax-and-cut algorithm */
    )
 {
    *terminate = FALSE;
@@ -2714,7 +2699,7 @@ SCIP_RETCODE checkMainLoopTermination(
    return SCIP_OKAY;
 }
 
-/** Searches and tries to add Lagromory cuts */
+/** searches and tries to add Lagromory cuts */
 static
 SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2767,6 +2752,8 @@ SCIP_RETCODE separateCuts(
    int nsoftcuts;
    int nsoftcutsold;
    int maxdepth;
+   int i;
+   int j;
 
    assert(*result == SCIP_DIDNOTRUN);
    assert(sepadata != NULL);
@@ -2806,7 +2793,7 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( SCIPallocBufferArray(scip, &generatedcutefficacies, nmaxgeneratedperroundcuts) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutindsperm, nmaxgeneratedperroundcuts) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &ngeneratedcutsperiter, sepadata->nmaxmainiters *
-            (sepadata->nmaxsubgradientiters + 1)) );
+         (sepadata->nmaxsubgradientiters + 1)) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &dualsol, nrows + nmaxgeneratedperroundcuts) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &dualvector, nmaxgeneratedperroundcuts) );
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &bestdualvector, nmaxgeneratedperroundcuts) );
@@ -2817,27 +2804,26 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( SCIPallocBufferArray(scip, &origobjcoefs, ncols) );
 
    /* store current objective function */
-   for( int i = 0; i < ncols; i++ )
-   {
+   for( i = 0; i < ncols; i++ )
       origobjcoefs[i] = SCIPcolGetObj(cols[i]);
-   }
+
    origobjoffset = SCIPgetTransObjoffset(scip);
 
    /* solve node LP relaxation to have an initial simplex tableau */
    SCIP_CALL( solveLagromoryLP(scip, sepadata, depth, origobjoffset, &solfound, softcutslpsol, softcutslpsolvals, &objval,
-            &ncurrroundlpiters));
+         &ncurrroundlpiters));
 
    /* generate initial cut pool */
    SCIP_CALL( generateInitCutPool(scip, sepa, sepadata, 0, softcutslpsol, softcutslpsolvals, nmaxgeneratedperroundcuts, allowlocal,
-            generatedcurrroundcuts, generatedcutefficacies, ngeneratedcutsperiter, &ngeneratedcurrroundcuts, depth,
-            &cutoff) );
+         generatedcurrroundcuts, generatedcutefficacies, ngeneratedcutsperiter, &ngeneratedcurrroundcuts, depth,
+         &cutoff) );
 
    /* termination check */
    SCIP_CALL( checkMainLoopTermination(sepadata, cutoff, TRUE, ngeneratedcurrroundcuts, nsoftcuts,
-            nmaxgeneratedperroundcuts, ncurrroundlpiters, depth, &terminate) );
+         nmaxgeneratedperroundcuts, ncurrroundlpiters, depth, &terminate) );
 
    /* compute cuts for each integer col with fractional val */
-   for( int i = 0; i < sepadata->nmaxmainiters && !SCIPisStopped(scip) && !terminate; ++i )
+   for( i = 0; i < sepadata->nmaxmainiters && !SCIPisStopped(scip) && !terminate; ++i )
    {
       nsoftcutsold = nsoftcuts;
       nsoftcuts = ngeneratedcurrroundcuts;
@@ -2845,9 +2831,9 @@ SCIP_RETCODE separateCuts(
 
       /* solve Lagrangain dual */
       SCIP_CALL( solveLagrangianDual(scip, sepa, sepadata, softcutslpsol, softcutslpsolvals, i, ubparam, depth, allowlocal,
-               nmaxgeneratedperroundcuts, origobjcoefs, origobjoffset, dualvector, &nsoftcuts, generatedcurrroundcuts,
-               generatedcutefficacies, ngeneratedcutsperiter, &ngeneratedcurrroundcuts, &ncurrroundlpiters, &cutoff,
-               &bestlagrangianval, bestdualvector, &bestdualvectorlen, &nbestdualupdates, &totaliternum) );
+            nmaxgeneratedperroundcuts, origobjcoefs, origobjoffset, dualvector, &nsoftcuts, generatedcurrroundcuts,
+            generatedcutefficacies, ngeneratedcutsperiter, &ngeneratedcurrroundcuts, &ncurrroundlpiters, &cutoff,
+            &bestlagrangianval, bestdualvector, &bestdualvectorlen, &nbestdualupdates, &totaliternum) );
 
       /* @todo filter cuts before adding them to the new LP that was created based on the node relaxation? */
 
@@ -2874,26 +2860,26 @@ SCIP_RETCODE separateCuts(
          {
             SCIP_CALL( SCIPlpiGetSol(sepadata->lpiwithhardcuts, NULL, NULL, dualsol, NULL, NULL) );
             SCIP_CALL( updateDualVector(scip, sepadata, dualvector, &(dualsol[nrows]),
-                     ngeneratedcurrroundcuts, 0, -1, -1, 0.0, NULL, ngeneratedcurrroundcuts, TRUE, 0.0, 0.0, 0.0, 0.0, -1,
-                     &dualvecsdiffer, NULL) );
+                  ngeneratedcurrroundcuts, 0, -1, -1, 0.0, NULL, ngeneratedcurrroundcuts, TRUE, 0.0, 0.0, 0.0, 0.0, -1,
+                  &dualvecsdiffer, NULL) );
          }
          else
          {
             SCIP_CALL( updateDualVector(scip, sepadata, dualvector, dualvector, nsoftcuts, 0, -1, -1, 0.0, NULL,
-                     ngeneratedcurrroundcuts, TRUE, 0.0, 0.0, 0.0, 0.0, -1, &dualvecsdiffer, NULL) );
+                  ngeneratedcurrroundcuts, TRUE, 0.0, 0.0, 0.0, 0.0, -1, &dualvecsdiffer, NULL) );
          }
       }
 
       /* termination check */
       SCIP_CALL( checkMainLoopTermination(sepadata, cutoff, dualvecsdiffer, ngeneratedcurrroundcuts, nsoftcuts,
-               nmaxgeneratedperroundcuts, ncurrroundlpiters, depth, &terminate) );
+            nmaxgeneratedperroundcuts, ncurrroundlpiters, depth, &terminate) );
    }
 
    /* set the maximal denominator in rational representation of gomory cut and the maximal scale factor to
     * scale resulting cut to integral values to avoid numerical instabilities
     */
-   /**@todo find better but still stable gomory cut settings: look at dcmulti, gesa3, khb0525, misc06, p2756 */
-   /* @note: above todo was copied from sepa_gomory.c. So, if gomory code is changed, same changes can be done here. */
+   /* @todo find better but still stable gomory cut settings: look at dcmulti, gesa3, khb0525, misc06, p2756 */
+   /* @note above todo was copied from sepa_gomory.c. So, if gomory code is changed, same changes can be done here. */
    maxdepth = SCIPgetMaxDepth(scip);
    if( depth == 0 )
    {
@@ -2925,17 +2911,17 @@ SCIP_RETCODE separateCuts(
       {
          nselectedcurrroundcuts = ngeneratedcurrroundcuts;
          SCIP_CALL( addCuts(scip, sepadata, generatedcurrroundcuts, nselectedcurrroundcuts, maxdnom, maxscale,
-                  &naddedcurrroundcuts, &cutoff2) );
+               &naddedcurrroundcuts, &cutoff2) );
          cutoff = cutoff2;
       }
       else if( SCIPisPositive(scip, sepadata->cutsfilterfactor) )
       {
          nprocessedcuts = 0;
-         for( int i = 0; i < sepadata->nmaxmainiters * (sepadata->nmaxsubgradientiters + 1); i++ )
+         for( i = 0; i < sepadata->nmaxmainiters * (sepadata->nmaxsubgradientiters + 1); i++ )
          {
             if( ngeneratedcutsperiter[i] != 0 )
             {
-               for( int j = 0; j < ngeneratedcutsperiter[i]; j++ )
+               for( j = 0; j < ngeneratedcutsperiter[i]; j++ )
                   cutindsperm[j] = j + nprocessedcuts;
 
                /* sort cut efficacies by fractionality */
@@ -2944,7 +2930,7 @@ SCIP_RETCODE separateCuts(
                nselectedcuts = (int)SCIPceil(scip, sepadata->cutsfilterfactor * ngeneratedcutsperiter[i]);
 
                SCIP_CALL( addCuts(scip, sepadata, &generatedcurrroundcuts[nprocessedcuts], nselectedcuts, maxdnom,
-                        maxscale, &naddedcurrroundcuts, &cutoff2) );
+                     maxscale, &naddedcurrroundcuts, &cutoff2) );
                cutoff = cutoff2;
 
                nprocessedcuts += ngeneratedcutsperiter[i];
@@ -2956,7 +2942,7 @@ SCIP_RETCODE separateCuts(
    {
       nselectedcurrroundcuts = ngeneratedcurrroundcuts;
       SCIP_CALL( addCuts(scip, sepadata, generatedcurrroundcuts, nselectedcurrroundcuts, maxdnom, maxscale,
-               &naddedcurrroundcuts, &cutoff2) );
+            &naddedcurrroundcuts, &cutoff2) );
    }
 
    /* add an aggregated cut based on best Lagrangian multipliers */
@@ -2964,12 +2950,12 @@ SCIP_RETCODE separateCuts(
    {
       assert(bestdualvectorlen <= ngeneratedcurrroundcuts);
       SCIP_CALL( aggregateGeneratedCuts(scip, sepa, sepadata, generatedcurrroundcuts, bestdualvector, bestdualvectorlen,
-               aggregatedcurrroundcuts, &naggregatedcurrroundcuts, &cutoff2) );
+            aggregatedcurrroundcuts, &naggregatedcurrroundcuts, &cutoff2) );
       cutoff = (!cutoff ? cutoff2 : cutoff);
       if( naggregatedcurrroundcuts > 0 )
       {
          SCIP_CALL( addCuts(scip, sepadata, aggregatedcurrroundcuts, naggregatedcurrroundcuts, maxdnom, maxscale,
-                  &naddedcurrroundcuts, &cutoff2) );
+               &naddedcurrroundcuts, &cutoff2) );
          cutoff = (!cutoff ? cutoff2 : cutoff);
       }
    }
@@ -2991,30 +2977,30 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( deleteLPWithSoftCuts(scip, sepadata) );
 
    /* release the rows in aggregatedcurrroundcuts */
-   for( int i = 0; i < naggregatedcurrroundcuts; ++i )
+   for( i = 0; i < naggregatedcurrroundcuts; ++i )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(aggregatedcurrroundcuts[i])) );
    }
+
    /* release the rows in generatedcurrroundcuts */
-   for( int i = 0; i < ngeneratedcurrroundcuts; ++i )
+   for( i = 0; i < ngeneratedcurrroundcuts; ++i )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(generatedcurrroundcuts[i])) );
    }
 
-   for( int i = 0; i < sepadata->nmaxmainiters * (sepadata->nmaxsubgradientiters + 1); i++ )
-   {
+   for( i = 0; i < sepadata->nmaxmainiters * (sepadata->nmaxsubgradientiters + 1); i++ )
       ngeneratedcutsperiter[i] = 0;
-   }
-   for( int i = 0; i < nrows; i++ )
-   {
+
+   for( i = 0; i < nrows; i++ )
       dualsol[i] = 0.0;
-   }
-   for( int i = 0; i < nmaxgeneratedperroundcuts; i++ )
+
+   for( i = 0; i < nmaxgeneratedperroundcuts; i++ )
    {
       dualsol[nrows + i] = 0.0;
       dualvector[i] = 0.0;
       bestdualvector[i] = 0.0;
    }
+
    /* free memory */
    SCIPfreeBufferArray(scip, &origobjcoefs);
    SCIPfreeBufferArray(scip, &hardcutslpsolvals);
@@ -3100,9 +3086,7 @@ SCIP_DECL_SEPAINIT(sepaInitLagromory)
 
    /* find trysol heuristic */
    if ( sepadata->heurtrysol == NULL )
-   {
       sepadata->heurtrysol = SCIPfindHeur(scip, "trysol");
-   }
 
    return SCIP_OKAY;
 }
@@ -3141,6 +3125,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpLagromory)
    int ncols;
    int ncalls;
    int runnum;
+   int i;
 
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -3201,7 +3186,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpLagromory)
    /* if a MIP primal solution exists, use it to estimate the optimal value of the Lagrangian dual problem */
    if( bestsol != NULL )
    {
-      for( int i = 0; i < ncols; ++i )
+      for( i = 0; i < ncols; ++i )
       {
          col = cols[i];
          assert(col != NULL);
@@ -3218,7 +3203,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpLagromory)
     */
    else
    {
-      for( int i = 0; i < ncols; ++i )
+      for( i = 0; i < ncols; ++i )
       {
          col = cols[i];
          assert(col != NULL);
@@ -3256,7 +3241,7 @@ SCIP_RETCODE SCIPincludeSepaLagromory(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
-            SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpLagromory, NULL, sepadata) );
+         SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpLagromory, NULL, sepadata) );
 
    assert(sepa != NULL);
 
@@ -3268,200 +3253,199 @@ SCIP_RETCODE SCIPincludeSepaLagromory(
 
    /* add separator parameters */
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/away", "minimal integrality violation of a basis "
-            "variable to try separation", &sepadata->away, FALSE, DEFAULT_AWAY, 0.0, 1.0, NULL, NULL) );
+         "variable to try separation", &sepadata->away, FALSE, DEFAULT_AWAY, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/rootlpiterlimitfactor", "factor w.r.t. root node LP "
-            "iterations for maximal separating LP iterations in the root node (negative for no limit)",
-            &sepadata->rootlpiterlimitfactor, TRUE, DEFAULT_ROOTLPITERLIMITFACTOR, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+         "iterations for maximal separating LP iterations in the root node (negative for no limit)",
+         &sepadata->rootlpiterlimitfactor, TRUE, DEFAULT_ROOTLPITERLIMITFACTOR, -1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/totallpiterlimitfactor", "factor w.r.t. root node LP "
-            "iterations for maximal separating LP iterations in the tree (negative for no limit)",
-            &sepadata->totallpiterlimitfactor, TRUE, DEFAULT_TOTALLPITERLIMITFACTOR, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+         "iterations for maximal separating LP iterations in the tree (negative for no limit)",
+         &sepadata->totallpiterlimitfactor, TRUE, DEFAULT_TOTALLPITERLIMITFACTOR, -1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/perroundlpiterlimitfactor", "factor w.r.t. root node LP "
-            "iterations for maximal separating LP iterations per separation round (negative for no limit)",
-            &sepadata->perroundlpiterlimitfactor, TRUE, DEFAULT_PERROUNDLPITERLIMITFACTOR, -1.0, SCIP_REAL_MAX, NULL,
-            NULL) );
+         "iterations for maximal separating LP iterations per separation round (negative for no limit)",
+         &sepadata->perroundlpiterlimitfactor, TRUE, DEFAULT_PERROUNDLPITERLIMITFACTOR, -1.0, SCIP_REAL_MAX, NULL,
+         NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/perroundcutsfactorroot", "factor w.r.t. number of integer "
-            "columns for number of cuts separated per separation round in root node", &sepadata->perroundcutsfactorroot,
-            TRUE, DEFAULT_PERROUNDCUTSFACTORROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         "columns for number of cuts separated per separation round in root node", &sepadata->perroundcutsfactorroot,
+         TRUE, DEFAULT_PERROUNDCUTSFACTORROOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/perroundcutsfactor", "factor w.r.t. number of integer "
-            "columns for number of cuts separated per separation round at a non-root node",
-            &sepadata->perroundcutsfactor, TRUE, DEFAULT_PERROUNDCUTSFACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         "columns for number of cuts separated per separation round at a non-root node",
+         &sepadata->perroundcutsfactor, TRUE, DEFAULT_PERROUNDCUTSFACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/totalcutsfactor", "factor w.r.t. number of integer "
-            "columns for total number of cuts separated", &sepadata->totalcutsfactor, TRUE, DEFAULT_TOTALCUTSFACTOR, 0.0,
-            SCIP_REAL_MAX, NULL, NULL) );
+         "columns for total number of cuts separated", &sepadata->totalcutsfactor, TRUE, DEFAULT_TOTALCUTSFACTOR, 0.0,
+         SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/muparaminit", "initial value of the mu parameter (factor "
-      "for step length)", &sepadata->muparaminit, TRUE, DEFAULT_MUPARAMINIT, 0.0, 100.0, NULL, NULL) );
+         "for step length)", &sepadata->muparaminit, TRUE, DEFAULT_MUPARAMINIT, 0.0, 100.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/muparamlb", "lower bound of the mu parameter (factor for "
-      "step length)", &sepadata->muparamlb, TRUE, DEFAULT_MUPARAMLB, 0.0, 1.0, NULL, NULL) );
+         "step length)", &sepadata->muparamlb, TRUE, DEFAULT_MUPARAMLB, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/muparamub", "upper bound of the mu parameter (factor for "
-      "step length)", &sepadata->muparamub, TRUE, DEFAULT_MUPARAMUB, 1.0, 10.0, NULL, NULL) );
+         "step length)", &sepadata->muparamub, TRUE, DEFAULT_MUPARAMUB, 1.0, 10.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/mubacktrackfactor", "factor of mu while backtracking the "
-            "mu parameter (factor for step length)", &sepadata->mubacktrackfactor, TRUE, DEFAULT_MUBACKTRACKFACTOR,
-            0.0, 1.0, NULL, NULL) );
+         "mu parameter (factor for step length)", &sepadata->mubacktrackfactor, TRUE, DEFAULT_MUBACKTRACKFACTOR,
+         0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/muslab1factor", "factor of mu parameter (factor for step "
-      "length) for larger increment" , &sepadata->muslab1factor, TRUE, DEFAULT_MUSLAB1FACTOR, 0.0, SCIP_REAL_MAX, NULL,
-            NULL));
+         "length) for larger increment" , &sepadata->muslab1factor, TRUE, DEFAULT_MUSLAB1FACTOR, 0.0, SCIP_REAL_MAX, NULL,
+         NULL));
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/muslab2factor", "factor of mu parameter (factor for step "
-      "length) for smaller increment", &sepadata->muslab2factor, TRUE, DEFAULT_MUSLAB2FACTOR, 0.0, SCIP_REAL_MAX, NULL,
-            NULL) );
+         "length) for smaller increment", &sepadata->muslab2factor, TRUE, DEFAULT_MUSLAB2FACTOR, 0.0, SCIP_REAL_MAX, NULL,
+         NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/muslab3factor", "factor of mu parameter (factor for step "
-      "length) for reduction", &sepadata->muslab3factor, TRUE, DEFAULT_MUSLAB3FACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         "length) for reduction", &sepadata->muslab3factor, TRUE, DEFAULT_MUSLAB3FACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/deltaslab1ub", "factor of delta deciding larger increment "
-            "of mu parameter (factor for step length)", &sepadata->deltaslab1ub, TRUE, DEFAULT_DELTASLAB1UB, 0.0, 1.0,
-            NULL, NULL) );
+         "of mu parameter (factor for step length)", &sepadata->deltaslab1ub, TRUE, DEFAULT_DELTASLAB1UB, 0.0, 1.0,
+         NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/deltaslab2ub", "factor of delta deciding smaller "
-            "increment of mu parameter (factor for step length)", &sepadata->deltaslab2ub, TRUE, DEFAULT_DELTASLAB2UB,
-            0.0, 1.0, NULL, NULL) );
+         "increment of mu parameter (factor for step length)", &sepadata->deltaslab2ub, TRUE, DEFAULT_DELTASLAB2UB,
+         0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/ubparamposfactor", "factor for positive upper bound used "
-            "as an estimate for the optimal Lagrangian dual value", &sepadata->ubparamposfactor, TRUE, DEFAULT_UBPARAMPOSFACTOR,
-            1.0, 100.0, NULL, NULL) );
+         "as an estimate for the optimal Lagrangian dual value", &sepadata->ubparamposfactor, TRUE, DEFAULT_UBPARAMPOSFACTOR,
+         1.0, 100.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/ubparamnegfactor", "factor for negative upper bound used "
-            "as an estimate for the optimal Lagrangian dual value", &sepadata->ubparamnegfactor, TRUE, DEFAULT_UBPARAMNEGFACTOR,
-            0.0, 1.0, NULL, NULL) );
+         "as an estimate for the optimal Lagrangian dual value", &sepadata->ubparamnegfactor, TRUE, DEFAULT_UBPARAMNEGFACTOR,
+         0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/perrootlpiterfactor", "factor w.r.t. root node LP "
-            "iterations for iteration limit of each separating LP (negative for no limit)",
-            &sepadata->perrootlpiterfactor, TRUE, DEFAULT_PERROOTLPITERFACTOR, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+         "iterations for iteration limit of each separating LP (negative for no limit)",
+         &sepadata->perrootlpiterfactor, TRUE, DEFAULT_PERROOTLPITERFACTOR, -1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/perlpiterfactor", "factor w.r.t. non-root node LP "
-            "iterations for iteration limit of each separating LP (negative for no limit)", &sepadata->perlpiterfactor, TRUE,
-            DEFAULT_PERLPITERFACTOR, -1.0, SCIP_REAL_MAX, NULL, NULL) );
+         "iterations for iteration limit of each separating LP (negative for no limit)", &sepadata->perlpiterfactor, TRUE,
+         DEFAULT_PERLPITERFACTOR, -1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/cutsfilterfactor", "fraction of generated cuts per "
-            "explored basis to accept from separator", &sepadata->cutsfilterfactor, TRUE, DEFAULT_CUTSFILTERFACTOR, 0.0,
-            1.0, NULL, NULL) );
+         "explored basis to accept from separator", &sepadata->cutsfilterfactor, TRUE, DEFAULT_CUTSFILTERFACTOR, 0.0,
+         1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/radiusinit", "initial radius of the ball used in "
-            "stabilization of Lagrangian multipliers", &sepadata->radiusinit, TRUE, DEFAULT_RADIUSINIT, 0.0, 1.0, NULL,
-            NULL) );
+         "stabilization of Lagrangian multipliers", &sepadata->radiusinit, TRUE, DEFAULT_RADIUSINIT, 0.0, 1.0, NULL,
+         NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/radiusmax", "maximum radius of the ball used in "
-            "stabilization of Lagrangian multipliers", &sepadata->radiusmax, TRUE, DEFAULT_RADIUSMAX, 0.0, SCIP_REAL_MAX,
-            NULL, NULL) );
+         "stabilization of Lagrangian multipliers", &sepadata->radiusmax, TRUE, DEFAULT_RADIUSMAX, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/radiusmin", "minimum radius of the ball used in "
-            "stabilization of Lagrangian multipliers", &sepadata->radiusmin, TRUE, DEFAULT_RADIUSMIN, 0.0, SCIP_REAL_MAX,
-            NULL, NULL) );
+         "stabilization of Lagrangian multipliers", &sepadata->radiusmin, TRUE, DEFAULT_RADIUSMIN, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/constant", "a constant for stablity center based "
-            "stabilization of Lagrangian multipliers", &sepadata->constant, TRUE, DEFAULT_CONST, 2.0, SCIP_REAL_MAX,
-            NULL, NULL) );
+         "stabilization of Lagrangian multipliers", &sepadata->constant, TRUE, DEFAULT_CONST, 2.0, SCIP_REAL_MAX,
+         NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/radiusupdateweight", "multiplier to evaluate cut "
-            "violation score used for updating ball radius", &sepadata->radiusupdateweight, TRUE,
-            DEFAULT_RADIUSUPDATEWEIGHT, 0.0, 1.0, NULL, NULL) );
+         "violation score used for updating ball radius", &sepadata->radiusupdateweight, TRUE,
+         DEFAULT_RADIUSUPDATEWEIGHT, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/dualdegeneracyratethreshold", "minimum dual degeneracy "
-            "rate for separator execution", &sepadata->dualdegeneracyratethreshold, FALSE,
-            DEFAULT_DUALDEGENERACYRATETHRESHOLD, 0.0, 1.0, NULL, NULL) );
+         "rate for separator execution", &sepadata->dualdegeneracyratethreshold, FALSE,
+         DEFAULT_DUALDEGENERACYRATETHRESHOLD, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/varconsratiothreshold", "minimum variable-constraint "
-            "ratio on optimal face for separator execution", &sepadata->varconsratiothreshold, FALSE,
-            DEFAULT_VARCONSRATIOTHRESHOLD, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+         "ratio on optimal face for separator execution", &sepadata->varconsratiothreshold, FALSE,
+         DEFAULT_VARCONSRATIOTHRESHOLD, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/muparamconst", "is the mu parameter (factor for step "
-      "length) constant?" , &sepadata->muparamconst, TRUE, DEFAULT_MUPARAMCONST, NULL, NULL) );
+         "length) constant?" , &sepadata->muparamconst, TRUE, DEFAULT_MUPARAMCONST, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/separaterows", "separate rows with integral slack?",
-            &sepadata->separaterows, TRUE, DEFAULT_SEPARATEROWS, NULL, NULL) );
+         &sepadata->separaterows, TRUE, DEFAULT_SEPARATEROWS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/sortcutoffsol", "sort fractional integer columns"
-            "based on fractionality?" , &sepadata->sortcutoffsol, TRUE, DEFAULT_SORTCUTOFFSOL, NULL, NULL) );
+         "based on fractionality?" , &sepadata->sortcutoffsol, TRUE, DEFAULT_SORTCUTOFFSOL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/sidetypebasis", "choose side types of row (lhs/rhs) "
-            "based on basis information?", &sepadata->sidetypebasis, TRUE, DEFAULT_SIDETYPEBASIS, NULL, NULL) );
+         "based on basis information?", &sepadata->sidetypebasis, TRUE, DEFAULT_SIDETYPEBASIS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/dynamiccuts", "should generated cuts be removed from "
-            "LP if they are no longer tight?", &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
+         "LP if they are no longer tight?", &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/makeintegral", "try to scale all cuts to integral "
-            "coefficients?", &sepadata->makeintegral, TRUE, DEFAULT_MAKEINTEGRAL, NULL, NULL) );
+         "coefficients?", &sepadata->makeintegral, TRUE, DEFAULT_MAKEINTEGRAL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/forcecuts", "force cuts to be added to the LP?",
-            &sepadata->forcecuts, TRUE, DEFAULT_FORCECUTS, NULL, NULL) );
+         &sepadata->forcecuts, TRUE, DEFAULT_FORCECUTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/delayedcuts", "should cuts be added to the delayed cut "
-            "pool", &sepadata->delayedcuts, TRUE, DEFAULT_DELAYEDCUTS, NULL, NULL) );
+         "pool", &sepadata->delayedcuts, TRUE, DEFAULT_DELAYEDCUTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/allowlocal", "should locally valid cuts be generated?",
-            &sepadata->allowlocal, TRUE, DEFAULT_ALLOWLOCAL, NULL, NULL) );
+         &sepadata->allowlocal, TRUE, DEFAULT_ALLOWLOCAL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/aggregatecuts", "aggregate all generated cuts using the "
-            "Lagrangian multipliers?", &sepadata->aggregatecuts, TRUE, DEFAULT_AGGREGATECUTS, NULL, NULL) );
+         "Lagrangian multipliers?", &sepadata->aggregatecuts, TRUE, DEFAULT_AGGREGATECUTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxrounds", "maximal number of separation rounds per node "
-            "(-1: unlimited)", &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
+         "(-1: unlimited)", &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxroundsroot", "maximal number of separation rounds in "
-            "the root node (-1: unlimited)", &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL,
-            NULL) );
+         "the root node (-1: unlimited)", &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL,
+         NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/perroundnmaxlpiters", "maximal number of separating LP "
-            "iterations per separation round (-1: unlimited)", &sepadata->perroundnmaxlpiters, FALSE,
-            DEFAULT_PERROUNDMAXLPITERS, -1, INT_MAX, NULL, NULL) );
+         "iterations per separation round (-1: unlimited)", &sepadata->perroundnmaxlpiters, FALSE,
+         DEFAULT_PERROUNDMAXLPITERS, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/nmaxcutsperlp", "maximal number of cuts separated per "
-            "Lagromory LP in the non-root node", &sepadata->nmaxcutsperlp, FALSE, DEFAULT_PERLPMAXCUTS, 0, INT_MAX, NULL,
-            NULL));
+         "Lagromory LP in the non-root node", &sepadata->nmaxcutsperlp, FALSE, DEFAULT_PERLPMAXCUTS, 0, INT_MAX, NULL,
+         NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/nmaxcutsperlproot", "maximal number of cuts separated per "
-            "Lagromory LP in the root node", &sepadata->nmaxcutsperlproot, FALSE, DEFAULT_PERLPMAXCUTSROOT, 0, INT_MAX,
-            NULL, NULL));
+         "Lagromory LP in the root node", &sepadata->nmaxcutsperlproot, FALSE, DEFAULT_PERLPMAXCUTSROOT, 0, INT_MAX,
+         NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/nmaxmainiters", "maximal number of main loop iterations of "
-            "the relax-and-cut algorithm", &sepadata->nmaxmainiters, TRUE, DEFAULT_MAXMAINITERS, 0, INT_MAX, NULL, NULL)
-         );
+         "the relax-and-cut algorithm", &sepadata->nmaxmainiters, TRUE, DEFAULT_MAXMAINITERS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/nmaxsubgradientiters", "maximal number of subgradient loop "
-            "iterations of the relax-and-cut algorithm", &sepadata->nmaxsubgradientiters, TRUE,
-            DEFAULT_MAXSUBGRADIENTITERS, 0, INT_MAX, NULL, NULL) );
+         "iterations of the relax-and-cut algorithm", &sepadata->nmaxsubgradientiters, TRUE,
+         DEFAULT_MAXSUBGRADIENTITERS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/cutgenfreq", "frequency of subgradient iterations for "
-            "generating cuts", &sepadata->cutgenfreq, TRUE, DEFAULT_CUTGENFREQ, 0, INT_MAX, NULL, NULL) );
+         "generating cuts", &sepadata->cutgenfreq, TRUE, DEFAULT_CUTGENFREQ, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/cutaddfreq", "frequency of subgradient iterations for "
-            "adding cuts to objective function", &sepadata->cutaddfreq, TRUE, DEFAULT_CUTADDFREQ, 0, INT_MAX, NULL, NULL) );
+         "adding cuts to objective function", &sepadata->cutaddfreq, TRUE, DEFAULT_CUTADDFREQ, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/nmaxlagrangianvalsforavg", "maximal number of iterations "
-            "for rolling average of Lagrangian value", &sepadata->nmaxlagrangianvalsforavg, TRUE,
-            DEFAULT_MAXLAGRANGIANVALSFORAVG, 0, INT_MAX, NULL, NULL) );
+         "for rolling average of Lagrangian value", &sepadata->nmaxlagrangianvalsforavg, TRUE,
+         DEFAULT_MAXLAGRANGIANVALSFORAVG, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/nmaxconsecitersformuupdate", "consecutive number of "
-            "iterations used to determine if mu needs to be backtracked", &sepadata->nmaxconsecitersformuupdate, TRUE,
-            DEFAULT_MAXCONSECITERSFORMUUPDATE, 0, INT_MAX, NULL, NULL) );
+         "iterations used to determine if mu needs to be backtracked", &sepadata->nmaxconsecitersformuupdate, TRUE,
+         DEFAULT_MAXCONSECITERSFORMUUPDATE, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/projectiontype", "the ball into which the Lagrangian multipliers "
-            "are projected for stabilization (0: no projection, 1: L1-norm ball projection, 2: L2-norm ball projection, 3: "
-            "L_inf-norm ball projection)", &sepadata->projectiontype, TRUE, DEFAULT_PROJECTIONTYPE, 0, 3, NULL, NULL));
+         "are projected for stabilization (0: no projection, 1: L1-norm ball projection, 2: L2-norm ball projection, 3: "
+         "L_inf-norm ball projection)", &sepadata->projectiontype, TRUE, DEFAULT_PROJECTIONTYPE, 0, 3, NULL, NULL));
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/stabilitycentertype", "type of stability center for "
-            "taking weighted average of Lagrangian multipliers for stabilization (0: no weighted stabilization, 1: best "
-            "Lagrangian multipliers)", &sepadata->stabilitycentertype, TRUE, DEFAULT_STABILITYCENTERTYPE, 0, 1, NULL,
-            NULL) );
+         "taking weighted average of Lagrangian multipliers for stabilization (0: no weighted stabilization, 1: best "
+         "Lagrangian multipliers)", &sepadata->stabilitycentertype, TRUE, DEFAULT_STABILITYCENTERTYPE, 0, 1, NULL,
+         NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/optimalfacepriority", "priority of the optimal face for "
-            "separator execution (0: low priority, 1: medium priority, 2: high priority)",
-            &sepadata->optimalfacepriority, TRUE, DEFAULT_OPTIMALFACEPRIORITY, 0, 2, NULL, NULL) );
+         "separator execution (0: low priority, 1: medium priority, 2: high priority)",
+         &sepadata->optimalfacepriority, TRUE, DEFAULT_OPTIMALFACEPRIORITY, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/minrestart", "minimum restart round for separator "
-            "execution (0: from beginning of the instance solving, >= n with n >= 1: from restart round n)",
-            &sepadata->minrestart, TRUE, DEFAULT_MINRESTART, 0, INT_MAX, NULL, NULL) );
+         "execution (0: from beginning of the instance solving, >= n with n >= 1: from restart round n)",
+         &sepadata->minrestart, TRUE, DEFAULT_MINRESTART, 0, INT_MAX, NULL, NULL) );
 
   return SCIP_OKAY;
 }

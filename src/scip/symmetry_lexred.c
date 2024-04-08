@@ -482,15 +482,14 @@ SCIP_RETCODE getVarOrder(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
-   NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
-                                                  *   rooted path to focus node */
+   NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in rooted path to focus node */
    int                   nvarstotal,         /**< length of that array */
    SCIP_VAR**            branchvars,         /**< array populated with variables branched on in the symvarmap hashset */
    int                   nbranchvars,        /**< number of elements in branchvars array */
    int*                  varorder,           /**< array to populate with variable order */
    int*                  nselvars,           /**< pointer to number of variables in the ordering */
    int                   maxnselvars         /**< maximal size of the number of selected variables */
-)
+   )
 {
    SCIP_VAR** vars;
    int nvars;
@@ -1538,8 +1537,7 @@ SCIP_RETCODE propagateLexredDynamic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
-   NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
-                                                  *   rooted path to focus node */
+   NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in rooted path to focus node */
    int                   nvarstotal,         /**< length of nodedepthbranchindices array */
    SCIP_VAR**            branchvars,         /**< array populated with variables branched on */
    int                   nbranchvars,        /**< number of elements in branchvars array */
@@ -1617,8 +1615,7 @@ SCIP_RETCODE propagateLexicographicReductionPerm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LEXREDDATA*      masterdata,         /**< pointer to global data for lexicographic reduction propagator */
    LEXDATA*              lexdata,            /**< pointer to data for this permutation */
-   NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in
-                                                  *   rooted path to focus node */
+   NODEDEPTHBRANCHINDEX* nodedepthbranchindices, /**< array with (depth, index)-information per variable in rooted path to focus node */
    int                   nvarstotal,         /**< length of that array */
    SCIP_VAR**            branchvars,         /**< array populated with variables branched on */
    int                   nbranchvars,        /**< number of elements in branchvars array */
