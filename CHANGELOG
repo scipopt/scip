@@ -93,6 +93,18 @@ Build system
 
 - add flags -ffp-contract=off and /fp:precise to enhance reproducibility across different systems
 
+Interface changes
+-----------------
+
+### New parameters
+
+- added parameter "propagating/symmetry/symtiming" to determine when symmetries are computed and handled
+
+### Changed parameters
+
+- Disabled "propagating/symmetry/addconsstiming" since it is not used anymore.
+- Disabled "propagating/symmetry/ofsymcomptiming" since it is not used anymore.
+
 @section RN900 SCIP 9.0.0
 *************************
 
@@ -271,8 +283,6 @@ Interface changes
 - Disabled "propagating/symmetry/performpresolving" since running orbital reduction during presolving is not effective.
 - Repurposed "propagating/symmetry/usedynamicprop" since it now also applies to lexicographic reduction.
 - Changed default value of parameter "propagating/symmetry/addsymresacks" from FALSE to TRUE.
-- Disabled "propagating/symmetry/addconsstiming" since it is not used anymore.
-- Disabled "propagating/symmetry/ofsymcomptiming" since it is not used anymore.
 
 ### New parameters
 
@@ -313,7 +323,6 @@ Interface changes
 - separating/lagromory/varconsratiothreshold to denote the minimum variable-constraint ratio on the optimal face for the
   separator execution
 - many other advanced parameters for the Lagromory separator, which are also mentioned under separating/lagromory/*
-- added parameter "propagating/symmetry/symtiming" to determine when symmetries are computed and handled
 
 ### Data structures
 
