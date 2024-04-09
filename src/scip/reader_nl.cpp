@@ -1940,6 +1940,15 @@ SCIP_RETCODE SCIPwriteSolutionNl(
          else
             solve_result_num = mp::sol::LIMIT_NO_FEAS_WORK;
          break;
+      case SCIP_STATUS_PRIMALLIMIT:
+         solve_result_num = mp::sol::LIMIT_FEAS_BESTOBJ;
+         break;
+      case SCIP_STATUS_DUALLIMIT:
+         if( haveprimal )
+            solve_result_num = mp::sol::LIMIT_FEAS_BESTBND;
+         else
+            solve_result_num = mp::sol::LIMIT_NO_FEAS_BESTBND;
+         break;
       case SCIP_STATUS_SOLLIMIT:
          if( haveprimal )
             solve_result_num = mp::sol::LIMIT_FEAS_NUMSOLS;

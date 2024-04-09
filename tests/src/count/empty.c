@@ -22,8 +22,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   problem.c
- * @brief  unit test for conflict analysis with small feasibility tolerance
+/**@file   empty.c
+ * @brief  unit test for counting solutions of the trivial problem
  * @author Dominik Kamp
  */
 
@@ -41,7 +41,7 @@ void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-   SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
+   SCIP_CALL( SCIPcreateProbBasic(scip, "empty") );
 }
 
 /** free SCIP instance */
@@ -51,20 +51,17 @@ void teardown(void)
    SCIPfree(&scip);
 }
 
-TestSuite(problem, .init = setup, .fini = teardown);
+TestSuite(empty, .init = setup, .fini = teardown);
 
 /* TESTS  */
-Test(problem, tolerance, .description = "test checking that the optimal solutions of a problem are not cut off during conflict analysis")
+Test(empty, counter, .description = "test checking that the empty solution is counted")
 {
-   SCIP_CALL( SCIPreadParams(scip, "src/conflict/problem.set") );
-   SCIP_CALL( SCIPreadProb(scip, "src/conflict/problem.cip", NULL) );
-   SCIP_CALL( SCIPsolve(scip) );
-   int nvars = SCIPgetNOrigVars(scip);
+   SCIP_CALL( SCIPsetParamsCountsols(scip) );
+   SCIP_CALL( SCIPcount(scip) );
+   SCIP_Bool valid;
+   SCIP_Longint count = SCIPgetNCountedSols(scip, &valid);
    int nsols = SCIPgetNSols(scip);
-   cr_assert_eq(nvars, 5);
-   cr_assert_geq(nsols, 1);
-   SCIP_VAR* var = SCIPgetOrigVars(scip)[1];
-   SCIP_SOL* sol = SCIPgetSols(scip)[0];
-   cr_assert_float_eq(SCIPgetSolVal(scip, sol, var), 1.0, 1e-5);
-   cr_assert_float_eq(SCIPgetSolOrigObj(scip, sol), 0.0, 1e-5);
+   cr_assert(valid);
+   cr_assert_eq(count, 1);
+   cr_assert_eq(nsols, 0);
 }

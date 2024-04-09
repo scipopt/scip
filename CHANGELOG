@@ -3,6 +3,7 @@
 
 Features
 --------
+- Added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
 
 - added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
 
@@ -21,6 +22,12 @@ Interface changes
 
 ### New API functions
 
+- SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
+- SCIPhistoryGetAncPseudocost(), SCIPhistoryGetAncPseudocostCount(), SCIPhistoryIsAncPseudocostEmpty(), SCIPgetVarAncPseudocostVal(),
+  SCIPvarGetAncPseudocost() for retrieving the values related to ancestral pseudo cost fields in variable history
+- SCIPgetAvgDPseudocostScore(), SCIPgetVarDPseudocostScore() for computing the discounted pseudo cost scores using ancestral pseudo costs
+- SCIPboundchgGetLPSolVal() for accessing the LP solution value in the branching data of the bound change
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -29,6 +36,8 @@ Interface changes
 
 ### New parameters
 
+- branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
+- branching/discountedpscost to enable/disable recording ancestral pseudo costs
 - new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
 - new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
 
@@ -87,7 +96,13 @@ Interface changes
 
 ### New parameters
 
+- limits/primal to terminate the solve as soon as the primal bound is at least as good as this value, same as limits/objectivestop (deprecated)
+- limits/dual to terminate the solve as soon as the dual bound is at least as good as this value
+- presolving/milp/internalmaxrounds to control the maximal rounds for each call of the milp presolver (PaPILO)
+
 ### New data structures
+
+- SCIP_Status is extended by SCIP_STATUS_PRIMALLIMIT and SCIP_STATUS_DUALLIMIT to indicate termination at limits/primal and limits/dual respectively
 
 Build system
 ------------
@@ -110,12 +125,39 @@ Fixed bugs
 ----------
 
 - fixed bug in detection of double lex matrices due to wrong memory allocation
-
+- fixed bug where parameter `limits/objectivestop` was copied to subscips in plugins which have different objectives
+- in count mode respect empty solution when problem is solved in presolving
+- fixed that SCIP may have tried to pass a negative random seed to an LP solver
+- fixed bug where conflict analysis in strong branching tried to analyze an unsuccessful LP solve
+- enable parameter limits/restarts by allowing to reach the restart limit in restartAllowed()
+- handle normalizing linear constraints in presolving with more caution to avoid numerical difficulties for integer variables with large coefficients
+- use quad precision to calculate residual activity bounds to reduce numerical errors for large variable bounds in cons_linear.c
+- in SCIPsolveProbingLP() when objective has been changed do not return cutoff due to exceeding the cutoff bound
+- set probing LP to be a relaxation only when objective has not been changed
+- declare contradicting infinities in getMinActivity() and getMaxActivity() as non-tight
+- reject farkas solution with large values to bound magnification of errors in SCIPgetFarkasProof()
+- if all variables are fixed, apply relative feasibility tolerance to avoid invalid infeasibility in applyFixings() of cons_linear.c
+- delete empty redundant knapsack and linear constraints after cleanup in SCIPmatrixCreate()
+- cleanup first constraints in SCIPcleanupConssVarbound(), SCIPcleanupConssSetppc(), and SCIPcleanupConssLogicor()
+- symmetry handling methods have not been added immediately after computing symmetries, which has been fixed
 
 Miscellaneous
 -------------
 
+- redefine isrelax to istight in cons_linear.c
 
+Build system
+------------
+
+### Cmake
+
+- A file cmake.log containing the changed options is written to the cmake build directory.
+- removed replacement of the settings of RelWithDebInfo
+- add compile option -ffp-contract=off or /fp:precise to enhance reproducibility across different systems
+
+### Makefile
+
+- add flags -ffp-contract=off and /fp:precise to enhance reproducibility across different systems
 
 @section RN900 SCIP 9.0.0
 *************************
@@ -295,6 +337,8 @@ Interface changes
 - Disabled "propagating/symmetry/performpresolving" since running orbital reduction during presolving is not effective.
 - Repurposed "propagating/symmetry/usedynamicprop" since it now also applies to lexicographic reduction.
 - Changed default value of parameter "propagating/symmetry/addsymresacks" from FALSE to TRUE.
+- Disabled "propagating/symmetry/addconsstiming" since it is not used anymore.
+- Disabled "propagating/symmetry/ofsymcomptiming" since it is not used anymore.
 
 ### New parameters
 
@@ -335,6 +379,7 @@ Interface changes
 - separating/lagromory/varconsratiothreshold to denote the minimum variable-constraint ratio on the optimal face for the
   separator execution
 - many other advanced parameters for the Lagromory separator, which are also mentioned under separating/lagromory/*
+- added parameter "propagating/symmetry/symtiming" to determine when symmetries are computed and handled
 
 ### Data structures
 
@@ -349,14 +394,14 @@ Deleted files
 
 Unit tests
 ----------
+
 - new unittests for nlhdlr_quadratic that test monoidal strengthening and the use of the minimal representation to compute cut coefficients
 - unittests for nlhdlr_signomial
 
 Testing
 -------
-- changed `set lim obj` to `set lim objective` in ctest since `obj` is no longer unambiguous
 
-- flush changes at the end of SCIPlpiSetBase() in lpi_grb.c to apply the newly set basis correctly
+- changed `set lim obj` to `set lim objective` in ctest since `obj` is no longer unambiguous
 
 Build system
 ------------
@@ -389,6 +434,7 @@ Fixed bugs
 - fixed make install when SHARED=no and make uninstall
 - check absolute coefficients relative to extremal average to avoid invalid unifications in normalizeCons()
 - enforce and check symmetry-based constraints to take their locks (in dual reductions) into account
+- flush changes at the end of SCIPlpiSetBase() in lpi_grb.c to apply the newly set basis correctly
 
 Miscellaneous
 -------------
@@ -398,8 +444,6 @@ Miscellaneous
 - fixed that scip/def.h, the header for C preprocessor definition (#define's), included headers for some SCIP type and function definitions
   (scip/type_retcode.h, scip/type_message.h, scip/pub_message.h)
 
-Known bugs
-----------
 
 @page RN80 Release notes for SCIP 8.1
 

@@ -729,7 +729,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
    SYM_GRAPH*            graph1,             /**< first symmetry detection graph */
    SYM_GRAPH*            graph2,             /**< second symmetry detection graph */
    SCIP_Bool             determinesize,      /**< whether only the size of the graph shall be determined */
-   sparsegraph*          SG,                  /**< graph to be constructed */
+   sparsegraph*          SG,                 /**< graph to be constructed */
    int*                  nnodes,             /**< pointer to store the total number of nodes in graph */
    int*                  nedges,             /**< pointer to store the total number of edges in graph */
    int**                 degrees,            /**< pointer to store the degrees of the nodes */

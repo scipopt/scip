@@ -84,23 +84,23 @@ SCIP_RETCODE SCIPincludeCutselDynamic(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPselectCutsDynamic(
-    SCIP*                 scip,               /**< SCIP data structure */
-    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
-    SCIP_ROW**            forcedcuts,         /**< array with forced cuts */
-    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator for tie-breaking, or NULL */
-    char                  filtermode,         /**< filtering strategy during cut selection (
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
+   SCIP_ROW**            forcedcuts,         /**< array with forced cuts */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator for tie-breaking, or NULL */
+   char                  filtermode,         /**< filtering strategy during cut selection (
                                               *  'd'ynamic- and 'f'ull dynamic parallelism) */
-    SCIP_Real             mingain,            /**< minimum efficacy gain in percentage to filter cuts */
-    SCIP_Real             maxparall,          /**< maximal parallelism for all cuts that are not good */
-    SCIP_Real             dircutoffdistweight,/**< weight of directed cutoff distance in cut score calculation */
-    SCIP_Real             efficacyweight,     /**< weight of efficacy in cut score calculation */
-    SCIP_Real             objparalweight,     /**< weight of objective parallelism in cut score calculation */
-    SCIP_Real             intsupportweight,   /**< weight of integral support in cut score calculation */
-    int                   ncuts,              /**< number of cuts in cuts array */
-    int                   nforcedcuts,        /**< number of forced cuts */
-    int                   maxselectedcuts,    /**< maximal number of cuts from cuts array to select */
-    int*                  nselectedcuts      /**< pointer to return number of selected cuts from cuts array */
-  );
+   SCIP_Real             mingain,            /**< minimum efficacy gain in percentage to filter cuts */
+   SCIP_Real             maxparall,          /**< maximal parallelism for all cuts that are not good */
+   SCIP_Real             dircutoffdistweight, /**< weight of directed cutoff distance in cut score calculation */
+   SCIP_Real             efficacyweight,     /**< weight of efficacy in cut score calculation */
+   SCIP_Real             objparalweight,     /**< weight of objective parallelism in cut score calculation */
+   SCIP_Real             intsupportweight,   /**< weight of integral support in cut score calculation */
+   int                   ncuts,              /**< number of cuts in cuts array */
+   int                   nforcedcuts,        /**< number of forced cuts */
+   int                   maxselectedcuts,    /**< maximal number of cuts from cuts array to select */
+   int*                  nselectedcuts       /**< pointer to return number of selected cuts from cuts array */
+   );
 
 /** @} */
 

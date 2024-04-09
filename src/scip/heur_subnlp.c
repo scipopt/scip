@@ -392,6 +392,8 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/solutions") );
    SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/time") );
    SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/totalnodes") );
+   SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/primal") );
+   SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/dual") );
 
    /* we remember here which way (continuous or not) we went, in case all binary and integer vars get fixed in root */
    heurdata->continuous = SCIPgetNBinVars(heurdata->subscip) == 0 && SCIPgetNIntVars(heurdata->subscip) == 0;

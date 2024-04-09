@@ -554,7 +554,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
       if( c >= 0 )
       {
-
          assert(c < ncols);
          var = SCIPcolGetVar(cols[c]);
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
@@ -691,7 +690,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          maxcutefficacy = cutefficacies[i];
       }
    }
-
 
    for( i = 0; i < nrows; ++i )
    {

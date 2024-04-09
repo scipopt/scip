@@ -3326,6 +3326,8 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/solutions", -1) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1LL) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
+   SCIP_CALL( SCIPsetRealParam(targetscip, "limits/primal", SCIP_INVALID) );
+   SCIP_CALL( SCIPsetRealParam(targetscip, "limits/dual", SCIP_INVALID) );
 
    return SCIP_OKAY;
 }

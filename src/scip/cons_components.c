@@ -495,6 +495,10 @@ SCIP_RETCODE createSubscip(
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/solutions", -1) );
       SCIP_CALL( SCIPsetIntParam(*subscip, "limits/bestsol", -1) );
 
+      /* disable bound limits */
+      SCIP_CALL( SCIPsetRealParam(*subscip, "limits/primal", SCIP_INVALID) );
+      SCIP_CALL( SCIPsetRealParam(*subscip, "limits/dual", SCIP_INVALID) );
+
       /* reduce the effort spent for hash tables; however, if the debug solution is enabled and valid in this subtree,
        * hash tables are needed for installing the debug solution
        */
@@ -1209,6 +1213,8 @@ SCIP_RETCODE solveComponent(
    case SCIP_STATUS_TIMELIMIT:
    case SCIP_STATUS_MEMLIMIT:
    case SCIP_STATUS_GAPLIMIT:
+   case SCIP_STATUS_PRIMALLIMIT:
+   case SCIP_STATUS_DUALLIMIT:
    case SCIP_STATUS_SOLLIMIT:
    case SCIP_STATUS_BESTSOLLIMIT:
    case SCIP_STATUS_RESTARTLIMIT:

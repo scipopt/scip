@@ -971,6 +971,10 @@ SCIP_RETCODE createSubSCIP(
    /* copy parameter settings */
    SCIP_CALL( SCIPcopyParamSettings(scip, heurdata->subscip) );
 
+   /* disable bound limits */
+   SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/primal", SCIP_INVALID) );
+   SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/dual", SCIP_INVALID) );
+
    /* create problem in sub-SCIP */
 
    /* get name of the original problem and add "dualval" */

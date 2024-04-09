@@ -227,7 +227,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Longint          iterlim,            /**< nonnegative iteration limit for the LP solves, or -1 for dynamic setting */
    int                   nodelimit,          /**< nonnegative probing node limit or -1 if no limit should be used */
    SCIP_Real             lpresolvedomchgquot, /**< percentage of immediate domain changes during probing to trigger LP resolve or -1
-                                                   if diveset specific default should be used */
+                                               *   if diveset specific default should be used */
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
@@ -987,6 +987,10 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
 
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(sourcescip, subscip) );
+
+      /* disable bound limits in subscip since objective might be changed */
+      SCIP_CALL( SCIPsetRealParam(subscip, "limits/primal", SCIP_INVALID) );
+      SCIP_CALL( SCIPsetRealParam(subscip, "limits/dual", SCIP_INVALID) );
 
       /* create linear constraints from LP rows of the source problem */
       SCIP_CALL( createRows(sourcescip, subscip, varmap) );
