@@ -71,6 +71,7 @@ Fixed bugs
 - if all variables are fixed, apply relative feasibility tolerance to avoid invalid infeasibility in applyFixings() of cons_linear.c
 - delete empty redundant knapsack and linear constraints after cleanup in SCIPmatrixCreate()
 - cleanup first constraints in SCIPcleanupConssVarbound(), SCIPcleanupConssSetppc(), and SCIPcleanupConssLogicor()
+- symmetry handling methods have not been added immediately after computing symmetries, which has been fixed
 
 Miscellaneous
 -------------
@@ -268,6 +269,8 @@ Interface changes
 - Disabled "propagating/symmetry/performpresolving" since running orbital reduction during presolving is not effective.
 - Repurposed "propagating/symmetry/usedynamicprop" since it now also applies to lexicographic reduction.
 - Changed default value of parameter "propagating/symmetry/addsymresacks" from FALSE to TRUE.
+- Disabled "propagating/symmetry/addconsstiming" since it is not used anymore.
+- Disabled "propagating/symmetry/ofsymcomptiming" since it is not used anymore.
 
 ### New parameters
 
@@ -308,6 +311,7 @@ Interface changes
 - separating/lagromory/varconsratiothreshold to denote the minimum variable-constraint ratio on the optimal face for the
   separator execution
 - many other advanced parameters for the Lagromory separator, which are also mentioned under separating/lagromory/*
+- added parameter "propagating/symmetry/symtiming" to determine when symmetries are computed and handled
 
 ### Data structures
 

@@ -47,9 +47,9 @@ extern "C" {
 typedef uint32_t SYM_SPEC;              /**< types of variables handled by symmetry */
 
 /** symmetry timings */
-#define SYM_COMPUTETIMING_BEFOREPRESOL    0  /**< compute symmetries before presolving */
-#define SYM_COMPUTETIMING_DURINGPRESOL    1  /**< compute symmetries during presolving */
-#define SYM_COMPUTETIMING_AFTERPRESOL     2  /**< compute symmetries after presolving */
+#define SYM_TIMING_BEFOREPRESOL    0         /**< compute and handle symmetries before presolving */
+#define SYM_TIMING_DURINGPRESOL    1         /**< compute and handle symmetries during presolving */
+#define SYM_TIMING_AFTERPRESOL     2         /**< compute and handle symmetries after presolving */
 
 /** define symmetry types detectable by SCIP */
 enum SYM_Symtype
