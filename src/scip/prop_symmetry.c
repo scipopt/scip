@@ -7249,7 +7249,7 @@ SCIP_DECL_PROPINITPRE(propInitpreSymmetry)
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Symmetry computation before presolving:\n");
 
-      SCIP_CALL( tryAddSymmetryHandlingMethods(scip, prop, NULL, NULL) );
+      SCIP_CALL( tryAddSymmetryHandlingMethods(scip, prop, FALSE, NULL, NULL) );
    }
 
    return SCIP_OKAY;
