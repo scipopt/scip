@@ -23,8 +23,7 @@ Fixed bugs
 - cleanup first constraints in SCIPcleanupConssVarbound(), SCIPcleanupConssSetppc(), and SCIPcleanupConssLogicor()
 - symmetry handling methods have not been added immediately after computing symmetries, which has been fixed
 - delay checking node limits after presolving to correctly continue up to the exceeding main node
-- ensured that the subproblem in the Lagromory separator is always a minimization problem because it is based on the
-  node's LP, which is always a minimization problem
+- simplified the objective sense assumption for the subproblems in the Lagromory separator
 
 Miscellaneous
 -------------
