@@ -102,7 +102,7 @@ set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso highs none )  #define list of values GUI will offer for the variable
 
-set(SYM sbliss CACHE STRING "options for symmetry computation")  #create the variable
+set(SYM snauty CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss sbliss nauty snauty none )  #define list of values GUI will offer for the variable
 
 if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
