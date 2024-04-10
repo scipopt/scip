@@ -156,30 +156,6 @@ void SCIPproofsetFree(
    (*proofset) = NULL;
 }
 
-#ifdef SCIP_DEBUG
-/** print a proof set */
-static
-void proofsetPrint(
-   SCIP_PROOFSET*        proofset,
-   SCIP_SET*             set,
-   SCIP_PROB*            transprob
-   )
-{
-   SCIP_VAR** vars;
-   int i;
-
-   assert(proofset != NULL);
-
-   vars = SCIPprobGetVars(transprob);
-   assert(vars != NULL);
-
-   printf("proofset: ");
-   for( i = 0; i < proofset->nnz; i++ )
-      printf("%+.15g <%s> ", proofset->vals[i], SCIPvarGetName(vars[proofset->inds[i]]));
-   printf(" <= %.15g\n", proofset->rhs);
-}
-#endif
-
 /** return the indices of variables in the proofset */
 static
 int* proofsetGetInds(
