@@ -502,11 +502,8 @@ SCIP_RETCODE createLPWithHardCuts(
       }
       assert(*lpi == NULL);
 
-      /* create an LPI with appropriate objective sense */
-      if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
-         SCIP_CALL( SCIPlpiCreate(lpi, SCIPgetMessagehdlr(scip), "node LP with generated cuts", SCIP_OBJSEN_MAXIMIZE) );
-      else
-         SCIP_CALL( SCIPlpiCreate(lpi, SCIPgetMessagehdlr(scip), "node LP with generated cuts", SCIP_OBJSEN_MINIMIZE) );
+      /* create an LPI */
+      SCIP_CALL( SCIPlpiCreate(lpi, SCIPgetMessagehdlr(scip), "node LP with generated cuts", SCIP_OBJSEN_MINIMIZE) );
 
       /* add cols to the LP interface */
       SCIP_CALL( SCIPallocBufferArray(scip, &colobj, ncols) );
