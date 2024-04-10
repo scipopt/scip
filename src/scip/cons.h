@@ -1084,6 +1084,17 @@ void SCIPconsMarkConflict(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** sets the conflict type for the constraint */
+void SCIPconsSetConflictType(
+   SCIP_CONS*            cons,               /**< constraint */
+   int                   conftype            /**< conflict type */
+   );
+
+/** sets the conflict constraint to use the cutoff bound */
+void SCIPconsSetConflictUsesCutoff(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** marks the constraint to be propagated (update might be delayed) */
 SCIP_EXPORT
 SCIP_RETCODE SCIPconsMarkPropagate(

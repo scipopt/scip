@@ -6080,6 +6080,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->age = 0.0;
    (*cons)->nuses = 0;
    (*cons)->nupgradelocks = 0;
+   (*cons)->conftype = 0;
    (*cons)->initial = initial;
    (*cons)->separate = separate;
    (*cons)->enforce = enforce;
@@ -6096,6 +6097,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->deleteconsdata = deleteconsdata;
    (*cons)->active = FALSE;
    (*cons)->conflict = FALSE;
+   (*cons)->confusescutoff = FALSE;
    (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
    (*cons)->markpropagate = TRUE;
@@ -7286,6 +7288,27 @@ void SCIPconsMarkConflict(
    cons->conflict = TRUE;
 }
 
+/** sets the conflict type for the constraint */
+void SCIPconsSetConflictType(
+   SCIP_CONS*            cons,               /**< constraint */
+   int                   conftype            /**< conflict type */
+   )
+{
+   assert(cons != NULL);
+
+   cons->conftype = (unsigned int) conftype;
+}
+
+/** sets the conflict constraint to use the cutoff bound */
+void SCIPconsSetConflictUsesCutoff(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   cons->conftype = TRUE;
+}
+
 /** marks the constraint to be propagated (update might be delayed) */
 SCIP_RETCODE SCIPconsMarkPropagate(
    SCIP_CONS*            cons,               /**< constraint */
@@ -8338,6 +8361,7 @@ void SCIPprintLinConsStats(
 #undef SCIPconsIsDeleted
 #undef SCIPconsIsObsolete
 #undef SCIPconsIsConflict
+#undef SCIPconsIsConfCutoff
 #undef SCIPconsGetAge
 #undef SCIPconsIsInitial
 #undef SCIPconsIsSeparated
@@ -8366,6 +8390,7 @@ void SCIPprintLinConsStats(
 #undef SCIPconsGetNLocksTypeNeg
 #undef SCIPconsIsAdded
 #undef SCIPconsGetNUpgradeLocks
+#undef SCIPconsGetConflictType
 
 /** returns the name of the constraint
  *
@@ -8527,6 +8552,16 @@ SCIP_Bool SCIPconsIsConflict(
    assert(cons != NULL);
 
    return cons->conflict;
+}
+
+/** returns TRUE iff the constraint is marked as a conflict and uses a cutoff */
+SCIP_Bool SCIPconsIsConfCutoff(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->confusescutoff;
 }
 
 /** gets age of constraint */
@@ -8817,7 +8852,7 @@ void SCIPconsAddUpgradeLocks(
 {
    assert(cons != NULL);
 
-   assert(cons->nupgradelocks < (1 << 28) - nlocks); /*lint !e574*/
+   assert(cons->nupgradelocks < (1 << 24) - nlocks); /*lint !e574*/
    cons->nupgradelocks += (unsigned int) nlocks;
 }
 
@@ -8829,4 +8864,14 @@ int SCIPconsGetNUpgradeLocks(
    assert(cons != NULL);
 
    return (int) cons->nupgradelocks;
+}
+
+/** gets the conflict type of the constraint */
+int SCIPconsGetConflictType(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return (int) cons->conftype;
 }

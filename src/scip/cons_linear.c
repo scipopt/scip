@@ -16762,8 +16762,17 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             if( upgdcons != NULL )
             {
                /* add the upgraded constraint to the problem */
-               SCIP_CALL( SCIPaddCons(scip, upgdcons) );
-               SCIP_CALL( SCIPreleaseCons(scip, &upgdcons) );
+               if(SCIPconsIsConflict(cons) && SCIPconsIsGlobal(cons))
+               {
+                  SCIPaddConflict(scip, NULL, upgdcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons));
+               }
+               else
+               {
+                  SCIP_CALL( SCIPaddCons(scip, upgdcons) );
+                  assert(SCIPconsIsLocal(cons) || (SCIPconsIsConflict(upgdcons) == SCIPconsIsConflict(cons)));
+                  SCIP_CALL( SCIPreleaseCons(scip, &upgdcons) );
+               }
+
                (*nupgdconss)++;
 
                /* mark the linear constraint being upgraded and to be removed after presolving;

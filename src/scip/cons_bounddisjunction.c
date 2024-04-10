@@ -1252,8 +1252,19 @@ SCIP_RETCODE upgradeCons(
 
       SCIPdebugMsg(scip, "updated constraint <%s> to the following %s constraint\n", SCIPconsGetName(cons), (nvars == 2 ? "setppc" : "logicor"));
       SCIPdebugPrintCons(scip, newcons, NULL);
-      SCIP_CALL( SCIPaddCons(scip, newcons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+
+      /* add the upgraded constraint to the problem */
+      if(SCIPconsIsConflict(cons) && SCIPconsIsGlobal(cons))
+      {
+         SCIPaddConflict(scip, NULL, newcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons));
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         assert((SCIPconsIsConflict(newcons) == SCIPconsIsConflict(cons)));
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      }
+
       ++(*naddconss);
 
       SCIP_CALL( SCIPdelCons(scip, cons) );
