@@ -177,6 +177,80 @@ SCIP_Real SCIPconsGetLhs(
    return lhs;
 }
 
+/** returns the exact right-hand side of an arbitrary SCIP constraint that can be represented as a single linear constraint
+ *
+ *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
+ */
+SCIP_Rational* SCIPconsGetRhsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which right-hand side is queried */
+   SCIP_Bool*            success             /**< pointer to store whether a valid right-hand side was returned */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   const char* conshdlrname;
+   SCIP_Rational* rhs;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(success != NULL);
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   conshdlrname = SCIPconshdlrGetName(conshdlr);
+
+   *success = TRUE;
+
+   if( strcmp(conshdlrname, "linear-exact") == 0 )
+   {
+      rhs = SCIPgetRhsExactLinear(scip, cons);
+   }
+   else
+   {
+      SCIPwarningMessage(scip, "Cannot return rhs for constraint of type <%s>\n", conshdlrname);
+      *success = FALSE;
+   }
+
+   return rhs;
+}
+
+/** returns the exact left-hand side of an arbitrary SCIP constraint that can be represented as a single linear constraint
+ *
+ *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
+ */
+SCIP_Rational* SCIPconsGetLhsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to get left-hand side for */
+   SCIP_Bool*            success             /**< pointer to store whether a valid left-hand side was returned */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   const char* conshdlrname;
+   SCIP_Rational* lhs;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(success != NULL);
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   conshdlrname = SCIPconshdlrGetName(conshdlr);
+
+   *success = TRUE;
+
+   if( strcmp(conshdlrname, "linear-exact") == 0 )
+   {
+      lhs = SCIPgetLhsExactLinear(scip, cons);
+   }
+   else
+   {
+      SCIPwarningMessage(scip, "Cannot return lhs for constraint of type <%s>\n", conshdlrname);
+      *success = FALSE;
+   }
+
+   return lhs;
+}
+
 /** returns the value array of an arbitrary SCIP constraint that can be represented as a single linear constraint
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -302,6 +376,69 @@ SCIP_RETCODE SCIPgetConsVals(
       {
          vals[i] = weights[i].inf;
       }
+   }
+   else
+   {
+      SCIPwarningMessage(scip, "Cannot return value array for constraint of type <%s>\n", conshdlrname);
+      *success = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** returns the value array of an arbitrary SCIP constraint that can be represented as a single linear constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @note The success pointer indicates if the individual contraint handler was able to return the involved values
+ */
+SCIP_RETCODE SCIPgetConsValsExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which the coefficients are wanted */
+   SCIP_Rational**       vals,               /**< array to store the coefficients of the constraint */
+   int                   varssize,           /**< available slots in vals array needed to check if the array is large enough */
+   SCIP_Bool*            success             /**< pointer to store whether the coefficients are successfully copied */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   const char* conshdlrname;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(vals != NULL);
+   assert(success != NULL);
+
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+
+   conshdlrname = SCIPconshdlrGetName(conshdlr);
+
+   *success = TRUE;
+
+   SCIP_CALL( SCIPgetConsNVars(scip, cons, &nvars, success) );
+
+   if( !(*success) )
+   {
+      SCIPwarningMessage(scip, "Cannot return value array for constraint of type <%s>\n", conshdlrname);
+      return SCIP_OKAY;
+   }
+
+   if( varssize < nvars )
+   {
+      SCIPwarningMessage(scip, "Cannot return value array for constraint of type <%s> (insufficient memory provided)\n", conshdlrname);
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   if( strcmp(conshdlrname, "linear-exact") == 0 )
+   {
+      SCIP_Rational** weights;
+      weights = SCIPgetValsExactLinear(scip, cons);
+      for( i = 0; i < nvars; i++ )
+         RatSet(vals[i], weights[i]);
    }
    else
    {
