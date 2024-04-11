@@ -267,15 +267,21 @@ SCIP_RETCODE addCut(
                SCIP_Real roundedval = SCIPround(scip, cutcoefs[j]);
                SCIP_Real delta = roundedval - cutcoefs[j];
                SCIP_VAR* var = vars[cutinds[j]];
+               SCIP_Real sideval;
 
                if( delta == 0 )
                   continue;
-               cutcoefs[j]= roundedval;
 
                if( cutislocal )
-                  cutrhs += (delta > 0 ? SCIPvarGetUbLocal(var) : SCIPvarGetLbLocal(var)) * delta;
+                  sideval = delta > 0 ? SCIPvarGetUbLocal(var) : SCIPvarGetLbLocal(var);
                else
-                  cutrhs += (delta > 0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var)) * delta;
+                  sideval = delta > 0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var); 
+
+               if( SCIPisInfinity(scip, REALABS(sideval)) )
+                  continue;
+
+               cutcoefs[j]= roundedval;
+               cutrhs += delta * sideval;
             }
          }
          SCIPintervalSetRoundingMode(roundmode);
