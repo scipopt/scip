@@ -338,7 +338,7 @@ SCIP_RETCODE addCut(
                SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
 
-	    SCIPdebug(SCIPprintRow(scip, cut, NULL));
+            SCIPdebug(SCIPprintRow(scip, cut, NULL));
 
             if( SCIPisCutNew(scip, cut) )
             {
@@ -365,6 +365,22 @@ SCIP_RETCODE addCut(
                {
                   SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
                   SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
+                  /* certify local cuts immediately or the bonds might be wrong in the certificate */
+                  if( SCIProwGetRowExact(cut) == NULL )
+                  {
+                     if( !cutislocal )
+                     {
+                        SCIP_CALL( SCIPdelPoolCut(scip, cut) );
+                        SCIP_CALL( SCIPcreateRowExactFromRow(scip, cut) );
+                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                     }
+                     else
+                     {
+                        SCIP_CALL( SCIPcreateRowExactFromRow(scip, cut) );
+                     }
+                  }
+
+                  SCIP_CALL( SCIPprintCertificateMirCut(scip, cut) );
                }
             }
          }

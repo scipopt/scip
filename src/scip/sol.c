@@ -2455,7 +2455,7 @@ SCIP_RETCODE solCheckExact(
    {
       /** @todo: exip turn this into checkExact new callback */
       SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
-            checkintegrality, checklprows, printreason, completely, &result) );
+            TRUE, checklprows, printreason, completely, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
 
 #ifdef SCIP_DEBUG

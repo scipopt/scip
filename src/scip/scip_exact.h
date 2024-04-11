@@ -134,6 +134,13 @@ SCIP_RETCODE SCIPaddCertificateMirInfo(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** print MIR cut to certificate file */
+SCIP_EXPORT
+SCIP_RETCODE SCIPprintCertificateMirCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row that needs to be certified */
+   );
+
 /** free information that is possibly still stored about this row in the certifacte structure */
 SCIP_RETCODE SCIPfreeRowCertInfo(
    SCIP*                 scip,               /**< SCIP data structure */

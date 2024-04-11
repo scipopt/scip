@@ -5561,7 +5561,7 @@ SCIP_RETCODE SCIProwRelease(
    (*row)->nuses--;
    if( (*row)->nuses == 0 )
    {
-      //SCIPfreeRowCertInfo(set->scip, (*row));
+      SCIPfreeRowCertInfo(set->scip, (*row));
       SCIP_CALL( SCIProwFree(row, blkmem, set, lp) );
    }
 

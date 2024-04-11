@@ -11714,7 +11714,10 @@ SCIP_RETCODE varProcessChgLbLocal(
    var->locdom.lb = newbound;
    /* adjust the exact bound as well */
    if( set->exact_enabled )
+   {
       RatSetReal(var->exactdata->locdom.lb, var->locdom.lb);
+      RatMAX(var->exactdata->locdom.lb, var->exactdata->locdom.lb, var->exactdata->glbdom.lb);
+   }
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
@@ -11900,7 +11903,11 @@ SCIP_RETCODE varProcessChgUbLocal(
    var->locdom.ub = newbound;
    /* adjust the exact bound as well */
    if( set->exact_enabled )
+   {
       RatSetReal(var->exactdata->locdom.ub, var->locdom.ub);
+      RatMIN(var->exactdata->locdom.ub, var->exactdata->locdom.ub, var->exactdata->glbdom.ub);
+   }
+
 
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic

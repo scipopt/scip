@@ -373,6 +373,7 @@ SCIP_RETCODE varVecAddScaledRowCoefsSafely(
    for( i = 0 ; i < row->len; ++i )
    {
       SCIP_Real val;
+      SCIP_INTERVAL valinterval;
       int probindex;
 
       probindex = row->cols[i]->var_probindex;
@@ -385,56 +386,25 @@ SCIP_RETCODE varVecAddScaledRowCoefsSafely(
       if( val == SCIP_INVALID ) /*lint !e777*/
          val = 0.0;
 
+      SCIPintervalSetBounds(&valinterval, rowexact->valsinterval[i].inf, rowexact->valsinterval[i].sup);
+      SCIPintervalMulScalar(SCIPinfinity(scip), &valinterval, valinterval, scale);
+      SCIPintervalAddScalar(SCIPinfinity(scip), &valinterval, valinterval, val);
+
       if( SCIPvarGetLbGlobal(var) > -SCIPinfinity(scip) && SCIPvarGetLbGlobal(var) >= 0 )
-      {
-         SCIPintervalSetRoundingModeDownwards();
-         if( scale >= 0 )
-            val += (rowexact->valsinterval[i].inf * scale);
-         else
-            val += (rowexact->valsinterval[i].sup * scale);
-      }
+         val = valinterval.inf; 
       else if(SCIPvarGetUbGlobal(var) < SCIPinfinity(scip) && SCIPvarGetUbGlobal(var) <= 0 )
-      {
-         SCIPintervalSetRoundingModeUpwards();
-         if( scale >= 0 )
-            val += (rowexact->valsinterval[i].sup * scale);
-         else
-            val += (rowexact->valsinterval[i].inf * scale);
-      }
+         val = valinterval.sup;
       else if( SCIPvarGetLbGlobal(var) > -SCIPinfinity(scip) )
       {
-         SCIP_Real uproundedval, downroundedval;
-         SCIPintervalSetRoundingModeDownwards();
-         if( scale >= 0 )
-            downroundedval = (rowexact->valsinterval[i].inf * scale);
-         else
-            downroundedval = (rowexact->valsinterval[i].sup * scale);
-
-         val += downroundedval;
+         val = valinterval.inf;
          SCIPintervalSetRoundingModeUpwards();
-         if( scale >= 0 )
-            uproundedval = (rowexact->valsinterval[i].sup * scale);
-         else
-            uproundedval = (rowexact->valsinterval[i].inf * scale);
-         *rhschange += (uproundedval - downroundedval) * (-SCIPvarGetLbGlobal(var));
+         *rhschange += (valinterval.sup - valinterval.inf) * (-SCIPvarGetLbGlobal(var));
       }
       else if( SCIPvarGetUbGlobal(var) < SCIPinfinity(scip) )
       {
-         SCIP_Real uproundedval, downroundedval;
-         SCIPintervalSetRoundingModeDownwards();
-         if( scale >= 0 )
-            downroundedval = (rowexact->valsinterval[i].inf * scale);
-         else
-            downroundedval = (rowexact->valsinterval[i].sup * scale);
-
+         val = valinterval.sup;
          SCIPintervalSetRoundingModeUpwards();
-         if( scale >= 0 )
-            uproundedval = (rowexact->valsinterval[i].sup * scale);
-         else
-            uproundedval = (rowexact->valsinterval[i].inf * scale);
-
-         val += uproundedval;
-         *rhschange += (uproundedval - downroundedval) * (SCIPvarGetUbGlobal(var));
+         *rhschange += (valinterval.sup - valinterval.inf) * (SCIPvarGetUbGlobal(var));
       }
       else
       {
@@ -1636,14 +1606,14 @@ SCIP_Real scaleValSafely(
    {
       newval = SCIPintervalGetInf(valinterval);
       SCIPintervalSetRoundingModeUpwards();
-      *rhschange = (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (-SCIPvarGetLbGlobal(var));
+      *rhschange = (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (-lb);
       SCIPdebugMessage("Using lb %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetLbGlobal(var), -SCIPintervalGetSup(valinterval) + SCIPintervalGetInf(valinterval), *rhschange);
    }
    else if( ub < SCIPinfinity(scip) )
    {
       newval = SCIPintervalGetSup(valinterval);
       SCIPintervalSetRoundingModeUpwards();
-      *rhschange = (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (SCIPvarGetUbGlobal(var));
+      *rhschange = (SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval)) * (ub);
       SCIPdebugMessage("Using ub %.17g corrected by %.17g. Change to rhs: %.17g \n", SCIPvarGetUbGlobal(var), SCIPintervalGetSup(valinterval) - SCIPintervalGetInf(valinterval), *rhschange);
    }
    else
