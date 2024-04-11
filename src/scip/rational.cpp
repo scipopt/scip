@@ -254,13 +254,21 @@ SCIP_RETCODE RatReallocBlockArray(
 {
    int i;
 
-   assert(newlen >= oldlen);
-
-   BMSreallocBlockMemoryArray(mem, result, oldlen, newlen);
-
-   for( i = oldlen; i < newlen; ++i )
+   if( newlen < oldlen )
    {
-      SCIP_CALL( RatCreateBlock(mem, &((*result)[i])) );
+      for( i = newlen; i < oldlen; ++i )
+      {
+         RatFreeBlock(mem, &((*result)[i]));
+      }
+   }
+   else
+   {
+      BMSreallocBlockMemoryArray(mem, result, oldlen, newlen);
+
+      for( i = oldlen; i < newlen; ++i )
+      {
+         SCIP_CALL( RatCreateBlock(mem, &((*result)[i])) );
+      }
    }
 
    return SCIP_OKAY;
@@ -565,6 +573,49 @@ bool SCIPisRationalString(
       std::string s(desc);
       return s.find_first_not_of("0123456789/") == std::string::npos;
    }
+}
+
+/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
+SCIP_Bool SCIPstrToRationalValue(
+   const char*           str,                /**< string to search */
+   SCIP_Rational*        value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   )
+{
+   SCIP_Bool hassign = false;
+   std::string s;
+   size_t endpos;
+
+   assert(str != NULL);
+   assert(value != NULL);
+   assert(endptr != NULL);
+
+   if( str[0] == '-' || str[0] == '+')
+   {
+      hassign = true;
+      s = str + 1;
+   }
+   else
+      s = str;
+
+   endpos = s.find_first_not_of("0123456789/");
+
+   if( endpos == 0 )
+   {
+      *endptr = (char*)str;
+      return FALSE;
+   }
+
+   RatSetString(value, s.substr(0, endpos).c_str());
+   if( str[0] == '-' )
+      RatNegate(value, value);
+   *endptr = (char*)str + endpos;
+   if( hassign )
+      *endptr += 1;
+   return TRUE;
 }
 
 /** set a rational to the value described by a string */

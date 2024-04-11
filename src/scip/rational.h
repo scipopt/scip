@@ -259,6 +259,18 @@ bool SCIPisRationalString(
    const char*           desc                /**< string to check */
    );
 
+
+/** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
+ *
+ *  @return Returns TRUE if a value could be extracted, otherwise FALSE
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPstrToRationalValue(
+   const char*           str,                /**< string to search */
+   SCIP_Rational*        value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   );
+
 /** sets a rational to the value described by a string */
 SCIP_EXPORT
 void RatSetString(
