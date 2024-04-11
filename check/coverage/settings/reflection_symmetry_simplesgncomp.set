@@ -1,0 +1,5 @@
+misc/usesymmetry = 6
+propagating/symmetry/symtype = 1
+propagating/symmetry/detectdoublelex = FALSE
+propagating/symmetry/handlesignedorbitopes = FALSE
+propagating/symmetry/usesimplesgncomp = TRUE
