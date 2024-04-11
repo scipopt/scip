@@ -34,9 +34,7 @@
 #ifdef SCIP_WITH_GMP
 #include <gmp.h>
 #endif
-#ifdef SCIP_WITH_ZIMPL
-#include "zimpl/lint.h"
-#endif
+
 #ifdef SCIP_WITH_MPFR
 #include <mpfr.h>
 #endif

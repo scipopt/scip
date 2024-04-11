@@ -105,6 +105,12 @@ SCIP_Bool SCIPisCertificateActive(
    SCIP*                 scip                /**< certificate information */
    );
 
+/** returns whether the certificate output is activated? */
+SCIP_EXPORT
+void SCIPcertificateExit(
+   SCIP*                 scip                /**< certificate information */
+   );
+
 
 /** returns certificate data structure
  *

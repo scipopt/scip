@@ -96,6 +96,10 @@ SCIP_Real SCIPconsGetRhs(
    {
       rhs = SCIPgetRhsVarbound(scip, cons);
    }
+   else if( strcmp(conshdlrname, "linear-exact") == 0 )
+   {
+      rhs = RatApproxReal(SCIPgetRhsExactLinear(scip, cons));
+   }
    else
    {
       SCIPwarningMessage(scip, "Cannot return rhs for constraint of type <%s>\n", conshdlrname);
@@ -159,6 +163,10 @@ SCIP_Real SCIPconsGetLhs(
    else if( strcmp(conshdlrname, "varbound") == 0 )
    {
       lhs = SCIPgetLhsVarbound(scip, cons);
+   }
+   else if( strcmp(conshdlrname, "linear-exact") == 0 )
+   {
+      lhs = RatApproxReal(SCIPgetLhsExactLinear(scip, cons));
    }
    else
    {
@@ -283,6 +291,16 @@ SCIP_RETCODE SCIPgetConsVals(
       for( i = 0; i < nvars; i++ )
       {
          vals[i] = weights[i];
+      }
+   }
+   else if( strcmp(conshdlrname, "linear-exact") == 0 )
+   {
+      SCIP_INTERVAL* weights;
+
+      weights = SCIPgetValsRealExactLinear(scip, cons);
+      for( i = 0; i < nvars; i++ )
+      {
+         vals[i] = weights[i].inf;
       }
    }
    else

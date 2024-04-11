@@ -29,6 +29,7 @@
 #include "scip/cuts.h"
 #include "scip/cons_exactlp.h"
 #include "scip/scip.h"
+#include "scip/scip_exact.h"
 #include "scip/set.h"
 #include "scip/lp.h"
 #include "scip/lpexact.h"
@@ -699,14 +700,15 @@ void concatCert(
 
 /** closes the certificate output files */
 void SCIPcertificateExit(
-   SCIP*                 scip,               /**< scip data structure */
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   SCIP*                 scip                /**< scip data structure */
    )
 {
+   SCIP_CERTIFICATE* certificate = SCIPgetCertificate(scip);
+   SCIP_MESSAGEHDLR* messagehdlr = SCIPgetMessagehdlr(scip);
+   SCIP_SET* set = scip->set;
+
    assert(certificate != NULL);
-   assert(set != NULL);
+   assert(scip->set != NULL);
 
    if( certificate->origfile != NULL )
    {
@@ -1015,6 +1017,8 @@ void SCIPcertificatePrintProblemMessage(
 {
    va_list ap;
    char buffer[3 * SCIP_MAXSTRLEN];
+   size_t written;
+
    /* check if certificate output should be created */
    if( certificate->transfile == NULL )
       return;
@@ -1023,12 +1027,13 @@ void SCIPcertificatePrintProblemMessage(
    vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
    if( isorigfile )
-      SCIPfprintf(certificate->origfile, "%s", buffer);
+      written = SCIPfprintf(certificate->origfile, "%s", buffer);
    else
-      SCIPfprintf(certificate->transfile, "%s", buffer);
+      written = SCIPfprintf(certificate->transfile, "%s", buffer);
 
    va_end(ap);
    updateFilesize(certificate, strlen(buffer));
+   assert(written == strlen(buffer));
 }
 
 /** checks that the state of the certificate is correct */
@@ -1055,15 +1060,18 @@ void SCIPcertificatePrintProofMessage(
 {
    va_list ap;
    char buffer[3 * SCIP_MAXSTRLEN];
+   size_t written;
+
    /* check if certificate output should be created */
    if( certificate->derivationfile == NULL )
       return;
    va_start(ap, formatstr);
    vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
-   SCIPfprintf(certificate->derivationfile, "%s", buffer); // todo: is this correct?
+   written = SCIPfprintf(certificate->derivationfile, "%s", buffer); // todo: is this correct?
    va_end(ap);
    updateFilesize(certificate, strlen(buffer));
+   assert(written == strlen(buffer));
 }
 
 
