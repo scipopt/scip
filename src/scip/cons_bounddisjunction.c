@@ -1261,7 +1261,7 @@ SCIP_RETCODE upgradeCons(
       else
       {
          SCIP_CALL( SCIPaddCons(scip, newcons) );
-         assert((SCIPconsIsConflict(newcons) == SCIPconsIsConflict(cons)));
+         assert(SCIPconsIsLocal(cons) || (SCIPconsIsConflict(newcons) == SCIPconsIsConflict(cons)));
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
       }
 
