@@ -42,6 +42,7 @@
 #include "scip/pub_var.h"
 #include "scip/reader_cip.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -430,6 +431,10 @@ SCIP_RETCODE getVariable(
 
    /* parse the variable */
    SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, NULL, &endptr, &success) );
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CALL( SCIPaddVarExactData(scip, var, NULL, NULL, NULL) );
+   }
 
    if( !success )
    {
@@ -874,6 +879,10 @@ SCIP_DECL_READERREAD(readerReadCip)
       objoffset *= objscale;
       SCIP_CALL( SCIPcreateVar(scip, &objoffsetvar, "objoffset", objoffset, objoffset, 1.0, SCIP_VARTYPE_CONTINUOUS,
          TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+      if( SCIPisExactSolve(scip) )
+      {
+         SCIP_CALL( SCIPaddVarExactData(scip, objoffsetvar, NULL, NULL, NULL) );
+      }
       SCIP_CALL( SCIPaddVar(scip, objoffsetvar) );
       SCIP_CALL( SCIPreleaseVar(scip, &objoffsetvar) );
       SCIPdebugMsg(scip, "added variables <objoffset> for objective offset of <%g>\n", objoffset);

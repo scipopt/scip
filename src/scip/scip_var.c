@@ -917,6 +917,99 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    return SCIP_OKAY;
 }
 
+/** parse the given string as linear sum of variables and coefficients (c1 \<x1\> + c2 \<x2\> + ... + cn \<xn\>)
+ *  (see SCIPwriteVarsLinearsum() ); if it was successful, the pointer success is set to TRUE
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note The pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist.
+ *
+ *  @note If the number of (parsed) variables is greater than the available slots in the variable array, nothing happens
+ *        except that the required size is stored in the corresponding integer; the reason for this approach is that we
+ *        cannot reallocate memory, since we do not know how the memory has been allocated (e.g., by a C++ 'new' or SCIP
+ *        memory functions).
+ */
+SCIP_RETCODE SCIPparseVarsLinearsumExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< string to parse */
+   SCIP_VAR**            vars,               /**< array to store the parsed variables */
+   SCIP_Rational**       vals,               /**< array to store the parsed coefficients */
+   int*                  nvars,              /**< pointer to store number of parsed variables */
+   int                   varssize,           /**< size of the variable array */
+   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   char**                endptr,             /**< pointer to store the final string position if successful */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
+   )
+{
+   SCIP_VAR*** monomialvars;
+   SCIP_Rational**  monomialcoefs;
+   int*        monomialnvars;
+   int         nmonomials;
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPparseVarsLinearsumExact", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(scip != NULL);
+   assert(str != NULL);
+   assert(vars != NULL || varssize == 0);
+   assert(vals != NULL || varssize == 0);
+   assert(nvars != NULL);
+   assert(requiredsize != NULL);
+   assert(endptr != NULL);
+   assert(success != NULL);
+
+   *requiredsize = 0;
+
+   SCIP_CALL( SCIPparseVarsPolynomialExact(scip, str, &monomialvars, &monomialcoefs, &nmonomials, endptr, success) );
+
+   if( !*success )
+   {
+      assert(nmonomials == 0); /* SCIPparseVarsPolynomial should have freed all buffers, so no need to call free here */
+      return SCIP_OKAY;
+   }
+
+   /* check if linear sum is just "0" */
+   if( nmonomials == 1 && monomialnvars[0] == 0 && RatIsZero(monomialcoefs[0]) )
+   {
+      *nvars = 0;
+      *requiredsize = 0;
+
+      SCIPfreeParseVarsPolynomialDataExact(scip, &monomialvars, &monomialcoefs, nmonomials);
+
+      return SCIP_OKAY;
+   }
+
+   *nvars = nmonomials;
+   *requiredsize = nmonomials;
+
+   /* if we have enough slots in the variables array, copy variables over */
+   if( varssize >= nmonomials )
+   {
+      int v;
+
+      for( v = 0; v < nmonomials; ++v )
+      {
+         assert(monomialvars[v][0] != NULL);
+
+         vars[v] = monomialvars[v][0]; /*lint !e613*/
+         RatSet(vals[v], monomialcoefs[v]); /*lint !e613*/
+      }
+   }
+
+   SCIPfreeParseVarsPolynomialDataExact(scip, &monomialvars, &monomialcoefs, nmonomials);
+
+   return SCIP_OKAY;
+}
+
 /** parse the given string as signomial of variables and coefficients
  *  (c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...)
  *  (see SCIPwriteVarsPolynomial()); if it was successful, the pointer success is set to TRUE
@@ -1271,6 +1364,319 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    return SCIP_OKAY;
 }
 
+/** parse the given string as signomial of variables and coefficients
+ *  (c1 \<x11\>^e11 \<x12\>^e12 ... \<x1n\>^e1n + c2 \<x21\>^e21 \<x22\>^e22 ... + ... + cn \<xn1\>^en1 ...)
+ *  (see SCIPwriteVarsPolynomial()); if it was successful, the pointer success is set to TRUE
+ *
+ *  The user has to call SCIPfreeParseVarsPolynomialData(scip, monomialvars, monomialexps,
+ *  monomialcoefs, monomialnvars, *nmonomials) short after SCIPparseVarsPolynomial to free all the
+ *  allocated memory again.
+ *
+ *  Parsing is stopped at the end of string (indicated by the \\0-character) or when no more monomials
+ *  are recognized.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPparseVarsPolynomialExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< string to parse */
+   SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
+   SCIP_Rational***      monomialcoefs,      /**< pointer to store array with monomial coefficients */
+   int*                  nmonomials,         /**< pointer to store number of parsed monomials */
+   char**                endptr,             /**< pointer to store the final string position if successful */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
+   )
+{
+   typedef enum
+   {
+      SCIPPARSEPOLYNOMIAL_STATE_BEGIN,       /* we are at the beginning of a monomial */
+      SCIPPARSEPOLYNOMIAL_STATE_INTERMED,    /* we are in between the factors of a monomial */
+      SCIPPARSEPOLYNOMIAL_STATE_COEF,        /* we parse the coefficient of a monomial */
+      SCIPPARSEPOLYNOMIAL_STATE_VARS,        /* we parse monomial variables */
+      SCIPPARSEPOLYNOMIAL_STATE_EXPONENT,    /* we parse the exponent of a variable */
+      SCIPPARSEPOLYNOMIAL_STATE_END,         /* we are at the end the polynomial */
+      SCIPPARSEPOLYNOMIAL_STATE_ERROR        /* a parsing error occured */
+   } SCIPPARSEPOLYNOMIAL_STATES;
+
+   SCIPPARSEPOLYNOMIAL_STATES state;
+   int monomialssize;
+
+   /* data of currently parsed monomial */
+   int varssize;
+   int nvars;
+   SCIP_VAR** vars;
+   SCIP_Rational* coef;
+
+   assert(scip != NULL);
+   assert(str != NULL);
+   assert(monomialvars != NULL);
+   assert(monomialcoefs != NULL);
+   assert(nmonomials != NULL);
+   assert(endptr != NULL);
+   assert(success != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPparseVarsPolynomialExact", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   *success = FALSE;
+   *nmonomials = 0;
+   monomialssize = 0;
+   *monomialvars = NULL;
+   *monomialcoefs = NULL;
+
+   /* initialize state machine */
+   state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
+   varssize = 0;
+   nvars = 0;
+   vars = NULL;
+
+   RatCreateBuffer(SCIPbuffer(scip), &coef);
+   RatSetString(coef, "inf");
+
+   SCIPdebugMsg(scip, "parsing polynomial from '%s'\n", str);
+
+   while( *str && state != SCIPPARSEPOLYNOMIAL_STATE_END && state != SCIPPARSEPOLYNOMIAL_STATE_ERROR )
+   {
+      /* skip white space */
+      SCIP_CALL( SCIPskipSpace((char**)&str) );
+
+      assert(state != SCIPPARSEPOLYNOMIAL_STATE_END);
+
+      switch( state )
+      {
+      case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
+      {
+         if( !RatIsInfinity(coef)  ) /*lint !e777*/
+         {
+            SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", RatApproxReal(coef), nvars);
+
+            /* push previous monomial */
+            if( monomialssize <= *nmonomials )
+            {
+               monomialssize = SCIPcalcMemGrowSize(scip, *nmonomials+1);
+
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  *nmonomials, monomialssize) );
+               SCIP_CALL( RatReallocBlockArray(SCIPblkmem(scip), monomialcoefs, *nmonomials, monomialssize) );
+            }
+
+            if( nvars > 0 )
+            {
+               SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*monomialvars)[*nmonomials], vars, nvars) ); /*lint !e866*/
+            }
+            else
+            {
+               (*monomialvars)[*nmonomials] = NULL;
+            }
+
+            RatSet((*monomialcoefs)[*nmonomials], coef);
+            ++*nmonomials;
+
+            nvars = 0;
+            RatSetString(coef, "inf");
+         }
+
+         if( *str == '<' )
+         {
+            /* there seem to come a variable at the beginning of a monomial
+             * so assume the coefficient is 1.0
+             */
+            state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
+            RatSetString(coef, "1");
+         }
+         else if( *str == '-' || *str == '+' || isdigit(*str) )
+            state = SCIPPARSEPOLYNOMIAL_STATE_COEF;
+         else
+            state = SCIPPARSEPOLYNOMIAL_STATE_END;
+
+         break;
+      }
+
+      case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
+      {
+         if( *str == '<' )
+         {
+            /* there seem to come another variable */
+            state = SCIPPARSEPOLYNOMIAL_STATE_VARS;
+         }
+         else if( *str == '-' || *str == '+' || isdigit(*str) )
+         {
+            /* there seem to come a coefficient, which means the next monomial */
+            state = SCIPPARSEPOLYNOMIAL_STATE_BEGIN;
+         }
+         else /* since we cannot detect the symbols we stop parsing the polynomial */
+            state = SCIPPARSEPOLYNOMIAL_STATE_END;
+
+         break;
+      }
+
+      case SCIPPARSEPOLYNOMIAL_STATE_COEF:
+      {
+         if( *str == '+' && !isdigit(str[1]) )
+         {
+            /* only a plus sign, without number */
+            RatSetString(coef, "1");
+            ++str;
+         }
+         else if( *str == '-' && !isdigit(str[1]) )
+         {
+            /* only a minus sign, without number */
+            RatSetString(coef, "-1");
+            ++str;
+         }
+         else if( SCIPstrToRationalValue(str, coef, endptr) )
+         {
+            str = *endptr;
+         }
+         else
+         {
+            SCIPerrorMessage("could not parse number in the beginning of '%s'\n", str);
+            state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
+            break;
+         }
+
+         /* after the coefficient we go into the intermediate state, i.e., expecting next variables */
+         state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;  /*lint !e838*/
+
+         break;
+      }
+
+      case SCIPPARSEPOLYNOMIAL_STATE_VARS:
+      {
+         SCIP_VAR* var;
+
+         assert(*str == '<');
+
+         /* parse variable name */
+         SCIP_CALL( SCIPparseVarName(scip, str, &var, endptr) );
+
+         /* check if variable name was parsed */
+         if( *endptr == str )
+         {
+            state = SCIPPARSEPOLYNOMIAL_STATE_END;
+            break;
+         }
+
+         if( var == NULL )
+         {
+            SCIPerrorMessage("did not find variable in the beginning of %s\n", str);
+            state = SCIPPARSEPOLYNOMIAL_STATE_ERROR;
+            break;
+         }
+
+         /* add variable to vars array */
+         if( nvars + 1 > varssize )
+         {
+            varssize = SCIPcalcMemGrowSize(scip, nvars+1);
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &vars,      nvars, varssize) );
+         }
+         assert(vars != NULL);
+
+         vars[nvars] = var;
+         ++nvars;
+
+         str = *endptr;
+
+         if( *str == '^' )
+            state = SCIPPARSEPOLYNOMIAL_STATE_EXPONENT;
+         else
+            state = SCIPPARSEPOLYNOMIAL_STATE_INTERMED;
+
+         break;
+      }
+
+      case SCIPPARSEPOLYNOMIAL_STATE_END:
+      case SCIPPARSEPOLYNOMIAL_STATE_ERROR:
+      default:
+         SCIPerrorMessage("unexpected state\n");
+         return SCIP_READERROR;
+      }
+   }
+
+   /* set end pointer */
+   *endptr = (char*)str;
+
+   /* check state at end of string */
+   switch( state )
+   {
+   case SCIPPARSEPOLYNOMIAL_STATE_BEGIN:
+   case SCIPPARSEPOLYNOMIAL_STATE_END:
+   case SCIPPARSEPOLYNOMIAL_STATE_INTERMED:
+   {
+      if( !RatIsInfinity(coef) ) /*lint !e777*/
+      {
+         /* push last monomial */
+         SCIPdebugMsg(scip, "push monomial with coefficient <%g> and <%d> vars\n", RatApproxReal(coef), nvars);
+         if( monomialssize <= *nmonomials )
+         {
+            monomialssize = *nmonomials+1;
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  *nmonomials, monomialssize) );
+            SCIP_CALL( RatReallocBlockArray(SCIPblkmem(scip), monomialcoefs, *nmonomials, monomialssize) );
+         }
+
+         if( nvars > 0 )
+         {
+            /* shrink vars and exponents array to needed size and take over ownership */
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &vars, varssize, nvars) );
+            (*monomialvars)[*nmonomials] = vars;
+            vars = NULL;
+         }
+         else
+         {
+            (*monomialvars)[*nmonomials] = NULL;
+         }
+         RatSet((*monomialcoefs)[*nmonomials], coef);
+         ++*nmonomials;
+      }
+
+      *success = TRUE;
+      break;
+   }
+
+   case SCIPPARSEPOLYNOMIAL_STATE_COEF:
+   case SCIPPARSEPOLYNOMIAL_STATE_VARS:
+   case SCIPPARSEPOLYNOMIAL_STATE_EXPONENT:
+   {
+      SCIPerrorMessage("unexpected parsing state at end of polynomial string\n");
+   }
+   /*lint -fallthrough*/
+   case SCIPPARSEPOLYNOMIAL_STATE_ERROR:
+      assert(!*success);
+      break;
+   }
+
+   /* free memory to store current monomial, if still existing */
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, varssize);
+
+   if( *success && *nmonomials > 0 )
+   {
+      /* shrink arrays to required size, so we do not need to keep monomialssize around */
+      assert(*nmonomials <= monomialssize);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, monomialvars,  monomialssize, *nmonomials) );
+      SCIP_CALL( RatReallocBlockArray(SCIPblkmem(scip), monomialcoefs, monomialssize, *nmonomials) );
+
+      /* SCIPwriteVarsPolynomial(scip, NULL, *monomialvars, *monomialexps, *monomialcoefs, *monomialnvars, *nmonomials, FALSE); */
+   }
+   else
+   {
+      /* in case of error, cleanup all data here */
+      SCIPfreeParseVarsPolynomialDataExact(scip, monomialvars, monomialcoefs, *nmonomials);
+      *nmonomials = 0;
+   }
+
+   RatFreeBuffer(SCIPbuffer(scip), &coef);
+
+   return SCIP_OKAY;
+}
+
 /** frees memory allocated when parsing a signomial from a string
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1320,6 +1726,49 @@ void SCIPfreeParseVarsPolynomialData(
    SCIPfreeBlockMemoryArray(scip, monomialcoefs, nmonomials);
    SCIPfreeBlockMemoryArray(scip, monomialnvars, nmonomials);
    SCIPfreeBlockMemoryArray(scip, monomialexps, nmonomials);
+   SCIPfreeBlockMemoryArray(scip, monomialvars, nmonomials);
+}
+
+/** frees memory allocated when parsing a signomial from a string
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+void SCIPfreeParseVarsPolynomialDataExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
+   SCIP_Rational***      monomialcoefs,      /**< pointer to store array with monomial coefficients */
+   int                   nmonomials          /**< pointer to store number of parsed monomials */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(monomialvars  != NULL);
+   assert(monomialcoefs != NULL);
+   assert((*monomialvars  != NULL) == (nmonomials > 0));
+   assert((*monomialcoefs != NULL) == (nmonomials > 0));
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPfreeParseVarsPolynomialDataExact", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( nmonomials == 0 )
+      return;
+
+   for( i = nmonomials - 1; i >= 0; --i )
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &(*monomialvars)[i], 1);
+   }
+
+   RatFreeBlockArray(SCIPblkmem(scip), monomialcoefs, nmonomials);
    SCIPfreeBlockMemoryArray(scip, monomialvars, nmonomials);
 }
 
