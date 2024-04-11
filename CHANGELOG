@@ -4,6 +4,7 @@
 Features
 --------
 - Added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
+- Copy variable data pointer if no copy routine was supplied.
 
 Performance improvements
 ------------------------
