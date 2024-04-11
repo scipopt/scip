@@ -70,14 +70,6 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
    SCIP*                 scip                /**< scip data structure */
    );
 
-/** closes the certificate output files */
-void SCIPcertificateExit(
-   SCIP*                 scip,               /**< scip data structure */
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
-   );
-
 /** returns whether the certificate output is activated? */
 SCIP_Bool SCIPsetCertificateEnabled(
    SCIP_SET*             set                 /**< SCIP settings */
