@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1529,39 +1529,50 @@ SCIP_RETCODE SCIPsolSetVal(
 
          if( val != oldval )  /*lint !e777*/
          {
-            SCIP_Real obj;
-            SCIP_Real objcont;
-
             SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
-            /* update the objective value; we do not need to do this for partial solutions */
-            if( !SCIPsolIsPartial(sol) )
+            /* update the objective value; we do not need to do this for invalid objectives or partial solutions */
+            if( sol->obj != SCIP_INVALID && !SCIPsolIsPartial(sol) ) /*lint !e777*/
             {
+               SCIP_Real obj;
+               SCIP_Real oldobjcont;
+               SCIP_Real newobjcont;
+
                /* an unknown solution value does not count towards the objective */
                obj = SCIPvarGetUnchangedObj(var);
-               if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
-               {
-                  objcont = obj * oldval;
+               oldobjcont = (oldval == SCIP_UNKNOWN ? 0.0 : obj * oldval); /*lint !e777*/
+               newobjcont = (val == SCIP_UNKNOWN ? 0.0 : obj * val); /*lint !e777*/
 
-                  /* we want to use a clean infinity */
-                  if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, sol->obj-objcont) )
-                     sol->obj = SCIPsetInfinity(set);
-                  else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj-objcont)) )
-                     sol->obj = -SCIPsetInfinity(set);
-                  else
-                     sol->obj -= objcont;
+               /* we want to use a safe invalid if the contribution exchange contradicts the infinity status of the objective value */
+               if( SCIPsetIsInfinity(set, sol->obj) )
+               {
+                  if( ( SCIPsetIsInfinity(set, oldobjcont) && !SCIPsetIsInfinity(set, newobjcont) )
+                     || ( !SCIPsetIsInfinity(set, -oldobjcont) && SCIPsetIsInfinity(set, -newobjcont) ) )
+                     sol->obj = SCIP_INVALID;
                }
-               if( val != SCIP_UNKNOWN ) /*lint !e777*/
+               else if( SCIPsetIsInfinity(set, -sol->obj) )
                {
-                  objcont = obj * val;
+                  if( ( SCIPsetIsInfinity(set, -oldobjcont) && !SCIPsetIsInfinity(set, -newobjcont) )
+                     || ( !SCIPsetIsInfinity(set, oldobjcont) && SCIPsetIsInfinity(set, newobjcont) ) )
+                     sol->obj = SCIP_INVALID;
+               }
+               /* we want to use a clean infinity if the contribution exchange or the resulting objective hits the infinity bound */
+               else
+               {
+                  if( !SCIPsetIsInfinity(set, MAX(ABS(oldobjcont), ABS(newobjcont))) )
+                  {
+                     sol->obj -= oldobjcont;
+                     sol->obj += newobjcont;
 
-                  /* we want to use a clean infinity */
-                  if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, sol->obj+objcont) )
+                     if( SCIPsetIsInfinity(set, sol->obj) )
+                        sol->obj = SCIPsetInfinity(set);
+                     else if( SCIPsetIsInfinity(set, -sol->obj) )
+                        sol->obj = -SCIPsetInfinity(set);
+                  }
+                  else if( !SCIPsetIsInfinity(set, MAX(oldobjcont, -newobjcont)) )
                      sol->obj = SCIPsetInfinity(set);
-                  else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj+objcont)) )
+                  else if( !SCIPsetIsInfinity(set, MAX(-oldobjcont, newobjcont)) )
                      sol->obj = -SCIPsetInfinity(set);
-                  else
-                     sol->obj += objcont;
                }
             }
 
@@ -1581,37 +1592,51 @@ SCIP_RETCODE SCIPsolSetVal(
 
       if( val != oldval )  /*lint !e777*/
       {
-         SCIP_Real obj;
-         SCIP_Real objcont;
-
          SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
-         /* update objective: an unknown solution value does not count towards the objective */
-         obj = SCIPvarGetUnchangedObj(var);
-
-         if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
+         /* update the objective value; we do not need to do this for invalid objectives */
+         if( sol->obj != SCIP_INVALID ) /*lint !e777*/
          {
-            objcont = obj * oldval;
+            SCIP_Real obj;
+            SCIP_Real oldobjcont;
+            SCIP_Real newobjcont;
 
-            /* we want to use a clean infinity */
-            if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, sol->obj-objcont) )
-               sol->obj = SCIPsetInfinity(set);
-            else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj-objcont)) )
-               sol->obj = -SCIPsetInfinity(set);
-            else
-               sol->obj -= objcont;
-         }
-         if( val != SCIP_UNKNOWN ) /*lint !e777*/
-         {
-            objcont = obj * val;
+            /* an unknown solution value does not count towards the objective */
+            obj = SCIPvarGetUnchangedObj(var);
+            oldobjcont = (oldval == SCIP_UNKNOWN ? 0.0 : obj * oldval); /*lint !e777*/
+            newobjcont = (val == SCIP_UNKNOWN ? 0.0 : obj * val); /*lint !e777*/
 
-            /* we want to use a clean infinity */
-            if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, sol->obj+objcont) )
-               sol->obj = SCIPsetInfinity(set);
-            else if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, -(sol->obj+objcont)) )
-               sol->obj = -SCIPsetInfinity(set);
+            /* we want to use a safe invalid if the contribution exchange contradicts the infinity status of the objective value */
+            if( SCIPsetIsInfinity(set, sol->obj) )
+            {
+               if( ( SCIPsetIsInfinity(set, oldobjcont) && !SCIPsetIsInfinity(set, newobjcont) )
+                  || ( !SCIPsetIsInfinity(set, -oldobjcont) && SCIPsetIsInfinity(set, -newobjcont) ) )
+                  sol->obj = SCIP_INVALID;
+            }
+            else if( SCIPsetIsInfinity(set, -sol->obj) )
+            {
+               if( ( SCIPsetIsInfinity(set, -oldobjcont) && !SCIPsetIsInfinity(set, -newobjcont) )
+                  || ( !SCIPsetIsInfinity(set, oldobjcont) && SCIPsetIsInfinity(set, newobjcont) ) )
+                  sol->obj = SCIP_INVALID;
+            }
+            /* we want to use a clean infinity if the contribution exchange or the resulting objective hits the infinity bound */
             else
-               sol->obj += objcont;
+            {
+               if( !SCIPsetIsInfinity(set, MAX(ABS(oldobjcont), ABS(newobjcont))) )
+               {
+                  sol->obj -= oldobjcont;
+                  sol->obj += newobjcont;
+
+                  if( SCIPsetIsInfinity(set, sol->obj) )
+                     sol->obj = SCIPsetInfinity(set);
+                  else if( SCIPsetIsInfinity(set, -sol->obj) )
+                     sol->obj = -SCIPsetInfinity(set);
+               }
+               else if( !SCIPsetIsInfinity(set, MAX(oldobjcont, -newobjcont)) )
+                  sol->obj = SCIPsetInfinity(set);
+               else if( !SCIPsetIsInfinity(set, MAX(-oldobjcont, newobjcont)) )
+                  sol->obj = -SCIPsetInfinity(set);
+            }
          }
 
          solStamp(sol, stat, tree, FALSE);
@@ -1828,7 +1853,7 @@ SCIP_RETCODE SCIPsolIncVal(
 
    SCIPsetDebugMsg(set, "increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), (void*)sol, incval);
 
-   if( SCIPsetIsZero(set, incval) )
+   if( incval == 0.0 )
       return SCIP_OKAY;
 
    assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
@@ -2472,6 +2497,172 @@ SCIP_RETCODE solCheckExact(
    return SCIP_OKAY;
 }
 
+/** checks solution for feasibility in original problem without adding it to the solution store
+ *
+ *  We first check the variable bounds. Then we loop over all constraint handlers and constraints, checking each in the
+ *  order of their check priority.
+ */
+SCIP_RETCODE SCIPsolCheckOrig(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             checkmodifiable,    /**< have modifiable constraint to be checked? */
+   SCIP_Bool*            feasible            /**< stores whether given solution is feasible */
+   )
+{
+   SCIP_RESULT result;
+#ifndef NDEBUG
+   int oldpriority;
+#endif
+   int v;
+   int c;
+   int h;
+
+   assert(sol != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(!prob->transformed);
+   assert(feasible != NULL);
+
+   *feasible = TRUE;
+
+   SCIPsolResetViolations(sol);
+
+   if( !printreason )
+      completely = FALSE;
+
+   /* check bounds */
+   if( checkbounds )
+   {
+      for( v = 0; v < prob->nvars; ++v )
+      {
+         SCIP_VAR* var;
+         SCIP_Real solval;
+         SCIP_Real lb;
+         SCIP_Real ub;
+
+         var = prob->vars[v];
+         solval = SCIPsolGetVal(sol, set, stat, var);
+
+         lb = SCIPvarGetLbOriginal(var);
+         ub = SCIPvarGetUbOriginal(var);
+
+         if( SCIPprimalUpdateViolations(primal) )
+         {
+            SCIPsolUpdateBoundViolation(sol, lb - solval, SCIPrelDiff(lb, solval));
+            SCIPsolUpdateBoundViolation(sol, solval - ub, SCIPrelDiff(solval, ub));
+         }
+
+         if( SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub) )
+         {
+            *feasible = FALSE;
+
+            if( printreason )
+            {
+               SCIPmessagePrintInfo(messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
+                  SCIPvarGetName(var), lb, ub, solval);
+            }
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* sort original constraint according to check priority */
+   SCIP_CALL( SCIPprobSortConssCheck(prob) );
+
+   /* check original constraints
+    *
+    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
+    * the original problem; however, if the solution comes from a heuristic during presolving, modifiable constraints
+    * have to be checked;
+    */
+#ifndef NDEBUG
+   oldpriority = INT_MAX;
+#endif
+   h = 0;
+   for( c = 0; c < prob->nconss; ++c )
+   {
+      SCIP_CONS* cons;
+      int priority;
+
+      cons = prob->origcheckconss[c];
+      assert( SCIPconsGetHdlr(cons) != NULL );
+      priority = SCIPconshdlrGetCheckPriority(SCIPconsGetHdlr(cons));
+
+#ifndef NDEBUG
+      assert( priority <= oldpriority );
+      oldpriority = priority;
+#endif
+
+      /* check constraints handlers without constraints that have a check priority at least as high as current
+       * constraint */
+      while( h < set->nconshdlrs && SCIPconshdlrGetCheckPriority(set->conshdlrs[h]) >= priority )
+      {
+         if( !SCIPconshdlrNeedsCons(set->conshdlrs[h]) )
+         {
+            SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
+                  checkintegrality, checklprows, printreason, completely, &result) );
+
+            if( result != SCIP_FEASIBLE )
+            {
+               *feasible = FALSE;
+
+               if( !completely )
+                  return SCIP_OKAY;
+            }
+         }
+         ++h;
+      }
+
+      /* now check constraint */
+      if( SCIPconsIsChecked(cons) && (checkmodifiable || !SCIPconsIsModifiable(cons)) )
+      {
+         /* check solution */
+         SCIP_CALL( SCIPconsCheck(cons, set, sol, checkintegrality, checklprows, printreason, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* one final loop over the remaining constraints handlers without constraints */
+   while( h < set->nconshdlrs )
+   {
+      if( !SCIPconshdlrNeedsCons(set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
+               checkintegrality, checklprows, printreason, completely, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+      ++h;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks primal CIP solution for feasibility
  *
  *  @note The difference between SCIPsolCheck() and SCIPcheckSolOrig() is that modifiable constraints are handled
@@ -2857,7 +3048,7 @@ SCIP_RETCODE SCIPsolRetransform(
    {
       assert(SCIPvarGetUnchangedObj(vars[v]) == SCIPvarGetObj(vars[v])); /*lint !e777*/
 
-      if( !SCIPsetIsZero(set, solvals[v]) )
+      if( solvals[v] != 0.0 )
       {
          SCIP_CALL( solSetArrayVal(sol, set, vars[v], solvals[v]) );
          if( solvals[v] != SCIP_UNKNOWN ) /*lint !e777*/
@@ -3020,7 +3211,7 @@ void SCIPsolRecomputeObj(
    for( v = 0; v < nvars; ++v )
    {
       solval = SCIPsolGetVal(sol, set, stat, vars[v]);
-      if( !SCIPsetIsZero(set, solval) && solval != SCIP_UNKNOWN ) /*lint !e777*/
+      if( solval != 0.0 && solval != SCIP_UNKNOWN ) /*lint !e777*/
       {
          sol->obj += SCIPvarGetUnchangedObj(vars[v]) * solval;
       }

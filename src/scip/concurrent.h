@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -36,6 +36,7 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 #include "scip/type_syncstore.h"
+#include "scip/type_retcode.h"
 #include "scip/def.h"
 
 #ifndef __SCIP_CONCURRENT_H__

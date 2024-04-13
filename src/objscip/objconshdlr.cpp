@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -619,6 +619,38 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsObj)
 
    return SCIP_OKAY;
 }
+
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint (if possible) */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraph)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_getpermsymgraph(scip, conshdlr, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint (if possible) */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraph)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_getsignedpermsymgraph(scip, conshdlr, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
 }
 
 
@@ -660,7 +692,8 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
          consActiveObj, consDeactiveObj,
          consEnableObj, consDisableObj, consDelVarsObj,
          consPrintObj, consCopyObj, consParseObj,
-         consGetVarsObj, consGetNVarsObj, consGetDiveBdChgsObj, conshdlrdata) ); /*lint !e429*/
+         consGetVarsObj, consGetNVarsObj, consGetDiveBdChgsObj,
+         consGetPermsymGraph, consGetSignedPermsymGraph, conshdlrdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

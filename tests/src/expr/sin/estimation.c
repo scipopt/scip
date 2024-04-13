@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -141,8 +141,8 @@ Test(separation, sine_x,
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 1.5, childlb, childub, FALSE);
    cr_expect(success);
-   cr_expect_eq(linconst, -1.5 * cos(1.5) + sin(1.5));
-   cr_expect_eq(lincoef, cos(1.5));
+   EXPECTFEQ(linconst, -1.5 * cos(1.5) + sin(1.5));
+   EXPECTFEQ(lincoef, cos(1.5));
 
    /*
     * test underestimation
@@ -150,8 +150,8 @@ Test(separation, sine_x,
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 4.8, childlb, childub, TRUE);
    cr_expect(success);
-   cr_expect_eq(linconst, -4.8 * cos(4.8) + sin(4.8));
-   cr_expect_eq(lincoef, cos(4.8));
+   EXPECTFEQ(linconst, -4.8 * cos(4.8) + sin(4.8));
+   EXPECTFEQ(lincoef, cos(4.8));
 
    /*
     * test point where solution tangent is not feasible
@@ -246,8 +246,8 @@ Test(separation, sine_y,
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -4.0, childlb, childub, FALSE);
    cr_expect(success);
-   cr_expect_eq(linconst, 4 * cos(-4) + sin(-4));
-   cr_expect_eq(lincoef, cos(-4));
+   EXPECTFEQ(linconst, 4 * cos(-4) + sin(-4));
+   EXPECTFEQ(lincoef, cos(-4));
 
    /*
     * test underestimation (not possible in this case)
@@ -255,8 +255,8 @@ Test(separation, sine_y,
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, -3.1, childlb, childub, TRUE);
    cr_expect(success);
-   cr_expect_eq(linconst, -sin(-6) + 2.0 * sin(-3));
-   cr_expect_eq(lincoef, (sin(-3) - sin(-6)) / 3.0);
+   EXPECTFEQ(linconst, -sin(-6) + 2.0 * sin(-3));
+   EXPECTFEQ(lincoef, (sin(-3) - sin(-6)) / 3.0);
 
    /*
     * test point where solution tangent is not underestimating
@@ -348,8 +348,8 @@ Test(separation, sine_z,
 
    success = computeEstimatorsTrig(scip, expr, &lincoef, &linconst, 2.0, childlb, childub, FALSE);
    cr_expect(success);
-   cr_expect_eq(linconst, -2 * cos(2) + sin(2));
-   cr_expect_eq(lincoef, cos(2));
+   EXPECTFEQ(linconst, -2 * cos(2) + sin(2));
+   EXPECTFEQ(lincoef, cos(2));
 
    /* note: solution underestimation doesn't make sense in [1,3] */
 
@@ -360,8 +360,8 @@ Test(separation, sine_z,
    cr_expect(success);
 
    /* check secant */
-   cr_expect_eq(linconst, -0.5 * sin(3) + 1.5 * sin(1));
-   cr_expect_eq(lincoef, 0.5 * (sin(3) - sin(1)));
+   EXPECTFEQ(linconst, -0.5 * sin(3) + 1.5 * sin(1));
+   EXPECTFEQ(lincoef, 0.5 * (sin(3) - sin(1)));
 
    /* release expression */
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );

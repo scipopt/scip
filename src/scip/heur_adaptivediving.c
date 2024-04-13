@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -233,7 +233,6 @@ SCIP_RETCODE findAndStoreDivesets(
    }
    return SCIP_OKAY;
 }
-
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
@@ -579,7 +578,7 @@ SCIP_DECL_HEUREXEC(heurExecAdaptivediving) /*lint --e{715}*/
    SCIPdebugMsg(scip, "Selected diveset %s\n", SCIPdivesetGetName(diveset));
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible,
-         lpiterlimit, SCIP_DIVECONTEXT_ADAPTIVE) );
+         lpiterlimit, -1, -1.0, SCIP_DIVECONTEXT_ADAPTIVE) );
 
    if( *result == SCIP_FOUNDSOL )
    {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -106,7 +106,7 @@ void getIneqViol(
    assert(viol1 != NULL);
    assert(viol2 != NULL);
 
-   norm = SQRT(SQR(xcoef) + SQR(ycoef));
+   norm = sqrt(SQR(xcoef) + SQR(ycoef));
 
    /* inequality can be used for underestimating xy if and only if xcoef * ycoef > 0 */
    if( xcoef * ycoef >= 0 )
@@ -867,34 +867,34 @@ void computeBilinEnvelope2(
    {
       assert(mj > 0.0);
 
-      /* xi = (y + SQRT(mi*mj)*x - qi) / (REALABS(mi) + SQRT(mi*mj)) */
+      /* xi = (y + sqrt(mi*mj)*x - qi) / (REALABS(mi) + sqrt(mi*mj)) */
       SCIPquadprecProdDD(xiq, mi, mj);
       SCIPquadprecSqrtQ(xiq, xiq);
       SCIPquadprecProdQD(xiq, xiq, x);
       SCIPquadprecSumQD(xiq, xiq, y);
-      SCIPquadprecSumQD(xiq, xiq, -qi); /* (y + SQRT(mi*mj)*x - qi) */
+      SCIPquadprecSumQD(xiq, xiq, -qi); /* (y + sqrt(mi*mj)*x - qi) */
       SCIPquadprecProdDD(tmpq, mi, mj);
       SCIPquadprecSqrtQ(tmpq, tmpq);
-      SCIPquadprecSumQD(tmpq, tmpq, REALABS(mi)); /* REALABS(mi) + SQRT(mi*mj) */
+      SCIPquadprecSumQD(tmpq, tmpq, REALABS(mi)); /* REALABS(mi) + sqrt(mi*mj) */
       SCIPquadprecDivQQ(xiq, xiq, tmpq);
-      assert(EPSEQ((y + SQRT(mi*mj)*x - qi) / (REALABS(mi) + SQRT(mi*mj)), QUAD_TO_DBL(xiq), 1e-3));
+      assert(EPSEQ((y + sqrt(mi*mj)*x - qi) / (REALABS(mi) + sqrt(mi*mj)), QUAD_TO_DBL(xiq), 1e-3));
 
       /* yi = mi*(*xi) + qi */
       SCIPquadprecProdQD(yiq, xiq, mi);
       SCIPquadprecSumQD(yiq, yiq, qi);
       assert(EPSEQ(mi*(QUAD_TO_DBL(xiq)) + qi, QUAD_TO_DBL(yiq), 1e-3));
 
-      /* xj = (y + SQRT(mi*mj)*x - qj) / (REALABS(mj) + SQRT(mi*mj)) */
+      /* xj = (y + sqrt(mi*mj)*x - qj) / (REALABS(mj) + sqrt(mi*mj)) */
       SCIPquadprecProdDD(xjq, mi, mj);
       SCIPquadprecSqrtQ(xjq, xjq);
       SCIPquadprecProdQD(xjq, xjq, x);
       SCIPquadprecSumQD(xjq, xjq, y);
-      SCIPquadprecSumQD(xjq, xjq, -qj); /* (y + SQRT(mi*mj)*x - qj) */
+      SCIPquadprecSumQD(xjq, xjq, -qj); /* (y + sqrt(mi*mj)*x - qj) */
       SCIPquadprecProdDD(tmpq, mi, mj);
       SCIPquadprecSqrtQ(tmpq, tmpq);
-      SCIPquadprecSumQD(tmpq, tmpq, REALABS(mj)); /* REALABS(mj) + SQRT(mi*mj) */
+      SCIPquadprecSumQD(tmpq, tmpq, REALABS(mj)); /* REALABS(mj) + sqrt(mi*mj) */
       SCIPquadprecDivQQ(xjq, xjq, tmpq);
-      assert(EPSEQ((y + SQRT(mi*mj)*x - qj) / (REALABS(mj) + SQRT(mi*mj)), QUAD_TO_DBL(xjq), 1e-3));
+      assert(EPSEQ((y + sqrt(mi*mj)*x - qj) / (REALABS(mj) + sqrt(mi*mj)), QUAD_TO_DBL(xjq), 1e-3));
 
       /* yj = mj*(*xj) + qj */
       SCIPquadprecProdQD(yjq, xjq, mj);

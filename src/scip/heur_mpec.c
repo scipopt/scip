@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -477,7 +477,7 @@ SCIP_RETCODE heurExec(
       else if( solstat <= SCIP_NLPSOLSTAT_FEASIBLE && !binaryfeasible )
       {
          BMScopyMemoryArray(initguess, primal, SCIPgetNVars(scip));
-         SCIP_CALL( SCIPsetNlpiInitialGuess(scip, heurdata->nlpi, heurdata->nlpiprob, primal, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPsetNlpiInitialGuess(scip, heurdata->nlpi, heurdata->nlpiprob, initguess, NULL, NULL, NULL) );
          SCIPdebugMsg(scip, "update theta from %g -> %g\n", theta, theta*heurdata->sigma);
 
          if( !reinit )

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -365,7 +365,7 @@ Test(nlhdlrsoc, detectandfree2, .description = "detects simple norm expression")
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* detects SQRT(8 +  2*(x + 1)^2 + 4*(sin(y) - 2)^2 ) as soc expression */
+/* detects sqrt(8 +  2*(x + 1)^2 + 4*(sin(y) - 2)^2 ) as soc expression */
 Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expression")
 {
    SCIP_CONS* cons;
@@ -399,9 +399,9 @@ Test(nlhdlrsoc, detectandfree3, .description = "detects more complex norm expres
    /* setup expected data */
    SCIP_EXPR* vars[3] = {xexpr, SCIPexprGetChildren(SCIPexprGetChildren(normexpr)[0])[2], normexpr};
    int nterms = 4;
-   SCIP_Real offsets[4] = {SQRT(2.0), -4.0, SQRT(8.0) /* constant */, 0.0};
+   SCIP_Real offsets[4] = {sqrt(2.0), -4.0, sqrt(8.0) /* constant */, 0.0};
    int nnonzeroes[4] = {1, 1, 0, 1};
-   SCIP_Real transcoefs[3] = {SQRT(2.0), 2.0, 1.0};
+   SCIP_Real transcoefs[3] = {sqrt(2.0), 2.0, 1.0};
    int transcoefsidx[3] = {0, 1, 2};
 
    /* check nlhdlrexprdata*/
@@ -452,7 +452,7 @@ Test(nlhdlrsoc, detectandfree4, .description = "detects simple quadratic express
    /* setup expected data */
    SCIP_EXPR* vars[3] = {xexpr, SCIPexprGetChildren(SCIPexprGetChildren(expr)[2])[0], yexpr};
    SCIP_Real offsets[3] = {0.0, 0.0, 0.0};
-   SCIP_Real transcoefs[3] = {SQRT(2.0), 1.0, 3.0};
+   SCIP_Real transcoefs[3] = {sqrt(2.0), 1.0, 3.0};
    int transcoefsidx[3] = {0, 1, 2};
    int nnonzeroes[3] = {1, 1, 1};
 
@@ -504,7 +504,7 @@ Test(nlhdlrsoc, detectandfree5, .description = "detects more complication quadra
    int nterms = 4;
    SCIP_Real offsets[4] = {0.0, 0.0, 1.0, 0.0};
    int nnonzeroes[4] = {1, 1, 0, 1};
-   SCIP_Real transcoefs[3] = {1.0, SQRT(2.0), 3.0};
+   SCIP_Real transcoefs[3] = {1.0, sqrt(2.0), 3.0};
    int transcoefsidx[3] = {0, 1, 2};
 
    /* check nlhdlrexprdata*/
@@ -591,7 +591,7 @@ Test(nlhdlrsoc, detectandfree7, .description = "detects hyperbolic quadratic exp
    /* setup expected data */
    SCIP_EXPR* vars[4] = {xexpr, zexpr, yexpr, uexpr};
    int nterms = 5;
-   SCIP_Real offsets[5] = {0.0, 0.0, SQRT(2.0), 0.0, 0.0}; /* hyperbolic, constant is second to last of lhs */
+   SCIP_Real offsets[5] = {0.0, 0.0, sqrt(2.0), 0.0, 0.0}; /* hyperbolic, constant is second to last of lhs */
    SCIP_Real transcoefs[6] = {4.0, 2.0, 1.0, -1.0, 1.0, 1.0};
    int transcoefsidx[6] = {0, 1, 2, 3, 2, 3};
    int nnonzeroes[5] = {1, 1, 0, 2, 2};
@@ -682,7 +682,7 @@ Test(nlhdlrsoc, detectandfree9, .description = "detects negated quadratic expres
    int nterms = 4;
    SCIP_Real offsets[4] = {0.0, 0.0, 1.0, 0.0};
    int nnonzeroes[4] = {1, 1, 0, 1};
-   SCIP_Real transcoefs[3] = {1.0, SQRT(2.0), 3.0};
+   SCIP_Real transcoefs[3] = {1.0, sqrt(2.0), 3.0};
    int transcoefsidx[3] = {0, 1, 2};
 
    /* check nlhdlrexprdata*/
@@ -730,7 +730,7 @@ Test(nlhdlrsoc, detectandfree10, .description = "detects negated hyperbolic quad
    /* setup expected data */
    SCIP_EXPR* vars[4] = {xexpr, zexpr, yexpr, uexpr};
    int nterms = 5;
-   SCIP_Real offsets[5] = {0.0, 0.0, SQRT(2.0), 0.0, 0.0};
+   SCIP_Real offsets[5] = {0.0, 0.0, sqrt(2.0), 0.0, 0.0};
    int nnonzeroes[5] = {1, 1, 0, 2, 2};
    SCIP_Real transcoefs[6] = {4.0, 2.0, 1.0, -1.0, 1.0, 1.0};
    int transcoefsidx[6] = {0, 1, 2, 3, 2, 3};
@@ -784,7 +784,7 @@ Test(nlhdlrsoc, detectandfree11, .description = "detects complex quadratic const
    /* setup expected data */
    SCIP_EXPR* vars[3] = {zexpr, yexpr, xexpr};
    int nterms = 4;
-   SCIP_Real offsets[4] = {-0.5321193159399078, -1.1644355645349063, SQRT(17.0909090909091), 3.275663328435811};
+   SCIP_Real offsets[4] = {-0.5321193159399078, -1.1644355645349063, sqrt(17.0909090909091), 3.275663328435811};
    int nnonzeroes[4] = {3, 3, 0, 3};
    SCIP_Real transcoefs[9] = { 0.8403540860560068, -0.8715100046656585, -0.15866733787070855,
                               -1.5723379860224058, -1.2601695810081268, -1.4058990135251308,
@@ -841,7 +841,7 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    SCIP_EXPR* vars[3] = {zexpr, yexpr, xexpr};
    int nterms = 4;
    int nnonzeroes[4] = {3, 3, 0, 3};
-   SCIP_Real offsets[4] = {-1.1644355645349063, 0.5321193159399078, SQRT(17.0909090909091), 3.275663328435811};
+   SCIP_Real offsets[4] = {-1.1644355645349063, 0.5321193159399078, sqrt(17.0909090909091), 3.275663328435811};
    SCIP_Real transcoefs[9] = {-1.5723379860224058, -1.2601695810081268, -1.4058990135251308,
                               -0.8403540860560068,  0.8715100046656585,  0.15866733787070855,
                               0.42242364072103755,  0.5895397027601558, -1.0008633075190196};
@@ -860,7 +860,7 @@ Test(nlhdlrsoc, detectandfree12, .description = "detects complex quadratic const
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 }
 
-/* detects that SQRT(x^2 -4x + 1) <= 2 is not a soc expression */
+/* detects that sqrt(x^2 -4x + 1) <= 2 is not a soc expression */
 Test(nlhdlrsoc, detectandfree13, .description = "detects complex quadratic constraint")
 {
    SCIP_CONS* cons;
@@ -941,7 +941,7 @@ Test(nlhdlrsoc, detectandfree14, .description = "detects complex quadratic const
 }
 
 
-/* disaggregates SQRT( 8 + 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) <= -2*(w - 1) */
+/* disaggregates sqrt( 8 + 2*(x + 1)^2 + 3*(y + sin(x) + 2)^2 ) <= -2*(w - 1) */
 Test(nlhdlrsoc, disaggregation, .description = "disaggregate soc and check the resulting datastructure")
 {
    SCIP_CONS* cons;
@@ -1055,10 +1055,10 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    cutvars[0] = nlhdlrexprdata->disvars[0];
    cutvars[1] = x;
    cutvars[2] = auxvar;
-   cutvals[0] = -2.0 / SQRT(8.0) - 1.0;
-   cutvals[1] = 4.0 / SQRT(8.0);
-   cutvals[2] = 2.0 / SQRT(8.0) - 1.0;
-   rhs = cutvals[1] + cutvals[2] * 2.0 - SQRT(8.0) + 2.0;
+   cutvals[0] = -2.0 / sqrt(8.0) - 1.0;
+   cutvals[1] = 4.0 / sqrt(8.0);
+   cutvals[2] = 2.0 / sqrt(8.0) - 1.0;
+   rhs = cutvals[1] + cutvals[2] * 2.0 - sqrt(8.0) + 2.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
    SCIPfreeRowprep(scip, &cut);
@@ -1069,10 +1069,10 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    cutvars[0] = auxvar;
    cutvars[1] = y;
    cutvars[2] = nlhdlrexprdata->disvars[1];
-   cutvals[0] = 1.0 / SQRT(17.0) - 1.0;
-   cutvals[1] = 8.0 / SQRT(17.0);
-   cutvals[2] = -1.0 / SQRT(17.0) - 1.0;
-   rhs =  cutvals[0] * 2.0 + cutvals[1] * 2.0 + cutvals[2] * 1.0 - SQRT(17.0) + 3.0;
+   cutvals[0] = 1.0 / sqrt(17.0) - 1.0;
+   cutvals[1] = 8.0 / sqrt(17.0);
+   cutvals[2] = -1.0 / sqrt(17.0) - 1.0;
+   rhs =  cutvals[0] * 2.0 + cutvals[1] * 2.0 + cutvals[2] * 1.0 - sqrt(17.0) + 3.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
    SCIPfreeRowprep(scip, &cut);
@@ -1083,10 +1083,10 @@ Test(nlhdlrsoc, separation1, .description = "test separation for simple norm exp
    cutvars[0] = auxvar;
    cutvars[1] = z;
    cutvars[2] = nlhdlrexprdata->disvars[2];
-   cutvals[0] = 1.0 / SQRT(17.0) - 1.0;
-   cutvals[1] = -8.0 / SQRT(17.0);
-   cutvals[2] = -1.0 / SQRT(17.0) - 1.0;
-   rhs =  cutvals[0] * 2.0 - cutvals[1] * 2.0 + cutvals[2] * 1.0 - SQRT(17.0) + 3.0;
+   cutvals[0] = 1.0 / sqrt(17.0) - 1.0;
+   cutvals[1] = -8.0 / sqrt(17.0);
+   cutvals[2] = -1.0 / sqrt(17.0) - 1.0;
+   rhs =  cutvals[0] * 2.0 - cutvals[1] * 2.0 + cutvals[2] * 1.0 - sqrt(17.0) + 3.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);
    SCIPfreeRowprep(scip, &cut);
@@ -1222,9 +1222,9 @@ Test(nlhdlrsoc, separation3, .description = "test separation for simple expressi
    cutvars[0] = x;
    cutvars[1] = y;
    cutvars[2] = z;
-   cutvals[0] = 4.0 / SQRT( 5.0 );
-   cutvals[1] = -1.0 + 1.0 / SQRT( 5.0 );
-   cutvals[2] = -(5.0 + SQRT( 5.0 )) / 5.0;
+   cutvals[0] = 4.0 / sqrt(5.0);
+   cutvals[1] = -1.0 + 1.0 / sqrt(5.0);
+   cutvals[2] = -(5.0 + sqrt(5.0)) / 5.0;
    rhs = 0.0;
 
    checkCut(cut, cutvars, cutvals, rhs, 3);

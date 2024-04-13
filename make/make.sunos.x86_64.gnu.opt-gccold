@@ -1,5 +1,5 @@
 FLAGS		+=	-DNDEBUG -DNO_STRERROR_R -DSCIP_ROUNDING_FE
-OFLAGS		+=	-m64 -O3 -fomit-frame-pointer
+OFLAGS		+=	-m64 -O3 -ffp-contract=off -fomit-frame-pointer
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing
 ARFLAGS		=	crs

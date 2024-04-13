@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -104,7 +104,7 @@
  *
  * \verbinclude output.log
  *
- * @version  8.0.3.5
+ * @version  10.0.0
  *
  * \image html scippy.png
  */
@@ -383,6 +383,7 @@
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
  * - @subpage TRAINESTIMATION "How to train custom tree size estimation for SCIP"
  * - @subpage SYMMETRY "How to use symmetry handling in SCIP"
+ * - @subpage PROBINGDIVING "How to use probing and diving mode"
  */
 
 /**@page AUTHORS SCIP Authors
@@ -7533,6 +7534,30 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page PROBINGDIVING How to use probing and diving mode
+ *
+ * SCIP contains two methods to perform a temporary dive in the branch-and-bound tree: the diving mode and the probing mode.
+ * Both methods enable the modification of variable bounds, addition of new constraints, or adjustments to the objective function.
+ * Whereas the diving mode works directly on the LP structure, the probing mode creates temporary branch-and-bound nodes, which makes it possible to perform backtracks during a dive.
+ * Probing allows to perform domain propagation at the temporary nodes and provides the ability to solve the LP by column generation if a pricer plugin is implemented; neither is possible in diving mode.
+ *
+ * After entering diving or probing mode by calling SCIPstartDive() and SCIPstartProbing(), respectively, there exist various functions that allow the user to temporarily change the LP.
+ * An overview for diving can be found here[https://www.scipopt.org/doc/html/group__PublicLPDivingMethods.php] and for the probing mode here[https://scipopt.org/doc/html/group__PublicProbingMethods.php].
+ * To reset all changes, the respective mode needs to be ended by calling SCIPendDive() and SCIPendProbing(), respectively.
+ *
+ * Note that, although the state of the LP and the problem is reset after ending probing and diving, both modes can have several effects on the subsequent solving process.
+ * In some situations, when the LP is infeasible for example, conflict analysis will be run in both probing and diving modes, which can lead to globally valid conflict constraints that are then added to the main solving process.
+ * Similarly, the function SCIPpropagateProbing() might find globally valid bound changes, which are added to the main SCIP and considered in the subsequent solving process.
+ * Another way to leverage insights found during probing or diving is to update pseudo costs during both modes, helping make better branching decisions.
+ * This is controlled by setting the parameter "divingpscosts" to TRUE, which is done in the default settings of SCIP.
+ * Moreover, if the LP was not solved to optimality before entering diving mode (or the parameter "resolverestore" is set to TRUE), the LP is resolved to reset the solution.
+ * In some cases, such as when dealing with a numerically difficult instance, this might lead to a different LP state.
+ * Finally, during probing, global variable statistics can be collected by calling SCIPenableVarHistory() after starting probing.
+ * Since these statistics can be used for decision-making in SCIP, enabling their collection can have an effect on the solving process after probing ends.
+ *
+ */
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page OBJ Creating, capturing, releasing, and adding data objects
  *
  *  Data objects (variables, constraints, rows, ... ) are subject to reference counting
@@ -8338,11 +8363,12 @@
  *
  * @section SYMDETECT Symmetry detection
  *
+ * SCIP can detect two types of symmetries: permutation symmetries and signed permutation symmetries.
  * In a purely integer linear setting
  * \f[
  *  \max \{ c^{\top} x : Ax \leq b,\; x \in \mathbb{Z}^n \},
  * \f]
- * a symmetry is a permutation \f$\gamma\f$ of \f$\{1,\dots,n\}\f$ that acts on vector \f$x\f$ by
+ * a permutation symmetry is a permutation \f$\gamma\f$ of \f$\{1,\dots,n\}\f$ that acts on vector \f$x\f$ by
  * permuting its coordinates via \f$\gamma(x) = (x_{\gamma^{-1}(1)}, \dots, x_{\gamma^{-1}(n)})\f$
  * such that
  *
@@ -8350,15 +8376,30 @@
  * -# \f$\gamma\f$ maps feasible solutions onto feasible solutions, i.e., \f$Ax \leq b\f$ if and only
  *    if \f$A\gamma(x) \leq b\f$.
  *
- * Since this definition depends on the feasible region of the integer program, which is unknown
+ * Signed permutation symmetries are defined similarly and allow to also handle symmetries arising from
+ * reflections of the feasible region along standard hyperplanes, e.g., mapping \f$x_i\f$ to \f$-x_i\f$
+ * and keeping the remaining entries of a solution vector \f$x\f$ invariant. Formally, a signed permutation \f$\gamma\f$
+ * is a permutation of the set \f$\{\pm 1, \dots, \pm n\}\f$ such that \f$\gamma(-i) = - \gamma(i)\f$
+ * for all \f$i \in \{1,\dots,n\}\f$. A signed permutation acts on a vector \f$x\f$ as
+ * \f$\gamma(x) = (\mathrm{sgn}(\gamma^{-1}(1))x_{|\gamma^{-1}(1)|},\dots,
+ * \mathrm{sgn}(\gamma^{-1}(n))x_{|\gamma^{-1}(n)|})\f$,
+ * where \f$\mathrm{sgn}(\cdot)\f$ is the sign function. The remaining properties of a symmetry are the same.
+ * It is possible to switch between these two types of symmetries via the
+ * parameter <code>propagating/symmetry/symtype</code>.
+ * Moreover, to detect more general signed permutations, one can shift variables with a
+ * bounded domain to be centered at the origin. This way, also variables with, e.g., domains \f$[1,2]\f$
+ * and \f$[0,1]\f$ can be symmetric. In SCIP, we implement this shift only within symmetry detection
+ * to find generalized signed permutations; the variable bounds of the problem itself remain unchanged.
+ *
+ * Since both definitions depend on the feasible region of the integer program, which is unknown
  * in general, SCIP only computes symmetries that leave the formulation of the optimization problem
  * invariant. To detect such formulation symmetries, SCIP builds an auxiliary colored graph whose
  * color-preserving automorphisms correspond to symmetries of the integer program. The symmetries of
  * the graph, and thus of the integer program, are then computed by an external graph automorphism
  * library that needs to be linked to SCIP. Currently, SCIP ships with two such libraries: The graph
- * automorphism library bliss is the basic workhorse to detect symmetries. Moreover, one can use
- * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss and is the
- * current default.
+ * automorphism libraries bliss or nauty/traces are the basic workhorses to detect symmetries. Moreover, one can use
+ * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss or nauty/traces.
+ * The current default is to use bliss in combination with sassy for symmetry detection.
  *
  * @note To detect symmetries, SCIP needs to be built with sassy/bliss, which can be achieved
  * by using the options <code>SYM=sassy</code> and <code>-DSYM=sassy</code> in the Makefile and CMake
@@ -8367,11 +8408,13 @@
  * Besides purely integer linear problems, SCIP also supports symmetry detection for general
  * constraint mixed-integer programs containing most of the constraint types that can be handled
  * by SCIP. In particular, symmetries of mixed-integer nonlinear problems can be detected.
+ * Moreover, symmetries can also be detected in code containing customized constraints.
+ * To this end, a suitable callback needs to be implemented, see \ref SYMDETECTCUSTOM.
  *
  * @subsection SYMPROCESS Processing symmetry information
  *
  * After symmetries have been computed, SCIP has access to a list \f$\gamma_1,\dots,\gamma_m\f$ of
- * permutations that generate a group \f$\Gamma\f$ of symmetries of the optimization problem. That
+ * (signed) permutations that generate a group \f$\Gamma\f$ of symmetries of the optimization problem. That
  * is, SCIP has not access to all permutations in \f$\Gamma\f$, but only a set of generators. Based
  * on these generators, SCIP analyzes the group \f$\Gamma\f$ and checks whether it can be split into
  * independent factors. That is, whether there exist subgroups \f$\Gamma_1,\dots,\Gamma_k\f$ of
@@ -8381,6 +8424,9 @@
  *
  * @section SYMMETHODS Symmetry handling methods
  *
+ * Most symmetry handling methods available in SCIP have only been implemented for ordinary permutation symmetries,
+ * and not for signed permutation symmetries. In the following, we silently assume that the described methods
+ * deal with ordinary permutation symmetries if not mentioned differently.
  * To handle symmetries, SCIP uses three different classes of methods, which we detail below.
  *
  * @subsection SYMCONSS Static symmetry handling constraints for binary variable domains
@@ -8439,6 +8485,8 @@
  *    Orbitopal reduction respects the parameter <code>propagating/symmetry/detectorbitopes</code>.
  * -# Lexicographic reduction is the dynamic counterpart of symresack and orbisack propagation.
  *    Lexicographic reduction respects the parameter <code>propagating/symmetry/addsymresacks</code>.
+ *    At the moment, the implementation of this method is the only one that allows to also handle signed permutation
+ *    symmetries.
  * -# Orbital reduction is a generalization of orbital fixing that also works for non-binary variable domains.
  *    Orbital reduction respects the 2-bit of the bitset <code>misc/usesymmetry</code>.
  *    See \ref SYMMETHODSELECT <method selection>. Since there is no static counterpart, this method ignores
@@ -8448,7 +8496,7 @@
  * In particular, at different branch-and-bound tree nodes, a different variable ordering can be active.
  * Since the symmetries are handled for independent factors of the symmetry group, a different variable ordering method
  * can be used for handling symmetries in different factors. In SCIP, the same method is used for orbital reduction and
- * for lexicographic reduction, which means that these two methods are compatible and can be used simultanuously in the
+ * for lexicographic reduction, which means that these two methods are compatible and can be used simultaneously in the
  * same factor. Orbitopal reduction uses a different method.
  *
  * As SCIP might restart the branch-and-bound process, which removes information regarding the branching decisions,
@@ -8511,8 +8559,8 @@
  *    is TRUE, some compatible SST cuts are added, too. Besides this, no further symmetry handling methods
  *    are applied for \f$\Gamma_i\f$.
  * -# Otherwise, orbital reduction is used. If <code>propagating/symmetry/usedynamicprop</code> and
- *    <code>propagating/symmetry/addsymresacks> are <code>TRUE</code>, then also the dynamic lexicographic reduction
- *    method is used.
+ *    <code>propagating/symmetry/addsymresacks</code> are <code>TRUE</code>, then also the dynamic lexicographic
+ *    reduction method is used.
  * -# Otherwise, if the majority of variables affected by \f$\Gamma_i\f$ are non-binary, SST cuts are applied
  *    to handle \f$\Gamma_i\f$. No further symmetry handling methods are applied for \f$\Gamma_i\f$.
  *
@@ -8528,14 +8576,152 @@
  * @subsection SYMTIMING Controlling the timing of symmetry computation
  *
  * Since presolving might both remove and introduce formulation symmetries, the timing of computing symmetries
- * can be changed via the parameters <code>propagating/symmetry/addconsstiming</code> and
- * <code>propagating/symmetry/ofsymcomptiming</code>.
- * The first specifies the moment at which symmetries handling methods must be determined.
- * The second specifies the moment at which the symmetries must be computed.
- * If the second is triggered at a later moment than the first, the symmetries are computed just before determining
- * the symmetry handling methods, so the first parameter is the dominant parameter.
- * Both parameters take values 0, 1, or 2, corresponding to computing symmetries before presolving,
- * during presolving, or when the symmetry handling methods are applied first, respectively.
+ * can be changed via the parameter <code>propagating/symmetry/symtiming</code>.
+ * The parameter takes value 0, 1, or 2, corresponding to computing symmetries before presolving,
+ * during presolving, or at the end of presolving, respectively.
+ * Based on the computed symmetries, SCIP enables some symmetry handling methods as explained above.
+ *
+ * @subsection SYMDETECTCUSTOM Symmetry detection for customized constraints
+ *
+ * To detect (signed) permutation symmetries, SCIP requests from each constraint present in the problem to be solved
+ * a node and edge colored graph whose symmetries correspond to the symmetries of the corresponding constraint.
+ * This information is provided by two callbacks, the SCIP_DECL_CONSGETPERMSYMGRAPH callback for permutation
+ * symmetries and the SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH callback for signed permutation symmetries. If a
+ * constraint handler does not implement one of these callbacks, SCIP will not detect symmetries of the corresponding
+ * type.
+ *
+ * In the following, we briefly describe how such a symmetry detection graph looks like for linear constraints.
+ * Afterwards, we mention the basic setup of the symmetry detection graphs and how the callbacks could be implemented
+ * for customized constraints.
+ *
+ * @subsubsection SYMDETECTLINEAR Symmetry detection graphs for linear constraints
+ *
+ * Simple permutation symmetries of a linear constraint \f$\sum_{i = 1}^n a_ix_i \leq \beta\f$ are given
+ * by permutations that exchange equivalent variables with the same coefficients. These symmetries can be encoded
+ * by a graph with the following structure. For every variable \f$x_i\f$, the graph contains a node \f$v_i\f$
+ * that receives a color that uniquely determines the type of the variable (lower/upper bound, objective coefficient,
+ * integrality). Moreover, the graph contains a node \f$w\f$ that receives a color corresponding to the right-hand side
+ * \f$\beta\f$. Node \f$w\f$ is then connected with all nodes corresponding to variables. Edge \f$\{w,v_i\}\f$ then
+ * receives a color corresponding to the coefficient \f$a_i\f$. Then, every automorphism of this graph corresponds to a
+ * permutation symmetry of the linear constraint.
+ *
+ * For signed permutation symmetries, almost the same construction can be used. The only difference is that also
+ * nodes \f$v_{-i}\f$ need to be introduced that correspond to the negation of variable \f$x_i\f$. These negated
+ * variable nodes are then also connected with node \f$\beta\f$ and the corresponding edge receives color \f$-a_i\f$.
+ * Finally, to make sure that the corresponding symmetry corresponds to a signed permutation \f$\gamma\f$, i.e.,
+ * \f$\gamma(-i) = - \gamma(i)\f$, one also needs to add the edges \f$\{v_i,v_{-i}\}\f$ that remain uncolored.
+ * Note that the color of node \f$v_{-i}\f$ also needs to uniquely determine the negated variable bounds and
+ * objective coefficient.
+ *
+ * @subsubsection SYMDETECTRULES Principles for building symmetry detection graphs
+ *
+ * A symmetry detection graph of a constraint needs to have the property that each of its automorphisms corresponds
+ * to a (signed) permutation of the constraint. Moreover, the corresponding constraint handler of the constraints
+ * needs to be encoded in the graph to make sure that only symmetries between equivalent constraints can be computed.
+ * Among others, this can be achieved by assigning the nodes and edges appropriate colors. To make sure that the
+ * colors are compatible between the different symmetry detection graphs, SCIP automatically determines the colors of
+ * nodes and edges based on information that is provided by the user (or the creator of the graph).
+ *
+ * A pointer to a globally maintained symmetry detection graph is provided to the callbacks. The nodes and edges of the
+ * graph of a constraint are added to this global graph.
+ * The nodes of the graph need to be added via the functions <code>SCIPaddSymgraphValnode()</code>
+ * and <code>SCIPaddSymgraphConsnode()</code>. The first function can be used to create nodes corresponding to
+ * a numerical value like \f$\beta\f$ in the above example, the latter function creates a node corresponding to
+ * a provided constraint. This ensures that only symmetry detection graphs from the same constraint handler
+ * can be isomorphic. The colors of the nodes are then computed automatically by SCIP based on the information
+ * that is provided the functions creating these nodes. This ensures that node colors are compatible.
+ *
+ * Edges are created via the function <code>SCIPaddSymgraphEdge()</code> which receives, among others, the
+ * indices of created nodes. Note that there is no function for creating variable nodes as SCIP automatically
+ * creates nodes for variables. Their indices can be accessed via <code>SCIPgetSymgraphVarnodeidx()</code> for
+ * original variables and <code>SCIPgetSymgraphNegatedVarnodeidx()</code> for negated variables used for
+ * signed permutations. The edges between variables \f$x_i\f$ and \f$-x_i\f$ are also automatically present
+ * in the symmetry detection graph for signed permutation symmetries. The function <code>SCIPaddSymgraphEdge()</code>
+ * also takes a numerical value as argument, which allows to assign an edge a weight (e.g., \f$a_i\f$
+ * as in the above example).
+ *
+ * Moreover, special nodes, so-called operator nodes, can be added via <code>SCIPaddSymgraphOpnode()</code>.
+ * Such nodes allow to model special structures of a constraint, which allow to have more degrees of freedom in
+ * creating symmetry detection graphs. Different operators are distinguished by an integral value.
+ * Their encoding is thus similar to the one of nodes created by <code>SCIPaddSymgraphValnode()</code>.
+ * In computing colors, operator nodes are treated differently though, which allows to distinguish
+ * operator 2 from the numerical value 2.
+ *
+ * @subsubsection SYMDETECTEXAMPLES Example for creating symmetry detection callbacks
+ *
+ * Let \f$G = (V,E)\f$ be an undirected graph with node weights \f$c_v\f$, \f$v \in C\f$. The maximum weight
+ * stable set problem can be modeled via the integer program
+ * \f\[ \max\Big\{ \sum_{v \in V} c_vx_v : x_u + x_v \leq 1 \text{ for all } \{u,v\} \in E,\; x \in \{0,1\}^V\Big\}.\f\]
+ * Suppose a user wants to implement a constraint handler <code>cons_stableset</code> that enforces a solution to define
+ * a stable set in \f$G\f$, e.g., by propagation methods and separating edge and clique inequalities.
+ * Then, the symmetries of the constraint are the weight-preserving automorphisms of the underlying graph \f$G\f$.
+ * The symmetry detection graph thus can be almost a copy of \f$G\f$.
+ *
+ * In our construction, we introduce for each node \f$v\f$ of the graph an operator node \f$v'\f$.
+ * Moreover, for each edge \f$\{u,v\}\in E\f$, we add the edges \f$\{u',v'\}\f$ to the symmetry detection graph.
+ * To identify the symmetry detection graph as derived from <code>cons_stableset</code>, we add a constraint node
+ * that is connected with all operator nodes, which preserves the automorphisms of \f$G\f$. Finally, each
+ * node \f$v'\f$ is connected with the corresponding variable node for \f$x_v\f$ by an edge.
+ *
+ * In the following, we present a code snippet showing how to implement the above mentioned symmetry detection graph.
+ * We assume that the constraint data <code>consdata</code> contains the following fields
+ *
+ * - <code>nnodes</code> number of nodes in graph;
+ * - <code>nedges</code> number of edges in graph;
+ * - <code>first</code> array containing the first nodes of each edge;
+ * - <code>second</code> array containing the second nodes of each edge;
+ * - <code>weights</code> array containing for each node its corresponding weight;
+ * - <code>vars</code> array containing a binary variable for each node modeling whether node is present in stable set.
+ *
+ * The code for creating the symmetry detection callback could then look like this.
+ *
+ * \code{.c}
+ * #define NODEOP 1
+ * static
+ * SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphStableSet)
+ * {
+ *    SCIP_CONSDATA* consdata;
+ *    int* idx;
+ *    int vidx;
+ *    int nnodes;
+ *    int v;
+ *
+ *    consdata = SCIPconsGetData(cons);
+ *    nnodes = consdata->nnodes;
+ *
+ *    SCIP_CALL( SCIPallocBufferArray(scip, &idx, nnodes + 1) );
+ *
+ *    // create operator nodes and constraint node
+ *    for( v = 0; v < nnodes; ++v )
+ *    {
+ *       SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, NODEOP, &idx[v]) );
+ *    }
+ *    SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &idx[nnodes]) );
+ *
+ *    // add edges of underlying graph
+ *    for( v = 0; v < consdata->nedges; ++v )
+ *    {
+ *       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, idx[consdata->first[v]], idx[consdata->second[v]], FALSE, 0.0) );
+ *    }
+ *
+ *    // connect nodes with constraint node
+ *    for( v = 0; v < nnodes; ++v )
+ *    {
+ *       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, idx[v], nodeidx[nnodes], FALSE, 0.0) );
+ *    }
+ *
+ *    // connect operator nodes with variable nodes, assign edges weight of node
+ *    for( v = 0; v < nnodes; ++v )
+ *    {
+ *       vidx = SCIPgetSymgraphVarnodeidx(scip, graph, consdata->vars[v]);
+ *       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, idx[v], vidx, TRUE, consdata->weights[v]) );
+ *    }
+ *
+ *    SCIPfreeBufferArray(scip, &idx);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
  */
 
 /**@page LICENSE License

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -40,6 +40,7 @@
 #include "scip/clock.h"
 #include "scip/set.h"
 #include "scip/pub_var.h"
+#include "scip/pub_message.h"
 #include "scip/sol.h"
 #include "scip/tree.h"
 #include "scip/struct_set.h"
@@ -268,6 +269,7 @@ SCIP_RETCODE evalAndDiff(
 #undef SCIPexprhdlrSetSimplify
 #undef SCIPexprhdlrSetReverseProp
 #undef SCIPexprhdlrSetEstimate
+#undef SCIPexprhdlrSetGetSymdata
 #undef SCIPexprhdlrGetName
 #undef SCIPexprhdlrGetDescription
 #undef SCIPexprhdlrGetPrecedence
@@ -380,10 +382,8 @@ void SCIPexprhdlrSetCopyFreeHdlr(
 /** set the expression handler callbacks to copy and free expression data */
 void SCIPexprhdlrSetCopyFreeData(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
-   SCIP_DECL_EXPRCOPYDATA((*copydata)),      /**< expression data copy callback (can be NULL for expressions
-                                                  without data) */
-   SCIP_DECL_EXPRFREEDATA((*freedata))       /**< expression data free callback (can be NULL if data does not
-                                                  need to be freed) */
+   SCIP_DECL_EXPRCOPYDATA((*copydata)),      /**< expression data copy callback (can be NULL for expressions without data) */
+   SCIP_DECL_EXPRFREEDATA((*freedata))       /**< expression data free callback (can be NULL if data does not need to be freed) */
    )
 {  /*lint --e{715}*/
    assert(exprhdlr != NULL);
@@ -515,6 +515,17 @@ void SCIPexprhdlrSetReverseProp(
    assert(exprhdlr != NULL);
 
    exprhdlr->reverseprop = reverseprop;
+}
+
+/** set the symmetry information callback of an expression handler */
+void SCIPexprhdlrSetGetSymdata(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRGETSYMDATA((*getsymdata))   /**< symmetry information callback (can be NULL) */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->getsymdata = getsymdata;
 }
 
 /** set the estimation callbacks of an expression handler */
@@ -668,6 +679,16 @@ SCIP_Bool SCIPexprhdlrHasReverseProp(
    assert(exprhdlr != NULL);
 
    return exprhdlr->reverseprop != NULL;
+}
+
+/** returns whether expression handler implements the symmetry information callback */
+SCIP_Bool SCIPexprhdlrHasGetSymData(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->getsymdata != NULL;
 }
 
 /** compares two expression handler w.r.t. their name */
@@ -1369,13 +1390,10 @@ SCIP_RETCODE SCIPexprhdlrEvalFwDiffExpr(
    SCIP_EXPR*            expr,               /**< expression to be evaluated */
    SCIP_Real*            val,                /**< buffer to store value of expression */
    SCIP_Real*            dot,                /**< buffer to store derivative value */
-   SCIP_Real*            childrenvals,       /**< values for children, or NULL if values stored in children should
-                                                  be used */
+   SCIP_Real*            childrenvals,       /**< values for children, or NULL if values stored in children should be used */
    SCIP_SOL*             sol,                /**< solution that is evaluated (can be NULL) */
-   SCIP_Real*            childrendirs,       /**< directional derivatives for children, or NULL if dot-values stored
-                                                  in children should be used */
-   SCIP_SOL*             direction           /**< direction of the derivative (useful only for var expressions, can
-                                                  be NULL if childrendirs is given) */
+   SCIP_Real*            childrendirs,       /**< directional derivatives for children, or NULL if dot-values stored in children should be used */
+   SCIP_SOL*             direction           /**< direction of the derivative (useful only for var expressions, can be NULL if childrendirs is given) */
    )
 {
    SCIP_Real origval;
@@ -1664,10 +1682,8 @@ SCIP_RETCODE SCIPexprhdlrReversePropExpr(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to propagate */
    SCIP_INTERVAL         bounds,             /**< the bounds on the expression that should be propagated */
-   SCIP_INTERVAL*        childrenbounds,     /**< array to store computed bounds for children, initialized with
-                                                  current activity */
-   SCIP_Bool*            infeasible          /**< buffer to store whether a children bounds were propagated to
-                                                  an empty interval */
+   SCIP_INTERVAL*        childrenbounds,     /**< array to store computed bounds for children, initialized with current activity */
+   SCIP_Bool*            infeasible          /**< buffer to store whether a children bounds were propagated to an empty interval */
    )
 {
    assert(exprhdlr != NULL);
@@ -3260,6 +3276,35 @@ SCIP_RETCODE SCIPexprSimplify(
    return SCIP_OKAY;
 }
 
+/** method to retrieve symmetry information from an expression
+ *
+ *  @see SCIPgetSymDataExpr
+ */
+SCIP_RETCODE SCIPexprGetSymData(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression from which information is retrieved */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry information */
+   )
+{
+   SCIP_EXPRHDLR* exprhdlr;
+
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(symdata != NULL);
+
+   exprhdlr = SCIPexprGetHdlr(expr);
+   assert(exprhdlr != NULL);
+
+   if( exprhdlr->getsymdata != NULL )
+   {
+      SCIP_CALL( exprhdlr->getsymdata(set->scip, expr, symdata) );
+   }
+   else
+      *symdata = NULL;
+
+   return SCIP_OKAY;
+}
+
 /** checks whether an expression is quadratic
  *
  * An expression is quadratic if it is either a power expression with exponent 2.0, a product of two expressions,
@@ -3557,7 +3602,8 @@ void SCIPexprFreeQuadratic(
    BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->lincoefs, expr->quaddata->nlinexprs);
    BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->bilinexprterms, expr->quaddata->nbilinexprterms);
    BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvalues, n);
-   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvectors, n * n);  /*lint !e647*/
+   if( expr->quaddata->eigenvectors != NULL )  /* check for NULL here before calculating n*n to avoid (harmless) overflow in case of large n */
+      BMSfreeBlockMemoryArray(blkmem, &expr->quaddata->eigenvectors, n * n);  /*lint !e647*/
 
    for( i = 0; i < n; ++i )
    {
@@ -4068,10 +4114,8 @@ void SCIPexprGetQuadraticData(
    SCIP_EXPR*            expr,               /**< quadratic expression */
    SCIP_Real*            constant,           /**< buffer to store constant term, or NULL */
    int*                  nlinexprs,          /**< buffer to store number of expressions that appear linearly, or NULL */
-   SCIP_EXPR***          linexprs,           /**< buffer to store pointer to array of expressions that appear linearly,
-                                                  or NULL */
-   SCIP_Real**           lincoefs,           /**< buffer to store pointer to array of coefficients of expressions that
-                                                  appear linearly, or NULL */
+   SCIP_EXPR***          linexprs,           /**< buffer to store pointer to array of expressions that appear linearly, or NULL */
+   SCIP_Real**           lincoefs,           /**< buffer to store pointer to array of coefficients of expressions that appear linearly, or NULL */
    int*                  nquadexprs,         /**< buffer to store number of expressions in quadratic terms, or NULL */
    int*                  nbilinexprs,        /**< buffer to store number of bilinear expressions terms, or NULL */
    SCIP_Real**           eigenvalues,        /**< buffer to store pointer to array of eigenvalues of Q, or NULL */
@@ -4114,15 +4158,12 @@ void SCIPexprGetQuadraticData(
 void SCIPexprGetQuadraticQuadTerm(
    SCIP_EXPR*            quadexpr,           /**< quadratic expression */
    int                   termidx,            /**< index of quadratic term */
-   SCIP_EXPR**           expr,               /**< buffer to store pointer to argument expression (the 'x') of this term,
-                                                  or NULL */
+   SCIP_EXPR**           expr,               /**< buffer to store pointer to argument expression (the 'x') of this term, or NULL */
    SCIP_Real*            lincoef,            /**< buffer to store linear coefficient of variable, or NULL */
    SCIP_Real*            sqrcoef,            /**< buffer to store square coefficient of variable, or NULL */
-   int*                  nadjbilin,          /**< buffer to store number of bilinear terms this variable is involved in,
-                                                  or NULL */
+   int*                  nadjbilin,          /**< buffer to store number of bilinear terms this variable is involved in, or NULL */
    int**                 adjbilin,           /**< buffer to store pointer to indices of associated bilinear terms, or NULL */
-   SCIP_EXPR**           sqrexpr             /**< buffer to store pointer to square expression (the 'x^2') of this term
-                                                  or NULL if no square expression, or NULL */
+   SCIP_EXPR**           sqrexpr             /**< buffer to store pointer to square expression (the 'x^2') of this term or NULL if no square expression, or NULL */
    )
 {
    SCIP_QUADEXPR_QUADTERM* quadexprterm;
@@ -4160,10 +4201,8 @@ void SCIPexprGetQuadraticBilinTerm(
    SCIP_EXPR**           expr1,              /**< buffer to store first factor, or NULL */
    SCIP_EXPR**           expr2,              /**< buffer to store second factor, or NULL */
    SCIP_Real*            coef,               /**< buffer to coefficient, or NULL */
-   int*                  pos2,               /**< buffer to position of expr2 in quadexprterms array of quadratic
-                                                  expression, or NULL */
-   SCIP_EXPR**           prodexpr            /**< buffer to store pointer to expression that is product if first
-                                                  and second factor, or NULL */
+   int*                  pos2,               /**< buffer to position of expr2 in quadexprterms array of quadratic expression, or NULL */
+   SCIP_EXPR**           prodexpr            /**< buffer to store pointer to expression that is product if first and second factor, or NULL */
    )
 {
    SCIP_QUADEXPR_BILINTERM* bilinexprterm;
@@ -4200,6 +4239,61 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
    assert(expr->quaddata != NULL);
 
    return expr->quaddata->allexprsarevars;
+}
+
+/** returns a monomial representation of a product expression
+ *
+ * The array to store all factor expressions needs to be of size the number of
+ * children in the expression which is given by SCIPexprGetNChildren().
+ *
+ * Given a non-trivial monomial expression, the function finds its representation as \f$cx^\alpha\f$, where
+ * \f$c\f$ is a real coefficient, \f$x\f$ is a vector of auxiliary or original variables (where some entries can
+ * be NULL is the auxiliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
+ *
+ * A non-trivial monomial is a product of a least two expressions.
+ */
+SCIP_RETCODE SCIPexprGetMonomialData(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            coef,               /**< coefficient \f$c\f$ */
+   SCIP_Real*            exponents,          /**< exponents \f$\alpha\f$ */
+   SCIP_EXPR**           factors             /**< factor expressions \f$x\f$ */
+   )
+{
+   SCIP_EXPR* child;
+   int c;
+   int nexprs;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(coef != NULL);
+   assert(exponents != NULL);
+   assert(factors != NULL);
+
+   assert(SCIPexprIsProduct(set, expr));
+
+   *coef = SCIPgetCoefExprProduct(expr);
+   nexprs = SCIPexprGetNChildren(expr);
+
+   for( c = 0; c < nexprs; ++c )
+   {
+      child = SCIPexprGetChildren(expr)[c];
+
+      if( SCIPexprIsPower(set, child) )
+      {
+         exponents[c] = SCIPgetExponentExprPow(child);
+         factors[c] = SCIPexprGetChildren(child)[0];
+      }
+      else
+      {
+         exponents[c] = 1.0;
+         factors[c] = child;
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 /**@} */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -4104,6 +4104,7 @@ SCIP_RETCODE SCIPincludeConshdlrOptcumulative(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_EVENTHDLR* eventhdlrbinvars;
    SCIP_EVENTHDLR* eventhdlrintvars;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlrbinvars, EVENTHDLR_BINVARS_NAME, EVENTHDLR_BINVARS_DESC,
@@ -4117,22 +4118,38 @@ SCIP_RETCODE SCIPincludeConshdlrOptcumulative(
    SCIP_CALL( conshdlrdataCreate(scip, &conshdlrdata, eventhdlrbinvars, eventhdlrintvars) );
 
    /* include constraint handler */
-   SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING, CONSHDLR_PRESOLTIMING,
-         conshdlrCopyOptcumulative,
-         consFreeOptcumulative, consInitOptcumulative, consExitOptcumulative,
-         consInitpreOptcumulative, consExitpreOptcumulative, consInitsolOptcumulative, consExitsolOptcumulative,
-         consDeleteOptcumulative, consTransOptcumulative, consInitlpOptcumulative,
-         consSepalpOptcumulative, consSepasolOptcumulative, consEnfolpOptcumulative, consEnforelaxOptcomulative, consEnfopsOptcumulative, consCheckOptcumulative,
-         consPropOptcumulative, consPresolOptcumulative, consRespropOptcumulative, consLockOptcumulative,
-         consActiveOptcumulative, consDeactiveOptcumulative,
-         consEnableOptcumulative, consDisableOptcumulative,
-         consDelvarsOptcumulative, consPrintOptcumulative, consCopyOptcumulative, consParseOptcumulative,
-         NULL, NULL, NULL,
-         conshdlrdata) );
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
+         CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpOptcumulative, consEnfopsOptcumulative, consCheckOptcumulative,
+         consLockOptcumulative, conshdlrdata) );
+
+   /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyOptcumulative, consCopyOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeactiveOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOptcumulative,
+         CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOptcumulative, CONSHDLR_PROPFREQ,
+         CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpOptcumulative, consSepasolOptcumulative,
+         CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransOptcumulative) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxOptcomulative) );
 
    /* add optcumulative constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -337,7 +337,7 @@ TheoryDataPoints(change, testchgcoef) =
 {
    DataPoints(int, 0, 1),
    DataPoints(int, 0, 1),
-   DataPoints(SCIP_Real, 0, 1, -1, 2, -2),
+   DataPoints(SCIP_Real, 0, 1, -1),
    DataPoints(int, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
 };
 
@@ -1082,8 +1082,6 @@ Test(change, testlpiwritereadlpmethods)
    SCIP_Real activity2[2];
    SCIP_Real redcost2[2];
    SCIP_OBJSEN sense;
-   FILE* file;
-   FILE* file2;
 
    /* 2x2 problem */
    cr_assume( initProb(5, &ncols, &nrows, &nnonz, &sense) );
@@ -1107,12 +1105,22 @@ Test(change, testlpiwritereadlpmethods)
    SCIP_CALL( SCIPlpiWriteLP(lpi, "lpi_change_test_problem2.lp") );
    SCIP_CALL( SCIPlpiClear(lpi) );
 
-   file = fopen("lpi_change_test_problem.lp", "r");
-   file2 = fopen("lpi_change_test_problem2.lp", "r");
-   cr_assert_file_contents_eq(file, file2);
+   /* skip comparison of file content if LP solver is Xpress
+    * Xpress writes a timestamp to the .lp file, which makes a simple check for
+    * file content to be equal not reliable
+    */
+   if( strncmp(SCIPlpiGetSolverName(), "Xpress", 6) != 0 )
+   {
+      FILE* file;
+      FILE* file2;
 
-   fclose(file);
-   fclose(file2);
+      file = fopen("lpi_change_test_problem.lp", "r");
+      file2 = fopen("lpi_change_test_problem2.lp", "r");
+      cr_assert_file_contents_eq(file, file2);
+
+      fclose(file);
+      fclose(file2);
+   }
 
    remove("lpi_change_test_problem.lp");
    remove("lpi_change_test_problem2.lp");

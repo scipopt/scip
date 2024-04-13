@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -29,6 +29,7 @@
  * @author Timo Berthold
  * @author Gerald Gamrath
  * @author Marc Pfetsch
+ * @author Krunal Patel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -74,6 +75,8 @@
 #define DEFAULT_CONFLENGTHWEIGHT 0.0         /**< weight in score calculations for conflict length score*/
 #define DEFAULT_INFERENCEWEIGHT  0.0001      /**< weight in score calculations for inference score */
 #define DEFAULT_CUTOFFWEIGHT     0.0001      /**< weight in score calculations for cutoff score */
+#define DEFAULT_GMIAVGEFFWEIGHT  0.0         /**< weight in score calculations of average GMI cut normed efficacies */
+#define DEFAULT_GMILASTEFFWEIGHT 0.00001     /**< weight in score calculations of last GMI cut normed efficacy */
 #define DEFAULT_PSCOSTWEIGHT     1.0         /**< weight in score calculations for pseudo cost score */
 #define DEFAULT_NLSCOREWEIGHT    0.1         /**< weight in score calculations for nlcount score */
 #define DEFAULT_MINRELIABLE      1.0         /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
@@ -109,6 +112,9 @@
 #define DEFAULT_FILTERCANDSSYM   FALSE       /**< Use symmetry to filter branching candidates? */
 #define DEFAULT_TRANSSYMPSCOST   FALSE       /**< Transfer pscost information to symmetric variables if filtering is performed? */
 
+/* discounted pseudo cost */
+#define BRANCHRULE_DISCOUNTFACTOR        0.2 /**< default discount factor for discounted pseudo costs.*/
+
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -116,6 +122,8 @@ struct SCIP_BranchruleData
    SCIP_Real             conflengthweight;   /**< weight in score calculations for conflict length score */
    SCIP_Real             inferenceweight;    /**< weight in score calculations for inference score */
    SCIP_Real             cutoffweight;       /**< weight in score calculations for cutoff score */
+   SCIP_Real             gmiavgeffweight;    /**< weight in score calculations of average GMI normed cut efficacies */
+   SCIP_Real             gmilasteffweight;   /**< weight in score calculations of last GMI cut normalized efficacy */
    SCIP_Real             pscostweight;       /**< weight in score calculations for pseudo cost score */
    SCIP_Real             nlscoreweight;      /**< weight in score calculations for nlcount score */
    SCIP_Real             minreliable;        /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
@@ -166,6 +174,9 @@ struct SCIP_BranchruleData
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
    int                   npermvars;          /**< number of variables for permutations */
    SCIP_HASHMAP*         permvarmap;         /**< map of variables to indices in permvars array */
+
+   /* for discounted pseudo costs */
+   SCIP_Real             discountfactor;     /**< discount factor for discounted pseudo costs.*/
 };
 
 /*
@@ -329,9 +340,48 @@ SCIP_RETCODE SCIPupdateVarPseudocostSymmetric(
 {
    int orbitidx;
    int j;
+   SCIP_Bool useancpscost;
 
    assert( scip != NULL );
    assert( branchruledata != NULL );
+
+   /* update the discounted pseudo cost of the current node branched variable */
+   SCIP_CALL(SCIPgetBoolParam(scip, "branching/collectancpscost", &useancpscost));
+   if( useancpscost )
+   {
+      SCIP_NODE* currentnode;
+
+      currentnode = SCIPgetFocusNode(scip);
+      if( SCIPnodeGetDepth(currentnode) > 0 )
+      {
+         SCIP_DOMCHG* domchange;
+         SCIP_BOUNDCHG* boundchg;
+         int nboundchgs;
+         SCIP_VAR* var;
+         int i;
+         SCIP_Real parentlpsolval;
+         SCIP_Real parentsolvedelta;
+
+         domchange = SCIPnodeGetDomchg(currentnode);
+         nboundchgs = SCIPdomchgGetNBoundchgs(domchange);
+         for( i = 0; i < nboundchgs; ++i )
+         {
+            boundchg = SCIPdomchgGetBoundchg(domchange, i);
+            var = SCIPboundchgGetVar(boundchg);
+            assert(var != NULL);
+
+            if( SCIPboundchgGetBoundchgtype(boundchg) == SCIP_BOUNDCHGTYPE_BRANCHING &&
+               SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            {
+               parentlpsolval = SCIPboundchgGetLPSolVal(boundchg);
+               if( parentlpsolval >= SCIP_INVALID )
+                  continue;
+               parentsolvedelta = SCIPboundchgGetNewbound(boundchg) - parentlpsolval;
+               SCIP_CALL( SCIPupdateVarAncPseudocost(scip, var, parentsolvedelta, objdelta, weight) );
+            }
+         }
+      }
+   }
 
    if( branchruledata->nosymmetry || ! branchruledata->transsympscost || branchorbitidx == NULL )
    {
@@ -591,6 +641,8 @@ SCIP_Real calcScore(
    SCIP_Real             avginferencescore,  /**< average inference score */
    SCIP_Real             cutoffscore,        /**< cutoff score of current variable */
    SCIP_Real             avgcutoffscore,     /**< average cutoff score */
+   SCIP_Real             gmieffscore,        /**< normalized-eff of avg GMI cuts from row when var was frac and basic */
+   SCIP_Real             lastgmieffscore,    /**< last normalized gmieffscore when var was frac and basic  */
    SCIP_Real             pscostscore,        /**< pscost score of current variable */
    SCIP_Real             avgpscostscore,     /**< average pscost score */
    SCIP_Real             nlscore,            /**< nonlinear score of current variable between 0 and 1 */
@@ -616,7 +668,8 @@ SCIP_Real calcScore(
    score = dynamicfactor * (branchruledata->conflictweight * (1.0 - 1.0/(1.0+conflictscore/avgconflictscore))
             + branchruledata->conflengthweight * (1.0 - 1.0/(1.0+conflengthscore/avgconflengthscore))
             + branchruledata->inferenceweight * (1.0 - 1.0/(1.0+inferencescore/avginferencescore))
-            + branchruledata->cutoffweight * (1.0 - 1.0/(1.0+cutoffscore/avgcutoffscore)))
+            + branchruledata->cutoffweight * (1.0 - 1.0/(1.0+cutoffscore/avgcutoffscore))
+            + branchruledata->gmiavgeffweight * gmieffscore + branchruledata->gmilasteffweight * lastgmieffscore)
          + branchruledata->pscostweight / dynamicfactor * (1.0 - 1.0/(1.0+pscostscore/avgpscostscore))
          + branchruledata->nlscoreweight * nlscore;
 
@@ -758,6 +811,69 @@ SCIP_RETCODE applyBdchgs(
    return SCIP_OKAY;
 }
 
+/** determine if strong branching is needed on the given candidate variable */
+static
+SCIP_Bool needsStrongBranching(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_VAR*             branchcand,         /**< branching candidate */
+   SCIP_Real             branchcandfrac,     /**< fractional part of the branching candidate */
+   SCIP_VAR*             bestpscand,         /**< best candidate as per pscost score, must be present if usehyptestforreliability is used */
+   SCIP_Real             bestpscandfrac,     /**< fractional part of the best candidate as per pscost score, must be present if usehyptestforreliability is used */
+   SCIP_Real             reliable,           /**< size threshold for reliability */
+   SCIP_Real             relerrorthreshold,  /**< relative error threshold for reliability */
+   SCIP_CONFIDENCELEVEL  clevel,             /**< confidence level */
+   SCIP_Bool             useancpscost        /**< check reliability for ancpscost as well */
+   )
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_Real pscostdownsize;
+   SCIP_Real pscostupsize;
+   SCIP_Real pscostsize;
+   SCIP_Real dpscostdownsize;
+   SCIP_Real dpscostupsize;
+   SCIP_Real dpscostsize;
+
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* check, if the pseudo cost score and the discounted pseudocost score of the variable is reliable */
+   pscostdownsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcand, SCIP_BRANCHDIR_DOWNWARDS);
+   pscostupsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcand, SCIP_BRANCHDIR_UPWARDS);
+   pscostsize = MIN(pscostdownsize, pscostupsize);
+   dpscostdownsize = SCIPgetVarAncPseudocostCountCurrentRun(scip, branchcand, SCIP_BRANCHDIR_DOWNWARDS);
+   dpscostupsize = SCIPgetVarAncPseudocostCountCurrentRun(scip, branchcand, SCIP_BRANCHDIR_UPWARDS);
+   dpscostsize = MIN(dpscostdownsize, dpscostupsize);
+
+   /* determine if variable is considered reliable based on the current reliability setting */
+   /* check fixed number threshold (aka original) reliability first */
+   assert(!branchruledata->usehyptestforreliability || bestpscand != NULL );
+   if( pscostsize < reliable || ( useancpscost && dpscostsize < reliable ) )
+      return TRUE;
+   if( branchruledata->userelerrorforreliability && branchruledata->usehyptestforreliability )
+   {
+      if( !SCIPisVarPscostRelerrorReliable(scip, branchcand, relerrorthreshold, clevel) &&
+            !SCIPsignificantVarPscostDifference(scip, bestpscand, bestpscandfrac,
+               branchcand, branchcandfrac, SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) &&
+            !SCIPsignificantVarPscostDifference(scip, bestpscand, 1 - bestpscandfrac,
+               branchcand, 1 - branchcandfrac, SCIP_BRANCHDIR_UPWARDS, clevel, TRUE) )
+         return TRUE;
+   }
+   /* check if relative error is tolerable */
+   if( branchruledata->userelerrorforreliability &&
+         !SCIPisVarPscostRelerrorReliable(scip, branchcand, relerrorthreshold, clevel))
+      return TRUE;
+   /* check if best pseudo-candidate is significantly better in both directions, use strong-branching otherwise */
+   if( branchruledata->usehyptestforreliability &&
+         !SCIPsignificantVarPscostDifference(scip, bestpscand, bestpscandfrac,
+               branchcand, branchcandfrac, SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) &&
+         !SCIPsignificantVarPscostDifference(scip, bestpscand, 1 - bestpscandfrac,
+               branchcand, 1 - branchcandfrac, SCIP_BRANCHDIR_UPWARDS, clevel, TRUE) )
+      return TRUE;
+   return FALSE;
+}
+
 /** execute reliability pseudo cost branching */
 static
 SCIP_RETCODE execRelpscost(
@@ -865,6 +981,7 @@ SCIP_RETCODE execRelpscost(
       SCIP_Real avginferencescore;
       SCIP_Real avgcutoffscore;
       SCIP_Real avgpscostscore;
+      SCIP_Real avgdpscostscore;
       SCIP_Real bestpsscore;
       SCIP_Real bestpsfracscore;
       SCIP_Real bestpsdomainscore;
@@ -895,6 +1012,9 @@ SCIP_RETCODE execRelpscost(
       int c;
       SCIP_CONFIDENCELEVEL clevel;
       SCIP_Real degeneracyfactor = 1.0;
+      SCIP_Bool useancpscost;
+
+      SCIP_CALL(SCIPgetBoolParam(scip, "branching/collectancpscost", &useancpscost));
 
       /* get LP degeneracy information and compute a factor to change weighting of pseudo cost score vs. other scores */
       if( branchruledata->degeneracyaware > 0 && (SCIPgetDepth(scip) > 0 || branchruledata->degeneracyaware > 1) )
@@ -938,6 +1058,8 @@ SCIP_RETCODE execRelpscost(
       avgcutoffscore = MAX(avgcutoffscore, 0.1);
       avgpscostscore = SCIPgetAvgPseudocostScore(scip);
       avgpscostscore = MAX(avgpscostscore, 0.1);
+      avgdpscostscore = SCIPgetAvgDPseudocostScore(scip, branchruledata->discountfactor);
+      avgdpscostscore = MAX(avgdpscostscore, 0.1);
 
       /* get nonlinear counts according to parameters */
       SCIP_CALL( branchruledataEnsureNlcount(scip, branchruledata) );
@@ -1033,6 +1155,8 @@ SCIP_RETCODE execRelpscost(
             SCIP_Real conflengthscore;
             SCIP_Real inferencescore;
             SCIP_Real cutoffscore;
+            SCIP_Real gmieffscore;
+            SCIP_Real lastgmieffscore;
             SCIP_Real pscostscore;
             SCIP_Real nlscore;
             SCIP_Real score;
@@ -1041,6 +1165,8 @@ SCIP_RETCODE execRelpscost(
             conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
             inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
             cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+            gmieffscore = SCIPgetVarAvgGMIScore(scip, branchcands[c]);
+            lastgmieffscore = SCIPgetVarLastGMIScore(scip, branchcands[c]);
             nlscore = calcNlscore(scip, branchruledata->nlcount, branchruledata->nlcountmax, SCIPvarGetProbindex(branchcands[c]));
             pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
 
@@ -1059,6 +1185,18 @@ SCIP_RETCODE execRelpscost(
                SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchcands[c], &down, &up, NULL, NULL, NULL, &lastlpobjval) );
                downgain = MAX(down - lastlpobjval, 0.0);
                upgain = MAX(up - lastlpobjval, 0.0);
+               if( useancpscost )
+               {
+                  /* add discounted gains as stored in dpscost */
+                  SCIP_Real downsol;
+                  SCIP_Real upsol;
+                  downsol = SCIPfeasCeil(scip, branchcandssol[c]-1.0);
+                  upsol = SCIPfeasFloor(scip, branchcandssol[c]+1.0);
+                  downgain += branchruledata->discountfactor * SCIPgetVarAncPseudocostVal(scip, branchcands[c], downsol-branchcandssol[c]);
+                  upgain += branchruledata->discountfactor * SCIPgetVarAncPseudocostVal(scip, branchcands[c], upsol-branchcandssol[c]);
+                  downgain /= (1 + branchruledata->discountfactor);
+                  upgain /= (1 + branchruledata->discountfactor);
+               }
                pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
                SCIPdebugMsg(scip, " -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), pscostscore=%g)\n",
@@ -1066,8 +1204,8 @@ SCIP_RETCODE execRelpscost(
             }
 
             score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c],
-               degeneracyfactor);
+               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, gmieffscore, lastgmieffscore,
+               pscostscore, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);
 
             /* check for better score of candidate */
             if( SCIPisSumGE(scip, score, bestpsscore) )
@@ -1090,12 +1228,34 @@ SCIP_RETCODE execRelpscost(
          }
       }
 
+      /* use discounted pseudocosts only if all candidates are reliable. */
+      if( useancpscost && maxninitcands > 0 )
+      {
+         /* look for at least one unreliable candidate */
+         for( c = 0; c < nbranchcands; ++c )
+         {
+            if( needsStrongBranching(scip, branchrule, branchcands[c], branchcandsfrac[c],
+                  bestpscand > 0 ? branchcands[bestpscand] : NULL,
+                  bestpscand > 0 ? branchcandsfrac[bestpscand] : 0.0,
+                  reliable, relerrorthreshold, clevel, useancpscost) )
+            {
+               useancpscost = FALSE;
+               break;
+            }
+         }
+      }
+
+      if( useancpscost )
+         avgpscostscore = avgdpscostscore;
+
       for( c = 0; c < nbranchcands; ++c )
       {
          SCIP_Real conflictscore;
          SCIP_Real conflengthscore;
          SCIP_Real inferencescore;
          SCIP_Real cutoffscore;
+         SCIP_Real gmieffscore;
+         SCIP_Real lastgmieffscore;
          SCIP_Real pscostscore;
          SCIP_Real nlscore;
          SCIP_Real score;
@@ -1123,9 +1283,13 @@ SCIP_RETCODE execRelpscost(
          conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
          inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
          cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+         gmieffscore = SCIPgetVarAvgGMIScore(scip, branchcands[c]);
+         lastgmieffscore = SCIPgetVarLastGMIScore(scip, branchcands[c]);
          nlscore = calcNlscore(scip, branchruledata->nlcount, branchruledata->nlcountmax, SCIPvarGetProbindex(branchcands[c]));
          pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
          usesb = FALSE;
+         if( useancpscost )
+            pscostscore = SCIPgetVarDPseudocostScore(scip, branchcands[c], branchcandssol[c],branchruledata->discountfactor);
 
          /* don't use strong branching on variables that have already been initialized at the current node;
           * instead replace the pseudo cost score with the already calculated one;
@@ -1141,6 +1305,18 @@ SCIP_RETCODE execRelpscost(
             SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchcands[c], &down, &up, NULL, NULL, NULL, &lastlpobjval) );
             downgain = MAX(down - lastlpobjval, 0.0);
             upgain = MAX(up - lastlpobjval, 0.0);
+            /* add discounted gains as stored in anspscost */
+            if( useancpscost ) {
+               /* the anspscost must be reliable here */
+               SCIP_Real downsol;
+               SCIP_Real upsol;
+               downsol = SCIPfeasCeil(scip, branchcandssol[c]-1.0);
+               upsol = SCIPfeasFloor(scip, branchcandssol[c]+1.0);
+               downgain += branchruledata->discountfactor * SCIPgetVarAncPseudocostVal(scip, branchcands[c], downsol-branchcandssol[c]);
+               upgain += branchruledata->discountfactor * SCIPgetVarAncPseudocostVal(scip, branchcands[c], upsol-branchcandssol[c]);
+               downgain /= (1 + branchruledata->discountfactor);
+               upgain /= (1 + branchruledata->discountfactor);
+            }
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
             mingains[c] = MIN(downgain, upgain);
@@ -1160,32 +1336,10 @@ SCIP_RETCODE execRelpscost(
             upsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS);
             size = MIN(downsize, upsize);
 
-            /* determine if variable is considered reliable based on the current reliability setting */
-            /* check fixed number threshold (aka original) reliability first */
-            assert(!branchruledata->usehyptestforreliability || bestpscand >= 0);
-            usesb = FALSE;
-            if( size < reliable )
-               usesb = TRUE;
-            else if( branchruledata->userelerrorforreliability && branchruledata->usehyptestforreliability )
-            {
-               if( !SCIPisVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold, clevel) &&
-                     !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], branchcandsfrac[bestpscand],
-                        branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) &&
-                     !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], 1 - branchcandsfrac[bestpscand],
-                        branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_UPWARDS, clevel, TRUE) )
-                  usesb = TRUE;
-            }
-            /* check if relative error is tolerable */
-            else if( branchruledata->userelerrorforreliability &&
-                  !SCIPisVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold, clevel))
-               usesb = TRUE;
-            /* check if best pseudo-candidate is significantly better in both directions, use strong-branching otherwise */
-            else if( branchruledata->usehyptestforreliability &&
-                  !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], branchcandsfrac[bestpscand],
-                        branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) &&
-                  !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], 1 - branchcandsfrac[bestpscand],
-                        branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_UPWARDS, clevel, TRUE))
-               usesb = TRUE;
+            usesb = needsStrongBranching(scip, branchrule, branchcands[c], branchcandsfrac[c],
+                  bestpscand > 0 ? branchcands[bestpscand] : NULL,
+                  bestpscand > 0 ? branchcandsfrac[bestpscand] : 0.0,
+                  reliable, relerrorthreshold, clevel, FALSE);
 
             /* count the number of variables that are completely uninitialized */
             if( size < 0.1 )
@@ -1194,14 +1348,16 @@ SCIP_RETCODE execRelpscost(
 
          /* combine the five score values */
          scoresfrompc[c] =  calcScore(scip, branchruledata, 0.0, avgconflictscore, 0.0, avgconflengthscore,
-                                      0.0, avginferencescore, 0.0, avgcutoffscore, pscostscore, avgpscostscore, 0.0, branchcandsfrac[c], degeneracyfactor);
+                                      0.0, avginferencescore, 0.0, avgcutoffscore, 0.0, 0.0,
+                                      pscostscore, avgpscostscore, 0.0, branchcandsfrac[c], degeneracyfactor);
          scoresfromothers[c] = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-                                         inferencescore, avginferencescore, cutoffscore, avgcutoffscore, 0.0, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);
+                                         inferencescore, avginferencescore, cutoffscore, avgcutoffscore, gmieffscore, lastgmieffscore,
+                                         0.0, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);
          score = scoresfrompc[c] + scoresfromothers[c];
          scores[c] = score;
          /*score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c],
-            degeneracyfactor);*/
+            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, gmieffscore, lastgmieffscore,
+            pscostscore, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);*/
          if( usesb )
          {
             int j;
@@ -1485,6 +1641,7 @@ SCIP_RETCODE execRelpscost(
          up = MAX(up, lpobjval);
          downgain = down - lpobjval;
          upgain = up - lpobjval;
+         assert(!useancpscost);
          assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
          assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
          assert(downinf || !downconflict);
@@ -1599,6 +1756,8 @@ SCIP_RETCODE execRelpscost(
             SCIP_Real conflengthscore;
             SCIP_Real inferencescore;
             SCIP_Real cutoffscore;
+            SCIP_Real gmieffscore;
+            SCIP_Real lastgmieffscore;
             SCIP_Real pscostscore;
             SCIP_Real nlscore;
             SCIP_Real score;
@@ -1623,17 +1782,22 @@ SCIP_RETCODE execRelpscost(
             inferencescore = branchruledata->usesblocalinfo ? SCIPgetBranchScore(scip, branchcands[c], (SCIP_Real)ndomredsdown, (SCIP_Real)ndomredsup)
                   : SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
             cutoffscore = branchruledata->usesblocalinfo ? 0.0 : SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+            gmieffscore = branchruledata->usesblocalinfo ? 0.0 : SCIPgetVarAvgGMIScore(scip, branchcands[c]);
+            lastgmieffscore = branchruledata->usesblocalinfo ? 0.0 : SCIPgetVarLastGMIScore(scip, branchcands[c]);
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
             scoresfrompc[c] =  calcScore(scip, branchruledata, 0.0, avgconflictscore, 0.0, avgconflengthscore,
-                                         0.0, avginferencescore, 0.0, avgcutoffscore, pscostscore, avgpscostscore, 0.0, branchcandsfrac[c], degeneracyfactor);
+                                         0.0, avginferencescore, 0.0, avgcutoffscore, 0.0, 0.0, pscostscore,
+                                         avgpscostscore, 0.0, branchcandsfrac[c], degeneracyfactor);
             scoresfromothers[c] = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-                                            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, 0.0, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);
+                                            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, gmieffscore,
+                                            lastgmieffscore, 0.0, avgpscostscore, nlscore, branchcandsfrac[c],
+                                            degeneracyfactor);
             score = scoresfrompc[c] + scoresfromothers[c];
             scores[c] = score;
             /*score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c],
-               degeneracyfactor);*/
+               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, gmieffscore, lastgmieffscore,
+               pscostscore, avgpscostscore, nlscore, branchcandsfrac[c], degeneracyfactor);*/
 
             if( SCIPisSumGE(scip, score, bestsbscore) )
             {
@@ -1664,9 +1828,9 @@ SCIP_RETCODE execRelpscost(
             else
                lookahead += 1.0;
 
-            SCIPdebugMsg(scip, " -> variable <%s> (solval=%g, down=%g (%+g,valid=%u), up=%g (%+g,valid=%u), score=%g/ %g/%g %g/%g -> %g)\n",
+            SCIPdebugMsg(scip, " -> variable <%s> (solval=%g, down=%g (%+g,valid=%u), up=%g (%+g,valid=%u), score=%g/ %g/%g %g/%g %g -> %g)\n",
                SCIPvarGetName(branchcands[c]), branchcandssol[c], down, downgain, downvalid, up, upgain, upvalid,
-               pscostscore, conflictscore, conflengthscore, inferencescore, cutoffscore,  score);
+               pscostscore, conflictscore, conflengthscore, inferencescore, cutoffscore, gmieffscore, score);
          }
       }
 #ifdef SCIP_DEBUG
@@ -2090,6 +2254,14 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "weight in score calculations for cutoff score",
          &branchruledata->cutoffweight, TRUE, DEFAULT_CUTOFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
+          "branching/relpscost/gmiavgeffweight",
+          "weight in score calculations for average GMI cuts normalized efficacy",
+          &branchruledata->gmiavgeffweight, TRUE, DEFAULT_GMIAVGEFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+          "branching/relpscost/gmilasteffweight",
+          "weight in score calculations for last GMI cuts normalized efficacy",
+          &branchruledata->gmilasteffweight, TRUE, DEFAULT_GMILASTEFFWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/pscostweight",
          "weight in score calculations for pseudo cost score",
          &branchruledata->pscostweight, TRUE, DEFAULT_PSCOSTWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
@@ -2208,6 +2380,10 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/transsympscost",
          "Transfer pscost information to symmetric variables?",
          &branchruledata->transsympscost, TRUE, DEFAULT_TRANSSYMPSCOST, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/discountfactor",
+         "discount factor for ancestral pseudo costs (0.0: disable discounted pseudo costs)",
+         &branchruledata->discountfactor, FALSE, BRANCHRULE_DISCOUNTFACTOR, 0.0, 1.0, NULL, NULL) );
 
    /* relpcost is safe to use in exact solving mode */
    SCIPsetBranchruleExact(branchrule);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -729,13 +729,13 @@ void hcGradCut(
    assert(coefy != NULL);
    assert(constant != NULL);
 
-   tmp1 = SQRT(lbx * ubx) + solx;
-   tmp2 = SQR(SQRT(lbx) + SQRT(ubx)) * soly; /*lint !e666*/
+   tmp1 = sqrt(lbx * ubx) + solx;
+   tmp2 = SQR(sqrt(lbx) + sqrt(ubx)) * soly; /*lint !e666*/
    assert(tmp2 > 0.0);
 
    *coefx = 2.0 * tmp1 / tmp2;
    *coefy = -SQR(tmp1) / (tmp2 * soly);
-   *constant = 2.0 * SQRT(lbx * ubx) * tmp1 / tmp2;
+   *constant = 2.0 * sqrt(lbx * ubx) * tmp1 / tmp2;
 }
 
 /** computes an over- or underestimator at a given point for the bivariate case x/y &le;/&ge; z

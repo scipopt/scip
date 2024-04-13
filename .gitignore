@@ -142,5 +142,7 @@ examples/*/doc/userguide.*
 examples/*/!doc/userguide.tex
 examples/*/lint
 
-
 !.github/workflows/*
+
+# avoid ignoring files in ci folder
+!ci/*

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -61,9 +61,13 @@ enum SCIP_Vartype
 {
    SCIP_VARTYPE_BINARY     = 0,         /**< binary variable: \f$ x \in \{0,1\} \f$ */
    SCIP_VARTYPE_INTEGER    = 1,         /**< integer variable: \f$ x in \{lb, \dots, ub\} \f$ */
-   SCIP_VARTYPE_IMPLINT    = 2,         /**< implicit integer variable: Integrality of this variable is implied for every optimal
-                                             solution of the remaining problem after any fixing all integer and binary variables,
-                                             without the explicit need to enforce integrality further */
+   SCIP_VARTYPE_IMPLINT    = 2,         /**< continuous variable with optional integrality restriction:
+                                             assigning a fractional value for the variable is feasible and the solver will not enforce
+                                             integrality for this variable, but it may treat the variable as if an additional integrality
+                                             restriction exists in certain cases, e.g., during boundtightening;
+                                             typically, this variable type is used for implicit integer variables, that is, variables which
+                                             are known to take an integral value in a feasible or optimal solution due to other constraints or
+                                             optimality conditions */
    SCIP_VARTYPE_CONTINUOUS = 3          /**< continuous variable: \f$ lb \leq x \leq ub \f$ */
 };
 typedef enum SCIP_Vartype SCIP_VARTYPE;
@@ -135,8 +139,8 @@ typedef struct SCIP_DomExact SCIP_DOMEXACT;       /**< exact domain (using ratio
  *  Because the original variable and the user data of the original variable should not be
  *  modified during the solving process, a transformed variable is created as a copy of
  *  the original variable. If the user variable data is never modified during the solving
- *  process anyways, it is enough to simple copy the user data's pointer. This is the
- *  default implementation, which is used when a NULL is given as VARTRANS method.
+ *  process anyways, it is enough to simply copy the user data's pointer. This is the
+ *  default implementation, which is used when NULL is given as the VARTRANS method.
  *  If the user data may be modified during the solving process (e.g. during preprocessing),
  *  the VARTRANS method must be given and has to copy the user variable data to a different
  *  memory location.
@@ -166,13 +170,13 @@ typedef struct SCIP_DomExact SCIP_DOMEXACT;       /**< exact domain (using ratio
 /** copies variable data of source SCIP variable for the target SCIP variable
  *
  *  This method should copy the variable data of the source SCIP and create a target variable data for target
- *  variable. This callback is optimal. If the copying process was successful the target variable gets this variable
- *  data assigned. In case the result pointer is set to SCIP_DIDNOTRUN the target variable will have no variable data at
+ *  variable. This callback is optional. If the copying process was successful, the target variable gets this variable
+ *  data assigned. In case the result pointer is set to SCIP_DIDNOTRUN, the target variable will have no variable data at
  *  all.
  *
  *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
  *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
- *  SCIP. You should be very carefully in using these two methods since they could lead to infinity loop.
+ *  SCIP. You should be very careful in using these two methods since they could lead to infinite loop.
  *
  *  input:
  *  - scip            : target SCIP data structure

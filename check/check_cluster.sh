@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -78,11 +78,11 @@ EXCLUDENODES="${30}"
 SLURMACCOUNT="${31}"
 PYTHON="${32}"
 EMPHBENCHMARK="${33}"
-WITHCERTIFICATE="${34}"
-
+CLOCKTYPE="${34}"
+WITHCERTIFICATE="${35}"
 
 # check if all variables defined (by checking the last one)
-if test -z "${EMPHBENCHMARK}"
+if test -z "${CLOCKTYPE}"
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = ${TSTNAME}"
@@ -119,6 +119,7 @@ then
     echo "SLURMACCOUNT  = ${SLURMACCOUNT}"
     echo "PYTHON        = ${PYTHON}"
     echo "EMPHBENCHMARK = ${EMPHBENCHMARK}"
+    echo "CLOCKTYPE     = ${CLOCKTYPE}"
     exit 1;
 fi
 
@@ -223,7 +224,7 @@ do
                 # this may modify the EXECNAME environment variable
                 . ./"${CONFFILE}" "${INSTANCE}" "${SCIPPATH}" "${TMPFILE}" "${SETNAME}" "${SETFILE}" "${THREADS}" "${SETCUTOFF}" \
                             "${FEASTOL}" "${TIMELIMIT}" "${MEMLIMIT}" "${NODELIMIT}" "${LPS}" "${DISPFREQ}" "${REOPT}" "${OPTCOMMAND}" \
-                            "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "${WITHCERTIFICATE}"
+                            "${CLIENTTMPDIR}" "${FILENAME}" "${VISUALIZE}" "${SOLUFILE}" "${EMPHBENCHMARK}" "${CLOCKTYPE}" "${WITHCERTIFICATE}"
 
                 JOBNAME="$(capitalize ${SOLVER})${SHORTPROBNAME}"
                 # additional environment variables needed by run.sh

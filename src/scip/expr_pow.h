@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -135,6 +135,22 @@ void SCIPaddSquareSecant(
    SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
    SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
    SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
+   );
+
+/** Separation for roots with exponent in [0,1] */
+SCIP_EXPORT
+void SCIPestimateRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             exponent,           /**< exponent */
+   SCIP_Bool             overestimate,       /**< should the power be overestimated? */
+   SCIP_Real             xlb,                /**< lower bound on x */
+   SCIP_Real             xub,                /**< upper bound on x */
+   SCIP_Real             xref,               /**< reference point (where to linearize) */
+   SCIP_Real*            constant,           /**< buffer to store constant term of estimator */
+   SCIP_Real*            slope,              /**< buffer to store slope of estimator */
+   SCIP_Bool*            islocal,            /**< buffer to store whether estimator only locally valid, that is,
+                                                  it depends on given bounds */
+   SCIP_Bool*            success             /**< buffer to store whether estimator could be computed */
    );
 
 #ifdef __cplusplus

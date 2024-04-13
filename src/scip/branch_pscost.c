@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -27,6 +27,7 @@
  * @brief  pseudo costs branching rule
  * @author Tobias Achterberg
  * @author Stefan Vigerske
+ * @author Krunal Patel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -66,6 +67,7 @@
 #define BRANCHRULE_NARYMINWIDTH_DEFAULT 0.001 /**< default minimal domain width in children when doing n-ary branching */
 #define BRANCHRULE_NARYWIDTHFAC_DEFAULT   2.0 /**< default factor of domain width in n-ary branching */
 #define BRANCHRULE_RANDSEED_DEFAULT        47 /**< initial random seed */
+#define BRANCHRULE_DISCOUNTFACTOR        0.2 /**< default discount factor for discounted pseudo costs */
 
 
 #define WEIGHTEDSCORING(data, min, max, sum) \
@@ -87,6 +89,7 @@ struct SCIP_BranchruleData
    int                   narymaxdepth;       /**< maximal depth where to do n-ary branching, -1 to turn off */
    SCIP_Real             naryminwidth;       /**< minimal domain width in children when doing n-ary branching, relative to global bounds */
    SCIP_Real             narywidthfactor;    /**< factor of domain width in n-ary branching */
+   SCIP_Real             discountfactor;     /**< discount factor for discounted pseudo costs.*/
 };
 
 /*
@@ -609,6 +612,7 @@ SCIP_DECL_BRANCHINIT(branchInitPscost)
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
 {  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
    SCIP_Real bestscore;
@@ -621,6 +625,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
 
    SCIPdebugMsg(scip, "Execlp method of pscost branching\n");
 
@@ -637,7 +644,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
       SCIP_Real rootsolval;
       SCIP_Real rootdiff;
 
-      score = SCIPgetVarPseudocostScore(scip, lpcands[c], lpcandssol[c]);
+      score = SCIPgetVarDPseudocostScore(scip, lpcands[c], lpcandssol[c], branchruledata->discountfactor);
       rootsolval = SCIPvarGetRootSol(lpcands[c]);
       rootdiff = REALABS(lpcandssol[c] - rootsolval);
       if( SCIPisSumGT(scip, score, bestscore) || (SCIPisSumEQ(scip, score, bestscore) && rootdiff > bestrootdiff) )
@@ -663,7 +670,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
 }
 
 
-/** branching execution method for external candidates */
+/** branching execution method for external candidates
+ *
+ * @todo extend discounted pseudocosts for non-linear problems
+ */
 static
 SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
 {  /*lint --e{715}*/
@@ -805,6 +815,10 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/narywidthfactor",
          "factor of domain width in n-ary branching when creating nodes with increasing distance from branching value",
          &branchruledata->narywidthfactor, FALSE, BRANCHRULE_NARYWIDTHFAC_DEFAULT, 1.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/discountfactor",
+         "discount factor for ancestral pseudo costs (0.0: disable discounted pseudo costs)",
+         &branchruledata->discountfactor, FALSE, BRANCHRULE_DISCOUNTFACTOR, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -51,12 +51,12 @@ enum SCIP_Status
    SCIP_STATUS_TIMELIMIT      =  5,     /**< the solving process was interrupted because the time limit was reached */
    SCIP_STATUS_MEMLIMIT       =  6,     /**< the solving process was interrupted because the memory limit was reached */
    SCIP_STATUS_GAPLIMIT       =  7,     /**< the solving process was interrupted because the gap limit was reached */
-   SCIP_STATUS_SOLLIMIT       =  8,     /**< the solving process was interrupted because the solution limit was
-                                          *  reached
-                                          */
-   SCIP_STATUS_BESTSOLLIMIT   =  9,    /**< the solving process was interrupted because the solution improvement limit
-                                          *   was reached
-                                          */
+   SCIP_STATUS_PRIMALLIMIT    = 16,     /**< the solving process was interrupted because the primal limit was reached */
+   SCIP_STATUS_DUALLIMIT      = 17,     /**< the solving process was interrupted because the dual limit was reached */
+   SCIP_STATUS_SOLLIMIT       =  8,     /**< the solving process was interrupted because the solution limit was reached */
+   SCIP_STATUS_BESTSOLLIMIT   =  9,     /**< the solving process was interrupted because the solution improvement limit
+                                         *   was reached
+                                         */
    SCIP_STATUS_RESTARTLIMIT   = 10,     /**< the solving process was interrupted because the restart limit was reached */
    SCIP_STATUS_OPTIMAL        = 11,     /**< the problem was solved to optimality, an optimal solution is available */
    SCIP_STATUS_INFEASIBLE     = 12,     /**< the problem was proven to be infeasible */

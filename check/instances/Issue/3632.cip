@@ -1,0 +1,15 @@
+STATISTICS
+  Problem name     : mod011
+  Variables        : 4 (3 binary, 0 integer, 0 implicit integer, 1 continuous)
+  Constraints      : 0 initial, 2 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <x1>: obj=1, original bounds=[0,1]
+  [binary] <x2>: obj=1, original bounds=[0,1]
+  [binary] <x3>: obj=1, original bounds=[0,1]
+  [continuous] <x10269>: obj=0, original bounds=[0,+inf]
+CONSTRAINTS
+  [linear] <c154>: <x10269>[C] == 94;
+  [linear] <c2>: 0 <= <x1>[B] +<x2>[B] +<x3>[B] <= 1;
+END

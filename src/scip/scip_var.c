@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1272,7 +1272,9 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          break;
       }
 
+      /* coverity[dead_error_line] */
       case SCIPPARSEPOLYNOMIAL_STATE_END:
+      /* coverity[dead_error_line] */
       case SCIPPARSEPOLYNOMIAL_STATE_ERROR:
       default:
          SCIPerrorMessage("unexpected state\n");
@@ -10850,6 +10852,38 @@ SCIP_RETCODE SCIPupdateVarPseudocost(
    return SCIP_OKAY;
 }
 
+/** updates the ancestor pseudo costs of the given variable and the global ancestor pseudo costs after a change of "solvaldelta" in the
+ *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value;
+ *  the update is ignored, if the objective value difference is infinite
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPupdateVarAncPseudocost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   SCIP_Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   SCIP_Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPupdateVarAncPseudocost", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPsetIsInfinity(scip->set, 2*objdelta) ) /* differences  infinity - eps  should also be treated as infinity */
+   {
+      if( scip->set->branch_divingpscost || (!scip->lp->diving && !SCIPtreeProbing(scip->tree)) )
+      {
+         SCIP_CALL( SCIPvarUpdateAncPseudocost(var, scip->set, scip->stat, solvaldelta, objdelta, weight) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** gets the variable's pseudo cost value for the given change of the variable's LP value
  *
  *  @return the variable's pseudo cost value for the given change of the variable's LP value
@@ -10874,6 +10908,32 @@ SCIP_Real SCIPgetVarPseudocostVal(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarPseudocostVal", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPvarGetPseudocost(var, scip->stat, solvaldelta);
+}
+
+/** gets the variable's ancestral pseudo cost value for the given change of the variable's LP value
+ *
+ *  @return the variable's ancestral pseudo cost value for the given change of the variable's LP value
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetVarAncPseudocostVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   assert( var->scip == scip );
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarAncPseudocostVal", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPvarGetAncPseudocost(var, scip->stat, solvaldelta);
 }
 
 /** gets the variable's pseudo cost value for the given change of the variable's LP value,
@@ -11010,6 +11070,34 @@ SCIP_Real SCIPgetVarPseudocostCountCurrentRun(
    assert(var->scip == scip);
 
    return SCIPvarGetPseudocostCountCurrentRun(var, dir);
+}
+
+/** gets the variable's (possible fractional) number of ancestor pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ *
+ *  @return the variable's (possible fractional) number of ancestor pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetVarAncPseudocostCountCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarAncPseudocostCountCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   assert(var->scip == scip);
+
+   return SCIPvarGetAncPseudocostCountCurrentRun(var, dir);
 }
 
 /** get pseudo cost variance of the variable, either for entire solve or only for current branch and bound run
@@ -11171,6 +11259,50 @@ SCIP_Real SCIPgetVarPseudocostScore(
    upsol = SCIPsetFeasFloor(scip->set, solval+1.0);
    pscostdown = SCIPvarGetPseudocost(var, scip->stat, downsol-solval);
    pscostup = SCIPvarGetPseudocost(var, scip->stat, upsol-solval);
+
+   return SCIPbranchGetScore(scip->set, var, pscostdown, pscostup);
+}
+
+/** gets the variable's discounted pseudo cost score value for the given LP solution value.
+ *
+ *  This combines both pscost and ancpscost fields.
+ *
+ *  @return the variable's discounted pseudo cost score value for the given LP solution value,
+ *  combining both pscost and ancpscost fields.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetVarDPseudocostScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             solval,             /**< variable's LP solution value */
+   SCIP_Real             discountfac         /**< discount factor for discounted pseudocost */
+   )
+{
+   SCIP_Real downsol;
+   SCIP_Real upsol;
+   SCIP_Real pscostdown;
+   SCIP_Real pscostup;
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarDPseudocostScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
+
+   downsol = SCIPsetFeasCeil(scip->set, solval-1.0);
+   upsol = SCIPsetFeasFloor(scip->set, solval+1.0);
+   pscostdown = SCIPvarGetPseudocost(var, scip->stat, downsol-solval)
+               + discountfac * SCIPvarGetAncPseudocost(var, scip->stat, downsol-solval);
+   pscostup = SCIPvarGetPseudocost(var, scip->stat, upsol-solval)
+            + discountfac * SCIPvarGetAncPseudocost(var, scip->stat, upsol-solval);
+   pscostdown /= (1 + discountfac);
+   pscostup /= (1 + discountfac);
 
    return SCIPbranchGetScore(scip->set, var, pscostdown, pscostup);
 }
@@ -11911,6 +12043,115 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
 
    return SCIPbranchGetScore(scip->set, var,
       inferdown + cutoffweight * avginfer * cutoffdown, inferup + cutoffweight * avginfer * cutoffup);
+}
+
+/** returns the variable's average GMI efficacy score value
+ *
+ *  @return the variable's average GMI efficacy score value
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetVarAvgGMIScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarAvgGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
+
+   return SCIPvarGetAvgGMIScore(var, scip->stat);
+}
+
+/** sets the variable's average GMI efficacy score value
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincVarGMISumScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             gmieff              /**< Efficacy of last GMI cut generated from when var was basic /frac */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPincVarGMISumScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
+
+   SCIP_CALL( SCIPvarIncGMIeffSum(var, scip->stat, gmieff) );
+
+   return SCIP_OKAY;
+}
+
+/** returns the variable's last GMI efficacy score value
+ *
+ *  @return the variable's last GMI efficacy score value
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetVarLastGMIScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarLastGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
+
+   return SCIPvarGetLastGMIScore(var, scip->stat);
+}
+
+/** sets the variable's last GMI efficacy score value
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPsetVarLastGMIScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             gmieff              /**< efficacy of GMI cut from tableau row when variable is basic / frac */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPsetVarLastGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
+
+   SCIP_CALL( SCIPvarSetLastGMIScore(var, scip->stat, gmieff) );
+
+   return SCIP_OKAY;
 }
 
 /** outputs variable information to file stream via the message system

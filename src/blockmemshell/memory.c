@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -841,7 +841,7 @@ int isPtrInChkmem(
 /** sanity check for a memory chunk */
 static
 void checkChunk(
-   const CHUNK*       chunk               /**< memory chunk */
+   const CHUNK*          chunk               /**< memory chunk */
    )
 {
    FREELIST* eager;
@@ -1860,6 +1860,14 @@ void* BMSallocBlockMemory_work(
       (*chkmemptr)->line = line;
 #endif
    }
+#ifndef NDEBUG
+   else
+   {
+      BMSfreeMemoryArrayNull(&(*chkmemptr)->filename);
+      BMSduplicateMemoryArray(&(*chkmemptr)->filename, filename, strlen(filename) + 1);
+      (*chkmemptr)->line = line;
+   }
+#endif
 
    /* get memory inside the chunk block */
    ptr = allocChkmemElement(*chkmemptr, &blkmem->memallocated);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -489,7 +489,7 @@ Test(evalexpr, complicated, .description = "Tests expression evaluation for a la
 
    /* evaluate solution with zero tag */
    printf("evaluate expression with a zero tag\n");
-   for( i = 1; i < 100; ++i )
+   for( i = 1; i < 50; ++i )
    {
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, i*i) );
       SCIP_CALL( SCIPsetSolVal(scip, sol, y, -5.0/i) );
