@@ -12838,6 +12838,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
 
+            if( set->exact_enabled && lp->lpexact->wasforcedsafebound )
+               SCIPlpExactForceSafeBound(lp->lpexact, set);
+
             if( (fastmip > 0) && simplex )
             {
                /* solution is infeasible (this can happen due to numerical problems): solve again without FASTMIP */

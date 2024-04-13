@@ -4016,6 +4016,8 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->boundshiftviable = TRUE;
    (*lp)->forceexactsolve = FALSE;
    (*lp)->allowexactsolve = FALSE;
+   (*lp)->forcesafebound = FALSE;
+   (*lp)->wasforcedsafebound = FALSE;
    (*lp)->lpiscaling = set->lp_scaling;
    (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
    (*lp)->lpirefactorinterval = set->lp_refactorinterval;
@@ -7957,6 +7959,22 @@ void SCIPlpExactForceExactSolve(
    assert(lpexact != NULL);
 
    lpexact->forceexactsolve = TRUE;
+}
+
+/** forces the next exact bound computation to be executed even in probing mode */
+void SCIPlpExactForceSafeBound(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->exact_enabled )
+      return;
+
+   assert(lpexact != NULL);
+
+   lpexact->forcesafebound = TRUE;
 }
 
 /** allows an exact lp to be solved in the next exact bound computation */

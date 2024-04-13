@@ -1831,7 +1831,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
          assert(slackrow != NULL);
          assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
 
-         key = SCIPcertificateGetRowIndex(certificate, slackrow, RatIsPositive(tmpval));
+         key = SCIPcertificateGetRowIndex(certificate, slackrow, RatIsPositive(value));
 
          SCIPcertificatePrintProofMessage(certificate, " %d ", key);
          RatMultReal(value, value, mirinfo->scale);

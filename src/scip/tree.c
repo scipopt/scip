@@ -6123,7 +6123,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
          uplb   = MAX(val, SCIPvarGetLbLocal(var) + SCIPsetEpsilon(set)); /*lint !e666*/
       }
    }
-   else if( SCIPsetIsFeasIntegral(set, val) )
+   else if( SCIPsetIsFeasIntegral(set, val) && !set->exact_enabled )
    {
       SCIP_Real lb;
       SCIP_Real ub;
@@ -6175,9 +6175,17 @@ SCIP_RETCODE SCIPtreeBranchVar(
    else
    {
       /* create child nodes with x <= floor(x'), and x >= ceil(x') */
-      downub = SCIPsetFeasFloor(set, val);
-      uplb = downub + 1.0;
-      assert( SCIPsetIsRelEQ(set, SCIPsetCeil(set, val), uplb) );
+      if( set->exact_enabled )
+      {
+         downub = floor(val);
+         uplb = downub + 1.0;
+      }
+      else
+      {
+         downub = SCIPsetFeasFloor(set, val);
+         uplb = downub + 1.0;
+         assert( SCIPsetIsRelEQ(set, SCIPsetCeil(set, val), uplb) );
+      }
       SCIPsetDebugMsg(set, "fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n",
          SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
    }
@@ -6992,7 +7000,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
    lp->divingobjchg = FALSE;
    tree->probingsumchgdobjs = 0;
    tree->sbprobing = strongbranching;
-   tree->porbinglphadsafebound = lp->hasprovedbound;
+   tree->probinglphadsafebound = lp->hasprovedbound;
    if( set->exact_enabled && lp->solved )
       tree->probinglpobjval = SCIPlpGetObjval(lp, set, transprob);
 
@@ -7476,7 +7484,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          {
             /* here we always set this, or the lpobjval would not longer be safe */
             lp->lpobjval = tree->probinglpobjval;
-            lp->hasprovedbound = tree->porbinglphadsafebound;
+            lp->hasprovedbound = tree->probinglphadsafebound;
          }
 
          if( lperror )

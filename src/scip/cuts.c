@@ -390,6 +390,13 @@ SCIP_RETCODE varVecAddScaledRowCoefsSafely(
       SCIPintervalMulScalar(SCIPinfinity(scip), &valinterval, valinterval, scale);
       SCIPintervalAddScalar(SCIPinfinity(scip), &valinterval, valinterval, val);
 
+      if( SCIPisInfinity(scip, REALABS(valinterval.inf)) || SCIPisInfinity(scip, REALABS(valinterval.sup)) )
+      {
+         *success = FALSE;
+         SCIPintervalSetRoundingMode(previousroundmode);
+         return SCIP_OKAY;
+      }
+
       if( SCIPvarGetLbGlobal(var) > -SCIPinfinity(scip) && SCIPvarGetLbGlobal(var) >= 0 )
          val = valinterval.inf; 
       else if(SCIPvarGetUbGlobal(var) < SCIPinfinity(scip) && SCIPvarGetUbGlobal(var) <= 0 )
