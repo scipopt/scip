@@ -2219,28 +2219,36 @@ SCIP_RETCODE SCIPvarCopy(
    SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *var) );
 
    /* in case there exists variable data and the variable data copy callback, try to copy variable data */
-   if( sourcevar->vardata != NULL && sourcevar->varcopy != NULL )
+   if( sourcevar->vardata != NULL )
    {
-      SCIP_CALL( sourcevar->varcopy(set->scip, sourcescip, sourcevar, sourcevar->vardata, 
-            varmap, consmap, (*var), &targetdata, &result) );
-
-      /* evaluate result */
-      if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
+      if( sourcevar->varcopy != NULL )
       {
-         SCIPerrorMessage("variable data copying method returned invalid result <%d>\n", result);
-         return SCIP_INVALIDRESULT;
+         SCIP_CALL( sourcevar->varcopy(set->scip, sourcescip, sourcevar, sourcevar->vardata,
+               varmap, consmap, (*var), &targetdata, &result) );
+
+         /* evaluate result */
+         if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
+         {
+            SCIPerrorMessage("variable data copying method returned invalid result <%d>\n", result);
+            return SCIP_INVALIDRESULT;
+         }
+
+         assert(targetdata == NULL || result == SCIP_SUCCESS);
+
+         /* if copying was successful, add the created variable data to the variable as well as all callback methods */
+         if( result == SCIP_SUCCESS )
+         {
+            (*var)->varcopy = sourcevar->varcopy;
+            (*var)->vardelorig = sourcevar->vardelorig;
+            (*var)->vartrans = sourcevar->vartrans;
+            (*var)->vardeltrans = sourcevar->vardeltrans;
+            (*var)->vardata = targetdata;
+         }
       }
-
-      assert(targetdata == NULL || result == SCIP_SUCCESS);
-
-      /* if copying was successful, add the created variable data to the variable as well as all callback methods */
-      if( result == SCIP_SUCCESS )
+      else
       {
-         (*var)->varcopy = sourcevar->varcopy;
-         (*var)->vardelorig = sourcevar->vardelorig;
-         (*var)->vartrans = sourcevar->vartrans;
-         (*var)->vardeltrans = sourcevar->vardeltrans;
-         (*var)->vardata = targetdata;
+         /* if there is no copy callback, just copy data pointers */
+         (*var)->vardata = sourcevar->vardata;
       }
    }
 

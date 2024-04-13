@@ -156,29 +156,6 @@ void SCIPproofsetFree(
    (*proofset) = NULL;
 }
 
-#ifdef SCIP_DEBUG
-/** print a proof set */
-void proofsetPrint(
-   SCIP_PROOFSET*        proofset,
-   SCIP_SET*             set,
-   SCIP_PROB*            transprob
-   )
-{
-   SCIP_VAR** vars;
-   int i;
-
-   assert(proofset != NULL);
-
-   vars = SCIPprobGetVars(transprob);
-   assert(vars != NULL);
-
-   printf("proofset: ");
-   for( i = 0; i < proofset->nnz; i++ )
-      printf("%+.15g <%s> ", proofset->vals[i], SCIPvarGetName(vars[proofset->inds[i]]));
-   printf(" <= %.15g\n", proofset->rhs);
-}
-#endif
-
 /** return the indices of variables in the proofset */
 static
 int* proofsetGetInds(
@@ -1279,9 +1256,9 @@ void tightenCoefficients(
       }
 
       SCIPsetDebugMsg(set, "coefficient tightening: [%.15g,%.15g] -> [%.15g,%.15g] (nnz: %d, nchg: %d rhs: %.15g)\n",
-            absmin, absmax, newabsmin, newabsmax, proofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
+            absmin, absmax, newabsmin, newabsmax, SCIPproofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
       printf("coefficient tightening: [%.15g,%.15g] -> [%.15g,%.15g] (nnz: %d, nchg: %d rhs: %.15g)\n",
-            absmin, absmax, newabsmin, newabsmax, proofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
+            absmin, absmax, newabsmin, newabsmax, SCIPproofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
    }
 #endif
 }
@@ -1474,7 +1451,7 @@ SCIP_RETCODE tightenDualproof(
    SCIPsetDebugMsg(set, "start dual proof tightening:\n");
    SCIPsetDebugMsg(set, "-> tighten dual proof: nvars=%d (bin=%d, int=%d, cont=%d)\n",
          nnz, nbinvars, nintvars, ncontvars);
-   debugPrintViolationInfo(set, aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
+   debugPrintViolationInfo(set, SCIPaggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
 
    /* try to find an alternative proof of local infeasibility that is stronger */
    if( set->conf_sepaaltproofs )
