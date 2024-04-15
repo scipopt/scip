@@ -992,7 +992,7 @@ set(scipheaders
     scip/type_implics.h
     scip/type_interrupt.h
     scip/type_lp.h
-    scip/scip_lpexact.h
+    scip/type_lpexact.h
     scip/type_matrix.h
     scip/type_mem.h
     scip/type_message.h
