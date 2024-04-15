@@ -33,6 +33,7 @@
 #include "scip/set.h"
 #include "scip/lp.h"
 #include "scip/lpexact.h"
+#include "scip/misc.h"
 #include "scip/pub_lpexact.h"
 #include "lpiexact/lpiexact.h"
 #include "scip/pub_misc.h"

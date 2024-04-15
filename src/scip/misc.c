@@ -10569,6 +10569,14 @@ SCIP_Real SCIPnegateReal(
    return -x;
 }
 
+/** checks, if value is integral without any tolerances */
+SCIP_Bool SCIPisExactlyIntegral(
+   SCIP_Real             val                 /**< value to process */
+   )
+{
+   return floor(val) == val; /*lint !e777*/
+}
+
 /*
  * Permutations / Shuffling
  */

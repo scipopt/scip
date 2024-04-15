@@ -37,6 +37,7 @@
 #include "scip/dbldblarith.h"
 #include "scip/intervalarith.h"
 #include "scip/lp.h"
+#include "scip/misc.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_lpexact.h"
 #include "scip/pub_message.h"

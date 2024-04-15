@@ -555,6 +555,7 @@ set(scipheaders
     scip/cons_cumulative.h
     scip/cons_disjunction.h
     scip/cons_exactlp.h
+    scip/cons_exactsol.h
     scip/cons.h
     scip/cons_indicator.h
     scip/cons_integral.h
