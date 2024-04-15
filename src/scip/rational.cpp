@@ -650,6 +650,7 @@ void RatSetString(
       {
          std::string::const_iterator it = findSubStringIC("e", s);
          int exponent = 0;
+
          // split s in decimal part and exponent
          if( it != s.end() )
          {
@@ -674,6 +675,9 @@ void RatSetString(
             s.erase(decimalpos, 1);
          }
          assert(std::all_of(s.begin()+1, s.end(), ::isdigit));
+
+         if( s[0] == '+' )
+            s = s.substr(1);
 
          s.append("/");
          s.append(denominator);

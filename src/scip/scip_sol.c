@@ -285,7 +285,10 @@ SCIP_RETCODE checkSolOrigExact(
 
    SCIPsolResetViolations(sol);
 
-   SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->transprob) );
+   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+      SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->origprob) );
+   else
+      SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->transprob) );
 
    if( !printreason )
       completely = FALSE;
@@ -2884,7 +2887,10 @@ SCIP_RETCODE SCIPmakeSolExact(
    assert(!SCIPsolIsExact(sol));
    SCIP_CALL( SCIPcheckStage(scip, "SCIPmakeSolExact", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsolMakeExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob) );
+   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+      SCIP_CALL( SCIPsolMakeExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprob) );
+   else
+      SCIP_CALL( SCIPsolMakeExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob) );
 
    return SCIP_OKAY;
 }

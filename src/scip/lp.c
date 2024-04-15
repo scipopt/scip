@@ -2228,6 +2228,8 @@ SCIP_RETCODE rowAddCoef(
    row->vals[pos] = val;
    row->linkpos[pos] = linkpos;
    row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+   if( set->exact_enabled )
+      row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPisExactlyIntegral(val);
    if( linkpos == -1 )
    {
       row->nunlinked++;
@@ -2415,6 +2417,8 @@ SCIP_RETCODE rowChgCoefPos(
       rowDelNorms(row, set, col, row->vals[pos], FALSE, FALSE, TRUE);
       row->vals[pos] = val;
       row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+      if( set->exact_enabled )
+         row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPisExactlyIntegral(val);
       rowAddNorms(row, set, col, row->vals[pos], TRUE);
       coefChanged(row, col, lp);
 
@@ -5241,7 +5245,11 @@ SCIP_RETCODE rowScale(
          }
       }
       else
+      {
          row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+         if( set->exact_enabled )
+            row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPisExactlyIntegral(val);
+      }
 
       ++c;
    }
@@ -6305,6 +6313,8 @@ void rowMerge(
                   vals[t] = SCIPsetIsIntegral(set, vals[t]) ? SCIPsetRound(set, vals[t]) : vals[t];
 
                row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
+               if( set->exact_enabled )
+                  row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPisExactlyIntegral(vals[t]);
                t++;
             }
             cols[t] = cols[s];
@@ -6315,6 +6325,8 @@ void rowMerge(
       if( !SCIPsetIsZero(set, vals[t]) )
       {
          row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
+         if( set->exact_enabled )
+            row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPisExactlyIntegral(vals[t]);
          t++;
       }
       assert(s == row->len);

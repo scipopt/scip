@@ -322,7 +322,6 @@ SCIP_Bool SCIPisIntegral(
 /** checks, if value is integral without any tolerances */
 SCIP_EXPORT
 SCIP_Bool SCIPisExactlyIntegral(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             val                 /**< value to process */
    );
 

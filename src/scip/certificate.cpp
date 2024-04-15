@@ -1419,25 +1419,25 @@ SCIP_RETCODE certificatePrintMirSplit(
          int varidx = SCIPvarGetCertificateIndex(var);
          SCIP_Real rowcoef = SCIProwGetVals(slackrow)[j];
 
-         assert(SCIPisExactlyIntegral(set->scip, rowcoef * slackval));
+         assert(SCIPisExactlyIntegral(rowcoef * slackval));
          assert(SCIPvarIsBinary(var) || SCIPvarIsIntegral(var));
          coefs[varidx] += rowcoef  * slackval;
-         assert(SCIPisExactlyIntegral(set->scip, coefs[varidx]));
+         assert(SCIPisExactlyIntegral(coefs[varidx]));
       }
       if( mirinfo->slacksign[i] == 1 )
       {
-         assert(SCIPisExactlyIntegral(set->scip, SCIProwGetRhs(slackrow) - SCIProwGetConstant(slackrow)));
+         assert(SCIPisExactlyIntegral(SCIProwGetRhs(slackrow) - SCIProwGetConstant(slackrow)));
          slackrhs += (SCIProwGetRhs(slackrow) - SCIProwGetConstant(slackrow)) * slackval;
 
-         assert(SCIPisExactlyIntegral(set->scip, slackrhs));
+         assert(SCIPisExactlyIntegral(slackrhs));
          SCIPdebugMessage("+%gsrhs_%s", mirinfo->slackcoefficients[i], SCIProwGetName(mirinfo->slackrows[i]));
       }
       else
       {
-         assert(SCIPisExactlyIntegral(set->scip, SCIProwGetLhs(slackrow) - SCIProwGetConstant(slackrow)));
+         assert(SCIPisExactlyIntegral(SCIProwGetLhs(slackrow) - SCIProwGetConstant(slackrow)));
          slackrhs += (SCIProwGetLhs(slackrow) - SCIProwGetConstant(slackrow)) * slackval;
 
-         assert(SCIPisExactlyIntegral(set->scip, slackrhs));
+         assert(SCIPisExactlyIntegral(slackrhs));
          SCIPdebugMessage("+%gslhs_%s", mirinfo->slackcoefficients[i], SCIProwGetName(mirinfo->slackrows[i]));
       }
    }

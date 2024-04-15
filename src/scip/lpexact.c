@@ -3586,6 +3586,9 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
    {
       int idx;
       idx = sideindexpostprocess[i];
+      var = SCIPcolExactGetVar(row->cols[idx]);
+      lbreal = SCIPvarGetLbGlobal(var);
+      ubreal = SCIPvarGetUbGlobal(var);
 
       if( valslhsrelax[idx] == rowexactvalsinterval[idx].inf )/*lint !e777*/
          rhsrelax += ubreal >= 0 ? (rowexactvalsinterval[idx].sup - rowexactvalsinterval[idx].inf) * ubreal : 0;
@@ -3598,6 +3601,10 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
    {
       int idx;
       idx = sideindexpostprocess[i];
+      idx = sideindexpostprocess[i];
+      var = SCIPcolExactGetVar(row->cols[idx]);
+      lbreal = SCIPvarGetLbGlobal(var);
+      ubreal = SCIPvarGetUbGlobal(var);
 
       //  upper bound was used
       if( valslhsrelax[idx] == rowexactvalsinterval[idx].sup )/*lint !e777*/

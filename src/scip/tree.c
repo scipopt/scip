@@ -6231,18 +6231,21 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
       /* print branching information to certificate, if certificate is active */
-      if( downub == SCIP_INVALID ) /*lint !e777*/
+      if( set->exact_enabled )
       {
-         SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
-      }
-      else if( uplb == SCIP_INVALID ) /*lint !e777*/
-      {
-         SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
-      }
-      else
-      {
-         SCIPerrorMessage("Cannot resolve 3-way branching in certificate currently \n");
-         SCIPABORT();
+         if( downub == SCIP_INVALID ) /*lint !e777*/
+         {
+            SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
+         }
+         else if( uplb == SCIP_INVALID ) /*lint !e777*/
+         {
+            SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
+         }
+         else
+         {
+            SCIPerrorMessage("Cannot resolve 3-way branching in certificate currently \n");
+            SCIPABORT();
+         }
       }
 
       if( !SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), fixval) )
@@ -7483,6 +7486,12 @@ SCIP_RETCODE SCIPtreeEndProbing(
 
          if( set->exact_enabled )
          {
+            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+            {
+               lp->solved = FALSE;
+               SCIPlpExactForceSafeBound(lp->lpexact, set);
+               SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, &lperror) );
+            }
             /* here we always set this, or the lpobjval would not longer be safe */
             lp->lpobjval = tree->probinglpobjval;
             lp->hasprovedbound = tree->probinglphadsafebound;
