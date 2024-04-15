@@ -227,7 +227,10 @@ SCIP_RETCODE SCIPfreeRowCertInfo(
 
    /* only do something if row does not already exist*/
    if( SCIPhashmapExists(certificate->rowdatahash, (void*) SCIProwGetRowExact(row)) )
+   {
+      SCIP_CALL( SCIPhashmapRemove(certificate->rowdatahash, (void*) SCIProwGetRowExact(row)) );
       return SCIP_OKAY;
+   }
 
    if( certificate->workingaggrinfo || certificate->workingmirinfo )
       return SCIP_OKAY;
@@ -278,6 +281,23 @@ SCIP_RETCODE SCIPaddCertificateMirInfo(
    assert(scip->stat != NULL);
 
    SCIP_CALL( SCIPcertificateNewMirInfo(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** print MIR cut to certificate file */
+SCIP_RETCODE SCIPprintCertificateMirCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row that needs to be certified */
+   )
+{
+   SCIP_CERTIFICATE* certificate;
+
+   if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
+      return SCIP_OKAY;
+
+   certificate = SCIPgetCertificate(scip);
+   SCIP_CALL( SCIPcertificatePrintMirCut(scip->set, scip->lp, certificate, scip->transprob, row, 'L') );
 
    return SCIP_OKAY;
 }

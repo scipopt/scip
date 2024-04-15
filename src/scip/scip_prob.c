@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -464,6 +464,10 @@ SCIP_RETCODE SCIPreadProb(
          /* display timing statistics */
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "Reading Time: %.2f\n", readingtime);
+
+         /* add reading time to solving time, if requested */
+         if( scip->set->time_reading )
+            SCIPclockSetTime(scip->stat->solvingtime, readingtime);
       }
       retcode = SCIP_OKAY;
       break;
@@ -477,18 +481,6 @@ SCIP_RETCODE SCIPreadProb(
  TERMINATE:
    /* free buffer array */
    SCIPfreeBufferArray(scip, &tmpfilename);
-
-   /* check if reading time should belong to solving time */
-   if( scip->set->time_reading )
-   {
-      SCIP_Real readingtime;
-
-      /* get reading time */
-      readingtime = SCIPgetReadingTime(scip);
-
-      /* add reading time to solving time */
-      SCIPclockSetTime(scip->stat->solvingtime, readingtime);
-   }
 
    return retcode;
 }

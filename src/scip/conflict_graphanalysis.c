@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -698,6 +698,12 @@ static
 SCIP_RETCODE detectImpliedBounds(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_TREE*            tree,               /**< tree data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_REOPT*           reopt,              /**< reoptimization data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_CONFLICTSET*     conflictset,        /**< conflict set to add to the tree */
    int*                  nbdchgs,            /**< number of global deducted bound changes due to the conflict set */
    int*                  nredvars,           /**< number of redundant and removed variables from conflict set */
@@ -888,6 +894,8 @@ SCIP_RETCODE detectImpliedBounds(
       if( glbinfeas )
       {
          SCIPsetDebugMsg(set, "conflict set (%p) led to global infeasibility\n", (void*) conflictset);
+
+         SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, prob, origprob, reopt, lp, blkmem) );
 
          /* clear the memory array before freeing it */
          BMSclearMemoryArray(redundants, nbdchginfos);
@@ -1781,7 +1789,7 @@ SCIP_RETCODE conflictAddConflictCons(
       SCIPclockStart(conflict->dIBclock, set);
 
       /* find global bound changes which can be derived from the new conflict set */
-      SCIP_CALL( detectImpliedBounds(set, transprob, conflictset, &nbdchgs, &nredvars, &redundant) );
+      SCIP_CALL( detectImpliedBounds(set, transprob, stat, tree, blkmem, origprob, reopt, lp, conflictset, &nbdchgs, &nredvars, &redundant) );
 
       /* all variables where removed, we have an infeasibility proof */
       if( conflictset->nbdchginfos == 0 )
@@ -2681,7 +2689,7 @@ SCIP_Bool bdchginfoIsInvalid(
    if( SCIPvarIsBinary(var) )
       return FALSE;
 
-   /* check if the bdchginfo is invaild since a tight/weaker bound change was already explained */
+   /* check if the bdchginfo is invalid since a tight/weaker bound change was already explained */
    if( SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER )
    {
       if( var->conflictlbcount != conflict->count || var->conflictlb != SCIPbdchginfoGetNewbound(bdchginfo) ) /*lint !e777*/
@@ -2749,7 +2757,7 @@ SCIP_RETCODE conflictsetAddBounds(
       }
       else
       {
-         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invaild -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invalid -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -2799,7 +2807,7 @@ SCIP_RETCODE conflictsetAddBounds(
       }
       else
       {
-         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invaild -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPsetDebugMsg(set, "-> bound change info [%d:<%s> %s %g] is invalid -> ignore it\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -2929,13 +2937,13 @@ SCIP_BDCHGINFO* conflictFirstCand(
 
    if( SCIPpqueueNElems(conflict->forcedbdchgqueue) > 0 )
    {
-      /* get next potetioal candidate */
+      /* get next potential candidate */
       bdchginfo = (SCIP_BDCHGINFO*)(SCIPpqueueFirst(conflict->forcedbdchgqueue));
 
       /* check if this candidate is valid */
       if( bdchginfoIsInvalid(conflict, bdchginfo) )
       {
-         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the force queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invalid -> pop it from the force queue\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -2954,7 +2962,7 @@ SCIP_BDCHGINFO* conflictFirstCand(
       /* check if this candidate is valid */
       if( bdchginfo != NULL && bdchginfoIsInvalid(conflict, bdchginfo) )
       {
-         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invaild -> pop it from the queue\n", SCIPbdchginfoGetDepth(bdchginfo),
+         SCIPdebugMessage("bound change info [%d:<%s> %s %g] is invalid -> pop it from the queue\n", SCIPbdchginfoGetDepth(bdchginfo),
             SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
             SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfo));
@@ -3211,7 +3219,7 @@ SCIP_RETCODE conflictResolveBound(
 
             var = infervar;
 
-            /* transform given varibale to active varibale */
+            /* transform given variable to active variable */
             SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
             assert(var == actvar);
 
@@ -3374,7 +3382,7 @@ SCIP_RETCODE convertToActiveVar(
    scalar = 1.0;
    constant = 0.0;
 
-   /* transform given varibale to active varibale */
+   /* transform given variable to active variable */
    SCIP_CALL( SCIPvarGetProbvarSum(var, set, &scalar, &constant) );
    assert(SCIPvarGetStatus(*var) == SCIP_VARSTATUS_FIXED || scalar != 0.0); /*lint !e777*/
 

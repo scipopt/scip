@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -981,8 +981,8 @@ SCIP_Longint SCIPsepaGetNCutsAppliedDirect(
 
 /** increase count of applied cuts by one */
 void SCIPsepaIncNCutsApplied(
-   SCIP_SEPA*            sepa,                /**< separator */
-   SCIP_Bool             fromcutpool          /**< whether the cuts were added from the cutpool to sepastore */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_Bool             fromcutpool         /**< whether the cuts were added from the cutpool to sepastore */
    )
 {
    SCIP_SEPA* parentsepa;
@@ -1003,8 +1003,8 @@ void SCIPsepaIncNCutsApplied(
 
 /** increase count of added cuts by one */
 void SCIPsepaIncNCutsAdded(
-   SCIP_SEPA*            sepa,                /**< separator */
-   SCIP_Bool             fromcutpool          /**< whether the cuts were added from the cutpool to sepastore */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_Bool             fromcutpool         /**< whether the cuts were added from the cutpool to sepastore */
    )
 {
    SCIP_SEPA* parentsepa;
@@ -1026,8 +1026,8 @@ void SCIPsepaIncNCutsAdded(
 
 /** decrease the count of added cuts by one */
 void SCIPsepaDecNCutsAdded(
-   SCIP_SEPA*            sepa,                /**< separator */
-   SCIP_Bool             fromcutpool          /**< whether the cuts were added from the cutpool to sepastore */
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_Bool             fromcutpool         /**< whether the cuts were added from the cutpool to sepastore */
    )
 {
    SCIP_SEPA* parentsepa;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -184,8 +184,10 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSGETVARS ((*consgetvars));   /**< constraint get variables method */
    SCIP_DECL_CONSGETNVARS((*consgetnvars));  /**< constraint get number of variable method */
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)); /**< constraint handler diving solution enforcement method */
+   SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)); /**< constraint get permutation symmetry detection graph method */
+   SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH((*consgetsignedpermsymgraph)); /**< constraint get signed permutation symmetry detection graph method */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
-   SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed inactive
+   SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones precede inactive
                                               *   ones; a constraint is active if it is global and was not removed
                                               *   during presolving or it was added locally (in that case the local flag
                                               *   is TRUE) and the current node belongs to the corresponding sub tree */

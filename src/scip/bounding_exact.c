@@ -2370,7 +2370,10 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    int nattempts;
 
    /* if we are not in exact solving mode, just return */
-   if( !set->exact_enabled || lp->diving || lp->probing || lp->strongbranchprobing )
+   if( !set->exact_enabled )
+      return SCIP_OKAY;
+
+   if( !lpexact->forcesafebound && (lp->diving || lp->probing || lp->strongbranchprobing) )
       return SCIP_OKAY;
 
    lastboundmethod = 'u';
@@ -2405,6 +2408,8 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
             *lperror = FALSE;
             SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                   prob, usefarkas, safebound) );
+            if( lp->hasprovedbound )
+               *dualfeasible = TRUE;
             break;
       #ifdef SCIP_WITH_GMP
          case 'p':
@@ -2412,6 +2417,8 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
             *lperror = FALSE;
             SCIP_CALL( projectShift(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                   prob, blkmem, usefarkas, safebound) );
+            if( lp->hasprovedbound )
+               *dualfeasible = TRUE;
             break;
       #endif
          case 'e':
@@ -2458,6 +2465,8 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
 
    /* reset the forceexactsolve flag */
    lpexact->forceexactsolve = FALSE;
+   lpexact->wasforcedsafebound = lpexact->forcesafebound;
+   lpexact->forcesafebound = FALSE;
 
    return SCIP_OKAY;
 }

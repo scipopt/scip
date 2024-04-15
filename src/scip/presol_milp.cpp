@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -90,19 +90,20 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "papilo/core/ProblemBuilder.hpp"
 #include "papilo/Config.hpp"
 
-#define PRESOL_NAME            "milp"
-#define PRESOL_DESC            "MILP specific presolving methods"
-#define PRESOL_PRIORITY        9999999 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
-#define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
+#define PRESOL_NAME                "milp"
+#define PRESOL_DESC                "MILP specific presolving methods"
+#define PRESOL_PRIORITY            9999999   /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
+#define PRESOL_MAXROUNDS           -1        /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_TIMING              SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
 /* default parameter values */
 #define DEFAULT_THREADS            0         /**< maximum number of threads presolving may use (0: automatic) */
 #define DEFAULT_MAXFILLINPERSUBST  3         /**< maximal possible fillin for substitutions to be considered */
 #define DEFAULT_MAXSHIFTPERROW     10        /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
 #define DEFAULT_DETECTLINDEP       0         /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
-#define DEFAULT_MAXBADGESIZE_SEQ   15000     /**< the max badge size in Probing if PaPILO is executed in sequential mode*/
-#define DEFAULT_MAXBADGESIZE_PAR   -1        /**< the max badge size in Probing if PaPILO is executed in parallel mode*/
+#define DEFAULT_MAXBADGESIZE_SEQ   15000     /**< the max badge size in Probing if PaPILO is executed in sequential mode */
+#define DEFAULT_MAXBADGESIZE_PAR   -1        /**< the max badge size in Probing if PaPILO is executed in parallel mode */
+#define DEFAULT_INTERNAL_MAXROUNDS -1        /**< internal max rounds in PaPILO (-1: no limit, 0: model cleanup) */
 #define DEFAULT_RANDOMSEED         0         /**< the random seed used for randomization of tie breaking */
 #define DEFAULT_MODIFYCONSFAC      0.8       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
@@ -128,8 +129,9 @@ struct SCIP_PresolData
    int lastnrows;                            /**< the number of rows from the last call */
    int threads;                              /**< maximum number of threads presolving may use (0: automatic) */
    int maxfillinpersubstitution;             /**< maximal possible fillin for substitutions to be considered */
-   int maxbadgesizeseq;                      /**< the max badge size in Probing if PaPILO is called in sequential mode*/
+   int maxbadgesizeseq;                      /**< the max badge size in Probing if PaPILO is called in sequential mode */
    int maxbadgesizepar;                      /**< the max badge size in Probing if PaPILO is called in parallel mode */
+   int internalmaxrounds;                    /**< internal max rounds in PaPILO (-1: no limit, 0: model cleanup) */
    int maxshiftperrow;                       /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
    int detectlineardependency;               /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
    int randomseed;                           /**< the random seed used for randomization of tie breaking */
@@ -147,7 +149,6 @@ struct SCIP_PresolData
    SCIP_Real hugebound;                      /**< absolute bound value that is considered too huge for activitity based calculations */
 
    char* filename = NULL;                    /**< filename to store the instance before presolving */
-
 };
 
 using namespace papilo;
@@ -1075,6 +1076,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    presolve.getPresolveOptions().threads = 1;
 #endif
 
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
+   presolve.getPresolveOptions().maxrounds = data->internalmaxrounds;
+#endif
 
    /* disable dual reductions that are not permitted */
    if( !complete )
@@ -1149,7 +1153,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    if( data->enablesparsify )
       presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
 
-
    /* set tolerances */
    presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
    presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
@@ -1168,6 +1171,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
    if( 0 != strncmp(data->filename, DEFAULT_FILENAME_PROBLEM, strlen(DEFAULT_FILENAME_PROBLEM)) )
    {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+                      "   writing transformed problem to %s (only enforced constraints)\n", data->filename);
       SCIP_CALL(SCIPwriteTransProblem(scip, data->filename, NULL, FALSE));
    }
 
@@ -1354,7 +1359,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             assert(side == res.postsolve.values[first + 2]);
             assert(res.postsolve.indices[first + 1] == 0);
             assert(res.postsolve.indices[first + 2] == 0);
-
          }
          assert( type == ReductionType::kSubstitutedCol || type == ReductionType::kSubstitutedColWithDual );
 #else
@@ -1670,6 +1674,14 @@ SCIP_RETCODE SCIPincludePresolMILP(
    presoldata->maxbadgesizepar = DEFAULT_MAXBADGESIZE_PAR;
 #endif
 
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
+   SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/internalmaxrounds",
+         "internal maxrounds for each milp presolving (-1: no limit, 0: model cleanup)",
+         &presoldata->internalmaxrounds, TRUE, DEFAULT_INTERNAL_MAXROUNDS, -1, INT_MAX, NULL, NULL));
+#else
+   presoldata->internalmaxrounds = DEFAULT_INTERNAL_MAXROUNDS;
+#endif
+
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/" PRESOL_NAME "/enableparallelrows",
          "should the parallel rows presolver be enabled within the presolve library?",
@@ -1701,7 +1713,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
          &presoldata->enablesparsify, TRUE, DEFAULT_ENABLESPARSIFY, NULL, NULL) );
 
    SCIP_CALL( SCIPaddStringParam(scip, "presolving/" PRESOL_NAME "/probfilename",
-         "filename to store the problem before MILP presolving starts",
+         "filename to store the problem before MILP presolving starts (only enforced constraints)",
          &presoldata->filename, TRUE, DEFAULT_FILENAME_PROBLEM, NULL, NULL) );
 
    SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/verbosity",

@@ -334,9 +334,8 @@ struct SCIP_LpExact
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
    SCIP_Bool             divelpwasdualchecked;/**< dual feasibility was checked when diving started */
    SCIP_Bool             divingobjchg;       /**< objective values were changed in diving or probing: LP objective is invalid */
-
-
-
+   SCIP_Bool             forcesafebound;     /**< should the next safe bounding step be forced to execute, even in probing/diving/etc? */
+   SCIP_Bool             wasforcedsafebound; /**< was the last safe bound forced to execute? */
 };
 
 #ifdef __cplusplus

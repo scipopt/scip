@@ -3586,6 +3586,9 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
    {
       int idx;
       idx = sideindexpostprocess[i];
+      var = SCIPcolExactGetVar(row->cols[idx]);
+      lbreal = SCIPvarGetLbGlobal(var);
+      ubreal = SCIPvarGetUbGlobal(var);
 
       if( valslhsrelax[idx] == rowexactvalsinterval[idx].inf )/*lint !e777*/
          rhsrelax += ubreal >= 0 ? (rowexactvalsinterval[idx].sup - rowexactvalsinterval[idx].inf) * ubreal : 0;
@@ -3598,6 +3601,10 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
    {
       int idx;
       idx = sideindexpostprocess[i];
+      idx = sideindexpostprocess[i];
+      var = SCIPcolExactGetVar(row->cols[idx]);
+      lbreal = SCIPvarGetLbGlobal(var);
+      ubreal = SCIPvarGetUbGlobal(var);
 
       //  upper bound was used
       if( valslhsrelax[idx] == rowexactvalsinterval[idx].sup )/*lint !e777*/
@@ -4016,6 +4023,8 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->boundshiftviable = TRUE;
    (*lp)->forceexactsolve = FALSE;
    (*lp)->allowexactsolve = FALSE;
+   (*lp)->forcesafebound = FALSE;
+   (*lp)->wasforcedsafebound = FALSE;
    (*lp)->lpiscaling = set->lp_scaling;
    (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
    (*lp)->lpirefactorinterval = set->lp_refactorinterval;
@@ -7957,6 +7966,22 @@ void SCIPlpExactForceExactSolve(
    assert(lpexact != NULL);
 
    lpexact->forceexactsolve = TRUE;
+}
+
+/** forces the next exact bound computation to be executed even in probing mode */
+void SCIPlpExactForceSafeBound(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->exact_enabled )
+      return;
+
+   assert(lpexact != NULL);
+
+   lpexact->forcesafebound = TRUE;
 }
 
 /** allows an exact lp to be solved in the next exact bound computation */

@@ -553,6 +553,42 @@ SCIP_RETCODE SCIPstartExactDive(
    return SCIP_OKAY;
 }
 
+/** checks if exact diving mode is possible at this point in time
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
+ *  @note In parallel to exact LP diving, this method also starts the regular LP diving mode by calling SCIPstartDive().
+ */
+SCIP_Bool SCIPisExactDivePossible(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPisExactDivePossible", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   assert(SCIPnodeGetType(SCIPgetCurrentNode(scip)) == SCIP_NODETYPE_FOCUSNODE);
+
+   if( SCIPlpExactDiving(scip->lpexact) )
+      return FALSE;
+
+   if( SCIPlpDiving(scip->lp) )
+      return FALSE;
+
+   if( SCIPtreeProbing(scip->tree) )
+      return FALSE;
+
+   if( !SCIPlpIsSolved(scip->lp) )
+      return FALSE;
+
+   return TRUE;
+}
+
 /** quits exact LP diving and resets bounds and objective values of columns to the current node's values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

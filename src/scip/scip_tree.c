@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -555,7 +555,7 @@ SCIP_RETCODE SCIPprintNodeRootPath(
 
    SCIPnodeGetAncestorBranchingPath(node, branchvars, branchbounds, boundtypes, &nbranchvars, branchvarssize, nodeswitches, &nnodes, nodeswitchsize );
 
-   /* if the arrays were to small, we have to reallocate them and recall SCIPnodeGetAncestorBranchingPath */
+   /* if the arrays were too small, we have to reallocate them and recall SCIPnodeGetAncestorBranchingPath */
    if( nbranchvars > branchvarssize || nnodes > nodeswitchsize )
    {
       branchvarssize = nbranchvars;

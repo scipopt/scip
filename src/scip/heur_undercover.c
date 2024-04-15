@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -522,6 +522,7 @@ SCIP_RETCODE createCoveringProblem(
    /* create problem data structure */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering", SCIPgetProbName(scip));
    SCIP_CALL( SCIPcreateProb(coveringscip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIPsetSubscipDepth(coveringscip, SCIPgetSubscipDepth(scip) + 1);
 
    /* allocate and initialize to zero counter arrays for weighted objectives */
    SCIP_CALL( SCIPallocBufferArray(scip, &consmarker, nvars) );

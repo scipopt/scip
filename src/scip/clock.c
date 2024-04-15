@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -513,6 +513,13 @@ SCIP_Real SCIPclockGetTime(
          result = 0.0; /*lint !e527*/
       }
    }
+
+   /* time typically moves forward
+    * but when compiler optimizations meet fast CPUs, then rounding errors create small timetravel
+    */
+   assert(!EPSN(result, 1e-12));
+   if( result < 0.0 )
+      result = 0.0;
 
    clck->lasttime = result;
    return result;

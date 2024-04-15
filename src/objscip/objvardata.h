@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -160,8 +160,10 @@ public:
       SCIP_RESULT*       result              /**< pointer to store the result of the call */
       )
    {  /*lint --e{715}*/
-      (*objvardata) = 0;
-      (*result) = SCIP_DIDNOTRUN;
+      assert(objvardata != NULL);
+      assert(result != NULL);
+      *objvardata = 0;
+      *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
 };

@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -90,14 +90,15 @@ EXCLUDENODES    =       none
 SLURMACCOUNT    =       default
 GAMS		=	gams
 PYTHON  =   none
-EMPHBENCHMARK  =   true
+EMPHBENCHMARK	=	true
+CLOCKTYPE	=	1
 
 # set SCIP version here for external projects
-SCIP_VERSION_MAJOR = 8
+SCIP_VERSION_MAJOR = 10
 SCIP_VERSION_MINOR = 0
-SCIP_VERSION_PATCH = 3
-SCIP_VERSION_SUB = 5
-SCIP_VERSION_API = 110
+SCIP_VERSION_PATCH = 0
+SCIP_VERSION_SUB = 0
+SCIP_VERSION_API = 116
 SCIP_VERSION = $(SCIP_VERSION_MAJOR).$(SCIP_VERSION_MINOR).$(SCIP_VERSION_PATCH).$(SCIP_VERSION_SUB)
 
 # compiling and linking parameters
@@ -247,7 +248,7 @@ GXXWARN = -pedantic -Wall -W
 GCCWARN += -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wredundant-decls -Wdisabled-optimization \
            -Wsign-compare -Wstrict-prototypes -Wmissing-declarations -Wmissing-prototypes
 GXXWARN += -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow -Wredundant-decls -Wdisabled-optimization \
-           -Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual
+           -Wnon-virtual-dtor -Wreorder -Woverloaded-virtual -Wsign-promo -Wsynth -Wcast-qual
 
 # disable some warning that would be too much effort to fix, disfigure the code, or produce too many false positive
 GCCWARN += -Wno-long-long -Wno-unknown-pragmas -Wno-unused-parameter -Wno-override-init -Wno-uninitialized -Wno-maybe-uninitialized
@@ -561,7 +562,11 @@ endif
 endif
 
 ifeq ($(SYM),snauty)
+ifeq ($(NAUTYEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+else
+LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/nauty
+endif
 CXXFLAGS	+=	$(CXX17FLAG)
 endif
 
@@ -753,9 +758,9 @@ OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(OBJSCIPLIBNAME).$(LIBEX
 # link SCIP for C projects
 LINKCXXSCIPALL	=	$(LINKCXX_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIBBASE)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
-			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)
+			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)
 
 # link SCIP for C++ projects (including libobjscip)
 LINKCCSCIPALL	=	$(LINKCC_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCC_l)$(SCIPLIBBASE)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) \
-			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)
+			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)

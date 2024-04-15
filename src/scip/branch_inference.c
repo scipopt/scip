@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -158,7 +158,7 @@ void evaluateAggrCand(
    )
 {
    /* evaluate the candidate against the currently best candidate */
-   /** TODO: consider a weaker comparison of some kind */
+   /* TODO: consider a weaker comparison of some kind */
    if( *bestscore < score )
    {
       /* the score of the candidate is better than the currently best know candidate, so it should be the first candidate in bestcands and nbestcands should be set to 1*/
@@ -168,7 +168,7 @@ void evaluateAggrCand(
       *nbestcands = 1;
       bestcands[0] = cand;
    }
-   /** TODO: consider a weaker comparison of some kind */
+   /* TODO: consider a weaker comparison of some kind */
    else if( SCIPisEQ(scip, *bestscore, score) )
    {
       /* the score of the candidate is comparable to the currently known best, so we add it to bestcands and increase nbestcands by 1*/
@@ -574,7 +574,6 @@ SCIP_RETCODE performBranchingNoSol(
    assert(result != NULL);
 
    *result = SCIP_DIDNOTFIND;
-
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcands, ncands) );

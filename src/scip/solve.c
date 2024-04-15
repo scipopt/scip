@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -195,6 +195,10 @@ SCIP_Bool SCIPsolveIsStopped(
       && (SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap)
          || SCIPsetIsLT(set, (SCIPgetUpperbound(set->scip) - SCIPgetLowerbound(set->scip)) * SCIPgetTransObjscale(set->scip), set->limit_absgap )) )
       stat->status = SCIP_STATUS_GAPLIMIT;
+   else if( set->limit_primal != SCIP_INVALID && !SCIPsetIsPositive(set, (int)SCIPgetObjsense(set->scip) * (SCIPgetPrimalbound(set->scip) - set->limit_primal)) ) /*lint !e777*/
+      stat->status = SCIP_STATUS_PRIMALLIMIT;
+   else if( set->limit_dual != SCIP_INVALID && !SCIPsetIsNegative(set, (int)SCIPgetObjsense(set->scip) * (SCIPgetDualbound(set->scip) - set->limit_dual)) ) /*lint !e777*/
+      stat->status = SCIP_STATUS_DUALLIMIT;
    else if( set->limit_solutions >= 0 && set->stage >= SCIP_STAGE_PRESOLVING
       && SCIPgetNLimSolsFound(set->scip) >= set->limit_solutions )
       stat->status = SCIP_STATUS_SOLLIMIT;
@@ -781,6 +785,7 @@ SCIP_RETCODE updatePseudocost(
       int nvalidupdates;
       int d;
       int i;
+      int ancestordepth;
 
       assert(SCIPnodeIsActive(tree->focuslpstatefork));
       assert(tree->path[tree->focuslpstatefork->depth] == tree->focuslpstatefork);
@@ -1055,6 +1060,108 @@ SCIP_RETCODE updatePseudocost(
 
       /* free the buffer for the collected bound changes */
       SCIPsetFreeBufferArray(set, &updates);
+
+      /* update the ancestor pscost fields */
+      if( tree->focuslpstatefork->depth >= 1 && set->branch_collectancpscost )
+      {
+         /* if the last fork is not the root node, we have more ancestors */
+         ancestordepth = -1;
+         for ( d = tree->focuslpstatefork->depth - 1; d >=0; --d )
+         {
+            node = tree->path[d];
+            if ( SCIPnodeGetType(node) == SCIP_NODETYPE_FORK )
+            {
+               ancestordepth = d;
+               break;
+            }
+         }
+         if( ancestordepth >= 0 )
+         {
+            /* ancestor pseudo cost updates for an ancestor */
+            assert(SCIPnodeIsActive(tree->path[ancestordepth]));
+
+            /* get a buffer for the collected bound changes; start with a size twice as large as the number of nodes between
+            * current LP fork and the previous LP fork
+            */
+            SCIP_CALL( SCIPsetAllocBufferArray(set, &updates, (int)(2*(tree->focuslpstatefork->depth - ancestordepth))) );
+            nupdates = 0;
+            nvalidupdates = 0;
+            for( d = ancestordepth + 1; d <= tree->focuslpstatefork->depth; ++d )
+            {
+               node = tree->path[d];
+
+               if( node->domchg != NULL )
+               {
+                  SCIP_BOUNDCHG* boundchgs;
+                  int nboundchgs;
+
+                  boundchgs = node->domchg->domchgbound.boundchgs;
+                  nboundchgs = (int) node->domchg->domchgbound.nboundchgs;
+                  for( i = 0; i < nboundchgs; ++i )
+                  {
+                     var = boundchgs[i].var;
+                     assert(var != NULL);
+
+                     /* we even collect redundant bound changes, since they were not redundant in the LP branching decision
+                     * and therefore should be regarded in the ancestor pseudocost updates
+                     */
+                     if( (SCIP_BOUNDCHGTYPE)boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING &&
+                        (PSEUDOCOSTFLAG)var->pseudocostflag == PSEUDOCOST_NONE )
+                     {
+                        /* remember the bound change and mark the variable */
+                        SCIP_CALL( SCIPsetReallocBufferArray(set, &updates, nupdates+1) );
+                        updates[nupdates] = &boundchgs[i];
+                        nupdates++;
+
+                        /* check for valid pseudocost updates for integer variables */
+                        if( isPseudocostUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval, updateintegers, updatecontinuous) &&
+                           SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+                        {
+                           var->pseudocostflag = PSEUDOCOST_UPDATE; /*lint !e641*/
+                           nvalidupdates++;
+                        }
+                        else
+                           var->pseudocostflag = PSEUDOCOST_IGNORE; /*lint !e641*/
+                     }
+                  }
+               }
+            }
+
+            /* update the ancestor pseudo cost values and reset the variables' flags; assume, that the
+            * responsibility for the dual gain is equally spread on all bound changes that lead to valid
+            * ancestor pseudo cost updates
+            */
+            assert(SCIPnodeGetType(tree->path[ancestordepth]) == SCIP_NODETYPE_FORK);
+            weight = (nvalidupdates > 0 ? 1.0 / (SCIP_Real)nvalidupdates : 1.0);
+            /* lp gain is same as above but with different weight */
+            lpgain = (SCIPlpGetObjval(lp, set, prob) - tree->focuslpstatefork->data.fork->lpobjval) * weight;
+            lpgain = MAX(lpgain, 0.0);
+
+            for( i = 0; i < nupdates; ++i )
+            {
+               assert((SCIP_BOUNDCHGTYPE)updates[i]->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING);
+
+               var = updates[i]->var;
+               assert(var != NULL);
+               assert((PSEUDOCOSTFLAG)var->pseudocostflag != PSEUDOCOST_NONE);
+
+               if( (PSEUDOCOSTFLAG)var->pseudocostflag == PSEUDOCOST_UPDATE )
+               {
+                  assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
+                  /* we use updates[i]->newbound as new lp value for measuring change in the LP value. */
+                  SCIPsetDebugMsg(set, "updating ancestor pseudocosts of <%s>: sol: %g -> %g, LP: %e -> %e => solvaldelta = %g, gain=%g, weight: %g\n",
+                     SCIPvarGetName(var), updates[i]->data.branchingdata.lpsolval, updates[i]->newbound,
+                     tree->focuslpstatefork->data.fork->lpobjval, SCIPlpGetObjval(lp, set, prob),
+                     updates[i]->newbound - updates[i]->data.branchingdata.lpsolval, lpgain, weight);
+                  SCIP_CALL( SCIPvarUpdateAncPseudocost(var, set, stat,
+                     updates[i]->newbound - updates[i]->data.branchingdata.lpsolval, lpgain, weight) );
+               }
+               var->pseudocostflag = PSEUDOCOST_NONE; /*lint !e641*/
+            }
+            /* free the buffer for the collected bound changes */
+            SCIPsetFreeBufferArray(set, &updates);
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -2640,6 +2747,8 @@ SCIP_RETCODE priceAndCutLoop(
          assert(lp->flushed);
          assert(lp->solved);
          assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+         assert(!(*lperror));
+         assert(!(*cutoff));
 
          olddomchgcount = stat->domchgcount;
          oldninitconssadded = stat->ninitconssadded;
@@ -2661,13 +2770,14 @@ SCIP_RETCODE priceAndCutLoop(
          assert(lp->flushed);
          assert(lp->solved);
          assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-
-         /* constraint separation */
-         SCIPsetDebugMsg(set, "constraint separation\n");
+         assert(!(*lperror));
 
          /* separate constraints and LP */
-         if( !(*cutoff) && !(*lperror) && !enoughcuts && lp->solved )
+         if( !(*cutoff) && !enoughcuts )
          {
+            /* constraint and LP separation */
+            SCIPsetDebugMsg(set, "constraint and LP separation\n");
+
             /* apply a separation round */
             SCIP_CALL( separationRoundLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, transprob, primal, tree,
                   lp, sepastore, actdepth, bounddist, allowlocal, delayedsepa,
@@ -2687,7 +2797,7 @@ SCIP_RETCODE priceAndCutLoop(
          }
 
          /* call global cut pool separation again since separators may add cuts to the pool instead of the sepastore */
-         if( !(*cutoff) && !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && !enoughcuts && lp->solved )
+         if( !(*cutoff) && !(*lperror) && lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && !enoughcuts )
          {
             SCIP_CALL( cutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, FALSE, root,
                   actdepth, &enoughcuts, cutoff) );
@@ -2699,11 +2809,8 @@ SCIP_RETCODE priceAndCutLoop(
          }
 
          /* delayed global cut pool separation */
-         if( !(*cutoff) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPsepastoreGetNCuts(sepastore) == 0 &&
-               !enoughcuts )
+         if( !(*cutoff) && !(*lperror) && lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPsepastoreGetNCuts(sepastore) == 0 && !enoughcuts )
          {
-            assert( !(*lperror) );
-
             SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, TRUE,
                   root, actdepth, &enoughcuts, cutoff) );
 
@@ -2711,9 +2818,35 @@ SCIP_RETCODE priceAndCutLoop(
             {
                SCIPsetDebugMsg(set, " -> delayed global cut pool detected cutoff\n");
             }
+            assert(lp->solved);
             assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
             assert(lp->flushed);
-            assert(lp->solved);
+         }
+
+         /* delayed separation if no cuts where produced */
+         if( !(*cutoff) && !(*lperror) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && SCIPsepastoreGetNCuts(sepastore) == 0 && delayedsepa )
+         {
+            SCIP_CALL( separationRoundLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, transprob, primal,
+                  tree, lp, sepastore, actdepth, bounddist, allowlocal, delayedsepa,
+                  &delayedsepa, &enoughcuts, cutoff, lperror, &mustsepa, &mustprice) );
+            assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
+
+            /* call delayed cut pool separation again, since separators may add cuts to the pool instead of the sepastore */
+            if( !(*cutoff) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+            {
+               assert( !(*lperror) );
+
+               SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, TRUE,
+                     root, actdepth, &enoughcuts, cutoff) );
+
+               if( *cutoff )
+               {
+                  SCIPsetDebugMsg(set, " -> delayed global cut pool detected cutoff\n");
+               }
+               assert(SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL);
+               assert(lp->flushed);
+               assert(lp->solved);
+            }
          }
 
          assert(*cutoff || *lperror || SCIPlpIsSolved(lp));
@@ -4163,15 +4296,14 @@ SCIP_Bool restartAllowed(
    assert(set != NULL);
    assert(stat != NULL);
 
-   return (set->nactivepricers == 0 && !set->reopt_enable
-         && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
-         && (set->limit_restarts == -1 || stat->nruns <= set->limit_restarts)
-         && !(set->exact_enabled));
+   return set->nactivepricers == 0 && !set->reopt_enable
+      && ( set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts )
+      && !(set->exact_enabled);
 }
 #else
-#define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && !set->reopt_enable && ((set)->presol_maxrestarts == -1 || (stat)->nruns <= (set)->presol_maxrestarts) \
-                                                && (set->limit_restarts == -1 || stat->nruns <= set->limit_restarts) \
-                                                && (!set->exact_enabled))
+#define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && !set->reopt_enable \
+                                                && ((set)->presol_maxrestarts == -1 || (stat)->nruns <= (set)->presol_maxrestarts)) \
+                                                && (!set->exact_enabled)
 #endif
 
 /** solves the focus node */
@@ -5132,12 +5264,13 @@ SCIP_RETCODE SCIPsolveCIP(
          /* focus selected node */
          SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt,
                lp, branchcand, conflict, conflictstore, eventfilter, eventqueue, cliquetable, &cutoff, FALSE, FALSE) );
-         if( SCIPisCertificateActive(set->scip) )
+
+         if( SCIPisExactSolve(set->scip) && !SCIPisLPConstructed(set->scip) )
          {
-            if( !SCIPisLPConstructed(set->scip))
+            SCIP_CALL( SCIPconstructLP(set->scip, &cutoff) );
+            assert(!cutoff);
+            if ( SCIPisCertificateActive(set->scip) )
             {
-               SCIP_CALL( SCIPconstructLP(set->scip, &cutoff) );
-               assert(!cutoff);
                SCIP_CALL( SCIPcertificateInitTransFile(set->scip) );
             }
          }

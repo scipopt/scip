@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -251,7 +251,7 @@ struct SCIP_Tree
    SCIP_Bool             probinglpwasprimchecked;/**< primal feasibility has been checked when probing started */
    SCIP_Bool             probinglpwasdualfeas;/**< dual feasibility when probing started */
    SCIP_Bool             probinglpwasdualchecked;/**< dual feasibility has been check when probing started */
-   SCIP_Bool             porbinglphadsafebound;/**< lp had a proven dual bound when probing started? */
+   SCIP_Bool             probinglphadsafebound;/**< lp had a proven dual bound when probing started? */
    SCIP_Bool             probdiverelaxstored; /**< was a relax solution stored before diving or probing ? */
    SCIP_Bool             probdiverelaxincludeslp; /**< did the stored relaxation solution include all lp cuts ? */
 };

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -35,6 +35,7 @@
 #include "scip/pub_misc_rowprep.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/pub_var.h"
+#include "scip/pub_message.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -547,6 +548,7 @@ void rowprepCleanupSide(
 #undef SCIProwprepGetName
 #undef SCIProwprepGetNModifiedVars
 #undef SCIProwprepGetModifiedVars
+#undef SCIProwprepSetCoef
 #undef SCIProwprepAddSide
 #undef SCIProwprepAddConstant
 #undef SCIProwprepSetSidetype
@@ -728,10 +730,17 @@ void SCIProwprepReset(
    rowprep->modifiedside = FALSE;
 }
 
-#ifdef NDEBUG
-#undef SCIProwprepAddSide
-#undef SCIProwprepAddConstant
-#endif
+/** sets coefficient idx of rowprep */
+void SCIProwprepSetCoef(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   int                   idx,                /**< index of coef to set */
+   SCIP_Real             newcoef             /**< new coefficient */
+   )
+{
+   assert(rowprep != NULL);
+
+   rowprep->coefs[idx] = newcoef;
+}
 
 /** adds constant value to side of rowprep */
 void SCIProwprepAddSide(

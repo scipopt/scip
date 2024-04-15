@@ -29,6 +29,7 @@
 #include "scip/cuts.h"
 #include "scip/cons_exactlp.h"
 #include "scip/scip.h"
+#include "scip/scip_exact.h"
 #include "scip/set.h"
 #include "scip/lp.h"
 #include "scip/lpexact.h"
@@ -699,14 +700,15 @@ void concatCert(
 
 /** closes the certificate output files */
 void SCIPcertificateExit(
-   SCIP*                 scip,               /**< scip data structure */
-   SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   SCIP*                 scip                /**< scip data structure */
    )
 {
+   SCIP_CERTIFICATE* certificate = SCIPgetCertificate(scip);
+   SCIP_MESSAGEHDLR* messagehdlr = SCIPgetMessagehdlr(scip);
+   SCIP_SET* set = scip->set;
+
    assert(certificate != NULL);
-   assert(set != NULL);
+   assert(scip->set != NULL);
 
    if( certificate->origfile != NULL )
    {
@@ -1015,6 +1017,8 @@ void SCIPcertificatePrintProblemMessage(
 {
    va_list ap;
    char buffer[3 * SCIP_MAXSTRLEN];
+   size_t written;
+
    /* check if certificate output should be created */
    if( certificate->transfile == NULL )
       return;
@@ -1023,12 +1027,13 @@ void SCIPcertificatePrintProblemMessage(
    vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
    if( isorigfile )
-      SCIPfprintf(certificate->origfile, "%s", buffer);
+      written = SCIPfprintf(certificate->origfile, "%s", buffer);
    else
-      SCIPfprintf(certificate->transfile, "%s", buffer);
+      written = SCIPfprintf(certificate->transfile, "%s", buffer);
 
    va_end(ap);
    updateFilesize(certificate, strlen(buffer));
+   assert(written == strlen(buffer));
 }
 
 /** checks that the state of the certificate is correct */
@@ -1055,15 +1060,18 @@ void SCIPcertificatePrintProofMessage(
 {
    va_list ap;
    char buffer[3 * SCIP_MAXSTRLEN];
+   size_t written;
+
    /* check if certificate output should be created */
    if( certificate->derivationfile == NULL )
       return;
    va_start(ap, formatstr);
    vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
-   SCIPfprintf(certificate->derivationfile, "%s", buffer); // todo: is this correct?
+   written = SCIPfprintf(certificate->derivationfile, "%s", buffer); // todo: is this correct?
    va_end(ap);
    updateFilesize(certificate, strlen(buffer));
+   assert(written == strlen(buffer));
 }
 
 
@@ -1392,6 +1400,8 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    for( i = 0; i < mirinfo->nsplitvars; ++i )
    {
+      if( mirinfo->splitcoefficients[i] == 0 )
+         continue;
       coefs[SCIPvarGetCertificateIndex(vars[mirinfo->varinds[i]])] += mirinfo->splitcoefficients[i];
       SCIPdebugMessage("+%g%s", mirinfo->splitcoefficients[i], SCIPvarGetName(vars[mirinfo->varinds[i]]));
    }
@@ -1409,25 +1419,25 @@ SCIP_RETCODE certificatePrintMirSplit(
          int varidx = SCIPvarGetCertificateIndex(var);
          SCIP_Real rowcoef = SCIProwGetVals(slackrow)[j];
 
-         assert(SCIPisExactlyIntegral(set->scip, rowcoef * slackval));
+         assert(SCIPisExactlyIntegral(rowcoef * slackval));
          assert(SCIPvarIsBinary(var) || SCIPvarIsIntegral(var));
          coefs[varidx] += rowcoef  * slackval;
-         assert(SCIPisExactlyIntegral(set->scip, coefs[varidx]));
+         assert(SCIPisExactlyIntegral(coefs[varidx]));
       }
       if( mirinfo->slacksign[i] == 1 )
       {
-         assert(SCIPisExactlyIntegral(set->scip, SCIProwGetRhs(slackrow) - SCIProwGetConstant(slackrow)));
+         assert(SCIPisExactlyIntegral(SCIProwGetRhs(slackrow) - SCIProwGetConstant(slackrow)));
          slackrhs += (SCIProwGetRhs(slackrow) - SCIProwGetConstant(slackrow)) * slackval;
 
-         assert(SCIPisExactlyIntegral(set->scip, slackrhs));
+         assert(SCIPisExactlyIntegral(slackrhs));
          SCIPdebugMessage("+%gsrhs_%s", mirinfo->slackcoefficients[i], SCIProwGetName(mirinfo->slackrows[i]));
       }
       else
       {
-         assert(SCIPisExactlyIntegral(set->scip, SCIProwGetLhs(slackrow) - SCIProwGetConstant(slackrow)));
+         assert(SCIPisExactlyIntegral(SCIProwGetLhs(slackrow) - SCIProwGetConstant(slackrow)));
          slackrhs += (SCIProwGetLhs(slackrow) - SCIProwGetConstant(slackrow)) * slackval;
 
-         assert(SCIPisExactlyIntegral(set->scip, slackrhs));
+         assert(SCIPisExactlyIntegral(slackrhs));
          SCIPdebugMessage("+%gslhs_%s", mirinfo->slackcoefficients[i], SCIProwGetName(mirinfo->slackrows[i]));
       }
    }
@@ -1491,6 +1501,71 @@ SCIP_RETCODE certificatePrintMirSplit(
 
 /** prints all local bounds that differ from their global bounds as the bounds to take into account */
 static
+SCIP_RETCODE certificatePrintIncompleteDerStart(
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_LP*              lp,                 /**< LP data structure */
+   SCIP_ROW**            rows,               /**< rows to be considered */
+   int                   nrows,              /**< number of rows to be considered */
+   SCIP_PROB*            prob,               /**< SCIP problem data */
+   SCIP_Bool             local               /**< TRUE if the cut is only valid locally */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+
+   vars = SCIPprobGetVars(prob);
+   nvars = SCIPprobGetNVars(prob);
+
+   SCIPcertificatePrintProofMessage(certificate, " { lin incomplete ");
+
+   /* add non-global bounds */
+   for( i = 0; i < nvars; i++ )
+   {
+      SCIP_VAR* var = vars[i];
+      SCIP_Longint index;
+
+      index = local ? SCIPvarGetLbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexGlobal(var);
+      if( index != -1 )
+      {
+	      assert(index <= certificate->indexcounter);
+	      SCIPcertificatePrintProofMessage(certificate, " %d ", index);
+      }
+      index = local ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetUbCertificateIndexGlobal(var);
+      if( index != -1 )
+      {
+	      assert(index <= certificate->indexcounter);
+	      SCIPcertificatePrintProofMessage(certificate, " %d ", index);
+      }
+   }
+
+   /* add non-default rows */
+   for( i = 0; i < nrows; ++i )
+   {
+      SCIP_ROWEXACT* rowexact = SCIProwGetRowExact(rows[i]);
+
+      if( !local && SCIProwIsLocal(rows[i]) )
+         continue;
+
+      if( !SCIPhashmapExists(certificate->rowdatahash, (void*) rowexact) )
+         continue;
+
+      assert(rowexact != NULL);
+      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) rowexact));
+      size_t key = (size_t) SCIPhashmapGetImageLong(certificate->rowdatahash, (void*) rowexact);
+      SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+      /* for a ranged row, we need both sides to be safe */
+      if( !RatIsAbsInfinity(rowexact->lhs) && !RatIsAbsInfinity(rowexact->rhs) && !RatIsEqual(rowexact->lhs, rowexact->rhs) )
+      {
+         SCIPcertificatePrintProofMessage(certificate, " %d ", key + 1);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** prints all local bounds that differ from their global bounds as the bounds to take into account */
+static
 SCIP_RETCODE certificatePrintWeakDerStart(
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
    SCIP_PROB*            prob,               /**< SCIP problem data */
@@ -1515,6 +1590,9 @@ SCIP_RETCODE certificatePrintWeakDerStart(
          nboundentries++;
       if( !RatIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
          nboundentries++;
+
+      assert(!RatIsEqual(var->exactdata->glbdom.lb, var->exactdata->locdom.lb) == (var->glbdom.lb != var->locdom.lb));
+      assert(!RatIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) == (var->glbdom.ub != var->locdom.ub));
    }
 
    SCIPcertificatePrintProofMessage(certificate, " { lin weak { %d", nboundentries);
@@ -1578,15 +1656,15 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    assert(sense == 'L'); // only take care of this case for now
    assert(SCIPhashmapExists(certificate->aggrinfohash, (void*) row));
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &oneminusf0) );
-   SCIP_CALL( RatCreateBuffer(set->buffer, &value) );
-
    rowexact = SCIProwGetRowExact(row);
 
    /* only do something if row does not already exist*/
    if( SCIPhashmapExists(certificate->rowdatahash, (void*) rowexact) )
       return SCIP_OKAY;
+
+   SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &oneminusf0) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &value) );
 
    SCIPdebugMessage("Printing MIR-certifiaction for row ");
    SCIPdebug(SCIProwExactPrint(rowexact,  set->scip->messagehdlr, NULL));
@@ -1640,197 +1718,209 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    /* print the mir cut with proof 1 * (\xi \le \lfloor \beta \rfloor) - (1/1-f)(\nu \ge 0) */
    /* we dont need the \nu \ge 0 part since it will be taken care of by the vipr completion part */
    assert(rowexact != NULL);
-
-   SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
-
-   /* calculate 1-f0 */
-   RatSetReal(oneminusf0, 1.0);
-   RatDiff(oneminusf0, oneminusf0, mirinfo->frac);
-
-   certificatePrintWeakDerStart(certificate, prob, SCIProwIsLocal(row));
-
-   /* 1 * (\xi \le \lfloor \beta \rfloor) we also have to add the correct multipliers for the negative slacks that were used here */
-   SCIPcertificatePrintProofMessage(certificate, "%d %d ", 1 + aggrinfo->nnegslackrows + mirinfo->nslacks, leftdisjunctionindex);
-   /* multiply with scaling parameter that was used during cut computation */
-   RatSetReal(tmpval, mirinfo->scale);
-   SCIPcertificatePrintProofRational(certificate, tmpval, 10);
-
-   SCIPdebugMessage("Verifying left part of split disjunction, multipliers 1 and 1/%g \n", RatApproxReal(oneminusf0));
-
-   SCIPdebugMessage("Correcting for negative continous slacks ( needed for v >= 0 part ) \n");
-   for( i = 0; i < aggrinfo->nnegslackrows; i++ )
+   if( TRUE )
    {
-       SCIP_Longint key;
-       SCIP_ROWEXACT* slackrow;
-       slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
+      SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
 
-       SCIPdebugMessage("adding (weight/(1-f0)) %g times row: ", aggrinfo->substfactor[i]);
-       SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
-       assert(slackrow != NULL);
-       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
-       RatSetReal(tmpval, aggrinfo->substfactor[i]);
+      /* calculate 1-f0 */
+      RatSetReal(oneminusf0, 1.0);
+      RatDiff(oneminusf0, oneminusf0, mirinfo->frac);
 
-       key = SCIPcertificateGetRowIndex(certificate, slackrow, RatIsPositive(tmpval));
+      certificatePrintWeakDerStart(certificate, prob, SCIProwIsLocal(row));
 
-       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
-       RatMultReal(tmpval, tmpval, mirinfo->scale);
-       SCIPcertificatePrintProofRational(certificate, tmpval, 10);
-   }
+      /* 1 * (\xi \le \lfloor \beta \rfloor) we also have to add the correct multipliers for the negative slacks that were used here */
+      SCIPcertificatePrintProofMessage(certificate, "%d %d ", 1 + aggrinfo->nnegslackrows + mirinfo->nslacks, leftdisjunctionindex);
+      /* multiply with scaling parameter that was used during cut computation */
+      RatSetReal(tmpval, mirinfo->scale);
+      SCIPcertificatePrintProofRational(certificate, tmpval, 10);
 
-   SCIPdebugMessage("Correcting for integer slacks  ( needed for v >= 0 part ) \n");
-   for( i = 0; i < mirinfo->nslacks; i++ )
-   {
-       SCIP_Longint key;
-       SCIP_ROWEXACT* slackrow;
-       slackrow = SCIProwGetRowExact(mirinfo->slackrows[i]);
-       SCIP_Longint upar;
+      SCIPdebugMessage("Verifying left part of split disjunction, multipliers 1 and 1/%g \n", RatApproxReal(oneminusf0));
 
-       assert(slackrow != NULL);
-       assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
-       if( mirinfo->slackroundeddown[i] )
-         RatSetReal(tmpval, 0);
-       else
-       {
-         // value = weight * scale * sign -> compute (1 - fr)/(1-f0) where fr is the fractionality of value
-         RatSetReal(tmpval, mirinfo->slackweight[i]);
-         RatMultReal(tmpval, tmpval, mirinfo->slackscale[i]);
-         RatMultReal(tmpval, tmpval, mirinfo->slacksign[i]);
-         RatRoundInteger(&upar, tmpval, SCIP_R_ROUND_UPWARDS);
-         RatDiffReal(tmpval, tmpval, upar);
-         RatNegate(tmpval, tmpval);
-         RatMultReal(tmpval, tmpval, mirinfo->slacksign[i]);
-         RatDiv(tmpval, tmpval, oneminusf0);
-         RatDebugMessage("tmpval 1 %g \n", RatApproxReal(tmpval));
-         RatSetReal(tmpval, mirinfo->slackusedcoef[i]);;
-         RatDiffReal(tmpval, tmpval, mirinfo->slackcoefficients[i]);
-         RatDebugMessage("tmpval 2 %g (slacksign %d, splitcoef %g, cutval %g) \n", RatApproxReal(tmpval), mirinfo->slacksign[i], mirinfo->slackcoefficients[i], mirinfo->slackusedcoef[i]);
-       }
-
-       key = SCIPcertificateGetRowIndex(certificate, slackrow, RatIsPositive(tmpval));
-
-       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
-       RatMultReal(tmpval, tmpval, mirinfo->scale);
-       SCIPcertificatePrintProofRational(certificate, tmpval, 10);
-   }
-
-   SCIPcertificatePrintProofMessage(certificate, " } -1 \n");
-
-   SCIPdebugMessage("Verifying right part of split disjunction, multipliers -f/(1-f) and 1/1-f \n");
-
-   /* print the mir cut with proof (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
-   SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
-
-   certificatePrintWeakDerStart(certificate, prob, SCIProwIsLocal(row));
-   SCIPcertificatePrintProofMessage(certificate, " %d ", 1 + aggrinfo->naggrrows + aggrinfo->nnegslackrows + mirinfo->nslacks);
-
-   /* (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) */
-   SCIPcertificatePrintProofMessage(certificate, "%d ", rightdisjunctionindex);
-   RatSet(tmpval, mirinfo->frac);
-   RatNegate(tmpval, tmpval); /* -f */
-   RatDiv(tmpval, tmpval, oneminusf0); /* -f/(1-f) */
-   /* multiply with scaling factor that was used in cut derivation */
-   RatMultReal(tmpval, tmpval, mirinfo->scale);
-   SCIPcertificatePrintProofRational(certificate, tmpval, 10);
-
-   RatDivReal(tmpval, tmpval, mirinfo->scale);
-
-   SCIPdebugMessage("Correcting for negative continous slacks \n");
-   /** @todo exip: really necessary? if so this is only for rounding error correction */
-   /* we also have to add the correct multipliers for the negative continuous slacks that were used here */
-   for( i = 0; i < aggrinfo->nnegslackrows; i++ )
-   {
-      SCIP_Longint key;
-      SCIP_ROWEXACT* slackrow;
-      slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
-
-      RatSetReal(value, -aggrinfo->negslackweights[i]);
-      RatDiv(value, value, oneminusf0);
-      RatAddReal(value, value, aggrinfo->substfactor[i]);
-      RatDebugMessage("adding %q times row (negative continous slacks) (%g aggweight %g substfactor): ", value, -aggrinfo->negslackweights[i] / RatApproxReal(oneminusf0), aggrinfo->substfactor[i]);
-      SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
-
-      assert(slackrow != NULL);
-      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
-
-      key = SCIPcertificateGetRowIndex(certificate, slackrow, RatIsPositive(tmpval));
-
-      SCIPcertificatePrintProofMessage(certificate, " %d ", key);
-      RatMultReal(value, value, mirinfo->scale);
-      SCIPcertificatePrintProofRational(certificate, value, 10);
-   }
-
-   SCIPdebugMessage("Correcting for %d integer slacks \n", mirinfo->nrounddownslacks);
-   /* we also have to add the correct multipliers for the integer slacks that were used here */
-   for( i = 0; i < mirinfo->nslacks; i++ )
-   {
-      SCIP_Longint key;
-      SCIP_ROWEXACT* slackrow;
-      slackrow = SCIProwGetRowExact(mirinfo->slackrows[i]);
-
-      if( mirinfo->slackroundeddown[i] )
+      SCIPdebugMessage("Correcting for negative continous slacks ( needed for v >= 0 part ) \n");
+      for( i = 0; i < aggrinfo->nnegslackrows; i++ )
       {
-         SCIPdebugMessage("Rounded down intger slack on row %s \n", mirinfo->slackrows[i]->name);
-         RatSetReal(value, mirinfo->slackweight[i]);
-         RatMultReal(value, value, mirinfo->slackscale[i]);
-         RatMultReal(value, value, mirinfo->slacksign[i]);
-         RatDiffReal(value, value, mirinfo->slackcoefficients[i] * (-mirinfo->slacksign[i]));
-         RatMultReal(value, value, mirinfo->slacksign[i]);
+         SCIP_Longint key;
+         SCIP_ROWEXACT* slackrow;
+         slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
+
+         SCIPdebugMessage("adding (weight/(1-f0)) %g times row: ", aggrinfo->substfactor[i]);
+         SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
+         assert(slackrow != NULL);
+         assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+         RatSetReal(tmpval, aggrinfo->substfactor[i]);
+
+         key = SCIPcertificateGetRowIndex(certificate, slackrow, RatIsPositive(tmpval));
+
+         SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+         RatMultReal(tmpval, tmpval, mirinfo->scale);
+         SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+      }
+
+      SCIPdebugMessage("Correcting for integer slacks  ( needed for v >= 0 part ) \n");
+      for( i = 0; i < mirinfo->nslacks; i++ )
+      {
+         SCIP_Longint key;
+         SCIP_ROWEXACT* slackrow;
+         slackrow = SCIProwGetRowExact(mirinfo->slackrows[i]);
+         SCIP_Longint upar;
+
+         assert(slackrow != NULL);
+         assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+         if( mirinfo->slackroundeddown[i] )
+            RatSetReal(tmpval, 0);
+         else
+         {
+            // value = weight * scale * sign -> compute (1 - fr)/(1-f0) where fr is the fractionality of value
+            RatSetReal(tmpval, mirinfo->slackweight[i]);
+            RatMultReal(tmpval, tmpval, mirinfo->slackscale[i]);
+            RatMultReal(tmpval, tmpval, mirinfo->slacksign[i]);
+            RatRoundInteger(&upar, tmpval, SCIP_R_ROUND_UPWARDS);
+            RatDiffReal(tmpval, tmpval, upar);
+            RatNegate(tmpval, tmpval);
+            RatMultReal(tmpval, tmpval, mirinfo->slacksign[i]);
+            RatDiv(tmpval, tmpval, oneminusf0);
+            RatDebugMessage("tmpval 1 %g \n", RatApproxReal(tmpval));
+            RatSetReal(tmpval, mirinfo->slackusedcoef[i]);;
+            RatDiffReal(tmpval, tmpval, mirinfo->slackcoefficients[i]);
+            RatDebugMessage("tmpval 2 %g (slacksign %d, splitcoef %g, cutval %g) \n", RatApproxReal(tmpval), mirinfo->slacksign[i], mirinfo->slackcoefficients[i], mirinfo->slackusedcoef[i]);
+         }
+
+         key = SCIPcertificateGetRowIndex(certificate, slackrow, RatIsPositive(tmpval));
+
+         SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+         RatMultReal(tmpval, tmpval, mirinfo->scale);
+         SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+      }
+
+      SCIPcertificatePrintProofMessage(certificate, " } -1 \n");
+
+      SCIPdebugMessage("Verifying right part of split disjunction, multipliers -f/(1-f) and 1/1-f \n");
+
+      /* print the mir cut with proof (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) + (1/1-f)(\xi - \nu \le \beta) */
+      SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
+
+      certificatePrintWeakDerStart(certificate, prob, SCIProwIsLocal(row));
+      SCIPcertificatePrintProofMessage(certificate, " %d ", 1 + aggrinfo->naggrrows + aggrinfo->nnegslackrows + mirinfo->nslacks);
+
+      /* (-f/1-f) * (\xi \ge \lfloor \beta + 1 \rfloor) */
+      SCIPcertificatePrintProofMessage(certificate, "%d ", rightdisjunctionindex);
+      RatSet(tmpval, mirinfo->frac);
+      RatNegate(tmpval, tmpval); /* -f */
+      RatDiv(tmpval, tmpval, oneminusf0); /* -f/(1-f) */
+      /* multiply with scaling factor that was used in cut derivation */
+      RatMultReal(tmpval, tmpval, mirinfo->scale);
+      SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+
+      RatDivReal(tmpval, tmpval, mirinfo->scale);
+
+      SCIPdebugMessage("Correcting for negative continous slacks \n");
+      /** @todo exip: really necessary? if so this is only for rounding error correction */
+      /* we also have to add the correct multipliers for the negative continuous slacks that were used here */
+      for( i = 0; i < aggrinfo->nnegslackrows; i++ )
+      {
+         SCIP_Longint key;
+         SCIP_ROWEXACT* slackrow;
+         slackrow = SCIProwGetRowExact(aggrinfo->negslackrows[i]);
+
+         RatSetReal(value, -aggrinfo->negslackweights[i]);
          RatDiv(value, value, oneminusf0);
+         RatAddReal(value, value, aggrinfo->substfactor[i]);
+         RatDebugMessage("adding %q times row (negative continous slacks) (%g aggweight %g substfactor): ", value, -aggrinfo->negslackweights[i] / RatApproxReal(oneminusf0), aggrinfo->substfactor[i]);
+         SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
+
+         assert(slackrow != NULL);
+         assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+
+         key = SCIPcertificateGetRowIndex(certificate, slackrow, RatIsPositive(value));
+
+         SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+         RatMultReal(value, value, mirinfo->scale);
+         SCIPcertificatePrintProofRational(certificate, value, 10);
       }
-      else
+
+      SCIPdebugMessage("Correcting for %d integer slacks \n", mirinfo->nrounddownslacks);
+      /* we also have to add the correct multipliers for the integer slacks that were used here */
+      for( i = 0; i < mirinfo->nslacks; i++ )
       {
-         SCIPdebugMessage("Rounded up intger slack on row %s \n", mirinfo->slackrows[i]->name);
-         RatSetReal(value, mirinfo->slackweight[i]);
-         RatMultReal(value, value, mirinfo->slackscale[i]);
-         RatMultReal(value, value, mirinfo->slacksign[i]);
-         RatDiffReal(value, value, (mirinfo->slackcoefficients[i] * -mirinfo->slacksign[i]) - 1); // fr exactly
-         RatDiff(value, value, mirinfo->frac); // fr - f0
-         RatDiv(value, value, oneminusf0); // (fr-f0) / (1-f0)
-         RatAddReal(value, value, (mirinfo->slackcoefficients[i] * -mirinfo->slacksign[i]) - 1); // (down(ar) + (fr-f0) / (1-f0)
-         RatMultReal(value, value, mirinfo->slacksign[i]);
-         RatDebugMessage("Exact coefficient %q(%g), used coefficient %g\n", value, RatApproxReal(value), mirinfo->slackusedcoef[i]);
+         SCIP_Longint key;
+         SCIP_ROWEXACT* slackrow;
+         slackrow = SCIProwGetRowExact(mirinfo->slackrows[i]);
 
-         RatAddReal(value, value, mirinfo->slackusedcoef[i]);
+         if( mirinfo->slackroundeddown[i] )
+         {
+            SCIPdebugMessage("Rounded down intger slack on row %s \n", mirinfo->slackrows[i]->name);
+            RatSetReal(value, mirinfo->slackweight[i]);
+            RatMultReal(value, value, mirinfo->slackscale[i]);
+            RatMultReal(value, value, mirinfo->slacksign[i]);
+            RatDiffReal(value, value, mirinfo->slackcoefficients[i] * (-mirinfo->slacksign[i]));
+            RatMultReal(value, value, mirinfo->slacksign[i]);
+            RatDiv(value, value, oneminusf0);
+         }
+         else
+         {
+            SCIPdebugMessage("Rounded up intger slack on row %s \n", mirinfo->slackrows[i]->name);
+            RatSetReal(value, mirinfo->slackweight[i]);
+            RatMultReal(value, value, mirinfo->slackscale[i]);
+            RatMultReal(value, value, mirinfo->slacksign[i]);
+            RatDiffReal(value, value, (mirinfo->slackcoefficients[i] * -mirinfo->slacksign[i]) - 1); // fr exactly
+            RatDiff(value, value, mirinfo->frac); // fr - f0
+            RatDiv(value, value, oneminusf0); // (fr-f0) / (1-f0)
+            RatAddReal(value, value, (mirinfo->slackcoefficients[i] * -mirinfo->slacksign[i]) - 1); // (down(ar) + (fr-f0) / (1-f0)
+            RatMultReal(value, value, mirinfo->slacksign[i]);
+            RatDebugMessage("Exact coefficient %q(%g), used coefficient %g\n", value, RatApproxReal(value), mirinfo->slackusedcoef[i]);
+
+            RatAddReal(value, value, mirinfo->slackusedcoef[i]);
+         }
+
+         RatDebugMessage("adding %q(%g) times row: ", value, RatApproxReal(value));
+         SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
+
+         assert(slackrow != NULL);
+         assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+
+         key = SCIPcertificateGetRowIndex(certificate, slackrow, RatIsPositive(value));
+
+         SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+         RatMultReal(value, value, mirinfo->scale);
+         SCIPcertificatePrintProofRational(certificate, value, 10);
       }
 
-      RatDebugMessage("adding %q(%g) times row: ", value, RatApproxReal(value));
-      SCIPdebug(SCIProwExactPrint(slackrow, set->scip->messagehdlr, NULL));
+      SCIPdebugMessage("Adding %d aggregation rows \n", aggrinfo->naggrrows);
+      /* we also have to add the correct multipliers for the aggregation rows that were used here */
+      for( i = 0; i < aggrinfo->naggrrows; i++ )
+      {
+         SCIP_Longint key;
+         SCIP_ROWEXACT* aggrrow;
+         aggrrow = SCIProwGetRowExact(aggrinfo->aggrrows[i]);
 
-      assert(slackrow != NULL);
-      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) slackrow));
+         RatSetReal(value, aggrinfo->weights[i]);
+         RatDiv(value, value, oneminusf0);
 
-      key = SCIPcertificateGetRowIndex(certificate, slackrow, RatIsPositive(value));
+         SCIPdebugMessage("adding (%g/%g) = %g times row: ", aggrinfo->weights[i], RatApproxReal(oneminusf0), RatApproxReal(value));
+         SCIPdebug(SCIProwExactPrint(aggrrow, set->scip->messagehdlr, NULL));
 
-      SCIPcertificatePrintProofMessage(certificate, " %d ", key);
-      RatMultReal(value, value, mirinfo->scale);
-      SCIPcertificatePrintProofRational(certificate, value, 10);
+         assert(aggrrow != NULL);
+         assert(SCIPhashmapExists(certificate->rowdatahash, (void*) aggrrow));
+
+         key = SCIPcertificateGetRowIndex(certificate, aggrrow, RatIsPositive(value));
+
+         SCIPcertificatePrintProofMessage(certificate, " %d ", key);
+         RatMultReal(value, value, mirinfo->scale);
+         SCIPcertificatePrintProofRational(certificate, value, 10);
+      }
+
+      SCIPcertificatePrintProofMessage(certificate, " } -1\n");
    }
-
-   SCIPdebugMessage("Adding %d aggregation rows \n", aggrinfo->naggrrows);
-   /* we also have to add the correct multipliers for the aggregation rows that were used here */
-   for( i = 0; i < aggrinfo->naggrrows; i++ )
+   else
    {
-      SCIP_Longint key;
-      SCIP_ROWEXACT* aggrrow;
-      aggrrow = SCIProwGetRowExact(aggrinfo->aggrrows[i]);
+      SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
+      certificatePrintIncompleteDerStart(certificate, lp, SCIPlpGetRows(lp), SCIPlpGetNRows(lp), prob, SCIProwIsLocal(row));
+      SCIPcertificatePrintProofMessage(certificate, " %d } -1\n", leftdisjunctionindex);
 
-      RatSetReal(value, aggrinfo->weights[i]);
-      RatDiv(value, value, oneminusf0);
-
-      SCIPdebugMessage("adding (%g/%g) = %g times row: ", aggrinfo->weights[i], RatApproxReal(oneminusf0), RatApproxReal(value));
-      SCIPdebug(SCIProwExactPrint(aggrrow, set->scip->messagehdlr, NULL));
-
-      assert(aggrrow != NULL);
-      assert(SCIPhashmapExists(certificate->rowdatahash, (void*) aggrrow));
-
-      key = SCIPcertificateGetRowIndex(certificate, aggrrow, RatIsPositive(value));
-
-      SCIPcertificatePrintProofMessage(certificate, " %d ", key);
-      RatMultReal(value, value, mirinfo->scale);
-      SCIPcertificatePrintProofRational(certificate, value, 10);
+      SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);
+      certificatePrintIncompleteDerStart(certificate, lp, SCIPlpGetRows(lp), SCIPlpGetNRows(lp), prob, SCIProwIsLocal(row));
+      SCIPcertificatePrintProofMessage(certificate, " %d } -1\n", rightdisjunctionindex);
    }
-
-   SCIPcertificatePrintProofMessage(certificate, " } -1\n");
 
    /* print the unsplitting of the split disjunction */
    SCIPcertificatePrintRow(set, certificate, rowexact, mirinfo->unroundedrhs);

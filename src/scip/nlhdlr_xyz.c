@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -27,8 +27,6 @@
  * @brief  xyz nonlinear handler
  * @author Jane Doe
  */
-
-#include <string.h>
 
 #include "scip/nlhdlr_xyz.h"
 #include "scip/cons_nonlinear.h"
@@ -268,7 +266,7 @@ SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropXyz)
  * nonlinear handler specific interface methods
  */
 
-/** includes Xyz nonlinear handler to consexpr */
+/** includes Xyz nonlinear handler in nonlinear constraint handler */
 SCIP_RETCODE SCIPincludeNlhdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    )

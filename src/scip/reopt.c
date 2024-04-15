@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -465,8 +465,8 @@ SCIP_Real reoptSimilarity(
    }
 
    /* divide similarity by norms of the objective vectors */
-   norm_obj1 = SQRT(norm_obj1);
-   norm_obj2 = SQRT(norm_obj2);
+   norm_obj1 = sqrt(norm_obj1);
+   norm_obj2 = sqrt(norm_obj2);
 
    if( !SCIPsetIsZero(set, norm_obj1) && !SCIPsetIsZero(set, norm_obj2) )
       similarity /= (norm_obj1 * norm_obj2);
@@ -5106,7 +5106,7 @@ SCIP_RETCODE SCIPreoptCreate(
    SCIP_CALL( createReopttree((*reopt)->reopttree, set, blkmem) );
 
    /* create a random number generator */
-   SCIP_CALL( SCIPrandomCreate(&(*reopt)->randnumgen, blkmem, (unsigned int)SCIPsetInitializeRandomSeed(set, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPrandomCreate(&(*reopt)->randnumgen, blkmem, SCIPsetInitializeRandomSeed(set, DEFAULT_RANDSEED)) );
 
    /* create event handler for node events */
    eventhdlr = NULL;

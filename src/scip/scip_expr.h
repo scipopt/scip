@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,6 +37,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
+#include "scip/type_message.h"
 
 #ifdef NDEBUG
 #include "scip/struct_scip.h"
@@ -58,62 +59,62 @@ extern "C" {
 /** creates the handler for an expression handler and includes it into SCIP */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeExprhdlr(
-   SCIP*                 scip,         /**< SCIP data structure */
-   SCIP_EXPRHDLR**       exprhdlr,     /**< buffer where to store created expression handler */
-   const char*           name,         /**< name of expression handler (must not be NULL) */
-   const char*           desc,         /**< description of expression handler (can be NULL) */
-   unsigned int          precedence,   /**< precedence of expression operation (used for printing) */
-   SCIP_DECL_EXPREVAL((*eval)),        /**< point evaluation callback (must not be NULL) */
-   SCIP_EXPRHDLRDATA*    data          /**< data of expression handler (can be NULL) */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRHDLR**       exprhdlr,           /**< buffer where to store created expression handler */
+   const char*           name,               /**< name of expression handler (must not be NULL) */
+   const char*           desc,               /**< description of expression handler (can be NULL) */
+   unsigned int          precedence,         /**< precedence of expression operation (used for printing) */
+   SCIP_DECL_EXPREVAL((*eval)),              /**< point evaluation callback (must not be NULL) */
+   SCIP_EXPRHDLRDATA*    data                /**< data of expression handler (can be NULL) */
    );
 
 /** gives expression handlers */
 SCIP_EXPORT
 SCIP_EXPRHDLR** SCIPgetExprhdlrs(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
 );
 
 /** gives number of expression handlers */
 SCIP_EXPORT
 int SCIPgetNExprhdlrs(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
 );
 
 /** returns an expression handler of a given name (or NULL if not found) */
 SCIP_EXPORT
 SCIP_EXPRHDLR* SCIPfindExprhdlr(
-   SCIP*                      scip,          /**< SCIP data structure */
-   const char*                name           /**< name of expression handler */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of expression handler */
    );
 
 /** returns expression handler for variable expressions (or NULL if not included) */
 SCIP_EXPORT
 SCIP_EXPRHDLR* SCIPgetExprhdlrVar(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns expression handler for constant value expressions (or NULL if not included) */
 SCIP_EXPORT
 SCIP_EXPRHDLR* SCIPgetExprhdlrValue(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns expression handler for sum expressions (or NULL if not included) */
 SCIP_EXPORT
 SCIP_EXPRHDLR* SCIPgetExprhdlrSum(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns expression handler for product expressions (or NULL if not included) */
 SCIP_EXPORT
 SCIP_EXPRHDLR* SCIPgetExprhdlrProduct(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns expression handler for power expressions (or NULL if not included) */
 SCIP_EXPORT
 SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
-   SCIP*                      scip           /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef NDEBUG
@@ -214,10 +215,10 @@ SCIP_RETCODE SCIPappendExprChild(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPreplaceExprChild(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPR*              expr,             /**< expression which is going to replace a child */
-   int                     childidx,         /**< index of child being replaced */
-   SCIP_EXPR*              newchild          /**< the new child */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression which is going to replace a child */
+   int                   childidx,           /**< index of child being replaced */
+   SCIP_EXPR*            newchild            /**< the new child */
    );
 
 /** remove all children of expr
@@ -277,7 +278,7 @@ SCIP_RETCODE SCIPcopyExpr(
  *
  * The actual definition:
  * <pre>
- * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
+ * Expression -> ["+" | "-"] Term { [ ("+" | "-" | "number *") Term | ("number" <varname>) ] }
  * Term       -> Factor { ("*" | "/" ) Factor }
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
@@ -356,34 +357,34 @@ SCIP_RETCODE SCIPprintExpr(
 /** initializes printing of expressions in dot format to a give FILE* pointer */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintExprDotInit(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPRPRINTDATA**    printdata,        /**< buffer to store dot printing data */
-   FILE*                   file,             /**< file to print to, or NULL for stdout */
-   SCIP_EXPRPRINT_WHAT     whattoprint       /**< info on what to print for each expression */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRPRINTDATA**  printdata,          /**< buffer to store dot printing data */
+   FILE*                 file,               /**< file to print to, or NULL for stdout */
+   SCIP_EXPRPRINT_WHAT   whattoprint         /**< info on what to print for each expression */
    );
 
 /** initializes printing of expressions in dot format to a file with given filename */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintExprDotInit2(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPRPRINTDATA**    printdata,        /**< buffer to store dot printing data */
-   const char*             filename,         /**< name of file to print to */
-   SCIP_EXPRPRINT_WHAT     whattoprint       /**< info on what to print for each expression */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRPRINTDATA**  printdata,          /**< buffer to store dot printing data */
+   const char*           filename,           /**< name of file to print to */
+   SCIP_EXPRPRINT_WHAT   whattoprint         /**< info on what to print for each expression */
    );
 
 /** main part of printing an expression in dot format */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintExprDot(
-   SCIP*                  scip,              /**< SCIP data structure */
-   SCIP_EXPRPRINTDATA*    printdata,         /**< data as initialized by \ref SCIPprintExprDotInit() */
-   SCIP_EXPR*             expr               /**< expression to be printed */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRPRINTDATA*   printdata,          /**< data as initialized by \ref SCIPprintExprDotInit() */
+   SCIP_EXPR*            expr                /**< expression to be printed */
    );
 
 /** finishes printing of expressions in dot format */
 SCIP_EXPORT
 SCIP_RETCODE SCIPprintExprDotFinal(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_EXPRPRINTDATA**    printdata         /**< buffer where dot printing data has been stored */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPRPRINTDATA**  printdata           /**< buffer where dot printing data has been stored */
    );
 
 /** shows a single expression by use of dot and gv
@@ -563,11 +564,11 @@ SCIP_RETCODE SCIPevalExprGradient(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPevalExprHessianDir(
-   SCIP*                 scip,             /**< SCIP data structure */
-   SCIP_EXPR*            expr,             /**< expression to be differentiated */
-   SCIP_SOL*             sol,              /**< solution to be evaluated (NULL for the current LP solution) */
-   SCIP_Longint          soltag,           /**< tag that uniquely identifies the solution (with its values), or 0. */
-   SCIP_SOL*             direction         /**< direction */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression to be differentiated */
+   SCIP_SOL*             sol,                /**< solution to be evaluated (NULL for the current LP solution) */
+   SCIP_Longint          soltag,             /**< tag that uniquely identifies the solution (with its values), or 0. */
+   SCIP_SOL*             direction           /**< direction */
    );
 
 /**@} */  /* end of differentiation methods */
@@ -754,6 +755,14 @@ SCIP_RETCODE SCIPsimplifyExpr(
    SCIP_Bool*            infeasible,         /**< buffer to store whether infeasibility has been detected */
    SCIP_DECL_EXPR_OWNERCREATE((*ownercreate)), /**< function to call to create ownerdata */
    void*                 ownercreatedata     /**< data to pass to ownercreate */
+   );
+
+/** retrieves symmetry information from an expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetSymDataExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression from which information needs to be retrieved */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry data */
    );
 
 /** replaces common sub-expressions in a given expression graph by using a hash key for each expression
@@ -944,6 +953,13 @@ SCIP_DECL_EXPRSIMPLIFY(SCIPcallExprSimplify);
 SCIP_EXPORT
 SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop);
 
+/** calls the symmetry information callback for an expression
+ *
+ * Returns NULL pointer if not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRGETSYMDATA(SCIPcallExprGetSymData);
+
 #ifdef NDEBUG
 #define SCIPappendExprChild(scip, expr, child)               SCIPexprAppendChild((scip)->set, (scip)->mem->probmem, expr, child)
 #define SCIPreplaceExprChild(scip, expr, childidx, newchild) SCIPexprReplaceChild((scip)->set, (scip)->stat, (scip)->mem->probmem, expr, childidx, newchild)
@@ -974,6 +990,7 @@ SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop);
 #define SCIPcallExprInitestimates(scip, expr, bounds, overestimate, coefs, constant, nreturned)  SCIPexprhdlrInitEstimatesExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, bounds, overestimate, coefs, constant, nreturned)
 #define SCIPcallExprSimplify(scip, expr, simplifiedexpr, ownercreate, ownercreatedata)  SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, simplifiedexpr, ownercreate, ownercreatedata)
 #define SCIPcallExprReverseprop(scip, expr, bounds, childrenbounds, infeasible) SCIPexprhdlrReversePropExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, bounds, childrenbounds, infeasible)
+#define SCIPcallExprGetSymData(scip, expr, symdata) SCIPexprhdlrGetSymdata(SCIPexprGetHdlr(expr), (scip)->set, expr, symdata)
 #endif
 
 /** @} */
@@ -1032,7 +1049,7 @@ void SCIPfreeExprQuadratic(
 
 /** evaluates quadratic term in a solution
  *
- * \note This requires that every expressiion used in the quadratic data is a variable expression.
+ * \note This requires that every expression used in the quadratic data is a variable expression.
  */
 SCIP_EXPORT
 SCIP_Real SCIPevalExprQuadratic(
@@ -1072,6 +1089,35 @@ SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(
 #define SCIPcheckExprQuadratic(scip, expr, isquadratic)  SCIPexprCheckQuadratic((scip)->set, (scip)->mem->probmem, expr, isquadratic)
 #define SCIPfreeExprQuadratic(scip, expr)                SCIPexprFreeQuadratic((scip)->mem->probmem, expr)
 #define SCIPcomputeExprQuadraticCurvature(scip, expr, curv, assumevarfixed, storeeigeninfo)  SCIPexprComputeQuadraticCurvature((scip)->set, (scip)->mem->probmem, (scip)->mem->buffer, (scip)->messagehdlr, expr, curv, assumevarfixed, storeeigeninfo)
+#endif
+
+/** @} */
+
+/**@name Monomial Expressions */
+/**@{ */
+
+/** returns a monomial representation of a product expression
+ *
+ * The array to store all factor expressions needs to be of size the number of
+ * children in the expression which is given by SCIPexprGetNChildren().
+ *
+ * Given a non-trivial monomial expression, the function finds its representation as \f$cx^\alpha\f$, where
+ * \f$c\f$ is a real coefficient, \f$x\f$ is a vector of auxiliary or original variables (where some entries can
+ * be NULL is the auxiliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
+ *
+ * A non-trivial monomial is a product of a least two expressions.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetExprMonomialData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            coef,               /**< coefficient \f$c\f$ */
+   SCIP_Real*            exponents,          /**< exponents \f$\alpha\f$ */
+   SCIP_EXPR**           factors             /**< factor expressions \f$x\f$ */
+   );
+
+#ifdef NDEBUG
+#define SCIPgetExprMonomialData(scip, expr, coef, exponents, factors)  SCIPexprGetMonomialData((scip)->set, (scip)->mem->probmem, expr, coef, exponents, factors)
 #endif
 
 /** @} */

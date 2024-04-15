@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -68,6 +68,7 @@ struct SCIP_Exprhdlr
    SCIP_DECL_EXPRCURVATURE((*curvature));    /**< curvature detection callback (can be NULL) */
    SCIP_DECL_EXPRMONOTONICITY((*monotonicity)); /**< monotonicity detection callback (can be NULL) */
    SCIP_DECL_EXPRINTEGRALITY((*integrality));/**< integrality detection callback (can be NULL) */
+   SCIP_DECL_EXPRGETSYMDATA((*getsymdata));  /**< symmetry information callback (can be NULL) */
 
    /* statistics */
    unsigned int          ncreated;           /**< number of times expression has been created */

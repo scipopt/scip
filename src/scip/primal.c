@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -905,30 +905,46 @@ SCIP_RETCODE primalAddSol(
 
    sol = *solptr;
    assert(sol != NULL);
+
+   /* if the solution is added during presolving and it is not defined on original variables,
+    * presolving operations will destroy its validity, so we retransform it to the original space
+    */
+   if( set->stage < SCIP_STAGE_PRESOLVED && !SCIPsolIsOriginal(sol) )
+   {
+      SCIP_Bool hasinfval;
+
+      SCIP_CALL( SCIPsolUnlink(sol, set, transprob) );
+      SCIP_CALL( SCIPsolRetransform(sol, set, stat, origprob, transprob, &hasinfval) );
+   }
+
    obj = SCIPsolGetObj(sol, set, transprob, origprob);
 
    if( set->exact_enabled )
    {
-       if( !SCIPsolIsExact(sol) )
-       {
-          SCIP_CALL( SCIPsolMakeExact(sol, blkmem, set, stat, transprob) );
-	  SCIP_CALL( primalAddSolExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
+      if( !SCIPsolIsExact(sol) )
+      {
+         if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+            SCIP_CALL( SCIPsolMakeExact(sol, blkmem, set, stat, origprob) );
+         else
+            SCIP_CALL( SCIPsolMakeExact(sol, blkmem, set, stat, transprob) );
+
+         SCIP_CALL( primalAddSolExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
                tree, reopt, lp->lpexact, eventqueue, eventfilter, solptr, insertpos, replace) );
 
-	  return SCIP_OKAY;
-       }
-       else
-       {
-	  SCIP_Rational* objexact;
+         return SCIP_OKAY;
+      }
+      else
+      {
+         SCIP_Rational* objexact;
 
-	  SCIP_CALL( RatCreateBuffer(set->buffer, &objexact) );
-	  SCIPsolGetObjExact(sol, set, transprob, origprob, objexact);
+         SCIP_CALL( RatCreateBuffer(set->buffer, &objexact) );
+         SCIPsolGetObjExact(sol, set, transprob, origprob, objexact);
 
-	  RatMIN(primal->cutoffboundexact, primal->cutoffboundexact, objexact);
-	  RatMIN(primal->upperboundexact, primal->upperboundexact, objexact);
+         RatMIN(primal->cutoffboundexact, primal->cutoffboundexact, objexact);
+         RatMIN(primal->upperboundexact, primal->upperboundexact, objexact);
 
-	  RatFreeBuffer(set->buffer, &objexact);
-       }
+         RatFreeBuffer(set->buffer, &objexact);
+      }
    }
 
 
@@ -1068,24 +1084,6 @@ SCIP_RETCODE primalAddSol(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
       primal->nbestsolsfound++;
       stat->bestsolnode = stat->nnodes;
-
-      if( set->limit_objstop != SCIP_INVALID ) /*lint !e777*/
-      {
-         SCIP_Real origobj;
-
-         if( !SCIPsolIsOriginal(sol) )
-         {
-            SCIP_Bool hasinfval;
-            SCIP_CALL( SCIPsolRetransform(sol, set, stat, origprob, transprob, &hasinfval) );
-         }
-         origobj = SCIPsolGetOrigObj(sol);
-
-         if( SCIPsetIsLE(set, origobj * (int) origprob->objsense, set->limit_objstop * (int) origprob->objsense) )
-         {
-            SCIPmessagePrintInfo(messagehdlr, "interrupting solve because objective stop was reached. \n");
-            stat->userinterrupt = TRUE;
-         }
-      }
    }
    else
    {
@@ -1329,7 +1327,7 @@ SCIP_Bool primalExistsSol(
 
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, origprob, transprob) )
       {
-         if( SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
+         if( set->stage >= SCIP_STAGE_PRESOLVED && SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
          {
             (*insertpos) = i;
             (*replace) = TRUE;
@@ -1356,7 +1354,7 @@ SCIP_Bool primalExistsSol(
 
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, origprob, transprob) )
       {
-         if( SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
+         if( set->stage >= SCIP_STAGE_PRESOLVED && SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
          {
             (*insertpos) = i;
             (*replace) = TRUE;

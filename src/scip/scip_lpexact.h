@@ -405,6 +405,23 @@ SCIP_RETCODE SCIPstartExactDive(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** checks if exact diving mode is possible at this point in time
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ *
+ *  @note In parallel to exact LP diving, this method also starts the regular LP diving mode by calling SCIPstartDive().
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPisExactDivePossible(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** quits exact LP diving and resets bounds and objective values of columns to the current node's values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

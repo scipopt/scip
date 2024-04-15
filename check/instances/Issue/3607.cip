@@ -1,0 +1,20 @@
+STATISTICS
+  Problem name     : PyomoModel
+  Variables        : 6 (1 binary, 0 integer, 0 implicit integer, 5 continuous)
+  Constraints      : 0 initial, 5 maximal
+OBJECTIVE
+  Sense            : maximize
+VARIABLES
+  [binary] <x833>: obj=1, original bounds=[0,1]
+  [continuous] <x6519>: obj=0, original bounds=[-inf,+inf]
+  [continuous] <x244>: obj=0, original bounds=[0,+inf]
+  [continuous] <x242>: obj=0, original bounds=[0,+inf]
+  [continuous] <x6181>: obj=0, original bounds=[-inf,+inf]
+  [continuous] <x6525>: obj=0, original bounds=[-inf,+inf]
+CONSTRAINTS
+  [linear] <c_u_x14366_>: <x242>[C] -123<x833>[B] == 0;
+  [linear] <c_e_x8809_>:  +5.322<x244>[C] -<x6519>[C] == -1676.675;
+  [linear] <c_u_x7642_>:  +3.565<x6181>[C] -<x6525>[C] <= 0;
+  [linear] <c_u_x8195_>:  -10<x6181>[C] +<x6519>[C] <= 0;
+  [linear] <c_e_x8815_>:  +9.49<x244>[C] +1.28<x242>[C] -<x6525>[C] == -1251.635;
+END

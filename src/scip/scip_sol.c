@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -285,7 +285,10 @@ SCIP_RETCODE checkSolOrigExact(
 
    SCIPsolResetViolations(sol);
 
-   SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->transprob) );
+   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+      SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->origprob) );
+   else
+      SCIP_CALL( SCIPsolMakeExact(sol, SCIPblkmem(scip), scip->set, scip->stat, scip->transprob) );
 
    if( !printreason )
       completely = FALSE;
@@ -2884,7 +2887,10 @@ SCIP_RETCODE SCIPmakeSolExact(
    assert(!SCIPsolIsExact(sol));
    SCIP_CALL( SCIPcheckStage(scip, "SCIPmakeSolExact", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPsolMakeExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob) );
+   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+      SCIP_CALL( SCIPsolMakeExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprob) );
+   else
+      SCIP_CALL( SCIPsolMakeExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob) );
 
    return SCIP_OKAY;
 }
@@ -3430,32 +3436,6 @@ SCIP_RETCODE SCIPaddSol(
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
-      /* if the solution is added during presolving and it is not defined on original variables,
-       * presolving operations will destroy its validity, so we retransform it to the original space
-       */
-      if( !SCIPsolIsOriginal(sol) )
-      {
-         SCIP_SOL* bestsol = SCIPgetBestSol(scip);
-         SCIP_SOL* tmpsol = sol;
-         SCIP_Bool hasinfval;
-
-         SCIP_CALL( SCIPcreateSolCopy(scip, &tmpsol, sol) );
-
-         SCIP_CALL( SCIPsolUnlink(tmpsol, scip->set, scip->transprob) );
-         SCIP_CALL( SCIPsolRetransform(tmpsol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
-
-         SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
-               scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp, scip->eventqueue, scip->eventfilter,
-               &tmpsol, stored) );
-
-         if( *stored && (bestsol != SCIPgetBestSol(scip)) )
-         {
-            SCIPstoreSolutionGap(scip);
-         }
-
-         return SCIP_OKAY;
-      }
-      /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    {
@@ -3520,17 +3500,6 @@ SCIP_RETCODE SCIPaddSolFree(
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
-      /* if the solution is added during presolving and it is not defined on original variables,
-       * presolving operations will destroy its validity, so we retransform it to the original space
-       */
-      if( !SCIPsolIsOriginal(*sol) )
-      {
-         SCIP_Bool hasinfval;
-
-         SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
-         SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
-      }
-      /*lint -fallthrough*/
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    {
@@ -3640,24 +3609,14 @@ SCIP_RETCODE SCIPtrySol(
       return SCIP_INVALIDDATA;
    }
 
-   /* if the solution is added during presolving and it is not defined on original variables,
-    * presolving operations will destroy its validity, so we retransform it to the original space
-    */
-   if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(sol) )
-   {
-      SCIP_Bool hasinfval;
-
-      SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
-      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
-   }
-
    if( SCIPsolIsOriginal(sol) )
    {
       SCIP_Bool feasible;
 
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints */
-      SCIP_CALL( checkSolOrig(scip, sol, &feasible, printreason, completely, checkbounds, checkintegrality, checklprows, TRUE) );
+      SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+            printreason, completely, checkbounds, checkintegrality, checklprows, TRUE, &feasible) );
       if( feasible )
       {
          SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
@@ -3685,7 +3644,7 @@ SCIP_RETCODE SCIPtrySol(
          {
 #ifdef SCIP_DEBUG_ABORTATORIGINFEAS
             SCIP_Bool feasible;
-            SCIP_CALL( checkSolOrig(scip, sol, &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+            SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
             if( ! feasible )
             {
@@ -3746,17 +3705,6 @@ SCIP_RETCODE SCIPtrySolFree(
       return SCIP_INVALIDDATA;
    }
 
-   /* if the solution is added during presolving and it is not defined on original variables,
-    * presolving operations will destroy its validity, so we retransform it to the original space
-    */
-   if( scip->set->stage == SCIP_STAGE_PRESOLVING && !SCIPsolIsOriginal(*sol) )
-   {
-      SCIP_Bool hasinfval;
-
-      SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
-      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
-   }
-
    if( SCIPsolIsOriginal(*sol) )
    {
       SCIP_Bool feasible;
@@ -3764,7 +3712,8 @@ SCIP_RETCODE SCIPtrySolFree(
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints
        */
-      SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, completely, checkbounds, checkintegrality, checklprows, TRUE) );
+      SCIP_CALL( SCIPsolCheckOrig(*sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+            printreason, completely, checkbounds, checkintegrality, checklprows, TRUE, &feasible) );
 
       if( feasible )
       {
@@ -3796,7 +3745,8 @@ SCIP_RETCODE SCIPtrySolFree(
          {
 #ifdef SCIP_DEBUG_ABORTATORIGINFEAS
             SCIP_Bool feasible;
-            SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+            SCIP_CALL( SCIPsolCheckOrig(SCIPgetBestSol(scip), scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+                  TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
             if( ! feasible )
             {
@@ -3850,7 +3800,8 @@ SCIP_RETCODE SCIPtryCurrentSol(
       {
 #ifdef SCIP_DEBUG_ABORTATORIGINFEAS
          SCIP_Bool feasible;
-         SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+         SCIP_CALL( SCIPsolCheckOrig(SCIPgetBestSol(scip), scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+               TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
          if( ! feasible )
          {
@@ -3960,7 +3911,8 @@ SCIP_RETCODE SCIPcheckSol(
       }
       else
       {
-         SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, completely, checkbounds, checkintegrality, checklprows, FALSE) );
+         SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+            printreason, completely, checkbounds, checkintegrality, checklprows, FALSE, feasible) );
       }
    }
    else
@@ -4020,7 +3972,8 @@ SCIP_RETCODE SCIPcheckSolOrig(
    }
    else
    {
-      SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, completely, TRUE, TRUE, TRUE, FALSE) );
+      SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+         printreason, completely, TRUE, TRUE, TRUE, FALSE, feasible) );
    }
 
    return SCIP_OKAY;

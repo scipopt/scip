@@ -397,8 +397,10 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
       SCIP_CALL( SCIPhashtableInsert(conshdlrdata->solhash, assignment) );
    }
 
-   /* next, check if we should buffer the solution instead of checking it right now */
-   if( conshdlrdata->nbufferedsols < DEFAULT_SOLBUFSIZE )
+   /* next, check if we should buffer the solution instead of checking it right now, done in one of the following cases
+      - buffer is not full and solution not more than 20% improving
+      - exact diving not possible at this point in time (mostly if lp state is not clean) */
+   if( conshdlrdata->nbufferedsols < DEFAULT_SOLBUFSIZE || !SCIPisExactDivePossible(scip) )
    {
       SCIP_Real multiplier;
 
@@ -406,7 +408,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
       multiplier = SCIPgetSolTransObj(scip, sol) > 0 ? 1.2 : 0.8;
       /* if the new solution is at least 20% better than the current upperbound, we stop buffering and repair immediately */
-      if( !SCIPisLT(scip, multiplier * SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip)) )
+      if( !SCIPisLT(scip, multiplier * SCIPgetSolTransObj(scip, sol), SCIPgetUpperbound(scip)) || !SCIPisExactDivePossible(scip) )
       {
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;

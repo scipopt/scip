@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -815,6 +815,7 @@ SCIP_RETCODE SCIPeventAddExactBdChg(
    assert(event != NULL);
    assert(blkmem != NULL);
    assert(!RatIsEqual(oldbound, newbound));
+   assert((event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED));
 
    SCIP_CALL( RatCopy(blkmem, &(event->data.eventbdchg.oldboundexact), oldbound) );
    SCIP_CALL( RatCopy(blkmem, &(event->data.eventbdchg.newboundexact), newbound) );
@@ -1119,6 +1120,27 @@ SCIP_RETCODE SCIPeventCreateRowSideChanged(
    return SCIP_OKAY;
 }
 
+static void eventFreeExactData(
+   SCIP_EVENT*           event,              /**< event to free */
+   BMS_BLKMEM*           blkmem              /**< block memory buffer */
+   )
+{
+   assert(event != NULL);
+   assert(blkmem != NULL);
+
+   if( ((event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)) && (event)->data.eventbdchg.newboundexact != NULL )
+   {
+      RatFreeBlock(blkmem, &(event)->data.eventbdchg.newboundexact);
+      RatFreeBlock(blkmem, &(event)->data.eventbdchg.oldboundexact);
+   }
+
+   if( ((event)->eventtype & SCIP_EVENTTYPE_OBJCHANGED) && (event)->data.eventobjchg.newobjexact != NULL )
+   {
+      RatFreeBlock(blkmem, &(event)->data.eventobjchg.newobjexact);
+      RatFreeBlock(blkmem, &(event)->data.eventobjchg.oldobjexact);
+   }
+}
+
 /** frees an event */
 SCIP_RETCODE SCIPeventFree(
    SCIP_EVENT**          event,              /**< event to free */
@@ -1128,18 +1150,7 @@ SCIP_RETCODE SCIPeventFree(
    assert(event != NULL);
    assert(blkmem != NULL);
 
-   if( ((*event)->eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)) && (*event)->data.eventbdchg.newboundexact != NULL )
-   {
-      RatFreeBlock(blkmem, &(*event)->data.eventbdchg.newboundexact);
-      RatFreeBlock(blkmem, &(*event)->data.eventbdchg.oldboundexact);
-   }
-
-   if( ((*event)->eventtype & SCIP_EVENTTYPE_OBJCHANGED) && (*event)->data.eventobjchg.newobjexact != NULL )
-   {
-      RatFreeBlock(blkmem, &(*event)->data.eventobjchg.newobjexact);
-      RatFreeBlock(blkmem, &(*event)->data.eventobjchg.oldobjexact);
-   }
-
+   eventFreeExactData(*event, blkmem);
    BMSfreeBlockMemory(blkmem, event);
 
    return SCIP_OKAY;
@@ -2572,6 +2583,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
             if( qevent->data.eventobjchg.newobj == qevent->data.eventobjchg.oldobj ) /*lint !e777*/
             {
                /* the queued objective value change was reversed -> disable the event in the queue */
+               eventFreeExactData(qevent, blkmem);
                eventDisable(qevent);
                var->eventqueueindexobj = -1;
                SCIPsetDebugMsg(set, " -> event disabled\n");
@@ -2641,6 +2653,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
             {
                /* the queued bound change was reversed -> disable the event in the queue */
                assert(qevent->data.eventbdchg.newbound == qevent->data.eventbdchg.oldbound); /*lint !e777*/
+               eventFreeExactData(qevent, blkmem);
                eventDisable(qevent);
                var->eventqueueindexlb = -1;
                SCIPsetDebugMsg(set, " -> event disabled\n");
@@ -2710,6 +2723,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
             {
                /* the queued bound change was reversed -> disable the event in the queue */
                assert(qevent->data.eventbdchg.newbound == qevent->data.eventbdchg.oldbound); /*lint !e777*/
+               eventFreeExactData(qevent, blkmem);
                eventDisable(qevent);
                var->eventqueueindexub = -1;
                SCIPsetDebugMsg(set, " -> event disabled\n");

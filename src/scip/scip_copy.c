@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1491,20 +1491,25 @@ SCIP_RETCODE SCIPtranslateSubSols(
    subsols = SCIPgetSols(subscip);
    for( i = 0; i < nsubsols; ++i )
    {
-      /* better do not copy unbounded solutions as this will mess up the SCIP solution status */
-      if( SCIPisInfinity(scip, -SCIPgetSolOrigObj(subscip, subsols[i])) )
-         continue;
-
+      /* create or clear main solution */
       if( newsol == NULL )
       {
          SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
          if( solindex != NULL )
             *solindex = SCIPsolGetIndex(newsol);
       }
+      else
+         SCIP_CALL( SCIPclearSol(scip, newsol) );
 
-      /* put values from subsol into newsol */
+      /* get values from subsol */
       SCIP_CALL( translateSubSol(scip, subscip, subsols[i], subvars, solvals) );
+
+      /* put values into newsol */
       SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, solvals) );
+
+      /* reject solution with invalid objective value */
+      if( SCIPgetSolTransObj(scip, newsol) == SCIP_INVALID ) /*lint !e777*/
+         continue;
 
       /* check whether feasible */
       SCIP_CALL( SCIPcheckSol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
@@ -3328,6 +3333,8 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/solutions", -1) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1LL) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
+   SCIP_CALL( SCIPsetRealParam(targetscip, "limits/primal", SCIP_INVALID) );
+   SCIP_CALL( SCIPsetRealParam(targetscip, "limits/dual", SCIP_INVALID) );
 
    return SCIP_OKAY;
 }
