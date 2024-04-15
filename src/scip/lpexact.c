@@ -8814,3 +8814,28 @@ SCIP_RETCODE SCIPlpExactWrite(
 
    return SCIP_OKAY;
 }
+
+/** overwrites the dual values stored in the fp lp with exact values */
+void SCIPlpExactOverwriteFpDualSol(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_Bool             dualfarkas          /**< TRUE if farkas proof, FALSE if dual sol? */
+   )
+{
+   assert(lp != NULL);
+
+   for( int c = 0; c < lp->ncols; ++c )
+   {
+      if( dualfarkas )
+         lp->cols[c]->fpcol->farkascoef = RatApproxReal(lp->cols[c]->farkascoef);
+      else
+         lp->cols[c]->fpcol->redcost = RatApproxReal(lp->cols[c]->redcost);
+   }
+
+   for( int r = 0; r < lp->nrows; ++r )
+   {
+      if( dualfarkas )
+         lp->rows[r]->fprow->dualfarkas = RatApproxReal(lp->rows[r]->dualfarkas);
+      else
+         lp->rows[r]->fprow->dualsol = RatApproxReal(lp->rows[r]->dualsol);
+   }
+}

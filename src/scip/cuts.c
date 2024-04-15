@@ -3541,7 +3541,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                // just exclude the negative continuous slacks for the certificate rows
                if( row->integral &&
                   ((!lhsused && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant)) ||
-                  (lhsused && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant))) )
+                  (lhsused && SCIPisExactlyIntegral(row->lhs) &&  SCIPisExactlyIntegral(row->constant))) )
                {
                   SCIPdebugMessage("row has integral slack\n");
                   rowusedcert = FALSE;
@@ -3595,7 +3595,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   // just exclude the negative continuous slacks for the certificate rows
                   if( row->integral &&
                      ((!lhsused && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant)) ||
-                     (lhsused && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant))) )
+                     (lhsused && SCIPisExactlyIntegral(row->lhs) &&  SCIPisExactlyIntegral(row->constant))) )
                   {
                      rowusedcert = FALSE;
                      SCIPdebugMessage("row has integral slack\n");

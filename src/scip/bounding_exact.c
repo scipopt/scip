@@ -1845,7 +1845,8 @@ char chooseInitialBoundingMethod(
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< SCIP statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Bool             dualfeasible        /**< was the fp lp dualfeasible? */
 )
 {
    char dualboundmethod;
@@ -1896,10 +1897,10 @@ char chooseInitialBoundingMethod(
       else
       {
          /* check if neumair-shcherbina is possible */
-         if( SCIPlpExactBSpossible(lpexact) )
+         if( SCIPlpExactBSpossible(lpexact) && dualfeasible )
             dualboundmethod = 'n';
          /* check if project and shift is possible */
-         else if( SCIPlpExactPSpossible(lpexact) )
+         else if( SCIPlpExactPSpossible(lpexact) && dualfeasible  )
             dualboundmethod = 'p';
          /* otherwise solve exactly */
          else
@@ -1964,14 +1965,15 @@ char chooseBoundingMethod(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   char                  lastboundmethod     /**< the last method that was chosen */
+   char                  lastboundmethod,    /**< the last method that was chosen */
+   SCIP_Bool             dualfeasible        /**< was the fp lp dualfeasible? */
    )
 {
    assert(!lpexact->fplp->hasprovedbound);
 
    /* choose which bounding method to use */
    if( lastboundmethod == 'u' )
-      return chooseInitialBoundingMethod(lpexact, set, stat, prob);
+      return chooseInitialBoundingMethod(lpexact, set, stat, prob, dualfeasible);
    else
       return chooseFallbackBoundingMethod(lpexact, set, lastboundmethod);
 }
@@ -2393,7 +2395,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
 
    while( (!lp->hasprovedbound && !shouldabort) || lpexact->allowexactsolve )
    {
-      dualboundmethod = chooseBoundingMethod(lpexact, set, stat, prob, lastboundmethod);
+      dualboundmethod = chooseBoundingMethod(lpexact, set, stat, prob, lastboundmethod, *dualfeasible);
       SCIPdebugMessage("Computing safe bound for LP with status %d using bounding method %c\n",
             SCIPlpGetSolstat(lp), dualboundmethod);
 
@@ -2408,8 +2410,6 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
             *lperror = FALSE;
             SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                   prob, usefarkas, safebound) );
-            if( lp->hasprovedbound )
-               *dualfeasible = TRUE;
             break;
       #ifdef SCIP_WITH_GMP
          case 'p':
@@ -2417,8 +2417,6 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
             *lperror = FALSE;
             SCIP_CALL( projectShift(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                   prob, blkmem, usefarkas, safebound) );
-            if( lp->hasprovedbound )
-               *dualfeasible = TRUE;
             break;
       #endif
          case 'e':
