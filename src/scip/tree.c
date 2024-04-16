@@ -869,11 +869,8 @@ SCIP_RETCODE nodeReleaseParent(
    parent = node->parent;
    if( parent != NULL )
    {
-      SCIP_Bool freeParent;
-      SCIP_Bool singleChild;
+      SCIP_Bool freeParent = FALSE;
 
-      freeParent = FALSE;
-      singleChild = FALSE;
       switch( SCIPnodeGetType(parent) )
       {
       case SCIP_NODETYPE_FOCUSNODE:
@@ -904,28 +901,24 @@ SCIP_RETCODE nodeReleaseParent(
          assert(parent->data.junction.nchildren > 0);
          parent->data.junction.nchildren--;
          freeParent = (parent->data.junction.nchildren == 0); /* free parent if it has no more children */
-         singleChild = (parent->data.junction.nchildren == 1);
          break;
       case SCIP_NODETYPE_PSEUDOFORK:
          assert(parent->data.pseudofork != NULL);
          assert(parent->data.pseudofork->nchildren > 0);
          parent->data.pseudofork->nchildren--;
          freeParent = (parent->data.pseudofork->nchildren == 0); /* free parent if it has no more children */
-         singleChild = (parent->data.pseudofork->nchildren == 1);
          break;
       case SCIP_NODETYPE_FORK:
          assert(parent->data.fork != NULL);
          assert(parent->data.fork->nchildren > 0);
          parent->data.fork->nchildren--;
          freeParent = (parent->data.fork->nchildren == 0); /* free parent if it has no more children */
-         singleChild = (parent->data.fork->nchildren == 1);
          break;
       case SCIP_NODETYPE_SUBROOT:
          assert(parent->data.subroot != NULL);
          assert(parent->data.subroot->nchildren > 0);
          parent->data.subroot->nchildren--;
          freeParent = (parent->data.subroot->nchildren == 0); /* free parent if it has no more children */
-         singleChild = (parent->data.subroot->nchildren == 1);
          break;
       case SCIP_NODETYPE_REFOCUSNODE:
          /* the only possible child a refocused node can have in its refocus state is the probing root node;
@@ -940,21 +933,74 @@ SCIP_RETCODE nodeReleaseParent(
          return SCIP_INVALIDDATA;
       }
 
-      /* free parent, if it is not on the current active path */
+      /* free parent if it is not on the current active path */
       if( freeParent && !parent->active )
       {
          SCIP_CALL( SCIPnodeFree(&node->parent, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
       }
-
-      /* update the effective root depth
-       * in reoptimization we must not increase the effective root depth
-       */
-      assert(tree->effectiverootdepth >= 0);
-      if( singleChild && SCIPnodeGetDepth(parent) == tree->effectiverootdepth && !set->reopt_enable )
+      /* update the effective root depth if not in reoptimization and active parent has children */
+      else if( !set->reopt_enable && freeParent == !parent->active )
       {
-         tree->effectiverootdepth++;
-         SCIPsetDebugMsg(set, "unlinked node #%" SCIP_LONGINT_FORMAT " in depth %d -> new effective root depth: %d\n",
-            SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->effectiverootdepth);
+         SCIP_Bool singleChild = FALSE;
+         int focusdepth = SCIPtreeGetFocusDepth(tree);
+
+         assert(tree->effectiverootdepth >= 0);
+
+         while( tree->effectiverootdepth < focusdepth )
+         {
+            SCIP_NODE* effectiveroot = tree->path[tree->effectiverootdepth];
+
+            switch( SCIPnodeGetType(effectiveroot) )
+            {
+            case SCIP_NODETYPE_FOCUSNODE:
+               SCIPerrorMessage("focus shallower than focus depth\n");
+               return SCIP_INVALIDDATA;
+            case SCIP_NODETYPE_PROBINGNODE:
+               SCIPerrorMessage("probing shallower than focus depth\n");
+               return SCIP_INVALIDDATA;
+            case SCIP_NODETYPE_SIBLING:
+               SCIPerrorMessage("sibling shallower than focus depth\n");
+               return SCIP_INVALIDDATA;
+            case SCIP_NODETYPE_CHILD:
+               SCIPerrorMessage("child shallower than focus depth\n");
+               return SCIP_INVALIDDATA;
+            case SCIP_NODETYPE_LEAF:
+               SCIPerrorMessage("leaf on focus path\n");
+               return SCIP_INVALIDDATA;
+            case SCIP_NODETYPE_DEADEND:
+               SCIPerrorMessage("dead-end on focus path\n");
+               return SCIP_INVALIDDATA;
+            case SCIP_NODETYPE_JUNCTION:
+               singleChild = (effectiveroot->data.junction.nchildren == 1);
+               break;
+            case SCIP_NODETYPE_PSEUDOFORK:
+               singleChild = (effectiveroot->data.pseudofork->nchildren == 1);
+               break;
+            case SCIP_NODETYPE_FORK:
+               singleChild = (effectiveroot->data.fork->nchildren == 1);
+               break;
+            case SCIP_NODETYPE_SUBROOT:
+               singleChild = (effectiveroot->data.subroot->nchildren == 1);
+               break;
+            case SCIP_NODETYPE_REFOCUSNODE:
+               singleChild = FALSE;
+               break;
+            default:
+               SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(effectiveroot));
+               return SCIP_INVALIDDATA;
+            }
+
+            if( !singleChild )
+               break;
+
+            ++tree->effectiverootdepth;
+
+            SCIPsetDebugMsg(set,
+               "unlinked node #%" SCIP_LONGINT_FORMAT " in depth %d -> new effective root depth: %d\n",
+               SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->effectiverootdepth);
+         }
+
+         assert(!singleChild || SCIPtreeGetEffectiveRootDepth(tree) == SCIPtreeGetFocusDepth(tree));
       }
    }
 
@@ -4521,16 +4567,16 @@ SCIP_RETCODE SCIPnodeFocus(
       assert(tree->nchildren == 0);
       assert(*node == NULL);
 
-      /* if the node is infeasible, convert it into a deadend; otherwise, put it into the LEAF queue */
+      /* if the node is infeasible, convert it into a dead-end; otherwise, put it into the LEAF queue */
       if( SCIPsetIsGE(set, tree->focusnode->lowerbound, primal->cutoffbound) )
       {
          /* in case the LP was not constructed (due to the parameter settings for example) we have the finally remember the
-          * old size of the LP (if it was constructed in an earlier node) before we change the current node into a deadend
+          * old size of the LP (if it was constructed in an earlier node) before we change the current node into a dead-end
           */
          if( !tree->focuslpconstructed )
             SCIPlpMarkSize(lp);
 
-         /* convert old focus node into deadend */
+         /* convert old focus node into dead-end */
          SCIP_CALL( focusnodeToDeadend(blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp, branchcand,
                cliquetable) );
       }
@@ -4626,12 +4672,12 @@ SCIP_RETCODE SCIPnodeFocus(
    else if( tree->focusnode != NULL )
    {
       /* in case the LP was not constructed (due to the parameter settings for example) we have the finally remember the
-       * old size of the LP (if it was constructed in an earlier node) before we change the current node into a deadend
+       * old size of the LP (if it was constructed in an earlier node) before we change the current node into a dead-end
        */
       if( !tree->focuslpconstructed )
          SCIPlpMarkSize(lp);
 
-      /* convert old focus node into deadend */
+      /* convert old focus node into dead-end */
       SCIP_CALL( focusnodeToDeadend(blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp, branchcand, cliquetable) );
    }
    assert(subroot == NULL || SCIPnodeGetType(subroot) == SCIP_NODETYPE_SUBROOT);
