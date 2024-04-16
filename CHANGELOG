@@ -74,6 +74,7 @@ Fixed bugs
 - symmetry handling methods have not been added immediately after computing symmetries, which has been fixed
 - delay checking node limits after presolving to correctly continue up to the exceeding main node
 - simplified the objective sense assumption for the subproblems in the Lagromory separator
+- update effective root depth iteratively to avoid trapping it at a single child node
 
 Miscellaneous
 -------------
