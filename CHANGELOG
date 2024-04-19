@@ -22,6 +22,8 @@ Interface changes
 
 ### New API functions
 
+- New function SCIPgetExprActivityNonlinear() to get activity of nonlinear constraint.
+
 ### Command line interface
 
 ### Interfaces to external software

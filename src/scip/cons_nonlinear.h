@@ -807,6 +807,19 @@ SCIP_RETCODE SCIPregisterExprUsageNonlinear(
    SCIP_Bool             useactivityforsepaabove  /**< whether activity of expr will be used by overestimation */
    );
 
+/** computes value of constraint expression in a given solution
+ *
+ * Stores value of constraint expression in sol in activity.
+ * In case of a domain error (function cannot be evaluated in sol), activity is set to SCIP_INVALID.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetExprActivityNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Real*            activity            /**< buffer to store computed activity */
+   );
+
 /** computes absolute violation for auxvar relation in an expression w.r.t. original variables
  *
  * Assume the expression is f(x), where x are original (i.e., not auxiliary) variables.
