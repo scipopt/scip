@@ -13777,6 +13777,32 @@ SCIP_RETCODE SCIPaddExprNonlinear(
    return SCIP_OKAY;
 }
 
+/** computes value of constraint expression in a given solution
+ *
+ * Stores value of constraint expression in sol in activity.
+ * In case of a domain error (function cannot be evaluated in sol), activity is set to SCIP_INVALID.
+ */
+SCIP_RETCODE SCIPgetExprActivityNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Real*            activity            /**< buffer to store computed activity */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(activity != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIP_CALL( SCIPevalExpr(scip, consdata->expr, sol, 0L) );
+   *activity = SCIPexprGetEvalValue(consdata->expr);
+
+   return SCIP_OKAY;
+}
+
 /** gets absolute violation of nonlinear constraint
  *
  * This function evaluates the constraints in the given solution.
