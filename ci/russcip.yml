@@ -11,7 +11,7 @@ russcip:
     - apt-get update && apt-get install -y clang gfortran
 
     - cd /usr/
-    - $CI_PROJECT_DIR/SCIP-${SCIP_VERSION}-Linux.sh --skip-license
+    - $CI_PROJECT_DIR/SCIP-*-Linux.sh --skip-license
     - mv /usr/lib64/libscip.so* /usr/lib/x86_64-linux-gnu/
 
     - cd ${CI_PROJECT_DIR}
