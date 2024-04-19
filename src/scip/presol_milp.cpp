@@ -658,7 +658,8 @@ SCIP_RETCODE doMilpPresolveRational(
          RatFreeBuffer(SCIPbuffer(scip), &tmpval);
 
          assert(!infeas);
-         assert(fixed);
+         assert(fixed || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED ||
+                      SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
          break;
       }
 /*

@@ -4376,6 +4376,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
       SCIPsetDebugMsg(set, "time limit exceeded before solving LP\n");
       lp->solved = TRUE;
       lpexact->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+      lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
       lp->lpobjval = -SCIPsetInfinity(set);
       return SCIP_OKAY;
    }
@@ -4480,10 +4481,12 @@ SCIP_RETCODE lpExactFlushAndSolve(
       else if( SCIPlpiExactIsIterlimExc(lpexact->lpiexact) )
       {
          lpexact->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
+         lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
       }
       else if( SCIPlpiExactIsTimelimExc(lpexact->lpiexact) )
       {
          lpexact->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+         lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
       }
       else
       {
