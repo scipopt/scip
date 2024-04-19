@@ -22,7 +22,7 @@
     - mv SCIP-*-Linux.* $CI_PROJECT_DIR/
   artifacts:
     paths:
-      - $CI_PROJECT_DIR/SCIP-${SCIP_VERSION}-Linux.*
+      - $CI_PROJECT_DIR/SCIP-*-Linux.*
 
 "cmake release gcc":
   extends: .cmake

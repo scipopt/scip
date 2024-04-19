@@ -9,8 +9,6 @@
 # The image is built in the first stage of the pipeline and then used in all the other stages.
 # Jobs that do not require the dependecies inside the image should run on a smaller image like debian-slim.
 variables:
-  SCIP_VERSION: "9.0.1"
-
   IMAGE_NAME: ${CI_REGISTRY}/integer/scip/ci
   # combine IMAGE_NAME and current branch
   IMAGE: ${IMAGE_NAME}:${IMAGE_HASH}
