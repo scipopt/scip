@@ -13,7 +13,7 @@ valgrind:
 
     - mkdir scipbuild
     - cd scipbuild
-    - $CI_PROJECT_DIR/SCIP-${SCIP_VERSION}-Linux.sh --skip-license
+    - $CI_PROJECT_DIR/SCIP-*-Linux.sh --skip-license
     - cd ${CI_PROJECT_DIR}
 
     - make test EXECUTABLE=scipbuild/bin/scip TEST=short_valgrind OPT=opt EXCLUSIVE=false MEM=12000 QUEUE=opt-low DEBUGTOOL=valgrind TIME=60
