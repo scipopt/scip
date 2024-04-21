@@ -260,7 +260,7 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
                {
                   j = varorbitidssort[++i];
                }
-               while ( i < orcdata->npermvars && varorbitids[j] != orbitend );
+               while ( i < orcdata->npermvars && varorbitids[j] != orbitid );
                break;
             }
          }
