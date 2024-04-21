@@ -2024,8 +2024,8 @@ SCIP_RETCODE isDoublelLexSym(
          SCIPfreeBlockMemoryArray(scip, &(*doublelexmatrix)[i], *ncols);
       }
       SCIPfreeBlockMemoryArray(scip, doublelexmatrix, *nrows);
-      SCIPfreeBlockMemoryArray(scip, rowsbegin, nmatrices2 + 1);
-      SCIPfreeBlockMemoryArray(scip, colsbegin, nmatrices1 + 1);
+      SCIPfreeBlockMemoryArrayNull(scip, rowsbegin, nmatrices2 + 1);
+      SCIPfreeBlockMemoryArrayNull(scip, colsbegin, nmatrices1 + 1);
       *doublelexmatrix = NULL;
       *rowsbegin = NULL;
       *colsbegin = NULL;
