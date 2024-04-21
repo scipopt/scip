@@ -238,7 +238,7 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
 
       /* the orbit must have the same bounds */
       orbitsymbroken = FALSE;
-      j = varorbitids[orbitbegin];
+      j = varorbitidssort[orbitbegin];
       orbitglb = orcdata->globalvarlbs[j];
       orbitgub = orcdata->globalvarubs[j];
       for (i = orbitbegin + 1; i < orcdata->npermvars; ++i)
