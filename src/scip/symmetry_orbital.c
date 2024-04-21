@@ -254,6 +254,13 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
             if ( !SCIPsymEQ(scip, orbitglb, orcdata->globalvarlbs[j]) || !SCIPsymEQ(scip, orbitgub, orcdata->globalvarubs[j]) )
             {
                orbitsymbroken = TRUE;
+
+               /* identify the correct end of the orbit */
+               do
+               {
+                  j = varorbitidssort[++i];
+               }
+               while ( i < orcdata->npermvars && varorbitids[j] != orbitend );
                break;
             }
          }
