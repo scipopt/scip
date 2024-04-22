@@ -229,8 +229,6 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool success;
-   SCIP_Bool cutoff;
    int i;
 
    assert(scip != NULL);
@@ -241,8 +239,133 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( conshdlrdata->nvars == 0 )
-      return SCIP_OKAY;
+   for( i = 0; i < conshdlrdata->nvars; ++i )
+   {
+      SCIP_VAR* var;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real val;
+      SCIP_Bool success;
+      SCIP_Bool cutoff;
+
+      var = conshdlrdata->vars[i];
+      assert(var != NULL);
+
+      lb = SCIPvarGetLbOriginal(var);
+      ub = SCIPvarGetUbOriginal(var);
+      val = SCIPgetSolVal(scip, NULL, var);
+
+      if( (!SCIPisInfinity(scip, -lb) && SCIPisFeasLT(scip, val, lb)) || (!SCIPisInfinity(scip, ub) && SCIPisFeasGT(scip, val, ub)) )
+      {
+         SCIP_CALL( addCut(scip, conshdlr, NULL, var, &success, &cutoff) );
+
+         if( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            break;
+         }
+
+         if( success )
+         {
+            *result = SCIP_SEPARATED;
+            break;
+         }
+
+         /* tighten LP feasibility tolerance, but check other variables first */
+         *result = SCIP_INFEASIBLE;
+      }
+   }
+
+   if( *result == SCIP_INFEASIBLE )
+   {
+      /* if we could not add a cut, or found a cutoff, then try to tighten LP feasibility tolerance
+       * otherwise, we have no mean to enforce the bound, and declare the solution as feasible instead
+       */
+      if( SCIPisPositive(scip, SCIPgetLPFeastol(scip)) )
+      {
+         SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), SCIPgetLPFeastol(scip)/10.0));  /*lint !e666*/
+         *result = SCIP_SOLVELP;
+      }
+      else
+      {
+         *result = SCIP_FEASIBLE;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxFixedvar)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   for( i = 0; i < conshdlrdata->nvars; ++i )
+   {
+      SCIP_VAR* var;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real val;
+      SCIP_Bool success;
+      SCIP_Bool cutoff;
+
+      var = conshdlrdata->vars[i];
+      assert(var != NULL);
+
+      lb = SCIPvarGetLbOriginal(var);
+      ub = SCIPvarGetUbOriginal(var);
+      val = SCIPgetSolVal(scip, sol, var);
+
+      if( (!SCIPisInfinity(scip, -lb) && SCIPisFeasLT(scip, val, lb)) || (!SCIPisInfinity(scip, ub) && SCIPisFeasGT(scip, val, ub)) )
+      {
+         SCIP_CALL( addCut(scip, conshdlr, NULL, var, &success, &cutoff) );
+
+         if( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            break;
+         }
+
+         if( success )
+         {
+            *result = SCIP_SEPARATED;
+            break;
+         }
+
+         /* switch to solving the LP relaxation, but check other variables first */
+         *result = SCIP_SOLVELP;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for pseudo solutions */
+static
+SCIP_DECL_CONSENFOPS(consEnfopsFixedvar)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    for( i = 0; i < conshdlrdata->nvars; ++i )
    {
@@ -260,37 +383,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
 
       if( (!SCIPisInfinity(scip, -lb) && SCIPisFeasLT(scip, val, lb)) || (!SCIPisInfinity(scip, ub) && SCIPisFeasGT(scip, val, ub)) )
       {
-         SCIP_CALL( addCut(scip, conshdlr, NULL, var, &success, &cutoff) );
-
-         if( cutoff )
-            *result = SCIP_CUTOFF;
-         else if( success )
-            *result = SCIP_SEPARATED;
-         /* TODO else */
+         /* if solution is already declared infeasible, then do not force solving an LP, as it may fail (we may be in enfops because the LP failed) */
+         *result = solinfeasible ? SCIP_INFEASIBLE : SCIP_SOLVELP;
+         break;
       }
    }
-
-   return SCIP_OKAY;
-}
-
-
-/** constraint enforcing method of constraint handler for relaxation solutions */
-static
-SCIP_DECL_CONSENFORELAX(consEnforelaxFixedvar)
-{  /*lint --e{715}*/
-   /* TODO check */
-   *result = SCIP_FEASIBLE;
-
-   return SCIP_OKAY;
-}
-
-
-/** constraint enforcing method of constraint handler for pseudo solutions */
-static
-SCIP_DECL_CONSENFOPS(consEnfopsFixedvar)
-{  /*lint --e{715}*/
-   /* TODO check */
-   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
