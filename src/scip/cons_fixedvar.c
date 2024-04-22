@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -55,6 +55,10 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
+   SCIP_VAR**            vars;               /**< variables to check */
+   int                   nvars;              /**< number of variables to check */
+   int                   varssize;           /**< size of vars array */
+
    SCIP_Bool             enabled;            /**< whether to do anything */
    SCIP_Bool             subscips;           /**< whether to be active in subscip's */
 };
@@ -138,6 +142,7 @@ SCIP_DECL_CONSFREE(consFreeFixedvar)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+   assert(conshdlrdata->vars == NULL);  /* should have been freed in Exitsol */
 
    SCIPfreeBlockMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
@@ -145,15 +150,87 @@ SCIP_DECL_CONSFREE(consFreeFixedvar)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_CONSINITSOL(consInitsolFixedvar)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->vars == NULL);
+   assert(conshdlrdata->varssize == 0);
+   assert(conshdlrdata->nvars == 0);
+
+   if( !conshdlrdata->enabled )
+      return SCIP_OKAY;
+
+   if( SCIPgetNFixedVars(scip) == 0 )
+      return SCIP_OKAY;
+
+   vars = SCIPgetOrigVars(scip);
+   nvars = SCIPgetNOrigVars(scip);
+
+   /* for faster checks, collect original variables that are fixed in transformed problem
+    * during solve, this list does not change
+    */
+   conshdlrdata->varssize = SCIPgetNFixedVars(scip);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->vars, conshdlrdata->varssize) );
+
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_VAR* var;
+
+      SCIP_CALL( SCIPgetTransformedVar(scip, vars[i], &var) );
+
+      /* skip original variable without counterpart in transformed problem */
+      if( var == NULL )
+         continue;
+
+      /* skip original variable that is still active in transformed problem
+       * the normal feasibility checks in SCIP should ensure that bounds are satisfied
+       */
+      if( SCIPvarIsActive(var) )
+         continue;
+
+      /* skip free original variable */
+      if( SCIPisInfinity(scip, -SCIPvarGetLbOriginal(vars[i])) && SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
+         continue;
+
+      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &conshdlrdata->vars, &conshdlrdata->varssize, conshdlrdata->nvars + 1) );
+      conshdlrdata->vars[conshdlrdata->nvars++] = vars[i];
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+static
+SCIP_DECL_CONSEXITSOL(consExitsolFixedvar)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->vars, conshdlrdata->varssize);
+   conshdlrdata->varssize = 0;
+   conshdlrdata->nvars = 0;
+
+   return SCIP_OKAY;
+}
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool success;
    SCIP_Bool cutoff;
-   SCIP_VAR** vars;
-   int nvars;
    int i;
 
    assert(scip != NULL);
@@ -161,30 +238,24 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
 
    *result = SCIP_FEASIBLE;
 
-   if( !SCIPconshdlrGetData(conshdlr)->enabled )
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->nvars == 0 )
       return SCIP_OKAY;
 
-   nvars = SCIPgetNOrigVars(scip);
-   vars = SCIPgetOrigVars(scip);
-   assert(vars != NULL);
-
-   for( i = 0; i < nvars; ++i )
+   for( i = 0; i < conshdlrdata->nvars; ++i )
    {
       SCIP_VAR* var;
       SCIP_Real lb;
       SCIP_Real ub;
       SCIP_Real val;
 
-      SCIP_CALL( SCIPgetTransformedVar(scip, vars[i], &var) );
+      var = conshdlrdata->vars[i];
+      assert(var != NULL);
 
-      if( var == NULL )
-         continue;
-
-      if( SCIPvarIsActive(var) )
-         continue;
-
-      lb = SCIPvarGetLbGlobal(vars[i]);
-      ub = SCIPvarGetUbGlobal(vars[i]);
+      lb = SCIPvarGetLbOriginal(var);
+      ub = SCIPvarGetUbOriginal(var);
       val = SCIPgetSolVal(scip, NULL, var);
 
       if( (!SCIPisInfinity(scip, -lb) && SCIPisFeasLT(scip, val, lb)) || (!SCIPisInfinity(scip, ub) && SCIPisFeasGT(scip, val, ub)) )
@@ -229,6 +300,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsFixedvar)
 static
 SCIP_DECL_CONSCHECK(consCheckFixedvar)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR** vars;
    int nvars;
    int i;
@@ -238,16 +310,28 @@ SCIP_DECL_CONSCHECK(consCheckFixedvar)
 
    *result = SCIP_FEASIBLE;
 
-   if( !SCIPconshdlrGetData(conshdlr)->enabled )
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( !conshdlrdata->enabled )
       return SCIP_OKAY;
 
    /* skip if no transformed problem yet */
    if( SCIPgetStage(scip) < SCIP_STAGE_TRANSFORMED || SCIPgetStage(scip) >= SCIP_STAGE_FREETRANS )
       return SCIP_OKAY;
 
-   nvars = SCIPgetNOrigVars(scip);
-   vars = SCIPgetOrigVars(scip);
-   assert(vars != NULL);
+   /* use cached list of relevant original variables during solve, other loop through all variables */
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   {
+      nvars = conshdlrdata->nvars;
+      vars = conshdlrdata->vars;
+   }
+   else
+   {
+      nvars = SCIPgetNOrigVars(scip);
+      vars = SCIPgetOrigVars(scip);
+   }
+   assert(vars != NULL || nvars == 0);
 
    for( i = 0; i < nvars; ++i )
    {
@@ -327,7 +411,7 @@ SCIP_RETCODE SCIPincludeConshdlrFixedvar(
    SCIP_CONSHDLR* conshdlr = NULL;
 
    /* create fixedvar constraint handler data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &conshdlrdata) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -338,6 +422,9 @@ SCIP_RETCODE SCIPincludeConshdlrFixedvar(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyFixedvar, NULL) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeFixedvar) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolFixedvar) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolFixedvar) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeFixedvar) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxFixedvar) );
 
