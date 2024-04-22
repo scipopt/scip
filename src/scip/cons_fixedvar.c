@@ -75,7 +75,7 @@ SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< fixedvar conshdlr */
    SCIP_SOL*             sol,                /**< solution that is enforced */
-   SCIP_VAR*             var,                /**< fixed variable which bound is violated */
+   SCIP_VAR*             var,                /**< fixed original variable which bound is violated */
    SCIP_Bool*            success,            /**< buffer to store whether cut was added */
    SCIP_Bool*            cutoff              /**< buffer to store whether a cutoff was detected */
    )
@@ -93,6 +93,9 @@ SCIP_RETCODE addCut(
    SCIPdebugMsg(scip, "addCut for variable <%s> [%.15g,%.15g] with value <%.15g>\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), SCIPgetSolVal(scip, sol, var));
 
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_bounds", SCIPvarGetName(var));
+
+   assert(SCIPvarGetLbGlobal(var) >= SCIPvarGetLbOriginal(var));  /*lint !e777*/
+   assert(SCIPvarGetUbGlobal(var) <= SCIPvarGetUbOriginal(var));  /*lint !e777*/
 
    SCIP_CALL( SCIPcreateEmptyRowConshdlr(scip, &row, conshdlr, name, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), FALSE, FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarToRow(scip, row, var, 1.0) );
