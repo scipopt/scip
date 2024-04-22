@@ -47,6 +47,7 @@
 /* parameter default values */
 #define DEFAULT_ENABLED            TRUE /**< enable constraint handler */
 #define DEFAULT_SUBSCIPS           TRUE /**< also run in subSCIPs */
+#define DEFAULT_PREFERCUT          TRUE /**< whether to prefer separation over tightening LP feastol in enforcement */
 
 /*
  * Data structures
@@ -61,6 +62,7 @@ struct SCIP_ConshdlrData
 
    SCIP_Bool             enabled;            /**< whether to do anything */
    SCIP_Bool             subscips;           /**< whether to be active in subscip's */
+   SCIP_Bool             prefercut;          /**< whether to prefer separation over tightening LP feastol in enforcement */
 };
 
 
@@ -229,6 +231,7 @@ static
 SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool addcut;
    int i;
 
    assert(scip != NULL);
@@ -238,6 +241,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   /* we will try separation if this is preferred or the LP feastol is too small already */
+   addcut = conshdlrdata->prefercut;
+   if( !SCIPisPositive(scip, SCIPgetLPFeastol(scip)) )
+      addcut = TRUE;
 
    for( i = 0; i < conshdlrdata->nvars; ++i )
    {
@@ -257,22 +265,31 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
 
       if( (!SCIPisInfinity(scip, -lb) && SCIPisFeasLT(scip, val, lb)) || (!SCIPisInfinity(scip, ub) && SCIPisFeasGT(scip, val, ub)) )
       {
-         SCIP_CALL( addCut(scip, conshdlr, NULL, var, &success, &cutoff) );
-
-         if( cutoff )
+         if( addcut )
          {
-            *result = SCIP_CUTOFF;
+            SCIP_CALL( addCut(scip, conshdlr, NULL, var, &success, &cutoff) );
+
+            if( cutoff )
+            {
+               *result = SCIP_CUTOFF;
+               break;
+            }
+
+            if( success )
+            {
+               *result = SCIP_SEPARATED;
+               break;
+            }
+
+            /* tighten LP feasibility tolerance, but check other variables first */
+            *result = SCIP_INFEASIBLE;
+         }
+         else
+         {
+            /* tighten LP feasibility tolerance */
+            *result = SCIP_INFEASIBLE;
             break;
          }
-
-         if( success )
-         {
-            *result = SCIP_SEPARATED;
-            break;
-         }
-
-         /* tighten LP feasibility tolerance, but check other variables first */
-         *result = SCIP_INFEASIBLE;
       }
    }
 
@@ -533,6 +550,10 @@ SCIP_RETCODE SCIPincludeConshdlrFixedvar(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/subscips",
       "whether to enable checks in subSCIPs",
       &conshdlrdata->subscips, FALSE, DEFAULT_SUBSCIPS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/prefercut",
+      "whether to prefer separation over tightening LP feastol in enforcement",
+      &conshdlrdata->prefercut, FALSE, DEFAULT_PREFERCUT, NULL, NULL) );
 
    return SCIP_OKAY;
 }
