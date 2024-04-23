@@ -30,6 +30,7 @@
 #include "scip/scip.h"
 #include "include/scip_test.h"
 #include "scip/scipdefplugins.h"
+#include "scip/struct_cons.h"
 #include <stdio.h>
 
 /* TESTS  */
@@ -87,6 +88,99 @@ Test(fixedvar, check)
    /* free */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
+   SCIP_CALL( SCIPreleaseVar(scip , &y) );
+   SCIP_CALL( SCIPreleaseVar(scip , &x) );
+
+   SCIP_CALL( SCIPfree(&scip ) );
+}
+
+Test(fixedvar, enforce)
+{
+   SCIP* scip;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS* cons;
+   SCIP_SOL* sol;
+   SCIP_RESULT result;
+   SCIP_Bool infeas;
+   SCIP_Bool redundant;
+   SCIP_Bool aggregated;
+   SCIP_Bool success;
+   SCIP_Bool feasible;
+
+   /* create */
+   SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+   SCIP_CALL( SCIPcreateProbBasic(scip, "fixedvar_enforce") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -1.0, SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+
+   /* dummy variable and constraint to avoid pseudosolution to be feasible */
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+
+   SCIP_CALL( SCIPparseCons(scip, &cons, "[linear] <dummy>: <z> >= 1", TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+   cr_assert(success);
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 1) ); /* to be able to stop in presolve, it needs to run */
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/maxroundsroot", 0) );
+
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, FALSE) );
+   /* SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_FULL) ); */
+
+   /* aggregate x = 1.0 + 2e6 y */
+   SCIP_CALL( SCIPaggregateVars(scip, x, y, 1.0, -2.0/SCIPfeastol(scip), 1.0, &infeas, &redundant, &aggregated) );
+   cr_expect(!infeas);
+   cr_expect(redundant);
+   cr_expect(aggregated);
+
+   /* SCIP_CALL( SCIPprintTransProblem(scip, NULL, NULL, FALSE) ); */
+
+   /* go to solving stage, but stop there */
+   SCIP_CALL( SCIPpresolve(scip) );
+
+   SCIP_CALL( SCIPsetLongintParam(scip, "limits/nodes", 1L) );
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/solvefreq", -1) );
+   SCIP_CALL( SCIPsolve(scip) );
+
+   /* solution y = 1e-6 -> x = 3 violates its upper bound 1 */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, y, SCIPfeastol(scip)) );
+   SCIP_CALL( SCIPsetSolVal(scip, sol, z, 1.0) );
+
+   /* due to cons_fixedvar, this is not feasible */
+   SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
+   cr_expect(!feasible);
+
+   /* enforce solution via the enforelax callback of cons_fixedvar */
+   conshdlr = SCIPfindConshdlr(scip, "fixedvar");
+   SCIP_CALL( conshdlr->consenforelax(scip, sol, conshdlr, NULL, 0, 0, FALSE, &result) );
+
+   /* we should now have 1 cut to enforce bounds [0,1] on x: 0 <= 2e6 y + 1 <= 1 */
+   cr_expect_eq(result, SCIP_SEPARATED);
+   cr_expect(SCIPgetNCuts(scip) == 1);
+   for( int i = 0; i < SCIPgetNCuts(scip); ++i )
+   {
+      SCIP_CALL( SCIPprintRow(scip, SCIPgetCuts(scip)[i], NULL) );
+   }
+
+   /* free */
+   SCIP_CALL( SCIPclearCuts(scip) );
+
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
+
+   SCIP_CALL( SCIPreleaseVar(scip , &z) );
    SCIP_CALL( SCIPreleaseVar(scip , &y) );
    SCIP_CALL( SCIPreleaseVar(scip , &x) );
 

@@ -349,7 +349,7 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxFixedvar)
 
       if( (!SCIPisInfinity(scip, -lb) && SCIPisFeasLT(scip, val, lb)) || (!SCIPisInfinity(scip, ub) && SCIPisFeasGT(scip, val, ub)) )
       {
-         SCIP_CALL( addCut(scip, conshdlr, NULL, var, &success, &cutoff) );
+         SCIP_CALL( addCut(scip, conshdlr, sol, var, &success, &cutoff) );
 
          if( cutoff )
          {
