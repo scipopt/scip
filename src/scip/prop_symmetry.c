@@ -1743,9 +1743,9 @@ SCIP_RETCODE computeSymmetryGroup(
 
    /* get symmetry detection graphs from constraints */
    conss = SCIPgetConss(scip);
-   assert( conss != NULL );
-
    nconss = SCIPgetNConss(scip);
+
+   assert( conss != NULL || nconss == 0 );
 
    /* exit if no constraints or no variables are available */
    if ( nconss == 0 || SCIPgetNVars(scip) == 0 )
