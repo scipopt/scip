@@ -24,8 +24,13 @@
 
 /**@file   cons_fixedvar.c
  * @ingroup DEFPLUGINS_CONS
- * @brief  constraint handler that checks variable fixings
+ * @brief  constraint handler that checks bounds on fixed variables
  * @author Stefan Vigerske
+ *
+ * For each original variable that has a counterpart in the transformed problem
+ * which is not active (i.e., fixed, negated, aggregated, or multiaggregated),
+ * check the original bounds. In enforcement, add a cut that enforces the bounds
+ * or tighten LP feasibility tolerance.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -519,7 +524,7 @@ SCIP_DECL_CONSLOCK(consLockFixedvar)
  * constraint specific interface methods
  */
 
-/** creates the handler for fixedvar constraints and includes it in SCIP */
+/** creates the fixedvar constraint handler and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrFixedvar(
    SCIP*                 scip                /**< SCIP data structure */
    )

@@ -24,7 +24,7 @@
 
 /**@file   cons_fixedvar.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler that checks variable fixings
+ * @brief  constraint handler that checks bounds on fixed variables
  * @author Stefan Vigerske
  */
 
@@ -40,10 +40,10 @@
 extern "C" {
 #endif
 
-/** creates the handler for fixedvar constraints and includes it in SCIP
+/** creates the fixedvar constraint handler and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
- * */
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrFixedvar(
    SCIP*                 scip                /**< SCIP data structure */
