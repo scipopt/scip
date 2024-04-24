@@ -116,8 +116,8 @@ SCIP_RETCODE addCut(
    SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
 
-   /* if LP solution, then it should be violated in the row */
-   assert(sol != NULL || SCIPisFeasNegative(scip, SCIPgetRowLPFeasibility(scip, row)));
+   /* solution should be violated in the row */
+   assert(SCIPisFeasNegative(scip, SCIPgetRowSolFeasibility(scip, row, sol)));
 
    SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
    SCIP_CALL( SCIPreleaseRow(scip, &row) );
