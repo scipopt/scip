@@ -314,7 +314,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
        */
       if( SCIPisPositive(scip, SCIPgetLPFeastol(scip)) )
       {
-         SCIPsetLPFeastol(scip, MAX(SCIPepsilon(scip), SCIPgetLPFeastol(scip)/10.0));  /*lint !e666*/
+         SCIP_Real redfeastol = SCIPgetLPFeastol(scip) / 10.0;
+
+         SCIPsetLPFeastol(scip, MAX(redfeastol, SCIPepsilon(scip)));  /*lint !e666*/
          *result = SCIP_SOLVELP;
       }
       else
