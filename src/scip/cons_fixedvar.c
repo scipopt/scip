@@ -45,7 +45,7 @@
 #define CONSHDLR_DESC          "check bounds of original variables that are not active in transformed problem"
 #define CONSHDLR_ENFOPRIORITY  -7000000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -7000000 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
+#define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
