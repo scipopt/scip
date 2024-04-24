@@ -93,6 +93,7 @@
 #include "scip/cons_indicator.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_exactlp.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_pseudoboolean.h"
 #include "scip/cons_setppc.h"
@@ -106,7 +107,9 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_opb.h"
+#include "scip/rational.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -682,6 +685,10 @@ SCIP_RETCODE createVariable(
 
    SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
          initial, removable, NULL, NULL, NULL, NULL, NULL) );
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CALL( SCIPaddVarExactData(scip, newvar, NULL, NULL, NULL) );
+   }
    SCIP_CALL( SCIPaddVar(scip, newvar) );
    *var = newvar;
 
@@ -1161,6 +1168,12 @@ SCIP_RETCODE setObjective(
        */
       if( ntermcoefs > 0 )
       {
+         if( SCIPisExactSolve(scip) )
+         {
+            SCIPerrorMessage("non-linear objectives are not supported in exact mode\n");
+            return SCIP_READERROR;
+         }
+
 #if (LINEAROBJECTIVE == TRUE)
          /* all non-linear parts are created as and-constraints, even if the same non-linear part was already part of the objective function */
 
@@ -1179,6 +1192,12 @@ SCIP_RETCODE setObjective(
             nvars = ntermvars[t];
             assert(vars != NULL);
             assert(nvars > 1);
+
+            if( SCIPisExactSolve(scip) )
+            {
+               SCIPerrorMessage("non-linear objectives are not supported in exact mode\n");
+               return SCIP_READERROR;
+            }
 
             /* create auxiliary variable */
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, ARTIFICIALVARNAMEPREFIX"obj_%d", t);
@@ -1511,6 +1530,11 @@ SCIP_RETCODE readConstraints(
 
    if( ntermcoefs > 0 || issoftcons )
    {
+      if( SCIPisExactSolve(scip) )
+      {
+         SCIPerrorMessage("non-linear constraints are not supported in exact mode\n");
+         return SCIP_READERROR;
+      }
 #if GENCONSNAMES == TRUE
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean%d", opbinput->consnumber);
       ++(opbinput->consnumber);
@@ -1531,8 +1555,31 @@ SCIP_RETCODE readConstraints(
 #else
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "linear");
 #endif
+      if( !SCIPisExactSolve(scip) )
+      {
       retcode = SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
+      }
+      else
+      {
+         SCIP_Rational** lincoefsrat;
+         SCIP_Rational* lhsrat;
+         SCIP_Rational* rhsrat;
+
+         RatCreateBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs);
+         RatCreateBuffer(SCIPbuffer(scip), &lhsrat);
+         RatCreateBuffer(SCIPbuffer(scip), &rhsrat);
+         RatSetReal(lhsrat, lhs);
+         RatSetReal(rhsrat, rhs);
+         for( int i = 0; i < nlincoefs; ++i )
+            RatSetReal(lincoefsrat[i], lincoefs[i]);
+         retcode = SCIPcreateConsExactLinear(scip, &cons, name, nlincoefs, linvars, lincoefsrat, lhsrat, rhsrat,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
+         RatFreeBuffer(SCIPbuffer(scip), &rhsrat);
+         RatFreeBuffer(SCIPbuffer(scip), &lhsrat);
+         RatFreeBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs);
+      }
+
       if( retcode != SCIP_OKAY )
          goto TERMINATE;
    }
@@ -1766,8 +1813,30 @@ SCIP_RETCODE readOPBFile(
       else
          topcostrhs = (SCIP_Longint) SCIPfloor(scip, opbinput->topcost);
 
-      SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcosts, -SCIPinfinity(scip),
+      if( !SCIPisExactSolve(scip) )
+      {
+         SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcosts, -SCIPinfinity(scip),
             (SCIP_Real) topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      }
+      else
+      {
+         SCIP_Rational** topcostsrat;
+         SCIP_Rational* lhs;
+         SCIP_Rational* rhs;
+
+         RatCreateBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars);
+         RatCreateBuffer(SCIPbuffer(scip), &lhs);
+         RatCreateBuffer(SCIPbuffer(scip), &rhs);
+         RatSetString(lhs, "-inf");
+         RatSetReal(rhs, (SCIP_Real) topcostrhs);
+         for( int i = 0; i < ntopcostvars; ++i )
+            RatSetReal(topcostsrat[i], topcosts[i]);
+         SCIP_CALL( SCIPcreateConsExactLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcostsrat, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         RatFreeBuffer(SCIPbuffer(scip), &rhs);
+         RatFreeBuffer(SCIPbuffer(scip), &lhs);
+         RatFreeBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars);
+      }
+
       SCIP_CALL( SCIPaddCons(scip, topcostcons) );
       SCIPdebugPrintCons(scip, topcostcons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &topcostcons) );
