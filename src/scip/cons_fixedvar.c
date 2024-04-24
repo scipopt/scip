@@ -66,7 +66,7 @@ struct SCIP_ConshdlrData
    int                   varssize;           /**< size of vars array */
 
    SCIP_Bool             enabled;            /**< whether to do anything */
-   SCIP_Bool             subscips;           /**< whether to be active in subscip's */
+   SCIP_Bool             subscips;           /**< whether to be active in subSCIPs */
    SCIP_Bool             prefercut;          /**< whether to prefer separation over tightening LP feastol in enforcement */
 };
 
@@ -210,7 +210,7 @@ SCIP_DECL_CONSINITSOL(consInitsolFixedvar)
       if( SCIPisInfinity(scip, -SCIPvarGetLbOriginal(vars[i])) && SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
          continue;
 
-      SCIP_CALL( SCIPensureBlockMemoryArray(scip, &conshdlrdata->vars, &conshdlrdata->varssize, conshdlrdata->nvars + 1) );
+      assert(conshdlrdata->nvars < conshdlrdata->varssize);
       conshdlrdata->vars[conshdlrdata->nvars++] = vars[i];
    }
 
@@ -251,9 +251,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
    assert(conshdlrdata != NULL);
 
    /* we will try separation if this is preferred or the LP feastol is too small already */
-   addcut = conshdlrdata->prefercut;
-   if( !SCIPisPositive(scip, SCIPgetLPFeastol(scip)) )
-      addcut = TRUE;
+   addcut = conshdlrdata->prefercut || !SCIPisPositive(scip, SCIPgetLPFeastol(scip));
 
    for( i = 0; i < conshdlrdata->nvars; ++i )
    {
@@ -261,8 +259,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
       SCIP_Real lb;
       SCIP_Real ub;
       SCIP_Real val;
-      SCIP_Bool success;
-      SCIP_Bool cutoff;
 
       var = conshdlrdata->vars[i];
       assert(var != NULL);
@@ -275,6 +271,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
       {
          if( addcut )
          {
+            SCIP_Bool success;
+            SCIP_Bool cutoff;
+
             SCIP_CALL( addCut(scip, conshdlr, NULL, var, &success, &cutoff) );
 
             if( cutoff )
@@ -303,7 +302,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
 
    if( *result == SCIP_INFEASIBLE )
    {
-      /* if we could not add a cut, or found a cutoff, then try to tighten LP feasibility tolerance
+      /* if we could not add a cut or find a cutoff, then try to tighten LP feasibility tolerance
        * otherwise, we have no mean to enforce the bound, and declare the solution as feasible instead
        */
       if( SCIPisPositive(scip, SCIPgetLPFeastol(scip)) )
@@ -342,8 +341,6 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxFixedvar)
       SCIP_Real lb;
       SCIP_Real ub;
       SCIP_Real val;
-      SCIP_Bool success;
-      SCIP_Bool cutoff;
 
       var = conshdlrdata->vars[i];
       assert(var != NULL);
@@ -354,6 +351,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxFixedvar)
 
       if( (!SCIPisInfinity(scip, -lb) && SCIPisFeasLT(scip, val, lb)) || (!SCIPisInfinity(scip, ub) && SCIPisFeasGT(scip, val, ub)) )
       {
+         SCIP_Bool success;
+         SCIP_Bool cutoff;
+
          SCIP_CALL( addCut(scip, conshdlr, sol, var, &success, &cutoff) );
 
          if( cutoff )
@@ -442,7 +442,7 @@ SCIP_DECL_CONSCHECK(consCheckFixedvar)
    if( SCIPgetStage(scip) < SCIP_STAGE_TRANSFORMED || SCIPgetStage(scip) >= SCIP_STAGE_FREETRANS )
       return SCIP_OKAY;
 
-   /* use cached list of relevant original variables during solve, other loop through all variables */
+   /* during solving use cached list of relevant original variables, otherwise loop through all variables */
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
       nvars = conshdlrdata->nvars;
@@ -520,6 +520,7 @@ SCIP_DECL_CONSLOCK(consLockFixedvar)
    return SCIP_OKAY;
 }
 
+
 /*
  * constraint specific interface methods
  */
@@ -547,7 +548,6 @@ SCIP_RETCODE SCIPincludeConshdlrFixedvar(
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeFixedvar) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolFixedvar) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolFixedvar) );
-   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeFixedvar) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxFixedvar) );
 
    /* add fixedvar constraint handler parameters */
@@ -556,7 +556,7 @@ SCIP_RETCODE SCIPincludeConshdlrFixedvar(
       &conshdlrdata->enabled, FALSE, DEFAULT_ENABLED, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/subscips",
-      "whether to enable checks in subSCIPs",
+      "whether to act on subSCIPs",
       &conshdlrdata->subscips, FALSE, DEFAULT_SUBSCIPS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/prefercut",
