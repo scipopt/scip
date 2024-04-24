@@ -75,6 +75,13 @@ struct SCIP_ConshdlrData
  * Local methods
  */
 
+/** add cut to enforce global bounds on variable aggregation
+ *
+ * Given an original fixed variable x, add cut lb <= x <= ub.
+ * SCIP will replace x by the corresponding aggregation of x in the transformed problem.
+ * Though we only need to enforce original bounds on x, we use here the global bounds on x for lb/ub,
+ * as these should be as tight as or tighter than the original bounds.
+ */
 static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
