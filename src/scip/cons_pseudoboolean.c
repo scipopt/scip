@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -3694,7 +3694,6 @@ SCIP_RETCODE checkAndConss(
    SCIP_VAR** vars;
    SCIP_VAR* res;
    int nvars;
-   SCIP_Real andvalue;
    int c;
    int v;
 
@@ -3709,6 +3708,11 @@ SCIP_RETCODE checkAndConss(
 
    for( c = conshdlrdata->nallconsanddatas - 1; c >= 0; --c )
    {
+      SCIP_Real solval;
+      SCIP_Real minsolval;
+      SCIP_Real sumsolval;
+      SCIP_Real viol;
+
       if( !conshdlrdata->allconsanddatas[c]->istransformed )
          continue;
 
@@ -3723,17 +3727,26 @@ SCIP_RETCODE checkAndConss(
       res = SCIPgetResultantAnd(scip, andcons);
       assert(nvars == 0 || (vars != NULL && res != NULL));
 
-      andvalue = 1;
       /* check if the and-constraint is violated */
+      minsolval = 1.0;
+      sumsolval = 0.0;
       for( v = nvars - 1; v >= 0; --v )
       {
-         andvalue *= SCIPgetSolVal(scip, sol, vars[v]);
-         if( SCIPisFeasZero(scip, andvalue) )
-            break;
+         solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+         if( solval < minsolval )
+            minsolval = solval;
+
+         sumsolval += solval;
       }
 
-      /* check for violation and update aging */
-      if( !SCIPisFeasEQ(scip, andvalue, SCIPgetSolVal(scip, sol, res)) )
+      /* the resultant must be at most as large as every operator
+       * and at least as large as one minus the sum of negated operators
+       */
+      solval = SCIPgetSolVal(scip, sol, res);
+      viol = MAX3(0.0, solval - minsolval, sumsolval - (nvars - 1.0 + solval));
+
+      if( SCIPisFeasPositive(scip, viol) )
       {
          /* only reset constraint age if we are in enforcement */
          if( sol == NULL )
@@ -5906,6 +5919,10 @@ SCIP_RETCODE tryUpgradingXor(
          else
             var = SCIPvarGetNegationVar(repvars[v]);
 
+         /* implicit binary variables cannot be handled by xor */
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+            goto TERMINATE;
+
          if( SCIPvarGetIndex(var) > SCIPvarGetIndex(linvars[v1]) )
          {
             if( nlinvars + 1 < MAXNVARS )
@@ -5944,6 +5961,10 @@ SCIP_RETCODE tryUpgradingXor(
                var = repvars[v];
             else
                var = SCIPvarGetNegationVar(repvars[v]);
+
+            /* implicit binary variables cannot be handled by xor */
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+               goto TERMINATE;
 
             if( nlinvars + 1 < MAXNVARS )
             {

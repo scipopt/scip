@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -83,6 +83,7 @@
 #include "scip/scip_sepa.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
+#include "scip/scip_var.h"
 #include "scip/sepa_gomory.h"
 #include <string.h>
 
@@ -267,15 +268,21 @@ SCIP_RETCODE addCut(
                SCIP_Real roundedval = SCIPround(scip, cutcoefs[j]);
                SCIP_Real delta = roundedval - cutcoefs[j];
                SCIP_VAR* var = vars[cutinds[j]];
+               SCIP_Real sideval;
 
                if( delta == 0 )
                   continue;
-               cutcoefs[j]= roundedval;
 
                if( cutislocal )
-                  cutrhs += (delta > 0 ? SCIPvarGetUbLocal(var) : SCIPvarGetLbLocal(var)) * delta;
+                  sideval = delta > 0 ? SCIPvarGetUbLocal(var) : SCIPvarGetLbLocal(var);
                else
-                  cutrhs += (delta > 0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var)) * delta;
+                  sideval = delta > 0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var); 
+
+               if( SCIPisInfinity(scip, REALABS(sideval)) )
+                  continue;
+
+               cutcoefs[j]= roundedval;
+               cutrhs += delta * sideval;
             }
          }
          SCIPintervalSetRoundingMode(roundmode);
@@ -338,7 +345,7 @@ SCIP_RETCODE addCut(
                SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
 
-	    SCIPdebug(SCIPprintRow(scip, cut, NULL));
+            SCIPdebug(SCIPprintRow(scip, cut, NULL));
 
             if( SCIPisCutNew(scip, cut) )
             {
@@ -365,6 +372,22 @@ SCIP_RETCODE addCut(
                {
                   SCIP_CALL( SCIPstoreCertificateActiveAggregationInfo(scip, cut) );
                   SCIP_CALL( SCIPstoreCertificateActiveMirInfo(scip, cut) );
+                  /* certify local cuts immediately or the bonds might be wrong in the certificate */
+                  if( SCIProwGetRowExact(cut) == NULL )
+                  {
+                     if( !cutislocal )
+                     {
+                        SCIP_CALL( SCIPdelPoolCut(scip, cut) );
+                        SCIP_CALL( SCIPcreateRowExactFromRow(scip, cut) );
+                        SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                     }
+                     else
+                     {
+                        SCIP_CALL( SCIPcreateRowExactFromRow(scip, cut) );
+                     }
+                  }
+
+                  SCIP_CALL( SCIPprintCertificateMirCut(scip, cut) );
                }
             }
          }
@@ -454,16 +477,20 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_COL** cols;
    SCIP_ROW** rows;
    SCIP_AGGRROW* aggrrow;
+   SCIP_VAR* var;
    SCIP_Real* binvrow;
    SCIP_Real* cutcoefs;
    SCIP_Real* basisfrac;
+   SCIP_Real* cutefficacies;
    int* basisind;
    int* basisperm;
    int* inds;
    int* cutinds;
+   int* colindsproducedcut;
    SCIP_Real maxscale;
    SCIP_Real minfrac;
    SCIP_Real maxfrac;
+   SCIP_Real maxcutefficacy;
    SCIP_Longint maxdnom;
    SCIP_Bool cutoff;
    SCIP_Bool separatescg;
@@ -576,6 +603,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_CALL( SCIPallocBufferArray(scip, &basisfrac, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutefficacies, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &colindsproducedcut, nrows) );
    SCIP_CALL( SCIPaggrRowCreate(scip, &aggrrow) );
 
    /* get basis indices */
@@ -586,13 +615,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       SCIP_Real frac = 0.0;
 
       c = basisind[i];
+      cutefficacies[i] = 0.0;
 
       basisperm[i] = i;
 
+      colindsproducedcut[i] = -1;
+
       if( c >= 0 )
       {
-         SCIP_VAR* var;
-
          assert(c < ncols);
          var = SCIPcolGetVar(cols[c]);
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
@@ -679,6 +709,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             assert(allowlocal || !cutislocal); /*lint !e644*/
             SCIP_CALL( addCut(scip, sepadata, vars, c, maxdnom, maxscale, cutnnz, cutinds, cutcoefs, cutefficacy, cutrhs,
                   cutislocal, cutrank, TRUE, &cutoff, &naddedcuts) );
+            if( c >= 0 )
+            {
+               cutefficacies[i] = cutefficacy;
+               colindsproducedcut[i] = c;
+            }
             cutefficacy = 0.0;
             strongcgsuccess = FALSE;
             if( cutoff )
@@ -700,12 +735,38 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
             SCIP_CALL( addCut(scip, sepadata, vars, c, maxdnom, maxscale, cutnnz, cutinds, cutcoefs, cutefficacy, cutrhs,
                   cutislocal, cutrank, strongcgsuccess, &cutoff, &naddedcuts) );
+            if( c >= 0 )
+            {
+               cutefficacies[i] = cutefficacy;
+               colindsproducedcut[i] = c;
+            }
          }
       }
       if( SCIPisCertificateActive(scip) )
       {
          SCIP_CALL( SCIPfreeCertificateActiveAggregationInfo(scip) );
          SCIP_CALL( SCIPfreeCertificateActiveMirInfo(scip) );
+      }
+   }
+
+   /* Add normalized efficacy GMI statistics to history */
+   maxcutefficacy = 0.0;
+   for( i = 0; i < nrows; ++i )
+   {
+      if( cutefficacies[i] > maxcutefficacy && colindsproducedcut[i] >= 0 )
+      {
+         maxcutefficacy = cutefficacies[i];
+      }
+   }
+
+   for( i = 0; i < nrows; ++i )
+   {
+      if( colindsproducedcut[i] >= 0 && SCIPisEfficacious(scip, cutefficacies[i])  )
+      {
+         assert( maxcutefficacy > 0.0 );
+         var = SCIPcolGetVar(cols[colindsproducedcut[i]]);
+         SCIP_CALL( SCIPsetVarLastGMIScore(scip, var, cutefficacies[i] / maxcutefficacy) );
+         SCIP_CALL( SCIPincVarGMISumScore(scip, var, cutefficacies[i] / maxcutefficacy) );
       }
    }
 
@@ -717,6 +778,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
+   SCIPfreeBufferArray(scip, &cutefficacies);
+   SCIPfreeBufferArray(scip, &colindsproducedcut);
    SCIPaggrRowFree(scip, &aggrrow);
 
    SCIPdebugMsg(scip, "end searching gomory cuts: found %d cuts\n", naddedcuts);

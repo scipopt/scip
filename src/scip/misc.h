@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -348,6 +348,12 @@ SCIP_RETCODE SCIPdigraphCopy(
  */
 SCIP_Real SCIPnegateReal(
    SCIP_Real             x                   /**< value to negate */
+   );
+
+/** checks, if value is integral without any tolerances */
+SCIP_EXPORT
+SCIP_Bool SCIPisExactlyIntegral(
+   SCIP_Real             val                 /**< value to process */
    );
 
 /** internal random number generator methods

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2120,6 +2120,37 @@ SCIP_Real SCIPgetAvgPseudocostScore(
    return SCIPbranchGetScore(scip->set, NULL, pscostdown, pscostup);
 }
 
+/** gets the average discounted pseudo cost score value over all variables, assuming a fractionality of 0.5
+ *
+ *  This combines both pscost and ancpscost fields.
+ *
+ *  @return the average discounted pseudo cost score value over all variables, assuming a fractionality of 0.5,
+ *  combining both pscost and ancpscost fields
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetAvgDPseudocostScore(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_Real             discountfac          /**< discount factor for discounted pseudocost */
+   )
+{
+   SCIP_Real pscostdown;
+   SCIP_Real pscostup;
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetAvgDPseudocostScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   pscostdown = SCIPhistoryGetPseudocost(scip->stat->glbhistory, -0.5)
+               + discountfac * SCIPhistoryGetAncPseudocost(scip->stat->glbhistory, -0.5);
+   pscostup = SCIPhistoryGetPseudocost(scip->stat->glbhistory, +0.5)
+            + discountfac * SCIPhistoryGetAncPseudocost(scip->stat->glbhistory, +0.5);
+   pscostdown /= (1 + discountfac);
+   pscostup /= (1 + discountfac);
+
+   return SCIPbranchGetScore(scip->set, NULL, pscostdown, pscostup);
+}
+
 /** returns the variance of pseudo costs for all variables in the requested direction
  *
  *  @return the variance of pseudo costs for all variables in the requested direction
@@ -2460,6 +2491,41 @@ SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
    cutoffsup = SCIPhistoryGetAvgCutoffs(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_UPWARDS);
 
    return SCIPbranchGetScore(scip->set, NULL, cutoffsdown, cutoffsup);
+}
+
+/** returns the average normalized efficacy of a GMI cut over all variables
+ *
+ *  @return increases the average normalized efficacy of a GMI cut over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPincAvgGMIeff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             gmieff              /**< average normalized GMI cut efficacy over all variables */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPincAvgGMIeff", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPhistoryIncGMIeffSum(scip->stat->glbhistory, gmieff);
+}
+
+/** Increases the cumulative normalized efficacy of average (over all variables) GMI cuts
+ *
+ *  @return the average normalized efficacy of a GMI cut over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetAvgGMIeff(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetAvgGMIeff", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPhistoryGetAvgGMIeff(scip->stat->glbhistory);
 }
 
 /** computes a deterministic measure of time from statistics
@@ -3205,7 +3271,6 @@ void SCIPprintSeparatorStatistics(
       /* only output data for separators without parent separator */
       if( SCIPsepaGetParentsepa(sepa) == NULL )
       {
-
          /* output data */
          SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
             SCIPsepaGetName(sepa),
@@ -3433,15 +3498,24 @@ void SCIPprintHeuristicStatistics(
    if ( ndivesets > 0 && scip->set->misc_showdivingstats )
    {
       int c;
-      SCIP_DIVECONTEXT divecontexts[] = {SCIP_DIVECONTEXT_SINGLE, SCIP_DIVECONTEXT_ADAPTIVE};
+      SCIP_DIVECONTEXT divecontexts[] = {SCIP_DIVECONTEXT_SINGLE, SCIP_DIVECONTEXT_ADAPTIVE, SCIP_DIVECONTEXT_SCHEDULER};
 
-      /* print statistics for both contexts individually */
-      for( c = 0; c < 2; ++c )
+      /* print statistics for all three contexts individually */
+      for( c = 0; c < 3; ++c )
       {
          SCIP_DIVECONTEXT divecontext = divecontexts[c];
-         SCIPmessageFPrintInfo(scip->messagehdlr, file,
-            "Diving %-12s:      Calls      Nodes   LP Iters Backtracks  Conflicts   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n",
-            divecontext == SCIP_DIVECONTEXT_SINGLE ? "(single)" : "(adaptive)");
+
+         if( divecontext == SCIP_DIVECONTEXT_SINGLE )
+         {
+            SCIPmessageFPrintInfo(scip->messagehdlr, file,
+               "Diving %-12s:      Calls      Nodes   LP Iters Backtracks  Conflicts   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n", "(single)");
+         }
+         else
+         {
+            SCIPmessageFPrintInfo(scip->messagehdlr, file,
+               "Diving %-12s:      Calls      Nodes   LP Iters Backtracks  Conflicts   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n",
+               divecontext == SCIP_DIVECONTEXT_ADAPTIVE ? "(adaptive)" : "(scheduler)");
+         }
 
          for( i = 0; i < scip->set->nheurs; ++i )
          {

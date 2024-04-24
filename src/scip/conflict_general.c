@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -105,6 +105,10 @@
  * 2^53 = 9007199254740992
  */
 #define NUMSTOP 9007199254740992.0
+/* because row violations might be magnified, we stop the infeasibility analysis if a dual weight is bigger than
+ * 10^7 = 10000000
+ */
+#define SOLSTOP 10000000.0
 
 /** returns the current number of conflict sets in the conflict set storage */
 int SCIPconflictGetNConflicts(
@@ -1037,35 +1041,36 @@ SCIP_Real SCIPaggrRowGetMinActivity(
       if( val > 0.0 )
       {
          SCIP_Real bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
-         if( infdelta != NULL && SCIPsetIsInfinity(set, -bnd) )
+
+         if( SCIPsetIsInfinity(set, -bnd) )
          {
-            *infdelta = TRUE;
-            goto TERMINATE;
+            if( infdelta != NULL )
+               *infdelta = TRUE;
+
+            return -SCIPsetInfinity(set);
          }
+
          SCIPquadprecProdDD(delta, val, bnd);
       }
       else
       {
          SCIP_Real bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
-         if( infdelta != NULL && SCIPsetIsInfinity(set, bnd) )
+
+         if( SCIPsetIsInfinity(set, bnd) )
          {
-            *infdelta = TRUE;
-            goto TERMINATE;
+            if( infdelta != NULL )
+               *infdelta = TRUE;
+
+            return -SCIPsetInfinity(set);
          }
+
          SCIPquadprecProdDD(delta, val, bnd);
       }
 
       /* update minimal activity */
       SCIPquadprecSumQQ(minact, minact, delta);
-
-      if( infdelta != NULL && SCIPsetIsInfinity(set, REALABS(QUAD_TO_DBL(delta))) )
-      {
-         *infdelta = TRUE;
-         goto TERMINATE;
-      }
    }
 
-  TERMINATE:
    /* check whether the minimal activity is infinite */
    if( SCIPsetIsInfinity(set, QUAD_TO_DBL(minact)) )
       return SCIPsetInfinity(set);
@@ -1366,17 +1371,26 @@ SCIP_RETCODE SCIPgetFarkasProof(
       SCIP_CALL( SCIPaggrRowCreate(set->scip, &farkasrow_fpdebug) );
 #endif
    BMSclearMemoryArray(dualfarkas, nrows);
-
-   /* get dual Farkas values of rows */
-   SCIP_CALL( SCIPlpiGetDualfarkas(lpi, dualfarkas) );
-
    localrowinds = NULL;
    localrowdepth = NULL;
    nlocalrows = 0;
 
+   /* get dual Farkas values of rows */
+   SCIP_CALL( SCIPlpiGetDualfarkas(lpi, dualfarkas) );
+
+   /* check whether the Farkas solution is numerically stable */
+   for( r = 0; r < nrows; ++r )
+   {
+      if( REALABS(dualfarkas[r]) > SOLSTOP )
+      {
+         *valid = FALSE;
+         goto TERMINATE;
+      }
+   }
+
    /* calculate the Farkas row */
-   (*valid) = TRUE;
-   (*validdepth) = 0;
+   *valid = TRUE;
+   *validdepth = 0;
 
    for( r = 0; r < nrows; ++r )
    {
@@ -1443,7 +1457,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
             /* due to numerical reasons we want to stop */
             if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
             {
-               (*valid) = FALSE;
+               *valid = FALSE;
                goto TERMINATE;
             }
          }
@@ -1499,7 +1513,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
       }
       else
       {
-         (*valid) = FALSE;
+         *valid = FALSE;
          SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
       }
    }
@@ -1547,7 +1561,8 @@ static SCIP_RETCODE getObjectiveRow(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_ROW**            row,                /**< pointer to store the row */
    SCIP_Real             rhs,                /**< right-hand side of the artificial row */
-   SCIP_Real             scale               /**< scalar */
+   SCIP_Real             scale,              /**< scalar */
+   SCIP_Bool*            success             /**< pointer to store whether adding the row was successful */
    )
 {
    SCIP_Real* vals;
@@ -1587,14 +1602,22 @@ static SCIP_RETCODE getObjectiveRow(
       colsexact[nvals] = scip->lpexact->cols[i];
       assert(scip->lp->cols[i]->var == scip->lpexact->cols[i]->var);
       nvals++;
+      /* rows do not allow numerically 0 coefficients, since this almost never happens, just abort the procedure in this case*/
+      if( SCIPisZero(scip, vals[nvals]) )
+      {
+         *success = FALSE;
+         break;
+      }
    }
 
-   SCIPcreateRowUnspec(scip, row, "objective", nvals, cols, vals, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE);
-   SCIPdebugMessage("%d == %d", SCIPgetNLPCols(scip), SCIProwGetNNonz(*row));
-   SCIProwExactCreate(&rowexact, *row, NULL, scip->mem->probmem, scip->set, scip->stat,
-   scip->lpexact, nvals,
-   colsexact, valsexact,
-   lhsexact, rhsexact, SCIP_ROWORIGINTYPE_UNSPEC,   TRUE, NULL);
+   if( *success )
+   {
+      SCIPcreateRowUnspec(scip, row, "objective", nvals, cols, vals, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE);
+      SCIProwExactCreate(&rowexact, *row, NULL, scip->mem->probmem, scip->set, scip->stat,
+			 scip->lpexact, nvals, colsexact, valsexact,
+			 lhsexact, rhsexact, SCIP_ROWORIGINTYPE_UNSPEC,   TRUE, NULL);
+      SCIPdebugMessage("%d == %d", SCIPgetNLPCols(scip), SCIProwGetNNonz(*row));
+   }
 
    RatFreeBuffer(SCIPbuffer(scip), &lhsexact);
    RatFreeBuffer(SCIPbuffer(scip), &rhsexact);
@@ -1628,7 +1651,6 @@ SCIP_RETCODE SCIPgetDualProof(
    SCIP_Real* redcosts;
    int* localrowinds;
    int* localrowdepth;
-   SCIP_Real maxabsdualsol;
    SCIP_Bool infdelta;
    SCIP_ROW* objectiverow = NULL;
    int nlocalrows;
@@ -1668,7 +1690,7 @@ SCIP_RETCODE SCIPgetDualProof(
    retcode = SCIPlpiGetSol(lpi, NULL, primsols, dualsols, NULL, redcosts);
    if( retcode == SCIP_LPERROR ) /* on an error in the LP solver, just abort the conflict analysis */
    {
-      (*valid) = FALSE;
+      *valid = FALSE;
       goto TERMINATE;
    }
    SCIP_CALL( retcode );
@@ -1681,20 +1703,13 @@ SCIP_RETCODE SCIPgetDualProof(
 #endif
 
    /* check whether the dual solution is numerically stable */
-   maxabsdualsol = 0;
-   for( r = 0; r < nrows; r++ )
+   for( r = 0; r < nrows; ++r )
    {
-      SCIP_Real absdualsol = REALABS(dualsols[r]);
-
-      if( absdualsol > maxabsdualsol )
-         maxabsdualsol = absdualsol;
-   }
-
-   /* don't consider dual solution with maxabsdualsol > 1e+07, this would almost cancel out the objective constraint */
-   if( maxabsdualsol > 1e+07 )
-   {
-      (*valid) = FALSE;
-      goto TERMINATE;
+      if( REALABS(dualsols[r]) > SOLSTOP )
+      {
+         *valid = FALSE;
+         goto TERMINATE;
+      }
    }
 
    if( set->exact_enabled )
@@ -1744,11 +1759,12 @@ SCIP_RETCODE SCIPgetDualProof(
 
       cutoffbound = RatRoundReal(SCIPgetCutoffboundExact(set->scip), SCIP_R_ROUND_UPWARDS);
 
-      SCIP_CALL( getObjectiveRow(set->scip, farkasrow, &objectiverow, cutoffbound, 1.0) );
-      SCIP_CALL( addRowToAggrRowSafely(set, objectiverow, 1.0, farkasrow, valid) );
+      SCIP_CALL( getObjectiveRow(set->scip, farkasrow, &objectiverow, cutoffbound, 1.0, valid) );
+      if( *valid )
+	 SCIP_CALL( addRowToAggrRowSafely(set, objectiverow, 1.0, farkasrow, valid) );
 
       if( !(*valid) )
-	      goto TERMINATE;
+	 goto TERMINATE;
    }
    else
    {
@@ -1800,7 +1816,7 @@ SCIP_RETCODE SCIPgetDualProof(
             /* due to numerical reasons we want to stop */
             if( REALABS(SCIPaggrRowGetRhs(farkasrow)) > NUMSTOP )
             {
-               (*valid) = FALSE;
+               *valid = FALSE;
                goto TERMINATE;
             }
          }
@@ -1856,7 +1872,7 @@ SCIP_RETCODE SCIPgetDualProof(
       }
       else
       {
-         (*valid) = FALSE;
+         *valid = FALSE;
          SCIPsetDebugMsg(set, " -> proof is not valid to due infinite activity delta\n");
       }
    }
@@ -2573,7 +2589,10 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          if( retcode != SCIP_LPERROR && SCIPlpiIsStable(lp->lpi) )
          {
             SCIP_CALL( retcode );
+         }
 
+         if( retcode != SCIP_LPERROR && SCIPlpiIsStable(lp->lpi) )
+         {
             /* count number of LP iterations */
             SCIP_CALL( SCIPlpiGetIterations(lp->lpi, &iter) );
             stat->nconflictlps++;
@@ -2637,7 +2656,10 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          if( retcode != SCIP_LPERROR && SCIPlpiIsStable(lp->lpi) )
          {
             SCIP_CALL( retcode );
+         }
 
+         if( retcode != SCIP_LPERROR && SCIPlpiIsStable(lp->lpi) )
+         {
             /* count number of LP iterations */
             SCIP_CALL( SCIPlpiGetIterations(lp->lpi, &iter) );
             stat->nconflictlps++;

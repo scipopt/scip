@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1934,13 +1934,13 @@ SCIP_Real SCIPselectSimpleValue(
  */
 SCIP_EXPORT
 SCIP_Real SCIPcalcRootNewton(
-   SCIP_DECL_NEWTONEVAL((*function)),       /**< pointer to function for which roots are computed */
+   SCIP_DECL_NEWTONEVAL((*function)),        /**< pointer to function for which roots are computed */
    SCIP_DECL_NEWTONEVAL((*derivative)),      /**< pointer to derivative of above function */
-   SCIP_Real*            params,            /**< parameters needed for function (can be NULL) */
-   int                   nparams,           /**< number of parameters (can be 0) */
-   SCIP_Real             x,                 /**< starting point */
-   SCIP_Real             eps,               /**< tolerance */
-   int                   k                  /**< iteration limit */
+   SCIP_Real*            params,             /**< parameters needed for function (can be NULL) */
+   int                   nparams,            /**< number of parameters (can be 0) */
+   SCIP_Real             x,                  /**< starting point */
+   SCIP_Real             eps,                /**< tolerance */
+   int                   k                   /**< iteration limit */
    );
 
 /* The C99 standard defines the function (or macro) isfinite.
@@ -2375,9 +2375,9 @@ void SCIPstrCopySection(
 /** checks whether a given string t appears at the beginning of the string s (up to spaces at beginning) */
 SCIP_EXPORT
 SCIP_Bool SCIPstrAtStart(
-        const char*           s,                  /**< string to search in */
-        const char*           t,                  /**< string to search for */
-        size_t                tlen                /**< length of t */
+   const char*           s,                  /**< string to search in */
+   const char*           t,                  /**< string to search for */
+   size_t                tlen                /**< length of t */
 );
 
 /**@} */

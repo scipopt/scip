@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -24,7 +24,7 @@
 
 /**@file   bandit_epsgreedy.c
  * @ingroup OTHER_CFILES
- * @brief  implementation of epsilon greedy bandit algorithm
+ * @brief  implementation of (a variant of) epsilon greedy bandit algorithm
  * @author Gregor Hendel
  */
 
@@ -53,6 +53,7 @@ struct SCIP_BanditData
    SCIP_Real*            priorities;         /**< saved priorities for tie breaking */
    int*                  sels;               /**< individual number of selections per action */
    SCIP_Real             eps;                /**< epsilon parameter (between 0 and 1) to control epsilon greedy */
+   SCIP_Bool             usemodification;    /**< TRUE if modified eps greedy should be used */
    SCIP_Real             decayfactor;        /**< the factor to reduce the weight of older observations if exponential decay is enabled */
    int                   avglim;             /**< nonnegative limit on observation number before the exponential decay starts,
                                                *  only relevant if exponential decay is enabled
@@ -142,10 +143,41 @@ SCIP_DECL_BANDITSELECT(SCIPbanditSelectEpsgreedy)
          }
       }
    }
-   else
+   else if( ! banditdata->usemodification ) /* use normal eps greedy */
    {
       /* play one of the actions at random */
       *selection = SCIPrandomGetInt(rng, 0, nactions - 1);
+   }
+   else /* pick an action w.r.t. the distributions defined by its weights */
+   {
+      int j;
+      SCIP_Real sum;
+      SCIP_Real weightsum;
+      SCIP_Real* weights = banditdata->weights;
+
+      weightsum = 0.0;
+      for( j = 0; j < nactions; ++j )
+         weightsum += banditdata->weights[j];
+
+      /* pick a random number between 0.0 and sum of weights */
+      randnr = SCIPrandomGetReal(rng, 0.0, weightsum);
+
+      /* pick action w.r.t. the weights distribution */
+      sum = 0.0;
+      *selection = -1;
+      for( j = 0; j < nactions - 1; ++j )
+      {
+         sum += weights[j];
+
+         if( sum >= randnr )
+         {
+            *selection = j;
+            break;
+         }
+      }
+
+      if( *selection < 0 )
+         *selection = nactions - 1;
    }
 
    return SCIP_OKAY;
@@ -247,6 +279,7 @@ SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
    SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< parameter to increase probability for exploration between all actions */
+   SCIP_Bool             usemodification,    /**< TRUE if modified eps greedy should be used */
    SCIP_Bool             preferrecent,       /**< should the weights be updated in an exponentially decaying way? */
    SCIP_Real             decayfactor,        /**< the factor to reduce the weight of older observations if exponential decay is enabled */
    int                   avglim,             /**< nonnegative limit on observation number before the exponential decay starts,
@@ -266,6 +299,7 @@ SCIP_RETCODE SCIPbanditCreateEpsgreedy(
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &banditdata->sels, nactions) );
    banditdata->eps = eps;
    banditdata->nselections = 0;
+   banditdata->usemodification = usemodification;
    banditdata->preferrecent = preferrecent;
    banditdata->decayfactor = decayfactor;
    banditdata->avglim = avglim;
@@ -281,6 +315,7 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    SCIP_BANDIT**         epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
    SCIP_Real*            priorities,         /**< nonnegative priorities for each action, or NULL if not needed */
    SCIP_Real             eps,                /**< parameter to increase probability for exploration between all actions */
+   SCIP_Bool             usemodification,    /**< TRUE if modified eps greedy should be used */
    SCIP_Bool             preferrecent,       /**< should the weights be updated in an exponentially decaying way? */
    SCIP_Real             decayfactor,        /**< the factor to reduce the weight of older observations if exponential decay is enabled */
    int                   avglim,             /**< nonnegative limit on observation number before the exponential decay starts,
@@ -301,7 +336,7 @@ SCIP_RETCODE SCIPcreateBanditEpsgreedy(
    }
 
    SCIP_CALL( SCIPbanditCreateEpsgreedy(SCIPblkmem(scip), SCIPbuffer(scip), vtable, epsgreedy,
-         priorities, eps, preferrecent, decayfactor, avglim, nactions, SCIPinitializeRandomSeed(scip, initseed)) );
+         priorities, eps, usemodification, preferrecent, decayfactor, avglim, nactions, SCIPinitializeRandomSeed(scip, initseed)) );
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -668,6 +668,27 @@ SCIP_RETCODE isSolutionInNode(
                *solcontained = FALSE;
             }
          }
+      }
+      if( *solcontained && SCIPnodeGetNAddedConss(node) > 0 )
+      {
+         int i;
+         int naddedcons = 0;
+         SCIP_CONS** addedcons;
+
+         SCIPsetAllocBufferArray(set, &addedcons, SCIPnodeGetNAddedConss(node));
+
+         SCIPnodeGetAddedConss(node, addedcons, &naddedcons, SCIPnodeGetNAddedConss(node));
+
+         for( i = 0; i < naddedcons && *solcontained; ++i )
+         {
+            SCIP_RESULT result = SCIP_FEASIBLE;
+            SCIP_CALL( SCIPcheckCons(set->scip, addedcons[i], debugsoldata->debugsol , TRUE, TRUE, FALSE, &result) );
+
+            if( result != SCIP_FEASIBLE )
+               *solcontained = FALSE;
+         }
+
+         SCIPsetFreeBufferArray(set, &addedcons);
       }
    }
 

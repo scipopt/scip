@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -50,6 +50,7 @@
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
 #include "scip/type_conflictstore.h"
+#include "scip/type_message.h"
 
 #include "scip/struct_prob.h"
 
@@ -181,6 +182,10 @@ void SCIPprobResortVars(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** possibly create and sort the constraints according to check priorties */
+SCIP_RETCODE SCIPprobSortConssCheck(
+   SCIP_PROB*            prob                /**< problem data */
+   );
 
 /*
  * problem modification

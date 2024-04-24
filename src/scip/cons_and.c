@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -76,6 +76,9 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
+#include <string.h>
 
 
 /* constraint handler properties */
@@ -3537,53 +3540,39 @@ SCIP_RETCODE enforceConstraint(
    SCIP_Bool cutoff;
    int i;
 
-   separated = FALSE;
-
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   *result = SCIP_FEASIBLE;
 
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
       SCIP_CALL( checkCons(scip, conss[i], sol, FALSE, FALSE, &violated) );
-      if( violated )
+      if( !violated )
+         continue;
+
+      if( !conshdlrdata->enforcecuts )
       {
-         if( conshdlrdata->enforcecuts )
-         {
-            SCIP_Bool consseparated;
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
 
-            SCIP_CALL( separateCons(scip, conss[i], sol, &consseparated, &cutoff) );
-            if ( cutoff )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-            separated = separated || consseparated;
-
-            /* following assert is wrong in the case some variables were not in relaxation (dynamic columns),
-            *
-            * e.g. the resultant, which has a negative objective value, is in the relaxation solution on its upper bound
-            * (variables with status loose are in an relaxation solution on it's best bound), but already creating a
-            * row, and thereby creating the column, changes the solution value (variable than has status column, and the
-            * initialization sets the relaxation solution value) to 0.0, and this already could lead to no violation of
-            * the rows, which then are not seperated into the lp
-            */
-#ifdef SCIP_DISABLED_CODE
-            assert(consseparated); /* because the solution is integral, the separation always finds a cut */
-#endif
-         }
-         else
-         {
-            *result = SCIP_INFEASIBLE;
-            return SCIP_OKAY;
-         }
+      SCIP_CALL( separateCons(scip, conss[i], sol, &separated, &cutoff) );
+      if( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      else if( separated )
+      {
+         *result = SCIP_SEPARATED;
+      }
+      else if( *result == SCIP_FEASIBLE )  /* do not change result separated to infeasible */
+      {
+         *result = SCIP_INFEASIBLE;
       }
    }
-
-   if( separated )
-      *result = SCIP_SEPARATED;
-   else
-      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -3791,6 +3780,63 @@ SCIP_RETCODE preprocessConstraintPairs(
       }
    }
    consdata0->changed = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** andvars;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = SCIPgetNVarsAnd(scip, cons);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   andvars = SCIPgetVarsAnd(scip, cons);
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      vars[i] = andvars[i];
+      vals[i] = 1.0;
+   }
+
+   assert(SCIPgetResultantAnd(scip, cons) != NULL);
+   vars[nlocvars] = SCIPgetResultantAnd(scip, cons);
+   vals[nlocvars++] = 2.0;
+   assert(nlocvars <= nvars);
+
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals,
+         nlocvars, cons, constant, constant, success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -4639,7 +4685,6 @@ SCIP_DECL_CONSLOCK(consLockAnd)
 static
 SCIP_DECL_CONSACTIVE(consActiveAnd)
 {  /*lint --e{715}*/
-
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisNLPConstructed(scip) )
    {
       SCIP_CALL( addNlrow(scip, cons) );
@@ -4891,6 +4936,23 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsAnd)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphAnd)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphAnd)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of event handler
@@ -4971,6 +5033,8 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransAnd) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxAnd) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphAnd) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphAnd) );
 
    /* add AND-constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

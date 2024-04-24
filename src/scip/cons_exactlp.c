@@ -17328,7 +17328,6 @@ SCIP_DECL_CONSCOPY(consCopyExactLinear)
    return SCIP_OKAY;
 }
 
-#ifdef SCIP_DISABLED_CODE
 /* find operators '<=', '==', '>=', [free] in input string and return those places. There should only be one operator,
  * except for ranged rows for which exactly two operators '<=' must be present
  */
@@ -17431,15 +17430,11 @@ SCIP_RETCODE findOperators(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** constraint parsing method of constraint handler */
 static
 SCIP_DECL_CONSPARSE(consParseExactLinear)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("not implemented in exact mode yet \n");
-   SCIPABORT();
-#ifdef SCIP_DISABLED_CODE
    SCIP_VAR** vars;
    SCIP_Rational** coefs;
    int        nvars;
@@ -17462,8 +17457,11 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    assert(cons != NULL);
 
    /* set left and right hand side to their default values */
-   lhs = -SCIPinfinity(scip);
-   rhs =  SCIPinfinity(scip);
+   RatCreateBuffer(SCIPbuffer(scip), &lhs);
+   RatCreateBuffer(SCIPbuffer(scip), &rhs);
+
+   RatSetString(lhs, "-inf");
+   RatSetString(rhs, "inf");
 
    (*success) = FALSE;
 
@@ -17536,7 +17534,7 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    /* parse left hand side, if necessary */
    if( lhsstrptr != NULL )
    {
-      if( ! SCIPparseReal(scip, lhsstrptr, &lhs, &endptr) )
+      if( ! SCIPparseRational(scip, lhsstrptr, lhs, &endptr) )
       {
          SCIPerrorMessage("error parsing left hand side number from <%s>\n", lhsstrptr);
          return SCIP_OKAY;
@@ -17544,13 +17542,13 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
 
       /* in case of an equation, assign the left also to the right hand side */
       if( rhsstrptr == lhsstrptr )
-         rhs = lhs;
+         RatSet(rhs, lhs);
    }
 
    /* parse right hand side, if different from left hand side */
    if( rhsstrptr != NULL && rhsstrptr != lhsstrptr )
    {
-      if( ! SCIPparseReal(scip, rhsstrptr, &rhs, &endptr) )
+      if( ! SCIPparseRational(scip, rhsstrptr, rhs, &endptr) )
       {
          SCIPerrorMessage("error parsing right hand side number from <%s>\n", lhsstrptr);
          return SCIP_OKAY;
@@ -17560,21 +17558,22 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    /* initialize buffers for storing the variables and coefficients */
    coefssize = 100;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
+   SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &coefs, coefssize) );
 
    assert(varstrptr != NULL);
 
    /* parse linear sum to get variables and coefficients */
-   SCIP_CALL( SCIPparseVarsLinearsum(scip, varstrptr, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
+   SCIP_CALL( SCIPparseVarsLinearsumExact(scip, varstrptr, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
 
    if( *success && requsize > coefssize )
    {
       /* realloc buffers and try again */
-      coefssize = requsize;
-      SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  coefssize) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, coefssize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
+      SCIP_CALL( RatReallocBufferArray(SCIPbuffer(scip), &coefs, coefssize, requsize) );
 
-      SCIP_CALL( SCIPparseVarsLinearsum(scip, varstrptr, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
+      coefssize = requsize;
+
+      SCIP_CALL( SCIPparseVarsLinearsumExact(scip, varstrptr, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
       assert(!*success || requsize <= coefssize); /* if successful, then should have had enough space now */
    }
 
@@ -17584,13 +17583,15 @@ SCIP_DECL_CONSPARSE(consParseExactLinear)
    }
    else
    {
-      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
+      SCIP_CALL( SCIPcreateConsExactLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
-   SCIPfreeBufferArray(scip, &coefs);
+   RatFreeBufferArray(SCIPbuffer(scip), &coefs, coefssize);
    SCIPfreeBufferArray(scip, &vars);
-   #endif
+
+   RatFreeBuffer(SCIPbuffer(scip), &rhs);
+   RatFreeBuffer(SCIPbuffer(scip), &lhs);
 
    return SCIP_OKAY;
 }
@@ -18079,14 +18080,14 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/propcont",
          "should bounds on continuous variables be tightened by propagation?",
-         &conshdlrdata->propcont, TRUE, FALSE, NULL, NULL) );
+         &conshdlrdata->propcont, TRUE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/limitdenom",
          "should denominators on continuous variables be controlled?",
-         &conshdlrdata->limitdenom, TRUE, TRUE, NULL, NULL) );
+         &conshdlrdata->limitdenom, TRUE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip,
          "constraints/" CONSHDLR_NAME "/maxdenom",
-         "maximal denominator on continuous variables after propagation?",
+         "maximal denominator on continuous variables after propagation (if limitdenom = TRUE)?",
          &conshdlrdata->maxdenom, TRUE, 256, 1, SCIP_LONGINT_MAX, NULL, NULL) );
 #ifdef SCIP_WITH_MPFR
    {

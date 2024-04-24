@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -43,8 +43,7 @@
 namespace scip
 {
 
-/**
- *  @brief C++ wrapper for Benders' decomposition plugins
+/** @brief C++ wrapper for Benders' decomposition plugins
  *
  *  This class defines the interface for the Benders' decomposition framework implemented in C++. Note that there
  *  are pure virtual functions (these have to be implemented). These functions are: benders_exec(), benders_createsub(),
@@ -278,7 +277,6 @@ public:
     *  @see SCIP_DECL_BENDERSGETVAR(x) in @ref type_benders.h
     */
    virtual SCIP_DECL_BENDERSGETVAR(scip_getvar) = 0;
-
 };
 
 } /* namespace scip */

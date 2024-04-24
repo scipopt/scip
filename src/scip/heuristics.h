@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -87,6 +87,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_RESULT*          result,             /**< SCIP result pointer */
    SCIP_Bool             nodeinfeasible,     /**< is the current node known to be infeasible? */
    SCIP_Longint          iterlim,            /**< nonnegative iteration limit for the LP solves, or -1 for dynamic setting */
+   int                   nodelimit,          /**< nonnegative probing node limit or -1 if no limit should be used */
+   SCIP_Real             lpresolvedomchgquot, /**< percentage of immediate domain changes during probing to trigger LP resolve or -1
+                                                   if diveset specific default should be used */
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1866,7 +1866,8 @@ SCIP_RETCODE colAddCoef(
    }
 
    /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
-   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+   if( !set->exact_enabled )
+      val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
 
    /* insert the row at the correct position and update the links */
    col->rows[pos] = row;
@@ -2006,7 +2007,8 @@ SCIP_RETCODE colChgCoefPos(
      col->vals[pos], col->rows[pos]->name, pos, SCIPvarGetName(col->var), val);*/
 
    /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
-   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+   if( !set->exact_enabled )
+      val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
 
    if( SCIPsetIsZero(set, val) )
    {
@@ -2217,7 +2219,8 @@ SCIP_RETCODE rowAddCoef(
    }
 
    /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
-   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+   if( !set->exact_enabled )
+      val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
 
    /* insert the column at the correct position and update the links */
    row->cols[pos] = col;
@@ -2225,6 +2228,8 @@ SCIP_RETCODE rowAddCoef(
    row->vals[pos] = val;
    row->linkpos[pos] = linkpos;
    row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+   if( set->exact_enabled )
+      row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPisExactlyIntegral(val);
    if( linkpos == -1 )
    {
       row->nunlinked++;
@@ -2392,7 +2397,8 @@ SCIP_RETCODE rowChgCoefPos(
    }
 
    /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
-   val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
+   if( !set->exact_enabled )
+      val = SCIPsetIsIntegral(set, val) ? SCIPsetRound(set, val) : val;
    col = row->cols[pos];
    assert(row->cols[pos] != NULL);
 
@@ -2411,6 +2417,8 @@ SCIP_RETCODE rowChgCoefPos(
       rowDelNorms(row, set, col, row->vals[pos], FALSE, FALSE, TRUE);
       row->vals[pos] = val;
       row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+      if( set->exact_enabled )
+         row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPisExactlyIntegral(val);
       rowAddNorms(row, set, col, row->vals[pos], TRUE);
       coefChanged(row, col, lp);
 
@@ -5237,7 +5245,11 @@ SCIP_RETCODE rowScale(
          }
       }
       else
+      {
          row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPsetIsIntegral(set, val);
+         if( set->exact_enabled )
+            row->integral = row->integral && SCIPcolIsIntegral(col) && SCIPisExactlyIntegral(val);
+      }
 
       ++c;
    }
@@ -5341,7 +5353,7 @@ SCIP_RETCODE SCIProwCreate(
          var = cols[i]->var;
          (*row)->cols_index[i] = cols[i]->index;
          (*row)->linkpos[i] = -1;
-         if( SCIPsetIsIntegral(set, (*row)->vals[i]) )
+         if( SCIPsetIsIntegral(set, (*row)->vals[i]) && !set->exact_enabled )
          {
             (*row)->vals[i] = SCIPsetRound(set, (*row)->vals[i]);
             (*row)->integral = (*row)->integral && SCIPvarIsIntegral(var);
@@ -5561,7 +5573,7 @@ SCIP_RETCODE SCIProwRelease(
    (*row)->nuses--;
    if( (*row)->nuses == 0 )
    {
-      //SCIPfreeRowCertInfo(set->scip, (*row));
+      SCIPfreeRowCertInfo(set->scip, (*row));
       SCIP_CALL( SCIProwFree(row, blkmem, set, lp) );
    }
 
@@ -6297,9 +6309,12 @@ void rowMerge(
             if( !SCIPsetIsZero(set, vals[t]) )
             {
                /* in case the coefficient is integral w.r.t. numerics we explicitly round the coefficient to an integral value */
-               vals[t] = SCIPsetIsIntegral(set, vals[t]) ? SCIPsetRound(set, vals[t]) : vals[t];
+               if( !set->exact_enabled )
+                  vals[t] = SCIPsetIsIntegral(set, vals[t]) ? SCIPsetRound(set, vals[t]) : vals[t];
 
                row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
+               if( set->exact_enabled )
+                  row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPisExactlyIntegral(vals[t]);
                t++;
             }
             cols[t] = cols[s];
@@ -6310,6 +6325,8 @@ void rowMerge(
       if( !SCIPsetIsZero(set, vals[t]) )
       {
          row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPsetIsIntegral(set, vals[t]);
+         if( set->exact_enabled )
+            row->integral = row->integral && SCIPcolIsIntegral(cols[t]) && SCIPisExactlyIntegral(vals[t]);
          t++;
       }
       assert(s == row->len);
@@ -6984,7 +7001,7 @@ SCIP_Real SCIProwGetLPSolCutoffDistance(
 
       if( scale > 0.0 )
       {
-         scale = 1.0 / SQRT(scale);
+         scale = 1.0 / sqrt(scale);
 
          for( k = 0; k < lp->ncols; ++k )
             lp->soldirection[k] *= scale;
@@ -8025,7 +8042,7 @@ SCIP_Real SCIProwGetObjParallelism(
 
    prod = row->sqrnorm * lp->objsqrnorm;
 
-   parallelism = SCIPsetIsPositive(set, prod) ? REALABS(row->objprod) / SQRT(prod) : 0.0;
+   parallelism = SCIPsetIsPositive(set, prod) ? REALABS(row->objprod) / sqrt(prod) : 0.0;
    assert(SCIPsetIsSumGE(set, parallelism, 0.0));
    assert(SCIPsetIsSumLE(set, parallelism, 1.0));
    parallelism = MIN(parallelism, 1.0);
@@ -11879,7 +11896,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetConditionLimit(lp, set->lp_conditionlimit, &success) );
    SCIP_CALL( lpSetMarkowitz(lp, set->lp_markowitz, &success) );
    SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
-   SCIP_CALL( lpSetRandomseed(lp, (int) SCIPsetInitializeRandomSeed(set, (unsigned) set->random_randomseed), &success) );
+   SCIP_CALL( lpSetRandomseed(lp, (int) (SCIPsetInitializeRandomSeed(set, (unsigned) set->random_randomseed) % INT_MAX), &success) );
    SCIP_CALL( lpSetSolutionPolishing(lp, usepolishing, &success) );
    SCIP_CALL( lpSetRefactorInterval(lp, set->lp_refactorinterval, &success) );
 
@@ -12733,7 +12750,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       }
 
       /* compute safe bound might change the solstat so we have to compute it before we evaluate the solution status */
-      if( lp->solved && set->exact_enabled )
+      if( lp->solved && set->exact_enabled && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_TIMELIMIT && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_ITERLIMIT )
       {
          if( SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE )
             SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid);
@@ -12832,6 +12849,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          if( !primalfeasible || !dualfeasible )
          {
             SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
+
+            if( set->exact_enabled && lp->lpexact->wasforcedsafebound )
+               SCIPlpExactForceSafeBound(lp->lpexact, set);
 
             if( (fastmip > 0) && simplex )
             {
@@ -13102,7 +13122,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   SCIPsetIsLT(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob)) )
                {
                   SCIP_Bool simplex = (lp->lastlpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lp->lastlpalgo == SCIP_LPALGO_DUALSIMPLEX);
-                  if( !(lperror) && (fastmip > 0) && simplex )
+                  if( !(*lperror) && (fastmip > 0) && simplex )
                   {
                      fastmip = 0;
                      SCIP_CALL( lpSolve(lp, set, messagehdlr, stat, prob, SCIP_LPALGO_DUALSIMPLEX, -1, -1,
@@ -18017,7 +18037,7 @@ SCIP_Real SCIPlpGetObjNorm(
    assert(!lp->objsqrnormunreliable);
    assert(lp->objsqrnorm >= 0.0);
 
-   return SQRT(lp->objsqrnorm);
+   return sqrt(lp->objsqrnorm);
 }
 
 /** sets whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */

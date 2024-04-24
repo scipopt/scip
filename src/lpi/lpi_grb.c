@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -50,7 +50,7 @@
 #endif
 
 #if ( GRB_VERSION_MAJOR < 6 || ( GRB_VERSION_MAJOR == 7 && GRB_VERSION_MINOR == 0 && GRB_VERSION_TECHNICAL < 2 ) )
-#error "The Gurobi intreface only works for Gurobi versions at least 7.0.2"
+#error "The Gurobi interface only works for Gurobi versions at least 7.0.2"
 #endif
 
 #ifdef SCIP_THREADSAFE
@@ -1652,7 +1652,6 @@ SCIP_RETCODE SCIPlpiAddCols(
    const SCIP_Real*      val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {
-
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(obj != NULL);
@@ -4656,6 +4655,9 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    CHECK_ZERO( lpi->messagehdlr, GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_CBASIS, 0, nrows, lpi->rstat) );
    CHECK_ZERO( lpi->messagehdlr, GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_VBASIS, 0, ncols+lpi->nrngrows, lpi->cstat) );
+
+   /* flush model changes */
+   CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    return SCIP_OKAY;
 }

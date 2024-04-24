@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -38,6 +38,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
 #include "scip/type_event.h"
+#include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,7 +86,6 @@ SCIP_RETCODE SCIPlexicographicReductionPropagate(
                                               *   only set this to TRUE when a reduction is found, never set to FALSE */
    );
 
-
 /** adds permutation for lexicographic reduction propagation */
 SCIP_EXPORT
 SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
@@ -94,9 +94,11 @@ SCIP_RETCODE SCIPlexicographicReductionAddPermutation(
    SCIP_VAR**            permvars,           /**< variable array of the permutation */
    int                   npermvars,          /**< number of variables in that array */
    int*                  perm,               /**< permutation */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries in perm */
+   SCIP_Real*            permvardomaincenter, /**< array containing center point for each variable domain */
+   SCIP_Bool             usedynamicorder,    /**< whether a dynamic variable order shall be used */
    SCIP_Bool*            success             /**< to store whether the component is successfully added */
    );
-
 
 /** resets lexicographic reduction propagation (removes all permutations) */
 SCIP_EXPORT

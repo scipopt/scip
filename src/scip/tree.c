@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -4245,7 +4245,8 @@ SCIP_RETCODE nodeToLeaf(
 #endif
 
    /* if node is good enough to keep, put it on the node queue */
-   if( SCIPsetIsLT(set, (*node)->lowerbound, cutoffbound) || (set->exact_enabled && (*node)->lowerbound < cutoffbound) )
+   if( (!SCIPsetIsInfinity(set, (*node)->lowerbound) && SCIPsetIsLT(set, (*node)->lowerbound, cutoffbound))
+         || (set->exact_enabled && (*node)->lowerbound < cutoffbound) )
    {
       /* insert leaf in node queue */
       SCIP_CALL( SCIPnodepqInsert(tree->leaves, set, *node) );
@@ -6123,7 +6124,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
          uplb   = MAX(val, SCIPvarGetLbLocal(var) + SCIPsetEpsilon(set)); /*lint !e666*/
       }
    }
-   else if( SCIPsetIsFeasIntegral(set, val) )
+   else if( SCIPsetIsFeasIntegral(set, val) && !set->exact_enabled )
    {
       SCIP_Real lb;
       SCIP_Real ub;
@@ -6175,9 +6176,17 @@ SCIP_RETCODE SCIPtreeBranchVar(
    else
    {
       /* create child nodes with x <= floor(x'), and x >= ceil(x') */
-      downub = SCIPsetFeasFloor(set, val);
-      uplb = downub + 1.0;
-      assert( SCIPsetIsRelEQ(set, SCIPsetCeil(set, val), uplb) );
+      if( set->exact_enabled )
+      {
+         downub = floor(val);
+         uplb = downub + 1.0;
+      }
+      else
+      {
+         downub = SCIPsetFeasFloor(set, val);
+         uplb = downub + 1.0;
+         assert( SCIPsetIsRelEQ(set, SCIPsetCeil(set, val), uplb) );
+      }
       SCIPsetDebugMsg(set, "fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n",
          SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
    }
@@ -6222,18 +6231,21 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
       /* print branching information to certificate, if certificate is active */
-      if( downub == SCIP_INVALID ) /*lint !e777*/
+      if( set->exact_enabled )
       {
-         SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
-      }
-      else if( uplb == SCIP_INVALID ) /*lint !e777*/
-      {
-         SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
-      }
-      else
-      {
-         SCIPerrorMessage("Cannot resolve 3-way branching in certificate currently \n");
-         SCIPABORT();
+         if( downub == SCIP_INVALID ) /*lint !e777*/
+         {
+            SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
+         }
+         else if( uplb == SCIP_INVALID ) /*lint !e777*/
+         {
+            SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
+         }
+         else
+         {
+            SCIPerrorMessage("Cannot resolve 3-way branching in certificate currently \n");
+            SCIPABORT();
+         }
       }
 
       if( !SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), fixval) )
@@ -6992,7 +7004,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
    lp->divingobjchg = FALSE;
    tree->probingsumchgdobjs = 0;
    tree->sbprobing = strongbranching;
-   tree->porbinglphadsafebound = lp->hasprovedbound;
+   tree->probinglphadsafebound = lp->hasprovedbound;
    if( set->exact_enabled && lp->solved )
       tree->probinglpobjval = SCIPlpGetObjval(lp, set, transprob);
 
@@ -7474,9 +7486,15 @@ SCIP_RETCODE SCIPtreeEndProbing(
 
          if( set->exact_enabled )
          {
+            if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+            {
+               lp->solved = FALSE;
+               SCIPlpExactForceSafeBound(lp->lpexact, set);
+               SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob, -1LL, FALSE, FALSE, FALSE, &lperror) );
+            }
             /* here we always set this, or the lpobjval would not longer be safe */
             lp->lpobjval = tree->probinglpobjval;
-            lp->hasprovedbound = tree->porbinglphadsafebound;
+            lp->hasprovedbound = tree->probinglphadsafebound;
          }
 
          if( lperror )
@@ -7553,7 +7571,11 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_CALL( SCIPlpEndProbing(lp) );
 
    if( set->exact_enabled )
+   {
       lp->pseudoobjvalid = FALSE;
+      if( SCIPnodeGetDepth(tree->focusnode) == 0 )
+         lp->glbpseudoobjvalid = FALSE;
+   }
 
    /* reset all marked constraints for propagation */
    SCIP_CALL( SCIPconshdlrsResetPropagationStatus(set, blkmem, set->conshdlrs, set->nconshdlrs) );

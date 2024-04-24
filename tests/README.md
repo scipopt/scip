@@ -131,6 +131,15 @@ This will start a `gdbserver`. To connect, in another terminal use
 >> gdb bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 -ex "target remote localhost:1234"
 ```
 
+With old Criterion (before 2.4) and modern gdbserver, the `--debug` option can fail with a protocol error due to tcp not being resolvable.
+A workaround is to add an alias from tcp to localhost before calling the test, e.g.,
+```
+TMP_HOSTS=$(mktemp)
+echo 'tcp localhost' > $TMP_HOSTS
+export HOSTALIASES=$TMP_HOSTS
+```
+See https://github.com/Snaipe/Criterion/issues/301 for more details.
+
 If one doesn't want to use a `gdbserver` use:
 ```
 >> bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2 --filter *gauge* --debug=idle

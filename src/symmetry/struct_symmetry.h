@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -25,6 +25,7 @@
 /**@file   struct_symmetry.h
  * @brief  structs for symmetry computations
  * @author Marc Pfetsch
+ * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -40,69 +41,71 @@
 extern "C" {
 #endif
 
-/** data of variables that are considered to be equivalent */
-struct SYM_Vartype
+/** data to encode a symmetry detection graph */
+struct SYM_Graph
 {
-   SCIP_Real             obj;                /**< objective of variable */
-   SCIP_Real             lb;                 /**< lower bound of variable */
-   SCIP_Real             ub;                 /**< upper bound of variable */
-   SCIP_VARTYPE          type;               /**< type of variable */
-   int                   nconss;             /**< number of conss a variable is contained in */
-   int                   color;              /**< store color */
+   /* general information about graph */
+   SYM_SYMTYPE           symtype;            /**< type of symmetries encoded in graph */
+   SCIP_Bool             islocked;           /**< whether graph is locked, i.e., cannot be modified anymore
+                                              *   (computing colors will lock the graph to avoid inconsistencies) */
+   SCIP_Real             infinity;           /**< values as least as large as this are regarded as infinite */
+
+   /* information about nodes and node arrays */
+   int                   nnodes;             /**< number of nodes in graph */
+   int                   maxnnodes;          /**< maximum number of entries in node-based arrays */
+   int                   nopnodes;           /**< number of operator nodes in graph */
+   int                   maxnopnodes;        /**< maximum number of entries in operator-based arrays */
+   int                   nvalnodes;          /**< number of value nodes in graph */
+   int                   maxnvalnodes;       /**< maximum number of entries in value-based arrays */
+   int                   nconsnodes;         /**< number of constraint nodes */
+   int                   maxnconsnodes;      /**< maximum number of constraint-based arrays */
+   int                   nvarcolors;         /**< number of variable colors */
+
+   /* node-based arrays */
+   SYM_NODETYPE*         nodetypes;          /**< array storing each node's type */
+   int*                  nodeinfopos;        /**< array assigning each node the position in the corresponding array
+                                              *   containing its information (operator, variable, or value) */
+   int*                  consnodeperm;       /**< array to hold permutation to sort constraint nodes
+                                              *   (graph needs to be locked to avoid inconsistencies) */
+
+   /* information-based arrays */
+   int*                  ops;                /**< operators corresponding to nodes in graph */
+   SCIP_Real*            vals;               /**< values corresponding to nodes in graph */
+   SCIP_CONS**           conss;              /**< constraints corresponding to cons nodes */
+   SCIP_Real*            lhs;                /**< array of left-hand sides for cons nodes */
+   SCIP_Real*            rhs;                /**< array of right-hand sides for cons nodes */
+
+   /* information about edges and edge arrays */
+   int                   nedges;             /**< number of edges in graph */
+   int                   maxnedges;          /**< maximum number of entries in edge-based arrays */
+
+   /* edge-based arrays; negative entries in edge-first and edge-second correspond to variables */
+   int*                  edgefirst;          /**< array of first nodes of edges */
+   int*                  edgesecond;         /**< array of second nodes of edges */
+   SCIP_Real*            edgevals;           /**< array assigning each edge a value (SCIPinfinity if unassigned) */
+
+   /* information about variables */
+   SCIP_VAR**            symvars;            /**< variables on which symmetries act */
+   int                   nsymvars;           /**< number of variables in symvars */
+   SCIP_Bool*            isfixedvar;         /**< whether a variable needs to be fixed */
+
+   /* arrays of colors used for symmetry detection */
+   int*                  varcolors;          /**< variable colors for symmetry detection */
+   int*                  opcolors;           /**< operator colors for symmetry detection */
+   int*                  valcolors;          /**< value colors for symmetry detection */
+   int*                  conscolors;         /**< constraint colors for symmetry detection */
+   int*                  edgecolors;         /**< edge colors used for symmetry detection (-1 uncolored) */
+   SCIP_Bool             uniqueedgetype;     /**< whether all edges are equivalent */
 };
 
-/** data of operators that are considered to be equivalent */
-struct SYM_Optype
+/** (additional) data used to encode an expression, which is not encoded as another expression */
+struct SYM_ExprData
 {
-   SCIP_EXPR*            expr;               /**< the underlying expression */
-   int                   level;              /**< level of operator in its expression tree */
-   int                   color;              /**< store color */
-};
-
-/** data of constants that are considered to be equivalent */
-struct SYM_Consttype
-{
-   SCIP_Real             value;              /**< value of constant */
-   int                   color;              /**< store color */
-};
-
-/** data of coefficients that are considered to be equivalent */
-struct SYM_Rhstype
-{
-   SCIP_Real             lhs;                /**< value of left-hand-side */
-   SCIP_Real             rhs;                /**< value of right-hand-side */
-   int                   color;              /**< store color */
-};
-
-/** data for symmetry group computation on linear constraints */
-struct SYM_Matrixdata
-{
-   SCIP_Real*            matcoef;            /**< nonzero coefficients appearing in the matrix */
-   SCIP_Real*            rhscoef;            /**< rhs coefficients */
-   SYM_RHSSENSE*         rhssense;           /**< sense of rhs */
-   int*                  matrhsidx;          /**< indices of rhs corresponding to matrix entries */
-   int*                  matvaridx;          /**< indices of variables for matrix entries */
-   int*                  matidx;             /**< indices in mat(rhs/var)idx array corresponding to matrix coefficients */
-   int*                  rhsidx;             /**< indices in rhstype array corresponding to rhs coefficients */
-   int*                  permvarcolors;      /**< array for storing the colors of the individual variables */
-   int*                  matcoefcolors;      /**< array for storing the colors of all matrix coefficients */
-   int*                  rhscoefcolors;      /**< array for storing the colors of all rhs coefficients */
-   SCIP_VAR**            permvars;           /**< variables on which permutations act */
-   int                   npermvars;          /**< number of variables for permutations */
-   int                   nmatcoef;           /**< number of coefficients in matrix */
-   int                   nrhscoef;           /**< number of coefficients in rhs */
-   int                   nmaxmatcoef;        /**< maximal number of matrix coefficients (will be increased on demand) */
-   int                   nuniquevars;        /**< number of unique variable types */
-   int                   nuniquerhs;         /**< number of unique rhs types */
-   int                   nuniquemat;         /**< number of unique matrix coefficients */
-};
-
-/** data for symmetry group computation on nonlinear constraints */
-struct SYM_Exprdata
-{
-   int                   nuniqueconstants;   /**< number of unique constants */
-   int                   nuniqueoperators;   /**< number of unique operators */
-   int                   nuniquecoefs;       /**< number of unique coefficients */
+   SCIP_Real*            constants;          /**< constants used in an expression */
+   int                   nconstants;         /**< number of constants */
+   SCIP_Real*            coefficients;       /**< coefficients of children */
+   int                   ncoefficients;      /**< number of coefficients */
+   SCIP_EXPR**           children;           /**< children of expression with a coefficient */
 };
 
 #ifdef __cplusplus

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -167,29 +167,6 @@ void SCIPproofsetFree(
    BMSfreeBlockMemory(blkmem, proofset);
    (*proofset) = NULL;
 }
-
-#ifdef SCIP_DEBUG
-/** print a proof set */
-void proofsetPrint(
-   SCIP_PROOFSET*        proofset,
-   SCIP_SET*             set,
-   SCIP_PROB*            transprob
-   )
-{
-   SCIP_VAR** vars;
-   int i;
-
-   assert(proofset != NULL);
-
-   vars = SCIPprobGetVars(transprob);
-   assert(vars != NULL);
-
-   printf("proofset: ");
-   for( i = 0; i < proofset->nnz; i++ )
-      printf("%+.15g <%s> ", proofset->vals[i], SCIPvarGetName(vars[proofset->inds[i]]));
-   printf(" <= %.15g\n", proofset->rhs);
-}
-#endif
 
 /** return the indices of variables in the proofset */
 static
@@ -537,11 +514,11 @@ SCIP_RETCODE tightenSingleVar(
          }
 
          SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, conslhs, consrhs,
-               FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+               FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal, FALSE, TRUE, TRUE, FALSE) );
 
          SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, var, 1.0) );
 
-         if( applyglobal )
+         if( applyglobal ) /*lint !e774*/
          {
             SCIP_CALL( SCIPprobAddCons(transprob, set, stat, cons) );
          }
@@ -642,6 +619,10 @@ SCIP_Real getMinActivity(
          assert(curvarlbs == NULL || !SCIPsetIsInfinity(set, -curvarlbs[v]));
 
          bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+
+         if( SCIPsetIsInfinity(set, -bnd) )
+            return -SCIPsetInfinity(set);
+
          SCIPquadprecProdDD(delta, val, bnd);
       }
       else
@@ -651,6 +632,10 @@ SCIP_Real getMinActivity(
          assert(curvarubs == NULL || !SCIPsetIsInfinity(set, curvarubs[v]));
 
          bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+
+         if( SCIPsetIsInfinity(set, bnd) )
+            return -SCIPsetInfinity(set);
+
          SCIPquadprecProdDD(delta, val, bnd);
       }
 
@@ -708,6 +693,10 @@ SCIP_Real getMaxActivity(
          assert(curvarlbs == NULL || !SCIPsetIsInfinity(set, -curvarlbs[v]));
 
          bnd = (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+
+         if( SCIPsetIsInfinity(set, -bnd) )
+            return SCIPsetInfinity(set);
+
          SCIPquadprecProdDD(delta, val, bnd);
       }
       else
@@ -717,6 +706,10 @@ SCIP_Real getMaxActivity(
          assert(curvarubs == NULL || !SCIPsetIsInfinity(set, curvarubs[v]));
 
          bnd = (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+
+         if( SCIPsetIsInfinity(set, bnd) )
+            return SCIPsetInfinity(set);
+
          SCIPquadprecProdDD(delta, val, bnd);
       }
 

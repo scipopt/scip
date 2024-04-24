@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -168,6 +168,9 @@ SCIP_RETCODE sampleRandomPoints(
 
    for( niter = 0; niter < 3 * nmaxrndpoints && *nstored < nmaxrndpoints; ++niter )
    {
+      /* reset solution, in case the old one had infinite objective, which can give difficulties in updating the obj value */
+      SCIP_CALL( SCIPclearSol(scip, sol) );
+
       for( i = 0; i < nvars; ++i )
       {
          lb = MIN(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])); /*lint !e666*/

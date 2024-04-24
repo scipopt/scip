@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -62,6 +62,9 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
+#include <string.h>
 
 
 #define CONSHDLR_NAME          "logicor"
@@ -702,6 +705,12 @@ SCIP_RETCODE dualPresolving(
 #endif
             idx = v;
          }
+
+         if( idxnouplocks == consdata->nvars - 1 )
+            idxnouplocks = v;
+
+         if( indepidx == consdata->nvars - 1 )
+            indepidx = v;
 
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          ++(*nchgcoefs);
@@ -4031,6 +4040,57 @@ SCIP_RETCODE enforceConstraint(
    return SCIP_OKAY;
 }
 
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** logicorvars;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = SCIPgetNVarsLogicor(scip, cons);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   logicorvars = SCIPgetVarsLogicor(scip, cons);
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      vars[i] = logicorvars[i];
+      vals[i] = 1.0;
+   }
+
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         cons, 1.0 - constant, SCIPinfinity(scip), success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of constraint handler
@@ -4167,7 +4227,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
 static
 SCIP_DECL_CONSINITSOL(consInitsolLogicor)
 {  /*lint --e{715}*/
-
    /* add nlrow representation to NLP, if NLP had been constructed */
    if( SCIPisNLPConstructed(scip) )
    {
@@ -5101,6 +5160,24 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsLogicor)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphLogicor)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphLogicor)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of event handler
  */
@@ -5289,6 +5366,8 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLogicor) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLogicor) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphLogicor) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphLogicor) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip, "linear");
    conshdlrdata->conshdlrsetppc = SCIPfindConshdlr(scip, "setppc");
@@ -5605,7 +5684,7 @@ SCIP_RETCODE SCIPcleanupConssLogicor(
    SCIP_CALL( SCIPallocBufferArray(scip, &entries, nentries) );
 
    /* loop backwards since then deleted constraints do not interfere with the loop */
-   for( i = nconss - 1; i > 0; --i )
+   for( i = nconss - 1; i >= 0; --i )
    {
       SCIP_CONS* cons;
       SCIP_Bool redundant;

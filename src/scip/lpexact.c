@@ -3586,6 +3586,9 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
    {
       int idx;
       idx = sideindexpostprocess[i];
+      var = SCIPcolExactGetVar(row->cols[idx]);
+      lbreal = SCIPvarGetLbGlobal(var);
+      ubreal = SCIPvarGetUbGlobal(var);
 
       if( valslhsrelax[idx] == rowexactvalsinterval[idx].inf )/*lint !e777*/
          rhsrelax += ubreal >= 0 ? (rowexactvalsinterval[idx].sup - rowexactvalsinterval[idx].inf) * ubreal : 0;
@@ -3598,6 +3601,10 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
    {
       int idx;
       idx = sideindexpostprocess[i];
+      idx = sideindexpostprocess[i];
+      var = SCIPcolExactGetVar(row->cols[idx]);
+      lbreal = SCIPvarGetLbGlobal(var);
+      ubreal = SCIPvarGetUbGlobal(var);
 
       //  upper bound was used
       if( valslhsrelax[idx] == rowexactvalsinterval[idx].sup )/*lint !e777*/
@@ -4016,6 +4023,8 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->boundshiftviable = TRUE;
    (*lp)->forceexactsolve = FALSE;
    (*lp)->allowexactsolve = FALSE;
+   (*lp)->forcesafebound = FALSE;
+   (*lp)->wasforcedsafebound = FALSE;
    (*lp)->lpiscaling = set->lp_scaling;
    (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
    (*lp)->lpirefactorinterval = set->lp_refactorinterval;
@@ -4367,6 +4376,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
       SCIPsetDebugMsg(set, "time limit exceeded before solving LP\n");
       lp->solved = TRUE;
       lpexact->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+      lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
       lp->lpobjval = -SCIPsetInfinity(set);
       return SCIP_OKAY;
    }
@@ -4471,10 +4481,12 @@ SCIP_RETCODE lpExactFlushAndSolve(
       else if( SCIPlpiExactIsIterlimExc(lpexact->lpiexact) )
       {
          lpexact->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
+         lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
       }
       else if( SCIPlpiExactIsTimelimExc(lpexact->lpiexact) )
       {
          lpexact->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+         lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
       }
       else
       {
@@ -7959,6 +7971,22 @@ void SCIPlpExactForceExactSolve(
    lpexact->forceexactsolve = TRUE;
 }
 
+/** forces the next exact bound computation to be executed even in probing mode */
+void SCIPlpExactForceSafeBound(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->exact_enabled )
+      return;
+
+   assert(lpexact != NULL);
+
+   lpexact->forcesafebound = TRUE;
+}
+
 /** allows an exact lp to be solved in the next exact bound computation */
 void SCIPlpExactAllowExactSolve(
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
@@ -8788,4 +8816,29 @@ SCIP_RETCODE SCIPlpExactWrite(
    SCIP_CALL( SCIPlpiExactWriteLP(lp->lpiexact, fname) );
 
    return SCIP_OKAY;
+}
+
+/** overwrites the dual values stored in the fp lp with exact values */
+void SCIPlpExactOverwriteFpDualSol(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_Bool             dualfarkas          /**< TRUE if farkas proof, FALSE if dual sol? */
+   )
+{
+   assert(lp != NULL);
+
+   for( int c = 0; c < lp->ncols; ++c )
+   {
+      if( dualfarkas )
+         lp->cols[c]->fpcol->farkascoef = RatApproxReal(lp->cols[c]->farkascoef);
+      else
+         lp->cols[c]->fpcol->redcost = RatApproxReal(lp->cols[c]->redcost);
+   }
+
+   for( int r = 0; r < lp->nrows; ++r )
+   {
+      if( dualfarkas )
+         lp->rows[r]->fprow->dualfarkas = RatApproxReal(lp->rows[r]->dualfarkas);
+      else
+         lp->rows[r]->fprow->dualsol = RatApproxReal(lp->rows[r]->dualsol);
+   }
 }

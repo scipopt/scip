@@ -23,7 +23,7 @@ See the manual for more information.
 If you have a working shell, and "make", you can run
    ./configure
 followed by
-   make 
+   make
 to compile nauty and Traces for your system.
 
 If that succeeds without problem, you will have the

@@ -737,6 +737,12 @@ void SCIPlpExactForceExactSolve(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** forces the next exact bound computation to be executed even in probing mode */
+void SCIPlpExactForceSafeBound(
+   SCIP_LPEXACT*         lpexact,            /**< exact LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** allows an exact lp to be solved in the next exact bound computation */
 void SCIPlpExactAllowExactSolve(
    SCIP_LPEXACT*         lpexact,            /**< exact LP data */
@@ -827,6 +833,12 @@ SCIP_Bool SCIPlpExactDiving(
 SCIP_RETCODE SCIPlpExactWrite(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
    const char*           fname               /**< file name */
+   );
+
+/** overwrites the dual values stored in the fp lp with exact values */
+void SCIPlpExactOverwriteFpDualSol(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_Bool             dualfarkas          /**< TRUE if farkas proof, FALSE if dual sol? */
    );
 
 #ifdef __cplusplus

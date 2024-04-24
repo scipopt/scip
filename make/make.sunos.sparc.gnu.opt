@@ -1,5 +1,5 @@
 FLAGS		+=	-DNO_STRERROR_R -DNDEBUG -DSCIP_ROUNDING_FE
-OFLAGS		+=	-O3 -mcpu=ultrasparc -mtune=ultrasparc -fomit-frame-pointer
+OFLAGS		+=	-O3 -ffp-contract=off -mcpu=ultrasparc -mtune=ultrasparc -fomit-frame-pointer
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing
 ARFLAGS		=	crs

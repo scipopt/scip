@@ -1,0 +1,3 @@
+presolving/dualinfer/maxrounds = -1
+presolving/milp/maxrounds = 0
+constraints/linear/maxprerounds = 0
