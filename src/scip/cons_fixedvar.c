@@ -77,7 +77,7 @@ struct SCIP_ConshdlrData
 
 /** an assert for checking that the violation is not so large
  *
- * This idea of this constraint handler is the handling of tiny bound violations that are scaled up
+ * The idea of this constraint handler is the handling of tiny bound violations that are scaled up
  * above the feasibility tolerance by aggregation factors. Usually, the violation should still be
  * rather "small". For this test, we quantify "small" as 0.5.
  */
@@ -332,7 +332,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
       else
       {
          *result = SCIP_FEASIBLE;
-         SCIPwarningMessage(scip, "Declaring solution with violated bound in original problem as feasible as attempts to enforce the bound have failed. We are very sorry.\n");
+         SCIPwarningMessage(scip, "Declaring solution with violated bound in original problem as feasible because attempts to enforce the bound have failed. We are very sorry.\n");
       }
    }
 

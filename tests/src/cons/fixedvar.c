@@ -28,10 +28,9 @@
  */
 
 #include "scip/scip.h"
-#include "include/scip_test.h"
 #include "scip/scipdefplugins.h"
 #include "scip/struct_cons.h"
-#include <stdio.h>
+#include "include/scip_test.h"
 
 /* TESTS  */
 
@@ -64,14 +63,14 @@ Test(fixedvar, check)
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, FALSE) );
 
    /* aggregate x = 1.0 + 2e5 y */
-   SCIP_CALL( SCIPaggregateVars(scip, x, y, 1.0, -0.2/SCIPfeastol(scip), 1.0, &infeas, &redundant, &aggregated) );
+   SCIP_CALL( SCIPaggregateVars(scip, x, y, 1.0, -0.2 / SCIPfeastol(scip), 1.0, &infeas, &redundant, &aggregated) );
    cr_expect(!infeas);
    cr_expect(redundant);
    cr_expect(aggregated);
 
    /* SCIP_CALL( SCIPprintTransProblem(scip, NULL, NULL, FALSE) ); */
 
-   /* solution y = 1e-6 -> x = 3 violates its upper bound 1 */
+   /* solution y = 1e-6 -> x = 1.2 violates its upper bound 1 */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, SCIPfeastol(scip)) );
 
@@ -91,7 +90,7 @@ Test(fixedvar, check)
    SCIP_CALL( SCIPreleaseVar(scip , &y) );
    SCIP_CALL( SCIPreleaseVar(scip , &x) );
 
-   SCIP_CALL( SCIPfree(&scip ) );
+   SCIP_CALL( SCIPfree(&scip) );
 }
 
 Test(fixedvar, enforce)
@@ -140,7 +139,7 @@ Test(fixedvar, enforce)
    /* SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_FULL) ); */
 
    /* aggregate x = 1.0 + 2e5 y */
-   SCIP_CALL( SCIPaggregateVars(scip, x, y, 1.0, -0.2/SCIPfeastol(scip), 1.0, &infeas, &redundant, &aggregated) );
+   SCIP_CALL( SCIPaggregateVars(scip, x, y, 1.0, -0.2 / SCIPfeastol(scip), 1.0, &infeas, &redundant, &aggregated) );
    cr_expect(!infeas);
    cr_expect(redundant);
    cr_expect(aggregated);
@@ -154,7 +153,7 @@ Test(fixedvar, enforce)
    SCIP_CALL( SCIPsetIntParam(scip, "lp/solvefreq", -1) );
    SCIP_CALL( SCIPsolve(scip) );
 
-   /* solution y = 1e-6 -> x = 3 violates its upper bound 1 */
+   /* solution y = 1e-6 -> x = 1.2 violates its upper bound 1 */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, SCIPfeastol(scip)) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, z, 1.0) );
@@ -162,12 +161,14 @@ Test(fixedvar, enforce)
    /* due to cons_fixedvar, this is not feasible */
    SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
    cr_expect(!feasible);
+   cr_expect(SCIPgetNCuts(scip) == 0);
 
    /* enforce solution via the enforelax callback of cons_fixedvar */
    conshdlr = SCIPfindConshdlr(scip, "fixedvar");
+   cr_assert_not_null(conshdlr);
    SCIP_CALL( conshdlr->consenforelax(scip, sol, conshdlr, NULL, 0, 0, FALSE, &result) );
 
-   /* we should now have 1 cut to enforce bounds [0,1] on x: 0 <= 2e6 y + 1 <= 1 */
+   /* we should now have 1 cut to enforce bounds [0,1] on x: 0 <= 2e5 y + 1 <= 1 */
    cr_expect_eq(result, SCIP_SEPARATED);
    cr_expect(SCIPgetNCuts(scip) == 1);
    for( int i = 0; i < SCIPgetNCuts(scip); ++i )
@@ -184,5 +185,5 @@ Test(fixedvar, enforce)
    SCIP_CALL( SCIPreleaseVar(scip , &y) );
    SCIP_CALL( SCIPreleaseVar(scip , &x) );
 
-   SCIP_CALL( SCIPfree(&scip ) );
+   SCIP_CALL( SCIPfree(&scip) );
 }
