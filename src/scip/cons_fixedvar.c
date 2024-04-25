@@ -284,7 +284,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
 
       if( (!SCIPisInfinity(scip, -lb) && SCIPisFeasLT(scip, val, lb)) || (!SCIPisInfinity(scip, ub) && SCIPisFeasGT(scip, val, ub)) )
       {
-         assertSmallViolation(lb, val, ub);
+         if( !solinfeasible )
+            assertSmallViolation(lb, val, ub);
 
          if( addcut )
          {
@@ -374,7 +375,8 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxFixedvar)
          SCIP_Bool success;
          SCIP_Bool cutoff;
 
-         assertSmallViolation(lb, val, ub);
+         if( !solinfeasible )
+            assertSmallViolation(lb, val, ub);
 
          SCIP_CALL( addCut(scip, conshdlr, sol, var, &success, &cutoff) );
 
@@ -433,7 +435,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsFixedvar)
          /* if solution is already declared infeasible, then do not force solving an LP, as it may fail (we may be in enfops because the LP failed) */
          *result = solinfeasible ? SCIP_INFEASIBLE : SCIP_SOLVELP;
 
-         assertSmallViolation(lb, val, ub);
+         if( !solinfeasible )
+            assertSmallViolation(lb, val, ub);
 
          break;
       }
@@ -512,10 +515,11 @@ SCIP_DECL_CONSCHECK(consCheckFixedvar)
 
          *result = SCIP_INFEASIBLE;
 
-         assertSmallViolation(lb, val, ub);
-
          if( !completely )
+         {
+            assertSmallViolation(lb, val, ub);
             return SCIP_OKAY;
+         }
       }
 
       if( !SCIPisInfinity(scip, ub) && SCIPisFeasGT(scip, val, ub) )
@@ -531,10 +535,11 @@ SCIP_DECL_CONSCHECK(consCheckFixedvar)
 
          *result = SCIP_INFEASIBLE;
 
-         assertSmallViolation(lb, val, ub);
-
          if( !completely )
+         {
+            assertSmallViolation(lb, val, ub);
             return SCIP_OKAY;
+         }
       }
    }
 
