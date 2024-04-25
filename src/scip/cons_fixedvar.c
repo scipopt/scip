@@ -322,6 +322,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
       else
       {
          *result = SCIP_FEASIBLE;
+         SCIPwarningMessage(scip, "Declaring solution with violated bound in original problem as feasible as attempts to enforce the bound have failed. We are very sorry.\n");
       }
    }
 
