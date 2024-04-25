@@ -102,6 +102,7 @@ Test(fixedvar, enforce)
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS* cons;
    SCIP_SOL* sol;
+   SCIP_ROW* cut;
    SCIP_Real val = 1.0;
    SCIP_RESULT result;
    SCIP_Bool infeas;
@@ -169,11 +170,15 @@ Test(fixedvar, enforce)
 
    /* we should now have 1 cut to enforce bounds [0,1] on x: 0 <= 2e5 y + 1 <= 1 */
    cr_expect_eq(result, SCIP_SEPARATED);
-   cr_expect(SCIPgetNCuts(scip) == 1);
-   for( int i = 0; i < SCIPgetNCuts(scip); ++i )
-   {
-      SCIP_CALL( SCIPprintRow(scip, SCIPgetCuts(scip)[i], NULL) );
-   }
+   cr_assert(SCIPgetNCuts(scip) == 1);
+   cut = SCIPgetCuts(scip)[0];
+   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+   cr_expect_eq(SCIProwGetLhs(cut), 0.0);
+   cr_expect_eq(SCIProwGetConstant(cut), 1.0);
+   cr_expect_eq(SCIProwGetRhs(cut), 1.0);
+   cr_assert(SCIProwGetNNonz(cut) == 1);
+   cr_expect_float_eq(SCIProwGetVals(cut)[0], 0.2 / SCIPfeastol(scip), SCIPepsilon(scip));
+   cr_expect_eq(SCIProwGetCols(cut)[0], SCIPvarGetCol(SCIPvarGetTransVar(y)));
 
    /* free */
    SCIP_CALL( SCIPclearCuts(scip) );
