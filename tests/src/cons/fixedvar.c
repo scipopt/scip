@@ -102,11 +102,11 @@ Test(fixedvar, enforce)
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS* cons;
    SCIP_SOL* sol;
+   SCIP_Real val = 1.0;
    SCIP_RESULT result;
    SCIP_Bool infeas;
    SCIP_Bool redundant;
    SCIP_Bool aggregated;
-   SCIP_Bool success;
    SCIP_Bool feasible;
 
    /* create */
@@ -124,8 +124,7 @@ Test(fixedvar, enforce)
    SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
    SCIP_CALL( SCIPaddVar(scip, z) );
 
-   SCIP_CALL( SCIPparseCons(scip, &cons, "[linear] <dummy>: <z> >= 1", TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
-   cr_assert(success);
+   SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "dummy", 1, &z, &val, 1, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
