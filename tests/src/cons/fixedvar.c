@@ -63,8 +63,8 @@ Test(fixedvar, check)
 
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, FALSE) );
 
-   /* aggregate x = 1.0 + 2e6 y */
-   SCIP_CALL( SCIPaggregateVars(scip, x, y, 1.0, -2.0/SCIPfeastol(scip), 1.0, &infeas, &redundant, &aggregated) );
+   /* aggregate x = 1.0 + 2e5 y */
+   SCIP_CALL( SCIPaggregateVars(scip, x, y, 1.0, -0.2/SCIPfeastol(scip), 1.0, &infeas, &redundant, &aggregated) );
    cr_expect(!infeas);
    cr_expect(redundant);
    cr_expect(aggregated);
@@ -139,8 +139,8 @@ Test(fixedvar, enforce)
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVING, FALSE) );
    /* SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", SCIP_VERBLEVEL_FULL) ); */
 
-   /* aggregate x = 1.0 + 2e6 y */
-   SCIP_CALL( SCIPaggregateVars(scip, x, y, 1.0, -2.0/SCIPfeastol(scip), 1.0, &infeas, &redundant, &aggregated) );
+   /* aggregate x = 1.0 + 2e5 y */
+   SCIP_CALL( SCIPaggregateVars(scip, x, y, 1.0, -0.2/SCIPfeastol(scip), 1.0, &infeas, &redundant, &aggregated) );
    cr_expect(!infeas);
    cr_expect(redundant);
    cr_expect(aggregated);

@@ -75,6 +75,14 @@ struct SCIP_ConshdlrData
  * Local methods
  */
 
+/** an assert for checking that the violation is not so large
+ *
+ * This idea of this constraint handler is the handling of tiny bound violations that are scaled up
+ * above the feasibility tolerance by aggregation factors. Usually, the violation should still be
+ * rather "small". For this test, we quantify "small" as 0.5.
+ */
+#define assertSmallViolation(lb, val, ub) (assert((val) >= (lb) - 0.5 && (val) <= (ub) + 0.5));
+
 /** add cut to enforce global bounds on variable aggregation
  *
  * Given an original fixed variable x, add cut lb <= x <= ub.
@@ -276,6 +284,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpFixedvar)
 
       if( (!SCIPisInfinity(scip, -lb) && SCIPisFeasLT(scip, val, lb)) || (!SCIPisInfinity(scip, ub) && SCIPisFeasGT(scip, val, ub)) )
       {
+         assertSmallViolation(lb, val, ub);
+
          if( addcut )
          {
             SCIP_Bool success;
@@ -364,6 +374,8 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxFixedvar)
          SCIP_Bool success;
          SCIP_Bool cutoff;
 
+         assertSmallViolation(lb, val, ub);
+
          SCIP_CALL( addCut(scip, conshdlr, sol, var, &success, &cutoff) );
 
          if( cutoff )
@@ -420,6 +432,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsFixedvar)
       {
          /* if solution is already declared infeasible, then do not force solving an LP, as it may fail (we may be in enfops because the LP failed) */
          *result = solinfeasible ? SCIP_INFEASIBLE : SCIP_SOLVELP;
+
+         assertSmallViolation(lb, val, ub);
+
          break;
       }
    }
@@ -497,6 +512,8 @@ SCIP_DECL_CONSCHECK(consCheckFixedvar)
 
          *result = SCIP_INFEASIBLE;
 
+         assertSmallViolation(lb, val, ub);
+
          if( !completely )
             return SCIP_OKAY;
       }
@@ -513,6 +530,8 @@ SCIP_DECL_CONSCHECK(consCheckFixedvar)
          }
 
          *result = SCIP_INFEASIBLE;
+
+         assertSmallViolation(lb, val, ub);
 
          if( !completely )
             return SCIP_OKAY;
