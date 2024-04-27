@@ -1,4 +1,3 @@
-
 #!/usr/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
@@ -1697,19 +1696,27 @@ END {
    {
       s = printorder[o];
 
-      parse_time(ref_array,solver_array,time,o,printorder,probidx,problistlen);
+      parse_time(ref_array, solver_array, time, o, printorder, probidx, problistlen);
       n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
       factorize(ref_array, solver_array, n, timelimit[s])
 
-      z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
-      printf("   z %8.4f",z);
-      z_to_p(z);
+      # do not print test if number of items is less than 20, because the test is not reliable there
+      if( n > 20 )
+      {
+         z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
+         printf("   z %8.4f", z);
+         z_to_p(z);
+      }
+      else
+      {
+         printf("     %8s", "");
+         printf("     -- (N = %2d <= 20)", n);
+      }
 
       if( printconfs )
 	 printf("%18s", "");
    }
    printf("\n");
-
 
    # compute and print result for Wilcoxon signed rank test for time to first solution w.r.t. reference setting
    if( printsoltimes )
@@ -1724,13 +1731,22 @@ END {
       {
          s = printorder[o];
 
-         parse_time(ref_array,solver_array,timetofirst,o,printorder,probidx,problistlen);
+         parse_time(ref_array, solver_array, timetofirst, o, printorder, probidx, problistlen);
          n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
          factorize(ref_array, solver_array, n, timelimit[s])
 
-	 z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
-	 printf("   z %8.4f",z);
-	 z_to_p(z);
+         # do not print test if number of items is less than 20, because the test is not reliable there
+         if( n > 20 )
+         {
+            z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
+            printf("   z %8.4f", z);
+            z_to_p(z);
+         }
+         else
+         {
+            printf("     %8s", "");
+            printf("     -- (N = %2d <= 20)", n);
+         }
 
          if( printconfs )
             printf("%18s", "");
@@ -1751,9 +1767,18 @@ END {
       n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
       factorize(ref_array, solver_array, n, infinity)
 
-      z = wilcoxon(ref_array, solver_array, n, infinity);
-      printf("   z %8.4f",z);
-      z_to_p(z);
+      # do not print test if number of items is less than 20, because the test is not reliable there
+      if( n > 20 )
+      {
+         z = wilcoxon(ref_array, solver_array, n, infinity);
+         printf("   z %8.4f", z);
+         z_to_p(z);
+      }
+      else
+      {
+         printf("     %8s", "");
+         printf("     -- (N = %2d <= 20)", n);
+      }
 
       if( printconfs )
 	 printf("%18s", "");
@@ -1768,13 +1793,22 @@ END {
       {
          s = printorder[o];
 
-         parse_time(ref_array,solver_array,confs,o,printorder,probidx,problistlen);
+         parse_time(ref_array, solver_array, confs, o, printorder, probidx, problistlen);
          n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
          factorize(ref_array, solver_array, n, timelimit[s])
 
-         z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
-         printf("   z %8.4f", z );
-         z_to_p(z);
+         # do not print test if number of items is less than 20, because the test is not reliable there
+         if( n > 20 )
+         {
+            z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
+            printf("   z %8.4f", z);
+            z_to_p(z);
+         }
+         else
+         {
+            printf("     %8s", "");
+            printf("     -- (N = %2d <= 20)", n);
+         }
 
          if( printconfs )
 	    printf("%18s", "");
