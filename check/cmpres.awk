@@ -463,6 +463,7 @@ BEGIN {
    printconfs = 0;
    printgap = 0; # if timeout, then print absolute gap at termination in time column, if gap is finite
    printsoltimes = !short && printsoltimes; # short deactivates the detailed solution times output
+   setnamelen = 50;  # display length of test sets
    infinity = 1e+20;
    timegeomshift = 1.0;
    nodegeomshift = 100.0;
@@ -1915,8 +1916,8 @@ END {
 
          header = (cat == -1 ? "optimal" : (cat == 0 ? "all" : (cat == 1 ? "diff" : (cat == 2 ? "equal" : "timeout"))));
          printf("\n");
-         printf("%-7s                                            proc eval fail time solv wins bett wors bobj wobj feas    gnodes   shnodes   gnodesQ  shnodesQ   gtime  shtime  gtimeQ shtimeQ   score\n",
-		header);
+         printf("%-*s proc eval fail time solv wins bett wors bobj wobj feas    gnodes   shnodes   gnodesQ  shnodesQ   gtime  shtime  gtimeQ shtimeQ   score\n",
+                setnamelen, header);
 
          for( o = 0; o < nsolver; ++o )
          {
@@ -1931,11 +1932,12 @@ END {
             }
             if( (o > 0 || cat == 0 || cat == -1) && nevalprobs[s,cat] > 0 )
             {
-               if ( length(sname) <= 50 )
-                  printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+               if ( length(sname) <= setnamelen )
+                  printf("%-*s %4d %4d %4d %4d %4d %4d", setnamelen, sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
                          ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
                else
-                  printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+                  printf("*%-*s %4d %4d %4d %4d %4d %4d", setnamelen - 1, substr(sname, length(sname) - setnamelen - 1),
+                         nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
                          ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
 
                printf(" %4d %4d", better[s,cat], worse[s,cat]);
@@ -1949,7 +1951,7 @@ END {
          }
          if( cat == 0 )
          {
-            printf("%-50s           %4d %4d %4d %4s", "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "");
+            printf("%-*s           %4d %4d %4d %4s", setnamelen, "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "");
             printf(" %4d %4s", bestbetter, "");
             printf(" %4d %4s %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7s\n",
                    bestbetterobj, "", bestfeasibles,
@@ -1962,7 +1964,8 @@ END {
       # output the all optimal case
       header = "all optimal";
       printf("\n");
-      printf("%-11s                                        proc eval fail time solv wins bett wors bobj wobj feas    gnodes   shnodes   gnodesQ  shnodesQ   gtime  shtime  gtimeQ shtimeQ   score\n", header);
+      printf("%-*s proc eval fail time solv wins bett wors bobj wobj feas    gnodes   shnodes   gnodesQ  shnodesQ   gtime  shtime  gtimeQ shtimeQ   score\n",
+             setnamelen, header);
       cat = -1;
       for( o = 0; o < nsolver; ++o )
       {
@@ -1977,11 +1980,12 @@ END {
          }
          if( (o > 0 || cat == 0 || cat == -1) && nevalprobs[s,cat] > 0 )
          {
-            if ( length(sname) <= 50 )
-               printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+            if ( length(sname) <= setnamelen )
+               printf("%-*s %4d %4d %4d %4d %4d %4d", setnamelen, sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
                       ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
             else
-               printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+               printf("*%-*s %4d %4d %4d %4d %4d %4d", setnamelen - 1, substr(sname, length(sname) - setnamelen - 1),
+                      nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
                       ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
             printf(" %4d %4d", better[s,cat], worse[s,cat]);
             printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n",
@@ -1994,7 +1998,7 @@ END {
       }
       if( cat == 0 )
       {
-         printf("%-50s           %4d %4d %4d %4s", "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "");
+         printf("%-*s           %4d %4d %4d %4s", setnamelen, "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "");
          printf(" %4d %4s", bestbetter, "");
          printf(" %4d %4s %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7s\n",
                 bestbetterobj, "", bestfeasibles,
