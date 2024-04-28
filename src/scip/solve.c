@@ -3007,6 +3007,8 @@ SCIP_RETCODE priceAndCutLoop(
          /* resolve LP */
          SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
             set->lp_iterlim, FALSE, FALSE, FALSE, lperror) );
+	 if( !(*lperror) && !tree->focusnodehaslp )
+	    tree->focusnodehaslp = TRUE;
       }
    }
 

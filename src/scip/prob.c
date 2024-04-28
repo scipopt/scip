@@ -2015,7 +2015,7 @@ void SCIPprobUpdateBestRootSol(
 
             /* get reduced cost if the variable gets fixed to one */
             ubrootredcost = SCIPvarGetImplRedcost(var, set, TRUE, stat, prob, lp);
-            assert( !SCIPsetIsDualfeasNegative(set, ubrootredcost)
+            assert( set->exact_enabled || !SCIPsetIsDualfeasNegative(set, ubrootredcost)
                || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
             if( -lbrootredcost > ubrootredcost )
