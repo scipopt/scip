@@ -793,24 +793,24 @@ END {
       {
 	 if( printsoltimes && printconfs == 0 )
 	 {
-	    if ( length(sname) <= 58 )
-	       printf("%58s |", sname);
+	    if ( length(sname) <= 59 )
+	       printf("%59s |", sname);
 	    else
-	       printf("*%57s |", substr(sname, length(sname) - 56));
+	       printf("*%58s |", substr(sname, length(sname) - 57));
 	 }
 	 else if( printsoltimes == 0 && printconfs )
 	 {
-	    if ( length(sname) <= 55 )
-	       printf("%55s |", sname);
+	    if ( length(sname) <= 56 )
+	       printf("%56s |", sname);
 	    else
-	       printf("*%54s |", substr(sname, length(sname) - 53));
+	       printf("*%55s |", substr(sname, length(sname) - 54));
 	 }
 	 else
 	 {
-	    if ( length(sname) <= 39 )
-	       printf("%39s |", sname)
+	    if ( length(sname) <= 40 )
+	       printf("%40s |", sname)
 	    else
-	       printf("*%38s |", substr(sname, length(sname) - 37));
+	       printf("*%39s |", substr(sname, length(sname) - 38));
 	 }
       }
       else
