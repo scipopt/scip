@@ -795,21 +795,21 @@ END {
 	    if ( length(sname) <= 58 )
 	       printf(" %58s |", sname);
 	    else
-	       printf(" *%57s |", substr(sname, length(sname)-58));
+	       printf(" *%57s |", substr(sname, length(sname) - 57));
 	 }
 	 else if( printsoltimes == 0 && printconfs )
 	 {
 	    if ( length(sname) <= 55 )
 	       printf(" %55s |", sname);
 	    else
-	       printf(" *%54s |", substr(sname, length(sname)-54));
+	       printf(" *%54s |", substr(sname, length(sname) - 54));
 	 }
 	 else
 	 {
 	    if ( length(sname) <= 39 )
 	       printf(" %39s |", sname)
 	    else
-	       printf(" *%38s |", substr(sname, length(sname)-39));
+	       printf(" *%38s |", substr(sname, length(sname) - 38));
 	 }
       }
       else
@@ -819,28 +819,28 @@ END {
 	    if( length(sname) <= 19 )
 	       printf("%19s |", sname);
 	    else
-	       printf("*%16s |", substr(sname, length(sname)-17));
+	       printf("*%18s |", substr(sname, length(sname) - 18));
 	 }
 	 else if( printsoltimes && printconfs == 0 )
 	 {
 	    if( length(sname) <= 47 )
 	       printf("%47s |", sname);
 	    else
-	       printf("*%46s |", substr(sname, length(sname)-47));
+	       printf("*%46s |", substr(sname, length(sname) - 46));
 	 }
 	 else if( printsoltimes == 0 && printconfs )
 	 {
 	    if( length(sname) <= 48 )
 	       printf("%48s |", sname);
 	    else
-	       printf("*%47s |", substr(sname, length(sname)-48));
+	       printf("*%47s |", substr(sname, length(sname) - 47));
 	 }
 	 else
 	 {
 	    if( length(sname) <= 33 )
 	       printf("%31s |", sname);
 	    else
-	       printf("*%30s |", substr(sname, length(sname)-31));
+	       printf("*%30s |", substr(sname, length(sname) - 30));
 	 }
       }
    }
