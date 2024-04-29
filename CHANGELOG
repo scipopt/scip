@@ -75,6 +75,8 @@ Known bugs
 Features
 --------
 
+- Added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem.
+
 Performance improvements
 ------------------------
 
@@ -92,6 +94,7 @@ Interface changes
 ### New API functions
 
 - New function SCIPgetExprActivityNonlinear() to get activity of nonlinear constraint.
+- New function SCIPincludeConshdlrFixedvar() to include new constraint handler that checks bounds on fixed original variables.
 
 ### Command line interface
 
@@ -102,6 +105,7 @@ Interface changes
 - limits/primal to terminate the solve as soon as the primal bound is at least as good as this value, same as limits/objectivestop (deprecated)
 - limits/dual to terminate the solve as soon as the dual bound is at least as good as this value
 - presolving/milp/internalmaxrounds to control the maximal rounds for each call of the milp presolver (PaPILO)
+- constraints/fixedvar/* to control the new constraint handler that checks bounds on fixed original variables
 
 ### New data structures
 

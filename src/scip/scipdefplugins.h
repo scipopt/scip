@@ -64,6 +64,7 @@
 #include "scip/cons_countsols.h"
 #include "scip/cons_cumulative.h"
 #include "scip/cons_disjunction.h"
+#include "scip/cons_fixedvar.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_integral.h"
 #include "scip/cons_knapsack.h"
