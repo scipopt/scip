@@ -117,9 +117,6 @@ Performance improvements
 - Added new branching score tiebreaker for reliability pseudo-cost branching rule
 - Try nearest bound if zero solution value is out of bounds in heuristic trivial.
 
-Examples and applications
--------------------------
-
 Interface changes
 -----------------
 
@@ -539,9 +536,6 @@ Miscellaneous
   SCIPdebugSolIsValidInSubtree, SCIPdebugIsMainscip, SCIPdebugSolEnable, SCIPdebugSolDisable, SCIPdebugSolIsEnabled,
   SCIPwithDebugSol are now exported
 
-Known bugs
-----------
-
 @section RN802 SCIP 8.0.2
 *************************
 
@@ -622,6 +616,7 @@ Miscellaneous
 
 @section RN801 SCIP 8.0.1
 *************************
+
 Features
 --------
 
@@ -1521,9 +1516,6 @@ Unit tests
 - added sepa/rlt/separation.c
 - added tests test_compute_symmetry:expr{1,2,3,4} in symmetry/compute.c
 
-Testing
--------
-
 Build system
 ------------
 
@@ -1579,9 +1571,6 @@ Miscellaneous
 - Parameters are not reset to their default values before activating an emphasis setting; this now allows to combine
   different emphasis settings.
 - If a lazy bound is set to a value that is tighter than the current global bound, then the global bound is now tightened accordingly.
-
-Known bugs
-----------
 
 @page RN70 Release notes for SCIP 7.0
 
@@ -1671,8 +1660,6 @@ Examples and applications
 Interface changes
 -----------------
 
-### New and changed callbacks
-
 ### Deleted and changed API methods
 
 - deprecated SCIPsetParam(); use SCIPsetIntParam(), SCIPsetRealParam(), etc, instead
@@ -1681,32 +1668,6 @@ Interface changes
 
 - new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
 - added new sorting functions SCIPsortPtrRealRealBoolBool()
-
-### Command line interface
-
-### Interfaces to external software
-
-### Changed parameters
-
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
-Unit tests
-----------
-
-Testing
--------
-
-Build system
-------------
-
-### Cmake
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -1732,12 +1693,6 @@ Fixed bugs
 - Fixed issues with scip statistics
 - Fixed issue with multi-aggregated variables
 - Fixed issue in with buffer memory in cons_cumulative
-
-Miscellaneous
--------------
-
-Known bugs
-----------
 
 @section RN701 SCIP 7.0.1
 *************************
@@ -2640,6 +2595,7 @@ Fixed bugs
 
 Miscellaneous
 -------------
+
 - do not scale linear constraints to integral coefficients
 
 @section RN600 SCIP 6.0.0
