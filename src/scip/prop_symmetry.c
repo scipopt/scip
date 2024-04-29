@@ -640,7 +640,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
       if ( tabledata->propdata->orbitopalreddata )
       {
          SCIP_CALL( SCIPorbitopalReductionGetStatistics(scip, tabledata->propdata->orbitopalreddata, &nred, &ncutoff) );
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbitopal reduction: %10d reductions applied,"
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbitopal red.   : %10d reductions applied,"
             " %10d cutoffs\n", nred, ncutoff);
       }
       if ( tabledata->propdata->orbitalreddata )
