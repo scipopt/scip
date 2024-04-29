@@ -9814,7 +9814,7 @@ SCIP_RETCODE SCIPcleanupConssSetppc(
    conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
 
    /* loop backwards since then deleted constraints do not interfere with the loop */
-   for( i = nconss - 1; i > 0; --i )
+   for( i = nconss - 1; i >= 0; --i )
    {
       SCIP_CONS* cons = conss[i];
 

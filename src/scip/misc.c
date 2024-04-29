@@ -710,7 +710,7 @@ void SCIPgmlWriteClosing(
  */
 void SCIPdotWriteOpening(
    FILE*                 file                /**< file to write to */
-)
+   )
 {
    assert(file != NULL);
 
@@ -725,7 +725,7 @@ void SCIPdotWriteNode(
    const char*           nodetype,           /**< type of the node, or NULL */
    const char*           fillcolor,          /**< color of the node's interior, or NULL */
    const char*           bordercolor         /**< color of the node's border, or NULL */
-)
+   )
 {
    assert(file != NULL);
 
@@ -738,7 +738,7 @@ void SCIPdotWriteArc(
    int                   source,             /**< source node id of the node */
    int                   target,             /**< target node id of the edge */
    const char*           color               /**< color of the edge, or NULL */
-)
+   )
 {
    assert(file != NULL);
 
@@ -747,8 +747,8 @@ void SCIPdotWriteArc(
 
 /** writes the closing line to a dot graph file, does not close a file */
 void SCIPdotWriteClosing(
-   FILE* file /**< file to write to */
-)
+   FILE*                 file                /**< file to write to */
+   )
 {
    assert(file != NULL);
 

@@ -343,7 +343,7 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
    SCIP_Real*            varubs,             /**< array of orcdata->permvars variable UBs. If NULL, use local bounds */
    int*                  branchedvarindices, /**< array of given branching decisions, in branching order */
    SCIP_Bool*            inbranchedvarindices, /**< array stating whether variable with index in orcdata->permvars is
-                                                *   contained in the branching decisions. */
+                                              *   contained in the branching decisions. */
    int                   nbranchedvarindices /**< number of branching decisions */
    )
 {

@@ -3,6 +3,10 @@
 
 Features
 --------
+- Added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
+- Copy variable data pointer if no copy routine was supplied.
+
+- added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
 
 Performance improvements
 ------------------------
@@ -19,6 +23,12 @@ Interface changes
 
 ### New API functions
 
+- SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
+- SCIPhistoryGetAncPseudocost(), SCIPhistoryGetAncPseudocostCount(), SCIPhistoryIsAncPseudocostEmpty(), SCIPgetVarAncPseudocostVal(),
+  SCIPvarGetAncPseudocost() for retrieving the values related to ancestral pseudo cost fields in variable history
+- SCIPgetAvgDPseudocostScore(), SCIPgetVarDPseudocostScore() for computing the discounted pseudo cost scores using ancestral pseudo costs
+- SCIPboundchgGetLPSolVal() for accessing the LP solution value in the branching data of the bound change
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -26,6 +36,11 @@ Interface changes
 ### Changed parameters
 
 ### New parameters
+
+- branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
+- branching/discountedpscost to enable/disable recording ancestral pseudo costs
+- new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
+- new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
 
 ### Data structures
 
@@ -60,6 +75,8 @@ Known bugs
 Features
 --------
 
+- Added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem.
+
 Performance improvements
 ------------------------
 
@@ -76,6 +93,9 @@ Interface changes
 
 ### New API functions
 
+- New function SCIPgetExprActivityNonlinear() to get activity of nonlinear constraint.
+- New function SCIPincludeConshdlrFixedvar() to include new constraint handler that checks bounds on fixed original variables.
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -84,6 +104,8 @@ Interface changes
 
 - limits/primal to terminate the solve as soon as the primal bound is at least as good as this value, same as limits/objectivestop (deprecated)
 - limits/dual to terminate the solve as soon as the dual bound is at least as good as this value
+- presolving/milp/internalmaxrounds to control the maximal rounds for each call of the milp presolver (PaPILO)
+- constraints/fixedvar/* to control the new constraint handler that checks bounds on fixed original variables
 
 ### New data structures
 
@@ -114,17 +136,51 @@ Fixed bugs
 - in count mode respect empty solution when problem is solved in presolving
 - fixed that SCIP may have tried to pass a negative random seed to an LP solver
 - fixed bug where conflict analysis in strong branching tried to analyze an unsuccessful LP solve
+- enable parameter limits/restarts by allowing to reach the restart limit in restartAllowed()
+- handle normalizing linear constraints in presolving with more caution to avoid numerical difficulties for integer variables with large coefficients
+- use quad precision to calculate residual activity bounds to reduce numerical errors for large variable bounds in cons_linear.c
+- in SCIPsolveProbingLP() when objective has been changed do not return cutoff due to exceeding the cutoff bound
+- set probing LP to be a relaxation only when objective has not been changed
+- declare contradicting infinities in getMinActivity() and getMaxActivity() as non-tight
+- reject farkas solution with large values to bound magnification of errors in SCIPgetFarkasProof()
+- if all variables are fixed, apply relative feasibility tolerance to avoid invalid infeasibility in applyFixings() of cons_linear.c
+- delete empty redundant knapsack and linear constraints after cleanup in SCIPmatrixCreate()
+- cleanup first constraints in SCIPcleanupConssVarbound(), SCIPcleanupConssSetppc(), and SCIPcleanupConssLogicor()
+- symmetry handling methods have not been added immediately after computing symmetries, which has been fixed
+- delay checking node limits after presolving to correctly continue up to the exceeding main node
+- simplified the objective sense assumption for the subproblems in the Lagromory separator
+- update effective root depth iteratively to avoid trapping it at a single child node
+- fixed that dualsparsify presolver did not always check do-not-multiaggregate variable flag
 
 Miscellaneous
 -------------
+
+- redefine isrelax to istight in cons_linear.c
 
 Build system
 ------------
 
 ### Cmake
 
+- A file cmake.log containing the changed options is written to the cmake build directory.
 - removed replacement of the settings of RelWithDebInfo
+- add compile option -ffp-contract=off or /fp:precise to enhance reproducibility across different systems
 
+### Makefile
+
+- add flags -ffp-contract=off and /fp:precise to enhance reproducibility across different systems
+
+Interface changes
+-----------------
+
+### New parameters
+
+- added parameter "propagating/symmetry/symtiming" to determine when symmetries are computed and handled
+
+### Changed parameters
+
+- Disabled "propagating/symmetry/addconsstiming" since it is not used anymore.
+- Disabled "propagating/symmetry/ofsymcomptiming" since it is not used anymore.
 
 @section RN900 SCIP 9.0.0
 *************************

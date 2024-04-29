@@ -54,7 +54,7 @@
 #define DEFAULT_MINGAIN                 0.01 /**< minimal efficacy gain for a cut to enter the LP */
 #define DEFAULT_MAXDEPTH                (-1) /**< maximum depth at which this cutselector is used (-1 : all nodes) */
 #define DEFAULT_FILTERMODE              'd'  /**< filtering strategy during cut selection (
-                                               *  'd'ynamic-  and 'f'ull dynamic parallelism) */
+                                              *  'd'ynamic-  and 'f'ull dynamic parallelism) */
 
 
 /*
@@ -224,7 +224,7 @@ SCIP_RETCODE computeProjectionScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             bestcut,            /**< cut to filter orthogonality with */
    SCIP_ROW*             cut,                /**< cut to perform scoring on */
-   SCIP_Real*            score              /**< score for cut */
+   SCIP_Real*            score               /**< score for cut */
    )
 {
    SCIP_Real efficacy;
@@ -255,9 +255,9 @@ SCIP_RETCODE computeProjectionScore(
 /** move the cut with the highest score to the first position in the array; there must be at least one cut */
 static
 void selectBestCut(
-    SCIP_ROW**           cuts,               /**< array with cuts to perform selection algorithm */
-    SCIP_Real*           scores,             /**< array with scores of cuts to perform selection algorithm */
-    int                  ncuts               /**< number of cuts in given array */
+   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
+   SCIP_Real*            scores,             /**< array with scores of cuts to perform selection algorithm */
+   int                   ncuts               /**< number of cuts in given array */
    )
 {
    int i;
@@ -324,14 +324,14 @@ int filterWithDynamicParallelism(
          cosine = SCIProwGetParallelism(bestcut, cuts[i], 's');
          thisparall = cosine * bestcutefficacy / currentcutefficacy;
          SCIPdebugMsg(scip, "Thisparall(%g) = cosine(%g) * (bestcutefficacy(%g)/ currentcutefficacy(%g))\n\n", thisparall,
-                      cosine, bestcutefficacy, currentcutefficacy);
+            cosine, bestcutefficacy, currentcutefficacy);
       }
       else
       {
          cosine = SCIProwGetParallelism(cuts[i], bestcut, 's');
          thisparall = cosine * currentcutefficacy / bestcutefficacy;
          SCIPdebugMsg(scip, "Thisparall(%g) = cosine(%g) * (currentcutefficacy(%g) / bestcutefficacy(%g))\n\n", thisparall,
-                      cosine, currentcutefficacy, bestcutefficacy);
+            cosine, currentcutefficacy, bestcutefficacy);
       }
 
       /* compute the max-minimum angle for given the given cuts to enforce
@@ -423,7 +423,8 @@ SCIP_DECL_CUTSELEXIT(cutselExitDynamic)
 
 /** cut selection method of cut selector */
 static
-SCIP_DECL_CUTSELSELECT(cutselSelectDynamic) { /*lint --e{715}*/
+SCIP_DECL_CUTSELSELECT(cutselSelectDynamic)
+{ /*lint --e{715}*/
    SCIP_CUTSELDATA *cutseldata;
 
    assert(cutsel != NULL);
@@ -439,10 +440,10 @@ SCIP_DECL_CUTSELSELECT(cutselSelectDynamic) { /*lint --e{715}*/
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPselectCutsDynamic( scip, cuts, forcedcuts, cutseldata->randnumgen, cutseldata->filtermode,
-                                      cutseldata->mingain, 1-cutseldata->minortho, cutseldata->dircutoffdistweight, cutseldata->efficacyweight,
-                                      cutseldata->objparalweight, cutseldata->intsupportweight, ncuts, nforcedcuts,
-                                      maxnselectedcuts, nselectedcuts) );
+   SCIP_CALL( SCIPselectCutsDynamic(scip, cuts, forcedcuts, cutseldata->randnumgen, cutseldata->filtermode,
+         cutseldata->mingain, 1-cutseldata->minortho, cutseldata->dircutoffdistweight, cutseldata->efficacyweight,
+         cutseldata->objparalweight, cutseldata->intsupportweight, ncuts, nforcedcuts,
+         maxnselectedcuts, nselectedcuts) );
 
    return SCIP_OKAY;
 }
@@ -464,8 +465,7 @@ SCIP_RETCODE SCIPincludeCutselDynamic(
    SCIP_CALL( SCIPallocBlockMemory(scip, &cutseldata) );
    BMSclearMemory(cutseldata);
 
-   SCIP_CALL( SCIPincludeCutselBasic(scip, &cutsel, CUTSEL_NAME, CUTSEL_DESC, CUTSEL_PRIORITY, cutselSelectDynamic,
-                                    cutseldata) );
+   SCIP_CALL( SCIPincludeCutselBasic(scip, &cutsel, CUTSEL_NAME, CUTSEL_DESC, CUTSEL_PRIORITY, cutselSelectDynamic, cutseldata) );
 
    assert(cutsel != NULL);
 
@@ -552,7 +552,7 @@ SCIP_RETCODE SCIPselectCutsDynamic(
    int                   ncuts,              /**< number of cuts in cuts array */
    int                   nforcedcuts,        /**< number of forced cuts */
    int                   maxselectedcuts,    /**< maximal number of cuts from cuts array to select */
-   int*                  nselectedcuts      /**< pointer to return number of selected cuts from cuts array */
+   int*                  nselectedcuts       /**< pointer to return number of selected cuts from cuts array */
    )
 {
    SCIP_ROW* selectedcut;
