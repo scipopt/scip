@@ -382,7 +382,7 @@ SECTION: General Questions about SCIP
        Of course, it would also be possible to change the type of variable y to "integer" (<code>SCIP_VARTYPE_INTEGER</code>), but this would mean that SCIP may
        try to actively enforce integrality of y, e.g., by branching on y if it takes a fractional value in a relaxations solution.
        Thus, to express that a variable will eventually take an integral value but does not need to be branched on, variable type SCIP_VARTYPE_IMPLINT is used.
-       In fact, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b with all coefficents being integral and all variables integer,
+       In fact, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b with all coefficients being integral and all variables integer,
        SCIP may decide to change the type of variable y to implicit-integer.
     </p>
     <p>
