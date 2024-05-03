@@ -2464,6 +2464,8 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    lpexact->forceexactsolve = FALSE;
    lpexact->wasforcedsafebound = lpexact->forcesafebound;
    lpexact->forcesafebound = FALSE;
+   if( lp->hasprovedbound )
+      *dualfeasible = TRUE;
 
    return SCIP_OKAY;
 }

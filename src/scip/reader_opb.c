@@ -1341,20 +1341,51 @@ SCIP_RETCODE setObjective(
       /* set the objective values */
       for( v = 0; v < ncoefs; ++v )
       {
+         SCIP_Rational* obj;
+
          assert(linvars != NULL); /* for lint */
          assert(coefs != NULL);
 
-         if( SCIPvarIsNegated(linvars[v]) )
-	 {
-	    SCIP_VAR* negvar = SCIPvarGetNegationVar(linvars[v]);
+         if( SCIPisExactSolve(scip) )
+         {
+            RatCreateBuffer(SCIPbuffer(scip), &obj);
 
-	    SCIP_CALL( SCIPaddOrigObjoffset(scip, coefs[v]) );
-	    SCIP_CALL( SCIPaddVarObj(scip, negvar, -scale * coefs[v]) );
-	 }
-	 else
-	 {
-	    SCIP_CALL( SCIPaddVarObj(scip, linvars[v], scale * coefs[v]) );
-	 }
+            if( SCIPvarIsNegated(linvars[v]) )
+            {
+               SCIP_VAR* negvar = SCIPvarGetNegationVar(linvars[v]);
+
+               RatSetReal(obj, coefs[v]);
+               SCIP_CALL( SCIPaddOrigObjoffsetExact(scip, obj) );
+
+               RatMultReal(obj, obj, -scale);
+               RatAdd(obj, obj, SCIPvarGetObjExact(negvar));
+               SCIP_CALL( SCIPchgVarObjExact(scip, negvar, obj) );
+            }
+            else
+            {
+               RatSetReal(obj, coefs[v]);
+               RatMultReal(obj, obj, scale);
+               RatAdd(obj, obj, SCIPvarGetObjExact(linvars[v]));
+               SCIP_CALL( SCIPchgVarObjExact(scip, linvars[v], obj) );
+            }
+
+            RatFreeBuffer(SCIPbuffer(scip), &obj);
+         }
+         else
+         {
+            if( SCIPvarIsNegated(linvars[v]) )
+            {
+               SCIP_VAR* negvar = SCIPvarGetNegationVar(linvars[v]);
+
+               SCIP_CALL( SCIPaddOrigObjoffset(scip, coefs[v]) );
+               SCIP_CALL( SCIPaddVarObj(scip, negvar, -scale * coefs[v]) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPaddVarObj(scip, linvars[v], scale * coefs[v]) );
+            }
+         }
+
       }
    }
 
