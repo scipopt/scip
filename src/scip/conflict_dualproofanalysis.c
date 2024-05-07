@@ -967,13 +967,28 @@ SCIP_RETCODE createAndAddProofcons(
       SCIP_CALL( SCIPupgradeConsLinear(set->scip, cons, &upgdcons) );
       if( upgdcons != NULL )
       {
-         SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
-         cons = upgdcons;
+         SCIP_CONSHDLR* conshdlr;
 
-         if( conflicttype == SCIP_CONFTYPE_INFEASLP )
-            conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
-         else if( conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
-            conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
+         conshdlr = SCIPconsGetHdlr(upgdcons);
+         assert(conshdlr != NULL);
+
+         /* only upgrade constraint if it can report number of variables (needed by
+          * SCIPconflictstoreAddDualraycons() and SCIPconflictstoreAddDualsolcons())
+          */
+         if( conshdlr->consgetnvars == NULL )
+         {
+            SCIP_CALL( SCIPreleaseCons(set->scip, &upgdcons) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+            cons = upgdcons;
+
+            if( conflicttype == SCIP_CONFTYPE_INFEASLP )
+               conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
+            else if( conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
+               conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
+         }
       }
    }
 
