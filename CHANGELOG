@@ -152,6 +152,7 @@ Fixed bugs
 - update effective root depth iteratively to avoid trapping it at a single child node
 - fixed that dualsparsify presolver did not always check do-not-multiaggregate variable flag
 - fixed bug in computing elements of orbits in orbital reduction
+- make sure that, in dual proof analysis, upgraded constraints can report their number of variables
 
 Miscellaneous
 -------------
