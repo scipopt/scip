@@ -1434,8 +1434,8 @@ static int qsort_comparison (const void * a, const void * b)
     }
 }
 SCIP_Bool SCIPNetworkDecompositionVerifyCycle(SCIP * scip,
-                                              const SCIP_NETWORKDECOMP * dec, spqr_col column, spqr_row * column_rows,
-                                         double * column_values, int num_rows,
+                                              const SCIP_NETWORKDECOMP * dec, spqr_col column,const  spqr_row * column_rows,
+                                         const double * column_values, int num_rows,
                                          spqr_row * computed_column_storage,
                                          SCIP_Bool * computedSignStorage){
     int num_found_rows = decompositionGetFundamentalCycleRows(dec,column,computed_column_storage,computedSignStorage);

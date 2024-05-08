@@ -168,6 +168,7 @@ set(scipsources
     scip/heur_zirounding.c
     scip/hypergraph.c
     scip/message_default.c
+    scip/network.c
     scip/nlhdlr_bilinear.c
     scip/nlhdlr_convex.c
     scip/nlhdlr_default.c
@@ -656,6 +657,7 @@ set(scipheaders
     scip/message_default.h
     scip/message.h
     scip/misc.h
+    scip/network.h
     scip/nlhdlr_bilinear.h
     scip/nlhdlr_convex.h
     scip/nlhdlr_default.h
