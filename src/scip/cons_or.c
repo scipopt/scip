@@ -874,11 +874,15 @@ SCIP_RETCODE checkCons(
             SCIPinfoMessage(scip, NULL, "violation:");
 
             if( SCIPisFeasPositive(scip, maxsolval - solval) )
+            {
                SCIPinfoMessage(scip, NULL, " operand <%s> = TRUE and resultant <%s> = FALSE\n",
                   SCIPvarGetName(consdata->vars[maxsolind]), SCIPvarGetName(consdata->resvar));
+            }
             else
+            {
                SCIPinfoMessage(scip, NULL, " all operands are FALSE and resultant <%s> = TRUE\n",
                   SCIPvarGetName(consdata->resvar));
+            }
          }
       }
 

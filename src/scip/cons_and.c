@@ -1172,11 +1172,15 @@ SCIP_RETCODE checkCons(
             SCIPinfoMessage(scip, NULL, "violation:");
 
             if( SCIPisFeasPositive(scip, solval - minsolval) )
+            {
                SCIPinfoMessage(scip, NULL, " operand <%s> = FALSE and resultant <%s> = TRUE\n",
                   SCIPvarGetName(consdata->vars[minsolind]), SCIPvarGetName(consdata->resvar));
+            }
             else
+            {
                SCIPinfoMessage(scip, NULL, " all operands are TRUE and resultant <%s> = FALSE\n",
                   SCIPvarGetName(consdata->resvar));
+            }
          }
       }
 
