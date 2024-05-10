@@ -325,10 +325,11 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * `allowweakcuts` = TRUE, if it didn't succeed to enforce a solution without using weak cuts.
  * If in enforcement and the nonlinear handler cannot enforce by separation or bound tightening, it should register
  * branching scores for those expressions where branching may help to compute tighter cuts in children.
- * If `branchcandonly` and separation or bound tightening would be possible, then the nonlinear handler should
- * not do anything. This is because cons_nonlinear may call the nlhdlr with branchcandonly=TRUE if it only
- * wants to collect potential branching candidates in order to decide whether to enforce nonlinear constraints
- * before integrality.
+ * If `branchcandonly`, then cons_nonlinear is interested in collecting potential branching candidates only
+ * (in order to decide whether to enforce nonlinear constraints before integrality). Therefore, in this situation,
+ * the nlhdlr should not do anything if it normally (`branchcandonly`=FALSE) were to separate or tighten bounds.
+ * In other words, with `branchcandonly` = TRUE, the nlhdlr should follow the same logic as for
+ * `branchcandonly` = FALSE, but skip the addition of cuts or bound tightenings.
  *
  * The nonlinear handler must set `result` to \ref SCIP_SEPARATED if it added a cut,
  * to \ref SCIP_REDUCEDDOM if it added a bound change,
