@@ -2038,7 +2038,7 @@ SCIP_RETCODE separateCons(
          SCIP_Real val;
 
          val = SCIPgetSolVal(scip, sol, consdata->vars[j]);
-         if ( SCIPisFeasGT(scip, val, 0.5) )
+         if( val > 0.5 )
          {
             if ( val < minval )
             {
@@ -2075,7 +2075,7 @@ SCIP_RETCODE separateCons(
             /* fill in row */
             for (j = 0; j < consdata->nvars; ++j)
             {
-               if ( SCIPisFeasGT(scip, SCIPgetSolVal(scip, sol, consdata->vars[j]), 0.5) )
+               if( SCIPgetSolVal(scip, sol, consdata->vars[j]) > 0.5 )
                {
                   SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[j], 1.0) );
                }
@@ -2111,7 +2111,7 @@ SCIP_RETCODE separateCons(
             /* fill in row */
             for (j = 0; j < consdata->nvars; ++j)
             {
-               if ( SCIPisFeasGT(scip, SCIPgetSolVal(scip, sol, consdata->vars[j]), 0.5) )
+               if( SCIPgetSolVal(scip, sol, consdata->vars[j]) > 0.5 )
                {
                   /* if the index corresponds to the smallest element, we reverse the sign */
                   if ( j == minidx )
@@ -2147,7 +2147,7 @@ SCIP_RETCODE separateCons(
             /* fill in row */
             for (j = 0; j < consdata->nvars; ++j)
             {
-               if ( SCIPisFeasGT(scip, SCIPgetSolVal(scip, sol, consdata->vars[j]), 0.5) )
+               if( SCIPgetSolVal(scip, sol, consdata->vars[j]) > 0.5 )
                {
                   SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->vars[j], 1.0) );
                }
@@ -2163,7 +2163,7 @@ SCIP_RETCODE separateCons(
             SCIP_CALL( SCIPflushRowExtensions(scip, row) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, cutoff) );
-            assert( *cutoff || SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real)(j-1)) );
+            assert( SCIPisGT(scip, SCIPgetRowLPActivity(scip, row), (SCIP_Real)cnt) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++ngen;
          }
