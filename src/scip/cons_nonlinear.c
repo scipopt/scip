@@ -7022,6 +7022,10 @@ void scoreBranchingCandidates(
 
             solval = SCIPgetSolVal(scip, NULL, cands[c].var);
 
+            /* the calculation for pscostdown/up follows SCIPgetVarPseudocostScore(),
+             * i.e., set solvaldelta to the (negated) difference between variable value and rounded down value for pscostdown
+             * and different between variable value and rounded up value for pscostup
+             */
             if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS) >= conshdlrdata->branchpscostreliable )
                pscostdown = SCIPgetVarPseudocostVal(scip, var, SCIPfeasCeil(scip, solval - 1.0) - solval);
             else
