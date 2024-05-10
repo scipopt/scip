@@ -309,6 +309,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             branchhighviolfactor; /**< consider a constraint highly violated if its violation is >= this factor * maximal violation among all constraints */
    SCIP_Real             branchhighscorefactor; /**< consider a variable branching score high if its branching score >= this factor * maximal branching score among all variables */
    SCIP_Real             branchviolweight;   /**< weight by how much to consider the violation assigned to a variable for its branching score */
+   SCIP_Real             branchfracweight;   /**< weight by how much to consider fractionality of integer variables in branching score for spatial branching */
    SCIP_Real             branchdualweight;   /**< weight by how much to consider the dual values of rows that contain a variable for its branching score */
    SCIP_Real             branchpscostweight; /**< weight by how much to consider the pseudo cost of a variable for its branching score */
    SCIP_Real             branchdomainweight; /**< weight by how much to consider the domain width in branching score */
@@ -361,6 +362,7 @@ typedef struct
    SCIP_Real             dual;               /**< dual score of candidate */
    SCIP_Real             pscost;             /**< pseudo-cost score of candidate */
    SCIP_Real             vartype;            /**< variable type score of candidate */
+   SCIP_Real             fractionality;      /**< fractionality score of candidate */
    SCIP_Real             weighted;           /**< weighted sum of other scores, see scoreBranchingCandidates() */
 } BRANCHCAND;
 
@@ -6851,6 +6853,7 @@ void scoreBranchingCandidates(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BRANCHCAND*           cands,              /**< branching candidates */
    int                   ncands,             /**< number of candidates */
+   SCIP_Bool             considerfracnl,     /**< whether to consider fractionality for spatial branching candidates */
    SCIP_SOL*             sol                 /**< solution to enforce (NULL for the LP solution) */
    )
 {
@@ -6876,6 +6879,32 @@ void scoreBranchingCandidates(
          /* cands[c].auxviol was set in collectBranchingCandidates, so only update maxscore here */
          maxscore.auxviol = MAX(maxscore.auxviol, cands[c].auxviol);
       }
+
+      if( conshdlrdata->branchfracweight > 0.0 && SCIPvarGetType(cands[c].var) <= SCIP_VARTYPE_INTEGER )
+      {
+         /* when collecting for branching on fractionality (cands[c].expr == NULL), only fractional integer variables
+          * should appear as candidates here and their fractionality should have been recorded in branchingIntegralOrNonlinear
+          */
+         assert(cands[c].expr != NULL || cands[c].fractionality > 0.0);
+
+         if( considerfracnl && cands[c].fractionality == 0.0 )
+         {
+            /* for an integer variable that is subject to spatial branching, we also record the fractionality (but separately from auxviol)
+             * if considerfracnl is TRUE; this way, we can give preference to fractional integer nonlinear variables
+             */
+            SCIP_Real solval;
+            SCIP_Real rounded;
+
+            solval = SCIPgetSolVal(scip, NULL, cands[c].var);
+            rounded = SCIPround(scip, solval);
+
+            cands[c].fractionality = REALABS(solval - rounded);
+         }
+
+         maxscore.fractionality = MAX(cands[c].fractionality, maxscore.fractionality);
+      }
+      else
+         cands[c].fractionality = 0.0;
 
       if( conshdlrdata->branchdomainweight > 0.0 && cands[c].expr != NULL )
       {
@@ -7094,6 +7123,14 @@ void scoreBranchingCandidates(
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(viol)", conshdlrdata->branchviolweight, cands[c].auxviol / maxscore.auxviol); )
       }
 
+      if( maxscore.fractionality > 0.0 )
+      {
+         cands[c].fractionality += conshdlrdata->branchfracweight * cands[c].fractionality / maxscore.fractionality;
+         weightsum += conshdlrdata->branchfracweight;
+
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%6.2g(frac)", conshdlrdata->branchfracweight, cands[c].fractionality / maxscore.fractionality); )
+      }
+
       if( maxscore.domain > 0.0 )
       {
          cands[c].weighted += conshdlrdata->branchdomainweight * cands[c].domain / maxscore.domain;
@@ -7134,6 +7171,7 @@ void scoreBranchingCandidates(
 
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%6.2g(vartype)", conshdlrdata->branchvartypeweight, cands[c].vartype / maxscore.vartype); )
       }
+
       assert(weightsum > 0.0);  /* we should have got at least one valid score */
       cands[c].weighted /= weightsum;
 
@@ -7167,6 +7205,7 @@ SCIP_RETCODE selectBranchingCandidate(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BRANCHCAND*           cands,              /**< branching candidates */
    int                   ncands,             /**< number of candidates */
+   SCIP_Bool             considerfracnl,     /**< whether to consider fractionality for spatial branching candidates */
    BRANCHCAND**          selected            /**< buffer to store selected branching candidates */
 )
 {
@@ -7193,7 +7232,7 @@ SCIP_RETCODE selectBranchingCandidate(
    assert(conshdlrdata != NULL);
 
    /* compute additional scores on branching candidates and weighted score */
-   scoreBranchingCandidates(scip, conshdlr, cands, ncands, NULL);
+   scoreBranchingCandidates(scip, conshdlr, cands, ncands, considerfracnl, NULL);
 
    /* sort candidates by weighted score */
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, ncands) );
@@ -7305,7 +7344,10 @@ SCIP_RETCODE branching(
    if( ncands == 0 )
       goto TERMINATE;
 
-   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, &selected) );
+   /* here we include fractionality of integer variables into the branching score
+    * but if we know there will be no fractional integer variables, then we can shortcut and turn this off
+    */
+   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, SCIPgetNLPBranchCands(scip) > 0, &selected) );
    assert(selected != NULL);
    assert(selected->expr != NULL);
 
@@ -7986,12 +8028,16 @@ SCIP_RETCODE branchingIntegralOrNonlinear(
       assert(SCIPvarGetType(lpcands[c]) <= SCIP_VARTYPE_INTEGER);
       cands[ncands].expr = NULL;
       cands[ncands].var = lpcands[c];
-      cands[ncands].auxviol = lpcandsfrac[c];
+      cands[ncands].auxviol = 0.0;
+      cands[ncands].fractionality = lpcandsfrac[c];
       ++ncands;
    }
 
-   /* select a variable for branching */
-   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, &selected) );
+   /* select a variable for branching
+    * to keep things separate, do not include fractionality of integer variables into scores of spatial branching candidates
+    * the same variables appear among the candides for branching on integrality, where its fractionality is considered
+    */
+   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, FALSE, &selected) );
    assert(selected != NULL);
 
    if( selected->expr == NULL )
@@ -12381,6 +12427,10 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/violweight",
          "weight by how much to consider the violation assigned to a variable for its branching score",
          &conshdlrdata->branchviolweight, FALSE, 1.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/fracweight",
+         "weight by how much to consider fractionality of integer variables in branching score for spatial branching",
+         &conshdlrdata->branchfracweight, FALSE, 1.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/dualweight",
          "weight by how much to consider the dual values of rows that contain a variable for its branching score",

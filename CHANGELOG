@@ -45,6 +45,7 @@ Interface changes
 - constraints/nonlinear/branching/mixfractional to specify minimal average pseudo cost count for discrete variables
   at which to start considering spatial branching before branching on fractional integer variables
   (default infinity means that integrality is always enforced before nonlinear constraints)
+- constraints/nonlinear/branching/fracweight to specify weight of fractionality of integer variables in spatial branching
 
 ### New data structures
 
