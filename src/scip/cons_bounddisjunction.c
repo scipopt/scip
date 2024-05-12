@@ -1254,7 +1254,7 @@ SCIP_RETCODE upgradeCons(
       SCIPdebugPrintCons(scip, newcons, NULL);
 
       /* add the upgraded constraint to the problem */
-      assert(SCIPconsGetValidDepth(cons) == SCIPconsGetActiveDepth(cons));
+      assert(SCIPconsIsGlobal(cons) || SCIPconsGetValidDepth(cons) == SCIPconsGetActiveDepth(cons));
       if( SCIPconsIsConflict(cons) )
       {
          SCIP_CALL( SCIPaddConflict(scip, SCIPconsIsLocal(cons) ? SCIPgetCurrentNode(scip) : NULL, newcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons)) );
