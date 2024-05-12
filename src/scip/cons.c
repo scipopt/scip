@@ -6080,7 +6080,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->age = 0.0;
    (*cons)->nuses = 0;
    (*cons)->nupgradelocks = 0;
-   (*cons)->conftype = SCIP_CONFTYPE_UNKNOWN;
+   (*cons)->conftype = (unsigned int) SCIP_CONFTYPE_UNKNOWN;
    (*cons)->initial = initial;
    (*cons)->separate = separate;
    (*cons)->enforce = enforce;
