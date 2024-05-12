@@ -16762,7 +16762,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             if( upgdcons != NULL )
             {
                /* add the upgraded constraint to the problem */
-               if(SCIPconsIsConflict(cons) && SCIPconsIsGlobal(cons))
+               if( SCIPconsIsConflict(cons) && SCIPconsIsGlobal(cons) )
                {
                   SCIP_CALL( SCIPaddConflict(scip, NULL, upgdcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons)) );
                }
