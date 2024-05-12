@@ -7306,7 +7306,7 @@ void SCIPconsSetConflictUsesCutoff(
 {
    assert(cons != NULL);
 
-   cons->conftype = TRUE;
+   cons->confusescutoff = TRUE;
 }
 
 /** marks the constraint to be propagated (update might be delayed) */
