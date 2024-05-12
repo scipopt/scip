@@ -1087,7 +1087,7 @@ void SCIPconsMarkConflict(
 /** sets the conflict type for the constraint */
 void SCIPconsSetConflictType(
    SCIP_CONS*            cons,               /**< constraint */
-   int                   conftype            /**< conflict type */
+   SCIP_CONFTYPE         conftype            /**< conflict type */
    );
 
 /** sets the conflict constraint to use the cutoff bound */

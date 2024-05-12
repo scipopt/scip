@@ -6080,7 +6080,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->age = 0.0;
    (*cons)->nuses = 0;
    (*cons)->nupgradelocks = 0;
-   (*cons)->conftype = 0;
+   (*cons)->conftype = SCIP_CONFTYPE_UNKNOWN;
    (*cons)->initial = initial;
    (*cons)->separate = separate;
    (*cons)->enforce = enforce;
@@ -7291,7 +7291,7 @@ void SCIPconsMarkConflict(
 /** sets the conflict type for the constraint */
 void SCIPconsSetConflictType(
    SCIP_CONS*            cons,               /**< constraint */
-   int                   conftype            /**< conflict type */
+   SCIP_CONFTYPE         conftype            /**< conflict type */
    )
 {
    assert(cons != NULL);
@@ -8867,11 +8867,11 @@ int SCIPconsGetNUpgradeLocks(
 }
 
 /** gets the conflict type of the constraint */
-int SCIPconsGetConflictType(
+SCIP_CONFTYPE SCIPconsGetConflictType(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
 
-   return (int) cons->conftype;
+   return (SCIP_CONFTYPE) cons->conftype;
 }

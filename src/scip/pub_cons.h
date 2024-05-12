@@ -870,7 +870,7 @@ int SCIPconsGetNUpgradeLocks(
 
 /** gets the conflict type of the constraint */
 SCIP_EXPORT
-int SCIPconsGetConflictType(
+SCIP_CONFTYPE SCIPconsGetConflictType(
    SCIP_CONS*            cons                /**< constraint */
    );
 
