@@ -106,7 +106,7 @@ struct SCIP_Cons
    unsigned int          updatemarkpropagate:1;/**< TRUE iff constraint has to be marked to be propagated in update phase */
    unsigned int          updateunmarkpropagate:1;/**< TRUE iff constraint has to be unmarked to be propagated in update phase */
    unsigned int          conftype:3;         /**< type of the conflict */
-   unsigned int          nupgradelocks:24;   /**< number of times, a constraint is locked against an upgrade
+   unsigned int          nupgradelocks:25;   /**< number of times, a constraint is locked against an upgrade
                                               *   (e.g. linear -> logicor), 0 means a constraint can be upgraded */
 #ifndef NDEBUG
    SCIP*                 scip;               /**< SCIP data structure */
