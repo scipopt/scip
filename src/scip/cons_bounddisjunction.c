@@ -1254,14 +1254,14 @@ SCIP_RETCODE upgradeCons(
       SCIPdebugPrintCons(scip, newcons, NULL);
 
       /* add the upgraded constraint to the problem */
-      if( SCIPconsIsConflict(cons) && SCIPconsIsGlobal(cons) )
+      assert(SCIPconsGetValidDepth(cons) == SCIPconsGetActiveDepth(cons));
+      if( SCIPconsIsConflict(cons) )
       {
-         SCIP_CALL( SCIPaddConflict(scip, NULL, newcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons)) );
+         SCIP_CALL( SCIPaddConflict(scip, SCIPconsIsLocal(cons) ? SCIPgetCurrentNode(scip) : NULL, newcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons)) );
       }
       else
       {
          SCIP_CALL( SCIPaddCons(scip, newcons) );
-         assert(SCIPconsIsLocal(cons) || (SCIPconsIsConflict(newcons) == SCIPconsIsConflict(cons)));
          SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
       }
 

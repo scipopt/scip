@@ -16762,14 +16762,14 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             if( upgdcons != NULL )
             {
                /* add the upgraded constraint to the problem */
-               if( SCIPconsIsConflict(cons) && SCIPconsIsGlobal(cons) )
+               assert(SCIPconsGetValidDepth(cons) == SCIPconsGetActiveDepth(cons));
+               if( SCIPconsIsConflict(cons) )
                {
-                  SCIP_CALL( SCIPaddConflict(scip, NULL, upgdcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons)) );
+                  SCIP_CALL( SCIPaddConflict(scip, SCIPconsIsLocal(cons) ? SCIPgetCurrentNode(scip) : NULL, upgdcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons)) );
                }
                else
                {
                   SCIP_CALL( SCIPaddCons(scip, upgdcons) );
-                  assert(SCIPconsIsLocal(cons) || (SCIPconsIsConflict(upgdcons) == SCIPconsIsConflict(cons)));
                   SCIP_CALL( SCIPreleaseCons(scip, &upgdcons) );
                }
 
