@@ -900,7 +900,7 @@ SCIP_CONFTYPE SCIPconsGetConflictType(
 #define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)
 #define SCIPconsIsConflict(cons)        ((cons)->conflict)
 #define SCIPconsIsConfCutoff(cons)      ((cons)->confusescutoff)
-#define SCIPconsGetConflictType(cons)   ((cons)->conftype)
+#define SCIPconsGetConflictType(cons)   ((SCIP_CONFTYPE)(cons)->conftype)
 #define SCIPconsGetAge(cons)            (cons)->age
 #define SCIPconsIsInitial(cons)         (cons)->initial
 #define SCIPconsIsSeparated(cons)       (cons)->separate
