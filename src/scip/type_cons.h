@@ -52,6 +52,7 @@
 #include "scip/type_var.h"
 #include "scip/type_sol.h"
 #include "scip/type_scip.h"
+#include "scip/type_conflict.h"
 #include "scip/type_timing.h"
 #include "scip/type_heur.h"
 
