@@ -1256,7 +1256,7 @@ SCIP_RETCODE upgradeCons(
       /* add the upgraded constraint to the problem */
       if(SCIPconsIsConflict(cons) && SCIPconsIsGlobal(cons))
       {
-         SCIPaddConflict(scip, NULL, newcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons));
+         SCIP_CALL( SCIPaddConflict(scip, NULL, newcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons)) );
       }
       else
       {

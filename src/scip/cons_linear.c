@@ -16764,7 +16764,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
                /* add the upgraded constraint to the problem */
                if(SCIPconsIsConflict(cons) && SCIPconsIsGlobal(cons))
                {
-                  SCIPaddConflict(scip, NULL, upgdcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons));
+                  SCIP_CALL( SCIPaddConflict(scip, NULL, upgdcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons)) );
                }
                else
                {
