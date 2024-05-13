@@ -46,6 +46,7 @@ Build system
 ### Makefile
 
 - add flags -ffp-contract=off and /fp:precise to enhance reproducibility across different systems
+- fixed that bliss main() was included in SCIP library
 
 Interface changes
 -----------------
