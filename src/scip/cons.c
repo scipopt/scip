@@ -6097,7 +6097,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->deleteconsdata = deleteconsdata;
    (*cons)->active = FALSE;
    (*cons)->conflict = FALSE;
-   (*cons)->confusescutoff = FALSE;
+   (*cons)->cutoffinvolved = FALSE;
    (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
    (*cons)->markpropagate = TRUE;
@@ -7306,7 +7306,7 @@ void SCIPconsSetConflictUsesCutoff(
 {
    assert(cons != NULL);
 
-   cons->confusescutoff = TRUE;
+   cons->cutoffinvolved = TRUE;
 }
 
 /** marks the constraint to be propagated (update might be delayed) */
@@ -8561,7 +8561,7 @@ SCIP_Bool SCIPconsIsConfCutoff(
 {
    assert(cons != NULL);
 
-   return cons->confusescutoff;
+   return cons->cutoffinvolved;
 }
 
 /** gets age of constraint */

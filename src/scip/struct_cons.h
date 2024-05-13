@@ -85,7 +85,7 @@ struct SCIP_Cons
                                               *   node belongs to the corresponding sub tree
                                               */
    unsigned int          conflict:1;         /**< TRUE iff constraint is a conflict */
-   unsigned int          confusescutoff:1;   /**< TRUE iff conflict uses the cutoff bound */
+   unsigned int          cutoffinvolved:1;   /**< TRUE iff conflict uses the cutoff bound */
    unsigned int          enabled:1;          /**< TRUE iff constraint is enforced, separated, and propagated in current node */
    unsigned int          obsolete:1;         /**< TRUE iff constraint is too seldomly used and therefore obsolete */
    unsigned int          markpropagate:1;    /**< TRUE iff constraint is marked to be propagated in the next round */
