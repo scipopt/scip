@@ -40,6 +40,10 @@
 #pragma GCC diagnostic ignored "-Wredundant-decls"
 #pragma GCC diagnostic ignored "-Wpedantic"
 
+#if defined(_WIN32) || defined(_WIN64)
+#define AVOID_UNISTD_H
+#endif
+
 #ifdef NAUTY
 #include "nauty/nauty.h"
 #include "nauty/nausparse.h"
