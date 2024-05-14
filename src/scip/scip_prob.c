@@ -3616,10 +3616,16 @@ SCIP_RETCODE SCIPaddConflict(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflict", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   /* mark constraint to be a conflict */
+   SCIPconsMarkConflict(cons);
    if( iscutoffinvolved )
+   {
+      SCIPconsSetConflictUsesCutoff(cons);
       primalbound = SCIPgetCutoffbound(scip);
+   }
    else
       primalbound = -SCIPinfinity(scip);
+   SCIPconsSetConflictType(cons, conftype);
 
    /* add a global conflict */
    if( node == NULL )
@@ -3638,11 +3644,6 @@ SCIP_RETCODE SCIPaddConflict(
       SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
             scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
    }
-
-   /* mark constraint to be a conflict */
-   SCIPconsMarkConflict(cons);
-   SCIPconsSetConflictUsesCutoff(cons);
-   SCIPconsSetConflictType(cons, conftype);
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
