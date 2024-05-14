@@ -640,7 +640,7 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
       if ( tabledata->propdata->orbitopalreddata )
       {
          SCIP_CALL( SCIPorbitopalReductionGetStatistics(scip, tabledata->propdata->orbitopalreddata, &nred, &ncutoff) );
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbitopal reduction: %10d reductions applied,"
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, file, "  orbitopal red.   : %10d reductions applied,"
             " %10d cutoffs\n", nred, ncutoff);
       }
       if ( tabledata->propdata->orbitalreddata )
@@ -1743,9 +1743,9 @@ SCIP_RETCODE computeSymmetryGroup(
 
    /* get symmetry detection graphs from constraints */
    conss = SCIPgetConss(scip);
-   assert( conss != NULL );
-
    nconss = SCIPgetNConss(scip);
+
+   assert( conss != NULL || nconss == 0 );
 
    /* exit if no constraints or no variables are available */
    if ( nconss == 0 || SCIPgetNVars(scip) == 0 )

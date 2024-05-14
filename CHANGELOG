@@ -6,6 +6,8 @@
 Features
 --------
 
+- Added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem.
+
 Performance improvements
 ------------------------
 
@@ -22,6 +24,9 @@ Interface changes
 
 ### New API functions
 
+- New function SCIPgetExprActivityNonlinear() to get activity of nonlinear constraint.
+- New function SCIPincludeConshdlrFixedvar() to include new constraint handler that checks bounds on fixed original variables.
+
 ### Command line interface
 
 ### Interfaces to external software
@@ -31,6 +36,7 @@ Interface changes
 - limits/primal to terminate the solve as soon as the primal bound is at least as good as this value, same as limits/objectivestop (deprecated)
 - limits/dual to terminate the solve as soon as the dual bound is at least as good as this value
 - presolving/milp/internalmaxrounds to control the maximal rounds for each call of the milp presolver (PaPILO)
+- constraints/fixedvar/* to control the new constraint handler that checks bounds on fixed original variables
 
 ### New data structures
 
@@ -74,6 +80,10 @@ Fixed bugs
 - symmetry handling methods have not been added immediately after computing symmetries, which has been fixed
 - delay checking node limits after presolving to correctly continue up to the exceeding main node
 - simplified the objective sense assumption for the subproblems in the Lagromory separator
+- update effective root depth iteratively to avoid trapping it at a single child node
+- fixed that dualsparsify presolver did not always check do-not-multiaggregate variable flag
+- fixed bug in computing elements of orbits in orbital reduction
+- make sure that, in dual proof analysis, upgraded constraints can report their number of variables
 
 Miscellaneous
 -------------
@@ -163,9 +173,6 @@ Performance improvements
 - Deactivate pre-root heuristic zeroobj in undercover heuristic.
 - Added new branching score tiebreaker for reliability pseudo-cost branching rule
 - Try nearest bound if zero solution value is out of bounds in heuristic trivial.
-
-Examples and applications
--------------------------
 
 Interface changes
 -----------------
@@ -586,9 +593,6 @@ Miscellaneous
   SCIPdebugSolIsValidInSubtree, SCIPdebugIsMainscip, SCIPdebugSolEnable, SCIPdebugSolDisable, SCIPdebugSolIsEnabled,
   SCIPwithDebugSol are now exported
 
-Known bugs
-----------
-
 @section RN802 SCIP 8.0.2
 *************************
 
@@ -669,6 +673,7 @@ Miscellaneous
 
 @section RN801 SCIP 8.0.1
 *************************
+
 Features
 --------
 
@@ -1568,9 +1573,6 @@ Unit tests
 - added sepa/rlt/separation.c
 - added tests test_compute_symmetry:expr{1,2,3,4} in symmetry/compute.c
 
-Testing
--------
-
 Build system
 ------------
 
@@ -1626,9 +1628,6 @@ Miscellaneous
 - Parameters are not reset to their default values before activating an emphasis setting; this now allows to combine
   different emphasis settings.
 - If a lazy bound is set to a value that is tighter than the current global bound, then the global bound is now tightened accordingly.
-
-Known bugs
-----------
 
 @page RN70 Release notes for SCIP 7.0
 
@@ -1718,8 +1717,6 @@ Examples and applications
 Interface changes
 -----------------
 
-### New and changed callbacks
-
 ### Deleted and changed API methods
 
 - deprecated SCIPsetParam(); use SCIPsetIntParam(), SCIPsetRealParam(), etc, instead
@@ -1728,32 +1725,6 @@ Interface changes
 
 - new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
 - added new sorting functions SCIPsortPtrRealRealBoolBool()
-
-### Command line interface
-
-### Interfaces to external software
-
-### Changed parameters
-
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
-Unit tests
-----------
-
-Testing
--------
-
-Build system
-------------
-
-### Cmake
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -1779,12 +1750,6 @@ Fixed bugs
 - Fixed issues with scip statistics
 - Fixed issue with multi-aggregated variables
 - Fixed issue in with buffer memory in cons_cumulative
-
-Miscellaneous
--------------
-
-Known bugs
-----------
 
 @section RN701 SCIP 7.0.1
 *************************
@@ -2687,6 +2652,7 @@ Fixed bugs
 
 Miscellaneous
 -------------
+
 - do not scale linear constraints to integral coefficients
 
 @section RN600 SCIP 6.0.0
