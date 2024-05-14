@@ -38,7 +38,6 @@
 #define NAUTY
 
 #ifdef NAUTY
-#include "nauty/nauty.h"
 #include "nauty/nausparse.h"
 #else
 #include "nauty/traces.h"
