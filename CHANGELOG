@@ -121,9 +121,25 @@ Build system
 Testing
 -------
 
+@section RN902 SCIP 9.0.2
+*************************
+
+Fixed bugs
+----------
+
+- make sure that, in dual proof analysis, upgraded constraints can report their number of variables
+
 Miscellaneous
 -------------
 
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+- fixed that bliss main() was included in SCIP library
 
 @section RN901 SCIP 9.0.1
 *************************
@@ -152,7 +168,6 @@ Fixed bugs
 - update effective root depth iteratively to avoid trapping it at a single child node
 - fixed that dualsparsify presolver did not always check do-not-multiaggregate variable flag
 - fixed bug in computing elements of orbits in orbital reduction
-- make sure that, in dual proof analysis, upgraded constraints can report their number of variables
 
 Miscellaneous
 -------------
@@ -171,7 +186,6 @@ Build system
 ### Makefile
 
 - add flags -ffp-contract=off and /fp:precise to enhance reproducibility across different systems
-- fixed that bliss main() was included in SCIP library
 
 Interface changes
 -----------------
