@@ -40,8 +40,8 @@
 #include "scip/def.h"
 
 #ifdef SCIP_WITH_ZLIB
-#include "gzstream.h"
-typedef gzstream::igzstream tspifstream;
+#include "external/zstr/zstr.hpp"
+typedef zstr::ifstream tspifstream;
 #else
 typedef std::ifstream tspifstream;
 #endif
