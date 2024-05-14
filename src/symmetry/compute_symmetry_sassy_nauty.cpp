@@ -37,6 +37,11 @@
 /* the following determines whether nauty or traces is used: */
 #define NAUTY
 
+#if defined(_WIN32) || defined(_WIN64)
+#define AVOID_UNISTD_H
+#endif
+
+
 #ifdef NAUTY
 #include "nauty/nauty.h"
 #include "nauty/nausparse.h"
