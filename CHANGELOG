@@ -17,8 +17,7 @@ Fixed bugs
 Examples and applications
 -------------------------
 
-- TSP: remove `gzstream.h/hpp` (L-GPL) and replace it with `zstr` (MIT License) for `.gz` file handling
-
+- TSP: remove `gzstream.h/hpp` and parse gzipped file differently
 
 Interface changes
 -----------------
