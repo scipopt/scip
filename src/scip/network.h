@@ -41,11 +41,12 @@
  * one +1 entry and one -1 entry in every column, which correspond to the in and out-node of an arc.
  * This file contains algorithms to detect reflected node-arc incidence matrices, where rows can be optionally negated.
  * Although network matrices are a strictly larger class of totally unimodular matrices, reflected node-arc incidence
- * matrices can be detected more quickly and are commonly used.
+ * matrices can be detected more quickly and are commonly used within MIP formulations
  *
  * Note that all addition algorithms expect that each nonzero is given exactly once and not more often; in particular,
  * it is up to the user to ensure this when using both column and row addition steps.
  *
+ * TODO
  * The column addition for network matrices is based on:
  *
  * The row addition for network matrices is based on:
@@ -68,131 +69,156 @@
 extern "C" {
 #endif
 
-/**
- * This class stores the Network decomposition using an SPQR tree
- */
-typedef struct SCIP_NetworkDecomposition SCIP_NETWORKDECOMP;
+/** this class stores a decomposition of the network matrix using SPQR trees */
+typedef struct SCIP_Netmatdec SCIP_NETMATDEC;
 
-SCIP_EXPORT SCIP_RETCODE SCIPNetworkDecompositionCreate(SCIP * env, SCIP_NETWORKDECOMP **pDecomposition, int numRows, int numColumns);
+/** create an empty network matrix decomposition that can store a matrix with at most the given dimensions */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnetmatdecCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NETMATDEC**      pdec,               /**< buffer to store pointer to created decomposition */
+   int                   nrows,              /**< The maximal number of rows that the decomposition can expect */
+   int                   ncols               /**< The maximal number of columns that the decomposition can expect */
+);
 
-SCIP_EXPORT void SCIPNetworkDecompositionFree(SCIP_NETWORKDECOMP **pDecomposition);
+/** frees a network matrix decomposition */
+SCIP_EXPORT
+void SCIPnetmatdecFree(
+   SCIP_NETMATDEC**      pdec                /**< pointer to the network matrix decomposition to freed */
+);
 
-/**
- * Returns if the Network decomposition contains the given row
- */
-SCIP_EXPORT SCIP_Bool SCIPNetworkDecompositionContainsRow(const SCIP_NETWORKDECOMP * decomposition, int row);
+/** checks if the network matrix decomposition contains the given row */
+SCIP_EXPORT
+SCIP_Bool SCIPnetmatdecContainsRow(
+   const SCIP_NETMATDEC* dec,                /**< The network matrix decomposition */
+   int                   row                 /**< The row index that is checked */
+);
 
-/**
- * Returns if the Network decomposition contains the given column
- */
-SCIP_EXPORT SCIP_Bool SCIPNetworkDecompositionContainsColumn(const SCIP_NETWORKDECOMP *decomposition, int column);
+/** checks if the network matrix decomposition contains the given column */
+SCIP_EXPORT
+SCIP_Bool SCIPnetmatdecContainsColumn(
+   const SCIP_NETMATDEC* dec,                /**< The network matrix decomposition */
+   int                   column              /**< The column index that is checked */
+);
 
-/**
- * Checks if the Network decomposition of the graph is minimal. This method should only be used in tests.
- */
-SCIP_EXPORT SCIP_Bool SCIPNetworkDecompositionIsMinimal(const SCIP_NETWORKDECOMP * decomposition);
+/** checks if the network matrix decomposition is minimal; it is minimal if it does not contain adjacent parallel or series skeletons; should only be used in tests or asserts*/
+SCIP_EXPORT
+SCIP_Bool SCIPnetmatdecIsMinimal(
+   const SCIP_NETMATDEC* dec                 /**< The network matrix decomposition */
+);
 
-//TODO: method to convert decomposition into a graph
-//TODO: method to remove complete components of the SPQR tree
+//TODO: add method that realizes a SCIP digraph from the decomposition
+//TODO: add method that *cleanly* removes complete components of the SPQR tree
 
-/**
- * Removes. Removed rows and columns from the SPQR tree.
- * Note that removed rows/columns can not be re-introduced into the SPQR tree; this is possible, but much more expensive
- * to compute and typically not needed.
- */
-SCIP_EXPORT void SCIPNetworkDecompositionRemoveComponents(SCIP_NETWORKDECOMP *dec, const int * componentRows,
-                                              int numRows, const int * componentCols, int numCols);
+/** removes a connected component of the matrix from the network decomposition; note that this method is 'stupid',
+ * and does not delete the associated graph data structure; moreover, it does not explicitly check if the rows/columns
+ * that the user provides are a connected component of the matrix given by the decomposition. If this is not the case,
+ * then calling this function is considered a bug. */
+SCIP_EXPORT
+void SCIPnetmatdecRemoveComponent(
+   SCIP_NETMATDEC*       dec,                /**< The network matrix decomposition */
+   const int*            componentrows,      /**< Pointer to the array of rows to delete */
+   int                   nrows,              /**< The number of rows to delete */
+   const int*            componentcols,      /**< Pointer to the array of columns to delete */
+   int                   ncols               /**< The number of columns to delete */
+);
 
-/**
- * A method to check if the cycle stored in the Decomposition matches the given array. This method should only be used in tests.
- */
-SCIP_EXPORT SCIP_Bool SCIPNetworkDecompositionVerifyCycle(SCIP * scip, const SCIP_NETWORKDECOMP * dec,
-                                                          int column, const int * column_rows, const double * column_values,
-                                                          int num_rows, int * computed_column_storage,
-                                                          SCIP_Bool * computedSignStorage);
+/** checks if the cycle stored in the Decomposition matches the given array; should only be used in tests */
+SCIP_EXPORT
+SCIP_Bool SCIPnetmatdecVerifyCycle(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const SCIP_NETMATDEC* dec,                /**< The network matrix decomposition */
+   int                   column,             /**< The column to check */
+   const int*            nonzrowidx,         /**< Pointer to the array with the column's nonzero row indices */
+   const double*         nonzvals,           /**< Pointer to the array with the column's nonzero values */
+   int                   nnonzs,             /**< Number of nonzeros in the column */
+   int*                  pathrowstorage,     /**< Pointer to a buffer to hold the computed path's rows */
+   SCIP_Bool*            pathsignstorage     /**< Pointer to a buffer to store the computed path's row signs */
+);
 
-/**
- * This class stores all data for performing sequential column additions to a matrix and checking if it is network or not.
- */
-typedef struct SCIP_NetworkColAddition SCIP_NETWORKCOLADDITION;
+/** this class stores all data for performing a column addition to the network matrix decomposition */
+typedef struct SCIP_NetColAdd SCIP_NETCOLADD;
 
-/**
- * @brief Creates the data structure for managing column-addition for an SPQR decomposition
- */
-SCIP_EXPORT SCIP_RETCODE SCIPNetworkColAdditionCreate(SCIP* scip, SCIP_NETWORKCOLADDITION** pNewCol );
+/** creates the data structure for managing column addition of a network matrix decomposition */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnetcoladdCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NETCOLADD**      pcoladd             /**< buffer to store pointer to column addition data structure */
+);
 
-/**
- * @brief Destroys the data structure for managing column-addition for SPQR decomposition
- */
-SCIP_EXPORT void SCIPNetworkColAdditionFree(SCIP* scip, SCIP_NETWORKCOLADDITION ** pNewCol);
+/** frees the data structure for managing column addition of a network matrix decomposition */
+SCIP_EXPORT
+void SCIPnetcoladdFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NETCOLADD**      pcoladd             /**< pointer to the column addition data structure to be freed */
+);
 
-/**
- * Checks if adding a column of the given matrix creates a network SPQR decomposition.
- * Adding a column which is already in the decomposition is undefined behavior and not checked for.
- * @param dec Current SPQR-decomposition
- * @param newRow Data structure to store information on how to add the new column (if applicable).
- * @param column The index of the column to be added
- * @param rows An array with the row indices of the nonzero entries of the column.
- * @param numRows The number of nonzero entries of the column
- */
-SCIP_EXPORT SCIP_RETCODE SCIPNetworkColAdditionCheck(SCIP_NETWORKDECOMP * dec, SCIP_NETWORKCOLADDITION * newCol, int column,
-                                          const int * nonzeroRows, const double * nonzeroValues, size_t numNonzeros);
-/**
- * @brief Adds the most recently checked column from checkNewRow() to the Decomposition.
- * In Debug mode, adding a column for which SPQRNetworkColumnAdditionRemainsNetwork() returns false will exit the program.
- * In Release mode, adding a column for which SPQRNetworkColumnAdditionRemainsNetwork() return false is undefined behavior
- * @param dec Current SPQR-decomposition
- * @param newRow Data structure containing information on how to add the new column.
- */
-SCIP_EXPORT SCIP_RETCODE SCIPNetworkColAdditionAdd(SCIP_NETWORKDECOMP *dec, SCIP_NETWORKCOLADDITION *newCol);
+/** Checks if we can add the given column to the network matrix decomposition.
+ * The result of the latest query can be checked through SCIPnetcoladdRemainsNetwork().
+ * Users can add the latest checked column through SCIPnetcoladdAdd()*/
+SCIP_EXPORT
+SCIP_RETCODE SCIPnetcoladdCheck(
+   SCIP_NETMATDEC*       dec,                /**< Network matrix decomposition */
+   SCIP_NETCOLADD*       coladd,             /**< Network matrix column addition data structure */
+   int                   column,             /**< The column to check */
+   const int*            nonzrows,           /**< The column's nonzero row indices */
+   const double*         nonzvals,           /**< The column's nonzero entries */
+   size_t                nnonzs              /**< The number of nonzeros in the column */
+);
+/** Adds the most recently checked column to the network matrix decomposition. */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnetcoladdAdd(
+   SCIP_NETMATDEC*       dec,                /**< Network matrix decomposition */
+   SCIP_NETCOLADD*       coladd              /**< Network matrix column addition data structure */
+);
 
-/**
- * @param newColumn
- * @return True if the most recently checked column is addable to the SPQR decomposition passed to it, i.e. the submatrix
- * given by both remains network.
- */
-SCIP_EXPORT SCIP_Bool SCIPNetworkColAdditionRemainsNetwork(SCIP_NETWORKCOLADDITION *newCol);
+/** Returns whether the most recently checked column can be added to the network */
+SCIP_EXPORT
+SCIP_Bool SCIPnetcoladdRemainsNetwork(
+   const SCIP_NETCOLADD* coladd              /**< Network matrix column addition data structure */
+);
 
-/**
- * This class stores all data for performing sequential row-additions to a matrix and checking if it is network or not.
- */
-typedef struct SCIP_NetworkRowAddition SCIP_NETWORKROWADDITION;
+/** this class stores all data for performing a row addition to the network matrix decomposition */
+typedef struct SCIP_NetRowAdd SCIP_NETROWADD;
 
-/**
- * @brief Creates the data structure for managing row-addition for an SPQR decomposition
- */
-SCIP_EXPORT SCIP_RETCODE SCIPNetworkRowAdditionCreate(SCIP* scip, SCIP_NETWORKROWADDITION** pNewRow );
-/**
- * @brief Destroys the data structure for managing row-addition for SPQR decomposition
- */
-SCIP_EXPORT void SCIPNetworkRowAdditionFree(SCIP* scip, SCIP_NETWORKROWADDITION ** pNewRow);
+/** creates the data structure for managing row addition of a network matrix decomposition */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnetrowaddCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NETROWADD**      prowadd             /**< buffer to store pointer to row addition data structure */
+);
 
-/**
- * Checks if adding a row of the given matrix creates a network SPQR decomposition.
- * Adding a row which is already in the decomposition is undefined behavior and not checked for.
- * @param dec Current SPQR-decomposition
- * @param newRow Data structure to store information on how to add the new row (if applicable).
- * @param row The index of the row to be added
- * @param columns An array with the column indices of the nonzero entries of the row.
- * @param numColumns The number of nonzero entries of the row
- */
-SCIP_EXPORT SCIP_RETCODE SCIPNetworkRowAdditionCheck(SCIP_NETWORKDECOMP * dec, SCIP_NETWORKROWADDITION * newRow, int row,
-                                       const int * nonzeroCols, const double * nonzeroValues, size_t numNonzeros);
-/**
- * @brief Adds the most recently checked column from checkNewRow() to the Decomposition.
- * In Debug mode, adding a column for which rowAdditionRemainsNetwork() returns false will fail an assertion.
- * In Release mode, adding a column for which rowAdditionRemainsNetwork() return false is undefined behavior
- * @param dec Current SPQR-decomposition
- * @param newRow Data structure containing information on how to add the new row.
- */
-SCIP_EXPORT SCIP_RETCODE SCIPNetworkRowAdditionAdd(SCIP_NETWORKDECOMP *dec, SCIP_NETWORKROWADDITION *newRow);
+/** frees the data structure for managing row addition of a network matrix decomposition */
+SCIP_EXPORT
+void SCIPnetrowaddFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NETROWADD**      prowadd             /**< pointer to the row addition data structure to be freed */
+);
 
-/**
- * @param newRow Data structure containing information on how to add the new row
- * @return True if the most recently checked row is addable to the SPQR decomposition passed to it, i.e. the submatrix
- * given by both remains network.
- */
-SCIP_EXPORT SCIP_Bool SCIPNetworkRowAdditionRemainsNetwork(const SCIP_NETWORKROWADDITION *newRow);
+/** Checks if we can add the given row to the network matrix decomposition.
+ * The result of the latest query can be checked through SCIPnetrowaddRemainsNetwork().
+ * Users can add the latest checked column through SCIPnetrowaddAdd()*/
+SCIP_EXPORT
+SCIP_RETCODE SCIPnetrowaddCheck(
+   SCIP_NETMATDEC*       dec,                /**< Network matrix decomposition */
+   SCIP_NETROWADD*       rowadd,             /**< Network matrix row addition data structure */
+   int                   row,                /**< The row to check */
+   const int*            nonzcols,           /**< The row's nonzero row indices */
+   const double*         nonzvals,           /**< The row's nonzero entries */
+   size_t                nnonzs              /**< The number of nonzeros in the row */
+);
+/** Adds the most recently checked row to the network matrix decomposition. */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnetrowaddAdd(
+   SCIP_NETMATDEC*       dec,                /**< Network matrix decomposition */
+   SCIP_NETROWADD*       rowadd              /**< Network matrix row addition data structure */
+);
+
+/** Returns whether the most recently checked row can be added to the network */
+SCIP_EXPORT
+SCIP_Bool SCIPnetrowaddRemainsNetwork(
+   const SCIP_NETROWADD* rowadd              /**< Network matrix row addition data structure */
+   );
 
 #ifdef cplusplus
 }
