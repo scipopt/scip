@@ -860,6 +860,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/misc.o \
 			scip/misc_linear.o \
 			scip/misc_rowprep.o \
+			scip/network.o \
 			scip/nlhdlr.o \
 			scip/nlp.o \
 			scip/nlpi.o \
