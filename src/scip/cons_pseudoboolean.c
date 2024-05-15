@@ -5919,10 +5919,6 @@ SCIP_RETCODE tryUpgradingXor(
          else
             var = SCIPvarGetNegationVar(repvars[v]);
 
-         /* implicit binary variables cannot be handled by xor */
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
-            goto TERMINATE;
-
          if( SCIPvarGetIndex(var) > SCIPvarGetIndex(linvars[v1]) )
          {
             if( nlinvars + 1 < MAXNVARS )
@@ -5961,10 +5957,6 @@ SCIP_RETCODE tryUpgradingXor(
                var = repvars[v];
             else
                var = SCIPvarGetNegationVar(repvars[v]);
-
-            /* implicit binary variables cannot be handled by xor */
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
-               goto TERMINATE;
 
             if( nlinvars + 1 < MAXNVARS )
             {
