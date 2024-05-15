@@ -7,6 +7,7 @@ Features
 --------
 
 - Added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem.
+- Implemented symmetry detection callbacks for cons_pseudoboolean.
 
 Performance improvements
 ------------------------

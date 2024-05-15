@@ -66,6 +66,8 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
 #include <string.h>
 
 #ifdef WITHEQKNAPSACK
@@ -7584,6 +7586,162 @@ SCIP_RETCODE findAggregation(
    return SCIP_OKAY;
 }
 
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** tmpvars = NULL;
+   SCIP_VAR** vars;
+   SCIP_CONS* lincons;
+   SCIP_LINEARCONSTYPE constype;
+   SCIP_Real* tmpvals = NULL;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int tmpnvars;
+   int rootnodeidx;
+   int nodeidx;
+   int nvars;
+   int i;
+   int c;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* allocate buffer to hold variables for creating of symmetry detection graph */
+   nvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   /* add root node to symmetry detection graph */
+   lhs = SCIPgetLhsPseudoboolean(scip, cons);
+   rhs = SCIPgetRhsPseudoboolean(scip, cons);
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, lhs, rhs, &rootnodeidx) );
+
+   /* possibly add nodes and edges encoding whether constraint is soft or an objective constraint */
+   vars[0] = SCIPgetIndVarPseudoboolean(scip, cons);
+   if( vars[0] != NULL )
+   {
+      vals[0] = 1.0;
+      tmpnvars = 1;
+      constant = 0.0;
+
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_PB_SOFT, &nodeidx) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnodeidx, nodeidx, TRUE, consdata->weight) );
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &tmpnvars, &constant,
+            SCIPisTransformed(scip)) );
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, nodeidx, vars, vals, tmpnvars, constant) );
+   }
+
+   if( consdata->intvar != NULL )
+   {
+      vars[0] = consdata->intvar;
+      vals[0] = 1.0;
+      tmpnvars = 1;
+      constant = 0.0;
+
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_PB_OBJ, &nodeidx) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnodeidx, nodeidx, FALSE, 0.0) );
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &tmpnvars, &constant,
+            SCIPisTransformed(scip)) );
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, nodeidx, vars, vals, tmpnvars, constant) );
+   }
+
+   /* add nodes and edges encoding linear part of the pseudoboolean cons */
+   lincons = SCIPgetLinearConsPseudoboolean(scip, cons);
+   constype = SCIPgetLinearConsTypePseudoboolean(scip, cons);
+
+   /* collect information about linear constraint */
+   tmpnvars = 0;
+   switch( constype )
+   {
+   case SCIP_LINEARCONSTYPE_LINEAR:
+      tmpvars = SCIPgetVarsLinear(scip, lincons);
+      tmpnvars = SCIPgetNVarsLinear(scip, lincons);
+      tmpvals = SCIPgetValsLinear(scip, lincons);
+      for( i = 0; i < tmpnvars; ++i )
+         vals[i] = tmpvals[i];
+      break;
+   case SCIP_LINEARCONSTYPE_LOGICOR:
+      tmpvars = SCIPgetVarsLogicor(scip, lincons);
+      tmpnvars = SCIPgetNVarsLogicor(scip, lincons);
+      for( i = 0; i < tmpnvars; ++i )
+         vals[i] = 1.0;
+      break;
+   case SCIP_LINEARCONSTYPE_KNAPSACK:
+      tmpvars = SCIPgetVarsKnapsack(scip, lincons);
+      tmpnvars = SCIPgetNVarsKnapsack(scip, lincons);
+      for( i = 0; i < tmpnvars; ++i )
+         vals[i] = (SCIP_Real)SCIPgetWeightsKnapsack(scip, cons)[i];
+      break;
+   case SCIP_LINEARCONSTYPE_SETPPC:
+      tmpvars = SCIPgetVarsSetppc(scip, lincons);
+      tmpnvars = SCIPgetNVarsSetppc(scip, lincons);
+      for( i = 0; i < tmpnvars; ++i )
+         vals[i] = 1.0;
+      break;
+   default:
+      SCIPfreeBufferArray(scip, &vals);
+      SCIPfreeBufferArray(scip, &vars);
+      *success = FALSE;
+
+      return SCIP_OKAY;
+   }
+   assert(tmpvars != NULL);
+   assert(tmpvals != NULL);
+   for( i = 0; i < tmpnvars; ++i )
+      vars[i] = tmpvars[i];
+   constant = 0.0;
+
+   /* create nodes and edges for linear part */
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_PB_LINEAR, &nodeidx) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnodeidx, nodeidx, FALSE, 0.0) );
+
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &tmpnvars, &constant,
+         SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, nodeidx, vars, vals, tmpnvars, constant) );
+
+   /* create nodes and edges for AND constraints */
+   for( c = 0; c < consdata->nconsanddatas; ++c )
+   {
+      assert(consdata->consanddatas[c] != NULL);
+
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_PB_AND, &nodeidx) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnodeidx, nodeidx, TRUE, consdata->andcoefs[c]) );
+
+      tmpnvars = consdata->consanddatas[c]->nvars;
+      for( i = 0; i < tmpnvars; ++i )
+         vars[i] = consdata->consanddatas[c]->vars[i];
+      for( i = 0; i < tmpnvars; ++i )
+         vals[i] = 1.0;
+      constant = 0.0;
+
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &tmpnvars, &constant,
+            SCIPisTransformed(scip)) );
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, nodeidx, vars, vals, tmpnvars, constant) );
+   }
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of constraint handler
@@ -9074,6 +9232,24 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsPseudoboolean)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphPseudoboolean)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphPseudoboolean)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
 /*
  * constraint specific interface methods
  */
@@ -9109,6 +9285,8 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintPseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransPseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphPseudoboolean) );
 
    /* add pseudoboolean constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
