@@ -60,8 +60,10 @@
 #ifndef __SCIP_NETWORK_H__
 #define __SCIP_NETWORK_H__
 
-#include "scip.h" //TODO; reduce to minimal set of includes, probably only SCIP and memory functions are needed
-
+#include "scip/def.h"
+#include "blockmemshell/memory.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 #ifdef cplusplus
 extern "C" {
 #endif

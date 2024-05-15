@@ -29,6 +29,7 @@
  */
 
 #include "scip/network.h"
+#include "scip/scip.h"
 #include <assert.h>
 
 ///Types which define matrix sizes
