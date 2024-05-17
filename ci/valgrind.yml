@@ -2,6 +2,8 @@ valgrind:
   stage: test
   image:
     name: debian:12-slim
+  tags:
+    - compile
   needs:
     - "cmake release with debug info"
   script:
