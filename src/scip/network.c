@@ -1934,32 +1934,6 @@ static int decompositionGetFundamentalCycleRows(
    return num_rows;
 }
 
-typedef struct
-{
-   spqr_row row;
-   SCIP_Bool reversed;
-} Nonzero;
-
-static int qsort_comparison(
-   const void* a,
-   const void* b
-)
-{
-   Nonzero* s1 = (Nonzero*) a;
-   Nonzero* s2 = (Nonzero*) b;
-
-   if( s1->row > s2->row )
-   {
-      return 1;
-   } else if( s1->row == s2->row )
-   {
-      return 0;
-   } else
-   {
-      return -1;
-   }
-}
-
 SCIP_Bool SCIPnetmatdecVerifyCycle(
    SCIP* scip,
    const SCIP_NETMATDEC* dec,
@@ -1981,45 +1955,65 @@ SCIP_Bool SCIPnetmatdecVerifyCycle(
    {
       return TRUE;
    }
-   Nonzero* array;
-   SCIP_RETCODE code = SCIPallocBufferArray(scip, &array, num_rows);
+   spqr_row * pathRow;
+   int * pathRowReversed;
+
+   SCIP_RETCODE code = SCIPallocBufferArray(scip, &pathRow, num_rows);
    if( code != SCIP_OKAY )
    {
       return FALSE;
    }
-   for( int i = 0; i < num_rows; ++i )
-   {
-      array[i].row = pathrowstorage[i];
-      array[i].reversed = pathsignstorage[i];
-   }
-   qsort(array, num_rows, sizeof(Nonzero), qsort_comparison);
-
-   Nonzero* secondArray;
-   code = SCIPallocBufferArray(scip, &secondArray, num_rows);
+   code = SCIPallocBufferArray(scip, &pathRowReversed, num_rows);
    if( code != SCIP_OKAY )
    {
-      SCIPfreeBufferArray(scip, &array);
+      SCIPfreeBufferArray(scip,&pathRow);
       return FALSE;
    }
    for( int i = 0; i < num_rows; ++i )
    {
-      secondArray[i].row = nonzrowidx[i];
-      secondArray[i].reversed = nonzvals[i] < 0.0;
+      pathRow[i] = pathrowstorage[i];
+      pathRowReversed[i] = pathsignstorage[i] ? 1 : 0;
+   }
+   SCIPsortIntInt(pathRow,pathRowReversed,num_rows);
+
+   spqr_row * secondPathRow;
+   int * secondPathRowReversed;
+   code = SCIPallocBufferArray(scip, &secondPathRow, num_rows);
+   if( code != SCIP_OKAY )
+   {
+      SCIPfreeBufferArray(scip,&pathRow);
+      SCIPfreeBufferArray(scip,&pathRowReversed);
+      return FALSE;
+   }
+   code = SCIPallocBufferArray(scip, &secondPathRowReversed, num_rows);
+   if( code != SCIP_OKAY )
+   {
+      SCIPfreeBufferArray(scip,&pathRow);
+      SCIPfreeBufferArray(scip,&pathRowReversed);
+      SCIPfreeBufferArray(scip,&secondPathRow);
+      return FALSE;
+   }
+   for( int i = 0; i < num_rows; ++i )
+   {
+      secondPathRow[i] = nonzrowidx[i];
+      secondPathRowReversed[i] = nonzvals[i] < 0.0 ? 1 : 0;
    }
 
-   qsort(secondArray, num_rows, sizeof(Nonzero), qsort_comparison);
+   SCIPsortIntInt(secondPathRow,secondPathRowReversed,num_rows);
 
    SCIP_Bool good = TRUE;
    for( int i = 0; i < num_rows; ++i )
    {
-      if( array[i].row != secondArray[i].row || array[i].reversed != secondArray[i].reversed )
+      if( pathRow[i] != secondPathRow[i] || pathRowReversed[i] != secondPathRowReversed[i] )
       {
          good = FALSE;
          break;
       }
    }
-   SCIPfreeBufferArray(scip, &secondArray);
-   SCIPfreeBufferArray(scip, &array);
+   SCIPfreeBufferArray(scip, &secondPathRowReversed);
+   SCIPfreeBufferArray(scip, &secondPathRow);
+   SCIPfreeBufferArray(scip, &pathRowReversed);
+   SCIPfreeBufferArray(scip, &pathRow);
    return good;
 }
 
@@ -5792,6 +5786,9 @@ struct SCIP_NetRowAdd
 
    MergeTreeCallData* mergeTreeCallData;
    int memMergeTreeCallData;
+
+   COLOR_STATUS * temporaryColorArray;
+   int memTemporaryColorArray;
 };
 
 typedef struct
@@ -6090,7 +6087,7 @@ static SCIP_RETCODE constructRowReducedDecomposition(
    if( newRow->memChildrenStorage < numTotalChildren )
    {
       int newMemSize = maxValue(newRow->memChildrenStorage * 2, numTotalChildren);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->childrenStorage, (size_t) newRow->memChildrenStorage,
+      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->childrenStorage, newRow->memChildrenStorage,
                                             newMemSize));
       newRow->memChildrenStorage = newMemSize;
    }
@@ -6308,6 +6305,12 @@ static SCIP_RETCODE allocateRigidSearchMemory(
       SCIP_CALL(
          SCIPreallocBlockMemoryArray(dec->env, &newRow->crossingPathCount, newRow->memCrossingPathCount, newSize));
       newRow->memCrossingPathCount = newSize;
+   }
+   if( totalNumNodes > newRow->memTemporaryColorArray ){
+      int newSize = maxValue(2 * newRow->memTemporaryColorArray, totalNumNodes);
+      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->temporaryColorArray,
+                                            newRow->memTemporaryColorArray, newSize));
+      newRow->memTemporaryColorArray = newSize;
    }
 
    //TODO: see if tradeoff for performance bound by checking max # of nodes of rigid is worth it to reduce size
@@ -6560,18 +6563,15 @@ static void rigidFindStarNodes(
    }
 }
 
-//TODO: remove SCIP_RETCODE from below functions (until propagation function, basically) and refactor memory allocation
-static SCIP_RETCODE zeroOutColorsExceptNeighbourhood(
+static void zeroOutColorsExceptNeighbourhood(
    SCIP_NETMATDEC* dec,
    SCIP_NETROWADD* newRow,
    const spqr_node articulationNode,
    const spqr_node startRemoveNode
 )
 {
-   COLOR_STATUS* neighbourColors;
-   int degree = nodeDegree(dec, articulationNode);
-   SCIP_CALL(SCIPallocBlockMemoryArray(dec->env, &neighbourColors, degree));
-
+   COLOR_STATUS* neighbourColors = newRow->temporaryColorArray;
+   assert(nodeDegree(dec, articulationNode) <= newRow->memTemporaryColorArray);
    {
       int i = 0;
       spqr_arc artFirstArc = getFirstNodeArc(dec, articulationNode);
@@ -6583,7 +6583,7 @@ static SCIP_RETCODE zeroOutColorsExceptNeighbourhood(
          spqr_node otherNode = articulationNode == head ? tail : head;
          neighbourColors[i] = newRow->nodeColors[otherNode];
          i++;
-         assert(i <= degree);
+         assert(i <= nodeDegree(dec, articulationNode));
          artItArc = getNextNodeArc(dec, artItArc, articulationNode);
       } while( artItArc != artFirstArc );
    }
@@ -6600,13 +6600,11 @@ static SCIP_RETCODE zeroOutColorsExceptNeighbourhood(
          spqr_node otherNode = articulationNode == head ? tail : head;
          newRow->nodeColors[otherNode] = neighbourColors[i];
          i++;
-         assert(i <= degree);
+         assert(i <= nodeDegree(dec, articulationNode));
          artItArc = getNextNodeArc(dec, artItArc, articulationNode);
       } while( artItArc != artFirstArc );
    }
 
-   SCIPfreeBlockMemoryArray(dec->env, &neighbourColors, degree);
-   return SCIP_OKAY;
 }
 
 //Theoretically, there is a faster algorithm, but it is quite complicated to implement.
@@ -7874,9 +7872,13 @@ static SplitOrientation getRelativeOrientation(
       case SPQR_MEMBERTYPE_LOOP:
       case SPQR_MEMBERTYPE_UNASSIGNED:
       default:
+      {
          assert(FALSE);
-         SplitOrientation orientation;
+         SplitOrientation orientation; /*lint !e527*/
+         orientation.headSplit = FALSE; /*lint !e527*/
+         orientation.otherIsSource = FALSE;
          return orientation;
+      }
    }
 }
 
@@ -8137,33 +8139,6 @@ static void determineSplitTypeNext(
    }
 }
 
-static void determineTypesChildrenNodes(
-   SCIP_NETMATDEC* dec,
-   SCIP_NETROWADD* newRow,
-   reduced_member_id parent,
-   reduced_member_id node,
-   reduced_member_id skipNode
-)
-{
-   if( node == skipNode || newRow->reducedMembers[node].type == TYPE_PROPAGATED )
-   {
-      return;
-   }
-   //check merging
-   determineSplitTypeNext(dec, newRow, parent, node, TRUE);
-   if( !newRow->remainsNetwork )
-   {
-      return;
-   }
-   //merge all children
-   for( int i = 0; i < newRow->reducedMembers[node].numChildren; ++i )
-   {
-      children_idx idx = newRow->reducedMembers[node].firstChild + i;
-      reduced_member_id child = newRow->childrenStorage[idx];
-      determineTypesChildrenNodes(dec, newRow, node, child, skipNode);
-   }
-}
-
 static void determineMergeableTypes(
    SCIP_NETMATDEC* dec,
    SCIP_NETROWADD* newRow,
@@ -8191,8 +8166,8 @@ static void determineMergeableTypes(
                break;
             case SPQR_MEMBERTYPE_UNASSIGNED:
             default:
-               assert(FALSE);
                newRow->remainsNetwork = FALSE;
+               assert(FALSE);
          }
       }
       return;
@@ -8257,6 +8232,7 @@ static void determineMergeableTypes(
          }
          //recursively process the child
          depth += 1;
+         assert(depth < newRow->memMergeTreeCallData);
          data[depth].id = currentchild;
          data[depth].currentChild = newRow->reducedMembers[currentchild].firstChild;
       }
@@ -9657,7 +9633,6 @@ static SCIP_RETCODE splitAndMergeRigid(
 static SCIP_RETCODE splitAndMerge(
    SCIP_NETMATDEC* dec,
    SCIP_NETROWADD* newRow,
-   reduced_member_id largeMember,
    reduced_member_id smallMember,
    SCIP_Bool largeIsParent,
    NewRowInformation* const newRowInformation
@@ -9690,33 +9665,6 @@ static SCIP_RETCODE splitAndMerge(
    return SCIP_OKAY;
 }
 
-//TODO; avoid recursion
-static SCIP_RETCODE mergeChildrenNodes(
-   SCIP_NETMATDEC* dec,
-   SCIP_NETROWADD* newRow,
-   reduced_member_id parent,
-   reduced_member_id node,
-   reduced_member_id skipNode,
-   NewRowInformation* const newRowInformation
-)
-{
-   if( node == skipNode || newRow->reducedMembers[node].type == TYPE_PROPAGATED )
-   {
-      return SCIP_OKAY;
-   }
-   //check merging
-   SCIP_CALL(splitAndMerge(dec, newRow, parent, node, TRUE, newRowInformation));
-
-   //merge all children
-   for( int i = 0; i < newRow->reducedMembers[node].numChildren; ++i )
-   {
-      children_idx idx = newRow->reducedMembers[node].firstChild + i;
-      reduced_member_id child = newRow->childrenStorage[idx];
-      SCIP_CALL(mergeChildrenNodes(dec, newRow, node, child, skipNode, newRowInformation));
-   }
-   return SCIP_OKAY;
-}
-
 static SCIP_RETCODE mergeTree(
    SCIP_NETMATDEC* dec,
    SCIP_NETROWADD* newRow,
@@ -9724,7 +9672,6 @@ static SCIP_RETCODE mergeTree(
    NewRowInformation* const newRowInformation
 )
 {
-
    //We use the same ordering as when finding
    //go to a leaf. We need to start in a leaf to avoid the ambiguity of choosing an orientation
    //in members which have no cut arcs; otherwise, we might choose the wrong one
@@ -9750,16 +9697,36 @@ static SCIP_RETCODE mergeTree(
    while( reducedMemberIsValid(nextNode))
    {
       //check this node
-      SCIP_CALL(splitAndMerge(dec, newRow, baseNode, nextNode, FALSE, newRowInformation));
+      SCIP_CALL(splitAndMerge(dec, newRow, nextNode, FALSE, newRowInformation));
 
-      //Add other nodes in the subtree
-      for( int i = 0; i < newRow->reducedMembers[nextNode].numChildren; ++i )
-      {
-         children_idx idx = newRow->reducedMembers[nextNode].firstChild + i;
-         reduced_member_id child = newRow->childrenStorage[idx];
-         SCIP_CALL(mergeChildrenNodes(dec, newRow, nextNode, child, baseNode, newRowInformation));
+      //Recursively merge the children
+      //use a while loop to avoid recursion; we may get stack overflows for large graphs
+      MergeTreeCallData * data = newRow->mergeTreeCallData;
+
+      data[0].id = nextNode;
+      data[0].currentChild = newRow->reducedMembers[nextNode].firstChild ;
+      int depth = 0;
+      while(depth >= 0){
+         reduced_member_id id = data[depth].id;
+         children_idx childidx = data[depth].currentChild;
+         if(childidx == newRow->reducedMembers[id].firstChild + newRow->reducedMembers[id].numChildren){
+            --depth;
+            continue;
+         }
+         reduced_member_id currentchild = newRow->childrenStorage[childidx];
+         data[depth].currentChild += 1;
+         //skip this child if we already processed it or it is not merged
+         if( currentchild == baseNode || newRow->reducedMembers[currentchild].type == TYPE_PROPAGATED){
+            continue;
+         }
+         SCIP_CALL(splitAndMerge(dec, newRow, currentchild, TRUE, newRowInformation));
+
+         //recursively process the child
+         depth += 1;
+         assert(depth < newRow->memMergeTreeCallData);
+         data[depth].id = currentchild;
+         data[depth].currentChild = newRow->reducedMembers[currentchild].firstChild;
       }
-
       //Move up one layer
       baseNode = nextNode;
       nextNode = newRow->reducedMembers[nextNode].parent;
@@ -9916,6 +9883,9 @@ SCIP_RETCODE SCIPnetrowaddCreate(
    newRow->mergeTreeCallData = NULL;
    newRow->memMergeTreeCallData = 0;
 
+   newRow->temporaryColorArray = NULL;
+   newRow->memTemporaryColorArray = 0;
+
    return SCIP_OKAY;
 }
 
@@ -9928,6 +9898,7 @@ void SCIPnetrowaddFree(
 
    SCIP_NETROWADD* newRow = *prowadd;
 
+   SCIPfreeBlockMemoryArray(scip, &newRow->temporaryColorArray, newRow->memTemporaryColorArray);
    SCIPfreeBlockMemoryArray(scip, &newRow->createReducedMembersCallstack, newRow->memCreateReducedMembersCallstack);
    SCIPfreeBlockMemoryArray(scip, &newRow->artDFSData, newRow->memArtDFSData);
    SCIPfreeBlockMemoryArray(scip, &newRow->colorDFSData, newRow->memColorDFSData);
