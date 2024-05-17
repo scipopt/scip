@@ -7875,6 +7875,8 @@ static SplitOrientation getRelativeOrientation(
       case SPQR_MEMBERTYPE_UNASSIGNED:
       default:
          assert(FALSE);
+         SplitOrientation orientation;
+         return orientation;
    }
 }
 
@@ -8230,17 +8232,34 @@ static void determineMergeableTypes(
          return;
       }
       //Add other nodes in the subtree
-      for( int i = 0; i < newRow->reducedMembers[nextNode].numChildren; ++i )
-      {
-         children_idx idx = newRow->reducedMembers[nextNode].firstChild + i;
-         reduced_member_id child = newRow->childrenStorage[idx];
-         determineTypesChildrenNodes(dec, newRow, nextNode, child, baseNode);
-         if( !newRow->remainsNetwork )
-         {
+      //use a while loop to avoid recursion; we may get stack overflows for large graphs
+      MergeTreeCallData * data = newRow->mergeTreeCallData;
+
+      data[0].id = nextNode;
+      data[0].currentChild = newRow->reducedMembers[nextNode].firstChild ;
+      int depth = 0;
+      while(depth >= 0){
+         reduced_member_id id = data[depth].id;
+         children_idx childidx = data[depth].currentChild;
+         if(childidx == newRow->reducedMembers[id].firstChild + newRow->reducedMembers[id].numChildren){
+            --depth;
+            continue;
+         }
+         reduced_member_id currentchild = newRow->childrenStorage[childidx];
+         data[depth].currentChild += 1;
+         //skip this child if we already processed it or it is not merged
+         if( currentchild == baseNode || newRow->reducedMembers[currentchild].type == TYPE_PROPAGATED){
+            continue;
+         }
+         determineSplitTypeNext(dec,newRow,id,currentchild,TRUE);
+         if(!newRow->remainsNetwork){
             return;
          }
+         //recursively process the child
+         depth += 1;
+         data[depth].id = currentchild;
+         data[depth].currentChild = newRow->reducedMembers[currentchild].firstChild;
       }
-
       //Move up one layer
       baseNode = nextNode;
       nextNode = newRow->reducedMembers[nextNode].parent;
