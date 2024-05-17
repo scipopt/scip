@@ -7,16 +7,16 @@
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   script:
-    # Error out of $IMAGE_HASH is not set
-    - if [ -z "$IMAGE_HASH" ]; then
-        echo "IMAGE_HASH is not set. Check that it is set in ci/docker/image_hash.yml and that the file is included in .gitlab-ci.yml";
+    # Error out of $DOCKERFILE_HASH is not set
+    - if [ -z "$DOCKERFILE_HASH" ]; then
+        echo "DOCKERFILE_HASH is not set. Check that it is set in .gitlab/docker/dockerfile_hash.yml and that the file is included in .gitlab-ci.yml";
         exit 1;
       fi
     # Calculate the MD5 hash of the file
     - computed_hash=$(md5sum ${IMAGE_PATH} | awk '{print $1}')
     # Compare the computed hash with the expected hash
-    - if [ $computed_hash != $IMAGE_HASH ]; then
-        echo Hashes do not match! IMAGE_HASH defined in .gitlab-ci.yml has to match the md5sum of ci/docker/Dockerfile.;
+    - if [ $computed_hash != $DOCKERFILE_HASH ]; then
+        echo Hashes do not match! DOCKERFILE_HASH defined in .gitlab-ci.yml has to match the md5sum of .gitlab/docker/Dockerfile.;
         exit 1;
       fi
     # Set gitlab registry credentials
