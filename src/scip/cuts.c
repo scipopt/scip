@@ -896,7 +896,7 @@ SCIP_RETCODE cutTightenCoefsQuad(
          intcoeffs[i] = QUAD_TO_DBL(val);
       }
 
-      SCIP_CALL( SCIPcalcIntegralScalar(intcoeffs, *cutnnz, -SCIPsumepsilon(scip), SCIPepsilon(scip),
+      SCIP_CALL( SCIPcalcIntegralScalar(intcoeffs, *cutnnz, -SCIPsumepsilon(scip), SCIPsumepsilon(scip),
             (SCIP_Longint)scip->set->sepa_maxcoefratio, scip->set->sepa_maxcoefratio, &intscalar, &success) );
 
       SCIPfreeBufferArray(scip, &intcoeffs);
@@ -1275,7 +1275,7 @@ SCIP_RETCODE cutTightenCoefs(
          intcoeffs[i] = val;
       }
 
-      SCIP_CALL( SCIPcalcIntegralScalar(intcoeffs, *cutnnz, -SCIPsumepsilon(scip), SCIPepsilon(scip),
+      SCIP_CALL( SCIPcalcIntegralScalar(intcoeffs, *cutnnz, -SCIPsumepsilon(scip), SCIPsumepsilon(scip),
             (SCIP_Longint)scip->set->sepa_maxcoefratio, scip->set->sepa_maxcoefratio, &intscalar, &success) );
 
       SCIPfreeBufferArray(scip, &intcoeffs);
@@ -4376,7 +4376,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       SCIP_Real intscale;
       SCIP_Bool intscalesuccess;
 
-      SCIP_CALL( SCIPcalcIntegralScalar(deltacands, nbounddist, -SCIPepsilon(scip), SCIPepsilon(scip), (SCIP_Longint)10000, 10000.0, &intscale, &intscalesuccess) );
+      SCIP_CALL( SCIPcalcIntegralScalar(deltacands, nbounddist, -SCIPepsilon(scip), SCIPsumepsilon(scip), (SCIP_Longint)10000, 10000.0, &intscale, &intscalesuccess) );
 
       if( intscalesuccess )
       {
