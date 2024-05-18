@@ -1013,7 +1013,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    assert(conflictstore->ndualrayconfs <= CONFLICTSTORE_DUALRAYSIZE);
 
    /* mark the constraint to be a conflict */
-   SCIPconsMarkConflict(dualproof);
+   SCIP_CALL( SCIPconsMarkConflict(dualproof) );
 
    /* create an array to store constraints based on dual rays */
    if( conflictstore->dualrayconfs == NULL )
@@ -1103,7 +1103,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
    assert(conflictstore->ndualsolconfs <= CONFLICTSTORE_DUALSOLSIZE);
 
    /* mark the constraint to be a conflict */
-   SCIPconsMarkConflict(dualproof);
+   SCIP_CALL( SCIPconsMarkConflict(dualproof) );
 
    /* create an array to store constraints based on dual rays */
    if( conflictstore->dualsolconfs == NULL )
@@ -1207,7 +1207,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    assert(!cutoffinvolved || !SCIPsetIsInfinity(set, REALABS(primalbound)));
 
    /* mark the constraint to be a conflict */
-   SCIPconsMarkConflict(cons);
+   SCIP_CALL( SCIPconsMarkConflict(cons) );
 
    /* add the constraint to a special store */
    if( SCIPconsIsOriginal(cons) )

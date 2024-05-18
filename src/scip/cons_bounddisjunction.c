@@ -1257,7 +1257,7 @@ SCIP_RETCODE upgradeCons(
       assert(SCIPconsIsGlobal(cons) || SCIPconsGetValidDepth(cons) == SCIPconsGetActiveDepth(cons));
       if( SCIPconsIsConflict(cons) )
       {
-         SCIP_CALL( SCIPaddConflict(scip, SCIPconsIsLocal(cons) ? SCIPgetCurrentNode(scip) : NULL, newcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsConfCutoff(cons)) );
+         SCIP_CALL( SCIPaddConflict(scip, SCIPconsIsLocal(cons) ? SCIPgetCurrentNode(scip) : NULL, newcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsCutoffInvolved(cons)) );
       }
       else
       {

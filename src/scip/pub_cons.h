@@ -682,10 +682,10 @@ SCIP_Bool SCIPconsIsConflict(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** returns TRUE iff the constraint is marked as a conflict and uses a cutoff */
+/** returns TRUE iff the conflict constraint is based on a cutoff bound */
 SCIP_EXPORT
-SCIP_Bool SCIPconsIsConfCutoff(
-   SCIP_CONS*            cons                /**< constraint */
+SCIP_Bool SCIPconsIsCutoffInvolved(
+   SCIP_CONS*            cons                /**< conflict constraint */
    );
 
 /** gets age of constraint */
@@ -868,10 +868,10 @@ int SCIPconsGetNUpgradeLocks(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** gets the conflict type of the constraint */
+/** gets the conflict type of the conflict constraint */
 SCIP_EXPORT
 SCIP_CONFTYPE SCIPconsGetConflictType(
-   SCIP_CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< conflict constraint */
    );
 
 #ifdef NDEBUG
@@ -899,7 +899,7 @@ SCIP_CONFTYPE SCIPconsGetConflictType(
 #define SCIPconsIsDeleted(cons)         ((cons)->deleted)
 #define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)
 #define SCIPconsIsConflict(cons)        ((cons)->conflict)
-#define SCIPconsIsConfCutoff(cons)      ((cons)->cutoffinvolved)
+#define SCIPconsIsCutoffInvolved(cons)  ((cons)->cutoffinvolved)
 #define SCIPconsGetConflictType(cons)   ((SCIP_CONFTYPE)(cons)->conftype)
 #define SCIPconsGetAge(cons)            (cons)->age
 #define SCIPconsIsInitial(cons)         (cons)->initial

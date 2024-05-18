@@ -1080,19 +1080,19 @@ SCIP_RETCODE SCIPconsDisablePropagation(
    );
 
 /** marks the constraint to be a conflict */
-void SCIPconsMarkConflict(
+SCIP_RETCODE SCIPconsMarkConflict(
    SCIP_CONS*            cons                /**< constraint */
    );
 
-/** sets the conflict type for the constraint */
-void SCIPconsSetConflictType(
-   SCIP_CONS*            cons,               /**< constraint */
+/** sets the conflict type for the conflict constraint */
+SCIP_RETCODE SCIPconsSetConflictType(
+   SCIP_CONS*            cons,               /**< conflict constraint */
    SCIP_CONFTYPE         conftype            /**< conflict type */
    );
 
-/** sets the conflict constraint to use the cutoff bound */
-void SCIPconsSetConflictUsesCutoff(
-   SCIP_CONS*            cons                /**< constraint */
+/** marks the conflict constraint to be based on a cutoff bound */
+SCIP_RETCODE SCIPconsMarkCutoffInvolved(
+   SCIP_CONS*            cons                /**< conflict constraint */
    );
 
 /** marks the constraint to be propagated (update might be delayed) */

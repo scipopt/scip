@@ -7279,34 +7279,44 @@ SCIP_RETCODE SCIPconsDisablePropagation(
 }
 
 /** marks the constraint to be a conflict */
-void SCIPconsMarkConflict(
+SCIP_RETCODE SCIPconsMarkConflict(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
 
    cons->conflict = TRUE;
+
+   return SCIP_OKAY;
 }
 
-/** sets the conflict type for the constraint */
-void SCIPconsSetConflictType(
-   SCIP_CONS*            cons,               /**< constraint */
+/** sets the conflict type for the conflict constraint */
+SCIP_RETCODE SCIPconsSetConflictType(
+   SCIP_CONS*            cons,               /**< conflict constraint */
    SCIP_CONFTYPE         conftype            /**< conflict type */
    )
 {
    assert(cons != NULL);
+   assert(cons->conflict);
+   assert(conftype == SCIP_CONFTYPE_UNKNOWN || conftype == SCIP_CONFTYPE_PROPAGATION
+         || cons->cutoffinvolved == (conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_ALTBNDPROOF));
 
-   cons->conftype = (unsigned int) conftype;
+   cons->conftype = (unsigned int)conftype;
+
+   return SCIP_OKAY;
 }
 
-/** sets the conflict constraint to use the cutoff bound */
-void SCIPconsSetConflictUsesCutoff(
-   SCIP_CONS*            cons                /**< constraint */
+/** marks the conflict constraint to be based on a cutoff bound */
+SCIP_RETCODE SCIPconsMarkCutoffInvolved(
+   SCIP_CONS*            cons                /**< conflict constraint */
    )
 {
    assert(cons != NULL);
+   assert(cons->conflict);
 
    cons->cutoffinvolved = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** marks the constraint to be propagated (update might be delayed) */
@@ -8361,7 +8371,7 @@ void SCIPprintLinConsStats(
 #undef SCIPconsIsDeleted
 #undef SCIPconsIsObsolete
 #undef SCIPconsIsConflict
-#undef SCIPconsIsConfCutoff
+#undef SCIPconsIsCutoffInvolved
 #undef SCIPconsGetAge
 #undef SCIPconsIsInitial
 #undef SCIPconsIsSeparated
@@ -8554,12 +8564,13 @@ SCIP_Bool SCIPconsIsConflict(
    return cons->conflict;
 }
 
-/** returns TRUE iff the constraint is marked as a conflict and uses a cutoff */
-SCIP_Bool SCIPconsIsConfCutoff(
-   SCIP_CONS*            cons                /**< constraint */
+/** returns TRUE iff the conflict constraint is based on a cutoff bound */
+SCIP_Bool SCIPconsIsCutoffInvolved(
+   SCIP_CONS*            cons                /**< conflict constraint */
    )
 {
    assert(cons != NULL);
+   assert(cons->conflict);
 
    return cons->cutoffinvolved;
 }
@@ -8866,12 +8877,17 @@ int SCIPconsGetNUpgradeLocks(
    return (int) cons->nupgradelocks;
 }
 
-/** gets the conflict type of the constraint */
+/** gets the conflict type of the conflict constraint */
 SCIP_CONFTYPE SCIPconsGetConflictType(
-   SCIP_CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons                /**< conflict constraint */
    )
 {
    assert(cons != NULL);
+   assert(cons->conflict);
+   assert((SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_UNKNOWN
+         || (SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_PROPAGATION
+         || cons->cutoffinvolved == ((SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_BNDEXCEEDING
+         || (SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_ALTBNDPROOF));
 
-   return (SCIP_CONFTYPE) cons->conftype;
+   return (SCIP_CONFTYPE)cons->conftype;
 }

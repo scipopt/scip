@@ -3617,15 +3617,15 @@ SCIP_RETCODE SCIPaddConflict(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddConflict", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* mark constraint to be a conflict */
-   SCIPconsMarkConflict(cons);
+   SCIP_CALL( SCIPconsMarkConflict(cons) );
    if( iscutoffinvolved )
    {
-      SCIPconsSetConflictUsesCutoff(cons);
+      SCIP_CALL( SCIPconsMarkCutoffInvolved(cons) );
       primalbound = SCIPgetCutoffbound(scip);
    }
    else
       primalbound = -SCIPinfinity(scip);
-   SCIPconsSetConflictType(cons, conftype);
+   SCIP_CALL( SCIPconsSetConflictType(cons, conftype) );
 
    /* add a global conflict */
    if( node == NULL )
