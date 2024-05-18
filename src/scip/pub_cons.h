@@ -688,6 +688,12 @@ SCIP_Bool SCIPconsIsCutoffInvolved(
    SCIP_CONS*            cons                /**< conflict constraint */
    );
 
+/** gets the conflict type of the conflict constraint */
+SCIP_EXPORT
+SCIP_CONFTYPE SCIPconsGetConflictType(
+   SCIP_CONS*            cons                /**< conflict constraint */
+   );
+
 /** gets age of constraint */
 SCIP_EXPORT
 SCIP_Real SCIPconsGetAge(
@@ -866,12 +872,6 @@ void SCIPconsAddUpgradeLocks(
 SCIP_EXPORT
 int SCIPconsGetNUpgradeLocks(
    SCIP_CONS*            cons                /**< constraint */
-   );
-
-/** gets the conflict type of the conflict constraint */
-SCIP_EXPORT
-SCIP_CONFTYPE SCIPconsGetConflictType(
-   SCIP_CONS*            cons                /**< conflict constraint */
    );
 
 #ifdef NDEBUG

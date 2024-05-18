@@ -6079,8 +6079,8 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->validdepth = (local ? -1 : 0);
    (*cons)->age = 0.0;
    (*cons)->nuses = 0;
-   (*cons)->nupgradelocks = 0;
    (*cons)->conftype = (unsigned int) SCIP_CONFTYPE_UNKNOWN;
+   (*cons)->nupgradelocks = 0;
    (*cons)->initial = initial;
    (*cons)->separate = separate;
    (*cons)->enforce = enforce;
@@ -7290,6 +7290,19 @@ SCIP_RETCODE SCIPconsMarkConflict(
    return SCIP_OKAY;
 }
 
+/** marks the conflict constraint to be based on a cutoff bound */
+SCIP_RETCODE SCIPconsMarkCutoffInvolved(
+   SCIP_CONS*            cons                /**< conflict constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->conflict);
+
+   cons->cutoffinvolved = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** sets the conflict type for the conflict constraint */
 SCIP_RETCODE SCIPconsSetConflictType(
    SCIP_CONS*            cons,               /**< conflict constraint */
@@ -7302,19 +7315,6 @@ SCIP_RETCODE SCIPconsSetConflictType(
          || cons->cutoffinvolved == (conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_ALTBNDPROOF));
 
    cons->conftype = (unsigned int)conftype;
-
-   return SCIP_OKAY;
-}
-
-/** marks the conflict constraint to be based on a cutoff bound */
-SCIP_RETCODE SCIPconsMarkCutoffInvolved(
-   SCIP_CONS*            cons                /**< conflict constraint */
-   )
-{
-   assert(cons != NULL);
-   assert(cons->conflict);
-
-   cons->cutoffinvolved = TRUE;
 
    return SCIP_OKAY;
 }
@@ -8372,6 +8372,7 @@ void SCIPprintLinConsStats(
 #undef SCIPconsIsObsolete
 #undef SCIPconsIsConflict
 #undef SCIPconsIsCutoffInvolved
+#undef SCIPconsGetConflictType
 #undef SCIPconsGetAge
 #undef SCIPconsIsInitial
 #undef SCIPconsIsSeparated
@@ -8400,7 +8401,6 @@ void SCIPprintLinConsStats(
 #undef SCIPconsGetNLocksTypeNeg
 #undef SCIPconsIsAdded
 #undef SCIPconsGetNUpgradeLocks
-#undef SCIPconsGetConflictType
 
 /** returns the name of the constraint
  *
@@ -8573,6 +8573,21 @@ SCIP_Bool SCIPconsIsCutoffInvolved(
    assert(cons->conflict);
 
    return cons->cutoffinvolved;
+}
+
+/** gets the conflict type of the conflict constraint */
+SCIP_CONFTYPE SCIPconsGetConflictType(
+   SCIP_CONS*            cons                /**< conflict constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(cons->conflict);
+   assert((SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_UNKNOWN
+         || (SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_PROPAGATION
+         || cons->cutoffinvolved == ((SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_BNDEXCEEDING
+         || (SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_ALTBNDPROOF));
+
+   return (SCIP_CONFTYPE)cons->conftype;
 }
 
 /** gets age of constraint */
@@ -8875,19 +8890,4 @@ int SCIPconsGetNUpgradeLocks(
    assert(cons != NULL);
 
    return (int) cons->nupgradelocks;
-}
-
-/** gets the conflict type of the conflict constraint */
-SCIP_CONFTYPE SCIPconsGetConflictType(
-   SCIP_CONS*            cons                /**< conflict constraint */
-   )
-{
-   assert(cons != NULL);
-   assert(cons->conflict);
-   assert((SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_UNKNOWN
-         || (SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_PROPAGATION
-         || cons->cutoffinvolved == ((SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_BNDEXCEEDING
-         || (SCIP_CONFTYPE)cons->conftype == SCIP_CONFTYPE_ALTBNDPROOF));
-
-   return (SCIP_CONFTYPE)cons->conftype;
 }
