@@ -231,9 +231,7 @@ static SCIP_RETCODE runColumnTestCase(
    SCIP_NETMATDEC* dec = NULL;
    SCIP_CALL(SCIPnetmatdecCreate(scip, &dec, testCase->nrows, testCase->ncols));
 
-   SCIP_NETCOLADD* coladd = NULL;
-   SCIP_CALL(SCIPnetcoladdCreate(scip, &coladd));
-   bool isNetwork = true;
+   SCIP_Bool isNetwork = TRUE;
 
    int* tempColumnStorage;
    SCIP_Bool* tempSignStorage;
@@ -245,19 +243,13 @@ static SCIP_RETCODE runColumnTestCase(
    {
       int colEntryStart = testCase->primaryIndexStart[i];
       int colEntryEnd = testCase->primaryIndexStart[i + 1];
-      const int* nonzeroRows = &testCase->entrySecondaryIndex[colEntryStart];
-      const double* nonzeroValues = &testCase->entryValue[colEntryStart];
+      int* nonzeroRows = &testCase->entrySecondaryIndex[colEntryStart];
+      double* nonzeroValues = &testCase->entryValue[colEntryStart];
       int nonzeros = colEntryEnd - colEntryStart;
       cr_assert(nonzeros >= 0);
       //Check if adding the column preserves the network matrix
-      SCIP_CALL(SCIPnetcoladdCheck(dec, coladd, i, nonzeroRows, nonzeroValues, nonzeros));
-      if( SCIPnetcoladdRemainsNetwork(coladd))
-      {
-         //If so, we add it.
-         SCIP_CALL(SCIPnetcoladdAdd(dec, coladd));
-      } else
-      {
-         isNetwork = false;
+      SCIP_CALL(SCIPnetmatdecTryAddCol(dec,i,nonzeroRows,nonzeroValues,nonzeros,&isNetwork));
+      if(!isNetwork){
          break;
       }
       cr_expect(SCIPnetmatdecIsMinimal(dec));
@@ -293,7 +285,6 @@ static SCIP_RETCODE runColumnTestCase(
    SCIPfreeBufferArray(scip, &tempColumnStorage);
    SCIPfreeBufferArray(scip, &tempSignStorage);
 
-   SCIPnetcoladdFree(scip, &coladd);
    SCIPnetmatdecFree(&dec);
    return SCIP_OKAY;
 }
@@ -317,9 +308,7 @@ static SCIP_RETCODE runRowTestCase(
    SCIP_NETMATDEC* dec = NULL;
    SCIP_CALL(SCIPnetmatdecCreate(scip, &dec, testCase->nrows, testCase->ncols));
 
-   SCIP_NETROWADD* rowadd = NULL;
-   SCIP_CALL(SCIPnetrowaddCreate(scip, &rowadd));
-   bool isNetwork = true;
+   SCIP_Bool isNetwork = TRUE;
 
    int* tempColumnStorage;
    SCIP_Bool* tempSignStorage;
@@ -331,19 +320,13 @@ static SCIP_RETCODE runRowTestCase(
    {
       int rowEntryStart = testCase->primaryIndexStart[i];
       int rowEntryEnd = testCase->primaryIndexStart[i + 1];
-      const int* nonzeroCols = &testCase->entrySecondaryIndex[rowEntryStart];
-      const double* nonzeroValues = &testCase->entryValue[rowEntryStart];
+      int* nonzeroCols = &testCase->entrySecondaryIndex[rowEntryStart];
+      double* nonzeroValues = &testCase->entryValue[rowEntryStart];
       int nonzeros = rowEntryEnd - rowEntryStart;
       cr_assert(nonzeros >= 0);
       //Check if adding the row preserves the network matrix
-      SCIP_CALL(SCIPnetrowaddCheck(dec, rowadd, i, nonzeroCols, nonzeroValues, nonzeros));
-      if( SCIPnetrowaddRemainsNetwork(rowadd))
-      {
-         //If so, we add it.
-         SCIP_CALL(SCIPnetrowaddAdd(dec, rowadd));
-      } else
-      {
-         isNetwork = false;
+      SCIP_CALL(SCIPnetmatdecTryAddRow(dec,i,nonzeroCols,nonzeroValues,nonzeros,&isNetwork));
+      if(!isNetwork){
          break;
       }
       cr_expect(SCIPnetmatdecIsMinimal(dec));
@@ -396,7 +379,6 @@ static SCIP_RETCODE runRowTestCase(
    SCIPfreeBufferArray(scip, &tempColumnStorage);
    SCIPfreeBufferArray(scip, &tempSignStorage);
 
-   SCIPnetrowaddFree(scip, &rowadd);
    SCIPnetmatdecFree(&dec);
    return SCIP_OKAY;
 }

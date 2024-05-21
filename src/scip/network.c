@@ -31,6 +31,7 @@
 #include "scip/network.h"
 #include "scip/scip.h"
 #include <assert.h>
+#include "blockmemshell/memory.h"
 
 ///Types which define matrix sizes
 typedef int spqr_matrix_size;
@@ -200,7 +201,7 @@ typedef struct
    int numArcs;
 } SPQRNetworkDecompositionMember;
 
-struct SCIP_Netmatdec
+typedef struct
 {
    int numArcs;
    int memArcs;
@@ -224,7 +225,7 @@ struct SCIP_Netmatdec
    SCIP* env;
 
    int numConnectedComponents;
-};
+} SCIP_NETMATDECDATA;
 
 static void swap_ints(
    int* a,
@@ -239,7 +240,7 @@ static void swap_ints(
 #ifndef NDEBUG
 
 static SCIP_Bool nodeIsRepresentative(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_node node
 )
 {
@@ -253,7 +254,7 @@ static SCIP_Bool nodeIsRepresentative(
 #endif
 
 static spqr_node findNode(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_node node
 )
 {
@@ -285,7 +286,7 @@ static spqr_node findNode(
 }
 
 static spqr_node findNodeNoCompression(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_node node
 )
 {
@@ -307,7 +308,7 @@ static spqr_node findNodeNoCompression(
 }
 
 static spqr_node findArcTail(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -322,7 +323,7 @@ static spqr_node findArcTail(
 }
 
 static spqr_node findArcHead(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -337,7 +338,7 @@ static spqr_node findArcHead(
 }
 
 static spqr_node findArcHeadNoCompression(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -350,7 +351,7 @@ static spqr_node findArcHeadNoCompression(
 }
 
 static spqr_node findArcTailNoCompression(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -364,7 +365,7 @@ static spqr_node findArcTailNoCompression(
 
 
 static spqr_arc getFirstNodeArc(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_node node
 )
 {
@@ -375,7 +376,7 @@ static spqr_arc getFirstNodeArc(
 }
 
 static spqr_arc getNextNodeArcNoCompression(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    spqr_node node
 )
@@ -397,7 +398,7 @@ static spqr_arc getNextNodeArcNoCompression(
 }
 
 static spqr_arc getNextNodeArc(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    spqr_node node
 )
@@ -420,7 +421,7 @@ static spqr_arc getNextNodeArc(
 }
 
 static spqr_arc getPreviousNodeArc(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    spqr_node node
 )
@@ -443,7 +444,7 @@ static spqr_arc getPreviousNodeArc(
 }
 
 static void mergeNodeArcList(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_node toMergeInto,
    spqr_node toRemove
 )
@@ -498,7 +499,7 @@ static void mergeNodeArcList(
 }
 
 static void arcFlipReversed(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -509,7 +510,7 @@ static void arcFlipReversed(
 }
 
 static void arcSetReversed(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    SCIP_Bool reversed
 )
@@ -521,7 +522,7 @@ static void arcSetReversed(
 }
 
 static void arcSetRepresentative(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    spqr_arc representative
 )
@@ -534,7 +535,7 @@ static void arcSetRepresentative(
 }
 
 static spqr_node mergeNodes(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_node first,
    spqr_node second
 )
@@ -565,7 +566,7 @@ static spqr_node mergeNodes(
 }
 
 static SCIP_Bool memberIsRepresentative(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_member member
 )
 {
@@ -577,7 +578,7 @@ static SCIP_Bool memberIsRepresentative(
 }
 
 static spqr_member findMember(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member member
 )
 {
@@ -609,7 +610,7 @@ static spqr_member findMember(
 }
 
 static spqr_member findMemberNoCompression(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_member member
 )
 {
@@ -632,7 +633,7 @@ static spqr_member findMemberNoCompression(
 }
 
 static spqr_member mergeMembers(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member first,
    spqr_member second
 )
@@ -661,7 +662,7 @@ static spqr_member mergeMembers(
 }
 
 static spqr_member findArcMember(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -675,7 +676,7 @@ static spqr_member findArcMember(
 }
 
 static spqr_member findArcMemberNoCompression(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -688,7 +689,7 @@ static spqr_member findArcMemberNoCompression(
 }
 
 static spqr_member findMemberParent(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member member
 )
 {
@@ -709,7 +710,7 @@ static spqr_member findMemberParent(
 }
 
 static spqr_member findMemberParentNoCompression(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_member member
 )
 {
@@ -727,7 +728,7 @@ static spqr_member findMemberParentNoCompression(
 }
 
 static spqr_member findArcChildMember(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -741,7 +742,7 @@ static spqr_member findArcChildMember(
 }
 
 static spqr_member findArcChildMemberNoCompression(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -755,7 +756,7 @@ static spqr_member findArcChildMemberNoCompression(
 
 // Only accounts for CHILD markers, not parent markers!
 static SCIP_Bool arcIsMarker(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -767,7 +768,7 @@ static SCIP_Bool arcIsMarker(
 }
 
 static SCIP_Bool arcIsTree(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -787,7 +788,7 @@ typedef struct
 #ifndef NDEBUG
 
 static SCIP_Bool arcIsRepresentative(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -801,7 +802,7 @@ static SCIP_Bool arcIsRepresentative(
 #endif
 
 static ArcSign findArcSign(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -847,7 +848,7 @@ static ArcSign findArcSign(
 }
 
 static ArcSign findArcSignNoCompression(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -875,7 +876,7 @@ static ArcSign findArcSignNoCompression(
 
 //Find the arc tail/head, but accounting for reflection
 static spqr_node findEffectiveArcHead(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -890,7 +891,7 @@ static spqr_node findEffectiveArcHead(
 }
 
 static spqr_node findEffectiveArcTail(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -905,7 +906,7 @@ static spqr_node findEffectiveArcTail(
 }
 
 static spqr_node findEffectiveArcHeadNoCompression(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -920,7 +921,7 @@ static spqr_node findEffectiveArcHeadNoCompression(
 }
 
 static spqr_node findEffectiveArcTailNoCompression(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -938,7 +939,7 @@ static spqr_node findEffectiveArcTailNoCompression(
 ///Is not symmetric, in the sense that the arc directions of coponent first are guaranteed not to change but those of second may change
 ///Based on whether one wants the reflection or not
 static spqr_arc mergeArcSigns(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc first,
    spqr_arc second,
    SCIP_Bool reflectRelative
@@ -976,7 +977,7 @@ static spqr_arc mergeArcSigns(
 }
 
 static SCIP_Bool arcIsReversedNonRigid(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -989,7 +990,7 @@ static SCIP_Bool arcIsReversedNonRigid(
 
 
 static spqr_element arcGetElement(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -1000,75 +1001,75 @@ static spqr_element arcGetElement(
    return dec->arcs[arc].element;
 }
 
-SCIP_Bool SCIPnetmatdecContainsRow(
-   const SCIP_NETMATDEC* dec,
-   int row
+static SCIP_Bool netMatDecDataContainsRow(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   int                   row                 /**< The row index that is checked */
 )
 {
-   assert(SPQRrowIsValid(row) && (int) row < dec->memRows);
+   assert(SPQRrowIsValid(row) && row < dec->memRows);
    assert(dec);
    return SPQRarcIsValid(dec->rowArcs[row]);
 }
 
-SCIP_Bool SCIPnetmatdecContainsColumn(
-   const SCIP_NETMATDEC* dec,
-   int column
+static SCIP_Bool netMatDecDataContainsColumn(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   int                   column              /**< The column index that is checked */
 )
 {
-   assert(SPQRcolIsValid(column) && (int) column < dec->memColumns);
+   assert(SPQRcolIsValid(column) && column < dec->memColumns);
    assert(dec);
    return SPQRarcIsValid(dec->columnArcs[column]);
 }
 
 static void setDecompositionColumnArc(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_col col,
    spqr_arc arc
 )
 {
-   assert(SPQRcolIsValid(col) && (int) col < dec->memColumns);
+   assert(SPQRcolIsValid(col) && col < dec->memColumns);
    assert(dec);
    assert(SPQRarcIsValid(arc));
    dec->columnArcs[col] = arc;
 }
 
 static void setDecompositionRowArc(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_row row,
    spqr_arc arc
 )
 {
-   assert(SPQRrowIsValid(row) && (int) row < dec->memRows);
+   assert(SPQRrowIsValid(row) && row < dec->memRows);
    assert(dec);
    assert(SPQRarcIsValid(arc));
    dec->rowArcs[row] = arc;
 }
 
 static spqr_arc getDecompositionColumnArc(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_col col
 )
 {
-   assert(SPQRcolIsValid(col) && (int) col < dec->memColumns);
+   assert(SPQRcolIsValid(col) && col < dec->memColumns);
    assert(dec);
    return dec->columnArcs[col];
 }
 
 static spqr_arc getDecompositionRowArc(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_row row
 )
 {
-   assert(SPQRrowIsValid(row) && (int) row < dec->memRows);
+   assert(SPQRrowIsValid(row) && row < dec->memRows);
    assert(dec);
    return dec->rowArcs[row];
 }
 
-SCIP_RETCODE SCIPnetmatdecCreate(
-   SCIP* scip,
-   SCIP_NETMATDEC** pdec,
-   int nrows,
-   int ncols
+static SCIP_RETCODE netMatDecDataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NETMATDECDATA**  pdec,               /**< buffer to store pointer to created decomposition */
+   int                   nrows,              /**< The maximal number of rows that the decomposition can expect */
+   int                   ncols               /**< The maximal number of columns that the decomposition can expect */
 )
 {
    assert(scip);
@@ -1076,7 +1077,7 @@ SCIP_RETCODE SCIPnetmatdecCreate(
    assert(!*pdec);
 
    SCIP_CALL(SCIPallocBlockMemory(scip, pdec));
-   SCIP_NETMATDEC* dec = *pdec;
+   SCIP_NETMATDECDATA* dec = *pdec;
    dec->env = scip;
 
    //Initialize arc array data
@@ -1136,23 +1137,24 @@ SCIP_RETCODE SCIPnetmatdecCreate(
    return SCIP_OKAY;
 }
 
-void SCIPnetmatdecFree(SCIP_NETMATDEC** pDecomposition)
-{
-   assert(pDecomposition);
-   assert(*pDecomposition);
+static void netMatDecDataFree(
+   SCIP_NETMATDECDATA**      pdec                /**< pointer to the network matrix decomposition to freed */
+){
+   assert(pdec);
+   assert(*pdec);
 
-   SCIP_NETMATDEC* dec = *pDecomposition;
+   SCIP_NETMATDECDATA* dec = *pdec;
    SCIPfreeBlockMemoryArray(dec->env, &dec->columnArcs, dec->memColumns);
    SCIPfreeBlockMemoryArray(dec->env, &dec->rowArcs, dec->memRows);
    SCIPfreeBlockMemoryArray(dec->env, &dec->nodes, dec->memNodes);
    SCIPfreeBlockMemoryArray(dec->env, &dec->members, dec->memMembers);
    SCIPfreeBlockMemoryArray(dec->env, &dec->arcs, dec->memArcs);
 
-   SCIPfreeBlockMemory(dec->env, pDecomposition);
+   SCIPfreeBlockMemory(dec->env, pdec);
 }
 
 static spqr_arc getFirstMemberArc(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_member member
 )
 {
@@ -1163,7 +1165,7 @@ static spqr_arc getFirstMemberArc(
 }
 
 static spqr_arc getNextMemberArc(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -1175,7 +1177,7 @@ static spqr_arc getNextMemberArc(
 }
 
 static spqr_arc getPreviousMemberArc(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -1187,7 +1189,7 @@ static spqr_arc getPreviousMemberArc(
 }
 
 static void addArcToMemberArcList(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    spqr_member member
 )
@@ -1212,7 +1214,7 @@ static void addArcToMemberArcList(
 }
 
 static SCIP_RETCODE createArc(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member member,
    SCIP_Bool reversed,
    spqr_arc* pArc
@@ -1261,7 +1263,7 @@ static SCIP_RETCODE createArc(
 }
 
 static SCIP_RETCODE createRowArc(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member member,
    spqr_arc* pArc,
    spqr_row row,
@@ -1277,7 +1279,7 @@ static SCIP_RETCODE createRowArc(
 }
 
 static SCIP_RETCODE createColumnArc(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member member,
    spqr_arc* pArc,
    spqr_col column,
@@ -1293,7 +1295,7 @@ static SCIP_RETCODE createColumnArc(
 }
 
 static SCIP_RETCODE createMember(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SPQRMemberType type,
    spqr_member* pMember
 )
@@ -1323,7 +1325,7 @@ static SCIP_RETCODE createMember(
 }
 
 static SCIP_RETCODE createNode(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_node* pNode
 )
 {
@@ -1344,7 +1346,7 @@ static SCIP_RETCODE createNode(
 }
 
 static void removeArcFromNodeArcList(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    spqr_node node,
    SCIP_Bool nodeIsHead
@@ -1379,7 +1381,7 @@ static void removeArcFromNodeArcList(
 }
 
 static void addArcToNodeArcList(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    spqr_node node,
    SCIP_Bool nodeIsHead
@@ -1425,7 +1427,7 @@ static void addArcToNodeArcList(
 }
 
 static void setArcHeadAndTail(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    spqr_node head,
    spqr_node tail
@@ -1436,7 +1438,7 @@ static void setArcHeadAndTail(
 }
 
 static void clearArcHeadAndTail(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc
 )
 {
@@ -1447,7 +1449,7 @@ static void clearArcHeadAndTail(
 }
 
 static void changeArcHead(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    spqr_node oldHead,
    spqr_node newHead
@@ -1460,7 +1462,7 @@ static void changeArcHead(
 }
 
 static void changeArcTail(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    spqr_node oldTail,
    spqr_node newTail
@@ -1473,7 +1475,7 @@ static void changeArcTail(
 }
 
 static int nodeDegree(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_node node
 )
 {
@@ -1484,7 +1486,7 @@ static int nodeDegree(
 }
 
 static SPQRMemberType getMemberType(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_member member
 )
 {
@@ -1496,7 +1498,7 @@ static SPQRMemberType getMemberType(
 }
 
 static void updateMemberType(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_member member,
    SPQRMemberType type
 )
@@ -1510,7 +1512,7 @@ static void updateMemberType(
 }
 
 static spqr_arc markerToParent(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_member member
 )
 {
@@ -1522,7 +1524,7 @@ static spqr_arc markerToParent(
 }
 
 static void updateMemberParentInformation(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    const spqr_member newMember,
    const spqr_member toRemove
 )
@@ -1540,7 +1542,7 @@ static void updateMemberParentInformation(
 }
 
 static spqr_arc markerOfParent(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_member member
 )
 {
@@ -1553,7 +1555,7 @@ static spqr_arc markerOfParent(
 
 
 static int getNumMemberArcs(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_member member
 )
 {
@@ -1564,20 +1566,20 @@ static int getNumMemberArcs(
    return dec->members[member].numArcs;
 }
 
-static int getNumNodes(const SCIP_NETMATDEC* dec)
+static int getNumNodes(const SCIP_NETMATDECDATA* dec)
 {
    assert(dec);
    return dec->numNodes;
 }
 
-static int getNumMembers(const SCIP_NETMATDEC* dec)
+static int getNumMembers(const SCIP_NETMATDECDATA* dec)
 {
    assert(dec);
    return dec->numMembers;
 }
 
 static SCIP_RETCODE createStandaloneParallel(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_col* columns,
    SCIP_Bool* reversed,
    int num_columns,
@@ -1604,7 +1606,7 @@ static SCIP_RETCODE createStandaloneParallel(
 
 //TODO: fix tracking connectivity more cleanly, should not be left up to the algorithms ideally
 static SCIP_RETCODE createConnectedParallel(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_col* columns,
    SCIP_Bool* reversed,
    int num_columns,
@@ -1629,7 +1631,7 @@ static SCIP_RETCODE createConnectedParallel(
 }
 
 static SCIP_RETCODE createStandaloneSeries(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_row* rows,
    SCIP_Bool* reversed,
    int numRows,
@@ -1654,7 +1656,7 @@ static SCIP_RETCODE createStandaloneSeries(
 }
 
 static SCIP_RETCODE createConnectedSeries(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_row* rows,
    SCIP_Bool* reversed,
    int numRows,
@@ -1678,7 +1680,7 @@ static SCIP_RETCODE createConnectedSeries(
 }
 
 static void removeArcFromMemberArcList(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    spqr_member member
 )
@@ -1720,7 +1722,7 @@ static void process_arc(
    FindCycleCall* callStack,
    int* callStackSize,
    spqr_arc arc,
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    SCIP_Bool* fundamental_cycle_direction,
    SCIP_Bool arcIsReversed
 )
@@ -1757,7 +1759,7 @@ static void process_arc(
 }
 
 static int decompositionGetFundamentalCycleRows(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    spqr_col column,
    spqr_row* output,
    SCIP_Bool* computedSignStorage
@@ -1934,9 +1936,9 @@ static int decompositionGetFundamentalCycleRows(
    return num_rows;
 }
 
-SCIP_Bool SCIPnetmatdecVerifyCycle(
+static SCIP_Bool netMatDecDataVerifyCycle(
    SCIP* scip,
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    int column,
    const int* nonzrowidx,
    const double* nonzvals,
@@ -2017,28 +2019,28 @@ SCIP_Bool SCIPnetmatdecVerifyCycle(
    return good;
 }
 
-static spqr_member largestMemberID(const SCIP_NETMATDEC* dec)
+static spqr_member largestMemberID(const SCIP_NETMATDECDATA* dec)
 {
    return dec->numMembers;
 }
 
-static spqr_arc largestArcID(const SCIP_NETMATDEC* dec)
+static spqr_arc largestArcID(const SCIP_NETMATDECDATA* dec)
 {
    return dec->numArcs;
 }
 
-static spqr_node largestNodeID(const SCIP_NETMATDEC* dec)
+static spqr_node largestNodeID(const SCIP_NETMATDECDATA* dec)
 {
    return dec->numNodes;
 }
 
-static int numConnectedComponents(const SCIP_NETMATDEC* dec)
+static int numConnectedComponents(const SCIP_NETMATDECDATA* dec)
 {
    return dec->numConnectedComponents;
 }
 
 static SCIP_RETCODE createChildMarker(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member member,
    spqr_member child,
    SCIP_Bool isTree,
@@ -2055,7 +2057,7 @@ static SCIP_RETCODE createChildMarker(
 }
 
 static SCIP_RETCODE createParentMarker(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member member,
    SCIP_Bool isTree,
    spqr_member parent,
@@ -2077,7 +2079,7 @@ static SCIP_RETCODE createParentMarker(
 }
 
 static SCIP_RETCODE createMarkerPair(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member parentMember,
    spqr_member childMember,
    SCIP_Bool parentIsTree,
@@ -2098,7 +2100,7 @@ static SCIP_RETCODE createMarkerPair(
 }
 
 static SCIP_RETCODE createMarkerPairWithReferences(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member parentMember,
    spqr_member childMember,
    SCIP_Bool parentIsTree,
@@ -2116,7 +2118,7 @@ static SCIP_RETCODE createMarkerPairWithReferences(
 }
 
 static void moveArcToNewMember(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_arc arc,
    spqr_member oldMember,
    spqr_member newMember
@@ -2156,7 +2158,7 @@ static void moveArcToNewMember(
 }
 
 static void mergeMemberArcList(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member toMergeInto,
    spqr_member toRemove
 )
@@ -2182,7 +2184,7 @@ static void mergeMemberArcList(
 }
 
 static void changeLoopToSeries(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member member
 )
 {
@@ -2198,7 +2200,7 @@ static void changeLoopToSeries(
 }
 
 static void changeLoopToParallel(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member member
 )
 {
@@ -2213,7 +2215,7 @@ static void changeLoopToParallel(
    dec->members[member].type = SPQR_MEMBERTYPE_PARALLEL;
 }
 
-SCIP_Bool SCIPnetmatdecIsMinimal(const SCIP_NETMATDEC* dec)
+static SCIP_Bool netMatDecDataIsMinimal(const SCIP_NETMATDECDATA* dec)
 {
    //Relies on parents/children etc. being set correctly in the tree
    SCIP_Bool isMinimal = TRUE;
@@ -2240,7 +2242,7 @@ SCIP_Bool SCIPnetmatdecIsMinimal(const SCIP_NETMATDEC* dec)
 }
 
 static void decreaseNumConnectedComponents(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    int by
 )
 {
@@ -2249,7 +2251,7 @@ static void decreaseNumConnectedComponents(
 }
 
 static void reorderComponent(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member newRoot
 )
 {
@@ -2296,8 +2298,8 @@ static void reorderComponent(
 }
 
 
-void SCIPnetmatdecRemoveComponent(
-   SCIP_NETMATDEC* dec,
+static void netMatDecDataRemoveComponent(
+   SCIP_NETMATDECDATA* dec,
    const int* componentRows,
    int numRows,
    const int* componentCols,
@@ -2470,7 +2472,7 @@ static void decompositionToDot(FILE *stream, const SCIP_NETMATDEC *dec, SCIP_Boo
 #endif
 
 static SCIP_RETCODE mergeGivenMemberIntoParent(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member member,
    spqr_member parent,
    spqr_arc parentToChild,
@@ -2649,7 +2651,7 @@ typedef struct
    spqr_member member;
 } CreateReducedMembersCallstack;
 
-struct SCIP_NetColAdd
+typedef struct
 {
    SCIP_Bool remainsNetwork;
 
@@ -2700,10 +2702,10 @@ struct SCIP_NetColAdd
    spqr_member* leafMembers;
    int numLeafMembers;
    int memLeafMembers;
-};
+} SCIP_NETCOLADD;
 
 static void cleanupPreviousIteration(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol
 )
 {
@@ -2750,7 +2752,7 @@ static void cleanupPreviousIteration(
    newCol->numPathArcs = 0;
 }
 
-SCIP_RETCODE SCIPnetcoladdCreate(
+static SCIP_RETCODE SCIPnetcoladdCreate(
    SCIP* scip,
    SCIP_NETCOLADD** pcoladd
 )
@@ -2812,7 +2814,7 @@ SCIP_RETCODE SCIPnetcoladdCreate(
    return SCIP_OKAY;
 }
 
-void SCIPnetcoladdFree(
+static void SCIPnetcoladdFree(
    SCIP* scip,
    SCIP_NETCOLADD** pcoladd
 )
@@ -2840,7 +2842,7 @@ void SCIPnetcoladdFree(
 
 
 static reduced_member_id createReducedMembersToRoot(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    const spqr_member firstMember
 )
@@ -2947,7 +2949,7 @@ static reduced_member_id createReducedMembersToRoot(
 }
 
 static SCIP_RETCODE constructReducedDecomposition(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol
 )
 {
@@ -3111,7 +3113,7 @@ static void cleanUpMemberInformation(SCIP_NETCOLADD* newCol)
 }
 
 static void createPathArc(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    const spqr_arc arc,
    const reduced_member_id reducedMember,
@@ -3161,7 +3163,7 @@ static void createPathArc(
 }
 
 static SCIP_RETCODE createPathArcs(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol
 )
 {
@@ -3217,7 +3219,7 @@ static SCIP_RETCODE createPathArcs(
  */
 static SCIP_RETCODE
 newColUpdateColInformation(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    spqr_col column,
    const spqr_row* nonzeroRows,
@@ -3270,7 +3272,7 @@ newColUpdateColInformation(
 }
 
 static SCIP_RETCODE computeLeafMembers(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol
 )
 {
@@ -3294,7 +3296,7 @@ static SCIP_RETCODE computeLeafMembers(
 }
 
 static void determineRigidPath(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    SPQRColReducedMember* redMem
 )
@@ -3354,7 +3356,7 @@ static void determineRigidPath(
 }
 
 static void determineSingleRigidType(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id reducedMember
    )
@@ -3373,7 +3375,7 @@ static void determineSingleRigidType(
 
 //TODO: type seems somewhat duplicate
 static void determineSingleComponentType(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id reducedMember
 )
@@ -3469,7 +3471,7 @@ static void determineSingleComponentType(
 
 
 static void determinePathSeriesType(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id reducedMember,
    spqr_member member,
@@ -3592,7 +3594,7 @@ static void determinePathSeriesType(
 }
 
 static void determinePathParallelType(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id reducedMember,
    spqr_member member,
@@ -3660,7 +3662,7 @@ static void determinePathParallelType(
 }
 
 static void determinePathRigidType(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id reducedMember,
    MemberPathType previousType,
@@ -3965,7 +3967,7 @@ static void determinePathRigidType(
 }
 
 static void determinePathMemberType(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id reducedMember,
    spqr_member member,
@@ -4007,7 +4009,7 @@ static void determinePathMemberType(
 }
 
 static void determinePathTypes(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    SPQRColReducedComponent* component
 )
@@ -4091,7 +4093,7 @@ static void determinePathTypes(
 }
 
 static void checkRigidLeaf(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id leaf,
    spqr_arc toParent,
@@ -4119,7 +4121,7 @@ static void checkRigidLeaf(
 }
 
 static ReducedMemberType checkLeaf(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id leaf,
    spqr_arc toParent,
@@ -4215,7 +4217,7 @@ static ReducedMemberType checkLeaf(
 }
 
 static void propagateCycles(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol
 )
 {
@@ -4343,7 +4345,7 @@ static void propagateCycles(
 }
 
 static void determineComponentTypes(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    SPQRColReducedComponent* component
 )
@@ -4363,9 +4365,8 @@ static void determineComponentTypes(
    }
 }
 
-SCIP_RETCODE
-SCIPnetcoladdCheck(
-   SCIP_NETMATDEC* dec,
+static SCIP_RETCODE SCIPnetcoladdCheck(
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* coladd,
    int column,
    const int* nonzrows,
@@ -4477,7 +4478,7 @@ static void setTerminalRepresentative(
 }
 
 static SCIP_RETCODE splitParallel(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    spqr_member parallel,
    spqr_arc arc1,
    spqr_arc arc2,
@@ -4508,7 +4509,7 @@ static SCIP_RETCODE splitParallel(
 }
 
 static SCIP_RETCODE splitSeries(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    SPQRColReducedMember* reducedMember,
    spqr_member member,
@@ -4680,7 +4681,7 @@ static SCIP_RETCODE splitSeries(
 
 
 static SCIP_RETCODE splitSeriesMerging(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    SPQRColReducedMember* reducedMember,
    spqr_member member,
@@ -4810,7 +4811,7 @@ static SCIP_RETCODE splitSeriesMerging(
 }
 
 static SCIP_RETCODE transformFirstPathMember(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id reducedMember,
    NewColInformation* newColInfo,
@@ -4910,7 +4911,7 @@ static SCIP_RETCODE transformFirstPathMember(
 }
 
 static SCIP_RETCODE transformAndMergeParallel(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id current,
    reduced_member_id next,
@@ -4980,7 +4981,7 @@ static SCIP_RETCODE transformAndMergeParallel(
 }
 
 static SCIP_RETCODE transformAndMergeSeries(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id current,
    reduced_member_id next,
@@ -5120,7 +5121,7 @@ static SCIP_RETCODE transformAndMergeSeries(
 }
 
 static SCIP_RETCODE transformAndMergeRigid(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id current,
    reduced_member_id next,
@@ -5185,7 +5186,7 @@ static SCIP_RETCODE transformAndMergeRigid(
 }
 
 static SCIP_RETCODE transformAndMerge(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id current,
    reduced_member_id next,
@@ -5227,7 +5228,7 @@ static SCIP_RETCODE transformAndMerge(
 }
 
 static SCIP_RETCODE transformPath(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    SPQRColReducedComponent* component,
    NewColInformation* newColInfo
@@ -5270,7 +5271,7 @@ static SCIP_RETCODE columnTransformSingleParallel(
 }
 
 static SCIP_RETCODE columnTransformSingleSeries(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id reducedMemberId,
    spqr_member member,
@@ -5293,7 +5294,7 @@ static SCIP_RETCODE columnTransformSingleSeries(
 }
 
 static SCIP_RETCODE columnTransformSingleRigid(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    reduced_member_id reducedMemberId,
    spqr_member member,
@@ -5423,7 +5424,7 @@ static SCIP_RETCODE columnTransformSingleRigid(
 }
 
 static SCIP_RETCODE transformComponent(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
    SPQRColReducedComponent* component,
    NewColInformation* newColInfo
@@ -5475,9 +5476,13 @@ static SCIP_RETCODE transformComponent(
 
    return SCIP_OKAY;
 }
+static SCIP_Bool SCIPnetcoladdRemainsNetwork(const SCIP_NETCOLADD* newCol)
+{
+   return newCol->remainsNetwork;
+}
 
-SCIP_RETCODE SCIPnetcoladdAdd(
-   SCIP_NETMATDEC* dec,
+static SCIP_RETCODE SCIPnetcoladdAdd(
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol
 )
 {
@@ -5579,10 +5584,7 @@ SCIP_RETCODE SCIPnetcoladdAdd(
    return SCIP_OKAY;
 }
 
-SCIP_Bool SCIPnetcoladdRemainsNetwork(const SCIP_NETCOLADD* newCol)
-{
-   return newCol->remainsNetwork;
-}
+
 
 
 static int minValue(
@@ -5707,7 +5709,7 @@ typedef struct
    reduced_member_id root;
 } SPQRRowReducedComponent;
 
-struct SCIP_NetRowAdd
+typedef struct
 {
    SCIP_Bool remainsNetwork;
 
@@ -5789,7 +5791,7 @@ struct SCIP_NetRowAdd
 
    COLOR_STATUS * temporaryColorArray;
    int memTemporaryColorArray;
-};
+} SCIP_NETROWADD;
 
 typedef struct
 {
@@ -5816,7 +5818,7 @@ static NewRowInformation emptyNewRowInformation(void)
  * already part of the decomposition.
  */
 static SCIP_RETCODE newRowUpdateRowInformation(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const spqr_row row,
    const spqr_col* columns,
@@ -5876,7 +5878,7 @@ static SCIP_RETCODE newRowUpdateRowInformation(
  * @return
  */
 static reduced_member_id createRowReducedMembersToRoot(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const spqr_member firstMember
 )
@@ -5984,7 +5986,7 @@ static reduced_member_id createRowReducedMembersToRoot(
  * @return
  */
 static SCIP_RETCODE constructRowReducedDecomposition(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow
 )
 {
@@ -6137,7 +6139,7 @@ static SCIP_RETCODE constructRowReducedDecomposition(
  * @param reducedMember
  */
 static void createCutArc(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const spqr_arc arc,
    const reduced_member_id reducedMember,
@@ -6188,7 +6190,7 @@ static void createCutArc(
  * Note this preallocates memory for cut arcs which may be created by propagation.
  */
 static SCIP_RETCODE createReducedDecompositionCutArcs(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow
 )
 {
@@ -6241,7 +6243,7 @@ static SCIP_RETCODE createReducedDecompositionCutArcs(
  * which is not propagated.
  */
 static SCIP_RETCODE determineLeafReducedMembers(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow
 )
 {
@@ -6268,7 +6270,7 @@ static SCIP_RETCODE determineLeafReducedMembers(
  * Preallocates memory arrays necessary for searching rigid components.
  */
 static SCIP_RETCODE allocateRigidSearchMemory(
-   const SCIP_NETMATDEC* dec,
+   const SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow
 )
 {
@@ -6374,7 +6376,7 @@ static SCIP_RETCODE allocateRigidSearchMemory(
 }
 
 static void zeroOutColors(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const spqr_node firstRemoveNode
 )
@@ -6425,7 +6427,7 @@ static void zeroOutColors(
 }
 
 static void cleanUpPreviousIteration(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow
 )
 {
@@ -6464,7 +6466,7 @@ static void cleanUpPreviousIteration(
 }
 
 static void rigidFindStarNodes(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id toCheck
 )
@@ -6564,7 +6566,7 @@ static void rigidFindStarNodes(
 }
 
 static void zeroOutColorsExceptNeighbourhood(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const spqr_node articulationNode,
    const spqr_node startRemoveNode
@@ -6610,7 +6612,7 @@ static void zeroOutColorsExceptNeighbourhood(
 //Theoretically, there is a faster algorithm, but it is quite complicated to implement.
 //Thus, we stick with the 'simple' version below, which is easily fast enough in practice.
 static void intersectionOfAllPaths(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id toCheck,
    int* const nodeNumPaths
@@ -6739,7 +6741,7 @@ static void addArticulationNode(
 }
 
 static void articulationPoints(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    ArticulationNodeInformation* nodeInfo,
    reduced_member_id reducedMember
@@ -6826,7 +6828,7 @@ static void articulationPoints(
 }
 
 static void rigidConnectedColoringRecursive(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    spqr_node articulationNode,
    spqr_node firstProcessNode,
@@ -6900,7 +6902,7 @@ static void rigidConnectedColoringRecursive(
 }
 
 static void rigidConnectedColoring(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id reducedMember,
    const spqr_node node,
@@ -6969,7 +6971,7 @@ static void rigidConnectedColoring(
 }
 
 static spqr_node checkNeighbourColoringArticulationNode(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const spqr_node articulationNode,
    spqr_arc* const adjacentSplittingArc
@@ -7030,7 +7032,7 @@ static spqr_node checkNeighbourColoringArticulationNode(
 
 
 static void rigidGetSplittableArticulationPointsOnPath(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id toCheck,
    spqr_node firstNode,
@@ -7132,7 +7134,7 @@ static void rigidGetSplittableArticulationPointsOnPath(
 }
 
 static void determineParallelType(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id toCheckMember,
    const spqr_arc markerToOther,
@@ -7183,7 +7185,7 @@ static void determineParallelType(
 }
 
 static void determineSeriesType(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id toCheckMember,
    const spqr_arc markerToOther,
@@ -7204,7 +7206,7 @@ static void determineSeriesType(
 }
 
 static void determineRigidType(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id toCheckMember,
    const spqr_arc markerToOther,
@@ -7266,7 +7268,7 @@ static void determineRigidType(
 }
 
 static RowReducedMemberType determineType(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id toCheckMember,
    const spqr_arc markerToOther,
@@ -7303,7 +7305,7 @@ static RowReducedMemberType determineType(
 }
 
 static void propagateComponents(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow
 )
 {
@@ -7407,7 +7409,7 @@ typedef struct
 
 static Nodes
 rigidDetermineCandidateNodesFromAdjacentComponents(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id toCheck
 )
@@ -7475,7 +7477,7 @@ rigidDetermineCandidateNodesFromAdjacentComponents(
 }
 
 static SCIP_RETCODE allocateTreeSearchMemory(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow
 )
 {
@@ -7491,7 +7493,7 @@ static SCIP_RETCODE allocateTreeSearchMemory(
 }
 
 static void determineSingleRowRigidType(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id reducedMember
 )
@@ -7520,7 +7522,7 @@ static void determineSingleRowRigidType(
 }
 
 static void determineSingleParallelType(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id reducedMember
    )
@@ -7567,7 +7569,7 @@ static void determineSingleSeriesType(
 }
 
 static spqr_node determineAndColorSplitNode(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id id,
    spqr_node candidateOne,
@@ -7647,7 +7649,7 @@ static spqr_node determineAndColorSplitNode(
 }
 
 static void determineSplitTypeFirstLeaf(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id reducedId
 )
@@ -7764,7 +7766,7 @@ typedef struct
 } SplitOrientation;
 
 static SplitOrientation getRelativeOrientationRigid(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id reducedId,
    spqr_arc arcToNext
@@ -7812,7 +7814,7 @@ static SplitOrientation getRelativeOrientationRigid(
 }
 
 static SplitOrientation getRelativeOrientationParallel(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id reducedId,
    spqr_arc arcToNext
@@ -7833,7 +7835,7 @@ static SplitOrientation getRelativeOrientationParallel(
 }
 
 static SplitOrientation getRelativeOrientationSeries(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id reducedId,
    spqr_arc arcToNext
@@ -7855,7 +7857,7 @@ static SplitOrientation getRelativeOrientationSeries(
 }
 
 static SplitOrientation getRelativeOrientation(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id reducedId,
    spqr_arc arcToNext
@@ -7883,7 +7885,7 @@ static SplitOrientation getRelativeOrientation(
 }
 
 static void determineSplitTypeSeries(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id reducedId,
    spqr_arc marker,
@@ -7931,7 +7933,7 @@ static void determineSplitTypeSeries(
 }
 
 static void determineSplitTypeParallel(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id reducedId,
    spqr_arc marker,
@@ -7987,7 +7989,7 @@ static void determineSplitTypeParallel(
 }
 
 static void determineSplitTypeRigid(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id reducedId,
    spqr_member member,
@@ -8098,7 +8100,7 @@ static void determineSplitTypeRigid(
 }
 
 static void determineSplitTypeNext(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id current,
    reduced_member_id next,
@@ -8140,7 +8142,7 @@ static void determineSplitTypeNext(
 }
 
 static void determineMergeableTypes(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id root
 )
@@ -8259,7 +8261,7 @@ static void cleanUpRowMemberInformation(SCIP_NETROWADD* newRow)
 }
 
 static SCIP_RETCODE rigidTransformArcIntoCycle(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    const spqr_member member,
    const spqr_arc arc,
    const SCIP_Bool reverseArcDirection,
@@ -8365,7 +8367,7 @@ static SCIP_RETCODE rigidTransformArcIntoCycle(
 }
 
 static SCIP_RETCODE transformSingleRigid(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id reducedMember,
    const spqr_member member,
@@ -8495,7 +8497,7 @@ static SCIP_RETCODE transformSingleRigid(
 
 
 static SCIP_RETCODE splitParallelRowAddition(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id reducedMember,
    const spqr_member member,
@@ -8681,7 +8683,7 @@ static SCIP_RETCODE splitParallelRowAddition(
 }
 
 static SCIP_RETCODE transformSingleParallel(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id reducedMember,
    const spqr_member member,
@@ -8693,7 +8695,7 @@ static SCIP_RETCODE transformSingleParallel(
 }
 
 static SCIP_RETCODE splitSeriesMergingRowAddition(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    const reduced_member_id reducedMember,
    const spqr_member member,
@@ -8808,7 +8810,7 @@ static SCIP_RETCODE splitSeriesMergingRowAddition(
 }
 
 static SCIP_RETCODE splitParallelMerging(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id reducedMember,
    spqr_member member,
@@ -9033,7 +9035,7 @@ static SCIP_RETCODE splitParallelMerging(
 }
 
 static SCIP_RETCODE splitFirstLeaf(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id leaf,
    NewRowInformation* const newRowInformation
@@ -9170,7 +9172,7 @@ static SCIP_RETCODE splitFirstLeaf(
 }
 
 static SCIP_RETCODE mergeSplitMemberIntoParent(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    spqr_member member,
    spqr_member parent,
@@ -9244,7 +9246,7 @@ static SCIP_RETCODE mergeSplitMemberIntoParent(
 }
 
 static SCIP_RETCODE splitAndMergeSeries(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id smallMember,
    SCIP_Bool largeIsParent,
@@ -9371,7 +9373,7 @@ static SCIP_RETCODE splitAndMergeSeries(
 }
 
 static SCIP_RETCODE splitAndMergeParallel(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id smallMember,
    SCIP_Bool largeIsParent,
@@ -9491,7 +9493,7 @@ static SCIP_RETCODE splitAndMergeParallel(
 }
 
 static SCIP_RETCODE splitAndMergeRigid(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id smallMember,
    SCIP_Bool largeIsParent,
@@ -9631,7 +9633,7 @@ static SCIP_RETCODE splitAndMergeRigid(
 }
 
 static SCIP_RETCODE splitAndMerge(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id smallMember,
    SCIP_Bool largeIsParent,
@@ -9666,7 +9668,7 @@ static SCIP_RETCODE splitAndMerge(
 }
 
 static SCIP_RETCODE mergeTree(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    reduced_member_id root,
    NewRowInformation* const newRowInformation
@@ -9736,7 +9738,7 @@ static SCIP_RETCODE mergeTree(
 }
 
 static SCIP_RETCODE transformComponentRowAddition(
-   SCIP_NETMATDEC* dec,
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
    SPQRRowReducedComponent* component,
    NewRowInformation* const newRowInformation
@@ -9796,7 +9798,7 @@ static SCIP_RETCODE transformComponentRowAddition(
 }
 
 
-SCIP_RETCODE SCIPnetrowaddCreate(
+static SCIP_RETCODE SCIPnetrowaddCreate(
    SCIP* scip,
    SCIP_NETROWADD** prowadd
 )
@@ -9889,7 +9891,7 @@ SCIP_RETCODE SCIPnetrowaddCreate(
    return SCIP_OKAY;
 }
 
-void SCIPnetrowaddFree(
+static void SCIPnetrowaddFree(
    SCIP* scip,
    SCIP_NETROWADD** prowadd
 )
@@ -9925,8 +9927,8 @@ void SCIPnetrowaddFree(
    SCIPfreeBlockMemory(scip, prowadd);
 }
 
-SCIP_RETCODE SCIPnetrowaddCheck(
-   SCIP_NETMATDEC* dec,
+static SCIP_RETCODE SCIPnetrowaddCheck(
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* rowadd,
    int row,
    const int* nonzcols,
@@ -9971,8 +9973,8 @@ SCIP_RETCODE SCIPnetrowaddCheck(
    return SCIP_OKAY;
 }
 
-SCIP_RETCODE SCIPnetrowaddAdd(
-   SCIP_NETMATDEC* dec,
+static SCIP_RETCODE SCIPnetrowaddAdd(
+   SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* rowadd
 )
 {
@@ -10074,7 +10076,144 @@ SCIP_RETCODE SCIPnetrowaddAdd(
    return SCIP_OKAY;
 }
 
-SCIP_Bool SCIPnetrowaddRemainsNetwork(const SCIP_NETROWADD* rowadd)
+static SCIP_Bool SCIPnetrowaddRemainsNetwork(const SCIP_NETROWADD* rowadd)
 {
    return rowadd->remainsNetwork;
+}
+
+struct SCIP_Netmatdec{
+   SCIP_NETMATDECDATA * dec;
+   SCIP_NETROWADD * rowadd;
+   SCIP_NETCOLADD * coladd;
+};
+
+SCIP_RETCODE SCIPnetmatdecCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NETMATDEC**      pdec,               /**< buffer to store pointer to created decomposition */
+   int                   nrows,              /**< The maximal number of rows that the decomposition can expect */
+   int                   ncols               /**< The maximal number of columns that the decomposition can expect */
+)
+{
+   SCIP_CALL(SCIPallocBlockMemory(scip, pdec));
+   SCIP_NETMATDEC* dec = *pdec;
+   dec->dec = NULL;
+   SCIP_CALL(netMatDecDataCreate(scip, &dec->dec, nrows, ncols));
+   dec->rowadd = NULL;
+   dec->coladd = NULL;
+   return SCIP_OKAY;
+}
+
+void SCIPnetmatdecFree(
+   SCIP_NETMATDEC**      pdec                /**< pointer to the network matrix decomposition to freed */
+)
+{
+   SCIP_NETMATDEC* dec = *pdec;
+   SCIP* scip = dec->dec->env;
+   if( dec->coladd != NULL)
+   {
+      SCIPnetcoladdFree(scip, &dec->coladd);
+   }
+   if( dec->rowadd != NULL)
+   {
+      SCIPnetrowaddFree(scip, &dec->rowadd);
+   }
+   netMatDecDataFree(&dec->dec);
+   SCIPfreeBlockMemory(scip,pdec);
+}
+
+SCIP_RETCODE SCIPnetmatdecTryAddCol(
+   SCIP_NETMATDEC*       dec,                /**< Network matrix decomposition */
+   int                   column,             /**< The column to add */
+   int*                  nonzrows,           /**< The column's nonzero row indices */
+   double*               nonzvals,           /**< The column's nonzero entries */
+   int                   nnonzs,             /**< The number of nonzeros in the column */
+   SCIP_Bool*            success             /**< Buffer to store whether the column was added */
+)
+{
+   if( dec->coladd == NULL)
+   {
+      SCIP_CALL(SCIPnetcoladdCreate(dec->dec->env, &dec->coladd));
+   }
+
+   SCIP_CALL(SCIPnetcoladdCheck(dec->dec, dec->coladd, column, nonzrows, nonzvals, nnonzs));
+   *success = SCIPnetcoladdRemainsNetwork(dec->coladd);
+   if( *success )
+   {
+      SCIP_CALL(SCIPnetcoladdAdd(dec->dec, dec->coladd));
+   }
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPnetmatdecTryAddRow(
+   SCIP_NETMATDEC*       dec,                /**< Network matrix decomposition */
+   int                   row,                /**< The row to add */
+   int*                  nonzcols,           /**< The row's nonzero column indices */
+   double*               nonzvals,           /**< The row's nonzero entries */
+   int                   nnonzs,             /**< The number of nonzeros in the row */
+   SCIP_Bool*            success             /**< Buffer to store whether the row was added */
+)
+{
+   if( dec->rowadd == NULL)
+   {
+      SCIP_CALL(SCIPnetrowaddCreate(dec->dec->env, &dec->rowadd));
+   }
+
+   SCIP_CALL(SCIPnetrowaddCheck(dec->dec, dec->rowadd, row, nonzcols, nonzvals, nnonzs));
+   *success = SCIPnetrowaddRemainsNetwork(dec->rowadd);
+   if( *success )
+   {
+      SCIP_CALL(SCIPnetrowaddAdd(dec->dec, dec->rowadd));
+   }
+   return SCIP_OKAY;
+}
+
+SCIP_Bool SCIPnetmatdecContainsRow(
+   SCIP_NETMATDEC*       dec,                /**< The network matrix decomposition */
+   int                   row                 /**< The row index that is checked */
+)
+{
+   return netMatDecDataContainsRow(dec->dec, row);
+}
+
+SCIP_Bool SCIPnetmatdecContainsColumn(
+   SCIP_NETMATDEC*       dec,                /**< The network matrix decomposition */
+   int                   column              /**< The column index that is checked */
+)
+{
+   return netMatDecDataContainsColumn(dec->dec, column);
+}
+
+void SCIPnetmatdecRemoveComponent(
+   SCIP_NETMATDEC*       dec,                /**< The network matrix decomposition */
+   int*                  componentrows,      /**< Pointer to the array of rows to delete */
+   int                   nrows,              /**< The number of rows to delete */
+   int*                  componentcols,      /**< Pointer to the array of columns to delete */
+   int                   ncols               /**< The number of columns to delete */
+)
+{
+   netMatDecDataRemoveComponent(dec->dec,componentrows,nrows,componentcols,ncols);
+}
+
+SCIP_Bool SCIPnetmatdecIsMinimal(
+   SCIP_NETMATDEC*       dec                 /**< The network matrix decomposition */
+)
+{
+   return netMatDecDataIsMinimal(dec->dec);
+}
+
+
+SCIP_Bool SCIPnetmatdecVerifyCycle(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NETMATDEC*       dec,                /**< The network matrix decomposition */
+   int                   column,             /**< The column to check */
+   int*                  nonzrowidx,         /**< Array with the column's nonzero row indices */
+   double*               nonzvals,           /**< Array with the column's nonzero values */
+   int                   nnonzs,             /**< Number of nonzeros in the column */
+   int*                  pathrowstorage,     /**< A buffer to hold the computed path's rows. Should have size equal or
+                                              *   greater than the number of rows in the decomposition. */
+   SCIP_Bool*            pathsignstorage     /**< A buffer to store the computed path's row signs. Should have size
+                                              * equal or greater than the number of rows in the decomposition. */
+)
+{
+   return netMatDecDataVerifyCycle(scip,dec->dec,column,nonzrowidx,nonzvals,nnonzs,pathrowstorage,pathsignstorage);
 }
