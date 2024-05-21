@@ -346,7 +346,6 @@ SYMSRC		=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(BLISSEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/bliss/src -I$(SRCDIR)/bliss/include
 BLISSOBJ	=	bliss/src/abstractgraph.o
-BLISSOBJ	+=	bliss/src/bliss.o
 BLISSOBJ	+=	bliss/src/bliss_C.o
 BLISSOBJ	+=	bliss/src/defs.o
 BLISSOBJ	+=	bliss/src/digraph.o
@@ -383,7 +382,6 @@ SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(BLISSEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/bliss/src -I$(SRCDIR)/bliss/include
 BLISSOBJ	=	bliss/src/abstractgraph.o
-BLISSOBJ	+=	bliss/src/bliss.o
 BLISSOBJ	+=	bliss/src/bliss_C.o
 BLISSOBJ	+=	bliss/src/defs.o
 BLISSOBJ	+=	bliss/src/digraph.o

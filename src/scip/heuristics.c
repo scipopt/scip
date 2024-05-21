@@ -988,10 +988,6 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(sourcescip, subscip) );
 
-      /* disable bound limits in subscip since objective might be changed */
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/primal", SCIP_INVALID) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/dual", SCIP_INVALID) );
-
       /* create linear constraints from LP rows of the source problem */
       SCIP_CALL( createRows(sourcescip, subscip, varmap) );
    }
@@ -1006,6 +1002,10 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
          SCIP_CALL( SCIPcopyCuts(sourcescip, subscip, varmap, NULL, TRUE, NULL) );
       }
    }
+
+   /* disable bound limits in subscip since objective might be changed */
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/primal", SCIP_INVALID) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/dual", SCIP_INVALID) );
 
    *success = TRUE;
 
