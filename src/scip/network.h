@@ -106,7 +106,13 @@ SCIP_RETCODE SCIPnetmatdecTryAddCol(
    SCIP_Bool*            success             /**< Buffer to store whether the column was added */
 );
 
-//TODO: note that first call may take longer due to memory initialization
+/** Tries to add a given column to the network network matrix
+ *
+ *  Note that the first call to this method for a given decomposition may be a bit slower,
+ *  due to memory initialization.
+ *  If the user is only interested in determining if a certain (sub)matrix is network or not, using
+ *  SCIPnetmatdecTryAddCol() will generally be faster, unless the (sub)matrix has many more columns than rows.
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnetmatdecTryAddRow(
    SCIP_NETMATDEC*       dec,                /**< Network matrix decomposition */
