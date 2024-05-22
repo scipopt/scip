@@ -42,189 +42,280 @@ typedef spqr_matrix_size spqr_col;
 #define SPQR_INVALID_ROW SPQR_INVALID
 #define SPQR_INVALID_COL SPQR_INVALID
 
+
+/* Only check in debug mode if the used indices are valid */
 #ifndef NDEBUG
 
-static SCIP_Bool SPQRrowIsInvalid(spqr_row row)
+/** Determine if the row index is invalid */
+static
+SCIP_Bool SPQRrowIsInvalid(
+   spqr_row              row                 /**< The row to check */
+   )
 {
    return row == SPQR_INVALID_ROW;
 }
 
-static SCIP_Bool SPQRcolIsInvalid(spqr_col col)
+/** Determine if the column index is invalid */
+static
+SCIP_Bool SPQRcolIsInvalid(
+   spqr_col              col                 /**< The column to check */
+   )
 {
    return col == SPQR_INVALID_COL;
 }
 
-static SCIP_Bool SPQRrowIsValid(spqr_row row)
+/** Determine if the row index is valid */
+static
+SCIP_Bool SPQRrowIsValid(
+   spqr_row              row                 /**< The row to check */
+   )
 {
    return !SPQRrowIsInvalid(row);
 }
 
-static SCIP_Bool SPQRcolIsValid(spqr_col col)
+/** Determine if the column index is valid */
+static
+SCIP_Bool SPQRcolIsValid(
+   spqr_col              col                 /**< The column to check */
+   )
 {
    return !SPQRcolIsInvalid(col);
 }
 
 #endif
 
-//Columns 0..x correspond to elements 0..x
-//Rows 0..y correspond to elements -1.. -y-1
+/** Columns 0..x correspond to elements 0..x and rows 0..y correspond to elements -1.. -y-1 */
 #define MARKER_ROW_ELEMENT (INT_MIN)
 #define MARKER_COLUMN_ELEMENT (INT_MAX)
 typedef int spqr_element;
 
-static SCIP_Bool SPQRelementIsRow(spqr_element element)
+/** Checks if an element is a row */
+static
+SCIP_Bool SPQRelementIsRow(
+   spqr_element          element             /**< The element to check */
+   )
 {
    return element < 0;
 }
 
-static SCIP_Bool SPQRelementIsColumn(spqr_element element)
+/** Checks if an element is a column */
+static
+SCIP_Bool SPQRelementIsColumn(
+   spqr_element          element             /**< The element to check */
+)
 {
    return !SPQRelementIsRow(element);
 }
 
-static spqr_row SPQRelementToRow(spqr_element element)
+/** Convert an element to the corresponding row index */
+static
+spqr_row SPQRelementToRow(
+   spqr_element          element             /**< The element to convert */
+)
 {
    assert(SPQRelementIsRow(element));
    return (spqr_row) ( -element - 1 );
 }
 
-static spqr_element SPQRrowToElement(spqr_row row)
+/** Convert a row to the corresponding element */
+static
+spqr_element SPQRrowToElement(
+   spqr_row              row                 /**< The row to convert */
+   )
 {
    assert(SPQRrowIsValid(row));
    return (spqr_element) -row - 1;
 }
 
-static spqr_col SPQRelementToColumn(spqr_element element)
+/** Convert an element to the corresponding column index */
+static
+spqr_col SPQRelementToColumn(
+   spqr_element          element             /**< The element to convert */
+   )
 {
    assert(SPQRelementIsColumn(element));
    return (spqr_col) element;
 }
 
-static spqr_element SPQRcolumnToElement(spqr_col column)
+/** Convert a column to the corresponding element */
+static
+spqr_element SPQRcolumnToElement(
+   spqr_col              column              /**< The column to convert */
+   )
 {
    assert(SPQRcolIsValid(column));
    return (spqr_element) column;
 }
 
-typedef int spqr_node;
-#define SPQR_INVALID_NODE (-1)
-
-static SCIP_Bool SPQRnodeIsInvalid(spqr_node node)
-{
-   return node < 0;
-}
-
-static SCIP_Bool SPQRnodeIsValid(spqr_node node)
-{
-   return !SPQRnodeIsInvalid(node);
-}
-
+/** spqr_member is an index for the members of the SPQR decomposition. The members are the nodes of the SPQR tree.
+ * Each member has an associated subgraph, sometimes called a skeleton.
+ * If two members are adjacent in the SPQR tree, the two corresponding subgraphs are connected by a 2-separation in any
+ * graph represented by the matrix.
+ * For members, we reserve all negative values as invalid. We use these negative values in union-find datastructure,
+ * where we store the rank of the representative as a negative number.
+ */
 typedef int spqr_member;
 #define SPQR_INVALID_MEMBER (-1)
 
-static SCIP_Bool SPQRmemberIsInvalid(spqr_member member)
+/** Check if a member is invalid */
+static
+SCIP_Bool SPQRmemberIsInvalid(
+   spqr_member           member              /**< The member to check */
+   )
 {
    return member < 0;
 }
 
-static SCIP_Bool SPQRmemberIsValid(spqr_member member)
+/** Check if a member is valid */
+static SCIP_Bool SPQRmemberIsValid(
+   spqr_member           member              /**< The member to check */
+   )
 {
    return !SPQRmemberIsInvalid(member);
 }
 
+/** spqr_node is an index for the nodes stored in the decomposition. The nodes are part of each member's skeleton.
+ * Similar to spqr_member, we reserve all negative values as invalid and use these in union-find.
+ */
+typedef int spqr_node;
+#define SPQR_INVALID_NODE (-1)
+
+/** Check if a node is invalid */
+static
+SCIP_Bool SPQRnodeIsInvalid(
+   spqr_node             node                /**< The node to check */
+)
+{
+   return node < 0;
+}
+
+/** Check if a node is valid */
+static
+SCIP_Bool SPQRnodeIsValid(
+   spqr_node             node                /**< The node to check */
+)
+{
+   return !SPQRnodeIsInvalid(node);
+}
+
+/** spqr_arc is an index for the arcs stored in the decomposition. The arcs are part of each member's skeleton.
+ * Similar to spqr_node and spqr_member, we reserve all negative values as invalid and use these in some union-find.
+ * However, in contrast to spqr_node and spqr_member, the union-find data structure does not represent the arcs,
+ * but rather if all arcs that have the same representative we know they are in the same member.
+ */
 typedef int spqr_arc;
 #define SPQR_INVALID_ARC (-1)
 
-static SCIP_Bool SPQRarcIsInvalid(spqr_arc arc)
+/** Check if an arc is invalid */
+static
+SCIP_Bool SPQRarcIsInvalid(
+   spqr_arc              arc                 /**< The arc to check */
+   )
 {
    return arc < 0;
 }
 
-static SCIP_Bool SPQRarcIsValid(spqr_arc arc)
+/** Check if an arc is valid */
+static
+SCIP_Bool SPQRarcIsValid(
+   spqr_arc              arc                 /**< The arc to check */
+   )
 {
    return !SPQRarcIsInvalid(arc);
 }
 
+/** The type of the member */
 typedef enum
 {
-   SPQR_MEMBERTYPE_RIGID = 0,   //Also known as triconnected components
-   SPQR_MEMBERTYPE_PARALLEL = 1,//Also known as a 'bond'
-   SPQR_MEMBERTYPE_SERIES = 2,  //Also known as 'polygon' or 'cycle'
-   SPQR_MEMBERTYPE_LOOP = 3,
-   SPQR_MEMBERTYPE_UNASSIGNED = 4// To indicate that the member has been merged/is not representative
+   SPQR_MEMBERTYPE_RIGID      = 0,           /** The member's skeleton is 3-connected and has at least 4 edges */
+   SPQR_MEMBERTYPE_PARALLEL   = 1,           /** The member's skeleton consists of 2 nodes with at least 3 edges */
+   SPQR_MEMBERTYPE_SERIES     = 2,           /** The member's skeleton is a cycle with at least 3 edges */
+   SPQR_MEMBERTYPE_LOOP       = 3,           /** The member's skeleton consists of 2 nodes connected by 1 or 2 edges */
+   SPQR_MEMBERTYPE_UNASSIGNED = 4            /** To indicate that the member is not a representative member anymore */
 } SPQRMemberType;
 
-
+/** Represents a single node of cyclic doubly-linked list of arc edges*/
 typedef struct
 {
    spqr_arc previous;
    spqr_arc next;
 } SPQRNetworkDecompositionArcListNode;
 
+/** This structure stores the relevant data for a single node. */
 typedef struct
 {
-   spqr_node representativeNode;
-   spqr_arc firstArc;//first arc of the neighbouring arcs
-   int numArcs;
+   spqr_node representativeNode;             /**< Points to the next node in the union-find data structure
+                                              * Stores the rank as a negative number if this node represents itself */
+   spqr_arc firstArc;                        /**< Points to the head node of the cyclic doubly linked list containing
+                                              * the arcs that are adjacent to this node.*/
+   int numArcs;                              /**< The number of arcs adjacent to this node */
 } SPQRNetworkDecompositionNode;
 
+/** Structure that stores the relevant data for a single arc. */
 typedef struct
 {
-   spqr_node head;
-   spqr_node tail;
-   spqr_member member;
-   spqr_member childMember;
-   SPQRNetworkDecompositionArcListNode headArcListNode;
-   SPQRNetworkDecompositionArcListNode tailArcListNode;
-   SPQRNetworkDecompositionArcListNode arcListNode;//Linked-list node of the array of arcs of the member which this arc is in
+   spqr_node head;                                      /**< The head node of the arc */
+   spqr_node tail;                                      /**< The tail node of the arc */
+   spqr_member member;                                  /**< The member that contains the arc */
+   spqr_member childMember;                             /**< Stores the child member, if this arc points to one */
+   SPQRNetworkDecompositionArcListNode headArcListNode; /**< Linked-list node for iterating over the head's arcs */
+   SPQRNetworkDecompositionArcListNode tailArcListNode; /**< Linked-list node for iterating over the tail's arcs */
+   SPQRNetworkDecompositionArcListNode arcListNode;     /**< Linked-list node for iterating over the member's arcs */
 
-   spqr_element element;
+   spqr_element element;                                /**< The element associated to this arc */
 
-   //Signed union-find for arc directions
-   //For non-rigid members every arc is it's own representative, and the direction is simply given by the boolean
-   //For rigid members, every arc is represented by another arc in the member,
-   //and the direction can be found by multiplying the signs along the union-find path
-   spqr_arc representative;
-   SCIP_Bool reversed;
+   /**Signed union-find for arc directions. If an arc is reversed, it head becomes its tail and vice-versa.
+    * For non-rigid members every arc is it's own representative, and the direction is simply given by the boolean.
+    * For rigid members, every arc is represented by another arc in the member,
+    * and the direction can be found by multiplying the signs along the union-find path
+    * We use this data structure to efficiently reverse all arcs in a skeleton.
+    */
+   spqr_arc representative;                  /**< The representative of the arc */
+   SCIP_Bool reversed;                       /**< Whether the arc's head and tail are reversed, or not */
 } SPQRNetworkDecompositionArc;
 
+/** Structure that stores the relevant data for a single member */
 typedef struct
 {
-   spqr_member representativeMember;
-   SPQRMemberType type;
+   spqr_member representativeMember;         /** The representative of this member (union-find) */
+   SPQRMemberType type;                      /** The type of this member */
 
-   spqr_member parentMember;
-   spqr_arc markerToParent;
-   spqr_arc markerOfParent;
+   /**The SPQR tree is stored as an arborescence. Each member stores its parents, and each edge of the member
+    * pointing to a child member stores the associated member in childMember
+    */
+   spqr_member parentMember;                 /**< The parent of this member in the arborescence */
+   spqr_arc markerToParent;                  /**< The arc pointing to the parent */
+   spqr_arc markerOfParent;                  /**< The arc of the parent pointing to this member */
 
-   spqr_arc firstArc;//First of the members' linked-list arc array
-   int numArcs;
+   spqr_arc firstArc;                        /** First arc of the linked list containing the member's arcs */
+   int numArcs;                              /** The number of arcs associated to the member */
 } SPQRNetworkDecompositionMember;
 
+/** Stores the SPQR forest data structure and its relevant data */
 typedef struct
 {
-   int numArcs;
-   int memArcs;
-   SPQRNetworkDecompositionArc* arcs;
-   spqr_arc firstFreeArc;
+   int numArcs;                              //TODO: check if this allows reclaiming of arcs
+   int memArcs;                              /**< The amount of space allocated in the arc data array */
+   SPQRNetworkDecompositionArc* arcs;        /**< Array of arcs of the SPQR forest, indexed by spqr_arc */
+   spqr_arc firstFreeArc;                    /**< Points to the first unused slot in the arcs array */
 
-   int memMembers;
-   int numMembers;
-   SPQRNetworkDecompositionMember* members;
+   int memMembers;                           /**< The amount of space allocated in the member data array */
+   int numMembers;                           /**< The number of slots used in the member data array */
+   SPQRNetworkDecompositionMember* members;  /**< Array of members of the SPQR forest. Indexed by spqr_member */
 
-   int memNodes;
-   int numNodes;
-   SPQRNetworkDecompositionNode* nodes;
+   int memNodes;                             /**< The amount of space allocated in the node data array */
+   int numNodes;                             /**< The number of slots used in the node data array */
+   SPQRNetworkDecompositionNode* nodes;      /**< Array of nodes of the SPQR forest. Indexed by spqr_node */
 
-   int memRows;
-   spqr_arc* rowArcs;
+   int memRows;                              /**< The (maximal) number of rows of the matrix */
+   spqr_arc* rowArcs;                        /**< Maps the rows of the matrix to arcs in the decomposition */
 
-   int memColumns;
-   spqr_arc* columnArcs;
+   int memColumns;                           /**< The (maximal) number of columns of the matrix */
+   spqr_arc* columnArcs;                     /**< Maps the columns of the matrix to arcs in the decomposition */
 
-   SCIP* env;
+   SCIP* env;                                /**< SCIP pointer stored for later use */
 
-   int numConnectedComponents;
+   int numConnectedComponents;               /** The number of disjoint SPQR trees in the SPQR forest */
 } SCIP_NETMATDECDATA;
 
 static void swap_ints(
