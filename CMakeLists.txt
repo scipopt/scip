@@ -104,6 +104,11 @@ set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso highs 
 
 set(SYM snauty CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss sbliss nauty snauty none )  #define list of values GUI will offer for the variable
+# On windows, switch to none if nauty or snauty is selected
+if(WIN32 AND (SYM STREQUAL "nauty" OR SYM STREQUAL "snauty"))
+    message(WARNING "nauty and snauty are not supported on Windows. Switching to none.")
+    set(SYM none)
+endif()
 
 if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
     message(FATAL_ERROR "You have not selected a valid CMAKE_BUILD_TYPE. Please select 'Release' or 'Debug'.")
