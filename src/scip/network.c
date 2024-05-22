@@ -3224,7 +3224,7 @@ newColUpdateColInformation(
    spqr_col column,
    const spqr_row* nonzeroRows,
    const double* nonzeroValues,
-   size_t numNonzeros
+   int numNonzeros
 )
 {
    newCol->newColIndex = column;
@@ -3232,7 +3232,7 @@ newColUpdateColInformation(
    newCol->numDecompositionRowArcs = 0;
    newCol->numNewRowArcs = 0;
 
-   for( size_t i = 0; i < numNonzeros; ++i )
+   for( int i = 0; i < numNonzeros; ++i )
    {
       spqr_arc rowArc = getDecompositionRowArc(dec, nonzeroRows[i]);
       SCIP_Bool reversed = nonzeroValues[i] < 0.0;
@@ -4371,7 +4371,7 @@ static SCIP_RETCODE SCIPnetcoladdCheck(
    int column,
    const int* nonzrows,
    const double* nonzvals,
-   size_t nnonzs
+   int nnonzs
 )
 {
    assert(dec);
@@ -5823,7 +5823,7 @@ static SCIP_RETCODE newRowUpdateRowInformation(
    const spqr_row row,
    const spqr_col* columns,
    const double* columnValues,
-   const size_t numColumns
+   const int numColumns
 )
 {
    newRow->newRowIndex = row;
@@ -5831,7 +5831,7 @@ static SCIP_RETCODE newRowUpdateRowInformation(
    newRow->numDecompositionColumnArcs = 0;
    newRow->numColumnArcs = 0;
 
-   for( size_t i = 0; i < numColumns; ++i )
+   for( int i = 0; i < numColumns; ++i )
    {
       spqr_arc columnArc = getDecompositionColumnArc(dec, columns[i]);
       SCIP_Bool reversed = columnValues[i] < 0.0;
@@ -9933,7 +9933,7 @@ static SCIP_RETCODE SCIPnetrowaddCheck(
    int row,
    const int* nonzcols,
    const double* nonzvals,
-   size_t nnonzs
+   int nnonzs
 )
 {
    assert(dec);

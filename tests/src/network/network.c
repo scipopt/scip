@@ -29,9 +29,6 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
-
-#include "scip/scip.h"
 #include "scip/network.h"
 
 #include "include/scip_test.h"
@@ -259,8 +256,8 @@ static SCIP_RETCODE runColumnTestCase(
       {
          int jColEntryStart = testCase->primaryIndexStart[j];
          int jColEntryEnd = testCase->primaryIndexStart[j + 1];
-         const int* jNonzeroRows = &testCase->entrySecondaryIndex[jColEntryStart];
-         const double* jNonzeroValues = &testCase->entryValue[jColEntryStart];
+         int* jNonzeroRows = &testCase->entrySecondaryIndex[jColEntryStart];
+         double* jNonzeroValues = &testCase->entryValue[jColEntryStart];
          int jNonzeros = jColEntryEnd - jColEntryStart;
          SCIP_Bool cycleIsCorrect = SCIPnetmatdecVerifyCycle(scip, dec, j,
                                                              jNonzeroRows, jNonzeroValues,
@@ -350,8 +347,8 @@ static SCIP_RETCODE runRowTestCase(
             }
          }
 
-         const int* jNonzeroRows = &colWiseCase.entrySecondaryIndex[jColEntryStart];
-         const double* jNonzeroValues = &colWiseCase.entryValue[jColEntryStart];
+         int* jNonzeroRows = &colWiseCase.entrySecondaryIndex[jColEntryStart];
+         double* jNonzeroValues = &colWiseCase.entryValue[jColEntryStart];
 
          int jNonzeros = finalEntryIndex - jColEntryStart;
          SCIP_Bool cycleIsCorrect = SCIPnetmatdecVerifyCycle(scip, dec, j,

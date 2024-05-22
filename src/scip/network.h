@@ -30,9 +30,10 @@
  * This file contains algorithms for incrementally growing (augmenting) network matrices,
  * which are a large subclass of totally unimodular matrices.
  *
- * A matrix \f$M \in \{-1,0,1\}^{m\times n} \f$ is a network matrix if there exists a directed graph \f$G\f$
- * with \f$m+n\f$ arcs and a spanning forest \f$T\f$ with \f$|T| = m\f$ such that
- * for each arc \f$ a = (u,v) \in A\setminus T\f$ and each arc \f$t\in T\f$,
+ * A matrix \f$M \in \{-1,0,1\}^{m\times n} \f$ is a network matrix if there exists a directed graph \f$G = (V,A)\f$
+ * with \f$|A| = m+n\f$ arcs and a spanning forest \f$T\f$ with \f$|T| = m\f$ such that \f$M\f$'s rows index \f$T\f$ and
+ * \f$M\f$'s columns index \f$A\setminus T\f$,
+ * and for each arc \f$ a = (u,v) \in A\setminus T\f$ and each arc \f$t\in T\f$
  * \f[
  *   M_{t,a} = \begin{cases}
  *   +1 &  \textrm{if the unique } u-v \textrm{ path in } T \textrm{ passes through } a \textrm{ forwardly} \\
@@ -40,19 +41,20 @@
  *   0 &   \textrm{if the unique } u-v \textrm{ path in } T \textrm{ does not pass through } a
  *   \end{cases}
  * \f]
+ * holds.
  *
- * The main difficulty with detecting network matrices is that there may exist many graph-spanning forest pairs
+ * The main difficulty with detecting network matrices is that there may exist many pairs of a graph and a spanning tree
  * that realize a matrix. The algorithms in this file maintain and update an SPQR forest, which is a graph decomposition
  * that represents all graphs that correspond to a given network matrix.
  *
  * Note that all addition algorithms expect that each nonzero is given exactly once and not more often; in particular,
  * it is up to the user to ensure this when interleaving column and row addition steps.
  *
- * TODO
- * The column addition for network matrices is based on:
- *
- * The row addition for network matrices is based on:
- *
+ * More details can be found in;
+ * - R.P. van der Hulst and M.Walter "A row-wise algorithm for graph realization"
+ * - R.E. Bixby and D.K. Wagner "An almost linear-time algorithm for graph realization"
+ * Note that although these publications contain the methods for undirected graphs (and binary matrices),
+ * their ideas are relatively easily extended to directed graphs and ternary matrices.
  */
 
 /** TODO: add method that realizes a SCIP digraph from the decomposition */
