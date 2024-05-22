@@ -328,6 +328,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * If `branchcandonly`, then cons_nonlinear is interested in collecting potential branching candidates only
  * (in order to decide whether to enforce nonlinear constraints before integrality). Therefore, in this situation,
  * the nlhdlr should not do anything if it normally (`branchcandonly`=FALSE) were to separate or tighten bounds.
+ * (Since in the normal mode it will only add branching candidates if it does no separation/tightening.)
  * In other words, with `branchcandonly` = TRUE, the nlhdlr should follow the same logic as for
  * `branchcandonly` = FALSE, but skip the addition of cuts or bound tightenings.
  *
