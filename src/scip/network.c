@@ -294,7 +294,7 @@ typedef struct
 /** Stores the SPQR forest data structure and its relevant data */
 typedef struct
 {
-   int numArcs;                              //TODO: check if this allows reclaiming of arcs
+   int numArcs;                              /**< The number of slots used in the arc data array */
    int memArcs;                              /**< The amount of space allocated in the arc data array */
    SPQRNetworkDecompositionArc* arcs;        /**< Array of arcs of the SPQR forest, indexed by spqr_arc */
    spqr_arc firstFreeArc;                    /**< Points to the first unused slot in the arcs array */
@@ -318,15 +318,6 @@ typedef struct
    int numConnectedComponents;               /** The number of disjoint SPQR trees in the SPQR forest */
 } SCIP_NETMATDECDATA;
 
-static void swap_ints(
-   int* a,
-   int* b
-)
-{
-   int temp = *a;
-   *a = *b;
-   *b = temp;
-}
 
 #ifndef NDEBUG
 
@@ -644,7 +635,7 @@ static spqr_node mergeNodes(
    spqr_node secondRank = dec->nodes[second].representativeNode;
    if( firstRank > secondRank )
    {
-      swap_ints(&first, &second);
+      SCIPswapInts(&first, &second);
    }
    //first becomes representative; we merge all of the arcs of second into first
    mergeNodeArcList(dec, first, second);
@@ -742,7 +733,7 @@ static spqr_member mergeMembers(
    spqr_member secondRank = dec->members[second].representativeMember;
    if( firstRank > secondRank )
    {
-      swap_ints(&first, &second);
+      SCIPswapInts(&first, &second);
    }
    dec->members[second].representativeMember = first;
    if( firstRank == secondRank )
@@ -1050,7 +1041,7 @@ static spqr_arc mergeArcSigns(
 
    if( firstRank > secondRank )
    {
-      swap_ints(&first, &second);
+      SCIPswapInts(&first, &second);
    }
    dec->arcs[second].representative = first;
    if( firstRank == secondRank )
@@ -3239,7 +3230,7 @@ static void createPathArc(
       listNode->arcTail = findEffectiveArcTail(dec, arc);
       if( reversed )
       {
-         swap_ints(&listNode->arcHead, &listNode->arcTail);
+         SCIPswapInts(&listNode->arcHead, &listNode->arcTail);
       }
       assert(SPQRnodeIsValid(listNode->arcHead) && SPQRnodeIsValid(listNode->arcTail));
       assert(listNode->arcHead < newCol->memNodePathDegree && listNode->arcTail < newCol->memNodePathDegree);
@@ -6264,7 +6255,7 @@ static void createCutArc(
       listNode->arcTail = findEffectiveArcTail(dec, arc);
       if( reversed )
       {
-         swap_ints(&listNode->arcHead, &listNode->arcTail);
+         SCIPswapInts(&listNode->arcHead, &listNode->arcTail);
       }
       assert(SPQRnodeIsValid(listNode->arcHead) && SPQRnodeIsValid(listNode->arcTail));
    } else
