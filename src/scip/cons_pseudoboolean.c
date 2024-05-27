@@ -7631,7 +7631,7 @@ SCIP_RETCODE addSymmetryInformation(
       tmpnvars = 1;
       constant = 0.0;
 
-      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_PB_SOFT, &nodeidx) );
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int)SYM_CONSOPTYPE_PB_SOFT, &nodeidx) );
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnodeidx, nodeidx, TRUE, consdata->weight) );
       SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &tmpnvars, &constant,
             SCIPisTransformed(scip)) );
@@ -7645,7 +7645,7 @@ SCIP_RETCODE addSymmetryInformation(
       tmpnvars = 1;
       constant = 0.0;
 
-      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_PB_OBJ, &nodeidx) );
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int)SYM_CONSOPTYPE_PB_OBJ, &nodeidx) );
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnodeidx, nodeidx, FALSE, 0.0) );
       SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &tmpnvars, &constant,
             SCIPisTransformed(scip)) );
@@ -7691,7 +7691,7 @@ SCIP_RETCODE addSymmetryInformation(
       *success = FALSE;
 
       return SCIP_OKAY;
-   }
+   } /*lint !e788*/
    assert(tmpvars != NULL);
    assert(tmpvals != NULL);
    for( i = 0; i < tmpnvars; ++i )
@@ -7699,7 +7699,7 @@ SCIP_RETCODE addSymmetryInformation(
    constant = 0.0;
 
    /* create nodes and edges for linear part */
-   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_PB_LINEAR, &nodeidx) );
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int)SYM_CONSOPTYPE_PB_LINEAR, &nodeidx) );
    SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnodeidx, nodeidx, FALSE, 0.0) );
 
    SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &tmpnvars, &constant,
@@ -7711,7 +7711,7 @@ SCIP_RETCODE addSymmetryInformation(
    {
       assert(consdata->consanddatas[c] != NULL);
 
-      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, SYM_CONSOPTYPE_PB_AND, &nodeidx) );
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int)SYM_CONSOPTYPE_PB_AND, &nodeidx) );
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnodeidx, nodeidx, TRUE, consdata->andcoefs[c]) );
 
       tmpnvars = consdata->consanddatas[c]->nvars;
