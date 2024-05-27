@@ -5129,7 +5129,7 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
 
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);
-   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_QUADRATIC, TABLE_DESC_QUADRATIC, TRUE,
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_QUADRATIC, TABLE_DESC_QUADRATIC, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputQuadratic,
          NULL, TABLE_POSITION_QUADRATIC, TABLE_EARLIEST_STAGE_QUADRATIC) );
    return SCIP_OKAY;
