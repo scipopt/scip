@@ -1419,12 +1419,12 @@ void examplePB(
    if ( detectsignedperms )
    {
       SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
-      permlen = 12;             /* 3 binary variables + 3 aritficial variables for AND-resultants + reflection */
+      permlen = 12;             /* 3 binary variables + 3 artificial variables for AND-resultants + reflection */
    }
    else
    {
       SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
-      permlen = 6;              /* 3 binary variables + 3 aritficial variables for AND-resultants */
+      permlen = 6;              /* 3 binary variables + 3 artificial variables for AND-resultants */
    }
 
    /* presolve problem (symmetry will be available afterwards) */
@@ -1435,22 +1435,11 @@ void examplePB(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   if( detectsignedperms )
-   {
-      cr_assert( nperms == 1 );
-      cr_assert( ncomponents == 1 );
-      SCIPsortInt(vartocomponent, 12);
-      cr_assert( vartocomponent[0] == -1 );
-      cr_assert( vartocomponent[4] == 0 );
-   }
-   else
-   {
-      cr_assert( nperms == 1 );
-      cr_assert( ncomponents == 1 );
-      SCIPsortInt(vartocomponent, 6);
-      cr_assert( vartocomponent[0] == -1 );
-      cr_assert( vartocomponent[2] == 0 );
-   }
+   cr_assert( nperms == 1 );
+   cr_assert( ncomponents == 1 );
+   SCIPsortInt(vartocomponent, 6);
+   cr_assert( vartocomponent[0] == -1 );
+   cr_assert( vartocomponent[2] == 0 );
 
    /* compute orbits */
    SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
