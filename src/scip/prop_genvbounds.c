@@ -2480,7 +2480,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
       /* replace non-active by active variables and update constant; note that this may result in coefficients where
        * SCIPisZero() is true; this should not create any problems
        */
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, genvbound->ncoefs, &genvbound->constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, genvbound->ncoefs, &genvbound->constant, &requiredsize) );
 
       /* if space was not enough we need to resize the buffers */
       if( requiredsize > genvbound->ncoefs )
@@ -2493,7 +2493,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
             genvbound->coefssize = requiredsize;
          }
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, requiredsize, &genvbound->constant, &requiredsize, TRUE) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, requiredsize, &genvbound->constant, &requiredsize) );
          assert(requiredsize <= genvbound->ncoefs);
       }
 

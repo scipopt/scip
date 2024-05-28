@@ -11,6 +11,8 @@ Features
 Performance improvements
 ------------------------
 
+- Reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
+
 Examples and applications
 -------------------------
 
@@ -20,6 +22,8 @@ Interface changes
 ### New and changed callbacks
 
 ### Deleted and changed API methods
+
+- SCIPgetProbvarLinearSum: remove parameter mergemultiples, which is now automatically true with the new implementation of SCIPvarGetActiveRepresentatives.
 
 ### New API functions
 

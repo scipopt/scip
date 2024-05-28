@@ -2237,7 +2237,7 @@ SCIP_RETCODE writeExpandedSolutions(
             nvars = 1;
             constant = 0.0;
 
-            SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, &nvars, nallvars, &constant, &requiredsize, TRUE) );
+            SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, &nvars, nallvars, &constant, &requiredsize) );
             assert(requiredsize <= nallvars);
             assert(nvars <= nactivevars);
 

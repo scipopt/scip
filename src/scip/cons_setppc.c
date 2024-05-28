@@ -1840,14 +1840,14 @@ SCIP_RETCODE applyFixings(
             consvals[0] = 1.0;
 
             /* get active variables for new constraint */
-            SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize, TRUE) );
+            SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize) );
             /* if space was not enough we need to resize the buffers */
             if( requiredsize > nconsvars )
             {
                SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
                SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
 
-               SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize, TRUE) );
+               SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize) );
                assert(requiredsize <= nconsvars);
             }
 
@@ -1975,7 +1975,7 @@ SCIP_RETCODE applyFixings(
                constant = 0.0;
 
                /* get active variables for new constraint */
-               SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize, TRUE) );
+               SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize) );
 
                /* if space was not enough (we found another multi-aggregation), we need to resize the buffers */
                if( requiredsize > nconsvars )
@@ -1983,7 +1983,7 @@ SCIP_RETCODE applyFixings(
                   SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
                   SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
 
-                  SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize, TRUE) );
+                  SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize) );
                   assert(requiredsize <= nconsvars);
                }
 

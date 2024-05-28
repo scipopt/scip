@@ -816,9 +816,8 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c which
                                               *   will chnage to constant d in the linear sum b_1*y_1 + ... + b_m*y_m +
                                               *   d w.r.t. the active variables */
-   int*                  requiredsize,       /**< pointer to store the required array size for the linear sum w.r.t. the
+   int*                  requiredsize        /**< pointer to store the required array size for the linear sum w.r.t. the
                                               *   active variables */
-   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
 
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or

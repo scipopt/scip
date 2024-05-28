@@ -2805,13 +2805,13 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
 
       /* transform linear constraint */
       constant = 0.0;
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, ntrafolinvars, &constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, ntrafolinvars, &constant, &requiredsize) );
       if( requiredsize > ntrafolinvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvars, requiredsize + 1) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvals, requiredsize + 1) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, requiredsize, &constant, &requiredsize, TRUE) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, requiredsize, &constant, &requiredsize) );
          assert( requiredsize <= ntrafolinvars );
       }
       if( !SCIPisInfinity(scip, -trafolhs) )
