@@ -1767,7 +1767,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    assert( *nvars <= varssize );
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetProbvarLinearSum", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-   SCIP_CALL( SCIPvarGetActiveRepresentatives(scip->set, vars, scalars, nvars, varssize, constant, requiredsize, mergemultiples) );
+   SCIP_CALL( SCIPvarGetActiveRepresentatives(scip->set, vars, scalars, nvars, varssize, constant, requiredsize) );
 
    return SCIP_OKAY;
 }

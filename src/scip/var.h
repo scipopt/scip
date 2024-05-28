@@ -417,8 +417,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
    int                   varssize,           /**< available slots in vars and scalars array */
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
-   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   int*                  requiredsize        /**< pointer to store the required array size for the active variables */
    );
 
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or
