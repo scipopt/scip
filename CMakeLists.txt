@@ -454,16 +454,8 @@ endif()
 if(PAPILO OR AUTOBUILD)
     message(STATUS "Finding PAPILO")
     find_package(PAPILO CONFIG HINTS ${PAPILO_DIR})
-    if(NOT PAPILO_FOUND)
-        # Utilities to automatically download missing dependencies
-        include(cmake/Dependencies.cmake)
-        find_or_download_package(
-          NAME PAPILO
-          VERSION 2.2.1
-          URL https://github.com/scipopt/papilo/archive/refs/tags/v2.2.1.tar.gz
-          URL_HASH SHA256=b022af82bda3db1a594fe67524d98be82e67279f9d9d645b2fcdfc9349cdc6f7
-          COMPONENTS papilo)
-        find_package(PAPILO REQUIRED CONFIG HINTS _deps/local)
+    if((NOT PAPILO_FOUND) AND (NOT AUTOBUILD))
+        message(FATAL_ERROR "PAPILO not found, try specifying PAPILO_DIR. ${AUTOBUILD_MSG}")
     endif()
 endif()
 if(PAPILO_FOUND)
