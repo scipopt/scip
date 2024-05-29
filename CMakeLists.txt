@@ -471,7 +471,18 @@ endif()
 message(STATUS "Finding Solver \"${LPS}\"")
 if(LPS STREQUAL "spx")
     message(STATUS "Finding Soplex")
-    find_package(SOPLEX REQUIRED CONFIG HINTS ${SOPLEX_DIR})
+    find_package(SOPLEX CONFIG HINTS ${SOPLEX_DIR})
+    if(NOT SOPLEX_FOUND)
+        # Utilities to automatically download missing dependencies
+        include(cmake/Dependencies.cmake)
+        find_or_download_package(
+          NAME SOPLEX
+          VERSION 7.0.1
+          URL https://github.com/scipopt/soplex/archive/refs/tags/release-701.tar.gz
+          URL_HASH SHA256=80cce994dcbe45fd52b60e31a3aeb5d2c60a7ddbaae495e0ce6bf58481675696
+          COMPONENTS soplex)
+        find_package(SOPLEX REQUIRED CONFIG HINTS _deps/local)
+    endif()
     if (DEFINED SOPLEX_WITH_PAPILO)
         message(STATUS "SOPLEX links PAPILO")
         if((NOT SCIP_WITH_PAPILO)) # TODO not sure how to handle AUTOBUILD
