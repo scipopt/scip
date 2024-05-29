@@ -4104,7 +4104,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
       scalar = tmpscalars[var->index];
       /* the scalar can be 0 if the variable has been treated before and is zeroed below */
-      if(scalar == 0.0)
+      if( scalar == 0.0 )
          continue;
 
       /* mark variable as treated */
