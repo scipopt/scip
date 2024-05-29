@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -822,11 +822,11 @@ SCIP_RETCODE checkCons(
    /* check feasibility of constraint if necessary */
    if( mustcheck )
    {
+      SCIP_Real maxsolval = 0.0;
+      SCIP_Real sumsolval = 0.0;
       SCIP_Real solval;
-      SCIP_Real maxsolval;
-      SCIP_Real sumsolval;
       SCIP_Real viol;
-      int maxsolind;
+      int maxsolind = 0;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -837,16 +837,12 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
-      maxsolind = 0;
-      maxsolval = 0.0;
-      sumsolval = 0.0;
-
       /* evaluate operator variables */
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
 
-         if( solval > maxsolval )
+         if( maxsolval < solval )
          {
             maxsolind = i;
             maxsolval = solval;
@@ -890,6 +886,7 @@ SCIP_RETCODE checkCons(
          }
       }
 
+      /* update constraint violation in solution */
       if( sol != NULL )
          SCIPupdateSolConsViolation(scip, sol, viol, viol);
    }
@@ -1444,7 +1441,7 @@ SCIP_RETCODE addSymmetryInformation(
    vals[nlocvars++] = 2.0;
    assert(nlocvars <= nvars);
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    /* represent the OR constraint via the gadget for linear constraints and use the constant as lhs/rhs to
     * distinguish different OR constraints (OR constraints do not have an intrinsic right-hand side)
@@ -1714,29 +1711,24 @@ SCIP_DECL_CONSENFOPS(consEnfopsOr)
    return SCIP_OKAY;
 }
 
-
-/** feasibility check method of constraint handler for integral solutions */
+/** feasibility check method of constraint handler or */
 static
 SCIP_DECL_CONSCHECK(consCheckOr)
 {  /*lint --e{715}*/
+   SCIP_Bool violated;
    int i;
 
    *result = SCIP_FEASIBLE;
 
-   /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
+   for( i = 0; i < nconss && ( *result == SCIP_FEASIBLE || completely ); ++i )
    {
-      SCIP_Bool violated = FALSE;
-
       SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
-
       if( violated )
          *result = SCIP_INFEASIBLE;
    }
 
    return SCIP_OKAY;
 }
-
 
 /** domain propagation method of constraint handler */
 static

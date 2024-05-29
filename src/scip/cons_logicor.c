@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -4081,7 +4081,7 @@ SCIP_RETCODE addSymmetryInformation(
       vals[i] = 1.0;
    }
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
 
    SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
          cons, 1.0 - constant, SCIPinfinity(scip), success) );
@@ -5684,7 +5684,7 @@ SCIP_RETCODE SCIPcleanupConssLogicor(
    SCIP_CALL( SCIPallocBufferArray(scip, &entries, nentries) );
 
    /* loop backwards since then deleted constraints do not interfere with the loop */
-   for( i = nconss - 1; i > 0; --i )
+   for( i = nconss - 1; i >= 0; --i )
    {
       SCIP_CONS* cons;
       SCIP_Bool redundant;

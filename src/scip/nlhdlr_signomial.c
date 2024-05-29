@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -196,7 +196,6 @@ void freeExprDataMem(
    SCIP_Bool             ispartial           /**< free the partially allocated memory or the fully allocated memory? */
    )
 {
-
    SCIPfreeBlockMemoryArrayNull(scip, &(*nlhdlrexprdata)->factors, (*nlhdlrexprdata)->nfactors);
    SCIPfreeBlockMemoryArray(scip, &(*nlhdlrexprdata)->exponents, (*nlhdlrexprdata)->nfactors);
    if( !ispartial )
@@ -235,7 +234,7 @@ void reformRowprep(
    SCIP_ROWPREP*         rowprep,            /**< cut to be reformulated */
    SCIP_Real             mincutscale,        /**< min scaling factor for the cut in rowprep */
    SCIP_Bool*            success             /**< pointer to store whether the reformulating was successful */
-)
+   )
 {
    int i;
    int nvars;
@@ -885,7 +884,6 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
 static
 SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSignomial)
 { /*lint --e{715}*/
-
    assert(expr != NULL);
    assert(enforcing != NULL);
    assert(participating != NULL);

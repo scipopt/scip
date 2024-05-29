@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -56,8 +56,11 @@ void rbRotate(
    int                   dir                 /**< direction of rotation */
    )
 {
+   assert(x != NULL);
+
    SCIP_RBTREENODE* p;
    SCIP_RBTREENODE* y = x->child[OPPOSITE(dir)];
+
    x->child[OPPOSITE(dir)] = y->child[dir];
    if( y->child[dir] != NULL )
    {
@@ -85,6 +88,8 @@ void rbInsertFixup(
    SCIP_RBTREENODE*      z                   /**< inserted node */
    )
 {
+   assert(z != NULL);
+
    SCIP_RBTREENODE* p;
    p = PARENT(z);
 
@@ -94,7 +99,9 @@ void rbInsertFixup(
       SCIP_RBTREENODE* y;
       int dir;
 
+      assert(p != NULL);
       pp = PARENT(p);
+      assert(pp != NULL);
       dir = p == pp->child[LEFT] ? RIGHT : LEFT;
 
       y = pp->child[dir];
@@ -112,10 +119,13 @@ void rbInsertFixup(
             z = p;
             rbRotate(root, z, OPPOSITE(dir));
             p = PARENT(z);
+            assert(p != NULL);
             pp = PARENT(p);
          }
 
+         assert(p != NULL);
          MAKE_BLACK(p);
+         assert(pp != NULL);
          MAKE_RED(pp);
          rbRotate(root, pp, dir);
       }
@@ -141,6 +151,7 @@ void rbDeleteFixup(
       int dir;
 
       p = PARENT(x == NULL ? nil : x);
+      assert(p != NULL);
       dir = x == p->child[LEFT] ? RIGHT : LEFT;
 
       w = p->child[dir];
@@ -171,6 +182,7 @@ void rbDeleteFixup(
             assert(p == PARENT(x == NULL ? nil : x));
             w = p->child[dir];
          }
+         assert(w != NULL);
          SET_COLOR(w, COLOR(p));
          MAKE_BLACK(p);
          MAKE_BLACK(w->child[dir]);
@@ -347,7 +359,11 @@ void SCIPrbtreeInsert_call(
    SCIP_RBTREENODE*      node                /**< node to insert into the tree */
    )
 {
-   SET_PARENT(node, parent);
+   /* we avoid SET_PARENT here, as this would read from uninitialized memory in an attempt to preserve the color of node */
+   node->parent = (uintptr_t)parent | RED;
+   node->child[LEFT] = NULL;
+   node->child[RIGHT] = NULL;
+
    if( parent == NULL )
       *root = node;
    else if( pos > 0 )
@@ -355,8 +371,5 @@ void SCIPrbtreeInsert_call(
    else
       parent->child[RIGHT] = node;
 
-   node->child[LEFT] = NULL;
-   node->child[RIGHT] = NULL;
-   MAKE_RED(node);
    rbInsertFixup(root, node);
 }

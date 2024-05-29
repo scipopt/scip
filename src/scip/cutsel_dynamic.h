@@ -3,13 +3,22 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -75,23 +84,23 @@ SCIP_RETCODE SCIPincludeCutselDynamic(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPselectCutsDynamic(
-    SCIP*                 scip,               /**< SCIP data structure */
-    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
-    SCIP_ROW**            forcedcuts,         /**< array with forced cuts */
-    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator for tie-breaking, or NULL */
-    char                  filtermode,         /**< filtering strategy during cut selection (
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
+   SCIP_ROW**            forcedcuts,         /**< array with forced cuts */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator for tie-breaking, or NULL */
+   char                  filtermode,         /**< filtering strategy during cut selection (
                                               *  'd'ynamic- and 'f'ull dynamic parallelism) */
-    SCIP_Real             mingain,            /**< minimum efficacy gain in percentage to filter cuts */
-    SCIP_Real             maxparall,          /**< maximal parallelism for all cuts that are not good */
-    SCIP_Real             dircutoffdistweight,/**< weight of directed cutoff distance in cut score calculation */
-    SCIP_Real             efficacyweight,     /**< weight of efficacy in cut score calculation */
-    SCIP_Real             objparalweight,     /**< weight of objective parallelism in cut score calculation */
-    SCIP_Real             intsupportweight,   /**< weight of integral support in cut score calculation */
-    int                   ncuts,              /**< number of cuts in cuts array */
-    int                   nforcedcuts,        /**< number of forced cuts */
-    int                   maxselectedcuts,    /**< maximal number of cuts from cuts array to select */
-    int*                  nselectedcuts      /**< pointer to return number of selected cuts from cuts array */
-  );
+   SCIP_Real             mingain,            /**< minimum efficacy gain in percentage to filter cuts */
+   SCIP_Real             maxparall,          /**< maximal parallelism for all cuts that are not good */
+   SCIP_Real             dircutoffdistweight, /**< weight of directed cutoff distance in cut score calculation */
+   SCIP_Real             efficacyweight,     /**< weight of efficacy in cut score calculation */
+   SCIP_Real             objparalweight,     /**< weight of objective parallelism in cut score calculation */
+   SCIP_Real             intsupportweight,   /**< weight of integral support in cut score calculation */
+   int                   ncuts,              /**< number of cuts in cuts array */
+   int                   nforcedcuts,        /**< number of forced cuts */
+   int                   maxselectedcuts,    /**< maximal number of cuts from cuts array to select */
+   int*                  nselectedcuts       /**< pointer to return number of selected cuts from cuts array */
+   );
 
 /** @} */
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -155,29 +155,6 @@ void SCIPproofsetFree(
    BMSfreeBlockMemory(blkmem, proofset);
    (*proofset) = NULL;
 }
-
-#ifdef SCIP_DEBUG
-/** print a proof set */
-void proofsetPrint(
-   SCIP_PROOFSET*        proofset,
-   SCIP_SET*             set,
-   SCIP_PROB*            transprob
-   )
-{
-   SCIP_VAR** vars;
-   int i;
-
-   assert(proofset != NULL);
-
-   vars = SCIPprobGetVars(transprob);
-   assert(vars != NULL);
-
-   printf("proofset: ");
-   for( i = 0; i < proofset->nnz; i++ )
-      printf("%+.15g <%s> ", proofset->vals[i], SCIPvarGetName(vars[proofset->inds[i]]));
-   printf(" <= %.15g\n", proofset->rhs);
-}
-#endif
 
 /** return the indices of variables in the proofset */
 static
@@ -518,7 +495,7 @@ SCIP_RETCODE tightenSingleVar(
 
          SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, var, 1.0) );
 
-         if( applyglobal )
+         if( applyglobal ) /*lint !e774*/
          {
             SCIP_CALL( SCIPprobAddCons(transprob, set, stat, cons) );
          }
@@ -990,13 +967,28 @@ SCIP_RETCODE createAndAddProofcons(
       SCIP_CALL( SCIPupgradeConsLinear(set->scip, cons, &upgdcons) );
       if( upgdcons != NULL )
       {
-         SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
-         cons = upgdcons;
+         SCIP_CONSHDLR* conshdlr;
 
-         if( conflicttype == SCIP_CONFTYPE_INFEASLP )
-            conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
-         else if( conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
-            conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
+         conshdlr = SCIPconsGetHdlr(upgdcons);
+         assert(conshdlr != NULL);
+
+         /* only upgrade constraint if it can report number of variables (needed by
+          * SCIPconflictstoreAddDualraycons() and SCIPconflictstoreAddDualsolcons())
+          */
+         if( conshdlr->consgetnvars == NULL )
+         {
+            SCIP_CALL( SCIPreleaseCons(set->scip, &upgdcons) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+            cons = upgdcons;
+
+            if( conflicttype == SCIP_CONFTYPE_INFEASLP )
+               conflicttype = SCIP_CONFTYPE_ALTINFPROOF;
+            else if( conflicttype == SCIP_CONFTYPE_BNDEXCEEDING )
+               conflicttype = SCIP_CONFTYPE_ALTBNDPROOF;
+         }
       }
    }
 
@@ -1279,9 +1271,9 @@ void tightenCoefficients(
       }
 
       SCIPsetDebugMsg(set, "coefficient tightening: [%.15g,%.15g] -> [%.15g,%.15g] (nnz: %d, nchg: %d rhs: %.15g)\n",
-            absmin, absmax, newabsmin, newabsmax, proofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
+            absmin, absmax, newabsmin, newabsmax, SCIPproofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
       printf("coefficient tightening: [%.15g,%.15g] -> [%.15g,%.15g] (nnz: %d, nchg: %d rhs: %.15g)\n",
-            absmin, absmax, newabsmin, newabsmax, proofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
+            absmin, absmax, newabsmin, newabsmax, SCIPproofsetGetNVars(proofset), *nchgcoefs, proofsetGetRhs(proofset));
    }
 #endif
 }
@@ -1474,7 +1466,7 @@ SCIP_RETCODE tightenDualproof(
    SCIPsetDebugMsg(set, "start dual proof tightening:\n");
    SCIPsetDebugMsg(set, "-> tighten dual proof: nvars=%d (bin=%d, int=%d, cont=%d)\n",
          nnz, nbinvars, nintvars, ncontvars);
-   debugPrintViolationInfo(set, aggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
+   debugPrintViolationInfo(set, SCIPaggrRowGetMinActivity(set, transprob, proofrow, curvarlbs, curvarubs, NULL), SCIPaggrRowGetRhs(proofrow), NULL);
 
    /* try to find an alternative proof of local infeasibility that is stronger */
    if( set->conf_sepaaltproofs )

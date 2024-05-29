@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2112,12 +2112,6 @@ SCIP_RETCODE tightenAuxVarBounds(
 
    *cutoff = FALSE;
 
-   /* do not tighten variable in problem stage (important for unittests)
-    * TODO put some kind of #ifdef UNITTEST around this
-    */
-   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) > SCIP_STAGE_SOLVING )
-      return SCIP_OKAY;
-
    var = SCIPgetExprAuxVarNonlinear(expr);
    if( var == NULL )
       return SCIP_OKAY;
@@ -3373,7 +3367,7 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrparticipating = SCIP_NLHDLR_METHOD_NONE;
       conshdlrdata->registerusesactivitysepabelow = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
       conshdlrdata->registerusesactivitysepaabove = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
-      /* coverity[forward_null] */
+      /* coverity[var_deref_model] */
       SCIP_CALL( SCIPnlhdlrDetect(scip, ownerdata->conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
 
       /* nlhdlr might have claimed more than needed: clean up sepa flags */
@@ -4199,6 +4193,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CALL( SCIPallocBufferArray(scip, &name, nchildren * (SCIP_MAXSTRLEN + 1) + 20) );
 
    /* prepare the names of the variable and the constraints */
+   /* coverity[secure_coding] */
    strcpy(name, "binreform");
    for( i = 0; i < nchildren; ++i )
    {
@@ -9482,7 +9477,7 @@ SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
       nlocvars = 1;
       constant = 0.0;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars,
             &constant, SCIPconsIsTransformed(cons)) );
 
       if( nlocvars != 1 || !SCIPisZero(scip, constant) )
@@ -9704,7 +9699,7 @@ SCIP_RETCODE tryAddGadgetEvenOperatorVariable(
    nlocvars = 1;
 
    SCIP_CALL( ensureLocVarsArraySize(scip, consvars, consvals, nlocvars, maxnconsvars) );
-   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars, &constant,
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars, &constant,
          SCIPconsIsTransformed(cons)) );
 
    /* skip multi-aggregated variables or variables with domain not centered at 0 */
@@ -9801,7 +9796,7 @@ SCIP_RETCODE tryAddGadgetEvenOperatorSum(
    }
    constant = SCIPgetConstantExprSum(child);
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars, &constant,
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars, &constant,
          SCIPconsIsTransformed(cons)) );
 
    /* we can only handle the case without constant and two variables with domain centered at origin */
@@ -10168,7 +10163,7 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
       constant = 0.0;
       nlocvars = 1;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals,
             &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
 
       if( nlocvars != 1 )
@@ -10184,7 +10179,7 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
       constant2 = 0.0;
       nlocvars = 1;
 
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals,
             &nlocvars, &constant2, SCIPconsIsTransformed(cons)) );
 
       if( nlocvars != 1 )
@@ -10233,11 +10228,13 @@ SCIP_RETCODE tryAddGadgetSquaredDifference(
          {
             SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) powexprs[j]) );
             powexprused[j] = TRUE;
+            var1found = TRUE;
          }
          else if( !var2found && powvars[j] == prodvars[cnt - 1] )
          {
             SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) powexprs[j]) );
             powexprused[j] = TRUE;
+            var2found = TRUE;
          }
       }
    }
@@ -10396,7 +10393,7 @@ SCIP_RETCODE addSymmetryInformation(
          consvals[0] = 1.0;
          constant = 0.0;
 
-         SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &consvars, &consvals,
+         SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &consvars, &consvals,
                &nconsvars, &constant, SCIPconsIsTransformed(cons)) );
 
          /* check whether variable is aggregated */
@@ -10409,7 +10406,7 @@ SCIP_RETCODE addSymmetryInformation(
 
             parentidx = thisidx;
          }
-         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, parentidx, consvars, consvals,
+         SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, parentidx, consvars, consvals,
                nconsvars, constant) );
       }
       else if( SCIPisExprValue(scip, expr) )
@@ -10438,7 +10435,7 @@ SCIP_RETCODE addSymmetryInformation(
             SCIP_EXPR** children;
             int sumidx;
             int optype;
-            int childidx = 0;
+            int childidx;
 
             /* sums are handled by a special gadget */
             usedefaultgadget = FALSE;
@@ -10463,7 +10460,7 @@ SCIP_RETCODE addSymmetryInformation(
 
             constant = SCIPgetConstantExprSum(expr);
 
-            SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &consvars, &consvals,
+            SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &consvars, &consvals,
                   &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
 
             SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
@@ -10472,7 +10469,7 @@ SCIP_RETCODE addSymmetryInformation(
             SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, sumidx, hasparentcoef, parentcoef) );
 
             /* add the linear part of the sum */
-            SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, sumidx, consvars, consvals, nlocvars, constant) );
+            SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, sumidx, consvars, consvals, nlocvars, constant) );
 
             SCIP_CALL( ensureOpenArraySizeSymdetect(scip, &openidx, nopenidx + 1, &maxnopenidx) );
 
@@ -12814,6 +12811,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          else if( !SCIPisEQ(scip, auxvalue, estimateval) )
          {
             char gap[40];
+            /* coverity[secure_coding] */
             (void) sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
             strcat(SCIProwprepGetName(rowprep), gap);
          }
@@ -13775,6 +13773,32 @@ SCIP_RETCODE SCIPaddExprNonlinear(
    /* not sure we care about any of these flags for original constraints */
    consdata->issimplified = FALSE;
    consdata->ispropagated = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** computes value of constraint expression in a given solution
+ *
+ * Stores value of constraint expression in sol in activity.
+ * In case of a domain error (function cannot be evaluated in sol), activity is set to SCIP_INVALID.
+ */
+SCIP_RETCODE SCIPgetExprActivityNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Real*            activity            /**< buffer to store computed activity */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(activity != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIP_CALL( SCIPevalExpr(scip, consdata->expr, sol, 0L) );
+   *activity = SCIPexprGetEvalValue(consdata->expr);
 
    return SCIP_OKAY;
 }

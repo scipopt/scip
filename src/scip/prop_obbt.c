@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -107,7 +107,7 @@
 #define DEFAULT_ONLYNONCONVEXVARS       TRUE /**< only apply obbt on non-convex variables */
 #define DEFAULT_INDICATORS             FALSE /**< apply obbt on variables of indicator constraints? (independent of convexity) */
 #define DEFAULT_INDICATORTHRESHOLD       1e6 /**< variables of indicator constraints with smaller upper bound are not considered
-                                                  and upper bound is tightened only if new bound is smaller */
+                                              *   and upper bound is tightened only if new bound is smaller */
 #define DEFAULT_TIGHTINTBOUNDSPROBING   TRUE /**< should bounds of integral variables be tightened during
                                               *   the probing mode? */
 #define DEFAULT_TIGHTCONTBOUNDSPROBING FALSE /**< should bounds of continuous variables be tightened during
@@ -2580,7 +2580,7 @@ SCIP_RETCODE applyObbtBilinear(
          /* add inequality to quadratic constraint handler if it separates (xt,yt) */
          if( !SCIPisHugeValue(scip, xcoef)  && !SCIPisFeasZero(scip, xcoef)
             && REALABS(ycoef) < 1e+3 && REALABS(ycoef) > 1e-3 /* TODO add a parameter for this */
-            && SCIPisFeasGT(scip, (xcoef*xt - ycoef*yt - constant) / SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)), 1e-2) )
+            && SCIPisFeasGT(scip, (xcoef*xt - ycoef*yt - constant) / sqrt(SQR(xcoef) + SQR(ycoef) + SQR(constant)), 1e-2) )
          {
             SCIP_Bool success;
 
@@ -2593,7 +2593,7 @@ SCIP_RETCODE applyObbtBilinear(
             {
                *result = SCIP_REDUCEDDOM;
                SCIPdebugMsg(scip, "   found %g x <= %g y + %g with violation %g\n", xcoef, ycoef, constant,
-                  (xcoef*xt - ycoef*yt - constant) / SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)));
+                  (xcoef*xt - ycoef*yt - constant) / sqrt(SQR(xcoef) + SQR(ycoef) + SQR(constant)));
 
                /* create a linear constraint that is only used for propagation */
                if( propdata->createlincons && nnonzduals > 1 )

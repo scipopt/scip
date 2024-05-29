@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -10225,7 +10225,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
       nlocvars = 1;
 
       /* ignore weights of SOS1 constraint (variables are sorted according to these weights) */
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &locvars, &locvals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_PERM, &locvars, &locvals,
             &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[0], 1.0) )
@@ -10237,7 +10237,7 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
       {
          SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &nodeidx) ); /*lint !e641*/
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, nodeidx, FALSE, 0.0) );
-         SCIP_CALL( SCIPaddSymgraphVarAggegration(scip, graph, nodeidx, locvars, locvals, nlocvars, constant) );
+         SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, nodeidx, locvars, locvals, nlocvars, constant) );
       }
    }
 
@@ -10291,7 +10291,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS1)
 
       /* use SYM_SYMTYPE_PERM here to NOT center variable domains at 0, as the latter might not preserve
        * SOS1 constraints */
-      SCIP_CALL( SCIPgetActiveVariables(scip, SYM_SYMTYPE_PERM, &locvars, &locvals,
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_PERM, &locvars, &locvals,
             &nlocvars, &constant, SCIPisTransformed(scip)) );
 
       if( nlocvars == 1 && SCIPisZero(scip, constant) && SCIPisEQ(scip, locvals[0], 1.0) )
@@ -10327,7 +10327,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS1)
 
          /* add nodes and edges for variables in aggregation, do not add edges to negated variables
           * since this might not necessarily be a symmetry of the SOS1 constraint; therefore,
-          * do not use SCIPaddSymgraphVarAggegration() */
+          * do not use SCIPaddSymgraphVarAggregation() */
          for( j = 0; j < nlocvars; ++j )
          {
             nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, locvars[j]);

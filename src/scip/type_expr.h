@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -49,6 +49,7 @@
 #include "scip/type_sol.h"
 #include "scip/type_var.h"
 #include "scip/type_tree.h"
+#include "scip/type_retcode.h"
 
 typedef struct SCIP_ExprData  SCIP_EXPRDATA;     /**< expression data, e.g., coefficients */
 typedef struct SCIP_Expr      SCIP_EXPR;         /**< expression */

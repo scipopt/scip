@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -616,6 +616,8 @@ void updateFixingRate(
    case SCIP_STATUS_TIMELIMIT:
    case SCIP_STATUS_MEMLIMIT:
    case SCIP_STATUS_GAPLIMIT:
+   case SCIP_STATUS_PRIMALLIMIT:
+   case SCIP_STATUS_DUALLIMIT:
    case SCIP_STATUS_RESTARTLIMIT:
    case SCIP_STATUS_UNBOUNDED:
    default:
@@ -668,7 +670,6 @@ void updateTargetNodeLimit(
    case SCIP_STATUS_INFORUNBD:
    case SCIP_STATUS_SOLLIMIT:
    case SCIP_STATUS_BESTSOLLIMIT:
-      break;
    case SCIP_STATUS_USERINTERRUPT:
    case SCIP_STATUS_TERMINATE:
    case SCIP_STATUS_UNKNOWN:
@@ -676,9 +677,10 @@ void updateTargetNodeLimit(
    case SCIP_STATUS_TIMELIMIT:
    case SCIP_STATUS_MEMLIMIT:
    case SCIP_STATUS_GAPLIMIT:
+   case SCIP_STATUS_PRIMALLIMIT:
+   case SCIP_STATUS_DUALLIMIT:
    case SCIP_STATUS_RESTARTLIMIT:
    case SCIP_STATUS_UNBOUNDED:
-      break;
    default:
       break;
    }
@@ -760,6 +762,8 @@ void updateMinimumImprovement(
    case SCIP_STATUS_TIMELIMIT:
    case SCIP_STATUS_MEMLIMIT:
    case SCIP_STATUS_GAPLIMIT:
+   case SCIP_STATUS_PRIMALLIMIT:
+   case SCIP_STATUS_DUALLIMIT:
    case SCIP_STATUS_RESTARTLIMIT:
    case SCIP_STATUS_UNBOUNDED:
    case SCIP_STATUS_TERMINATE:
@@ -4087,7 +4091,7 @@ SCIP_RETCODE SCIPincludeHeurAlns(
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/banditalgo",
          "the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy, exp.3-(i)x",
-         &heurdata->banditalgo, TRUE, DEFAULT_BANDITALGO, "uegib", NULL, NULL) );
+         &heurdata->banditalgo, TRUE, DEFAULT_BANDITALGO, "uegi", NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gamma",
          "weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3",

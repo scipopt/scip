@@ -1,4 +1,209 @@
+@section RN1000 SCIP 10.0.0
+***************************
+
+Features
+--------
+- Added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
+- Copy variable data pointer if no copy routine was supplied.
+
+- added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+### New API functions
+
+- SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
+- SCIPhistoryGetAncPseudocost(), SCIPhistoryGetAncPseudocostCount(), SCIPhistoryIsAncPseudocostEmpty(), SCIPgetVarAncPseudocostVal(),
+  SCIPvarGetAncPseudocost() for retrieving the values related to ancestral pseudo cost fields in variable history
+- SCIPgetAvgDPseudocostScore(), SCIPgetVarDPseudocostScore() for computing the discounted pseudo cost scores using ancestral pseudo costs
+- SCIPboundchgGetLPSolVal() for accessing the LP solution value in the branching data of the bound change
+
+### Command line interface
+
+### Interfaces to external software
+
+### Changed parameters
+
+### New parameters
+
+- branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
+- branching/discountedpscost to enable/disable recording ancestral pseudo costs
+- new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
+- new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
+
+### Data structures
+
+Deleted files
+-------------
+
+Testing
+-------
+
+Build system
+------------
+
+### Makefile
+
+### Cmake
+
+Fixed bugs
+----------
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
+
 @page RN90 Release notes for SCIP 9
+
+@section RN910 SCIP 9.1.0
+*************************
+
+Features
+--------
+
+- Added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem.
+- added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem
+- allow for implicit integer variables in xor constraints
+- implemented symmetry detection callbacks for cons_pseudoboolean
+
+Performance improvements
+------------------------
+
+Fixed bugs
+----------
+
+Examples and applications
+-------------------------
+
+- TSP: remove `gzstream.h/hpp` and parse gzipped file differently
+
+Interface changes
+-----------------
+
+### New callbacks
+
+### New API functions
+
+- New function SCIPgetExprActivityNonlinear() to get activity of nonlinear constraint.
+- New function SCIPincludeConshdlrFixedvar() to include new constraint handler that checks bounds on fixed original variables.
+
+### Command line interface
+
+### Interfaces to external software
+
+### New parameters
+
+- limits/primal to terminate the solve as soon as the primal bound is at least as good as this value, same as limits/objectivestop (deprecated)
+- limits/dual to terminate the solve as soon as the dual bound is at least as good as this value
+- presolving/milp/internalmaxrounds to control the maximal rounds for each call of the milp presolver (PaPILO)
+- constraints/fixedvar/* to control the new constraint handler that checks bounds on fixed original variables
+
+### New data structures
+
+- SCIP_Status is extended by SCIP_STATUS_PRIMALLIMIT and SCIP_STATUS_DUALLIMIT to indicate termination at limits/primal and limits/dual respectively
+
+Build system
+------------
+
+### Makefile
+
+### Cmake
+
+Testing
+-------
+
+@section RN902 SCIP 9.0.2
+*************************
+
+Fixed bugs
+----------
+
+- make sure that, in dual proof analysis, upgraded constraints can report their number of variables
+- check knapsack constraints as linear constraints to avoid violations based on implicit integrality
+
+Miscellaneous
+-------------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+- fixed that bliss main() was included in SCIP library
+
+@section RN901 SCIP 9.0.1
+*************************
+
+Fixed bugs
+----------
+
+- fixed bug in detection of double lex matrices due to wrong memory allocation
+- fixed bug where parameter `limits/objectivestop` was copied to subscips in plugins which have different objectives
+- in count mode respect empty solution when problem is solved in presolving
+- fixed that SCIP may have tried to pass a negative random seed to an LP solver
+- fixed bug where conflict analysis in strong branching tried to analyze an unsuccessful LP solve
+- enable parameter limits/restarts by allowing to reach the restart limit in restartAllowed()
+- handle normalizing linear constraints in presolving with more caution to avoid numerical difficulties for integer variables with large coefficients
+- use quad precision to calculate residual activity bounds to reduce numerical errors for large variable bounds in cons_linear.c
+- in SCIPsolveProbingLP() when objective has been changed do not return cutoff due to exceeding the cutoff bound
+- set probing LP to be a relaxation only when objective has not been changed
+- declare contradicting infinities in getMinActivity() and getMaxActivity() as non-tight
+- reject farkas solution with large values to bound magnification of errors in SCIPgetFarkasProof()
+- if all variables are fixed, apply relative feasibility tolerance to avoid invalid infeasibility in applyFixings() of cons_linear.c
+- delete empty redundant knapsack and linear constraints after cleanup in SCIPmatrixCreate()
+- cleanup first constraints in SCIPcleanupConssVarbound(), SCIPcleanupConssSetppc(), and SCIPcleanupConssLogicor()
+- symmetry handling methods have not been added immediately after computing symmetries, which has been fixed
+- delay checking node limits after presolving to correctly continue up to the exceeding main node
+- simplified the objective sense assumption for the subproblems in the Lagromory separator
+- update effective root depth iteratively to avoid trapping it at a single child node
+- fixed that dualsparsify presolver did not always check do-not-multiaggregate variable flag
+- fixed bug in computing elements of orbits in orbital reduction
+
+Miscellaneous
+-------------
+
+- redefine isrelax to istight in cons_linear.c
+
+Build system
+------------
+
+### Cmake
+
+- A file cmake.log containing the changed options is written to the cmake build directory.
+- removed replacement of the settings of RelWithDebInfo
+- add compile option -ffp-contract=off or /fp:precise to enhance reproducibility across different systems
+
+### Makefile
+
+- add flags -ffp-contract=off and /fp:precise to enhance reproducibility across different systems
+
+Interface changes
+-----------------
+
+### New parameters
+
+- added parameter "propagating/symmetry/symtiming" to determine when symmetries are computed and handled
+
+### Changed parameters
+
+- Disabled "propagating/symmetry/addconsstiming" since it is not used anymore.
+- Disabled "propagating/symmetry/ofsymcomptiming" since it is not used anymore.
 
 @section RN900 SCIP 9.0.0
 *************************
@@ -41,6 +246,7 @@ Features
 - when parsing nonlinear constraints from CIP files, the * after the number in a term is now optional if followed by a variable,
   i.e., instead of 3*<x>*<y>, now also 3<x>*<y> can be read, but 3<x><y> is not supported;
   this allows to read some CIP files that were written with SCIP < 8
+- when running bliss, we now limit the number of actually created generators and not the ones considered by bliss
 
 Performance improvements
 ------------------------
@@ -57,9 +263,6 @@ Performance improvements
 - Deactivate pre-root heuristic zeroobj in undercover heuristic.
 - Added new branching score tiebreaker for reliability pseudo-cost branching rule
 - Try nearest bound if zero solution value is out of bounds in heuristic trivial.
-
-Examples and applications
--------------------------
 
 Interface changes
 -----------------
@@ -82,6 +285,14 @@ Interface changes
 - Replaced SCIPnlrowSetCurvature() by SCIPsetNlRowCurvature().
 - SCIPsnprintf() now returns the required string length in case reallocation is necessary.
 - SCIPcomputeCoverUndercover() receives three more arguments which nonlinearities to cover
+- removed definition of SQRT
+- SCIPincludeObjConshdlr(), SCIPincludeConshdlr(), SCIPconshdlrCreate() receive two more arguments for the
+  conshdlr callbacks CONSGETPERMSYMGRAPH and CONSGETSIGNEDPERMSYMGRAPH
+- removed SYM_VARTYPE, SYM_OPTYPE, SYM_CONSTTYPE, SYM_RHSTYPE, SYM_MATRIXDATA
+- new parameter issigned for SCIPcomputeOrbitsSym()
+- new parameter symtype for SCIPcomputeComponentsSym()
+- new parameter symtype and permvardomaincenter for SCIPlexicographicReductionAddPermutation()
+- replaced parameters matrixdata and exprdata of SYMcomputeSymmetryGenerators() by graph
 
 ### New API functions
 
@@ -120,6 +331,26 @@ Interface changes
 - SCIPincludeCutselDynamic(), SCIPselectCutsDynamic() to include cutsel_dynamic or use the selection algorithm
 - SCIPincludeSepaLagromory() to include the new Lagromory separator
 - SCIPconsCompCheck() to compare two constraints based on their check priority
+- SCIPgetConsPermsymGraph() and SCIPgetConsSignedPermsymGraph() to access the (signed) permutation symmetry detection graph of a constraint
+- SCIPsetConshdlrGetPermsymGraph() and SCIPsetConshdlrGetSignedPermsymGraph() to set the (signed) permutation symmetry detection graph of a constraint
+- SCIPconshdlrSupportsPermsymDetection() and SCIPconshdlrSupportsSignedPermsymDetection() to access whether a conshdlr supports detection of (signed) permutation symmetries
+- new API functions for creating and manipulating a symmetry detection graph: SCIPcreateSymgraph(), SCIPfreeSymgraph(), SCIPcopySymgraph(), SCIPextendPermsymDetectionGraphLinear(),
+  SCIPaddSymgraphVarAggregation(), SCIPaddSymgraphOpnode(), SCIPaddSymgraphValnode(), SCIPaddSymgraphConsnode(), SCIPgetSymgraphVarnodeidx(), SCIPgetSymgraphNegatedVarnodeidx(),
+  SCIPupdateSymgraphLhs(), SCIPupdateSymgraphRhs(), SCIPfixSymgraphVarnode(), SCIPaddSymgraphEdge(), SCIPcomputeSymgraphColors(), SCIPgetSymgraphSymtype(), SCIPgetSymgraphVars(),
+  SCIPgetSymgraphNVars(), SCIPgetSymgraphNConsnodes(), SCIPgetSymgraphNNodes(), SCIPgetSymgraphNEdges(), SCIPgetSymgraphEdgeFirst(), SCIPgetSymgraphEdgeSecond(),
+  SCIPgetSymgraphVarnodeColor(), SCIPgetSymgraphNodeType(), SCIPgetSymgraphNodeColor(), SCIPisSymgraphEdgeColored(), SCIPgetSymgraphEdgeColor(), SCIPgetSymgraphNVarcolors(),
+  SCIPhasGraphUniqueEdgetype(), SCIPallocateSymgraphConsnodeperm(), SCIPcreateSymgraphConsnodeperm(), SCIPgetSymgraphConsnodeperm(), SCIPfreeSymgraphConsnodeperm(),
+  SCIPgetSymActiveVariables(), SCIPfreeSymDataExpr(), SCIPgetSymExprdataNConstants(), SCIPgetSymExprdataConstants(), SCIPgetCoefSymData(),
+  SCIPcreateSymOpNodeType(), SCIPgetSymOpNodeType()
+- SCIPexprhdlrSetGetSymdata(), SCIPexprhdlrHasGetSymData(), SCIPgetSymDataExpr(), SCIPcallExprGetSymData() to access symmetry data of expressions
+- SYMcheckGraphsAreIdentical() to check whether two symmetry detection graphs are identical
+- new functions SYMbuildSassyGraph(), SYMbuildSassyGraphCheck()
+- new type SYM_GRAPH
+- new definitions SCIP_DECL_CONSGETPERMSYMGRAPH, SCIP_DECL_EXPRGETSYMDATA
+- new member SYM_NODETYPE_CONS in SYM_NODETYPE enum
+- new members SYM_CONSOPTYPE_SUM, SYM_CONSOPTYPE_SLACK, SYM_CONSOPTYPE_COEF, SYM_CONSOPTYPE_RHS, SYM_CONSOPTYPE_LAST in SYM_CONSOPTYPE enum
+- new defintion SCIP_DECL_EXPRGETSYMDATA
+- new function SCIPdetectSingleOrDoubleLexMatrices()
 
 ### Command line interface
 
@@ -137,6 +368,7 @@ Interface changes
     `option scip_options 'limits/time 10 display/verblevel 1';`.
   String values should not be quoted and spaces in string values are not supported.
 - sassy can be used now as preprocessor for nauty/traces
+- The solution status codes written to AMPL solution files now match those from https://mp.ampl.com/details.html#_CPPv4N2mp3sol6StatusE.
 
 ### Changed parameters
 
@@ -193,6 +425,7 @@ Interface changes
 
 - new data structure SYM_GRAPH to encode symmetry information from a constraint
 - new data structure SYM_EXPRDATA to encode symmetry information from expressions
+- replaced enum SYM_SYMTYPE by a complete new one; removed SYM_RHSSENSE, added SYM_NODETYPE and SYM_CONSOPTYPE
 
 Deleted files
 -------------
@@ -201,14 +434,14 @@ Deleted files
 
 Unit tests
 ----------
+
 - new unittests for nlhdlr_quadratic that test monoidal strengthening and the use of the minimal representation to compute cut coefficients
 - unittests for nlhdlr_signomial
 
 Testing
 -------
-- changed `set lim obj` to `set lim objective` in ctest since `obj` is no longer unambiguous
 
-- flush changes at the end of SCIPlpiSetBase() in lpi_grb.c to apply the newly set basis correctly
+- changed `set lim obj` to `set lim objective` in ctest since `obj` is no longer unambiguous
 
 Build system
 ------------
@@ -238,15 +471,19 @@ Fixed bugs
 - add safeguard for number of selected cuts
 - use double double precision for delta in activity updates of cons_linear.c
 - sort constraints in checkSolOrig() to keep the logic of constraint handlers intact
+- fixed make install when SHARED=no and make uninstall
+- check absolute coefficients relative to extremal average to avoid invalid unifications in normalizeCons()
+- enforce and check symmetry-based constraints to take their locks (in dual reductions) into account
+- flush changes at the end of SCIPlpiSetBase() in lpi_grb.c to apply the newly set basis correctly
 
 Miscellaneous
 -------------
 
 - The TPI has been changed to become mostly independent from the actual parallel interface during compile time.
   For this, the locks and conditions are now pointers to abstract structs.
+- fixed that scip/def.h, the header for C preprocessor definition (#define's), included headers for some SCIP type and function definitions
+  (scip/type_retcode.h, scip/type_message.h, scip/pub_message.h)
 
-Known bugs
-----------
 
 @page RN80 Release notes for SCIP 8.1
 
@@ -446,9 +683,6 @@ Miscellaneous
   SCIPdebugSolIsValidInSubtree, SCIPdebugIsMainscip, SCIPdebugSolEnable, SCIPdebugSolDisable, SCIPdebugSolIsEnabled,
   SCIPwithDebugSol are now exported
 
-Known bugs
-----------
-
 @section RN802 SCIP 8.0.2
 *************************
 
@@ -529,6 +763,7 @@ Miscellaneous
 
 @section RN801 SCIP 8.0.1
 *************************
+
 Features
 --------
 
@@ -1428,9 +1663,6 @@ Unit tests
 - added sepa/rlt/separation.c
 - added tests test_compute_symmetry:expr{1,2,3,4} in symmetry/compute.c
 
-Testing
--------
-
 Build system
 ------------
 
@@ -1486,9 +1718,6 @@ Miscellaneous
 - Parameters are not reset to their default values before activating an emphasis setting; this now allows to combine
   different emphasis settings.
 - If a lazy bound is set to a value that is tighter than the current global bound, then the global bound is now tightened accordingly.
-
-Known bugs
-----------
 
 @page RN70 Release notes for SCIP 7.0
 
@@ -1578,8 +1807,6 @@ Examples and applications
 Interface changes
 -----------------
 
-### New and changed callbacks
-
 ### Deleted and changed API methods
 
 - deprecated SCIPsetParam(); use SCIPsetIntParam(), SCIPsetRealParam(), etc, instead
@@ -1588,32 +1815,6 @@ Interface changes
 
 - new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
 - added new sorting functions SCIPsortPtrRealRealBoolBool()
-
-### Command line interface
-
-### Interfaces to external software
-
-### Changed parameters
-
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
-Unit tests
-----------
-
-Testing
--------
-
-Build system
-------------
-
-### Cmake
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -1639,12 +1840,6 @@ Fixed bugs
 - Fixed issues with scip statistics
 - Fixed issue with multi-aggregated variables
 - Fixed issue in with buffer memory in cons_cumulative
-
-Miscellaneous
--------------
-
-Known bugs
-----------
 
 @section RN701 SCIP 7.0.1
 *************************
@@ -2547,6 +2742,7 @@ Fixed bugs
 
 Miscellaneous
 -------------
+
 - do not scale linear constraints to integral coefficients
 
 @section RN600 SCIP 6.0.0

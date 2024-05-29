@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -46,7 +46,7 @@ extern "C" {
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeNlhdlrSignomial(
-   SCIP*                  scip               /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@addtogroup NLHDLRS

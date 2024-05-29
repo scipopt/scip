@@ -84,8 +84,8 @@ else:
     if newapiversion != oldapiversion:
         print("\nAPI versions before the change:")
         print(commands.getoutput('grep -e "APIVERSION" -e "SCIP_VERSION_API" make/make.project CMakeLists.txt'))
-        if newsubversion == "0":
-            print "\nWarning: API version increased for what seems to be a bugfix version (%s)" %(newversionstring)
+        if newminor != "0" or newpatch != "0":
+            print "\nWarning: API version increased for what does not seem to be the master branch (version %s)" %(newversionstring)
         commands.getoutput('sed -i "s/^SCIP_VERSION_API.*/SCIP_VERSION_API = %-s/" make/make.project' % newapiversion)
         commands.getoutput('sed -i "s/set(SCIP_VERSION_API [0-9]*)/set(SCIP_VERSION_API %s)/" CMakeLists.txt' \
                            %(newapiversion))

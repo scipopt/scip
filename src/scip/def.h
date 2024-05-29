@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -102,8 +102,7 @@
 /*
  * Add some macros for differing functions on Windows
  */
-#if defined(_WIN32) || defined(_WIN64)
-
+#ifdef _WIN32
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #define getcwd _getcwd
@@ -132,20 +131,10 @@
 #endif
 
 
-
-#include "scip/type_retcode.h"
-#include "scip/type_message.h"
-#include "scip/pub_message.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 #define SCIP_VERSION     (100*SCIP_VERSION_MAJOR + 10*SCIP_VERSION_MINOR + SCIP_VERSION_PATCH) /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION  SCIP_VERSION_SUB  /**< SCIP sub version number */
 #define SCIP_APIVERSION  SCIP_VERSION_API  /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)"
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)"
 
 
 /*
@@ -170,7 +159,7 @@ extern "C" {
 #define SCIP_LONGINT_MAX          LLONG_MAX
 #define SCIP_LONGINT_MIN          LLONG_MIN
 #ifndef SCIP_LONGINT_FORMAT
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #define SCIP_LONGINT_FORMAT           "I64d"
 #else
 #define SCIP_LONGINT_FORMAT           "lld"
@@ -223,12 +212,11 @@ extern "C" {
 
 #ifndef SQR
 #define SQR(x)        ((x)*(x))
-#define SQRT(x)       (sqrt(x))
 #endif
 
 /* platform-dependent specification of the log1p, which is numerically more stable around x = 0.0 */
 #ifndef LOG1P
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 #define LOG1P(x) (log(1.0+x))
 #else
 #define LOG1P(x) (log1p(x))
@@ -244,7 +232,7 @@ extern "C" {
 #endif
 
 #ifndef ABS
-#define ABS(x)        ((x) >= 0 ? (x) : -(x))
+#define ABS(x)    ((x) >= 0 ? (x) : -(x))
 #endif
 
 #ifndef MAX
@@ -451,10 +439,6 @@ extern "C" {
 #else
 #  define SCIP_DEPRECATED
 #endif
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #endif

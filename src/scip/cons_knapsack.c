@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -996,9 +996,8 @@ SCIP_RETCODE checkCons(
 
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
-      SCIP_Real sum;
-      SCIP_Longint integralsum;
-      SCIP_Bool ishuge;
+      SCIP_Real normsum = 0.0;
+      SCIP_Real hugesum = 0.0;
       SCIP_Real absviol;
       SCIP_Real relviol;
       int v;
@@ -1011,38 +1010,31 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
-      sum = 0.0;
-      integralsum = 0;
-      /* we perform a more exact comparison if the capacity does not exceed the huge value */
-      if( SCIPisHugeValue(scip, (SCIP_Real) consdata->capacity) )
+      /* sum separately over normal and huge weight contributions in order to reduce numerical cancellation */
+      for( v = consdata->nvars - 1; v >= 0; --v )
       {
-         ishuge = TRUE;
+         assert(SCIPvarIsBinary(consdata->vars[v]));
 
-         /* sum over all weight times the corresponding solution value */
-         for( v = consdata->nvars - 1; v >= 0; --v )
-         {
-            assert(SCIPvarIsBinary(consdata->vars[v]));
-            sum += consdata->weights[v] * SCIPgetSolVal(scip, sol, consdata->vars[v]);
-         }
-      }
-      else
-      {
-         ishuge = FALSE;
-
-         /* sum over all weight for which the variable has a solution value of 1 in feastol */
-         for( v = consdata->nvars - 1; v >= 0; --v )
-         {
-            assert(SCIPvarIsBinary(consdata->vars[v]));
-
-            if( SCIPgetSolVal(scip, sol, consdata->vars[v]) > 0.5 )
-               integralsum += consdata->weights[v];
-         }
+         if( SCIPisHugeValue(scip, (SCIP_Real)consdata->weights[v]) )
+            hugesum += consdata->weights[v] * SCIPgetSolVal(scip, sol, consdata->vars[v]);
+         else
+            normsum += consdata->weights[v] * SCIPgetSolVal(scip, sol, consdata->vars[v]);
       }
 
       /* calculate constraint violation and update it in solution */
-      absviol = ishuge ? sum : (SCIP_Real)integralsum;
-      absviol -= consdata->capacity;
-      relviol = SCIPrelDiff(absviol + consdata->capacity, (SCIP_Real)consdata->capacity);
+      normsum += hugesum;
+
+      if( normsum > consdata->capacity )
+      {
+         absviol = normsum - consdata->capacity;
+         relviol = SCIPrelDiff(normsum, (SCIP_Real)consdata->capacity);
+      }
+      else
+      {
+         absviol = 0.0;
+         relviol = 0.0;
+      }
+
       if( sol != NULL )
          SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
@@ -12059,7 +12051,7 @@ SCIP_RETCODE addSymmetryInformation(
       vals[i] = (SCIP_Real) consdata->weights[i];
    }
 
-   SCIP_CALL( SCIPgetActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
    rhs = (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons) - constant;
 
    SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
@@ -13281,7 +13273,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       /* try to parse coefficient, and use 1 if not successful */
       weight = 1;
       nread = 0;
-      sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread);
+      (void) sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread);
       str += nread;
 
       /* parse variable name */

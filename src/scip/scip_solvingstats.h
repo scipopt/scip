@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1427,6 +1427,23 @@ SCIP_Real SCIPgetPseudocostCount(
 SCIP_EXPORT
 SCIP_Real SCIPgetAvgPseudocostScore(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the average discounted pseudo cost score value over all variables, assuming a fractionality of 0.5
+ *
+ *  This combines both pscost and ancpscost fields.
+ *
+ *  @return the average discounted pseudo cost score value over all variables, assuming a fractionality of 0.5,
+ *  combining both pscost and ancpscost fields
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetAvgDPseudocostScore(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_Real             discountfac          /**< discount factor for discounted pseudocost */
    );
 
 /** returns the variance of pseudo costs for all variables in the requested direction

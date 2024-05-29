@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -952,7 +952,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    /* scale distance function and original objective to the same norm */
    objnorm = SCIPgetObjNorm(scip);
    objnorm = MAX(objnorm, 1.0);
-   scalingfactor = SQRT((SCIP_Real)(nbinvars + nintvars)) / objnorm;
+   scalingfactor = sqrt((SCIP_Real)(nbinvars + nintvars)) / objnorm;
 
    /* data initialization */
    alpha = heurdata->alpha;

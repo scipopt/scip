@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *#
 #*         SCIP --- Solving Constraint Integer Programs                      *#
 #*                                                                           *#
-#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *#
+#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *#
 #*                                                                           *#
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *#
 #*  you may not use this file except in compliance with the License.         *#
@@ -346,7 +346,6 @@ SYMSRC		=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(BLISSEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/bliss/src -I$(SRCDIR)/bliss/include
 BLISSOBJ	=	bliss/src/abstractgraph.o
-BLISSOBJ	+=	bliss/src/bliss.o
 BLISSOBJ	+=	bliss/src/bliss_C.o
 BLISSOBJ	+=	bliss/src/defs.o
 BLISSOBJ	+=	bliss/src/digraph.o
@@ -383,7 +382,6 @@ SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(BLISSEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/bliss/src -I$(SRCDIR)/bliss/include
 BLISSOBJ	=	bliss/src/abstractgraph.o
-BLISSOBJ	+=	bliss/src/bliss.o
 BLISSOBJ	+=	bliss/src/bliss_C.o
 BLISSOBJ	+=	bliss/src/defs.o
 BLISSOBJ	+=	bliss/src/digraph.o
@@ -603,6 +601,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_countsols.o \
 			scip/cons_cumulative.o \
 			scip/cons_disjunction.o \
+			scip/cons_fixedvar.o \
 			scip/cons_indicator.o \
 			scip/cons_integral.o \
 			scip/cons_knapsack.o \

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1203,7 +1203,9 @@ SCIP_RETCODE presolve(
 
    finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds)
          || (*unbounded) || (*vanished) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
-   stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
+
+   /* abort if time limit was reached or user interrupted */
+   stopped = SCIPsolveIsStopped(scip->set, scip->stat, FALSE);
 
    /* perform presolving rounds */
    while( !finished && !stopped )
@@ -1273,7 +1275,7 @@ SCIP_RETCODE presolve(
       }
 
       /* abort if time limit was reached or user interrupted */
-      stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
+      stopped = SCIPsolveIsStopped(scip->set, scip->stat, FALSE);
    }
 
    /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
@@ -2607,7 +2609,8 @@ SCIP_RETCODE SCIPsolve(
          }
          assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
-         if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) )
+         /* abort if a node limit was reached */
+         if( SCIPsolveIsStopped(scip->set, scip->stat, TRUE) )
             break;
          /*lint -fallthrough*/
 
@@ -3332,6 +3335,8 @@ SCIP_RETCODE SCIPfreeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   assert(scip != NULL);
+
    SCIP_CALL( SCIPcheckStage(scip, "SCIPfreeTransform", TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    /* release variables and constraints captured by reoptimization */

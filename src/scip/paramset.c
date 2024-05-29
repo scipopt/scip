@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1448,12 +1448,17 @@ void SCIPparamsetFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
+   SCIP_PARAM* objectivestop;
    int i;
 
    assert(paramset != NULL);
    assert(*paramset != NULL);
    assert((*paramset)->paramssize == 0 || (*paramset)->params != NULL);
    assert((*paramset)->paramssize >= (*paramset)->nparams);
+
+   /* free deprecated objectivestop */
+   objectivestop = SCIPparamsetGetParam(*paramset, "limits/objectivestop");
+   paramFree(&objectivestop, blkmem);
 
    for( i = (*paramset)->nparams - 1; i >= 0; --i )
    {
@@ -3886,6 +3891,9 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
 
       /* turn on aggressive constraint aging */ 
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/agelimit", 1, quiet) );
+
+      /* turn off symmetry handling */
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "misc/usesymmetry", 0, quiet) );
 
       /* turn off components presolver since we are currently not able to handle that in case of counting */
 #ifndef NDEBUG

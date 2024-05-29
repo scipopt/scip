@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -80,7 +80,6 @@
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
 #include "scip/sepa_gomory.h"
-#include "struct_history.h"
 #include <string.h>
 
 #define SEPA_NAME              "gomory"
@@ -555,7 +554,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
       if( c >= 0 )
       {
-
          assert(c < ncols);
          var = SCIPcolGetVar(cols[c]);
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
@@ -692,7 +690,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          maxcutefficacy = cutefficacies[i];
       }
    }
-
 
    for( i = 0; i < nrows; ++i )
    {

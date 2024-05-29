@@ -875,7 +875,7 @@ FMT_FUNC void fmt::report_windows_error(
 FMT_FUNC void fmt::print(std::FILE *f, CStringRef format_str, ArgList args) {
   MemoryWriter w;
   w.write(format_str, args);
-  std::fwrite(w.data(), 1, w.size(), f);
+  std::fwrite(w.data(), w.size(), 1, f);
 }
 
 FMT_FUNC void fmt::print(CStringRef format_str, ArgList args) {
@@ -894,7 +894,7 @@ FMT_FUNC int fmt::fprintf(std::FILE *f, CStringRef format, ArgList args) {
   MemoryWriter w;
   printf(w, format, args);
   std::size_t size = w.size();
-  return std::fwrite(w.data(), 1, size, f) < size ? -1 : static_cast<int>(size);
+  return !std::fwrite(w.data(), size, 1, f) ? -1 : static_cast<int>(size);
 }
 
 #ifndef FMT_HEADER_ONLY

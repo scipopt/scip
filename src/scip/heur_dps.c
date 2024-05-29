@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1163,6 +1163,7 @@ SCIP_RETCODE calculateShift(
        */
       for( v = 0; v < linking->nblocks - *nviolatedblocksrhs; v++ )
       {
+         /* coverity[uninit_use] */
          part = linking->currentrhs[nonviolatedblocksrhs[v]] - residual/(linking->nblocks - *nviolatedblocksrhs - v);
          part = MIN(MAX(part, linking->minactivity[nonviolatedblocksrhs[v]]), linking->maxactivity[nonviolatedblocksrhs[v]]);
          shift_tmp = part - linking->currentrhs[nonviolatedblocksrhs[v]];
@@ -1193,6 +1194,7 @@ SCIP_RETCODE calculateShift(
        */
       for( v = 0; v < linking->nblocks - *nviolatedblockslhs; v++ )
       {
+         /* coverity[uninit_use] */
          part = linking->currentlhs[nonviolatedblockslhs[v]] - residual/(linking->nblocks - *nviolatedblockslhs - v);
          part = MIN(MAX(part, linking->minactivity[nonviolatedblockslhs[v]]), linking->maxactivity[nonviolatedblockslhs[v]]);
          shift_tmp = part - linking->currentlhs[nonviolatedblockslhs[v]];
@@ -1691,7 +1693,7 @@ SCIP_DECL_EVENTEXEC(eventExecDps)
    assert(event != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_LPSOLVED);
 
-   SCIPdebugMsg(scip, "dual bound: %0.2f\n", SCIPgetDualbound(scip));
+   SCIPdebugMsg(scip, "dual bound: %.2f\n", SCIPgetDualbound(scip));
 
    if( SCIPisFeasGT(scip, SCIPgetDualbound(scip), 0.0) && SCIPgetNSols(scip) >= 1 )
    {

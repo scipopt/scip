@@ -1,11 +1,10 @@
-
 #!/usr/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -464,6 +463,7 @@ BEGIN {
    printconfs = 0;
    printgap = 0; # if timeout, then print absolute gap at termination in time column, if gap is finite
    printsoltimes = !short && printsoltimes; # short deactivates the detailed solution times output
+   setnamelen = 50;  # display length of test sets
    infinity = 1e+20;
    timegeomshift = 1.0;
    nodegeomshift = 100.0;
@@ -793,24 +793,24 @@ END {
       {
 	 if( printsoltimes && printconfs == 0 )
 	 {
-	    if ( length(sname) <= 58 )
-	       printf(" %58s |", sname);
+	    if ( length(sname) <= 59 )
+	       printf("%59s |", sname);
 	    else
-	       printf(" *%57s |", substr(sname, length(sname)-58));
+	       printf("*%58s |", substr(sname, length(sname) - 57));
 	 }
 	 else if( printsoltimes == 0 && printconfs )
 	 {
-	    if ( length(sname) <= 55 )
-	       printf(" %55s |", sname);
+	    if ( length(sname) <= 56 )
+	       printf("%56s |", sname);
 	    else
-	       printf(" *%54s |", substr(sname, length(sname)-54));
+	       printf("*%55s |", substr(sname, length(sname) - 54));
 	 }
 	 else
 	 {
-	    if ( length(sname) <= 39 )
-	       printf(" %39s |", sname)
+	    if ( length(sname) <= 40 )
+	       printf("%40s |", sname)
 	    else
-	       printf(" *%38s |", substr(sname, length(sname)-39));
+	       printf("*%39s |", substr(sname, length(sname) - 38));
 	 }
       }
       else
@@ -820,28 +820,28 @@ END {
 	    if( length(sname) <= 19 )
 	       printf("%19s |", sname);
 	    else
-	       printf("*%16s |", substr(sname, length(sname)-17));
+	       printf("*%18s |", substr(sname, length(sname) - 17));
 	 }
 	 else if( printsoltimes && printconfs == 0 )
 	 {
 	    if( length(sname) <= 47 )
 	       printf("%47s |", sname);
 	    else
-	       printf("*%46s |", substr(sname, length(sname)-47));
+	       printf("*%46s |", substr(sname, length(sname) - 45));
 	 }
 	 else if( printsoltimes == 0 && printconfs )
 	 {
 	    if( length(sname) <= 48 )
 	       printf("%48s |", sname);
 	    else
-	       printf("*%47s |", substr(sname, length(sname)-48));
+	       printf("*%47s |", substr(sname, length(sname) - 46));
 	 }
 	 else
 	 {
 	    if( length(sname) <= 33 )
-	       printf("%31s |", sname);
+	       printf("%33s |", sname);
 	    else
-	       printf("*%30s |", substr(sname, length(sname)-31));
+	       printf("*%32s |", substr(sname, length(sname) - 31));
 	 }
       }
    }
@@ -1697,19 +1697,27 @@ END {
    {
       s = printorder[o];
 
-      parse_time(ref_array,solver_array,time,o,printorder,probidx,problistlen);
+      parse_time(ref_array, solver_array, time, o, printorder, probidx, problistlen);
       n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
       factorize(ref_array, solver_array, n, timelimit[s])
 
-      z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
-      printf("   z %8.4f",z);
-      z_to_p(z);
+      # do not print test if number of items is less than 20, because the test is not reliable there
+      if( n > 20 )
+      {
+         z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
+         printf("   z %8.4f", z);
+         z_to_p(z);
+      }
+      else
+      {
+         printf("     %8s", "");
+         printf("     -- (N = %2d <= 20)", n);
+      }
 
       if( printconfs )
 	 printf("%18s", "");
    }
    printf("\n");
-
 
    # compute and print result for Wilcoxon signed rank test for time to first solution w.r.t. reference setting
    if( printsoltimes )
@@ -1724,13 +1732,22 @@ END {
       {
          s = printorder[o];
 
-         parse_time(ref_array,solver_array,timetofirst,o,printorder,probidx,problistlen);
+         parse_time(ref_array, solver_array, timetofirst, o, printorder, probidx, problistlen);
          n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
          factorize(ref_array, solver_array, n, timelimit[s])
 
-	 z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
-	 printf("   z %8.4f",z);
-	 z_to_p(z);
+         # do not print test if number of items is less than 20, because the test is not reliable there
+         if( n > 20 )
+         {
+            z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
+            printf("   z %8.4f", z);
+            z_to_p(z);
+         }
+         else
+         {
+            printf("     %8s", "");
+            printf("     -- (N = %2d <= 20)", n);
+         }
 
          if( printconfs )
             printf("%18s", "");
@@ -1751,9 +1768,18 @@ END {
       n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
       factorize(ref_array, solver_array, n, infinity)
 
-      z = wilcoxon(ref_array, solver_array, n, infinity);
-      printf("   z %8.4f",z);
-      z_to_p(z);
+      # do not print test if number of items is less than 20, because the test is not reliable there
+      if( n > 20 )
+      {
+         z = wilcoxon(ref_array, solver_array, n, infinity);
+         printf("   z %8.4f", z);
+         z_to_p(z);
+      }
+      else
+      {
+         printf("     %8s", "");
+         printf("     -- (N = %2d <= 20)", n);
+      }
 
       if( printconfs )
 	 printf("%18s", "");
@@ -1768,13 +1794,22 @@ END {
       {
          s = printorder[o];
 
-         parse_time(ref_array,solver_array,confs,o,printorder,probidx,problistlen);
+         parse_time(ref_array, solver_array, confs, o, printorder, probidx, problistlen);
          n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
          factorize(ref_array, solver_array, n, timelimit[s])
 
-         z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
-         printf("   z %8.4f", z );
-         z_to_p(z);
+         # do not print test if number of items is less than 20, because the test is not reliable there
+         if( n > 20 )
+         {
+            z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
+            printf("   z %8.4f", z);
+            z_to_p(z);
+         }
+         else
+         {
+            printf("     %8s", "");
+            printf("     -- (N = %2d <= 20)", n);
+         }
 
          if( printconfs )
 	    printf("%18s", "");
@@ -1881,8 +1916,8 @@ END {
 
          header = (cat == -1 ? "optimal" : (cat == 0 ? "all" : (cat == 1 ? "diff" : (cat == 2 ? "equal" : "timeout"))));
          printf("\n");
-         printf("%-7s                                            proc eval fail time solv wins bett wors bobj wobj feas    gnodes   shnodes   gnodesQ  shnodesQ   gtime  shtime  gtimeQ shtimeQ   score\n",
-		header);
+         printf("%-*s proc eval fail time solv wins bett wors bobj wobj feas    gnodes   shnodes   gnodesQ  shnodesQ   gtime  shtime  gtimeQ shtimeQ   score\n",
+                setnamelen, header);
 
          for( o = 0; o < nsolver; ++o )
          {
@@ -1897,11 +1932,13 @@ END {
             }
             if( (o > 0 || cat == 0 || cat == -1) && nevalprobs[s,cat] > 0 )
             {
-               if ( length(sname) <= 50 )
-                  printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+               if ( length(sname) <= setnamelen )
+                  printf("%-*s %4d %4d %4d %4d %4d %4d", setnamelen, sname,
+                         nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
                          ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
                else
-                  printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+                  printf("*%-*s %4d %4d %4d %4d %4d %4d", setnamelen - 1, substr(sname, length(sname) - setnamelen + 2),
+                         nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
                          ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
 
                printf(" %4d %4d", better[s,cat], worse[s,cat]);
@@ -1915,7 +1952,7 @@ END {
          }
          if( cat == 0 )
          {
-            printf("%-50s           %4d %4d %4d %4s", "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "");
+            printf("%-*s           %4d %4d %4d %4s", setnamelen, "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "");
             printf(" %4d %4s", bestbetter, "");
             printf(" %4d %4s %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7s\n",
                    bestbetterobj, "", bestfeasibles,
@@ -1928,7 +1965,8 @@ END {
       # output the all optimal case
       header = "all optimal";
       printf("\n");
-      printf("%-11s                                        proc eval fail time solv wins bett wors bobj wobj feas    gnodes   shnodes   gnodesQ  shnodesQ   gtime  shtime  gtimeQ shtimeQ   score\n", header);
+      printf("%-*s proc eval fail time solv wins bett wors bobj wobj feas    gnodes   shnodes   gnodesQ  shnodesQ   gtime  shtime  gtimeQ shtimeQ   score\n",
+             setnamelen, header);
       cat = -1;
       for( o = 0; o < nsolver; ++o )
       {
@@ -1943,11 +1981,12 @@ END {
          }
          if( (o > 0 || cat == 0 || cat == -1) && nevalprobs[s,cat] > 0 )
          {
-            if ( length(sname) <= 50 )
-               printf("%-50s %4d %4d %4d %4d %4d %4d", sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+            if ( length(sname) <= setnamelen )
+               printf("%-*s %4d %4d %4d %4d %4d %4d", setnamelen, sname, nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
                       ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
             else
-               printf("*%-49s %4d %4d %4d %4d %4d %4d", substr(sname, length(sname)-48), nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+               printf("*%-*s %4d %4d %4d %4d %4d %4d", setnamelen - 1, substr(sname, length(sname) - setnamelen + 2),
+                      nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
                       ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
             printf(" %4d %4d", better[s,cat], worse[s,cat]);
             printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n",
@@ -1960,7 +1999,7 @@ END {
       }
       if( cat == 0 )
       {
-         printf("%-50s           %4d %4d %4d %4s", "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "");
+         printf("%-*s           %4d %4d %4d %4s", setnamelen, "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "");
          printf(" %4d %4s", bestbetter, "");
          printf(" %4d %4s %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7s\n",
                 bestbetterobj, "", bestfeasibles,

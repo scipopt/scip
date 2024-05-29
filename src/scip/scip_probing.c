@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -745,7 +745,8 @@ SCIP_RETCODE solveProbingLP(
    /* load the LP state (if necessary) */
    SCIP_CALL( SCIPtreeLoadProbingLPState(scip->tree, scip->mem->probmem, scip->set, scip->transprob, scip->eventqueue, scip->lp) );
 
-   SCIPlpSetIsRelax(scip->lp, TRUE);
+   /* the LP is a relaxation if and only if the objective has not been changed */
+   SCIPlpSetIsRelax(scip->lp, !scip->tree->probingobjchanged);
 
    /* solve probing LP */
    SCIP_CALL( SCIPlpSolveAndEval(scip->lp, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat,
@@ -785,7 +786,7 @@ SCIP_RETCODE solveProbingLP(
    /* the LP is infeasible or the objective limit was reached */
    if( !(*lperror) && (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
          || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT ||
-         (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OPTIMAL
+         (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OPTIMAL && !scip->tree->probingobjchanged
             && SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))) )
    {
       /* analyze the infeasible LP (only if all columns are in the LP and no external pricers exist) */

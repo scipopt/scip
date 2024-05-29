@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2744,37 +2744,37 @@ SCIP_RETCODE printNonLinearCons(
    mult = 1;
    retcode = SCIP_OKAY;
 
-   /* print row(s) in OPB format */
-   if( SCIPisEQ(scip, lhs, rhs) )
+   if( activevars != NULL )
    {
-      assert( !SCIPisInfinity(scip, rhs) );
-
-      /* equality constraint */
-      retcode = printNLRow(scip, file, "=", activevars, activevals, nactivevars, rhs - activeconstant, resvars,
-         nresvars, andvars, nandvars, weight, &mult, multisymbol);
-   }
-   else
-   {
-      if( !SCIPisInfinity(scip, -lhs) )
+      /* print row(s) in OPB format */
+      if( SCIPisEQ(scip, lhs, rhs) )
       {
-         /* print inequality ">=" */
-         retcode = printNLRow(scip, file, ">=", activevars, activevals, nactivevars, lhs - activeconstant, resvars,
+         assert( !SCIPisInfinity(scip, rhs) );
+
+         /* equality constraint */
+         retcode = printNLRow(scip, file, "=", activevars, activevals, nactivevars, rhs - activeconstant, resvars,
             nresvars, andvars, nandvars, weight, &mult, multisymbol);
       }
-
-      if( !SCIPisInfinity(scip, rhs) )
+      else
       {
-         mult *= -1;
+         if( !SCIPisInfinity(scip, -lhs) )
+         {
+            /* print inequality ">=" */
+            retcode = printNLRow(scip, file, ">=", activevars, activevals, nactivevars, lhs - activeconstant, resvars,
+               nresvars, andvars, nandvars, weight, &mult, multisymbol);
+         }
 
-         /* print inequality ">=" and multiplying all coefficients by -1 */
-         retcode = printNLRow(scip, file, ">=", activevars, activevals, nactivevars, rhs - activeconstant, resvars,
-            nresvars, andvars, nandvars, weight, &mult, multisymbol);
+         if( !SCIPisInfinity(scip, rhs) )
+         {
+            mult *= -1;
+
+            /* print inequality ">=" and multiplying all coefficients by -1 */
+            retcode = printNLRow(scip, file, ">=", activevars, activevals, nactivevars, rhs - activeconstant, resvars,
+               nresvars, andvars, nandvars, weight, &mult, multisymbol);
+         }
       }
-   }
 
-   /* free buffer arrays */
-   if( vars != NULL )
-   {
+      /* free buffer arrays */
       SCIPfreeBufferArray(scip, &activevals);
       SCIPfreeBufferArray(scip, &activevars);
    }
@@ -2935,37 +2935,36 @@ SCIP_RETCODE printLinearCons(
    mult = 1;
    retcode = SCIP_OKAY;
 
-   /* print row(s) in OPB format */
-   if( SCIPisEQ(scip, lhs, rhs) )
+   if( activevars != NULL )
    {
-      assert( !SCIPisInfinity(scip, rhs) );
-
-      /* equality constraint */
-      retcode = printRow(scip, file, "=", activevars, activevals, nactivevars, rhs - activeconstant, weight, &mult,
-         multisymbol);
-   }
-   else
-   {
-      if( !SCIPisInfinity(scip, -lhs) )
+      /* print row(s) in OPB format */
+      if( SCIPisEQ(scip, lhs, rhs) )
       {
-         /* print inequality ">=" */
-         retcode = printRow(scip, file, ">=", activevars, activevals, nactivevars, lhs - activeconstant, weight, &mult,
+         assert( !SCIPisInfinity(scip, rhs) );
+
+         /* equality constraint */
+         retcode = printRow(scip, file, "=", activevars, activevals, nactivevars, rhs - activeconstant, weight, &mult,
             multisymbol);
       }
-
-      if( !SCIPisInfinity(scip, rhs) )
+      else
       {
-         mult *= -1;
+         if( !SCIPisInfinity(scip, -lhs) )
+         {
+            /* print inequality ">=" */
+            retcode = printRow(scip, file, ">=", activevars, activevals, nactivevars, lhs - activeconstant, weight, &mult,
+               multisymbol);
+         }
 
-         /* print inequality ">=" and multiplying all coefficients by -1 */
-         retcode = printRow(scip, file, ">=", activevars, activevals, nactivevars, rhs - activeconstant, weight, &mult,
-            multisymbol);
+         if( !SCIPisInfinity(scip, rhs) )
+         {
+            mult *= -1;
+
+            /* print inequality ">=" and multiplying all coefficients by -1 */
+            retcode = printRow(scip, file, ">=", activevars, activevals, nactivevars, rhs - activeconstant, weight, &mult,
+               multisymbol);
+         }
       }
-   }
-
-   /* free buffer arrays */
-   if( vars != NULL )
-   {
+      /* free buffer arrays */
       SCIPfreeBufferArray(scip, &activevals);
       SCIPfreeBufferArray(scip, &activevars);
    }

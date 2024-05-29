@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -47,6 +47,8 @@ struct SCIP_History
    SCIP_Real             pscostcount[2];     /**< nr of (partial) summands in down/upwards pseudo costs (may be fractional) */
    SCIP_Real             pscostweightedmean[2]; /**< weighted mean of (partial) pseudo cost values for down/upwards branching */
    SCIP_Real             pscostvariance[2];  /**< weighted variance of (partial) pseudo cost history for down/upwards branching */
+   SCIP_Real             ancpscostcount[2];  /**< nr of (partial) summands in down/upwards ancestral pseudo costs (may be fractional) */
+   SCIP_Real             ancpscostweightedmean[2]; /**< weighted mean of (partial) ancestral pseudo cost values for down/upwards branching */
    SCIP_Real             vsids[2];           /**< degree of how often the variable was reason for a conflict */
    SCIP_Real             conflengthsum[2];   /**< overall length of all active conflicts for which the variable gave reason */
    SCIP_Real             inferencesum[2];    /**< degree of how often branching on the variable lead to inference of another bound */

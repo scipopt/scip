@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -3326,6 +3326,8 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/solutions", -1) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1LL) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
+   SCIP_CALL( SCIPsetRealParam(targetscip, "limits/primal", SCIP_INVALID) );
+   SCIP_CALL( SCIPsetRealParam(targetscip, "limits/dual", SCIP_INVALID) );
 
    return SCIP_OKAY;
 }

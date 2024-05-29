@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -35,6 +35,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_SQRT2 on Windows */  /*lint !750 */
+
 #include <assert.h>
 #include <string.h>
 #include <stdarg.h>
@@ -42,6 +44,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "scip/def.h"
 #include "scip/pub_message.h"
@@ -56,8 +59,6 @@
 /*
  * methods for statistical tests
  */
-
-#define SQRTOFTWO                  1.4142136 /**< the square root of 2 with sufficient precision */
 
 /**< contains all critical values for a one-sided two sample t-test up to 15 degrees of freedom
  *   a critical value represents a threshold for rejecting the null-hypothesis in hypothesis testing at
@@ -145,8 +146,8 @@ SCIP_Real SCIPcomputeTwoSampleTTestValue(
    /* tresult can be understood as realization of a Student-T distributed variable with
     * countx + county - 2 degrees of freedom
     */
-   tresult = (meanx - meany) / SQRT(pooledvariance);
-   tresult *= SQRT(countx * county / (countx + county));
+   tresult = (meanx - meany) / sqrt(pooledvariance);
+   tresult *= sqrt(countx * county / (countx + county));
 
    return tresult;
 }
@@ -219,7 +220,7 @@ SCIP_Real SCIPnormalCDF(
    assert( std != 0.0 ); /* for lint */
 
    /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for SCIPerf() function */
-   normvalue = (value - mean)/(std * SQRTOFTWO);
+   normvalue = (value - mean)/(std * M_SQRT2);
 
    SCIPdebugMessage(" Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
 
@@ -709,7 +710,7 @@ void SCIPgmlWriteClosing(
  */
 void SCIPdotWriteOpening(
    FILE*                 file                /**< file to write to */
-)
+   )
 {
    assert(file != NULL);
 
@@ -724,7 +725,7 @@ void SCIPdotWriteNode(
    const char*           nodetype,           /**< type of the node, or NULL */
    const char*           fillcolor,          /**< color of the node's interior, or NULL */
    const char*           bordercolor         /**< color of the node's border, or NULL */
-)
+   )
 {
    assert(file != NULL);
 
@@ -737,7 +738,7 @@ void SCIPdotWriteArc(
    int                   source,             /**< source node id of the node */
    int                   target,             /**< target node id of the edge */
    const char*           color               /**< color of the edge, or NULL */
-)
+   )
 {
    assert(file != NULL);
 
@@ -746,8 +747,8 @@ void SCIPdotWriteArc(
 
 /** writes the closing line to a dot graph file, does not close a file */
 void SCIPdotWriteClosing(
-   FILE* file /**< file to write to */
-)
+   FILE*                 file                /**< file to write to */
+   )
 {
    assert(file != NULL);
 
@@ -8200,6 +8201,7 @@ TERMINATE:
    {
       SCIPdigraphFreeComponents(digraph);
    }
+   /* coverity[uninit_use_in_call] */
    BMSfreeMemoryArrayNull(&ndirectedsuccessors);
    BMSfreeMemoryArrayNull(&stackadjvisited);
    BMSfreeMemoryArrayNull(&dfsstack);

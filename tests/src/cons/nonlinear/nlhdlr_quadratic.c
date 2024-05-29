@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1242,7 +1242,7 @@ void testCut(
    enorm = 0.0;
    for( int i = 0; i < expectedncoefs; i++ )
       enorm += SQR( expectedcoefs[i] );
-   enorm = SQRT( enorm );
+   enorm = sqrt(enorm);
    cr_assert(enorm > 0);
 
    expr = SCIPgetExprNonlinear(cons);
@@ -1818,7 +1818,7 @@ Test(interCuts, testRays6)
          0.05223665235168156, -0.1616116523516816, 0.125, -0.4785533905932738, 1.353553390593274,
          0.002757575950825020, 0.03713203435596426, 0.125, -0.5474873734152916, 1.353553390593274,
          0.1594117965644036, -0.2823223304703363, 0.125, -0.4492640687119285, 1.353553390593274};
-      SCIP_Real expectedroots4b[3] = { 1.0 + SQRT( 2.0 ), 5.0 / 3, 5.0 * (1 + SQRT( 2.0 )) / 6};
+      SCIP_Real expectedroots4b[3] = { 1.0 + sqrt(2.0), 5.0 / 3, 5.0 * (1 + sqrt(2.0)) / 6};
 
       for( int nray = 0; nray < myrays->nrays; ++nray )
       {
@@ -1859,7 +1859,7 @@ Test(interCuts, testRays6)
       SCIP_Real testraycoef[1] = {1.0};
       int testrayidx[1] = {2};
       int testraynnonz = 1;
-      SCIP_Real expectedroot4a = 2.0 + 4.0 * SQRT( 2.0 ) + 2.0 * SQRT( 10.0 + 6.0 * SQRT( 2.0 ) );
+      SCIP_Real expectedroot4a = 2.0 + 4.0 * sqrt(2.0) + 2.0 * sqrt(10.0 + 6.0 * sqrt(2.0));
       SCIP_Real expectedroot4b = SCIPinfinity(scip);
 
       printf("testing ray with finite/infinte intersection\n");
