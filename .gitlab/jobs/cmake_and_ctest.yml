@@ -58,5 +58,6 @@
     - export CXXFLAGS=$CXXFLAGS
     - cmake $CI_PROJECT_DIR ${CMAKE_FLAGS} -LA -DZIMPL=off -DREADLINE=off -DBoost_USE_STATIC_LIBS=on -DSTATIC_GMP=on -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
     - make -j
+    - make all_executables -j
     - ./bin/scip -f $CI_PROJECT_DIR/check/instances/MINLP/ex1224.nl
     - ctest --output-on-failure -j  -T test --no-compress-output
