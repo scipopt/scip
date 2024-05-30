@@ -3966,7 +3966,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_VAR* multvar;
    SCIP_Real multscalar;
    SCIP_Real multconstant;
-   SCIP_Bool foundmultaggr = FALSE;
+   SCIP_VARSTATUS varstatus;
    int ntotalvars;
 
    assert(set != NULL);
@@ -3992,9 +3992,12 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    }
 
    /* allocate temporary list of variables */
-   activevarssize = 2 * (*nvars);
    tmpvarssize = *nvars;
    SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpvars, tmpvarssize) );
+
+   /* allocate memory for list of active variables */
+   activevarssize = 2 * (*nvars);
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
 
    /* allocate dense array for storing scalars (to avoid checking for duplicate variables) */
    ntotalvars = SCIPgetNTotalVars(set->scip);
@@ -4002,6 +4005,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
    /* perform one round of replacing variables by their active, fixed or multi-aggregated counterparts */
    activeconstant = 0.0;
+   nactivevars = 0;
    ntmpvars = 0;
    for( v = 0; v < *nvars; ++v )
    {
@@ -4017,81 +4021,29 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       assert(SCIPsetIsInfinity(set, activeconstant) == (activeconstant == SCIPsetInfinity(set))); /*lint !e777*/
       assert(SCIPsetIsInfinity(set, -activeconstant) == (activeconstant == -SCIPsetInfinity(set))); /*lint !e777*/
 
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-
-      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
-         foundmultaggr = TRUE;
+      varstatus = SCIPvarGetStatus(var);
+      assert( varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN
+         || varstatus == SCIP_VARSTATUS_MULTAGGR || varstatus == SCIP_VARSTATUS_FIXED);
 
       /* enter nonzero scalars into dense array and list */
       if( scalar != 0.0 )
       {
          assert(0 <= var->index && var->index < ntotalvars);
          if( tmpscalars[var->index] == 0.0 )
-            tmpvars[ntmpvars++] = var;
+         {
+            if( varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN )
+               activevars[nactivevars++] = var; /* store active variables */
+            else if( varstatus == SCIP_VARSTATUS_MULTAGGR )
+               tmpvars[ntmpvars++] = var; /* enter mutli-aggregated variables in list to be processed below */
+         }
          tmpscalars[var->index] += scalar;
       }
    }
    assert(ntmpvars <= *nvars);
+   assert(nactivevars <= *nvars);
 
    /* store whether the constant is infinite */
    activeconstantinf = SCIPsetIsInfinity(set, activeconstant) || SCIPsetIsInfinity(set, -activeconstant);
-
-   /* if no multi-aggregated variables are left, we have resolved all dependencies and can exit a bit faster */
-   if( ! foundmultaggr )
-   {
-      *requiredsize = ntmpvars;
-      assert(*requiredsize <= varssize);
-
-      /* sort variables for making the results consistent (todo: check whether this is necessary) */
-      SCIPsortPtr((void**)tmpvars, SCIPvarComp, ntmpvars);
-
-      /* copy active variable and scalar array to the given arrays */
-      *nvars = 0;
-      for( v = 0; v < ntmpvars; ++v )
-      {
-         var = tmpvars[v];
-         assert(0 <= var->index && var->index < ntotalvars);
-
-         if( tmpscalars[var->index] != 0.0 )
-         {
-            vars[*nvars] = var;
-            scalars[*nvars] = tmpscalars[var->index];
-            assert(scalars[*nvars] != 0.0);
-
-            /* ensure that dense array is zero at end */
-            tmpscalars[var->index] = 0.0;
-            ++(*nvars);
-         }
-      }
-
-      if( !SCIPsetIsInfinity(set, *constant) && !SCIPsetIsInfinity(set, -(*constant)) )
-      {
-         /* if the activeconstant is infinite, the constant pointer gets the same value, otherwise add the value */
-         if( activeconstantinf )
-            *constant = activeconstant;
-         else
-            *constant += activeconstant;
-      }
-#ifndef NDEBUG
-      else
-      {
-         assert(!SCIPsetIsInfinity(set, (*constant)) || !SCIPsetIsInfinity(set, -activeconstant));
-         assert(!SCIPsetIsInfinity(set, -(*constant)) || !SCIPsetIsInfinity(set, activeconstant));
-      }
-#endif
-
-      SCIPsetFreeCleanBufferArray(set, &tmpscalars);
-      SCIPsetFreeBufferArray(set, &tmpvars);
-
-      return SCIP_OKAY;
-   }
-
-   /* allocate memory for list of active variables */
-   nactivevars = 0;
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
 
    /* collect for each variable the representation in active variables */
    while( ntmpvars >= 1 )
@@ -4101,120 +4053,36 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       var = tmpvars[ntmpvars];
       assert(var != NULL);
       assert(0 <= var->index && var->index < ntotalvars);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 
       scalar = tmpscalars[var->index];
       /* the scalar can be 0 if the variable has been treated before and is zeroed below */
       if( scalar == 0.0 )
          continue;
 
+      /* x = a_1*y_1 + ... + a_n*y_n + c */
+      nmultvars = var->data.multaggr.nvars;
+      multvars = var->data.multaggr.vars;
+      multscalars = var->data.multaggr.scalars;
+
       /* mark variable as treated */
       tmpscalars[var->index] = 0.0;
 
-      /* because of the initial round above, only the following types are allowed at this point: */
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-
-      switch( SCIPvarGetStatus(var) )
+      /* loop through variables of multi-aggregation */
+      for( v = 0; v < nmultvars; ++v )
       {
-      case SCIP_VARSTATUS_LOOSE:
-      case SCIP_VARSTATUS_COLUMN:
+         multvar = multvars[v];
+         multscalar = multscalars[v];
+         multconstant = 0.0;
 
-         /* store the variable in list if not already active */
-         if( tmpscalars[var->index] == 0.0 )
-         {
-            if( nactivevars >= activevarssize )
-            {
-               activevarssize *= 2;
-               SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
-               assert(nactivevars < activevarssize);
-            }
-            activevars[nactivevars++] = var;
-         }
+         assert(multvar != NULL);
+         SCIP_CALL( SCIPvarGetProbvarSum(&multvar, set, &multscalar, &multconstant) );
+         assert(multvar != NULL);
 
-         /* store scalar to dense array */
-         tmpscalars[var->index] += scalar;
-         break;
-
-      case SCIP_VARSTATUS_MULTAGGR:
-         /* x = a_1*y_1 + ... + a_n*y_n + c */
-         nmultvars = var->data.multaggr.nvars;
-         multvars = var->data.multaggr.vars;
-         multscalars = var->data.multaggr.scalars;
-
-         /* reallocate space here instead of possibly reallocating several times below */
-         if( nmultvars + ntmpvars > tmpvarssize )
-         {
-            while( nmultvars + ntmpvars > tmpvarssize )
-               tmpvarssize *= 2;
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars, tmpvarssize) );
-            assert(nmultvars + ntmpvars <= tmpvarssize);
-         }
-
-         /* loop through variables of multi-aggregation */
-         for( v = 0; v < nmultvars; ++v )
-         {
-            multvar = multvars[v];
-            multscalar = multscalars[v];
-            multconstant = 0.0;
-
-            assert(multvar != NULL);
-            SCIP_CALL( SCIPvarGetProbvarSum(&multvar, set, &multscalar, &multconstant) );
-            assert(multvar != NULL);
-
-            /* handle constant */
-            if( !activeconstantinf )
-            {
-               assert(!SCIPsetIsInfinity(set, scalar) && !SCIPsetIsInfinity(set, -scalar));
-
-               if( SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant) )
-               {
-                  assert(scalar != 0.0);
-                  if( scalar * multconstant > 0.0 )
-                  {
-                     activeconstant = SCIPsetInfinity(set);
-                     activeconstantinf = TRUE;
-                  }
-                  else
-                  {
-                     activeconstant = -SCIPsetInfinity(set);
-                     activeconstantinf = TRUE;
-                  }
-               }
-               else
-                  activeconstant += scalar * multconstant;
-            }
-#ifndef NDEBUG
-            else
-            {
-               assert(!SCIPsetIsInfinity(set, activeconstant) || !(scalar * multconstant < 0.0 &&
-                     (SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant))));
-               assert(!SCIPsetIsInfinity(set, -activeconstant) || !(scalar * multconstant > 0.0 &&
-                     (SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant))));
-            }
-#endif
-
-            /* Note that the variable can have a nonzero constant but 0 scalar. */
-            if( multscalar == 0.0 )
-               continue;
-
-            /* enter variable into list if not already present */
-            assert(0 <= multvar->index && multvar->index < ntotalvars);
-            if( tmpscalars[multvar->index] == 0.0 )
-               tmpvars[ntmpvars++] = multvar;
-
-            /* transfer new scalar to dense array */
-            tmpscalars[multvar->index] += scalar * multscalar;
-            assert(scalar * multscalar != 0.0);
-         }
-
-         /* handle constant of multi-aggregation */
+         /* handle constant */
          if( !activeconstantinf )
          {
             assert(!SCIPsetIsInfinity(set, scalar) && !SCIPsetIsInfinity(set, -scalar));
-
-            multconstant = SCIPvarGetMultaggrConstant(var);
 
             if( SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant) )
             {
@@ -4236,26 +4104,85 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 #ifndef NDEBUG
          else
          {
-            multconstant = SCIPvarGetMultaggrConstant(var);
             assert(!SCIPsetIsInfinity(set, activeconstant) || !(scalar * multconstant < 0.0 &&
                   (SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant))));
             assert(!SCIPsetIsInfinity(set, -activeconstant) || !(scalar * multconstant > 0.0 &&
                   (SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant))));
          }
 #endif
-         break;
 
-      case SCIP_VARSTATUS_FIXED:
-      case SCIP_VARSTATUS_ORIGINAL:
-      case SCIP_VARSTATUS_AGGREGATED:
-      case SCIP_VARSTATUS_NEGATED:
-      default:
-         /* case x = c, but actually we should not be here, since SCIPvarGetProbvarSum() returns a scalar of 0.0 for
-          * fixed variables and is handled already
-          */
-         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-         assert(SCIPsetIsZero(set, var->glbdom.lb) && SCIPsetIsEQ(set, var->glbdom.lb, var->glbdom.ub));
+         /* Note that the variable can have a nonzero constant but 0 scalar. */
+         if( multscalar == 0.0 )
+            continue;
+
+         /* enter variable into list if not already present */
+         assert(0 <= multvar->index && multvar->index < ntotalvars);
+         if( tmpscalars[multvar->index] == 0.0 )
+         {
+            varstatus = SCIPvarGetStatus(multvar);
+            if( varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN )
+            {
+               /* store active variables */
+               if( nactivevars >= activevarssize )
+               {
+                  activevarssize *= 2;
+                  SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
+                  assert(nactivevars <= activevarssize);
+               }
+               activevars[nactivevars++] = multvar;
+            }
+            else if( varstatus == SCIP_VARSTATUS_MULTAGGR )
+            {
+               /* ensure storage */
+               if( ntmpvars >= tmpvarssize )
+               {
+                  tmpvarssize *= 2;
+                  SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars, tmpvarssize) );
+                  assert(ntmpvars <= tmpvarssize);
+               }
+               tmpvars[ntmpvars++] = var;
+            }
+         }
+
+         /* transfer new scalar to dense array in any case */
+         tmpscalars[multvar->index] += scalar * multscalar;
+         assert(scalar * multscalar != 0.0);
       }
+
+      /* handle constant of multi-aggregation */
+      if( !activeconstantinf )
+      {
+         assert(!SCIPsetIsInfinity(set, scalar) && !SCIPsetIsInfinity(set, -scalar));
+
+         multconstant = SCIPvarGetMultaggrConstant(var);
+
+         if( SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant) )
+         {
+            assert(scalar != 0.0);
+            if( scalar * multconstant > 0.0 )
+            {
+               activeconstant = SCIPsetInfinity(set);
+               activeconstantinf = TRUE;
+            }
+            else
+            {
+               activeconstant = -SCIPsetInfinity(set);
+               activeconstantinf = TRUE;
+            }
+         }
+         else
+            activeconstant += scalar * multconstant;
+      }
+#ifndef NDEBUG
+      else
+      {
+         multconstant = SCIPvarGetMultaggrConstant(var);
+         assert(!SCIPsetIsInfinity(set, activeconstant) || !(scalar * multconstant < 0.0 &&
+               (SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant))));
+         assert(!SCIPsetIsInfinity(set, -activeconstant) || !(scalar * multconstant > 0.0 &&
+               (SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant))));
+      }
+#endif
    }
 
    /* return results */
@@ -4268,7 +4195,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
       if( !SCIPsetIsInfinity(set, *constant) && !SCIPsetIsInfinity(set, -(*constant)) )
       {
-         /* if the activeconstant is infinite, the constant pointer gets the same value, otherwise add the value */
+         /* if activeconstant is infinite, the constant pointer gets the same value, otherwise add the value */
          if( activeconstantinf )
             *constant = activeconstant;
          else
@@ -4293,6 +4220,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
          assert(0 <= var->index && var->index < ntotalvars);
+
+         /* due to cancelation, the scalar could become 0 */
          if( tmpscalars[var->index] != 0.0 )
          {
             vars[*nvars] = var;
@@ -4319,8 +4248,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    assert(SCIPsetIsInfinity(set, *constant) == ((*constant) == SCIPsetInfinity(set))); /*lint !e777*/
    assert(SCIPsetIsInfinity(set, -(*constant)) == ((*constant) == -SCIPsetInfinity(set))); /*lint !e777*/
 
-   SCIPsetFreeBufferArray(set, &activevars);
    SCIPsetFreeCleanBufferArray(set, &tmpscalars);
+   SCIPsetFreeBufferArray(set, &activevars);
    SCIPsetFreeBufferArray(set, &tmpvars);
 
    return SCIP_OKAY;
