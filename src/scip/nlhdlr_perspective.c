@@ -1568,6 +1568,13 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
       return SCIP_OKAY;
    }
 
+   if( branchcandonly )
+   {
+      /* let the regular calls to the nlhdlrs after perspective register branching candidates */
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
    auxvar = SCIPgetExprAuxVarNonlinear(expr);
    assert(auxvar != NULL);
 
