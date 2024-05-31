@@ -127,23 +127,42 @@ if(SYM STREQUAL "bliss")
     message(STATUS "Support SYM: bliss")
     set(sym symmetry/compute_symmetry_bliss.cpp)
 
-    # modify configuration for bliss
-    set(BUILD_SHARED_LIBS OFF)
-    set(TMPFLAGS ${CMAKE_C_FLAGS})
-    set(TMXFLAGS ${CMAKE_CXX_FLAGS})
-    set(CMAKE_C_FLAGS -w)
-    set(CMAKE_CXX_FLAGS -w)
+    find_package(Bliss CONFIG HINTS ${BLISS_DIR})
+    if(Bliss_FOUND)
+        get_filename_component(BLISS_ABSOLUTE_PATH ${Bliss_DIR}/../../.. REALPATH)
+        include_directories(${BLISS_ABSOLUTE_PATH}/include)
+        set(SYM_LIBRARIES ${BLISS_ABSOLUTE_PATH}/lib/libbliss.a)
+        set(SYM_PIC_LIBRARIES ${BLISS_ABSOLUTE_PATH}/lib/libbliss.a)
+        message(STATUS "Found Bliss: ${BLISS_ABSOLUTE_PATH}")
+    else()
+        # Utilities to automatically download missing dependencies
+        include(cmake/Dependencies.cmake)
+        # modify configuration for bliss
+        set(BUILD_SHARED_LIBS OFF)
+        set(TMPFLAGS ${CMAKE_C_FLAGS})
+        set(TMXFLAGS ${CMAKE_CXX_FLAGS})
+        set(CMAKE_C_FLAGS -w)
+        set(CMAKE_CXX_FLAGS -w)
+        find_or_download_package(
+          NAME Bliss
+          VERSION 0.77
+          URL https://github.com/scipopt/bliss/archive/refs/tags/v0.77.tar.gz
+          URL_HASH SHA256=34c9cec2cb4dd73f881852bd1b1e0429859c8adcc6a61bc0d70a446a23b51d53
+          COMPONENTS libbliss)
+        # undo modification
+        set(CMAKE_C_FLAGS ${TMPFLAGS})
+        set(CMAKE_CXX_FLAGS ${TMXFLAGS})
+        set(BUILD_SHARED_LIBS ${SHARED})
 
-    add_subdirectory(src/bliss EXCLUDE_FROM_ALL)
-
-    # undo modification
-    set(CMAKE_C_FLAGS ${TMPFLAGS})
-    set(CMAKE_CXX_FLAGS ${TMXFLAGS})
-    set(BUILD_SHARED_LIBS ${SHARED})
-
-    set(BLISS_TARGET libbliss)
-    set(SYM_LIBRARIES libbliss)
-    set(SYM_PIC_LIBRARIES libbliss)
+        find_package(Bliss CONFIG HINTS _deps/local)
+        if (NOT Bliss_FOUND)
+            message(FATAL_ERROR "Automatic download of Bliss failed. Please specify the BLISS_DIR.")
+        endif()
+        include_directories(${CMAKE_CURRENT_BINARY_DIR}/_deps/local/include)
+        set(SYM_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/_deps/local/lib/libbliss.a)
+        set(SYM_PIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/_deps/local/lib/libbliss.a)
+        message(STATUS "Installed Bliss in: ${CMAKE_CURRENT_BINARY_DIR}/_deps/local")
+    endif()
 elseif(SYM STREQUAL "sbliss")
     message(STATUS "Support SYM: sassy+bliss")
     set(sym symmetry/compute_symmetry_sassy_bliss.cpp symmetry/build_sassy_graph.cpp)
