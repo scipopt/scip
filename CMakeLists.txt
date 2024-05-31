@@ -123,9 +123,15 @@ message(STATUS "Finding symmetry computation program \"${SYM}\"")
 
 unset(BLISS_TARGET)
 unset(NAUTY_TARGET)
-if(SYM STREQUAL "bliss")
-    message(STATUS "Support SYM: bliss")
-    set(sym symmetry/compute_symmetry_bliss.cpp)
+if(SYM STREQUAL "bliss" OR SYM STREQUAL "sbliss")
+    if(SYM STREQUAL "bliss")
+        message(STATUS "Support SYM: bliss")
+        set(sym symmetry/compute_symmetry_bliss.cpp)
+    else()
+        message(STATUS "Support SYM: sassy+bliss")
+        set(sym symmetry/compute_symmetry_sassy_bliss.cpp symmetry/build_sassy_graph.cpp)
+        set(CMAKE_CXX_STANDARD 17)
+    endif()
 
     find_package(Bliss CONFIG HINTS ${BLISS_DIR})
     if(Bliss_FOUND)
@@ -162,36 +168,6 @@ if(SYM STREQUAL "bliss")
         set(SYM_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/_deps/local/lib/libbliss.a)
         set(SYM_PIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/_deps/local/lib/libbliss.a)
         message(STATUS "Installed Bliss in: ${CMAKE_CURRENT_BINARY_DIR}/_deps/local")
-    endif()
-elseif(SYM STREQUAL "sbliss")
-    message(STATUS "Support SYM: sassy+bliss")
-    set(sym symmetry/compute_symmetry_sassy_bliss.cpp symmetry/build_sassy_graph.cpp)
-
-    # configure bliss
-    set(BUILD_SHARED_LIBS OFF)
-    set(TMPFLAGS ${CMAKE_C_FLAGS})
-    set(TMXFLAGS ${CMAKE_CXX_FLAGS})
-    set(CMAKE_C_FLAGS -w)
-    set(CMAKE_CXX_FLAGS -w)
-
-    add_subdirectory(src/bliss EXCLUDE_FROM_ALL)
-
-    # undo modification
-    set(CMAKE_C_FLAGS ${TMPFLAGS})
-    set(CMAKE_CXX_FLAGS ${TMXFLAGS})
-    set(BUILD_SHARED_LIBS ${SHARED})
-
-    set(BLISS_TARGET libbliss)
-    set(SYM_LIBRARIES libbliss)
-    set(SYM_PIC_LIBRARIES libbliss)
-
-    # sassy needs C++-17
-    set(CMAKE_CXX_STANDARD 17)
-
-    if(NOT BLISS_INCLUDE_DIR OR NOT BLISS_LIBRARY)
-      find_path(BLISS_INCLUDE_DIR
-	NAMES bliss/graph.hh
-	PATH_SUFFIXES include src)
     endif()
 elseif(SYM STREQUAL "nauty" OR SYM STREQUAL "snauty")
     if(NAUTY_DIR)
