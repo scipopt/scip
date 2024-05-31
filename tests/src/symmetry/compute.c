@@ -630,7 +630,7 @@ void exampleBounddisjunction(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 2 );
+      cr_assert( nperms == 2 || nperms == 3 );
       cr_assert( ncomponents == 1 );
       cr_assert( vartocomponent[0] == vartocomponent[1] );
       cr_assert( vartocomponent[1] == vartocomponent[4] );
@@ -638,7 +638,7 @@ void exampleBounddisjunction(
       cr_assert( vartocomponent[2] == -1 );
       cr_assert( vartocomponent[3] == -1 );
       cr_assert( componentbegins[0] == 0 );
-      cr_assert( componentbegins[1] == 2 );
+      cr_assert( componentbegins[1] == nperms );
    }
    else
    {

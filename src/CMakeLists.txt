@@ -1079,6 +1079,8 @@ else()
     add_executable(scip main.c)
     if(DEFINED BLISS_TARGET)
         target_link_libraries(scip libscip ${BLISS_TARGET})
+    elseif(DEFINED NAUTY_TARGET)
+        target_link_libraries(scip libscip ${NAUTY_TARGET})
     else()
         target_link_libraries(scip libscip)
     endif()
@@ -1156,7 +1158,7 @@ install(TARGETS scip libscip EXPORT scip-targets
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Add all targets to the build-tree export set
-export(TARGETS scip libscip ${BLISS_TARGET}
+export(TARGETS scip libscip ${BLISS_TARGET} ${NAUTY_TARGET}
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
 # make soplex and zimpl dir absolute for the config file

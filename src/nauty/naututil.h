@@ -14,11 +14,21 @@ used, it is necessary to check they are correct.
 /* Check whether various headers are available */
 
 #define HAVE_ISATTY  1     /* if isatty() is available */
+#ifndef _WIN32
 #define HAVE_TIMES  1      /* if times() is available */
+#else
+#define HAVE_TIMES  0      /* if times() is available */
+#endif
 #define HAVE_TIME  1      /* if time() is available */
+#ifndef _WIN32
 #define HAVE_GETRUSAGE 1  /* if getrusage() is available */
 #define HAVE_GETTIMEOFDAY  1  /* if gettimeofday() */
 #define HAVE_CLOCK_GETTIME  1  /* if clock_gettime() */
+#else
+#define HAVE_GETRUSAGE 0  /* if getrusage() is available */
+#define HAVE_GETTIMEOFDAY  0  /* if gettimeofday() */
+#define HAVE_CLOCK_GETTIME  0  /* if clock_gettime() */
+#endif
 #define HAVE_CLOCK  1  /* if clock() is available */
 
 /*==================================================================*/
