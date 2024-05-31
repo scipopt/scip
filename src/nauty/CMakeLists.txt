@@ -7,16 +7,12 @@ project(nauty)
 set(SOURCE_FILES
     gtools.c
     naugroup.c
-    naugstrings.c
     naurng.c
     nausparse.c
-    nautaux.c
-    nautinv.c
     nauty.c
     nautycliquer.c
-    planarity.c
     schreier.c
-    traces.c
+    nautil.c
 )
 
 # Add the library target
