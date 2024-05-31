@@ -16,7 +16,7 @@ set(SOURCE_FILES
 )
 
 # fPIC
-if(NOT SHARED)
+if(SHARED)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
