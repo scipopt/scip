@@ -6,18 +6,29 @@
 Features
 --------
 
+- Added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem.
 - added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem
 - allow for implicit integer variables in xor constraints
+- implemented symmetry detection callbacks for cons_pseudoboolean
 - added option to consider enforcement of nonlinear constraints (including spatial branching) before integrality has been enforced
 
 Performance improvements
 ------------------------
+
+Build system
+------------
+
+### Cmake
+
+- cmake now automatically downloads and installs the latest release version of SoPlex from GitHub if it is not found directly
 
 Fixed bugs
 ----------
 
 Examples and applications
 -------------------------
+
+- TSP: remove `gzstream.h/hpp` and parse gzipped file differently
 
 Interface changes
 -----------------
