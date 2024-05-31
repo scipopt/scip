@@ -15,5 +15,10 @@ set(SOURCE_FILES
     nautil.c
 )
 
+# fPIC
+if(NOT SHARED)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
 # Add the library target
 add_library(nauty STATIC ${SOURCE_FILES})
