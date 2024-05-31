@@ -3096,6 +3096,9 @@
  * domains of the variables.
  * \n
  * A complete list of all branching rules contained in this release can be found \ref BRANCHINGRULES "here".
+ * However, note that constraint handlers can implement their own branching when enforcing constraints.
+ * In particular the handler for nonlinear constraints currently does not use the branching plugins for spatial branching
+ * by default. Its behavior can be adjusted with the parameters in category constraints/nonlinear/branching.
  *
  * We now explain how users can add their own branching rules.  Take the most infeasible LP branching rule
  * (src/scip/branch_mostinf.c) as an example.  As all other default plugins, it is written in C. C++ users can easily
