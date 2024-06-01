@@ -216,7 +216,7 @@ namespace dejavu {
      * Used to make the output look a bit more structured.
      */
     static void progress_print_split() {
-        PRINT("\r______________________________________________________________");
+       std::cout << "\r______________________________________________________________" << std::endl;
     }
 
     /**
@@ -224,8 +224,8 @@ namespace dejavu {
      */
     static void progress_print_header() {
         progress_print_split();
-        PRINT(std::setw(11) << std::left <<"T (ms)" << std::setw(11) << "delta(ms)" << std::setw(12) << "proc"
-              << std::setw(16) << "p1"        << std::setw(16)        << "p2");
+        std::cout << std::setw(11) << std::left <<"T (ms)" << std::setw(11) << "delta(ms)" << std::setw(12) << "proc"
+                  << std::setw(16) << "p1"        << std::setw(16)        << "p2" << std::endl;
         progress_print_split();
     }
 
@@ -258,17 +258,17 @@ namespace dejavu {
 
         void print(const std::string& str) const {
             if(h_silent) return;
-            PRINT("\r" << str);
+            std::cout << "\r" << str << std::endl;
         }
 
         void timer_print(const std::string& proc, const std::string& p1, const std::string& p2) {
             if(h_silent) return;
             auto now = std::chrono::high_resolution_clock::now();
-            PRINT("\r" << std::fixed << std::setprecision(2) << std::setw(11) << std::left
+            std::cout << "\r" << std::fixed << std::setprecision(2) << std::setw(11) << std::left
                        << (std::chrono::duration_cast<std::chrono::nanoseconds>(now - first).count()) / 1000000.0
                        << std::setw(11)
                        << (std::chrono::duration_cast<std::chrono::nanoseconds>(now - previous).count()) / 1000000.0
-                       << std::setw(12) << proc << std::setw(16) << p1 << std::setw(16) << p2);
+                       << std::setw(12) << proc << std::setw(16) << p1 << std::setw(16) << p2 << std::endl;
             previous = now;
         }
 
@@ -279,40 +279,40 @@ namespace dejavu {
         void timer_print(const std::string& proc, const int p1, const int p2) {
             if(h_silent) return;
             auto now = std::chrono::high_resolution_clock::now();
-            PRINT("\r" << std::fixed << std::setprecision(2) << std::setw(11) << std::left
+            std::cout << "\r" << std::fixed << std::setprecision(2) << std::setw(11) << std::left
                        << (std::chrono::duration_cast<std::chrono::nanoseconds>(now - first).count()) / 1000000.0
                        << std::setw(11)
                        << (std::chrono::duration_cast<std::chrono::nanoseconds>(now - previous).count()) / 1000000.0
-                       << std::setw(12) << proc << std::setw(16) << p1 << std::setw(16) << p2);
+                       << std::setw(12) << proc << std::setw(16) << p1 << std::setw(16) << p2 << std::endl;
             previous = now;
         }
 
         void timer_print(const std::string& proc, const int p1, const double p2) {
             if(h_silent) return;
             auto now = std::chrono::high_resolution_clock::now();
-            PRINT("\r" << std::fixed << std::setprecision(2) << std::setw(11) << std::left
+            std::cout << "\r" << std::fixed << std::setprecision(2) << std::setw(11) << std::left
                        << (std::chrono::duration_cast<std::chrono::nanoseconds>(now - first).count()) / 1000000.0
                        << std::setw(11)
                        << (std::chrono::duration_cast<std::chrono::nanoseconds>(now - previous).count()) / 1000000.0
-                       << std::setw(12) << proc << std::setw(16) << p1 << std::setw(16) << p2);
+                       << std::setw(12) << proc << std::setw(16) << p1 << std::setw(16) << p2 << std::endl;
             previous = now;
         }
 
         void progress_current_method(const std::string& print) const  {
             if(h_silent) return;
-            PRINT_NO_NEWLINE("\r>" << print);
+            std::cout << "\r>" << print << std::flush;
         }
         void progress_current_method(const std::string& method_name, const std::string& var1, double var1_val,
                                             const std::string& var2, double var2_val) const  {
             if(h_silent) return;
-            PRINT_NO_NEWLINE("\r>" << method_name << " " << var1 << "=" << var1_val << ", " << var2 << "=" << var2_val);
+            std::cout << "\r>" << method_name << " " << var1 << "=" << var1_val << ", " << var2 << "=" << var2_val << std::flush;
         }
         void progress_current_method(const std::string& method_name, const std::string& var1, int var1_val,
                                             const std::string& var2, int var2_val,
                                             const std::string& var3, double var3_val) const {
             if(h_silent) return;
-            PRINT_NO_NEWLINE("\r>" << method_name << " "  << var1 << "=" << var1_val << ", " << var2 << "=" << var2_val
-                                   << ", " << var3 << "=" << var3_val);
+            std::cout << "\r>" << method_name << " "  << var1 << "=" << var1_val << ", " << var2 << "=" << var2_val
+                      << ", " << var3 << "=" << var3_val << std::flush;
         }
 
         void progress_current_method(const std::string& method_name, const std::string& var1, double var1_val,
@@ -320,8 +320,8 @@ namespace dejavu {
                                             const std::string& var3, int var3_val,
                                             const std::string& var4, int var4_val) const  {
             if(h_silent) return;
-            PRINT_NO_NEWLINE("\r>" << method_name << " "  << var1 << "=" << var1_val << ", " << var2 << "=" << var2_val
-                                   << ", " << var3 << "=" << var3_val << ", " << var4 << "=" << var4_val);
+            std::cout << "\r>" << method_name << " "  << var1 << "=" << var1_val << ", " << var2 << "=" << var2_val
+                      << ", " << var3 << "=" << var3_val << ", " << var4 << "=" << var4_val << std::flush;
         }
     };
 }
