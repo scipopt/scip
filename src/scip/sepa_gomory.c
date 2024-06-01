@@ -554,7 +554,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
       if( c >= 0 )
       {
-
          assert(c < ncols);
          var = SCIPcolGetVar(cols[c]);
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
@@ -692,7 +691,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       }
    }
 
-
    for( i = 0; i < nrows; ++i )
    {
       if( colindsproducedcut[i] >= 0 && SCIPisEfficacious(scip, cutefficacies[i])  )
@@ -705,6 +703,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    }
 
    /* free temporary memory */
+   SCIPaggrRowFree(scip, &aggrrow);
+   SCIPfreeBufferArray(scip, &colindsproducedcut);
+   SCIPfreeBufferArray(scip, &cutefficacies);
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
    SCIPfreeBufferArray(scip, &basisfrac);
@@ -712,9 +713,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
-   SCIPfreeBufferArray(scip, &cutefficacies);
-   SCIPfreeBufferArray(scip, &colindsproducedcut);
-   SCIPaggrRowFree(scip, &aggrrow);
 
    SCIPdebugMsg(scip, "end searching gomory cuts: found %d cuts\n", naddedcuts);
 

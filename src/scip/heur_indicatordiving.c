@@ -992,7 +992,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreIndicatordiving)
             if( (scdata->bvars[b] == cand || (SCIPvarIsNegated(cand) && scdata->bvars[0] == SCIPvarGetNegationVar(cand)))
                   && SCIPisEQ(scip, side, scdata->vals0[b]) )
             {
-
                /* TODO: handle also more general variables;
                 * currently we handle only variables with domain vals0 < lb1 <= ub1 */
                if( SCIPisGE(scip, lpsolsemicontinuous, scdata->vals0[b]) && SCIPisLE(scip, lpsolsemicontinuous, scdata->ubs1[b]) )

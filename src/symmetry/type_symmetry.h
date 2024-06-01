@@ -47,9 +47,13 @@ extern "C" {
 typedef uint32_t SYM_SPEC;              /**< types of variables handled by symmetry */
 
 /** symmetry timings */
-#define SYM_COMPUTETIMING_BEFOREPRESOL    0  /**< compute symmetries before presolving */
-#define SYM_COMPUTETIMING_DURINGPRESOL    1  /**< compute symmetries during presolving */
-#define SYM_COMPUTETIMING_AFTERPRESOL     2  /**< compute symmetries after presolving */
+#define SYM_TIMING_BEFOREPRESOL    0         /**< compute and handle symmetries before presolving */
+#define SYM_TIMING_DURINGPRESOL    1         /**< compute and handle symmetries during presolving */
+#define SYM_TIMING_AFTERPRESOL     2         /**< compute and handle symmetries after presolving */
+
+#define SYM_COMPUTETIMING_BEFOREPRESOL    SYM_TIMING_BEFOREPRESOL  /**< compute symmetries before presolving */
+#define SYM_COMPUTETIMING_DURINGPRESOL    SYM_TIMING_DURINGPRESOL  /**< compute symmetries during presolving */
+#define SYM_COMPUTETIMING_AFTERPRESOL     SYM_TIMING_AFTERPRESOL   /**< compute symmetries after presolving */
 
 /** define symmetry types detectable by SCIP */
 enum SYM_Symtype
@@ -81,7 +85,11 @@ enum SYM_Consoptype
    SYM_CONSOPTYPE_COEF        = 6,           /**< indicates coefficients from parent expressions */
    SYM_CONSOPTYPE_SQDIFF      = 7,           /**< indicates a squared difference */
    SYM_CONSOPTYPE_CARD_TUPLE  = 8,           /**< encodes pairs in cardinality constraints */
-   SYM_CONSOPTYPE_LAST        = 9            /**< number of predefined enum types, needs to always
+   SYM_CONSOPTYPE_PB_AND      = 9,           /**< indicates AND conss in pseudoboolean conss */
+   SYM_CONSOPTYPE_PB_LINEAR   = 10,          /**< indicates linear conss in pseudoboolean conss */
+   SYM_CONSOPTYPE_PB_SOFT     = 11,          /**< indicates pseudoboolean cons is soft constraint */
+   SYM_CONSOPTYPE_PB_OBJ      = 12,          /**< indicates pseudoboolean cons is objective function */
+   SYM_CONSOPTYPE_LAST        = 13           /**< number of predefined enum types, needs to always
                                               *   hold the biggest value */
 };
 typedef enum SYM_Consoptype SYM_CONSOPTYPE;

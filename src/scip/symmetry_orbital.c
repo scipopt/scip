@@ -238,7 +238,7 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
 
       /* the orbit must have the same bounds */
       orbitsymbroken = FALSE;
-      j = varorbitids[orbitbegin];
+      j = varorbitidssort[orbitbegin];
       orbitglb = orcdata->globalvarlbs[j];
       orbitgub = orcdata->globalvarubs[j];
       for (i = orbitbegin + 1; i < orcdata->npermvars; ++i)
@@ -258,8 +258,14 @@ SCIP_RETCODE identifyOrbitalSymmetriesBroken(
             }
          }
       }
-      /* the loop above has terminated, so i is either orcdata->npermvars or varorbitidssort[i] is in the next orbit,
-       * and orbitglb and orbitgub are the maximal global lower bound and minimal global upper bound in orbit orbitid */
+      assert( orbitsymbroken || i == orcdata->npermvars || varorbitids[j] != orbitid );
+
+      /* in case we terminated the orbit due to broken symmetries, find the correct end of the orbit */
+      if ( orbitsymbroken )
+      {
+         while ( i < orcdata->npermvars && varorbitids[j] == orbitid )
+            j = varorbitidssort[++i];
+      }
       orbitend = i;
 
       /* symmetry is broken within this orbit if the intersection of the global variable domains are empty */
@@ -343,7 +349,7 @@ SCIP_RETCODE orbitalReductionGetSymmetryStabilizerSubgroup(
    SCIP_Real*            varubs,             /**< array of orcdata->permvars variable UBs. If NULL, use local bounds */
    int*                  branchedvarindices, /**< array of given branching decisions, in branching order */
    SCIP_Bool*            inbranchedvarindices, /**< array stating whether variable with index in orcdata->permvars is
-                                                *   contained in the branching decisions. */
+                                              *   contained in the branching decisions. */
    int                   nbranchedvarindices /**< number of branching decisions */
    )
 {

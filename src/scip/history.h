@@ -84,6 +84,17 @@ void SCIPhistoryUpdatePseudocost(
    SCIP_Real             weight              /**< weight of this update in pseudo cost sum (added to pscostcount) */
    );
 
+/** updates the ancestral pseudo costs for a change of "solvaldelta" in the variable's LP solution value and a change of
+ * "objdelta" in the LP's objective value
+ */
+void SCIPhistoryUpdateAncPseudocost(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   SCIP_Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   SCIP_Real             weight              /**< weight of this update in discounted pseudo cost sum (added to ancpscostcount) */
+   );
+
 
 /**@defgroup ValueHistory Value Based History
  * @ingroup INTERNALAPI
@@ -132,6 +143,12 @@ SCIP_Real SCIPhistoryGetPseudocost(
    SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    );
 
+/** returns the expected ancestral dual gain for moving the corresponding variable by "solvaldelta" */
+SCIP_Real SCIPhistoryGetAncPseudocost(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
 /** returns the variance of pseudo costs about the mean. */
 SCIP_Real SCIPhistoryGetPseudocostVariance(
    SCIP_HISTORY*         history,            /**< branching and inference history */
@@ -146,8 +163,22 @@ SCIP_Real SCIPhistoryGetPseudocostCount(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** returns the (possible fractional) number of (partial) ancestral pseudo cost updates performed on this pseudo cost entry in
+ *  the given branching direction
+ */
+SCIP_Real SCIPhistoryGetAncPseudocostCount(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
 /** returns whether the pseudo cost entry is empty in the given branching direction (whether no value was added yet) */
 SCIP_Bool SCIPhistoryIsPseudocostEmpty(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns whether the ancestral pseudo cost entry is empty in the given branching direction (whether no value was added yet) */
+SCIP_Bool SCIPhistoryIsAncPseudocostEmpty(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
@@ -283,12 +314,19 @@ void SCIPhistorySetRatioHistory(
       ? (history)->pscostweightedmean[1] : 1.0)      \
       : -(solvaldelta) * ((history)->pscostcount[0] > 0.0               \
          ? (history)->pscostweightedmean[0] : 1.0) )
+#define SCIPhistoryGetAncPseudocost(history,solvaldelta)                   \
+   ( (solvaldelta) >= 0.0 ? (solvaldelta) * ((history)->ancpscostcount[1] > 0.0 \
+      ? (history)->ancpscostweightedmean[1] : 1.0)      \
+      : -(solvaldelta) * ((history)->ancpscostcount[0] > 0.0               \
+         ? (history)->ancpscostweightedmean[0] : 1.0) )
 #define SCIPhistoryGetPseudocostVariance(history, dir)                  \
    ( (history)->pscostcount[dir] >= 1.9 ? 1 / ((history)->pscostcount[dir] - 1)  \
          * ((history)->pscostvariance[dir]) \
          : 0.0)
 #define SCIPhistoryGetPseudocostCount(history,dir) ((history)->pscostcount[dir])
+#define SCIPhistoryGetAncPseudocostCount(history,dir) ((history)->ancpscostcount[dir])
 #define SCIPhistoryIsPseudocostEmpty(history,dir)  ((history)->pscostcount[dir] == 0.0)
+#define SCIPhistoryIsAncPseudocostEmpty(history,dir)  ((history)->ancpscostcount[dir] == 0.0)
 #define SCIPhistoryIncVSIDS(history,dir,weight) (history)->vsids[dir] += (weight)
 #define SCIPhistoryScaleVSIDS(history,scalar)  { (history)->vsids[0] *= (scalar); \
       (history)->vsids[1] *= (scalar);  }

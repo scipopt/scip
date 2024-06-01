@@ -1,0 +1,32 @@
+".linktest":
+  stage: test
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - apt-get update && apt-get install -y gfortran
+    - ./SCIP-*-Linux*.sh --skip-license
+    - bin/scip -v
+
+"linktest debian11":
+  extends: ".linktest"
+  image: debian:11-slim
+  needs:
+    - "cmake release gcc"
+
+"linktest debian12":
+  extends: ".linktest"
+  image: debian:12-slim
+  needs:
+    - "cmake release gcc"
+
+"linktest ubuntu20":
+  extends: ".linktest"
+  image: ubuntu:20.04
+  needs:
+    - "cmake release gcc"
+
+"linktest ubuntu22":
+  extends: ".linktest"
+  image: ubuntu:22.04
+  needs:
+    - "cmake release gcc"

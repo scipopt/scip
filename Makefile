@@ -346,7 +346,6 @@ SYMSRC		=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(BLISSEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/bliss/src -I$(SRCDIR)/bliss/include
 BLISSOBJ	=	bliss/src/abstractgraph.o
-BLISSOBJ	+=	bliss/src/bliss.o
 BLISSOBJ	+=	bliss/src/bliss_C.o
 BLISSOBJ	+=	bliss/src/defs.o
 BLISSOBJ	+=	bliss/src/digraph.o
@@ -383,7 +382,6 @@ SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(BLISSEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/bliss/src -I$(SRCDIR)/bliss/include
 BLISSOBJ	=	bliss/src/abstractgraph.o
-BLISSOBJ	+=	bliss/src/bliss.o
 BLISSOBJ	+=	bliss/src/bliss_C.o
 BLISSOBJ	+=	bliss/src/defs.o
 BLISSOBJ	+=	bliss/src/digraph.o
@@ -619,6 +617,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_countsols.o \
 			scip/cons_cumulative.o \
 			scip/cons_disjunction.o \
+			scip/cons_fixedvar.o \
 			scip/cons_indicator.o \
 			scip/cons_integral.o \
 			scip/cons_knapsack.o \
