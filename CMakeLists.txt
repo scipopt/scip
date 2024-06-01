@@ -325,6 +325,7 @@ if(MSVC)
     add_definitions(/wd4244)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
     add_definitions(/Zc:__cplusplus)
+    add_definitions(/EHsc)
 endif()
 
 # Visual Studio compiler with static runtime libraries
