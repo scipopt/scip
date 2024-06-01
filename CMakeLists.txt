@@ -185,64 +185,15 @@ elseif(SYM STREQUAL "nauty" OR SYM STREQUAL "snauty")
         set(SYM_PIC_LIBRARIES nauty)
         set(NAUTY_TARGET nauty)
     endif()
-    file(GLOB files ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/*)
-
-    # add custom command to build the library using configure and make
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
-        COMMAND
-        mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
-        cd ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
-        cp ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/* . &&
-        ./configure &&
-        make ${PIC_FLAG} nauty.a &&
-        cp nauty.a ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
-        DEPENDS ${files})
-
-    # add custom target and library target
-    add_custom_target(libnauty_target DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
-    add_library(libnauty STATIC IMPORTED GLOBAL)
-    add_dependencies(libnauty libnauty_target)
-    set_target_properties(libnauty PROPERTIES
-        IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
-
-    set(NAUTY_TARGET libnauty)
-    set(SYM_LIBRARIES libnauty)
-    set(SYM_PIC_LIBRARIES libnauty)
- elseif(SYM STREQUAL "snauty")
-    message(STATUS "Support SYM: sassy+nauty")
-    set(sym symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_dejavu_graph.cpp)
-
-    if(SHARED)
-        set(PIC_FLAG "CFLAGS='-fPIC'")
-    else()
-        set(PIC_FLAG "")
+    if(SYM STREQUAL "nauty")
+        message(STATUS "Support SYM: nauty")
+        set(sym symmetry/compute_symmetry_nauty.c)
+    elseif(SYM STREQUAL "snauty")
+        message(STATUS "Support SYM: sassy+nauty")
+        set(sym symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_sassy_graph.cpp)
+        # sassy needs C++-17
+        set(CMAKE_CXX_STANDARD 17)
     endif()
-    file(GLOB files ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/*)
-
-    # sassy needs C++-14
-    set(CMAKE_CXX_STANDARD 14)
-
-    # add custom command to build the library using configure and make
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
-        COMMAND
-        mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
-        cd ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
-        cp ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/* . &&
-        ./configure &&
-        make ${PIC_FLAG} nauty.a &&
-        cp nauty.a ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
-        DEPENDS ${files})
-
-    # add custom target and library target
-    add_custom_target(libnauty_target DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
-    add_library(libnauty STATIC IMPORTED GLOBAL)
-    add_dependencies(libnauty libnauty_target)
-    set_target_properties(libnauty PROPERTIES
-        IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
-
-    set(NAUTY_TARGET libnauty)
-    set(SYM_LIBRARIES libnauty)
-    set(SYM_PIC_LIBRARIES libnauty)
 elseif(SYM STREQUAL "dejavu")
     message(STATUS "Support SYM: dejavu")
     set(sym symmetry/compute_symmetry_dejavu.cpp symmetry/build_dejavu_graph.cpp)
@@ -252,7 +203,7 @@ elseif(SYM STREQUAL "dejavu")
 
     if(NOT DEJAVU_INCLUDE_DIR)
       find_path(DEJAVU_INCLUDE_DIR
-	NAMES dejavu/dejavu.hh
+	NAMES dejavu/dejavu.h
 	PATH_SUFFIXES include src)
     endif()
 elseif(SYM STREQUAL "none")
