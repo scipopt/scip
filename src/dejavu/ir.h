@@ -167,6 +167,9 @@ namespace dejavu {
             worklist  diff_vertices_list; /**< vertices that differ, but in a list */
             worklist  diff_vertices_list_pt; /**< vertex v is stored at position diff_vertices_list_pt[v] in the list
                                                *  above */
+            markset       diff_updated_color;
+            workspace     diff_previous_color;
+            workspace     diff_original_size;
             bool diff_diverge = false; /**< paths of difference are diverging, can not properly track it anymore, and
                                          *there is also no point in tracking it anymore since they are not isomorphic */
             int singleton_pt_start = 0; /**< a pointer were we need to start reading singletons */
@@ -258,10 +261,15 @@ namespace dejavu {
             }
 
             std::function<type_split_color_hook> self_split_hook() {
+                #ifndef dej_nolambda
                 return [this](auto && PH1, auto && PH2, auto && PH3) { return
-                        split_hook(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2),
+                            this->split_hook(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2),
                                 std::forward<decltype(PH3)>(PH3));
                 };
+                #else
+                return std::bind(&controller::split_hook, this, std::placeholders::_1, std::placeholders::_2,
+                                 std::placeholders::_3);
+                #endif
             }
 
 
@@ -289,10 +297,13 @@ namespace dejavu {
             }
 
             std::function<type_worklist_color_hook> self_worklist_hook() {
+                #ifndef dej_nolambda
                 return [this](auto && PH1, auto && PH2) {
-                    return worklist_hook(std::forward<decltype(PH1)>(PH1),
-                                       std::forward<decltype(PH2)>(PH2));
+                    return this->worklist_hook(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2));
                 };
+                #else
+                return std::bind(&controller::worklist_hook, this, std::placeholders::_1, std::placeholders::_2);
+                #endif
             }
 
             /**
@@ -392,6 +403,10 @@ namespace dejavu {
                 diff_vertices_list.resize(col->domain_size);
                 diff_vertices_list_pt.resize(col->domain_size);
                 diff_is_singleton.initialize(col->domain_size);
+
+                diff_updated_color.initialize(col->domain_size);
+                diff_previous_color.resize(col->domain_size);
+                diff_original_size.resize(col->domain_size);
 
                 singleton_pt_start = 0;
                 singletons.reserve(col->domain_size);
@@ -530,7 +545,7 @@ namespace dejavu {
 
                 // find a corresponding counterpart in the other coloring
                 //const int left      = state.c->lab[right_col];
-                const int right_col_sz = c->ptn[right_col];
+                const int right_col_sz = c->ptn[right_col] + 1;
                 int left = -1;
                 for (int i = 0; i < right_col_sz; ++i) {
                     const int candidate = state.c->lab[right_col + i];
@@ -594,31 +609,85 @@ namespace dejavu {
              * @return whether there is a difference
              */
             bool update_diff_vertices_last_individualization(const controller& other_state) {
-                int i = base.back().touched_color_list_pt;
+                int i;
                 if(touched_color_list.cur_pos != other_state.touched_color_list.cur_pos) {
                     diff_diverge = true;
                     return true;
                 }
-                for(;i < touched_color_list.cur_pos; ++i) {
+
+                diff_updated_color.reset();
+
+                // reconstruct color prior to individualization for each new color
+                for(i = base.back().touched_color_list_pt; i < touched_color_list.cur_pos; ++i) {
                     const int old_color = prev_color_list[i];
                     const int new_color = touched_color_list[i];
+                    diff_original_size[old_color] = 0;
+                    if(!diff_updated_color.get(old_color)) {
+                        diff_updated_color.set(old_color);
+                        diff_previous_color[old_color] = old_color;
+                    }
+                    while(diff_previous_color[old_color] != diff_previous_color[diff_previous_color[old_color]])
+                        diff_previous_color[old_color] = diff_previous_color[diff_previous_color[old_color]];
+                    diff_updated_color.set(new_color);
+                    diff_previous_color[new_color] = diff_previous_color[old_color];
+                }
 
-                    dej_assert(old_color != new_color);
+                // determine size of the original color classes
+                for(i = base.back().touched_color_list_pt; i < touched_color_list.cur_pos; ++i) {
+                    const int new_color = touched_color_list[i];
+                    const int old_color = diff_previous_color[new_color];
+                    diff_original_size[old_color] = std::max(diff_original_size[old_color],
+                                                             new_color + c->ptn[new_color] + 1);
+                }
 
-                    const int old_color_sz = c->ptn[old_color] + 1;
-                    const int new_color_sz = c->ptn[new_color] + 1;
+                diff_updated_color.reset();
 
+                // now fix colors according to fragments of original color classes
+                for(i = base.back().touched_color_list_pt; i < touched_color_list.cur_pos; ++i) {
+                    const int old_color = prev_color_list[i];
+                    if(diff_updated_color.get(old_color)) {
+                        dej_assert(diff_updated_color.get(touched_color_list[i]));
+                        continue;
+                    }
+                    int old_color_end_pt = std::max(old_color + c->ptn[old_color] + 1, diff_original_size[old_color]);
+
+
+                    // let's update diff for all the fragments of old_color
+                    const int old_color_sz       = c->ptn[old_color] + 1;
                     const int old_color_sz_other = other_state.c->ptn[old_color] + 1;
-                    const int new_color_sz_other = other_state.c->ptn[new_color] + 1;
+                    diff_diverge = diff_diverge || (old_color_sz != old_color_sz_other);
+                    if(diff_diverge) break;
 
-                    diff_diverge = diff_diverge || (old_color_sz != old_color_sz_other)
-                                   || (new_color_sz != new_color_sz_other);
+                    // determine the largest fragment
+                    int largest_fragment    = -1;
+                    int largest_fragment_sz = -1;
 
-                    //color_fix_difference(other_state, new_color);
+                    for(int j = old_color; j < old_color_end_pt;) {
+                        const int next_color    = j;
+                        const int next_color_sz = c->ptn[next_color] + 1;
+                        const int next_color_sz_other = other_state.c->ptn[next_color] + 1;
+                        diff_diverge = diff_diverge || (next_color_sz != next_color_sz_other);
+                        if(next_color_sz > largest_fragment_sz) {
+                            largest_fragment    = next_color;
+                            largest_fragment_sz = next_color_sz;
+                        }
 
-                    if(new_color_sz <= old_color_sz) color_fix_difference(other_state, new_color);
-                    else                             color_fix_difference(other_state, old_color);
-                    if(old_color_sz == 1) color_fix_difference(other_state, old_color);
+                        diff_updated_color.set(next_color);
+                        j += next_color_sz;
+                    }
+
+                    if(diff_diverge) break;
+
+                    // update all but the largest of those fragments
+                    for(int j = old_color; j < old_color_end_pt;) {
+                        const int next_color    = j;
+                        const int next_color_sz = c->ptn[next_color] + 1;
+                        if(j != largest_fragment) color_fix_difference(other_state, next_color);
+                        j += next_color_sz;
+                    }
+
+                    // unless the largest fragment is a singleton, in that case we want to record the singleton
+                    if(largest_fragment_sz == 1) color_fix_difference(other_state, largest_fragment);
                 }
                 return (diff_vertices_list.cur_pos != 0) || diff_diverge; // there is a diff!
             }
@@ -1076,7 +1145,7 @@ namespace dejavu {
             std::function<type_selector_hook> dynamic_seletor;
             markset test_set;
             std::vector<int> candidates;
-            big_number ir_tree_size_estimate;
+            big_number ir_tree_size_estimate;;
 
             int color_score(sgraph *g, controller *state, int color) {
                 test_set.reset();
@@ -1685,8 +1754,7 @@ namespace dejavu {
          */
         class deviation_map {
         private:
-            //SV renamed deviation_map to deviation_map_ to avoid clash with classname
-            std::unordered_set<unsigned long> deviation_map_;
+            std::unordered_set<unsigned long> deviation_map;
             int computed_for_base = 0;
             int expected_for_base = 0;
             bool deviation_done = false;
@@ -1701,12 +1769,12 @@ namespace dejavu {
                 computed_for_base = 0;
                 expected_for_base = h_expected_for_base;
 
-                deviation_map_.clear();
+                deviation_map.clear();
                 deviation_done = false;
             }
 
             void record_deviation(unsigned long deviation) {
-                deviation_map_.insert(deviation);
+                deviation_map.insert(deviation);
                 ++computed_for_base;
                 dej_assert(computed_for_base <= expected_for_base);
                 check_finished();
@@ -1719,7 +1787,7 @@ namespace dejavu {
             }
 
             bool check_deviation(unsigned long deviation) {
-                return !deviation_done || deviation_map_.find(deviation) != deviation_map_.end();
+                return !deviation_done || deviation_map.find(deviation) != deviation_map.end();
             }
         };
 

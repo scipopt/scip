@@ -24,6 +24,33 @@ namespace dejavu {
      */
     namespace search_strategy {
 
+
+//        static bool check_matched(coloring& c1, coloring& c2) {
+//            markset test(c1.domain_size);
+//            for(int i = 0; i < c1.domain_size; ) {
+//                int col_sz = c1.ptn[i] + 1;
+//                if(c2.ptn[i] + 1 != col_sz) {
+//                    return false;
+//                }
+//                if(col_sz == 1) {
+//                    i += col_sz;
+//                    continue;
+//                }
+//                for(int j = i; j < i + col_sz; ++j) {
+//                    test.set(c1.lab[j]);
+//                }
+//                for(int j = i; j < i + col_sz; ++j) {
+//                    if(!test.get(c2.lab[j])) {
+//                        return false;
+//                    }
+//                }
+//                test.reset();
+//                i += col_sz;
+//            }
+//
+//            return true;
+//        }
+
         /**
          * \brief Depth-first search without backtracking.
          *

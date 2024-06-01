@@ -46,6 +46,10 @@
 #define dej_nodiscard
 #endif
 
+// use these options to prevent dejavu from using certain C++ language features
+// #define dej_nolambda
+// #define dej_nothreadlocal
+
 
 /**
  * Hash function for unsigned integers.

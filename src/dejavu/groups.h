@@ -194,9 +194,15 @@ namespace dejavu {
              * @param pwr Power with which \p other is applied to this automorphism.
              */
             void apply(automorphism_workspace& other, int pwr = 1) {
+                #ifndef dej_nothreadlocal
                 thread_local worklist scratch_apply1;
                 thread_local worklist scratch_apply2;
                 thread_local markset  scratch_apply3;
+                #else
+                static worklist scratch_apply1;
+                static worklist scratch_apply2;
+                static markset  scratch_apply3;
+                #endif
                 scratch_apply1.allocate(domain_size);
                 scratch_apply2.allocate(domain_size);
                 scratch_apply3.initialize(domain_size);
@@ -837,7 +843,7 @@ namespace dejavu {
             markset scratch2;        /**< auxiliary space */
             worklist scratch_apply1; /**< auxiliary space used for `apply` operations */
             worklist scratch_apply2; /**< auxiliary space used for `apply` operations */
-            markset scratch_apply3; /**< auxiliary space used for `apply` operations */
+            markset  scratch_apply3; /**< auxiliary space used for `apply` operations */
             automorphism_workspace scratch_auto; /**< used to store a sparse automorphism*/
         };
 
@@ -1806,16 +1812,7 @@ namespace dejavu {
                     if(v_from != v_to) ws_auto.write_single_map(v_from, v_to);
                 }
 
-                /*markset debug(h_domain_size);
-                for(int i = 0; i < h_domain_size; ++i) {
-                    dej_assert(!debug.get(ws_auto.perm()[i]));
-                    debug.set(ws_auto.perm()[i]);
-                }*/
-
-
-                //std::cout << "sifting..." << std::endl;
                 const bool result = schreier.sift(ws_schreier, ws_auto, false, !known_in_group);
-                //std::cout << "sifting done " << result << std::endl;
                 ws_auto.reset();
                 return result;
             }

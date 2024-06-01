@@ -18,9 +18,9 @@
 #include "inprocess.h"
 #include "components.h"
 
-//#if ((defined(_MSVC_LANG) && _MSVC_LANG < 201402L) || __cplusplus < 201402L)
-//#  error "dejavu requires to be compiled with C++ 2014 or newer"
-//#endif
+#if ((defined(_MSVC_LANG) && _MSVC_LANG < 201402L) || __cplusplus < 201402L)
+#  error "dejavu requires to be compiled with C++ 2014 or newer"
+#endif
 
 // structures for testing
 #if defined(DEJDEBUG) &&  !defined(NDEBUG)
@@ -74,10 +74,15 @@ namespace dejavu {
             }
 
             dejavu_hook* get_hook() override {
+                #ifndef dej_nolambda
                 my_hook = [this](auto && PH1, auto && PH2, auto && PH3, auto && PH4)
-                { return hook_func(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2),
+                { return this->hook_func(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2),
                                      std::forward<decltype(PH3)>(PH3), std::forward<decltype(PH4)>(PH4));
                 };
+                #else
+                my_hook = std::bind(&multi_hook::hook_func, this, std::placeholders::_1, std::placeholders::_2,
+                                 std::placeholders::_3, std::placeholders::_4);
+                #endif
                 return &my_hook;
             }
         };
@@ -116,10 +121,15 @@ namespace dejavu {
             explicit ostream_hook(std::ostream& ostream) : my_ostream(ostream) {}
 
             dejavu_hook* get_hook() override {
+                #ifndef dej_nolambda
                 my_hook = [this](auto && PH1, auto && PH2, auto && PH3, auto && PH4)
-                { return hook_func(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2),
+                { return this->hook_func(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2),
                                      std::forward<decltype(PH3)>(PH3), std::forward<decltype(PH4)>(PH4));
                 };
+                #else
+                my_hook = std::bind(&ostream_hook::hook_func, this, std::placeholders::_1, std::placeholders::_2,
+                                    std::placeholders::_3, std::placeholders::_4);
+                #endif
                 return &my_hook;
             }
         };
@@ -137,7 +147,7 @@ namespace dejavu {
         class strong_certification_hook : public hook_interface {
         private:
             dejavu_hook  my_hook;
-            dejavu_hook* my_call_hook;
+            dejavu_hook* my_call_hook = nullptr;
             markset scratch_set;
 
             sgraph my_g;
@@ -149,22 +159,31 @@ namespace dejavu {
             }
         public:
             explicit strong_certification_hook(static_graph& g, dejavu_hook* call_hook) {
-                my_g.copy_graph(g.get_sgraph());
-                my_call_hook = call_hook;
-                scratch_set.initialize(g.get_sgraph()->v_size);
+                initialize(*g.get_sgraph(), call_hook);
             }
 
             explicit strong_certification_hook(sgraph& g, dejavu_hook* call_hook) {
+                initialize(g, call_hook);
+            }
+
+            strong_certification_hook() = default;
+
+            void initialize(sgraph& g, dejavu_hook* call_hook) {
                 my_g.copy_graph(&g);
                 my_call_hook = call_hook;
                 scratch_set.initialize(g.v_size);
             }
 
             dejavu_hook* get_hook() override {
+                #ifndef dej_nolambda
                 my_hook = [this](auto && PH1, auto && PH2, auto && PH3, auto && PH4)
-                { return hook_func(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2),
+                { return this->hook_func(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2),
                                      std::forward<decltype(PH3)>(PH3), std::forward<decltype(PH4)>(PH4));
                 };
+                #else
+                my_hook = std::bind(&strong_certification_hook::hook_func, this, std::placeholders::_1,
+                                    std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
+                #endif
                 return &my_hook;
             }
         };
@@ -185,10 +204,15 @@ namespace dejavu {
             explicit schreier_hook(groups::random_schreier& schreier) : my_schreier(schreier) {}
 
             dejavu_hook* get_hook() override {
+                #ifndef dej_nolambda
                 my_hook = [this](auto && PH1, auto && PH2, auto && PH3, auto && PH4)
-                { return hook_func(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2),
+                { return this->hook_func(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2),
                                      std::forward<decltype(PH3)>(PH3), std::forward<decltype(PH4)>(PH4));
                 };
+                #else
+                my_hook = std::bind(&schreier_hook::hook_func, this, std::placeholders::_1, std::placeholders::_2,
+                                    std::placeholders::_3, std::placeholders::_4);
+                #endif
                 return &my_hook;
             }
         };
@@ -209,10 +233,15 @@ namespace dejavu {
             explicit orbit_hook(groups::orbit& save_orbit) : my_orbit(save_orbit) {}
 
             dejavu_hook* get_hook() override {
+                #ifndef dej_nolambda
                 my_hook = [this](auto && PH1, auto && PH2, auto && PH3, auto && PH4)
-                { return hook_func(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2),
+                { return this->hook_func(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2),
                                      std::forward<decltype(PH3)>(PH3), std::forward<decltype(PH4)>(PH4));
                 };
+                #else
+                my_hook = std::bind(&orbit_hook::hook_func, this, std::placeholders::_1, std::placeholders::_2,
+                                    std::placeholders::_3, std::placeholders::_4);
+                #endif
                 return &my_hook;
             }
         };
@@ -229,8 +258,8 @@ namespace dejavu {
         int h_error_bound       = 10; /**< assuming uniform random numbers, error probability is below
                                         * `1/2^h_error_bound`, default value of 10 thus misses a generator
                                         *  with probabiltiy at most 1/2^10 < 0.098% */
-        bool h_random_use_true_random = false; /**< use true randomness where randomness affects error probabilities */
-        int  h_random_seed = 0; /**< is true randomness is not used, here is the seed to be used */
+        bool h_random_use_true_random = false; /**< use 'true randomness' where randomness affects error probabilities*/
+        int  h_random_seed = 0; /**< if 'true randomness' is not used, here is the seed to be used */
         bool h_silent = false; /**< don't print solver progress */
         int  h_bfs_memory_limit = 0x20000000;
         bool h_decompose = true; /**< use non-uniform component decomposition */
@@ -242,20 +271,16 @@ namespace dejavu {
 
         //int h_limit_fail        = 0; /**< limit for the amount of backtracking allowed */
 
-        //bool h_cert_original = true; /**< certify all automorphisms on the original graph, and skip non-certified */
-        //int  s_cert_skip = 0; /**< how many non-certified automorphisms were skipped, please report bug if not 0  */
-
         // std::function<selector_hook>* h_user_selector  = nullptr; /**< user-provided cell selector */
         // std::function<selector_hook>* h_user_invariant = nullptr; /**< user-provided invariant to be applied during
         //                                                             inprocessing */
 
         bool s_deterministic_termination = true; /**< did the last run terminate deterministically? */
-        big_number s_grp_sz; /**< size of the automorphism group computed in last run */
+        big_number s_grp_sz; /**< order of the automorphism group computed in last run */
     public:
         /**
          * Assuming uniform random numbers, error probability is below `1/2^error_bound`, default value is 10. Thus, the
-         * default value misses a generator with probabiltiy at most 1/2^10 < 0.098% (assuming truely randomly generated
-         * numbers).
+         * default value misses a generator with probabiltiy at most 1/2^10 < 0.098% (assuming uniform random numbers).
          *
          * @param error_bound the new error bound
          */
@@ -413,8 +438,9 @@ namespace dejavu {
             m_printer.h_silent = h_silent;
 
             // use strong certification?
-            hooks::strong_certification_hook certification_hook(*g, hook);
+            hooks::strong_certification_hook certification_hook;
             if(h_strong_certification) {
+                certification_hook.initialize(*g, hook);
                 hook = certification_hook.get_hook();
                 h_destructive = false;
             }
@@ -603,7 +629,7 @@ namespace dejavu {
                     const bool s_too_long = base_size > h_base_max_diff * s_last_base_size && s_inproc_success <= 1;
                     const bool s_too_big  = (s_inproc_success <= (s_regular + !s_prunable)) &&
                                             (s_last_tree_sz < s_tree_estimate) &&
-                                            (s_restarts >= 2); // TODO was 3 at some point
+                                            (s_restarts >= 2);
 
                     // immediately discard this base if deemed too unfavourable by the heuristics above, unless we are
                     // discarding too often
@@ -929,10 +955,10 @@ namespace dejavu {
 
                 // let's add up the total group size from all the different modules.
                 s_grp_sz.multiply(m_inprocess.s_grp_sz);
-                s_grp_sz.multiply(m_dfs.s_grp_sz);
+                if(s_term != t_inproc) s_grp_sz.multiply(m_dfs.s_grp_sz);
 
                 // if we finished with BFS, group size in Schreier is redundant since we also found them with BFS
-                if(s_term != t_bfs) s_grp_sz.multiply(sh_schreier.get_group_size());
+                if(s_term != t_bfs && s_term != t_inproc) s_grp_sz.multiply(sh_schreier.get_group_size());
             } // end of loop for non-uniform components
             m_printer.h_silent = h_silent;
             m_printer.timer_print("done", s_deterministic_termination, s_term);
