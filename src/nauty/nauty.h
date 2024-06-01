@@ -11,6 +11,8 @@ creating nauty.h out of nauty-h.in.  If configure is not being used,
 it is necessary to check they are correct.
 ====================================================================*/
 
+#include "tinycthread/tinycthread.h" /* for _Thread_local */
+
 /* Check whether various headers or options are available */
 #ifndef _WIN32
 #define HAVE_UNISTD_H  1    /* <unistd.h> */
