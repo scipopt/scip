@@ -5,8 +5,8 @@ Features
 --------
 - Added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
 - Copy variable data pointer if no copy routine was supplied.
-
-- added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
+- Added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry.
+- Dejavu can be used to compute symmetries; the source code is shipped with SCIP and incorporates sassy.
 
 Performance improvements
 ------------------------
@@ -78,7 +78,6 @@ Known bugs
 Features
 --------
 
-- Dejavu can be used to compute symmetries; the source code is shipped with SCIP and incorporates sassy
 - Added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem.
 - added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem
 - allow for implicit integer variables in xor constraints
