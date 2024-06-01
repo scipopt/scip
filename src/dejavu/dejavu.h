@@ -558,7 +558,7 @@ namespace dejavu {
 
                 // initialize modules for high-level search strategies
                 search_strategy::dfs_ir      m_dfs(m_printer, automorphism); /*< depth-first search */
-                search_strategy::bfs_ir      m_bfs(m_printer, automorphism, schreierw); /*< breadth-first search */
+                search_strategy::bfs_ir      m_bfs(m_printer, automorphism); //, schreierw); /*< breadth-first search */
                 search_strategy::random_ir   m_rand(m_printer, schreierw, automorphism, rng); /*< randomized search */
                 search_strategy::inprocessor m_inprocess; /*< inprocessing */
 

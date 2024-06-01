@@ -16,7 +16,7 @@ namespace dejavu {
         class bfs_ir {
             timed_print& gl_printer;
             groups::automorphism_workspace& gl_automorphism;
-            groups::schreier_workspace&     gl_schreier;
+            // groups::schreier_workspace&     gl_schreier;
 
         public:
             bool h_use_deviation_pruning = true; /**< use pruning using deviation maps */
@@ -29,9 +29,10 @@ namespace dejavu {
             int s_total_leaves             = 0; /**< how many of the computed nodes were leaves */
             int s_deviation_prune          = 0; /**< how many nodes were pruned using deviation maps */
 
-            bfs_ir(timed_print& printer, groups::automorphism_workspace& automorphism,
-                   groups::schreier_workspace& schreier) :
-                   gl_printer(printer), gl_automorphism(automorphism), gl_schreier(schreier) {}
+            bfs_ir(timed_print& printer, groups::automorphism_workspace& automorphism) :
+                   // groups::schreier_workspace& schreier) :
+                   gl_printer(printer), gl_automorphism(automorphism) {}
+                   // gl_printer(printer), gl_automorphism(automorphism), gl_schreier(schreier) {}
 
             void do_a_level(sgraph* g, dejavu_hook* hook, ir::shared_tree& ir_tree, ir::controller& local_state,
                             std::function<ir::type_selector_hook> *selector) {
