@@ -191,8 +191,8 @@ elseif(SYM STREQUAL "nauty" OR SYM STREQUAL "snauty")
     elseif(SYM STREQUAL "snauty")
         message(STATUS "Support SYM: sassy+nauty")
         set(sym symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_sassy_graph.cpp)
-        # sassy needs C++-17
-        set(CMAKE_CXX_STANDARD 17)
+        # sassy needs C++-14
+        set(CMAKE_CXX_STANDARD 14)
     endif()
 elseif(SYM STREQUAL "dejavu")
     message(STATUS "Support SYM: dejavu")
