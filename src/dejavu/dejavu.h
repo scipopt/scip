@@ -10,6 +10,7 @@
 #define DEJAVU_VERSION_IS_PREVIEW true
 
 #include <utility>
+#include <string>
 
 #include "dfs.h"
 #include "bfs.h"
