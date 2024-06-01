@@ -190,7 +190,7 @@ elseif(SYM STREQUAL "nauty" OR SYM STREQUAL "snauty")
         set(sym symmetry/compute_symmetry_nauty.c)
     elseif(SYM STREQUAL "snauty")
         message(STATUS "Support SYM: sassy+nauty")
-        set(sym symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_sassy_graph.cpp)
+        set(sym symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_dejavu_graph.cpp)
         # sassy needs C++-14
         set(CMAKE_CXX_STANDARD 14)
     endif()
