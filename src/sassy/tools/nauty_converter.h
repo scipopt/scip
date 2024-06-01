@@ -44,8 +44,10 @@ static void convert_sassy_to_nauty(sassy::sgraph *g, int* colmap, sparsegraph* s
     DYNALLOC1(int, *ptn, (*ptn_sz), (g->v_size), "malloc");
 
     for (int i = 0; i < g->v_size; ++i) {
+/*TODO: warning: Array access results in a null pointer dereference*/
         (*lab)[i] = i;
-        (*ptn)[i] = 1;
+/*TODO: warning: Array access results in a null pointer dereference*/
+       (*ptn)[i] = 1;
         sg->v[i] = g->v[i];
         sg->d[i] = g->d[i];
     }
