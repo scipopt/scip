@@ -10,11 +10,8 @@ if(POLICY CMP0091)
    cmake_policy(SET CMP0091 NEW)
 endif()
 
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
-
-set(SCIP_VERSION_MAJOR 10)
-set(SCIP_VERSION_MINOR 0)
+set(SCIP_VERSION_MAJOR 9)
+set(SCIP_VERSION_MINOR 1)
 set(SCIP_VERSION_PATCH 0)
 set(SCIP_VERSION_SUB 0)
 set(SCIP_VERSION_API 117)
@@ -105,7 +102,7 @@ set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso highs none )  #define list of values GUI will offer for the variable
 
-set(SYM sbliss CACHE STRING "options for symmetry computation")  #create the variable
+set(SYM snauty CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss sbliss nauty snauty dejavu none )  #define list of values GUI will offer for the variable
 
 if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
@@ -177,14 +174,16 @@ elseif(SYM STREQUAL "sbliss")
 	NAMES bliss/graph.hh
 	PATH_SUFFIXES include src)
     endif()
-elseif(SYM STREQUAL "nauty")
-    message(STATUS "Support SYM: nauty")
-    set(sym symmetry/compute_symmetry_nauty.c)
-
-    if(SHARED)
-        set(PIC_FLAG "CFLAGS='-fPIC'")
+elseif(SYM STREQUAL "nauty" OR SYM STREQUAL "snauty")
+    if(NAUTY_DIR)
+        include_directories(${NAUTY_DIR})
+        set(SYM_LIBRARIES ${NAUTY_DIR}/nauty/nauty.a)
+        set(SYM_PIC_LIBRARIES ${NAUTY_DIR}/nauty/nauty.a)
     else()
-        set(PIC_FLAG "")
+        add_subdirectory(src/nauty)
+        set(SYM_LIBRARIES nauty)
+        set(SYM_PIC_LIBRARIES nauty)
+        set(NAUTY_TARGET nauty)
     endif()
     file(GLOB files ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/*)
 
@@ -996,6 +995,9 @@ elseif(LPS STREQUAL "none")
 endif()
 if(NOT SYM STREQUAL "sbliss")
   file(APPEND ${CMAKE_BINARY_DIR}/cmake.log " -DSYM=${SYM}")
+endif()
+if((SYM STREQUAL "nauty" OR SYM STREQUAL "snauty") AND NAUTY_DIR)
+  file(APPEND ${CMAKE_BINARY_DIR}/cmake.log " -DNAUTY_DIR=${NAUTY_DIR}")
 endif()
 file(APPEND ${CMAKE_BINARY_DIR}/cmake.log "\n")
 message(STATUS "Written file with changed options to ${CMAKE_BINARY_DIR}/cmake.log.")

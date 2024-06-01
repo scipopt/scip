@@ -88,6 +88,8 @@ Features
 Performance improvements
 ------------------------
 
+- Use sassy+nauty as default symmetry computation package.
+
 Build system
 ------------
 
