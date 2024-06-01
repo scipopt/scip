@@ -11,7 +11,16 @@ creating nauty.h out of nauty-h.in.  If configure is not being used,
 it is necessary to check they are correct.
 ====================================================================*/
 
-#include "tinycthread/tinycthread.h" /* for _Thread_local */
+/* define _Thread_local (copied from tinycthread.h) */
+#if !defined(_Thread_local)
+ #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201102L
+  #define _Thread_local _Thread_local
+ #elif defined(__GNUC__) || (defined(__INTEL_COMPILER) && !defined(_MSC_VER)) || defined(__SUNPRO_CC) || defined(__IBMCPP__)
+  #define _Thread_local __thread
+ #else
+  #define _Thread_local __declspec(thread)
+ #endif
+#endif
 
 /* Check whether various headers or options are available */
 #ifndef _WIN32
