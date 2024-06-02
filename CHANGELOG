@@ -77,7 +77,6 @@ Known bugs
 Features
 --------
 
-- Added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem.
 - added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem
 - allow for implicit integer variables in xor constraints
 - implemented symmetry detection callbacks for cons_pseudoboolean
@@ -86,14 +85,7 @@ Features
 Performance improvements
 ------------------------
 
-- Use sassy+nauty as default symmetry computation package.
-
-Build system
-------------
-
-### Cmake
-
-- cmake now automatically downloads and installs the latest release version of SoPlex from GitHub if it is not found directly
+- changed the default symmetry computation package from sassy+bliss to sassy+nauty
 
 Fixed bugs
 ----------
@@ -101,7 +93,7 @@ Fixed bugs
 Examples and applications
 -------------------------
 
-- TSP: remove `gzstream.h/hpp` and parse gzipped file differently
+- TSP: removed `gzstream.h/hpp` and parse gzipped files differently
 
 Interface changes
 -----------------
@@ -113,8 +105,8 @@ Interface changes
 
 ### New API functions
 
-- New function SCIPgetExprActivityNonlinear() to get activity of nonlinear constraint.
-- New function SCIPincludeConshdlrFixedvar() to include new constraint handler that checks bounds on fixed original variables.
+- new function SCIPgetExprActivityNonlinear() to get activity of nonlinear constraint
+- new function SCIPincludeConshdlrFixedvar() to include new constraint handler that checks bounds on fixed original variables
 
 ### Command line interface
 
@@ -133,7 +125,7 @@ Interface changes
 
 ### New data structures
 
-- SCIP_Status is extended by SCIP_STATUS_PRIMALLIMIT and SCIP_STATUS_DUALLIMIT to indicate termination at limits/primal and limits/dual respectively
+- enum SCIP_Status has been extended by SCIP_STATUS_PRIMALLIMIT and SCIP_STATUS_DUALLIMIT to indicate termination at limits/primal and limits/dual respectively
 
 Build system
 ------------
@@ -141,6 +133,8 @@ Build system
 ### Makefile
 
 ### Cmake
+
+- cmake now automatically downloads and installs the latest release version of SoPlex from GitHub if it is not found directly
 
 Testing
 -------

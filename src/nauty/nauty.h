@@ -55,10 +55,14 @@ it is necessary to check they are correct.
 #if !TLS_SUPPORTED
  #error "TLS is requested but not available"
 #else
-#ifndef _WIN32
-#define TLS_ATTR _Thread_local
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201102L
+ #define TLS_ATTR _Thread_local
+#elif defined(_MSC_VER)
+ #define TLS_ATTR __declspec(thread)
+#elif defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__SUNPRO_CC) || defined(__IBMCPP__)
+ #define TLS_ATTR __thread
 #else
-#define TLS_ATTR __declspec(thread)
+ #error "Do not know how to define TLS_ATTR"
 #endif
 #define HAVE_TLS 1
 #endif
