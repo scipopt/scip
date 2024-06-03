@@ -7883,10 +7883,11 @@ SCIP_RETCODE upgradeCons(
       SCIPfreeBufferArray(scip, &consvars);
    }
 
-   SCIP_CALL( SCIPaddCons(scip, newcons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+   /* add the upgraded constraint to the problem */
+   SCIP_CALL( SCIPaddUpgrade(scip, cons, newcons) );
    ++(*naddconss);
 
+   /* remove the underlying constraint from the problem */
    SCIP_CALL( SCIPdelCons(scip, cons) );
    ++(*ndelconss);
 
@@ -8081,10 +8082,11 @@ SCIP_RETCODE deleteRedundantVars(
                         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
                         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                         SCIPconsIsStickingAtNode(cons)) );
+
+                  /* add the special constraint to the problem */
                   SCIPdebugMsg(scip, " -> adding clique constraint: ");
                   SCIPdebugPrintCons(scip, cliquecons, NULL);
-                  SCIP_CALL( SCIPaddCons(scip, cliquecons) );
-                  SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+                  SCIP_CALL( SCIPaddUpgrade(scip, cons, cliquecons) );
                   ++(*naddconss);
                }
             }
@@ -8314,10 +8316,11 @@ SCIP_RETCODE detectRedundantVars(
                      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
                      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                      SCIPconsIsStickingAtNode(cons)) );
+
+               /* add the special constraint to the problem */
                SCIPdebugMsg(scip, " -> adding clique constraint: ");
                SCIPdebugPrintCons(scip, cliquecons, NULL);
-               SCIP_CALL( SCIPaddCons(scip, cliquecons) );
-               SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, cliquecons) );
                ++(*naddconss);
             }
          }
@@ -8484,10 +8487,11 @@ SCIP_RETCODE dualWeightsTightening(
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );
 
-      SCIP_CALL( SCIPaddCons(scip, newcons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      /* add the upgraded constraint to the problem */
+      SCIP_CALL( SCIPaddUpgrade(scip, cons, newcons) );
       ++(*naddconss);
 
+      /* remove the underlying constraint from the problem */
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
 
@@ -10593,8 +10597,8 @@ SCIP_RETCODE tightenWeights(
                   SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                   SCIPconsIsStickingAtNode(cons)) );
 
-            SCIP_CALL( SCIPaddCons(scip, cliquecons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+            /* add the upgraded constraint to the problem */
+            SCIP_CALL( SCIPaddUpgrade(scip, cons, cliquecons) );
             ++(*naddconss);
 
             /* delete old constraint */
@@ -10651,10 +10655,11 @@ SCIP_RETCODE tightenWeights(
                   SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
                   SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                   SCIPconsIsStickingAtNode(cons)) );
+
+            /* add the special constraint to the problem */
             SCIPdebugMsg(scip, " -> adding clique constraint: ");
             SCIPdebugPrintCons(scip, cliquecons, NULL);
-            SCIP_CALL( SCIPaddCons(scip, cliquecons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+            SCIP_CALL( SCIPaddUpgrade(scip, cons, cliquecons) );
             ++(*naddconss);
          }
 
@@ -10836,12 +10841,15 @@ SCIP_RETCODE tightenWeights(
                               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
                               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                               SCIPconsIsStickingAtNode(cons)) );
+
+                        /* add the special constraint to the problem */
                         SCIPdebugMsg(scip, " -> adding clique constraint: ");
                         SCIPdebugPrintCons(scip, cliquecons, NULL);
-                        SCIP_CALL( SCIPaddCons(scip, cliquecons) );
-                        SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
+                        SCIP_CALL( SCIPaddUpgrade(scip, cons, cliquecons) );
+                        ++(*naddconss);
+
+                        /* free clique array */
                         SCIPfreeBufferArray(scip, &cliquevars);
-                        (*naddconss)++;
                      }
                   }
                }
@@ -12980,8 +12988,8 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
                SCIPprintCons(scip, cardcons, NULL);
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
-               SCIP_CALL( SCIPaddCons(scip, cardcons) );
-               SCIP_CALL( SCIPreleaseCons(scip, &cardcons) );
+               /* add the upgraded constraint to the problem */
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, cardcons) );
                ++(*nupgdconss);
 
                /* delete oknapsack constraint */

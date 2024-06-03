@@ -1106,12 +1106,13 @@ SCIP_RETCODE applyFixings(
                   SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-            SCIP_CALL( SCIPaddCons(scip, newcons) );
 
-            SCIPdebugMsg(scip, "added linear constraint: ");
+            /* add the downgraded constraint to the problem */
+            SCIPdebugMsg(scip, "adding linear constraint: ");
             SCIPdebugPrintCons(scip, newcons, NULL);
-            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+            SCIP_CALL( SCIPaddUpgrade(scip, cons, newcons) );
 
+            /* free constraint arrays */
             SCIPfreeBufferArray(scip, &consvals);
             SCIPfreeBufferArray(scip, &consvars);
 
