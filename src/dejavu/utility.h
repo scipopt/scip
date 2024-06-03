@@ -52,6 +52,7 @@
 
 #if ((defined(_MSVC_LANG) && _MSVC_LANG < 201402L) || __cplusplus < 201402L)
 #define dej_nothreadlocal
+#define dej_nolambda
 #endif
 
 /**
