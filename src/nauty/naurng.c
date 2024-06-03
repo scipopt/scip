@@ -64,6 +64,7 @@ ran_init_2(unsigned long long seed1, unsigned long long seed2)
     kissz = KISSZ;
 
     for (i = 0; i < 1000; ++i) ul = KISS;
+    (void)ul;  //SV avoid unused variable
 }
 
 unsigned long long
@@ -73,7 +74,7 @@ ran_init_time(unsigned long long extra)
    the same initialization. */
 {
     double t;
-    unsigned long long ul,seed;
+    unsigned long long seed;
     REALTIMEDEFS
 
     t = NAUTYREALTIME;
