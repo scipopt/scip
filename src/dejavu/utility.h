@@ -50,6 +50,9 @@
 // #define dej_nolambda
 // #define dej_nothreadlocal
 
+#if (defined(_MSVC_LANG) && _MSVC_LANG < 201402L)
+#define dej_nothreadlocal
+#endif
 
 /**
  * Hash function for unsigned integers.
