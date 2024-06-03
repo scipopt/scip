@@ -672,6 +672,10 @@
  *   the comment starts at column 46 (if column-count starts with 1).
  * - Maximal line length is 120 characters.
  * - Always only one declaration in a line.
+ * - Joint declaration and initialization is possible at the top-level of a function and in the header of loops.
+ *
+ *   @refsnippet{src/scip/cuts.c,SnippetCodeStyleInLoopDeclaration}
+ *
  * - Variable names should be all lower case.
  *
  *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleDeclaration}

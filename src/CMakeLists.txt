@@ -1068,21 +1068,27 @@ if(SHARED)
     set(ZIMPL_NEEDED 0)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
     add_executable(scip main.c ${scipsources} ${objscipsources} ${lpisources} ${tpisources} ${symsources})
+    if(DEFINED NAUTY_TARGET)
+      target_link_libraries(scip PRIVATE ${NAUTY_TARGET})
+    endif()
 else()
     set(SOPLEX_NEEDED ${SOPLEX_FOUND})
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
     if(DEFINED BLISS_TARGET)
+        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
+    elseif(DEFINED NAUTY_TARGET)
         target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
     else()
         target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
     endif()
     add_executable(scip main.c)
     if(DEFINED BLISS_TARGET)
-        target_link_libraries(scip libscip ${BLISS_TARGET})
+        target_link_libraries(scip PUBLIC libscip ${BLISS_TARGET})
     elseif(DEFINED NAUTY_TARGET)
-        target_link_libraries(scip libscip ${NAUTY_TARGET})
+        target_link_libraries(scip PUBLIC libscip)
+        target_link_libraries(scip PRIVATE ${NAUTY_TARGET})
     else()
-        target_link_libraries(scip libscip)
+        target_link_libraries(scip PUBLIC libscip)
     endif()
 endif()
 
@@ -1105,6 +1111,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 target_link_libraries(scip
+   PUBLIC
    ${SYM_LIBRARIES}
    $<$<BOOL:${SCIP_WITH_ZLIB}>:ZLIB::ZLIB>
    ${Readline_LIBRARY}
