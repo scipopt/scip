@@ -1250,23 +1250,13 @@ SCIP_RETCODE upgradeCons(
 	       SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       }
 
-      SCIPdebugMsg(scip, "updated constraint <%s> to the following %s constraint\n", SCIPconsGetName(cons), (nvars == 2 ? "setppc" : "logicor"));
-      SCIPdebugPrintCons(scip, newcons, NULL);
-
       /* add the upgraded constraint to the problem */
-      assert(SCIPconsIsGlobal(cons) || SCIPconsGetValidDepth(cons) == SCIPconsGetActiveDepth(cons));
-      if( SCIPconsIsConflict(cons) )
-      {
-         SCIP_CALL( SCIPaddConflict(scip, SCIPconsIsLocal(cons) ? SCIPgetCurrentNode(scip) : NULL, newcons, NULL, SCIPconsGetConflictType(cons), SCIPconsIsCutoffInvolved(cons)) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPaddCons(scip, newcons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-      }
-
+      SCIPdebugMsg(scip, "upgrading constraint <%s> to the following %s constraint\n", SCIPconsGetName(cons), (nvars == 2 ? "setppc" : "logicor"));
+      SCIPdebugPrintCons(scip, newcons, NULL);
+      SCIP_CALL( SCIPaddUpgrade(scip, cons, newcons) );
       ++(*naddconss);
 
+      /* remove the underlying constraint from the problem */
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
    }
@@ -2595,9 +2585,10 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
                      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                      SCIPconsIsStickingAtNode(cons)) );
                }
-               SCIP_CALL( SCIPaddCons(scip, lincons) );
-               SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
-               (*nupgdconss)++;
+
+               /* add the upgraded constraint to the problem */
+               SCIP_CALL( SCIPaddUpgrade(scip, cons, lincons) );
+               ++(*nupgdconss);
             }
 
             SCIP_CALL( SCIPdelCons(scip, cons) );

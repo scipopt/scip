@@ -1509,6 +1509,33 @@ SCIP_RETCODE SCIPaddCons(
    SCIP_CONS*            cons                /**< constraint to add */
    );
 
+/** adds constraint to the problem and conflict to the conflict store; if constraint is only valid locally, it is added
+ *  to the local subproblem of the current node (and all of its subnodes); otherwise it is added to the global problem;
+ *  if a local constraint is added at the root node, it is automatically upgraded into a global constraint
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note this method will release the upgraded constraint
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPaddUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            oldcons,            /**< underlying constraint to upgrade */
+   SCIP_CONS*            newcons             /**< upgraded constraint to add */
+   );
+
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the
  *  node, where it was added, or from the problem, if it was a problem constraint
  *
