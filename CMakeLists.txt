@@ -121,7 +121,6 @@ set(CMAKE_CXX_STANDARD 14)
 #search the selected symmetry computation program
 message(STATUS "Finding symmetry computation program \"${SYM}\"")
 
-unset(BLISS_TARGET)
 unset(NAUTY_TARGET)
 if(SYM STREQUAL "bliss" OR SYM STREQUAL "sbliss")
     if(SYM STREQUAL "bliss")
