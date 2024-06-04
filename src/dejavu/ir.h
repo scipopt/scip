@@ -1283,9 +1283,15 @@ namespace dejavu {
              */
             void find_sparse_optimized_base(sgraph *g, controller *state) {
                 // some settings for heuristics
+                #ifndef dej_noconstexpr
                 constexpr int base_lim = 1000;
                 constexpr int test_lim_pre  = 512;
                 constexpr int test_lim_post = 1;
+                #else
+                const int base_lim = 1000;
+                const int test_lim_pre  = 512;
+                const int test_lim_post = 1;
+                #endif
 
                 state->mode_write_base();
 
@@ -1614,7 +1620,11 @@ namespace dejavu {
              */
             void find_early_trace_deviation_base(sgraph *g, controller* state, controller* state_probe, int perturbe) {
                 state->mode_write_base();
+                #ifndef dej_noconstexpr
                 constexpr int probe_limit = 5;
+                #else
+                const int probe_limit = 5;
+                #endif
 
                 state_probe->link(state);
                 state_probe->mode_compare_base();

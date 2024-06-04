@@ -129,7 +129,11 @@ namespace dejavu {
                     return;
                 }
 
+                #ifndef dej_noconstexpr
                 constexpr int size_threshold = 1000;
+                #else
+                const int size_threshold = 1000;
+                #endif
 
                 // do efficient loading if parent is the same as previous load
                 if(next_node_save != last_load || g->v_size < size_threshold) { // TODO heuristic to check how much has changed
