@@ -1568,6 +1568,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    {
       SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &graphs[c], symvars, nsymvars, 10, 10, 1, 100) );
 
+      success = FALSE;
       switch ( symtype )
       {
       case SYM_SYMTYPE_PERM:
