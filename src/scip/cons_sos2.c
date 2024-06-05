@@ -2257,6 +2257,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
    int i;
    int j;
 
+   assert(success != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2306,6 +2308,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
    SCIPfreeBufferArray(scip, &locvals);
    SCIPfreeBufferArray(scip, &locvars);
 
+   *success = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -2327,6 +2331,8 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS2)
    int nvars;
    int i;
    int j;
+
+   assert(success != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2415,6 +2421,8 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS2)
 
    SCIPfreeBufferArray(scip, &locvals);
    SCIPfreeBufferArray(scip, &locvars);
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
