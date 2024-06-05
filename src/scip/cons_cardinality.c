@@ -3238,6 +3238,9 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphCardinality)
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
 
+   assert(success != NULL);
+   *success = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -3376,6 +3379,9 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphCardinality)
 
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
+
+   assert(success != NULL);
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
