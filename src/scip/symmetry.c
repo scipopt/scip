@@ -1678,7 +1678,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
       for (p = 0; p < nselectedperms; ++p)
       {
          perm = perms[selectedperms[p]];
-         for (v = colorbegins[c]; compidx[v] == compidx[colorbegins[c]] && v < nposdegree; ++v)
+         for (v = colorbegins[c]; v < nposdegree && compidx[v] == compidx[colorbegins[c]]; ++v)
          {
             if ( perm[varidx[v]] != varidx[v] )
             {
