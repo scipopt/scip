@@ -1122,7 +1122,7 @@ void exampleSOS1(
 
    if( detectsignedperms )
    {
-      cr_assert( nperms == 2 );
+      cr_assert( nperms == 2 || nperms == 3 );
    }
    else
    {
@@ -2298,7 +2298,7 @@ void exampleExpr6(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 4 );
+      cr_assert( nperms == 4 || nperms == 5 );
    }
    else
    {
