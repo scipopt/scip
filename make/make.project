@@ -117,7 +117,6 @@ SHARED		=	false
 NOBLKMEM	=	false
 NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
-BLISSEXTERNAL	=	false
 NAUTYEXTERNAL	=	false
 
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
@@ -531,21 +530,11 @@ TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 #-----------------------------------------------------------------------------
 
 ifeq ($(SYM),bliss)
-ifeq ($(BLISSEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
-endif
 endif
 
 ifeq ($(SYM),sbliss)
-ifeq ($(BLISSEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
-endif
 CXXFLAGS	+=	$(CXX17FLAG)
 endif
 
