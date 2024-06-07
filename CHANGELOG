@@ -85,8 +85,6 @@ Features
 Performance improvements
 ------------------------
 
-- changed the default symmetry computation package from sassy+bliss to sassy+nauty
-
 Fixed bugs
 ----------
 
@@ -129,6 +127,9 @@ Interface changes
 
 Build system
 ------------
+
+- changed the default symmetry computation package from sassy+bliss to sassy+nauty
+- bliss source is no longer included in the source tree, but can be linked as external library (https://github.com/ds4dm/Bliss)
 
 ### Makefile
 
