@@ -10552,6 +10552,8 @@ SCIP_RETCODE addSymmetryInformation(
    SCIPfreeBufferArray(scip, &openidx);
    SCIPfreeExpriter(&it);
 
+   *success = TRUE;
+
    return SCIP_OKAY;
 }
 

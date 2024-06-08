@@ -608,6 +608,8 @@ SCIP_RETCODE addSymmetryInformation(
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
 
+   *success = TRUE;
+
    return SCIP_OKAY;
 }
 

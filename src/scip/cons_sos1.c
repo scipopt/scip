@@ -10244,6 +10244,9 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
    SCIPfreeBufferArray(scip, &locvals);
    SCIPfreeBufferArray(scip, &locvars);
 
+   assert(success != NULL);
+   *success = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -10345,6 +10348,9 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS1)
 
    SCIPfreeBufferArray(scip, &locvals);
    SCIPfreeBufferArray(scip, &locvars);
+
+   assert(success != NULL);
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
