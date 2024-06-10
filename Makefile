@@ -364,6 +364,7 @@ SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC		=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 FLAGS		+=	-I$(LIBDIR)/include/
 ALLSRC		+=	$(SYMSRC)
+CXXFLAGS	+=	$(CXX17FLAG)
 SOFTLINKS	+=	$(LIBDIR)/include/bliss
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -382,6 +383,7 @@ SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
 ifeq ($(NAUTYEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
+LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/nauty
 NAUTYOBJ	=	nauty/nauty.o
 NAUTYOBJ	+=      nauty/nautil.o
 NAUTYOBJ	+=      nauty/nausparse.o
@@ -392,14 +394,16 @@ SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(NAUTYOBJ))
 SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(NAUTYOBJ:.o=.c))
 else
 FLAGS		+=	-I$(LIBDIR)/include/
-endif
-ALLSRC		+=	$(SYMSRC)
-ifeq ($(NAUTYEXTERNAL),true)
 SOFTLINKS	+=	$(LIBDIR)/include/nauty
+ifeq ($(SHARED),true)
+SOFTLINKS	+=	$(LIBDIR)/shared/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+else
 SOFTLINKS	+=	$(LIBDIR)/static/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+endif
 LPIINSTMSG	+=	"\n  -> \"nautyinc\" is the path to the Nauty directory, e.g., \"<Nauty-path>\".\n"
 LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<Nauty-path>/nauty.a\"\n"
 endif
+ALLSRC		+=	$(SYMSRC)
 endif
 
 SYMOPTIONS	+=	snauty
@@ -410,6 +414,7 @@ SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(NAUTYEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
+LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/nauty
 NAUTYOBJ	=	nauty/nauty.o
 NAUTYOBJ	+=      nauty/nautil.o
 NAUTYOBJ	+=      nauty/nausparse.o
@@ -420,14 +425,17 @@ SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(NAUTYOBJ))
 SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(NAUTYOBJ:.o=.c))
 else
 FLAGS		+=	-I$(LIBDIR)/include/
-endif
-ALLSRC		+=	$(SYMSRC)
-ifeq ($(NAUTYEXTERNAL),true)
 SOFTLINKS	+=	$(LIBDIR)/include/nauty
+ifeq ($(SHARED),true)
+SOFTLINKS	+=	$(LIBDIR)/shared/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+else
 SOFTLINKS	+=	$(LIBDIR)/static/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+endif
 LPIINSTMSG	+=	"\n  -> \"nautyinc\" is the path to the Nauty directory, e.g., \"<Nauty-path>\".\n"
 LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<Nauty-path>/nauty.a\"\n"
 endif
+ALLSRC		+=	$(SYMSRC)
+CXXFLAGS	+=	$(CXX17FLAG)
 endif
 
 #-----------------------------------------------------------------------------
@@ -521,6 +529,18 @@ ifeq ($(READLINE_LDFLAGS),true)
 SCIPLIBEXTLIBS	+=	$(READLINE_LDFLAGS)
 endif
 SCIPLIBEXTLIBS	+=	$(ZIMPLLIB)
+ifeq ($(SYM),bliss)
+SCIPLIBEXTLIBS	+=	$(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
+ifeq ($(SYM),sbliss)
+SCIPLIBEXTLIBS	+=	$(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
+ifeq ($(SYM)-$(NAUTYEXTERNAL),nauty-true)
+SCIPLIBEXTLIBS	+=	$(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
+ifeq ($(SYM)-$(NAUTYEXTERNAL),snauty-true)
+SCIPLIBEXTLIBS	+=	$(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
 ifneq ($(LINKRPATH),)
 SCIPLIBEXTLIBS	+=	$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
 endif
