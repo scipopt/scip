@@ -190,6 +190,7 @@ Fixed bugs
 - update effective root depth iteratively to avoid trapping it at a single child node
 - fixed that dualsparsify presolver did not always check do-not-multiaggregate variable flag
 - fixed bug in computing elements of orbits in orbital reduction
+- fixed that multi-aggregations from PaPILO were accepted without ensuring that their bounds hold
 
 Miscellaneous
 -------------
