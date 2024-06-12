@@ -26,6 +26,88 @@
  * @ingroup OTHER_CFILES
  * @brief   Methods for detecting network (sub)matrices
  * @author Rolf van der Hulst
+ * Detecting if a matrix is a network matrix can be quite complex. Below is an introductory text, which may help with
+ * navigating the functions and datastructures in this file by giving a general overview.
+ * More details can be found in;
+ * R.P. van der Hulst and M.Walter "A row-wise algorithm for graph realization"
+ * and
+ * R.E. Bixby and D.K. Wagner "An almost linear-time algorithm for graph realization"
+ * for the column-wise algorithm.
+ *
+ * The main difficulty with detecting network matrices is that there may exist many pairs of a graph and a spanning tree
+ * that realize a matrix. The ambiguity of these graphs may be characterized in terms of \f$k\f$-separations on the
+ * graph associated to the network matrix. An edge partition \f$(E_1,E_2)\f$ is considered a \f$k\f$-separation if
+ * \f$|E_i|\geq k \f$ holds for \f$i\in\{1,2\}\f$. The ambiguity of network matrices is completely given by all
+ * the 1-separations and 2-separations of the associated graph(s). In particular, if the graph realizing a
+ * network matrix is 3-connected, then it is unique, up to inverting all edges of the graph.
+ *
+ * A 1-separation given by edge sets \f$(E_1,E_2)\f$, which is given by a singular node that is referred to as an
+ * articulation node, implies that no column of the network matrix contains edges in both \f$E_1\f$ and \f$E_2\f$.
+ * Remember that each edge in a realizing graph is associated with a row or column of the network matrix. Then, we have
+ * a 1-separation exactly when the network matrix contains two (or more) disconnected blocks, where the rows and columns
+ * of each block are contained in either \f$E_1\f$ or \f$E_2\f$. To obtain a graph realizing our network matrix, we can
+ * attach the graph realizing \f$E_2\f$ at any node of the graph realizing \f$E_1\f$.
+ * Thus, we store the graphs corresponding to the connected blocks of the network matrix separately.
+ * Each block has a 2-connected realization graph.
+ *
+ * If a graph \f$G\f$ realizing the network matrix has a 2-separation \f$(E_1,E_2)\f$ at vertices u and v, then we can
+ * obtain an another graph representing the network matrix, by inverting the direction of all edges in \f$E_2\f$ and
+ * replacing u by v and vice-versa, to obtain a different graph that realizes the network matrix. One can also imagine
+ * adding a virtual edge \f$e'=\{u,v\}\f$ to both E_1 and E_2. In the trivial realization, we simply map the head of
+ * \f$e'\f$ in \f$E_1\f$ to the head of \f$e'\f$ in \f$E_2\f$ and remove \f$e'\f$ from both graphs. In the second
+ * realization we do the same thing, but first invert all the edges in \f$E_2\f$, including \f$e'\f$.
+ * An SPQR tree \f$\mathcal{T}=(\mathcal{V},\mathcal{E})\f$ is a tree data structure that represents the structure of
+ * all 2-separations in a 2-connected graph. Each member \f$\nu\in\mathcal{V}\f$ has an associated skeleton graph that
+ * has one of four different types;
+ * (S) - The member's skeleton graph is a cycle with at least 3 edges (also referred to as series or polygon)
+ * (P) - The member's skeleton graph consists of at least 3 parallel edges and 2 nodes (also referred to as bond)
+ * (Q) - The member's skeleton graph consists of at most 2 edges connecting two nodes (also referred to as loop)
+ * (R) - The member's skeleton graph is 3-connected and consists of at least 4 edges.
+ *
+ * An SPQR tree is considered minimal if it has no P-P or S-S connections. Each connected matrix has a unique minimal
+ * SPQR tree. Each edge \f$\{\nu,\mu\}\in\mathcal{E}\f$ defines a 2-separation of the underlying graph. In particular,
+ * each edge has one virtual edge in the member graph that it connects to the other member graph in the edge.
+ *
+ * We can obtain a realization of the graph underlying the network matrix by doing the following operations;
+ * 1. Permute the edges of each (S)-member arbitrarily
+ * 2. For each edge in $\mathcal{E}$, pick one of the two orientations of the virtual edges and merge the adjacent
+ *    member graphs accordingly.
+ * In this way, all the graphs given by the network matrix are represented. In order to efficiently perform the merge
+ * of two member graphs, the member and node labels are given by union-find datastructures. Additionally, we also
+ * introduce a signed-union find datastructure on the arcs of the graphs, so that we can efficiently invert the arcs
+ * of one side of a 2-separation.
+ * The 1-separations can be handled by storing an SPQR forest, with a (minimal) SPQR tree for every connected block
+ * of the network matrix.
+ *
+ * For adding a column to the network matrix, one can show that one can add a column only if the nonzeros of the column
+ * Form a path with the correct signs in some graph represented by the network matrix. We solve the problem for each
+ * graph represented by the network matrix simultaneously by decomposing over the SPQR tree. First, we compute the path
+ * in each member. Then, we attempt to combine the paths by orienting the 2-separations so that the different member
+ * paths form a path in the represented graph.
+ * If some member has a set of edges that do not form a path, we can terminate.
+ * An important step is 'propagation'; when we are in a leaf node of the sub-SPQR tree containing path edges and the
+ * path in our leaf node forms a cycle with the virtual arc e connecting to the rest of the sub-tree, then we can
+ * remove the leaf node from the SPQR tree and mark the virtual arc f that is paired with e.
+ * After performing all such propagations, the sub-SPQR tree should form a path. Then, we merge these members into one,
+ * forming a single path. By adding the new column edge to the end nodes of this path, we form a new member of type R.
+ * Finally, we can easily join the paths of multiple SPQR trees using a series node to obtain the final path.
+ *
+ * The ideas for the row-wise algorithm have many parallels with the column-wise algorithm. One can add a row to a
+ * network matrix if and only if a node is 'splittable' with respect to a certain auxilliary graph formed by the nonzero
+ * columns indices of the row, for a graph represented by the network matrix. In particular, this auxilliary graph must
+ * be a directed bipartite graph; then, the arcs incident to the given node can be reassigned to two new nodes, so that
+ * the paths of the columns corresponding to the nonzeros of the row can be elongated to contain the new row, which is
+ * placed between the two new nodes.
+ * Similarly to the column-case, splittability of each graph represented by the network matrix can be computed at once
+ * by computing the splittability (and the corresponding bipartition) of every member graph.
+ * Similarly to the column algorithm, we can propagate; If a member is a leaf of the SPQR tree and both nodes of the
+ * 2-separation connecting it to the rest of graph are splittable, then we can and update our datastructures to.
+ * Finally, we are left with some minimal subtree with splittable vertices for each member graph. If we can merge all
+ * splittable vertices of the member graphs in the subtree into a single splittable vertex, then we perform this merge,
+ * and split this vertex. This yields us a new, larger node of type R.
+ *
+ *
+ * TODO: fix tracking connectivity more cleanly, should not be left up to the algorithms ideally
  */
 
 #include "scip/network.h"
@@ -861,12 +943,13 @@ static SCIP_Bool arcIsTree(
    return SPQRelementIsRow(dec->arcs[arc].element);
 }
 
+/** Output data structure that stores both the arc's sign and representative*/
 typedef struct
 {
    spqr_arc representative;
    SCIP_Bool reversed;
 } ArcSign;
-//find
+
 #ifndef NDEBUG
 
 static SCIP_Bool arcIsRepresentative(
@@ -1017,14 +1100,15 @@ static spqr_node findEffectiveArcTailNoCompression(
    }
 }
 
-///Merge for signed union find of the arc directions.
-///Is not symmetric, in the sense that the arc directions of coponent first are guaranteed not to change but those of second may change
-///Based on whether one wants the reflection or not
+/** Merges the sign union-find structures for two arc sets. If reflectRelative is set to true then all arcs of the
+ * represented by the second arc are reversed w.r.t. their current orientation. Otherwise, all arcs keep the same
+ * reversed status with respect to the root node of the union find tree.
+ */
 static spqr_arc mergeArcSigns(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc first,
-   spqr_arc second,
-   SCIP_Bool reflectRelative
+   SCIP_NETMATDECDATA*   dec,                /**< The decomposition data structure */
+   spqr_arc              first,              /**< Representative arc of the first arc set */
+   spqr_arc              second,             /**< Representative arc of the second arc set */
+   SCIP_Bool             reflectRelative     /**< Should all arcs in the second arc set be reversed?*/
 )
 {
    assert(dec);
@@ -1035,7 +1119,7 @@ static spqr_arc mergeArcSigns(
    assert(second < dec->memArcs);
 
    //The rank is stored as a negative number: we decrement it making the negative number larger.
-   // We want the new root to be the one with 'largest' rank, so smallest number. If they are equal, we decrement.
+   //We want the new root to be the one with 'largest' rank, so smallest number. If they are equal, we decrement.
    spqr_member firstRank = dec->arcs[first].representative;
    spqr_member secondRank = dec->arcs[second].representative;
 
@@ -1049,6 +1133,7 @@ static spqr_arc mergeArcSigns(
       --dec->arcs[first].representative;
    }
    //These boolean formula's cover all 16 possible cases, such that the relative orientation of the first is not changed
+   //but the relative orientation of the second is changed based on whether we want to reflect.
    SCIP_Bool equal = dec->arcs[first].reversed == dec->arcs[second].reversed;
    dec->arcs[second].reversed = ( equal == reflectRelative );
    if( firstRank > secondRank )
@@ -1220,7 +1305,7 @@ static SCIP_RETCODE netMatDecDataCreate(
 }
 
 static void netMatDecDataFree(
-   SCIP_NETMATDECDATA**      pdec                /**< pointer to the network matrix decomposition to freed */
+   SCIP_NETMATDECDATA**  pdec                /**< pointer to the network matrix decomposition to freed */
 ){
    assert(pdec);
    assert(*pdec);
@@ -1686,7 +1771,6 @@ static SCIP_RETCODE createStandaloneParallel(
    return SCIP_OKAY;
 }
 
-//TODO: fix tracking connectivity more cleanly, should not be left up to the algorithms ideally
 static SCIP_RETCODE createConnectedParallel(
    SCIP_NETMATDECDATA* dec,
    spqr_col* columns,
@@ -2619,6 +2703,9 @@ static int maxValue(
    return ( a > b ) ? a : b;
 }
 
+/** ---------- START functions for column addition -------------------------------------------------------------------*/
+
+/**< Path arcs are all those arcs that correspond to nonzeros of the column to be added */
 typedef int path_arc_id;
 #define INVALID_PATH_ARC (-1)
 
@@ -2632,14 +2719,18 @@ static SCIP_Bool pathArcIsValid(const path_arc_id arc)
    return !pathArcIsInvalid(arc);
 }
 
+/** A forward linked list-node for the path arcs. Contains a pointer to the next path arc in the member graph and the
+ * next path arc in the SPQR tree. We additionally store copies of the corresponding arc's node indices.
+ */
 typedef struct
 {
-   spqr_arc arc;
-   spqr_node arcHead;//These can be used in various places to prevent additional find()'s
-   spqr_node arcTail;
-   path_arc_id nextMember;
-   path_arc_id nextOverall;
-   SCIP_Bool reversed;
+   spqr_arc arc;                             /**< The arc corresponding to the path arc*/
+   spqr_node arcHead;                        /**< A copy of the arc's head node index */
+   spqr_node arcTail;                        /**< A copy of the arc's tail node index */
+   path_arc_id nextMember;                   /**< Array index of the next path arc in the member path arc linked list*/
+   path_arc_id nextOverall;                  /**< Array index of the next path arc in the total path arc linked list */
+   SCIP_Bool reversed;                       /**< Is the path arc occuring forwards or backwards in the path?
+                                              *   Corresponds to the sign of the nonzero */
 } PathArcListNode;
 
 typedef int reduced_member_id;
@@ -5666,8 +5757,9 @@ static SCIP_RETCODE SCIPnetcoladdAdd(
    return SCIP_OKAY;
 }
 
+/** ---------- END functions for column addition ---------------------------------------------------------------------*/
 
-
+/** ---------- START functions for row addition ----------------------------------------------------------------------*/
 
 static int minValue(
    int a,

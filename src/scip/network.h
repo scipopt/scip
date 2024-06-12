@@ -50,11 +50,12 @@
  * Note that all addition algorithms expect that each nonzero is given exactly once and not more often; in particular,
  * it is up to the user to ensure this when interleaving column and row addition steps.
  *
- * More details can be found in;
+ * More details can be found in:
  * - R.P. van der Hulst and M.Walter "A row-wise algorithm for graph realization"
  * - R.E. Bixby and D.K. Wagner "An almost linear-time algorithm for graph realization"
  * Note that although these publications contain the methods for undirected graphs (and binary matrices),
  * their ideas are relatively easily extended to directed graphs and ternary matrices.
+ * Implementation details are described in further detail in network.c
  */
 
 /** TODO: add method that realizes a SCIP digraph from the decomposition */
