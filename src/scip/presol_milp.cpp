@@ -299,7 +299,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       return SCIP_OKAY;
    }
 
-   /* only allow communication of constraint modifications by deleting all constraints when they have not been upgraded yet */
+   /* only allow communication of constraint modifications by deleting all constraints when some already have been upgraded */
    SCIP_CONSHDLR* linconshdlr = SCIPfindConshdlr(scip, "linear");
    assert(linconshdlr != NULL);
    bool allowconsmodification = (SCIPconshdlrGetNCheckConss(linconshdlr) == SCIPmatrixGetNRows(matrix));
@@ -488,14 +488,65 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    }
 
    /* result indicated success, now populate the changes into the SCIP structures */
+
+   /* tighten bounds of variables that are still present after presolving */
+   VariableDomains<SCIP_Real>& varDomains = problem.getVariableDomains();
+   for( int i = 0; i != problem.getNCols(); ++i )
+   {
+      assert( ! varDomains.flags[i].test(ColFlag::kInactive) );
+      SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
+      if( !varDomains.flags[i].test(ColFlag::kLbInf) )
+      {
+         SCIP_Bool infeas;
+         SCIP_Bool tightened;
+         SCIP_CALL( SCIPtightenVarLb(scip, var, varDomains.lower_bounds[i], TRUE, &infeas, &tightened) );
+
+         if( tightened )
+            *nchgbds += 1;
+
+         if( infeas )
+         {
+            *result = SCIP_CUTOFF;
+            break;
+         }
+      }
+
+      if( !varDomains.flags[i].test(ColFlag::kUbInf) )
+      {
+         SCIP_Bool infeas;
+         SCIP_Bool tightened;
+         SCIP_CALL( SCIPtightenVarUb(scip, var, varDomains.upper_bounds[i], TRUE, &infeas, &tightened) );
+
+         if( tightened )
+            *nchgbds += 1;
+
+         if( infeas )
+         {
+            *result = SCIP_CUTOFF;
+            break;
+         }
+      }
+   }
+
+   if( *result == SCIP_CUTOFF )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+            "   (%.1fs) MILP presolver detected infeasibility\n",
+            SCIPgetSolvingTime(scip));
+      SCIPmatrixFree(scip, &matrix);
+      return SCIP_OKAY;
+   }
+
+   /* transfer variable fixings and aggregations */
    std::vector<SCIP_VAR*> tmpvars;
    std::vector<SCIP_Real> tmpvals;
 
-   /* if the number of nonzeros decreased by a sufficient factor, rather create all constraints from scratch */
+   /* if the size of the problem decreased by a sufficient factor, create all constraints from scratch if allowed */
    int newnnz = problem.getConstraintMatrix().getNnz();
    bool constraintsReplaced = false;
    if( newnnz == 0 || (allowconsmodification &&
-         (problem.getNRows() <= data->modifyconsfac * data->lastnrows ||
+         (problem.getNCols() <= data->modifyconsfac * SCIPmatrixGetNColumns(matrix) ||
+          problem.getNRows() <= data->modifyconsfac * SCIPmatrixGetNRows(matrix) ||
           newnnz <= data->modifyconsfac * oldnnz)) )
    {
       int oldnrows = SCIPmatrixGetNRows(matrix);
@@ -552,6 +603,22 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
    }
+
+   /* PaPILO's aggregations are valid regarding the constraints as they were presolved by PaPILO.
+    * If coefficients were changed, but constraints in SCIP are not replaced by those from PaPILO,
+    * then it can not be guaranteed that the bounds of multiaggregated variables will be enforced,
+    * i.e., will be implied by the constraints in SCIP (see also #3704).
+    * Only for variable aggregations, SCIP will ensure this by tightening the bounds on the aggregation
+    * variable as part of SCIPaggregateVars(). For multiaggregations, we will only accept those
+    * where we can be sure with a simple check that the bounds on the aggregated variable are implied.
+    */
+   bool checkmultaggr =
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
+         presolve.getStatistics().single_matrix_coefficient_changes > 0
+#else
+         presolve.getStatistics().ncoefchgs > 0
+#endif
+         && !constraintsReplaced;
 
    /* loop over res.postsolve and add all fixed variables and aggregations to scip */
    for( std::size_t i = 0; i != res.postsolve.types.size(); ++i )
@@ -654,8 +721,13 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
          {
             SCIP_Real colCoef = 0.0;
             SCIP_Real updatedSide;
+            SCIP_Bool checklbimplied;
+            SCIP_Bool checkubimplied;
+            SCIP_Real impliedlb;
+            SCIP_Real impliedub;
+            int j;
 
-            for( int j = startRowCoefficients; j < lastRowCoefficients; ++j )
+            for( j = startRowCoefficients; j < lastRowCoefficients; ++j )
             {
                if( res.postsolve.indices[j] == col )
                {
@@ -677,14 +749,75 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
             updatedSide = side - constant;
 
-            for( int j = startRowCoefficients; j < lastRowCoefficients; ++j )
+            /* we need to check whether lb/ub on aggrvar is implied by bounds of other variables in multiaggregation
+             * if checkmultaggr is TRUE and the lb/ub is finite
+             * it should be sufficient to ensure global bounds on aggrvar (and as we are in presolve, local=global anyway)
+             */
+            checklbimplied = checkmultaggr && !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(aggrvar));
+            checkubimplied = checkmultaggr && !SCIPisInfinity(scip,  SCIPvarGetUbGlobal(aggrvar));
+            impliedlb = impliedub = updatedSide / colCoef;
+
+            for( j = startRowCoefficients; j < lastRowCoefficients; ++j )
             {
+               SCIP_Real coef;
+               SCIP_VAR* var;
+
                if( res.postsolve.indices[j] == col )
                   continue;
 
-               tmpvars.push_back(SCIPmatrixGetVar(matrix, res.postsolve.indices[j]));
-               tmpvals.push_back(- res.postsolve.values[j] / colCoef);
+               coef = - res.postsolve.values[j] / colCoef;
+               var = SCIPmatrixGetVar(matrix, res.postsolve.indices[j]);
+
+               if( checklbimplied )
+               {
+                  if( coef > 0.0 )
+                  {
+                     /* if impliedlb will be -infinity, then we can give up: we cannot use this mutiaggregation */
+                     if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+                        break;
+                     else
+                        impliedlb += coef * SCIPvarGetLbLocal(var);
+                  }
+                  else
+                  {
+                     if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+                        break;
+                     else
+                        impliedlb += coef * SCIPvarGetUbLocal(var);
+                  }
+               }
+
+               if( checkubimplied )
+               {
+                  if( coef > 0.0 )
+                  {
+                     if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+                        break;
+                     else
+                        impliedub += coef * SCIPvarGetUbLocal(var);
+                  }
+                  else
+                  {
+                     if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+                        break;
+                     else
+                        impliedub += coef * SCIPvarGetLbLocal(var);
+                  }
+               }
+
+               tmpvals.push_back(coef);
+               tmpvars.push_back(var);
             }
+
+            /* if implied bounds are not sufficient to ensure bounds on aggrvar, then we cannot use the multiaggregation */
+            if( j < lastRowCoefficients )
+               break;
+
+            if( checklbimplied && SCIPisGT(scip, SCIPvarGetLbGlobal(aggrvar), impliedlb) )
+               break;
+
+            if( checkubimplied && SCIPisLT(scip, SCIPvarGetUbGlobal(aggrvar), impliedub) )
+               break;
 
             SCIP_CALL( SCIPmultiaggregateVar(scip, aggrvar, tmpvars.size(),
                tmpvars.data(), tmpvals.data(), updatedSide / colCoef, &infeas, &aggregated) );
@@ -769,48 +902,6 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       default:
          SCIPdebugMsg(scip, "PaPILO returned unknown data type: \n" );
          continue;
-      }
-   }
-
-   /* tighten bounds of variables that are still present after presolving */
-   if( *result != SCIP_CUTOFF )
-   {
-      VariableDomains<SCIP_Real>& varDomains = problem.getVariableDomains();
-      for( int i = 0; i != problem.getNCols(); ++i )
-      {
-         assert( ! varDomains.flags[i].test(ColFlag::kInactive) );
-         SCIP_VAR* var = SCIPmatrixGetVar(matrix, res.postsolve.origcol_mapping[i]);
-         if( !varDomains.flags[i].test(ColFlag::kLbInf) )
-         {
-            SCIP_Bool infeas;
-            SCIP_Bool tightened;
-            SCIP_CALL( SCIPtightenVarLb(scip, var, varDomains.lower_bounds[i], TRUE, &infeas, &tightened) );
-
-            if( tightened )
-               *nchgbds += 1;
-
-            if( infeas )
-            {
-               *result = SCIP_CUTOFF;
-               break;
-            }
-         }
-
-         if( !varDomains.flags[i].test(ColFlag::kUbInf) )
-         {
-            SCIP_Bool infeas;
-            SCIP_Bool tightened;
-            SCIP_CALL( SCIPtightenVarUb(scip, var, varDomains.upper_bounds[i], TRUE, &infeas, &tightened) );
-
-            if( tightened )
-               *nchgbds += 1;
-
-            if( infeas )
-            {
-               *result = SCIP_CUTOFF;
-               break;
-            }
-         }
       }
    }
 
