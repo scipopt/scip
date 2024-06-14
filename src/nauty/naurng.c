@@ -87,7 +87,7 @@ ran_init_time(unsigned long long extra)
 }
 
 unsigned long long
-ran_nextran()
+ran_nextran(void)  /*SV added void*/
 /* Make a 64-bit random number */
 {
     return KISS;
