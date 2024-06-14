@@ -1573,6 +1573,20 @@ public:
          SCIP_CALL_THROW( SCIPaddLinearVarNonlinear(scip, objcons, objvar, -1.0) );
          SCIP_CALL_THROW( SCIPaddCons(scip, objcons) );
 
+         if( initsol != NULL )
+         {
+            /* compute value for objvar in initial solution from other variable values */
+            SCIP_CALL_THROW( SCIPevalExpr(scip, objexpr, initsol, 0) );
+            if( SCIPexprGetEvalValue(objexpr) != SCIP_INVALID )
+            {
+               SCIPsetSolVal(scip, initsol, objvar, SCIPexprGetEvalValue(objexpr));
+            }
+            else
+            {
+               SCIPwarningMessage(scip, "Objective function could not be evaluated in initial point. Domain error.");
+            }
+         }
+
          SCIP_CALL_THROW( SCIPreleaseCons(scip, &objcons) );
          SCIP_CALL_THROW( SCIPreleaseVar(scip, &objvar) );
       }
