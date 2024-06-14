@@ -140,6 +140,11 @@ Build system
 Testing
 -------
 
+Miscellaneous
+-------------
+
+- updated nauty to version 2.8.8
+
 @section RN902 SCIP 9.0.2
 *************************
 
