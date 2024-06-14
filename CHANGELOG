@@ -10,6 +10,7 @@ Fixed bugs
 - check knapsack constraints as linear constraints to avoid violations based on implicit integrality
 - make sure that symmetry detection callbacks report success
 - make arithmetics in cuts.c more robust to avoid invalid scg cuts due to numerical rounding sensitivity
+- allow to copy cons_pseudoboolean even if no AND constraints are present in order to avoid a warning
 - set value for variable that is introduced to reformulate nonlinear objective function when reading .nl files with initial solution
 
 Miscellaneous
