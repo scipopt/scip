@@ -3876,7 +3876,7 @@ SCIP_RETCODE copyConsPseudoboolean(
          assert(SCIPconsGetHdlr(targetlincons) != NULL);
          /* @note  due to copying special linear constraints, now leads only to simple linear constraints, we check that
           *        our target constraint handler is the same as our source constraint handler of the linear constraint,
-          *        if not copying was not valid
+          *        if copying was not valid
           */
          if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(targetlincons)), "linear") == 0 )
             targetlinconstype = SCIP_LINEARCONSTYPE_LINEAR;
@@ -3977,13 +3977,6 @@ SCIP_RETCODE copyConsPseudoboolean(
          assert(ntargetandconss <= ntargetlinvars);
       }
 
-      /* no correct pseudoboolean constraint */
-      if( ntargetandconss == 0 )
-      {
-         SCIPdebugMsg(sourcescip, "no and-constraints copied for pseudoboolean constraint <%s>\n", SCIPconsGetName(sourcecons));
-         *valid = FALSE;
-      }
-
       if( *valid )
       {
          SCIP_Real targetrhs;
@@ -4027,6 +4020,7 @@ SCIP_RETCODE copyConsPseudoboolean(
             /* create new pseudoboolean constraint */
             /* coverity[var_deref_op] */
             /* coverity[var_deref_model] */
+            /* Note that due to compression the and constraints might have disappeared in which case ntargetandconss == 0. */
             SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
                   targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
                   indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, targetlhs, targetrhs,
@@ -9369,9 +9363,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    assert(cons != NULL);
    assert(lincons != NULL);
    assert(linconstype > SCIP_LINEARCONSTYPE_INVALIDCONS);
-   assert(andconss != NULL);
-   assert(andcoefs != NULL);
-   assert(nandconss >= 1);
+   assert(nandconss == 0 || (andconss != NULL && andcoefs != NULL));
    assert(issoftcons == (indvar != NULL));
 
    if( intvar != NULL )
