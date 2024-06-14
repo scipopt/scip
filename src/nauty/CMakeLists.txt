@@ -5,14 +5,11 @@ project(nauty)
 
 # Add the source files
 set(SOURCE_FILES
-    gtools.c
-    naugroup.c
-    naurng.c
-    nausparse.c
     nauty.c
-    nautycliquer.c
-    schreier.c
     nautil.c
+    nausparse.c
+    schreier.c
+    naurng.c
 )
 
 # fPIC
