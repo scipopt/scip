@@ -7,6 +7,7 @@ Features
 - Copy variable data pointer if no copy routine was supplied.
 
 - added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
+- implemented symmetry detection callbacks for cons_disjunction
 
 Performance improvements
 ------------------------
