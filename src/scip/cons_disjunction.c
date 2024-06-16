@@ -459,7 +459,7 @@ SCIP_RETCODE copySymgraph(
    int*                  rootidx             /**< pointer to hold index of root node of sourcegraph in targetgraph
                                               *   (or -1 if root cannot be detected) */
    )
-{
+{  /*lint --e{788}*/
    SYM_NODETYPE nodetype;
    int* nodeinfopos;
    int* nodemap;
