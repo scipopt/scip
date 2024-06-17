@@ -41,7 +41,7 @@
 namespace scip
 {
 
-/** @brief C++ wrapper for primal heuristics
+/** @brief C++ wrapper for node selectors
  *
  *  This class defines the interface for node selectors implemented in C++. Note that there is a pure virtual
  *  function (this function has to be implemented). This function is: scip_comp().
