@@ -981,14 +981,6 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  @subpage POLYSCIP_MAIN
- *  </td>
- *  <td>
- *  A solver for multi-objective optimization problems.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
  *  @subpage RINGPACKING_MAIN "Ringpacking"
  *  </td>
  *  <td>
