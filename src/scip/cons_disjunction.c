@@ -449,105 +449,6 @@ SCIP_RETCODE enforceConstraint(
    return SCIP_OKAY;
 }
 
-/** copies a symmetry detection graph into another symmetry detection graph */
-static
-SCIP_RETCODE copySymgraph(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SYM_GRAPH*            sourcegraph,        /**< graph to be copied */
-   SYM_GRAPH*            targetgraph,        /**< graph into which copy shall be included */
-   SCIP_CONS*            sourcecons,         /**< constraint associated with sourcegraph */
-   int*                  rootidx             /**< pointer to hold index of root node of sourcegraph in targetgraph
-                                              *   (or -1 if root cannot be detected) */
-   )
-{  /*lint --e{788}*/
-   SYM_NODETYPE nodetype;
-   int* nodeinfopos;
-   int* nodemap;
-   int nnodes;
-   int first;
-   int second;
-   int nodeidx;
-   int i;
-
-   assert(scip != NULL);
-   assert(sourcegraph != NULL);
-   assert(targetgraph != NULL);
-   assert(sourcecons != NULL);
-   assert(rootidx != NULL);
-
-   *rootidx = -1;
-
-   /* copy nodes */
-   nnodes = sourcegraph->nnodes;
-   nodeinfopos = sourcegraph->nodeinfopos;
-
-   /* prepare map of node index from sourcegraph to indices in copied graph */
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodemap, nnodes) );
-
-   for( i = 0; i < nnodes; ++i )
-   {
-      nodetype = sourcegraph->nodetypes[i];
-
-      switch( nodetype )
-      {
-      case SYM_NODETYPE_OPERATOR:
-         SCIP_CALL( SCIPaddSymgraphOpnode(scip, targetgraph, sourcegraph->ops[nodeinfopos[i]], &nodeidx) );
-         break;
-      case SYM_NODETYPE_VAL:
-         SCIP_CALL( SCIPaddSymgraphValnode(scip, targetgraph, sourcegraph->vals[nodeinfopos[i]], &nodeidx) );
-         break;
-      default:
-         assert(nodetype == SYM_NODETYPE_CONS);
-         SCIP_CALL( SCIPaddSymgraphConsnode(scip, targetgraph, sourcegraph->conss[nodeinfopos[i]],
-               sourcegraph->lhs[nodeinfopos[i]], sourcegraph->rhs[nodeinfopos[i]], &nodeidx) );
-
-         if( sourcegraph->conss[nodeinfopos[i]] == sourcecons )
-         {
-            /* store the root node of sourcegraph; if there are multiple nodes that could qualify
-             * as root, stop; we cannot identify root node unambiguously
-             */
-            if( *rootidx == -1 )
-               *rootidx = nodeidx;
-            else
-            {
-               *rootidx = -1;
-               SCIPfreeBufferArray(scip, &nodemap);
-               return SCIP_OKAY;
-            }
-         }
-      }
-      assert(0 <= nodeidx && nodeidx < targetgraph->nnodes);
-
-      nodemap[i] = nodeidx;
-   }
-
-   /* terminate early if root node could not be detected */
-   if( *rootidx == -1 )
-   {
-      SCIPfreeBufferArray(scip, &nodemap);
-      return SCIP_OKAY;
-   }
-
-   /* copy edges */
-   for( i = 0; i < sourcegraph->nedges; ++i )
-   {
-      first = SCIPgetSymgraphEdgeFirst(sourcegraph, i);
-      second = SCIPgetSymgraphEdgeSecond(sourcegraph, i);
-
-      /* adapt indices from source graph to target graph in case of non-variable nodes  */
-      if( first >= 0 )
-         first = nodemap[first];
-      if( second >= 0 )
-         second = nodemap[second];
-
-      SCIP_CALL( SCIPaddSymgraphEdge(scip, targetgraph, first, second,
-            !SCIPisInfinity(scip, sourcegraph->edgevals[i]), sourcegraph->edgevals[i]) );
-   }
-   SCIPfreeBufferArray(scip, &nodemap);
-
-   return SCIP_OKAY;
-}
-
 /** adds symmetry information of constraint to a symmetry detection graph */
 static
 SCIP_RETCODE addSymmetryInformation(
@@ -601,12 +502,14 @@ SCIP_RETCODE addSymmetryInformation(
    /* start building the symmetry detection graph for the disjunctive constraint */
    SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &rootnode) );
 
+   /* copy of graph: most constraints are linear, use modest estimation of number of nodes */
+   SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &symgraph, SCIPgetVars(scip), SCIPgetNVars(scip),
+         5, 5, 1, SCIPgetNVars(scip)) );
+
    /* for each constraint, build the symmetry detection graph and copy it to the global graph */
    for( c = 0; c < consdata->nconss && *success; ++c )
    {
-      /* most constraints are linear, use modest estimation of number of nodes */
-      SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &symgraph, SCIPgetVars(scip), SCIPgetNVars(scip),
-            5, 5, 1, SCIPgetNVars(scip)) );
+      SCIP_CALL( SCIPclearSymgraph(scip, symgraph, SCIPgetVars(scip), SCIPgetNVars(scip), symtype) );
 
       if( symtype == SYM_SYMTYPE_PERM )
       {
@@ -622,7 +525,7 @@ SCIP_RETCODE addSymmetryInformation(
       if( *success )
       {
          /* copy the symmetry detection graph and find its root node with index in target graph */
-         SCIP_CALL( copySymgraph(scip, symgraph, graph, consdata->conss[c], &subroot) );
+         SCIP_CALL( SCIPcopySymgraphAsSubgraph(scip, symgraph, graph, consdata->conss[c], &subroot) );
 
          if( subroot < 0 )
             *success = FALSE;
@@ -630,9 +533,8 @@ SCIP_RETCODE addSymmetryInformation(
          /* connect root of disjunction constraint with root of copied graph */
          SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnode, subroot, FALSE, 0.0) );
       }
-
-      SCIP_CALL( SCIPfreeSymgraph(scip, &symgraph) );
    }
+   SCIP_CALL( SCIPfreeSymgraph(scip, &symgraph) );
 
    return SCIP_OKAY;
 }
