@@ -608,7 +608,16 @@ SCIP_RETCODE addSymmetryInformation(
       SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &symgraph, SCIPgetVars(scip), SCIPgetNVars(scip),
             5, 5, 1, SCIPgetNVars(scip)) );
 
-      SCIP_CALL( SCIPgetConsPermsymGraph(scip, consdata->conss[c], symgraph, success) );
+      if( symtype == SYM_SYMTYPE_PERM )
+      {
+         SCIP_CALL( SCIPgetConsPermsymGraph(scip, consdata->conss[c], symgraph, success) );
+      }
+      else
+      {
+         assert(symtype == SYM_SYMTYPE_SIGNPERM);
+
+         SCIP_CALL( SCIPgetConsSignedPermsymGraph(scip, consdata->conss[c], symgraph, success) );
+      }
 
       if( *success )
       {
