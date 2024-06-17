@@ -78,7 +78,7 @@ option(AMPL "should ampl interface be compiled" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(LAPACK "should lapack be linked" OFF)
 option(WORHP "should worhp be linked" OFF)
-# for backward compability
+# for backward compatibility
 option(PARASCIP "should scip be compiled thread safe (deprecated, use THREADSAFE)" OFF)
 option(THREADSAFE "should scip be compiled thread safe" ON)
 option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
