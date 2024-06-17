@@ -360,13 +360,13 @@ Miscellaneous
 
 - The TPI has been changed to become mostly independent from the actual parallel interface during compile time.
   For this, the locks and conditions are now pointers to abstract structs.
-- fixed that scip/def.h, the header for C preprocessor definition (#define's), included headers for some SCIP type and function definitions
+- fixed that scip/def.h, the header for C preprocessor definition (`#define`'s), included headers for some SCIP type and function definitions
   (scip/type_retcode.h, scip/type_message.h, scip/pub_message.h)
 
 
-@page RN80 Release notes for SCIP 8.1
+@page RN81 Release notes for SCIP 8.1
 
-@section RN805 SCIP 8.1.0
+@section RN810 SCIP 8.1.0
 *************************
 
 Fixed bugs

@@ -405,6 +405,7 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
+ * - \subpage RN81         "SCIP 8.1"
  * - \subpage RN80         "SCIP 8.0"
  * - \subpage RN70         "SCIP 7.0"
  * - \subpage RN60         "SCIP 6.0"
@@ -8481,7 +8482,7 @@
  *    symmetries.
  * -# Orbital reduction is a generalization of orbital fixing that also works for non-binary variable domains.
  *    Orbital reduction respects the 2-bit of the bitset <code>misc/usesymmetry</code>.
- *    See \ref SYMMETHODSELECT <method selection>. Since there is no static counterpart, this method ignores
+ *    See \ref SYMMETHODSELECT "method selection". Since there is no static counterpart, this method ignores
  *    <code>propagating/symmetry/usedynamicprop</code>.
  *
  * In all cases, the dynamic variable ordering is derived from the branching decisions.

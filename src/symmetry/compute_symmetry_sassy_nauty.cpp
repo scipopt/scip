@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   compute_symmetry_sassy_nauty.c
+/**@file   compute_symmetry_sassy_nauty.cpp
  * @brief  interface for symmetry computations to sassy as a preprocessor to nauty
  * @author Marc Pfetsch
  * @author Gioni Mexi

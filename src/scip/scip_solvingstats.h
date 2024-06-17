@@ -104,8 +104,6 @@ int SCIPgetNReoptRuns(
 
 /** add given number to the number of processed nodes in current run and in all runs, including the focus node
  *
- *  @return the number of processed nodes in current run, including the focus node
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -1633,9 +1631,7 @@ SCIP_Real SCIPgetAvgGMIeff(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the average normalized efficacy of a GMI cut over all variables
- *
- *  @return increases the average normalized efficacy of a GMI cut over all variables
+/** increases the average normalized efficacy of a GMI cut over all variables
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
