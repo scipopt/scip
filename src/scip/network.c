@@ -106,6 +106,14 @@
  * splittable vertices of the member graphs in the subtree into a single splittable vertex, then we perform this merge,
  * and split this vertex. This yields us a new, larger node of type R.
  *
+ * Implementation notes:
+ * 1. Quite a few algorithms used for network matrix detection are recursive in nature. However, recursive calls can
+ * cause stack overflows, particularly with large graphs. Quite frequently in the code, we need to allocate the
+ * call-data of these algorithms on the heap, instead, and use while loops to simulate the recursion.
+ *
+ * 2. In order to make the code fast in practice, a lot of emphasis is put on reusing allocated memory and avoiding
+ *   allocations. In particular for the column-wise algorithm, even allocating and zeroing an array of size m+n for an
+ *   m x n matrix can significantly slow down the code!
  *
  * TODO: fix tracking connectivity more cleanly, should not be left up to the algorithms ideally
  */
@@ -2733,6 +2741,8 @@ typedef struct
                                               *   Corresponds to the sign of the nonzero */
 } PathArcListNode;
 
+/**< Index for the reduced members, which are the members of the sub-SPQR tree containing all path arcs.
+ *   Note that these are indexed separately from the members of the SPQR tree! */
 typedef int reduced_member_id;
 #define INVALID_REDUCED_MEMBER (-1)
 
@@ -2746,22 +2756,29 @@ static SCIP_Bool reducedMemberIsValid(const reduced_member_id id)
    return !reducedMemberIsInvalid(id);
 }
 
+/**< Array index for the children of a reduced member */
 typedef int children_idx;
 
+/**< Type of the member, signifies to what degree we processed the member and how to treat with it when updating the
+ * graph */
 typedef enum
 {
-   REDUCEDMEMBER_TYPE_UNASSIGNED = 0,
-   REDUCEDMEMBER_TYPE_CYCLE = 1,
-   REDUCEDMEMBER_TYPE_MERGED = 2,
-   REDUCEDMEMBER_TYPE_NOT_NETWORK = 3
+   REDUCEDMEMBER_TYPE_UNASSIGNED = 0,        /**< We have not yet decided if the reduced member contains a valid path */
+   REDUCEDMEMBER_TYPE_CYCLE = 1,             /**< The reduced member is a leaf node of the SPQR tree and contains a path
+                                                * that forms a cycle with the corresponding virtual edge, i.e.
+                                                * it is propagated */
+   REDUCEDMEMBER_TYPE_MERGED = 2,            /**< The reduced member contains a path and is not propagated */
+   REDUCEDMEMBER_TYPE_NOT_NETWORK = 3        /**< The reduced member does not have a valid path or can not be oriented
+                                                * to form a valid path with the other members. */
 } ReducedMemberType;
 
+/**< Defines the structure of the path in the reduced member */
 typedef enum
 {
-   INTO_HEAD = 0,
-   INTO_TAIL = 1,
-   OUT_HEAD = 2,
-   OUT_TAIL = 3
+   INTO_HEAD = 0,                            /**< The directed path goes into the head of the virtual arc */
+   INTO_TAIL = 1,                            /**< The directed path goes into the tail of the virtual arc */
+   OUT_HEAD = 2,                             /**< The directed path goes out of the head of the virtual arc */
+   OUT_TAIL = 3                              /**< The directed path goes out of the tail of the virtual arc */
 } MemberPathType;
 
 static SCIP_Bool isInto(MemberPathType type)
@@ -2774,107 +2791,130 @@ static SCIP_Bool isHead(MemberPathType type)
    return type == INTO_HEAD || type == OUT_HEAD;
 }
 
+/**< A struct that keeps track of the relevant data for the members that are in the subtree given by the specified row
+ * arcs. We typically call these 'reduced' members (members of the reduced tree). */
 typedef struct
 {
-   spqr_member member;
-   spqr_member rootMember;
-   int depth;
-   ReducedMemberType type;
-   reduced_member_id parent;
+   spqr_member member;                       /**< The id of the member */
+   spqr_member rootMember;                   /**< The root member of the arborescence that contains this member */
+   int depth;                                /**< The depth of this member in the arborescence */
+   ReducedMemberType type;                   /**< The type of the member */
+   reduced_member_id parent;                 /**< The reduced member id of the parent of this reduced member */
 
-   children_idx firstChild;
-   children_idx numChildren;
+   children_idx firstChild;                  /**< The index of the first child in the children array. */
+   children_idx numChildren;                 /**< The number of children in the arborescence of this reduced member */
 
-   path_arc_id firstPathArc;
-   int numPathArcs;
+   path_arc_id firstPathArc;                 /**< Head of the linked list containing the path arcs */
+   int numPathArcs;                          /**< The number of path arcs in the linked list */
 
    SCIP_Bool reverseArcs;
-   spqr_node rigidPathStart;
-   spqr_node rigidPathEnd;
+   spqr_node rigidPathStart;                 /**< The start node of the path. Only used for Rigid/3-connected nodes */
+   spqr_node rigidPathEnd;                   /**< The end node of the path. Only used for Rigid/3-connected nodes */
 
-   SCIP_Bool pathBackwards;
+   SCIP_Bool pathBackwards;                  /**< Indicates if the path direction is reversed with respect to the
+                                                * default orientation within series and parallel members. */
 
-   int numPropagatedChildren;
-   int componentIndex;
+   int numPropagatedChildren;                /**< Counts the number of children that are cycles that propagated to this
+                                                * reduced member */
+   int componentIndex;                       /**< Stores the index of the component of the SPQR forest that this reduced
+                                                * member is contained in. */
 
-   MemberPathType pathType;
-   reduced_member_id nextPathMember;
-   SCIP_Bool nextPathMemberIsParent;
-   spqr_arc pathSourceArc;
-   spqr_arc pathTargetArc;
+   MemberPathType pathType;                  /**< The type of the path with respect to the virtual arc*/
+   reduced_member_id nextPathMember;         /**< Indicates the id of the next reduced member in the path during merging.
+                                                * During merging, the SPQR tree must be a path itself. */
+   SCIP_Bool nextPathMemberIsParent;         /**< Indicates if the next reduced member in the path is a parent of
+                                                * this member */
+   spqr_arc pathSourceArc;                   /**< The virtual arc from where the path originates */
+   spqr_arc pathTargetArc;                   /**< The virtual arc where the path has to go */
 } SPQRColReducedMember;
 
+/**< Keeps track of the data relevant for each SPQR tree in the SPQR forest. */
 typedef struct
 {
-   int rootDepth;
-   reduced_member_id root;
+   int rootDepth;                            /**< The depth of the root node of the subtree in the arborescence */
+   reduced_member_id root;                   /**< The reduced member id of the root */
 
-   reduced_member_id pathEndMembers[2];
-   int numPathEndMembers;
+   reduced_member_id pathEndMembers[2];      /**< The reduced members that contain the ends of the path */
+   int numPathEndMembers;                    /**< The number of reduced members that contain an end of the path */
 } SPQRColReducedComponent;
 
+/**< Keeps track of the reduced member and the reduced member that is the root of the arborescence for a single member*/
 typedef struct
 {
-   reduced_member_id reducedMember;
-   reduced_member_id rootDepthMinimizer;
+   reduced_member_id reducedMember;          /**< The ID of the associated reduced member */
+   reduced_member_id rootDepthMinimizer;     /**< The ID of the reduced member that is the root of the arborescence this
+                                                * reduced member is contained in. */
 } MemberInfo;
 
+/**< Data to be used for the recursive algorithms that creates the sub-SPQR trees that contain the path edges */
 typedef struct
 {
-   spqr_member member;
+   spqr_member member;                       /**< The current member */
 } CreateReducedMembersCallstack;
 
+/**< The main datastructure that manages all the data for column-addition in network matrices */
 typedef struct
 {
-   SCIP_Bool remainsNetwork;
+   SCIP_Bool remainsNetwork;                 /**< Does the addition of the current column give a network matrix? */
 
-   SPQRColReducedMember* reducedMembers;
-   int memReducedMembers;
-   int numReducedMembers;
+   SPQRColReducedMember* reducedMembers;     /**< The array of reduced members, that form the subtree containing the
+                                                * rows of the current column.*/
+   int memReducedMembers;                    /**< Number of allocated slots in the reduced member array */
+   int numReducedMembers;                    /**< Number of used slots in the reduced member array */
 
-   SPQRColReducedComponent* reducedComponents;
-   int memReducedComponents;
-   int numReducedComponents;
+   SPQRColReducedComponent* reducedComponents;/**< The array of reduced components,
+                                                 * that represent the SPQR trees in the SPQR forest */
+   int memReducedComponents;                 /**< Number of allocated slots in the reduced component array */
+   int numReducedComponents;                 /**< Number of used slots in the reduced component array */
 
-   MemberInfo* memberInformation;
-   int memMemberInformation;
-   int numMemberInformation;
+   MemberInfo* memberInformation;            /**< Array with member information; tracks the reduced member id that
+                                                * corresponds to every member in the decomposition. */
+   int memMemberInformation;                 /**< Number of allocated slots in the member information array */
+   int numMemberInformation;                 /**< Number of used slots in the member information array */
 
-   reduced_member_id* childrenStorage;
-   int memChildrenStorage;
-   int numChildrenStorage;
+   reduced_member_id* childrenStorage;       /**< Array that stores the children of the reduced member arborescences.
+                                                * Each reduced member has a 'firstChild' field and a length, that points
+                                                * to the subarray within this array with its children. This array is
+                                                * shared here in order to minimize allocations across iterations. */
+   int memChildrenStorage;                   /**< Number of allocated slots for the children storage array */
+   int numChildrenStorage;                   /**< Number of used slots for the children storage array */
 
-   PathArcListNode* pathArcs;
-   int memPathArcs;
-   int numPathArcs;
-   path_arc_id firstOverallPathArc;
+   PathArcListNode* pathArcs;                /**< Array that contains the linked-list nodes of the path arcs, that
+                                                * correspond to the rows of the current column. */
+   int memPathArcs;                          /**< Number of allocated slots for the path arc array */
+   int numPathArcs;                          /**< Number of used slots for the path arc array */
+   path_arc_id firstOverallPathArc;          /**< Head node of the linked list containing all path arcs */
 
-   int* nodeInPathDegree;
-   int* nodeOutPathDegree;
-   int memNodePathDegree;
+   int* nodeInPathDegree;                    /**< Array that contains the in degree of all nodes */
+   int* nodeOutPathDegree;                   /**< Array that contains the out degree of all nodes */
+   int memNodePathDegree;                    /**< The number of allocated slots for the node-degree arrays */
 
-   SCIP_Bool* arcInPath;
-   SCIP_Bool* arcInPathReversed;
-   int memArcsInPath;
+   SCIP_Bool* arcInPath;                     /**< Is the given arc in the path? */
+   SCIP_Bool* arcInPathReversed;             /**< Is the given arc's direction reversed in the path? */
+   int memArcsInPath;                        /**< The number of allocated slots for the arcInPath(Reversed) arrays */
 
-   CreateReducedMembersCallstack* createReducedMembersCallStack;
-   int memCreateReducedMembersCallStack;
+   CreateReducedMembersCallstack* createReducedMembersCallStack; /**< Callstack for createReducedMembers() */
+   int memCreateReducedMembersCallStack;     /**< Allocated memory for callstack for createReducedMembers() */
 
-   spqr_col newColIndex;
+   spqr_col newColIndex;                     /**< The index of the new column to be added */
 
-   spqr_row* newRowArcs;
-   SCIP_Bool* newRowArcReversed;
-   int memNewRowArcs;
-   int numNewRowArcs;
+   spqr_row* newRowArcs;                     /**< The row indices of the nonzeros of the column to be added, that are
+                                                * not yet in the decomposition.*/
+   SCIP_Bool* newRowArcReversed;             /**< True if the nonzero corresponding to the row index is -1,
+                                                * false otherwise */
+   int memNewRowArcs;                        /**< Number of allocated slots in newRowArcs(Reversed) */
+   int numNewRowArcs;                        /**< Number of new rows in the column to be added */
 
-   spqr_arc* decompositionRowArcs;
-   SCIP_Bool* decompositionArcReversed;
-   int memDecompositionRowArcs;
-   int numDecompositionRowArcs;
+   spqr_arc* decompositionRowArcs;           /**< For each row nonzero that is in the decomposition,
+                                                * stores the corresponding decomposition arc */
+   SCIP_Bool* decompositionArcReversed;      /**< For each row nonzero that is in the decomposition,
+                                                * stores whether the corresponding decomposition arc is reversed */
+   int memDecompositionRowArcs;              /**< Number of allocated slots in decompositionRowArcs(Reversed) */
+   int numDecompositionRowArcs;              /**< Number of used slots in decompositionRowArcs(Reversed)*/
 
-   spqr_member* leafMembers;
-   int numLeafMembers;
-   int memLeafMembers;
+   spqr_member* leafMembers;                 /**< Array that stores the leaf members of the SPQR forest */
+   int numLeafMembers;                       /**< Number of used slots in leafMembers array*/
+   int memLeafMembers;                       /**< Number of allocated slots in leafMembers array*/
 } SCIP_NETCOLADD;
 
 static void cleanupPreviousIteration(
@@ -3386,8 +3426,7 @@ static SCIP_RETCODE createPathArcs(
 }
 
 
-/**
- * Saves the information of the current row and partitions it based on whether or not the given columns are
+/** Saves the information of the current row and partitions it based on whether or not the given columns are
  * already part of the decomposition.
  */
 static SCIP_RETCODE
@@ -3546,7 +3585,6 @@ static void determineSingleRigidType(
    }
 }
 
-//TODO: type seems somewhat duplicate
 static void determineSingleComponentType(
    SCIP_NETMATDECDATA* dec,
    SCIP_NETCOLADD* newCol,
@@ -4578,16 +4616,16 @@ static SCIP_RETCODE SCIPnetcoladdCheck(
    return SCIP_OKAY;
 }
 
-///Contains the data which tells us where to store the new column after the graph has been modified
-///In case member is a parallel or series node, the respective new column and rows are placed in parallel (or series) with it
-///Otherwise, the rigid member has a free spot between firstNode and secondNode
+/**< Struct that contains the data that tells us how to add the new column after the graph has been modified
+ *   In the case the member is a series or parallel node, the new column and rows are placed in series or parallel,
+ *   respectively. Otherwise, the edge can be added between head and tail in a rigid member*/
 typedef struct
 {
-   spqr_member member;
-   spqr_node head;
-   spqr_node tail;
-   spqr_arc representative;
-   SCIP_Bool reversed;
+   spqr_member member;                       /**< The member where the new column should be added */
+   spqr_node head;                           /**< The head node of the new column (rigid members only)*/
+   spqr_node tail;                           /**< The tail node of the new column (rigid members only)*/
+   spqr_arc representative;                  /**< The representative arc of the new column */
+   SCIP_Bool reversed;                       /**< Is the new column reversed? */
 } NewColInformation;
 
 static NewColInformation emptyNewColInformation(void)
@@ -5649,6 +5687,7 @@ static SCIP_RETCODE transformComponent(
 
    return SCIP_OKAY;
 }
+
 static SCIP_Bool SCIPnetcoladdRemainsNetwork(const SCIP_NETCOLADD* newCol)
 {
    return newCol->remainsNetwork;
