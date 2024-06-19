@@ -681,12 +681,12 @@ SCIP_RETCODE printSyminfoGroupAction(
 
    SCIPinfoMessage(scip, NULL, "  Group action:\t\t\t");
    if ( isorbitope )
-      SCIPinfoMessage(scip, NULL, "column action on matrix of dimension %d x %d\n", nrows, ncols);
+      SCIPinfoMessage(scip, NULL, "column action on %d x %d matrix\n", nrows, ncols);
    else if ( isdoublelex )
    {
       int i;
 
-      SCIPinfoMessage(scip, NULL, "row and column action on matrix of dimension %d x %d\n", nrows, ncols);
+      SCIPinfoMessage(scip, NULL, "row and column action on %d x %d matrix\n", nrows, ncols);
       SCIPinfoMessage(scip, NULL, "  number of row blocks:\t\t%d (blocks of length %d", nrowmatrices,
          rowsbegin[1] - rowsbegin[0]);
       for (i = 1; i < nrowmatrices; ++i)
@@ -3175,7 +3175,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    {
       SCIPinfoMessage(scip, NULL, "  detected subgroup acting as symmetric group on columns of %d x %d matrix\n",
          nrows, ngencols);
-      SCIPinfoMessage(scip, NULL, "  handle by full orbitope constraints\n");
+      SCIPinfoMessage(scip, NULL, "  use full orbitope constraints\n");
    }
 
    /* do not release constraint here - will be done later */
@@ -3279,7 +3279,7 @@ SCIP_RETCODE addStrongSBCsSubgroup(
    }
 
    if( propdata->dispsyminfo )
-      SCIPinfoMessage(scip, NULL, "sort first row by SST cuts\n");
+      SCIPinfoMessage(scip, NULL, "  sort first row by SST cuts\n");
 
    return SCIP_OKAY;
 }
@@ -3463,7 +3463,7 @@ SCIP_RETCODE addWeakSBCsSubgroup(
          ++propdata->ngenlinconss;
       }
       if ( orbitsize[activeorb] > 0 && propdata->dispsyminfo )
-         SCIPinfoMessage(scip, NULL, "  add SST cuts for leader %s\n", SCIPvarGetName(vars[0]));
+         SCIPinfoMessage(scip, NULL, "  use SST cuts for leader %s\n", SCIPvarGetName(vars[0]));
 
 
       /* possibly store lexicographic order defined by weak SBCs */
@@ -3899,7 +3899,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
       {
          SCIPinfoMessage(scip, NULL, "  detected subgroup acting as symmetric group on columns of 1 x %d matrix\n",
             npermsincomp + 1);
-         SCIPinfoMessage(scip, NULL, "  handle by orbisack constraints\n");
+         SCIPinfoMessage(scip, NULL, "  use %d orbisack constraints to handle column permutations\n", npermsincomp);
       }
 
       for (k = 0; k < npermsincomp; ++k)
@@ -4142,13 +4142,11 @@ SCIP_RETCODE detectAndHandleSubgroups(
     */
    if ( nvarslexorder > 0 && propdata->addsymresacks && ! handlednonbinarysymmetry )
    {
+      int naddedconss = 0;
       int k;
 
       SCIP_CALL( adaptSymmetryDataSST(scip, propdata->perms, modifiedperms, propdata->nperms,
             propdata->permvars, modifiedpermvars, propdata->npermvars, lexorder, nvarslexorder) );
-
-      if ( propdata->dispsyminfo )
-         SCIPinfoMessage(scip, NULL, "  use symresack constraints to handle permutations\n");
 
       for (k = 0; k < npermsincomp; ++k)
       {
@@ -4184,6 +4182,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
                &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
          propdata->genorbconss[propdata->ngenorbconss++] = cons;
          ++propdata->nsymresacks;
+         ++naddedconss;
 
          if ( ! propdata->componentblocked[cidx] )
          {
@@ -4193,6 +4192,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
          SCIPdebugMsg(scip, "  add symresack for permutation %d of component %d adapted to suborbitope lexorder\n", k, cidx);
       }
+
+      if ( propdata->dispsyminfo )
+         SCIPinfoMessage(scip, NULL, "  use %d symresack constraints\n", naddedconss);
    }
 
  FREEMEMORY:
@@ -4659,7 +4661,7 @@ SCIP_RETCODE addSymresackConss(
    }
 
    if ( nsymresackcons > 0 && propdata->dispsyminfo )
-      SCIPinfoMessage(scip, NULL, "  add symresack constraints\n");
+      SCIPinfoMessage(scip, NULL, "  use %d symresack constraints\n", nsymresackcons);
 
    if ( propdata->nleaders > 0 && ISSSTBINACTIVE(propdata->sstleadervartype) )
    {
@@ -4740,7 +4742,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
 
       leadervar = permvars[orbits[orbitbegins[orbitidx] + orbitleaderidx]];
 
-      SCIPinfoMessage(scip, NULL, "  add %d SST cuts for leader %s of type ", orbitsize - 1, SCIPvarGetName(leadervar));
+      SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s of type ", orbitsize - 1, SCIPvarGetName(leadervar));
       switch ( SCIPvarGetType(leadervar) )
       {
       case SCIP_VARTYPE_BINARY:
@@ -5486,7 +5488,7 @@ SCIP_RETCODE addOrbitopesDynamic(
 
       if ( propdata->dispsyminfo )
       {
-         SCIPinfoMessage(scip, NULL, "  dynamic lexicographic reduction on columns\n");
+         SCIPinfoMessage(scip, NULL, "  use dynamic lexicographic reduction on columns\n");
       }
 
       /* If the component is an orbitope with 2 columns, then there is 1 generator of order 2. */
@@ -5538,7 +5540,7 @@ SCIP_RETCODE addOrbitopesDynamic(
 
       if ( propdata->dispsyminfo )
       {
-         SCIPinfoMessage(scip, NULL, "  packing orbitope on %d x %d matrix\n", npprows, ncols);
+         SCIPinfoMessage(scip, NULL, "  use packing orbitope on %d x %d matrix\n", npprows, ncols);
       }
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_pp", partialname);
@@ -5569,7 +5571,7 @@ SCIP_RETCODE addOrbitopesDynamic(
 
       if ( propdata->dispsyminfo )
       {
-         SCIPinfoMessage(scip, NULL, "  dynamic orbitopal reduction\n");
+         SCIPinfoMessage(scip, NULL, "  use dynamic orbitopal reduction\n");
       }
 
       /* variable array */
@@ -5936,7 +5938,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
       if ( success )
       {
          if ( propdata->dispsyminfo )
-            SCIPinfoMessage(scip, NULL, "  add packing/partitioning orbisacks\n");
+            SCIPinfoMessage(scip, NULL, "  use packing/partitioning orbisacks\n");
          propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
          goto FINISHCOMPONENT;
       }
@@ -6037,7 +6039,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
             propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
 
             if ( propdata->dispsyminfo )
-               SCIPinfoMessage(scip, NULL, "  add simple cut for reflection symmetries of full component\n");
+               SCIPinfoMessage(scip, NULL, "  use simple cut for reflection symmetries of full component\n");
          }
       }
    }
@@ -6266,7 +6268,7 @@ SCIP_RETCODE handleOrbitope(
 
       if ( propdata->dispsyminfo )
       {
-         SCIPinfoMessage(scip, NULL, "  static orbitopal reduction on %d x %d matrix\n", nrows, ncols);
+         SCIPinfoMessage(scip, NULL, "  use static orbitopal reduction on %d x %d matrix\n", nrows, ncols);
          SCIPinfoMessage(scip, NULL, "  sort first row of %d x %d matrix by SST cuts\n", nrows, ncols);
          if ( issigned )
             SCIPinfoMessage(scip, NULL, "  first row in upper variable domain (signed orbitope)\n");
@@ -6377,7 +6379,7 @@ SCIP_RETCODE handleOrbitope(
          {
             if ( propdata->dispsyminfo )
             {
-               SCIPinfoMessage(scip, NULL, "  full orbitope on %d x %d matrix\n", nbinrows, ncols);
+               SCIPinfoMessage(scip, NULL, "  use full orbitope on %d x %d matrix\n", nbinrows, ncols);
             }
             SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, partialname, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
                   nbinrows, ncols, propdata->usedynamicprop /* @todo disable */, FALSE, FALSE, FALSE,
@@ -6478,7 +6480,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
 
       if ( propdata->dispsyminfo )
       {
-         SCIPinfoMessage(scip, NULL, "  static orbitopal reduction on %d x %d matrix\n", nrows, ncols);
+         SCIPinfoMessage(scip, NULL, "  use static orbitopal reduction on %d x %d matrix\n", nrows, ncols);
          SCIPinfoMessage(scip, NULL, "  sort first row of %d x %d matrix by SST cuts\n", nrows, ncols);
          if ( nsignedconss > 0 )
             SCIPinfoMessage(scip, NULL, "  recursively enforce first half of entries per column to %s\n",
@@ -6683,7 +6685,7 @@ SCIP_RETCODE handleDoubleLexOrbitope(
          {
             if ( propdata->dispsyminfo )
             {
-               SCIPinfoMessage(scip, NULL, "  full orbitope on %d x %d matrix\n", nbinrows, ncols);
+               SCIPinfoMessage(scip, NULL, "  use full orbitope on %d x %d matrix\n", nbinrows, ncols);
             }
 
             SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, partialname, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
