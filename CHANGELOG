@@ -1,4 +1,4 @@
-@page RN90 Release notes for SCIP 9
+@page RN9 Release notes for SCIP 9
 
 @section RN910 SCIP 9.1.0
 *************************
@@ -406,7 +406,7 @@ Miscellaneous
   (scip/type_retcode.h, scip/type_message.h, scip/pub_message.h)
 
 
-@page RN81 Release notes for SCIP 8.1
+@page RN8 Release notes for SCIP 8
 
 @section RN810 SCIP 8.1.0
 *************************
@@ -480,8 +480,6 @@ Miscellaneous
 -------------
 
 - the parameter change callback is no longer called at the moment a parameter is created
-
-@page RN80 Release notes for SCIP 8.0
 
 @section RN804 SCIP 8.0.4
 *************************
