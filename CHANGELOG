@@ -157,6 +157,7 @@ Fixed bugs
 - make arithmetics in cuts.c more robust to avoid invalid scg cuts due to numerical rounding sensitivity
 - allow to copy cons_pseudoboolean even if no AND constraints are present in order to avoid a warning
 - set value for variable that is introduced to reformulate nonlinear objective function when reading .nl files with initial solution
+- fixed that multi-aggregations from PaPILO were accepted without ensuring that their bounds hold
 
 Miscellaneous
 -------------
@@ -197,7 +198,6 @@ Fixed bugs
 - update effective root depth iteratively to avoid trapping it at a single child node
 - fixed that dualsparsify presolver did not always check do-not-multiaggregate variable flag
 - fixed bug in computing elements of orbits in orbital reduction
-- fixed that multi-aggregations from PaPILO were accepted without ensuring that their bounds hold
 
 Miscellaneous
 -------------
