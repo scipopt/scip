@@ -1050,7 +1050,7 @@ SCIP_RETCODE copyVars(
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
 
-      if( SCIPvarIsRelaxationOnly(sourcevars[i]) )
+      if( SCIPvarIsRelaxationOnly(fixedvars[i]) )
          continue;
 
       /* retrieve target variable as image of the source variable */
