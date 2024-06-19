@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objbenders.h
- * @brief  C++ wrapper for Benders' decomposition
+ * @brief  C++ wrapper for the Benders' decomposition plugins
  * @author Stephen J. Maher
  */
 
