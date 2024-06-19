@@ -104,7 +104,7 @@
  * 2-separation connecting it to the rest of graph are splittable, then we can and update our datastructures to.
  * Finally, we are left with some minimal subtree with splittable vertices for each member graph. If we can merge all
  * splittable vertices of the member graphs in the subtree into a single splittable vertex, then we perform this merge,
- * and split this vertex. This yields us a new, larger node of type R.
+ * and split this vertex. This yields us a new, larger node of type R (rigid).
  *
  * Implementation notes:
  * 1. Quite a few algorithms used for network matrix detection are recursive in nature. However, recursive calls can
@@ -2807,7 +2807,7 @@ typedef struct
    path_arc_id firstPathArc;                 /**< Head of the linked list containing the path arcs */
    int numPathArcs;                          /**< The number of path arcs in the linked list */
 
-   SCIP_Bool reverseArcs;
+   SCIP_Bool reverseArcs;                    /**< Will the arcs in this component be reversed? */
    spqr_node rigidPathStart;                 /**< The start node of the path. Only used for Rigid/3-connected nodes */
    spqr_node rigidPathEnd;                   /**< The end node of the path. Only used for Rigid/3-connected nodes */
 
@@ -4075,7 +4075,7 @@ static void determinePathRigidType(
          }
       }
 
-      //TODO: these can probably be simplified significantly, but this might pose risk of introducing incorrect assumptions
+      //TODO: this if-else tree to compute two booleans can probably be simplified significantly
       SCIP_Bool isBad = FALSE;
       if( isInto(previousType) == isHead(previousType))
       {
@@ -5808,6 +5808,7 @@ static int minValue(
    return a < b ? a : b;
 }
 
+/**< Index type for the nonzeros of the new row, e.g. the columns whose tree path must be elongated with the new row */
 typedef int cut_arc_id;
 #define INVALID_CUT_ARC (-1)
 
@@ -5821,198 +5822,222 @@ static SCIP_Bool cutArcIsValid(const cut_arc_id arc)
    return !cutArcIsInvalid(arc);
 }
 
+/**< Linked list node for the cut arcs. Contains links to the next cut arc in the whole decomposition and the next cut
+   * arc in the current member. */
 typedef struct
-{//TODO:test if memory overhead of pointers is worth it?
-   spqr_arc arc;
-   spqr_node arcHead;
-   spqr_node arcTail;
-   cut_arc_id nextMember;
-   cut_arc_id nextOverall;
-   SCIP_Bool arcReversed;
+{
+   spqr_arc arc;                             /**< The arc id */
+   spqr_node arcHead;                        /**< The arc's head node */
+   spqr_node arcTail;                        /**< The arc's tail node */
+   cut_arc_id nextMember;                    /**< Index to next linked list node of the linked list containing the cut arcs
+                                                * of the arcs member.*/
+   cut_arc_id nextOverall;                   /**< Index to next linked list node of the linked list containing the cut arcs
+                                                * of the complete decomposition.*/
+   SCIP_Bool arcReversed;                    /**< Should the new row have reverse direction in the cut arcs path? */
 } CutArcListNode;
 
-
+/**< Type of the reduced member; indicates whether the member is processed, and whether it should be merged or left
+ *   the same. */
 typedef enum
 {
-   TYPE_UNDETERMINED = 0,
-   TYPE_PROPAGATED = 1,
-   TYPE_MERGED = 2,
-   TYPE_NOT_NETWORK = 3
+   TYPE_UNDETERMINED = 0,                    /**< The type of this member has not yet been determined */
+   TYPE_PROPAGATED = 1,                      /**< The member contains cut arcs, but should not be merged */
+   TYPE_MERGED = 2,                          /**< This member should be merged into a rigid member */
+   TYPE_NOT_NETWORK = 3                      /**< This member implies that the addition of the new row
+                                                * does not create a network matrix */
 } RowReducedMemberType;
 
-
+/**< Stores for every vertex information needed for computing articulation nodes in rigid members. */
 typedef struct
 {
-   int low;
-   int discoveryTime;
+   int low;                                  /**< What is the lowest discovery time vertex that can be reached from this
+                                                * subtree?*/
+   int discoveryTime;                        /**< When was the vertex first discovered? */
 } ArticulationNodeInformation;
 
-//We allocate the callstacks of recursive algorithms (usually DFS, bounded by some linear number of calls)
-//If one does not do this, we overflow the stack for large matrices/graphs through the number of recursive function calls
-//Then, we can write the recursive algorithms as while loops and allocate the function call data on the heap, preventing
-//Stack overflows
+/**< Call stack data structure for performing DFS on the rigid member graphs */
 typedef struct
 {
-   spqr_node node;
-   spqr_arc nodeArc;
+   spqr_node node;                           /**< The current node of the DFS call */
+   spqr_arc nodeArc;                         /**< The current arc of the node that is being processed */
 } DFSCallData;
 
+/**< Call stack data structure for merging the SPQR tree into a single rigid member */
 typedef struct
 {
-   children_idx currentChild;
-   reduced_member_id id;
+   children_idx currentChild;                /**< The index of the current child that is being merged */
+   reduced_member_id id;                     /**< The index of the current member */
 } MergeTreeCallData;
 
+/**< Call stack data structure that determines whether a bipartition of the nodes exists that satisfies the requirements*/
 typedef struct
 {
-   spqr_node node;
-   spqr_arc arc;
+   spqr_node node;                           /**< The current node of the call */
+   spqr_arc arc;                             /**< The current arc that is being processed */
 } ColorDFSCallData;
 
+/**< Call stack data structure for recursive algorithm to find articulation point in rigid member graphs (Tarjan) */
 typedef struct
 {
-   spqr_arc arc;
-   spqr_node node;
-   spqr_node parent;
-   SCIP_Bool isAP;
+   spqr_arc arc;                             /**< The arc that is currently being processed */
+   spqr_node node;                           /**< The node that is currently being processed */
+   spqr_node parent;                         /**< The node's parent */
+   SCIP_Bool isAP;                           /**< Is the current node an articulation point? */
 } ArticulationPointCallStack;
 
+/**< Colors assigned to the node in the partitioning algorithm. It must either be in the source or the sink partition.*/
 typedef enum
 {
-   UNCOLORED = 0,
-   COLOR_SOURCE = 1,
-   COLOR_SINK = 2
+   UNCOLORED = 0,                            /**< The current node has not yet been processed */
+   COLOR_SOURCE = 1,                         /**< The current node belongs to the source partition */
+   COLOR_SINK = 2                            /**< The current node belongs to the sink partition */
 } COLOR_STATUS;
 
+/**< Struct that stores the data of a single reduced member. */
 typedef struct
 {
-   spqr_member member;
-   spqr_member rootMember;
-   int depth;
-   RowReducedMemberType type;
-   reduced_member_id parent;
+   spqr_member member;                       /**< The id of the decomposition member */
+   spqr_member rootMember;                   /**< The decomposition member that is the root node of the arborescence
+                                                * containing this member */
+   int depth;                                /**< The depth of this member in the arborescence */
+   RowReducedMemberType type;                /**< The type of the member */
+   reduced_member_id parent;                 /**< The reduced member id of the parent of this reduced member */
 
-   children_idx firstChild;
-   children_idx numChildren;
-   children_idx numPropagatedChildren;
+   children_idx firstChild;                  /**< The index of the first child in the children array. */
+   children_idx numChildren;                 /**< The number of children in the arborescence of this reduced member */
+   children_idx numPropagatedChildren;       /**< Counts the number of children that are propagated to this reduced
+                                                * member */
 
-   cut_arc_id firstCutArc;
-   int numCutArcs;
+   cut_arc_id firstCutArc;                   /**< Head of the linked list containing the cut arcs */
+   int numCutArcs;                           /**< The number of cut arcs in the linked list */
 
-   //For non-rigid members
-   spqr_arc splitArc;
-   SCIP_Bool splitHead;    //Otherwise the tail of this arc is split
-   SCIP_Bool otherIsSource;//Otherwise the other end node is part of the sink partition.
-   // For non-rigid members this refers to splitArc, for rigid members it refers to articulation arc
+   spqr_arc splitArc;                        /**< An arc adjacent to the split node. */
+   SCIP_Bool splitHead;                      /**< Is the head or the tail of the split arc split in the realization? */
+   SCIP_Bool otherIsSource;                  /**< Is the nonsplit node of the split arc in the source or the sink
+                                                * partition? In rigid members this refers to the articulation arc. */
 
-   //For rigid members
-   spqr_node otherNode;
-   spqr_node splitNode;
-   SCIP_Bool allHaveCommonNode;
-   SCIP_Bool otherNodeSplit;
-   SCIP_Bool willBeReversed;
-   spqr_arc articulationArc;
-   spqr_node coloredNode;//points to a colored node so that we can efficiently zero out the colors again.
-
+   /* Rigid member fields */
+   spqr_node otherNode;                      /**< The other nonsplit node adjacent to the virtual edge */
+   spqr_node splitNode;                      /**< The node to be split */
+   SCIP_Bool allHaveCommonNode;              /**< Do all cut edges share a common node? */
+   SCIP_Bool otherNodeSplit;                 /**< Is the other node a split node, too? */
+   SCIP_Bool willBeReversed;                 /**< Will all the arcs in this component be reversed? */
+   spqr_arc articulationArc;                 /**< Indicates the arc between the split node and the other ndoe, if both
+                                                * are splittable. */
+   spqr_node coloredNode;                    /**< Points to a colored node so that we can efficiently zero out colors
+                                                * by backtracking our DFS */
 } SPQRRowReducedMember;
 
+/**< Keeps track of the data relevant for each SPQR tree in the SPQR forest. */
 typedef struct
 {
-   int rootDepth;
-   reduced_member_id root;
+   int rootDepth;                            /**< The depth of the root node of the subtree in the arborescence */
+   reduced_member_id root;                   /**< The reduced member id of the root */
 } SPQRRowReducedComponent;
 
+/**< The main datastructure that manages all the data for row-addition in network matrices */
 typedef struct
 {
-   SCIP_Bool remainsNetwork;
+   SCIP_Bool remainsNetwork;                 /**< Does the addition of the current row give a network matrix? */
 
-   SPQRRowReducedMember* reducedMembers;
-   int memReducedMembers;
-   int numReducedMembers;
+   SPQRRowReducedMember* reducedMembers;     /**< The array of reduced members, that form the subtree containing the
+                                                * rows of the current column.*/
+   int memReducedMembers;                    /**< Number of allocated slots in the reduced member array */
+   int numReducedMembers;                    /**< Number of used slots in the reduced member array */
 
-   SPQRRowReducedComponent* reducedComponents;
-   int memReducedComponents;
-   int numReducedComponents;
+   SPQRRowReducedComponent* reducedComponents;/**< The array of reduced components,
+                                                 * that represent the SPQR trees in the SPQR forest */
+   int memReducedComponents;                 /**< Number of allocated slots in the reduced component array */
+   int numReducedComponents;                 /**< Number of used slots in the reduced component array */
 
-   MemberInfo* memberInformation;
-   int memMemberInformation;
-   int numMemberInformation;
+   MemberInfo* memberInformation;            /**< Array with member information; tracks the reduced member id that
+                                                * corresponds to every member in the decomposition. */
+   int memMemberInformation;                 /**< Number of allocated slots in the member information array */
+   int numMemberInformation;                 /**< Number of used slots in the member information array */
 
-   reduced_member_id* childrenStorage;
-   int memChildrenStorage;
-   int numChildrenStorage;
+   reduced_member_id* childrenStorage;       /**< Array that stores the children of the reduced member arborescences.
+                                                * Each reduced member has a 'firstChild' field and a length, that points
+                                                * to the subarray within this array with its children. This array is
+                                                * shared here in order to minimize allocations across iterations. */
+   int memChildrenStorage;                   /**< Number of allocated slots for the children storage array */
+   int numChildrenStorage;                   /**< Number of used slots for the children storage array */
 
-   CutArcListNode* cutArcs;
-   int memCutArcs;
-   int numCutArcs;
-   cut_arc_id firstOverallCutArc;
+   CutArcListNode* cutArcs;                  /**< Array containing the linked list nodes of the cut arcs */
+   int memCutArcs;                           /**< Number of allocated entries in cutArcs */
+   int numCutArcs;                           /**< Number of used entries in cutArcs */
+   cut_arc_id firstOverallCutArc;            /**< Index of the head node of the linked list containing all cut arcs */
 
-   spqr_row newRowIndex;
+   spqr_row newRowIndex;                     /**< The index of the new row to be added */
 
-   spqr_col* newColumnArcs;
-   SCIP_Bool* newColumnReversed;
-   int memColumnArcs;
-   int numColumnArcs;
+   spqr_col* newColumnArcs;                  /**< The nonzero columns in the new row that do not yet occur in the
+                                                * decomposition */
+   SCIP_Bool* newColumnReversed;             /**< True if the nonzero entry of the new column is -1, False otherwise */
+   int memColumnArcs;                        /**< Number of allocated slots in newColumnArcs/newColumnReversed */
+   int numColumnArcs;                        /**< Number of new columns in the row to be added */
 
-   reduced_member_id* leafMembers;
-   int numLeafMembers;
-   int memLeafMembers;
+   reduced_member_id* leafMembers;           /**< Array that stores the leaf members of the SPQR forest */
+   int numLeafMembers;                       /**< Number of used slots in leafMembers array*/
+   int memLeafMembers;                       /**< Number of allocated slots in leafMembers array*/
 
-   spqr_arc* decompositionColumnArcs;
-   SCIP_Bool* decompositionColumnArcReversed;
-   int memDecompositionColumnArcs;
-   int numDecompositionColumnArcs;
+   spqr_arc* decompositionColumnArcs;        /**< For each nonzero column of the new row that is in the decomposition,
+                                                * stores the corresponding decomposition arc */
+   SCIP_Bool* decompositionColumnArcReversed;/**< For each nonzero column of the new row that is in the decomposition,
+                                                * stores whether the corresponding decomposition arc is reversed */
+   int memDecompositionColumnArcs;           /**< Number of allocated slots in decompositionColumnArcs(Reversed) */
+   int numDecompositionColumnArcs;           /**< Number of used slots in decompositionColumnArcs(Reversed) */
 
-   SCIP_Bool* isArcCut;
-   SCIP_Bool* isArcCutReversed;
-   int numIsArcCut;
-   int memIsArcCut;
+   SCIP_Bool* isArcCut;                      /**< Stores for each arc, if the arc a cut arc?*/
+   SCIP_Bool* isArcCutReversed;              /**< Is the new row in reverse direction on the arcs cycle? */
+   int memIsArcCut;                          /**< The allocated size of the isArcCut(Reversed) arrays */
 
-   COLOR_STATUS* nodeColors;
-   int memNodeColors;
+   COLOR_STATUS* nodeColors;                 /**< Stores the color of each node */
+   int memNodeColors;                        /**< The allocated size of the nodeColors array */
 
-   spqr_node* articulationNodes;
-   int numArticulationNodes;
-   int memArticulationNodes;
+   spqr_node* articulationNodes;             /**< Temp. array for storing articulation nodes of member graph-cut arcs*/
+   int numArticulationNodes;                 /**< Number of used slots in articulation nodes array */
+   int memArticulationNodes;                 /**< Number of allocated slots in articulation nodes array */
 
-   ArticulationNodeInformation* articulationNodeSearchInfo;
-   int memNodeSearchInfo;
+   ArticulationNodeInformation* articulationNodeSearchInfo; /**<Stores for each node information necessary to find
+                                                              * articulation nodes. */
+   int memNodeSearchInfo;                    /**< The number of allocated entries in articulationNodeSearchInfo array*/
 
-   int* crossingPathCount;
-   int memCrossingPathCount;
+   int* crossingPathCount;                   /**< Stores for each arc, how many cut arc cycles contain it */
+   int memCrossingPathCount;                 /**< The number of allocated entries for the crossingPathCount array */
 
-   DFSCallData* intersectionDFSData;
-   int memIntersectionDFSData;
+   DFSCallData* intersectionDFSData;         /**< Call stack for computing the intersection of all cut arc paths */
+   int memIntersectionDFSData;               /**< Number of allocated entries for intersectionDFSData */
 
-   ColorDFSCallData* colorDFSData;
-   int memColorDFSData;
+   ColorDFSCallData* colorDFSData;           /**< Call stack for computing source/sink coloring */
+   int memColorDFSData;                      /**< Number of allocated entries for colorDFSData */
 
-   ArticulationPointCallStack* artDFSData;
-   int memArtDFSData;
+   ArticulationPointCallStack* artDFSData;   /**< Call stack for computing articulation points */
+   int memArtDFSData;                        /**< Number of allocated entries for artDFSData */
 
-   CreateReducedMembersCallstack* createReducedMembersCallstack;
-   int memCreateReducedMembersCallstack;
+   CreateReducedMembersCallstack* createReducedMembersCallstack;/**< Call stack for createReducedMembers() */
+   int memCreateReducedMembersCallstack;     /**< Number of allocated entries for createReducedMembersCallStack*/
 
-   int* intersectionPathDepth;
-   int memIntersectionPathDepth;
+   int* intersectionPathDepth;               /**< Tracks depth of each node in the intersection of all paths algorithm*/
+   int memIntersectionPathDepth;             /**< Number of allocated entries in intersectionPathDepth array */
 
-   spqr_node* intersectionPathParent;
-   int memIntersectionPathParent;
+   spqr_node* intersectionPathParent;        /**< Tracks the parents of each node in the intersection of all paths
+                                                * algorithm. */
+   int memIntersectionPathParent;            /**< Number of allocated entries in intersectionPathParent array */
 
-   MergeTreeCallData* mergeTreeCallData;
-   int memMergeTreeCallData;
+   MergeTreeCallData* mergeTreeCallData;     /**< Call stack for mergeTree */
+   int memMergeTreeCallData;                 /**< Number of allocated elements for mergeTreeCallData */
 
-   COLOR_STATUS * temporaryColorArray;
-   int memTemporaryColorArray;
+   COLOR_STATUS * temporaryColorArray;       /**< A temporary array used for saving some colors*/
+   int memTemporaryColorArray;               /**< The number of allocated elements in temporaryColorArray */
 } SCIP_NETROWADD;
 
+/**< Struct that contains information on how to place the new row arc in the decomposition */
 typedef struct
 {
-   spqr_member member;
-   spqr_node head;
-   spqr_node tail;
-   spqr_arc representative;
-   SCIP_Bool reversed;
+   spqr_member member;                       /**< The member to place the new row in */
+   spqr_node head;                           /**< The head node of the new row arc (only used for rigid members) */
+   spqr_node tail;                           /**< The tail node of the new row arc (only used for rigid members) */
+   spqr_arc representative;                  /**< The representative arc of the new row arc */
+   SCIP_Bool reversed;                       /**< Orientation of the arc w.r.t. the representative */
 } NewRowInformation;
 
 static NewRowInformation emptyNewRowInformation(void)
@@ -6083,13 +6108,6 @@ static SCIP_RETCODE newRowUpdateRowInformation(
    return SCIP_OKAY;
 }
 
-/**
- * Recursively creates reduced members from this member to the root of the decomposition tree.
- * @param dec
- * @param newRow
- * @param member
- * @return
- */
 static reduced_member_id createRowReducedMembersToRoot(
    SCIP_NETMATDECDATA* dec,
    SCIP_NETROWADD* newRow,
@@ -6822,7 +6840,7 @@ static void zeroOutColorsExceptNeighbourhood(
 
 }
 
-//Theoretically, there is a faster algorithm, but it is quite complicated to implement.
+//Theoretically, there is a faster algorithm using lowest common ancestor queries, but it is quite complicated.
 //Thus, we stick with the 'simple' version below, which is easily fast enough in practice.
 static void intersectionOfAllPaths(
    SCIP_NETMATDECDATA* dec,
@@ -7614,6 +7632,7 @@ static void propagateComponents(
    }
 }
 
+/**< A data structure representing a node pair */
 typedef struct
 {
    spqr_node first;
@@ -7972,10 +7991,12 @@ static void determineSplitTypeFirstLeaf(
    redMember->type = TYPE_MERGED;
 }
 
+/**< A data structure that tells us if the head or tail of a virtual arc is split, and if the other node is in the
+ * source or the sink partition. */
 typedef struct
 {
-   SCIP_Bool headSplit;
-   SCIP_Bool otherIsSource;
+   SCIP_Bool headSplit;                      /**< Is the head or tail of the virtual arc split?*/
+   SCIP_Bool otherIsSource;                  /**< Is the non-split node in the source or sink partition? */
 } SplitOrientation;
 
 static SplitOrientation getRelativeOrientationRigid(
@@ -10062,7 +10083,6 @@ static SCIP_RETCODE SCIPnetrowaddCreate(
    newRow->isArcCut = NULL;
    newRow->isArcCutReversed = NULL;
    newRow->memIsArcCut = 0;
-   newRow->numIsArcCut = 0;
 
    newRow->nodeColors = NULL;
    newRow->memNodeColors = 0;
@@ -10294,6 +10314,7 @@ static SCIP_Bool SCIPnetrowaddRemainsNetwork(const SCIP_NETROWADD* rowadd)
    return rowadd->remainsNetwork;
 }
 
+/**< A generic data structure that stores a decomposition and can perform both column and row additions */
 struct SCIP_Netmatdec{
    SCIP_NETMATDECDATA * dec;
    SCIP_NETROWADD * rowadd;
