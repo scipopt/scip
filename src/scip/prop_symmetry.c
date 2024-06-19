@@ -3175,7 +3175,7 @@ SCIP_RETCODE addOrbitopeSubgroup(
    {
       SCIPinfoMessage(scip, NULL, "  detected subgroup acting as symmetric group on columns of %d x %d matrix\n",
          nrows, ngencols);
-      SCIPinfoMessage(scip, NULL, "  use full orbitope constraints\n");
+      SCIPinfoMessage(scip, NULL, "  use full orbitope constraint\n");
    }
 
    /* do not release constraint here - will be done later */
@@ -3279,7 +3279,8 @@ SCIP_RETCODE addStrongSBCsSubgroup(
    }
 
    if( propdata->dispsyminfo )
-      SCIPinfoMessage(scip, NULL, "  sort first row by SST cuts\n");
+      SCIPinfoMessage(scip, NULL, "  use %d SST cuts to sort first row\n",
+         graphcompbegins[graphcompidx+1] - graphcompbegins[graphcompidx] - 1);
 
    return SCIP_OKAY;
 }
@@ -3463,7 +3464,8 @@ SCIP_RETCODE addWeakSBCsSubgroup(
          ++propdata->ngenlinconss;
       }
       if ( orbitsize[activeorb] > 0 && propdata->dispsyminfo )
-         SCIPinfoMessage(scip, NULL, "  use SST cuts for leader %s\n", SCIPvarGetName(vars[0]));
+         SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s\n",
+            orbitsize[activeorb] - 1, SCIPvarGetName(vars[0]));
 
 
       /* possibly store lexicographic order defined by weak SBCs */
@@ -5457,7 +5459,7 @@ SCIP_RETCODE addOrbitopesDynamic(
 
       if ( propdata->dispsyminfo )
       {
-         SCIPinfoMessage(scip, NULL, "  sort first row by SST cuts\n");
+         SCIPinfoMessage(scip, NULL, "  use %d SST cuts to sort first row\n", ncols - 1);
       }
 
       /* for all adjacent column pairs, add linear constraint */
@@ -5615,7 +5617,8 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
    int**                 componentperms,     /**< permutations in the component */
    int                   componentsize,      /**< number of permutations in the component */
    SCIP_Bool             hassignedperm,      /**< whether the component has a signed permutation */
-   SCIP_Bool*            success             /**< whether the packing partitioning upgrade succeeded */
+   SCIP_Bool*            success,            /**< whether the packing partitioning upgrade succeeded */
+   int*                  naddedconss         /**< pointer to store number of added constraints */
    )
 {
    int c;
@@ -5649,6 +5652,7 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
 
    /* we did not upgrade yet */
    *success = FALSE;
+   *naddedconss = 0;
 
    /* currently, we cannot handle signed permutations */
    if ( hassignedperm )
@@ -5825,6 +5829,7 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
           */
          propdata->genlinconss[propdata->ngenlinconss++] = cons;
          SCIP_CALL( SCIPaddCons(scip, cons) );
+         ++(*naddedconss);
       }
 
       SCIPfreeBufferArray(scip, &ppvarsmatrix);
@@ -5931,14 +5936,16 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    if ( checklexred && ( checkpporbisack == NULL || SCIPparamGetBool(checkpporbisack) == TRUE )
       && nproperperms > 0 && propdata->nmovedbinpermvars > 0 )
    {
+      int naddedconss = 0;
+
       assert( properperms != NULL );
       SCIP_CALL( componentPackingPartitioningOrbisackUpgrade(scip, propdata,
-            properperms, nproperperms, FALSE /* we filter proper permutations */, &success) );
+            properperms, nproperperms, FALSE /* we filter proper permutations */, &success, &naddedconss) );
 
       if ( success )
       {
          if ( propdata->dispsyminfo )
-            SCIPinfoMessage(scip, NULL, "  use packing/partitioning orbisacks\n");
+            SCIPinfoMessage(scip, NULL, "  use %d packing/partitioning orbisacks\n", naddedconss);
          propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
          goto FINISHCOMPONENT;
       }
@@ -5974,7 +5981,7 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
       }
 
       if ( propdata->dispsyminfo )
-         SCIPinfoMessage(scip, NULL, "  use lexicographic reduction\n");
+         SCIPinfoMessage(scip, NULL, "  use lexicographic reduction for %d permutations\n", componentsize);
 
    }
    else if ( propdata->usesimplesgncomp && ! propdata->componentblocked[cidx] )
@@ -6269,7 +6276,8 @@ SCIP_RETCODE handleOrbitope(
       if ( propdata->dispsyminfo )
       {
          SCIPinfoMessage(scip, NULL, "  use static orbitopal reduction on %d x %d matrix\n", nrows, ncols);
-         SCIPinfoMessage(scip, NULL, "  sort first row of %d x %d matrix by SST cuts\n", nrows, ncols);
+         SCIPinfoMessage(scip, NULL, "  use %d SST cuts to sort first row of %d x %d matrix\n",
+            ncols - 1, nrows, ncols);
          if ( issigned )
             SCIPinfoMessage(scip, NULL, "  first row in upper variable domain (signed orbitope)\n");
       }
@@ -6481,7 +6489,8 @@ SCIP_RETCODE handleDoubleLexOrbitope(
       if ( propdata->dispsyminfo )
       {
          SCIPinfoMessage(scip, NULL, "  use static orbitopal reduction on %d x %d matrix\n", nrows, ncols);
-         SCIPinfoMessage(scip, NULL, "  sort first row of %d x %d matrix by SST cuts\n", nrows, ncols);
+         SCIPinfoMessage(scip, NULL, "  use %d SST cuts to sort first row of %d x %d matrix\n",
+            ncols - 1, nrows, ncols);
          if ( nsignedconss > 0 )
             SCIPinfoMessage(scip, NULL, "  recursively enforce first half of entries per column to %s\n",
                "upper half and sort by static orbitopal reduction");
