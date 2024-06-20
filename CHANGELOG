@@ -1,5 +1,33 @@
 @page RN9 Release notes for SCIP 9
 
+@section RN911 SCIP 9.1.1
+*************************
+
+Fixed bugs
+----------
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Miscellaneous
+-------------
+
 @section RN910 SCIP 9.1.0
 *************************
 
