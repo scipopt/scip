@@ -1197,6 +1197,7 @@ set_target_properties(scip PROPERTIES
 # install the header files of scip
 install(FILES ${lpiheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lpi)
 install(FILES ${lpiexactheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lpiexact)
+install(FILES ${rectluheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rectlu)
 install(FILES ${dijkstraheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dijkstra)
 install(FILES ${objscipheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/objscip)
 install(FILES ${scipheaders} ${PROJECT_BINARY_DIR}/scip/config.h ${PROJECT_BINARY_DIR}/scip/scip_export.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/scip)
