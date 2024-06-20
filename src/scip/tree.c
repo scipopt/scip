@@ -6407,6 +6407,7 @@ SCIP_RETCODE treeCreateProbingNode(
 
    /* get the current node */
    currentnode = SCIPtreeGetCurrentNode(tree);
+   assert(currentnode != NULL);
    assert(SCIPnodeGetType(currentnode) == SCIP_NODETYPE_FOCUSNODE
       || SCIPnodeGetType(currentnode) == SCIP_NODETYPE_REFOCUSNODE
       || SCIPnodeGetType(currentnode) == SCIP_NODETYPE_PROBINGNODE);
