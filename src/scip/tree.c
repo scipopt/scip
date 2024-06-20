@@ -6721,8 +6721,9 @@ SCIP_RETCODE SCIPtreeMarkProbingNodeHasLP(
 
    /* get current probing node */
    node = SCIPtreeGetCurrentNode(tree);
+   assert(node != NULL);
    assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
-   assert(node != NULL && node->data.probingnode != NULL);
+   assert(node->data.probingnode != NULL);
 
    /* update LP information in probingnode data */
    /* cppcheck-suppress nullPointer */
