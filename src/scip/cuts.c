@@ -37,6 +37,7 @@
 #include "scip/dbldblarith.h"
 #include "scip/intervalarith.h"
 #include "scip/lp.h"
+#include "scip/misc.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_lpexact.h"
 #include "scip/pub_message.h"
@@ -3540,7 +3541,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                // just exclude the negative continuous slacks for the certificate rows
                if( row->integral &&
                   ((!lhsused && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant)) ||
-                  (lhsused && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant))) )
+                  (lhsused && SCIPisExactlyIntegral(row->lhs) &&  SCIPisExactlyIntegral(row->constant))) )
                {
                   SCIPdebugMessage("row has integral slack\n");
                   rowusedcert = FALSE;
@@ -3594,7 +3595,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   // just exclude the negative continuous slacks for the certificate rows
                   if( row->integral &&
                      ((!lhsused && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant)) ||
-                     (lhsused && SCIPisExactlyIntegral(row->rhs) &&  SCIPisExactlyIntegral(row->constant))) )
+                     (lhsused && SCIPisExactlyIntegral(row->lhs) &&  SCIPisExactlyIntegral(row->constant))) )
                   {
                      rowusedcert = FALSE;
                      SCIPdebugMessage("row has integral slack\n");

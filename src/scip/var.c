@@ -10144,6 +10144,8 @@ SCIP_RETCODE varProcessChgLbGlobal(
    oldbound = var->glbdom.lb;
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
    var->glbdom.lb = newbound;
+   if( set->exact_enabled && RatIsLTReal(SCIPvarGetLbGlobalExact(var), newbound) )
+      RatSetReal(var->exactdata->glbdom.lb, newbound);
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
    assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
 
@@ -10335,6 +10337,9 @@ SCIP_RETCODE varProcessChgUbGlobal(
    oldbound = var->glbdom.ub;
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
    var->glbdom.ub = newbound;
+   if( set->exact_enabled && RatIsGTReal(SCIPvarGetUbGlobalExact(var), newbound) )
+      RatSetReal(var->exactdata->glbdom.ub, newbound);
+
    assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
    assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
 

@@ -7571,7 +7571,11 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_CALL( SCIPlpEndProbing(lp) );
 
    if( set->exact_enabled )
+   {
       lp->pseudoobjvalid = FALSE;
+      if( SCIPnodeGetDepth(tree->focusnode) == 0 )
+         lp->glbpseudoobjvalid = FALSE;
+   }
 
    /* reset all marked constraints for propagation */
    SCIP_CALL( SCIPconshdlrsResetPropagationStatus(set, blkmem, set->conshdlrs, set->nconshdlrs) );

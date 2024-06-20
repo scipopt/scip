@@ -4376,6 +4376,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
       SCIPsetDebugMsg(set, "time limit exceeded before solving LP\n");
       lp->solved = TRUE;
       lpexact->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+      lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
       lp->lpobjval = -SCIPsetInfinity(set);
       return SCIP_OKAY;
    }
@@ -4480,10 +4481,12 @@ SCIP_RETCODE lpExactFlushAndSolve(
       else if( SCIPlpiExactIsIterlimExc(lpexact->lpiexact) )
       {
          lpexact->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
+         lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
       }
       else if( SCIPlpiExactIsTimelimExc(lpexact->lpiexact) )
       {
          lpexact->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+         lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
       }
       else
       {
@@ -8813,4 +8816,29 @@ SCIP_RETCODE SCIPlpExactWrite(
    SCIP_CALL( SCIPlpiExactWriteLP(lp->lpiexact, fname) );
 
    return SCIP_OKAY;
+}
+
+/** overwrites the dual values stored in the fp lp with exact values */
+void SCIPlpExactOverwriteFpDualSol(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_Bool             dualfarkas          /**< TRUE if farkas proof, FALSE if dual sol? */
+   )
+{
+   assert(lp != NULL);
+
+   for( int c = 0; c < lp->ncols; ++c )
+   {
+      if( dualfarkas )
+         lp->cols[c]->fpcol->farkascoef = RatApproxReal(lp->cols[c]->farkascoef);
+      else
+         lp->cols[c]->fpcol->redcost = RatApproxReal(lp->cols[c]->redcost);
+   }
+
+   for( int r = 0; r < lp->nrows; ++r )
+   {
+      if( dualfarkas )
+         lp->rows[r]->fprow->dualfarkas = RatApproxReal(lp->rows[r]->dualfarkas);
+      else
+         lp->rows[r]->fprow->dualsol = RatApproxReal(lp->rows[r]->dualsol);
+   }
 }

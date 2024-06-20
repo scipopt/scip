@@ -1561,7 +1561,8 @@ static SCIP_RETCODE getObjectiveRow(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_ROW**            row,                /**< pointer to store the row */
    SCIP_Real             rhs,                /**< right-hand side of the artificial row */
-   SCIP_Real             scale               /**< scalar */
+   SCIP_Real             scale,              /**< scalar */
+   SCIP_Bool*            success             /**< pointer to store whether adding the row was successful */
    )
 {
    SCIP_Real* vals;
@@ -1601,14 +1602,22 @@ static SCIP_RETCODE getObjectiveRow(
       colsexact[nvals] = scip->lpexact->cols[i];
       assert(scip->lp->cols[i]->var == scip->lpexact->cols[i]->var);
       nvals++;
+      /* rows do not allow numerically 0 coefficients, since this almost never happens, just abort the procedure in this case*/
+      if( SCIPisZero(scip, vals[nvals]) )
+      {
+         *success = FALSE;
+         break;
+      }
    }
 
-   SCIPcreateRowUnspec(scip, row, "objective", nvals, cols, vals, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE);
-   SCIPdebugMessage("%d == %d", SCIPgetNLPCols(scip), SCIProwGetNNonz(*row));
-   SCIProwExactCreate(&rowexact, *row, NULL, scip->mem->probmem, scip->set, scip->stat,
-   scip->lpexact, nvals,
-   colsexact, valsexact,
-   lhsexact, rhsexact, SCIP_ROWORIGINTYPE_UNSPEC,   TRUE, NULL);
+   if( *success )
+   {
+      SCIPcreateRowUnspec(scip, row, "objective", nvals, cols, vals, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE);
+      SCIProwExactCreate(&rowexact, *row, NULL, scip->mem->probmem, scip->set, scip->stat,
+			 scip->lpexact, nvals, colsexact, valsexact,
+			 lhsexact, rhsexact, SCIP_ROWORIGINTYPE_UNSPEC,   TRUE, NULL);
+      SCIPdebugMessage("%d == %d", SCIPgetNLPCols(scip), SCIProwGetNNonz(*row));
+   }
 
    RatFreeBuffer(SCIPbuffer(scip), &lhsexact);
    RatFreeBuffer(SCIPbuffer(scip), &rhsexact);
@@ -1750,11 +1759,12 @@ SCIP_RETCODE SCIPgetDualProof(
 
       cutoffbound = RatRoundReal(SCIPgetCutoffboundExact(set->scip), SCIP_R_ROUND_UPWARDS);
 
-      SCIP_CALL( getObjectiveRow(set->scip, farkasrow, &objectiverow, cutoffbound, 1.0) );
-      SCIP_CALL( addRowToAggrRowSafely(set, objectiverow, 1.0, farkasrow, valid) );
+      SCIP_CALL( getObjectiveRow(set->scip, farkasrow, &objectiverow, cutoffbound, 1.0, valid) );
+      if( *valid )
+	 SCIP_CALL( addRowToAggrRowSafely(set, objectiverow, 1.0, farkasrow, valid) );
 
       if( !(*valid) )
-	      goto TERMINATE;
+	 goto TERMINATE;
    }
    else
    {

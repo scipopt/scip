@@ -835,6 +835,12 @@ SCIP_RETCODE SCIPlpExactWrite(
    const char*           fname               /**< file name */
    );
 
+/** overwrites the dual values stored in the fp lp with exact values */
+void SCIPlpExactOverwriteFpDualSol(
+   SCIP_LPEXACT*         lp,                 /**< current LP data */
+   SCIP_Bool             dualfarkas          /**< TRUE if farkas proof, FALSE if dual sol? */
+   );
+
 #ifdef __cplusplus
 }
 #endif

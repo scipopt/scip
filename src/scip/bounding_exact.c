@@ -2408,8 +2408,6 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
             *lperror = FALSE;
             SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                   prob, usefarkas, safebound) );
-            if( lp->hasprovedbound )
-               *dualfeasible = TRUE;
             break;
       #ifdef SCIP_WITH_GMP
          case 'p':
@@ -2417,8 +2415,6 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
             *lperror = FALSE;
             SCIP_CALL( projectShift(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                   prob, blkmem, usefarkas, safebound) );
-            if( lp->hasprovedbound )
-               *dualfeasible = TRUE;
             break;
       #endif
          case 'e':
@@ -2448,16 +2444,17 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       lastboundmethod = dualboundmethod;
 
       /* we fail if we tried all available methods, or if we had to solve the lp exactly but could not */
-      if( (lpexact->forceexactsolve && (*lperror)) || (nattempts >= 3 && !lp->hasprovedbound) || (lastboundmethod == 't')
-          || lpexact->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
+      if( (lpexact->forceexactsolve && (*lperror)) || (nattempts >= 3 && !lp->hasprovedbound) || (lastboundmethod == 't') )
       {
          SCIPdebugMessage("failed save bounding call after %d attempts to compute safe bound\n", nattempts);
          shouldabort = TRUE;
          *lperror = TRUE;
       }
+      if( lpexact->lpsolstat == SCIP_LPSOLSTAT_TIMELIMIT )
+	 shouldabort = TRUE;
    }
 #endif
-   if( *lperror )
+   if( *lperror && lp->lpsolstat != SCIP_LPSOLSTAT_TIMELIMIT && lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT )
    {
       lp->solved = FALSE;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
