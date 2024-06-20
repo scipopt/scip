@@ -6407,6 +6407,7 @@ SCIP_RETCODE treeCreateProbingNode(
 
    /* get the current node */
    currentnode = SCIPtreeGetCurrentNode(tree);
+   assert(currentnode != NULL);
    assert(SCIPnodeGetType(currentnode) == SCIP_NODETYPE_FOCUSNODE
       || SCIPnodeGetType(currentnode) == SCIP_NODETYPE_REFOCUSNODE
       || SCIPnodeGetType(currentnode) == SCIP_NODETYPE_PROBINGNODE);
@@ -6720,8 +6721,9 @@ SCIP_RETCODE SCIPtreeMarkProbingNodeHasLP(
 
    /* get current probing node */
    node = SCIPtreeGetCurrentNode(tree);
+   assert(node != NULL);
    assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
-   assert(node != NULL && node->data.probingnode != NULL);
+   assert(node->data.probingnode != NULL);
 
    /* update LP information in probingnode data */
    /* cppcheck-suppress nullPointer */
