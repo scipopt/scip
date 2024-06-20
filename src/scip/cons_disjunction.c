@@ -49,7 +49,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/symmetry_graph.h"
-#include "symmetry/struct_symmetry.h"
 #include <string.h>
 
 
