@@ -824,21 +824,10 @@ int compareVarsSignedPerm(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   /* use SCIP's comparison functions if available */
-   if( scip == NULL )
-   {
-      if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
-         return -1;
-      if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
-         return 1;
-   }
-   else
-   {
-      if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
-         return -1;
-      if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
-         return 1;
-   }
+   if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
+      return -1;
+   if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
+      return 1;
 
    obj1 = isneg1 ? -SCIPvarGetObj(var1) : SCIPvarGetObj(var1);
    obj2 = isneg2 ? -SCIPvarGetObj(var2) : SCIPvarGetObj(var2);
