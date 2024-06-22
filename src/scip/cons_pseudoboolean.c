@@ -67,7 +67,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
 #include "scip/symmetry_graph.h"
-#include "symmetry/struct_symmetry.h"
 #include <string.h>
 
 #ifdef WITHEQKNAPSACK
