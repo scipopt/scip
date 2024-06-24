@@ -463,6 +463,10 @@ set(instances_Or
     "instances/Or/problem.cip\;0"
     )
 
+set(instances_Objlim
+    "instances/Issue/3715.cip\;0\;default\;0.01"
+    )
+
 #
 # Pairs of instances and settings
 #
@@ -535,6 +539,14 @@ macro(split_decompinstance instance)
     list(GET instance 2 optval)
     get_filename_component(basename ${instpath} NAME)
 endmacro(split_decompinstance)
+
+macro(split_objliminstance instance)
+    list(GET instance 0 path)
+    list(GET instance 1 optval)
+    list(GET instance 2 setting)
+    list(GET instance 3 objlim)
+    get_filename_component(basename ${path} NAME)
+endmacro(split_objliminstance)
 
 macro(split_pair pair)
     list(GET pair 0 path)
@@ -688,6 +700,26 @@ foreach(instance ${instances_Indicator})
             COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solvecip-${basename}.bat
             )
     set_tests_properties(Indicator-solvecip-${basename}
+        PROPERTIES
+            PASS_REGULAR_EXPRESSION "Validation         : Success"
+            FAIL_REGULAR_EXPRESSION ERROR
+            DEPENDS scip-build
+        )
+endforeach(instance)
+
+#
+# test checking objectivelimits
+#
+foreach(instance ${instances_Objlim})
+    split_objliminstance(instance)
+    #
+    # configure the batch file for this test by substituting placeholders in the in.file
+    #
+    configure_file(interactiveshell/objectivelimit.bat.in interactiveshell/objectivelimit-${basename}.bat)
+    add_test(NAME Objlim-${setting}-${basename}
+            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/objectivelimit-${basename}.bat
+            )
+    set_tests_properties(Objlim-${setting}-${basename}
         PROPERTIES
             PASS_REGULAR_EXPRESSION "Validation         : Success"
             FAIL_REGULAR_EXPRESSION ERROR
