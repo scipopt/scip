@@ -9,6 +9,7 @@ Features
 - Copy variable data pointer if no copy routine was supplied.
 
 - added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
+- implemented symmetry detection callbacks for cons_disjunction and cons_superindicator
 
 Performance improvements
 ------------------------
@@ -30,6 +31,7 @@ Interface changes
   SCIPvarGetAncPseudocost() for retrieving the values related to ancestral pseudo cost fields in variable history
 - SCIPgetAvgDPseudocostScore(), SCIPgetVarDPseudocostScore() for computing the discounted pseudo cost scores using ancestral pseudo costs
 - SCIPboundchgGetLPSolVal() for accessing the LP solution value in the branching data of the bound change
+- SCIPclearSymgraph() and SCIPcopySymgraphAsSubgraph() to clear and copy as symmetry detection graph, respectively
 
 ### Command line interface
 
