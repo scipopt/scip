@@ -121,6 +121,8 @@ Miscellaneous
 Fixed bugs
 ----------
 
+- fix bug in separator aggregation that caused incorrect terminations when for an integral objective the objective limit was set to a fractional value
+
 Performance improvements
 ------------------------
 
