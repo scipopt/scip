@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   build_sassy_graph.c
+/**@file   build_sassy_graph.cpp
  * @brief  methods to build sassy graph for symmetry detection
  * @author Christopher Hojny
  */

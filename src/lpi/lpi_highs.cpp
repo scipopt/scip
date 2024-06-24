@@ -566,9 +566,9 @@ const char* SCIPlpiGetSolverDesc(
 {
    SCIPdebugMessage("calling SCIPlpiGetSolverDesc()\n");
 
-   snprintf(highsdesc, 200, "%s [%s] [GitHash: %s]",
+   snprintf(highsdesc, 200, "%s [GitHash: %s]",
       "Linear optimization suite written and engineered at the University of Edinburgh",
-      HIGHS_COMPILATION_DATE, HIGHS_GITHASH);
+      HIGHS_GITHASH);
    return highsdesc;
 }
 
