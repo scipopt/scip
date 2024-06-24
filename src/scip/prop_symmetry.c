@@ -654,7 +654,7 @@ SCIP_RETCODE printSyminfoComponentHeader(
    assert( propdata != NULL );
    assert( 0 <= cidx && cidx < propdata->ncomponents );
 
-   SCIPinfoMessage(scip, NULL, "\nSymmetry information component %d\n", cidx);
+   SCIPinfoMessage(scip, NULL, "%sSymmetry information component %d\n", cidx == 0 ? "" : "\n", cidx);
    SCIPinfoMessage(scip, NULL, "  number of generators:\t\t%d\n",
       propdata->componentbegins[cidx + 1] - propdata->componentbegins[cidx]);
 
