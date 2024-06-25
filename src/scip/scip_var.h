@@ -2312,7 +2312,6 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    SCIP_Rational*        newbound,           /**< new value for bound */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
-   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
@@ -2341,7 +2340,6 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    SCIP_Rational*        newbound,           /**< new value for bound */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
-   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );

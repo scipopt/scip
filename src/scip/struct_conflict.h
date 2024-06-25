@@ -96,7 +96,7 @@ struct SCIP_ProofSet
    int                   size;
    int                   validdepth;
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP */
-   unsigned long         certificateline;
+   SCIP_Longint          certificateline;
 };
 
 /** set of LP bound change */

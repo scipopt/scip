@@ -2469,10 +2469,10 @@ SCIP_Longint SCIPcertificatePrintDualbound(
 }
 
 /** returns the index for a row in the certificate */
-unsigned long SCIPcertificateGetRowIndex(
-   SCIP_CERTIFICATE* certificate,            /**< certificate data structure */
-   SCIP_ROWEXACT* row,                       /**< row to consider */
-   SCIP_Bool rhs                             /**< whether we want the index for the rhs or the lhs */
+SCIP_Longint SCIPcertificateGetRowIndex(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   SCIP_ROWEXACT*        row,                /**< row to consider */
+   SCIP_Bool             rhs                 /**< whether we want the index for the rhs or the lhs */
    )
 {
    SCIP_Longint ret = SCIPhashmapGetImageLong(certificate->rowdatahash, row);
@@ -2602,10 +2602,10 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
 
 /** Print cutoff bound for objective value **/
 SCIP_RETCODE SCIPcertificatePrintCutoffBound(
-   SCIP* scip,
-   SCIP_CERTIFICATE* certificate,
-   SCIP_Rational* bound,
-   unsigned long* certificateline
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_Rational*        bound,              /**< the bound */
+   SCIP_Longint*         certificateline     /**< save the line index */
    )
 {
    SCIP_Rational* newbound;

@@ -1250,8 +1250,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       /* in exact mode we have to end diving prior to trying the solution */
       if( SCIPisExactSolve(scip) )
       {
-         SCIPunlinkSol(scip, heurdata->sol);
-         SCIPendDive(scip);
+         SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
+         SCIP_CALL( SCIPendDive(scip) );
       }
 
       SCIPdebugMsg(scip, "feasibility pump found solution (%d fractional variables)\n", nfracs);

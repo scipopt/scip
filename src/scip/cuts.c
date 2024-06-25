@@ -4313,10 +4313,8 @@ SCIP_RETCODE determineBestBounds(
 static
 void performBoundSubstitutionSafely(
    SCIP*                 scip,               /**< SCIP datastructure */
-   int*                  cutinds,            /**< index array of nonzeros in the cut */
    SCIP_Real*            cutcoefs,           /**< array of cut coefficients */
    SCIP_Real*            cutrhs,            /**< pointer to right hand side of the cut */
-   int*                  nnz,                /**< pointer to number of nonzeros of the cut */
    int                   varsign,            /**< stores the sign of the transformed variable in summation */
    int                   boundtype,          /**< stores the bound used for transformed variable:
                                               *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
@@ -4544,8 +4542,6 @@ SCIP_RETCODE cutsTransformMIRSafely(
                                               *   NULL for using closest bound for all variables */
    SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables;
                                               *   NULL for using closest bound for all variables */
-   SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
-   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            cutcoefs,           /**< array of coefficients of cut */
    SCIP_Real*            cutrhs,             /**< pointer to right hand side of cut */
    int*                  cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
@@ -4629,7 +4625,7 @@ SCIP_RETCODE cutsTransformMIRSafely(
          boundtype[i] = bestlbtypes[i];
          varsign[i] = +1;
 
-         performBoundSubstitutionSafely(scip, cutinds, cutcoefs, cutrhs, nnz, varsign[i], boundtype[i], bestlbs[i], v, localbdsused);
+         performBoundSubstitutionSafely(scip, cutcoefs, cutrhs, varsign[i], boundtype[i], bestlbs[i], v, localbdsused);
       }
       else
       {
@@ -4639,7 +4635,7 @@ SCIP_RETCODE cutsTransformMIRSafely(
          boundtype[i] = bestubtypes[i];
          varsign[i] = -1;
 
-         performBoundSubstitutionSafely(scip, cutinds, cutcoefs, cutrhs, nnz, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
+         performBoundSubstitutionSafely(scip, cutcoefs, cutrhs, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
       }
 
       if( SCIPisCertificateActive(scip) )
@@ -7078,7 +7074,7 @@ SCIP_RETCODE calcMIRSafely(
        *   a_{zu_j} := a_{zu_j} + a_j * bu_j
        */
       SCIP_CALL( cutsTransformMIRSafely(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, FALSE,
-            boundsfortrans, boundtypesfortrans, minfrac, maxfrac, tmpcoefs, &rhs, tmpinds, &tmpnnz, varsign, boundtype, &freevariable, &localbdsused) );
+            boundsfortrans, boundtypesfortrans, tmpcoefs, &rhs, tmpinds, &tmpnnz, varsign, boundtype, &freevariable, &localbdsused) );
       assert(allowlocal || !localbdsused);
       tmpislocal = tmpislocal || localbdsused;
 

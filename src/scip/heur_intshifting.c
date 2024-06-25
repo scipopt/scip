@@ -1125,8 +1125,8 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          /* in exact mode we have to end diving prior to trying the solution */
          if( SCIPisExactSolve(scip) )
          {
-            SCIPunlinkSol(scip, heurdata->sol);
-            SCIPendDive(scip);
+            SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
+            SCIP_CALL( SCIPendDive(scip) );
          }
 
          /* check solution for feasibility, and add it to solution store if possible

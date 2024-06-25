@@ -189,7 +189,7 @@ SCIP_Rational* SCIPconsGetRhsExact(
 {
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
-   SCIP_Rational* rhs;
+   SCIP_Rational* rhs = NULL;
 
    assert(scip != NULL);
    assert(cons != NULL);

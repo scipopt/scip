@@ -3259,7 +3259,7 @@ SCIP_RETCODE SCIProwExactCreate(
    (*row)->fprelaxable = isfprelaxable;
    (*row)->rhsreal = RatRoundReal((*row)->rhs, SCIP_R_ROUND_UPWARDS);
    (*row)->lhsreal = RatRoundReal((*row)->lhs, SCIP_R_ROUND_DOWNWARDS);
-   SCIPintervalSet(&(*row)->constantreal, 0);
+   SCIPintervalSet(&(*row)->constantreal, 0.0);
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -3600,7 +3600,6 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
    for( i = 0; i < npostprocess; i++ )
    {
       int idx;
-      idx = sideindexpostprocess[i];
       idx = sideindexpostprocess[i];
       var = SCIPcolExactGetVar(row->cols[idx]);
       lbreal = SCIPvarGetLbGlobal(var);

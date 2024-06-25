@@ -2407,7 +2407,7 @@ SCIP_RETCODE rowChgCoefPos(
       /* delete existing coefficient */
       SCIP_CALL( rowDelCoefPos(row, blkmem, set, eventqueue, lp, pos) );
    }
-   else if( !SCIPsetIsEQ(set, row->vals[pos], val) || (set->exact_enabled && row->vals[pos] != val) )
+   else if( !SCIPsetIsEQ(set, row->vals[pos], val) || (set->exact_enabled && row->vals[pos] != val) ) /*lint !e777*/
    {
       SCIP_Real oldval;
 
@@ -5494,7 +5494,7 @@ SCIP_RETCODE SCIProwFree(
          (*row)->rowexact->fprow = NULL;
       else
          (*row)->rowexact->fprowrhs = NULL;
-      SCIProwExactRelease(&(*row)->rowexact, blkmem, set, lp->lpexact);
+      SCIP_CALL( SCIProwExactRelease(&(*row)->rowexact, blkmem, set, lp->lpexact) );
    }
 
    BMSfreeBlockMemory(blkmem, row);
@@ -5573,7 +5573,7 @@ SCIP_RETCODE SCIProwRelease(
    (*row)->nuses--;
    if( (*row)->nuses == 0 )
    {
-      SCIPfreeRowCertInfo(set->scip, (*row));
+      SCIP_CALL( SCIPfreeRowCertInfo(set->scip, (*row)) );
       SCIP_CALL( SCIProwFree(row, blkmem, set, lp) );
    }
 
@@ -5883,7 +5883,7 @@ SCIP_RETCODE SCIProwChgLhs(
    assert(row != NULL);
    assert(lp != NULL);
 
-   if( !SCIPsetIsEQ(set, row->lhs, lhs) || (set->exact_enabled && row->lhs != lhs) )
+   if( !SCIPsetIsEQ(set, row->lhs, lhs) || (set->exact_enabled && row->lhs != lhs) ) /*lint !e777*/
    {
       SCIP_Real oldlhs;
 
@@ -5915,7 +5915,7 @@ SCIP_RETCODE SCIProwChgRhs(
    assert(row != NULL);
    assert(lp != NULL);
 
-   if( !SCIPsetIsEQ(set, row->rhs, rhs) || (set->exact_enabled && row->rhs != rhs) )
+   if( !SCIPsetIsEQ(set, row->rhs, rhs) || (set->exact_enabled && row->rhs != rhs) ) /*lint !e777*/
    {
       SCIP_Real oldrhs;
 
@@ -10462,7 +10462,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
    }
 
    if( !lp->diving && !lp->probing )
-      SCIPlpExactSetCutoffbound(lp->lpexact, set, cutoffbound);
+      SCIP_CALL( SCIPlpExactSetCutoffbound(lp->lpexact, set, cutoffbound) );
 
    lp->cutoffbound = cutoffbound;
 
@@ -12753,9 +12753,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       if( lp->solved && set->exact_enabled && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_TIMELIMIT && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_ITERLIMIT )
       {
          if( SCIPlpGetSolstat(lp) ==  SCIP_LPSOLSTAT_INFEASIBLE )
-            SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid);
+            SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat, &farkasvalid) );
          else
-            SCIPlpGetSol(lp, set, stat, &primalfeasible, &dualfeasible);
+            SCIP_CALL( SCIPlpGetSol(lp, set, stat, &primalfeasible, &dualfeasible) );
 
          /* in objlimit case, the lp objval is set to infinity, get the real objval to correct */
          if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )

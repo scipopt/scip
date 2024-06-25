@@ -944,15 +944,15 @@ SCIP_RETCODE createAndAddProofcons(
    }
 
    /* don't store global dual proofs that are too long / have too many non-zeros */
-      if( toolong && !set->exact_enabled )
+   if( toolong && !set->exact_enabled )
+   {
+      if( applyglobal )
       {
-         if( applyglobal )
-         {
-            SCIP_CALL( propagateLongProof(conflict, set, stat, reopt, tree, blkmem, origprob, transprob, lp, branchcand,
-                  eventqueue, cliquetable, coefs, inds, nnz, rhs, conflicttype, proofset->validdepth) );
-         }
-         return SCIP_OKAY;
+         SCIP_CALL( propagateLongProof(conflict, set, stat, reopt, tree, blkmem, origprob, transprob, lp, branchcand,
+               eventqueue, cliquetable, coefs, inds, nnz, rhs, conflicttype, proofset->validdepth) );
       }
+      return SCIP_OKAY;
+   }
 
    /* check if conflict contains variables that are invalid after a restart to label it appropriately */
    hasrelaxvar = FALSE;
@@ -1006,7 +1006,7 @@ SCIP_RETCODE createAndAddProofcons(
       SCIP_CALL( SCIPcreateConsExactLinear(set->scip, &cons, name, nnz, consvars, coefs_exact, lhs_exact, rhs_exact,
             FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
             FALSE, TRUE, TRUE, FALSE) );
-      if ( SCIPisCertificateActive(set->scip) )
+      if( SCIPisCertificateActive(set->scip) )
       {
          SCIP_CALL( SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, cons, proofset->certificateline) );
       }
@@ -1627,6 +1627,8 @@ SCIP_RETCODE tightenDualproof(
          }
       }
    }
+
+   redundant = FALSE;
 
    /* apply coefficient tightening to initial proof */
    if( !set->exact_enabled )

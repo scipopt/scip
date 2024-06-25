@@ -142,7 +142,6 @@ SCIP_RETCODE SCIPsolCreateLPSolExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LPEXACT*         lp,                 /**< current LP data */
@@ -192,7 +191,6 @@ SCIP_RETCODE SCIPsolCreatePseudoSolExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LPEXACT*         lp,                 /**< current LP data */
@@ -218,7 +216,6 @@ SCIP_RETCODE SCIPsolCreateCurrentSolExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LPEXACT*         lp,                 /**< current LP data */
@@ -267,7 +264,6 @@ SCIP_RETCODE SCIPsolLinkLPSol(
 SCIP_RETCODE SCIPsolLinkLPSolExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 
@@ -302,7 +298,6 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
 SCIP_RETCODE SCIPsolLinkPseudoSolExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 

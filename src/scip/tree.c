@@ -1819,8 +1819,10 @@ SCIP_RETCODE treeAddPendingBdchg(
    tree->pendingbdchgs[tree->npendingbdchgs].probingchange = probingchange;
    if( newboundexact != NULL )
    {
-      if(  tree->pendingbdchgs[tree->npendingbdchgs].newboundexact == NULL )
-         RatCreate(&tree->pendingbdchgs[tree->npendingbdchgs].newboundexact);
+      if( tree->pendingbdchgs[tree->npendingbdchgs].newboundexact == NULL )
+      {
+         SCIP_CALL( RatCreate(&tree->pendingbdchgs[tree->npendingbdchgs].newboundexact) );
+      }
       RatSet(tree->pendingbdchgs[tree->npendingbdchgs].newboundexact, newboundexact);
    }
    tree->npendingbdchgs++;
@@ -1927,8 +1929,10 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &newboundex));
 
       RatSetReal(newboundex, newbound);
-      SCIPcertificatePrintGlobalBound(set->scip, SCIPgetCertificate(set->scip), var, boundtype, newboundex, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(set->scip)) - 1);
-      SCIPvarChgBdGlobalExact(var, blkmem, set, stat, lp->lpexact, branchcand, eventqueue, cliquetable, newboundex, boundtype);
+      SCIP_CALL( SCIPcertificatePrintGlobalBound(set->scip, SCIPgetCertificate(set->scip), var, boundtype,
+         newboundex, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(set->scip)) - 1) );
+      SCIP_CALL( SCIPvarChgBdGlobalExact(var, blkmem, set, stat, lp->lpexact, branchcand,
+         eventqueue, cliquetable, newboundex, boundtype) );
 
       RatFreeBuffer(SCIPbuffer(set->scip), &newboundex);
    }
@@ -2220,7 +2224,6 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    SCIP_Bool useglobal;
 
    useglobal = (int) node->depth <= tree->effectiverootdepth;
-   newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
 
    if( useglobal )
    {
@@ -2233,7 +2236,10 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       oldub = SCIPvarGetUbLocalExact(var);
    }
    if( set->stage > SCIP_STAGE_PRESOLVING && useglobal && SCIPsetCertificateEnabled(set) )
-      SCIPcertificatePrintGlobalBound(set->scip, SCIPgetCertificate(set->scip), var, boundtype, newbound, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(set->scip)) - 1);
+   {
+      SCIP_CALL( SCIPcertificatePrintGlobalBound(set->scip, SCIPgetCertificate(set->scip), var,
+            boundtype, newbound, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(set->scip)) - 1) );
+   }
 
    assert(node != NULL);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE

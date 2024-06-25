@@ -373,59 +373,11 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    fixval = SCIP_INVALID;
    uplb = SCIP_INVALID;
 
-   if( SCIPsetIsFeasIntegral(set, val) && FALSE )
-   {
-      SCIP_Real lb;
-      SCIP_Real ub;
-
-      lb = SCIPvarGetLbLocal(var);
-      ub = SCIPvarGetUbLocal(var);
-
-      /* if there was no explicit value given for branching, the variable has a finite domain and the current LP/pseudo
-       * solution is close to one of the bounds (e.g. lb), we branch on x = lb, x >= lb + 1 */
-      if( !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub)
-         && (SCIPsetIsFeasEQ(set, val, lb) || SCIPsetIsFeasEQ(set, val, ub)) )
-      {
-         SCIP_Real center;
-
-         center = (ub + lb) / 2.0;
-         if( val <= center )
-         {
-            downub = SCIPsetFeasFloor(set, lb);
-            uplb = downub + 1.0;
-         }
-         else
-         {
-            uplb = SCIPsetFeasCeil(set, ub);
-            downub = uplb - 1.0;
-         }
-      }
-      else
-      {
-         /* create child nodes with x <= x'-1, x = x', and x >= x'+1 */
-         assert(SCIPsetIsEQ(set, SCIPsetFeasCeil(set, val), SCIPsetFeasFloor(set, val)));
-
-         fixval = SCIPsetFeasCeil(set, val); /* get rid of numerical issues */
-
-         /* create child node with x <= x'-1, if this would be feasible */
-         if( SCIPsetIsFeasGE(set, fixval-1.0, lb) )
-            downub = fixval - 1.0;
-
-         /* create child node with x >= x'+1, if this would be feasible */
-         if( SCIPsetIsFeasLE(set, fixval+1.0, ub) )
-            uplb = fixval + 1.0;
-      }
-      SCIPsetDebugMsg(set, "integral branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n",
-         SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
-   }
-   else
-   {
-      /* create child nodes with x <= floor(x'), and x >= ceil(x') */
-      downub = floor(val);
-      uplb = downub + 1.0;
-      SCIPsetDebugMsg(set, "fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n",
-         SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
-   }
+   /* create child nodes with x <= floor(x'), and x >= ceil(x') */
+   downub = floor(val);
+   uplb = downub + 1.0;
+   SCIPsetDebugMsg(set, "fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n",
+      SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
 
    /* perform the branching;
     * set the node selection priority in a way, s.t. a node is preferred whose branching goes in the same direction
