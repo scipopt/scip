@@ -4758,7 +4758,7 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
          break;
       default:
          SCIPinfoMessage(scip, NULL, "CONTINUOUS\n");
-      }
+      } /*lint !e788*/
    }
 
    /* (re-)allocate memory for Schreier Sims constraints and leaders */
