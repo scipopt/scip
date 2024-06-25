@@ -325,11 +325,19 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * `allowweakcuts` = TRUE, if it didn't succeed to enforce a solution without using weak cuts.
  * If in enforcement and the nonlinear handler cannot enforce by separation or bound tightening, it should register
  * branching scores for those expressions where branching may help to compute tighter cuts in children.
+ * If `branchcandonly`, then cons_nonlinear is interested in collecting potential branching candidates only
+ * (in order to decide whether to enforce nonlinear constraints before integrality). Therefore, in this situation,
+ * the nlhdlr should not do anything if it normally (`branchcandonly`=FALSE) were to separate or tighten bounds.
+ * (Since in the normal mode it will only add branching candidates if it does no separation/tightening.)
+ * In other words, with `branchcandonly` = TRUE, the nlhdlr should follow the same logic as for
+ * `branchcandonly` = FALSE, but skip the addition of cuts or bound tightenings.
  *
  * The nonlinear handler must set `result` to \ref SCIP_SEPARATED if it added a cut,
- * to \ref SCIP_REDUCEDDOM if it added a bound change, and
+ * to \ref SCIP_REDUCEDDOM if it added a bound change,
+ * to \ref SCIP_CUTOFF if it found the current node infeasible, and
  * to \ref SCIP_BRANCHED if it added branching scores.
  * Otherwise, it may set result to \ref SCIP_DIDNOTRUN or \ref SCIP_DIDNOTFIND.
+ * If `branchcandonly`, then SCIP_SEPARATED and SCIP_REDUCEDDOM are not allowed.
  *
  * Parameter `cons` gives the constraint that is currently enforced.
  * Note that `expr` does not need to be the root of this constraint, i.e., `SCIPgetExprNonlinear(cons)==expr` may not hold.
@@ -348,6 +356,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
  * \param[in] allowweakcuts  whether we should only look for "strong" cuts, or anything that separates is fine
  * \param[in] separated      whether another nonlinear handler already added a cut for this expression
  * \param[in] inenforcement  whether we are in enforcement, or only in separation
+ * \param[in] branchcandonly whether to generate branching candidates only (no separation or propagation; detecting infeasibility is ok)
  * \param[out] result        pointer to store the result
  */
 #define SCIP_DECL_NLHDLRENFO(x) SCIP_RETCODE x (\
@@ -363,6 +372,7 @@ typedef unsigned int SCIP_NLHDLR_METHOD; /**< nlhdlr methods bitflags */
    SCIP_Bool            allowweakcuts,   \
    SCIP_Bool            separated,       \
    SCIP_Bool            addbranchscores, \
+   SCIP_Bool            branchcandonly,  \
    SCIP_RESULT*         result)
 
 /** nonlinear handler under/overestimation callback

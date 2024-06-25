@@ -61,7 +61,7 @@ struct SCIP_RBTreeNode
  */
 #define SCIP_RBTREE_HOOKS SCIP_RBTREENODE _rbtreenode
 
-/* convenience macros that automtically cast the given arguments to SCIP_RBTREENODE */
+/* convenience macros that automatically cast the given arguments to SCIP_RBTREENODE */
 #define SCIPrbtreeFirst(root)  SCIPrbtreeFirst_call((SCIP_RBTREENODE*)(root))
 #define SCIPrbtreeLast(root)  SCIPrbtreeLast_call((SCIP_RBTREENODE*)(root))
 #define SCIPrbtreeSuccessor(x)  SCIPrbtreeSuccessor_call((SCIP_RBTREENODE*)(x))

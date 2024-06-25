@@ -1678,7 +1678,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
       for (p = 0; p < nselectedperms; ++p)
       {
          perm = perms[selectedperms[p]];
-         for (v = colorbegins[c]; compidx[v] == compidx[colorbegins[c]] && v < nposdegree; ++v)
+         for (v = colorbegins[c]; v < nposdegree && compidx[v] == compidx[colorbegins[c]]; ++v)
          {
             if ( perm[varidx[v]] != varidx[v] )
             {
@@ -2005,14 +2005,17 @@ SCIP_RETCODE isDoublelLexSym(
    }
 
    /* store begin positions of row and column blocks */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, rowsbegin, nmatrices2 + 1) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, colsbegin, nmatrices1 + 1) );
-   (*rowsbegin)[0] = 0;
-   (*colsbegin)[0] = 0;
-   for (j = 0; j < nmatrices2; ++j)
-      (*rowsbegin)[j + 1] = (*rowsbegin)[j] + ncols2[j];
-   for (j = 0; j < nmatrices1; ++j)
-      (*colsbegin)[j + 1] = (*colsbegin)[j] + ncols1[j];
+   if ( *success )
+   {
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, rowsbegin, nmatrices2 + 1) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, colsbegin, nmatrices1 + 1) );
+      (*rowsbegin)[0] = 0;
+      (*colsbegin)[0] = 0;
+      for (j = 0; j < nmatrices2; ++j)
+         (*rowsbegin)[j + 1] = (*rowsbegin)[j] + ncols2[j];
+      for (j = 0; j < nmatrices1; ++j)
+         (*colsbegin)[j + 1] = (*colsbegin)[j] + ncols1[j];
+   }
 
  FREEMEMORY:
    SCIPfreeBufferArray(scip, &sortvals);
@@ -2024,8 +2027,6 @@ SCIP_RETCODE isDoublelLexSym(
          SCIPfreeBlockMemoryArray(scip, &(*doublelexmatrix)[i], *ncols);
       }
       SCIPfreeBlockMemoryArray(scip, doublelexmatrix, *nrows);
-      SCIPfreeBlockMemoryArray(scip, rowsbegin, nmatrices2 + 1);
-      SCIPfreeBlockMemoryArray(scip, colsbegin, nmatrices1 + 1);
       *doublelexmatrix = NULL;
       *rowsbegin = NULL;
       *colsbegin = NULL;
@@ -2177,14 +2178,6 @@ SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
       *success = TRUE;
       *isorbitope = TRUE;
    }
-#ifndef NDEBUG
-   else if ( !(*success) )
-   {
-      assert( *lexmatrix == NULL );
-      assert( *lexrowsbegin == NULL );
-      assert( *lexcolsbegin == NULL );
-   }
-#endif
 
  FREEMEMORY:
    for (p = nmatricestype2 - 1; p >= 0; --p)

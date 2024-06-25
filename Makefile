@@ -373,36 +373,18 @@ SYMOPTIONS	+=	bliss
 ifeq ($(SYM),bliss)
 SYMOBJ		=	symmetry/compute_symmetry_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
-SYMSRC		=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
-ifeq ($(BLISSEXTERNAL),false)
-FLAGS		+=	-I$(SRCDIR)/bliss/src -I$(SRCDIR)/bliss/include
-BLISSOBJ	=	bliss/src/abstractgraph.o
-BLISSOBJ	+=	bliss/src/bliss.o
-BLISSOBJ	+=	bliss/src/bliss_C.o
-BLISSOBJ	+=	bliss/src/defs.o
-BLISSOBJ	+=	bliss/src/digraph.o
-BLISSOBJ	+=	bliss/src/graph.o
-BLISSOBJ	+=	bliss/src/orbit.o
-BLISSOBJ	+=	bliss/src/partition.o
-BLISSOBJ	+=	bliss/src/uintseqhash.o
-BLISSOBJ	+=	bliss/src/utils.o
-SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(BLISSOBJ))
-SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(BLISSOBJ:.o=.cc))
-else
+SYMSRC		=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 FLAGS		+=	-I$(LIBDIR)/include/
-endif
 ALLSRC		+=	$(SYMSRC)
-ifeq ($(BLISSEXTERNAL),true)
 SOFTLINKS	+=	$(LIBDIR)/include/bliss
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 endif
-endif
-LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS directory, e.g., \"<BLISS-path>\".\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.a\"\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
+LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/include/bliss\".\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.a\"\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.so\""
 endif
 
 SYMOPTIONS	+=	sbliss
@@ -410,36 +392,19 @@ ifeq ($(SYM),sbliss)
 SYMOBJ		=	symmetry/build_sassy_graph.o
 SYMOBJ		+=	symmetry/compute_symmetry_sassy_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
-SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
-ifeq ($(BLISSEXTERNAL),false)
-FLAGS		+=	-I$(SRCDIR)/bliss/src -I$(SRCDIR)/bliss/include
-BLISSOBJ	=	bliss/src/abstractgraph.o
-BLISSOBJ	+=	bliss/src/bliss.o
-BLISSOBJ	+=	bliss/src/bliss_C.o
-BLISSOBJ	+=	bliss/src/defs.o
-BLISSOBJ	+=	bliss/src/digraph.o
-BLISSOBJ	+=	bliss/src/graph.o
-BLISSOBJ	+=	bliss/src/orbit.o
-BLISSOBJ	+=	bliss/src/partition.o
-BLISSOBJ	+=	bliss/src/uintseqhash.o
-BLISSOBJ	+=	bliss/src/utils.o
-SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(BLISSOBJ))
-SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(BLISSOBJ:.o=.cc))
-else
+SYMSRC		=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 FLAGS		+=	-I$(LIBDIR)/include/
-endif
 ALLSRC		+=	$(SYMSRC)
-ifeq ($(BLISSEXTERNAL),true)
+CXXFLAGS	+=	$(CXX17FLAG)
 SOFTLINKS	+=	$(LIBDIR)/include/bliss
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 endif
-endif
-LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS directory, e.g., \"<BLISS-path>\".\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.a\"\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/libbliss.so\""
+LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/include/bliss\".\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.a\"\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.so\""
 endif
 
 SYMOPTIONS	+=	nauty
@@ -449,24 +414,26 @@ SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
 ifeq ($(NAUTYEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
+LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/nauty
 NAUTYOBJ	=	nauty/nauty.o
 NAUTYOBJ	+=      nauty/nautil.o
 NAUTYOBJ	+=      nauty/nausparse.o
-NAUTYOBJ	+=      nauty/naugraph.o
 NAUTYOBJ	+=      nauty/schreier.o
 NAUTYOBJ	+=      nauty/naurng.o
 SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(NAUTYOBJ))
 SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(NAUTYOBJ:.o=.c))
 else
 FLAGS		+=	-I$(LIBDIR)/include/
-endif
-ALLSRC		+=	$(SYMSRC)
-ifeq ($(NAUTYEXTERNAL),true)
 SOFTLINKS	+=	$(LIBDIR)/include/nauty
+ifeq ($(SHARED),true)
+SOFTLINKS	+=	$(LIBDIR)/shared/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+else
 SOFTLINKS	+=	$(LIBDIR)/static/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+endif
 LPIINSTMSG	+=	"\n  -> \"nautyinc\" is the path to the Nauty directory, e.g., \"<Nauty-path>\".\n"
 LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<Nauty-path>/nauty.a\"\n"
 endif
+ALLSRC		+=	$(SYMSRC)
 endif
 
 SYMOPTIONS	+=	snauty
@@ -477,24 +444,27 @@ SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(NAUTYEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
+LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/nauty
 NAUTYOBJ	=	nauty/nauty.o
 NAUTYOBJ	+=      nauty/nautil.o
 NAUTYOBJ	+=      nauty/nausparse.o
-NAUTYOBJ	+=      nauty/naugraph.o
 NAUTYOBJ	+=      nauty/schreier.o
 NAUTYOBJ	+=      nauty/naurng.o
 SYMOBJFILES	+=	$(addprefix $(LIBOBJDIR)/,$(NAUTYOBJ))
 SYMSRC  	+=	$(addprefix $(SRCDIR)/,$(NAUTYOBJ:.o=.c))
 else
 FLAGS		+=	-I$(LIBDIR)/include/
-endif
-ALLSRC		+=	$(SYMSRC)
-ifeq ($(NAUTYEXTERNAL),true)
 SOFTLINKS	+=	$(LIBDIR)/include/nauty
+ifeq ($(SHARED),true)
+SOFTLINKS	+=	$(LIBDIR)/shared/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+else
 SOFTLINKS	+=	$(LIBDIR)/static/libnauty.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+endif
 LPIINSTMSG	+=	"\n  -> \"nautyinc\" is the path to the Nauty directory, e.g., \"<Nauty-path>\".\n"
 LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<Nauty-path>/nauty.a\"\n"
 endif
+ALLSRC		+=	$(SYMSRC)
+CXXFLAGS	+=	$(CXX17FLAG)
 endif
 
 #-----------------------------------------------------------------------------
@@ -606,6 +576,18 @@ ifeq ($(READLINE_LDFLAGS),true)
 SCIPLIBEXTLIBS	+=	$(READLINE_LDFLAGS)
 endif
 SCIPLIBEXTLIBS	+=	$(ZIMPLLIB)
+ifeq ($(SYM),bliss)
+SCIPLIBEXTLIBS	+=	$(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
+ifeq ($(SYM),sbliss)
+SCIPLIBEXTLIBS	+=	$(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
+ifeq ($(SYM)-$(NAUTYEXTERNAL),nauty-true)
+SCIPLIBEXTLIBS	+=	$(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
+ifeq ($(SYM)-$(NAUTYEXTERNAL),snauty-true)
+SCIPLIBEXTLIBS	+=	$(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
 ifneq ($(LINKRPATH),)
 SCIPLIBEXTLIBS	+=	$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
 endif
@@ -652,6 +634,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/cons_countsols.o \
 			scip/cons_cumulative.o \
 			scip/cons_disjunction.o \
+			scip/cons_fixedvar.o \
 			scip/cons_exactlp.o \
 			scip/cons_exactsol.o \
 			scip/cons_indicator.o \

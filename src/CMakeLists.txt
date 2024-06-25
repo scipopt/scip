@@ -64,6 +64,7 @@ set(scipsources
     scip/cons_disjunction.c
     scip/cons_exactlp.c
     scip/cons_exactsol.c
+    scip/cons_fixedvar.c
     scip/cons_indicator.c
     scip/cons_integral.c
     scip/cons_knapsack.c
@@ -556,6 +557,7 @@ set(scipheaders
     scip/cons_disjunction.h
     scip/cons_exactlp.h
     scip/cons_exactsol.h
+    scip/cons_fixedvar.h
     scip/cons.h
     scip/cons_indicator.h
     scip/cons_integral.h
@@ -1126,17 +1128,9 @@ if(SHARED)
 else()
     set(SOPLEX_NEEDED ${SOPLEX_FOUND})
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
-    if(DEFINED BLISS_TARGET)
-        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${LPSEX_LIBRARIES})
-    else()
-        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${LPSEX_LIBRARIES} ${SYM_LIBRARIES})
-    endif()
+    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
     add_executable(scip main.c)
-    if(DEFINED BLISS_TARGET)
-        target_link_libraries(scip libscip ${BLISS_TARGET})
-    else()
-        target_link_libraries(scip libscip)
-    endif()
+    target_link_libraries(scip PUBLIC libscip)
 endif()
 
 add_executable(SCIP::SCIP ALIAS scip)
@@ -1158,6 +1152,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 target_link_libraries(scip
+   PUBLIC
    ${SYM_LIBRARIES}
    $<$<BOOL:${SCIP_WITH_ZLIB}>:ZLIB::ZLIB>
    ${Readline_LIBRARY}
@@ -1216,7 +1211,7 @@ install(TARGETS scip libscip EXPORT scip-targets
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Add all targets to the build-tree export set
-export(TARGETS scip libscip ${BLISS_TARGET}
+export(TARGETS scip libscip
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
 # make soplex and zimpl dir absolute for the config file

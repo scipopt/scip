@@ -1547,8 +1547,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          nnonz = SCIPmatrixGetColNNonzs(matrix, c);
          vars[c] = SCIPmatrixGetVar(matrix, c);
 
-         /* if the locks do not match do not consider the column for sparsification */
-         if( SCIPmatrixDownlockConflict(matrix, c) || SCIPmatrixUplockConflict(matrix, c) )
+         /* if the locks do not match do not consider the column for sparsification
+          * also skip if the variable is not allowed to be multi-aggregated
+          */
+         if( SCIPmatrixDownlockConflict(matrix, c) || SCIPmatrixUplockConflict(matrix, c) || SCIPdoNotMultaggrVar(scip, vars[c]) )
          {
             isblockedvar[c] = TRUE;
             ishashingcols[c] = FALSE;

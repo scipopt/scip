@@ -56,6 +56,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrCountsols(scip) );
    SCIP_CALL( SCIPincludeConshdlrCumulative(scip) );
    SCIP_CALL( SCIPincludeConshdlrDisjunction(scip) );
+   SCIP_CALL( SCIPincludeConshdlrFixedvar(scip) );
    SCIP_CALL( SCIPincludeConshdlrIndicator(scip) );
    SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
    SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );
