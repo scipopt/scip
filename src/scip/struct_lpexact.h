@@ -231,7 +231,7 @@ struct SCIP_ProjShiftData
    SCIP_Rational**       correction;         /**< needed on every iteration, so only construct once and possibly resize */
    int*                  includedrows;       /**< 1 if constraints (or vars) dual variable is included in original S-interior point/ray */
    int*                  projshiftbasis;     /**< mapping for basis used in factorization (maps [1,...,|includedrows|] -> 2*nrows+2*ncols) */
-#ifdef SCIP_WITH_GMP
+#if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
    qsnum_factor_work*    rectfactor;         /**< stores factorized matrix for project-and-shift */
 #endif
    SCIP_Rational*        commonslack;        /**< slack by which S-interior point/ray satisfies inequalities */
