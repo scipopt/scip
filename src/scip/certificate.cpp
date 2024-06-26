@@ -1093,7 +1093,7 @@ void SCIPcertificatePrintProofRational(
    )
 {
    SCIP_Longint len = RatStrlen(val) + 1;
-   char* formatstr;
+   char* formatstr = NULL;
 
    assert(len <= INT_MAX);
 

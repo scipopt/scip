@@ -1855,8 +1855,6 @@ char chooseInitialBoundingMethod(
    assert(lpexact != NULL);
    assert(set != NULL);
 
-   dualboundmethod = 'u';
-
    if( set->scip->stat->nnodes == 1 && lpexact->allowexactsolve )
       dualboundmethod = 'e';
    /* first, check if we need to solve exactly */
@@ -1924,8 +1922,6 @@ char chooseFallbackBoundingMethod(
 
    assert(lpexact != NULL);
    assert(set != NULL);
-
-   dualboundmethod = 'u';
 
    switch( lastboundmethod )
    {
@@ -2051,7 +2047,6 @@ SCIP_RETCODE boundShift(
 
    /* reset proved bound status */
    lp->hasprovedbound = FALSE;
-   computedbound = 0;
 
    /* calculate y^Tb */
    SCIPintervalSet(&productsidedualval, 0.0);

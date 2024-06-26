@@ -1765,7 +1765,7 @@ SCIP_RETCODE SCIPgetDualProof(
 	      SCIP_CALL( addRowToAggrRowSafely(set, objectiverow, 1.0, farkasrow, valid) );
 
       if( !(*valid) )
-	 goto TERMINATE;
+	      goto TERMINATE;
    }
    else
    {

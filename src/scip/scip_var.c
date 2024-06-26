@@ -941,7 +941,7 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
  */
 SCIP_RETCODE SCIPparseVarsLinearsumExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           str,                /**< string to parse */
+   char*                 str,                /**< string to parse */
    SCIP_VAR**            vars,               /**< array to store the parsed variables */
    SCIP_Rational**       vals,               /**< array to store the parsed coefficients */
    int*                  nvars,              /**< pointer to store number of parsed variables */
@@ -1387,7 +1387,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
  */
 SCIP_RETCODE SCIPparseVarsPolynomialExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           str,                /**< string to parse */
+   char*                 str,                /**< string to parse */
    SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
    SCIP_Rational***      monomialcoefs,      /**< pointer to store array with monomial coefficients */
    int*                  nmonomials,         /**< pointer to store number of parsed monomials */

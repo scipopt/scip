@@ -1058,8 +1058,8 @@ SCIP_RETCODE addVar(
    SCIP_VAR* var;
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Rational* lbrat;
-   SCIP_Rational* ubrat;
+   SCIP_Rational* lbrat = NULL;
+   SCIP_Rational* ubrat = NULL;
    SCIP_VARTYPE vartype;
    SCIP_Bool initial;
    SCIP_Bool removable;
@@ -1175,7 +1175,6 @@ SCIP_RETCODE addVar(
    /* create variable */
    if( SCIPisExactSolve(scip) )
    {
-      // todo: create exact variable with lbrat/ubrat
       SCIPdebugMessage("zimpl reader: added new variable");
       SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVarExactData(scip, var, lbrat, ubrat, NULL) );

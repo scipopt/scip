@@ -60,6 +60,7 @@
 #include "scip/struct_scip.h"
 #include "scip/struct_set.h"
 #include "scip/struct_certificate.h"
+#include "scip/type_certificate.h"
 #include "scip/rational.h"
 
 /* =========================================== general static functions =========================================== */
@@ -1394,9 +1395,6 @@ SCIP_RETCODE cutTightenCoefsQuad(
       }
       else
       {
-         /* otherwise, apply the equilibrium scaling */
-         isintegral = FALSE;
-
          /* perform the scaling */
          SCIPquadprecProdQD(maxacttmp, maxacttmp, equiscale);
 

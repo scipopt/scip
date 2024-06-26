@@ -7397,12 +7397,6 @@ SCIP_RETCODE tightenVarBounds(
 
                if( conshdlrdata->limitdenom )
                {
-                  // be more strict for 0 bounds
-                  if( SCIPvarGetUbLocal(var) == 0.0 )
-                     maxdenom = 2L;
-                  else
-                     maxdenom = MAX(256L, RatDenominator(SCIPvarGetUbLocalExact(var)));
-
                   maxdenom = conshdlrdata->maxdenom;
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
                }
@@ -7479,11 +7473,6 @@ SCIP_RETCODE tightenVarBounds(
 
                if( conshdlrdata->limitdenom )
                {
-                  if( SCIPvarGetLbLocal(var) == 0.0 )
-                     maxdenom = 2L;
-                  else
-                     maxdenom = MAX(256L, RatDenominator(SCIPvarGetLbLocalExact(var)));
-
                   maxdenom = conshdlrdata->maxdenom;
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
                }
@@ -7521,8 +7510,8 @@ SCIP_RETCODE tightenVarBounds(
             }
             if( tightened )
             {
-               lb = SCIPvarGetLbLocal(var); /* get bound again: it may be additionally modified due to integrality */
                (*nchgbds)++;
+               SCIPdebug(lb = SCIPvarGetLbLocal(var)); /* get bound again: it may be additionally modified due to integrality */
                SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, new bds=[%.15g,%.15g]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);
             }
@@ -7563,11 +7552,6 @@ SCIP_RETCODE tightenVarBounds(
 
                if( conshdlrdata->limitdenom )
                {
-                  if( SCIPvarGetLbLocal(var) == 0.0 )
-                     maxdenom = 2L;
-                  else
-                     maxdenom = MAX(256L, RatDenominator(SCIPvarGetLbLocalExact(var)));
-
                   maxdenom = conshdlrdata->maxdenom;
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
                }
@@ -7642,11 +7626,6 @@ SCIP_RETCODE tightenVarBounds(
 
                if( conshdlrdata->limitdenom )
                {
-                  if( SCIPvarGetUbLocal(var) == 0.0 )
-                     maxdenom = 2L;
-                  else
-                     maxdenom = MAX(256L, RatDenominator(SCIPvarGetUbLocalExact(var)));
-
                   maxdenom = conshdlrdata->maxdenom;
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
                }
@@ -7684,8 +7663,8 @@ SCIP_RETCODE tightenVarBounds(
             }
             if( tightened )
             {
-               ub = SCIPvarGetUbLocal(var); /* get bound again: it may be additionally modified due to integrality */
                (*nchgbds)++;
+               SCIPdebug(ub = SCIPvarGetUbLocal(var)); /* get bound again: it may be additionally modified due to integrality */
                SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, new bds=[%.15g,%.15g]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub);
             }
