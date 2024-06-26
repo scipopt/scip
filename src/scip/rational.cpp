@@ -1856,8 +1856,6 @@ SCIP_Real RatRoundReal(
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
-   SCIP_Real realapprox;
-
    assert(rational != NULL);
 
    if( rational->isinf )
@@ -1867,6 +1865,7 @@ SCIP_Real RatRoundReal(
 
 #if defined(SCIP_WITH_MPFR) && defined(SCIP_WITH_BOOST)
    {
+      SCIP_Real realapprox;
       mpfr_t valmpfr;
       mpq_t* val;
 
@@ -1892,46 +1891,13 @@ SCIP_Real RatRoundReal(
             break;
       }
       mpfr_clear(valmpfr);
+      return realapprox;
    }
 #else
-#ifdef SCIP_DISABLED_CODE
-   {
-      SCIP_ROUNDMODE current;
-      Integer numer, denom;
-
-      current = SCIPintervalGetRoundingMode();
-      switch(roundmode)
-      {
-      case SCIP_R_ROUND_DOWNWARDS:
-         SCIPintervalSetRoundingModeDownwards();
-         break;
-      case SCIP_R_ROUND_UPWARDS:
-         SCIPintervalSetRoundingModeUpwards();
-         break;
-      case SCIP_R_ROUND_NEAREST:
-         SCIPintervalSetRoundingModeToNearest();
-         break;
-      default:
-         break;
-      }
-
-      numer = num(rational);
-      denom = den(rational);
-
-      SCIPdebugMessage("computing %s/%s \n", numer.str().c_str(), denom.str().c_str());
-
-      realapprox = ((double) numer) / (double) denom;
-
-      assert(roundmode != SCIP_R_ROUND_DOWNWARDS || Rational(realapprox) <= rational->val);
-      assert(roundmode != SCIP_R_ROUND_UPWARDS || Rational(realapprox) >= rational->val);
-
-      SCIPintervalSetRoundingMode(current);
-   }
-#endif
    SCIPerrorMessage("method RatRoundReal not supported when SCIP is compiled without Boost.\n");
    SCIPABORT();
+   return SCIP_INVALID;
 #endif
-   return realapprox;
 }
 
 /** round a rational to the nearest integer and save it as a rational */

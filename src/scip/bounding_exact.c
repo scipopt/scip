@@ -41,7 +41,9 @@
 #include "scip/primal.h"
 #include "scip/sepastoreexact.h"
 #include "scip/struct_scip.h"
+#ifdef SCIP_WITH_EXACTSOLVE
 #include "rectlu/rectlu.h"
+#endif
 
 #ifdef SCIP_WITH_BOOST
 

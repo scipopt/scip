@@ -76,7 +76,9 @@
 #include "lpi/type_lpi.h"
 #include "lpiexact/type_lpiexact.h"
 #include "scip/rational.h"
+#ifdef SCIP_WITH_EXACTSOLVE
 #include "rectlu/rectlu.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {

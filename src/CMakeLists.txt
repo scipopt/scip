@@ -432,17 +432,24 @@ set(lpisources
    ${lpi}
    )
 
-set(lpiexactsources
-   ${lpiexact}
-   )
-
 set(symsources
    ${sym}
    )
 
+set(lpiexactsources
+   ${lpiexact}
+   )
+
+if(SCIP_WITH_EXACTSOLVE)
 set(rectlusources
    rectlu/rectlu_factor.c
    )
+
+set(rectluheaders
+    rectlu/rectlu.h
+    rectlu/rectlu_num.h
+    rectlu/rectlu_factor.h)
+endif()
 
 set(blockmemshellheader
     blockmemshell/memory.h
@@ -457,11 +464,6 @@ set(lpiexactheaders
     lpiexact/lpiexact.h
     lpiexact/type_lpiexact.h
 )
-
-set(rectluheaders
-    rectlu/rectlu.h
-    rectlu/rectlu_num.h
-    rectlu/rectlu_factor.h)
 
 set(dijkstraheaders
     dijkstra/dijkstra.h
