@@ -50,6 +50,19 @@
 #else
 #endif
 
+
+/* find substring, ignore case */
+static
+std::string::const_iterator findSubStringIC(const std::string & substr, const std::string & str)
+{
+   auto it = std::search(
+      str.begin(), str.end(),
+      substr.begin(),   substr.end(),
+      [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
+   );
+   return it;
+}
+
 extern "C" {
 
 static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are considered to be infinite */
@@ -546,18 +559,6 @@ void RatSetInt(
 
    res->isinf = FALSE;
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-}
-
-/* find substring, ignore case */
-static
-std::string::const_iterator findSubStringIC(const std::string & substr, const std::string & str)
-{
-   auto it = std::search(
-      str.begin(), str.end(),
-      substr.begin(),   substr.end(),
-      [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
-   );
-   return it;
 }
 
 /** checks if a string describes a rational number */
