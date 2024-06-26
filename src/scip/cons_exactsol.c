@@ -24,6 +24,7 @@
 #include <assert.h>
 
 #include "scip/cons_exactsol.h"
+#include "scip/cons_exactlp.h"
 #include "scip/lp.h"
 #include "scip/lpexact.h"
 #include "scip/pub_var.h"
@@ -70,6 +71,7 @@ struct SCIP_ConshdlrData
    int                   nbufferedsols;      /**< number of solutions currently in the solubuffer */
    int                   lensolubuffer;      /**< length of the solubuffer */
    SCIP_Bool             checkfpfeasibility; /**< should a solution be checked in floating-point arithmetic prior to being processed? */
+   int                   probhasequations;   /**< does the problem have equations? (-1 unknown, 0 no, 1 yes) */
 };
 
 /** gets the key of the given element */
@@ -221,6 +223,60 @@ void solFreeAssignment(
    SCIPfreeBlockMemory(scip, assignment);
 }
 
+static
+void setProbHasEquations(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< exactsol constraint handler data */
+   )
+{
+   SCIP_CONS** conss;
+   int nconss;
+   int c;
+   SCIP_Bool success;
+
+   assert(scip != NULL);
+   assert(conshdlrdata != NULL);
+
+   if( conshdlrdata->probhasequations != -1 )
+      return;
+
+   conss = SCIPgetConss(scip);
+   nconss = SCIPgetNConss(scip);
+   success = TRUE;
+
+   conshdlrdata->probhasequations = 0;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      if( SCIPconsGetHdlr(conss[c]) == SCIPfindConshdlr(scip, "linear-exact") )
+      {
+         // constraint is an equality constraint
+         if( RatIsEqual(SCIPconsGetRhsExact(scip, conss[c], &success), SCIPconsGetLhsExact(scip, conss[c], &success)) )
+         {
+            // check if there are non-integer variables
+            SCIP_VAR** vars = SCIPgetVarsExactLinear(scip, conss[c]);
+
+            for( int i = 0; i < SCIPgetNVarsExactLinear(scip, conss[c]); ++i )
+            {
+               if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_INTEGER && SCIPvarGetType(vars[i]) != SCIP_VARTYPE_BINARY )
+               {
+                  conshdlrdata->probhasequations = 1;
+                  break;
+               }
+            }
+         }
+         conshdlrdata->probhasequations = 1;
+         break;
+      }
+      else
+      {
+         // unspported constraint type -> throw error
+         SCIPerrorMessage("Unsupported constraint type in exactsol constraint handler: %s\n", SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])));
+         SCIPABORT();
+      }
+   }
+}
+
 /*
  * Callback methods of constraint handler
  */
@@ -283,6 +339,16 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
    assert(conshdlrdata != NULL);
 
+   /* if we are not solving exactly, we have nothing to check */
+   if( !SCIPisExactSolve(scip) )
+      return SCIP_OKAY;
+
+   if( conshdlrdata->probhasequations == -1 )
+      setProbHasEquations(scip, conshdlrdata);
+
+   if( conshdlrdata->probhasequations == 1 )
+      return SCIP_OKAY;
+
    /* disable exact sol if we stalled too often in a row */
    if( ncurrentstalls >= CONSHDLR_MAXSTALLS )
       return SCIP_OKAY;
@@ -297,9 +363,6 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
    /* do not run for problems that are purely integer */
    if( SCIPgetNContVars(scip) == 0 )
-       return SCIP_OKAY;
-   /* if we are not solving exactly, we have nothing to check */
-   if( !SCIPisExactSolve(scip) )
       return SCIP_OKAY;
 
    /* if we're already in exact diving mode, we already computed an exact solution
@@ -605,6 +668,7 @@ SCIP_DECL_CONSINIT(consInitExactSol)
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->solubuffer, DEFAULT_SOLBUFSIZE) );
    conshdlrdata->lensolubuffer = DEFAULT_SOLBUFSIZE;
    conshdlrdata->nbufferedsols = 0;
+   conshdlrdata->probhasequations = -1;
 
    return SCIP_OKAY;
 }

@@ -1881,7 +1881,7 @@ SCIP_RETCODE SCIPgetDualProof(
    if ( set->exact_enabled && SCIPisCertificateActive(set->scip))
    {
       //certificatePrintAggrrow(set->scip, SCIPgetCertificate(set->scip), farkasrow, &farkasrow->certificateline);
-      long certificateline;
+      SCIP_Longint certificateline;
       SCIP_ROW** usedrows;
       SCIP_CALL( SCIPcertificatePrintCutoffBound(set->scip, SCIPgetCertificate(set->scip), SCIPgetCutoffboundExact(set->scip), &certificateline) );
       SCIP_CALL( SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact, certificateline) );
@@ -1892,7 +1892,7 @@ SCIP_RETCODE SCIPgetDualProof(
          usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
          if( SCIPsetCertificateEnabled(set) )
          {
-            long certificateIndex;
+            SCIP_Longint certificateIndex;
             certificateIndex = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, usedrows[i]->rowexact);
             if(certificateIndex  == LONG_MAX && SCIProwGetOrigintype(usedrows[i]) == SCIP_ROWORIGINTYPE_SEPA )
             {

@@ -591,7 +591,6 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
    SCIP_Rational**       val                 /**< values of constraint matrix entries */
    )
 {
-   register int i;
    int rval = 0;
 
    assert(lpi != NULL);
@@ -912,7 +911,7 @@ SCIP_RETCODE SCIPlpiExactClear(
       rval = mpq_QSdelete_rows(lpi->prob, nrows, lpi->ircnt);
       QS_CONDRET(rval);
    }
-   return SCIP_OKAY;
+   return QS_RETURN(rval);
 }
 
 
@@ -1016,7 +1015,7 @@ SCIP_RETCODE SCIPlpiExactChgSides(
       }
    }
 
-   return SCIP_OKAY;
+   return QS_RETURN(rval);
 }
 
 /** changes a single coefficient */
@@ -1066,7 +1065,8 @@ SCIP_RETCODE SCIPlpiExactChgObjsen(
       rval = mpq_QSchange_objsense(lpi->prob, QS_MIN);
       QS_CONDRET(rval);
    }
-   return SCIP_OKAY;
+
+   return QS_RETURN(rval);
 }
 
 /** changes objective values of columns in the LP */
@@ -1091,7 +1091,7 @@ SCIP_RETCODE SCIPlpiExactChgObj(
       rval = mpq_QSchange_objcoef(lpi->prob, ind[i], *RatGetGMP(obj[i]));
       QS_CONDRET(rval);
    }
-   return SCIP_OKAY;
+   return QS_RETURN(rval);
 }
 
 /** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
@@ -1606,7 +1606,7 @@ SCIP_RETCODE SCIPlpiExactGetBounds(
       }
    }
 
-   return SCIP_OKAY;
+   return QS_RETURN(rval);
 }
 
 /** gets current row sides from LP problem object */
@@ -2249,7 +2249,7 @@ SCIP_RETCODE SCIPlpiExactGetIterations(
    *iterations = nit - lpi->previt;
    lpi->previt = nit;
 
-   return SCIP_OKAY;
+   return QS_RETURN(rval);
 }
 
 /**@} */
@@ -2328,7 +2328,7 @@ SCIP_RETCODE SCIPlpiExactGetBase(
          SCIPABORT();
       }
    }
-   return SCIP_OKAY;
+   return QS_RETURN(rval);
 }
 
 /** sets current basis status for columns and rows */
@@ -2419,7 +2419,7 @@ SCIP_RETCODE SCIPlpiExactSetBase(
 /** returns the indices of the basic columns and rows */
 SCIP_RETCODE SCIPlpiExactGetBasisInd(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   int*                  ind                 /**< basic column n gives value n, basic row m gives value -1-m */
+   int*                  bind                /**< basic column n gives value n, basic row m gives value -1-m */
    )
 {
    int rval = 0, nrows, ncols;
@@ -2509,7 +2509,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
 
    /* if there was no basis information available, LPI state was not stored */
    if (lpistate == NULL)
-      return SCIP_OKAY;
+      return QS_RETURN(rval);
 
    /* continue test */
    ncols = mpq_QSget_colcount(lpi->prob);
@@ -2524,7 +2524,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
       lpistate->ncols, lpistate->nrows, ncols, nrows);
 
    if( lpistate->ncols == 0 || lpistate->nrows == 0 )
-      return SCIP_OKAY;
+      return QS_RETURN(rval);
 
    /* allocate enough memory for storing uncompressed basis information */
    SCIP_CALL( ensureColMem(lpi, ncols) );
@@ -2608,7 +2608,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
 
 /** frees LPi state information */
 SCIP_RETCODE SCIPlpiExactFreeState(
-   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
+   const SCIP_LPIEXACT*  lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
@@ -2625,7 +2625,7 @@ SCIP_RETCODE SCIPlpiExactFreeState(
 /** checks, whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiExactHasStateBasis(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LP state information (like basis information) */
    )
 {  /*lint --e{715} */
    return (lpistate != NULL);
@@ -2971,7 +2971,7 @@ SCIP_Bool SCIPlpiExactIsNegInfinity(
 
 /** returns value treated as negative infinity in the LP solver */
 SCIP_Real SCIPlpiExactInfinity(
-   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
+   const SCIP_LPIEXACT*  lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715} */
    assert(lpi != NULL);

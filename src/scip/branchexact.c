@@ -304,7 +304,6 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    SCIP_Real estimate;
 
    SCIP_Real downub;
-   SCIP_Real fixval;
    SCIP_Real uplb;
    SCIP_Real val;
 
@@ -369,10 +368,6 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    /* see comment in SCIPbranchVarVal */
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
-   downub = SCIP_INVALID;
-   fixval = SCIP_INVALID;
-   uplb = SCIP_INVALID;
-
    /* create child nodes with x <= floor(x'), and x >= ceil(x') */
    downub = floor(val);
    uplb = downub + 1.0;
@@ -407,39 +402,6 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
 
       if( downchild != NULL )
          *downchild = node;
-   }
-
-   if( fixval != SCIP_INVALID )    /*lint !e777*/
-   {
-      /* create child node with x = fixval */
-      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_FIXED, fixval);
-      estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, fixval);
-      SCIPsetDebugMsg(set, " -> creating child: <%s> == %g (priority: %g, estimate: %g)\n",
-         SCIPvarGetName(var), fixval, priority, estimate);
-      SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
-
-      /* print branching information to certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
-
-      if( !SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), fixval) )
-      {
-         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-               NULL, var, fixval, SCIP_BOUNDTYPE_LOWER, FALSE) );
-      }
-
-      /* print branching information to certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
-
-      if( !SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), fixval) )
-      {
-         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-               NULL, var, fixval, SCIP_BOUNDTYPE_UPPER, FALSE) );
-      }
-      /* output branching bound change to visualization file */
-      SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
-
-      if( eqchild != NULL )
-         *eqchild = node;
    }
 
    if( uplb != SCIP_INVALID )    /*lint !e777*/

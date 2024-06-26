@@ -580,7 +580,7 @@ bool SCIPisRationalString(
  *  @return Returns TRUE if a value could be extracted, otherwise FALSE
  */
 SCIP_Bool SCIPstrToRationalValue(
-   const char*           str,                /**< string to search */
+   char*                 str,                /**< string to search */
    SCIP_Rational*        value,              /**< pointer to store the parsed value */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
@@ -605,14 +605,14 @@ SCIP_Bool SCIPstrToRationalValue(
 
    if( endpos == 0 )
    {
-      *endptr = (char*)str;
+      *endptr = str;
       return FALSE;
    }
 
    RatSetString(value, s.substr(0, endpos).c_str());
    if( str[0] == '-' )
       RatNegate(value, value);
-   *endptr = (char*)str + endpos;
+   *endptr = str + endpos;
    if( hassign )
       *endptr += 1;
    return TRUE;

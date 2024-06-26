@@ -266,7 +266,7 @@ bool SCIPisRationalString(
  */
 SCIP_EXPORT
 SCIP_Bool SCIPstrToRationalValue(
-   const char*           str,                /**< string to search */
+   char*                 str,                /**< string to search */
    SCIP_Rational*        value,              /**< pointer to store the parsed value */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );

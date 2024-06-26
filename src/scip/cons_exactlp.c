@@ -7399,9 +7399,9 @@ SCIP_RETCODE tightenVarBounds(
                {
                   // be more strict for 0 bounds
                   if( SCIPvarGetUbLocal(var) == 0.0 )
-                     maxdenom = 2;
+                     maxdenom = 2L;
                   else
-                     maxdenom = MAX(256, RatDenominator(SCIPvarGetUbLocalExact(var)));
+                     maxdenom = MAX(256L, RatDenominator(SCIPvarGetUbLocalExact(var)));
 
                   maxdenom = conshdlrdata->maxdenom;
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
@@ -7480,9 +7480,9 @@ SCIP_RETCODE tightenVarBounds(
                if( conshdlrdata->limitdenom )
                {
                   if( SCIPvarGetLbLocal(var) == 0.0 )
-                     maxdenom = 2;
+                     maxdenom = 2L;
                   else
-                     maxdenom = MAX(256, RatDenominator(SCIPvarGetLbLocalExact(var)));
+                     maxdenom = MAX(256L, RatDenominator(SCIPvarGetLbLocalExact(var)));
 
                   maxdenom = conshdlrdata->maxdenom;
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
@@ -7564,9 +7564,9 @@ SCIP_RETCODE tightenVarBounds(
                if( conshdlrdata->limitdenom )
                {
                   if( SCIPvarGetLbLocal(var) == 0.0 )
-                     maxdenom = 2;
+                     maxdenom = 2L;
                   else
-                     maxdenom = MAX(256, RatDenominator(SCIPvarGetLbLocalExact(var)));
+                     maxdenom = MAX(256L, RatDenominator(SCIPvarGetLbLocalExact(var)));
 
                   maxdenom = conshdlrdata->maxdenom;
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, -1);
@@ -7643,9 +7643,9 @@ SCIP_RETCODE tightenVarBounds(
                if( conshdlrdata->limitdenom )
                {
                   if( SCIPvarGetUbLocal(var) == 0.0 )
-                     maxdenom = 2;
+                     maxdenom = 2L;
                   else
-                     maxdenom = MAX(256, RatDenominator(SCIPvarGetUbLocalExact(var)));
+                     maxdenom = MAX(256L, RatDenominator(SCIPvarGetUbLocalExact(var)));
 
                   maxdenom = conshdlrdata->maxdenom;
                   RatComputeApproximation(tmpbound, tmpbound, maxdenom, 1);
@@ -16615,7 +16615,6 @@ static
 SCIP_DECL_CONSPROP(consPropExactLinear)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool rangedrowpropagation = FALSE;
    SCIP_Bool tightenbounds;
    SCIP_Bool cutoff;
 
@@ -16641,20 +16640,12 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
       int depth;
       int propfreq;
       int tightenboundsfreq;
-      int rangedrowfreq;
 
       depth = SCIPgetDepth(scip);
       propfreq = SCIPconshdlrGetPropFreq(conshdlr);
       tightenboundsfreq = propfreq * conshdlrdata->tightenboundsfreq;
       tightenbounds = (conshdlrdata->tightenboundsfreq >= 0)
          && ((tightenboundsfreq == 0 && depth == 0) || (tightenboundsfreq >= 1 && (depth % tightenboundsfreq == 0)));
-
-      /* check if we want to do ranged row propagation */
-      rangedrowpropagation = conshdlrdata->rangedrowpropagation;
-      rangedrowpropagation = rangedrowpropagation && !SCIPinRepropagation(scip);
-      rangedrowpropagation = rangedrowpropagation && (depth <= conshdlrdata->rangedrowmaxdepth);
-      rangedrowfreq = propfreq * conshdlrdata->rangedrowfreq;
-      rangedrowpropagation = rangedrowpropagation && (depth % rangedrowfreq == 0);
    }
 
    cutoff = FALSE;

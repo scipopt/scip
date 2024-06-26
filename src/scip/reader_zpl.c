@@ -580,8 +580,6 @@ SCIP_RETCODE addConsTerm(
          break;
       }
    }
-   else
-   {
    switch( type )
    {
       case CON_FREE:
@@ -611,7 +609,6 @@ SCIP_RETCODE addConsTerm(
          sciprhs = (SCIP_Real)numb_todbl(rhs);
          readerdata->readerror = TRUE;
          break;
-      }
    }
 
    cons = NULL;

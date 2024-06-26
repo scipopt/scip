@@ -1018,7 +1018,6 @@ void SCIPcertificatePrintProblemMessage(
 {
    va_list ap;
    char buffer[3 * SCIP_MAXSTRLEN];
-   size_t written;
 
    /* check if certificate output should be created */
    if( certificate->transfile == NULL )
@@ -1028,28 +1027,12 @@ void SCIPcertificatePrintProblemMessage(
    vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
    if( isorigfile )
-      written = SCIPfprintf(certificate->origfile, "%s", buffer);
+      (void) SCIPfprintf(certificate->origfile, "%s", buffer);
    else
-      written = SCIPfprintf(certificate->transfile, "%s", buffer);
+      (void) SCIPfprintf(certificate->transfile, "%s", buffer);
 
    va_end(ap);
    updateFilesize(certificate, strlen(buffer));
-   assert(written == strlen(buffer));
-}
-
-/** checks that the state of the certificate is correct */
-void SCIPcertificateAssertStateCorrect(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< variable to check */
-   )
-{
-   SCIP_CERTIFICATE* certificate;
-
-   if ( !SCIPisCertificateActive(scip) )
-      return;
-
-   certificate = SCIPgetCertificate(scip);
-   assert( certificate != NULL );
 }
 
 /** prints a string to the proof section of the certificate file */
@@ -1061,7 +1044,6 @@ void SCIPcertificatePrintProofMessage(
 {
    va_list ap;
    char buffer[3 * SCIP_MAXSTRLEN];
-   size_t written;
 
    /* check if certificate output should be created */
    if( certificate->derivationfile == NULL )
@@ -1069,10 +1051,9 @@ void SCIPcertificatePrintProofMessage(
    va_start(ap, formatstr);
    vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
-   written = SCIPfprintf(certificate->derivationfile, "%s", buffer); // todo: is this correct?
+   (void) SCIPfprintf(certificate->derivationfile, "%s", buffer); // todo: is this correct?
    va_end(ap);
    updateFilesize(certificate, strlen(buffer));
-   assert(written == strlen(buffer));
 }
 
 
@@ -1085,7 +1066,7 @@ void SCIPcertificatePrintProblemRational(
    )
 {
    SCIP_Longint len = RatStrlen(val) + 1;
-   char* formatstr;
+   char* formatstr = NULL;
 
    assert(len <= INT_MAX);
 
@@ -2095,7 +2076,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_Rational* lowerbound;
    SCIP_Rational* farkasrhs;
    SCIP_Rational* tmp;
-   SCIP_Longint* ind;
+   SCIP_Longint* ind = NULL;
    int len;
    int i;
    unsigned long key;
@@ -2265,7 +2246,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    SCIP_VAR** vars;
    SCIP_Rational* pseudoobjval;
    SCIP_Rational** bounds;
-   SCIP_Longint* dualind;
+   SCIP_Longint* dualind = NULL;
    int nvars;
    int duallen;
    int i;
@@ -2553,7 +2534,7 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
    SCIP_NODE*            node                /**< new node, that was created */
    )
 {
-   SCIP_CERTNODEDATA* nodedata;
+   SCIP_CERTNODEDATA* nodedata = NULL;
 
    assert(stat != NULL );
    assert(node != NULL );
@@ -2884,7 +2865,7 @@ SCIP_RETCODE SCIPcertificateNewAggrInfo(
    )
 {
    int i;
-   SCIP_AGGREGATIONINFO* info;
+   SCIP_AGGREGATIONINFO* info = NULL;
    SCIP_CERTIFICATE* certificate;
 
    assert(scip != NULL );

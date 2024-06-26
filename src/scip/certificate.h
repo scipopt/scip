@@ -429,12 +429,6 @@ SCIP_Longint SCIPcertificateGetLastBoundIndex(
    SCIP_CERTIFICATE*     certificate         /**< certificate data structure */
    );
 
-/** checks that the state of the certificate is correct */
-void SCIPcertificateAssertStateCorrect(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< variable to check */
-   );
-
 /** returns the index for a row in the certificate */
 SCIP_Longint SCIPcertificateGetRowIndex(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
