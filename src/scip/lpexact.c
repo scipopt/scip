@@ -4349,7 +4349,6 @@ SCIP_RETCODE lpExactFlushAndSolve(
    SCIP_CALL( SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPINFO, (int) set->exact_lpinfo) );
    algo = set->lp_initalgorithm;
    lp = lpexact->fplp;
-   solveagain;
 
    /* set up the exact lpi for the current node */
    SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );

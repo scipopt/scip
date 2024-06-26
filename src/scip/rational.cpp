@@ -1888,6 +1888,7 @@ SCIP_Real RatRoundReal(
             realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDN);
             break;
          default:
+            realapprox = SCIP_INVALID;
             break;
       }
       mpfr_clear(valmpfr);
