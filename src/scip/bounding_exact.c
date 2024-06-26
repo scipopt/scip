@@ -369,8 +369,12 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
     */
    RatSetGMPArray(projvalgmp, projval, 2 * nnonz + 2 * ncols);
 
+#if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
    rval = RECTLUbuildFactorization(&projshiftdata->rectfactor, ncols, projshiftdata->projshiftbasisdim,
       projshiftdata->projshiftbasis, projvalgmp, projind, projbeg, projlen);
+#else
+   rval = 1;
+#endif
 
    /* if rval != 0 then RECTLUbuildFactorization has failed. In this case the project-and-shift method will not work and
     * we will return failure
@@ -1467,7 +1471,11 @@ SCIP_RETCODE projectShift(
          mpq_init(correctiongmp[i]);
       }
 
+#if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
       rval = RECTLUsolveSystem(projshiftdata->rectfactor, ncols, nextendedrows, violationgmp, correctiongmp);
+#else
+      rval = 1;
+#endif
 
       /* rval = 0 -> fail */
       if( rval )

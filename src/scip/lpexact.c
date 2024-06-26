@@ -3826,7 +3826,7 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    projshiftdata->commonslack = NULL;
    projshiftdata->includedrows = NULL;
    projshiftdata->projshiftbasis = NULL;
-#ifdef SCIP_WITH_GMP
+#if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
    projshiftdata->rectfactor = (qsnum_factor_work*) NULL;
 #endif
 
