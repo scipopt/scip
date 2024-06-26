@@ -38,6 +38,7 @@
 #include <string.h>
 #include <ostream>
 #include <algorithm>
+#include <cctype>
 
 #ifdef SCIP_WITH_BOOST
 #include <boost/format.hpp>
