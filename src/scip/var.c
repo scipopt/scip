@@ -12423,22 +12423,9 @@ SCIP_RETCODE SCIPvarChgLbLocal(
    {
       SCIP_Real childnewbound;
       assert(var->data.aggregate.var != NULL);
-      if (!set->exact_enabled)
-      {
-         assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-         childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
-      }
-      else
-      {
-         SCIP_INTERVAL parentboundinterval;
-         SCIPintervalSet(&parentboundinterval, newbound);
-         SCIPintervalSubScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, var->data.aggregate.constant);
-         SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, var->data.aggregate.scalar);
-         childnewbound = var->data.aggregate.scalar > 0 ? parentboundinterval.inf : parentboundinterval.sup;
-      }
+
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
-
          /* a > 0 -> change lower bound of y */
          assert((SCIPsetIsInfinity(set, -var->locdom.lb) && SCIPsetIsInfinity(set, -var->data.aggregate.var->locdom.lb))
             || SCIPsetIsFeasEQ(set, var->locdom.lb,
@@ -12452,7 +12439,6 @@ SCIP_RETCODE SCIPvarChgLbLocal(
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
-
          /* a < 0 -> change upper bound of y */
          assert((SCIPsetIsInfinity(set, -var->locdom.lb) && SCIPsetIsInfinity(set, var->data.aggregate.var->locdom.ub))
             || SCIPsetIsFeasEQ(set, var->locdom.lb,
@@ -12703,22 +12689,8 @@ SCIP_RETCODE SCIPvarChgUbLocal(
       SCIP_Real childnewbound;
       assert(var->data.aggregate.var != NULL);
 
-      if (!set->exact_enabled)
-      {
-         assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-         childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
-      }
-      else
-      {
-         SCIP_INTERVAL parentboundinterval;
-         SCIPintervalSet(&parentboundinterval, newbound);
-         SCIPintervalSubScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, var->data.aggregate.constant);
-         SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, var->data.aggregate.scalar);
-         childnewbound = var->data.aggregate.scalar > 0 ? parentboundinterval.inf : parentboundinterval.sup;
-      }
       if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
-
          /* a > 0 -> change upper bound of y */
          assert((SCIPsetIsInfinity(set, var->locdom.ub) && SCIPsetIsInfinity(set, var->data.aggregate.var->locdom.ub))
             || SCIPsetIsFeasEQ(set, var->locdom.ub,

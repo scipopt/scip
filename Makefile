@@ -308,7 +308,7 @@ LPSEXOPTIONS	+=	spx
 ifeq ($(LPSEX),spx)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxexinc
-LPILIBOBJ	+=	lpiexact/lpiexact_spx.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
+LPILIBOBJ	+=	lpiexact/lpiexact_spx.o
 LPILIBSRC	+=	$(SRCDIR)/lpiexact/lpiexact_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/rbtree.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxexinc
 ifeq ($(SHARED),true)
@@ -322,7 +322,7 @@ endif
 
 LPSEXOPTIONS	+=	none
 ifeq ($(LPSEX),none)
-LPILIBOBJ	+=	lpiexact/lpiexact_none.o blockmemshell/memory.o scip/rbtree.o scip/message.o
+LPILIBOBJ	+=	lpiexact/lpiexact_none.o
 endif
 
 #-----------------------------------------------------------------------------

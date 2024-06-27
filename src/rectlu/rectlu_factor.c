@@ -528,6 +528,9 @@ static int qsnum_make_lc_space (
       minspace = f->lc_space * f->grow_mul;
    }
 
+   if( lc_freebeg > minspace )
+      return -1;
+
    new_lccoef = QSnum_AllocArray (minspace);
    CG_SAFE_MALLOC (new_lcindx, minspace, int);
 
@@ -1106,7 +1109,6 @@ static int qsnum_elim(
       lcindx = f->lcindx;
       lccoef = f->lccoef;
       qsnum_load_row (f, r);
-      ucindx = f->ucindx + uc_inf[c].cbeg;
       for( i = 0; i < nzcnt; i++ )
       {
          j = f->ucindx[uc_inf[c].cbeg + i];

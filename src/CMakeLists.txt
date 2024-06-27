@@ -1084,17 +1084,12 @@ add_library(liblpi EXCLUDE_FROM_ALL
 setLibProperties(liblpi "lpi")
 
 add_library(liblpiexact EXCLUDE_FROM_ALL
-    ${lpiexactsources}
-    scip/bitencode.c
-    blockmemshell/memory.c
-    scip/message.c)
+    ${lpiexactsources})
 setLibProperties(liblpiexact "lpiexact")
 
 add_library(librectlu EXCLUDE_FROM_ALL
     ${rectlusources}
-    scip/bitencode.c
-    blockmemshell/memory.c
-    scip/message.c)
+    scip/bitencode.c)
 setLibProperties(librectlu "rectlu")
 
 add_library(libscip ${scipsources} ${objscipsources} ${lpisources} ${lpiexactsources} ${rectlusources} ${tpisources} ${symsources})
