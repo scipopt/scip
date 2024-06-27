@@ -691,6 +691,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_veclendiving.o \
 			scip/heur_zeroobj.o \
 			scip/heur_zirounding.o \
+			scip/hypergraph.o \
 			scip/message_default.o \
 			scip/nlhdlr_bilinear.o \
 			scip/nlhdlr_convex.o \
@@ -775,6 +776,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_mcf.o \
 			scip/sepa_minor.o \
 			scip/sepa_mixing.o \
+			scip/sepa_multilinear.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_rlt.o \
