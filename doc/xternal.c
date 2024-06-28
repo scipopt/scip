@@ -104,7 +104,7 @@
  *
  * \verbinclude output.log
  *
- * @version  9.2.0
+ * @version  10.0.0
  *
  * \image html scippy.png
  */
@@ -405,8 +405,8 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
- * - \subpage RN9          "SCIP 9"
- * - \subpage RN8          "SCIP 8"
+ * - \subpage RN81         "SCIP 8.1"
+ * - \subpage RN80         "SCIP 8.0"
  * - \subpage RN70         "SCIP 7.0"
  * - \subpage RN60         "SCIP 6.0"
  * - \subpage RN50         "SCIP 5.0"
@@ -673,6 +673,10 @@
  *   the comment starts at column 46 (if column-count starts with 1).
  * - Maximal line length is 120 characters.
  * - Always only one declaration in a line.
+ * - Joint declaration and initialization is possible at the top-level of a function and in the header of loops.
+ *
+ *   @refsnippet{src/scip/cuts.c,SnippetCodeStyleInLoopDeclaration}
+ *
  * - Variable names should be all lower case.
  *
  *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleDeclaration}

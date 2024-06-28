@@ -10,11 +10,14 @@ if(POLICY CMP0091)
    cmake_policy(SET CMP0091 NEW)
 endif()
 
-set(SCIP_VERSION_MAJOR 9)
-set(SCIP_VERSION_MINOR 2)
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
+
+set(SCIP_VERSION_MAJOR 10)
+set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
 set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 115)
+set(SCIP_VERSION_API 119)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
@@ -398,8 +401,16 @@ endif()
 if(PAPILO OR AUTOBUILD)
     message(STATUS "Finding PAPILO")
     find_package(PAPILO CONFIG HINTS ${PAPILO_DIR})
-    if((NOT PAPILO_FOUND) AND (NOT AUTOBUILD))
-        message(FATAL_ERROR "PAPILO not found, try specifying PAPILO_DIR. ${AUTOBUILD_MSG}")
+    if(NOT PAPILO_FOUND)
+        # Utilities to automatically download missing dependencies
+        include(cmake/Dependencies.cmake)
+        find_or_download_package(
+          NAME PAPILO
+          VERSION 2.2.1
+          URL https://github.com/scipopt/papilo/archive/refs/tags/v2.2.1.tar.gz
+          URL_HASH SHA256=b022af82bda3db1a594fe67524d98be82e67279f9d9d645b2fcdfc9349cdc6f7
+          COMPONENTS papilo)
+        find_package(PAPILO REQUIRED CONFIG HINTS _deps/local)
     endif()
 endif()
 if(PAPILO_FOUND)
