@@ -4,6 +4,7 @@ ENV BOOST_MAJOR=1
 ENV BOOST_MINOR=73
 ENV BOOST_PATCH=0
 ENV GMP_VERSION=6.3.0
+ENV MPFR_VERSION = 4.2.1
 ENV METIS_VERSION=5.1.1
 ENV LAPACK_VERSION=3.12.0
 ENV MUMPS_VERSION=3.0.5
@@ -44,6 +45,14 @@ RUN wget https://gmplib.org/download/gmp/gmp-$GMP_VERSION.tar.xz && \
     tar xf gmp-$GMP_VERSION.tar.xz && \
     cd /home/builds/gmp-$GMP_VERSION && \
     ./configure --with-pic --enable-cxx --disable-shared && \
+    make install -j && \
+    rm -rf /home/builds/*
+
+# mpfr
+RUN wget https://ftp.gnu.org/gnu/mpfr/mpfr-$MPFR_VERSION.tar.xz && \
+    tar xf mpfr-$MPFR_VERSION.tar.xz && \
+    cd /home/builds/mpfr-$MPFR_VERSION && \
+    ./configure --with-pic --disable-shared && \
     make install -j && \
     rm -rf /home/builds/*
 
