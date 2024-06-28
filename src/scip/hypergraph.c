@@ -1303,7 +1303,7 @@ SCIP_Bool SCIPhypergraphIsValid(
 
    if( SCIPhypergraphHasVertexEdges(hypergraph) )
    {
-      int nincidences = SCIPhypergraphGetNIncidences(hypergraph);
+      int nincidences;
       long long* incidences1 = NULL;
       long long* incidences2 = NULL;
       int i1 = 0;
