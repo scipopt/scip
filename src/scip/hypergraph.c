@@ -1299,7 +1299,6 @@ SCIP_Bool SCIPhypergraphIsValid(
       BMSfreeBlockMemoryArray(hypergraph->blkmem, &incidences2, nincidences);
       BMSfreeBlockMemoryArray(hypergraph->blkmem, &incidences1, nincidences);
    }
-   assert(file);
 
    if( SCIPhypergraphHasVertexEdges(hypergraph) )
    {
