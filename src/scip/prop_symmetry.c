@@ -6101,11 +6101,11 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
       SCIPfreeBlockMemoryArray(scip, &lexmatrix, nrows);
       if ( ncolmatrices > 0 )
       {
-         SCIPfreeBlockMemoryArray(scip, &lexcolsbegin, ncolmatrices);
+         SCIPfreeBlockMemoryArray(scip, &lexcolsbegin, ncolmatrices + 1);
       }
       if ( nrowmatrices > 0 )
       {
-         SCIPfreeBlockMemoryArray(scip, &lexrowsbegin, nrowmatrices);
+         SCIPfreeBlockMemoryArray(scip, &lexrowsbegin, nrowmatrices + 1);
       }
    }
 
