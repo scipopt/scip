@@ -48,14 +48,6 @@ RUN wget https://gmplib.org/download/gmp/gmp-$GMP_VERSION.tar.xz && \
     make install -j && \
     rm -rf /home/builds/*
 
-# mpfr
-RUN wget https://ftp.gnu.org/gnu/mpfr/mpfr-$MPFR_VERSION.tar.xz && \
-    tar xf mpfr-$MPFR_VERSION.tar.xz && \
-    cd /home/builds/mpfr-$MPFR_VERSION && \
-    ./configure --with-pic --disable-shared && \
-    make install -j && \
-    rm -rf /home/builds/*
-
 # gklib and metis
 RUN wget https://github.com/KarypisLab/GKlib/archive/refs/tags/METIS-v$METIS_VERSION-DistDGL-0.5.tar.gz && \
     tar xfz METIS-v$METIS_VERSION-DistDGL-0.5.tar.gz && \
