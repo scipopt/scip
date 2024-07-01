@@ -41,8 +41,6 @@ Build system
 Miscellaneous
 -------------
 
-- Event `BESTSOLFOUND` is thrown before scanning the current node list and removing nodes potentially throwing the `NODEDELETE` event
-
 @section RN911 SCIP 9.1.1
 *************************
 
