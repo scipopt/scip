@@ -17,7 +17,8 @@ variables:
 workflow:
   rules:
     # only run the pipeline on merge requests and when the title does not contain Draft
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_MERGE_REQUEST_TITLE !~ /Draft/
+    #- if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_MERGE_REQUEST_TITLE !~ /Draft/
+    - when: never
 
 stages:
   - image
