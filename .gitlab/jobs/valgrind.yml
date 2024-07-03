@@ -8,7 +8,7 @@ valgrind:
     - "cmake release with debug info"
   script:
     - ls /IP
-    - apt-get update && apt-get install -y make gfortran valgrind git
+    - apt-get update && apt-get install -y make gfortran valgrind git libgmp-dev
 
     - ln -fs /IP ${CI_PROJECT_DIR}/check/IP
     - ln -s /IP/instancedata ${CI_PROJECT_DIR}/check/instancedata
