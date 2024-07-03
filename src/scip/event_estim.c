@@ -2749,6 +2749,9 @@ SCIP_DECL_EVENTEXEC(eventExecEstim)
    eventtype = SCIPeventGetType(event);
    treedata = eventhdlrdata->treedata;
 
+   if( SCIPisExactSolve(scip) )
+      return SCIP_OKAY;
+
    /* actual leaf nodes for our tree data are children/siblings/leaves or the focus node itself (deadend)
     * if it has not been branched on
     */
