@@ -44,7 +44,7 @@ RUN wget https://github.com/Reference-LAPACK/lapack/archive/refs/tags/v$LAPACK_V
 RUN wget https://gmplib.org/download/gmp/gmp-$GMP_VERSION.tar.xz && \
     tar xf gmp-$GMP_VERSION.tar.xz && \
     cd /home/builds/gmp-$GMP_VERSION && \
-    ./configure --with-pic --enable-cxx --disable-shared && \
+    ./configure --with-pic --enable-cxx&& \
     make install -j && \
     rm -rf /home/builds/*
 
@@ -52,7 +52,7 @@ RUN wget https://gmplib.org/download/gmp/gmp-$GMP_VERSION.tar.xz && \
 RUN wget https://ftp.gnu.org/gnu/mpfr/mpfr-$MPFR_VERSION.tar.xz && \
     tar xf mpfr-$MPFR_VERSION.tar.xz && \
     cd /home/builds/mpfr-$MPFR_VERSION && \
-    ./configure --with-pic --disable-shared && \
+    ./configure && \
     make install -j && \
     rm -rf /home/builds/*
 
