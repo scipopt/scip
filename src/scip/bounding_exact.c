@@ -98,6 +98,7 @@ SCIP_Bool fpLPisIntFeasible(
    return feasible;
 }
 
+#ifdef SCIP_WITH_GMP
 /** helper method, compute number of nonzeros in lp */
 static
 int getNNonz(
@@ -115,7 +116,6 @@ int getNNonz(
    return ret;
 }
 
-#ifdef SCIP_WITH_GMP
 /** subroutine of constructProjectShiftData(); chooses which columns of the dual matrix are designated as set S, used for projections */
 static
 SCIP_RETCODE projectShiftChooseDualSubmatrix(
@@ -2392,8 +2392,10 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    if( SCIPgetDepth(set->scip) <= 0 && lpexact->projshiftdata->lpiexact == NULL
       && !lpexact->projshiftdata->projshiftdatacon && !lpexact->projshiftdata->projshiftdatafail )
    {
+#ifdef SCIP_WITH_GMP
       SCIP_CALL( constructProjectShiftDataLPIExact(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob,
             blkmem) );
+#endif
    }
 
    while( (!lp->hasprovedbound && !shouldabort) || lpexact->allowexactsolve )

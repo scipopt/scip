@@ -402,14 +402,6 @@ void RatClearGMPArray(
    }
 }
 #endif
-#else
-   /** get the underlying mpq_t* */
- mpq_t* RatGetGMP(
-   SCIP_Rational*        rational            /**< the rational */
-   )
-{
-   return 0;
-}
 #endif
 
 /* transforms rational into canonical form */
@@ -1865,7 +1857,7 @@ SCIP_Real RatRoundReal(
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_R_ROUND_NEAREST )
       return RatApproxReal(rational);
 
-#if defined(SCIP_WITH_MPFR) && defined(SCIP_WITH_BOOST)
+#if defined(SCIP_WITH_MPFR) && defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
    {
       SCIP_Real realapprox;
       mpfr_t valmpfr;
