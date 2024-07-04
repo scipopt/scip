@@ -105,7 +105,7 @@
 #define DEFAULT_DYNAMICLOOKAHEAD TRUE        /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
 #define DEFAULT_GEOMETRICMEANGAINS TRUE      /**< should the geometric mean be used instead of the arithmetic mean for min and max gain? */
 #define DEFAULT_LOOKAHEAD_USEBAYESIAN FALSE  /**< should the update of the parameter estimation use the Bayesian rule or a simple weighted combination? */
-#define DEFAULT_USEPARETODISTRIBUTION TRUE   /**< should the Pareto distribution be used for the estimation of the tree size? */
+#define DEFAULT_DYNAMICLOOKDISTRIBUTION PARETODISTRIBUTION   /**< which distribution should be used for dynamic lookahead? 0=exponential, 1=Pareto, 2=log-normal */
 #define DEFAULT_RANDINITORDER    FALSE       /**< should slight perturbation of scores be used to break ties in the prior scores? */
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE   /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 #define DEFAULT_DYNAMICWEIGHTS   TRUE        /**< should the weights of the branching rule be adjusted dynamically during solving based
@@ -115,6 +115,10 @@
 /* symmetry handling */
 #define DEFAULT_FILTERCANDSSYM   FALSE       /**< Use symmetry to filter branching candidates? */
 #define DEFAULT_TRANSSYMPSCOST   FALSE       /**< Transfer pscost information to symmetric variables if filtering is performed? */
+
+#define EXPONENTIALDISTRIBUTION 0
+#define PARETODISTRIBUTION 1
+#define LOGNORMALDISTRIBUTION 2
 
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -161,7 +165,7 @@ struct SCIP_BranchruleData
    SCIP_Bool             dynamiclookahead;   /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
    SCIP_Bool             geometricmeangains; /**< should the geometric mean be used instead of the arithmetic mean for min and max gain? */
    SCIP_Bool             lookaheadbayesian;  /**< should the update of the parameter estimation use the Bayesian rule or a simple convex combination */
-   SCIP_Bool             useparetodistribution;/**< should the Pareto distribution be used for the estimation of the tree size? */
+   int                   dynamiclookdistribution; /**< which distribution should be used for dynamic lookahead? 0=, 1=Pareto, 2=log-normal */
    int                   minsamplesize;      /**< minimum sample size to estimate the tree size for dynamic lookahead */
    int                   degeneracyaware;    /**< should degeneracy be taken into account to update weights and skip strong branching? (0: off, 1: after root, 2: always) */
    int                   confidencelevel;    /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
@@ -850,10 +854,10 @@ SCIP_Real cdfProbability(
    SCIP_Real             zeroprob,
    SCIP_Real             proposedgain,
    SCIP_Real             mingain,
-   SCIP_Bool             useparetocdf
+   int                   distributioncdf
    )
 {
-   if(useparetocdf)
+   if(distributioncdf == PARETODISTRIBUTION)
    {
       if (proposedgain < mingain)
          return 0.0;
@@ -861,10 +865,15 @@ SCIP_Real cdfProbability(
          return zeroprob + (1.0 - zeroprob) * (1.0 - pow(mingain / proposedgain, rate));
 
    }
-   else
+   else if(distributioncdf == EXPONENTIALDISTRIBUTION)
    {
       assert(rate >= 0.0);
       return zeroprob + (1.0 - zeroprob) * (1.0 - exp(-rate * proposedgain));
+   }
+   else
+   {
+      assert(distributioncdf == LOGNORMALDISTRIBUTION);
+      return -1.0;
    }
 }
 
@@ -877,7 +886,7 @@ SCIP_Real expectedTreeSize(
    SCIP_Real             currentdepth,
    SCIP_Real             lambda,
    SCIP_Real             mingain,
-   SCIP_Bool             useparetocdf
+   int                   distributioncdf
    )
 {
 
@@ -896,7 +905,7 @@ SCIP_Real expectedTreeSize(
    else if (depth == 2)
    {
       /* Probability of finding a better variable that would reduce the depth (smaller tree size). */
-      SCIP_Real p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, useparetocdf);
+      SCIP_Real p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, distributioncdf);
       SCIPdebugMsg(scip, " -> Probability of finding a better variable that would reduce the depth: %g\n", p);
       /* Size of the improved tree. */
       improvedtree =  strongBranchingTreeSize(depth - 1);
@@ -907,9 +916,9 @@ SCIP_Real expectedTreeSize(
    else
    {
       /* Probability of not finding a better variable that would reduce the depth of the tree (size of the tree). */
-      SCIP_Real pnotbetter = cdfProbability(lambda, zeroprob, (gap / (depth - 1)), mingain, useparetocdf);
+      SCIP_Real pnotbetter = cdfProbability(lambda, zeroprob, (gap / (depth - 1)), mingain, distributioncdf);
       /* Probability of finding a better variable that would reduce the depth (smaller tree size). */
-      SCIP_Real pbetter = 1.0 - cdfProbability(lambda, zeroprob, gap / (depth - 1), mingain, useparetocdf);
+      SCIP_Real pbetter = 1.0 - cdfProbability(lambda, zeroprob, gap / (depth - 1), mingain, distributioncdf);
       SCIPdebugMsg(scip, " -> Probability of finding a better variable that would reduce the depth: %g\n", pbetter);
 
       if( pbetter < 1e-5 )
@@ -921,14 +930,14 @@ SCIP_Real expectedTreeSize(
       {
          if (depth > 2)
          {
-            p = cdfProbability(lambda, zeroprob, gap / (depth - 2), mingain, useparetocdf) - cdfProbability(lambda, zeroprob, gap / (depth - 1), mingain, useparetocdf);
+            p = cdfProbability(lambda, zeroprob, gap / (depth - 2), mingain, distributioncdf) - cdfProbability(lambda, zeroprob, gap / (depth - 1), mingain, distributioncdf);
             ptotal += p;
-            pbetter = 1.0 - cdfProbability(lambda, zeroprob, gap / (depth - 2), mingain, useparetocdf);
+            pbetter = 1.0 - cdfProbability(lambda, zeroprob, gap / (depth - 2), mingain, distributioncdf);
          }
 
          else if (depth == 2)
          {
-               p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, useparetocdf);
+               p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, distributioncdf);
                ptotal += p;
                pbetter = 0.0;
          }
@@ -1034,7 +1043,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    assert(!SCIPisInfinity(scip, -maxmeangain));
 
    SCIP_Real zeroprob = (SCIP_Real) branchruledata->nzerogains / (branchruledata->nzerogains + branchruledata->currndualgains);
-   if(branchruledata->useparetodistribution)
+   if(branchruledata->dynamiclookdistribution == PARETODISTRIBUTION)
    {
       assert(minmeangain > 0.0);
       assert(branchruledata->currndualgains > 0);
@@ -1043,24 +1052,32 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
          return TRUE;
       lambda = branchruledata->currndualgains / sum_for_lambda;
    }
-   /* update the rate for the exponential distribution */
-   else if (branchruledata->ndualgains == 0 || branchruledata->currndualgains >= branchruledata->minsamplesize )
+   else if (branchruledata->dynamiclookdistribution == EXPONENTIALDISTRIBUTION)
    {
-      lambda = 1 / (branchruledata->currmeandualgain);
+      /* update the rate for the exponential distribution */
+      if (branchruledata->ndualgains == 0 || branchruledata->currndualgains >= branchruledata->minsamplesize )
+      {
+         lambda = 1 / (branchruledata->currmeandualgain);
+      }
+      else
+      {
+         int npreviousgains = MAX(branchruledata->minsamplesize - branchruledata->currndualgains, 0);
+
+         int total = branchruledata->minsamplesize;
+         if ( branchruledata->lookaheadbayesian )
+         {
+            lambda = ((SCIP_Real) branchruledata->currndualgains + 1.0) / (branchruledata->meandualgain + branchruledata->currndualgains * branchruledata->currmeandualgain);
+         } else {
+            SCIP_Real oldgainfrac = (SCIP_Real) npreviousgains / total;
+            SCIP_Real mean = oldgainfrac * branchruledata->meandualgain + (1.0 - oldgainfrac) * branchruledata->currmeandualgain;
+            lambda = 1 / mean;
+         }
+      }
    }
    else
    {
-      int npreviousgains = MAX(branchruledata->minsamplesize - branchruledata->currndualgains, 0);
-
-      int total = branchruledata->minsamplesize;
-      if ( branchruledata->lookaheadbayesian )
-      {
-         lambda = ((SCIP_Real) branchruledata->currndualgains + 1.0) / (branchruledata->meandualgain + branchruledata->currndualgains * branchruledata->currmeandualgain);
-      } else {
-         SCIP_Real oldgainfrac = (SCIP_Real) npreviousgains / total;
-         SCIP_Real mean = oldgainfrac * branchruledata->meandualgain + (1.0 - oldgainfrac) * branchruledata->currmeandualgain;
-         lambda = 1 / mean;
-      }
+      assert(branchruledata->dynamiclookdistribution == LOGNORMALDISTRIBUTION);
+      // TODO CONTINUE
    }
 
    /* TodoSB too large depth can cause overflow. Set limit of 50 */
@@ -1079,7 +1096,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    currenttreesize = strongBranchingTreeSize(currentdepth);
 
    /* Compute the expected size of the tree with one more strong branching */
-   nexttreesize =  expectedTreeSize(scip, gaptoclose, zeroprob, currentdepth, lambda, minmeangain, branchruledata->useparetodistribution);
+   nexttreesize =  expectedTreeSize(scip, gaptoclose, zeroprob, currentdepth, lambda, minmeangain, branchruledata->dynamiclookdistribution);
 
    if(SCIPisLE(scip, nexttreesize, currenttreesize - 1.0))
    {
@@ -2521,9 +2538,9 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "branching/relpscost/initcand",
          "maximal number of candidates initialized with strong branching per node",
          &branchruledata->initcand, FALSE, DEFAULT_INITCAND, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/useparetodistribution",
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/dynamiclookdistribution",
          "should the Pareto distribution be used for the estimation of the tree size?",
-         &branchruledata->useparetodistribution, TRUE, DEFAULT_USEPARETODISTRIBUTION, NULL, NULL) );
+         &branchruledata->dynamiclookdistribution, TRUE, DEFAULT_DYNAMICLOOKDISTRIBUTION, EXPONENTIALDISTRIBUTION, LOGNORMALDISTRIBUTION, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/inititer",
          "iteration limit for strong branching initializations of pseudo cost entries (0: auto)",
