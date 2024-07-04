@@ -293,6 +293,17 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactSol)
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for LP solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxExactSol)
+{  /*lint --e{715}*/
+
+   /* returning feasible since we can't enforce anything */
+   *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsExactSol)
@@ -709,6 +720,22 @@ SCIP_DECL_CONSEXIT(consExitExactSol)
    return SCIP_OKAY;
 }
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyExactSol)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrExactSol(scip) );
+
+   *valid = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /*
  * constraint specific interface methods
  */
@@ -730,6 +757,9 @@ SCIP_RETCODE SCIPincludeConshdlrExactSol(
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpExactSol, consEnfopsExactSol, consCheckExactSol, consLockExactSol,
          conshdlrdata) );
+
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyExactSol, NULL) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxExactSol) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/checkfpfeasibility",

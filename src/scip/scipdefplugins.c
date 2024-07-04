@@ -43,10 +43,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
 
    SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear constraint handler must be before linear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
-#ifdef SCIP_WITH_BOOST
-   SCIP_CALL( SCIPincludeConshdlrExactLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrExactLinear(scip) );
    SCIP_CALL( SCIPincludeConshdlrExactSol(scip) );
-#endif
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBenders(scip) );
    SCIP_CALL( SCIPincludeConshdlrBenderslp(scip) );
