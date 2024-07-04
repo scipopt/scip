@@ -36,6 +36,7 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/branch_relpscost.h"
+#include "scip/def.h"
 #include "scip/treemodel.h"
 #include "scip/cons_and.h"
 #include "scip/pub_branch.h"
@@ -63,6 +64,7 @@
 #include "scip/prop_symmetry.h"
 #include "scip/symmetry.h"
 #include "scip/struct_branch.h"
+#include "scip/type_result.h"
 #include <string.h>
 
 #define BRANCHRULE_NAME          "relpscost"
@@ -873,7 +875,10 @@ SCIP_Real cdfProbability(
    else
    {
       assert(distributioncdf == LOGNORMALDISTRIBUTION);
-      return -1.0;
+      // TODOSB: collect and pass parameters of the lognormal to the function
+      SCIP_Real logmean = 0.0;
+      SCIP_Real logstdev = 1.0;
+      return zeroprob + 0.5 * erfc(-(log(proposedgain) - logmean) / (logstdev * SQRT(2.0)));
    }
 }
 
@@ -1077,7 +1082,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    else
    {
       assert(branchruledata->dynamiclookdistribution == LOGNORMALDISTRIBUTION);
-      // TODO CONTINUE
+      // TODO CONTINUE and update lognormal distribution parameters here
    }
 
    /* TodoSB too large depth can cause overflow. Set limit of 50 */
