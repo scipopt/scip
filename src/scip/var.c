@@ -1101,6 +1101,20 @@ SCIP_RETCODE SCIPboundchgUndo(
             SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip), var->lbchginfos[var->nlbchginfos].oldcertindex);
       }
 
+      if( set->exact_enabled && !RatIsFpRepresentable(SCIPvarGetLbGlobalExact(boundchg->var))
+            && SCIPsetIsEQ(set, var->lbchginfos[var->nlbchginfos].oldbound, SCIPvarGetLbGlobal(boundchg->var) ) )
+      {
+         /* reinstall the exact global bound, if necessary */
+         SCIP_CALL( SCIPvarChgLbLocalExact(boundchg->var, blkmem, set, stat, lp->lpexact, branchcand, eventqueue,
+               SCIPvarGetLbGlobalExact(boundchg->var)) );
+      }
+      else
+      {
+         /* reinstall the previous local bound */
+         SCIP_CALL( SCIPvarChgLbLocal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue,
+               var->lbchginfos[var->nlbchginfos].oldbound) );
+      }
+
       /* reinstall the previous local bound */
       SCIP_CALL( SCIPvarChgLbLocal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue,
             var->lbchginfos[var->nlbchginfos].oldbound) );
@@ -1123,15 +1137,25 @@ SCIP_RETCODE SCIPboundchgUndo(
          var->ubchginfos[var->nubchginfos].bdchgidx.depth, var->ubchginfos[var->nubchginfos].bdchgidx.pos,
          var->ubchginfos[var->nubchginfos].oldbound, var->ubchginfos[var->nubchginfos].newbound);
 
-      if ( SCIPcertificateShouldTrackBounds(set->scip) )
+      if( SCIPcertificateShouldTrackBounds(set->scip) )
       {
          if (!SCIPsetIsInfinity(set, var->ubchginfos[var->nubchginfos].oldbound))
             SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip), var->ubchginfos[var->nubchginfos].oldcertindex);
       }
 
-      /* reinstall the previous local bound */
-      SCIP_CALL( SCIPvarChgUbLocal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue,
-            var->ubchginfos[var->nubchginfos].oldbound) );
+      if( set->exact_enabled && !RatIsFpRepresentable(SCIPvarGetUbGlobalExact(boundchg->var))
+            && SCIPsetIsEQ(set, var->ubchginfos[var->nubchginfos].oldbound, SCIPvarGetUbGlobal(boundchg->var) ) )
+      {
+         /* reinstall the exact global bound, if necessary */
+         SCIP_CALL( SCIPvarChgUbLocalExact(boundchg->var, blkmem, set, stat, lp->lpexact, branchcand, eventqueue,
+               SCIPvarGetUbGlobalExact(boundchg->var)) );
+      }
+      else
+      {
+         /* reinstall the previous local bound */
+         SCIP_CALL( SCIPvarChgUbLocal(boundchg->var, blkmem, set, stat, lp, branchcand, eventqueue,
+               var->ubchginfos[var->nubchginfos].oldbound) );
+      }
 
       /* in case all bound changes are removed the local bound should match the global bound */
       assert(var->nubchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.ub, var->glbdom.ub));
