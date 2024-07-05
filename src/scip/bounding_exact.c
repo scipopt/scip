@@ -41,7 +41,9 @@
 #include "scip/primal.h"
 #include "scip/sepastoreexact.h"
 #include "scip/struct_scip.h"
+#ifdef SCIP_WITH_EXACTSOLVE
 #include "rectlu/rectlu.h"
+#endif
 
 #ifdef SCIP_WITH_BOOST
 
@@ -96,6 +98,7 @@ SCIP_Bool fpLPisIntFeasible(
    return feasible;
 }
 
+#ifdef SCIP_WITH_GMP
 /** helper method, compute number of nonzeros in lp */
 static
 int getNNonz(
@@ -113,7 +116,6 @@ int getNNonz(
    return ret;
 }
 
-#ifdef SCIP_WITH_GMP
 /** subroutine of constructProjectShiftData(); chooses which columns of the dual matrix are designated as set S, used for projections */
 static
 SCIP_RETCODE projectShiftChooseDualSubmatrix(
@@ -367,8 +369,12 @@ SCIP_RETCODE projectShiftFactorizeDualSubmatrix(
     */
    RatSetGMPArray(projvalgmp, projval, 2 * nnonz + 2 * ncols);
 
+#if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
    rval = RECTLUbuildFactorization(&projshiftdata->rectfactor, ncols, projshiftdata->projshiftbasisdim,
       projshiftdata->projshiftbasis, projvalgmp, projind, projbeg, projlen);
+#else
+   rval = 1;
+#endif
 
    /* if rval != 0 then RECTLUbuildFactorization has failed. In this case the project-and-shift method will not work and
     * we will return failure
@@ -1465,7 +1471,11 @@ SCIP_RETCODE projectShift(
          mpq_init(correctiongmp[i]);
       }
 
+#if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
       rval = RECTLUsolveSystem(projshiftdata->rectfactor, ncols, nextendedrows, violationgmp, correctiongmp);
+#else
+      rval = 1;
+#endif
 
       /* rval = 0 -> fail */
       if( rval )
@@ -1855,8 +1865,6 @@ char chooseInitialBoundingMethod(
    assert(lpexact != NULL);
    assert(set != NULL);
 
-   dualboundmethod = 'u';
-
    if( set->scip->stat->nnodes == 1 && lpexact->allowexactsolve )
       dualboundmethod = 'e';
    /* first, check if we need to solve exactly */
@@ -1924,8 +1932,6 @@ char chooseFallbackBoundingMethod(
 
    assert(lpexact != NULL);
    assert(set != NULL);
-
-   dualboundmethod = 'u';
 
    switch( lastboundmethod )
    {
@@ -2051,7 +2057,6 @@ SCIP_RETCODE boundShift(
 
    /* reset proved bound status */
    lp->hasprovedbound = FALSE;
-   computedbound = 0;
 
    /* calculate y^Tb */
    SCIPintervalSet(&productsidedualval, 0.0);
@@ -2387,8 +2392,10 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    if( SCIPgetDepth(set->scip) <= 0 && lpexact->projshiftdata->lpiexact == NULL
       && !lpexact->projshiftdata->projshiftdatacon && !lpexact->projshiftdata->projshiftdatafail )
    {
+#ifdef SCIP_WITH_GMP
       SCIP_CALL( constructProjectShiftDataLPIExact(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter, prob,
             blkmem) );
+#endif
    }
 
    while( (!lp->hasprovedbound && !shouldabort) || lpexact->allowexactsolve )

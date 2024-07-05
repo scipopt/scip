@@ -193,7 +193,7 @@ static void RsetSpxR(
    }
    else
    {
-#ifdef SCIP_WITH_BOOST
+#if defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
       r->val = spxr;
 #else
       r->val = (double) spxr;
@@ -235,7 +235,7 @@ static void SpxRSetRat(
    }
    else
    {
-#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_BOOST)
+#if defined(SOPLEX_WITH_GMP) && defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
       spxr = soplex::Rational(*RatGetGMP(src));
 #else
       spxr = soplex::Rational(RatApproxReal(src));

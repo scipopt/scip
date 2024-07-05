@@ -521,7 +521,7 @@ void SCIPstatUpdatePrimalDualIntegrals(
    assert(stat != NULL);
    assert(set != NULL);
 
-   solvingtime = MAX(SCIPclockGetTime(stat->solvingtime), stat->previntegralevaltime);
+   solvingtime = MAX(SCIPclockGetTime(stat->solvingtime), stat->previntegralevaltime); /*lint !e666*/
    assert(solvingtime >= stat->previntegralevaltime);
 
    if( !SCIPsetIsInfinity(set, upperbound) ) /*lint !e777*/

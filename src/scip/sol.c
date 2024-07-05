@@ -880,7 +880,6 @@ SCIP_RETCODE SCIPsolCreateLPSolExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LPEXACT*         lp,                 /**< current LP data */
@@ -892,7 +891,7 @@ SCIP_RETCODE SCIPsolCreateLPSolExact(
    assert(lp->solved);
 
    SCIP_CALL( SCIPsolCreateExact(sol, blkmem, set, stat, primal, tree, heur) );
-   SCIP_CALL( SCIPsolLinkLPSolExact(*sol, set, prob, lp) );
+   SCIP_CALL( SCIPsolLinkLPSolExact(*sol, set, lp) );
 
    return SCIP_OKAY;
 }
@@ -975,7 +974,6 @@ SCIP_RETCODE SCIPsolCreatePseudoSolExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree, or NULL */
    SCIP_LPEXACT*         lp,                 /**< current LP data */
@@ -985,7 +983,7 @@ SCIP_RETCODE SCIPsolCreatePseudoSolExact(
    assert(sol != NULL);
 
    SCIP_CALL( SCIPsolCreateExact(sol, blkmem, set, stat, primal, tree, heur) );
-   SCIP_CALL( SCIPsolLinkPseudoSolExact(*sol, set, prob, lp) );
+   SCIP_CALL( SCIPsolLinkPseudoSolExact(*sol, set, lp) );
 
    return SCIP_OKAY;
 }
@@ -1023,7 +1021,6 @@ SCIP_RETCODE SCIPsolCreateCurrentSolExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LPEXACT*         lp,                 /**< current LP data */
@@ -1035,11 +1032,11 @@ SCIP_RETCODE SCIPsolCreateCurrentSolExact(
    if( SCIPtreeHasCurrentNodeLP(tree) )
    {
       assert(lp->solved);
-      SCIP_CALL( SCIPsolCreateLPSolExact(sol, blkmem, set, stat, prob, primal, tree, lp, heur) );
+      SCIP_CALL( SCIPsolCreateLPSolExact(sol, blkmem, set, stat, primal, tree, lp, heur) );
    }
    else
    {
-      SCIP_CALL( SCIPsolCreatePseudoSolExact(sol, blkmem, set, stat, prob, primal, tree, lp, heur) );
+      SCIP_CALL( SCIPsolCreatePseudoSolExact(sol, blkmem, set, stat, primal, tree, lp, heur) );
    }
 
    return SCIP_OKAY;
@@ -1221,7 +1218,6 @@ SCIP_RETCODE SCIPsolLinkLPSol(
 SCIP_RETCODE SCIPsolLinkLPSolExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
@@ -1355,7 +1351,6 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
 SCIP_RETCODE SCIPsolLinkPseudoSolExact(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_LPEXACT*         lp                  /**< current LP data */
    )
 {
@@ -2380,7 +2375,6 @@ SCIP_RETCODE solCheckExact(
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
    SCIP_Bool             completely,         /**< Should all violations be checked? */
-   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            feasible            /**< stores whether solution is feasible */
    )
@@ -2702,7 +2696,7 @@ SCIP_RETCODE SCIPsolCheck(
    if( set->exact_enabled )
    {
       SCIP_CALL( solCheckExact(sol, set, messagehdlr, blkmem, stat, prob, printreason,
-            completely, checkintegrality, checklprows, feasible) );
+            completely, checklprows, feasible) );
    }
 
    SCIPsolResetViolations(sol);

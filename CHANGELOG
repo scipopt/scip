@@ -1,3 +1,5 @@
+@page RN10 Release notes for SCIP 10
+
 @section RN1000 SCIP 10.0.0
 ***************************
 
@@ -5,6 +7,11 @@ Features
 --------
 - Added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
 - Copy variable data pointer if no copy routine was supplied.
+- added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
+- implemented symmetry detection callbacks for cons_disjunction and cons_superindicator
+- detailed information about applied symmetry handling techniques can be printed to the terminal
+- added a new separator sepa_multilinear to generate flower cuts from AND constraints nonlinear product expressions.
+- added functionality to deal with hypergraphs by means of efficient access to vertices, edges and intersections edges.
 
 Performance improvements
 ------------------------
@@ -26,6 +33,9 @@ Interface changes
   SCIPvarGetAncPseudocost() for retrieving the values related to ancestral pseudo cost fields in variable history
 - SCIPgetAvgDPseudocostScore(), SCIPgetVarDPseudocostScore() for computing the discounted pseudo cost scores using ancestral pseudo costs
 - SCIPboundchgGetLPSolVal() for accessing the LP solution value in the branching data of the bound change
+- SCIPclearSymgraph() and SCIPcopySymgraphAsSubgraph() to clear and copy as symmetry detection graph, respectively
+- SCIPincludeSepaMultilinear() to include the new multilinear cut separator
+- SCIPhypergraphCreate(), SCIPhypergraphClear(), SCIPhypergraphFree(), SCIPhypergraphAddVertex(), SCIPhypergraphAddEdge(), SCIPhypergraphIsValid() and SCIPhypergraphComputeVerticesEdges() for building and deleting hypergraphs, SCIPhypergraphComputeOverlaps(), SCIPhypergraphOverlapFind(), SCIPhypergraphIntersectEdges(), SCIPhypergraphComputeOverlapsEdges(), SCIPhypergraphComputeVerticesOverlaps(), SCIPhypergraphOverlapsDisjoint() to deal with pair-wise intersections of hyperedges, SCIPhypergraphIterInit(), SCIPhypergraphIterClear(), SCIPhypergraphIterStart(), SCIPhypergraphIterValid(), SCIPhypergraphIterNext(), SCIPhypergraphIterBase(), SCIPhypergraphIterAdjacent(), SCIPhypergraphIterMinVertex(), SCIPhypergraphIterOverlap() for iterating over adjacent edges, SCIPhypergraphHasVertexEdges() SCIPhypergraphHasOverlaps(), SCIPhypergraphHasOverlapsEdges(), SCIPhypergraphHasVertexOverlaps(), SCIPhypergraphGetNVertices(), SCIPhypergraphGetNEdges(), SCIPhypergraphBlkmem(), SCIPhypergraphGetNOverlaps(), SCIPhypergraphVertexData(), SCIPhypergraphEdgeData(), SCIPhypergraphEdgeSize(), SCIPhypergraphEdgeVertices(), SCIPhypergraphVertexEdgesFirst(), SCIPhypergraphVertexEdgesBeyond(), SCIPhypergraphVertexEdgesGetAtIndex(), SCIPhypergraphOverlapData(), SCIPhypergraphOverlapSize(), SCIPhypergraphOverlapVertices() SCIPhypergraphEdgesOverlapsFirst(), SCIPhypergraphEdgesOverlapsBeyond(), SCIPhypergraphEdgesOverlapsGetAtIndex(), SCIPhypergraphOverlapsEdgesFirst(), SCIPhypergraphOverlapsEdgesBeyond(), SCIPhypergraphOverlapsEdgesGetAtIndex(), SCIPhypergraphVertexOverlapsFirst(), SCIPhypergraphVertexOverlapsBeyond() and SCIPhypergraphVertexOverlapsGetAtIndex() to query information about vertices, edges and overlaps as well as their incidences.
 
 ### Command line interface
 
@@ -37,6 +47,9 @@ Interface changes
 
 - branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
 - branching/discountedpscost to enable/disable recording ancestral pseudo costs
+- new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
+- new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
+- new parameter "propagating/symmetry/dispsyminfo" to control whether information about which symmetry handling methods are applied are printed
 
 ### Data structures
 
@@ -53,6 +66,8 @@ Build system
 
 ### Cmake
 
+- cmake now automatically downloads and installs the latest release version of SoPlex+PaPilo from GitHub if they are not found directly
+
 Fixed bugs
 ----------
 
@@ -62,10 +77,9 @@ Miscellaneous
 Known bugs
 ----------
 
+@page RN9 Release notes for SCIP 9
 
-@page RN90 Release notes for SCIP 9
-
-@section RN910 SCIP 9.1.0
+@section RN920 SCIP 9.2.0
 *************************
 
 Features
@@ -82,37 +96,129 @@ Examples and applications
 
 Interface changes
 -----------------
+### New callbacks
+### New API functions
+### Command line interface
+### Interfaces to external software
+### New parameters
+### Data structures
+
+Deleted files
+-------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+### Cmake
+### Makefile
+
+Miscellaneous
+-------------
+
+- Event `BESTSOLFOUND` is thrown before scanning the current node list and removing nodes potentially throwing the `NODEDELETE` event
+
+@section RN911 SCIP 9.1.1
+*************************
+
+Fixed bugs
+----------
+
+- fix bug in separator aggregation that caused incorrect terminations when for an integral objective the objective limit was set to a fractional value
+- fix bug in memory management of doublelex matrices where indices were set beyond array bounds
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Miscellaneous
+-------------
+
+@section RN910 SCIP 9.1.0
+*************************
+
+Features
+--------
+
+- added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem
+- allow for implicit integer variables in xor constraints
+- implemented symmetry detection callbacks for pseudoboolean constraints
+- added option to consider enforcement of nonlinear constraints (including spatial branching) before integrality has been enforced
+
+Fixed bugs
+----------
+
+- make sure that, in dual proof analysis, upgraded constraints can report their number of variables
+- check knapsack constraints as linear constraints to avoid violations based on implicit integrality
+- make sure that symmetry detection callbacks report success
+- make arithmetics in cuts.c more robust to avoid invalid scg cuts due to numerical rounding sensitivity
+- allow to copy pseudoboolean constraints even if no AND constraints are present in order to avoid a warning
+- set value for variable that is introduced to reformulate nonlinear objective function when reading .nl files with initial solution
+- fixed that multi-aggregations from PaPILO were accepted without ensuring that their bounds hold
+
+Examples and applications
+-------------------------
+
+- TSP: removed `gzstream.h/hpp` and parse gzipped files differently
+
+Interface changes
+-----------------
 
 ### New callbacks
 
+- SCIP_DECL_NLHDLRENFO takes additional parameter branchcandonly to indicate whether only branching candidates should be registered,
+  without looking for cuts or boundchanges
+
 ### New API functions
 
-### Command line interface
-
-### Interfaces to external software
+- new function SCIPgetExprActivityNonlinear() to get activity of nonlinear constraint
+- new function SCIPincludeConshdlrFixedvar() to include new constraint handler that checks bounds on fixed original variables
 
 ### New parameters
 
 - limits/primal to terminate the solve as soon as the primal bound is at least as good as this value, same as limits/objectivestop (deprecated)
 - limits/dual to terminate the solve as soon as the dual bound is at least as good as this value
 - presolving/milp/internalmaxrounds to control the maximal rounds for each call of the milp presolver (PaPILO)
+- constraints/fixedvar/* to control the new constraint handler that checks bounds on fixed original variables
+- constraints/nonlinear/branching/mixfractional to specify minimal average pseudo cost count for discrete variables
+  at which to start considering spatial branching before branching on fractional integer variables
+  (default infinity means that integrality is always enforced before nonlinear constraints)
+- constraints/nonlinear/branching/fracweight to specify weight of fractionality of integer variables in spatial branching
 
 ### New data structures
 
-- SCIP_Status is extended by SCIP_STATUS_PRIMALLIMIT and SCIP_STATUS_DUALLIMIT to indicate termination at limits/primal and limits/dual respectively
+- enum SCIP_Status has been extended by SCIP_STATUS_PRIMALLIMIT and SCIP_STATUS_DUALLIMIT to indicate termination at limits/primal and limits/dual respectively
 
 Build system
 ------------
 
-### Makefile
-
-### Cmake
-
-Testing
--------
+- changed the default symmetry computation package from sassy+bliss to sassy+nauty
+- bliss source is no longer included in the source tree, but can be linked as external library (https://github.com/ds4dm/Bliss)
+- cmake now automatically downloads and installs the latest release version of SoPlex from GitHub if it is not found directly
 
 Miscellaneous
 -------------
+
+- updated nauty to version 2.8.8
 
 
 @section RN901 SCIP 9.0.1
@@ -139,6 +245,9 @@ Fixed bugs
 - symmetry handling methods have not been added immediately after computing symmetries, which has been fixed
 - delay checking node limits after presolving to correctly continue up to the exceeding main node
 - simplified the objective sense assumption for the subproblems in the Lagromory separator
+- update effective root depth iteratively to avoid trapping it at a single child node
+- fixed that dualsparsify presolver did not always check do-not-multiaggregate variable flag
+- fixed bug in computing elements of orbits in orbital reduction
 
 Miscellaneous
 -------------
@@ -228,9 +337,6 @@ Performance improvements
 - Deactivate pre-root heuristic zeroobj in undercover heuristic.
 - Added new branching score tiebreaker for reliability pseudo-cost branching rule
 - Try nearest bound if zero solution value is out of bounds in heuristic trivial.
-
-Examples and applications
--------------------------
 
 Interface changes
 -----------------
@@ -449,13 +555,13 @@ Miscellaneous
 
 - The TPI has been changed to become mostly independent from the actual parallel interface during compile time.
   For this, the locks and conditions are now pointers to abstract structs.
-- fixed that scip/def.h, the header for C preprocessor definition (#define's), included headers for some SCIP type and function definitions
+- fixed that scip/def.h, the header for C preprocessor definition (`#define`'s), included headers for some SCIP type and function definitions
   (scip/type_retcode.h, scip/type_message.h, scip/pub_message.h)
 
 
-@page RN80 Release notes for SCIP 8.1
+@page RN8 Release notes for SCIP 8
 
-@section RN805 SCIP 8.1.0
+@section RN810 SCIP 8.1.0
 *************************
 
 Fixed bugs
@@ -527,8 +633,6 @@ Miscellaneous
 -------------
 
 - the parameter change callback is no longer called at the moment a parameter is created
-
-@page RN80 Release notes for SCIP 8.0
 
 @section RN804 SCIP 8.0.4
 *************************
@@ -651,9 +755,6 @@ Miscellaneous
   SCIPdebugSolIsValidInSubtree, SCIPdebugIsMainscip, SCIPdebugSolEnable, SCIPdebugSolDisable, SCIPdebugSolIsEnabled,
   SCIPwithDebugSol are now exported
 
-Known bugs
-----------
-
 @section RN802 SCIP 8.0.2
 *************************
 
@@ -734,6 +835,7 @@ Miscellaneous
 
 @section RN801 SCIP 8.0.1
 *************************
+
 Features
 --------
 
@@ -1633,9 +1735,6 @@ Unit tests
 - added sepa/rlt/separation.c
 - added tests test_compute_symmetry:expr{1,2,3,4} in symmetry/compute.c
 
-Testing
--------
-
 Build system
 ------------
 
@@ -1691,9 +1790,6 @@ Miscellaneous
 - Parameters are not reset to their default values before activating an emphasis setting; this now allows to combine
   different emphasis settings.
 - If a lazy bound is set to a value that is tighter than the current global bound, then the global bound is now tightened accordingly.
-
-Known bugs
-----------
 
 @page RN70 Release notes for SCIP 7.0
 
@@ -1783,8 +1879,6 @@ Examples and applications
 Interface changes
 -----------------
 
-### New and changed callbacks
-
 ### Deleted and changed API methods
 
 - deprecated SCIPsetParam(); use SCIPsetIntParam(), SCIPsetRealParam(), etc, instead
@@ -1793,32 +1887,6 @@ Interface changes
 
 - new function SCIPcolGetVarProbindex() for accessing the probindex of a variable corresponding to a column
 - added new sorting functions SCIPsortPtrRealRealBoolBool()
-
-### Command line interface
-
-### Interfaces to external software
-
-### Changed parameters
-
-### New parameters
-
-### Data structures
-
-Deleted files
--------------
-
-Unit tests
-----------
-
-Testing
--------
-
-Build system
-------------
-
-### Cmake
-
-### Makefile
 
 Fixed bugs
 ----------
@@ -1844,12 +1912,6 @@ Fixed bugs
 - Fixed issues with scip statistics
 - Fixed issue with multi-aggregated variables
 - Fixed issue in with buffer memory in cons_cumulative
-
-Miscellaneous
--------------
-
-Known bugs
-----------
 
 @section RN701 SCIP 7.0.1
 *************************
@@ -2752,6 +2814,7 @@ Fixed bugs
 
 Miscellaneous
 -------------
+
 - do not scale linear constraints to integral coefficients
 
 @section RN600 SCIP 6.0.0

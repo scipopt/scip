@@ -578,7 +578,7 @@ SCIP_RETCODE SCIPcreateLPSolExact(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPsolCreateLPSolExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
+   SCIP_CALL( SCIPsolCreateLPSolExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal,
             scip->tree, scip->lpexact, heur) );
 
    return SCIP_OKAY;
@@ -1259,7 +1259,7 @@ SCIP_RETCODE SCIPlinkLPSolExact(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPsolLinkLPSolExact(sol, scip->set, scip->transprob, scip->lpexact) );
+   SCIP_CALL( SCIPsolLinkLPSolExact(sol, scip->set, scip->lpexact) );
 
    return SCIP_OKAY;
 }
@@ -2198,7 +2198,7 @@ SCIP_RETCODE SCIPprintSolExact(
             FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
       /* create a temporary solution that is linked to the current solution */
-      SCIP_CALL( SCIPsolCreateCurrentSolExact(&sol, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->primal,
+      SCIP_CALL( SCIPsolCreateCurrentSolExact(&sol, scip->mem->probmem, scip->set, scip->stat, scip->primal,
             scip->tree, scip->lpexact, NULL) );
    }
 

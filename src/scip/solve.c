@@ -3271,7 +3271,7 @@ SCIP_RETCODE solveNodeLP(
 
          if( set->exact_enabled && lp->lpexact->solved )
          {
-            SCIP_CALL( SCIPsolCreateLPSolExact(&sol, blkmem, set, stat, transprob, primal, tree, lp->lpexact, NULL) );
+            SCIP_CALL( SCIPsolCreateLPSolExact(&sol, blkmem, set, stat, primal, tree, lp->lpexact, NULL) );
 
             SCIP_CALL( SCIPprimalTrySolFreeExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpexact,
                eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
@@ -5060,7 +5060,7 @@ SCIP_RETCODE addCurrentSolution(
       /* add solution to storage */
       if( set->exact_enabled && lp->lpexact->solved )
       {
-         SCIP_CALL( SCIPsolCreateLPSolExact(&sol, blkmem, set, stat, transprob, set->scip->primal, tree, lp->lpexact, NULL) );
+         SCIP_CALL( SCIPsolCreateLPSolExact(&sol, blkmem, set, stat, set->scip->primal, tree, lp->lpexact, NULL) );
 
          SCIP_CALL( SCIPprimalTrySolFreeExact(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp->lpexact,
                eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &foundsol) );

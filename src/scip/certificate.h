@@ -220,10 +220,10 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
 
 /** Print cutoff bound for objective value **/
 SCIP_RETCODE SCIPcertificatePrintCutoffBound(
-   SCIP* scip,
-   SCIP_CERTIFICATE* certificate,
-   SCIP_Rational* bound,
-   unsigned long* certificateline
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
+   SCIP_Rational*        bound,              /**< the bound */
+   SCIP_Longint*         certificateline     /**< save the line index */
    );
 
 /** create a new node data structure for the current node */
@@ -429,17 +429,11 @@ SCIP_Longint SCIPcertificateGetLastBoundIndex(
    SCIP_CERTIFICATE*     certificate         /**< certificate data structure */
    );
 
-/** checks that the state of the certificate is correct */
-void SCIPcertificateAssertStateCorrect(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var                 /**< variable to check */
-   );
-
 /** returns the index for a row in the certificate */
-unsigned long SCIPcertificateGetRowIndex(
-   SCIP_CERTIFICATE* certificate,            /**< certificate data structure */
-   SCIP_ROWEXACT* row,                       /**< row to consider */
-   SCIP_Bool rhs                             /**< whether we want the index for the rhs or the lhs */
+SCIP_Longint SCIPcertificateGetRowIndex(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   SCIP_ROWEXACT*        row,                /**< row to consider */
+   SCIP_Bool             rhs                 /**< whether we want the index for the rhs or the lhs */
    );
 
 /** prints a proof that boundchange is leads to infeasibility */

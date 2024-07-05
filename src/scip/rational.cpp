@@ -38,6 +38,7 @@
 #include <string.h>
 #include <ostream>
 #include <algorithm>
+#include <cctype>
 
 #ifdef SCIP_WITH_BOOST
 #include <boost/format.hpp>
@@ -48,6 +49,19 @@
 #include <boost/multiprecision/number.hpp>
 #else
 #endif
+
+
+/* find substring, ignore case */
+static
+std::string::const_iterator findSubStringIC(const std::string & substr, const std::string & str)
+{
+   auto it = std::search(
+      str.begin(), str.end(),
+      substr.begin(),   substr.end(),
+      [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
+   );
+   return it;
+}
 
 extern "C" {
 
@@ -388,14 +402,6 @@ void RatClearGMPArray(
    }
 }
 #endif
-#else
-   /** get the underlying mpq_t* */
- mpq_t* RatGetGMP(
-   SCIP_Rational*        rational            /**< the rational */
-   )
-{
-   return 0;
-}
 #endif
 
 /* transforms rational into canonical form */
@@ -547,18 +553,6 @@ void RatSetInt(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
-/* find substring, ignore case */
-static
-std::string::const_iterator findSubStringIC(const std::string & substr, const std::string & str)
-{
-   auto it = std::search(
-      str.begin(), str.end(),
-      substr.begin(),   substr.end(),
-      [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
-   );
-   return it;
-}
-
 /** checks if a string describes a rational number */
 bool SCIPisRationalString(
    const char*           desc                /**< string to check */
@@ -580,7 +574,7 @@ bool SCIPisRationalString(
  *  @return Returns TRUE if a value could be extracted, otherwise FALSE
  */
 SCIP_Bool SCIPstrToRationalValue(
-   const char*           str,                /**< string to search */
+   char*                 str,                /**< string to search */
    SCIP_Rational*        value,              /**< pointer to store the parsed value */
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
@@ -605,14 +599,14 @@ SCIP_Bool SCIPstrToRationalValue(
 
    if( endpos == 0 )
    {
-      *endptr = (char*)str;
+      *endptr = str;
       return FALSE;
    }
 
    RatSetString(value, s.substr(0, endpos).c_str());
    if( str[0] == '-' )
       RatNegate(value, value);
-   *endptr = (char*)str + endpos;
+   *endptr = str + endpos;
    if( hassign )
       *endptr += 1;
    return TRUE;
@@ -1856,19 +1850,16 @@ SCIP_Real RatRoundReal(
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
-   SCIP_Real realapprox;
-
    assert(rational != NULL);
-
-   realapprox = 0;
 
    if( rational->isinf )
       return (rational->val.sign() * infinity);
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE || roundmode == SCIP_R_ROUND_NEAREST )
       return RatApproxReal(rational);
 
-#if defined(SCIP_WITH_MPFR) && defined(SCIP_WITH_BOOST)
+#if defined(SCIP_WITH_MPFR) && defined(SCIP_WITH_BOOST) && defined(SCIP_WITH_GMP)
    {
+      SCIP_Real realapprox;
       mpfr_t valmpfr;
       mpq_t* val;
 
@@ -1890,49 +1881,17 @@ SCIP_Real RatRoundReal(
             realapprox = (SCIP_Real) mpfr_get_d(valmpfr, MPFR_RNDN);
             break;
          default:
+            realapprox = SCIP_INVALID;
             break;
       }
       mpfr_clear(valmpfr);
+      return realapprox;
    }
 #else
-#ifdef SCIP_DISABLED_CODE
-   {
-      SCIP_ROUNDMODE current;
-      Integer numer, denom;
-
-      current = SCIPintervalGetRoundingMode();
-      switch(roundmode)
-      {
-      case SCIP_R_ROUND_DOWNWARDS:
-         SCIPintervalSetRoundingModeDownwards();
-         break;
-      case SCIP_R_ROUND_UPWARDS:
-         SCIPintervalSetRoundingModeUpwards();
-         break;
-      case SCIP_R_ROUND_NEAREST:
-         SCIPintervalSetRoundingModeToNearest();
-         break;
-      default:
-         break;
-      }
-
-      numer = num(rational);
-      denom = den(rational);
-
-      SCIPdebugMessage("computing %s/%s \n", numer.str().c_str(), denom.str().c_str());
-
-      realapprox = ((double) numer) / (double) denom;
-
-      assert(roundmode != SCIP_R_ROUND_DOWNWARDS || Rational(realapprox) <= rational->val);
-      assert(roundmode != SCIP_R_ROUND_UPWARDS || Rational(realapprox) >= rational->val);
-
-      SCIPintervalSetRoundingMode(current);
-   }
-#endif
    SCIPerrorMessage("method RatRoundReal not supported when SCIP is compiled without Boost.\n");
    SCIPABORT();
+   return SCIP_INVALID;
 #endif
-   return realapprox;
 }
 
 /** round a rational to the nearest integer and save it as a rational */
@@ -2164,7 +2123,6 @@ void RatComputeApproximationLong(
    }
    else
    {
-      temp = 1;
       a0 = tn / td;
       temp = tn % td;
 

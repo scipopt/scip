@@ -404,7 +404,6 @@ SCIP_RETCODE SCIPvarColumnExact(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_PROB*            prob,               /**< problem data */
    SCIP_LPEXACT*         lp                  /**< current LP data */
    );
 
@@ -521,7 +520,6 @@ SCIP_RETCODE SCIPvarGetProbvarSum(
  */
 SCIP_RETCODE SCIPvarGetProbvarSumExact(
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Rational*        scalar,             /**< pointer to scalar a in sum a*x + c */
    SCIP_Rational*        constant            /**< pointer to constant c in sum a*x + c */
    );

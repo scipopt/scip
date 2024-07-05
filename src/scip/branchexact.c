@@ -304,7 +304,6 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    SCIP_Real estimate;
 
    SCIP_Real downub;
-   SCIP_Real fixval;
    SCIP_Real uplb;
    SCIP_Real val;
 
@@ -369,63 +368,11 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
    /* see comment in SCIPbranchVarVal */
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 
-   downub = SCIP_INVALID;
-   fixval = SCIP_INVALID;
-   uplb = SCIP_INVALID;
-
-   if( SCIPsetIsFeasIntegral(set, val) && FALSE )
-   {
-      SCIP_Real lb;
-      SCIP_Real ub;
-
-      lb = SCIPvarGetLbLocal(var);
-      ub = SCIPvarGetUbLocal(var);
-
-      /* if there was no explicit value given for branching, the variable has a finite domain and the current LP/pseudo
-       * solution is close to one of the bounds (e.g. lb), we branch on x = lb, x >= lb + 1 */
-      if( !SCIPsetIsInfinity(set, -lb) && !SCIPsetIsInfinity(set, ub)
-         && (SCIPsetIsFeasEQ(set, val, lb) || SCIPsetIsFeasEQ(set, val, ub)) )
-      {
-         SCIP_Real center;
-
-         center = (ub + lb) / 2.0;
-         if( val <= center )
-         {
-            downub = SCIPsetFeasFloor(set, lb);
-            uplb = downub + 1.0;
-         }
-         else
-         {
-            uplb = SCIPsetFeasCeil(set, ub);
-            downub = uplb - 1.0;
-         }
-      }
-      else
-      {
-         /* create child nodes with x <= x'-1, x = x', and x >= x'+1 */
-         assert(SCIPsetIsEQ(set, SCIPsetFeasCeil(set, val), SCIPsetFeasFloor(set, val)));
-
-         fixval = SCIPsetFeasCeil(set, val); /* get rid of numerical issues */
-
-         /* create child node with x <= x'-1, if this would be feasible */
-         if( SCIPsetIsFeasGE(set, fixval-1.0, lb) )
-            downub = fixval - 1.0;
-
-         /* create child node with x >= x'+1, if this would be feasible */
-         if( SCIPsetIsFeasLE(set, fixval+1.0, ub) )
-            uplb = fixval + 1.0;
-      }
-      SCIPsetDebugMsg(set, "integral branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n",
-         SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
-   }
-   else
-   {
-      /* create child nodes with x <= floor(x'), and x >= ceil(x') */
-      downub = floor(val);
-      uplb = downub + 1.0;
-      SCIPsetDebugMsg(set, "fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n",
-         SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
-   }
+   /* create child nodes with x <= floor(x'), and x >= ceil(x') */
+   downub = floor(val);
+   uplb = downub + 1.0;
+   SCIPsetDebugMsg(set, "fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n",
+      SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
 
    /* perform the branching;
     * set the node selection priority in a way, s.t. a node is preferred whose branching goes in the same direction
@@ -455,39 +402,6 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
 
       if( downchild != NULL )
          *downchild = node;
-   }
-
-   if( fixval != SCIP_INVALID )    /*lint !e777*/
-   {
-      /* create child node with x = fixval */
-      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, SCIP_BRANCHDIR_FIXED, fixval);
-      estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, fixval);
-      SCIPsetDebugMsg(set, " -> creating child: <%s> == %g (priority: %g, estimate: %g)\n",
-         SCIPvarGetName(var), fixval, priority, estimate);
-      SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
-
-      /* print branching information to certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
-
-      if( !SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), fixval) )
-      {
-         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-               NULL, var, fixval, SCIP_BOUNDTYPE_LOWER, FALSE) );
-      }
-
-      /* print branching information to certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
-
-      if( !SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), fixval) )
-      {
-         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-               NULL, var, fixval, SCIP_BOUNDTYPE_UPPER, FALSE) );
-      }
-      /* output branching bound change to visualization file */
-      SCIP_CALL( SCIPvisualUpdateChild(stat->visual, set, stat, node) );
-
-      if( eqchild != NULL )
-         *eqchild = node;
    }
 
    if( uplb != SCIP_INVALID )    /*lint !e777*/

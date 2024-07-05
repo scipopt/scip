@@ -85,7 +85,11 @@ enum SYM_Consoptype
    SYM_CONSOPTYPE_COEF        = 6,           /**< indicates coefficients from parent expressions */
    SYM_CONSOPTYPE_SQDIFF      = 7,           /**< indicates a squared difference */
    SYM_CONSOPTYPE_CARD_TUPLE  = 8,           /**< encodes pairs in cardinality constraints */
-   SYM_CONSOPTYPE_LAST        = 9            /**< number of predefined enum types, needs to always
+   SYM_CONSOPTYPE_PB_AND      = 9,           /**< indicates AND conss in pseudoboolean conss */
+   SYM_CONSOPTYPE_PB_LINEAR   = 10,          /**< indicates linear conss in pseudoboolean conss */
+   SYM_CONSOPTYPE_PB_SOFT     = 11,          /**< indicates pseudoboolean cons is soft constraint */
+   SYM_CONSOPTYPE_PB_OBJ      = 12,          /**< indicates pseudoboolean cons is objective function */
+   SYM_CONSOPTYPE_LAST        = 13           /**< number of predefined enum types, needs to always
                                               *   hold the biggest value */
 };
 typedef enum SYM_Consoptype SYM_CONSOPTYPE;

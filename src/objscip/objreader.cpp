@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objreader.cpp
- * @brief  C++ wrapper for file readers
+ * @brief  C++ wrapper for file readers and writers
  * @author Tobias Achterberg
  */
 

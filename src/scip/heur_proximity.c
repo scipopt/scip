@@ -218,8 +218,8 @@ SCIP_RETCODE solveLp(
       /* in exact mode we have to end diving prior to trying the solution */
       if( SCIPisExactSolve(scip) )
       {
-         SCIPunlinkSol(scip, sol);
-         SCIPendDive(scip);
+         SCIP_CALL( SCIPunlinkSol(scip, sol) );
+         SCIP_CALL( SCIPendDive(scip) );
       }
 
       SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );

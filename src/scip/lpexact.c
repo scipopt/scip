@@ -3259,7 +3259,7 @@ SCIP_RETCODE SCIProwExactCreate(
    (*row)->fprelaxable = isfprelaxable;
    (*row)->rhsreal = RatRoundReal((*row)->rhs, SCIP_R_ROUND_UPWARDS);
    (*row)->lhsreal = RatRoundReal((*row)->lhs, SCIP_R_ROUND_DOWNWARDS);
-   SCIPintervalSet(&(*row)->constantreal, 0);
+   SCIPintervalSet(&(*row)->constantreal, 0.0);
    return SCIP_OKAY;
 } /*lint !e715*/
 
@@ -3531,8 +3531,6 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
       var = SCIPcolExactGetVar(row->cols[i]);
       ub = SCIPvarGetUbGlobalExact(var);
       lb = SCIPvarGetLbGlobalExact(var);
-      lbreal = SCIPvarGetLbGlobal(var);
-      ubreal = SCIPvarGetUbGlobal(var);
 
       /* coefficient is exactly representable as fp number */
       if( rowexactvalsinterval[i].inf == rowexactvalsinterval[i].sup )/*lint !e777*/
@@ -3600,7 +3598,6 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
    for( i = 0; i < npostprocess; i++ )
    {
       int idx;
-      idx = sideindexpostprocess[i];
       idx = sideindexpostprocess[i];
       var = SCIPcolExactGetVar(row->cols[idx]);
       lbreal = SCIPvarGetLbGlobal(var);
@@ -3829,7 +3826,7 @@ SCIP_RETCODE SCIPlpPsdataCreate(
    projshiftdata->commonslack = NULL;
    projshiftdata->includedrows = NULL;
    projshiftdata->projshiftbasis = NULL;
-#ifdef SCIP_WITH_GMP
+#if defined SCIP_WITH_GMP && defined SCIP_WITH_EXACTSOLVE
    projshiftdata->rectfactor = (qsnum_factor_work*) NULL;
 #endif
 
@@ -4352,7 +4349,6 @@ SCIP_RETCODE lpExactFlushAndSolve(
    SCIP_CALL( SCIPlpiExactSetIntpar(lpexact->lpiexact, SCIP_LPPAR_LPINFO, (int) set->exact_lpinfo) );
    algo = set->lp_initalgorithm;
    lp = lpexact->fplp;
-   solveagain = FALSE;
 
    /* set up the exact lpi for the current node */
    SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lpexact, eventqueue) );

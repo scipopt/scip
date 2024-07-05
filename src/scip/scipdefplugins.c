@@ -43,10 +43,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
 
    SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear constraint handler must be before linear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
-#ifdef SCIP_WITH_BOOST
-   SCIP_CALL( SCIPincludeConshdlrExactLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrExactLinear(scip) );
    SCIP_CALL( SCIPincludeConshdlrExactSol(scip) );
-#endif
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBenders(scip) );
    SCIP_CALL( SCIPincludeConshdlrBenderslp(scip) );
@@ -56,6 +54,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrCountsols(scip) );
    SCIP_CALL( SCIPincludeConshdlrCumulative(scip) );
    SCIP_CALL( SCIPincludeConshdlrDisjunction(scip) );
+   SCIP_CALL( SCIPincludeConshdlrFixedvar(scip) );
    SCIP_CALL( SCIPincludeConshdlrIndicator(scip) );
    SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
    SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );
@@ -145,7 +144,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
    SCIP_CALL( SCIPincludeBranchruleVanillafullstrong(scip) );
-//   SCIP_CALL( SCIPincludeEventHdlrEstim(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrEstim(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );
    SCIP_CALL( SCIPincludeComprLargestrepr(scip) );
    SCIP_CALL( SCIPincludeComprWeakcompr(scip) );
@@ -235,6 +234,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaMcf(scip) );
    SCIP_CALL( SCIPincludeSepaMinor(scip) );
    SCIP_CALL( SCIPincludeSepaMixing(scip) );
+   SCIP_CALL( SCIPincludeSepaMultilinear(scip) );
    SCIP_CALL( SCIPincludeSepaOddcycle(scip) );
    SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
    SCIP_CALL( SCIPincludeSepaRlt(scip) );

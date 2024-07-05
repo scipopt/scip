@@ -355,10 +355,7 @@ static int qsnum_make_ur_space (
    if( urcind )
    {
       CG_SAFE_MALLOC (new_urcind, minspace, int);
-   }
 
-   if( urcind )
-   {
       for( j = 0; j < dimr; j++ )
       {
          rbeg = ur_inf[j].rbeg;
@@ -452,10 +449,7 @@ static int qsnum_make_uc_space (
    {
       new_uccoef = QSnum_AllocArray (minspace);
       CG_SAFE_MALLOC (new_ucrind, minspace, int);
-   }
 
-   if( ucrind )
-   {
       for( j = 0; j < dimc; j++ )
       {
          cbeg = uc_inf[j].cbeg;
@@ -533,6 +527,9 @@ static int qsnum_make_lc_space (
    {
       minspace = f->lc_space * f->grow_mul;
    }
+
+   if( lc_freebeg > minspace )
+      return -1;
 
    new_lccoef = QSnum_AllocArray (minspace);
    CG_SAFE_MALLOC (new_lcindx, minspace, int);
@@ -1112,7 +1109,6 @@ static int qsnum_elim(
       lcindx = f->lcindx;
       lccoef = f->lccoef;
       qsnum_load_row (f, r);
-      ucindx = f->ucindx + uc_inf[c].cbeg;
       for( i = 0; i < nzcnt; i++ )
       {
          j = f->ucindx[uc_inf[c].cbeg + i];
@@ -1414,10 +1410,10 @@ static int qsnum_create_factor_space(
 /** init and copy basis matrix into factorization work */
 static int qsnum_init_matrix(
    qsnum_factor_work *   f,                  /**< factorization work */
-   int *                 basis,              /**< indices of basis matrix */
-   int *                 cbeg,               /**< column beginning positions */
-   int *                 clen,               /**< column lengths */
-   int *                 in_ucindx,          /**< row indices for nonzeros */
+   const int *           basis,              /**< indices of basis matrix */
+   const int *           cbeg,               /**< column beginning positions */
+   const int *           clen,               /**< column lengths */
+   const int *           in_ucindx,          /**< row indices for nonzeros */
    QSnum_type *          in_uccoef           /**< coefficient values */
    )
 {
@@ -1865,7 +1861,6 @@ static int qsnum_dense_build_matrix(
    f->dense_base = f->stage;
    f->dmat = dmat;
    f->dsize = dsize;
-   dmat = 0;
 
    /* CLEANUP:  */
    return rval;
@@ -3259,13 +3254,10 @@ void QSnum_factor_btran (
    int *aindx = a->indx;
    QSnum_type *acoef = a->coef;
    QSnum_type *work_coef = f->work_coef;
-   int dimr = f->dimr;
+   int dimr;
 
    if( a->nzcnt >= SPARSE_FACTOR * f->dimr )
    {
-      aindx = a->indx;
-      acoef = a->coef;
-      work_coef = f->work_coef;
       nzcnt = a->nzcnt;
       for( i = 0; i < nzcnt; i++ )
       {
@@ -3423,7 +3415,6 @@ int QSnum_svector_alloc(
    )
 {
    int rval = 0;
-
    s->nzcnt = nzcnt;
    if( nzcnt == 0 )
    {
@@ -3551,8 +3542,11 @@ void RECTLUfreeFactorization(
    qsnum_factor_work*    f                   /**< factor work */
    )
 {
-   QSnum_factor_free_factor_work (f);
-   QSnum_factor_clear ();
+   if(f)
+   {
+      QSnum_factor_free_factor_work (f);
+      QSnum_factor_clear ();
+   }
    if (f) free (f);
 }
 #endif

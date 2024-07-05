@@ -437,7 +437,7 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
 SCIP_EXPORT
 SCIP_RETCODE SCIPparseVarsLinearsumExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           str,                /**< string to parse */
+   char*                 str,                /**< string to parse */
    SCIP_VAR**            vars,               /**< array to store the parsed variables */
    SCIP_Rational**       vals,               /**< array to store the parsed coefficients */
    int*                  nvars,              /**< pointer to store number of parsed variables */
@@ -486,9 +486,6 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
 
 /** frees memory allocated when parsing a signomial from a string
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -532,7 +529,7 @@ void SCIPfreeParseVarsPolynomialDataExact(
 SCIP_EXPORT
 SCIP_RETCODE SCIPparseVarsPolynomialExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           str,                /**< string to parse */
+   char*                 str,                /**< string to parse */
    SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
    SCIP_Rational***      monomialcoefs,      /**< pointer to store array with monomial coefficients */
    int*                  nmonomials,         /**< pointer to store number of parsed monomials */
@@ -2315,7 +2312,6 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    SCIP_Rational*        newbound,           /**< new value for bound */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
-   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
@@ -2344,7 +2340,6 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    SCIP_Rational*        newbound,           /**< new value for bound */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
-   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );

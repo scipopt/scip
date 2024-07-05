@@ -516,7 +516,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       {
          /* transform loose variable into column variable */
          SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
-         SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, prob, lp->lpexact) );
+         SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, lp->lpexact) );
       }
 
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
@@ -548,7 +548,7 @@ SCIP_RETCODE SCIPpricestoreApplyVars(
       {
          /* transform loose variable into column variable */
          SCIP_CALL( SCIPvarColumn(var, blkmem, set, stat, prob, lp) );
-         SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, prob, lp->lpexact) );
+         SCIP_CALL( SCIPvarColumnExact(var, blkmem, set, stat, lp->lpexact) );
       }
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 

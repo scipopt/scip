@@ -941,7 +941,7 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
  */
 SCIP_RETCODE SCIPparseVarsLinearsumExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           str,                /**< string to parse */
+   char*                 str,                /**< string to parse */
    SCIP_VAR**            vars,               /**< array to store the parsed variables */
    SCIP_Rational**       vals,               /**< array to store the parsed coefficients */
    int*                  nvars,              /**< pointer to store number of parsed variables */
@@ -953,7 +953,6 @@ SCIP_RETCODE SCIPparseVarsLinearsumExact(
 {
    SCIP_VAR*** monomialvars;
    SCIP_Rational**  monomialcoefs;
-   int*        monomialnvars;
    int         nmonomials;
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPparseVarsLinearsumExact", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -978,7 +977,7 @@ SCIP_RETCODE SCIPparseVarsLinearsumExact(
    }
 
    /* check if linear sum is just "0" */
-   if( nmonomials == 1 && monomialnvars[0] == 0 && RatIsZero(monomialcoefs[0]) )
+   if( nmonomials == 1 && RatIsZero(monomialcoefs[0]) )
    {
       *nvars = 0;
       *requiredsize = 0;
@@ -1377,9 +1376,6 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
  *  Parsing is stopped at the end of string (indicated by the \\0-character) or when no more monomials
  *  are recognized.
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -1391,7 +1387,7 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
  */
 SCIP_RETCODE SCIPparseVarsPolynomialExact(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           str,                /**< string to parse */
+   char*                 str,                /**< string to parse */
    SCIP_VAR****          monomialvars,       /**< pointer to store arrays with variables for each monomial */
    SCIP_Rational***      monomialcoefs,      /**< pointer to store array with monomial coefficients */
    int*                  nmonomials,         /**< pointer to store number of parsed monomials */
@@ -1441,7 +1437,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
    nvars = 0;
    vars = NULL;
 
-   RatCreateBuffer(SCIPbuffer(scip), &coef);
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &coef) );
    RatSetString(coef, "inf");
 
    SCIPdebugMsg(scip, "parsing polynomial from '%s'\n", str);
@@ -1597,6 +1593,7 @@ SCIP_RETCODE SCIPparseVarsPolynomialExact(
 
       case SCIPPARSEPOLYNOMIAL_STATE_END:
       case SCIPPARSEPOLYNOMIAL_STATE_ERROR:
+      case SCIPPARSEPOLYNOMIAL_STATE_EXPONENT:
       default:
          SCIPerrorMessage("unexpected state\n");
          return SCIP_READERROR;
@@ -2490,7 +2487,7 @@ SCIP_RETCODE SCIPgetProbvarSumExact(
    assert(constant != NULL);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetProbvarSumExact", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-   SCIP_CALL( SCIPvarGetProbvarSumExact(var, scip->set, scalar, constant) );
+   SCIP_CALL( SCIPvarGetProbvarSumExact(var, scalar, constant) );
 
    return SCIP_OKAY;
 }
@@ -6960,7 +6957,6 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    SCIP_Rational*        newbound,           /**< new value for bound */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
-   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    )
@@ -6968,7 +6964,7 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    SCIP_Rational* lb;
    SCIP_Rational* ub;
    SCIP_Rational* adjustedBound;
-   RatCreateBuffer(SCIPbuffer(scip), &adjustedBound);
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &adjustedBound) );
    RatSet(adjustedBound, newbound);
    assert(infeasible != NULL);
 
@@ -6998,8 +6994,9 @@ SCIP_RETCODE SCIPinferVarUbConsExact(
    if( RatIsLT(adjustedBound, lb) )
    {
       *infeasible = TRUE;
-      if (SCIPcertificateShouldTrackBounds(scip))
-         SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip), var, NULL, adjustedBound, -1, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(scip)) - 1);
+      if( SCIPcertificateShouldTrackBounds(scip) )
+         SCIP_CALL( SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip),
+            var, NULL, adjustedBound, -1L, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(scip)) - 1L) );
       goto RETURN_SCIP_OKAY;
    }
 
@@ -7080,7 +7077,6 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    SCIP_Rational*        newbound,           /**< new value for bound */
    SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
-   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    )
@@ -7088,7 +7084,7 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    SCIP_Rational* ub;
    SCIP_Rational* lb;
    SCIP_Rational* adjustedBound;
-   RatCreateBuffer(SCIPbuffer(scip), &adjustedBound);
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &adjustedBound) );
    RatSet(adjustedBound, newbound);
    assert(infeasible != NULL);
 
@@ -7119,7 +7115,8 @@ SCIP_RETCODE SCIPinferVarLbConsExact(
    {
       *infeasible = TRUE;
       if (SCIPcertificateShouldTrackBounds(scip))
-         SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip), var, adjustedBound, NULL, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(scip)) - 1, -1);
+         SCIP_CALL( SCIPcertificatePrintCutoffConflictingBounds(scip, SCIPgetCertificate(scip),
+            var, adjustedBound, NULL, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(scip)) -1L, -1L) );
       goto RETURN_SCIP_OKAY;
    }
 
@@ -7726,7 +7723,7 @@ SCIP_RETCODE tightenVarLbGlobalSafe(
    if( SCIPsetIsEQ(scip->set, lb, newbound) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
-   RatCreateBuffer(SCIPbuffer(scip), &newboundexact);
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &newboundexact) );
    RatSetReal(newboundexact, newbound);
 
    switch( scip->set->stage )
@@ -7957,7 +7954,7 @@ SCIP_RETCODE tightenVarUbGlobalSafe(
    if( SCIPsetIsEQ(scip->set, ub, newbound) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
-   RatCreateBuffer(SCIPbuffer(scip), &newboundexact);
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &newboundexact) );
    RatSetReal(newboundexact, newbound);
 
    switch( scip->set->stage )
@@ -10435,8 +10432,8 @@ SCIP_RETCODE SCIPaggregateVarsExact(
    /* get the corresponding equality in active problem variable space:
     * transform both expressions "a*x + 0" and "b*y + 0" into problem variable space
     */
-   SCIP_CALL( SCIPvarGetProbvarSumExact(&varx, scip->set, scalarx, constantx) );
-   SCIP_CALL( SCIPvarGetProbvarSumExact(&vary, scip->set, scalary, constanty) );
+   SCIP_CALL( SCIPvarGetProbvarSumExact(&varx, scalarx, constantx) );
+   SCIP_CALL( SCIPvarGetProbvarSumExact(&vary, scalary, constanty) );
 
    /* we cannot aggregate multi-aggregated variables */
    if( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(vary) == SCIP_VARSTATUS_MULTAGGR )

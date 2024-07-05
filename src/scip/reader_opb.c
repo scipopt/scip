@@ -1602,8 +1602,8 @@ SCIP_RETCODE readConstraints(
 #endif
       if( !SCIPisExactSolve(scip) )
       {
-      retcode = SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
+         retcode = SCIPcreateConsLinear(scip, &cons, name, nlincoefs, linvars, lincoefs, lhs, rhs,
+               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
       }
       else
       {
@@ -1611,9 +1611,9 @@ SCIP_RETCODE readConstraints(
          SCIP_Rational* lhsrat;
          SCIP_Rational* rhsrat;
 
-         RatCreateBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs);
-         RatCreateBuffer(SCIPbuffer(scip), &lhsrat);
-         RatCreateBuffer(SCIPbuffer(scip), &rhsrat);
+         SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &lincoefsrat, nlincoefs) );
+         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lhsrat) );
+         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &rhsrat) );
          RatSetReal(lhsrat, lhs);
          RatSetReal(rhsrat, rhs);
          for( int i = 0; i < nlincoefs; ++i )
@@ -1868,13 +1868,13 @@ SCIP_RETCODE readOPBFile(
          SCIP_Rational* lhs;
          SCIP_Rational* rhs;
 
-         RatCreateBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars);
-         RatCreateBuffer(SCIPbuffer(scip), &lhs);
-         RatCreateBuffer(SCIPbuffer(scip), &rhs);
+         SCIP_CALL( RatCreateBufferArray(SCIPbuffer(scip), &topcostsrat, ntopcostvars) );
+         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lhs) );
+         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &rhs) );
          RatSetString(lhs, "-inf");
          RatSetReal(rhs, (SCIP_Real) topcostrhs);
-         for( int i = 0; i < ntopcostvars; ++i )
-            RatSetReal(topcostsrat[i], topcosts[i]);
+         for( int j = 0; j < ntopcostvars; ++j )
+            RatSetReal(topcostsrat[j], topcosts[j]);
          SCIP_CALL( SCIPcreateConsExactLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcostsrat, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          RatFreeBuffer(SCIPbuffer(scip), &rhs);
          RatFreeBuffer(SCIPbuffer(scip), &lhs);

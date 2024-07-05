@@ -610,8 +610,8 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       /* in exact mode we have to end diving prior to trying the solution */
       if( SCIPisExactSolve(scip) )
       {
-         SCIPunlinkSol(scip, heurdata->sol);
-         SCIPendDive(scip);
+         SCIP_CALL( SCIPunlinkSol(scip, heurdata->sol) );
+         SCIP_CALL( SCIPendDive(scip) );
       }
 
       /* try to add solution to SCIP */

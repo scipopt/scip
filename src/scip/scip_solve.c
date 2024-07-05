@@ -1352,6 +1352,16 @@ SCIP_RETCODE presolve(
       SCIP_Bool approxchecknonzeros;
       SCIP_Bool approxactivenonzeros;
       SCIP_Bool infeas;
+      int j;
+
+      /* flatten aggregation graph in order to avoid complicated multi-aggregated variables */
+      for( j = 0; j < scip->transprob->nfixedvars; ++j )
+      {
+         if( SCIPvarGetStatus(scip->transprob->fixedvars[j]) == SCIP_VARSTATUS_MULTAGGR )
+         {
+            SCIP_CALL( SCIPflattenVarAggregationGraph(scip, scip->transprob->fixedvars[j]) );
+         }
+      }
 
       SCIP_CALL( exitPresolve(scip, *unbounded || *infeasible || *vanished, &infeas) );
       *infeasible = *infeasible || infeas;

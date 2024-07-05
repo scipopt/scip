@@ -405,6 +405,7 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
+ * - \subpage RN81         "SCIP 8.1"
  * - \subpage RN80         "SCIP 8.0"
  * - \subpage RN70         "SCIP 7.0"
  * - \subpage RN60         "SCIP 6.0"
@@ -672,6 +673,10 @@
  *   the comment starts at column 46 (if column-count starts with 1).
  * - Maximal line length is 120 characters.
  * - Always only one declaration in a line.
+ * - Joint declaration and initialization is possible at the top-level of a function and in the header of loops.
+ *
+ *   @refsnippet{src/scip/cuts.c,SnippetCodeStyleInLoopDeclaration}
+ *
  * - Variable names should be all lower case.
  *
  *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleDeclaration}
@@ -977,14 +982,6 @@
  *  </td>
  *  <td>
  *  A solver that computes irreducible infeasible subsystems using Benders decomposition
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  @subpage POLYSCIP_MAIN
- *  </td>
- *  <td>
- *  A solver for multi-objective optimization problems.
  *  </td>
  *  </tr>
  *  <tr>
@@ -3096,6 +3093,9 @@
  * domains of the variables.
  * \n
  * A complete list of all branching rules contained in this release can be found \ref BRANCHINGRULES "here".
+ * However, note that constraint handlers can implement their own branching when enforcing constraints.
+ * In particular the handler for nonlinear constraints currently does not use the branching plugins for spatial branching
+ * by default. Its behavior can be adjusted with the parameters in category constraints/nonlinear/branching.
  *
  * We now explain how users can add their own branching rules.  Take the most infeasible LP branching rule
  * (src/scip/branch_mostinf.c) as an example.  As all other default plugins, it is written in C. C++ users can easily
@@ -8489,7 +8489,7 @@
  *    symmetries.
  * -# Orbital reduction is a generalization of orbital fixing that also works for non-binary variable domains.
  *    Orbital reduction respects the 2-bit of the bitset <code>misc/usesymmetry</code>.
- *    See \ref SYMMETHODSELECT <method selection>. Since there is no static counterpart, this method ignores
+ *    See \ref SYMMETHODSELECT "method selection". Since there is no static counterpart, this method ignores
  *    <code>propagating/symmetry/usedynamicprop</code>.
  *
  * In all cases, the dynamic variable ordering is derived from the branching decisions.

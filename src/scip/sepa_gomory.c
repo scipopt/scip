@@ -771,6 +771,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    }
 
    /* free temporary memory */
+   SCIPaggrRowFree(scip, &aggrrow);
+   SCIPfreeBufferArray(scip, &colindsproducedcut);
+   SCIPfreeBufferArray(scip, &cutefficacies);
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
    SCIPfreeBufferArray(scip, &basisfrac);
@@ -778,9 +781,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
-   SCIPfreeBufferArray(scip, &cutefficacies);
-   SCIPfreeBufferArray(scip, &colindsproducedcut);
-   SCIPaggrRowFree(scip, &aggrrow);
 
    SCIPdebugMsg(scip, "end searching gomory cuts: found %d cuts\n", naddedcuts);
 

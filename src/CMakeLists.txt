@@ -64,6 +64,7 @@ set(scipsources
     scip/cons_disjunction.c
     scip/cons_exactlp.c
     scip/cons_exactsol.c
+    scip/cons_fixedvar.c
     scip/cons_indicator.c
     scip/cons_integral.c
     scip/cons_knapsack.c
@@ -169,6 +170,7 @@ set(scipsources
     scip/heur_veclendiving.c
     scip/heur_zeroobj.c
     scip/heur_zirounding.c
+    scip/hypergraph.c
     scip/message_default.c
     scip/nlhdlr_bilinear.c
     scip/nlhdlr_convex.c
@@ -257,6 +259,7 @@ set(scipsources
     scip/sepa_mcf.c
     scip/sepa_minor.c
     scip/sepa_mixing.c
+    scip/sepa_multilinear.c
     scip/sepa_oddcycle.c
     scip/sepa_rapidlearning.c
     scip/sepa_rlt.c
@@ -431,17 +434,24 @@ set(lpisources
    ${lpi}
    )
 
-set(lpiexactsources
-   ${lpiexact}
-   )
-
 set(symsources
    ${sym}
    )
 
+set(lpiexactsources
+   ${lpiexact}
+   )
+
+if(SCIP_WITH_EXACTSOLVE)
 set(rectlusources
    rectlu/rectlu_factor.c
    )
+
+set(rectluheaders
+    rectlu/rectlu.h
+    rectlu/rectlu_num.h
+    rectlu/rectlu_factor.h)
+endif()
 
 set(blockmemshellheader
     blockmemshell/memory.h
@@ -456,11 +466,6 @@ set(lpiexactheaders
     lpiexact/lpiexact.h
     lpiexact/type_lpiexact.h
 )
-
-set(rectluheaders
-    rectlu/rectlu.h
-    rectlu/rectlu_num.h
-    rectlu/rectlu_factor.h)
 
 set(dijkstraheaders
     dijkstra/dijkstra.h
@@ -556,6 +561,7 @@ set(scipheaders
     scip/cons_disjunction.h
     scip/cons_exactlp.h
     scip/cons_exactsol.h
+    scip/cons_fixedvar.h
     scip/cons.h
     scip/cons_indicator.h
     scip/cons_integral.h
@@ -675,6 +681,7 @@ set(scipheaders
     scip/heur_zeroobj.h
     scip/heur_zirounding.h
     scip/history.h
+    scip/hypergraph.h
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
@@ -893,6 +900,7 @@ set(scipheaders
     scip/sepa_mcf.h
     scip/sepa_minor.h
     scip/sepa_mixing.h
+    scip/sepa_multilinear.h
     scip/sepa_oddcycle.h
     scip/sepa_rapidlearning.h
     scip/sepa_rlt.h
@@ -924,6 +932,7 @@ set(scipheaders
     scip/struct_expr.h
     scip/struct_heur.h
     scip/struct_history.h
+    scip/struct_hypergraph.h
     scip/struct_implics.h
     scip/struct_lp.h
     scip/struct_lpexact.h
@@ -990,6 +999,7 @@ set(scipheaders
     scip/type_exprinterpret.h
     scip/type_heur.h
     scip/type_history.h
+    scip/type_hypergraph.h
     scip/type_implics.h
     scip/type_interrupt.h
     scip/type_lp.h
@@ -1080,17 +1090,12 @@ add_library(liblpi EXCLUDE_FROM_ALL
 setLibProperties(liblpi "lpi")
 
 add_library(liblpiexact EXCLUDE_FROM_ALL
-    ${lpiexactsources}
-    scip/bitencode.c
-    blockmemshell/memory.c
-    scip/message.c)
+    ${lpiexactsources})
 setLibProperties(liblpiexact "lpiexact")
 
 add_library(librectlu EXCLUDE_FROM_ALL
     ${rectlusources}
-    scip/bitencode.c
-    blockmemshell/memory.c
-    scip/message.c)
+    scip/bitencode.c)
 setLibProperties(librectlu "rectlu")
 
 add_library(libscip ${scipsources} ${objscipsources} ${lpisources} ${lpiexactsources} ${rectlusources} ${tpisources} ${symsources})
@@ -1126,17 +1131,9 @@ if(SHARED)
 else()
     set(SOPLEX_NEEDED ${SOPLEX_FOUND})
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
-    if(DEFINED BLISS_TARGET)
-        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${LPSEX_LIBRARIES})
-    else()
-        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${LPSEX_LIBRARIES} ${SYM_LIBRARIES})
-    endif()
+    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
     add_executable(scip main.c)
-    if(DEFINED BLISS_TARGET)
-        target_link_libraries(scip libscip ${BLISS_TARGET})
-    else()
-        target_link_libraries(scip libscip)
-    endif()
+    target_link_libraries(scip PUBLIC libscip)
 endif()
 
 add_executable(SCIP::SCIP ALIAS scip)
@@ -1158,6 +1155,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 target_link_libraries(scip
+   PUBLIC
    ${SYM_LIBRARIES}
    $<$<BOOL:${SCIP_WITH_ZLIB}>:ZLIB::ZLIB>
    ${Readline_LIBRARY}
@@ -1197,6 +1195,7 @@ set_target_properties(scip PROPERTIES
 # install the header files of scip
 install(FILES ${lpiheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lpi)
 install(FILES ${lpiexactheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lpiexact)
+install(FILES ${rectluheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/rectlu)
 install(FILES ${dijkstraheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dijkstra)
 install(FILES ${objscipheaders} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/objscip)
 install(FILES ${scipheaders} ${PROJECT_BINARY_DIR}/scip/config.h ${PROJECT_BINARY_DIR}/scip/scip_export.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/scip)
@@ -1215,7 +1214,7 @@ install(TARGETS scip libscip EXPORT scip-targets
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Add all targets to the build-tree export set
-export(TARGETS scip libscip ${BLISS_TARGET}
+export(TARGETS scip libscip
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
 # make soplex and zimpl dir absolute for the config file
