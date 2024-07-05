@@ -130,6 +130,7 @@ Fixed bugs
 
 - fix bug in separator aggregation that caused incorrect terminations when for an integral objective the objective limit was set to a fractional value
 - fix bug in memory management of doublelex matrices where indices were set beyond array bounds
+- store relevance flags in consdataTightenCoefs() of cons_linear.c to avoid dropping variables unintentionally due to numerical changes
 
 Performance improvements
 ------------------------
