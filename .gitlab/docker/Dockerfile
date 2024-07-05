@@ -109,22 +109,13 @@ RUN git clone https://github.com/scipopt/soplex.git && \
     make install && \
     rm -rf /home/builds/*
 
-# tbb
-RUN wget https://github.com/oneapi-src/oneTBB/archive/refs/tags/v$TBB_VERSION.tar.gz && \
-    tar xvf v$TBB_VERSION.tar.gz && \
-    mkdir /home/builds/oneTBB-$TBB_VERSION/build && \
-    cd /home/builds/oneTBB-$TBB_VERSION/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DTBB_TEST=OFF -DTBB_EXAMPLES=OFF -DTBB4PY_BUILD=OFF -DBUILD_SHARED_LIBS=off && \
-    make -j3 && make install && \
-    rm -rf /home/builds/*
-
 # papilo
 RUN git clone https://github.com/scipopt/papilo.git && \
     cd /home/builds/papilo && \
     git checkout $PAPILO_REVISION && \
     mkdir /home/builds/papilo/build && \
     cd /home/builds/papilo/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DQUADMATH=off -DBLA_STATIC=ON -DBLA_VENDOR=OpenBLAS && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DQUADMATH=off -DBLA_STATIC=ON -DBLA_VENDOR=OpenBLAS -DTBB=off && \
     make -j5 && \
     make install && \
     rm -rf /home/builds/*
