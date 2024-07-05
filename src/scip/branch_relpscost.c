@@ -167,7 +167,7 @@ struct SCIP_BranchruleData
    SCIP_Bool             dynamiclookahead;   /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
    SCIP_Bool             geometricmeangains; /**< should the geometric mean be used instead of the arithmetic mean for min and max gain? */
    SCIP_Bool             lookaheadbayesian;  /**< should the update of the parameter estimation use the Bayesian rule or a simple convex combination */
-   int                   dynamiclookdistribution; /**< which distribution should be used for dynamic lookahead? 0=, 1=Pareto, 2=log-normal */
+   int                   dynamiclookdistribution; /**< which distribution should be used for dynamic lookahead? 0=exponential, 1=Pareto, 2=log-normal */
    int                   minsamplesize;      /**< minimum sample size to estimate the tree size for dynamic lookahead */
    int                   degeneracyaware;    /**< should degeneracy be taken into account to update weights and skip strong branching? (0: off, 1: after root, 2: always) */
    int                   confidencelevel;    /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
@@ -856,6 +856,8 @@ SCIP_Real cdfProbability(
    SCIP_Real             zeroprob,
    SCIP_Real             proposedgain,
    SCIP_Real             mingain,
+   SCIP_Real             logmeangain,
+   SCIP_Real             logstdevgain,
    int                   distributioncdf
    )
 {
@@ -875,10 +877,7 @@ SCIP_Real cdfProbability(
    else
    {
       assert(distributioncdf == LOGNORMALDISTRIBUTION);
-      // TODOSB: collect and pass parameters of the lognormal to the function
-      SCIP_Real logmean = 0.0;
-      SCIP_Real logstdev = 1.0;
-      return zeroprob + 0.5 * erfc(-(log(proposedgain) - logmean) / (logstdev * SQRT(2.0)));
+      return zeroprob + 0.5 * erfc(-(log(proposedgain) - logmeangain) / (logstdevgain * SQRT(2.0)));
    }
 }
 
@@ -891,6 +890,8 @@ SCIP_Real expectedTreeSize(
    SCIP_Real             currentdepth,
    SCIP_Real             lambda,
    SCIP_Real             mingain,
+   SCIP_Real             logmeangain,
+   SCIP_Real             logstdevgain,
    int                   distributioncdf
    )
 {
@@ -910,7 +911,7 @@ SCIP_Real expectedTreeSize(
    else if (depth == 2)
    {
       /* Probability of finding a better variable that would reduce the depth (smaller tree size). */
-      SCIP_Real p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, distributioncdf);
+      SCIP_Real p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, logmeangain, logstdevgain, distributioncdf);
       SCIPdebugMsg(scip, " -> Probability of finding a better variable that would reduce the depth: %g\n", p);
       /* Size of the improved tree. */
       improvedtree =  strongBranchingTreeSize(depth - 1);
@@ -921,9 +922,9 @@ SCIP_Real expectedTreeSize(
    else
    {
       /* Probability of not finding a better variable that would reduce the depth of the tree (size of the tree). */
-      SCIP_Real pnotbetter = cdfProbability(lambda, zeroprob, (gap / (depth - 1)), mingain, distributioncdf);
+      SCIP_Real pnotbetter = cdfProbability(lambda, zeroprob, (gap / (depth - 1)), mingain, logmeangain, logstdevgain, distributioncdf);
       /* Probability of finding a better variable that would reduce the depth (smaller tree size). */
-      SCIP_Real pbetter = 1.0 - cdfProbability(lambda, zeroprob, gap / (depth - 1), mingain, distributioncdf);
+      SCIP_Real pbetter = 1.0 - cdfProbability(lambda, zeroprob, gap / (depth - 1), mingain, logmeangain, logstdevgain, distributioncdf);
       SCIPdebugMsg(scip, " -> Probability of finding a better variable that would reduce the depth: %g\n", pbetter);
 
       if( pbetter < 1e-5 )
@@ -935,14 +936,14 @@ SCIP_Real expectedTreeSize(
       {
          if (depth > 2)
          {
-            p = cdfProbability(lambda, zeroprob, gap / (depth - 2), mingain, distributioncdf) - cdfProbability(lambda, zeroprob, gap / (depth - 1), mingain, distributioncdf);
+            p = cdfProbability(lambda, zeroprob, gap / (depth - 2), mingain, logmeangain, logstdevgain, distributioncdf) - cdfProbability(lambda, zeroprob, gap / (depth - 1), mingain, logmeangain, logstdevgain, distributioncdf);
             ptotal += p;
-            pbetter = 1.0 - cdfProbability(lambda, zeroprob, gap / (depth - 2), mingain, distributioncdf);
+            pbetter = 1.0 - cdfProbability(lambda, zeroprob, gap / (depth - 2), mingain, logmeangain, logstdevgain, distributioncdf);
          }
 
          else if (depth == 2)
          {
-               p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, distributioncdf);
+               p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, logmeangain, logstdevgain, distributioncdf);
                ptotal += p;
                pbetter = 0.0;
          }
@@ -1015,6 +1016,8 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    SCIP_Real currenttreesize;
    SCIP_Real absdualgap;
    SCIP_Real gaptoclose;
+   SCIP_Real logmeangain;
+   SCIP_Real logstdevgain;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
 
@@ -1082,7 +1085,8 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    else
    {
       assert(branchruledata->dynamiclookdistribution == LOGNORMALDISTRIBUTION);
-      // TODO CONTINUE and update lognormal distribution parameters here
+      // TODOSB CONTINUE and compute lognormal distribution parameters here
+      // logmeangain, logstdevgain
    }
 
    /* TodoSB too large depth can cause overflow. Set limit of 50 */
@@ -1101,7 +1105,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    currenttreesize = strongBranchingTreeSize(currentdepth);
 
    /* Compute the expected size of the tree with one more strong branching */
-   nexttreesize =  expectedTreeSize(scip, gaptoclose, zeroprob, currentdepth, lambda, minmeangain, branchruledata->dynamiclookdistribution);
+   nexttreesize =  expectedTreeSize(scip, gaptoclose, zeroprob, currentdepth, lambda, minmeangain, logmeangain, logstdevgain, branchruledata->dynamiclookdistribution);
 
    if(SCIPisLE(scip, nexttreesize, currenttreesize - 1.0))
    {
