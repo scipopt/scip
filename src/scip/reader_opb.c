@@ -1348,7 +1348,7 @@ SCIP_RETCODE setObjective(
 
          if( SCIPisExactSolve(scip) )
          {
-            RatCreateBuffer(SCIPbuffer(scip), &obj);
+            SCIP_CAL( RatCreateBuffer(SCIPbuffer(scip), &obj) );
 
             if( SCIPvarIsNegated(linvars[v]) )
             {

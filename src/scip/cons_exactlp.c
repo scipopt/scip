@@ -317,6 +317,7 @@ struct SCIP_LinConsUpgrade
  * Propagation rules
  */
 
+/*lint --e{749} */
 enum Proprule
 {
    PROPRULE_1_RHS        = 1,                /**< activity residuals of all other variables tighten bounds of single
@@ -2145,7 +2146,7 @@ void consdataUpdateAddCoef(
 
       assert(consdata->maxabsval < SCIP_INVALID);
 
-      absval = MAX(REALABS(val.inf), REALABS(val.sup)); /*lint !e777*/
+      absval = MAX(REALABS(val.inf), REALABS(val.sup)); /*lint !e777 !e666*/
       consdata->maxabsval = MAX(consdata->maxabsval, absval);
    }
 
@@ -2155,7 +2156,7 @@ void consdataUpdateAddCoef(
 
       assert(consdata->minabsval < SCIP_INVALID);
 
-      absval = MAX(REALABS(val.inf), REALABS(val.sup)); /*lint !e777*/
+      absval = MAX(REALABS(val.inf), REALABS(val.sup)); /*lint !e777  !e666*/
       consdata->minabsval = MIN(consdata->minabsval, absval);
    }
 
@@ -3542,7 +3543,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    SCIP_Rational* correctedside;
    int* varsindex;
    int i;
-   unsigned long image;
+   SCIP_Longint image;
 
    /*lint --e{715}*/
    assert(scip != NULL);
@@ -3669,17 +3670,17 @@ SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_ORIGINAL:
          SCIPABORT();
-         return SCIP_ERROR;
+         return -1;
       case SCIP_VARSTATUS_NEGATED:
 
-         RatMultReal(newbound, newbound, -1);
+         RatMultReal(newbound, newbound, -1.0);
          assert( SCIPvarGetNegationConstant(variable) == 1 );
          RatAddReal(newbound, newbound, 1.0);
          res = SCIPcertificatePrintActivityVarBoundEx(scip, certificate, linename,
                boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER,
                newbound, ismaxactivity, constraint, variable->negatedvar);
          RatAddReal(newbound, newbound, -1.0);
-         RatMultReal(newbound, newbound, -1);
+         RatMultReal(newbound, newbound, -1.0);
          return res;
          break;
       case SCIP_VARSTATUS_AGGREGATED:
@@ -3810,7 +3811,7 @@ SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
    certificate->lastinfo->certificateindex = certificate->indexcounter - 1;
    RatSet(certificate->lastinfo->boundval, newbound);
 #endif
-   SCIP_CALL( SCIPcertificateSetLastBoundIndex(scip, certificate, certificate->indexcounter - 1) );
+   (void) SCIPcertificateSetLastBoundIndex(scip, certificate, certificate->indexcounter - 1);
 
    return (certificate->indexcounter - 1);
 }
@@ -3963,8 +3964,8 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
             SCIP_Rational* abscont1;
             SCIP_Rational* abscont2;
 
-            SCIP_CALL( RatCreate(&abscont1) );
-            SCIP_CALL( RatCreate(&abscont2) );
+            (void) RatCreate(&abscont1);
+	    (void) RatCreate(&abscont2);
 
             RatDiff(abscont1, SCIPvarGetUbGlobalExact(var1), SCIPvarGetLbGlobalExact(var1));
             RatMult(abscont1, consdata->vals[ind1], abscont1);
@@ -7468,7 +7469,7 @@ SCIP_RETCODE tightenVarBounds(
             {
                SCIP_Longint maxdenom;
 
-               RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
+               SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpbound) );
                RatSetReal(tmpbound, newlb);
 
                if( conshdlrdata->limitdenom )
@@ -7547,7 +7548,7 @@ SCIP_RETCODE tightenVarBounds(
             {
                SCIP_Longint maxdenom;
 
-               RatCreateBuffer(SCIPbuffer(scip), &tmpbound);
+               SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmpbound) );
                RatSetReal(tmpbound, newlb);
 
                if( conshdlrdata->limitdenom )

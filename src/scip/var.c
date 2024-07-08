@@ -11771,9 +11771,9 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
-      SCIP_CALL( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && varEventLbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
+      SCIP_CALL( varEventLbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
 
    /* process parent variables */

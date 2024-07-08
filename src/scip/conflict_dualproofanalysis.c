@@ -314,7 +314,7 @@ SCIP_RETCODE proofsetAddAggrrow(
    {
       assert(aggrrow->certificateline != LONG_MAX);
       assert(proofset->certificateline == LONG_MAX); //@todo
-      proofset->certificateline = aggrrow->certificateline;
+      proofset->certificateline = (SCIP_Longint)aggrrow->certificateline;
    }
 
 

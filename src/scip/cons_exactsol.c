@@ -251,7 +251,7 @@ void setProbHasEquations(
       if( SCIPconsGetHdlr(conss[c]) == SCIPfindConshdlr(scip, "linear-exact") )
       {
          // constraint is an equality constraint
-         if( RatIsEqual(SCIPconsGetRhsExact(scip, conss[c], &success), SCIPconsGetLhsExact(scip, conss[c], &success)) )
+         if( RatIsEqual(SCIPconsGetRhsExact(scip, conss[c], &success), SCIPconsGetLhsExact(scip, conss[c], &success)) ) /*lint !e864*/
          {
             // check if there are non-integer variables
             SCIP_VAR** vars = SCIPgetVarsExactLinear(scip, conss[c]);
