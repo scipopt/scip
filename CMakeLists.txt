@@ -372,7 +372,7 @@ if(EXACTSOLVE OR AUTOBUILD)
 
     if(Boost_FOUND)
         include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
-        add_definitions(-DSCIP_WITH_BOOST)
+        set(SCIP_WITH_BOOST on)
         if(LPSEXACT STREQUAL "spxexact")
             find_package(SOPLEX REQUIRED CONFIG)
         elseif(LPSEXACT STREQUAL "qsoex")

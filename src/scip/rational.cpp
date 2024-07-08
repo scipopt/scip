@@ -48,6 +48,7 @@
 #endif
 #include <boost/multiprecision/number.hpp>
 #else
+using namespace scip_rational;
 #endif
 
 

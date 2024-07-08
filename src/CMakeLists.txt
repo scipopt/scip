@@ -691,6 +691,7 @@ set(scipheaders
     scip/mem.h
     scip/message_default.h
     scip/message.h
+    scip/multiprecision.hpp
     scip/misc.h
     scip/nlhdlr_bilinear.h
     scip/nlhdlr_convex.h
