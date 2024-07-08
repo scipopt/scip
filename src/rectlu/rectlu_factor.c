@@ -50,7 +50,7 @@ void *CGutil_allocrus (
    size_t                size                /**< length of array to be allocated */
    )
 {
-   void *mem = (void *) NULL;
+   void *mem;
    if( size == 0 )
    {
       fprintf (stderr, "Warning: 0 bytes allocated\n");
