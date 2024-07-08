@@ -84,7 +84,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "scip/scip_timing.h"
 #include "scip/scip_message.h"
 #include "scip/scip_randnumgen.h"
+#if defined(SCIP_WITH_EXACTSOLVE)
 #include "scip/struct_rational.h"
+#endif
 #include "scip/rational.h"
 #include "papilo/core/Presolve.hpp"
 #include "papilo/core/ProblemBuilder.hpp"
