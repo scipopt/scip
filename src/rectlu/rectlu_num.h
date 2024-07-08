@@ -37,17 +37,17 @@
 
 /* allocates array with size elements of QSnum_type */
 #define QSnum_AllocArray(size) ({                                \
-        size_t __i__ = (size);                                   \
+        int __i__ = (size);                                   \
         QSnum_type *__res = (QSnum_type *) malloc(size*sizeof(QSnum_type));  \
         if (__res) while(__i__--) mpq_init(__res[__i__]);        \
         __res;})
 
 /* frees array ea with size elements of QSnum_type */
-#define QSnum_FreeArray(ea,size) ({\
-        size_t __sz = size;\
+#define QSnum_FreeArray(ea,size) do{\
+        int __sz = size;\
         QSnum_type* __ptr__ = (ea);\
         if (ea) while(__sz--) mpq_clear(__ptr__[__sz]);\
-        if (ea) { free(ea);  ea = NULL;}})
+        if (ea) { free(ea);  ea = NULL;}} while(0)
 
 
 /* initializes an individual element of QSnum_type */
@@ -73,18 +73,18 @@
 #define QSnum_Mult(a,b,c) mpq_mul(a,b,c)          /* a = b*c */
 
 /* a = a*b (for b an unsigned int) */
-#define QSnum_CopyMultUi(a,b) ({                                       \
+#define QSnum_CopyMultUi(a,b) do {                                       \
         mpz_mul_ui(mpq_numref(a),mpq_numref(a),(unsigned long int)b);  \
-        mpq_canonicalize(a);(unsigned long)0;})
+        mpq_canonicalize(a);} while(0)
 
 /* a = a - b*c */
-#define QSnum_CopySubProd(a, b, c) ({                                  \
-        mpq_mul (__t__, b, c);  mpq_sub (a, a, __t__);  })
+#define QSnum_CopySubProd(a, b, c) do {                                  \
+        mpq_mul (__t__, b, c);  mpq_sub (a, a, __t__);  } while(0)
 
 /* a = max(a,|b|) */
-#define QSnum_CopyMaxAbs(a, b) ({                                      \
+#define QSnum_CopyMaxAbs(a, b) do {                                      \
         mpq_abs (__t__, b);                                            \
-        if (mpq_cmp (a, __t__) < 0) mpq_set (a, __t__); })
+        if (mpq_cmp (a, __t__) < 0) mpq_set (a, __t__); } while(0)
 
 /* a = max(a,abs(b)), execute extra code if update is needed */
 #define QSnum_CopyMaxAbsAndDo(a,b,c)                                   \

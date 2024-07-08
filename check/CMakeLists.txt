@@ -515,6 +515,7 @@ set(pairs_Issue
     "instances/Issue/3688.cip\;131882\;reduced_presolving"
     "instances/Issue/3693.cip\;7812672.2316\;default"
     "instances/Issue/3719.cip\;0\;presolving_off"
+    "instances/Issue/3722.cip\;1200008400.00755\;default"
 )
 
 #
