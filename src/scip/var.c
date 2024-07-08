@@ -1102,7 +1102,8 @@ SCIP_RETCODE SCIPboundchgUndo(
       if ( SCIPcertificateShouldTrackBounds(set->scip) )
       {
          if (!SCIPsetIsInfinity(set, -var->lbchginfos[var->nlbchginfos].oldbound))
-            SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip), var->lbchginfos[var->nlbchginfos].oldcertindex);
+            SCIP_CALL( SCIPcertificateSetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip),
+               var->lbchginfos[var->nlbchginfos].oldcertindex) );
       }
 
       /* reinstall the previous local bound */
