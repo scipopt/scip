@@ -217,7 +217,7 @@ Problem<SCIP_Real> buildProblem(
    return builder.build();
 }
 
-#ifdef SCIP_WITH_GMP
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
 /** builds the presolvelib problem datastructure from the matrix */
 static
 Problem<papilo::Rational> buildProblemRational(
@@ -331,7 +331,7 @@ SCIP_DECL_PRESOLINIT(presolInitMILP)
    return SCIP_OKAY;
 }
 
-#ifdef SCIP_WITH_GMP
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
 static
 SCIP_RETCODE doMilpPresolveRational(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1031,7 +1031,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    assert(linconshdlr != NULL);
    bool allowconsmodification = (SCIPconshdlrGetNCheckConss(linconshdlr) == SCIPmatrixGetNRows(matrix));
 
-#ifdef SCIP_WITH_GMP
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
    if( SCIPisExactSolve(scip) )
    {
       SCIP_Retcode retcode;
