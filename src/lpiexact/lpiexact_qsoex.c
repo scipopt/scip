@@ -27,7 +27,7 @@
 /* #define USEOBJLIM */  /** uncomment to pass objlimit to exact lp solver; same as in cons_exactlp.c;  warning: QSopt_ex allows objlimits but the support is buggy; if the limit is reached, QSopt_ex does not stop but increasess the precision */
 #include "scip/def.h"
 
-#ifdef SCIP_WITH_GMP
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
 #include "EGlib.h"
 #include "QSopt_ex.h"
 #endif
