@@ -55,9 +55,13 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 /** LP interface */
 struct SCIP_LPiExact
 {
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
    mpq_QSprob            prob;               /**< LP struct pointer */
+   mpq_factor_work*      factor;             /**< factorized matrix  */
    int                   solstat;            /**< solution status of last optimization call */
    int                   previt;             /**< previous number of simplex iterations performed */
+   int                   pricing;	         /**< SCIP pricing option */
+#endif
    int                   rowspace;           /**< current size of internal row-related arrays */
    char*                 isen;               /**< array of length rowspace */
    mpq_t*                irhs;               /**< array of rhs rowspace */
@@ -70,8 +74,6 @@ struct SCIP_LPiExact
    int                   tbsz;	             /**< current size of tableau-related arrays */
    mpq_t*                itab;               /**< array of length tbsz */
    char*                 ibas; 	             /**< array of length tbsz */
-   int                   pricing;	         /**< SCIP pricing option */
-   mpq_factor_work*      factor;             /**< factorized matrix  */
 };
 
 
@@ -80,6 +82,7 @@ struct SCIP_LPiExact
  * local defines
  */
 
+/*lint --e{750} */
 /** print location of the calling line */
 #define __QS_PRINTLOC__ fprintf(stderr,", in (%s:%d)\n", __FILE__, __LINE__);
 
@@ -142,7 +145,7 @@ void printGMP(
    char* buffer;
    buffer = (char*) malloc(mpz_sizeinbase(mpq_numref(val),
                                           10) + mpz_sizeinbase(mpq_denref(val), 10) + 3);
-   mpq_get_str(buffer, 10, val);
+   (void)mpq_get_str(buffer, 10, val);
    printf("%s \n", buffer);
    free(buffer);
 }
@@ -245,11 +248,11 @@ SCIP_RETCODE ensureTabMem(
    SCIP_LPIEXACT*        lpi,
    int const             sz
    )
-{
+{ /*lint --e{647}*/
    register int i;
    if( lpi->tbsz < sz )
    {
-      SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->itab), sz*2) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->itab), sz*2) ); 
       SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->ibas), sz*2) );
       for( i = lpi->tbsz ; i < sz * 2 ; i++ )
 	      mpq_init(lpi->itab[i]);
@@ -280,7 +283,7 @@ SCIP_RETCODE ensureRowMem(
    SCIP_LPIEXACT*        lpi,
    int const             nrows
    )
-{
+{  /*lint --e{647}*/
    register int i;
    if( lpi->rowspace < nrows )
    {
@@ -307,7 +310,7 @@ SCIP_RETCODE convertSides(
    SCIP_Rational**       lhs,
    SCIP_Rational**       rhs
    )
-{
+{  /*lint --e{663, 550, 438, 528}*/
    int state;
    register int i;
 
@@ -320,10 +323,15 @@ SCIP_RETCODE convertSides(
 
       lhsg = RatGetGMP(lhs[i]);
       rhsg = RatGetGMP(rhs[i]);
-
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
       state1 = ((mpq_cmp(*lhsg, mpq_ILL_MINDOUBLE) <= 0) ? 1U : 0U);
       state2 = ((mpq_cmp(*rhsg, mpq_ILL_MAXDOUBLE) >= 0) ? 2U : 0U);
       state = state1 | state2;
+#else
+      state1 = 0;
+      state2 = 0;
+      state = 0;
+#endif
       //state = (((mpq_cmp(*lhsg, mpq_ILL_MINDOUBLE) <= 0) ? 1U : 0U) | ((mpq_cmp(*rhsg, mpq_ILL_MAXDOUBLE) >= 0) ? 2U : 0U));
       lpi->ircnt[i] = 0;
       lpi->irbeg[i] = 0;
@@ -360,7 +368,7 @@ SCIP_RETCODE convertSides(
       }
    }
    return SCIP_OKAY;
-}
+ }  /*lint --e{528}*/
 
 
 /*
@@ -377,7 +385,7 @@ const char* SCIPlpiExactGetSolverName(
    void
    )
 {
-#ifdef SCIP_WITH_GMP
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
    sprintf(__qsstr, "QSopt_ex %s", string_QSopt_ex);
 #else
    sprintf(__qsstr, "QSopt_ex");
@@ -399,7 +407,7 @@ const char* SCIPlpiExactGetExternalCodeName(
    void
    )
 {
-#ifdef SCIP_WITH_GMP
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
    sprintf(__egstr, "EGlib %s", string_EGlib);
 #else
    sprintf(__egstr, "EGlib");
@@ -416,7 +424,7 @@ const char* SCIPlpiExactGetExternalCodeDesc(
    return "Library for basic structures and utilities by D. Espinoza and M. Goycoolea (dii.uchile.cl/~daespino/EGlib_doc/main.html)";
 }
 
-#ifdef SCIP_WITH_GMP
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
 
 /** gets pointer for LP solver - use only with great care */
 void* SCIPlpiExactGetSolverPointer(
@@ -521,9 +529,6 @@ SCIP_RETCODE SCIPlpiExactFree(
    )
 {
    register int i;
-
-
-
 
    assert(lpi != NULL);
    assert(*lpi != NULL);
@@ -802,7 +807,7 @@ SCIP_RETCODE SCIPlpiExactAddRows(
    SCIP_ALLOC( BMSallocMemoryArray(&valgmp, nnonz) );
    RatSetGMPArray(valgmp, val, nnonz);
 
-   rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, valgmp, lpi->irhs, lpi->isen, lpi->irng, (const char**) rownames);
+   rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, (const mpq_t*) valgmp, (const mpq_t*) lpi->irhs, lpi->isen, (const mpq_t*) lpi->irng, (const char**) rownames);
    QS_CONDRET(rval);
 
    RatClearGMPArray(valgmp, nnonz);
@@ -911,7 +916,7 @@ SCIP_RETCODE SCIPlpiExactClear(
       rval = mpq_QSdelete_rows(lpi->prob, nrows, lpi->ircnt);
       QS_CONDRET(rval);
    }
-   return QS_RETURN(rval);
+   QS_RETURN(rval);
 }
 
 
@@ -1015,7 +1020,7 @@ SCIP_RETCODE SCIPlpiExactChgSides(
       }
    }
 
-   return QS_RETURN(rval);
+   QS_RETURN(rval);
 }
 
 /** changes a single coefficient */
@@ -1066,7 +1071,7 @@ SCIP_RETCODE SCIPlpiExactChgObjsen(
       QS_CONDRET(rval);
    }
 
-   return QS_RETURN(rval);
+   QS_RETURN(rval);
 }
 
 /** changes objective values of columns in the LP */
@@ -1091,7 +1096,7 @@ SCIP_RETCODE SCIPlpiExactChgObj(
       rval = mpq_QSchange_objcoef(lpi->prob, ind[i], *RatGetGMP(obj[i]));
       QS_CONDRET(rval);
    }
-   return QS_RETURN(rval);
+   QS_RETURN(rval);
 }
 
 /** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
@@ -1606,7 +1611,7 @@ SCIP_RETCODE SCIPlpiExactGetBounds(
       }
    }
 
-   return QS_RETURN(rval);
+   QS_RETURN(rval);
 }
 
 /** gets current row sides from LP problem object */
@@ -2249,7 +2254,7 @@ SCIP_RETCODE SCIPlpiExactGetIterations(
    *iterations = nit - lpi->previt;
    lpi->previt = nit;
 
-   return QS_RETURN(rval);
+   QS_RETURN(rval);
 }
 
 /**@} */
@@ -2328,7 +2333,7 @@ SCIP_RETCODE SCIPlpiExactGetBase(
          SCIPABORT();
       }
    }
-   return QS_RETURN(rval);
+   QS_RETURN(rval);
 }
 
 /** sets current basis status for columns and rows */
@@ -2432,14 +2437,14 @@ SCIP_RETCODE SCIPlpiExactGetBasisInd(
 
    nrows = mpq_QSget_rowcount(lpi->prob);
    ncols = mpq_QSget_colcount(lpi->prob);
-   rval = mpq_QSget_basis_order(lpi->prob, ind);
+   rval = mpq_QSget_basis_order(lpi->prob, bind);
    QS_CONDRET(rval);
 
    /* transform QSopt_ex basis header into SCIP format */
    for( i = 0; i < nrows; ++i )
    {
-      if( ind[i] >= ncols )
-	      ind[i] = -(ind[i] - ncols - 1);
+      if( bind[i] >= ncols )
+	      bind[i] = -(bind[i] - ncols - 1);
    }
 
    return SCIP_OKAY;
@@ -2509,7 +2514,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
 
    /* if there was no basis information available, LPI state was not stored */
    if (lpistate == NULL)
-      return QS_RETURN(rval);
+      QS_RETURN(rval);
 
    /* continue test */
    ncols = mpq_QSget_colcount(lpi->prob);
@@ -2524,7 +2529,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
       lpistate->ncols, lpistate->nrows, ncols, nrows);
 
    if( lpistate->ncols == 0 || lpistate->nrows == 0 )
-      return QS_RETURN(rval);
+      QS_RETURN(rval);
 
    /* allocate enough memory for storing uncompressed basis information */
    SCIP_CALL( ensureColMem(lpi, ncols) );
@@ -2608,7 +2613,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
 
 /** frees LPi state information */
 SCIP_RETCODE SCIPlpiExactFreeState(
-   const SCIP_LPIEXACT*  lpi,                /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
@@ -2625,7 +2630,7 @@ SCIP_RETCODE SCIPlpiExactFreeState(
 /** checks, whether the given LP state contains simplex basis information */
 SCIP_Bool SCIPlpiExactHasStateBasis(
    SCIP_LPIEXACT*        lpi,                /**< LP interface structure */
-   const SCIP_LPISTATE*  lpistate            /**< LP state information (like basis information) */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
    )
 {  /*lint --e{715} */
    return (lpistate != NULL);
@@ -2971,7 +2976,7 @@ SCIP_Bool SCIPlpiExactIsNegInfinity(
 
 /** returns value treated as negative infinity in the LP solver */
 SCIP_Real SCIPlpiExactInfinity(
-   const SCIP_LPIEXACT*  lpi                 /**< LP interface structure */
+   SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715} */
    assert(lpi != NULL);
