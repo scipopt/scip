@@ -37,14 +37,14 @@
 
 /* allocates array with size elements of QSnum_type */
 #define QSnum_AllocArray(size) ({                                \
-        size_t __i__ = (size);                                   \
+        int __i__ = (size);                                   \
         QSnum_type *__res = (QSnum_type *) malloc(size*sizeof(QSnum_type));  \
         if (__res) while(__i__--) mpq_init(__res[__i__]);        \
         __res;})
 
 /* frees array ea with size elements of QSnum_type */
 #define QSnum_FreeArray(ea,size) do{\
-        size_t __sz = size;\
+        int __sz = size;\
         QSnum_type* __ptr__ = (ea);\
         if (ea) while(__sz--) mpq_clear(__ptr__[__sz]);\
         if (ea) { free(ea);  ea = NULL;}} while(0)
