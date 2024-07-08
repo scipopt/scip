@@ -10192,7 +10192,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventGlbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
@@ -10385,7 +10385,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventGubChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
@@ -10714,7 +10714,7 @@ SCIP_RETCODE varProcessChgUbGlobalExact(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventGubChangedExact(var, blkmem, set, lpexact->fplp, branchcand, eventqueue, oldbound, newbound) );
    }
@@ -11748,7 +11748,7 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
    if( var->eventfilter != NULL )
    {
-      SCIP_CALL( varEventLbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
+      SCIP_CALL( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && varEventLbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
 
    /* process parent variables */
@@ -11935,7 +11935,7 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventUbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
@@ -12127,7 +12127,7 @@ SCIP_RETCODE varProcessChgLbLocalExact(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventLbChangedExact(var, blkmem, set, lpexact, branchcand, eventqueue, oldbound, newbound) );
    }
@@ -12270,7 +12270,7 @@ SCIP_RETCODE varProcessChgUbLocalExact(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventUbChangedExact(var, blkmem, set, lpexact, branchcand, eventqueue, oldbound, newbound) );
    }
