@@ -124,7 +124,7 @@ RUN git clone https://github.com/scipopt/papilo.git && \
     git checkout $PAPILO_REVISION && \
     mkdir /home/builds/papilo/build && \
     cd /home/builds/papilo/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DQUADMATH=off -DBLA_STATIC=ON -DBLA_VENDOR=OpenBLAS && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DQUADMATH=off -DBLA_STATIC=ON -DBLA_VENDOR=OpenBLAS -DTBB=off && \
     make -j5 && \
     make install && \
     rm -rf /home/builds/*

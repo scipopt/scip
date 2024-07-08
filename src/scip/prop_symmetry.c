@@ -7165,21 +7165,21 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
                allowchgbds, nchgbds) );
       }
 
-      FREEMEMORY:
-         /* free memory not needed anymore */
-         for (i = nrows - 1; i >= 0; --i)
-         {
-            SCIPfreeBlockMemoryArray(scip, &lexmatrix[i], ncols);
-         }
-         SCIPfreeBlockMemoryArray(scip, &lexmatrix, nrows);
-         if ( ncolmatrices > 0 )
-         {
-            SCIPfreeBlockMemoryArray(scip, &lexcolsbegin, ncolmatrices + 1);
-         }
-         if ( nrowmatrices > 0 )
-         {
-            SCIPfreeBlockMemoryArray(scip, &lexrowsbegin, nrowmatrices + 1);
-         }
+   FREEMEMORY:
+      /* free memory not needed anymore */
+      for (i = nrows - 1; i >= 0; --i)
+      {
+         SCIPfreeBlockMemoryArray(scip, &lexmatrix[i], ncols);
+      }
+      SCIPfreeBlockMemoryArray(scip, &lexmatrix, nrows);
+      if ( ncolmatrices > 0 )
+      {
+         SCIPfreeBlockMemoryArray(scip, &lexcolsbegin, ncolmatrices + 1);
+      }
+      if ( nrowmatrices > 0 )
+      {
+         SCIPfreeBlockMemoryArray(scip, &lexrowsbegin, nrowmatrices + 1);
+      }
    }
    SCIPfreeBufferArray(scip, &perms);
 

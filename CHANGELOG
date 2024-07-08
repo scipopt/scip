@@ -120,6 +120,8 @@ Build system
 Miscellaneous
 -------------
 
+- Event `BESTSOLFOUND` is thrown before scanning the current node list and removing nodes potentially throwing the `NODEDELETE` event
+
 @section RN911 SCIP 9.1.1
 *************************
 
@@ -127,6 +129,7 @@ Fixed bugs
 ----------
 
 - fix bug in separator aggregation that caused incorrect terminations when for an integral objective the objective limit was set to a fractional value
+- fix bug in memory management of doublelex matrices where indices were set beyond array bounds
 
 Performance improvements
 ------------------------
