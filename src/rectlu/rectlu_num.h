@@ -40,7 +40,7 @@
         int __i__ = (size);                                   \
         QSnum_type *__res = (QSnum_type *) malloc(size*sizeof(QSnum_type));  \
         if (__res) while(__i__--) mpq_init(__res[__i__]);        \
-        __res;}) /*lint !429*/
+        __res;})
 
 /* frees array ea with size elements of QSnum_type */
 #define QSnum_FreeArray(ea,size) do{\

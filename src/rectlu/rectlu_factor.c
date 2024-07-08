@@ -162,7 +162,7 @@ void QSnum_factor_free_factor_work(
    CG_IFFREE (f->uc_inf, qsnum_uc_info);
    if( f->dimr + f->max_k > 0 && f->ur_inf )
    {
-      unsigned int i = f->dimr + f->max_k + 1;
+      int i = f->dimr + f->max_k + 1;
       while( i-- )
          QSnum_Clear (f->ur_inf[i].max);
    }
@@ -206,16 +206,16 @@ int QSnum_factor_create_factor_work(
    f->dimr = dimr;
    f->dimc = dimc;
    f->etacnt = 0;
-   f->work_coef = QSnum_AllocArray (maxdim);
-   CG_SAFE_MALLOC (f->work_indx, maxdim, int);
-   CG_SAFE_MALLOC (f->uc_inf, dimc + (f->max_k + 1), qsnum_uc_info);
-   CG_SAFE_MALLOC (f->ur_inf, dimr + (f->max_k + 1), qsnum_ur_info);
-   CG_SAFE_MALLOC (f->lc_inf, dimr, qsnum_lc_info);
-   CG_SAFE_MALLOC (f->lr_inf, dimr, qsnum_lr_info);
-   CG_SAFE_MALLOC (f->rperm, dimr, int);
-   CG_SAFE_MALLOC (f->rrank, dimr, int);
-   CG_SAFE_MALLOC (f->cperm, dimc, int);
-   CG_SAFE_MALLOC (f->crank, dimc, int);
+   f->work_coef = QSnum_AllocArray (maxdim); /*lint --e{429,160}*/
+   CG_SAFE_MALLOC (f->work_indx, maxdim, int); /*lint --e{571,776}*/ /*lint --e{571,776}*/
+   CG_SAFE_MALLOC (f->uc_inf, dimc + (f->max_k + 1), qsnum_uc_info); /*lint --e{571,776}*/
+   CG_SAFE_MALLOC (f->ur_inf, dimr + (f->max_k + 1), qsnum_ur_info); /*lint --e{571,776}*/
+   CG_SAFE_MALLOC (f->lc_inf, dimr, qsnum_lc_info); /*lint --e{571,776}*/
+   CG_SAFE_MALLOC (f->lr_inf, dimr, qsnum_lr_info); /*lint --e{571,776}*/
+   CG_SAFE_MALLOC (f->rperm, dimr, int); /*lint --e{571,776}*/
+   CG_SAFE_MALLOC (f->rrank, dimr, int); /*lint --e{571,776}*/
+   CG_SAFE_MALLOC (f->cperm, dimc, int); /*lint --e{571,776}*/
+   CG_SAFE_MALLOC (f->crank, dimc, int); /*lint --e{571,776}*/
 
    for (i = dimr + f->max_k + 1; i--;)
       QSnum_Init (f->ur_inf[i].max);
@@ -349,12 +349,12 @@ static int qsnum_make_ur_space (
       minspace = 1+minspace*f->grow_mul;
    }
 
-   new_urcoef = QSnum_AllocArray (minspace);
-   CG_SAFE_MALLOC (new_urindx, minspace + 1, int);
+   new_urcoef = QSnum_AllocArray (minspace); /*lint --e{429,160}*/
+   CG_SAFE_MALLOC (new_urindx, minspace + 1, int); /*lint --e{571,776}*/
 
    if( urcind )
    {
-      CG_SAFE_MALLOC (new_urcind, minspace, int);
+      CG_SAFE_MALLOC (new_urcind, minspace, int); /*lint --e{571,776}*/
 
       for( j = 0; j < dimr; j++ )
       {
@@ -443,12 +443,12 @@ static int qsnum_make_uc_space (
       minspace = f->uc_space * f->grow_mul;
    }
 
-   CG_SAFE_MALLOC (new_ucindx, minspace + 1, int);
+   CG_SAFE_MALLOC (new_ucindx, minspace + 1, int); /*lint --e{571,776}*/
 
    if( ucrind )
    {
-      new_uccoef = QSnum_AllocArray (minspace);
-      CG_SAFE_MALLOC (new_ucrind, minspace, int);
+      new_uccoef = QSnum_AllocArray (minspace); /*lint --e{429,160}*/
+      CG_SAFE_MALLOC (new_ucrind, minspace, int); /*lint --e{571,776}*/
 
       for( j = 0; j < dimc; j++ )
       {
@@ -531,8 +531,8 @@ static int qsnum_make_lc_space (
    if( lc_freebeg > minspace )
       return -1;
 
-   new_lccoef = QSnum_AllocArray (minspace);
-   CG_SAFE_MALLOC (new_lcindx, minspace, int);
+   new_lccoef = QSnum_AllocArray (minspace); /*lint --e{429,160}*/
+   CG_SAFE_MALLOC (new_lcindx, minspace, int); /*lint --e{571,776}*/
 
    for( i = 0; i < lc_freebeg; i++ )
    {
@@ -1361,7 +1361,7 @@ static int qsnum_create_factor_space(
    if( f->ucindx == 0 )
    {
       f->uc_space = nzcnt * f->uc_space_mul;
-      CG_SAFE_MALLOC (f->ucindx, f->uc_space + 1, int);
+      CG_SAFE_MALLOC (f->ucindx, f->uc_space + 1, int); /*lint --e{571,776}*/
    }
 
    if( f->urindx == 0 || f->urcoef == 0 )
@@ -1369,8 +1369,8 @@ static int qsnum_create_factor_space(
       CG_IFFREE (f->urindx, int);
       QSnum_FreeArray (f->urcoef, f->ur_space);
       f->ur_space = nzcnt * f->ur_space_mul;
-      CG_SAFE_MALLOC (f->urindx, f->ur_space + 1, int);
-      f->urcoef = QSnum_AllocArray (f->ur_space);
+      CG_SAFE_MALLOC (f->urindx, f->ur_space + 1, int); /*lint --e{571,776}*/
+      f->urcoef = QSnum_AllocArray (f->ur_space); /*lint --e{429,160}*/
    }
 
    if( f->lcindx == 0 || f->lccoef == 0 )
@@ -1378,8 +1378,8 @@ static int qsnum_create_factor_space(
       CG_IFFREE (f->lcindx, int);
       QSnum_FreeArray (f->lccoef, f->lc_space);
       f->lc_space = nzcnt * f->lc_space_mul;
-      CG_SAFE_MALLOC (f->lcindx, f->lc_space, int);
-      f->lccoef = QSnum_AllocArray (f->lc_space);
+      CG_SAFE_MALLOC (f->lcindx, f->lc_space, int); /*lint --e{571,776}*/
+      f->lccoef = QSnum_AllocArray (f->lc_space); /*lint --e{429,160}*/
    }
 
    nzcnt = 0;
@@ -1581,21 +1581,21 @@ static int qsnum_build_iteration_u_data(
    }
 
    QSnum_FreeArray (f->uccoef, f->uc_space);
-   uccoef = QSnum_AllocArray (nzcnt);
+   uccoef = QSnum_AllocArray (nzcnt); /*lint --e{429,160}*/
    f->uccoef = uccoef;
 
    CG_IFFREE (f->ucrind, int);
-   CG_SAFE_MALLOC (ucrind, nzcnt, int);
+   CG_SAFE_MALLOC (ucrind, nzcnt, int); /*lint --e{571,776}*/
    f->ucrind = ucrind;
 
    CG_IFFREE (f->urcind, int);
-   CG_SAFE_MALLOC (urcind, f->ur_space, int);
+   CG_SAFE_MALLOC (urcind, f->ur_space, int); /*lint --e{571,776}*/
    f->urcind = urcind;
 
    if( uc_space < nzcnt )
    {
       CG_IFFREE (f->ucindx, int);
-      CG_SAFE_MALLOC (f->ucindx, nzcnt + 1, int);
+      CG_SAFE_MALLOC (f->ucindx, nzcnt + 1, int); /*lint --e{571,776}*/
    }
    f->uc_space = nzcnt;
    uc_space = nzcnt;
@@ -1681,9 +1681,9 @@ static int qsnum_build_iteration_u_data(
    qsnum_clear_work (f);
 
    er_space = f->er_space_mul * f->etamax;
-   CG_SAFE_MALLOC (f->er_inf, f->etamax, qsnum_er_info);
-   CG_SAFE_MALLOC (f->erindx, er_space, int);
-   f->ercoef = QSnum_AllocArray (er_space);
+   CG_SAFE_MALLOC (f->er_inf, f->etamax, qsnum_er_info); /*lint --e{571,776}*/
+   CG_SAFE_MALLOC (f->erindx, er_space, int); /*lint --e{571,776}*/
+   f->ercoef = QSnum_AllocArray (er_space); /*lint --e{429,160}*/
    f->etacnt = 0;
    f->er_freebeg = 0;
    f->er_space = er_space;
@@ -1728,13 +1728,13 @@ static int qsnum_build_iteration_l_data(
    QSnum_FreeArray (f->lrcoef, f->lr_space);
    if( nzcnt )
    {
-      lrcoef = QSnum_AllocArray (nzcnt);
+      lrcoef = QSnum_AllocArray (nzcnt); /*lint --e{429,160}*/
       f->lr_space = nzcnt; /* added by dan */
       f->lrcoef = lrcoef;
    }
 
    CG_IFFREE (f->lrindx, int);
-   CG_SAFE_MALLOC (lrindx, nzcnt + 1, int);
+   CG_SAFE_MALLOC (lrindx, nzcnt + 1, int); /*lint --e{571,776}*/
    f->lrindx = lrindx;
 
    for( i = 0; i < dimr; i++ )
@@ -1798,8 +1798,8 @@ static int qsnum_handle_singularity(
    }
 
    nsing = f->nstages - f->stage;
-   CG_SAFE_MALLOC (singr, nsing, int);
-   CG_SAFE_MALLOC (singc, nsing, int);
+   CG_SAFE_MALLOC (singr, nsing, int); /*lint --e{571,776}*/
+   CG_SAFE_MALLOC (singc, nsing, int); /*lint --e{571,776}*/
 
    for( i = f->stage; i < f->nstages; i++ )
    {
@@ -1838,7 +1838,7 @@ static int qsnum_dense_build_matrix(
    int j;
    int rval = 0;
 
-   dmat = QSnum_AllocArray (dsize);
+   dmat = QSnum_AllocArray (dsize); /*lint --e{429,160}*/
    /*  WHY no check for NULL?  -- Bico */
 
    for( i = 0; i < dsize; i++ )
@@ -3423,8 +3423,8 @@ int QSnum_svector_alloc(
    }
    else
    {
-      CG_SAFE_MALLOC (s->indx, nzcnt, int);
-      s->coef = QSnum_AllocArray (nzcnt);
+      CG_SAFE_MALLOC (s->indx, nzcnt, int); /*lint --e{571,776}*/
+      s->coef = QSnum_AllocArray (nzcnt); /*lint --e{429,160}*/
    }
    return 0;
  CLEANUP:
