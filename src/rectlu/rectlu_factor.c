@@ -348,7 +348,7 @@ static int qsnum_make_ur_space (
    new_urcoef = QSnum_AllocArray (minspace); /*lint !e160 !e429*/
    CG_SAFE_MALLOC (new_urindx, minspace + 1, int); /*lint !e571 !e776*/
 
-   assert(new_urindex != NULL);
+   assert(new_urindxg != NULL);
 
    if( urcind )
    {

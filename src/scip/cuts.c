@@ -1651,7 +1651,7 @@ SCIP_RETCODE cutTightenCoefsSafely(
    int*                  cutnnz,             /**< the number of non-zeros in the cut */
    SCIP_Bool*            redundant           /**< whether the cut was detected to be redundant */
    )
-{
+{ /*lint --e{644}*/
    int i;
    int nintegralvars;
    SCIP_Bool isintegral = TRUE;
@@ -1661,7 +1661,7 @@ SCIP_RETCODE cutTightenCoefsSafely(
    SCIP_Real maxabsintval = 0.0;
    SCIP_Real maxabscontval = 0.0;
    SCIP_ROUNDMODE previousroundmode;
-   SCIP_MIRINFO* mirinfo;
+   SCIP_MIRINFO* mirinfo = NULL;
 
    assert(SCIPisExactSolve(scip));
 
@@ -1777,7 +1777,7 @@ SCIP_RETCODE cutTightenCoefsSafely(
          if( SCIPisCertificateActive(scip) )
          {
             assert(mirinfo != NULL);
-            mirinfo->scale = intscalar; /*lint !e644*/
+            mirinfo->scale = intscalar;
          }
 
          for( i = 0; i < *cutnnz; )
@@ -3491,7 +3491,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    SCIP_Bool*            valid               /**< is the aggregation valid */
    )
 {
-   SCIP_AGGRROW* certificaterow;
+   SCIP_AGGRROW* certificaterow = NULL;
    SCIP_ROW** rows;
    SCIP_ROW** usedrows;
    SCIP_ROW** negslackrows;
@@ -4565,7 +4565,7 @@ SCIP_RETCODE cutsTransformMIRSafely(
    SCIP_Bool*            freevariable,       /**< stores whether a free variable was found in MIR row -> invalid summation */
    SCIP_Bool*            localbdsused        /**< pointer to store whether local bounds were used in transformation */
    )
-{
+{ /*lint --e{644}*/
    SCIP_Real* bestlbs;
    SCIP_Real* bestubs;
    int* bestlbtypes;
@@ -4576,7 +4576,7 @@ SCIP_RETCODE cutsTransformMIRSafely(
    int nvars;
    int firstcontvar;
    SCIP_VAR** vars;
-   SCIP_MIRINFO* mirinfo;
+   SCIP_MIRINFO* mirinfo = NULL;
 
    SCIP_ROUNDMODE previousroundmode;
 
@@ -4656,7 +4656,7 @@ SCIP_RETCODE cutsTransformMIRSafely(
          assert(mirinfo != NULL);
          if( boundtype[i] == -2 )
          {
-            mirinfo->localbdused[v] = TRUE; /*lint !e644*/
+            mirinfo->localbdused[v] = TRUE;
             mirinfo->nlocalvars++;
          }
          mirinfo->upperused[v] = (varsign[i] == -1);
@@ -6313,8 +6313,8 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
    SCIP_ROWEXACT* rowexact;
    SCIP_INTERVAL onedivoneminusf0, tmpinterval;
    SCIP_ROUNDMODE previousroundmode;
-   SCIP_AGGREGATIONINFO* aggrinfo;
-   SCIP_MIRINFO* mirinfo;
+   SCIP_AGGREGATIONINFO* aggrinfo = NULL;
+   SCIP_MIRINFO* mirinfo = NULL;
    SCIP_Real mult;
    SCIP_Real splitcoef;
    SCIP_Real slackweight;
@@ -6485,6 +6485,7 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
 
          if( SCIPisCertificateActive(scip) && !integralslack )
          {
+            assert(aggrinfo != NULL);
             assert(aggrinfo->negslackweights[currentnegslackrow] == -weights[i]); /*lint !e777*/
             aggrinfo->substfactor[currentnegslackrow] = mult;
             currentnegslackrow++;
