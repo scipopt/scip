@@ -76,6 +76,8 @@ static void teardown(void)
 /* TEST SUITE */
 TestSuite(rationals, .init = setup, .fini = teardown);
 
+#ifdef SCIP_WITH_BOOST
+
 /* TESTS  */
 Test(rationals, create_and_free)
 {
@@ -403,3 +405,4 @@ Test(rationals, arrays, .description = "tests rational array methods")
 
    SCIPrationalarrayFree(&ratar2, blkmem);
 }
+#endif
