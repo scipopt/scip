@@ -321,7 +321,7 @@ static int qsnum_make_ur_space (
    )
 {
    QSnum_type *new_urcoef;
-   int *new_urindx;
+   int *new_urindx = NULL;
    int *new_urcind = 0;
    QSnum_type *urcoef = f->urcoef;
    int *urindx = f->urindx;
@@ -344,6 +344,8 @@ static int qsnum_make_ur_space (
    {
       minspace = 1+minspace*(int)f->grow_mul;
    }
+
+   assert(minspace >= 0);
 
    new_urcoef = QSnum_AllocArray (minspace); /*lint !e160 !e429*/
    CG_SAFE_MALLOC (new_urindx, minspace + 1, int); /*lint !e571 !e776*/
@@ -525,6 +527,8 @@ static int qsnum_make_lc_space (
    {
       minspace = (int) f->lc_space * (int) f->grow_mul;
    }
+
+   assert(minspace >= 0);
 
    if( lc_freebeg > minspace )
       return -1;
@@ -1787,7 +1791,7 @@ static int qsnum_handle_singularity(
 {
    int rval = 0;
    int nsing;
-   int *singr;
+   int *singr = 0;
    int *singc = 0;
    int i;
 
@@ -1798,16 +1802,19 @@ static int qsnum_handle_singularity(
    }
 
    nsing = f->nstages - f->stage;
+
+   assert(nsing > 0);
+
    CG_SAFE_MALLOC (singr, nsing, int); /*lint !e571 !e776*/
    CG_SAFE_MALLOC (singc, nsing, int); /*lint !e571 !e776*/
 
    assert(singr != NULL);
    assert(singc != NULL);
 
-   for( i = f->stage; i < f->nstages; i++ )
+   for( i = 0; i < nsing; i++ )
    {
-      singr[i - f->stage] = f->rperm[i];
-      singc[i - f->stage] = f->cperm[i];
+      singr[i] = f->rperm[i + f->stage];
+      singc[i] = f->cperm[i + f->stage];
    }
    *f->p_nsing = nsing;
    *f->p_singr = singr;
