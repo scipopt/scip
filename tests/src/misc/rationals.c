@@ -94,7 +94,7 @@ Test(rationals, setting, .description = "tests all the different methods to set/
    int testint = 100345;
    SCIP_Real testreal = 1235.235690;
    SCIP_Rational* testr;
-#ifdef SCIP_WITH_GMP
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
    mpq_t gmpr;
 
    mpq_init(gmpr);
@@ -133,7 +133,7 @@ Test(rationals, setting, .description = "tests all the different methods to set/
    cr_assert_lt(RatRoundReal(r1, SCIP_R_ROUND_DOWNWARDS), RatRoundReal(r1, SCIP_R_ROUND_UPWARDS), "rounding down should be lt rounding up");
 
    /* test gmp conversion */
-#ifdef SCIP_WITH_GMP
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_BOOST)
    RatSetGMP(r1, gmpr);
    cr_assert_eq(RatApproxReal(r1), mpq_get_d(gmpr), "gmp and Rational should be the same ");
    cr_assert(0 == mpq_cmp(gmpr, *RatGetGMP(r1)));
