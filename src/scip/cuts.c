@@ -1775,7 +1775,10 @@ SCIP_RETCODE cutTightenCoefsSafely(
          *cutrhs *= intscalar;
 
          if( SCIPisCertificateActive(scip) )
+         {
+            assert(mirinfo != NULL);
             mirinfo->scale = intscalar; /*lint !e644*/
+         }
 
          for( i = 0; i < *cutnnz; )
          {
@@ -1822,6 +1825,7 @@ SCIP_RETCODE cutTightenCoefsSafely(
 
          if( SCIPisCertificateActive(scip) )
          {
+            assert(mirinfo != NULL);
             mirinfo->unroundedrhs = *cutrhs;
          }
          *cutrhs = floor(*cutrhs); /*lint !e835*/
@@ -1873,7 +1877,6 @@ SCIP_RETCODE cutTightenCoefsSafely(
       else
       {
          /* otherwise, apply the equilibrium scaling */
-         isintegral = FALSE;
 
          /* perform the scaling */
          SCIPintervalMulScalar(SCIPinfinity(scip), &maxact, maxact, equiscale);
@@ -1882,7 +1885,10 @@ SCIP_RETCODE cutTightenCoefsSafely(
          *cutrhs *= equiscale;
          maxabsintval *= equiscale;
          if( SCIPisCertificateActive(scip) )
+         {
+            assert(mirinfo != NULL);
             mirinfo->scale = equiscale;
+         }
 
          for( i = 0; i < *cutnnz; ++i )
          {
@@ -1922,7 +1928,10 @@ SCIP_RETCODE cutTightenCoefsSafely(
       *cutrhs *= scale;
       maxabsintval *= scale;
       if( SCIPisCertificateActive(scip) )
-            mirinfo->scale = scale;
+      {
+         assert(mirinfo != NULL);
+         mirinfo->scale = scale;
+      }
 
       for( i = 0; i < *cutnnz; ++i )
       {
@@ -4644,6 +4653,7 @@ SCIP_RETCODE cutsTransformMIRSafely(
 
       if( SCIPisCertificateActive(scip) )
       {
+         assert(mirinfo != NULL);
          if( boundtype[i] == -2 )
          {
             mirinfo->localbdused[v] = TRUE; /*lint !e644*/
@@ -4704,6 +4714,7 @@ SCIP_RETCODE cutsTransformMIRSafely(
 
       if( SCIPisCertificateActive(scip) )
       {
+         assert(mirinfo != NULL);
          if( boundtype[i] == -2 )
          {
             mirinfo->localbdused[v] = TRUE;
@@ -6441,22 +6452,23 @@ SCIP_RETCODE cutsSubstituteMIRSafely(
 
       if( SCIPisCertificateActive(scip) && integralslack) /*lint --e{644}*/
       {
-            // save the value for the split disjunction for the integer slack and the continous part (for rounded up we subtract 1-f)
-            // multiply by -slacksign (same as above) since slack = side - row
-            mirinfo->slackrows[mirinfo->nslacks] = userow;
-            SCIP_CALL( SCIPcaptureRow(scip, userow) );
-            mirinfo->slackcoefficients[mirinfo->nslacks] = splitcoef * (-slacksign[i]);
-            mirinfo->slacksign[mirinfo->nslacks] = slacksign[i];
-            assert(SCIPisExactlyIntegral(splitcoef));
-            mirinfo->slackweight[mirinfo->nslacks] = slackweight;
-            mirinfo->slackscale[mirinfo->nslacks] = scale;
-            mirinfo->slackusedcoef[mirinfo->nslacks] = mult;
+         assert(mirinfo != NULL);
+         // save the value for the split disjunction for the integer slack and the continous part (for rounded up we subtract 1-f)
+         // multiply by -slacksign (same as above) since slack = side - row
+         mirinfo->slackrows[mirinfo->nslacks] = userow;
+         SCIP_CALL( SCIPcaptureRow(scip, userow) );
+         mirinfo->slackcoefficients[mirinfo->nslacks] = splitcoef * (-slacksign[i]);
+         mirinfo->slacksign[mirinfo->nslacks] = slacksign[i];
+         assert(SCIPisExactlyIntegral(splitcoef));
+         mirinfo->slackweight[mirinfo->nslacks] = slackweight;
+         mirinfo->slackscale[mirinfo->nslacks] = scale;
+         mirinfo->slackusedcoef[mirinfo->nslacks] = mult;
 
-            // save the value that goes into the certificate aggregation row (either downar or ar)
-            mirinfo->slackroundeddown[mirinfo->nslacks] = slackroundeddown; // * slacksign[i];
-            if( slackroundeddown )
-               mirinfo->nrounddownslacks++;
-            mirinfo->nslacks++;
+         // save the value that goes into the certificate aggregation row (either downar or ar)
+         mirinfo->slackroundeddown[mirinfo->nslacks] = slackroundeddown; // * slacksign[i];
+         if( slackroundeddown )
+            mirinfo->nrounddownslacks++;
+         mirinfo->nslacks++;
       }
 
       /* if the coefficient was reduced to zero, ignore the slack variable */

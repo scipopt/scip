@@ -1883,6 +1883,9 @@ SCIP_RETCODE SCIPgetDualProof(
       //certificatePrintAggrrow(set->scip, SCIPgetCertificate(set->scip), farkasrow, &farkasrow->certificateline);
       SCIP_Longint certificateline;
       SCIP_ROW** usedrows;
+
+      assert(objectiverow->rowexact != NULL);
+
       SCIP_CALL( SCIPcertificatePrintCutoffBound(set->scip, SCIPgetCertificate(set->scip), SCIPgetCutoffboundExact(set->scip), &certificateline) );
       SCIP_CALL( SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact, certificateline) );
       SCIP_CALL( SCIPallocBufferArray(set->scip, &usedrows, farkasrow->nrows + 1) );

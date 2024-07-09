@@ -3962,6 +3962,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
             break;
          else if( SCIPisExactSolve(scip) )
          {
+            assert(refvalsrat[i] != NULL);
             if( !SCIPparseRational(scip, refstrs[i], refvalsrat[i], &endptr) ) /*lint !e644*/
             {
                SCIPdialogMessage(scip, NULL, "Could not parse value '%s', please try again or type 'q' to quit\n", refstrs[i]);
@@ -3980,6 +3981,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
       {
          if( SCIPisExactSolve(scip) )
          {
+            assert(refvalsrat[0] != NULL);
             SCIP_CALL( SCIPvalidateSolveExact(scip, refvalsrat[0], refvalsrat[1], FALSE, NULL, NULL, NULL) );
             RatFreeArray(&refvalsrat, 2);
          }

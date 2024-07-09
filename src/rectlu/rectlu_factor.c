@@ -348,6 +348,8 @@ static int qsnum_make_ur_space (
    new_urcoef = QSnum_AllocArray (minspace); /*lint !e160 !e429*/
    CG_SAFE_MALLOC (new_urindx, minspace + 1, int); /*lint !e571 !e776*/
 
+   assert(new_urindex != NULL);
+
    if( urcind )
    {
       CG_SAFE_MALLOC (new_urcind, minspace, int); /*lint !e571 !e776*/
@@ -529,6 +531,8 @@ static int qsnum_make_lc_space (
 
    new_lccoef = QSnum_AllocArray (minspace); /*lint !e160 !e429*/
    CG_SAFE_MALLOC (new_lcindx, minspace, int); /*lint !e571 !e776*/
+
+   assert(new_lcindx != NULL);
 
    for( i = 0; i < lc_freebeg; i++ )
    {
@@ -1796,6 +1800,9 @@ static int qsnum_handle_singularity(
    nsing = f->nstages - f->stage;
    CG_SAFE_MALLOC (singr, nsing, int); /*lint !e571 !e776*/
    CG_SAFE_MALLOC (singc, nsing, int); /*lint !e571 !e776*/
+
+   assert(singr != NULL);
+   assert(singc != NULL);
 
    for( i = f->stage; i < f->nstages; i++ )
    {
