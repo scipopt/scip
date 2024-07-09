@@ -321,7 +321,7 @@ static int qsnum_make_ur_space (
    )
 {
    QSnum_type *new_urcoef;
-   int *new_urindx = NULL;
+   int *new_urindx;
    int *new_urcind = 0;
    QSnum_type *urcoef = f->urcoef;
    int *urindx = f->urindx;
@@ -1791,7 +1791,7 @@ static int qsnum_handle_singularity(
 {
    int rval = 0;
    int nsing;
-   int *singr = 0;
+   int *singr;
    int *singc = 0;
    int i;
 
