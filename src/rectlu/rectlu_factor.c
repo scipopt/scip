@@ -55,10 +55,7 @@ void *CGutil_allocrus (
       fprintf (stderr, "Warning: 0 bytes allocated\n");
    }
    mem = (void *) malloc (size);
-   if( mem == (void *) NULL )
-   {
-      fprintf (stderr, "Out of memory. Asked for %d bytes\n", (int) size);
-   }
+   assert(mem != (void *) NULL);
    return mem;
 }
 

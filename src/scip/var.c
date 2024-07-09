@@ -10248,18 +10248,6 @@ SCIP_RETCODE varProcessChgLbGlobal(
             SCIP_Real parentnewbound;
             assert(parentvar->data.aggregate.var == var);
 
-            if (!set->exact_enabled)
-            {
-               parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
-            }
-            else
-            {
-               SCIP_INTERVAL parentboundinterval;
-               SCIPintervalSet(&parentboundinterval, newbound);
-               SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.scalar);
-               SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.constant);
-               parentnewbound = parentvar->data.aggregate.scalar > 0 ? parentboundinterval.inf : parentboundinterval.sup;
-            }
             if( parentvar->data.aggregate.scalar > 0 )
             {
 
@@ -10441,18 +10429,6 @@ SCIP_RETCODE varProcessChgUbGlobal(
             SCIP_Real parentnewbound;
             assert(parentvar->data.aggregate.var == var);
 
-            if (!set->exact_enabled)
-            {
-               parentnewbound = parentvar->data.aggregate.scalar * newbound + parentvar->data.aggregate.constant;
-            }
-            else
-            {
-               SCIP_INTERVAL parentboundinterval;
-               SCIPintervalSet(&parentboundinterval, newbound);
-               SCIPintervalMulScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.scalar);
-               SCIPintervalAddScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, parentvar->data.aggregate.constant);
-               parentnewbound = parentvar->data.aggregate.scalar > 0 ? parentboundinterval.inf : parentboundinterval.sup;
-            }
             if( parentvar->data.aggregate.scalar > 0 )
             {
 
@@ -10905,19 +10881,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
       {
          SCIP_Real childnewbound;
          assert(var->data.aggregate.var != NULL);
-         if (!set->exact_enabled)
-         {
-            assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-            childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
-         }
-         else
-         {
-            SCIP_INTERVAL parentboundinterval;
-            SCIPintervalSet(&parentboundinterval, newbound);
-            SCIPintervalSubScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, var->data.aggregate.constant);
-            SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, var->data.aggregate.scalar);
-            childnewbound = var->data.aggregate.scalar > 0 ? parentboundinterval.inf : parentboundinterval.sup;
-         }
+
          if( var->data.aggregate.scalar > 0 )
          {
 
@@ -11207,19 +11171,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    {
       SCIP_Real childnewbound;
       assert(var->data.aggregate.var != NULL);
-      if (!set->exact_enabled)
-      {
-         assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
-         childnewbound = (newbound - var->data.aggregate.constant)/var->data.aggregate.scalar;
-      }
-      else
-      {
-         SCIP_INTERVAL parentboundinterval;
-         SCIPintervalSet(&parentboundinterval, newbound);
-         SCIPintervalSubScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, var->data.aggregate.constant);
-         SCIPintervalDivScalar(SCIP_INTERVAL_INFINITY, &parentboundinterval, parentboundinterval, var->data.aggregate.scalar);
-         childnewbound = var->data.aggregate.scalar > 0 ? parentboundinterval.inf : parentboundinterval.sup;
-      }
+
       if( var->data.aggregate.scalar > 0 )
       {
 

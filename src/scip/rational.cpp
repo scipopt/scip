@@ -2154,6 +2154,8 @@ void RatComputeApproximationLong(
       tn = td;
       td = temp;
 
+      assert(td != 0L);
+
       ai = tn / td;
       temp = tn % td;
 

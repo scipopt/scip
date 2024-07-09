@@ -1666,7 +1666,10 @@ SCIP_RETCODE cutTightenCoefsSafely(
    assert(SCIPisExactSolve(scip));
 
    if( SCIPisCertificateActive(scip)   )
+   {
       mirinfo = SCIPgetCertificate(scip)->mirinfo[SCIPgetCertificate(scip)->nmirinfos - 1];
+      assert(mirinfo != NULL);
+   }
 
    SCIPintervalSet(&maxact, 0.0);
 
@@ -3549,6 +3552,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                }
                else
                {
+                  assert(certificaterow != NULL);
                   SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[rowinds[k]], weights[rowinds[k]], sidetypebasis,
                         allowlocal, 0, maxaggrlen, &rowtoolongcert, &rowusedcert, valid, &lhsused) );
                }
@@ -3603,6 +3607,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
                   }
                   else
                   {
+                     assert(certificaterow != NULL);
                      SCIP_CALL( addOneRowSafely(scip, certificaterow, rows[k], weights[k], sidetypebasis, allowlocal, 0, maxaggrlen, &rowtoolongcert, &rowusedcert, valid, &lhsused) );
                   }
                   if( rowusedcert )
@@ -3633,6 +3638,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    {
       SCIP_Bool validcert;
       validcert = TRUE;
+      assert(certificaterow != NULL);
       SCIPaggrRowRemoveZeros(scip, certificaterow, FALSE, &validcert);
 
       *valid = *valid && validcert;
