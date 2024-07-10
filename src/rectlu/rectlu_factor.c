@@ -39,6 +39,8 @@
 
 #pragma GCC diagnostic ignored "-Wpedantic"
 
+#ifndef __clang_analyzer__
+
 #ifdef SCIP_WITH_GMP
 static QSnum_type qsnum_zeroLpNum;
 static QSnum_type qsnum_oneLpNum;
@@ -386,6 +388,8 @@ static int qsnum_make_ur_space (
       }
    }
 
+   assert(new_nzcnt <= minspace);
+
    for( i = new_nzcnt; i < minspace; i++ )
    {
       new_urindx[i] = -1;
@@ -537,6 +541,7 @@ static int qsnum_make_lc_space (
    CG_SAFE_MALLOC (new_lcindx, minspace, int); /*lint !e571 !e776*/
 
    assert(new_lcindx != NULL);
+   asserrt(lc Freebeg <= minspace);
 
    for( i = 0; i < lc_freebeg; i++ )
    {
@@ -3559,4 +3564,5 @@ void RECTLUfreeFactorization(
    }
    if (f) free (f);
 }
+#endif
 #endif

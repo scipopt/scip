@@ -3655,6 +3655,8 @@ SCIP_RETCODE SCIPaggrRowSumRows(
 
    if( SCIPisExactSolve(scip) && SCIPisCertificateActive(scip) )
    {
+      assert(certificaterow != NULL);
+
       SCIP_CALL( SCIPaddCertificateAggregation(scip, certificaterow, usedrows, usedweights, certificaterow->nrows, negslackrows, negslackweights, nnegslackrows) );
       SCIPaggrRowFree(scip, &certificaterow);
 
