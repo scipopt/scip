@@ -13098,8 +13098,8 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    SCIP* scip;
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
-   SCIP_Real cons1scale;
-   SCIP_Real cons2scale;
+   SCIP_Real minscale;
+   SCIP_Real maxscale;
    int i;
 
    assert(key1 != NULL);
@@ -13132,21 +13132,34 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
       assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0);
    }
 
-   /* compute scale before comparing coefficients of constraints */
-   cons1scale = COPYSIGN(1.0/consdata1->maxabsval, consdata1->vals[0]);
-   cons2scale = COPYSIGN(1.0/consdata2->maxabsval, consdata2->vals[0]);
+   /* order by maxabsval */
+   if( consdataGetMaxAbsval(consdata1) > consdataGetMaxAbsval(consdata2) )
+      SCIPswapPointers((void**)&consdata1, (void**)&consdata2);
 
-   /* tests if coefficients are equal with the computed scale */
+   /* initialize extremal scales */
+   minscale = SCIPinfinity(scip);
+   maxscale = -SCIPinfinity(scip);
+
+   /* test if coefficient scales are equal */
    for( i = 0; i < consdata1->nvars; ++i )
    {
-      SCIP_Real val1;
-      SCIP_Real val2;
+      SCIP_Real scale = consdata2->vals[i] / consdata1->vals[i];
 
-      val1 = consdata1->vals[i] * cons1scale;
-      val2 = consdata2->vals[i] * cons2scale;
+      if( minscale > scale )
+      {
+         minscale = scale;
 
-      if( !SCIPisEQ(scip, val1, val2) )
-         return FALSE;
+         if( SCIPisLT(scip, minscale, maxscale) )
+            return FALSE;
+      }
+
+      if( maxscale < scale )
+      {
+         maxscale = scale;
+
+         if( SCIPisLT(scip, minscale, maxscale) )
+            return FALSE;
+      }
    }
 
    return TRUE;
@@ -13160,7 +13173,6 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    int minidx;
    int mididx;
    int maxidx;
-   SCIP_Real scale;
 #ifndef NDEBUG
    SCIP* scip;
 
@@ -13178,12 +13190,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    minidx = SCIPvarGetIndex(consdata->vars[0]);
    mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
-   scale = COPYSIGN(1.0/consdata->maxabsval, consdata->vals[0]);
 
    /* using only the variable indices as hash, since the values are compared by epsilon */
-   return SCIPhashSeven(consdata->nvars, minidx, SCIPrealHashCode(consdata->vals[0] * scale),
-                        mididx, SCIPrealHashCode(consdata->vals[consdata->nvars / 2] * scale),
-                        maxidx, SCIPrealHashCode(consdata->vals[consdata->nvars - 1] * scale));
+   return SCIPhashFour(consdata->nvars, minidx, mididx, maxidx);
 }
 
 /** returns the key for deciding which of two parallel constraints should be kept (smaller key should be kept);
@@ -13380,6 +13389,8 @@ SCIP_RETCODE detectRedundantConstraints(
              */
 #ifndef NDEBUG
             {
+               assert(consdata0->validmaxabsval);
+               assert(consdatadel->validmaxabsval);
                int k;
                SCIP_Real scale0 = 1.0 / consdata0->maxabsval;
                SCIP_Real scaledel = COPYSIGN(1.0 / consdatadel->maxabsval, scale);
