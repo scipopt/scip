@@ -1138,7 +1138,6 @@ else()
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
     target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
     add_executable(scip main.c)
-    target_link_libraries(scip PUBLIC libscip)
 endif()
 
 add_executable(SCIP::SCIP ALIAS scip)
@@ -1161,6 +1160,7 @@ endif()
 
 target_link_libraries(scip
     PUBLIC
+    libscip
     ${SYM_LIBRARIES}
     ${ZLIB_LIBRARIES}
     ${Readline_LIBRARY}
@@ -1171,7 +1171,7 @@ target_link_libraries(scip
     ${NLPI_LIBRARIES}
     ${LAPACK_LIBRARIES}
     ${PAPILO_IMPORTED_TARGETS}
-    ${LPSEX_LIBRARIES}
+    ${LPS_LIBRARIES}
 )
 
 add_dependencies(libscip scip_update_githash)
