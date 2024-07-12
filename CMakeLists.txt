@@ -105,8 +105,9 @@ set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create th
 set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values GUI will offer for the variable
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
+set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso highs none)  #define list of values GUI will offer for the variable
 set(LPSEXACT none CACHE STRING "options for exact LP solver")  #create the variable
-set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso highs none )  #define list of values GUI will offer for the variable
+set_property(CACHE LPSEXACT PROPERTY STRINGS none spx qsoex)  #define list of values GUI will offer for the variable
 
 set(SYM snauty CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss sbliss nauty snauty none )  #define list of values GUI will offer for the variable
@@ -620,15 +621,11 @@ endif()
 #multiprecision
 if(EXACTSOLVE OR AUTOBUILD)
     message(STATUS "Building SCIP with support for exact solving mode.")
-    # soplex and Boost is required
-    find_package(SOPLEX CONFIG)
-    find_package(Boost 1.65.0)
 
+    # boost is required
+    find_package(Boost 1.65.0)
     if((NOT Boost_FOUND) AND (NOT AUTOBUILD))
-        message(FATAL_ERROR "Boost Version 1.65 or high is needed to compile with exact solving support.")
-    endif()
-    if((NOT SOPLEX_FOUND) AND (NOT AUTOBUILD))
-        message(FATAL_ERROR "SoPlex is needed as exact LP solver to compile with exact solving support.")
+        message(FATAL_ERROR "Boost Version 1.65 or higher is needed to compile with exact solving support.")
     endif()
 
     set(SCIP_WITH_EXACTSOLVE ON)
@@ -650,6 +647,8 @@ if(EXACTSOLVE OR AUTOBUILD)
             set(BUILD_SHARED_LIBS off)
             set(SHARED off)
             message(STATUS "Turning off shared libraries.")
+        elseif(LPSEXACT STREQUAL "spx")
+            find_package(SOPLEX CONFIG)
         endif()
 
         if(QSOPTEX_FOUND)
@@ -666,10 +665,10 @@ if(EXACTSOLVE OR AUTOBUILD)
             set(lpiexact lpiexact/lpiexact_spx.cpp)
         else()
             set(lpiexact lpiexact/lpiexact_none.c)
-            message(WARNING "SoPlex is needed as exact LP solver to compile with exact solving support.\
-                No SoPlex was found. Continuing without support for exact solving.")
+            message(WARNING "An exact LP solver is required to compile with exact solving support.\
+                Continuing without support for exact solving.")
             set(SCIP_WITH_EXACTSOLVE off)
-         endif()
+        endif()
     else()
         message(WARNING "Boost Version 1.65 or high is needed to compile with exact solving support.\
         No Boost was found. Continuing without support for exact solving.")
