@@ -105,7 +105,7 @@ set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create th
 set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values GUI will offer for the variable
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
-set(LPSEXACT spxexact CACHE STRING "options for LP solver")  #create the variable
+set(LPSEXACT none CACHE STRING "options for exact LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso highs none )  #define list of values GUI will offer for the variable
 
 set(SYM snauty CACHE STRING "options for symmetry computation")  #create the variable
@@ -641,9 +641,7 @@ if(EXACTSOLVE OR AUTOBUILD)
     if(Boost_FOUND)
         include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
         set(SCIP_WITH_BOOST on)
-        if(LPSEXACT STREQUAL "spxexact")
-            find_package(SOPLEX REQUIRED CONFIG)
-        elseif(LPSEXACT STREQUAL "qsoex")
+        if(LPSEXACT STREQUAL "qsoex")
             find_package(QSOPTEX REQUIRED)
             find_package(EGLIB REQUIRED)
             if(EGLIB_FOUND)
@@ -652,8 +650,6 @@ if(EXACTSOLVE OR AUTOBUILD)
             set(BUILD_SHARED_LIBS off)
             set(SHARED off)
             message(STATUS "Turning off shared libraries.")
-        else()
-            set(lpiexact lpiexact/lpiexact_none.c)
         endif()
 
         if(QSOPTEX_FOUND)
