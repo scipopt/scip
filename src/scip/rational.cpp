@@ -2178,8 +2178,6 @@ void RatComputeApproximationLong(
       if( q[2] > maxdenom )
          done = 1;
 
-      int cfcnt = 2;
-
       while(!done && td != 0)
       {
          /* update everything: compute next ai, then update convergents */
@@ -2205,8 +2203,6 @@ void RatComputeApproximationLong(
 
          if( q[2] > maxdenom )
             done = 1;
-
-         cfcnt++;
       }
 
       if( (forcegreater == 1 && scip_rational::Rational(p[2],q[2]) * sign < src->val) ||
@@ -2382,8 +2378,6 @@ void RatComputeApproximation(
       if( q[2] > maxdenom )
          done = 1;
 
-      int cfcnt = 2;
-
       while(!done && td != 0)
       {
          /* update everything: compute next ai, then update convergents */
@@ -2407,8 +2401,6 @@ void RatComputeApproximation(
 
          if( q[2] > maxdenom )
             done = 1;
-
-         cfcnt++;
       }
 
       if( (forcegreater == 1 && scip_rational::Rational(p[2],q[2]) * sign < src->val) ||
