@@ -1115,24 +1115,28 @@ target_include_directories(libscip BEFORE PUBLIC
 target_link_libraries(libscip
     PRIVATE
     ${SYM_LIBRARIES}
-    $<$<BOOL:${SCIP_WITH_ZLIB}>:ZLIB::ZLIB>
+    ${ZLIB_LIBRARIES}
     ${Readline_LIBRARY}
-    ${GMP_LIBRARIES}
-    ${MPFR_LIBRARIES}
     ${THREAD_LIBRARIES}
     ${NLPI_LIBRARIES}
+    ${PAPILO_IMPORTED_TARGETS}
+)
+target_link_libraries(libscip
+    PUBLIC
+    ${GMP_LIBRARIES}
+    ${MPFR_LIBRARIES}
     ${LAPACK_LIBRARIES}
-    ${PAPILO_IMPORTED_TARGETS})
+)
 
 if(SHARED)
     set(SOPLEX_NEEDED 0)
     set(ZIMPL_NEEDED 0)
-    target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
+    target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES})
     add_executable(scip main.c ${scipsources} ${objscipsources} ${lpisources} ${lpiexactsources} ${rectlusources} ${tpisources} ${symsources})
 else()
     set(SOPLEX_NEEDED ${SOPLEX_FOUND})
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
-    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
+    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
     add_executable(scip main.c)
     target_link_libraries(scip PUBLIC libscip)
 endif()
@@ -1156,21 +1160,19 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 target_link_libraries(scip
-   PUBLIC
-   ${SYM_LIBRARIES}
-   $<$<BOOL:${SCIP_WITH_ZLIB}>:ZLIB::ZLIB>
-   ${Readline_LIBRARY}
-   ${GMP_LIBRARIES}
-   ${MPFR_LIBRARIES}
-   ${ZIMPL_LIBRARIES}
-   ${LPS_LIBRARIES}
-   ${LPSEX_LIBRARIES}
-   ${SYM_LIBRARIES}
-   ${THREAD_LIBRARIES}
-   ${NLPI_LIBRARIES}
-   ${LAPACK_LIBRARIES}
-   ${PAPILO_IMPORTED_TARGETS}
-   )
+    PUBLIC
+    ${SYM_LIBRARIES}
+    ${ZLIB_LIBRARIES}
+    ${Readline_LIBRARY}
+    ${GMP_LIBRARIES}
+    ${MPFR_LIBRARIES}
+    ${ZIMPL_LIBRARIES}
+    ${THREAD_LIBRARIES}
+    ${NLPI_LIBRARIES}
+    ${LAPACK_LIBRARIES}
+    ${PAPILO_IMPORTED_TARGETS}
+    ${LPSEX_LIBRARIES}
+)
 
 add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)
