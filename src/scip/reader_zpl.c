@@ -92,6 +92,13 @@ extern "C" {
 }
 #endif
 
+/* disable warning that our callbacks, like xlp_addvar, may return NULL if there was an error earlier,
+ * even though they were declared __attribute__((__nonnull__))
+ */
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wnonnull"
+#endif
+
 #define READER_NAME             "zplreader"
 #define READER_DESC             "file reader for ZIMPL model files"
 #define READER_EXTENSION        "zpl"
