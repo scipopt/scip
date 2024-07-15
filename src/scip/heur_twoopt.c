@@ -674,6 +674,7 @@ SCIP_RETCODE innerPresolve(
    assert(vars != NULL);
    assert(nvars >= 2);
    assert(nblocks != NULL);
+   assert(maxblocksize != NULL);
    assert(nblockvars != NULL);
    assert(blockstart != NULL);
    assert(blockend != NULL);
@@ -765,7 +766,7 @@ SCIP_RETCODE presolveTwoOpt(
    int nbinblockvars = 0;
    int nintblockvars;
    int maxbinblocksize = 0;
-   int maxintblocksize;
+   int maxintblocksize = 0;
 
    assert(scip != NULL);
    assert(heurdata != NULL);
