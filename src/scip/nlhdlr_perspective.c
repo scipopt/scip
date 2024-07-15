@@ -1712,7 +1712,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
       if( doprobingind )
       {
          SCIP_Bool propagate;
-         SCIP_Bool cutoff_probing;
+         SCIP_Bool cutoff_probing = FALSE;
          SCIP_Bool cutoff;
          SCIP_Bool fixed;
 

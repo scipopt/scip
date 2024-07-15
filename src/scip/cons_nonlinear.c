@@ -8718,6 +8718,7 @@ SCIP_RETCODE bilinTermAddAuxExpr(
    }
    else
    {
+      assert(term->aux.exprs != NULL);
       term->aux.exprs[pos]->underestimate |= auxexpr->underestimate;
       term->aux.exprs[pos]->overestimate  |= auxexpr->overestimate;
    }
