@@ -1736,6 +1736,7 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    if( vargraph == NULL )
    {
       SCIP_CALL( SCIPvariableGraphCreate(scip, &vargraph, FALSE, 1.0, NULL) );
+      assert(vargraph != NULL);
       localvargraph = TRUE;
    }
    else
