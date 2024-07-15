@@ -674,6 +674,7 @@ SCIP_RETCODE innerPresolve(
    assert(vars != NULL);
    assert(nvars >= 2);
    assert(nblocks != NULL);
+   assert(maxblocksize != NULL);
    assert(nblockvars != NULL);
    assert(blockstart != NULL);
    assert(blockend != NULL);
@@ -691,6 +692,7 @@ SCIP_RETCODE innerPresolve(
     */
    startindex = 0;
    *nblocks = 0;
+   *maxblocksize = 0;
    *nblockvars = 0;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, blockstart, nvars/2) );
@@ -762,9 +764,9 @@ SCIP_RETCODE presolveTwoOpt(
    int nintvars;
    int nvars;
    SCIP_VAR** vars;
-   int nbinblockvars = 0;
+   int nbinblockvars;
    int nintblockvars;
-   int maxbinblocksize = 0;
+   int maxbinblocksize;
    int maxintblocksize;
 
    assert(scip != NULL);
@@ -777,27 +779,31 @@ SCIP_RETCODE presolveTwoOpt(
    /* get necessary variable information, i.e. number of binary and integer variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
+#ifdef SCIP_STATISTIC
+   /* update statistics */
+   heurdata->ntotalbinvars += nbinvars;
+#endif
+
    /* if number of binary problem variables exceeds 2, they are subject to 2-optimization algorithm, hence heuristic
     * calls innerPresolve method to detect necessary structures. */
    if( nbinvars >= 2 )
    {
       SCIP_CALL( innerPresolve(scip, vars, &(heurdata->binvars), nbinvars, &(heurdata->nbinblocks), &maxbinblocksize,
             &nbinblockvars, &(heurdata->binblockstart), &(heurdata->binblockend), heur, heurdata) );
+
+#ifdef SCIP_STATISTIC
+      /* update statistics */
+      heurdata->binnblocks += heurdata->nbinblocks;
+      heurdata->binnblockvars += nbinblockvars;
+      heurdata->maxbinblocksize = MAX(maxbinblocksize, heurdata->maxbinblocksize);
+
+      SCIPstatisticMessage("   Twoopt BINARY presolving finished with <%d> blocks, <%d> block variables \n",
+         heurdata->nbinblocks, nbinblockvars);
+#endif
    }
 
    heurdata->nbinvars = nbinvars;
    heurdata->execute = nbinvars > 1 && heurdata->nbinblocks > 0;
-
-#ifdef SCIP_STATISTIC
-   /* update statistics */
-   heurdata->binnblocks += (heurdata->nbinblocks);
-   heurdata->binnblockvars += nbinblockvars;
-   heurdata->ntotalbinvars += nbinvars;
-   heurdata->maxbinblocksize = MAX(maxbinblocksize, heurdata->maxbinblocksize);
-
-   SCIPstatisticMessage("   Twoopt BINARY presolving finished with <%d> blocks, <%d> block variables \n",
-      heurdata->nbinblocks, nbinblockvars);
-#endif
 
    if( heurdata->intopt && nintvars > 1 )
    {

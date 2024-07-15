@@ -2480,6 +2480,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
       xmlFreeNode(start);
 
    /* free memory for constraint information (position nconss belongs to the nonlinear objective function) */
+   assert(termssize != NULL);
    for( c = nconss; c >= 0; --c )
    {
       /* free nonlinear parts */
