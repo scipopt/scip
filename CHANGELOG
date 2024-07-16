@@ -12,6 +12,8 @@ Performance improvements
 Examples and applications
 -------------------------
 
+- in example Binpacking implement Farkas pricing for packings because branching can actually lead to infeasible restricted master LPs
+
 Unit tests
 ----------
 
