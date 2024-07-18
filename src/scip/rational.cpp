@@ -634,10 +634,12 @@ void RatSetString(
    else
    {
       std::string s(desc);
+      s = s.substr(s.find_first_not_of(" "),s.length());
+      s = s.substr(0, s.find(" "));
       /* case 1: string is given in nom/den format */
       if( s.find('.') == std::string::npos && findSubStringIC("e",s) == s.end() )
       {
-         res->val = scip_rational::Rational(desc);
+         res->val = scip_rational::Rational(s.c_str());
          res->isinf = FALSE;
       }
       /* case 2: string is given as base-10 decimal number */
