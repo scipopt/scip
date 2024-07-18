@@ -574,7 +574,7 @@ int SCIPtpiGetNumThreads(
    void
    )
 {
-   return _threadpool->nthreads;
+   return _threadpool != NULL ? _threadpool->nthreads : 0;
 }
 
 /** initializes tpi */
