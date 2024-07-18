@@ -26,7 +26,6 @@
 QUEUETYPE	=	srun
 QUEUE		=	M620v2
 PPN 		=	-1
-CLIENTTMPDIR	=	/local/tmp
 NOWAITCLUSTER   =       1
 EXCLUSIVE	=	false
 
