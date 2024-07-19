@@ -2109,10 +2109,6 @@ SCIP_RETCODE boundShift(
    SCIPdebugMessage("   resulting scalar product=[%g,%g]\n", SCIPintervalGetInf(productsidedualval), SCIPintervalGetSup(productsidedualval));
 
    /* calculate min{(obj - dual^TMatrix)redcost} */
-
-   /* compute infimums of -dual^TMatrix */
-   roundmode = SCIPintervalGetRoundingMode();
-   SCIPintervalSetRoundingModeDownwards();
    for( j = 0; j < lp->ncols; ++j )
    {
       col = lp->cols[j];
@@ -2142,7 +2138,8 @@ SCIP_RETCODE boundShift(
          fpdualcolwise[i] = fpdual[colexact->rows[i]->lppos];
       }
       productcoldualval[j].inf = 0.0;
-      SCIPintervalScalprodScalarsInf(SCIPsetInfinity(set), &productcoldualval[j], colexact->nlprows, lpcolvals, fpdualcolwise);
+      productcoldualval[j].sup = 0.0;
+      SCIPintervalScalprodScalars(SCIPsetInfinity(set), &productcoldualval[j], colexact->nlprows, lpcolvals, fpdualcolwise);
 
 #ifndef NDEBUG
       for( i = colexact->nlprows; i < colexact->len; ++i )
@@ -2153,52 +2150,6 @@ SCIP_RETCODE boundShift(
       }
 #endif
    }
-
-   /* compute supremums of -dual^TMatrix */
-   SCIPintervalSetRoundingModeUpwards();
-   for( j = 0; j < lp->ncols; ++j )
-   {
-      col = lp->cols[j];
-      assert(col != NULL);
-      assert(col->nunlinked == 0);
-
-      /* colexact can be longer than col (epsilon entries) so we have to work with colexact */
-      colexact = SCIPcolGetColExact(col);
-
-      assert(colexact->nlprows >= col->nlprows);
-
-      /* create -Matrix.j vector in interval arithmetic and corresponding dual vector and compute supremums of vector -a.j^Ty */
-      for( i = 0; i < colexact->nlprows; ++i )
-      {
-         SCIP_INTERVAL val;
-         SCIP_ROWEXACT* rowexact;
-
-         assert(colexact->rows[i] != NULL);
-         assert(colexact->rows[i]->lppos >= 0);
-         assert(colexact->linkpos[i] >= 0);
-
-         rowexact = colexact->rows[i];
-
-         val = rowexact->valsinterval[colexact->linkpos[i]];
-
-         assert(RatIsGEReal(colexact->vals[i], val.inf) && RatIsLEReal(colexact->vals[i], val.sup));
-
-         SCIPintervalSetBounds(&lpcolvals[i], -val.sup, -val.inf);
-         fpdualcolwise[i] = fpdual[colexact->rows[i]->lppos];
-      }
-      productcoldualval[j].sup = 0.0;
-      SCIPintervalScalprodScalarsSup(SCIPsetInfinity(set), &productcoldualval[j], colexact->nlprows, lpcolvals, fpdualcolwise);
-
-#ifndef NDEBUG
-      for( i = col->nlprows; i < col->len; ++i )
-      {
-         assert(col->rows[i] != NULL);
-         assert(col->rows[i]->lppos == -1);
-         assert(col->linkpos[i] >= 0);
-      }
-#endif
-   }
-   SCIPintervalSetRoundingMode(roundmode);
 
    /* create objective vector and lb/ub vector in interval arithmetic and compute min{(obj^T - dual^TMatrix)lb/ub} */
    for( j = 0; j < lp->ncols; ++j )
@@ -2214,6 +2165,8 @@ SCIP_RETCODE boundShift(
       else
       {
          obj[j] = SCIPvarGetObjInterval(SCIPcolGetVar(col));
+         assert(RatIsGEReal(SCIPcolExactGetObj(SCIPcolGetColExact(col)), obj[j].inf));
+         assert(RatIsLEReal(SCIPcolExactGetObj(SCIPcolGetColExact(col)), obj[j].sup));
       }
 
       assert(SCIPcolGetLb(col) <= RatRoundReal(SCIPvarGetLbLocalExact(col->var), SCIP_R_ROUND_DOWNWARDS));
@@ -2247,8 +2200,24 @@ SCIP_RETCODE boundShift(
          }
       }
    }
-   SCIPintervalAddVectors(SCIPsetInfinity(set), productcoldualval, lp->ncols, productcoldualval, obj);
-   SCIPintervalScalprod(SCIPsetInfinity(set), &safeboundinterval, lp->ncols, productcoldualval, ublbcol);
+   roundmode = SCIPintervalGetRoundingMode();
+   SCIPintervalSetRoundingModeDownwards();
+   {
+      SCIP_Real objcontrib = 0;
+      for (int i = 0; i < lp->ncols; i++)
+      {
+         if(obj[i].sup < 0)
+         {
+            objcontrib += obj[i].sup * SCIPcolGetUb(lp->cols[i]);
+         }
+         else if(obj[i].inf > 0)
+            objcontrib += (-obj[i].inf) * SCIPcolGetLb(lp->cols[i]);
+      }
+      SCIPintervalScalprod(SCIPsetInfinity(set), &safeboundinterval, lp->ncols, productcoldualval, ublbcol);
+      SCIPintervalAddScalar(SCIPsetInfinity(set), &safeboundinterval, safeboundinterval, objcontrib);
+   }
+   SCIPintervalSetRoundingMode(roundmode);
+
 
    /* add dualsol * rhs/lhs (or farkas * rhs/lhs) */
    SCIPintervalAdd(SCIPsetInfinity(set), &safeboundinterval, safeboundinterval, productsidedualval);
