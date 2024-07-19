@@ -135,6 +135,7 @@ Fixed bugs
 - compare coefficient scales to detect parallelism to avoid integral relaxations in detectRedundantConstraints() of cons_linear.c
 - remove coefficient information from linear constraint hashes in order to compare keys with tolerances
 - fixed NULL pointer dereference in SCIPtpiGetNumThreads() of TinyCThread interface if called before SCIPtpiInit(); now returns 0 in this case
+- calling SCIPsolveConcurrent() when SCIP was compiled without a TPI now results in a plugin-not-found error
 
 Performance improvements
 ------------------------
@@ -3181,7 +3182,6 @@ Interface changes
 
 - Misc:
   - changed return type of SCIPcliqueGetId() from `int` to `unsigned int`
-  - SCIPsolveParallel() is deprecated; use SCIPsolveConcurrent() instead
   - removed SCIPvarGetCliqueComponentIdx(); the connectedness information of the clique table is now stored as a
     `SCIP_DISJOINTSET` member of the clique table and cannot be publicly accessed
   - added parameter `copytables` to SCIPcopyPlugins()
