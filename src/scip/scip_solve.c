@@ -2862,8 +2862,8 @@ SCIP_RETCODE SCIPsolveConcurrent(
    )
 {
 #ifdef TPI_NONE
-   SCIPinfoMessage(scip, NULL, "SCIP was compiled without task processing interface. Parallel solve not possible\n");
-   return SCIP_OKAY;
+   SCIPerrorMessage("SCIP was compiled without task processing interface. Concurrent solve not possible\n");
+   return SCIP_PLUGINNOTFOUND;
 #else
    SCIP_RETCODE     retcode;
    int              i;

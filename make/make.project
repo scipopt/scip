@@ -518,7 +518,9 @@ TPILDFLAGS  	=	-openmp$(LINKLIBSUFFIX)
 endif
 else ifeq ($(TPI),tny)
 TPICFLAGS	=
+ifneq ($(COMP),msvc)
 TPILDFLAGS  	=	-lpthread
+endif
 endif
 
 TPILIB		=	$(TPILIBNAME).$(BASE)
