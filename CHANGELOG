@@ -98,6 +98,10 @@ Interface changes
 -----------------
 ### New callbacks
 ### New API functions
+
+- added SCIPtpiIsAvailable() to check whether a working task processing interface is available (TPI != none)
+- added SCIPtpiGetLibraryName() and SCIPtpiGetLibraryDesc()
+
 ### Command line interface
 ### Interfaces to external software
 ### New parameters
