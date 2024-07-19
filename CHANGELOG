@@ -13,6 +13,7 @@ Fixed bugs
 - compare coefficient scales to detect parallelism to avoid integral relaxations in detectRedundantConstraints() of cons_linear.c
 - remove coefficient information from linear constraint hashes in order to compare keys with tolerances
 - fixed NULL pointer dereference in SCIPtpiGetNumThreads() of TinyCThread interface if called before SCIPtpiInit(); now returns 0 in this case
+- calling SCIPsolveConcurrent() when SCIP was compiled without a TPI now results in a plugin-not-found error
 
 Performance improvements
 ------------------------
