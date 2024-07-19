@@ -34,6 +34,8 @@ Build system
 
 ### Cmake
 
+- Fixed compilation and linking with HiGHS. To use HiGHS, cmake now requires to specify the directory containing the `highs-config.cmake` file via `-DHIGHS_DIR`.
+
 ### Makefile
 
 Miscellaneous
