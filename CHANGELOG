@@ -82,6 +82,7 @@ Build system
 ### Cmake
 
 - Fixed compilation and linking with HiGHS. To use HiGHS, cmake now requires to specify the directory containing the `highs-config.cmake` file via `-DHIGHS_DIR`.
+- Extended identification of Ipopt library on Windows to also look for ipopt.dll.lib, as this is used since Ipopt 3.13.0 (2019)
 
 ### Makefile
 
