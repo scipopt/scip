@@ -3471,6 +3471,84 @@ void appendLine(
       endLine(scip, file, linebuffer, linecnt);
 }
 
+/* print row in LP format to file stream */
+static
+SCIP_RETCODE printRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< row name */
+   const char*           rownameextension,   /**< row name extension */
+   const char*           type,               /**< row type ("=", "<=", or ">=") */
+   SCIP_VAR**            linvars,            /**< array of linear variables */
+   SCIP_Rational**       linvals,            /**< array of linear coefficient values */
+   int                   nlinvars,           /**< number of linear variables */
+   SCIP_Rational*        rhs,                /**< right hand side */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   int v;
+   char linebuffer[LP_MAX_PRINTLEN+1] = { '\0' };
+   char ratbuffer[LP_MAX_PRINTLEN+1] = { '\0' };
+   int linecnt;
+
+   char varname[LP_MAX_NAMELEN];
+   char consname[LP_MAX_NAMELEN + 1]; /* an extra character for ':' */
+   char buffer[LP_MAX_PRINTLEN];
+
+   assert( scip != NULL );
+   assert( strcmp(type, "=") == 0 || strcmp(type, "<=") == 0 || strcmp(type, ">=") == 0 );
+   assert( nlinvars == 0 || (linvars != NULL && linvals != NULL) );
+
+   clearLine(linebuffer, &linecnt);
+
+   /* start each line with a space */
+   appendLine(scip, file, linebuffer, &linecnt, " ");
+
+   /* print row name */
+   if( strlen(rowname) > 0 || strlen(rownameextension) > 0 )
+   {
+      (void) SCIPsnprintf(consname, LP_MAX_NAMELEN + 1, "%s%s:", rowname, rownameextension);
+      appendLine(scip, file, linebuffer, &linecnt, consname);
+   }
+
+   /* print coefficients */
+   for( v = 0; v < nlinvars; ++v )
+   {
+      SCIP_VAR* var;
+
+      assert(linvars != NULL);  /* for lint */
+      assert(linvals != NULL);
+
+      var = linvars[v];
+      assert( var != NULL );
+
+      /* we start a new line; therefore we tab this line */
+      if( linecnt == 0 )
+         appendLine(scip, file, linebuffer, &linecnt, " ");
+
+      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+      RatToString(linvals[v], ratbuffer, LP_MAX_PRINTLEN);
+      if( !RatIsNegative(linvals[v]) )
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "+%s %s", ratbuffer, varname);
+      else
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "%s %s", ratbuffer, varname);
+
+      appendLine(scip, file, linebuffer, &linecnt, buffer);
+   }
+
+   RatToString(rhs, ratbuffer, LP_MAX_PRINTLEN);
+   (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %s", type, ratbuffer);
+
+   /* we start a new line; therefore we tab this line */
+   if( linecnt == 0 )
+      appendLine(scip, file, linebuffer, &linecnt, " ");
+   appendLine(scip, file, linebuffer, &linecnt, buffer);
+
+   endLine(scip, file, linebuffer, &linecnt);
+
+   return SCIP_OKAY;
+}
+
 
 /* print row in LP format to file stream */
 static
@@ -4749,6 +4827,30 @@ SCIP_RETCODE SCIPwriteLp(
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
             SCIPinfoMessage(scip, file, ";\n");
+         }
+      }
+      else if(strcmp(conshdlrname, "linear-exact") == 0 )
+      {
+         if( RatIsEqual(SCIPgetRhsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) )
+         {
+            SCIP_CALL( printRowExact(scip, file, consname, "_", "=",
+               SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
+               SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons), transformed) );
+         }
+         else
+         {
+            if( !RatIsNegInfinity(SCIPgetLhsExactLinear(scip, cons)) )
+            {
+               SCIP_CALL( printRowExact(scip, file, consname, "_lhs", ">=",
+                  SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
+                  SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons), transformed) );
+            }
+            if( !RatIsInfinity(SCIPgetRhsExactLinear(scip, cons)) )
+            {
+               SCIP_CALL( printRowExact(scip, file, consname,  "_rhs", "<=",
+                  SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
+                  SCIPgetNVarsExactLinear(scip, cons), SCIPgetRhsExactLinear(scip, cons), transformed) );
+            }
          }
       }
       else
