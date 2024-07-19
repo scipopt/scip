@@ -3059,7 +3059,6 @@ Interface changes
 
 - Misc:
   - changed return type of SCIPcliqueGetId() from `int` to `unsigned int`
-  - SCIPsolveParallel() is deprecated; use SCIPsolveConcurrent() instead
   - removed SCIPvarGetCliqueComponentIdx(); the connectedness information of the clique table is now stored as a
     `SCIP_DISJOINTSET` member of the clique table and cannot be publicly accessed
   - added parameter `copytables` to SCIPcopyPlugins()

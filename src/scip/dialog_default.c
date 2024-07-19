@@ -2147,7 +2147,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecConcurrentOpt)
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      SCIP_CALL( SCIPsolveParallel(scip) );
+      SCIP_CALL( SCIPsolveConcurrent(scip) );
       break;
 
    case SCIP_STAGE_SOLVED:
