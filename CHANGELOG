@@ -62,6 +62,8 @@ Testing
 Build system
 ------------
 
+- changed the default for TPI to tny
+
 ### Makefile
 
 ### Cmake
