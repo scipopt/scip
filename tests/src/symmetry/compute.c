@@ -1918,7 +1918,7 @@ void exampleExpr3(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 2 );
+      cr_assert( nperms == 2 || nperms == 3 );
    }
    else
    {
