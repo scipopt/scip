@@ -512,9 +512,9 @@ SCIP_RETCODE lpiSolve(
       retcode = lpiSolve(lpi);
       if( retcode != SCIP_OKAY )
       {
-         HighsModelStatus model_status = lpi->highs->getModelStatus();
+         HighsModelStatus model_status2 = lpi->highs->getModelStatus();
          SCIPerrorMessage("HiGHS terminated with model status <%s> (%d) after trying to recover inverse\n",
-            lpi->highs->modelStatusToString(model_status).c_str(), (int)model_status);
+            lpi->highs->modelStatusToString(model_status2).c_str(), (int)model_status2);
       }
       HIGHS_CALL( lpi->highs->setOptionValue("presolve", "on") );
       SCIP_CALL( retcode );
