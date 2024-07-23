@@ -115,6 +115,9 @@
  *   allocations. In particular for the column-wise algorithm, even allocating and zeroing an array of size m+n for an
  *   m x n matrix can significantly slow down the code!
  *
+ * 3. The graphs of the S,P and Q members do not need to be stored explicitly, as they always have the same structure.
+ *    This also makes it easier to permute edges of S nodes on the fly.
+ *
  * TODO: fix tracking connectivity more cleanly, should not be left up to the algorithms ideally
  */
 
@@ -411,9 +414,11 @@ typedef struct
 
 #ifndef NDEBUG
 
-static SCIP_Bool nodeIsRepresentative(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_node node
+/**< Check if a node is a representative in the union-find data structure for nodes */
+static
+SCIP_Bool nodeIsRepresentative(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_node             node                /**< The node to check if it is representative */
 )
 {
    assert(dec);
@@ -425,9 +430,11 @@ static SCIP_Bool nodeIsRepresentative(
 
 #endif
 
-static spqr_node findNode(
-   SCIP_NETMATDECDATA* dec,
-   spqr_node node
+/**< Find the node its representative node in the union-find data structure */
+static
+spqr_node findNode(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_node             node                /**< The node to find the representative for */
 )
 {
    assert(dec);
@@ -457,9 +464,12 @@ static spqr_node findNode(
    return root;
 }
 
-static spqr_node findNodeNoCompression(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_node node
+/**< Find the node its representative node in the union-find data structure, without compressing the union-find tree.
+   * Should only be used for debugging or asserts. */
+static
+spqr_node findNodeNoCompression(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_node             node                /**< The node to find the representative for */
 )
 {
    assert(dec);
@@ -479,9 +489,12 @@ static spqr_node findNodeNoCompression(
    return root;
 }
 
-static spqr_node findArcTail(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Find the arc's tail node in the union find data structure of the nodes.
+   * Updates the arc's tail to point to the representative for faster future queries. */
+static
+spqr_node findArcTail(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc whose tail we want to find */
 )
 {
    assert(dec);
@@ -494,9 +507,12 @@ static spqr_node findArcTail(
    return representative;
 }
 
-static spqr_node findArcHead(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Find the arc's head node in the union find data structure of the nodes.
+   * Updates the arc's head to point to the representative for faster future queries. */
+static
+spqr_node findArcHead(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc whose head we want to find */
 )
 {
    assert(dec);
@@ -509,9 +525,12 @@ static spqr_node findArcHead(
    return representative;
 }
 
-static spqr_node findArcHeadNoCompression(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Find the arc's head node in the union find data structure of the nodes, without compressing the union-find tree.
+   * Should only be used in debugging statements or asserts. */
+static
+spqr_node findArcHeadNoCompression(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc whose head we want to find */
 )
 {
    assert(dec);
@@ -522,9 +541,12 @@ static spqr_node findArcHeadNoCompression(
    return representative;
 }
 
-static spqr_node findArcTailNoCompression(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Find the arc's tail node in the union find data structure of the nodes, without compressing the union-find tree.
+   * Should only be used in debugging statements or asserts. */
+static
+spqr_node findArcTailNoCompression(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc whose tail we want to find */
 )
 {
    assert(dec);
@@ -535,10 +557,12 @@ static spqr_node findArcTailNoCompression(
    return representative;
 }
 
-
-static spqr_arc getFirstNodeArc(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_node node
+/**< Find the first arc in the list of arcs that are adjacent to the given node.
+   * These arcs form a cyclic linked-list. */
+static
+spqr_arc getFirstNodeArc(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_node             node                /**< The node to find the arc for */
 )
 {
    assert(dec);
@@ -547,10 +571,13 @@ static spqr_arc getFirstNodeArc(
    return dec->nodes[node].firstArc;
 }
 
-static spqr_arc getNextNodeArcNoCompression(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   spqr_node node
+/**< Given the current arc adjacent to this node, find the next arc in the cyclic linked list of adjacent arcs to the
+   * given node. This function does not compress the union-find tree, and should only be used in debugging or asserts.*/
+static
+spqr_arc getNextNodeArcNoCompression(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc,                /**< The current arc that is adjacent to this node */
+   spqr_node             node                /**< The node to which the arc is adjacent */
 )
 {
    assert(dec);
@@ -561,7 +588,8 @@ static spqr_arc getNextNodeArcNoCompression(
    if( findArcHeadNoCompression(dec, arc) == node )
    {
       arc = dec->arcs[arc].headArcListNode.next;
-   } else
+   }
+   else
    {
       assert(findArcTailNoCompression(dec, arc) == node);
       arc = dec->arcs[arc].tailArcListNode.next;
@@ -569,10 +597,13 @@ static spqr_arc getNextNodeArcNoCompression(
    return arc;
 }
 
-static spqr_arc getNextNodeArc(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   spqr_node node
+/**< Given the current arc adjacent to this node, find the next arc in the cyclic linked list of adjacent arcs to the
+   * given node. */
+static
+spqr_arc getNextNodeArc(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_arc              arc,                /**< The current arc that is adjacent to this node */
+   spqr_node             node                /**< The node to which the arc is adjacent */
 )
 {
    assert(dec);
@@ -583,19 +614,23 @@ static spqr_arc getNextNodeArc(
    if( findArcHead(dec, arc) == node )
    {
       arc = dec->arcs[arc].headArcListNode.next;
-   } else
+   }
+   else
    {
       assert(findArcTailNoCompression(dec, arc) == node);
-      dec->arcs[arc].tail = node;//This assignment is not necessary but speeds up future queries.
+      dec->arcs[arc].tail = node; //This assignment is not necessary but speeds up future queries.
       arc = dec->arcs[arc].tailArcListNode.next;
    }
    return arc;
 }
 
-static spqr_arc getPreviousNodeArc(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   spqr_node node
+/**< Given the current arc adjacent to this node, find the previous arc in the cyclic linked list of adjacent arcs
+   * to the given node. */
+static
+spqr_arc getPreviousNodeArc(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_arc              arc,                /**< The current arc that is adjacent to this node */
+   spqr_node             node                /**< The node to which the arc is adjacent */
 )
 {
    assert(dec);
@@ -606,7 +641,8 @@ static spqr_arc getPreviousNodeArc(
    if( findArcHead(dec, arc) == node )
    {
       arc = dec->arcs[arc].headArcListNode.previous;
-   } else
+   }
+   else
    {
       assert(findArcTailNoCompression(dec, arc) == node);
       dec->arcs[arc].tail = node;//This assignment is not necessary but speeds up future queries.
@@ -615,13 +651,15 @@ static spqr_arc getPreviousNodeArc(
    return arc;
 }
 
-static void mergeNodeArcList(
-   SCIP_NETMATDECDATA* dec,
-   spqr_node toMergeInto,
-   spqr_node toRemove
+/**< Update the cyclic node-arc incidence data structure to move all arcs adjacent to one node to another node.
+   * We typically call this when two nodes are identified with one another, and we need to merge their adjacent arcs. */
+static
+void mergeNodeArcList(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_node             toMergeInto,        /**< The node that we want to give all the arcs of both nodes */
+   spqr_node             toRemove            /**< The node whose arcs we want to remove */
 )
 {
-
    spqr_arc firstIntoArc = getFirstNodeArc(dec, toMergeInto);
    spqr_arc firstFromArc = getFirstNodeArc(dec, toRemove);
    if( SPQRarcIsInvalid(firstIntoArc))
@@ -634,7 +672,8 @@ static void mergeNodeArcList(
       dec->nodes[toRemove].firstArc = SPQR_INVALID_ARC;
 
       return;
-   } else if( SPQRarcIsInvalid(firstFromArc))
+   }
+   else if( SPQRarcIsInvalid(firstFromArc))
    {
       //Old node has no arcs; we can just return
       return;
@@ -670,9 +709,11 @@ static void mergeNodeArcList(
    dec->nodes[toRemove].firstArc = SPQR_INVALID_ARC;
 }
 
-static void arcFlipReversed(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Flips the direction a given arc. */
+static
+void arcFlipReversed(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc that we want to flip */
 )
 {
    assert(dec);
@@ -681,10 +722,12 @@ static void arcFlipReversed(
    dec->arcs[arc].reversed = !dec->arcs[arc].reversed;
 }
 
-static void arcSetReversed(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   SCIP_Bool reversed
+/**< Sets the direction of a given arc */
+static
+void arcSetReversed(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_arc              arc,                /**< The given arc */
+   SCIP_Bool             reversed            /**< Are the head and tail reversed?*/
 )
 {
    assert(dec);
@@ -693,10 +736,15 @@ static void arcSetReversed(
    dec->arcs[arc].reversed = reversed;
 }
 
-static void arcSetRepresentative(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   spqr_arc representative
+
+/**< Sets the representative of a given arc. The arcs reversed field is given with respect to the representative.
+   * In particular, whether an arc is reversed or not is determined by the sign of the path in the signed union-find
+   * data structure for arcs, which can be computed by multiplying the signs of the individual edges (xor over bools) */
+static
+void arcSetRepresentative(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_arc              arc,                /**< The given arc */
+   spqr_arc              representative      /**< The representative to set the arc to */
 )
 {
    assert(dec);
@@ -706,10 +754,13 @@ static void arcSetRepresentative(
    dec->arcs[arc].representative = representative;
 }
 
-static spqr_node mergeNodes(
-   SCIP_NETMATDECDATA* dec,
-   spqr_node first,
-   spqr_node second
+/**< Merge two representative nodes (Union operation) in the union-find data structure for nodes.
+   * Returns the id of the node that becomes representative for both.*/
+static
+spqr_node mergeNodes(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_node             first,              /**< A node to merge */
+   spqr_node             second              /**< A second node to merge */
 )
 {
    assert(dec);
@@ -720,7 +771,7 @@ static spqr_node mergeNodes(
    assert(second < dec->memNodes);
 
    //The rank is stored as a negative number: we decrement it making the negative number larger.
-   // We want the new root to be the one with 'largest' rank, so smallest number. If they are equal, we decrement.
+   //We want the new root to be the one with 'largest' rank, so smallest number. If they are equal, we decrement.
    spqr_node firstRank = dec->nodes[first].representativeNode;
    spqr_node secondRank = dec->nodes[second].representativeNode;
    if( firstRank > secondRank )
@@ -737,9 +788,12 @@ static spqr_node mergeNodes(
    return first;
 }
 
-static SCIP_Bool memberIsRepresentative(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_member member
+
+/**< Check if a member is a representative in the union-find data structure for members*/
+static
+SCIP_Bool memberIsRepresentative(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_member           member              /**< The member to check */
 )
 {
    assert(dec);
@@ -749,9 +803,11 @@ static SCIP_Bool memberIsRepresentative(
    return SPQRmemberIsInvalid(dec->members[member].representativeMember);
 }
 
-static spqr_member findMember(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member member
+/**< Find the member its representative member in the union-find data structure */
+static
+spqr_member findMember(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_member           member              /**< The member to find the representative for */
 )
 {
    assert(dec);
@@ -781,9 +837,12 @@ static spqr_member findMember(
    return root;
 }
 
-static spqr_member findMemberNoCompression(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_member member
+/**< Find the member's representative member in the union-find data structure, without compressing the union-find tree.
+   * Should only be used for debugging or asserts. */
+static
+spqr_member findMemberNoCompression(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_member           member              /**< The member to find the representative for */
 )
 {
    assert(dec);
@@ -804,10 +863,13 @@ static spqr_member findMemberNoCompression(
    return root;
 }
 
-static spqr_member mergeMembers(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member first,
-   spqr_member second
+/**< Merge two representative members (Union operation) in the union-find data structure.
+   * Returns the id of the member that becomes representative for both.*/
+static
+spqr_member mergeMembers(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_member           first,              /**< The first member to merge */
+   spqr_member           second              /**< The second member to merge */
 )
 {
    assert(dec);
@@ -833,9 +895,11 @@ static spqr_member mergeMembers(
    return first;
 }
 
-static spqr_member findArcMember(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Finds the member in which the arc is located */
+static
+spqr_member findArcMember(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to find the member for */
 )
 {
    assert(dec);
@@ -847,9 +911,11 @@ static spqr_member findArcMember(
    return representative;
 }
 
-static spqr_member findArcMemberNoCompression(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Finds the member in which the arc is located, without compressing the member union-find tree */
+static
+spqr_member findArcMemberNoCompression(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to find the member for */
 )
 {
    assert(dec);
@@ -860,9 +926,11 @@ static spqr_member findArcMemberNoCompression(
    return representative;
 }
 
-static spqr_member findMemberParent(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member member
+/**< Find the representative parent member of the given member. Note the given member must be representative. */
+static
+spqr_member findMemberParent(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_member           member              /**< The member to find the parent for. Must be representative. */
 )
 {
    assert(dec);
@@ -881,9 +949,12 @@ static spqr_member findMemberParent(
    return parent_representative;
 }
 
-static spqr_member findMemberParentNoCompression(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_member member
+/**< Find the representative parent member of the given member. Note the given member must be representative.
+ *   This version does not perform compression of the union-find tree, and should only be used in debug or asserts. */
+static
+spqr_member findMemberParentNoCompression(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_member           member              /**< The member to find the parent for. Must be representative. */
 )
 {
    assert(dec);
@@ -899,9 +970,11 @@ static spqr_member findMemberParentNoCompression(
    return parent_representative;
 }
 
-static spqr_member findArcChildMember(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Find the child member associated to the given arc. Can only call for virtual arcs.*/
+static
+spqr_member findArcChildMember(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to find the child member for */
 )
 {
    assert(dec);
@@ -913,9 +986,12 @@ static spqr_member findArcChildMember(
    return representative;
 }
 
-static spqr_member findArcChildMemberNoCompression(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Find the child member associated to the given arc. Can only call for virtual arcs.
+   * This version does not compress the union-find tree and should only be used for debugging and asserts. */
+static
+spqr_member findArcChildMemberNoCompression(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to find the child member for */
 )
 {
    assert(dec);
@@ -926,10 +1002,11 @@ static spqr_member findArcChildMemberNoCompression(
    return representative;
 }
 
-// Only accounts for CHILD markers, not parent markers!
-static SCIP_Bool arcIsMarker(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Checks if the arc has a child member */
+static
+SCIP_Bool arcIsChildMarker(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to check */
 )
 {
    assert(dec);
@@ -939,9 +1016,11 @@ static SCIP_Bool arcIsMarker(
    return SPQRmemberIsValid(dec->arcs[arc].childMember);
 }
 
-static SCIP_Bool arcIsTree(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Check whether the given arc is a tree arc or not, i.e. whether it belongs to a (virtual) row or column or not */
+static
+SCIP_Bool arcIsTree(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to check */
 )
 {
    assert(dec);
@@ -960,9 +1039,12 @@ typedef struct
 
 #ifndef NDEBUG
 
-static SCIP_Bool arcIsRepresentative(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Check if an arc is a representative in the signed union-find data structure for arc directions. In each member,
+   * exactly one arc is the representative. */
+static
+SCIP_Bool arcIsRepresentative(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to check */
 )
 {
    assert(dec);
@@ -974,9 +1056,11 @@ static SCIP_Bool arcIsRepresentative(
 
 #endif
 
-static ArcSign findArcSign(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Find an arcs representative and its direction in the signed union-find data structure for arcs */
+static
+ArcSign findArcSign(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to find the representative and direction for */
 )
 {
    assert(dec);
@@ -1020,9 +1104,12 @@ static ArcSign findArcSign(
    return sign;
 }
 
-static ArcSign findArcSignNoCompression(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Find an arcs representative and its direction in the signed union-find data structure for arcs.
+   * This version does not compress the union-find tree and should only be used in debug and asserts. */
+static
+ArcSign findArcSignNoCompression(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to find the representative and direction for */
 )
 {
    assert(dec);
@@ -1047,72 +1134,85 @@ static ArcSign findArcSignNoCompression(
    return sign;
 }
 
-//Find the arc tail/head, but accounting for reflection
-static spqr_node findEffectiveArcHead(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Finds the arcs head, taking into account whether it is reversed by the signed union-find data structure.*/
+static
+spqr_node findEffectiveArcHead(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to find the head for */
 )
 {
    assert(dec);
    if( findArcSign(dec, arc).reversed )
    {
       return findArcTail(dec, arc);
-   } else
+   }
+   else
    {
       return findArcHead(dec, arc);
    }
 }
 
-static spqr_node findEffectiveArcTail(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Finds the arcs tail, taking into account whether it is reversed by the signed union-find data structure.*/
+static
+spqr_node findEffectiveArcTail(
+   SCIP_NETMATDECDATA*   dec,                /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to find the tail for */
 )
 {
    assert(dec);
    if( findArcSign(dec, arc).reversed )
    {
       return findArcHead(dec, arc);
-   } else
+   }
+   else
    {
       return findArcTail(dec, arc);
    }
 }
-
-static spqr_node findEffectiveArcHeadNoCompression(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Finds the arcs head, taking into account whether it is reversed by the signed union-find data structure.
+   * This version does not compress the union-find tree and should only be used in debug and asserts. */
+static
+spqr_node findEffectiveArcHeadNoCompression(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to find the head for */
 )
 {
    assert(dec);
    if( findArcSignNoCompression(dec, arc).reversed )
    {
       return findArcTailNoCompression(dec, arc);
-   } else
+   }
+   else
    {
       return findArcHeadNoCompression(dec, arc);
    }
 }
 
-static spqr_node findEffectiveArcTailNoCompression(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Finds the arcs tail, taking into account whether it is reversed by the signed union-find data structure.
+   * This version does not compress the union-find tree and should only be used in debug and asserts. */
+static
+spqr_node findEffectiveArcTailNoCompression(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to find the tail for */
 )
 {
    assert(dec);
    if( findArcSignNoCompression(dec, arc).reversed )
    {
       return findArcHeadNoCompression(dec, arc);
-   } else
+   }
+   else
    {
       return findArcTailNoCompression(dec, arc);
    }
 }
 
-/** Merges the sign union-find structures for two arc sets. If reflectRelative is set to true then all arcs of the
+/**< Merges the sign union-find structures for two arc sets. If reflectRelative is set to true then all arcs of the
  * represented by the second arc are reversed w.r.t. their current orientation. Otherwise, all arcs keep the same
  * reversed status with respect to the root node of the union find tree.
  */
-static spqr_arc mergeArcSigns(
+static
+spqr_arc mergeArcSigns(
    SCIP_NETMATDECDATA*   dec,                /**< The decomposition data structure */
    spqr_arc              first,              /**< Representative arc of the first arc set */
    spqr_arc              second,             /**< Representative arc of the second arc set */
@@ -1151,9 +1251,12 @@ static spqr_arc mergeArcSigns(
    return first;
 }
 
-static SCIP_Bool arcIsReversedNonRigid(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Checks whether an arc is reversed for arcs in non-rigid members. For non-rigid members, we do not use the
+ *   union-find datastructure, as we can get away without it. */
+static
+SCIP_Bool arcIsReversedNonRigid(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to check */
 )
 {
    assert(dec);
@@ -1163,10 +1266,11 @@ static SCIP_Bool arcIsReversedNonRigid(
    return dec->arcs[arc].reversed;
 }
 
-
-static spqr_element arcGetElement(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Gets the element (row/column) associated to the given arc */
+static
+spqr_element arcGetElement(
+   const SCIP_NETMATDECDATA* dec,            /**< The network decomposition */
+   spqr_arc              arc                 /**< The arc to get the element for */
 )
 {
    assert(dec);
@@ -1176,7 +1280,9 @@ static spqr_element arcGetElement(
    return dec->arcs[arc].element;
 }
 
-static SCIP_Bool netMatDecDataContainsRow(
+/**< Check whether the network matrix decomposition contains an edge for the given row index */
+static
+SCIP_Bool netMatDecDataContainsRow(
    SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
    int                   row                 /**< The row index that is checked */
 )
@@ -1186,7 +1292,9 @@ static SCIP_Bool netMatDecDataContainsRow(
    return SPQRarcIsValid(dec->rowArcs[row]);
 }
 
-static SCIP_Bool netMatDecDataContainsColumn(
+/**< Check whether the network matrix decomposition contains an edge for the given column index */
+static
+SCIP_Bool netMatDecDataContainsColumn(
    SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
    int                   column              /**< The column index that is checked */
 )
@@ -1196,10 +1304,12 @@ static SCIP_Bool netMatDecDataContainsColumn(
    return SPQRarcIsValid(dec->columnArcs[column]);
 }
 
-static void setDecompositionColumnArc(
-   SCIP_NETMATDECDATA* dec,
-   spqr_col col,
-   spqr_arc arc
+/**< Associate the given arc to the given column in the network matrix decomposition. */
+static
+void setDecompositionColumnArc(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_col              col,                /**< The column to associate */
+   spqr_arc              arc                 /**< The arc to associate to the column */
 )
 {
    assert(SPQRcolIsValid(col) && col < dec->memColumns);
@@ -1208,10 +1318,12 @@ static void setDecompositionColumnArc(
    dec->columnArcs[col] = arc;
 }
 
-static void setDecompositionRowArc(
-   SCIP_NETMATDECDATA* dec,
-   spqr_row row,
-   spqr_arc arc
+/**< Associate the given arc to the given row in the network matrix decomposition. */
+static
+void setDecompositionRowArc(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_row              row,                /**< The row to associate */
+   spqr_arc              arc                 /**< The arc to associate to the row */
 )
 {
    assert(SPQRrowIsValid(row) && row < dec->memRows);
@@ -1220,9 +1332,11 @@ static void setDecompositionRowArc(
    dec->rowArcs[row] = arc;
 }
 
-static spqr_arc getDecompositionColumnArc(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_col col
+/**< Get the decomposition arc associated to the given column. */
+static
+spqr_arc getDecompositionColumnArc(
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   spqr_col              col                 /**< The given column */
 )
 {
    assert(SPQRcolIsValid(col) && col < dec->memColumns);
@@ -1230,9 +1344,11 @@ static spqr_arc getDecompositionColumnArc(
    return dec->columnArcs[col];
 }
 
-static spqr_arc getDecompositionRowArc(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_row row
+/**< Get the decomposition arc associated to the given row. */
+static
+spqr_arc getDecompositionRowArc(
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   spqr_row              row                 /**< The given row */
 )
 {
    assert(SPQRrowIsValid(row) && row < dec->memRows);
@@ -1240,7 +1356,9 @@ static spqr_arc getDecompositionRowArc(
    return dec->rowArcs[row];
 }
 
-static SCIP_RETCODE netMatDecDataCreate(
+/**< Initialize the network matrix decomposition data structure */
+static
+SCIP_RETCODE netMatDecDataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NETMATDECDATA**  pdec,               /**< buffer to store pointer to created decomposition */
    int                   nrows,              /**< The maximal number of rows that the decomposition can expect */
@@ -1312,7 +1430,9 @@ static SCIP_RETCODE netMatDecDataCreate(
    return SCIP_OKAY;
 }
 
-static void netMatDecDataFree(
+/**< Free the network matrix decomposition data structure */
+static
+void netMatDecDataFree(
    SCIP_NETMATDECDATA**  pdec                /**< pointer to the network matrix decomposition to freed */
 ){
    assert(pdec);
@@ -1328,9 +1448,11 @@ static void netMatDecDataFree(
    SCIPfreeBlockMemory(dec->env, pdec);
 }
 
-static spqr_arc getFirstMemberArc(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_member member
+/**< Get the first arc of the linked list of arcs contained in the given member */
+static
+spqr_arc getFirstMemberArc(
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   spqr_member           member              /**< The given member */
 )
 {
    assert(dec);
@@ -1339,9 +1461,11 @@ static spqr_arc getFirstMemberArc(
    return dec->members[member].firstArc;
 }
 
-static spqr_arc getNextMemberArc(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Given the current arc, get the next arc of the linked list of arcs that are in the same member */
+static
+spqr_arc getNextMemberArc(
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   spqr_arc              arc                 /**< The current arc */
 )
 {
    assert(dec);
@@ -1351,9 +1475,11 @@ static spqr_arc getNextMemberArc(
    return arc;
 }
 
-static spqr_arc getPreviousMemberArc(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Given the current arc, get the previous arc of the linked list of arcs that are in the same member */
+static
+spqr_arc getPreviousMemberArc(
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   spqr_arc              arc                 /**< The current arc */
 )
 {
    assert(dec);
@@ -1363,10 +1489,12 @@ static spqr_arc getPreviousMemberArc(
    return arc;
 }
 
-static void addArcToMemberArcList(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   spqr_member member
+/**< Adds an arc to the linked list of arcs of the given member */
+static
+void addArcToMemberArcList(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_arc              arc,                /**< The arc to add */
+   spqr_member           member              /**< The member to add the arc to */
 )
 {
    spqr_arc firstMemberArc = getFirstMemberArc(dec, member);
@@ -1378,7 +1506,8 @@ static void addArcToMemberArcList(
       dec->arcs[arc].arcListNode.previous = lastMemberArc;
       dec->arcs[firstMemberArc].arcListNode.previous = arc;
       dec->arcs[lastMemberArc].arcListNode.next = arc;
-   } else
+   }
+   else
    {
       assert(dec->members[member].numArcs == 0);
       dec->arcs[arc].arcListNode.next = arc;
@@ -1388,11 +1517,13 @@ static void addArcToMemberArcList(
    ++( dec->members[member].numArcs );
 }
 
-static SCIP_RETCODE createArc(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member member,
-   SCIP_Bool reversed,
-   spqr_arc* pArc
+/**< Create a new arc in the network matrix decomposition */
+static
+SCIP_RETCODE createArc(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_member           member,             /**< The member that contains the arc */
+   SCIP_Bool             reversed,           /**< Is the arc reversed or not? */
+   spqr_arc*             pArc                /**< out-pointer to the id that is assigned to the arc. */
 )
 {
    assert(dec);
@@ -1403,7 +1534,8 @@ static SCIP_RETCODE createArc(
    if( SPQRarcIsValid(idx))
    {
       dec->firstFreeArc = dec->arcs[idx].arcListNode.next;
-   } else
+   }
+   else
    {
       //Enlarge array, no free nodes in arc list
       int newSize = 2 * dec->memArcs;
@@ -1437,12 +1569,14 @@ static SCIP_RETCODE createArc(
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE createRowArc(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member member,
-   spqr_arc* pArc,
-   spqr_row row,
-   SCIP_Bool reversed
+/**< Create a new arc in the network matrix decomposition that is associated to the given row */
+static
+SCIP_RETCODE createRowArc(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_member           member,             /**< The member that contains the arc */
+   spqr_arc*             pArc,               /**< out-pointer to the id that is assigned to the arc. */
+   spqr_row              row,                /**< The row associated to the arc */
+   SCIP_Bool             reversed            /**< Is the arc reversed or not? */
 )
 {
    SCIP_CALL(createArc(dec, member, reversed, pArc));
@@ -1453,12 +1587,14 @@ static SCIP_RETCODE createRowArc(
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE createColumnArc(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member member,
-   spqr_arc* pArc,
-   spqr_col column,
-   SCIP_Bool reversed
+/**< Create a new arc in the network matrix decomposition that is associated to the given column */
+static
+SCIP_RETCODE createColumnArc(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_member           member,             /**< The member that contains the arc */
+   spqr_arc*             pArc,               /**< out-pointer to the id that is assigned to the arc. */
+   spqr_col              column,             /**< The column associated to the arc */
+   SCIP_Bool             reversed            /**< Is the arc reversed or not? */
 )
 {
    SCIP_CALL(createArc(dec, member, reversed, pArc));
@@ -1469,10 +1605,12 @@ static SCIP_RETCODE createColumnArc(
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE createMember(
-   SCIP_NETMATDECDATA* dec,
-   SPQRMemberType type,
-   spqr_member* pMember
+/**< Create a new member in the network matrix decomposition. */
+static
+SCIP_RETCODE createMember(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   SPQRMemberType        type,               /**< The SPQR-type of the member */
+   spqr_member*          pMember             /**< out-pointer to the id that is assigned to the member. */
 )
 {
    assert(dec);
@@ -1499,9 +1637,11 @@ static SCIP_RETCODE createMember(
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE createNode(
-   SCIP_NETMATDECDATA* dec,
-   spqr_node* pNode
+/**< Create a new node in the network matrix decomposition. */
+static
+SCIP_RETCODE createNode(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_node*            pNode               /**< out-pointer to the id that is assigned to the node */
 )
 {
 
@@ -1520,11 +1660,13 @@ static SCIP_RETCODE createNode(
    return SCIP_OKAY;
 }
 
-static void removeArcFromNodeArcList(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   spqr_node node,
-   SCIP_Bool nodeIsHead
+/**< Remove an arc from the linked list of arcs that are adjacent to a given node */
+static
+void removeArcFromNodeArcList(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_arc              arc,                /**< The arc to remove */
+   spqr_node             node,               /**< The node to remove the arc from */
+   SCIP_Bool             nodeIsHead          /**< Indicates whether the node is the arcs head, or tail */
 )
 {
    SPQRNetworkDecompositionArcListNode* arcListNode = nodeIsHead ? &dec->arcs[arc].headArcListNode
@@ -1533,7 +1675,8 @@ static void removeArcFromNodeArcList(
    if( dec->nodes[node].numArcs == 1 )
    {
       dec->nodes[node].firstArc = SPQR_INVALID_ARC;
-   } else
+   }
+   else
    {
       spqr_arc next_arc = arcListNode->next;
       spqr_arc prev_arc = arcListNode->previous;
@@ -1555,11 +1698,13 @@ static void removeArcFromNodeArcList(
    --( dec->nodes[node].numArcs );
 }
 
-static void addArcToNodeArcList(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   spqr_node node,
-   SCIP_Bool nodeIsHead
+/**< Add an arc to the linked list of arcs that are adjacent to a given node */
+static
+void addArcToNodeArcList(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_arc              arc,                /**< The arc to add */
+   spqr_node             node,               /**< The node to add the arc to */
+   SCIP_Bool             nodeIsHead          /**< Indicates whether the node is the arcs head, or tail */
 )
 {
    assert(nodeIsRepresentative(dec, node));
@@ -1585,7 +1730,8 @@ static void addArcToNodeArcList(
       previousListNode->next = arc;
       nextListNode->previous = arc;
 
-   } else
+   }
+   else
    {
       arcListNode->next = arc;
       arcListNode->previous = arc;
@@ -1595,26 +1741,31 @@ static void addArcToNodeArcList(
    if( nodeIsHead )
    {
       dec->arcs[arc].head = node;
-   } else
+   }
+   else
    {
       dec->arcs[arc].tail = node;
    }
 }
 
-static void setArcHeadAndTail(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   spqr_node head,
-   spqr_node tail
+/**< Initializes the data structures of the arcs head and tail nodes */
+static
+void setArcHeadAndTail(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_arc              arc,                /**< The arc to initialize */
+   spqr_node             head,               /**< The arc its head node*/
+   spqr_node             tail                /**< The arc its tail node*/
 )
 {
    addArcToNodeArcList(dec, arc, head, TRUE);
    addArcToNodeArcList(dec, arc, tail, FALSE);
 }
 
-static void clearArcHeadAndTail(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc
+/**< Deinitializes the data structures of the arcs head and tail nodes */
+static
+void clearArcHeadAndTail(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_arc              arc                /**< The arc to deinitialize */
 )
 {
    removeArcFromNodeArcList(dec, arc, findArcHead(dec, arc), TRUE);
@@ -1623,11 +1774,13 @@ static void clearArcHeadAndTail(
    dec->arcs[arc].tail = SPQR_INVALID_NODE;
 }
 
-static void changeArcHead(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   spqr_node oldHead,
-   spqr_node newHead
+/**< Change the arc's head node to a new node */
+static
+void changeArcHead(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_arc              arc,                /**< The given arc */
+   spqr_node             oldHead,            /**< The current head node of the arc */
+   spqr_node             newHead             /**< The new head node of the arc */
 )
 {
    assert(nodeIsRepresentative(dec, oldHead));
@@ -1636,11 +1789,13 @@ static void changeArcHead(
    addArcToNodeArcList(dec, arc, newHead, TRUE);
 }
 
-static void changeArcTail(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   spqr_node oldTail,
-   spqr_node newTail
+/**< Change the arc's head node to a new node */
+static
+void changeArcTail(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_arc              arc,                /**< The given arc */
+   spqr_node             oldTail,            /**< The current tail node of the arc */
+   spqr_node             newTail             /**< The new tail node of the arc */
 )
 {
    assert(nodeIsRepresentative(dec, oldTail));
@@ -1649,9 +1804,11 @@ static void changeArcTail(
    addArcToNodeArcList(dec, arc, newTail, FALSE);
 }
 
-static int nodeDegree(
-   SCIP_NETMATDECDATA* dec,
-   spqr_node node
+/**< Returns the degree of the given node */
+static
+int nodeDegree(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_node             node                /**< The given node */
 )
 {
    assert(dec);
@@ -1660,9 +1817,11 @@ static int nodeDegree(
    return dec->nodes[node].numArcs;
 }
 
-static SPQRMemberType getMemberType(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_member member
+/**< Get the SPQR-type of the given member */
+static
+SPQRMemberType getMemberType(
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   spqr_member           member              /**< The given member */
 )
 {
    assert(dec);
@@ -1672,10 +1831,12 @@ static SPQRMemberType getMemberType(
    return dec->members[member].type;
 }
 
-static void updateMemberType(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_member member,
-   SPQRMemberType type
+/**< Update the SPQR-type of the given member */
+static
+void updateMemberType(
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   spqr_member           member,             /**< The member to update the type for */
+   SPQRMemberType        type                /**< The new SPQR-type of the member */
 )
 {
    assert(dec);
@@ -1686,9 +1847,11 @@ static void updateMemberType(
    dec->members[member].type = type;
 }
 
-static spqr_arc markerToParent(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_member member
+/**< Returns the virtual arc pointing to the parent member (in the arborescence) of the given member */
+static
+spqr_arc markerToParent(
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   spqr_member           member              /**< The given member */
 )
 {
    assert(dec);
@@ -1698,10 +1861,12 @@ static spqr_arc markerToParent(
    return dec->members[member].markerToParent;
 }
 
-static void updateMemberParentInformation(
-   SCIP_NETMATDECDATA* dec,
-   const spqr_member newMember,
-   const spqr_member toRemove
+/**< Updates the parent information of a member that is identified with another another member */
+static
+void updateMemberParentInformation(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   const spqr_member     newMember,          /**< The new large member containing both members */
+   const spqr_member     toRemove            /**< The member that was merged and removed */
 )
 {
    assert(memberIsRepresentative(dec, newMember));
@@ -1716,9 +1881,11 @@ static void updateMemberParentInformation(
    dec->members[toRemove].parentMember = SPQR_INVALID_MEMBER;
 }
 
-static spqr_arc markerOfParent(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_member member
+/**< Returns the virtual arc of the parent member that points to the given member */
+static
+spqr_arc markerOfParent(
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   spqr_member           member              /**< The given member */
 )
 {
    assert(dec);
@@ -1728,10 +1895,11 @@ static spqr_arc markerOfParent(
    return dec->members[member].markerOfParent;
 }
 
-
-static int getNumMemberArcs(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_member member
+/**< Returns the number of arcs in the member */
+static
+int getNumMemberArcs(
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   spqr_member           member              /**< The member to get the number of arcs of */
 )
 {
    assert(dec);
@@ -1741,25 +1909,36 @@ static int getNumMemberArcs(
    return dec->members[member].numArcs;
 }
 
-static int getNumNodes(const SCIP_NETMATDECDATA* dec)
+/**< Returns the number of nodes in complete network matrix decomposition */
+static
+int getNumNodes(
+   const SCIP_NETMATDECDATA* dec             /**< The network matrix decomposition */
+   )
 {
    assert(dec);
    return dec->numNodes;
 }
 
-static int getNumMembers(const SCIP_NETMATDECDATA* dec)
+/**< Returns the number of members in complete network matrix decomposition */
+static
+int getNumMembers(
+   const SCIP_NETMATDECDATA* dec             /**< The network matrix decomposition */
+   )
 {
    assert(dec);
    return dec->numMembers;
 }
 
-static SCIP_RETCODE createStandaloneParallel(
-   SCIP_NETMATDECDATA* dec,
-   spqr_col* columns,
-   SCIP_Bool* reversed,
-   int num_columns,
-   spqr_row row,
-   spqr_member* pMember
+/**< Creates a standalone parallel member with the given row and columns that is not connected to other members of the
+ *   network matrix decomposition. New arcs are created for the given row and columns */
+static
+SCIP_RETCODE createStandaloneParallel(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_col*             columns,            /**< The columns in the parallel member */
+   SCIP_Bool*            reversed,           /**< Array indicating the direction of each column edge */
+   int                   num_columns,        /**< The number of columns in the parallel member */
+   spqr_row              row,                /**< The row in the parallel member */
+   spqr_member*          pMember             /**< out-pointer to the new parallel member id */
 )
 {
    spqr_member member;
@@ -1779,13 +1958,16 @@ static SCIP_RETCODE createStandaloneParallel(
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE createConnectedParallel(
-   SCIP_NETMATDECDATA* dec,
-   spqr_col* columns,
-   SCIP_Bool* reversed,
-   int num_columns,
-   spqr_row row,
-   spqr_member* pMember
+/**< Creates a parallel member with the given row and columns is connected to other members of the
+ *   network matrix decomposition. New arcs are created for the given row and columns */
+static
+SCIP_RETCODE createConnectedParallel(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_col*             columns,            /**< The columns in the parallel member */
+   SCIP_Bool*            reversed,           /**< Array indicating the direction of each column edge */
+   int                   num_columns,        /**< The number of columns in the parallel member */
+   spqr_row              row,                /**< The row in the parallel member */
+   spqr_member*          pMember             /**< out-pointer to the new parallel member id */
 )
 {
    spqr_member member;
@@ -1804,13 +1986,16 @@ static SCIP_RETCODE createConnectedParallel(
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE createStandaloneSeries(
-   SCIP_NETMATDECDATA* dec,
-   spqr_row* rows,
-   SCIP_Bool* reversed,
-   int numRows,
-   spqr_col col,
-   spqr_member* pMember
+/**< Creates a standalone series member with the given row and columns that is not connected to other members of the
+ *   network matrix decomposition. New arcs are created for the given rows and column */
+static
+SCIP_RETCODE createStandaloneSeries(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_row*             rows,               /**< The rows in the series member */
+   SCIP_Bool*            reversed,           /**< Array indicating the direction of each row edge */
+   int                   numRows,            /**< The number of rows in the parallel member */
+   spqr_col              col,                /**< The column in the parallel member */
+   spqr_member*          pMember             /**< out-pointer to the new series member id */
 )
 {
    spqr_member member;
@@ -1829,13 +2014,16 @@ static SCIP_RETCODE createStandaloneSeries(
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE createConnectedSeries(
-   SCIP_NETMATDECDATA* dec,
-   spqr_row* rows,
-   SCIP_Bool* reversed,
-   int numRows,
-   spqr_col col,
-   spqr_member* pMember
+/**< Creates a series member with the given row and columns that is connected to some other member of the
+ *   network matrix decomposition. New arcs are created for the given rows and column */
+static
+SCIP_RETCODE createConnectedSeries(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_row*             rows,               /**< The rows in the series member */
+   SCIP_Bool*            reversed,           /**< Array indicating the direction of each row edge */
+   int                   numRows,            /**< The number of rows in the parallel member */
+   spqr_col              col,                /**< The column in the parallel member */
+   spqr_member*          pMember             /**< out-pointer to the new series member id */
 )
 {
    spqr_member member;
@@ -1853,10 +2041,12 @@ static SCIP_RETCODE createConnectedSeries(
    return SCIP_OKAY;
 }
 
-static void removeArcFromMemberArcList(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   spqr_member member
+/**< Remove an arc from the linked list containing all arcs of a single member */
+static
+void removeArcFromMemberArcList(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_arc              arc,                /**< The arc to remove */
+   spqr_member           member              /**< The member to remove it from */
 )
 {
    assert(findArcMemberNoCompression(dec, arc) == member);
@@ -1884,25 +2074,29 @@ static void removeArcFromMemberArcList(
    --( dec->members[member].numArcs );
 }
 
+/**< Data structure for the algorithms to find fundamental cycle within the network matrix decomposition */
 typedef struct
 {
    spqr_arc arc;
    SCIP_Bool reversed;
 } FindCycleCall;
 
-static void process_arc(
-   spqr_row* fundamental_cycle_arcs,
-   int* num_cycle_arcs,
-   FindCycleCall* callStack,
-   int* callStackSize,
-   spqr_arc arc,
-   const SCIP_NETMATDECDATA* dec,
-   SCIP_Bool* fundamental_cycle_direction,
-   SCIP_Bool arcIsReversed
+/**< Processes a single arc for the algorithm to find cycles in the network matrix decomposition:
+ * if virtual, pushes it on the callstack, if non-virtual, adds it to the found cycle. */
+static
+void process_arc(
+   spqr_row*             cyclearcs,          /**< The found cycle so far */
+   int*                  num_cycle_arcs,     /**< The number of arcs in the cycle so far */
+   FindCycleCall*        callStack,          /**< The call stack of virtual edges to process still */
+   int*                  callStackSize,      /**< The number of virtual edges on the callstack */
+   spqr_arc              arc,                /**< The current arc to process */
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   SCIP_Bool*            cycledir,           /**< Whether the current arc is reversed w.r.t to the cycle/path */
+   SCIP_Bool             arcIsReversed       /**< The arcIsReversed status from the network matrix decomposition */
 )
 {
    assert(arcIsTree(dec, arc));
-   if( !arcIsMarker(dec, arc))
+   if( !arcIsChildMarker(dec, arc))
    {
       spqr_member current_member = findArcMemberNoCompression(dec, arc);
       if( markerToParent(dec, current_member) == arc )
@@ -1917,8 +2111,8 @@ static void process_arc(
          spqr_element element = arcGetElement(dec, arc);
          assert(SPQRelementIsRow(element));
          spqr_row row = SPQRelementToRow(element);
-         fundamental_cycle_arcs[*num_cycle_arcs] = row;
-         fundamental_cycle_direction[*num_cycle_arcs] = arcIsReversed;
+         cyclearcs[*num_cycle_arcs] = row;
+         cycledir[*num_cycle_arcs] = arcIsReversed;
          ++( *num_cycle_arcs );
       }
    } else
@@ -1932,13 +2126,19 @@ static void process_arc(
    }
 }
 
-static int decompositionGetFundamentalCycleRows(
-   const SCIP_NETMATDECDATA* dec,
-   spqr_col column,
-   spqr_row* output,
-   SCIP_Bool* computedSignStorage
+/**< Find the fundamental path of a cycle. This is a slow method and only intended for debugging and testing. */
+static
+int decompositionGetFundamentalCycleRows(
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   spqr_col              column,             /**< The column to find the fundamental path for */
+   spqr_row*             output,             /**< preallocated array to store fundamental path in. Must have at least
+                                              **<  the number of rows in the decomposition allocated */
+   SCIP_Bool*            computedSignStorage /**< Boolean array for storage of whether the path occurs forwards or
+                                              **< backwards. Must have at least the same size as output array. */
 )
 {
+   /*Basic idea; for each component, do a dfs over the tree formed by the row arcs to find the relevant edges.
+   This is easy for SPQ-nodes, for R nodes we need to search */
    spqr_arc arc = getDecompositionColumnArc(dec, column);
    if( SPQRarcIsInvalid(arc))
    {
@@ -2110,15 +2310,20 @@ static int decompositionGetFundamentalCycleRows(
    return num_rows;
 }
 
-static SCIP_Bool netMatDecDataVerifyCycle(
-   SCIP* scip,
-   const SCIP_NETMATDECDATA* dec,
-   int column,
-   const int* nonzrowidx,
-   const double* nonzvals,
-   int num_rows,
-   int* pathrowstorage,
-   SCIP_Bool* pathsignstorage
+/**< Given a cycle (e.g. a matrix column), checks if the column's cycle matches the cycle in the
+ * network matrix decomposition */
+static
+SCIP_Bool netMatDecDataVerifyCycle(
+   SCIP*                 scip,               /**< The SCIP datastructure */
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
+   int                   column,             /**< The column to check */
+   const int*            nonzrowidx,         /**< Array with the nonzero row indices of the column */
+   const double*         nonzvals,           /**< Array with the nonzero entry values of the column's row indices */
+   int                   num_rows,           /**< The number of nonzeros in the column */
+   int*                  pathrowstorage,     /**< Temporary storage vector for storing the fundamental path. Must have
+                                              **< at least as many entries allocated as the number of rows in dec. */
+   SCIP_Bool*            pathsignstorage     /**< Temporary storage for the fundamental path directions. Must have
+                                              **< at least as many entries allocated as the number of rows in dec. */
 )
 {
    int num_found_rows = decompositionGetFundamentalCycleRows(dec, column, pathrowstorage, pathsignstorage);
@@ -2193,33 +2398,51 @@ static SCIP_Bool netMatDecDataVerifyCycle(
    return good;
 }
 
-static spqr_member largestMemberID(const SCIP_NETMATDECDATA* dec)
+/**< Returns the largest member id that is currently in the decomposition */
+static
+spqr_member largestMemberID(
+   const SCIP_NETMATDECDATA* dec             /**< The network matrix decomposition */
+   )
 {
    return dec->numMembers;
 }
 
-static spqr_arc largestArcID(const SCIP_NETMATDECDATA* dec)
+/**< Returns the largest arc id that is currently in the decomposition */
+static
+spqr_arc largestArcID(
+   const SCIP_NETMATDECDATA* dec             /**< The network matrix decomposition */
+   )
 {
    return dec->numArcs;
 }
 
-static spqr_node largestNodeID(const SCIP_NETMATDECDATA* dec)
+/**< Returns the largest node id that is currently in the decomposition */
+static
+spqr_node largestNodeID(
+   const SCIP_NETMATDECDATA* dec             /**< The network matrix decomposition */
+   )
 {
    return dec->numNodes;
 }
 
-static int numConnectedComponents(const SCIP_NETMATDECDATA* dec)
+/**< Returns the number of SPQR trees in the SPQR forest, i.e. the number of connected components. */
+static
+int numConnectedComponents(
+   const SCIP_NETMATDECDATA* dec             /**< The network matrix decomposition */
+   )
 {
    return dec->numConnectedComponents;
 }
 
-static SCIP_RETCODE createChildMarker(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member member,
-   spqr_member child,
-   SCIP_Bool isTree,
-   spqr_arc* pArc,
-   SCIP_Bool reversed
+/**< Creates a child marker in the network decomposition */
+static
+SCIP_RETCODE createChildMarker(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_member           member,             /**< The member to create the arc in */
+   spqr_member           child,              /**< The member that the arc points to */
+   SCIP_Bool             isTree,             /**< Indicates if the new arc is a tree arc */
+   spqr_arc*             pArc,               /**< Out-pointer to store the new arc's id */
+   SCIP_Bool             reversed            /**< Sets the reversed field of the arc */
 )
 {
    SCIP_CALL(createArc(dec, member, reversed, pArc));
@@ -2230,14 +2453,16 @@ static SCIP_RETCODE createChildMarker(
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE createParentMarker(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member member,
-   SCIP_Bool isTree,
-   spqr_member parent,
-   spqr_arc parentMarker,
-   spqr_arc* arc,
-   SCIP_Bool reversed
+/**< Creates a parent marker in the network decomposition */
+static
+SCIP_RETCODE createParentMarker(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_member           member,             /**< The member to create the arc in */
+   SCIP_Bool             isTree,             /**< Indicates if the new arc is a tree arc */
+   spqr_member           parent,             /**< The member that the arc points to */
+   spqr_arc              parentMarker,       /**< The parent arc in the parent that points to this member */
+   spqr_arc*             arc,                /**< Out-pointer to store the new arc's id */
+   SCIP_Bool             reversed            /**< Sets the reversed field of the arc */
 )
 {
 
@@ -2252,13 +2477,15 @@ static SCIP_RETCODE createParentMarker(
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE createMarkerPair(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member parentMember,
-   spqr_member childMember,
-   SCIP_Bool parentIsTree,
-   SCIP_Bool childMarkerReversed,
-   SCIP_Bool parentMarkerReversed
+/**< Creates a child-marker parent-marker pair in the network decomposition */
+static
+SCIP_RETCODE createMarkerPair(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_member           parentMember,       /**< The parent member */
+   spqr_member           childMember,        /**< The child member */
+   SCIP_Bool             parentIsTree,       /**< Is the edge in the parent member (the child marker) a tree edge? */
+   SCIP_Bool             childMarkerReversed, /**< Is the child marker arc reversed?*/
+   SCIP_Bool             parentMarkerReversed /**< IS the parent marker arc reversed? */
 )
 {
    spqr_arc parentToChildMarker = SPQR_INVALID_ARC;
@@ -2273,15 +2500,17 @@ static SCIP_RETCODE createMarkerPair(
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE createMarkerPairWithReferences(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member parentMember,
-   spqr_member childMember,
-   SCIP_Bool parentIsTree,
-   SCIP_Bool childMarkerReversed,
-   SCIP_Bool parentMarkerReversed,
-   spqr_arc* parentToChild,
-   spqr_arc* childToParent
+/**< Creates a child-marker parent-marker pair in the network decomposition, and returns the assigned arc id's */
+static
+SCIP_RETCODE createMarkerPairWithReferences(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_member           parentMember,       /**< The parent member */
+   spqr_member           childMember,        /**< The child member */
+   SCIP_Bool             parentIsTree,       /**< Is the edge in the parent member (the child marker) a tree edge? */
+   SCIP_Bool             childMarkerReversed,  /**< Is the child marker arc reversed?*/
+   SCIP_Bool             parentMarkerReversed, /**< IS the parent marker arc reversed? */
+   spqr_arc*             parentToChild,      /**< Output-pointer containing arc id of the arc in the parent member */
+   spqr_arc*             childToParent       /**< Output-pointer containing arc id of the arc in the child member */
 )
 {
    SCIP_CALL(createChildMarker(dec, parentMember, childMember, parentIsTree, parentToChild, childMarkerReversed));
@@ -2291,11 +2520,14 @@ static SCIP_RETCODE createMarkerPairWithReferences(
    return SCIP_OKAY;
 }
 
-static void moveArcToNewMember(
-   SCIP_NETMATDECDATA* dec,
-   spqr_arc arc,
-   spqr_member oldMember,
-   spqr_member newMember
+/**< Moves a given arc from one member to another, updating the linked lists it is contained in and the parent/child
+ * information of the relevant members. */
+static
+void moveArcToNewMember(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_arc              arc,                /**< The arc to move */
+   spqr_member           oldMember,          /**< The member that currently contains the arc */
+   spqr_member           newMember           /**< The member to move the arc to */
 )
 {
    assert(SPQRarcIsValid(arc));
@@ -2331,10 +2563,12 @@ static void moveArcToNewMember(
    }
 }
 
-static void mergeMemberArcList(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member toMergeInto,
-   spqr_member toRemove
+/**< Merges the arc linked list of two members into one linked list. */
+static
+void mergeMemberArcList(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_member           toMergeInto,        /**< The member id that gets the new large linked list containing both */
+   spqr_member           toRemove            /**< The member id that is invalidated, whose linked list is moved away. */
 )
 {
    spqr_arc firstIntoArc = getFirstMemberArc(dec, toMergeInto);
@@ -2357,9 +2591,11 @@ static void mergeMemberArcList(
    dec->members[toRemove].firstArc = SPQR_INVALID_ARC;
 }
 
-static void changeLoopToSeries(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member member
+/**< Changes the type of a member from loop to series */
+static
+void changeLoopToSeries(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_member           member              /**< The member whose type is changed */
 )
 {
    assert(SPQRmemberIsValid(member));
@@ -2373,9 +2609,11 @@ static void changeLoopToSeries(
    dec->members[member].type = SPQR_MEMBERTYPE_SERIES;
 }
 
-static void changeLoopToParallel(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member member
+/**< Changes the type of a member from loop to parallel */
+static
+void changeLoopToParallel(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_member           member              /**< The member whose type is changed */
 )
 {
    assert(SPQRmemberIsValid(member));
@@ -2389,7 +2627,12 @@ static void changeLoopToParallel(
    dec->members[member].type = SPQR_MEMBERTYPE_PARALLEL;
 }
 
-static SCIP_Bool netMatDecDataIsMinimal(const SCIP_NETMATDECDATA* dec)
+/**< Checks if the network decomposition is minimal, i.e. if it does not contain two adjacent parlalel or series
+ **< members */
+static
+SCIP_Bool netMatDecDataIsMinimal(
+   const SCIP_NETMATDECDATA* dec             /**< The network matrix decomposition */
+   )
 {
    //Relies on parents/children etc. being set correctly in the tree
    SCIP_Bool isMinimal = TRUE;
@@ -2415,18 +2658,23 @@ static SCIP_Bool netMatDecDataIsMinimal(const SCIP_NETMATDECDATA* dec)
    return isMinimal;
 }
 
-static void decreaseNumConnectedComponents(
-   SCIP_NETMATDECDATA* dec,
-   int by
+/**< Decreases the count of the number of connected components in the network matrix decomposition */
+static
+void decreaseNumConnectedComponents(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   int                   by                  /**< The number of connected components to remove. */
 )
 {
    dec->numConnectedComponents -= by;
    assert(dec->numConnectedComponents >= 1);
 }
 
-static void reorderComponent(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member newRoot
+/**< Reorders the arborescence of the SPQR that contains a given member so that the given member becomes the new root
+ * of the arborescence. */
+static
+void reorderComponent(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_member           newRoot             /**< The member to make the new root */
 )
 {
    assert(dec);
@@ -2471,13 +2719,16 @@ static void reorderComponent(
    }
 }
 
-
-static void netMatDecDataRemoveComponent(
-   SCIP_NETMATDECDATA* dec,
-   const int* componentRows,
-   int numRows,
-   const int* componentCols,
-   int numCols
+/**< Deletes the SPQR tree (connected component) containing the given component rows and columns.
+ * Note that the implementation of this method does not actually modify the SPQR tree, but rather unlinks the rows and
+ * columns from the relevant arcs. Thus, this method is a bit hacky and should be used with care. */
+static
+void netMatDecDataRemoveComponent(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   const int*            componentRows,      /**< The rows of the connected component*/
+   int                   numRows,            /**< The number of rows */
+   const int*            componentCols,      /**< The columns of the connected component*/
+   int                   numCols             /**< The number of columns */
 )
 {
    //The below just removes the 'link' but not the internal datastructures.
@@ -2503,8 +2754,12 @@ static void netMatDecDataRemoveComponent(
 }
 
 #ifdef SCIP_DEBUG
-                                                                                                                        //Debugging functions to print the decomposition
-static char typeToChar(SPQRMemberType type)
+
+/**< Converts the members type to an associated character */                                                                                                                        //Debugging functions to print the decomposition
+static
+char typeToChar(
+   SPQRMemberType        type                /**< The member type */
+   )
 {
    switch (type)
    {
@@ -2521,8 +2776,17 @@ static char typeToChar(SPQRMemberType type)
    }
 }
 
-static void arcToDot(FILE *stream, const SCIP_NETMATDEC *dec,
-                     spqr_arc arc, unsigned long dot_head, unsigned long dot_tail, SCIP_Bool useElementNames)
+/**< Prints an arc in DOT format */
+static
+void arcToDot(
+   FILE*                 stream,             /**< The stream to write the arc to */
+   const SCIP_NETMATDEC* dec,                /**< The network matrix decomposition */
+   spqr_arc              arc,                /**< The arc to write */
+   unsigned long         dot_head,           /**< The head id of the arc */
+   unsigned long         dot_tail,           /**< The tail id of the arc */
+   SCIP_Bool             useElementNames     /**< If TRUE, prints the corresponding row/column index. If FALSE,
+                                              **< prints the spqr_arc id instead. */
+   )
 {
    assert(SPQRarcIsValid(arc));
    spqr_member member = findArcMemberNoCompression(dec, arc);
@@ -2578,7 +2842,14 @@ static void arcToDot(FILE *stream, const SCIP_NETMATDEC *dec,
    }
 }
 
-static void decompositionToDot(FILE *stream, const SCIP_NETMATDEC *dec, SCIP_Bool useElementNames)
+/**< Outputs the network decomposition as a DOT file */
+static
+void decompositionToDot(
+   FILE*                 stream,             /**< The stream to write to */
+   const SCIP_NETMATDEC* dec,                /**< The network matrix decomposition */
+   SCIP_Bool             useElementNames     /**< If TRUE, prints the corresponding row/column index. If FALSE,
+                                              **< prints the spqr_arc id instead. */
+   )
 {
    fprintf(stream, "//decomposition\ndigraph decomposition{\n   compound = TRUE;\n");
    for (spqr_member member = 0; member < dec->numMembers; ++member)
@@ -2645,14 +2916,15 @@ static void decompositionToDot(FILE *stream, const SCIP_NETMATDEC *dec, SCIP_Boo
 }
 #endif
 
-static SCIP_RETCODE mergeGivenMemberIntoParent(
-   SCIP_NETMATDECDATA* dec,
-   spqr_member member,
-   spqr_member parent,
-   spqr_arc parentToChild,
-   spqr_arc childToParent,
-   SCIP_Bool headToHead,
-   spqr_member* mergedMember
+static
+SCIP_RETCODE mergeGivenMemberIntoParent(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   spqr_member           member,             /**< The member to merge */
+   spqr_member           parent,             /**< The parent of the member to merge into */
+   spqr_arc              parentToChild,      /**< The arc from the parent pointing to the member */
+   spqr_arc              childToParent,      /**< The arc in the child pointing to the parent */
+   SCIP_Bool             headToHead,         /**< Identify the head of parentToChild with the head of childToParent?*/
+   spqr_member*          mergedMember        /**< Out-pointer to the member id of the final member */
 )
 {
    assert(dec);
@@ -2703,7 +2975,9 @@ static SCIP_RETCODE mergeGivenMemberIntoParent(
    return SCIP_OKAY;
 }
 
-static int maxValue(
+/**< Returns the maximum of two values. */
+static
+int maxValue(
    int a,
    int b
 )
@@ -4831,7 +5105,7 @@ static SCIP_RETCODE splitSeries(
                adjacentMember = findMemberParent(dec, reducedMember->member);
                adjacentMarker = markerOfParent(dec, reducedMember->member);
                memberMarker = arc;
-            } else if( arcIsMarker(dec, arc))
+            } else if( arcIsChildMarker(dec, arc))
             {
                adjacentMember = findArcChildMember(dec, arc);
                adjacentMarker = markerToParent(dec, adjacentMember);
@@ -5543,8 +5817,8 @@ static SCIP_RETCODE columnTransformSingleRigid(
       if( SPQRarcIsValid(existingArcWithPath))
       {
          SCIP_Bool isParent = FALSE;
-         spqr_member adjacentMember = arcIsMarker(dec, existingArcWithPath) ?
-            findArcChildMember(dec,existingArcWithPath) : SPQR_INVALID_MEMBER;
+         spqr_member adjacentMember = arcIsChildMarker(dec, existingArcWithPath) ?
+                                      findArcChildMember(dec,existingArcWithPath) : SPQR_INVALID_MEMBER;
          if( existingArcWithPath == markerToParent(dec, member))
          {
             adjacentMember = findMemberParent(dec, member);
@@ -6548,8 +6822,8 @@ static SCIP_RETCODE allocateRigidSearchMemory(
 
    //TODO: see if tradeoff for performance bound by checking max # of nodes of rigid is worth it to reduce size
    //of the following allocations
-   int largestID = largestNodeID(
-      dec);//TODO: only update the stack sizes of the following when needed? The preallocation might be causing performance problems
+   int largestID = largestNodeID(dec);
+   //TODO: only update the stack sizes of the following when needed? The preallocation may not be worth it.
    if( largestID > newRow->memIntersectionDFSData )
    {
       int newSize = maxValue(2 * newRow->memIntersectionDFSData, largestID);
@@ -8515,7 +8789,7 @@ static SCIP_RETCODE rigidTransformArcIntoCycle(
          markerCycleMember = adjacentMember;
          markerCycleArc = markerOfParent(dec, member);
       }
-   } else if( arcIsMarker(dec, arc))
+   } else if( arcIsChildMarker(dec, arc))
    {
       adjacentMember = findArcChildMember(dec, arc);
       if( getMemberType(dec, adjacentMember) == SPQR_MEMBERTYPE_SERIES )
@@ -8772,7 +9046,7 @@ static SCIP_RETCODE splitParallelRowAddition(
          {
             adjacentMember = findMemberParent(dec, member);
             adjacentArc = markerOfParent(dec, member);
-         } else if( arcIsMarker(dec, treeArc))
+         } else if( arcIsChildMarker(dec, treeArc))
          {
             adjacentMember = findArcChildMember(dec, treeArc);
             adjacentArc = markerToParent(dec, adjacentMember);
@@ -8876,7 +9150,7 @@ static SCIP_RETCODE splitParallelRowAddition(
    if( arc == markerToParent(dec, member))
    {
       adjacentMember = findMemberParent(dec, member);
-   } else if( arcIsMarker(dec, arc))
+   } else if( arcIsChildMarker(dec, arc))
    {
       adjacentMember = findArcChildMember(dec, arc);
    }
