@@ -68,8 +68,6 @@ Build system
 
 ### Cmake
 
-- cmake now automatically downloads and installs the latest release version of SoPlex+PaPilo from GitHub if they are not found directly
-
 Fixed bugs
 ----------
 
