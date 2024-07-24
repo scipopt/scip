@@ -144,7 +144,7 @@ SCIP_Bool SCIPnetmatdecContainsColumn(
  *
  * Note that this method is 'stupid', and does not delete the associated graph data structure.
  * Moreover, it does not explicitly check if the rows/columns that the user provides are a connected
- * component of the submatrix given by the decomposition.
+ * component of the submatrix given by the decomposition. Use with care!
  * If this is not the case, then calling this function is considered a bug.
  */
 SCIP_EXPORT
