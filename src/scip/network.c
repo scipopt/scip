@@ -2056,7 +2056,8 @@ void removeArcFromMemberArcList(
    {
       dec->members[member].firstArc = SPQR_INVALID_ARC;
 
-   } else
+   }
+   else
    {
       spqr_arc nextArc = dec->arcs[arc].arcListNode.next;
       spqr_arc prevArc = dec->arcs[arc].arcListNode.previous;
@@ -2106,7 +2107,8 @@ void process_arc(
          callStack[*callStackSize].arc = other_arc;
          callStack[*callStackSize].reversed = arcIsReversed;
          ++( *callStackSize );
-      } else
+      }
+      else
       {
          spqr_element element = arcGetElement(dec, arc);
          assert(SPQRelementIsRow(element));
@@ -2115,7 +2117,8 @@ void process_arc(
          cycledir[*num_cycle_arcs] = arcIsReversed;
          ++( *num_cycle_arcs );
       }
-   } else
+   }
+   else
    {
       spqr_member child_member = findArcChildMemberNoCompression(dec, arc);
       spqr_arc other_arc = markerToParent(dec, child_member);
@@ -2229,11 +2232,13 @@ int decompositionGetFundamentalCycleRows(
                   {
                      --pathSearchCallStackSize;
                      dfsData = &pathSearchCallStack[pathSearchCallStackSize - 1];
-                  } else
+                  }
+                  else
                   {
                      break;
                   }
-               } while( pathSearchCallStackSize > 0 );
+               }
+               while( pathSearchCallStackSize > 0 );
             }
             for( int i = 0; i < pathSearchCallStackSize; ++i )
             {
@@ -2267,7 +2272,8 @@ int decompositionGetFundamentalCycleRows(
                   tree_count++;
                }
                iter_arc = getNextMemberArc(dec, iter_arc);
-            } while( iter_arc != first_arc );
+            }
+            while( iter_arc != first_arc );
             if( tree_count != 1 )
             {
                return -1;
@@ -2288,12 +2294,14 @@ int decompositionGetFundamentalCycleRows(
                   SCIP_Bool treeIsReversed = arcIsReversedNonRigid(dec, iter_arc);
                   process_arc(output, &num_rows, callStack, &callStackSize, iter_arc, dec,
                               computedSignStorage, ( columnReversed == treeIsReversed ) != reverseEverything);
-               } else
+               }
+               else
                {
                   nontree_count++;
                }
                iter_arc = getNextMemberArc(dec, iter_arc);
-            } while( iter_arc != first_arc );
+            }
+            while( iter_arc != first_arc );
             if( nontree_count != 1 )
             {
                return -1;
@@ -2708,11 +2716,13 @@ void reorderComponent(
             member = oldParent;
             newMarkerToParent = oldMarkerOfParent;
             markerOfNewParent = oldMarkerToParent;
-         } else
+         }
+         else
          {
             break;
          }
-      } while( TRUE ); /*lint !e506*/
+      }
+      while( TRUE ); /*lint !e506*/
       dec->members[newRoot].parentMember = SPQR_INVALID_MEMBER;
       dec->members[newRoot].markerToParent = SPQR_INVALID_ARC;
       dec->members[newRoot].markerOfParent = SPQR_INVALID_ARC;
@@ -3411,7 +3421,8 @@ reduced_member_id createReducedMembersToRoot(
             callstack[callDepth].member = parentMember;
             continue;
 
-         } else
+         }
+         else
          {
             //we found a new reduced decomposition component
 
@@ -3772,13 +3783,14 @@ SCIP_RETCODE newColUpdateColInformation(
             SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->decompositionRowArcs,
                                                   newCol->memDecompositionRowArcs, newNumArcs));
             SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->decompositionArcReversed,
-                                                   newCol->memDecompositionRowArcs, newNumArcs));
+                                                  newCol->memDecompositionRowArcs, newNumArcs));
             newCol->memDecompositionRowArcs = newNumArcs;
          }
          newCol->decompositionRowArcs[newCol->numDecompositionRowArcs] = rowArc;
          newCol->decompositionArcReversed[newCol->numDecompositionRowArcs] = reversed;
          ++newCol->numDecompositionRowArcs;
-      } else
+      }
+      else
       {
          //Not in the decomposition: add it to the set of arcs which are newly added with this row.
          if( newCol->numNewRowArcs == newCol->memNewRowArcs )
@@ -3970,7 +3982,8 @@ void determineSingleComponentType(
             {
                passesForwards =
                   newCol->pathArcs[pathArc].reversed != arcIsReversedNonRigid(dec, newCol->pathArcs[pathArc].arc);
-            } else if(
+            }
+            else if(
                ( newCol->pathArcs[pathArc].reversed != arcIsReversedNonRigid(dec, newCol->pathArcs[pathArc].arc)) !=
                passesForwards )
             {
@@ -3992,7 +4005,8 @@ void determineSingleComponentType(
             //Type -> Cycle;
             //Propagate arc
             redMem->type = REDUCEDMEMBER_TYPE_CYCLE;
-         } else
+         }
+         else
          {
             //Type -> single_end
             redMem->type = REDUCEDMEMBER_TYPE_MERGED;
@@ -4037,8 +4051,9 @@ void determinePathSeriesType(
       {
          passesForwards =
             newCol->pathArcs[pathArc].reversed != arcIsReversedNonRigid(dec, newCol->pathArcs[pathArc].arc);
-      } else if(( newCol->pathArcs[pathArc].reversed != arcIsReversedNonRigid(dec, newCol->pathArcs[pathArc].arc)) !=
-                passesForwards )
+      }
+      else if(( newCol->pathArcs[pathArc].reversed != arcIsReversedNonRigid(dec, newCol->pathArcs[pathArc].arc)) !=
+              passesForwards )
       {
          good = FALSE;
          break;
@@ -4064,7 +4079,8 @@ void determinePathSeriesType(
       if(( firstReversed == targetReversed ) == reversePath )
       {
          redMem->pathType = INTO_HEAD;
-      } else
+      }
+      else
       {
          redMem->pathType = OUT_HEAD;
       }
@@ -4126,7 +4142,8 @@ void determinePathSeriesType(
    if( isInto(previousType))
    {
       redMem->pathType = INTO_HEAD;
-   } else
+   }
+   else
    {
       redMem->pathType = OUT_HEAD;
    }
@@ -4251,21 +4268,25 @@ void determinePathRigidType(
             if( isTargetTail )
             {
                redMem->pathType = INTO_TAIL;
-            } else
+            }
+            else
             {
                redMem->pathType = INTO_HEAD;
             }
-         } else
+         }
+         else
          {
             if( isTargetTail )
             {
                redMem->pathType = OUT_TAIL;
-            } else
+            }
+            else
             {
                redMem->pathType = OUT_HEAD;
             }
          }
-      } else
+      }
+      else
       {
          redMem->reverseArcs = TRUE;
          //because of the reversal, all the heads/tails are switched below
@@ -4274,16 +4295,19 @@ void determinePathRigidType(
             if( isTargetTail )
             {
                redMem->pathType = INTO_HEAD;
-            } else
+            }
+            else
             {
                redMem->pathType = INTO_TAIL;
             }
-         } else
+         }
+         else
          {
             if( isTargetTail )
             {
                redMem->pathType = OUT_HEAD;
-            } else
+            }
+            else
             {
                redMem->pathType = OUT_TAIL;
             }
@@ -4306,16 +4330,20 @@ void determinePathRigidType(
       if( redMem->rigidPathEnd == targetHead )
       {
          redMem->pathType = INTO_HEAD;
-      } else if( redMem->rigidPathEnd == targetTail )
+      }
+      else if( redMem->rigidPathEnd == targetTail )
       {
          redMem->pathType = INTO_TAIL;
-      } else if( redMem->rigidPathStart == targetHead )
+      }
+      else if( redMem->rigidPathStart == targetHead )
       {
          redMem->pathType = OUT_HEAD;
-      } else if( redMem->rigidPathStart == targetTail )
+      }
+      else if( redMem->rigidPathStart == targetTail )
       {
          redMem->pathType = OUT_TAIL;
-      } else
+      }
+      else
       {
          redMem->type = REDUCEDMEMBER_TYPE_NOT_NETWORK;
          newCol->remainsNetwork = FALSE;
@@ -4343,7 +4371,8 @@ void determinePathRigidType(
       }
       assert(startsAtHead || endsAtTail);//both can hold; they can form cycle but other components can not be reduced
       //        redMem->reverseArcs = isInto(previousType) != startsAtHead; //Reverse only if there is no path starting at head
-   } else
+   }
+   else
    {//Into tail or outHead
       //Check if path starts at tail or ends at head
       if( !startsAtTail && !endsAtHead )
@@ -4384,23 +4413,28 @@ void determinePathRigidType(
          if( startsAtHead && endsAtTail )
          {
             outReverse = ( startsAtTargetHead || startsAtTargetTail ) == isInto(previousType);
-         } else if( startsAtHead )
+         }
+         else if( startsAtHead )
          {
             outReverse = !isInto(previousType);
-         } else
+         }
+         else
          {
             assert(endsAtTail);
             outReverse = isInto(previousType);
          }
-      } else
+      }
+      else
       {
          if( startsAtTail && endsAtHead )
          {
             outReverse = ( startsAtTargetHead || startsAtTargetTail ) == isInto(previousType);
-         } else if( startsAtTail )
+         }
+         else if( startsAtTail )
          {
             outReverse = !isInto(previousType);
-         } else
+         }
+         else
          {
             assert(endsAtHead);
             outReverse = isInto(previousType);
@@ -4414,59 +4448,72 @@ void determinePathRigidType(
          if( startsAtHead && endsAtTail )
          {
             outHead = ( startsAtTargetTail || endsAtTargetHead ) == isInto(previousType);
-         } else if( startsAtHead )
+         }
+         else if( startsAtHead )
          {
             if( endsAtTargetHead )
             {
                outHead = isInto(previousType);
-            } else if( endsAtTargetTail )
+            }
+            else if( endsAtTargetTail )
             {
                outHead = !isInto(previousType);
-            } else
+            }
+            else
             {
                isBad = TRUE;
             }
-         } else
+         }
+         else
          {
             assert(endsAtTail);
             if( startsAtTargetTail )
             {
                outHead = isInto(previousType);
-            } else if( startsAtTargetHead )
+            }
+            else if( startsAtTargetHead )
             {
                outHead = !isInto(previousType);
-            } else
+            }
+            else
             {
                isBad = TRUE;
             }
          }
-      } else
+      }
+      else
       {
          if( startsAtTail && endsAtHead )
          {
             outHead = ( startsAtTargetTail || endsAtTargetHead ) == isInto(previousType);
-         } else if( startsAtTail )
+         }
+         else if( startsAtTail )
          {
             if( endsAtTargetHead )
             {
                outHead = isInto(previousType);
-            } else if( endsAtTargetTail )
+            }
+            else if( endsAtTargetTail )
             {
                outHead = !isInto(previousType);
-            } else
+            }
+            else
             {
                isBad = TRUE;
             }
-         } else
+         }
+         else
          {
             assert(endsAtHead);
             if( startsAtTargetTail )
             {
                outHead = isInto(previousType);
-            } else if( startsAtTargetHead )
+            }
+            else if( startsAtTargetHead )
             {
                outHead = !isInto(previousType);
-            } else
+            }
+            else
             {
                isBad = TRUE;
             }
@@ -4483,7 +4530,8 @@ void determinePathRigidType(
       if( isInto(previousType))
       {
          redMem->pathType = outHead ? INTO_HEAD : INTO_TAIL;
-      } else
+      }
+      else
       {
          redMem->pathType = outHead ? OUT_HEAD : OUT_TAIL;
       }
@@ -4494,7 +4542,8 @@ void determinePathRigidType(
    if( isInto(previousType) == isHead(previousType))
    {
       redMem->reverseArcs = startsAtHead != isInto(previousType);
-   } else
+   }
+   else
    {
       redMem->reverseArcs = startsAtTail != isInto(previousType);
    }
@@ -4503,7 +4552,8 @@ void determinePathRigidType(
    if( isInto(previousType))
    {
       redMem->pathType = INTO_HEAD;
-   } else
+   }
+   else
    {
       redMem->pathType = OUT_HEAD;
    }
@@ -4724,7 +4774,8 @@ ReducedMemberType checkLeaf(
             {
                passesForwards =
                   newCol->pathArcs[pathArc].reversed != arcIsReversedNonRigid(dec, newCol->pathArcs[pathArc].arc);
-            } else if(
+            }
+            else if(
                ( newCol->pathArcs[pathArc].reversed != arcIsReversedNonRigid(dec, newCol->pathArcs[pathArc].arc)) !=
                passesForwards )
             {
@@ -4753,7 +4804,8 @@ ReducedMemberType checkLeaf(
             createPathArc(dec, newCol, toChild, parent,
                           ( parentReversed == firstArcReversed ) != firstArcInPathReverse);
 
-         } else
+         }
+         else
          {
             //Type -> single_end
             reducedMember->type = REDUCEDMEMBER_TYPE_MERGED;
@@ -4799,14 +4851,17 @@ void propagateCycles(
             if( newCol->reducedMembers[next].numPropagatedChildren == newCol->reducedMembers[next].numChildren )
             {
                newCol->leafMembers[leafArrayIndex] = next;
-            } else
+            }
+            else
             {
                ++leafArrayIndex;
             }
-         } else if( type == REDUCEDMEMBER_TYPE_NOT_NETWORK )
+         }
+         else if( type == REDUCEDMEMBER_TYPE_NOT_NETWORK )
          {
             return;
-         } else
+         }
+         else
          {
             assert(type == REDUCEDMEMBER_TYPE_MERGED);
             ++leafArrayIndex;
@@ -4820,7 +4875,8 @@ void propagateCycles(
             newCol->reducedComponents[component].pathEndMembers[newCol->reducedComponents[component].numPathEndMembers] = leaf;
             ++newCol->reducedComponents[component].numPathEndMembers;
          }
-      } else
+      }
+      else
       {
          ++leafArrayIndex;
          int component = newCol->reducedMembers[leaf].componentIndex;
@@ -4870,7 +4926,8 @@ void propagateCycles(
             {
                root = child;
                continue;
-            } else if( type == REDUCEDMEMBER_TYPE_NOT_NETWORK )
+            }
+            else if( type == REDUCEDMEMBER_TYPE_NOT_NETWORK )
             {
                return;
             }
@@ -4916,7 +4973,8 @@ void determineComponentTypes(
    {
       assert(component->root == component->pathEndMembers[0]);
       determineSingleComponentType(dec, newCol, component->root);
-   } else
+   }
+   else
    {
       assert(component->numPathEndMembers == 2);
       determinePathTypes(dec, newCol, component);
@@ -5076,7 +5134,8 @@ SCIP_RETCODE splitParallel(
    if( parentMoved )
    {
       SCIP_CALL(createMarkerPair(dec, *childParallel, parallel, !childContainsTree, FALSE, FALSE));
-   } else
+   }
+   else
    {
       SCIP_CALL(createMarkerPair(dec, parallel, *childParallel, childContainsTree, FALSE, FALSE));
    }
@@ -5121,7 +5180,8 @@ SCIP_RETCODE splitSeries(
       if( reversed == reducedMember->pathBackwards )
       {
          setTerminalReversed(newColInfo, !reversed);
-      } else
+      }
+      else
       {
          setTerminalReversed(newColInfo, reversed);
       }
@@ -5170,7 +5230,8 @@ SCIP_RETCODE splitSeries(
       {
          SCIP_CALL(createMarkerPair(dec, member, *loopMember, TRUE, FALSE, FALSE));
          SCIP_CALL(createMarkerPair(dec, *loopMember, pathMember, TRUE, FALSE, TRUE));
-      } else
+      }
+      else
       {
          SCIP_CALL(createMarkerPair(dec, pathMember, *loopMember, FALSE, FALSE, TRUE));
          SCIP_CALL(createMarkerPair(dec, *loopMember, member, FALSE, FALSE, FALSE));
@@ -5198,7 +5259,8 @@ SCIP_RETCODE splitSeries(
                adjacentMember = findMemberParent(dec, reducedMember->member);
                adjacentMarker = markerOfParent(dec, reducedMember->member);
                memberMarker = arc;
-            } else if( arcIsChildMarker(dec, arc))
+            }
+            else if( arcIsChildMarker(dec, arc))
             {
                adjacentMember = findArcChildMember(dec, arc);
                adjacentMarker = markerToParent(dec, adjacentMember);
@@ -5208,7 +5270,8 @@ SCIP_RETCODE splitSeries(
             break;//There is only a singular such arc
          }
          arc = getNextMemberArc(dec, arc);
-      } while( arc != firstArc );
+      }
+      while( arc != firstArc );
 
       if( SPQRmemberIsValid(adjacentMember))
       {
@@ -5244,7 +5307,8 @@ SCIP_RETCODE splitSeries(
    if( parentMoved )
    {
       SCIP_CALL(createMarkerPair(dec, pathMember, member, FALSE, FALSE, FALSE));
-   } else
+   }
+   else
    {
       SCIP_CALL(createMarkerPair(dec, member, pathMember, TRUE, FALSE, FALSE));
    }
@@ -5309,17 +5373,20 @@ SCIP_RETCODE splitSeriesMerging(
       {
          SCIP_CALL(createMarkerPairWithReferences(dec, pathMember, member, FALSE, inNewReversed, inOldReversed,
                                                   &ignored, pathRepresentative));
-      } else
+      }
+      else
       {
          SCIP_CALL(createMarkerPairWithReferences(dec, member, pathMember, TRUE, inOldReversed, inNewReversed,
                                                   pathRepresentative, &ignored));
       }
-   } else
+   }
+   else
    {
       if( pathArcIsValid(reducedMember->firstPathArc))
       {
          *pathRepresentative = newCol->pathArcs[reducedMember->firstPathArc].arc;
-      } else
+      }
+      else
       {
          *pathRepresentative = SPQR_INVALID_ARC;
       }
@@ -5340,7 +5407,8 @@ SCIP_RETCODE splitSeriesMerging(
          {
             parentMoved = parentMoved || markerToParent(dec, member) == arc;
             moveArcToNewMember(dec, arc, member, nonPathMember);
-         } else
+         }
+         else
          {
             canStop = TRUE;
          }
@@ -5349,7 +5417,8 @@ SCIP_RETCODE splitSeriesMerging(
          {
             break;
          }
-      } while( TRUE ); /*lint !e506*/
+      }
+      while( TRUE ); /*lint !e506*/
       assert(getNumMemberArcs(dec, nonPathMember) >= 2);
       SCIP_Bool representativeIsTree = !arcIsTree(dec, exceptionArc1);
       if( SPQRarcIsValid(exceptionArc2))
@@ -5363,12 +5432,14 @@ SCIP_RETCODE splitSeriesMerging(
       {
          SCIP_CALL(createMarkerPairWithReferences(dec, nonPathMember, member, !representativeIsTree,
                                                   inNewReversed, inOldReversed, &ignored, nonPathRepresentative));
-      } else
+      }
+      else
       {
          SCIP_CALL(createMarkerPairWithReferences(dec, member, nonPathMember, representativeIsTree,
                                                   inOldReversed, inNewReversed, nonPathRepresentative, &ignored));
       }
-   } else
+   }
+   else
    {
       *nonPathRepresentative = SPQR_INVALID_ARC;
       if( numNonPathArcs != 0 )
@@ -5383,7 +5454,8 @@ SCIP_RETCODE splitSeriesMerging(
                break;
             }
             arc = getNextMemberArc(dec, arc);
-         } while( arc != firstArc );
+         }
+         while( arc != firstArc );
          assert(*nonPathRepresentative != SPQR_INVALID_ARC);
       }
    }
@@ -5460,14 +5532,16 @@ SCIP_RETCODE transformFirstPathMember(
    if( arcIsReversedNonRigid(dec, pathRepresentative) == targetReversed )
    {
       setArcHeadAndTail(dec, pathRepresentative, a, c);
-   } else
+   }
+   else
    {
       setArcHeadAndTail(dec, pathRepresentative, c, a);
    }
    if( arcIsReversedNonRigid(dec, nonPathRepresentative) == targetReversed )
    {
       setArcHeadAndTail(dec, nonPathRepresentative, b, a);
-   } else
+   }
+   else
    {
       setArcHeadAndTail(dec, nonPathRepresentative, a, b);
    }
@@ -5483,7 +5557,8 @@ SCIP_RETCODE transformFirstPathMember(
    if( pathType == INTO_HEAD )
    {
       setTerminalTail(newColInfo, a);
-   } else
+   }
+   else
    {
       setTerminalHead(newColInfo, a);
    }
@@ -5534,7 +5609,8 @@ SCIP_RETCODE transformAndMergeParallel(
          if( arcIsReversedNonRigid(dec, arc) == sourceReversed )
          {
             setArcHeadAndTail(dec, arc, sourceHead, sourceTail);
-         } else
+         }
+         else
          {
             setArcHeadAndTail(dec, arc, sourceTail, sourceHead);
          }
@@ -5542,7 +5618,8 @@ SCIP_RETCODE transformAndMergeParallel(
          arcSetReversed(dec, arc, FALSE);
 
          arc = getNextMemberArc(dec, arc);
-      } while( arc != firstArc );
+      }
+      while( arc != firstArc );
 
       arcSetRepresentative(dec, source, SPQR_INVALID_ARC);
    }
@@ -5553,12 +5630,15 @@ SCIP_RETCODE transformAndMergeParallel(
    spqr_member newMergedMember = SPQR_INVALID_MEMBER;
    if( nextIsParent )
    {
-      SCIP_CALL( mergeGivenMemberIntoParent(dec, *mergedMember, nextMember,
-                                 source, newCol->reducedMembers[current].pathTargetArc, TRUE, &newMergedMember) );
-   } else
+      SCIP_CALL(mergeGivenMemberIntoParent(dec, *mergedMember, nextMember,
+                                           source, newCol->reducedMembers[current].pathTargetArc, TRUE,
+                                           &newMergedMember));
+   }
+   else
    {
-      SCIP_CALL( mergeGivenMemberIntoParent(dec, nextMember, *mergedMember,
-                                 newCol->reducedMembers[current].pathTargetArc, source, TRUE, &newMergedMember) );
+      SCIP_CALL(mergeGivenMemberIntoParent(dec, nextMember, *mergedMember,
+                                           newCol->reducedMembers[current].pathTargetArc, source, TRUE,
+                                           &newMergedMember));
    }
    *mergedMember = newMergedMember;
 
@@ -5606,7 +5686,8 @@ SCIP_RETCODE transformAndMergeSeries(
    if( SPQRarcIsValid(pathRepresentative))
    {
       SCIP_CALL(createNode(dec, &c));
-   } else
+   }
+   else
    {
       c = b;
    }
@@ -5615,12 +5696,14 @@ SCIP_RETCODE transformAndMergeSeries(
    if( hasNonPath && hasTarget )
    {
       SCIP_CALL(createNode(dec, &d));
-   } else
+   }
+   else
    {
       if( hasNonPath )
       {
          d = c;
-      } else
+      }
+      else
       {
          d = a;
       }
@@ -5631,7 +5714,8 @@ SCIP_RETCODE transformAndMergeSeries(
    if( pathStartInHead )
    {
       setArcHeadAndTail(dec, source, b, a);
-   } else
+   }
+   else
    {
       setArcHeadAndTail(dec, source, a, b);
    }
@@ -5640,7 +5724,8 @@ SCIP_RETCODE transformAndMergeSeries(
       if(( arcIsReversedNonRigid(dec, pathRepresentative) == sourceReversed ) == pathStartInHead )
       {
          setArcHeadAndTail(dec, pathRepresentative, c, b);
-      } else
+      }
+      else
       {
          setArcHeadAndTail(dec, pathRepresentative, b, c);
       }
@@ -5652,7 +5737,8 @@ SCIP_RETCODE transformAndMergeSeries(
       if(( arcIsReversedNonRigid(dec, target) == sourceReversed ) == pathStartInHead )
       {
          setArcHeadAndTail(dec, target, d, c);
-      } else
+      }
+      else
       {
          setArcHeadAndTail(dec, target, c, d);
       }
@@ -5664,7 +5750,8 @@ SCIP_RETCODE transformAndMergeSeries(
       if(( arcIsReversedNonRigid(dec, nonPathRepresentative) == sourceReversed ) == pathStartInHead )
       {
          setArcHeadAndTail(dec, nonPathRepresentative, a, d);
-      } else
+      }
+      else
       {
          setArcHeadAndTail(dec, nonPathRepresentative, d, a);
       }
@@ -5680,12 +5767,15 @@ SCIP_RETCODE transformAndMergeSeries(
    spqr_member newMergedMember = SPQR_INVALID_MEMBER;
    if( nextIsParent )
    {
-      SCIP_CALL( mergeGivenMemberIntoParent(dec, *mergedMember, nextMember,
-                                 source, newCol->reducedMembers[current].pathTargetArc, TRUE, &newMergedMember) );
-   } else
+      SCIP_CALL(mergeGivenMemberIntoParent(dec, *mergedMember, nextMember,
+                                           source, newCol->reducedMembers[current].pathTargetArc, TRUE,
+                                           &newMergedMember));
+   }
+   else
    {
-      SCIP_CALL( mergeGivenMemberIntoParent(dec, nextMember, *mergedMember,
-                                 newCol->reducedMembers[current].pathTargetArc, source, TRUE, &newMergedMember) );
+      SCIP_CALL(mergeGivenMemberIntoParent(dec, nextMember, *mergedMember,
+                                           newCol->reducedMembers[current].pathTargetArc, source, TRUE,
+                                           &newMergedMember));
    }
    *mergedMember = newMergedMember;
 
@@ -5697,7 +5787,8 @@ SCIP_RETCODE transformAndMergeSeries(
       if( isInto(newCol->reducedMembers[current].pathType))
       {
          setTerminalHead(info, c);
-      } else
+      }
+      else
       {
          setTerminalTail(info, c);
       }
@@ -5729,14 +5820,15 @@ SCIP_RETCODE transformAndMergeRigid(
 
    if( nextIsParent )
    {
-      SCIP_CALL( mergeGivenMemberIntoParent(dec, *mergedMember, nextMember,
-                                 source, newCol->reducedMembers[current].pathTargetArc, !redMem->reverseArcs,
-                                 &newMergedMember) );
-   } else
+      SCIP_CALL(mergeGivenMemberIntoParent(dec, *mergedMember, nextMember,
+                                           source, newCol->reducedMembers[current].pathTargetArc, !redMem->reverseArcs,
+                                           &newMergedMember));
+   }
+   else
    {
-      SCIP_CALL( mergeGivenMemberIntoParent(dec, nextMember, *mergedMember,
-                                 newCol->reducedMembers[current].pathTargetArc, source, !redMem->reverseArcs,
-                                 &newMergedMember) );
+      SCIP_CALL(mergeGivenMemberIntoParent(dec, nextMember, *mergedMember,
+                                           newCol->reducedMembers[current].pathTargetArc, source, !redMem->reverseArcs,
+                                           &newMergedMember));
    }
 
    *mergedMember = newMergedMember;
@@ -5752,16 +5844,19 @@ SCIP_RETCODE transformAndMergeRigid(
          if( redMem->reverseArcs )
          {
             setTerminalHead(info, redMem->rigidPathStart);
-         } else
+         }
+         else
          {
             setTerminalHead(info, redMem->rigidPathEnd);
          }
-      } else
+      }
+      else
       {
          if( redMem->reverseArcs )
          {
             setTerminalTail(info, redMem->rigidPathEnd);
-         } else
+         }
+         else
          {
             setTerminalTail(info, redMem->rigidPathStart);
          }
@@ -5926,12 +6021,13 @@ SCIP_RETCODE columnTransformSingleRigid(
             break;
          }
          arc = getNextNodeArc(dec, arc, reducedMember->rigidPathStart);
-      } while( arc != firstArc );
+      }
+      while( arc != firstArc );
       if( SPQRarcIsValid(existingArcWithPath))
       {
          SCIP_Bool isParent = FALSE;
          spqr_member adjacentMember = arcIsChildMarker(dec, existingArcWithPath) ?
-                                      findArcChildMember(dec,existingArcWithPath) : SPQR_INVALID_MEMBER;
+                                      findArcChildMember(dec, existingArcWithPath) : SPQR_INVALID_MEMBER;
          if( existingArcWithPath == markerToParent(dec, member))
          {
             adjacentMember = findMemberParent(dec, member);
@@ -5943,7 +6039,8 @@ SCIP_RETCODE columnTransformSingleRigid(
             SCIP_Bool markerReversed = arcIsReversedNonRigid(dec, parallelMarker);
             setTerminalMember(newColInfo, adjacentMember);
             setTerminalReversed(newColInfo, markerReversed == pathInSameDirection);
-         } else
+         }
+         else
          {
             //create a new parallel and move the edge there
             //This is a bit painful, because we cannot actually remove edges because of the union-find data structure
@@ -5959,15 +6056,18 @@ SCIP_RETCODE columnTransformSingleRigid(
                if( SPQRelementIsColumn(element))
                {
                   SCIP_CALL(createColumnArc(dec, adjacentParallel, &duplicate, SPQRelementToColumn(element), FALSE));
-               } else
+               }
+               else
                {
                   SCIP_CALL(createRowArc(dec, adjacentParallel, &duplicate, SPQRelementToRow(element), FALSE));
                }
-            } else if( isParent )
+            }
+            else if( isParent )
             {
                SCIP_CALL(createParentMarker(dec, adjacentParallel, arcIsTree(dec, existingArcWithPath), adjacentMember,
                                             markerOfParent(dec, member), &duplicate, FALSE));
-            } else
+            }
+            else
             {
                SCIP_CALL(createChildMarker(dec, adjacentParallel, adjacentMember, arcIsTree(dec, existingArcWithPath),
                                            &duplicate, FALSE));
@@ -5980,7 +6080,8 @@ SCIP_RETCODE columnTransformSingleRigid(
             {
                SCIP_CALL(createChildMarker(dec, adjacentParallel, member, !arcIsTree(dec, existingArcWithPath),
                                            &parallelMarker, FALSE));
-            } else
+            }
+            else
             {
                SCIP_CALL(createParentMarker(dec, adjacentParallel, !arcIsTree(dec, existingArcWithPath),
                                             member, existingArcWithPath, &parallelMarker, FALSE));
@@ -5998,7 +6099,8 @@ SCIP_RETCODE columnTransformSingleRigid(
                                                                                             : MARKER_COLUMN_ELEMENT;
                dec->arcs[existingArcWithPath].childMember = adjacentParallel;
 
-            } else
+            }
+            else
             {
                dec->arcs[existingArcWithPath].element = arcIsTree(dec, existingArcWithPath) ? MARKER_ROW_ELEMENT
                                                                                             : MARKER_COLUMN_ELEMENT;
@@ -6103,7 +6205,8 @@ SCIP_RETCODE SCIPnetcoladdAdd(
       spqr_member member;
       SCIP_CALL(createStandaloneSeries(dec, newCol->newRowArcs, newCol->newRowArcReversed,
                                        newCol->numNewRowArcs, newCol->newColIndex, &member));
-   } else if( newCol->numReducedComponents == 1 )
+   }
+   else if( newCol->numReducedComponents == 1 )
    {
       NewColInformation information = emptyNewColInformation();
       SCIP_CALL(transformComponent(dec, newCol, &newCol->reducedComponents[0], &information));
@@ -6120,7 +6223,8 @@ SCIP_RETCODE SCIPnetcoladdAdd(
             arcSetRepresentative(dec, colArc, information.representative);
             arcSetReversed(dec, colArc, information.reversed != arcIsReversedNonRigid(dec, information.representative));
          }
-      } else
+      }
+      else
       {
          spqr_member newSeries = SPQR_INVALID_MEMBER;
          SCIP_CALL(createConnectedSeries(dec, newCol->newRowArcs, newCol->newRowArcReversed, newCol->numNewRowArcs,
@@ -6147,7 +6251,8 @@ SCIP_RETCODE SCIPnetcoladdAdd(
             changeLoopToParallel(dec, information.member);
          }
       }
-   } else
+   }
+   else
    {
 #ifndef NDEBUG
       int numDecComponentsBefore = numConnectedComponents(dec);
@@ -6167,7 +6272,8 @@ SCIP_RETCODE SCIPnetcoladdAdd(
             moveArcToNewMember(dec, arc, information.member, newSeries);
             arcSetReversed(dec, arc, !newCol->arcInPathReversed[arc]);
             dec->members[information.member].type = SPQR_MEMBERTYPE_UNASSIGNED;
-         } else
+         }
+         else
          {
             reorderComponent(dec,
                              information.member);//reorder the subtree so that the newly series member is a parent
@@ -6493,7 +6599,8 @@ SCIP_RETCODE newRowUpdateRowInformation(
          newRow->decompositionColumnArcs[newRow->numDecompositionColumnArcs] = columnArc;
          newRow->decompositionColumnArcReversed[newRow->numDecompositionColumnArcs] = reversed;
          ++newRow->numDecompositionColumnArcs;
-      } else
+      }
+      else
       {
          //Not in the decomposition: add it to the set of arcs which are newly added with this row.
          if( newRow->numColumnArcs == newRow->memColumnArcs )
@@ -6571,7 +6678,8 @@ reduced_member_id createRowReducedMembersToRoot(
             callstack[callDepth].member = parentMember;
             continue;
 
-         } else
+         }
+         else
          {
             //we found a new reduced decomposition component
 
@@ -6810,7 +6918,8 @@ void createCutArc(
          SCIPswapInts(&listNode->arcHead, &listNode->arcTail);
       }
       assert(SPQRnodeIsValid(listNode->arcHead) && SPQRnodeIsValid(listNode->arcTail));
-   } else
+   }
+   else
    {
       listNode->arcHead = SPQR_INVALID_NODE;
       listNode->arcTail = SPQR_INVALID_NODE;
@@ -7314,11 +7423,13 @@ void intersectionOfAllPaths(
             {
                --pathSearchCallStackSize;
                dfsData = &pathSearchCallStack[pathSearchCallStackSize - 1];
-            } else
+            }
+            else
             {
                break;
             }
-         } while( pathSearchCallStackSize > 0 );
+         }
+         while( pathSearchCallStackSize > 0 );
       }
    }
 
@@ -7364,7 +7475,8 @@ void intersectionOfAllPaths(
       assert(SPQRnodeIsValid(source) && SPQRnodeIsValid(target));
       assert(source == target);
 
-   } while( cutArcIsValid(cutArc));
+   }
+   while( cutArcIsValid(cutArc));
 }
 
 /**< Add a node to array of articulation nodes */
@@ -7441,7 +7553,8 @@ void articulationPoints(
                nodeInfo[otherNode].discoveryTime = time;
                continue;
 
-            } else
+            }
+            else
             {
                nodeInfo[node].low = minValue(nodeInfo[node].low, nodeInfo[otherNode].discoveryTime);
             }
@@ -7458,7 +7571,7 @@ void articulationPoints(
          spqr_node current_node = callStack[depth].node;
          spqr_node other_node = callStack[depth + 1].node;
          nodeInfo[current_node].low = minValue(nodeInfo[current_node].low,
-                                          nodeInfo[other_node].low);
+                                               nodeInfo[other_node].low);
          if( depth != 0 &&
              !callStack[depth].isAP &&
              nodeInfo[current_node].discoveryTime <= nodeInfo[other_node].low )
@@ -7526,7 +7639,8 @@ void rigidConnectedColoringRecursive(
             if( isArcCut[callData->arc] )
             {
                nodeColors[otherNode] = currentColor == COLOR_SOURCE ? COLOR_SINK : COLOR_SOURCE;//reverse the colors
-            } else
+            }
+            else
             {
                nodeColors[otherNode] = currentColor;
             }
@@ -7578,7 +7692,8 @@ void rigidConnectedColoring(
          assert(newRow->nodeColors[findArcHeadNoCompression(dec, memberArc)] == UNCOLORED);
          assert(newRow->nodeColors[findArcTailNoCompression(dec, memberArc)] == UNCOLORED);
          memberArc = getNextMemberArc(dec, memberArc);
-      } while( firstArc != memberArc );
+      }
+      while( firstArc != memberArc );
    }
 #endif
 
@@ -7600,7 +7715,8 @@ void rigidConnectedColoring(
       {
          firstProcessNode = tail;
          firstColor = COLOR_SOURCE;
-      } else
+      }
+      else
       {
          assert(head != node);
          firstProcessNode = head;
@@ -7617,7 +7733,8 @@ void rigidConnectedColoring(
    {
       zeroOutColors(dec, newRow, firstProcessNode);
       newRow->reducedMembers[reducedMember].coloredNode = SPQR_INVALID_NODE;
-   } else
+   }
+   else
    {
       //Otherwise, we zero out all colors but the ones which we need
       zeroOutColorsExceptNeighbourhood(dec, newRow, node, firstProcessNode);
@@ -7657,31 +7774,36 @@ spqr_node checkNeighbourColoringArticulationNode(
          {
             firstSideCandidate = otherNode;
             firstSideArc = moveArc;
-         } else if( numFirstSide > 0 )
+         }
+         else if( numFirstSide > 0 )
          {
             firstSideCandidate = SPQR_INVALID_NODE;
          }
          ++numFirstSide;
-      } else
+      }
+      else
       {
          if( numSecondSide == 0 && arcIsTree(dec, moveArc))
          {
             secondSideCandidate = otherNode;
             secondSideArc = moveArc;
-         } else if( numSecondSide > 0 )
+         }
+         else if( numSecondSide > 0 )
          {
             secondSideCandidate = SPQR_INVALID_NODE;
          }
          ++numSecondSide;
       }
       moveArc = getNextNodeArc(dec, moveArc, articulationNode);
-   } while( moveArc != firstArc );
+   }
+   while( moveArc != firstArc );
 
    if( numFirstSide == 1 )
    {
       *adjacentSplittingArc = firstSideArc;
       return firstSideCandidate;
-   } else if( numSecondSide == 1 )
+   }
+   else if( numSecondSide == 1 )
    {
       *adjacentSplittingArc = secondSideArc;
       return secondSideCandidate;
@@ -7819,7 +7941,8 @@ void determineParallelType(
       if( countedCutArcs == 0 )
       {
          isReversed = arcIsReversed;
-      } else if( arcIsReversed != isReversed )
+      }
+      else if( arcIsReversed != isReversed )
       {
          good = FALSE;
          break;
@@ -7838,7 +7961,8 @@ void determineParallelType(
    {
       //In all other cases, the bond can be split so that the result will be okay!
       newRow->reducedMembers[toCheckMember].type = TYPE_MERGED;
-   } else
+   }
+   else
    {
       SCIP_Bool markerIsReversed = arcIsReversedNonRigid(dec, markerToOther);
       createCutArc(dec, newRow, markerToCheck, otherMember, markerIsReversed != isReversed);
@@ -7916,16 +8040,19 @@ void determineRigidType(
                           newRow->reducedMembers[toCheckMember].otherIsSource;
 
       createCutArc(dec, newRow, markerToCheck, otherMember, reverse);
-   } else if( newRow->reducedMembers[toCheckMember].splitNode == markerHead ||
-              newRow->reducedMembers[toCheckMember].splitNode == markerTail )
+   }
+   else if( newRow->reducedMembers[toCheckMember].splitNode == markerHead ||
+            newRow->reducedMembers[toCheckMember].splitNode == markerTail )
    {
       newRow->reducedMembers[toCheckMember].type = TYPE_MERGED;
-   } else if( SPQRarcIsValid(newRow->reducedMembers[toCheckMember].articulationArc) &&
-              ( newRow->reducedMembers[toCheckMember].otherNode == markerHead ||
-                newRow->reducedMembers[toCheckMember].otherNode == markerTail ))
+   }
+   else if( SPQRarcIsValid(newRow->reducedMembers[toCheckMember].articulationArc) &&
+            ( newRow->reducedMembers[toCheckMember].otherNode == markerHead ||
+              newRow->reducedMembers[toCheckMember].otherNode == markerTail ))
    {
       newRow->reducedMembers[toCheckMember].type = TYPE_MERGED;
-   } else
+   }
+   else
    {
       //Found source or sinks, but not adjacent to the marker
       newRow->reducedMembers[toCheckMember].type = TYPE_NOT_NETWORK;
@@ -8002,19 +8129,23 @@ void propagateComponents(
             if( newRow->reducedMembers[next].numPropagatedChildren == newRow->reducedMembers[next].numChildren )
             {
                newRow->leafMembers[leafArrayIndex] = next;
-            } else
+            }
+            else
             {
                ++leafArrayIndex;
             }
-         } else if( type == TYPE_NOT_NETWORK )
+         }
+         else if( type == TYPE_NOT_NETWORK )
          {
             return;
-         } else
+         }
+         else
          {
             assert(type == TYPE_MERGED);
             ++leafArrayIndex;
          }
-      } else
+      }
+      else
       {
          ++leafArrayIndex;
       }
@@ -8054,14 +8185,17 @@ void propagateComponents(
             if( type == TYPE_PROPAGATED )
             {
                root = child;
-            } else if( type == TYPE_NOT_NETWORK )
+            }
+            else if( type == TYPE_NOT_NETWORK )
             {
                return;
-            } else
+            }
+            else
             {
                break;
             }
-         } else
+         }
+         else
          {
             break;
          }
@@ -8106,7 +8240,8 @@ Nodes rigidDetermineCandidateNodesFromAdjacentComponents(
          {
             pair.first = head;
             pair.second = tail;
-         } else
+         }
+         else
          {
             if( pair.first != head && pair.first != tail )
             {
@@ -8134,7 +8269,8 @@ Nodes rigidDetermineCandidateNodesFromAdjacentComponents(
       {
          pair.first = head;
          pair.second = tail;
-      } else
+      }
+      else
       {
          if( pair.first != head && pair.first != tail )
          {
@@ -8191,7 +8327,8 @@ void determineSingleRowRigidType(
    if( SPQRnodeIsValid(newRow->reducedMembers[reducedMember].splitNode))
    {
       newRow->reducedMembers[reducedMember].type = TYPE_MERGED;
-   } else
+   }
+   else
    {
       newRow->reducedMembers[reducedMember].type = TYPE_NOT_NETWORK;
       newRow->remainsNetwork = FALSE;
@@ -8220,7 +8357,8 @@ void determineSingleParallelType(
       if( countedCutArcs == 0 )
       {
          isReversed = arcIsReversed;
-      } else if( arcIsReversed != isReversed )
+      }
+      else if( arcIsReversed != isReversed )
       {
          good = FALSE;
          break;
@@ -8231,7 +8369,8 @@ void determineSingleParallelType(
    {
       redMember->type = TYPE_NOT_NETWORK;
       newRow->remainsNetwork = FALSE;
-   } else
+   }
+   else
    {
       redMember->type = TYPE_MERGED;
    }
@@ -8297,7 +8436,8 @@ spqr_node determineAndColorSplitNode(
       if( newRow->reducedMembers[id].numCutArcs == 1 )
       {
          color = newRow->reducedMembers[id].otherIsSource ? COLOR_SINK : COLOR_SOURCE;
-      } else
+      }
+      else
       {
          color = newRow->reducedMembers[id].otherIsSource ? COLOR_SOURCE : COLOR_SINK;
       }
@@ -8307,11 +8447,13 @@ spqr_node determineAndColorSplitNode(
          spqr_node other = head == splitNode ? findArcTail(dec, iterArc) : head;
          newRow->nodeColors[other] = color;
          iterArc = getNextNodeArc(dec, iterArc, splitNode);
-      } while( iterArc != firstNodeArc );
+      }
+      while( iterArc != firstNodeArc );
       newRow->nodeColors[newRow->reducedMembers[id].splitNode] = newRow->reducedMembers[id].otherIsSource ? COLOR_SINK
                                                                                                           : COLOR_SOURCE;
 
-   } else
+   }
+   else
    {
       COLOR_STATUS splitColor = newRow->nodeColors[splitNode];
 
@@ -8323,7 +8465,8 @@ spqr_node determineAndColorSplitNode(
          spqr_node other = head == splitNode ? findArcTail(dec, iterArc) : head;
          newRow->nodeColors[other] = splitColor;
          iterArc = getNextNodeArc(dec, iterArc, splitNode);
-      } while( iterArc != firstNodeArc );
+      }
+      while( iterArc != firstNodeArc );
       newRow->nodeColors[newRow->reducedMembers[id].splitNode] = splitColor == COLOR_SOURCE ? COLOR_SINK : COLOR_SOURCE;
       newRow->nodeColors[splitNode] = UNCOLORED;
    }
@@ -8362,7 +8505,8 @@ void determineSplitTypeFirstLeaf(
          if( countedCutArcs == 0 )
          {
             isReversed = arcIsReversed;
-         } else if( arcIsReversed != isReversed )
+         }
+         else if( arcIsReversed != isReversed )
          {
             good = FALSE;
             break;
@@ -8373,7 +8517,8 @@ void determineSplitTypeFirstLeaf(
       {
          redMember->type = TYPE_NOT_NETWORK;
          newRow->remainsNetwork = FALSE;
-      } else
+      }
+      else
       {
          spqr_arc marker = markerToParent(dec, member);
          redMember->type = TYPE_MERGED;
@@ -8496,7 +8641,8 @@ SplitOrientation getRelativeOrientationRigid(
    {
       orientation.headSplit = arcHead != splitNode;
       orientation.otherIsSource = newRow->nodeColors[other] != COLOR_SOURCE;
-   } else
+   }
+   else
    {
       orientation.headSplit = arcHead == splitNode;
       orientation.otherIsSource = newRow->nodeColors[other] == COLOR_SOURCE;
@@ -8520,7 +8666,8 @@ SplitOrientation getRelativeOrientationParallel(
    if( arcIsReversedNonRigid(dec, arcToNext) == arcIsReversedNonRigid(dec, newRow->reducedMembers[reducedId].splitArc))
    {
       orientation.headSplit = newRow->reducedMembers[reducedId].splitHead;
-   } else
+   }
+   else
    {
       orientation.headSplit = !newRow->reducedMembers[reducedId].splitHead;
    }
@@ -8544,7 +8691,8 @@ SplitOrientation getRelativeOrientationSeries(
    if( arcIsReversedNonRigid(dec, arcToNext) == arcIsReversedNonRigid(dec, newRow->reducedMembers[reducedId].splitArc))
    {
       orientation.headSplit = !newRow->reducedMembers[reducedId].splitHead;
-   } else
+   }
+   else
    {
       orientation.headSplit = newRow->reducedMembers[reducedId].splitHead;
    }
@@ -8654,7 +8802,8 @@ void determineSplitTypeParallel(
       if( countedCutArcs == 0 )
       {
          isReversed = arcIsReversed;
-      } else if( arcIsReversed != isReversed )
+      }
+      else if( arcIsReversed != isReversed )
       {
          good = FALSE;
          break;
@@ -8996,7 +9145,8 @@ SCIP_RETCODE rigidTransformArcIntoCycle(
          markerCycleMember = adjacentMember;
          markerCycleArc = markerOfParent(dec, member);
       }
-   } else if( arcIsChildMarker(dec, arc))
+   }
+   else if( arcIsChildMarker(dec, arc))
    {
       adjacentMember = findArcChildMember(dec, arc);
       if( getMemberType(dec, adjacentMember) == SPQR_MEMBERTYPE_SERIES )
@@ -9011,7 +9161,8 @@ SCIP_RETCODE rigidTransformArcIntoCycle(
       if( arcIsReversedNonRigid(dec, markerCycleArc))
       {
          newRowInfo->reversed = reverseArcDirection;
-      } else
+      }
+      else
       {
          newRowInfo->reversed = !reverseArcDirection;
       }
@@ -9032,16 +9183,19 @@ SCIP_RETCODE rigidTransformArcIntoCycle(
       if( SPQRelementIsColumn(element))
       {
          SCIP_CALL(createColumnArc(dec, newCycle, &duplicate, SPQRelementToColumn(element), TRUE));
-      } else
+      }
+      else
       {
          SCIP_CALL(createRowArc(dec, newCycle, &duplicate, SPQRelementToRow(element), TRUE));
       }
-   } else if( isParent )
+   }
+   else if( isParent )
    {
       //create parent marker
       SCIP_CALL(createParentMarker(dec, newCycle, arcIsTree(dec, arc), adjacentMember,
                                    markerOfParent(dec, member), &duplicate, TRUE));
-   } else
+   }
+   else
    {
       //create child marker
       SCIP_CALL(createChildMarker(dec, newCycle, adjacentMember, arcIsTree(dec, arc), &duplicate, TRUE));
@@ -9054,7 +9208,8 @@ SCIP_RETCODE rigidTransformArcIntoCycle(
    {
       SCIP_CALL(createChildMarker(dec, newCycle, member, !arcIsTree(dec, arc),
                                   &cycleMarker, FALSE));
-   } else
+   }
+   else
    {
       SCIP_CALL(createParentMarker(dec, newCycle, !arcIsTree(dec, arc),
                                    member, arc, &cycleMarker, FALSE));
@@ -9070,7 +9225,8 @@ SCIP_RETCODE rigidTransformArcIntoCycle(
       dec->arcs[arc].element = arcIsTree(dec, arc) ? MARKER_ROW_ELEMENT : MARKER_COLUMN_ELEMENT;
       dec->arcs[arc].childMember = SPQR_INVALID_MEMBER;
 
-   } else
+   }
+   else
    {
       dec->arcs[arc].element = arcIsTree(dec, arc) ? MARKER_ROW_ELEMENT : MARKER_COLUMN_ELEMENT;
       dec->arcs[arc].childMember = newCycle;
@@ -9105,7 +9261,8 @@ SCIP_RETCODE transformSingleRigid(
       {
          reversed = ( newRow->reducedMembers[reducedMember].splitNode == findEffectiveArcHead(dec, arc)) ==
                     newRow->reducedMembers[reducedMember].otherIsSource;
-      } else
+      }
+      else
       {
          reversed = ( newRow->reducedMembers[reducedMember].splitNode == findEffectiveArcHead(dec, arc)) !=
                     newRow->reducedMembers[reducedMember].otherIsSource;
@@ -9134,25 +9291,29 @@ SCIP_RETCODE transformSingleRigid(
          if( arcHead == splitNode )
          {
             changeArcHead(dec, cutArc, arcHead, newNode);
-         } else
+         }
+         else
          {
             changeArcTail(dec, cutArc, findArcTail(dec, cutArc), newNode);
          }
 
          cutArcIdx = newRow->cutArcs[cutArcIdx].nextMember;
-      } while( cutArcIsValid(cutArcIdx));
+      }
+      while( cutArcIsValid(cutArcIdx));
 
       newRowInfo->member = member;
       if( newRow->reducedMembers[reducedMember].otherIsSource )
       {
          newRowInfo->head = newNode;
          newRowInfo->tail = splitNode;
-      } else
+      }
+      else
       {
          newRowInfo->head = splitNode;
          newRowInfo->tail = newNode;
       }
-      newRowInfo->representative = findArcSign(dec,newRow->cutArcs[newRow->reducedMembers[reducedMember].firstCutArc].arc).representative;
+      newRowInfo->representative = findArcSign(dec,
+                                               newRow->cutArcs[newRow->reducedMembers[reducedMember].firstCutArc].arc).representative;
       newRowInfo->reversed = FALSE;
 
       return SCIP_OKAY;
@@ -9180,7 +9341,8 @@ SCIP_RETCODE transformSingleRigid(
          if( otherHead == splitNode )
          {
             changeArcHead(dec, iterArc, otherHead, newNode);
-         } else
+         }
+         else
          {
             changeArcTail(dec, iterArc, otherTail, newNode);
          }
@@ -9198,13 +9360,15 @@ SCIP_RETCODE transformSingleRigid(
       {
          firstNodeArc = iterArc;
       }
-   } while( TRUE ); /*lint !e506*/
+   }
+   while( TRUE ); /*lint !e506*/
    newRow->reducedMembers[reducedMember].coloredNode = SPQR_INVALID_NODE;
 
    newRowInfo->member = member;
    newRowInfo->head = newNode;
    newRowInfo->tail = splitNode;
-   newRowInfo->representative = findArcSign(dec,newRow->cutArcs[newRow->reducedMembers[reducedMember].firstCutArc].arc).representative;
+   newRowInfo->representative = findArcSign(dec,
+                                            newRow->cutArcs[newRow->reducedMembers[reducedMember].firstCutArc].arc).representative;
    newRowInfo->reversed = FALSE;
 
    return SCIP_OKAY;
@@ -9237,7 +9401,8 @@ SCIP_RETCODE splitParallelRowAddition(
          break;
       }
       treeArc = getNextMemberArc(dec, treeArc);
-   } while( treeArc != getFirstMemberArc(dec, member));
+   }
+   while( treeArc != getFirstMemberArc(dec, member));
    assert(arcIsTree(dec, treeArc));
 
    SCIP_Bool treeReversed = arcIsReversedNonRigid(dec, treeArc);
@@ -9254,7 +9419,8 @@ SCIP_RETCODE splitParallelRowAddition(
          {
             adjacentMember = findMemberParent(dec, member);
             adjacentArc = markerOfParent(dec, member);
-         } else if( arcIsChildMarker(dec, treeArc))
+         }
+         else if( arcIsChildMarker(dec, treeArc))
          {
             adjacentMember = findArcChildMember(dec, treeArc);
             adjacentArc = markerToParent(dec, adjacentMember);
@@ -9270,7 +9436,8 @@ SCIP_RETCODE splitParallelRowAddition(
             if( arcIsReversedNonRigid(dec, treeArc) == arcIsReversedNonRigid(dec, adjacentArc))
             {
                newRowInfo->reversed = !firstReversed;
-            } else
+            }
+            else
             {
                newRowInfo->reversed = firstReversed;
             }
@@ -9296,7 +9463,8 @@ SCIP_RETCODE splitParallelRowAddition(
          if( parentCut )
          {
             SCIP_CALL(createMarkerPair(dec, cutMember, member, TRUE, FALSE, TRUE));
-         } else
+         }
+         else
          {
             SCIP_CALL(createMarkerPair(dec, member, cutMember, FALSE, TRUE, FALSE));
          }
@@ -9305,11 +9473,13 @@ SCIP_RETCODE splitParallelRowAddition(
          if( treeReversed )
          {
             newRowInfo->reversed = firstReversed == arcIsReversedNonRigid(dec, treeArc);
-         } else
+         }
+         else
          {
             newRowInfo->reversed = firstReversed != arcIsReversedNonRigid(dec, treeArc);
          }
-      } else
+      }
+      else
       {
          spqr_member cutMember = SPQR_INVALID_MEMBER;
          SCIP_CALL(createMember(dec, SPQR_MEMBERTYPE_PARALLEL, &cutMember));
@@ -9334,7 +9504,8 @@ SCIP_RETCODE splitParallelRowAddition(
          {
             SCIP_CALL(createMarkerPair(dec, newSeries, member, TRUE, FALSE, FALSE));
             SCIP_CALL(createMarkerPair(dec, cutMember, newSeries, TRUE, FALSE, TRUE));
-         } else
+         }
+         else
          {
             SCIP_CALL(createMarkerPair(dec, member, newSeries, FALSE, FALSE, FALSE));
             SCIP_CALL(createMarkerPair(dec, newSeries, cutMember, FALSE, TRUE, FALSE));
@@ -9358,7 +9529,8 @@ SCIP_RETCODE splitParallelRowAddition(
    if( arc == markerToParent(dec, member))
    {
       adjacentMember = findMemberParent(dec, member);
-   } else if( arcIsChildMarker(dec, arc))
+   }
+   else if( arcIsChildMarker(dec, arc))
    {
       adjacentMember = findArcChildMember(dec, arc);
    }
@@ -9386,7 +9558,8 @@ SCIP_RETCODE splitParallelRowAddition(
    if( parentCut )
    {
       SCIP_CALL(createMarkerPair(dec, newSeries, member, TRUE, TRUE, FALSE));
-   } else
+   }
+   else
    {
       SCIP_CALL(createMarkerPair(dec, member, newSeries, FALSE, FALSE, TRUE));
    }
@@ -9466,7 +9639,8 @@ SCIP_RETCODE splitSeriesMergingRowAddition(
             break;
          }
          arc = getNextMemberArc(dec, arc);
-      } while( arc != firstArc );
+      }
+      while( arc != firstArc );
       *mergingMember = member;
       return SCIP_OKAY;
    }
@@ -9516,7 +9690,8 @@ SCIP_RETCODE splitSeriesMergingRowAddition(
    {
       SCIP_CALL(createMarkerPairWithReferences(dec, mergingSeries, member, coTreeToMergingMember, TRUE, FALSE,
                                                representativeEdge, &ignoreArc));
-   } else
+   }
+   else
    {
       SCIP_CALL(
          createMarkerPairWithReferences(dec, member, mergingSeries, !coTreeToMergingMember, FALSE, TRUE, &ignoreArc,
@@ -9583,14 +9758,16 @@ SCIP_RETCODE splitParallelMerging(
       {
          SCIP_CALL(
             createMarkerPairWithReferences(dec, cutMember, member, TRUE, FALSE, FALSE, &ignoreArc, cutRepresentative));
-      } else
+      }
+      else
       {
          SCIP_CALL(
             createMarkerPairWithReferences(dec, member, cutMember, FALSE, FALSE, FALSE, cutRepresentative, &ignoreArc));
       }
 
       *pMergeMember = member;
-   } else if( createCutParallel )
+   }
+   else if( createCutParallel )
    {
       assert(!keepOriginalParallel);
 
@@ -9615,7 +9792,8 @@ SCIP_RETCODE splitParallelMerging(
       {
          SCIP_CALL(
             createMarkerPairWithReferences(dec, cutMember, member, TRUE, FALSE, FALSE, &ignoreArc, cutRepresentative));
-      } else
+      }
+      else
       {
          SCIP_CALL(
             createMarkerPairWithReferences(dec, member, cutMember, FALSE, FALSE, FALSE, cutRepresentative, &ignoreArc));
@@ -9672,13 +9850,15 @@ SCIP_RETCODE splitParallelMerging(
       {
          SCIP_CALL(createMarkerPairWithReferences(dec, mergingMember, member, !treeToMergingMember, FALSE, FALSE,
                                                   &ignoreArgument, &noCutRepresentative));
-      } else
+      }
+      else
       {
          SCIP_CALL(createMarkerPairWithReferences(dec, member, mergingMember, treeToMergingMember, FALSE, FALSE,
                                                   &noCutRepresentative, &ignoreArgument));
       }
       *pMergeMember = mergingMember;
-   } else if( keepOriginalParallel )
+   }
+   else if( keepOriginalParallel )
    {
       assert(!createCutParallel);
       if( cutArcIsValid(newRow->reducedMembers[reducedMember].firstCutArc))
@@ -9687,7 +9867,8 @@ SCIP_RETCODE splitParallelMerging(
       }
       *pMergeMember = member;
 
-   } else
+   }
+   else
    {
       assert(!keepOriginalParallel && !createCutParallel);
 
@@ -9746,7 +9927,8 @@ SCIP_RETCODE splitParallelMerging(
       {
          SCIP_CALL(createMarkerPairWithReferences(dec, mergingMember, member, !treeToMergingMember, FALSE, FALSE,
                                                   &ignoreArgument, &noCutRepresentative));
-      } else
+      }
+      else
       {
          SCIP_CALL(createMarkerPairWithReferences(dec, member, mergingMember, treeToMergingMember, FALSE, FALSE,
                                                   &noCutRepresentative, &ignoreArgument));
@@ -9801,16 +9983,19 @@ SCIP_RETCODE splitFirstLeaf(
             if( arcIsReversedNonRigid(dec, arc))
             {
                setArcHeadAndTail(dec, arc, secondNode, firstNode);
-            } else
+            }
+            else
             {
                setArcHeadAndTail(dec, arc, firstNode, secondNode);
             }
-         } else
+         }
+         else
          {
             if(( arcIsReversedNonRigid(dec, arc) == splitArcReversed ) == splitHead )
             {
                setArcHeadAndTail(dec, arc, thirdNode, otherNode);
-            } else
+            }
+            else
             {
                setArcHeadAndTail(dec, arc, otherNode, thirdNode);
             }
@@ -9819,12 +10004,14 @@ SCIP_RETCODE splitFirstLeaf(
          if( arc == splitArc )
          {
             arcSetRepresentative(dec, arc, SPQR_INVALID_ARC);
-         } else
+         }
+         else
          {
             arcSetRepresentative(dec, arc, splitArc);
          }
          arc = getNextMemberArc(dec, arc);
-      } while( arc != first_arc );
+      }
+      while( arc != first_arc );
 
 
       updateMemberType(dec, mergeMember, SPQR_MEMBERTYPE_RIGID);
@@ -9833,7 +10020,8 @@ SCIP_RETCODE splitFirstLeaf(
       {
          newRowInfo->head = thirdNode;
          newRowInfo->tail = splitNode;
-      } else
+      }
+      else
       {
          newRowInfo->head = splitNode;
          newRowInfo->tail = thirdNode;
@@ -9868,7 +10056,8 @@ SCIP_RETCODE splitFirstLeaf(
          if( otherHead == splitNode )
          {
             changeArcHead(dec, iterArc, otherHead, newNode);
-         } else
+         }
+         else
          {
             changeArcTail(dec, iterArc, otherTail, newNode);
          }
@@ -9885,7 +10074,8 @@ SCIP_RETCODE splitFirstLeaf(
       {
          firstNodeArc = iterArc;
       }
-   } while( TRUE ); /*lint !e506*/
+   }
+   while( TRUE ); /*lint !e506*/
    newRowInfo->head = newNode;
    newRowInfo->tail = splitNode;
    newRowInfo->member = member;
@@ -10014,26 +10204,31 @@ SCIP_RETCODE splitAndMergeSeries(
             if( splitHead )
             {
                setArcHeadAndTail(dec, splitArc, b, a);
-            } else
+            }
+            else
             {
                setArcHeadAndTail(dec, splitArc, a, b);
             }
-         } else if( arc == nonVirtualArc )
+         }
+         else if( arc == nonVirtualArc )
          {
             if(( arcIsReversedNonRigid(dec, arc) == splitReversed ) == splitHead )
             {
                setArcHeadAndTail(dec, arc, a, d);
-            } else
+            }
+            else
             {
                setArcHeadAndTail(dec, arc, d, a);
             }
-         } else
+         }
+         else
          {
             spqr_node otherNode = cutArcIsValid(newRow->reducedMembers[smallMember].firstCutArc) ? c : b;
             if(( arcIsReversedNonRigid(dec, arc) == splitReversed ) == splitHead )
             {
                setArcHeadAndTail(dec, arc, d, otherNode);
-            } else
+            }
+            else
             {
                setArcHeadAndTail(dec, arc, otherNode, d);
             }
@@ -10041,7 +10236,8 @@ SCIP_RETCODE splitAndMergeSeries(
          arcSetReversed(dec, arc, FALSE);
          arcSetRepresentative(dec, arc, splitArc);
          arc = getNextMemberArc(dec, arc);
-      } while( arc != firstArc );
+      }
+      while( arc != firstArc );
       arcSetRepresentative(dec, splitArc, SPQR_INVALID_ARC);
    }
 
@@ -10068,7 +10264,8 @@ SCIP_RETCODE splitAndMergeSeries(
                                            &arcNodeOne,
                                            &arcNodeTwo,
                                            &thirdNode));
-   } else
+   }
+   else
    {
       SCIP_CALL(mergeSplitMemberIntoParent(dec, newRow, otherMember, mergingMember, splitArc, otherMarker, TRUE,
                                            c, otherNode, &mergedMember,
@@ -10085,15 +10282,18 @@ SCIP_RETCODE splitAndMergeSeries(
    {
       newRowInfo->head = thirdNode;
       newRowInfo->tail = arcNodeOne;
-   } else if( !splitIsReferenceHead && splitIsNewRowHead )
+   }
+   else if( !splitIsReferenceHead && splitIsNewRowHead )
    {
       newRowInfo->head = arcNodeOne;
       newRowInfo->tail = thirdNode;
-   } else if( splitIsReferenceHead && !splitIsNewRowHead )
+   }
+   else if( splitIsReferenceHead && !splitIsNewRowHead )
    {
       newRowInfo->head = thirdNode;
       newRowInfo->tail = arcNodeTwo;
-   } else if( splitIsReferenceHead && splitIsNewRowHead )
+   }
+   else if( splitIsReferenceHead && splitIsNewRowHead )
    {
       newRowInfo->head = arcNodeTwo;
       newRowInfo->tail = thirdNode;
@@ -10146,16 +10346,19 @@ SCIP_RETCODE splitAndMergeParallel(
          if( arcIsReversedNonRigid(dec, arc))
          {
             setArcHeadAndTail(dec, arc, secondNode, firstNode);
-         } else
+         }
+         else
          {
             setArcHeadAndTail(dec, arc, firstNode, secondNode);
          }
-      } else
+      }
+      else
       {
          if(( arcIsReversedNonRigid(dec, arc) == splitArcReversed ) == splitHead )
          {
             setArcHeadAndTail(dec, arc, thirdNode, otherNode);
-         } else
+         }
+         else
          {
             setArcHeadAndTail(dec, arc, otherNode, thirdNode);
          }
@@ -10163,7 +10366,8 @@ SCIP_RETCODE splitAndMergeParallel(
       arcSetReversed(dec, arc, FALSE);
       arcSetRepresentative(dec, arc, splitArc);
       arc = getNextMemberArc(dec, arc);
-   } while( arc != first_arc );
+   }
+   while( arc != first_arc );
    arcSetRepresentative(dec, splitArc, SPQR_INVALID_ARC);
 
    spqr_member otherMember = newRowInfo->member;
@@ -10191,7 +10395,8 @@ SCIP_RETCODE splitAndMergeParallel(
                                            &arcNodeOne,
                                            &arcNodeTwo,
                                            &mergeNodeThree));
-   } else
+   }
+   else
    {
       SCIP_CALL(mergeSplitMemberIntoParent(dec, newRow, otherMember, mergeMember, splitArc, otherMarker, TRUE,
                                            thirdNode, largeOtherNode, &mergedMember,
@@ -10209,15 +10414,18 @@ SCIP_RETCODE splitAndMergeParallel(
    {
       newRowInfo->head = mergeNodeThree;
       newRowInfo->tail = arcNodeOne;
-   } else if( !splitIsReferenceHead && splitIsNewRowHead )
+   }
+   else if( !splitIsReferenceHead && splitIsNewRowHead )
    {
       newRowInfo->head = arcNodeOne;
       newRowInfo->tail = mergeNodeThree;
-   } else if( splitIsReferenceHead && !splitIsNewRowHead )
+   }
+   else if( splitIsReferenceHead && !splitIsNewRowHead )
    {
       newRowInfo->head = mergeNodeThree;
       newRowInfo->tail = arcNodeTwo;
-   } else if( splitIsReferenceHead && splitIsNewRowHead )
+   }
+   else if( splitIsReferenceHead && splitIsNewRowHead )
    {
       newRowInfo->head = arcNodeTwo;
       newRowInfo->tail = mergeNodeThree;
@@ -10273,7 +10481,8 @@ SCIP_RETCODE splitAndMergeRigid(
             if( otherHead == splitNode )
             {
                changeArcHead(dec, iterArc, otherHead, newNode);
-            } else
+            }
+            else
             {
                changeArcTail(dec, iterArc, otherTail, newNode);
             }
@@ -10294,13 +10503,14 @@ SCIP_RETCODE splitAndMergeRigid(
          {
             firstNodeArc = iterArc;
          }
-      } while( TRUE ); /*lint !e506*/
+      }
+      while( TRUE ); /*lint !e506*/
    }
 
    spqr_arc representative = findArcSign(dec, smallMarker).representative;
 
    newRowInfo->representative = mergeArcSigns(dec, newRowInfo->representative, representative,
-                                                     newRow->reducedMembers[smallMember].willBeReversed);
+                                              newRow->reducedMembers[smallMember].willBeReversed);
 
    spqr_node largeMarkerHead = findArcHead(dec, largeMarker);
    spqr_node largeMarkerTail = findArcTail(dec, largeMarker);
@@ -10311,7 +10521,7 @@ SCIP_RETCODE splitAndMergeRigid(
       largeMarkerTail = temp;
    }
    assert(newRowInfo->head == largeMarkerHead || newRowInfo->head == largeMarkerTail ||
-             newRowInfo->tail == largeMarkerHead || newRowInfo->tail == largeMarkerTail);
+          newRowInfo->tail == largeMarkerHead || newRowInfo->tail == largeMarkerTail);
    spqr_node largeOtherNode = ( newRowInfo->head == largeMarkerHead || newRowInfo->head == largeMarkerTail )
                               ? newRowInfo->tail : newRowInfo->head;
 
@@ -10327,7 +10537,8 @@ SCIP_RETCODE splitAndMergeRigid(
                                     &arcNodeOne,
                                     &arcNodeTwo,
                                     &mergeNodeThree));
-   } else
+   }
+   else
    {
       SCIP_CALL(
          mergeSplitMemberIntoParent(dec, newRow, largeMemberMember, smallMemberMember, smallMarker, largeMarker, TRUE,
@@ -10340,25 +10551,28 @@ SCIP_RETCODE splitAndMergeRigid(
 
    SCIP_Bool otherIsHead = largeOtherNode == newRowInfo->head;
    SCIP_Bool adjacentToMarkerHead = ( newRowInfo->tail == largeMarkerHead ||
-      newRowInfo->head == largeMarkerHead );
+                                      newRowInfo->head == largeMarkerHead );
    if( adjacentToMarkerHead )
    {
       if( otherIsHead )
       {
          newRowInfo->head = mergeNodeThree;
          newRowInfo->tail = arcNodeTwo;
-      } else
+      }
+      else
       {
          newRowInfo->head = arcNodeTwo;
          newRowInfo->tail = mergeNodeThree;
       }
-   } else
+   }
+   else
    {
       if( otherIsHead )
       {
          newRowInfo->head = mergeNodeThree;
          newRowInfo->tail = arcNodeOne;
-      } else
+      }
+      else
       {
          newRowInfo->head = arcNodeOne;
          newRowInfo->tail = mergeNodeThree;
@@ -10521,8 +10735,6 @@ SCIP_RETCODE transformComponentRowAddition(
                if( getNumMemberArcs(dec, member) == 2 )
                {
                   changeLoopToSeries(dec, member);
-               } else
-               {
                }
             }
             break;
@@ -10734,7 +10946,8 @@ SCIP_RETCODE SCIPnetrowaddAdd(
       spqr_member newMember = SPQR_INVALID_MEMBER;
       SCIP_CALL(createStandaloneParallel(dec, rowadd->newColumnArcs, rowadd->newColumnReversed,
                                          rowadd->numColumnArcs, rowadd->newRowIndex, &newMember));
-   } else if( rowadd->numReducedComponents == 1 )
+   }
+   else if( rowadd->numReducedComponents == 1 )
    {
       NewRowInformation information = emptyNewRowInformation();
       SCIP_CALL(transformComponentRowAddition(dec, rowadd, &rowadd->reducedComponents[0], &information));
@@ -10751,7 +10964,8 @@ SCIP_RETCODE SCIPnetrowaddAdd(
             arcSetRepresentative(dec, rowArc, information.representative);
             arcSetReversed(dec, rowArc, information.reversed != arcIsReversedNonRigid(dec, information.representative));
          }
-      } else
+      }
+      else
       {
          spqr_member new_row_parallel = SPQR_INVALID_MEMBER;
          SCIP_CALL(createConnectedParallel(dec, rowadd->newColumnArcs, rowadd->newColumnReversed, rowadd->numColumnArcs,
@@ -10779,7 +10993,8 @@ SCIP_RETCODE SCIPnetrowaddAdd(
             changeLoopToSeries(dec, information.member);
          }
       }
-   } else
+   }
+   else
    {
 #ifndef NDEBUG
       int numDecComponentsBefore = numConnectedComponents(dec);
@@ -10800,7 +11015,8 @@ SCIP_RETCODE SCIPnetrowaddAdd(
             moveArcToNewMember(dec, arc, information.member, new_row_parallel);
             arcSetReversed(dec, arc, rowadd->isArcCutReversed[arc]);
             dec->members[information.member].type = SPQR_MEMBERTYPE_UNASSIGNED;
-         } else
+         }
+         else
          {
             reorderComponent(dec,
                              information.member);//Make sure the new component is the root of the local decomposition tree
