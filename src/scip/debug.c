@@ -717,6 +717,35 @@ SCIP_RETCODE SCIPdebugFreeSol(
    return SCIP_OKAY;
 }
 
+/** clears the debug solution */
+SCIP_RETCODE SCIPdebugClearSol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+   int s;
+
+   assert(scip != NULL);
+
+   debugsoldata = SCIPsetGetDebugSolData(scip->set);
+   assert(debugsoldata != NULL);
+
+   if( debugsoldata->debugsol != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &debugsoldata->debugsol) );
+   }
+   SCIP_CALL( SCIPcreateOrigSol(scip, &debugsoldata->debugsol, NULL) );
+
+   for( s = debugsoldata->nsolvals - 1; s >= 0; --s )
+      BMSfreeMemoryArrayNull(&(debugsoldata->solnames[s]));
+
+   debugsoldata->nsolvals = 0;
+   debugsoldata->debugsolval= 0.0;
+   debugsoldata->solisachieved = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** resets the data structure after restart */
 SCIP_RETCODE SCIPdebugReset(
    SCIP_SET*             set
