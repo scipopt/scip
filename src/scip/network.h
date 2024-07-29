@@ -51,16 +51,17 @@
  * it is up to the user to ensure this when interleaving column and row addition steps.
  *
  * More details can be found in:
- * - R.P. van der Hulst and M.Walter "A row-wise algorithm for graph realization"
+ * - R.P. van der Hulst and M. Walter "A row-wise algorithm for graph realization"
  * - R.E. Bixby and D.K. Wagner "An almost linear-time algorithm for graph realization"
+ *
  * Note that although these publications contain the methods for undirected graphs (and binary matrices),
  * their ideas are relatively easily extended to directed graphs and ternary matrices.
  * Implementation details are described in further detail in network.c
  */
 
-/** TODO: add method that realizes a SCIP digraph from the decomposition */
-/** TODO: add method that *cleanly* removes complete components of the SPQR tree */
-/** TODO: add node-arc incidence matrix methods */
+/** @TODO add method that realizes a SCIP digraph from the decomposition */
+/** @TODO add method that *cleanly* removes complete components of the SPQR tree */
+/** @TODO add node-arc incidence matrix methods */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_NETWORK_H__
@@ -69,6 +70,7 @@
 #include "scip/def.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
+
 #ifdef cplusplus
 extern "C" {
 #endif
@@ -94,7 +96,7 @@ void SCIPnetmatdecFree(
    SCIP_NETMATDEC**      pdec                /**< pointer to the network matrix decomposition to free */
 );
 
-/** Tries to add a given column to the network network matrix
+/** tries to add a given column to the network network matrix
  *
  *  Note that the first call to this method for a given decomposition may be a bit slower,
  *  due to memory initialization.
@@ -109,7 +111,7 @@ SCIP_RETCODE SCIPnetmatdecTryAddCol(
    SCIP_Bool*            success             /**< Buffer to store whether the column was added */
 );
 
-/** Tries to add a given column to the network network matrix
+/** tries to add a given column to the network network matrix
  *
  *  Note that the first call to this method for a given decomposition may be a bit slower,
  *  due to memory initialization.
@@ -184,9 +186,8 @@ SCIP_Bool SCIPnetmatdecVerifyCycle(
                                               * equal or greater than the number of rows in the decomposition. */
 );
 
-
 #ifdef cplusplus
 }
 #endif
 
-#endif //__SCIP_NETWORK_H__
+#endif /*__SCIP_NETWORK_H__ */

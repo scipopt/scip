@@ -24,12 +24,13 @@
 
 /**@file   network.c
  * @ingroup OTHER_CFILES
- * @brief   Methods for detecting network (sub)matrices
+ * @brief  Methods for detecting network (sub)matrices
  * @author Rolf van der Hulst
+ *
  * Detecting if a matrix is a network matrix can be quite complex. Below is an introductory text, which may help with
  * navigating the functions and datastructures in this file by giving a general overview.
  * More details can be found in;
- * R.P. van der Hulst and M.Walter "A row-wise algorithm for graph realization"
+ * R.P. van der Hulst and M. Walter "A row-wise algorithm for graph realization"
  * and
  * R.E. Bixby and D.K. Wagner "An almost linear-time algorithm for graph realization"
  * for the column-wise algorithm.
@@ -51,36 +52,37 @@
  * Each block has a 2-connected realization graph.
  *
  * If a graph \f$G\f$ realizing the network matrix has a 2-separation \f$(E_1,E_2)\f$ at vertices u and v, then we can
- * obtain an another graph representing the network matrix, by inverting the direction of all edges in \f$E_2\f$ and
- * replacing u by v and vice-versa, to obtain a different graph that realizes the network matrix. One can also imagine
+ * obtain another graph representing the network matrix, by inverting the direction of all edges in \f$E_2\f$ and
+ * replacing u by v and vice-versa. One can also imagine
  * adding a virtual edge \f$e'=\{u,v\}\f$ to both E_1 and E_2. In the trivial realization, we simply map the head of
  * \f$e'\f$ in \f$E_1\f$ to the head of \f$e'\f$ in \f$E_2\f$ and remove \f$e'\f$ from both graphs. In the second
  * realization we do the same thing, but first invert all the edges in \f$E_2\f$, including \f$e'\f$.
  * An SPQR tree \f$\mathcal{T}=(\mathcal{V},\mathcal{E})\f$ is a tree data structure that represents the structure of
  * all 2-separations in a 2-connected graph. Each member \f$\nu\in\mathcal{V}\f$ has an associated skeleton graph that
- * has one of four different types;
- * (S) - The member's skeleton graph is a cycle with at least 3 edges (also referred to as series or polygon)
- * (P) - The member's skeleton graph consists of at least 3 parallel edges and 2 nodes (also referred to as bond)
- * (Q) - The member's skeleton graph consists of at most 2 edges connecting two nodes (also referred to as loop)
- * (R) - The member's skeleton graph is 3-connected and consists of at least 4 edges.
+ * has one of four different types:
+ * - (S) The member's skeleton graph is a cycle with at least 3 edges (also referred to as series or polygon)
+ * - (P) The member's skeleton graph consists of at least 3 parallel edges and 2 nodes (also referred to as bond)
+ * - (Q) The member's skeleton graph consists of at most 2 edges connecting two nodes (also referred to as loop)
+ * - (R) The member's skeleton graph is 3-connected and consists of at least 4 edges.
  *
  * An SPQR tree is considered minimal if it has no P-P or S-S connections. Each connected matrix has a unique minimal
  * SPQR tree. Each edge \f$\{\nu,\mu\}\in\mathcal{E}\f$ defines a 2-separation of the underlying graph. In particular,
  * each edge has one virtual edge in the member graph that it connects to the other member graph in the edge.
  *
- * We can obtain a realization of the graph underlying the network matrix by doing the following operations;
+ * We can obtain a realization of the graph underlying the network matrix by doing the following operations:
  * 1. Permute the edges of each (S)-member arbitrarily
- * 2. For each edge in $\mathcal{E}$, pick one of the two orientations of the virtual edges and merge the adjacent
+ * 2. For each edge in \f$\mathcal{E}\f$, pick one of the two orientations of the virtual edges and merge the adjacent
  *    member graphs accordingly.
+ *
  * In this way, all the graphs given by the network matrix are represented. In order to efficiently perform the merge
  * of two member graphs, the member and node labels are given by union-find datastructures. Additionally, we also
- * introduce a signed-union find datastructure on the arcs of the graphs, so that we can efficiently invert the arcs
+ * introduce a signed-union-find datastructure on the arcs of the graphs, so that we can efficiently invert the arcs
  * of one side of a 2-separation.
  * The 1-separations can be handled by storing an SPQR forest, with a (minimal) SPQR tree for every connected block
  * of the network matrix.
  *
  * For adding a column to the network matrix, one can show that one can add a column only if the nonzeros of the column
- * Form a path with the correct signs in some graph represented by the network matrix. We solve the problem for each
+ * form a path with the correct signs in some graph represented by the network matrix. We solve the problem for each
  * graph represented by the network matrix simultaneously by decomposing over the SPQR tree. First, we compute the path
  * in each member. Then, we attempt to combine the paths by orienting the 2-separations so that the different member
  * paths form a path in the represented graph.
@@ -93,8 +95,8 @@
  * Finally, we can easily join the paths of multiple SPQR trees using a series node to obtain the final path.
  *
  * The ideas for the row-wise algorithm have many parallels with the column-wise algorithm. One can add a row to a
- * network matrix if and only if a node is 'splittable' with respect to a certain auxilliary graph formed by the nonzero
- * columns indices of the row, for a graph represented by the network matrix. In particular, this auxilliary graph must
+ * network matrix if and only if a node is 'splittable' with respect to a certain auxiliary graph formed by the nonzero
+ * columns indices of the row, for a graph represented by the network matrix. In particular, this auxiliary graph must
  * be a directed bipartite graph; then, the arcs incident to the given node can be reassigned to two new nodes, so that
  * the paths of the columns corresponding to the nonzeros of the row can be elongated to contain the new row, which is
  * placed between the two new nodes.
@@ -108,25 +110,25 @@
  *
  * Implementation notes:
  * 1. Quite a few algorithms used for network matrix detection are recursive in nature. However, recursive calls can
- * cause stack overflows, particularly with large graphs. Quite frequently in the code, we need to allocate the
- * call-data of these algorithms on the heap, instead, and use while loops to simulate the recursion.
+ *    cause stack overflows, particularly with large graphs. Quite frequently in the code, we need to allocate the
+ *    call-data of these algorithms on the heap, instead, and use while loops to simulate the recursion.
  *
  * 2. In order to make the code fast in practice, a lot of emphasis is put on reusing allocated memory and avoiding
- *   allocations. In particular for the column-wise algorithm, even allocating and zeroing an array of size m+n for an
- *   m x n matrix can significantly slow down the code!
+ *    allocations. In particular for the column-wise algorithm, even allocating and zeroing an array of size m+n for an
+ *    m x n matrix can significantly slow down the code!
  *
- * 3. The graphs of the S,P and Q members do not need to be stored explicitly, as they always have the same structure.
+ * 3. The graphs of the S, P and Q members do not need to be stored explicitly, as they always have the same structure.
  *    This also makes it easier to permute edges of S nodes on the fly.
  *
  * TODO: fix tracking connectivity more cleanly, should not be left up to the algorithms ideally
  */
 
+#include <assert.h>
 #include "scip/network.h"
 #include "scip/scip.h"
-#include <assert.h>
 #include "blockmemshell/memory.h"
 
-///Types which define matrix sizes
+/* types which define matrix sizes */
 typedef int spqr_matrix_size;
 typedef spqr_matrix_size spqr_row;
 typedef spqr_matrix_size spqr_col;
