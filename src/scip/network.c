@@ -4999,6 +4999,10 @@ SCIP_RETCODE SCIPnetcoladdCheck(
    assert(coladd);
    assert(nnonzs == 0 || ( nonzrows && nonzvals ));
 
+   /* A column can only be added once */
+   if( netMatDecDataContainsColumn(dec,column)){
+      return SCIP_INVALIDDATA;
+   }
    coladd->remainsNetwork = TRUE;
    cleanupPreviousIteration(dec, coladd);
    //assert that previous iteration was cleaned up
@@ -10902,6 +10906,11 @@ SCIP_RETCODE SCIPnetrowaddCheck(
    assert(dec);
    assert(rowadd);
    assert(nnonzs == 0 || nonzcols);
+
+   /* A row can only be added once */
+   if( netMatDecDataContainsRow(dec,row)){
+      return SCIP_INVALIDDATA;
+   }
 
    rowadd->remainsNetwork = TRUE;
    cleanUpPreviousIteration(dec, rowadd);

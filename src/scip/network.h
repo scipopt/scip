@@ -23,12 +23,16 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    network.h
- * @ingroup OTHER_CFILES
+ * @ingroup PUBLICCOREAPI
  * @brief   Methods for detecting network matrices
  * @author  Rolf van der Hulst
  *
  * This file contains algorithms for incrementally growing (augmenting) network matrices,
  * which are a large subclass of totally unimodular matrices.
+ *
+ * @addtogroup NetworkMatrix
+ *
+ * @{
  *
  * A matrix \f$M \in \{-1,0,1\}^{m\times n} \f$ is a network matrix if there exists a directed graph \f$G = (V,A)\f$
  * with \f$|A| = m+n\f$ arcs and a spanning forest \f$T\f$ with \f$|T| = m\f$ such that \f$M\f$'s rows index \f$T\f$ and
@@ -59,9 +63,9 @@
  * Implementation details are described in further detail in network.c
  */
 
-/** @TODO add method that realizes a SCIP digraph from the decomposition */
-/** @TODO add method that *cleanly* removes complete components of the SPQR tree */
-/** @TODO add node-arc incidence matrix methods */
+/* TODO add method that realizes a SCIP digraph from the decomposition */
+/* TODO add method that *cleanly* removes complete components of the SPQR tree */
+/* TODO add node-arc incidence matrix methods */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_NETWORK_H__
@@ -96,7 +100,11 @@ void SCIPnetmatdecFree(
    SCIP_NETMATDEC**      pdec                /**< pointer to the network matrix decomposition to free */
 );
 
-/** tries to add a given column to the network network matrix
+/** tries to add a given column to the network matrix. Any nonzero row indices in the column that are not yet in the
+ *  network matrix decomposition are added, too.
+ *
+ *  @note Each column and row may be added only once. Trying to add a column that is already in the decomposition will
+ *  result in an error.
  *
  *  Note that the first call to this method for a given decomposition may be a bit slower,
  *  due to memory initialization.
@@ -111,12 +119,18 @@ SCIP_RETCODE SCIPnetmatdecTryAddCol(
    SCIP_Bool*            success             /**< Buffer to store whether the column was added */
 );
 
-/** tries to add a given column to the network network matrix
+/** tries to add a given row to the network matrix. Any nonzero column indices in the row that are not yet in the
+ *  network matrix decomposition are added, too.
+ *
+ *  @note Each column and row may be added only once. Trying to add a row that is already in the decomposition will
+ *  result in an error.
  *
  *  Note that the first call to this method for a given decomposition may be a bit slower,
  *  due to memory initialization.
+ *
  *  If the user is only interested in determining if a certain (sub)matrix is network or not, using
  *  SCIPnetmatdecTryAddCol() will generally be faster, unless the (sub)matrix has many more columns than rows.
+ *
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnetmatdecTryAddRow(
@@ -144,10 +158,10 @@ SCIP_Bool SCIPnetmatdecContainsColumn(
 
 /** removes a connected component of the matrix from the network decomposition
  *
- * Note that this method is 'stupid', and does not delete the associated graph data structure.
+ * @note This method is 'stupid', and does not delete the associated graph data structure in the decomposition.
  * Moreover, it does not explicitly check if the rows/columns that the user provides are a connected
- * component of the submatrix given by the decomposition. Use with care!
- * If this is not the case, then calling this function is considered a bug.
+ * component of the submatrix given by the decomposition. If this is not the case, this will lead to buggy behavior.
+ * Use with care!
  */
 SCIP_EXPORT
 void SCIPnetmatdecRemoveComponent(
@@ -160,8 +174,9 @@ void SCIPnetmatdecRemoveComponent(
 
 /** checks if the network matrix decomposition is minimal.
  *
- * It is minimal if it does not contain adjacent parallel or series skeletons.
- * The network matrix decomposition should always be minimal. This method should only be used in tests or asserts.
+ * A network matrix decomposition is minimal if it does not contain adjacent parallel or series skeletons.
+ * The network matrix decomposition we compute should always be minimal.
+ * This method should only be used in tests or asserts.
  */
 SCIP_EXPORT
 SCIP_Bool SCIPnetmatdecIsMinimal(
@@ -185,6 +200,8 @@ SCIP_Bool SCIPnetmatdecVerifyCycle(
    SCIP_Bool*            pathsignstorage     /**< A buffer to store the computed path's row signs. Should have size
                                               * equal or greater than the number of rows in the decomposition. */
 );
+
+/**@} */
 
 #ifdef cplusplus
 }
