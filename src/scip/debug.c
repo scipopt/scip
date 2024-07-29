@@ -121,21 +121,21 @@ SCIP_Bool debugSolutionAvailable(
    debugsoldata = SCIPsetGetDebugSolData(set);
 
    /* check whether a debug solution is specified */
-    if( strcmp(set->misc_debugsol, "-") == 0 )
-    {
-       if( !debugsoldata->warningprinted )
-       {
-          SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "SCIP is compiled with 'DEBUGSOL=true' but no debug solution is given:\n ");
-          SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "*** Please set the parameter 'misc/debugsol' and reload the problem again to use the debugging-mechanism ***\n\n");
-          debugsoldata->warningprinted = TRUE;
-       }
-       return FALSE;
-    }
-    else
-    {
-       debugsoldata->warningprinted = FALSE;
-       return TRUE;
-    }
+   if( strcmp(set->misc_debugsol, "-") == 0 )
+   {
+      if( !debugsoldata->warningprinted )
+      {
+         SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "SCIP is compiled with 'DEBUGSOL=true' but no debug solution is given:\n");
+         SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "*** Please set the parameter 'misc/debugsol' and reload the problem again to use the debugging-mechanism ***\n\n");
+         debugsoldata->warningprinted = TRUE;
+      }
+      return FALSE;
+   }
+   else
+   {
+      debugsoldata->warningprinted = FALSE;
+      return TRUE;
+   }
 }
 
 /** reads solution from given file into given arrays */
