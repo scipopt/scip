@@ -103,7 +103,8 @@
  * Similarly to the column-case, splittability of each graph represented by the network matrix can be computed at once
  * by computing the splittability (and the corresponding bipartition) of every member graph.
  * Similarly to the column algorithm, we can propagate; If a member is a leaf of the SPQR tree and both nodes of the
- * 2-separation connecting it to the rest of graph are splittable, then we can and update our datastructures to.
+ * 2-separation connecting it to the rest of graph are splittable, then we can remove the leaf from the reduced
+ * SPQR tree and mark the virtual edge connecting to the subtree.
  * Finally, we are left with some minimal subtree with splittable vertices for each member graph. If we can merge all
  * splittable vertices of the member graphs in the subtree into a single splittable vertex, then we perform this merge,
  * and split this vertex. This yields us a new, larger node of type R (rigid).
