@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/bin/bash -e
 
 #
 # generate doxygen documentation for SCIP
-# requires python and php in PATH
+# requires python3 in PATH
 #
 # Optionally, a custom .dxy file can be passed for the doxygen configuration
 #
@@ -12,9 +12,6 @@
 echo "" > ${DOCLOG}
 echo "running builddoc.sh in $(pwd)"
 
-# stop on error
-set -e
-
 if [ -e MathJax ]; then
    echo "Found MathJax in doc folder."
    export MATHJAX_RELPATH="../MathJax"
@@ -22,17 +19,7 @@ else
    echo "No local MathJax found, will build doc with online version."
 fi
 
-if [ "$1" != "" ]
-then
-    DOXYFILE=$1
-else
-    DOXYFILE=scip.dxy
-fi
-
-if [ "$HTML_FILE_EXTENSION" = "" ]
-then
-    HTML_FILE_EXTENSION=shtml
-fi
+DOXYFILE=${1:-scip.dxy}
 
 ### START SHELL TUTORIAL
 
@@ -41,7 +28,7 @@ cd ..
 
 # build a fresh version of SCIP
 # make -j clean
-make -j8 ZIMPL=false >> ${DOCLOG}
+make -j8 >> ${DOCLOG}
 
 # run scip with some commands for the shell tutorial
 bin/scip < doc/inc/shelltutorial/commands | tee doc/inc/shelltutorial/shelltutorialraw.tmp >> ${DOCLOG}
@@ -60,7 +47,9 @@ python3 inc/shelltutorial/insertsnippetstutorial.py
 
 cd inc/faq
 
-python3 parser.py --linkext $HTML_FILE_EXTENSION  && php localfaq.php > faq.inc
+# parser.py now writes faq.inc as well
+#python3 parser.py --linkext ${HTML_FILE_EXTENSION:-shtml}  && php localfaq.php > faq.inc
+./parser.py --linkext ${HTML_FILE_EXTENSION:-shtml}
 cd ../../
 
 ### FINISHED FAQ GENERATION
