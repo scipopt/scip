@@ -572,6 +572,7 @@ macro(add_instancetests instances settings prefix)
             # treat the instance as a tuple (list) of two values
             #
             if(NOT ((${setting} STREQUAL "tolerance") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "xprs")))
+            if(NOT ((${setting} STREQUAL "convertinttobin_mostinf") AND (${basename} STREQUAL "bell5.mps") AND (${LPS} STREQUAL "cpx")))
             add_test(NAME ${prefix}-${setting}-${basename}
                     COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
                     )
@@ -582,6 +583,7 @@ macro(add_instancetests instances settings prefix)
                                     FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
+            endif()  # integrality violated in multiaggregated integer variable, #3724 (LPS=cpx, MIP-convertinttobin_mostinf-bell5.mps)
             endif()  # Xpress does not keep feasibility tolerance setting, #3640
         endforeach(setting)
     endforeach(instance)
