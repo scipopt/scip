@@ -40,8 +40,8 @@
  * and for each arc \f$ a = (u,v) \in A\setminus T\f$ and each arc \f$t\in T\f$
  * \f[
  *   M_{t,a} = \begin{cases}
- *   +1 &  \textrm{if the unique } u-v \textrm{ path in } T \textrm{ passes through } a \textrm{ forwardly} \\
- *   -1 &  \textrm{if the unique } u-v \textrm{ path in } T \textrm{ passes through } a \textrm{ backwardly} \\
+ *   +1 &  \textrm{if the unique } u-v \textrm{ path in } T \textrm{ passes through } a \textrm{ forwardly}, \\
+ *   -1 &  \textrm{if the unique } u-v \textrm{ path in } T \textrm{ passes through } a \textrm{ backwardly}, \\
  *   0 &   \textrm{if the unique } u-v \textrm{ path in } T \textrm{ does not pass through } a
  *   \end{cases}
  * \f]
@@ -55,7 +55,7 @@
  * it is up to the user to ensure this when interleaving column and row addition steps.
  *
  * More details can be found in:
- * - R.P. van der Hulst and M. Walter "A row-wise algorithm for graph realization"
+ * - R.P. van der Hulst and M. Walter "A Row-wise Algorithm for Graph Realization"
  * - R.E. Bixby and D.K. Wagner "An almost linear-time algorithm for graph realization"
  *
  * Note that although these publications contain the methods for undirected graphs (and binary matrices),
