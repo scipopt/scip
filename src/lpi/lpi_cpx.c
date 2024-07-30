@@ -3096,10 +3096,10 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
 
    /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we cannot conclude,
-    * that the problem is unbounded
+    * that the problem is unbounded.
     */
    return ((primalfeasible && (lpi->solstat == CPX_STAT_UNBOUNDED || lpi->solstat == CPX_STAT_INForUNBD))
-      || lpi->solstat == CPX_STAT_OPTIMAL_FACE_UNBOUNDED);
+      || lpi->solstat == CPX_STAT_OPTIMAL_FACE_UNBOUNDED || (primalfeasible && lpi->solstat == CPX_STAT_ABORT_PRIM_OBJ_LIM && lpi->method == CPX_ALG_BARRIER));
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -3118,7 +3118,8 @@ SCIP_Bool SCIPlpiIsPrimalInfeasible(
 
    ABORT_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
 
-   return (lpi->solstat == CPX_STAT_INFEASIBLE || (lpi->solstat == CPX_STAT_INForUNBD && dualfeasible));
+   return (lpi->solstat == CPX_STAT_INFEASIBLE || (lpi->solstat == CPX_STAT_INForUNBD && dualfeasible)
+      || (lpi->solstat == CPX_STAT_ABORT_DUAL_OBJ_LIM && lpi->method == CPX_ALG_BARRIER));
 }
 
 /** returns TRUE iff LP is proven to be primal feasible */
@@ -3184,7 +3185,8 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
 
    ABORT_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
 
-   return (dualfeasible && (lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_INForUNBD));
+   return (dualfeasible && ((lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_INForUNBD)
+         || (lpi->solstat == CPX_STAT_ABORT_DUAL_OBJ_LIM && lpi->method == CPX_ALG_BARRIER)));
 }
 
 /** returns TRUE iff LP is proven to be dual infeasible */
@@ -3205,7 +3207,8 @@ SCIP_Bool SCIPlpiIsDualInfeasible(
 
    return (lpi->solstat == CPX_STAT_UNBOUNDED
       || lpi->solstat == CPX_STAT_OPTIMAL_FACE_UNBOUNDED
-      || (lpi->solstat == CPX_STAT_INForUNBD && primalfeasible));
+      || (lpi->solstat == CPX_STAT_INForUNBD && primalfeasible)
+      || (lpi->solstat == CPX_STAT_ABORT_PRIM_OBJ_LIM && lpi->method == CPX_ALG_BARRIER));
 }
 
 /** returns TRUE iff LP is proven to be dual feasible */
@@ -3307,9 +3310,14 @@ SCIP_Bool SCIPlpiIsObjlimExc(
    assert(lpi != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == CPX_STAT_ABORT_OBJ_LIM
-      || lpi->solstat == CPX_STAT_ABORT_DUAL_OBJ_LIM
-      || lpi->solstat == CPX_STAT_ABORT_PRIM_OBJ_LIM);
+   if( lpi->solstat == CPX_STAT_ABORT_OBJ_LIM )
+      return TRUE;
+   else if( lpi->solstat == CPX_STAT_ABORT_DUAL_OBJ_LIM || lpi->solstat == CPX_STAT_ABORT_PRIM_OBJ_LIM )
+   {
+      if( lpi->method != CPX_ALG_BARRIER )
+         return TRUE;
+   }
+   return FALSE;
 }
 
 /** returns TRUE iff the iteration limit was reached */
