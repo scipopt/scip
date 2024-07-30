@@ -14,6 +14,7 @@ Fixed bugs
 - remove coefficient information from linear constraint hashes in order to compare keys with tolerances
 - fixed NULL pointer dereference in SCIPtpiGetNumThreads() of TinyCThread interface if called before SCIPtpiInit(); now returns 0 in this case
 - calling SCIPsolveConcurrent() when SCIP was compiled without a TPI now results in a plugin-not-found error
+- fixed LPI status functions of lpi_cpx if the barrier is called
 
 Performance improvements
 ------------------------
