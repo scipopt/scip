@@ -125,7 +125,7 @@
  */
 
 #include <assert.h>
-#include "scip/network.h"
+#include "scip/pub_network.h"
 #include "scip/scip.h"
 #include "blockmemshell/memory.h"
 

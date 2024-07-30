@@ -657,7 +657,7 @@ set(scipheaders
     scip/message_default.h
     scip/message.h
     scip/misc.h
-    scip/network.h
+        scip/pub_network.h
     scip/nlhdlr_bilinear.h
     scip/nlhdlr_convex.h
     scip/nlhdlr_default.h

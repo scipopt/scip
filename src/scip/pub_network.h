@@ -190,7 +190,7 @@ SCIP_Bool SCIPnetmatdecIsMinimal(
  */
 SCIP_EXPORT
 SCIP_Bool SCIPnetmatdecVerifyCycle(
-   BMS_BUFMEM *          blkmem,             /**< Buffer memory */
+   BMS_BUFMEM *          bufmem,             /**< Buffer memory */
    SCIP_NETMATDEC*       dec,                /**< The network matrix decomposition */
    int                   column,             /**< The column to check */
    int*                  nonzrowidx,         /**< Array with the column's nonzero row indices */
