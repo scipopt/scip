@@ -2299,12 +2299,11 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    lpi->instabilityignored = FALSE;
 
    /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
-   if( lpi->solstat != CPX_STAT_INForUNBD )
+   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, &primalfeasible, &dualfeasible) );
+   if( lpi->solstat != CPX_STAT_INForUNBD && solntype != CPX_NO_SOLN )
       lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
    else
       lpi->iterations = 0;
-
-   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
 
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
@@ -2352,6 +2351,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
          assert( lpi->solstat != CPX_STAT_INForUNBD );
 
          lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
+         CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
@@ -2368,7 +2368,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
     * also for some pathological cases of infeasibility, e.g., contradictory bounds */
-   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
    lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    assert( lpi->solisbasic || lpi->solstat != CPX_STAT_OPTIMAL );
 
@@ -2425,12 +2424,11 @@ SCIP_RETCODE SCIPlpiSolveDual(
    lpi->instabilityignored = FALSE;
 
    /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
-   if( lpi->solstat != CPX_STAT_INForUNBD )
+   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, &primalfeasible, &dualfeasible) );
+   if( lpi->solstat != CPX_STAT_INForUNBD && solntype != CPX_NO_SOLN )
       lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
    else
       lpi->iterations = 0;
-
-   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
 
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
@@ -2464,7 +2462,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
          assert( lpi->solstat != CPX_STAT_INForUNBD );
 
          lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
-         CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+         CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
@@ -2482,7 +2480,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
    /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
     * also for some pathological cases of infeasibility, e.g., contradictory bounds
     */
-   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
    lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    assert( lpi->solisbasic || lpi->solstat != CPX_STAT_OPTIMAL );
 
@@ -2608,7 +2605,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    lpi->method = CPX_ALG_BARRIER;
    lpi->instabilityignored = FALSE;
 
-   if( lpi->solstat != CPX_STAT_INForUNBD )
+   if( lpi->solstat != CPX_STAT_INForUNBD && solntype != CPX_NO_SOLN )
       lpi->iterations = CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
    else
       lpi->iterations = 0;
