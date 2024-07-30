@@ -12,6 +12,7 @@ Features
 - detailed information about applied symmetry handling techniques can be printed to the terminal
 - added a new separator sepa_multilinear to generate flower cuts from AND constraints nonlinear product expressions.
 - added functionality to deal with hypergraphs by means of efficient access to vertices, edges and intersections edges.
+- added support for (transposed) network matrix detection in pub_network.h
 
 Performance improvements
 ------------------------
