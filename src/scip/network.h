@@ -73,7 +73,8 @@
 
 #include "scip/def.h"
 #include "scip/type_retcode.h"
-#include "scip/type_scip.h"
+#include "scip/type_mem.h"
+#include "blockmemshell/memory.h"
 
 #ifdef cplusplus
 extern "C" {
@@ -88,7 +89,7 @@ typedef struct SCIP_Netmatdec SCIP_NETMATDEC;
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPnetmatdecCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
+   BMS_BLKMEM*           blkmem,             /**< Block memory */
    SCIP_NETMATDEC**      pdec,               /**< buffer to store pointer to created decomposition */
    int                   nrows,              /**< The maximal number of rows that the decomposition can expect */
    int                   ncols               /**< The maximal number of columns that the decomposition can expect */
@@ -189,7 +190,7 @@ SCIP_Bool SCIPnetmatdecIsMinimal(
  */
 SCIP_EXPORT
 SCIP_Bool SCIPnetmatdecVerifyCycle(
-   SCIP*                 scip,               /**< SCIP data structure */
+   BMS_BUFMEM *          blkmem,             /**< Buffer memory */
    SCIP_NETMATDEC*       dec,                /**< The network matrix decomposition */
    int                   column,             /**< The column to check */
    int*                  nonzrowidx,         /**< Array with the column's nonzero row indices */

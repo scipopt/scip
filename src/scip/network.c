@@ -409,7 +409,7 @@ typedef struct
    int memColumns;                           /**< The (maximal) number of columns of the matrix */
    spqr_arc* columnArcs;                     /**< Maps the columns of the matrix to arcs in the decomposition */
 
-   SCIP* env;                                /**< SCIP pointer stored for later use */
+   BMS_BLKMEM * env;                         /**< used memory allocator */
 
    int numConnectedComponents;               /** The number of disjoint SPQR trees in the SPQR forest */
 } SCIP_NETMATDECDATA;
@@ -1362,19 +1362,19 @@ spqr_arc getDecompositionRowArc(
 /**< Initialize the network matrix decomposition data structure */
 static
 SCIP_RETCODE netMatDecDataCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
+   BMS_BLKMEM*           blkmem,             /**< Block memory */
    SCIP_NETMATDECDATA**  pdec,               /**< buffer to store pointer to created decomposition */
    int                   nrows,              /**< The maximal number of rows that the decomposition can expect */
    int                   ncols               /**< The maximal number of columns that the decomposition can expect */
 )
 {
-   assert(scip);
+   assert(blkmem);
    assert(pdec);
    assert(!*pdec);
 
-   SCIP_CALL(SCIPallocBlockMemory(scip, pdec));
+   SCIP_ALLOC(BMSallocBlockMemory(blkmem, pdec));
    SCIP_NETMATDECDATA* dec = *pdec;
-   dec->env = scip;
+   dec->env = blkmem;
 
    //Initialize arc array data
    int initialMemArcs = 8;
@@ -1382,7 +1382,7 @@ SCIP_RETCODE netMatDecDataCreate(
       assert(initialMemArcs > 0);
       dec->memArcs = initialMemArcs;
       dec->numArcs = 0;
-      SCIP_CALL(SCIPallocBlockMemoryArray(scip, &dec->arcs, dec->memArcs));
+      SCIP_ALLOC(BMSallocBlockMemoryArray(blkmem, &dec->arcs, dec->memArcs));
       for( spqr_arc i = 0; i < dec->memArcs; ++i )
       {
          dec->arcs[i].arcListNode.next = i + 1;
@@ -1398,7 +1398,7 @@ SCIP_RETCODE netMatDecDataCreate(
       assert(initialMemMembers > 0);
       dec->memMembers = initialMemMembers;
       dec->numMembers = 0;
-      SCIP_CALL(SCIPallocBlockMemoryArray(scip, &dec->members, dec->memMembers));
+      SCIP_ALLOC(BMSallocBlockMemoryArray(blkmem, &dec->members, dec->memMembers));
    }
 
    //Initialize node array data
@@ -1407,13 +1407,13 @@ SCIP_RETCODE netMatDecDataCreate(
       assert(initialMemNodes > 0);
       dec->memNodes = initialMemNodes;
       dec->numNodes = 0;
-      SCIP_CALL(SCIPallocBlockMemoryArray(scip, &dec->nodes, dec->memNodes));
+      SCIP_ALLOC(BMSallocBlockMemoryArray(blkmem, &dec->nodes, dec->memNodes));
    }
 
    //Initialize mappings for rows
    {
       dec->memRows = nrows;
-      SCIP_CALL(SCIPallocBlockMemoryArray(scip, &dec->rowArcs, dec->memRows));
+      SCIP_ALLOC(BMSallocBlockMemoryArray(blkmem, &dec->rowArcs, dec->memRows));
       for( int i = 0; i < dec->memRows; ++i )
       {
          dec->rowArcs[i] = SPQR_INVALID_ARC;
@@ -1422,7 +1422,7 @@ SCIP_RETCODE netMatDecDataCreate(
    //Initialize mappings for columns
    {
       dec->memColumns = ncols;
-      SCIP_CALL(SCIPallocBlockMemoryArray(scip, &dec->columnArcs, dec->memColumns));
+      SCIP_ALLOC(BMSallocBlockMemoryArray(blkmem, &dec->columnArcs, dec->memColumns));
       for( int i = 0; i < dec->memColumns; ++i )
       {
          dec->columnArcs[i] = SPQR_INVALID_ARC;
@@ -1442,13 +1442,13 @@ void netMatDecDataFree(
    assert(*pdec);
 
    SCIP_NETMATDECDATA* dec = *pdec;
-   SCIPfreeBlockMemoryArray(dec->env, &dec->columnArcs, dec->memColumns);
-   SCIPfreeBlockMemoryArray(dec->env, &dec->rowArcs, dec->memRows);
-   SCIPfreeBlockMemoryArray(dec->env, &dec->nodes, dec->memNodes);
-   SCIPfreeBlockMemoryArray(dec->env, &dec->members, dec->memMembers);
-   SCIPfreeBlockMemoryArray(dec->env, &dec->arcs, dec->memArcs);
+   BMSfreeBlockMemoryArray(dec->env, &dec->columnArcs, dec->memColumns);
+   BMSfreeBlockMemoryArray(dec->env, &dec->rowArcs, dec->memRows);
+   BMSfreeBlockMemoryArray(dec->env, &dec->nodes, dec->memNodes);
+   BMSfreeBlockMemoryArray(dec->env, &dec->members, dec->memMembers);
+   BMSfreeBlockMemoryArray(dec->env, &dec->arcs, dec->memArcs);
 
-   SCIPfreeBlockMemory(dec->env, pdec);
+   BMSfreeBlockMemory(dec->env, pdec);
 }
 
 /**< Get the first arc of the linked list of arcs contained in the given member */
@@ -1542,7 +1542,7 @@ SCIP_RETCODE createArc(
    {
       //Enlarge array, no free nodes in arc list
       int newSize = 2 * dec->memArcs;
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &dec->arcs, dec->memArcs, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &dec->arcs, dec->memArcs, newSize));
       for( int i = dec->memArcs + 1; i < newSize; ++i )
       {
          dec->arcs[i].arcListNode.next = i + 1;
@@ -1622,7 +1622,7 @@ SCIP_RETCODE createMember(
    if( dec->numMembers == dec->memMembers )
    {
       int newSize = dec->memMembers * 2;
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &dec->members, dec->memMembers, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &dec->members, dec->memMembers, newSize));
       dec->memMembers = newSize;
    }
    SPQRNetworkDecompositionMember* data = &dec->members[dec->numMembers];
@@ -1651,7 +1651,7 @@ SCIP_RETCODE createNode(
    if( dec->numNodes == dec->memNodes )
    {
       int newSize = dec->memNodes * 2;
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &dec->nodes, dec->memNodes, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &dec->nodes, dec->memNodes, newSize));
       dec->memNodes = newSize;
    }
    *pNode = dec->numNodes;
@@ -2153,8 +2153,7 @@ int decompositionGetFundamentalCycleRows(
    int num_rows = 0;
 
    FindCycleCall* callStack;
-   SCIP_RETCODE result = SCIPallocBlockMemoryArray(dec->env, &callStack, dec->memRows);
-   if( result != SCIP_OKAY )
+   if( BMSallocBlockMemoryArray(dec->env, &callStack, dec->memRows) == NULL )
    {
       return -1;
    }
@@ -2163,8 +2162,7 @@ int decompositionGetFundamentalCycleRows(
    callStack[0].reversed = FALSE;
 
    SCIP_Bool* nodeVisited;
-   result = SCIPallocBlockMemoryArray(dec->env, &nodeVisited, dec->numNodes);
-   if( result != SCIP_OKAY )
+   if( BMSallocBlockMemoryArray(dec->env, &nodeVisited, dec->numNodes) == NULL )
    {
       return -1;
    }
@@ -2179,8 +2177,7 @@ int decompositionGetFundamentalCycleRows(
       spqr_arc nodeArc;
    } DFSCallData;
    DFSCallData* pathSearchCallStack;
-   result = SCIPallocBlockMemoryArray(dec->env, &pathSearchCallStack, dec->numNodes);
-   if( result != SCIP_OKAY )
+   if( BMSallocBlockMemoryArray(dec->env, &pathSearchCallStack, dec->numNodes) == NULL )
    {
       return -1;
    }
@@ -2315,9 +2312,9 @@ int decompositionGetFundamentalCycleRows(
             assert(FALSE);
       }
    }
-   SCIPfreeBlockMemoryArray(dec->env, &pathSearchCallStack, dec->numNodes);
-   SCIPfreeBlockMemoryArray(dec->env, &nodeVisited, dec->numNodes);
-   SCIPfreeBlockMemoryArray(dec->env, &callStack, dec->memRows);
+   BMSfreeBlockMemoryArray(dec->env, &pathSearchCallStack, dec->numNodes);
+   BMSfreeBlockMemoryArray(dec->env, &nodeVisited, dec->numNodes);
+   BMSfreeBlockMemoryArray(dec->env, &callStack, dec->memRows);
    return num_rows;
 }
 
@@ -2325,7 +2322,7 @@ int decompositionGetFundamentalCycleRows(
  * network matrix decomposition */
 static
 SCIP_Bool netMatDecDataVerifyCycle(
-   SCIP*                 scip,               /**< The SCIP datastructure */
+   BMS_BUFMEM*           bufmem,             /**< Buffer memory */
    const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
    int                   column,             /**< The column to check */
    const int*            nonzrowidx,         /**< Array with the nonzero row indices of the column */
@@ -2350,15 +2347,14 @@ SCIP_Bool netMatDecDataVerifyCycle(
    spqr_row * pathRow;
    int * pathRowReversed;
 
-   SCIP_RETCODE code = SCIPallocBufferArray(scip, &pathRow, num_rows);
-   if( code != SCIP_OKAY )
+   if( BMSallocBufferMemoryArray(bufmem, &pathRow, num_rows) == NULL )
    {
       return FALSE;
    }
-   code = SCIPallocBufferArray(scip, &pathRowReversed, num_rows);
-   if( code != SCIP_OKAY )
+
+   if( BMSallocBufferMemoryArray(bufmem, &pathRowReversed, num_rows) == NULL )
    {
-      SCIPfreeBufferArray(scip,&pathRow);
+      BMSfreeBufferMemoryArray(bufmem,&pathRow);
       return FALSE;
    }
    for( int i = 0; i < num_rows; ++i )
@@ -2370,19 +2366,18 @@ SCIP_Bool netMatDecDataVerifyCycle(
 
    spqr_row * secondPathRow;
    int * secondPathRowReversed;
-   code = SCIPallocBufferArray(scip, &secondPathRow, num_rows);
-   if( code != SCIP_OKAY )
+   if( BMSallocBufferMemoryArray(bufmem, &secondPathRow, num_rows) == NULL )
    {
-      SCIPfreeBufferArray(scip,&pathRow);
-      SCIPfreeBufferArray(scip,&pathRowReversed);
+      BMSfreeBufferMemoryArray(bufmem,&pathRow);
+      BMSfreeBufferMemoryArray(bufmem,&pathRowReversed);
       return FALSE;
    }
-   code = SCIPallocBufferArray(scip, &secondPathRowReversed, num_rows);
-   if( code != SCIP_OKAY )
+
+   if( BMSallocBufferMemoryArray(bufmem, &secondPathRowReversed, num_rows) == NULL )
    {
-      SCIPfreeBufferArray(scip,&pathRow);
-      SCIPfreeBufferArray(scip,&pathRowReversed);
-      SCIPfreeBufferArray(scip,&secondPathRow);
+      BMSfreeBufferMemoryArray(bufmem,&pathRow);
+      BMSfreeBufferMemoryArray(bufmem,&pathRowReversed);
+      BMSfreeBufferMemoryArray(bufmem,&secondPathRow);
       return FALSE;
    }
    for( int i = 0; i < num_rows; ++i )
@@ -2402,10 +2397,10 @@ SCIP_Bool netMatDecDataVerifyCycle(
          break;
       }
    }
-   SCIPfreeBufferArray(scip, &secondPathRowReversed);
-   SCIPfreeBufferArray(scip, &secondPathRow);
-   SCIPfreeBufferArray(scip, &pathRowReversed);
-   SCIPfreeBufferArray(scip, &pathRow);
+   BMSfreeBufferMemoryArray(bufmem, &secondPathRowReversed);
+   BMSfreeBufferMemoryArray(bufmem, &secondPathRow);
+   BMSfreeBufferMemoryArray(bufmem, &pathRowReversed);
+   BMSfreeBufferMemoryArray(bufmem, &pathRow);
    return good;
 }
 
@@ -3279,13 +3274,13 @@ void cleanupPreviousIteration(
 /**< Create a new network column addition datastructure */
 static
 SCIP_RETCODE SCIPnetcoladdCreate(
-   SCIP*                 scip,               /**< SCIP environment */
+   BMS_BLKMEM*           blkmem,             /**< Block memory */
    SCIP_NETCOLADD**      pcoladd             /**< Out-pointer for the created network column addition datastructure */
 )
 {
-   assert(scip);
+   assert(blkmem);
 
-   SCIP_CALL(SCIPallocBlockMemory(scip, pcoladd));
+   SCIP_ALLOC(BMSallocBlockMemory(blkmem, pcoladd));
    SCIP_NETCOLADD* newCol = *pcoladd;
 
    newCol->remainsNetwork = FALSE;
@@ -3343,29 +3338,29 @@ SCIP_RETCODE SCIPnetcoladdCreate(
 /**< Free a network column addition datastructure */
 static
 void SCIPnetcoladdFree(
-   SCIP*                 scip,               /**< SCIP environment */
+   BMS_BLKMEM*           blkmem,             /**< Block memory */
    SCIP_NETCOLADD**      pcoladd             /**< Pointer to the network column addition datastructure to be freed */
 )
 {
-   assert(scip);
+   assert(blkmem);
    SCIP_NETCOLADD* newCol = *pcoladd;
-   SCIPfreeBlockMemoryArray(scip, &newCol->decompositionRowArcs, newCol->memDecompositionRowArcs);
-   SCIPfreeBlockMemoryArray(scip, &newCol->decompositionArcReversed, newCol->memDecompositionRowArcs);
-   SCIPfreeBlockMemoryArray(scip, &newCol->newRowArcs, newCol->memNewRowArcs);
-   SCIPfreeBlockMemoryArray(scip, &newCol->newRowArcReversed, newCol->memNewRowArcs);
-   SCIPfreeBlockMemoryArray(scip, &newCol->createReducedMembersCallStack, newCol->memCreateReducedMembersCallStack);
-   SCIPfreeBlockMemoryArray(scip, &newCol->arcInPath, newCol->memArcsInPath);
-   SCIPfreeBlockMemoryArray(scip, &newCol->arcInPathReversed, newCol->memArcsInPath);
-   SCIPfreeBlockMemoryArray(scip, &newCol->nodeInPathDegree, newCol->memNodePathDegree);
-   SCIPfreeBlockMemoryArray(scip, &newCol->nodeOutPathDegree, newCol->memNodePathDegree);
-   SCIPfreeBlockMemoryArray(scip, &newCol->pathArcs, newCol->memPathArcs);
-   SCIPfreeBlockMemoryArray(scip, &newCol->childrenStorage, newCol->memChildrenStorage);
-   SCIPfreeBlockMemoryArray(scip, &newCol->memberInformation, newCol->memMemberInformation);
-   SCIPfreeBlockMemoryArray(scip, &newCol->reducedComponents, newCol->memReducedComponents);
-   SCIPfreeBlockMemoryArray(scip, &newCol->reducedMembers, newCol->memReducedMembers);
-   SCIPfreeBlockMemoryArray(scip, &newCol->leafMembers, newCol->memLeafMembers);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->decompositionRowArcs, newCol->memDecompositionRowArcs);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->decompositionArcReversed, newCol->memDecompositionRowArcs);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->newRowArcs, newCol->memNewRowArcs);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->newRowArcReversed, newCol->memNewRowArcs);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->createReducedMembersCallStack, newCol->memCreateReducedMembersCallStack);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->arcInPath, newCol->memArcsInPath);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->arcInPathReversed, newCol->memArcsInPath);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->nodeInPathDegree, newCol->memNodePathDegree);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->nodeOutPathDegree, newCol->memNodePathDegree);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->pathArcs, newCol->memPathArcs);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->childrenStorage, newCol->memChildrenStorage);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->memberInformation, newCol->memMemberInformation);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->reducedComponents, newCol->memReducedComponents);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->reducedMembers, newCol->memReducedMembers);
+   BMSfreeBlockMemoryArray(blkmem, &newCol->leafMembers, newCol->memLeafMembers);
 
-   SCIPfreeBlockMemory(scip, pcoladd);
+   BMSfreeBlockMemory(blkmem, pcoladd);
 }
 
 /**< Adds members to the reduced member tree, by starting at the given member, jumping up to the parent, repeating this
@@ -3509,15 +3504,15 @@ SCIP_RETCODE constructReducedDecomposition(
    if( newSize > newCol->memReducedMembers )
    {
       int newArraySize = maxValue(2 * newCol->memReducedMembers, newSize);
-      SCIP_CALL(
-         SCIPreallocBlockMemoryArray(dec->env, &newCol->reducedMembers, newCol->memReducedMembers, newArraySize));
+      SCIP_ALLOC(
+         BMSreallocBlockMemoryArray(dec->env, &newCol->reducedMembers, newCol->memReducedMembers, newArraySize));
       newCol->memReducedMembers = newArraySize;
    }
    if( newSize > newCol->memMemberInformation )
    {
       int updatedSize = maxValue(2 * newCol->memMemberInformation, newSize);
-      SCIP_CALL(
-         SCIPreallocBlockMemoryArray(dec->env, &newCol->memberInformation, newCol->memMemberInformation, updatedSize));
+      SCIP_ALLOC(
+         BMSreallocBlockMemoryArray(dec->env, &newCol->memberInformation, newCol->memMemberInformation, updatedSize));
       for( int i = newCol->memMemberInformation; i < updatedSize; ++i )
       {
          newCol->memberInformation[i].reducedMember = INVALID_REDUCED_MEMBER;
@@ -3530,8 +3525,8 @@ SCIP_RETCODE constructReducedDecomposition(
    if( numComponents > newCol->memReducedComponents )
    {
       int updatedSize = maxValue(2 * newCol->memReducedComponents, numComponents);
-      SCIP_CALL(
-         SCIPreallocBlockMemoryArray(dec->env, &newCol->reducedComponents, newCol->memReducedComponents, updatedSize));
+      SCIP_ALLOC(
+         BMSreallocBlockMemoryArray(dec->env, &newCol->reducedComponents, newCol->memReducedComponents, updatedSize));
       newCol->memReducedComponents = updatedSize;
    }
 
@@ -3539,7 +3534,7 @@ SCIP_RETCODE constructReducedDecomposition(
    if( newCol->memCreateReducedMembersCallStack < numMembers )
    {
       int updatedSize = maxValue(2 * newCol->memCreateReducedMembersCallStack, numMembers);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->createReducedMembersCallStack,
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newCol->createReducedMembersCallStack,
                                             newCol->memCreateReducedMembersCallStack, updatedSize));
       newCol->memCreateReducedMembersCallStack = updatedSize;
    }
@@ -3589,8 +3584,8 @@ SCIP_RETCODE constructReducedDecomposition(
    if( newCol->memChildrenStorage < numTotalChildren )
    {
       int newMemSize = maxValue(newCol->memChildrenStorage * 2, numTotalChildren);
-      SCIP_CALL(
-         SCIPreallocBlockMemoryArray(dec->env, &newCol->childrenStorage, newCol->memChildrenStorage, newMemSize));
+      SCIP_ALLOC(
+         BMSreallocBlockMemoryArray(dec->env, &newCol->childrenStorage, newCol->memChildrenStorage, newMemSize));
       newCol->memChildrenStorage = newMemSize;
    }
    newCol->numChildrenStorage = numTotalChildren;
@@ -3715,15 +3710,15 @@ SCIP_RETCODE createPathArcs(
    if( newCol->memPathArcs < maxNumPathArcs )
    {
       int newMaxNumArcs = 2 * maxNumPathArcs;//safety factor to prevent very frequent reallocations
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->pathArcs, newCol->memPathArcs, newMaxNumArcs));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newCol->pathArcs, newCol->memPathArcs, newMaxNumArcs));
       newCol->memPathArcs = newMaxNumArcs;
    }
    int maxPathArcIndex = largestArcID(dec);
    if( newCol->memArcsInPath < maxPathArcIndex )
    {
       int newSize = 2 * maxPathArcIndex;//safety factor to prevent very frequent reallocations
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->arcInPath, newCol->memArcsInPath, newSize));
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->arcInPathReversed, newCol->memArcsInPath, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newCol->arcInPath, newCol->memArcsInPath, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newCol->arcInPathReversed, newCol->memArcsInPath, newSize));
 
       for( int i = newCol->memArcsInPath; i < newSize; ++i )
       {
@@ -3736,8 +3731,8 @@ SCIP_RETCODE createPathArcs(
    if( newCol->memNodePathDegree < maxNumNodes )
    {
       int newSize = 2 * maxNumNodes;//safety factor to prevent very frequent reallocations
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->nodeInPathDegree, newCol->memNodePathDegree, newSize));
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->nodeOutPathDegree, newCol->memNodePathDegree, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newCol->nodeInPathDegree, newCol->memNodePathDegree, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newCol->nodeOutPathDegree, newCol->memNodePathDegree, newSize));
       for( int i = newCol->memNodePathDegree; i < newSize; ++i )
       {
          newCol->nodeInPathDegree[i] = 0;
@@ -3783,9 +3778,9 @@ SCIP_RETCODE newColUpdateColInformation(
          if( newCol->numDecompositionRowArcs == newCol->memDecompositionRowArcs )
          {
             int newNumArcs = newCol->memDecompositionRowArcs == 0 ? 8 : 2 * newCol->memDecompositionRowArcs;
-            SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->decompositionRowArcs,
+            SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newCol->decompositionRowArcs,
                                                   newCol->memDecompositionRowArcs, newNumArcs));
-            SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->decompositionArcReversed,
+            SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newCol->decompositionArcReversed,
                                                   newCol->memDecompositionRowArcs, newNumArcs));
             newCol->memDecompositionRowArcs = newNumArcs;
          }
@@ -3799,9 +3794,9 @@ SCIP_RETCODE newColUpdateColInformation(
          if( newCol->numNewRowArcs == newCol->memNewRowArcs )
          {
             int newNumArcs = newCol->memNewRowArcs == 0 ? 8 : 2 * newCol->memNewRowArcs;
-            SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->newRowArcs,
+            SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newCol->newRowArcs,
                                                   newCol->memNewRowArcs, newNumArcs));
-            SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->newRowArcReversed,
+            SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newCol->newRowArcReversed,
                                                   newCol->memNewRowArcs, newNumArcs));
             newCol->memNewRowArcs = newNumArcs;
          }
@@ -3824,7 +3819,7 @@ SCIP_RETCODE computeLeafMembers(
    if( newCol->numReducedMembers > newCol->memLeafMembers )
    {
       int newSize = maxValue(newCol->numReducedMembers, 2 * newCol->memLeafMembers);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newCol->leafMembers, newCol->memLeafMembers, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newCol->leafMembers, newCol->memLeafMembers, newSize));
       newCol->memLeafMembers = newSize;
    }
    newCol->numLeafMembers = 0;
@@ -6597,9 +6592,9 @@ SCIP_RETCODE newRowUpdateRowInformation(
          if( newRow->numDecompositionColumnArcs == newRow->memDecompositionColumnArcs )
          {
             int newNumArcs = newRow->memDecompositionColumnArcs == 0 ? 8 : 2 * newRow->memDecompositionColumnArcs;
-            SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->decompositionColumnArcs,
+            SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->decompositionColumnArcs,
                                                   newRow->memDecompositionColumnArcs, newNumArcs));
-            SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->decompositionColumnArcReversed,
+            SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->decompositionColumnArcReversed,
                                                   newRow->memDecompositionColumnArcs, newNumArcs));
             newRow->memDecompositionColumnArcs = newNumArcs;
          }
@@ -6613,9 +6608,9 @@ SCIP_RETCODE newRowUpdateRowInformation(
          if( newRow->numColumnArcs == newRow->memColumnArcs )
          {
             int newNumArcs = newRow->memColumnArcs == 0 ? 8 : 2 * newRow->memColumnArcs;
-            SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->newColumnArcs,
+            SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->newColumnArcs,
                                                   newRow->memColumnArcs, newNumArcs));
-            SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->newColumnReversed,
+            SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->newColumnReversed,
                                                   newRow->memColumnArcs, newNumArcs));
             newRow->memColumnArcs = newNumArcs;
          }
@@ -6763,14 +6758,14 @@ SCIP_RETCODE constructRowReducedDecomposition(
    if( newSize > newRow->memReducedMembers )
    {
       int updatedSize = maxValue(2 * newRow->memReducedMembers, newSize);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->reducedMembers, newRow->memReducedMembers, updatedSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->reducedMembers, newRow->memReducedMembers, updatedSize));
       newRow->memReducedMembers = updatedSize;
    }
    if( newSize > newRow->memMemberInformation )
    {
       int updatedSize = maxValue(2 * newRow->memMemberInformation, newSize);
-      SCIP_CALL(
-         SCIPreallocBlockMemoryArray(dec->env, &newRow->memberInformation, newRow->memMemberInformation, updatedSize));
+      SCIP_ALLOC(
+         BMSreallocBlockMemoryArray(dec->env, &newRow->memberInformation, newRow->memMemberInformation, updatedSize));
       for( int i = newRow->memMemberInformation; i < updatedSize; ++i )
       {
          newRow->memberInformation[i].reducedMember = INVALID_REDUCED_MEMBER;
@@ -6783,8 +6778,8 @@ SCIP_RETCODE constructRowReducedDecomposition(
    if( numComponents > newRow->memReducedComponents )
    {
       int updatedSize = maxValue(2 * newRow->memReducedComponents, numComponents);
-      SCIP_CALL(
-         SCIPreallocBlockMemoryArray(dec->env, &newRow->reducedComponents, newRow->memReducedComponents, updatedSize));
+      SCIP_ALLOC(
+         BMSreallocBlockMemoryArray(dec->env, &newRow->reducedComponents, newRow->memReducedComponents, updatedSize));
       newRow->memReducedComponents = updatedSize;
    }
 
@@ -6792,7 +6787,7 @@ SCIP_RETCODE constructRowReducedDecomposition(
    if( newRow->memCreateReducedMembersCallstack < numMembers )
    {
       int updatedSize = maxValue(2 * newRow->memCreateReducedMembersCallstack, numMembers);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->createReducedMembersCallstack,
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->createReducedMembersCallstack,
                                             newRow->memCreateReducedMembersCallstack, updatedSize));
       newRow->memCreateReducedMembersCallstack = updatedSize;
    }
@@ -6842,7 +6837,7 @@ SCIP_RETCODE constructRowReducedDecomposition(
    if( newRow->memChildrenStorage < numTotalChildren )
    {
       int newMemSize = maxValue(newRow->memChildrenStorage * 2, numTotalChildren);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->childrenStorage, newRow->memChildrenStorage,
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->childrenStorage, newRow->memChildrenStorage,
                                             newMemSize));
       newRow->memChildrenStorage = newMemSize;
    }
@@ -6948,8 +6943,8 @@ SCIP_RETCODE createReducedDecompositionCutArcs(
    if( maxArcID > newRow->memIsArcCut )
    {
       int newSize = maxValue(maxArcID, 2 * newRow->memIsArcCut);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->isArcCut, newRow->memIsArcCut, newSize));
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->isArcCutReversed, newRow->memIsArcCut, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->isArcCut, newRow->memIsArcCut, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->isArcCutReversed, newRow->memIsArcCut, newSize));
       for( int i = newRow->memIsArcCut; i < newSize; ++i )
       {
          newRow->isArcCut[i] = FALSE;
@@ -6969,7 +6964,7 @@ SCIP_RETCODE createReducedDecompositionCutArcs(
    if( numNeededArcs > newRow->memCutArcs )
    {
       int newSize = maxValue(newRow->memCutArcs * 2, numNeededArcs);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->cutArcs, newRow->memCutArcs, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->cutArcs, newRow->memCutArcs, newSize));
       newRow->memCutArcs = newSize;
    }
    newRow->numCutArcs = 0;
@@ -6997,7 +6992,7 @@ SCIP_RETCODE determineLeafReducedMembers(
    if( newRow->numDecompositionColumnArcs > newRow->memLeafMembers )
    {
       int updatedSize = maxValue(newRow->numDecompositionColumnArcs, 2 * newRow->memLeafMembers);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->leafMembers, newRow->memLeafMembers, updatedSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->leafMembers, newRow->memLeafMembers, updatedSize));
       newRow->memLeafMembers = updatedSize;
    }
    newRow->numLeafMembers = 0;
@@ -7025,7 +7020,7 @@ SCIP_RETCODE allocateRigidSearchMemory(
    if( maxNumNodes > newRow->memNodeColors )
    {
       int newSize = maxValue(2 * newRow->memNodeColors, maxNumNodes);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->nodeColors, newRow->memNodeColors, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->nodeColors, newRow->memNodeColors, newSize));
       for( int i = newRow->memNodeColors; i < newSize; ++i )
       {
          newRow->nodeColors[i] = UNCOLORED;
@@ -7036,27 +7031,27 @@ SCIP_RETCODE allocateRigidSearchMemory(
    if( totalNumNodes > newRow->memArticulationNodes )
    {
       int newSize = maxValue(2 * newRow->memArticulationNodes, totalNumNodes);
-      SCIP_CALL(
-         SCIPreallocBlockMemoryArray(dec->env, &newRow->articulationNodes, newRow->memArticulationNodes, newSize));
+      SCIP_ALLOC(
+         BMSreallocBlockMemoryArray(dec->env, &newRow->articulationNodes, newRow->memArticulationNodes, newSize));
       newRow->memArticulationNodes = newSize;
    }
    if( totalNumNodes > newRow->memNodeSearchInfo )
    {
       int newSize = maxValue(2 * newRow->memNodeSearchInfo, totalNumNodes);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->articulationNodeSearchInfo, newRow->memNodeSearchInfo,
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->articulationNodeSearchInfo, newRow->memNodeSearchInfo,
                                             newSize));
       newRow->memNodeSearchInfo = newSize;
    }
    if( totalNumNodes > newRow->memCrossingPathCount )
    {
       int newSize = maxValue(2 * newRow->memCrossingPathCount, totalNumNodes);
-      SCIP_CALL(
-         SCIPreallocBlockMemoryArray(dec->env, &newRow->crossingPathCount, newRow->memCrossingPathCount, newSize));
+      SCIP_ALLOC(
+         BMSreallocBlockMemoryArray(dec->env, &newRow->crossingPathCount, newRow->memCrossingPathCount, newSize));
       newRow->memCrossingPathCount = newSize;
    }
    if( totalNumNodes > newRow->memTemporaryColorArray ){
       int newSize = maxValue(2 * newRow->memTemporaryColorArray, totalNumNodes);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->temporaryColorArray,
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->temporaryColorArray,
                                             newRow->memTemporaryColorArray, newSize));
       newRow->memTemporaryColorArray = newSize;
    }
@@ -7068,20 +7063,20 @@ SCIP_RETCODE allocateRigidSearchMemory(
    if( largestID > newRow->memIntersectionDFSData )
    {
       int newSize = maxValue(2 * newRow->memIntersectionDFSData, largestID);
-      SCIP_CALL(
-         SCIPreallocBlockMemoryArray(dec->env, &newRow->intersectionDFSData, newRow->memIntersectionDFSData, newSize));
+      SCIP_ALLOC(
+         BMSreallocBlockMemoryArray(dec->env, &newRow->intersectionDFSData, newRow->memIntersectionDFSData, newSize));
       newRow->memIntersectionDFSData = newSize;
    }
    if( largestID > newRow->memColorDFSData )
    {
       int newSize = maxValue(2 * newRow->memColorDFSData, largestID);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->colorDFSData, newRow->memColorDFSData, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->colorDFSData, newRow->memColorDFSData, newSize));
       newRow->memColorDFSData = newSize;
    }
    if( largestID > newRow->memArtDFSData )
    {
       int newSize = maxValue(2 * newRow->memArtDFSData, largestID);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->artDFSData, newRow->memArtDFSData, newSize));
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->artDFSData, newRow->memArtDFSData, newSize));
       newRow->memArtDFSData = newSize;
    }
 
@@ -7093,7 +7088,7 @@ SCIP_RETCODE allocateRigidSearchMemory(
    if( largestID > newRow->memIntersectionPathDepth )
    {
       int newSize = maxValue(2 * newRow->memIntersectionPathDepth, largestID);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->intersectionPathDepth, newRow->memIntersectionPathDepth,
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->intersectionPathDepth, newRow->memIntersectionPathDepth,
                                             newSize));
       for( int i = newRow->memIntersectionPathDepth; i < newSize; ++i )
       {
@@ -7108,8 +7103,8 @@ SCIP_RETCODE allocateRigidSearchMemory(
    if( largestID > newRow->memIntersectionPathParent )
    {
       int newSize = maxValue(2 * newRow->memIntersectionPathParent, largestID);
-      SCIP_CALL(
-         SCIPreallocBlockMemoryArray(dec->env, &newRow->intersectionPathParent, newRow->memIntersectionPathParent,
+      SCIP_ALLOC(
+         BMSreallocBlockMemoryArray(dec->env, &newRow->intersectionPathParent, newRow->memIntersectionPathParent,
                                      newSize));
       for( int i = newRow->memIntersectionPathParent; i < newSize; ++i )
       {
@@ -8303,7 +8298,7 @@ SCIP_RETCODE allocateTreeSearchMemory(
    if( necessarySpace > newRow->memMergeTreeCallData )
    {
       int updatedSize = maxValue(2 * newRow->memMergeTreeCallData, necessarySpace);
-      SCIP_CALL(SCIPreallocBlockMemoryArray(dec->env, &newRow->mergeTreeCallData, newRow->memMergeTreeCallData,
+      SCIP_ALLOC(BMSreallocBlockMemoryArray(dec->env, &newRow->mergeTreeCallData, newRow->memMergeTreeCallData,
                                             updatedSize));
       newRow->memMergeTreeCallData = updatedSize;
    }
@@ -10763,12 +10758,12 @@ SCIP_RETCODE transformComponentRowAddition(
 /**< Create the network row addition data structure */
 static
 SCIP_RETCODE SCIPnetrowaddCreate(
-   SCIP*                 scip,               /**< Main SCIP instance */
+   BMS_BLKMEM*           blkmem,             /**< Block memory */
    SCIP_NETROWADD**      prowadd             /**< Pointer to store the new row addition struct at */
 )
 {
-   assert(scip);
-   SCIP_CALL(SCIPallocBlockMemory(scip, prowadd));
+   assert(blkmem);
+   SCIP_ALLOC(BMSallocBlockMemory(blkmem, prowadd));
    SCIP_NETROWADD* newRow = *prowadd;
 
    newRow->remainsNetwork = TRUE;
@@ -10857,7 +10852,7 @@ SCIP_RETCODE SCIPnetrowaddCreate(
 /**< Frees the network row addition data structure */
 static
 void SCIPnetrowaddFree(
-   SCIP*                 scip,               /**< Main SCIP instance */
+   BMS_BLKMEM*           blkmem,             /**< Block memory */
    SCIP_NETROWADD**      prowadd             /**< Pointer to row addition struct to be freed */
 )
 {
@@ -10865,31 +10860,31 @@ void SCIPnetrowaddFree(
 
    SCIP_NETROWADD* newRow = *prowadd;
 
-   SCIPfreeBlockMemoryArray(scip, &newRow->temporaryColorArray, newRow->memTemporaryColorArray);
-   SCIPfreeBlockMemoryArray(scip, &newRow->createReducedMembersCallstack, newRow->memCreateReducedMembersCallstack);
-   SCIPfreeBlockMemoryArray(scip, &newRow->artDFSData, newRow->memArtDFSData);
-   SCIPfreeBlockMemoryArray(scip, &newRow->colorDFSData, newRow->memColorDFSData);
-   SCIPfreeBlockMemoryArray(scip, &newRow->mergeTreeCallData, newRow->memMergeTreeCallData);
-   SCIPfreeBlockMemoryArray(scip, &newRow->intersectionDFSData, newRow->memIntersectionDFSData);
-   SCIPfreeBlockMemoryArray(scip, &newRow->intersectionPathParent, newRow->memIntersectionPathParent);
-   SCIPfreeBlockMemoryArray(scip, &newRow->intersectionPathDepth, newRow->memIntersectionPathDepth);
-   SCIPfreeBlockMemoryArray(scip, &newRow->crossingPathCount, newRow->memCrossingPathCount);
-   SCIPfreeBlockMemoryArray(scip, &newRow->articulationNodeSearchInfo, newRow->memNodeSearchInfo);
-   SCIPfreeBlockMemoryArray(scip, &newRow->articulationNodes, newRow->memArticulationNodes);
-   SCIPfreeBlockMemoryArray(scip, &newRow->nodeColors, newRow->memNodeColors);
-   SCIPfreeBlockMemoryArray(scip, &newRow->isArcCut, newRow->memIsArcCut);
-   SCIPfreeBlockMemoryArray(scip, &newRow->isArcCutReversed, newRow->memIsArcCut);
-   SCIPfreeBlockMemoryArray(scip, &newRow->decompositionColumnArcs, newRow->memDecompositionColumnArcs);
-   SCIPfreeBlockMemoryArray(scip, &newRow->decompositionColumnArcReversed, newRow->memDecompositionColumnArcs);
-   SCIPfreeBlockMemoryArray(scip, &newRow->newColumnArcs, newRow->memColumnArcs);
-   SCIPfreeBlockMemoryArray(scip, &newRow->newColumnReversed, newRow->memColumnArcs);
-   SCIPfreeBlockMemoryArray(scip, &newRow->childrenStorage, newRow->memChildrenStorage);
-   SCIPfreeBlockMemoryArray(scip, &newRow->cutArcs, newRow->memCutArcs);
-   SCIPfreeBlockMemoryArray(scip, &newRow->memberInformation, newRow->memMemberInformation);
-   SCIPfreeBlockMemoryArray(scip, &newRow->reducedComponents, newRow->memReducedComponents);
-   SCIPfreeBlockMemoryArray(scip, &newRow->reducedMembers, newRow->memReducedMembers);
-   SCIPfreeBlockMemoryArray(scip, &newRow->leafMembers, newRow->memLeafMembers);
-   SCIPfreeBlockMemory(scip, prowadd);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->temporaryColorArray, newRow->memTemporaryColorArray);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->createReducedMembersCallstack, newRow->memCreateReducedMembersCallstack);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->artDFSData, newRow->memArtDFSData);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->colorDFSData, newRow->memColorDFSData);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->mergeTreeCallData, newRow->memMergeTreeCallData);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->intersectionDFSData, newRow->memIntersectionDFSData);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->intersectionPathParent, newRow->memIntersectionPathParent);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->intersectionPathDepth, newRow->memIntersectionPathDepth);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->crossingPathCount, newRow->memCrossingPathCount);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->articulationNodeSearchInfo, newRow->memNodeSearchInfo);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->articulationNodes, newRow->memArticulationNodes);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->nodeColors, newRow->memNodeColors);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->isArcCut, newRow->memIsArcCut);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->isArcCutReversed, newRow->memIsArcCut);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->decompositionColumnArcs, newRow->memDecompositionColumnArcs);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->decompositionColumnArcReversed, newRow->memDecompositionColumnArcs);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->newColumnArcs, newRow->memColumnArcs);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->newColumnReversed, newRow->memColumnArcs);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->childrenStorage, newRow->memChildrenStorage);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->cutArcs, newRow->memCutArcs);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->memberInformation, newRow->memMemberInformation);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->reducedComponents, newRow->memReducedComponents);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->reducedMembers, newRow->memReducedMembers);
+   BMSfreeBlockMemoryArray(blkmem, &newRow->leafMembers, newRow->memLeafMembers);
+   BMSfreeBlockMemory(blkmem, prowadd);
 }
 
 /**< Checks if the given row can be added to the network decomposition */
@@ -11071,16 +11066,17 @@ struct SCIP_Netmatdec{
 };
 
 SCIP_RETCODE SCIPnetmatdecCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
+   BMS_BLKMEM*           blkmem,             /**< Block memory */
    SCIP_NETMATDEC**      pdec,               /**< buffer to store pointer to created decomposition */
    int                   nrows,              /**< The maximal number of rows that the decomposition can expect */
    int                   ncols               /**< The maximal number of columns that the decomposition can expect */
 )
 {
-   SCIP_CALL(SCIPallocBlockMemory(scip, pdec));
+
+   SCIP_ALLOC(BMSallocBlockMemory(blkmem,pdec));
    SCIP_NETMATDEC* dec = *pdec;
    dec->dec = NULL;
-   SCIP_CALL(netMatDecDataCreate(scip, &dec->dec, nrows, ncols));
+   SCIP_CALL(netMatDecDataCreate(blkmem, &dec->dec, nrows, ncols));
    dec->rowadd = NULL;
    dec->coladd = NULL;
    return SCIP_OKAY;
@@ -11091,17 +11087,17 @@ void SCIPnetmatdecFree(
 )
 {
    SCIP_NETMATDEC* dec = *pdec;
-   SCIP* scip = dec->dec->env;
+   BMS_BLKMEM* blkmem = dec->dec->env;
    if( dec->coladd != NULL)
    {
-      SCIPnetcoladdFree(scip, &dec->coladd);
+      SCIPnetcoladdFree(blkmem, &dec->coladd);
    }
    if( dec->rowadd != NULL)
    {
-      SCIPnetrowaddFree(scip, &dec->rowadd);
+      SCIPnetrowaddFree(blkmem, &dec->rowadd);
    }
    netMatDecDataFree(&dec->dec);
-   SCIPfreeBlockMemory(scip,pdec);
+   BMSfreeBlockMemory(blkmem,pdec);
 }
 
 SCIP_RETCODE SCIPnetmatdecTryAddCol(
@@ -11186,7 +11182,7 @@ SCIP_Bool SCIPnetmatdecIsMinimal(
 
 
 SCIP_Bool SCIPnetmatdecVerifyCycle(
-   SCIP*                 scip,               /**< SCIP data structure */
+   BMS_BUFMEM*           bufmem,             /**< Buffer memory */
    SCIP_NETMATDEC*       dec,                /**< The network matrix decomposition */
    int                   column,             /**< The column to check */
    int*                  nonzrowidx,         /**< Array with the column's nonzero row indices */
@@ -11198,5 +11194,5 @@ SCIP_Bool SCIPnetmatdecVerifyCycle(
                                               * equal or greater than the number of rows in the decomposition. */
 )
 {
-   return netMatDecDataVerifyCycle(scip,dec->dec,column,nonzrowidx,nonzvals,nnonzs,pathrowstorage,pathsignstorage);
+   return netMatDecDataVerifyCycle(bufmem,dec->dec,column,nonzrowidx,nonzvals,nnonzs,pathrowstorage,pathsignstorage);
 }

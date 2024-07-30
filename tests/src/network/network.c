@@ -226,7 +226,9 @@ static SCIP_RETCODE runColumnTestCase(
    }
    cr_expect(!testCase->isRowWise);
    SCIP_NETMATDEC* dec = NULL;
-   SCIP_CALL(SCIPnetmatdecCreate(scip, &dec, testCase->nrows, testCase->ncols));
+   BMS_BLKMEM * blkmem = SCIPblkmem(scip);
+   BMS_BUFMEM * bufmem = SCIPbuffer(scip);
+   SCIP_CALL(SCIPnetmatdecCreate(blkmem, &dec, testCase->nrows, testCase->ncols));
 
    SCIP_Bool isNetwork = TRUE;
 
@@ -259,7 +261,7 @@ static SCIP_RETCODE runColumnTestCase(
          int* jNonzeroRows = &testCase->entrySecondaryIndex[jColEntryStart];
          double* jNonzeroValues = &testCase->entryValue[jColEntryStart];
          int jNonzeros = jColEntryEnd - jColEntryStart;
-         SCIP_Bool cycleIsCorrect = SCIPnetmatdecVerifyCycle(scip, dec, j,
+         SCIP_Bool cycleIsCorrect = SCIPnetmatdecVerifyCycle(bufmem, dec, j,
                                                              jNonzeroRows, jNonzeroValues,
                                                              jNonzeros, tempColumnStorage,
                                                              tempSignStorage);
@@ -302,8 +304,11 @@ static SCIP_RETCODE runRowTestCase(
    DirectedTestCase colWiseCase = copyTestCase(testCase);
    transposeMatrixStorage(&colWiseCase);
 
+   BMS_BLKMEM * blkmem = SCIPblkmem(scip);
+   BMS_BUFMEM * bufmem = SCIPbuffer(scip);
+
    SCIP_NETMATDEC* dec = NULL;
-   SCIP_CALL(SCIPnetmatdecCreate(scip, &dec, testCase->nrows, testCase->ncols));
+   SCIP_CALL(SCIPnetmatdecCreate(blkmem, &dec, testCase->nrows, testCase->ncols));
 
    SCIP_Bool isNetwork = TRUE;
 
@@ -351,7 +356,7 @@ static SCIP_RETCODE runRowTestCase(
          double* jNonzeroValues = &colWiseCase.entryValue[jColEntryStart];
 
          int jNonzeros = finalEntryIndex - jColEntryStart;
-         SCIP_Bool cycleIsCorrect = SCIPnetmatdecVerifyCycle(scip, dec, j,
+         SCIP_Bool cycleIsCorrect = SCIPnetmatdecVerifyCycle(bufmem, dec, j,
                                                              jNonzeroRows, jNonzeroValues,
                                                              jNonzeros, tempColumnStorage,
                                                              tempSignStorage);
