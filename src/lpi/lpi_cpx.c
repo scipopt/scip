@@ -147,6 +147,7 @@ struct SCIP_LPi
    SCIP_CPXPARAM         curparam;           /**< current CPLEX parameters in the environment */
    CPXLPptr              cpxlp;              /**< CPLEX LP pointer */
    int                   solstat;            /**< solution status of last optimization call */
+   int                   method;             /**< solution method of last optimization call */
    SCIP_CPXPARAM         cpxparam;           /**< current parameter values for this LP */
    char*                 larray;             /**< array with 'L' entries for changing lower bounds */
    char*                 uarray;             /**< array with 'U' entries for changing upper bounds */
@@ -711,6 +712,7 @@ void invalidateSolution(
 {
    assert(lpi != NULL);
    lpi->solstat = -1;
+   lpi->method = CPX_ALG_NONE;
    lpi->instabilityignored = FALSE;
 }
 
@@ -2293,6 +2295,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    }
 
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
+   lpi->method = CPX_ALG_PRIMAL;
    lpi->instabilityignored = FALSE;
 
    /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
@@ -2418,6 +2421,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    }
 
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
+   lpi->method = CPX_ALG_DUAL;
    lpi->instabilityignored = FALSE;
 
    /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
@@ -2601,6 +2605,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
+   lpi->method = CPX_ALG_BARRIER;
    lpi->instabilityignored = FALSE;
 
    if( lpi->solstat != CPX_STAT_INForUNBD )
@@ -3158,7 +3163,7 @@ SCIP_Bool SCIPlpiHasDualRay(
    assert(lpi->cpxenv != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == CPX_STAT_INFEASIBLE && CPXgetmethod(lpi->cpxenv, lpi->cpxlp) == CPX_ALG_DUAL);
+   return (lpi->solstat == CPX_STAT_INFEASIBLE && lpi->method == CPX_ALG_DUAL);
 }
 
 /** returns TRUE iff LP is proven to be dual unbounded */
