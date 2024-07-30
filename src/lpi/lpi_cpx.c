@@ -2637,12 +2637,17 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
       lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
       lpi->instabilityignored = FALSE;
-      assert( lpi->solstat != CPX_STAT_INForUNBD );
 
       lpi->iterations += CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
       SCIPdebugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
 
       setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
+
+      if( lpi->solstat == CPX_STAT_INForUNBD )
+      {
+         /* if we could not resolve CPX_STAT_INForUNBD, we use the dual simplex */
+         SCIP_CALL( SCIPlpiSolveDual(lpi) );
+      }
    }
 
    return SCIP_OKAY;
