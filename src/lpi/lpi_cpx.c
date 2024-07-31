@@ -3506,7 +3506,6 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    )
 {
    int solntype;
-   int what;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -3517,26 +3516,28 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 
    SCIPdebugMessage("requesting solution quality from CPLEX: quality %d\n", qualityindicator);
 
-   switch( qualityindicator )
-   {
-   case SCIP_LPSOLQUALITY_ESTIMCONDITION:
-      what = CPX_KAPPA;
-      break;
-
-   case SCIP_LPSOLQUALITY_EXACTCONDITION:
-      what = CPX_EXACT_KAPPA;
-      break;
-
-   default:
-      SCIPerrorMessage("Solution quality %d unknown.\n", qualityindicator);
-      return SCIP_INVALIDDATA;
-   }
-
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
    if( solntype == CPX_BASIC_SOLN )
    {
-      CHECK_ZERO( lpi->messagehdlr, CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what) );
+      int what;
+
+      switch( qualityindicator )
+      {
+      case SCIP_LPSOLQUALITY_ESTIMCONDITION:
+         what = CPX_KAPPA;
+         break;
+
+      case SCIP_LPSOLQUALITY_EXACTCONDITION:
+         what = CPX_EXACT_KAPPA;
+         break;
+
+      default:
+         SCIPerrorMessage("Solution quality %d unknown.\n", qualityindicator);
+         return SCIP_INVALIDDATA;
+      }
+
+      (void) CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what);
    }
 
    return SCIP_OKAY;
