@@ -805,11 +805,14 @@ SCIP_RETCODE primalAddSol(
    /* check, if the global upper bound has to be updated */
    if( obj < primal->cutoffbound && insertpos == 0 )
    {
+      /* issue BESTSOLFOUND event */
+      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
+      SCIP_CALL( SCIPeventChgSol(&event, sol) );
+      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+
       /* update the upper bound */
       SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, tree, reopt, lp, obj) );
 
-      /* issue BESTSOLFOUND event */
-      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
       primal->nbestsolsfound++;
       stat->bestsolnode = stat->nnodes;
    }
@@ -817,9 +820,10 @@ SCIP_RETCODE primalAddSol(
    {
       /* issue POORSOLFOUND event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_POORSOLFOUND) );
+      SCIP_CALL( SCIPeventChgSol(&event, sol) );
+      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
    }
-   SCIP_CALL( SCIPeventChgSol(&event, sol) );
-   SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+
 
    /* display node information line */
    if( insertpos == 0 && !replace && set->stage >= SCIP_STAGE_SOLVING )

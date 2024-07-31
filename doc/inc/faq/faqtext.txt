@@ -216,8 +216,8 @@ SECTION: General Questions about SCIP
         SCIP supports nonlinear constraints of the form lhs &le; f(x) &le; rhs, where the function f(x) is an algebraic
         expression that can be represented as expression tree. Such an expression tree has constants and variables as terminal
         nodes and operands as non-terminal nodes.
-        Expression operands supported by SCIP include addition, subtraction, multiplication, division, exponentiation and
-        logarithm. Trigonometric functions are not yet supported by SCIP.
+        Expression operands supported by SCIP include addition, subtraction, multiplication, division, exponentiation,
+        logarithm, sine and cosine.
     </p>
     <p>
         Nonlinear objective functions are not supported by SCIP and must be modeled as constraint function.

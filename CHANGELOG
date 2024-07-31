@@ -7,9 +7,11 @@ Features
 --------
 - Added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
 - Copy variable data pointer if no copy routine was supplied.
-
 - added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
 - implemented symmetry detection callbacks for cons_disjunction and cons_superindicator
+- detailed information about applied symmetry handling techniques can be printed to the terminal
+- added a new separator sepa_multilinear to generate flower cuts from AND constraints nonlinear product expressions.
+- added functionality to deal with hypergraphs by means of efficient access to vertices, edges and intersections edges.
 
 Performance improvements
 ------------------------
@@ -36,6 +38,8 @@ Interface changes
 - SCIPgetAvgDPseudocostScore(), SCIPgetVarDPseudocostScore() for computing the discounted pseudo cost scores using ancestral pseudo costs
 - SCIPboundchgGetLPSolVal() for accessing the LP solution value in the branching data of the bound change
 - SCIPclearSymgraph() and SCIPcopySymgraphAsSubgraph() to clear and copy as symmetry detection graph, respectively
+- SCIPincludeSepaMultilinear() to include the new multilinear cut separator
+- SCIPhypergraphCreate(), SCIPhypergraphClear(), SCIPhypergraphFree(), SCIPhypergraphAddVertex(), SCIPhypergraphAddEdge(), SCIPhypergraphIsValid() and SCIPhypergraphComputeVerticesEdges() for building and deleting hypergraphs, SCIPhypergraphComputeOverlaps(), SCIPhypergraphOverlapFind(), SCIPhypergraphIntersectEdges(), SCIPhypergraphComputeOverlapsEdges(), SCIPhypergraphComputeVerticesOverlaps(), SCIPhypergraphOverlapsDisjoint() to deal with pair-wise intersections of hyperedges, SCIPhypergraphIterInit(), SCIPhypergraphIterClear(), SCIPhypergraphIterStart(), SCIPhypergraphIterValid(), SCIPhypergraphIterNext(), SCIPhypergraphIterBase(), SCIPhypergraphIterAdjacent(), SCIPhypergraphIterMinVertex(), SCIPhypergraphIterOverlap() for iterating over adjacent edges, SCIPhypergraphHasVertexEdges() SCIPhypergraphHasOverlaps(), SCIPhypergraphHasOverlapsEdges(), SCIPhypergraphHasVertexOverlaps(), SCIPhypergraphGetNVertices(), SCIPhypergraphGetNEdges(), SCIPhypergraphBlkmem(), SCIPhypergraphGetNOverlaps(), SCIPhypergraphVertexData(), SCIPhypergraphEdgeData(), SCIPhypergraphEdgeSize(), SCIPhypergraphEdgeVertices(), SCIPhypergraphVertexEdgesFirst(), SCIPhypergraphVertexEdgesBeyond(), SCIPhypergraphVertexEdgesGetAtIndex(), SCIPhypergraphOverlapData(), SCIPhypergraphOverlapSize(), SCIPhypergraphOverlapVertices() SCIPhypergraphEdgesOverlapsFirst(), SCIPhypergraphEdgesOverlapsBeyond(), SCIPhypergraphEdgesOverlapsGetAtIndex(), SCIPhypergraphOverlapsEdgesFirst(), SCIPhypergraphOverlapsEdgesBeyond(), SCIPhypergraphOverlapsEdgesGetAtIndex(), SCIPhypergraphVertexOverlapsFirst(), SCIPhypergraphVertexOverlapsBeyond() and SCIPhypergraphVertexOverlapsGetAtIndex() to query information about vertices, edges and overlaps as well as their incidences.
 
 ### Command line interface
 
@@ -49,6 +53,7 @@ Interface changes
 - branching/discountedpscost to enable/disable recording ancestral pseudo costs
 - new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
 - new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
+- new parameter "propagating/symmetry/dispsyminfo" to control whether information about which symmetry handling methods are applied are printed
 
 ### Data structures
 
@@ -97,6 +102,10 @@ Interface changes
 -----------------
 ### New callbacks
 ### New API functions
+
+- added SCIPtpiIsAvailable() to check whether a working task processing interface is available (TPI != none)
+- added SCIPtpiGetLibraryName() and SCIPtpiGetLibraryDesc()
+
 ### Command line interface
 ### Interfaces to external software
 ### New parameters
@@ -119,17 +128,30 @@ Build system
 Miscellaneous
 -------------
 
+- Event `BESTSOLFOUND` is thrown before scanning the current node list and removing nodes potentially throwing the `NODEDELETE` event
+
 @section RN911 SCIP 9.1.1
 *************************
 
 Fixed bugs
 ----------
 
+- fix bug in separator aggregation that caused incorrect terminations when for an integral objective the objective limit was set to a fractional value
+- fix bug in memory management of doublelex matrices where indices were set beyond array bounds
+- store relevance flags in consdataTightenCoefs() of cons_linear.c to avoid dropping variables unintentionally due to numerical changes
+- fix possible segmentation fault when resetting local and global bounds of original variables after abnormal termination
+- compare coefficient scales to detect parallelism to avoid integral relaxations in detectRedundantConstraints() of cons_linear.c
+- remove coefficient information from linear constraint hashes in order to compare keys with tolerances
+- fixed NULL pointer dereference in SCIPtpiGetNumThreads() of TinyCThread interface if called before SCIPtpiInit(); now returns 0 in this case
+- calling SCIPsolveConcurrent() when SCIP was compiled without a TPI now results in a plugin-not-found error
+
 Performance improvements
 ------------------------
 
 Examples and applications
 -------------------------
+
+- in example Binpacking implement Farkas pricing for packings because branching can actually lead to infeasible restricted master LPs
 
 Unit tests
 ----------
@@ -141,6 +163,9 @@ Build system
 ------------
 
 ### Cmake
+
+- Fixed compilation and linking with HiGHS. To use HiGHS, cmake now requires to specify the directory containing the `highs-config.cmake` file via `-DHIGHS_DIR`.
+- Extended identification of Ipopt library on Windows to also look for ipopt.dll.lib, as this is used since Ipopt 3.13.0 (2019)
 
 ### Makefile
 
@@ -3168,7 +3193,6 @@ Interface changes
 
 - Misc:
   - changed return type of SCIPcliqueGetId() from `int` to `unsigned int`
-  - SCIPsolveParallel() is deprecated; use SCIPsolveConcurrent() instead
   - removed SCIPvarGetCliqueComponentIdx(); the connectedness information of the clique table is now stored as a
     `SCIP_DISJOINTSET` member of the clique table and cannot be publicly accessed
   - added parameter `copytables` to SCIPcopyPlugins()

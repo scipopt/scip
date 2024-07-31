@@ -232,6 +232,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaMcf(scip) );
    SCIP_CALL( SCIPincludeSepaMinor(scip) );
    SCIP_CALL( SCIPincludeSepaMixing(scip) );
+   SCIP_CALL( SCIPincludeSepaMultilinear(scip) );
    SCIP_CALL( SCIPincludeSepaOddcycle(scip) );
    SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
    SCIP_CALL( SCIPincludeSepaRlt(scip) );
@@ -271,10 +272,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, TRUE) );
    SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, FALSE) );
    SCIP_CALL( SCIPincludeNlpSolverAll(scip) );
-
-#ifdef TPI_TNY
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "TinyCThread", "Small, portable implementation of the C11 threads API (tinycthread.github.io)") );
-#endif
 
    SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
 

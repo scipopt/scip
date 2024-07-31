@@ -3909,6 +3909,30 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    SCIP_CALL( SCIPcreateVarBasic(scip, &auxvar, name, minact, maxact, 0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
+#ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
+   {
+      SCIP_Real debugsolval;  /* value of auxvar in debug solution */
+      SCIP_Real val;
+
+      /* compute value of new variable in debug solution */
+      /* first \sum_j c_{ij} x_j (coefs[j] * vars[j]) */
+      debugsolval = 0.0;
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[i], &val) );
+         debugsolval += coefs[i] * val;
+      }
+
+      /* now multiply by x_i (facvar) */
+      SCIP_CALL( SCIPdebugGetSolVal(scip, facvar, &val) );
+      debugsolval *= val;
+
+      /* store debug solution value of auxiliary variable */
+      SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugsolval) );
+   }
+#endif
+
    /* create and add z - maxact x <= 0 */
    if( !SCIPisZero(scip, maxact) )
    {
@@ -4212,6 +4236,25 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIPdebugMsg(scip, "  created auxiliary variable %s\n", name);
+
+#ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
+   {
+      SCIP_Real debugsolval;  /* value of auxvar in debug solution */
+      SCIP_Real val;
+
+      /* compute value of new variable in debug solution (\prod_i vars[i]) */
+      debugsolval = 1.0;
+      for( i = 0; i < nchildren; ++i )
+      {
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[i], &val) );
+         debugsolval *= val;
+      }
+
+      /* store debug solution value of auxiliary variable */
+      SCIP_CALL( SCIPdebugAddSolVal(scip, w, debugsolval) );
+   }
+#endif
 
    /* use variable bound constraints if it is a bilinear product and there is no empathy for an AND constraint */
    if( nchildren == 2 && !empathy4and )
@@ -8675,6 +8718,7 @@ SCIP_RETCODE bilinTermAddAuxExpr(
    }
    else
    {
+      assert(term->aux.exprs != NULL);
       term->aux.exprs[pos]->underestimate |= auxexpr->underestimate;
       term->aux.exprs[pos]->overestimate  |= auxexpr->overestimate;
    }

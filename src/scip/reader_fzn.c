@@ -1536,9 +1536,9 @@ SCIP_RETCODE parseOutputDimensioninfo(
    DIMENSIONS**          info                /**< pointer to store the output dimension information if one */
    )
 {
-   FZNNUMBERTYPE type;
-   SCIP_Real lb;
-   SCIP_Real ub;
+   FZNNUMBERTYPE type = FZN_INT;   /* init for scan-build */
+   SCIP_Real lb = SCIP_INVALID;  /* init for scan-build */
+   SCIP_Real ub = SCIP_INVALID;  /* init for scan-build */
    int nelements;
    int size;
 
