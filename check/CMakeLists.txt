@@ -834,7 +834,7 @@ if(NOT ${TPI} STREQUAL "none")
         # configure the batch file for this test by substituting placeholders in the in.file
         #
         configure_file(interactiveshell/concurrentsolve.bat.in interactiveshell/concurrentsolve-${basename}.bat)
-        if(NOT ((${basename} STREQUAL "egout.mps") AND (${LPS} STREQUAL "spx") AND (${TPI} STREQUAL "tny")))
+        if(NOT ((${basename} STREQUAL "egout.mps") AND (${TPI} STREQUAL "tny")))
         add_test(NAME MIP-concurrentsolve-${basename}
                 COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${basename}.bat
                 )
