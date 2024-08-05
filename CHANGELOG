@@ -15,6 +15,7 @@ Fixed bugs
 - fixed NULL pointer dereference in SCIPtpiGetNumThreads() of TinyCThread interface if called before SCIPtpiInit(); now returns 0 in this case
 - calling SCIPsolveConcurrent() when SCIP was compiled without a TPI now results in a plugin-not-found error
 - fixed LPI status functions of lpi_cpx if the barrier is called
+- check cuts for redundancy after scaling in cutTightenCoefs() and cutTightenCoefsQuad() of cuts.c
 
 Performance improvements
 ------------------------
