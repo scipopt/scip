@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file    network.h
+/**@file    pub_network.h
  * @ingroup PUBLICCOREAPI
  * @brief   Methods for detecting network matrices
  * @author  Rolf van der Hulst
