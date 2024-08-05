@@ -458,6 +458,13 @@ SCIP_RETCODE checkData(
       cr_assert_float_eq(lpiobj[j], obj[j], EPS, "Violation of objective coefficient %d: %g != %g\n", j, lpiobj[j], obj[j]);
 
       cr_assert( lpibeg[j] == beg[j] );
+
+      /* LP-solvers sometimes permute the nonzero entries per column (e.g., XPRESS with barrier) - we therefore sort them */
+      if ( j < ncols - 1 )
+         i = lpibeg[j+1] - lpibeg[j];
+      else
+         i = lpinnonz2 - lpibeg[j];
+      SCIPsortIntReal(&lpiind[lpibeg[j]], &lpival[lpibeg[j]], i);
    }
 
    /* compare matrix */
