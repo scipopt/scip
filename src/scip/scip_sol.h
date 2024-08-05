@@ -953,6 +953,7 @@ SCIP_RETCODE SCIPprintSol(
    );
 
 /** print a rational solution */
+SCIP_EXPORT
 SCIP_RETCODE SCIPprintSolExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
