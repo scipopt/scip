@@ -3108,16 +3108,6 @@ SCIP_RETCODE mergeGivenMemberIntoParent(
    return SCIP_OKAY;
 }
 
-/** Returns the maximum of two values. */
-static
-int maxValue(
-   int a,
-   int b
-)
-{
-   return ( a > b ) ? a : b;
-}
-
 /* ---------- START functions for column addition ------------------------------------------------------------------- */
 
 /** Path arcs are all those arcs that correspond to nonzeros of the column to be added. */
@@ -3641,13 +3631,13 @@ SCIP_RETCODE constructReducedDecomposition(
    int newSize = largestMemberID(dec);//Is this sufficient?
    if( newSize > newCol->memReducedMembers )
    {
-      int newArraySize = maxValue(2 * newCol->memReducedMembers, newSize);
+      int newArraySize = MAX(2 * newCol->memReducedMembers, newSize);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newCol->reducedMembers, newCol->memReducedMembers, newArraySize) );
       newCol->memReducedMembers = newArraySize;
    }
    if( newSize > newCol->memMemberInformation )
    {
-      int updatedSize = maxValue(2 * newCol->memMemberInformation, newSize);
+      int updatedSize = MAX(2 * newCol->memMemberInformation, newSize);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newCol->memberInformation, newCol->memMemberInformation, updatedSize) );
       for( int i = newCol->memMemberInformation; i < updatedSize; ++i )
       {
@@ -3660,7 +3650,7 @@ SCIP_RETCODE constructReducedDecomposition(
    int numComponents = numConnectedComponents(dec);
    if( numComponents > newCol->memReducedComponents )
    {
-      int updatedSize = maxValue(2 * newCol->memReducedComponents, numComponents);
+      int updatedSize = MAX(2 * newCol->memReducedComponents, numComponents);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newCol->reducedComponents, newCol->memReducedComponents, updatedSize) );
       newCol->memReducedComponents = updatedSize;
    }
@@ -3668,7 +3658,7 @@ SCIP_RETCODE constructReducedDecomposition(
    int numMembers = getNumMembers(dec);
    if( newCol->memCreateReducedMembersCallStack < numMembers )
    {
-      int updatedSize = maxValue(2 * newCol->memCreateReducedMembersCallStack, numMembers);
+      int updatedSize = MAX(2 * newCol->memCreateReducedMembersCallStack, numMembers);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newCol->createReducedMembersCallStack,
                                              newCol->memCreateReducedMembersCallStack, updatedSize) );
       newCol->memCreateReducedMembersCallStack = updatedSize;
@@ -3718,7 +3708,7 @@ SCIP_RETCODE constructReducedDecomposition(
 
    if( newCol->memChildrenStorage < numTotalChildren )
    {
-      int newMemSize = maxValue(newCol->memChildrenStorage * 2, numTotalChildren);
+      int newMemSize = MAX(newCol->memChildrenStorage * 2, numTotalChildren);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newCol->childrenStorage, newCol->memChildrenStorage, newMemSize) );
       newCol->memChildrenStorage = newMemSize;
    }
@@ -3953,7 +3943,7 @@ SCIP_RETCODE computeLeafMembers(
 {
    if( newCol->numReducedMembers > newCol->memLeafMembers )
    {
-      int newSize = maxValue(newCol->numReducedMembers, 2 * newCol->memLeafMembers);
+      int newSize = MAX(newCol->numReducedMembers, 2 * newCol->memLeafMembers);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newCol->leafMembers, newCol->memLeafMembers, newSize) );
       newCol->memLeafMembers = newSize;
    }
@@ -6468,16 +6458,6 @@ SCIP_RETCODE SCIPnetcoladdAdd(
 
 /* ---------- START functions for row addition ---------------------------------------------------------------------- */
 
-/** Computes the minimum of two values */
-static
-int minValue(
-   int a,
-   int b
-)
-{
-   return a < b ? a : b;
-}
-
 /** Index type for the nonzeros of the new row, e.g. the columns whose tree path must be elongated with the new row */
 typedef int cut_arc_id;
 #define INVALID_CUT_ARC (-1)
@@ -6930,13 +6910,13 @@ SCIP_RETCODE constructRowReducedDecomposition(
    int newSize = largestMemberID(dec);//Is this sufficient?
    if( newSize > newRow->memReducedMembers )
    {
-      int updatedSize = maxValue(2 * newRow->memReducedMembers, newSize);
+      int updatedSize = MAX(2 * newRow->memReducedMembers, newSize);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->reducedMembers, newRow->memReducedMembers, updatedSize) );
       newRow->memReducedMembers = updatedSize;
    }
    if( newSize > newRow->memMemberInformation )
    {
-      int updatedSize = maxValue(2 * newRow->memMemberInformation, newSize);
+      int updatedSize = MAX(2 * newRow->memMemberInformation, newSize);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->memberInformation, newRow->memMemberInformation, updatedSize) );
       for( int i = newRow->memMemberInformation; i < updatedSize; ++i )
       {
@@ -6949,7 +6929,7 @@ SCIP_RETCODE constructRowReducedDecomposition(
    int numComponents = numConnectedComponents(dec);
    if( numComponents > newRow->memReducedComponents )
    {
-      int updatedSize = maxValue(2 * newRow->memReducedComponents, numComponents);
+      int updatedSize = MAX(2 * newRow->memReducedComponents, numComponents);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->reducedComponents, newRow->memReducedComponents, updatedSize) );
       newRow->memReducedComponents = updatedSize;
    }
@@ -6957,7 +6937,7 @@ SCIP_RETCODE constructRowReducedDecomposition(
    int numMembers = getNumMembers(dec);
    if( newRow->memCreateReducedMembersCallstack < numMembers )
    {
-      int updatedSize = maxValue(2 * newRow->memCreateReducedMembersCallstack, numMembers);
+      int updatedSize = MAX(2 * newRow->memCreateReducedMembersCallstack, numMembers);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->createReducedMembersCallstack,
                                              newRow->memCreateReducedMembersCallstack, updatedSize) );
       newRow->memCreateReducedMembersCallstack = updatedSize;
@@ -7007,7 +6987,7 @@ SCIP_RETCODE constructRowReducedDecomposition(
 
    if( newRow->memChildrenStorage < numTotalChildren )
    {
-      int newMemSize = maxValue(newRow->memChildrenStorage * 2, numTotalChildren);
+      int newMemSize = MAX(newRow->memChildrenStorage * 2, numTotalChildren);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->childrenStorage, newRow->memChildrenStorage,
                                              newMemSize) );
       newRow->memChildrenStorage = newMemSize;
@@ -7117,7 +7097,7 @@ SCIP_RETCODE createReducedDecompositionCutArcs(
    spqr_arc maxArcID = largestArcID(dec);
    if( maxArcID > newRow->memIsArcCut )
    {
-      int newSize = maxValue(maxArcID, 2 * newRow->memIsArcCut);
+      int newSize = MAX(maxArcID, 2 * newRow->memIsArcCut);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->isArcCut, newRow->memIsArcCut, newSize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->isArcCutReversed, newRow->memIsArcCut, newSize) );
       for( int i = newRow->memIsArcCut; i < newSize; ++i )
@@ -7138,7 +7118,7 @@ SCIP_RETCODE createReducedDecompositionCutArcs(
    int numNeededArcs = newRow->numDecompositionColumnArcs * 4;
    if( numNeededArcs > newRow->memCutArcs )
    {
-      int newSize = maxValue(newRow->memCutArcs * 2, numNeededArcs);
+      int newSize = MAX(newRow->memCutArcs * 2, numNeededArcs);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->cutArcs, newRow->memCutArcs, newSize) );
       newRow->memCutArcs = newSize;
    }
@@ -7169,7 +7149,7 @@ SCIP_RETCODE determineLeafReducedMembers(
 {
    if( newRow->numDecompositionColumnArcs > newRow->memLeafMembers )
    {
-      int updatedSize = maxValue(newRow->numDecompositionColumnArcs, 2 * newRow->memLeafMembers);
+      int updatedSize = MAX(newRow->numDecompositionColumnArcs, 2 * newRow->memLeafMembers);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->leafMembers, newRow->memLeafMembers, updatedSize) );
       newRow->memLeafMembers = updatedSize;
    }
@@ -7198,7 +7178,7 @@ SCIP_RETCODE allocateRigidSearchMemory(
    int maxNumNodes = 2 * dec->numArcs;
    if( maxNumNodes > newRow->memNodeColors )
    {
-      int newSize = maxValue(2 * newRow->memNodeColors, maxNumNodes);
+      int newSize = MAX(2 * newRow->memNodeColors, maxNumNodes);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->nodeColors, newRow->memNodeColors, newSize) );
       for( int i = newRow->memNodeColors; i < newSize; ++i )
       {
@@ -7209,26 +7189,26 @@ SCIP_RETCODE allocateRigidSearchMemory(
 
    if( totalNumNodes > newRow->memArticulationNodes )
    {
-      int newSize = maxValue(2 * newRow->memArticulationNodes, totalNumNodes);
+      int newSize = MAX(2 * newRow->memArticulationNodes, totalNumNodes);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->articulationNodes, newRow->memArticulationNodes, newSize) );
       newRow->memArticulationNodes = newSize;
    }
    if( totalNumNodes > newRow->memNodeSearchInfo )
    {
-      int newSize = maxValue(2 * newRow->memNodeSearchInfo, totalNumNodes);
+      int newSize = MAX(2 * newRow->memNodeSearchInfo, totalNumNodes);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->articulationNodeSearchInfo, newRow->memNodeSearchInfo,
                                              newSize) );
       newRow->memNodeSearchInfo = newSize;
    }
    if( totalNumNodes > newRow->memCrossingPathCount )
    {
-      int newSize = maxValue(2 * newRow->memCrossingPathCount, totalNumNodes);
+      int newSize = MAX(2 * newRow->memCrossingPathCount, totalNumNodes);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->crossingPathCount, newRow->memCrossingPathCount, newSize) );
       newRow->memCrossingPathCount = newSize;
    }
    if( totalNumNodes > newRow->memTemporaryColorArray )
    {
-      int newSize = maxValue(2 * newRow->memTemporaryColorArray, totalNumNodes);
+      int newSize = MAX(2 * newRow->memTemporaryColorArray, totalNumNodes);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->temporaryColorArray,
                                              newRow->memTemporaryColorArray, newSize) );
       newRow->memTemporaryColorArray = newSize;
@@ -7240,19 +7220,19 @@ SCIP_RETCODE allocateRigidSearchMemory(
    //TODO: only update the stack sizes of the following when needed? The preallocation may not be worth it.
    if( largestID > newRow->memIntersectionDFSData )
    {
-      int newSize = maxValue(2 * newRow->memIntersectionDFSData, largestID);
+      int newSize = MAX(2 * newRow->memIntersectionDFSData, largestID);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->intersectionDFSData, newRow->memIntersectionDFSData, newSize) );
       newRow->memIntersectionDFSData = newSize;
    }
    if( largestID > newRow->memColorDFSData )
    {
-      int newSize = maxValue(2 * newRow->memColorDFSData, largestID);
+      int newSize = MAX(2 * newRow->memColorDFSData, largestID);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->colorDFSData, newRow->memColorDFSData, newSize) );
       newRow->memColorDFSData = newSize;
    }
    if( largestID > newRow->memArtDFSData )
    {
-      int newSize = maxValue(2 * newRow->memArtDFSData, largestID);
+      int newSize = MAX(2 * newRow->memArtDFSData, largestID);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->artDFSData, newRow->memArtDFSData, newSize) );
       newRow->memArtDFSData = newSize;
    }
@@ -7264,7 +7244,7 @@ SCIP_RETCODE allocateRigidSearchMemory(
 
    if( largestID > newRow->memIntersectionPathDepth )
    {
-      int newSize = maxValue(2 * newRow->memIntersectionPathDepth, largestID);
+      int newSize = MAX(2 * newRow->memIntersectionPathDepth, largestID);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->intersectionPathDepth, newRow->memIntersectionPathDepth,
                                              newSize) );
       for( int i = newRow->memIntersectionPathDepth; i < newSize; ++i )
@@ -7279,7 +7259,7 @@ SCIP_RETCODE allocateRigidSearchMemory(
    }
    if( largestID > newRow->memIntersectionPathParent )
    {
-      int newSize = maxValue(2 * newRow->memIntersectionPathParent, largestID);
+      int newSize = MAX(2 * newRow->memIntersectionPathParent, largestID);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->intersectionPathParent, newRow->memIntersectionPathParent,
                                              newSize) );
       for( int i = newRow->memIntersectionPathParent; i < newSize; ++i )
@@ -7746,7 +7726,7 @@ void articulationPoints(
             }
             else
             {
-               nodeInfo[node].low = minValue(nodeInfo[node].low, nodeInfo[otherNode].discoveryTime);
+               nodeInfo[node].low = MIN(nodeInfo[node].low, nodeInfo[otherNode].discoveryTime);
             }
          }
       }
@@ -7760,8 +7740,7 @@ void articulationPoints(
 
          spqr_node current_node = callStack[depth].node;
          spqr_node other_node = callStack[depth + 1].node;
-         nodeInfo[current_node].low = minValue(nodeInfo[current_node].low,
-                                               nodeInfo[other_node].low);
+         nodeInfo[current_node].low = MIN(nodeInfo[current_node].low, nodeInfo[other_node].low);
          if( depth != 0 &&
              !callStack[depth].isAP &&
              nodeInfo[current_node].discoveryTime <= nodeInfo[other_node].low )
@@ -8493,7 +8472,7 @@ SCIP_RETCODE allocateTreeSearchMemory(
    int necessarySpace = newRow->numReducedMembers;
    if( necessarySpace > newRow->memMergeTreeCallData )
    {
-      int updatedSize = maxValue(2 * newRow->memMergeTreeCallData, necessarySpace);
+      int updatedSize = MAX(2 * newRow->memMergeTreeCallData, necessarySpace);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(dec->env, &newRow->mergeTreeCallData, newRow->memMergeTreeCallData,
                                              updatedSize) );
       newRow->memMergeTreeCallData = updatedSize;
