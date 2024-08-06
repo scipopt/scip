@@ -3398,7 +3398,7 @@ void cleanupPreviousIteration(
 
 /** Create a new network column addition datastructure. */
 static
-SCIP_RETCODE SCIPnetcoladdCreate(
+SCIP_RETCODE netcoladdCreate(
    BMS_BLKMEM*           blkmem,             /**< Block memory */
    SCIP_NETCOLADD**      pcoladd             /**< Out-pointer for the created network column addition datastructure */
 )
@@ -3462,7 +3462,7 @@ SCIP_RETCODE SCIPnetcoladdCreate(
 
 /** Free a network column addition datastructure */
 static
-void SCIPnetcoladdFree(
+void netcoladdFree(
    BMS_BLKMEM*           blkmem,             /**< Block memory */
    SCIP_NETCOLADD**      pcoladd             /**< Pointer to the network column addition datastructure to be freed */
 )
@@ -5115,7 +5115,7 @@ void determineComponentTypes(
  * See header for more info.
  */
 static
-SCIP_RETCODE SCIPnetcoladdCheck(
+SCIP_RETCODE netcoladdCheck(
    SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
    SCIP_NETCOLADD*       coladd,        	   /**< The network matrix column addition data structure */
    int                   column,             /**< The column to add */
@@ -6324,7 +6324,7 @@ SCIP_RETCODE transformComponent(
 
 /** Check if the submatrix stored remains a network matrix with the new column update. */
 static
-SCIP_Bool SCIPnetcoladdRemainsNetwork(
+SCIP_Bool netcoladdRemainsNetwork(
    const SCIP_NETCOLADD* newCol              /**< The network matrix column addition data structure */
    )
 {
@@ -6336,14 +6336,14 @@ SCIP_Bool SCIPnetcoladdRemainsNetwork(
  * Only use this function after SCIPnetcoladdCheck() has been called.
  */
 static
-SCIP_RETCODE SCIPnetcoladdAdd(
+SCIP_RETCODE netcoladdAdd(
    SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
    SCIP_NETCOLADD*       newCol             /**< The network matrix column addition data structure */
 )
 {
    assert(dec);
    assert(newCol);
-   assert(SCIPnetcoladdRemainsNetwork(newCol));
+   assert(netcoladdRemainsNetwork(newCol));
 
    if( newCol->numReducedComponents == 0 )
    {
@@ -10935,7 +10935,7 @@ SCIP_RETCODE transformComponentRowAddition(
 
 /** Create the network row addition data structure. */
 static
-SCIP_RETCODE SCIPnetrowaddCreate(
+SCIP_RETCODE netrowaddCreate(
    BMS_BLKMEM*           blkmem,             /**< Block memory */
    SCIP_NETROWADD**      prowadd             /**< Pointer to store the new row addition struct at */
 )
@@ -11029,7 +11029,7 @@ SCIP_RETCODE SCIPnetrowaddCreate(
 
 /** Frees the network row addition data structure. */
 static
-void SCIPnetrowaddFree(
+void netrowaddFree(
    BMS_BLKMEM*           blkmem,             /**< Block memory */
    SCIP_NETROWADD**      prowadd             /**< Pointer to row addition struct to be freed */
 )
@@ -11067,7 +11067,7 @@ void SCIPnetrowaddFree(
 
 /** Checks if the given row can be added to the network decomposition. */
 static
-SCIP_RETCODE SCIPnetrowaddCheck(
+SCIP_RETCODE netrowaddCheck(
    SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
    SCIP_NETROWADD*       rowadd,             /**< The network matrix row addition data structure */
    int                   row,                /**< The row to be checked */
@@ -11121,7 +11121,7 @@ SCIP_RETCODE SCIPnetrowaddCheck(
 
 /** Adds the last checked row to the network decomposition. */
 static
-SCIP_RETCODE SCIPnetrowaddAdd(
+SCIP_RETCODE netrowaddAdd(
    SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
    SCIP_NETROWADD*       rowadd              /**< The network matrix row addition data structure */
 )
@@ -11230,7 +11230,7 @@ SCIP_RETCODE SCIPnetrowaddAdd(
 
 /** Returns whether the last checked row can be added to the network decomposition. */
 static
-SCIP_Bool SCIPnetrowaddRemainsNetwork(
+SCIP_Bool netrowaddRemainsNetwork(
    const SCIP_NETROWADD* rowadd              /**< The network matrix row addition data structure */
    )
 {
@@ -11272,11 +11272,11 @@ void SCIPnetmatdecFree(
 
    if( dec->coladd != NULL )
    {
-      SCIPnetcoladdFree(blkmem, &dec->coladd);
+      netcoladdFree(blkmem, &dec->coladd);
    }
    if( dec->rowadd != NULL )
    {
-      SCIPnetrowaddFree(blkmem, &dec->rowadd);
+      netrowaddFree(blkmem, &dec->rowadd);
    }
    netMatDecDataFree(&dec->dec);
    BMSfreeBlockMemory(blkmem,pdec);
@@ -11293,14 +11293,14 @@ SCIP_RETCODE SCIPnetmatdecTryAddCol(
 {
    if( dec->coladd == NULL )
    {
-      SCIP_CALL( SCIPnetcoladdCreate(dec->dec->env, &dec->coladd) );
+      SCIP_CALL( netcoladdCreate(dec->dec->env, &dec->coladd) );
    }
 
-   SCIP_CALL( SCIPnetcoladdCheck(dec->dec, dec->coladd, column, nonzrows, nonzvals, nnonzs) );
-   *success = SCIPnetcoladdRemainsNetwork(dec->coladd);
+   SCIP_CALL( netcoladdCheck(dec->dec, dec->coladd, column, nonzrows, nonzvals, nnonzs) );
+   *success = netcoladdRemainsNetwork(dec->coladd);
    if( *success )
    {
-      SCIP_CALL( SCIPnetcoladdAdd(dec->dec, dec->coladd) );
+      SCIP_CALL( netcoladdAdd(dec->dec, dec->coladd) );
    }
 
    return SCIP_OKAY;
@@ -11317,14 +11317,14 @@ SCIP_RETCODE SCIPnetmatdecTryAddRow(
 {
    if( dec->rowadd == NULL )
    {
-      SCIP_CALL( SCIPnetrowaddCreate(dec->dec->env, &dec->rowadd) );
+      SCIP_CALL( netrowaddCreate(dec->dec->env, &dec->rowadd) );
    }
 
-   SCIP_CALL( SCIPnetrowaddCheck(dec->dec, dec->rowadd, row, nonzcols, nonzvals, nnonzs) );
-   *success = SCIPnetrowaddRemainsNetwork(dec->rowadd);
+   SCIP_CALL( netrowaddCheck(dec->dec, dec->rowadd, row, nonzcols, nonzvals, nnonzs) );
+   *success = netrowaddRemainsNetwork(dec->rowadd);
    if( *success )
    {
-      SCIP_CALL( SCIPnetrowaddAdd(dec->dec, dec->rowadd) );
+      SCIP_CALL( netrowaddAdd(dec->dec, dec->rowadd) );
    }
 
    return SCIP_OKAY;
