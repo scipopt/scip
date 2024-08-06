@@ -657,7 +657,6 @@ set(scipheaders
     scip/message_default.h
     scip/message.h
     scip/misc.h
-        scip/pub_network.h
     scip/nlhdlr_bilinear.h
     scip/nlhdlr_convex.h
     scip/nlhdlr_default.h
@@ -748,6 +747,7 @@ set(scipheaders
     scip/pub_misc_rowprep.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
+    scip/pub_network.h
     scip/pub_nlhdlr.h
     scip/pub_nlp.h
     scip/pub_nlpi.h
