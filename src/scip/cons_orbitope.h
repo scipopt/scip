@@ -23,10 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_orbitope.h
- * @ingroup CONSHDLRS
- * @brief  constraint handler for (partitioning/packing/full) orbitope constraints w.r.t. the full symmetric group
- * @author Timo Berthold
- * @author Marc Pfetsch
+ * @brief  interface for constraint handlers of type partitioning, packing, and full
  * @author Christopher Hojny
  */
 
@@ -46,44 +43,11 @@
 extern "C" {
 #endif
 
-/** creates the handler for orbitope constraints and includes it in SCIP
- *
- * @ingroup ConshdlrIncludes
- */
+/** includes the orbitope constraint handlers used by this interface */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
-/**@addtogroup CONSHDLRS
- *
- * @{
- *
- * @name Orbitope Constraints
- *
- * @{
- *
- * This constraint handler can be used to handle symmetries in certain 0/1-programs. The principle
- * structure is that some variables can be ordered in matrix form, such that permuting columns does
- * not change the validity and objective function value of a solution. That is, the symmetry group
- * of the program contains the full symmetric group obtained by permuting the columns of this
- * matrix. These symmetries can be handled by so-called full orbitopes.
- *
- * Moreover, if the variables in each row are contained in set packing or partitioning
- * constraint, these symmetries can be handled by specialized packing or partitioning orbitopes.
- *
- * In more mathematical terms the structure has to be as follows: There are 0/1-variables
- * \f$x_{ij}\f$, \f$i \in \{1, \dots, p\}\f$, \f$j \in \{1, \dots, q\}\f$. The variables may be coupled
- * through set packing or partitioning constraints:
- * \f[
- *    \sum_{j = 1}^q x_{ij} \leq 1  \quad \mbox{or} \quad \sum_{j = 1}^q x_{ij} = 1 \quad \mbox{for all }i = 1, \ldots, p.
- * \f]
- * Permuting columns of \f$x\f$ does not change the validity and objective function value of any feasible solution.
- *
- * We distinguish whether an orbitope is a model constraint or not. If it is a model constraint, then
- * its information are copied to subSCIPs. Otherwise, the constraint was added just for the purpose of
- * symmetry handling and we do not copy its information to subSCIPs.
- */
 
 /** creates and captures a orbitope constraint
  *
@@ -96,13 +60,14 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
-   int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
-   int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
+   int                   nrows,              /**< number of rows of variable matrix */
+   int                   ncols,              /**< number of columns of variable matrix */
    SCIP_Bool             usedynamicprop,     /**< whether dynamic propagation should be used */
    SCIP_Bool             mayinteract,        /**< whether symmetries corresponding to orbitope might interact
                                               *   with symmetries handled by other routines */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
+   SCIP_Bool             checkpporbitope,    /**< Check if full orbitope constraints can be upgraded to pp-orbitope? */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -148,13 +113,10 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    SCIP_Bool             usedynamicprop,     /**< whether dynamic propagation should be used */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
-   SCIP_Bool             mayinteract         /**< whether symmetries corresponding to orbitope might interact
+   SCIP_Bool             mayinteract,        /**< whether symmetries corresponding to orbitope might interact
                                               *   with symmetries handled by other routines */
+   SCIP_Bool             checkpporbitope     /**< Check if full orbitope constraints can be upgraded to pp-orbitope? */
    );
-
-/** @} */
-
-/** @} */
 
 #ifdef __cplusplus
 }
