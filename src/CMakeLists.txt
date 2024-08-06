@@ -195,6 +195,7 @@ set(scipsources
     scip/presol_dualinfer.c
     scip/presol_gateextraction.c
     scip/presol_implics.c
+    scip/presol_implint.c
     scip/presol_inttobinary.c
     scip/presol_qpkktref.c
     scip/presol_redvub.c
@@ -692,6 +693,7 @@ set(scipheaders
     scip/presol_gateextraction.h
     scip/presol.h
     scip/presol_implics.h
+    scip/presol_implint.h
     scip/presol_inttobinary.h
     scip/presol_qpkktref.h
     scip/presol_redvub.h

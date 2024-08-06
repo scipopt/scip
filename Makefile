@@ -717,6 +717,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/presol_dualinfer.o\
 			scip/presol_gateextraction.o \
 			scip/presol_implics.o \
+			scip/presol_implint.o \
 			scip/presol_inttobinary.o \
 			scip/presol_qpkktref.o \
 			scip/presol_redvub.o \
