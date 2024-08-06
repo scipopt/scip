@@ -5174,18 +5174,7 @@ typedef struct
    SCIP_Bool             reversed;           /**< Is the new column reversed? */
 } NewColInformation;
 
-/** Initializes an empty newcolinformation struct. */
-static
-NewColInformation emptyNewColInformation(void)
-{
-   NewColInformation information;
-   information.member = SPQR_INVALID_MEMBER;
-   information.head = SPQR_INVALID_NODE;
-   information.tail = SPQR_INVALID_NODE;
-   information.reversed = FALSE;
-   information.representative = SPQR_INVALID_ARC;
-   return information;
-}
+#define NEWCOLINFORMATION_EMPTY { SPQR_INVALID_MEMBER, SPQR_INVALID_NODE, SPQR_INVALID_NODE, SPQR_INVALID_ARC, FALSE }
 
 /** Set the head node of the new column edge to be added. */
 static
@@ -6364,7 +6353,7 @@ SCIP_RETCODE SCIPnetcoladdAdd(
    }
    else if( newCol->numReducedComponents == 1 )
    {
-      NewColInformation information = emptyNewColInformation();
+      NewColInformation information = NEWCOLINFORMATION_EMPTY;
       SCIP_CALL( transformComponent(dec, newCol, &newCol->reducedComponents[0], &information) );
       assert(memberIsRepresentative(dec, information.member));
       if( newCol->numNewRowArcs == 0 )
@@ -6418,7 +6407,7 @@ SCIP_RETCODE SCIPnetcoladdAdd(
                                        newCol->numNewRowArcs, newCol->newColIndex, &newSeries) );
       for( int i = 0; i < newCol->numReducedComponents; ++i )
       {
-         NewColInformation information = emptyNewColInformation();
+         NewColInformation information = NEWCOLINFORMATION_EMPTY;
          SCIP_CALL( transformComponent(dec, newCol, &newCol->reducedComponents[i], &information) );
          if( getMemberType(dec, information.member) == SPQR_MEMBERTYPE_LOOP )
          {
@@ -6704,18 +6693,7 @@ typedef struct
    SCIP_Bool             reversed;           /**< Orientation of the arc w.r.t. the representative */
 } NewRowInformation;
 
-/** Initializes an empty NewRowInformation struct */
-static
-NewRowInformation emptyNewRowInformation(void)
-{
-   NewRowInformation information;
-   information.member = SPQR_INVALID_MEMBER;
-   information.head = SPQR_INVALID_NODE;
-   information.tail = SPQR_INVALID_NODE;
-   information.representative = SPQR_INVALID_ARC;
-   information.reversed = FALSE;
-   return information;
-}
+#define NEWROWINFORMATION_EMPTY { SPQR_INVALID_MEMBER, SPQR_INVALID_NODE, SPQR_INVALID_NODE, SPQR_INVALID_ARC, FALSE }
 
 /** Saves the information of the current row and partitions it based on whether or not the given columns are
  * already part of the decomposition.
@@ -11157,7 +11135,7 @@ SCIP_RETCODE SCIPnetrowaddAdd(
    }
    else if( rowadd->numReducedComponents == 1 )
    {
-      NewRowInformation information = emptyNewRowInformation();
+      NewRowInformation information = NEWROWINFORMATION_EMPTY;
       SCIP_CALL( transformComponentRowAddition(dec, rowadd, &rowadd->reducedComponents[0], &information) );
 
       if( rowadd->numColumnArcs == 0 )
@@ -11212,7 +11190,7 @@ SCIP_RETCODE SCIPnetrowaddAdd(
                                          rowadd->newRowIndex, &new_row_parallel) );
       for( int i = 0; i < rowadd->numReducedComponents; ++i )
       {
-         NewRowInformation information = emptyNewRowInformation();
+         NewRowInformation information = NEWROWINFORMATION_EMPTY;
 
          SCIP_CALL( transformComponentRowAddition(dec, rowadd, &rowadd->reducedComponents[i], &information) );
          if( getMemberType(dec, information.member) == SPQR_MEMBERTYPE_LOOP )
