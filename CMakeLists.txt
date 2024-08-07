@@ -17,7 +17,7 @@ set(SCIP_VERSION_MAJOR 10)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
 set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 117)
+set(SCIP_VERSION_API 121)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
@@ -78,7 +78,7 @@ option(AMPL "should ampl interface be compiled" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(LAPACK "should lapack be linked" OFF)
 option(WORHP "should worhp be linked" OFF)
-# for backward compability
+# for backward compatibility
 option(PARASCIP "should scip be compiled thread safe (deprecated, use THREADSAFE)" OFF)
 option(THREADSAFE "should scip be compiled thread safe" ON)
 option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
@@ -96,7 +96,7 @@ SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
 
-set(TPI none CACHE STRING "options for thread support library")  #create the variable
+set(TPI tny CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
 
 set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create the variable
@@ -105,7 +105,7 @@ set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso highs none )  #define list of values GUI will offer for the variable
 
-set(SYM sbliss CACHE STRING "options for symmetry computation")  #create the variable
+set(SYM snauty CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss sbliss nauty snauty none )  #define list of values GUI will offer for the variable
 
 if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
@@ -124,126 +124,70 @@ set(CMAKE_CXX_STANDARD 14)
 #search the selected symmetry computation program
 message(STATUS "Finding symmetry computation program \"${SYM}\"")
 
-unset(BLISS_TARGET)
-unset(NAUTY_TARGET)
-if(SYM STREQUAL "bliss")
-    message(STATUS "Support SYM: bliss")
-    set(sym symmetry/compute_symmetry_bliss.cpp)
-
-    # modify configuration for bliss
-    set(BUILD_SHARED_LIBS OFF)
-    set(TMPFLAGS ${CMAKE_C_FLAGS})
-    set(TMXFLAGS ${CMAKE_CXX_FLAGS})
-    set(CMAKE_C_FLAGS -w)
-    set(CMAKE_CXX_FLAGS -w)
-
-    add_subdirectory(src/bliss EXCLUDE_FROM_ALL)
-
-    # undo modification
-    set(CMAKE_C_FLAGS ${TMPFLAGS})
-    set(CMAKE_CXX_FLAGS ${TMXFLAGS})
-    set(BUILD_SHARED_LIBS ${SHARED})
-
-    set(BLISS_TARGET libbliss)
-    set(SYM_LIBRARIES libbliss)
-    set(SYM_PIC_LIBRARIES libbliss)
-elseif(SYM STREQUAL "sbliss")
-    message(STATUS "Support SYM: sassy+bliss")
-    set(sym symmetry/compute_symmetry_sassy_bliss.cpp symmetry/build_sassy_graph.cpp)
-
-    # configure bliss
-    set(BUILD_SHARED_LIBS OFF)
-    set(TMPFLAGS ${CMAKE_C_FLAGS})
-    set(TMXFLAGS ${CMAKE_CXX_FLAGS})
-    set(CMAKE_C_FLAGS -w)
-    set(CMAKE_CXX_FLAGS -w)
-
-    add_subdirectory(src/bliss EXCLUDE_FROM_ALL)
-
-    # undo modification
-    set(CMAKE_C_FLAGS ${TMPFLAGS})
-    set(CMAKE_CXX_FLAGS ${TMXFLAGS})
-    set(BUILD_SHARED_LIBS ${SHARED})
-
-    set(BLISS_TARGET libbliss)
-    set(SYM_LIBRARIES libbliss)
-    set(SYM_PIC_LIBRARIES libbliss)
-
-    # sassy needs C++-17
-    set(CMAKE_CXX_STANDARD 17)
-
-    if(NOT BLISS_INCLUDE_DIR OR NOT BLISS_LIBRARY)
-      find_path(BLISS_INCLUDE_DIR
-	NAMES bliss/graph.hh
-	PATH_SUFFIXES include src)
-    endif()
-elseif(SYM STREQUAL "nauty")
-    message(STATUS "Support SYM: nauty")
-    set(sym symmetry/compute_symmetry_nauty.c)
-
-    if(SHARED)
-        set(PIC_FLAG "CFLAGS='-fPIC'")
+if(SYM STREQUAL "bliss" OR SYM STREQUAL "sbliss")
+    if(SYM STREQUAL "bliss")
+        message(STATUS "Support SYM: bliss")
+        set(sym symmetry/compute_symmetry_bliss.cpp)
     else()
-        set(PIC_FLAG "")
+        message(STATUS "Support SYM: sassy+bliss")
+        set(sym symmetry/compute_symmetry_sassy_bliss.cpp symmetry/build_sassy_graph.cpp)
+        set(CMAKE_CXX_STANDARD 17)
     endif()
-    file(GLOB files ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/*)
 
-    # add custom command to build the library using configure and make
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
-        COMMAND
-        mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
-        cd ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
-        cp ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/* . &&
-        ./configure &&
-        make ${PIC_FLAG} nauty.a &&
-        cp nauty.a ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
-        DEPENDS ${files})
-
-    # add custom target and library target
-    add_custom_target(libnauty_target DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
-    add_library(libnauty STATIC IMPORTED GLOBAL)
-    add_dependencies(libnauty libnauty_target)
-    set_target_properties(libnauty PROPERTIES
-        IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
-
-    set(NAUTY_TARGET libnauty)
-    set(SYM_LIBRARIES libnauty)
-    set(SYM_PIC_LIBRARIES libnauty)
- elseif(SYM STREQUAL "snauty")
-    message(STATUS "Support SYM: sassy+nauty")
-    set(sym symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_sassy_graph.cpp)
-
-    if(SHARED)
-        set(PIC_FLAG "CFLAGS='-fPIC'")
+    find_package(Bliss CONFIG HINTS ${BLISS_DIR})
+    if(Bliss_FOUND)
+        get_filename_component(BLISS_ABSOLUTE_PATH ${Bliss_DIR}/../../.. REALPATH)
+        include_directories(${BLISS_ABSOLUTE_PATH}/include)
+        set(SYM_LIBRARIES ${BLISS_ABSOLUTE_PATH}/lib/libbliss.a)
+        set(SYM_PIC_LIBRARIES ${BLISS_ABSOLUTE_PATH}/lib/libbliss.a)
+        message(STATUS "Found Bliss: ${BLISS_ABSOLUTE_PATH}")
     else()
-        set(PIC_FLAG "")
+        # Utilities to automatically download missing dependencies
+        include(cmake/Dependencies.cmake)
+        # modify configuration for bliss
+        set(BUILD_SHARED_LIBS OFF)
+        set(TMPFLAGS ${CMAKE_C_FLAGS})
+        set(TMXFLAGS ${CMAKE_CXX_FLAGS})
+        set(CMAKE_C_FLAGS -w)
+        set(CMAKE_CXX_FLAGS -w)
+        find_or_download_package(
+          NAME Bliss
+          VERSION 0.77
+          URL https://github.com/scipopt/bliss/archive/refs/tags/v0.77.tar.gz
+          URL_HASH SHA256=34c9cec2cb4dd73f881852bd1b1e0429859c8adcc6a61bc0d70a446a23b51d53
+          COMPONENTS libbliss)
+        # undo modification
+        set(CMAKE_C_FLAGS ${TMPFLAGS})
+        set(CMAKE_CXX_FLAGS ${TMXFLAGS})
+        set(BUILD_SHARED_LIBS ${SHARED})
+
+        find_package(Bliss CONFIG HINTS _deps/local)
+        if (NOT Bliss_FOUND)
+            message(FATAL_ERROR "Automatic download of Bliss failed. Please specify the BLISS_DIR.")
+        endif()
+        include_directories(${CMAKE_CURRENT_BINARY_DIR}/_deps/local/include)
+        set(SYM_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/_deps/local/lib/libbliss.a)
+        set(SYM_PIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/_deps/local/lib/libbliss.a)
+        message(STATUS "Installed Bliss in: ${CMAKE_CURRENT_BINARY_DIR}/_deps/local")
     endif()
-    file(GLOB files ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/*)
-
-    # sassy needs C++-17
-    set(CMAKE_CXX_STANDARD 17)
-
-    # add custom command to build the library using configure and make
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
-        COMMAND
-        mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
-        cd ${CMAKE_CURRENT_BINARY_DIR}/src/nauty &&
-        cp ${CMAKE_CURRENT_SOURCE_DIR}/src/nauty/* . &&
-        ./configure &&
-        make ${PIC_FLAG} nauty.a &&
-        cp nauty.a ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a
-        DEPENDS ${files})
-
-    # add custom target and library target
-    add_custom_target(libnauty_target DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
-    add_library(libnauty STATIC IMPORTED GLOBAL)
-    add_dependencies(libnauty libnauty_target)
-    set_target_properties(libnauty PROPERTIES
-        IMPORTED_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/lib/libnauty.a)
-
-    set(NAUTY_TARGET libnauty)
-    set(SYM_LIBRARIES libnauty)
-    set(SYM_PIC_LIBRARIES libnauty)
+elseif(SYM STREQUAL "nauty" OR SYM STREQUAL "snauty")
+    if(NAUTY_DIR)
+        include_directories(${NAUTY_DIR})
+        set(SYM_LIBRARIES ${NAUTY_DIR}/nauty/nauty.a)
+        set(SYM_PIC_LIBRARIES ${NAUTY_DIR}/nauty/nauty.a)
+    else()
+        include_directories(src/nauty)
+        set(sym nauty/nauty.c nauty/nautil.c nauty/nausparse.c nauty/schreier.c nauty/naurng.c)
+    endif()
+    if(SYM STREQUAL "nauty")
+        message(STATUS "Support SYM: nauty")
+        set(sym ${sym} symmetry/compute_symmetry_nauty.c)
+    elseif(SYM STREQUAL "snauty")
+        message(STATUS "Support SYM: sassy+nauty")
+        set(sym ${sym} symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_sassy_graph.cpp)
+        # sassy needs C++-17
+        set(CMAKE_CXX_STANDARD 17)
+    endif()
 elseif(SYM STREQUAL "none")
     message(STATUS "Support SYM: OFF")
     set(sym symmetry/compute_symmetry_none.cpp)
@@ -602,12 +546,11 @@ else()
 endif()
 
 if(HIGHS_FOUND)
-    include_directories(${HIGHS_INCLUDE_DIRS})
     if(LPS STREQUAL "highs")
         set(lpi lpi/lpi_highs.cpp)
     endif()
-    set(LPS_LIBRARIES ${LPS_LIBRARIES} ${HIGHS_LIBRARIES} Threads::Threads)
-    set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} ${HIGHS_LIBRARIES} Threads::Threads)
+    set(LPS_LIBRARIES ${LPS_LIBRARIES} highs::highs)
+    set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} highs::highs)
     message(WARNING "EXPERIMENTAL: You are using the experimental HiGHS interface. Please report any issues on https://github.com/scipopt/scip.")
 endif()
 
@@ -963,6 +906,9 @@ elseif(LPS STREQUAL "none")
 endif()
 if(NOT SYM STREQUAL "sbliss")
   file(APPEND ${CMAKE_BINARY_DIR}/cmake.log " -DSYM=${SYM}")
+endif()
+if((SYM STREQUAL "nauty" OR SYM STREQUAL "snauty") AND NAUTY_DIR)
+  file(APPEND ${CMAKE_BINARY_DIR}/cmake.log " -DNAUTY_DIR=${NAUTY_DIR}")
 endif()
 file(APPEND ${CMAKE_BINARY_DIR}/cmake.log "\n")
 message(STATUS "Written file with changed options to ${CMAKE_BINARY_DIR}/cmake.log.")

@@ -568,7 +568,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       {
          SCIP_VAR* bdchgvar;
          SCIP_Real bdchgvalue;
-         SCIP_Longint localdomreds;
+         SCIP_Longint localdomreds = 0;
          SCIP_BRANCHDIR bdchgdir;
          int nbdchanges;
 
@@ -746,7 +746,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          while( backtrack );
 
          /* we add the domain reductions from the last evaluated node */
-         domreds += localdomreds; /*lint !e771 lint thinks localdomreds has not been initialized */
+         domreds += localdomreds;
 
          /* store candidate for pseudo cost update and choose next candidate only if no cutoff was detected */
          if( ! cutoff )

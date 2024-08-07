@@ -3012,6 +3012,9 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
 
    *result = SCIP_DIDNOTFIND;
 
+   if( branchcandonly )
+      return SCIP_OKAY;
+
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata != NULL);
 

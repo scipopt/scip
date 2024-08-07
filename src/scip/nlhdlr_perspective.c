@@ -1568,6 +1568,13 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
       return SCIP_OKAY;
    }
 
+   if( branchcandonly )
+   {
+      /* let the regular calls to the nlhdlrs after perspective register branching candidates */
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
    auxvar = SCIPgetExprAuxVarNonlinear(expr);
    assert(auxvar != NULL);
 
@@ -1705,7 +1712,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
       if( doprobingind )
       {
          SCIP_Bool propagate;
-         SCIP_Bool cutoff_probing;
+         SCIP_Bool cutoff_probing = FALSE;
          SCIP_Bool cutoff;
          SCIP_Bool fixed;
 

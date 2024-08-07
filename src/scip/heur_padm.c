@@ -1268,6 +1268,8 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
       SCIP_VAR* var;
       const char* vname;
 
+      assert(linkvartoblocks[i].indexes != NULL);
+
       vname = SCIPvarGetName(linkvars[i]);
       k = 0;
       for( b = 0; b < problem->nblocks; b++ )

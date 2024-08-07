@@ -1,0 +1,106 @@
+STATISTICS
+  Problem name     : glass4
+  Variables        : 39 (24 binary, 0 integer, 0 implicit integer, 15 continuous)
+  Constraints      : 0 initial, 58 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <z1&2.0>: obj=0, original bounds=[0,1]
+  [binary] <z1&2.1>: obj=0, original bounds=[0,1]
+  [binary] <z1&2.2>: obj=0, original bounds=[0,1]
+  [binary] <z1&2.3>: obj=0, original bounds=[0,1]
+  [binary] <z1&3.2>: obj=0, original bounds=[0,1]
+  [binary] <z1&3.7>: obj=0, original bounds=[0,1]
+  [binary] <z1&3.9>: obj=0, original bounds=[0,1]
+  [binary] <z1&4.3>: obj=0, original bounds=[0,1]
+  [binary] <z1&4.5>: obj=0, original bounds=[0,1]
+  [binary] <z1&6.4>: obj=0, original bounds=[0,1]
+  [binary] <z1&6.5>: obj=0, original bounds=[0,1]
+  [binary] <z1&6.7>: obj=0, original bounds=[0,1]
+  [binary] <z1&7.0>: obj=0, original bounds=[0,1]
+  [binary] <z1&7.1>: obj=0, original bounds=[0,1]
+  [binary] <z1&7.2>: obj=0, original bounds=[0,1]
+  [binary] <z1&7.4>: obj=0, original bounds=[0,1]
+  [binary] <z1&7.6>: obj=0, original bounds=[0,1]
+  [binary] <z1&9.1>: obj=0, original bounds=[0,1]
+  [binary] <z1&9.2>: obj=0, original bounds=[0,1]
+  [binary] <z1&9.3>: obj=0, original bounds=[0,1]
+  [binary] <z1&9.6>: obj=0, original bounds=[0,1]
+  [binary] <z6&9.0>: obj=0, original bounds=[0,1]
+  [binary] <z6&9.2>: obj=0, original bounds=[0,1]
+  [binary] <z6&9.3>: obj=0, original bounds=[0,1]
+  [continuous] <x3>: obj=2, original bounds=[200,+inf]
+  [continuous] <x4>: obj=2, original bounds=[200,+inf]
+  [continuous] <x5>: obj=0, original bounds=[100,+inf]
+  [continuous] <x6>: obj=0, original bounds=[200,+inf]
+  [continuous] <x7>: obj=2, original bounds=[200,+inf]
+  [continuous] <x8>: obj=2, original bounds=[300,+inf]
+  [continuous] <x9>: obj=0, original bounds=[0,+inf]
+  [continuous] <lung>: obj=1000000, original bounds=[0,+inf]
+  [continuous] <y1>: obj=1, original bounds=[0,700]
+  [continuous] <y5>: obj=1, original bounds=[0,800]
+  [continuous] <y6>: obj=1, original bounds=[0,600]
+  [continuous] <y7>: obj=1, original bounds=[0,700]
+  [continuous] <y9>: obj=1, original bounds=[0,600]
+  [continuous] <x1>: obj=0, original bounds=[0,+inf]
+  [continuous] <x2>: obj=2, original bounds=[0,+inf]
+CONSTRAINTS
+  [linear] <id21>: <lung>[C] -<x1>[C] == 1200;
+  [linear] <id23>:  -<x3>[C] +<lung>[C] >= 200;
+  [linear] <id28>:  -<x8>[C] +<lung>[C] >= 500;
+  [linear] <id31>:  -8400000<z1&2.0>[B] +200<y1>[C] >= -8360000;
+  [linear] <id32>:  -8400000<z1&2.0>[B] +300<x1>[C] -300<x2>[C] >= -8310000;
+  [linear] <id34>:  -8400000<z1&2.1>[B] +700<y1>[C] >= -8050000;
+  [linear] <id36>:  -8400000<z1&2.2>[B] +300<y1>[C] -300<x1>[C] +300<x2>[C] >= -8130000;
+  [linear] <id38>:  -8400000<z1&2.3>[B] -600<x1>[C] +600<x2>[C] >= -7980000;
+  [linear] <id40>:  -300<y1>[C] >= -8280000;
+  [linear] <id43>:  -500<y1>[C] >= -8150000;
+  [linear] <id46>:  -250<y1>[C] >= -8300000;
+  [linear] <id49>: <z1&2.0>[B] +<z1&2.1>[B] +<z1&2.2>[B] +<z1&2.3>[B] == 1;
+  [linear] <id55>:  -8400000<z1&3.2>[B] +400<x3>[C] -400<x1>[C] >= -8040000;
+  [linear] <id60>:  -200<y1>[C] >= -8360000;
+  [linear] <id67>:  -8400000<z1&3.7>[B] -120<x3>[C] -60<y1>[C] +120<x1>[C] >= -8394000;
+  [linear] <id72>:  -8400000<z1&3.9>[B] -1100<x3>[C] +1100<x1>[C] >= -8180000;
+  [linear] <id73>: <z1&3.2>[B] +<z1&3.7>[B] +<z1&3.9>[B] == 1;
+  [linear] <id81>:  -8400000<z1&4.3>[B] +200<x4>[C] -200<y1>[C] -200<x1>[C] >= -8340000;
+  [linear] <id86>:  -8400000<z1&4.5>[B] -100<x4>[C] -200<y1>[C] +100<x1>[C] >= -8490000;
+  [linear] <id94>: <z1&4.3>[B] +<z1&4.5>[B] == 1;
+  [linear] <id108>:  +25<x5>[C] -50<y1>[C] +50<y5>[C] -25<x1>[C] >= 20000;
+  [linear] <id126>:  -8400000<z1&6.4>[B] -166.665985107422<x6>[C] -166.666000366211<y1>[C] +166.666000366211<y6>[C] +166.665985107422<x1>[C] >= -8366666.79492188;
+  [linear] <id127>:  -8400000<z1&6.4>[B] +66.6659851074219<x6>[C] -133.333999633789<y1>[C] +133.333999633789<y6>[C] -66.6659851074219<x1>[C] >= -8346666.40039062;
+  [linear] <id129>:  -8400000<z1&6.5>[B] -200<x6>[C] -200<y1>[C] +200<y6>[C] +200<x1>[C] >= -8320000;
+  [linear] <id134>:  -8400000<z1&6.7>[B] -400<x6>[C] +400<x1>[C] >= -8280000;
+  [linear] <id135>: <z1&6.4>[B] +<z1&6.5>[B] +<z1&6.7>[B] == 1;
+  [linear] <id137>:  -8400000<z1&7.0>[B] -300<x7>[C] +300<y1>[C] -300<y7>[C] +300<x1>[C] >= -8310000;
+  [linear] <id139>:  -8400000<z1&7.1>[B] +700<y1>[C] -700<y7>[C] >= -8050000;
+  [linear] <id141>:  -8400000<z1&7.2>[B] +800<x7>[C] -800<x1>[C] >= -7680000;
+  [linear] <id145>:  -8400000<z1&7.4>[B] -66.6659851074219<x7>[C] -133.333984375<y1>[C] +133.333984375<y7>[C] +66.6659851074219<x1>[C] >= -8393332.59570312;
+  [linear] <id150>:  -8400000<z1&7.6>[B] -200<x7>[C] -100<y1>[C] +100<y7>[C] +200<x1>[C] >= -8410000;
+  [linear] <id156>: <z1&7.0>[B] +<z1&7.1>[B] +<z1&7.2>[B] +<z1&7.4>[B] +<z1&7.6>[B] == 1;
+  [linear] <id191>:  -8400000<z1&9.1>[B] +700<y1>[C] -700<y9>[C] >= -7980000;
+  [linear] <id193>:  -8400000<z1&9.2>[B] +1000<x9>[C] -1000<x1>[C] == -7700000;
+  [linear] <id195>:  -8400000<z1&9.3>[B] -100<x9>[C] -200<y1>[C] +200<y9>[C] +100<x1>[C] >= -8390000;
+  [linear] <id203>:  -8400000<z1&9.6>[B] -400<x9>[C] +400<x1>[C] == -280000;
+  [linear] <id204>: <z1&9.1>[B] +<z1&9.2>[B] +<z1&9.3>[B] +<z1&9.6>[B] == 1;
+  [linear] <id206>: 0 == 0;
+  [linear] <id216>:  +300<x3>[C] -300<x2>[C] >= 90000;
+  [linear] <id218>: 0 == 0;
+  [linear] <id238>:  -300<x4>[C] +300<x2>[C] == -90000;
+  [linear] <id241>: 0 == 0;
+  [linear] <id263>: 0 == 0;
+  [linear] <id281>:  -200<x6>[C] +200<x2>[C] >= 60000;
+  [linear] <id299>:  -200<x7>[C] +200<x2>[C] >= 20000;
+  [linear] <id357>:  +200<x3>[C] -200<x5>[C] -200<y5>[C] >= -8320000;
+  [linear] <id358>:  +300<x3>[C] -300<x5>[C] >= -8250000;
+  [linear] <id547>:  +200<x5>[C] -200<x6>[C] -200<y5>[C] +200<y6>[C] == 0;
+  [linear] <id566>:  +300<x5>[C] -300<x7>[C] +300<y5>[C] -300<y7>[C] == 210000;
+  [linear] <id593>:  -200<x5>[C] +200<x9>[C] +400<y5>[C] -400<y9>[C] == 300000;
+  [linear] <id595>:  -200<x5>[C] +200<x9>[C] +100<y5>[C] -100<y9>[C] == 120000;
+  [linear] <id601>:  +500<x5>[C] -500<x9>[C] -500<y5>[C] +500<y9>[C] == -450000;
+  [linear] <id603>:  +200<x5>[C] -200<x9>[C] +100<y5>[C] -100<y9>[C] == 0;
+  [linear] <id630>:  -400<x6>[C] +400<x8>[C] +400<y6>[C] == 360000;
+  [linear] <id649>:  -8400000<z6&9.0>[B] +500<x6>[C] -500<x9>[C] +500<y6>[C] -500<y9>[C] >= -8100000;
+  [linear] <id653>:  -8400000<z6&9.2>[B] -300<x6>[C] +300<x9>[C] == 150000;
+  [linear] <id656>:  -8400000<z6&9.3>[B] -600<x6>[C] +600<x9>[C] >= -8220000;
+  [linear] <id663>: <z6&9.0>[B] +<z6&9.2>[B] +<z6&9.3>[B] == 1;
+END

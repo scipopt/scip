@@ -6938,7 +6938,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventGlbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
@@ -7113,7 +7113,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventGubChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
@@ -7707,7 +7707,7 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventLbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
@@ -7874,7 +7874,7 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventUbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }

@@ -1,153 +1,94 @@
-/* naurng.c
- *
-   This file contains the code for a high-quality random number
-   generator written by Don Knuth.  The auxilliary routine
-   ran_arr_cycle() has been modified slightly, and ran_init() is new.
+/*  This file contains a 64-bit random number generator written
+by the late George Marsaglia, published online at
+https://www.thecodingforums.com/threads/64-bit-kiss-rngs.673657/
 
-   To use it:
+Since George is no longer with us, I can't get his permission to
+distribute this with nauty, but since he published it in an open
+forum without mentioning any restrictions I'm confident that he
+would be pleased to see his effort put to good use.
 
-      0.  #include "naurng.h" (or "naututil.h" if you are using nauty)
+See naurng.h for usage instructions.
 
-      1.  Call ran_init(seed), where seed is any long integer.
-          This step is optional, but if you don't use it you
-          will always get the same sequence of random numbers.
+The rest of these comments are from George.
 
-      2.  For each random number, use the NEXTRAN macro.  It will
-          give a random value in the range 0..2^30-1.  Alternatively,
-          KRAN(k) will have a random value in the range 0..k-1.
-          KRAN(k) actually gives you NEXTRAN mod k, so it is not
-          totally uniform if k is very large.  In that case, you
-          can use the slightly slower GETKRAN(k,var) to set the
-          variable var to a better random number from 0..k-1.
+Use of KISS or KISS() as a general 64-bit RNG requires specifying
+3*64+58=250 bits for seeds, 64 bits each for x,y,z and 58 for c,
+resulting in a composite sequence with period around 2^250.
+The actual period is
+(2^250+2^192+2^64-2^186-2^129)/6 ~= 2^(247.42) or 10^(74.48).
+We "lose" 1+1.58=2.58 bits from maximum possible period, one bit
+because b=2^64, a square, cannot be a primitive root of p=ab-1,
+so the best possible order for b is (p-1)/2.
+The periods of MWC and XSH have gcd 3=2^1.58, so another 1.58
+bits are "lost" from the best possible period we could expect
+from 250 seed bits.
 
-    Brendan McKay, July 2002.  Fixed Nov 2002 on advice of DEK.
-                   Nov 2022.  Added ran_init_time().
+Some users may think 250 seed bits are an unreasonable requirement.
+A good seeding procedure might be to assume the default seed
+values then let the user choose none, one, two,..., or all
+of x,y,z, and c to be reseeded.
 */
-
-/*    This program by D E Knuth is in the public domain and freely copyable
- *    AS LONG AS YOU MAKE ABSOLUTELY NO CHANGES!
- *    It is explained in Seminumerical Algorithms, 3rd edition, Section 3.6
- *    (or in the errata to the 2nd edition --- see
- *        http://www-cs-faculty.stanford.edu/~knuth/taocp.html
- *    in the changes to Volume 2 on pages 171 and following).              */
-
-/*    N.B. The MODIFICATIONS introduced in the 9th printing (2002) are
-      included here; there's no backwards compatibility with the original. */
-
-/*    If you find any bugs, please report them immediately to
- *                 taocp@cs.stanford.edu
- *    (and you will be rewarded if the bug is genuine). Thanks!            */
-
-/************ see the book for explanations and caveats! *******************/
-/************ in particular, you need two's complement arithmetic **********/
 
 #include "naurng.h"
 
-#define KK 100                     /* the long lag */
-#define LL  37                     /* the short lag */
-#define MM (1L<<30)                 /* the modulus */
-#define mod_diff(x,y) (((x)-(y))&(MM-1)) /* subtraction mod MM */
+#define KISSX 1234567890987654321ULL
+#define KISSY 362436362436362436ULL
+#define KISSC 123456123456123456ULL
+#define KISSZ 1066149217761810ULL
+static TLS_ATTR unsigned long long kissx=KISSX, kissc=KISSC,
+                                   kissy=KISSY, kissz=KISSZ, kisst;
 
-static TLS_ATTR long ran_x[KK];                    /* the generator state */
+#define MWC (kisst=(kissx<<58)+kissc, kissc=(kissx>>6), kissx+=kisst, \
+             kissc+=(kissx<kisst), kissx)
+#define XSH ( kissy^=(kissy<<13), kissy^=(kissy>>17), kissy^=(kissy<<43) )
+#define CNG ( kissz=6906969069LL*kissz+1234567 )
+#define KISS (MWC+XSH+CNG)
 
-static void
-ran_array(long aa[],int n)
+void
+ran_init(unsigned long long seed)
+/* Initialize random number generator */
 {
-  int i,j;
-  for (j=0;j<KK;j++) aa[j]=ran_x[j];
-  for (;j<n;j++) aa[j]=mod_diff(aa[j-KK],aa[j-LL]);
-  for (i=0;i<LL;i++,j++) ran_x[i]=mod_diff(aa[j-KK],aa[j-LL]);
-  for (;i<KK;i++,j++) ran_x[i]=mod_diff(aa[j-KK],ran_x[i-LL]);
-}
-
-/* the following routines are from exercise 3.6--15 */
-/* after calling ran_start, get new randoms by, e.g., "x=ran_arr_next()" */
-
-#define RNG_QUALITY 1009 /* recommended quality level for high-res use */
-static TLS_ATTR long ran_arr_buf[RNG_QUALITY];
-static long ran_arr_dummy=-1;
-static long ran_arr_started=-1;
-static TLS_ATTR long *ran_arr_ptr = &ran_arr_dummy;
-
-#define TT  70   /* guaranteed separation between streams */
-#define is_odd(x)  ((x)&1)          /* units bit of x */
-
-static void
-ran_start(long seed)
-{
-  int t,j;
-  long x[KK+KK-1];              /* the preparation buffer */
-  long ss=(seed+2)&(MM-2);
-
-  for (j=0;j<KK;j++) {
-    x[j]=ss;                      /* bootstrap the buffer */
-    ss<<=1; if (ss>=MM) ss-=MM-2; /* cyclic shift 29 bits */
-  }
-  x[1]++;              /* make x[1] (and only x[1]) odd */
-  for (ss=seed&(MM-1),t=TT-1; t; ) {       
-    for (j=KK-1;j>0;j--) x[j+j]=x[j], x[j+j-1]=0; /* "square" */
-    for (j=KK+KK-2;j>=KK;j--)
-      x[j-(KK-LL)]=mod_diff(x[j-(KK-LL)],x[j]),
-      x[j-KK]=mod_diff(x[j-KK],x[j]);
-    if (is_odd(ss)) {              /* "multiply by z" */
-      for (j=KK;j>0;j--)  x[j]=x[j-1];
-      x[0]=x[KK];            /* shift the buffer cyclically */
-      x[LL]=mod_diff(x[LL],x[KK]);
-    }
-    if (ss) ss>>=1; else t--;
-  }
-  for (j=0;j<LL;j++) ran_x[j+KK-LL]=x[j];
-  for (;j<KK;j++) ran_x[j-LL]=x[j];
-  for (j=0;j<10;j++) ran_array(x,KK+KK-1); /* warm things up */
-  ran_arr_ptr=&ran_arr_started;
+   ran_init_2(seed,0);
 }
 
 void
-ran_init(long seed)
-/* Added by BDM: use instead of ran_start. */
+ran_init_2(unsigned long long seed1, unsigned long long seed2)
+/* Use the two seeds to initialize */
 {
-    ran_start((unsigned long)seed % (MM-2));
+    int i;
+    unsigned long long ul;
+
+    kissx = KISSX + seed1;
+    kissy = KISSY + (seed2 * 997);
+    kissc = KISSC;
+    kissz = KISSZ;
+
+    for (i = 0; i < 1000; ++i) ul = KISS;
+    (void)ul;  //SV avoid unused variable
 }
 
-long
-ran_init_time(long extra)
-/* Added by BDM: use the real time and the argument to initialise.
-   Returns the value of the seed, so the same sequence can be
-   obtained again by calling ran_init(seed).
-*/
+unsigned long long
+ran_init_time(unsigned long long extra)
+/* Use the real time and an extra seed to initialize. If val is
+   the value returned, then ran_init_2(val,extra) will perform
+   the same initialization. */
 {
     double t;
-    nauty_counter ul;  /* 64-bit unsigned */
-    long seed;
+    unsigned long long seed;
     REALTIMEDEFS
 
     t = NAUTYREALTIME;
-    if (t > 1660000000.0) ul = (nauty_counter)(t*2100001.0);
-    else                  ul = (nauty_counter)(t+212300021.0);
-    ul ^= (nauty_counter)(extra) * 997;
-    seed = (long)ul;
-    ran_init(seed);
+    if (t > 1660000000.0) seed = (unsigned long long)(t*2100001.0);
+    else                  seed = (unsigned long long)(t+212300021.0);
+
+    ran_init_2(seed,extra);
 
     return seed;
 }
 
-static long
-ran_arr_cycle(void)
-/* Modified by BDM to automatically initialise 
-   if no explicit initialisation has been done */
+unsigned long long
+ran_nextran(void)  /*SV added void*/
+/* Make a 64-bit random number */
 {
-   if (ran_arr_ptr==&ran_arr_dummy)
-       ran_start(314159L); /* the user forgot to initialize */
-
-  ran_array(ran_arr_buf,RNG_QUALITY);
-
-  ran_arr_buf[KK]=-1;
-  ran_arr_ptr=ran_arr_buf+1;
-  return ran_arr_buf[0];
-}
-
-long
-ran_nextran(void)
-{
-    return (*ran_arr_ptr>=0 ? *ran_arr_ptr++ : ran_arr_cycle()); 
+    return KISS;
 }
