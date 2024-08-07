@@ -165,8 +165,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
    case 'm':
       /* search the most fractional candidate */
       bestfractionality = 0;
-      for(int i = 0; i < nlpcands; ++i ) {
-         assert(lpcands[i] != nullptr);
+      for( i = 0; i < nlpcands; ++i ) {
+         assert(lpcands[i] != NULL);
          fractionality = lpcandsfrac[i];
          fractionality = MIN( fractionality, 1.0-fractionality );
          if ( fractionality > bestfractionality )
@@ -390,45 +390,11 @@ SCIP_DECL_BRANCHCOPY(branchCopyColoring)
 }
 
 
-/** initialization method of branching rule (called after problem was transformed) */
-static
-SCIP_DECL_BRANCHINIT(branchInitColoring)
-{
-   SCIP_BRANCHRULEDATA* branchruledata;
-
-   /* get branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   assert(branchruledata != NULL);
-
-   /* get memory */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &(branchruledata->strategy));
-
-   return SCIP_OKAY;
-}
-
-
-/** deinitialization method of branching rule (called before transformed problem is freed) */
-static
-SCIP_DECL_BRANCHEXIT(branchExitColoring)
-{
-   SCIP_BRANCHRULEDATA* branchruledata;
-
-   /* get branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   assert(branchruledata != NULL);
-
-   /* free parameters */
-   SCIPfreeBlockMemory(scip, &(branchruledata->strategy));
-
-   return SCIP_OKAY;
-}
-
-
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_BRANCHFREE(branchFreeColoring)
-   {
-      SCIP_BRANCHRULEDATA* branchruledata;
+{
+   SCIP_BRANCHRULEDATA* branchruledata;
 
    /* free branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
@@ -436,7 +402,7 @@ SCIP_DECL_BRANCHFREE(branchFreeColoring)
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
-   }/*lint !e715*/
+}/*lint !e715*/
 
 
 
@@ -466,8 +432,6 @@ SCIP_RETCODE SCIPincludeBranchruleColoring(
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpColoring) );
    SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsColoring) );
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyColoring) );
-   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitColoring) );
-   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitColoring) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeColoring) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "branching/" BRANCHRULE_NAME "/strategy",
@@ -475,5 +439,4 @@ SCIP_RETCODE SCIPincludeBranchruleColoring(
          &branchruledata->strategy, FALSE, BRANCHRULE_STRATEGY_DEFAULT, BRANCHRULE_STRATEGIES, NULL, NULL) );
 
    return SCIP_OKAY;
-
 }
