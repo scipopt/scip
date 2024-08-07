@@ -7686,7 +7686,6 @@ SCIP_RETCODE addSymmetryInformation(
       return SCIP_OKAY;
    } /*lint !e788*/
    assert(tmpvars != NULL);
-   assert(tmpvals != NULL);
    for( i = 0; i < tmpnvars; ++i )
       vars[i] = tmpvars[i];
    constant = 0.0;
