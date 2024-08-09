@@ -821,7 +821,8 @@ SCIP_RETCODE propagateCons(
    orbitopetype = consdata->orbitopetype;
    *nfixedvars = 0;
 
-   if( !SCIPallowStrongDualReds(scip) )
+   /* if the constraint is not a model constraint, check whether symmetry reductions are permitted */
+   if( !consdata->ismodelcons && !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);

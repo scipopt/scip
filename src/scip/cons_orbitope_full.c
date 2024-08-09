@@ -454,8 +454,8 @@ SCIP_RETCODE propagateCons(
    *nfixedvars = 0;
    *infeasible = FALSE;
 
-   /* @todo Can the following be removed? */
-   if ( ! SCIPallowStrongDualReds(scip) )
+   /* if the constraint is not a model constraint, check whether symmetry reductions are permitted */
+   if ( !consdata->ismodelcons && !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
    assert( consdata->nrows > 0 );
