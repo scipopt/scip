@@ -11692,5 +11692,5 @@ SCIP_RETCODE SCIPnetmatdecCreateDiGraph(
    SCIP_Bool             createrowarcs       /**< Should the row arcs be added to the created digraph? */
 )
 {
-   return netMatDecDataCreateDiGraph(dec->dec,blkmem,pdigraph);
+   return netMatDecDataCreateDiGraph(dec->dec,blkmem,pdigraph,createrowarcs);
 }

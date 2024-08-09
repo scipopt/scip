@@ -420,7 +420,7 @@ static SCIP_RETCODE runRowTestCaseGraph(
       assert(isNetwork);
    }
    SCIP_DIGRAPH* graph;
-   SCIP_CALL( SCIPnetmatdecCreateDiGraph(dec, blkmem, &graph) );
+   SCIP_CALL( SCIPnetmatdecCreateDiGraph(dec, blkmem, &graph, TRUE) );
 
    SCIPdigraphPrint(graph, SCIPgetMessagehdlr(scip),stdout);
    SCIPdigraphFree(&graph);
