@@ -74,6 +74,7 @@
 #include "scip/def.h"
 #include "scip/type_retcode.h"
 #include "scip/type_mem.h"
+#include "scip/type_misc.h"
 #include "blockmemshell/memory.h"
 
 #ifdef cplusplus
@@ -202,6 +203,20 @@ SCIP_Bool SCIPnetmatdecVerifyCycle(
                                               * equal or greater than the number of rows in the decomposition. */
 );
 
+/** Constructs a realization of an underlying directed graph belonging to the network matrix.
+ *
+ * Since many different realizations are possible, we use the default orientation of the two-separations to associate
+ * pairs of nodes to each other. In particular, we choose to connect the nodes of different 2-connected components
+ * in node 0. This way, the rank of the underlying matrix is equal to m+1-c, where c is the number of undirected
+ * connected components of the graph where the row/tree edges have been left out.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPnetmatdecCreateDiGraph(
+   SCIP_NETMATDEC*       dec,                /**< The network matrix decomposition */
+   BMS_BLKMEM *          blkmem,             /**< The block memory to use for the created digraph */
+   SCIP_DIGRAPH**        pdigraph,           /**< Pointer to the pointer to store the created digraph */
+   SCIP_Bool             createrowarcs       /**< Should the row arcs be added to the created digraph? */
+);
 /**@} */
 
 #ifdef cplusplus

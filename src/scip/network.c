@@ -126,6 +126,9 @@
  */
 
 #include <assert.h>
+
+#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/pub_network.h"
 #include "scip/scip.h"
 #include "blockmemshell/memory.h"
@@ -2875,7 +2878,6 @@ void netMatDecDataRemoveComponent(
 }
 
 #ifdef SCIP_DEBUG
-
 /** Converts the members type to an associated character */                                                                                                                        //Debugging functions to print the decomposition
 static
 char typeToChar(
@@ -2901,7 +2903,7 @@ char typeToChar(
 static
 void arcToDot(
    FILE*                 stream,             /**< The stream to write the arc to */
-   const SCIP_NETMATDEC* dec,                /**< The network matrix decomposition */
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
    spqr_arc              arc,                /**< The arc to write */
    unsigned long         dot_head,           /**< The head id of the arc */
    unsigned long         dot_tail,           /**< The tail id of the arc */
@@ -2929,7 +2931,7 @@ void arcToDot(
       fprintf(stream, "    %c_%d_%lu [shape=box];\n", type, member, dot_head);
       fprintf(stream, "    %c_p_%d [style=dashed];\n", type, member);
    }
-   else if( arcIsMarker(dec, arc) )
+   else if( arcIsChildMarker(dec, arc) )
    {
       spqr_member child = findArcChildMemberNoCompression(dec, arc);
       char childType = typeToChar(getMemberType(dec, child));
@@ -2970,7 +2972,7 @@ void arcToDot(
 static
 void decompositionToDot(
    FILE*                 stream,             /**< The stream to write to */
-   const SCIP_NETMATDEC* dec,                /**< The network matrix decomposition */
+   const SCIP_NETMATDECDATA* dec,            /**< The network matrix decomposition */
    SCIP_Bool             useElementNames     /**< If TRUE, prints the corresponding row/column index. If FALSE,
                                               * prints the spqr_arc id instead. */
    )
@@ -3108,6 +3110,309 @@ SCIP_RETCODE mergeGivenMemberIntoParent(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE netMatDecDataCreateDiGraph(
+   SCIP_NETMATDECDATA*   dec,                /**< The network matrix decomposition */
+   BMS_BLKMEM *          blkmem,             /**< The block memory to use for the created digraph */
+   SCIP_DIGRAPH**        pdigraph,           /**< Pointer to the pointer to store the created digraph */
+   SCIP_Bool             createrowarcs       /**< Should the row arcs be added to the created digraph? */
+)
+{
+
+   /* Compute the number of rows m in the network matrix decomposition. The underlying graph has m+1 vertices. */
+   int nrows = 0;
+   for( int i = 0; i < dec->memRows; ++i )
+   {
+      if( netMatDecDataContainsRow(dec, i))
+      {
+         ++nrows;
+      }
+   }
+
+   int nvertices = nrows + 1;
+   SCIP_CALL( SCIPdigraphCreate(pdigraph, blkmem, nvertices) );
+
+   /* Map decomposition nodes to graph nodes. The first node of each component is mapped to node 0 */
+   int largestNode = largestNodeID(dec);
+   int* dectographnode;
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem,&dectographnode, largestNode) );
+   for( int i = 0; i < largestNode; ++i )
+   {
+      dectographnode[i] = -1;
+   }
+
+
+   SCIP_DIGRAPH* digraph = *pdigraph;
+   /* Recursively explore the decomposition, adding the edges of each component and identifying them as needed */
+
+   typedef struct{
+      spqr_member member;
+      spqr_arc arc;
+      int graphfirstarchead;
+      int graphfirstarctail;
+   } CallData;
+   spqr_member largestmember = largestMemberID(dec);
+   CallData* calldata;
+   int ncalldata = 0;
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &calldata, largestmember) );
+
+   SCIP_Bool* rowprocessed;
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &rowprocessed, dec->memRows) );
+   for( int i = 0; i < dec->memRows; ++i )
+   {
+      rowprocessed[i] = FALSE;
+   }
+
+   /* This outer loop loops over all components; this is a bit ugly unfortunately  */
+   int nextnodeindex = 1; /* 0 is assigned to the first arc of the root members' head */
+   for( int i = 0; i <dec->memRows ; ++i )
+   {
+      spqr_arc rowarc = dec->rowArcs[i];
+      if( SPQRarcIsInvalid(rowarc))
+      {
+         continue;
+      }
+      assert(netMatDecDataContainsRow(dec, i));
+      if( rowprocessed[i] )
+      {
+         continue;
+      }
+
+      /* Find the root member of the SPQR tree */
+      spqr_member arcmember = findArcMember(dec,rowarc);
+      spqr_member rootmember = arcmember;
+      do
+      {
+         spqr_member parent = findMemberParent(dec, rootmember);
+         if( SPQRmemberIsInvalid(parent))
+         {
+            break;
+         }
+         rootmember = parent;
+      }
+      while( TRUE );
+
+      calldata[0].member = rootmember;
+      ++ncalldata;
+      /* We identify all the SPQR trees at node 0 */
+      {
+         calldata[0].arc = getFirstMemberArc(dec,rootmember);
+         calldata[0].graphfirstarchead = 0;
+         calldata[0].graphfirstarctail = nextnodeindex;
+         ++nextnodeindex;
+      }
+
+      while( ncalldata != 0 )
+      {
+         /* Pop the next member to process of the call stack */
+         CallData explore = calldata[ncalldata-1];
+         --ncalldata;
+
+         switch( getMemberType(dec, explore.member) )
+         {
+            case SPQR_MEMBERTYPE_RIGID:
+            {
+               /* First, we set the initial arc's nodes */
+               {
+                  assert(dectographnode[findEffectiveArcHeadNoCompression(dec, explore.arc)] == -1);
+                  assert(dectographnode[findEffectiveArcTailNoCompression(dec, explore.arc)] == -1);
+                  spqr_node exploreHead = findArcHead(dec, explore.arc);
+                  spqr_node exploreTail = findArcTail(dec, explore.arc);
+                  if( findArcSign(dec, explore.arc).reversed )
+                  {
+                     SCIPswapInts(&exploreTail, &exploreTail);
+                  }
+                  dectographnode[exploreHead] = explore.graphfirstarchead;
+                  dectographnode[exploreTail] = explore.graphfirstarctail;
+               }
+               /* Add all the members arcs to the graph */
+               spqr_arc firstArc = getFirstMemberArc(dec, explore.member);
+               spqr_arc arc = firstArc;
+               do
+               {
+                  spqr_node head = findArcHead(dec, arc);
+                  spqr_node tail = findArcTail(dec, arc);
+                  if( findArcSign(dec, arc).reversed )
+                  {
+                     SCIPswapInts(&head, &tail);
+                  }
+                  if( dectographnode[head] == -1 )
+                  {
+                     dectographnode[head] = nextnodeindex;
+                     ++nextnodeindex;
+                  }
+                  if( dectographnode[tail] == -1 )
+                  {
+                     dectographnode[tail] = nextnodeindex;
+                     ++nextnodeindex;
+                  }
+                  /* If an arc is a marker to a child node, we add it to the call stack */
+                  if( arcIsChildMarker(dec, arc))
+                  {
+                     spqr_member child = findArcChildMember(dec, arc);
+                     spqr_arc toparent = markerToParent(dec, child);
+                     /* Identify head with head and tail with tail */
+                     /* Push member onto the processing stack (recursive call) */
+
+                     calldata[ncalldata].member = child;
+                     calldata[ncalldata].arc = toparent;
+                     calldata[ncalldata].graphfirstarchead = dectographnode[head];
+                     calldata[ncalldata].graphfirstarctail = dectographnode[tail];
+
+                     ++ncalldata;
+                  }
+                  else if( arc != markerToParent(dec, explore.member))
+                  {
+                     //We only realize non-virtual arcs
+                     if( createrowarcs || !arcIsTree(dec, arc))
+                     {
+                        SCIP_CALL( SCIPdigraphAddArc(digraph, dectographnode[tail], dectographnode[head], NULL) );
+                     }
+                  }
+                  spqr_element element = arcGetElement(dec, arc);
+                  if( SPQRelementIsRow(element) && element != MARKER_ROW_ELEMENT)
+                  {
+                     spqr_row row = SPQRelementToRow(element);
+                     rowprocessed[row] = TRUE;
+                  }
+                  arc = getNextMemberArc(dec, arc);
+               }
+               while( arc != firstArc );
+               break;
+            }
+            case SPQR_MEMBERTYPE_LOOP:
+            case SPQR_MEMBERTYPE_PARALLEL:
+            {
+               spqr_arc firstArc = getFirstMemberArc(dec, explore.member);
+               spqr_arc arc = firstArc;
+               do
+               {
+                  /* If an edge is a marker to a child node, we add it to the call stack */
+                  if( arcIsChildMarker(dec, arc))
+                  {
+                     spqr_member child = findArcChildMember(dec, arc);
+                     spqr_arc toparent = markerToParent(dec, child);
+                     SCIP_Bool directionsmatch =
+                        arcIsReversedNonRigid(dec, explore.arc) == arcIsReversedNonRigid(dec, arc);
+                     /* Identify head with head and tail with tail */
+                     /* Push member onto the processing stack (recursive call) */
+                     calldata[ncalldata].member = child;
+                     calldata[ncalldata].arc = toparent;
+                     calldata[ncalldata].graphfirstarchead = directionsmatch ? explore.graphfirstarchead
+                                                                             : explore.graphfirstarctail;
+                     calldata[ncalldata].graphfirstarctail = directionsmatch ? explore.graphfirstarctail
+                                                                             : explore.graphfirstarchead;
+
+                     ++ncalldata;
+                  }
+                  else if( arc != markerToParent(dec, explore.member) )
+                  {
+                     /* We only realize non-virtual arcs */
+                     if( createrowarcs || !arcIsTree(dec, arc) )
+                     {
+                        if( arcIsReversedNonRigid(dec, explore.arc) == arcIsReversedNonRigid(dec, arc))
+                        {
+                           SCIP_CALL(
+                              SCIPdigraphAddArc(digraph, explore.graphfirstarctail, explore.graphfirstarchead, NULL) );
+                        }
+                        else
+                        {
+                           SCIP_CALL(
+                              SCIPdigraphAddArc(digraph, explore.graphfirstarchead, explore.graphfirstarctail, NULL) );
+                        }
+                     }
+                  }
+                  spqr_element element = arcGetElement(dec, arc);
+                  if( SPQRelementIsRow(element) && element != MARKER_ROW_ELEMENT)
+                  {
+                     spqr_row row = SPQRelementToRow(element);
+                     rowprocessed[row] = TRUE;
+                  }
+                  arc = getNextMemberArc(dec, arc);
+               }
+               while( arc != firstArc );
+               break;
+            }
+            case SPQR_MEMBERTYPE_SERIES:
+            {
+               int count = getNumMemberArcs(dec, explore.member);
+               spqr_arc arc = explore.arc;
+               int firstnode = explore.graphfirstarchead;
+               int secondnode = explore.graphfirstarctail;
+               for( int j = 0; j < count; ++j )
+               {
+                  if( arcIsChildMarker(dec, arc))
+                  {
+                     spqr_member child = findArcChildMember(dec, arc);
+                     spqr_arc toparent = markerToParent(dec, child);
+                     SCIP_Bool directionsmatch =
+                        arcIsReversedNonRigid(dec, explore.arc) == arcIsReversedNonRigid(dec, arc);
+                     /* Identify head with head and tail with tail */
+                     /* Push member onto the processing stack (recursive call) */
+                     calldata[ncalldata].member = child;
+                     calldata[ncalldata].arc = toparent;
+                     calldata[ncalldata].graphfirstarchead = directionsmatch ? firstnode : secondnode;
+                     calldata[ncalldata].graphfirstarctail = directionsmatch ? secondnode : firstnode;
+
+                     ++ncalldata;
+                  }
+                  else if( arc != markerToParent(dec, explore.member))
+                  {
+                     /* We only realize non-virtual arcs */
+                     if( createrowarcs || !arcIsTree(dec, arc))
+                     {
+                        if( arcIsReversedNonRigid(dec, explore.arc) == arcIsReversedNonRigid(dec, arc) )
+                        {
+                           SCIP_CALL( SCIPdigraphAddArc(digraph, secondnode, firstnode, NULL) );
+                        }
+                        else
+                        {
+                           SCIP_CALL( SCIPdigraphAddArc(digraph, firstnode, secondnode, NULL) );
+                        }
+                     }
+                  }
+
+                  spqr_element element = arcGetElement(dec, arc);
+                  if( SPQRelementIsRow(element) && element != MARKER_ROW_ELEMENT )
+                  {
+                     spqr_row row = SPQRelementToRow(element);
+                     rowprocessed[row] = TRUE;
+                  }
+
+                  arc = getNextMemberArc(dec, arc);
+                  secondnode = firstnode;
+                  if( j >= count - 2 )
+                  {
+                     firstnode = explore.graphfirstarctail;
+                  }
+                  else
+                  {
+                     firstnode = nextnodeindex;
+                     ++nextnodeindex;
+                  }
+               }
+               assert(arc == explore.arc); /* Check that we added all arcs */
+               break;
+            }
+            case SPQR_MEMBERTYPE_UNASSIGNED:{
+               SCIPerrorMessage("Can not create graph for unassigned member type, exiting. \n");
+               SCIPABORT();
+               return SCIP_ERROR;
+            }
+         }
+
+      }
+   }
+
+   /* We cannot have more vertices then there are in the graph.
+    * If we processed everything right, all vertices should have been hit. */
+   assert(nextnodeindex == nvertices);
+
+   BMSfreeBlockMemoryArray(blkmem,&rowprocessed,dec->memRows);
+   BMSfreeBlockMemoryArray(blkmem,&calldata,largestmember);
+   BMSfreeBlockMemoryArray(blkmem,&dectographnode,largestNode);
+   return SCIP_OKAY;
+}
 /* ---------- START functions for column addition ------------------------------------------------------------------- */
 
 /** Path arcs are all those arcs that correspond to nonzeros of the column to be added. */
@@ -11364,7 +11669,6 @@ SCIP_Bool SCIPnetmatdecIsMinimal(
    return netMatDecDataIsMinimal(dec->dec);
 }
 
-
 SCIP_Bool SCIPnetmatdecVerifyCycle(
    BMS_BUFMEM*           bufmem,             /**< Buffer memory */
    SCIP_NETMATDEC*       dec,                /**< The network matrix decomposition */
@@ -11379,4 +11683,14 @@ SCIP_Bool SCIPnetmatdecVerifyCycle(
 )
 {
    return netMatDecDataVerifyCycle(bufmem, dec->dec, column, nonzrowidx, nonzvals, nnonzs, pathrowstorage, pathsignstorage);
+}
+
+SCIP_RETCODE SCIPnetmatdecCreateDiGraph(
+   SCIP_NETMATDEC*       dec,                /**< The network matrix decomposition */
+   BMS_BLKMEM *          blkmem,             /**< The block memory to use for the created digraph */
+   SCIP_DIGRAPH**        pdigraph,           /**< Pointer to the pointer to store the created digraph */
+   SCIP_Bool             createrowarcs       /**< Should the row arcs be added to the created digraph? */
+)
+{
+   return netMatDecDataCreateDiGraph(dec->dec,blkmem,pdigraph);
 }

@@ -385,6 +385,50 @@ static SCIP_RETCODE runRowTestCase(
    return SCIP_OKAY;
 }
 
+static SCIP_RETCODE runRowTestCaseGraph(
+   DirectedTestCase* testCase
+)
+{
+   if( !testCase->isRowWise )
+   {
+      transposeMatrixStorage(testCase);
+   }
+   cr_expect(testCase->isRowWise);
+
+   //We keep a column-wise copy to check the columns easily
+   DirectedTestCase colWiseCase = copyTestCase(testCase);
+   transposeMatrixStorage(&colWiseCase);
+
+   BMS_BLKMEM * blkmem = SCIPblkmem(scip);
+   BMS_BUFMEM * bufmem = SCIPbuffer(scip);
+
+   SCIP_NETMATDEC* dec = NULL;
+   SCIP_CALL(SCIPnetmatdecCreate(blkmem, &dec, testCase->nrows, testCase->ncols));
+
+   SCIP_Bool isNetwork = TRUE;
+
+   for( int i = 0; i < testCase->nrows; ++i )
+   {
+      int rowEntryStart = testCase->primaryIndexStart[i];
+      int rowEntryEnd = testCase->primaryIndexStart[i + 1];
+      int* nonzeroCols = &testCase->entrySecondaryIndex[rowEntryStart];
+      double* nonzeroValues = &testCase->entryValue[rowEntryStart];
+      int nonzeros = rowEntryEnd - rowEntryStart;
+      cr_assert(nonzeros >= 0);
+      //Check if adding the row preserves the network matrix
+      SCIP_CALL(SCIPnetmatdecTryAddRow(dec,i,nonzeroCols,nonzeroValues,nonzeros,&isNetwork));
+      assert(isNetwork);
+   }
+   SCIP_DIGRAPH* graph;
+   SCIP_CALL( SCIPnetmatdecCreateDiGraph(dec, blkmem, &graph) );
+
+   SCIPdigraphPrint(graph, SCIPgetMessagehdlr(scip),stdout);
+   SCIPdigraphFree(&graph);
+   freeTestCase(&colWiseCase);
+
+   SCIPnetmatdecFree(&dec);
+   return SCIP_OKAY;
+}
 TestSuite(network, .init = setup, .fini = teardown);
 
 Test(network, coladd_single_column, .description = "Try adding a single column")
@@ -1899,3 +1943,15 @@ Test(network, rowadd_singlerigid_8, .description = "Updating a single rigid memb
    freeTestCase(&testCase);
 }
 //TODO: test interleaved addition, test using random sampling + test erdos-renyi generated graphs
+
+Test(network, rowadd_singlerigid_graph, .description = "Computing the graph for a single rigid member")
+{
+   DirectedTestCase testCase = stringToTestCase(
+      "+1 0 +1 "
+      "+1 +1 0 "
+      "0 -1 +1 "
+      "+1 +1 0 ",
+      4, 3);
+   runRowTestCaseGraph(&testCase);
+   freeTestCase(&testCase);
+}
