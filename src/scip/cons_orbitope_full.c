@@ -925,6 +925,10 @@ SCIP_RETCODE separateConstraints(
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
 
+      /* skip non-model constraints if strong dual reductions are not permitted */
+      if ( !consdata->ismodelcons && !SCIPallowStrongDualReds(scip) )
+         continue;
+
       /* do not enforce non-model constraints */
       if ( enforce && !consdata->ismodelcons )
          continue;

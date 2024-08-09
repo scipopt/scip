@@ -1466,6 +1466,10 @@ SCIP_RETCODE enfopsPackingPartitioningOrbitopeSolution(
 
    consdata = SCIPconsGetData(cons);
 
+   /* do not enforce non-model constraints if strong dual reductions are not permitted */
+   if ( !consdata->ismodelcons && !SCIPallowStrongDualReds(scip) )
+      return SCIP_OKAY;
+
    assert( scip != NULL );
    assert( consdata != NULL );
    assert( consdata->nspcons > 0 );
@@ -1720,6 +1724,10 @@ SCIP_RETCODE separateConstraints(
       /* get data of constraint */
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
+
+      /* skip non-model constraints if strong dual reductions are not permitted */
+      if ( !consdata->ismodelcons && !SCIPallowStrongDualReds(scip) )
+         continue;
 
       /* do not enforce non-model constraints */
       if ( enforce && !consdata->ismodelcons )
