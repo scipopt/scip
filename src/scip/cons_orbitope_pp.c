@@ -30,6 +30,9 @@
  * @author Christopher Hojny
  *
  * The type of constraints of this constraint handler is described in cons_orbitope_pp.h.
+ * When creating the constraint, users can decide whether it is a constraint defining the model
+ * or "just" use to handle symmetries. In the latter case, symmetry reductions are only performed
+ * by the constraint handler if strong dual reductions are permitted.
  *
  * The details of the method implemented here are described in the following papers.
  *

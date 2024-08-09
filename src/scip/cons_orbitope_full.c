@@ -30,6 +30,9 @@
  * @author Christopher Hojny
  *
  * The type of constraints of this constraint handler is described in cons_orbitope_full.h.
+ * When creating the constraint, users can decide whether it is a constraint defining the model
+ * or "just" use to handle symmetries. In the latter case, symmetry reductions are only performed
+ * by the constraint handler if strong dual reductions are permitted.
  *
  * The details of the method implemented here are described in the following papers.
  *
@@ -40,27 +43,16 @@
  * Two linear time propagation algorithms for full orbitopes are described in this paper, a static
  * version and a dynamic one. While the static version uses a fixed variable order, the dynamic
  * version determines the variable order during the solving process via branching descisions.
- * We implemented the static version as well as a modified version of the dynamic one. The reason
- * for the latter is to simplify the compatibility with full orbitope cutting planes.
- *
- * Note, however, that the dynamic version may lead to conflicts if orbitopes are copied to subSCIPs.
- * Since the dynamic version is based on branching decisions, which may be different in main SCIP
- * and subSCIPs, orbitopes using the dynamic algorithm are not allowed to be copied. However, as a
- * user might use orbitopes to enforce a certain variable ordering in a solution, we distinguish
- * whether an orbitope is a model constraint or not. If it is a model constraint, we assume that
- * a variable order has already been fixed and disable the dynamic algorithm. In this case, orbitope
- * constraints are copied to subSCIPs. If it is not a model constraint, the orbitope was added to
- * handle symmetries but not to enforce a solution to have a certain structure. In this case, the
- * dynamic algorithm can be used and we do not copy orbitope constraints to subSCIPs.
+ * We only implemented the static version, because constraints should define the model and should
+ * not be changed during the solving process. Instead, a dynamic version of orbitopal fixing has
+ * been implemented as a routine in prop_symmetry.c.
  *
  * Polytopes associated with symmetry handling@n
  * Christopher Hojny and Marc E. Pfetsch,@n
  * Math. Program. (2018)
  *
  * In this paper, a linear time separation algorithm for orbisacks (full orbitopes with two columnes)
- * is described. We use this algorithm for every pair of adjacent columns within the orbitope as well
- * as a version that is adapted to the reordering based on the dynamic full orbitope propagation
- * algorithm to ensure validity of binary points via cutting planes.
+ * is described. We use this algorithm for every pair of adjacent columns within the orbitope.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
