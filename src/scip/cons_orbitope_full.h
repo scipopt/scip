@@ -90,9 +90,6 @@ SCIP_RETCODE SCIPcreateConsOrbitopeFull(
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows */
    int                   ncols,              /**< number of columns */
-   SCIP_Bool             usedynamicprop,     /**< whether dynamic propagation should be used */
-   SCIP_Bool             mayinteract,        /**< whether symmetries corresponding to orbitope might interact
-                                              *   with symmetries handled by other routines */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -136,11 +133,8 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitopeFull(
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
    int                   nrows,              /**< number of rows */
    int                   ncols,              /**< number of columns */
-   SCIP_Bool             usedynamicprop,     /**< whether dynamic propagation should be used */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
-   SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
-   SCIP_Bool             mayinteract         /**< whether symmetries corresponding to orbitope might interact
-                                              *   with symmetries handled by other routines */
+   SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
    );
 
 /** @} */

@@ -50,9 +50,7 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
    SCIP_VAR***           vars,               /**< variable matrix of orbitope constraint */
    int*                  nrows,              /**< pointer to number of rows of variable matrix */
    int                   ncols,              /**< number of columns of variable matrix */
-   SCIP_ORBITOPETYPE*    type,               /**< pointer to store type of orbitope constraint after strengthening */
-   SCIP_Bool             mayinteract         /**< whether symmetries corresponding to orbitope might interact
-                                              *   with symmetries handled by other routines */
+   SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after strengthening */
    )
 {
    SCIP_Bool* pprows = NULL;
@@ -73,10 +71,8 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
     * to exploit the packing/partitioning structure on these rows, because packing/partitioning orbitopes
     * or more restrictive than full orbitopes. If at least three rows have this property, we discard
     * all rows not contained in set packing/partitioning constraints and add the smaller sub packing orbitope.
-    * This is only possible if the orbitope's symmetries do not interact with other symmetry handling
-    * methods (otherwise, dropping rows might change the variable order).
     */
-   if ( npprows >= 3 && ! mayinteract )
+   if ( npprows >= 3 )
    {
       int r = *nrows - 1;
       int i;
@@ -139,9 +135,6 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
    int                   nrows,              /**< number of rows of variable matrix */
    int                   ncols,              /**< number of columns of variable matrix */
-   SCIP_Bool             usedynamicprop,     /**< whether dynamic propagation should be used */
-   SCIP_Bool             mayinteract,        /**< whether symmetries corresponding to orbitope might interact
-                                              *   with symmetries handled by other routines */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
    SCIP_Bool             checkpporbitope,    /**< Check if full orbitope constraints can be upgraded to pp-orbitope? */
@@ -176,14 +169,13 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
    if ( checkpporbitope && orbitopetype != SCIP_ORBITOPETYPE_PARTITIONING
       && orbitopetype != SCIP_ORBITOPETYPE_PACKING )
    {
-      SCIP_CALL( strengthenOrbitopeConstraint(scip, vars, &nrows, ncols, &orbitopetype, mayinteract) );
+      SCIP_CALL( strengthenOrbitopeConstraint(scip, vars, &nrows, ncols, &orbitopetype) );
    }
 
    if ( orbitopetype == SCIP_ORBITOPETYPE_FULL )
    {
-      SCIP_CALL( SCIPcreateConsOrbitopeFull(scip, cons, name, vars, nrows, ncols, usedynamicprop,
-            mayinteract, resolveprop, ismodelcons, initial, separate, enforce, check, propagate,
-            local, modifiable, dynamic, removable, stickingatnode) );
+      SCIP_CALL( SCIPcreateConsOrbitopeFull(scip, cons, name, vars, nrows, ncols, resolveprop, ismodelcons,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
    else
    {
@@ -208,16 +200,13 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
    int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
-   SCIP_Bool             usedynamicprop,     /**< whether dynamic propagation should be used */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
-   SCIP_Bool             mayinteract,        /**< whether symmetries corresponding to orbitope might interact
-                                              *   with symmetries handled by other routines */
    SCIP_Bool             checkpporbitope     /**< Check if full orbitope constraints can be upgraded to pp-orbitope? */
    )
 {
-   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks, usedynamicprop,
-         resolveprop, ismodelcons, mayinteract, checkpporbitope,
+   SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name, vars, orbitopetype, nspcons, nblocks,
+         resolveprop, ismodelcons, checkpporbitope,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
