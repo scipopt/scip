@@ -205,6 +205,8 @@ SCIP_Bool SCIPnetmatdecVerifyCycle(
 
 /** Constructs a realization of an underlying directed graph belonging to the network matrix.
  *
+ * The arc data of the digraph contains the row/column indices of the graph. If index < nrows, then the index is the
+ * corresponding row. If the index >= nrows, then index-nrows is the column index.
  * Since many different realizations are possible, we use the default orientation of the two-separations to associate
  * pairs of nodes to each other. In particular, we choose to connect the nodes of different 2-connected components
  * in node 0. This way, the rank of the underlying matrix is equal to m+1-c, where c is the number of undirected
