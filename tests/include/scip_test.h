@@ -22,7 +22,6 @@ void TESTsetTestfilename(
  * be available every test.
  * */
 #include "scip_test.c"
-#include "locale.h"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wredundant-decls"
@@ -49,17 +48,3 @@ void TESTsetTestfilename(
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
-
-CR_API int main(int argc, char *argv[]) {
-    struct criterion_test_set *tests = criterion_initialize();
-
-    int result = 0;
-    if (criterion_handle_args(argc, argv, true))
-    {
-       setlocale(LC_ALL, "C");
-       result = !criterion_run_all_tests(tests);
-    }
-
-    criterion_finalize(tests);
-    return result;
-}
