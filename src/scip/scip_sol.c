@@ -528,6 +528,56 @@ SCIP_RETCODE SCIPcreateSol(
    }  /*lint !e788*/
 }
 
+/** creates an exact primal solution, initialized to zero
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPcreateSolExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateSolExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPsolCreateOriginalExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprob, scip->origprimal, NULL, heur) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPsolCreateExact(sol, scip->mem->probmem, scip->set, scip->stat, scip->primal, scip->tree, heur) );
+      return SCIP_OKAY;
+
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_EXITSOLVE:
+   case SCIP_STAGE_FREETRANS:
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDDATA;
+   }  /*lint !e788*/
+}
+
 /** creates a primal solution, initialized to the current LP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1492,6 +1542,49 @@ SCIP_RETCODE SCIPsetSolVal(
    return SCIP_OKAY;
 }
 
+/** sets exact value of variable in primal CIP solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_RETCODE SCIPsetSolValExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution */
+   SCIP_VAR*             var,                /**< variable to add to solution */
+   SCIP_Rational*        val                 /**< solution value of variable */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPsetSolValExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   assert( var->scip == scip );
+   assert(SCIPisExactSol(scip, sol));
+
+   if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
+   {
+      SCIPerrorMessage("cannot set value of transformed variable <%s> in original space solution\n",
+         SCIPvarGetName(var));
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPsolSetValExact(sol, scip->set, scip->stat, scip->tree, var, val) );
+
+   return SCIP_OKAY;
+}
+
 /** sets values of multiple variables in primal CIP solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1763,6 +1856,70 @@ SCIP_Real SCIPgetSolOrigObj(
       else
          return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPlpGetPseudoObjval(scip->lp, scip->set, scip->transprob));
    }
+}
+
+/** returns exact objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
+ *
+ *  @return exact objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+void SCIPgetSolOrigObjExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo objective value */
+   SCIP_Rational*        res                 /**< result pointer to store rational */
+   )
+{
+   SCIP_Rational* tmp;
+   assert(SCIPisExactSol(scip, sol));
+
+   /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
+    * for all other solutions, we should be at least in SCIP_STAGE_TRANSFORMING
+    */
+   if( sol != NULL && SCIPsolIsOriginal(sol) )
+   {
+      SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolOrigObjExact", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+      RatSet(res, SCIPsolGetOrigObjExact(sol));
+      return;
+   }
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolOrigObjExact", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
+   if( sol != NULL )
+   {
+      SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob, tmp);
+      SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, res);
+   }
+   else
+   {
+      SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolOrigObjExact(sol==NULL)", \
+            FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+      if( SCIPtreeHasCurrentNodeLP(scip->tree) )
+      {
+         SCIPlpExactGetObjval(scip->lp, scip->set, tmp);
+         SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, res);
+      }
+      else
+      {
+         SCIPlpExactGetPseudoObjval(scip->lp, scip->set, tmp);
+         SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, res);
+      }
+   }
+   RatFreeBuffer(SCIPbuffer(scip), &tmp);
 }
 
 /** returns transformed objective value of primal CIP solution, or transformed current LP/pseudo objective value
