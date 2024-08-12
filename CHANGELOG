@@ -145,6 +145,7 @@ Fixed bugs
 - calling SCIPsolveConcurrent() when SCIP was compiled without a TPI now results in a plugin-not-found error
 - fixed LPI status functions of lpi_cpx if the barrier is called
 - check cuts for redundancy after scaling in cutTightenCoefs() and cutTightenCoefsQuad() of cuts.c
+- maintain definition of artificial integral variables in xor constraints to avoid invalidations of conflict constraints
 
 Performance improvements
 ------------------------
