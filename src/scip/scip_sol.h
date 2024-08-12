@@ -619,6 +619,7 @@ SCIP_Real SCIPgetSolVal(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
+SCIP_EXPORT
 void SCIPgetSolValExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -1652,6 +1653,7 @@ SCIP_RETCODE SCIPoverwriteFPsol(
    );
 
 /** returns TRUE if the solution is an exact rational solution */
+SCIP_EXPORT
 SCIP_Bool SCIPisExactSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal CIP solution */

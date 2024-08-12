@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_linear.c
+/**@file   cons_exactlp.c
  * @brief Constraint handler for exact linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Leon Eifler
  * @author Sander Borst
