@@ -18874,7 +18874,7 @@ void SCIPgetActivityExactLinear(
    if( consdata->rowexact != NULL )
       SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, FALSE, ret);
    else
-      consdataGetActivity(scip, consdata, sol, FALSE, ret);
+      consdataGetActivity(scip, consdata, sol, TRUE, ret);
 }
 
 /** gets the feasibility of the linear constraint in the given solution */
