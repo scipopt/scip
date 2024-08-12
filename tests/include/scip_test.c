@@ -24,6 +24,7 @@
 
 #include "scip/nodesel_dfs.h"
 #include "scip/cons_integral.h"
+#include <locale.h>
 
 /** execution method of presolver */
 static
@@ -165,3 +166,13 @@ void TESTsetTestfilename(
    else
       (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, testfile);
 }
+
+/* ensure we run with C locale */
+#ifdef __GNUC__
+__attribute__((constructor))
+static
+void TESTsetlocale(void)
+{
+   setlocale(LC_ALL, "C");
+}
+#endif
