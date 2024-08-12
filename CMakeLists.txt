@@ -109,6 +109,16 @@ if(ENABLE_IPO AND CMAKE_BUILD_TYPE STREQUAL "Release")
     if(result)
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
         message(STATUS "IPO enabled")
+
+        # with link-time optimization enabled, we get additional warnings at link time on
+        # - reader_nl and presol_milp violating the C++ One Definition Rule (-Wodr) due to
+        #   using struct names SCIP_ProbData and SCIP_PresolData that are also used in objscip (C++ interface)
+        # - some presumed malloc() calls with size 18446744073709551608 ((uint)-1)
+        # - some presumed memmove() calls in boost::container::short_vector via papilo to a 0-length memory
+        # we disable these warnings (need to pass them to the compiler when linking)
+        if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "CLANG"))
+           add_link_options(-Wno-odr -Wno-alloc-size-larger-than -Wno-stringop-overflow)
+        endif()
     else()
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION FALSE)
         message(STATUS "IPO is not supported.")
