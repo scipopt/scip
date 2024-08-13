@@ -519,6 +519,7 @@ SCIP_RETCODE findImpliedIntegers(
    SCIPfreeBufferArray(scip,&tempIdxArray);
    SCIPfreeBufferArray(scip,&tempValArray);
 
+   SCIPnetmatdecFree(&transdec);
    SCIPnetmatdecFree(&dec);
 
    return SCIP_OKAY;
