@@ -24,7 +24,7 @@
 
 /**@file   presol_implint.h
  * @ingroup PRESOLVERS
- * @brief  Presolver that detects implied integer variables
+ * @brief  Presolver that detects implicit integer variables
  * @author Rolf van der Hulst
  */
 
@@ -39,7 +39,7 @@
 extern "C" {
 #endif
 
-/** creates the implied integer presolver and includes it in SCIP
+/** creates the implicit integer presolver and includes it in SCIP
  *
  * @ingroup PresolverIncludes
  */
