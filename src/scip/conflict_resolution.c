@@ -85,222 +85,6 @@
 
 #define EPS                       1e-06
 
-// #define SCIP_CONFGRAPH_DOT
-
-#ifdef SCIP_CONFGRAPH_DOT
-/*
- * Output of Conflict Graph
- */
-
-#include <stdio.h>
-#include "scip/scip_message.h"
-
-static FILE*             confgraphfile = NULL;              /**< output file for current conflict graph */
-static int               nsubgraphs = 0;                    /**< number of subgraphs in current conflict graph */
-static int               nodeid = 0;                        /**< id of next node to add to the conflict graph */
-
-static const char* colors[] = {
-      "#FFCCCC",  /* conflict row */
-      "#CCFFFF",  /* reason row */
-      "#CCFFCC",  /* reduced reason row */
-      "#F9EBEA",  /* resolved row row */
-      "#3399FF",  /* current bound change */
-      "#FF99FF"   /* next bound change */
-
-   };
-typedef enum {
-   CONFLICT_ROW,
-   REASON_ROW,
-   REDUCED_REASON_ROW,
-   RESOLVED_ROW,
-   CURRENT_BOUND_CHANGE,
-   NEXT_BOUND_CHANGE
-} Color;
-
-/** writes a node section to the conflict graph file */
-static
-void confgraphWriteNode(
-   const char*           label,              /**< label of the node */
-   const char*           nodetype,           /**< type of the node */
-   const char*           fillcolor,          /**< color of the node's interior */
-   const char*           bordercolor         /**< color of the node's border */
-   )
-{
-   assert(confgraphfile != NULL);
-
-   SCIPdotWriteNode(confgraphfile, nodeid, label, nodetype, fillcolor, bordercolor); /*lint !e571*/
-   nodeid++;
-}
-
-/** creates a file to output the current conflict graph into; adds the conflict vertex to the graph */
-static
-SCIP_RETCODE confgraphCreate(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   char fname[SCIP_MAXSTRLEN];
-
-   assert(conflict != NULL);
-   assert(confgraphfile == NULL);
-
-   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%p%d.dot", conflict, conflict->count);
-
-   SCIPinfoMessage(set->scip, NULL, "storing conflict graph in file <%s>\n", fname);
-
-   confgraphfile = fopen(fname, "w");
-
-   if( confgraphfile == NULL )
-   {
-      SCIPerrorMessage("cannot open graph file <%s>\n", fname);
-      SCIPABORT(); /*lint !e527*/
-      return SCIP_WRITEERROR;
-   }
-
-   SCIPdotWriteOpening(confgraphfile);
-
-   confgraphWriteNode("conflict", "plaintext", "#ff0000", "#000000");
-   fprintf(confgraphfile, "\trankdir=LR; \n");
-
-
-   return SCIP_OKAY;
-}
-
-/** closes conflict graph file */
-static
-void confgraphFree(
-
-   void
-   )
-{
-   if( confgraphfile != NULL )
-   {
-      SCIPdotWriteClosing(confgraphfile);
-
-      fclose(confgraphfile);
-
-      confgraphfile = NULL;
-      nsubgraphs = 0;
-   }
-}
-
-/** adds a bound change node to the conflict graph */
-static
-void confgraphAddBdchg(
-   SCIP_BDCHGINFO*       bdchginfo,          /**< bound change to add to the conflict graph */
-   int                   col                 /**< color of the node */
-   )
-{
-   char label[SCIP_MAXSTRLEN];
-   int offset;
-
-   offset = 0;
-   if (col == 4)
-      offset = SCIPsnprintf(label, SCIP_MAXSTRLEN, "Bound to resolve:\n");
-   else
-   {
-      assert(col == 5);
-      offset = SCIPsnprintf(label, SCIP_MAXSTRLEN, "Next bound in queue:\n");
-   }
-
-   (void) SCIPsnprintf(label + offset, SCIP_MAXSTRLEN - offset, "x_%d %s %g\n[%d:%d] %s",
-      SCIPvarGetProbindex(SCIPbdchginfoGetVar(bdchginfo)),
-      SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-      SCIPbdchginfoGetNewbound(bdchginfo), SCIPbdchginfoGetDepth(bdchginfo), SCIPbdchginfoGetPos(bdchginfo),
-      SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
-      : (SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
-         ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
-         : (SCIPbdchginfoGetInferProp(bdchginfo) != NULL ? SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo))
-            : "none")));
-   confgraphWriteNode(label, "ellipse", colors[col], "#000000");
-}
-
-/** adds a row node to the conflict graph */
-static
-void confgraphAddRow(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   int                   col                 /**< color of the node */
-   )
-{
-   int MAXLEN = 1048576;
-   char label[MAXLEN];
-   int offset = 0;
-   int i = 0;
-   int elementsinoneline = 5;
-
-   if(col == 0 || col == 3)
-   {
-      SCIP_CONFLICTROW* conflictrow;
-      conflictrow = conflict->conflictrow;
-      if (col == 0)
-         offset += SCIPsnprintf(label + offset, MAXLEN - offset, "Conflict Row: \n");
-      else
-         offset += SCIPsnprintf(label + offset, MAXLEN - offset, "Resolved Row: \n");
-      for(i = 0; i < conflictrow->nnz; i++)
-      {
-         int v;
-         v = conflictrow->inds[i];
-
-         offset += SCIPsnprintf(label + offset, MAXLEN - offset, "%f<x_%d> ", conflictrow->vals[v], v);
-         if ((i + 1) % elementsinoneline == 0)
-            offset += SCIPsnprintf(label + offset, MAXLEN - offset, "\n");
-         if(offset >= MAXLEN - 1)
-            break;
-      }
-      SCIPsnprintf(label + offset, MAXLEN - offset, "\n >= %f \n", conflictrow->lhs);
-   }
-   else
-   {
-      SCIP_REASONROW * reasonrow;
-      reasonrow = conflict->reasonrow;
-      if (col == 1)
-         offset += SCIPsnprintf(label + offset, MAXLEN - offset, "Reason Row: \n");
-      else{
-         assert(col == 2);
-         offset += SCIPsnprintf(label + offset, MAXLEN - offset, "Reduced Reason Row: \n");
-      }
-      for(i = 0; i < reasonrow->nnz; i++)
-      {
-         int v;
-         SCIP_Real val;
-         v = reasonrow->inds[i];
-         val = reasonrow->vals[v];
-         offset += SCIPsnprintf(label + offset, MAXLEN - offset, "%f<x_%d> ", val, v);
-         if ((i + 1) % elementsinoneline == 0)
-            offset += SCIPsnprintf(label + offset, MAXLEN - offset, "\n");
-         if(offset >= MAXLEN - 1)
-            break;
-      }
-      SCIPsnprintf(label + offset, MAXLEN - offset, "\n >= %f \n", reasonrow->lhs);
-
-   }
-
-   confgraphWriteNode(label, "plaintext", colors[col], "#000000");
-}
-
-
-/** start subgraph for current iteration */
-static
-void startSubgraph(
-   int                   iteration           /**< current iteration of resolution */
-   )
-{
-   fprintf(confgraphfile, "\tsubgraph cluster_%d { \n", nsubgraphs);
-   fprintf(confgraphfile, "\tlabel = \"Iteration %d\"; \n", iteration);
-   nsubgraphs++;
-}
-
-/** start subgraph for current iteration */
-static
-void endSubgraph(
-   void
-   )
-{
-   fprintf(confgraphfile, "\t } \n \n");
-}
-
-#endif
-
 /** creates a copy of the given generalized resolution row, allocating an additional amount of memory */
 static
 SCIP_RETCODE conflictRowCopy(
@@ -4128,10 +3912,6 @@ SCIP_RETCODE reduceReason(
 
    SCIPdebug(printConflictRow(rowtoreduce, set, vars, REDUCED_REASON_ROWTYPE));
 
-#ifdef SCIP_CONFGRAPH_DOT
-      confgraphAddRow(conflict, REDUCED_REASON_ROW);
-#endif
-
    return SCIP_OKAY;
 }
 
@@ -5176,17 +4956,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
     */
    while( TRUE )  /*lint !e716*/
    {
-#ifdef SCIP_CONFGRAPH_DOT
-      {
-         startSubgraph(nressteps + 1);
-         confgraphAddBdchg(bdchginfo, CURRENT_BOUND_CHANGE);
-         /* get the next bound change */
-         nextbdchginfo = conflictFirstCand(set, conflict, FALSE);
-         if (nextbdchginfo != NULL)
-            confgraphAddBdchg(nextbdchginfo, NEXT_BOUND_CHANGE);
-         confgraphAddRow(conflict, CONFLICT_ROW);
-      }
-#endif
+
 #ifdef SCIP_DEBUG
       {
          SCIPsetDebugMsgPrint(set, "\nResolution Iteration: %d \n", nressteps);
@@ -5244,9 +5014,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIPdebug(printConflictRow(conflict->conflictrow, set, vars, CONFLICT_ROWTYPE));
          SCIPdebug(printConflictRow(reasonrow, set, vars, REASON_ROWTYPE));
 
-#ifdef SCIP_CONFGRAPH_DOT
-            confgraphAddRow(conflict, REASON_ROW);
-#endif
          successresolution = FALSE;
 
          /* call resolution */
@@ -5287,9 +5054,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
             vars[residx]->conflictresub = SCIP_REAL_MAX;
          }
 
-#ifdef SCIP_CONFGRAPH_DOT
-         confgraphAddRow(conflict, RESOLVED_ROW);
-#endif
          if( conflictrow->nnz > maxsize )
          {
             SCIPsetDebugMsgPrint(set, "Number of nonzeros in conflict is larger than maxsize %d > %d\n",
@@ -5446,23 +5210,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
                goto TERMINATE_RESOLUTION_LOOP;
          }
       }
-#ifdef SCIP_CONFGRAPH_DOT
-   endSubgraph();
-#endif
    }
 
   TERMINATE_RESOLUTION_LOOP:
-
-#ifdef SCIP_CONFGRAPH_DOT
-   endSubgraph();
-   startSubgraph(nressteps + 1);
-   if (bdchginfo != NULL)
-      confgraphAddBdchg(bdchginfo, CURRENT_BOUND_CHANGE);
-   if (nextbdchginfo != NULL)
-      confgraphAddBdchg(nextbdchginfo, NEXT_BOUND_CHANGE);
-   confgraphAddRow(conflict, CONFLICT_ROW);
-   endSubgraph();
-#endif
 
    SCIPsetDebugMsgPrint(set, "Total number of conflict rows found %d\n", conflict->nconflictrows);
    SCIPsetDebugMsgPrint(set, "Total number of FUIPS found %d\n", nfuips);
@@ -5538,19 +5288,9 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
    /* setting this to true adds bound changes only to the resolution bdchg queue */
    conflict->bdchgonlyresqueue = TRUE;
 
-   /* create the conflict graph */
-#ifdef SCIP_CONFGRAPH_DOT
-   assert(confgraphfile == NULL);
-   SCIP_CALL( confgraphCreate(set, conflict) );
-#endif
-
    /* analyze the conflict set, and create a conflict constraint on success */
    SCIP_CALL( conflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
           cliquetable, initialconflictrow, validdepth, infeasibleLP, pseudoobj, &nconss, &nconfvars) );
-
-#ifdef SCIP_CONFGRAPH_DOT
-   confgraphFree();
-#endif
 
    conflict->nressuccess += (nconss > 0 ? 1 : 0);
    conflict->nresconfconss += nconss;
