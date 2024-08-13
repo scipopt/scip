@@ -400,7 +400,6 @@ static SCIP_RETCODE runRowTestCaseGraph(
    transposeMatrixStorage(&colWiseCase);
 
    BMS_BLKMEM * blkmem = SCIPblkmem(scip);
-   BMS_BUFMEM * bufmem = SCIPbuffer(scip);
 
    SCIP_NETMATDEC* dec = NULL;
    SCIP_CALL(SCIPnetmatdecCreate(blkmem, &dec, testCase->nrows, testCase->ncols));

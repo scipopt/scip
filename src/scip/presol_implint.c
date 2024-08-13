@@ -74,18 +74,6 @@ struct SCIP_PresolData
 };
 
 
-/*
- * Local methods
- */
-typedef enum
-{
-   VAR_CLASS_INTEGER_CANDIDATE = 0,          /**< The variable has integrality constraints and could potentially
-                                               *< be an implicit integer. */
-   VAR_CLASS_INTEGER_FIXED = 1,              /**< All other variables with integrality constraints*/
-   VAR_CLASS_CONTINUOUS_CANDIDATE = 2,       /**< The variable is continuous and could be an implicit integer */
-   VAR_CLASS_CONTINUOUS_FIXED = 3            /**< All other continuous variables */
-} VAR_CLASS;
-
 /**
  * Struct that contains information about the blocks/components of the submatrix given by the continuous columns
  */
@@ -208,10 +196,10 @@ SCIP_RETCODE computeContinuousComponents(
 
       while( ndfsstack != 0 ){
          --ndfsstack;
-         int index = dfsstack[ndfsstack];
+         int ind  = dfsstack[ndfsstack];
          /* process column or row, adding new connected rows/columns to the dfs stack */
-         if( index >= comp->nmatrixrows ){
-            int column = index - comp->nmatrixrows;
+         if( ind >= comp->nmatrixrows ){
+            int column = ind - comp->nmatrixrows;
             assert(comp->coltype[column] == SCIP_VARTYPE_CONTINUOUS);
             comp->componentcols[colindex] = column;
             ++colindex;
@@ -231,7 +219,7 @@ SCIP_RETCODE computeContinuousComponents(
          }
          else
          {
-            int row = index;
+            int row = ind;
             comp->componentrows[rowindex] = row;
             ++rowindex;
 

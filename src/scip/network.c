@@ -3267,10 +3267,14 @@ SCIP_RETCODE netMatDecDataCreateDiGraph(
                      if( createrowarcs || !arcIsTree(dec, arc))
                      {
                         spqr_element element = arcGetElement(dec,arc);
-                        long index = SPQRelementIsRow(element) ? SPQRelementToRow(element) :
-                                     SPQRelementToColumn(element) + dec->memRows;
+                        long ind;
+                        if( SPQRelementIsRow(element) ){
+                           ind = SPQRelementToRow(element);
+                        }else{
+                           ind = SPQRelementToColumn(element) + dec->memRows;
+                        }
                         SCIP_CALL( SCIPdigraphAddArc(digraph, dectographnode[tail], dectographnode[head],
-                                                     (void*) index) );
+                                                     (void*) ind) );
                      }
                   }
                   spqr_element element = arcGetElement(dec, arc);
@@ -3315,17 +3319,21 @@ SCIP_RETCODE netMatDecDataCreateDiGraph(
                      if( createrowarcs || !arcIsTree(dec, arc) )
                      {
                         spqr_element element = arcGetElement(dec,arc);
-                        long index = SPQRelementIsRow(element) ? SPQRelementToRow(element) :
-                                     SPQRelementToColumn(element) + dec->memRows;
+                        long ind;
+                        if( SPQRelementIsRow(element) ){
+                           ind = SPQRelementToRow(element);
+                        }else{
+                           ind = SPQRelementToColumn(element) + dec->memRows;
+                        }
                         if( arcIsReversedNonRigid(dec, explore.arc) == arcIsReversedNonRigid(dec, arc))
                         {
                            SCIP_CALL( SCIPdigraphAddArc(digraph, explore.graphfirstarctail,
-                                                        explore.graphfirstarchead, (void*) index) );
+                                                        explore.graphfirstarchead, (void*) ind) );
                         }
                         else
                         {
                            SCIP_CALL( SCIPdigraphAddArc(digraph, explore.graphfirstarchead,
-                                                        explore.graphfirstarctail, (void*) index) );
+                                                        explore.graphfirstarctail, (void*) ind) );
                         }
                      }
                   }
@@ -3369,16 +3377,20 @@ SCIP_RETCODE netMatDecDataCreateDiGraph(
                      if( createrowarcs || !arcIsTree(dec, arc))
                      {
                         spqr_element element = arcGetElement(dec,arc);
-                        long index = SPQRelementIsRow(element) ? SPQRelementToRow(element) :
-                           SPQRelementToColumn(element) + dec->memRows;
+                        long ind;
+                        if( SPQRelementIsRow(element) ){
+                           ind = SPQRelementToRow(element);
+                        }else{
+                           ind = SPQRelementToColumn(element) + dec->memRows;
+                        }
 
                         if( arcIsReversedNonRigid(dec, explore.arc) == arcIsReversedNonRigid(dec, arc) )
                         {
-                           SCIP_CALL( SCIPdigraphAddArc(digraph, secondnode, firstnode, (void*) index) );
+                           SCIP_CALL( SCIPdigraphAddArc(digraph, secondnode, firstnode, (void*) ind) );
                         }
                         else
                         {
-                           SCIP_CALL( SCIPdigraphAddArc(digraph, firstnode, secondnode, (void*) index) );
+                           SCIP_CALL( SCIPdigraphAddArc(digraph, firstnode, secondnode, (void*) ind) );
                         }
                      }
                   }
