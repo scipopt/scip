@@ -1587,12 +1587,9 @@ SCIP_RETCODE nodeDeactivate(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
-   SCIP_Bool freeNode;
-
    assert(node != NULL);
    assert(node->active);
    assert(tree != NULL);
@@ -1611,39 +1608,6 @@ SCIP_RETCODE nodeDeactivate(
    /* count number of deactivated nodes (ignoring probing switches) */
    if( !SCIPtreeProbing(tree) )
       stat->ndeactivatednodes++;
-
-   /* free node if it is a dead-end node, i.e., has no children */
-   switch( SCIPnodeGetType(node) )   
-   {
-   case SCIP_NODETYPE_FOCUSNODE:
-   case SCIP_NODETYPE_PROBINGNODE:
-   case SCIP_NODETYPE_SIBLING:
-   case SCIP_NODETYPE_CHILD:
-   case SCIP_NODETYPE_LEAF:
-   case SCIP_NODETYPE_DEADEND:
-   case SCIP_NODETYPE_REFOCUSNODE:
-      freeNode = FALSE;
-      break;
-   case SCIP_NODETYPE_JUNCTION:
-      freeNode = (node->data.junction.nchildren == 0); 
-      break;
-   case SCIP_NODETYPE_PSEUDOFORK:
-      freeNode = (node->data.pseudofork->nchildren == 0); 
-      break;
-   case SCIP_NODETYPE_FORK:
-      freeNode = (node->data.fork->nchildren == 0); 
-      break;
-   case SCIP_NODETYPE_SUBROOT:
-      freeNode = (node->data.subroot->nchildren == 0); 
-      break;
-   default:
-      SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(node));
-      return SCIP_INVALIDDATA;
-   }
-   if( freeNode ) 
-   {
-      SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
-   }
 
    return SCIP_OKAY;
 }
@@ -3166,7 +3130,7 @@ SCIP_RETCODE treeSwitchPath(
    /* undo the domain and constraint set changes of the old active path by deactivating the path's nodes */
    for( i = tree->pathlen-1; i > forkdepth; --i )
    {
-      SCIP_CALL( nodeDeactivate(tree->path[i], blkmem, set, stat, tree, lp, branchcand, eventfilter, eventqueue) );
+      SCIP_CALL( nodeDeactivate(tree->path[i], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
    }
    tree->pathlen = forkdepth+1;
 
@@ -3187,11 +3151,48 @@ SCIP_RETCODE treeSwitchPath(
    }
 
    /* if the old focus node is a dead end (has no children), delete it */
-   if( oldfocusnode != NULL && SCIPnodeGetType(oldfocusnode) == SCIP_NODETYPE_DEADEND )
+   if( oldfocusnode != NULL )
    {
-      assert(tree->appliedeffectiverootdepth <= tree->effectiverootdepth);
-      SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
-      assert(tree->effectiverootdepth <= focusnodedepth || tree->focusnode == NULL);
+      SCIP_Bool freeNode;
+
+      switch( SCIPnodeGetType(oldfocusnode) )
+      {
+      case SCIP_NODETYPE_FOCUSNODE:
+      case SCIP_NODETYPE_SIBLING:
+      case SCIP_NODETYPE_CHILD:
+      case SCIP_NODETYPE_LEAF:
+      case SCIP_NODETYPE_REFOCUSNODE:
+         freeNode = FALSE;
+         break;
+      case SCIP_NODETYPE_DEADEND:
+         freeNode = TRUE;
+         break;
+      case SCIP_NODETYPE_JUNCTION:
+         freeNode = (oldfocusnode->data.junction.nchildren == 0);
+         break;
+      case SCIP_NODETYPE_PSEUDOFORK:
+         freeNode = (oldfocusnode->data.pseudofork->nchildren == 0);
+         break;
+      case SCIP_NODETYPE_FORK:
+         freeNode = (oldfocusnode->data.fork->nchildren == 0);
+         break;
+      case SCIP_NODETYPE_SUBROOT:
+         freeNode = (oldfocusnode->data.subroot->nchildren == 0);
+         break;
+      case SCIP_NODETYPE_PROBINGNODE:
+         SCIPerrorMessage("probing node could not be the focus node\n");
+         return SCIP_INVALIDDATA;
+      default:
+         SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(oldfocusnode));
+         return SCIP_INVALIDDATA;
+      }
+
+      if( freeNode )
+      {
+         assert(tree->appliedeffectiverootdepth <= tree->effectiverootdepth);
+         SCIP_CALL( SCIPnodeFree(&oldfocusnode, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
+         assert(tree->effectiverootdepth <= focusnodedepth || tree->focusnode == NULL);
+      }
    }
 
    /* apply effective root shift up to the new focus node */
@@ -6825,7 +6826,7 @@ SCIP_RETCODE treeBacktrackProbing(
          }
 
          /* undo bound changes by deactivating the probing node */
-         SCIP_CALL( nodeDeactivate(node, blkmem, set, stat, tree, lp, branchcand, eventfilter, eventqueue) );
+         SCIP_CALL( nodeDeactivate(node, blkmem, set, stat, tree, lp, branchcand, eventqueue) );
 
          /* free the probing node */
          SCIP_CALL( SCIPnodeFree(&tree->path[tree->pathlen-1], blkmem, set, stat, eventfilter, eventqueue, tree, lp) );

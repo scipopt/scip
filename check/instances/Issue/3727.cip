@@ -1,0 +1,46 @@
+STATISTICS
+  Problem name     : dcmulti
+  Variables        : 24 (4 binary, 0 integer, 0 implicit integer, 20 continuous)
+  Constraints      : 0 initial, 13 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <D511>: obj=0, original bounds=[0,1]
+  [binary] <G21>: obj=0, original bounds=[0,1]
+  [binary] <B21>: obj=1200, original bounds=[0,1]
+  [binary] <D112>: obj=0, original bounds=[0,1]
+  [continuous] <X1211>: obj=8, original bounds=[0,+inf]
+  [continuous] <X1511>: obj=16, original bounds=[0,+inf]
+  [continuous] <X2211>: obj=6, original bounds=[0,+inf]
+  [continuous] <Y2111>: obj=0, original bounds=[0,+inf]
+  [continuous] <Y2211>: obj=0, original bounds=[0,+inf]
+  [continuous] <Y2311>: obj=0, original bounds=[0,+inf]
+  [continuous] <Y2411>: obj=6, original bounds=[0,+inf]
+  [continuous] <Y2511>: obj=0, original bounds=[0,+inf]
+  [continuous] <Y2611>: obj=0, original bounds=[0,+inf]
+  [continuous] <Y5411>: obj=8, original bounds=[0,+inf]
+  [continuous] <Z2111>: obj=0, original bounds=[0,+inf]
+  [continuous] <Z2121>: obj=0, original bounds=[0,+inf]
+  [continuous] <Z2211>: obj=0, original bounds=[0,+inf]
+  [continuous] <Z2221>: obj=0, original bounds=[0,+inf]
+  [continuous] <Z5111>: obj=2, original bounds=[146,146]
+  [continuous] <Z5121>: obj=0, original bounds=[0,+inf]
+  [continuous] <W21>: obj=0, original bounds=[0,+inf]
+  [continuous] <X3112>: obj=0, original bounds=[0,+inf]
+  [continuous] <Z1112>: obj=2, original bounds=[0,+inf]
+  [continuous] <Z1122>: obj=0, original bounds=[0,+inf]
+CONSTRAINTS
+  [linear] <16>: <X1211>[C] +<X2211>[C] -<Y2111>[C] -<Y2211>[C] -<Y2311>[C] -<Y2411>[C] -<Y2511>[C] -<Y2611>[C] == 0;
+  [linear] <22>: <X1511>[C] -<Y5411>[C] == -19;
+  [linear] <34>:  -<X1211>[C] -<X2211>[C] +<Z2111>[C] +<Z2121>[C] == 0;
+  [linear] <40>:  -<Z2111>[C] -<Z2121>[C] -2<Z2211>[C] -2<Z2221>[C] +<W21>[C] == 0;
+  [linear] <41>:  -500<G21>[B] +<W21>[C] == 0;
+  [linear] <43>: <G21>[B] -<B21>[B] == 0;
+  [linear] <64>:  -<X1511>[C] +<Z5121>[C] == 0;
+  [linear] <66>:  -600<D511>[B] +<Z5121>[C] == 0;
+  [linear] <67>:  +180<D511>[B] -<Z5111>[C] <= 0;
+  [linear] <85>: <Y2411>[C] +<Y5411>[C] >= 24;
+  [linear] <119>:  -<X3112>[C] +<Z1112>[C] +<Z1122>[C] == 109;
+  [linear] <121>:  -600<D112>[B] +<Z1122>[C] <= 0;
+  [linear] <122>:  +180<D112>[B] -<Z1112>[C] <= 0;
+END
