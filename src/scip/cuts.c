@@ -2626,7 +2626,7 @@ SCIP_RETCODE findBestLb(
 
    *simplebound = *bestlb;
 
-   if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   if( usevbds && (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT))
    {
       SCIP_Real bestvlb;
       int bestvlbidx;
@@ -2687,7 +2687,7 @@ SCIP_RETCODE findBestUb(
 
    *simplebound = *bestub;
 
-   if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   if( usevbds && (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT))
    {
       SCIP_Real bestvub;
       int bestvubidx;
@@ -5298,7 +5298,7 @@ SCIP_RETCODE determineBoundForSNF(
       bestlb[varposinrow] = bestslb[varposinrow];
       bestlbtype[varposinrow] = bestslbtype[varposinrow];
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT)
       {
          SCIP_Real bestvlb;
          int bestvlbidx;
@@ -5320,7 +5320,7 @@ SCIP_RETCODE determineBoundForSNF(
       bestub[varposinrow] = bestsub[varposinrow];
       bestubtype[varposinrow] = bestsubtype[varposinrow];
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT  )
       {
          SCIP_Real bestvub;
          int bestvubidx;
