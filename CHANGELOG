@@ -146,6 +146,7 @@ Fixed bugs
 - fixed LPI status functions of lpi_cpx if the barrier is called
 - check cuts for redundancy after scaling in cutTightenCoefs() and cutTightenCoefsQuad() of cuts.c
 - maintain definition of artificial integral variables in xor constraints to avoid invalidations of conflict constraints
+- free childless nodes only after the deactivation of the old focus path in treeSwitchPath() of tree.c
 
 Performance improvements
 ------------------------
