@@ -274,6 +274,40 @@ SCIP_Longint SCIPconflictGetNResCalls(
    return conflict->nrescalls;
 }
 
+SCIP_Longint SCIPconflictGetNIntReductionCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nintreductioncalls;
+}
+SCIP_Longint SCIPconflictGetNIntReductionSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nintreductionsuccess;
+}
+SCIP_Longint SCIPconflictGetNIntReductionSuccessMbred(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nintreductionsuccessmbred;
+}
+
+SCIP_Longint SCIPconflictGetNIntReductionFails(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nintreductionfails;
+}
+
 /** gets the percentage of weeakening candidates that was actually weakened */
 SCIP_Real SCIPconflictGetWeakeningPercentage(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -1850,6 +1884,76 @@ SCIP_Real twoNormOfCoefs(
    norm = sqrt(norm);
 
    return norm;
+}
+
+/** check if some non-binary integer variable contributes with local bounds and not with the global upper or lower bound */
+static
+SCIP_RETCODE globalContribution(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_CONFLICTROW*     row,                /**< generalized resolution row */
+   SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change */
+   SCIP_Real*            fixbounds,          /**< dense array of fixed bounds */
+   int*                  fixinds,            /**< dense array of indices of fixed variables */
+   SCIP_Bool*            global              /**< pointer to store if all variables contribute with global bounds */
+   )
+{
+   SCIP_BDCHGIDX * currbdchgidx;
+   int i;
+
+   assert(vars != NULL);
+
+   *global = TRUE;
+   currbdchgidx = SCIPbdchginfoGetIdx(currbdchginfo);
+   /***
+    * Go through the row and check if all variables contribute with global bounds
+    * if a_j < 0: check if the current lower bound is either the global lower bound or the global upper bound
+    * if a_j > 0: check if the current upper bound is either the global lower bound or the global upper bound
+    * For the variable we are resolving
+    */
+   for( i = 0; i < row->nnz; i++ )
+   {
+      SCIP_Real coef;
+      SCIP_Real bound;
+      int v;
+      v = row->inds[i];
+
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+
+      if (SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY)
+         continue;
+
+      coef = row->vals[v];
+
+      /* get the latest bound change before currbdchgidx */
+      if( coef > 0.0 )
+      {
+         if ( fixinds != NULL && fixinds[v] == 1 ) /* if the variable is fixed */
+            bound = fixbounds[v];
+         else
+            bound = SCIPgetVarUbAtIndex(set->scip, vars[v], currbdchgidx, TRUE);
+
+         if (SCIPsetIsGT(set, bound, SCIPvarGetLbGlobal(vars[v])) && SCIPsetIsLT(set, bound, SCIPvarGetUbGlobal(vars[v])))
+         {
+            *global = FALSE;
+            break;
+         }
+      }
+      else
+      {
+         if (fixinds != NULL && fixinds[v] == -1) /* if the variable is fixed */
+            bound = fixbounds[v];
+         else
+            bound = SCIPgetVarLbAtIndex(set->scip, vars[v], currbdchgidx, TRUE);
+
+         if (SCIPsetIsGT(set, bound, SCIPvarGetLbGlobal(vars[v])) && SCIPsetIsLT(set, bound, SCIPvarGetUbGlobal(vars[v])))
+         {
+            *global = FALSE;
+            break;
+         }
+      }
+   }
+   return SCIP_OKAY;
 }
 
 /** calculates the slack (maxact - rhs) for a generalized resolution row given a set of bounds and coefficients */
@@ -4387,6 +4491,17 @@ SCIP_RETCODE executeResolutionStep(
 
    SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
 
+   SCIP_Bool globalcontribution;
+   SCIP_CALL( globalContribution(set, vars, reasonrow, currbdchginfo, fixbounds, fixinds, &globalcontribution) );
+   if (!(globalcontribution))
+   {
+      conflict->nintreductioncalls++;
+      if( SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0) )
+         conflict->nintreductionsuccess++;
+      else
+         conflict->nintreductionfails++;
+   }
+
    /* if the resolvent is not infeasible under the local domain, try to reduce the reason row */
    if( SCIPsetIsGE(set, resolvedconflictrow->slack, 0.0) )
    {
@@ -4400,6 +4515,11 @@ SCIP_RETCODE executeResolutionStep(
       /* apply reduction to the reason row */
       SCIP_CALL( reduceReason(conflict, set, blkmem, vars, nvars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds) );
 
+      if (!(globalcontribution))
+      {
+         if( SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0) )
+            conflict->nintreductionsuccessmbred++;
+      }
       /* todo add some flag if the reduction really did something so that we avoid some of the calculations below */
       /* after reduction resolve again */
       SCIPsetDebugMsgPrint(set, "Resolve %s after reducing the reason row \n", SCIPvarGetName(vars[residx]));
@@ -4481,6 +4601,11 @@ SCIP_RETCODE executeResolutionStep(
                SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
                assert(SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0) || !isBinaryConflictRow(set, vars, reducedreasonrow));
 #endif
+               if (!(globalcontribution))
+               {
+                  if( SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0) )
+                     conflict->nintreductionsuccessmbred++;
+               }
                return SCIP_OKAY;
             }
 
@@ -4494,7 +4619,7 @@ SCIP_RETCODE executeResolutionStep(
          SCIP_CALL( weakenContinuousVarsConflictRow(reducedreasonrow, set, vars, residx) );
 
          /* after resolving the continuous variables we resolve once more if the constraint is binary */
-         if(isBinaryConflictRow(set, vars, reducedreasonrow))
+         if(nresconts > 0)
          {
             /* apply reduction to the reason row */
             SCIP_CALL( reduceReason(conflict, set, blkmem, vars, nvars, reducedreasonrow, currbdchginfo, residx, fixbounds, fixinds) );
@@ -4506,8 +4631,13 @@ SCIP_RETCODE executeResolutionStep(
 
             SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
 
+            if (!(globalcontribution))
+            {
+               if( SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0) )
+                  conflict->nintreductionsuccessmbred++;
+            }
             /* The resolved conflict row may not be infeasible under the local domain if the reduced reason row is not binary */
-            assert(!(*successresolution) || SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0));
+            // assert(!(*successresolution) || SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0));
          }
       }
 

@@ -4013,6 +4013,21 @@ void SCIPprintSummaryStatistics(
          proptime += SCIPconshdlrGetPropTime(conshdlr);
    }
    printf("STATS PropTime %.2f \n", proptime);
+   // SCIPmessageFPrintInfo(scip->messagehdlr, file, "PaperStats:     NIntRes   NIntFails    NIntSuccess\n");
+   // SCIPmessageFPrintInfo(scip->messagehdlr, file, "  IntReduction :  %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT"\n",
+   //    SCIPconflictGetNIntReductionCalls(scip->conflict),
+   //    SCIPconflictGetNIntReductionFails(scip->conflict),
+   //    SCIPconflictGetNIntReductionSuccess(scip->conflict),
+   //    SCIPconflictGetNIntReductionSuccessMbred(scip->conflict));
+   printf("STATS IntReductionCalls %lld\n", SCIPconflictGetNIntReductionCalls(scip->conflict));
+   printf("STATS IntReductionFails %lld\n", SCIPconflictGetNIntReductionFails(scip->conflict));
+   printf("STATS IntReductionSuccess %lld\n", SCIPconflictGetNIntReductionSuccess(scip->conflict));
+   printf("STATS IntReductionSuccessMbred %lld\n", SCIPconflictGetNIntReductionSuccessMbred(scip->conflict));
+   // write the four numbers for the reduction is a single lien
+   printf("STATS IntReduction: %lld %lld %lld %lld\n", SCIPconflictGetNIntReductionCalls(scip->conflict),
+      SCIPconflictGetNIntReductionFails(scip->conflict),
+      SCIPconflictGetNIntReductionSuccess(scip->conflict),
+      SCIPconflictGetNIntReductionSuccessMbred(scip->conflict));
 }
 
 /** outputs concurrent solver statistics

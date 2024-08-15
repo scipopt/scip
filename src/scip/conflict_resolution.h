@@ -82,6 +82,21 @@ SCIP_Longint SCIPconflictGetNResCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+SCIP_Longint SCIPconflictGetNIntReductionCalls(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+SCIP_Longint SCIPconflictGetNIntReductionSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+SCIP_Longint SCIPconflictGetNIntReductionSuccessMbred(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+SCIP_Longint SCIPconflictGetNIntReductionFails(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets the percentage of weeakening candidates that was actually weakened */
 SCIP_Real SCIPconflictGetWeakeningPercentage(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
