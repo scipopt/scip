@@ -159,6 +159,9 @@ struct SCIP_Conflict
    SCIP_Longint          nknownaborts;       /**< count the number of calls that we terminate unsucessfully for a known reason */
    SCIP_Longint          nunresolvable;      /**< count the number of calls that we terminate because we cannot resolve a continuous
                                               *   or general integer bound change */
+   SCIP_Longint          nnonlinearreason;   /**< count the number of calls that we terminate because of a nonlinear reason */
+   SCIP_Longint          nnonlinearreasonbranching;   /**< count the number of calls that we terminate because of a nonlinear reason */
+   SCIP_Longint          nalliterations;     /**< total number of iterations used in resolution conflict analysis */
    SCIP_Longint          nresmircalls;       /**< number of calls of c-MIR in resolution conflict analysis */
    SCIP_Longint          nresflowcovercalls; /**< number of calls of flow cover in resolution conflict analysis */
    SCIP_Longint          nresmir;            /**< number of successful calls of c-MIR in resolution conflict analysis */

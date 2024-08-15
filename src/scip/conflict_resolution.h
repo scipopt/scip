@@ -117,6 +117,17 @@ SCIP_Longint SCIPconflictGetNUnresolvable(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+SCIP_Longint SCIPconflictGetNNonLinearReason(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+SCIP_Longint SCIPconflictGetNNonLinearReasonBranching(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+SCIP_Longint SCIPconflictGetNAllIterations(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** create resolution constraints out of resolution sets and add them to the problem */
 SCIP_RETCODE SCIPconflictAddConflictCon(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */

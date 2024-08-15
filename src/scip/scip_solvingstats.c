@@ -4028,6 +4028,9 @@ void SCIPprintSummaryStatistics(
       SCIPconflictGetNIntReductionFails(scip->conflict),
       SCIPconflictGetNIntReductionSuccess(scip->conflict),
       SCIPconflictGetNIntReductionSuccessMbred(scip->conflict));
+   printf("STATS NonlinearReason: %lld %lld %lld\n", SCIPconflictGetNAllIterations(scip->conflict),
+      SCIPconflictGetNNonLinearReason(scip->conflict),
+      SCIPconflictGetNNonLinearReasonBranching(scip->conflict));
 }
 
 /** outputs concurrent solver statistics
