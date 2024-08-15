@@ -5017,6 +5017,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
 #endif
       conflict->nknownaborts++;
       SCIPsetDebugMsgPrint(set, "Conflict analysis not applicable since no resolvable bounds exist \n");
+      conflict->nnonlinearreason++;
       return SCIP_OKAY;
    }
 

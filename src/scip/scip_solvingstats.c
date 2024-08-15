@@ -4023,12 +4023,16 @@ void SCIPprintSummaryStatistics(
    printf("STATS IntReductionFails %lld\n", SCIPconflictGetNIntReductionFails(scip->conflict));
    printf("STATS IntReductionSuccess %lld\n", SCIPconflictGetNIntReductionSuccess(scip->conflict));
    printf("STATS IntReductionSuccessMbred %lld\n", SCIPconflictGetNIntReductionSuccessMbred(scip->conflict));
-   // write the four numbers for the reduction is a single lien
-   printf("STATS IntReduction: %lld %lld %lld %lld\n", SCIPconflictGetNIntReductionCalls(scip->conflict),
+   // write the four numbers for the reduction is a single line
+   printf("STATS-Values: ResCalls ResSuccess Long Numerics RedCalls RedFails RedSuccess RedSuccessMbred AllResIters NonLinReason NonLinReasonBranching\n");
+   printf("STATS-IntReduction: %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld\n",SCIPconflictGetNResCalls(scip->conflict),
+      SCIPconflictGetNResSuccess(scip->conflict),
+      SCIPconflictGetNIntReductionCalls(scip->conflict),
+      SCIPconflictGetNResLongConflicts(scip->conflict),
+      SCIPconflictGetNResLargeCoefs(scip->conflict),
       SCIPconflictGetNIntReductionFails(scip->conflict),
       SCIPconflictGetNIntReductionSuccess(scip->conflict),
-      SCIPconflictGetNIntReductionSuccessMbred(scip->conflict));
-   printf("STATS NonlinearReason: %lld %lld %lld\n", SCIPconflictGetNAllIterations(scip->conflict),
+      SCIPconflictGetNIntReductionSuccessMbred(scip->conflict),SCIPconflictGetNAllIterations(scip->conflict),
       SCIPconflictGetNNonLinearReason(scip->conflict),
       SCIPconflictGetNNonLinearReasonBranching(scip->conflict));
 }
