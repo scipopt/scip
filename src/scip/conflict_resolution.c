@@ -340,6 +340,31 @@ SCIP_Longint SCIPconflictGetNUnresolvable(
    return conflict->nunresolvable;
 }
 
+SCIP_Longint SCIPconflictGetNNonLinearReason(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nnonlinearreason;
+}
+SCIP_Longint SCIPconflictGetNNonLinearReasonBranching(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nnonlinearreasonbranching;
+}
+
+SCIP_Longint SCIPconflictGetNAllIterations(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   )
+{
+   assert(conflict != NULL);
+
+   return conflict->nalliterations;
+}
 
 #ifdef SCIP_DEBUG
 static int               dbgelementsoneline = 5;               /**< elements on a single line when writing rows */
@@ -556,6 +581,7 @@ void printNonResolvableReasonType(
    bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
    if (bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING)
    {
+
       SCIPsetDebugMsgPrint(set, " \t -> Not resolvable bound change: branching \n");
    }
    else if (bdchgtype == SCIP_BOUNDCHGTYPE_PROPINFER)
@@ -5086,7 +5112,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
     */
    while( TRUE )  /*lint !e716*/
    {
-
+      conflict->nalliterations++;
 #ifdef SCIP_DEBUG
       {
          SCIPsetDebugMsgPrint(set, "\nResolution Iteration: %d \n", nressteps);
@@ -5102,9 +5128,15 @@ SCIP_RETCODE conflictAnalyzeResolution(
       {
          SCIP_Bool successfixing;
 
+         SCIP_BOUNDCHGTYPE bdchgtype;
+
+         bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
+         if (bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING)
+            conflict->nnonlinearreasonbranching++;
 #ifdef SCIP_DEBUG
          printNonResolvableReasonType(set, bdchginfo);
 #endif
+         conflict->nnonlinearreason++;
          SCIP_CALL( fixBoundChangeWithoutResolving(conflict, set, vars, &bdchginfo, &bdchgdepth, nressteps,
                         fixbounds, fixinds, &successfixing) );
          if( !successfixing )
