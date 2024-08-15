@@ -4024,17 +4024,22 @@ void SCIPprintSummaryStatistics(
    printf("STATS IntReductionSuccess %lld\n", SCIPconflictGetNIntReductionSuccess(scip->conflict));
    printf("STATS IntReductionSuccessMbred %lld\n", SCIPconflictGetNIntReductionSuccessMbred(scip->conflict));
    // write the four numbers for the reduction is a single line
-   printf("STATS-Values: ResCalls ResSuccess Long Numerics RedCalls RedFails RedSuccess RedSuccessMbred AllResIters NonLinReason NonLinReasonBranching\n");
-   printf("STATS-IntReduction: %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld\n",SCIPconflictGetNResCalls(scip->conflict),
-      SCIPconflictGetNResSuccess(scip->conflict),
-      SCIPconflictGetNIntReductionCalls(scip->conflict),
-      SCIPconflictGetNResLongConflicts(scip->conflict),
-      SCIPconflictGetNResLargeCoefs(scip->conflict),
-      SCIPconflictGetNIntReductionFails(scip->conflict),
-      SCIPconflictGetNIntReductionSuccess(scip->conflict),
-      SCIPconflictGetNIntReductionSuccessMbred(scip->conflict),SCIPconflictGetNAllIterations(scip->conflict),
-      SCIPconflictGetNNonLinearReason(scip->conflict),
-      SCIPconflictGetNNonLinearReasonBranching(scip->conflict));
+   printf("STATS-Values:            %-12s %-12s %-8s %-10s %-10s %-10s %-12s %-16s %-12s %-15s %-20s\n",
+         "ResCalls", "ResSuccess", "Long", "Numerics", "RedCalls", "RedFails", "RedSuccess", "RedSuccessMbred", "AllResIters", "NonLinReason", "NonLinReasonBranching");
+
+   printf("STATS-IntReduction: %12lld %12lld %8lld %10lld %10lld %10lld %12lld %16lld %12lld %15lld %20lld\n",
+         SCIPconflictGetNResCalls(scip->conflict),
+         SCIPconflictGetNResSuccess(scip->conflict),
+         SCIPconflictGetNResLongConflicts(scip->conflict),
+         SCIPconflictGetNResLargeCoefs(scip->conflict),
+         SCIPconflictGetNIntReductionCalls(scip->conflict),
+         SCIPconflictGetNIntReductionFails(scip->conflict),
+         SCIPconflictGetNIntReductionSuccess(scip->conflict),
+         SCIPconflictGetNIntReductionSuccessMbred(scip->conflict),
+         SCIPconflictGetNAllIterations(scip->conflict),
+         SCIPconflictGetNNonLinearReason(scip->conflict),
+         SCIPconflictGetNNonLinearReasonBranching(scip->conflict));
+
 }
 
 /** outputs concurrent solver statistics
