@@ -65,6 +65,7 @@ Fixed bugs
 - check cuts for redundancy after scaling in cutTightenCoefs() and cutTightenCoefsQuad() of cuts.c
 - maintain definition of artificial integral variables in xor constraints to avoid invalidations of conflict constraints
 - free childless nodes only after the deactivation of the old focus path in treeSwitchPath() of tree.c
+- only normalize rows for column norm evaluations in heur_shiftandpropagate.c to avoid unscaled violations
 
 Performance improvements
 ------------------------
@@ -1731,7 +1732,7 @@ Miscellaneous
   different emphasis settings.
 - If a lazy bound is set to a value that is tighter than the current global bound, then the global bound is now tightened accordingly.
 
-@page RN70 Release notes for SCIP 7.0
+@page RN7 Release notes for SCIP 7
 
 @section RN703 SCIP 7.0.3
 *************************
@@ -2576,7 +2577,7 @@ Miscellaneous
 - changed the name of the variable that is added by the OSiL reader to represent the quadratic or nonlinear parts of the objective function
 - SCIP_EXPORT is now defined as __attribute__((__visibility__("default"))) if GCC and no SCIP config header is used
 
-@page RN60 Release notes for SCIP 6.0
+@page RN6 Release notes for SCIP 6
 
 @section RN602 SCIP 6.0.2
 *************************
@@ -2905,7 +2906,7 @@ Miscellaneous
 - updated CppAD to version 20180000.0
 - remove LEGACY mode, compiler needs to be C++11-compliant
 
-@page RN50 Release notes for SCIP 5.0
+@page RN5 Release notes for SCIP 5
 
 @section RN501 SCIP 5.0.1
 *************************
@@ -3325,7 +3326,7 @@ Fixed bugs
   - fixed releasing of variables in the genvbounds propagator in case the problem could be solved during presolving of a restart
   - fixed numerical issues in bound widening of variable bound constraint handler and vbound propagator during conflict analysis
 
-@page RN40 Release notes for SCIP 4.0
+@page RN4 Release notes for SCIP 4
 
 @section RN401 SCIP 4.0.1
 *************************
@@ -3825,7 +3826,7 @@ Fixed bugs
   - correct handling of implicit integer variables with fractional solution value in simplerounding heuristic
   - fixed bug in heur_octane with uninitialized ray direction
 
-@page RN32 Release notes for SCIP 3.2
+@page RN3_2 Release notes for SCIP 3.2
 
 @section RN321 SCIP 3.2.1
 *************************
@@ -4386,7 +4387,7 @@ Fixed bugs
   - fixed bug in cons_quadratic.c: do not generate linearization cuts for disabled constraints
   - fix missing clean phase of bilinear terms with zero coefficient in cons_quadratic.c
 
-@page RN31 Release notes for SCIP 3.1
+@page RN3_1 Release notes for SCIP 3.1
 
 @section RN311 SCIP 3.1.1
 *************************
@@ -5014,7 +5015,7 @@ Miscellaneous
 
 - new SCIP Optimization Suite homepages
 
-@page RN30 Release notes for SCIP 3.0
+@page RN3_0 Release notes for SCIP 3.0
 
 @section RN302 SCIP 3.0.2
 *************************
@@ -5763,7 +5764,7 @@ Miscellaneous
 - new SCIP T-shirts
 - renamed ZIB Optimization Suite to SCIP Optimization Suite
 
-@page RN21 Release notes for SCIP 2.1
+@page RN2_1 Release notes for SCIP 2.1
 
 @section RN212 SCIP 2.1.2
 *************************
@@ -6433,7 +6434,7 @@ Miscellaneous
 - The interface contains several additional callback functions and parameters for plugins. Some effort may be required to compile your old
   projects with SCIP 2.1. For details see section `Changes between version 2.0 and 2.1` in the doxygen documentation.
 
-@page RN20 Release notes for SCIP 2.0
+@page RN2_0 Release notes for SCIP 2.0
 
 @section RN202 SCIP 2.0.2
 *************************
@@ -7203,7 +7204,7 @@ Miscellaneous
   own projects with SCIP 2.0. See also `Changes between version 1.2 and 2.0` in the doxygen
   documentation for additional information.
 
-@page RN12 Release notes for SCIP 1.2
+@page RN1_2 Release notes for SCIP 1.2
 
 @section RN120 SCIP 1.2.0
 *************************
@@ -7543,7 +7544,7 @@ Fixed bugs
   - fixed potential interface bug: time limits of 0.0 are not anymore passed to the LP solver, which may have caused
     errors
 
-@page RN11 Release notes for SCIP 1.1
+@page RN1_1 Release notes for SCIP 1.1
 
 @section RN110 SCIP 1.1.0
 *************************
@@ -7940,7 +7941,7 @@ Fixed bugs
   - fixed obvious bug in linear constraint data sorting. Most part of the code assumed pure index sorting, but in fact, it
     was sorted by variable type as first criterion and index as second criterion.
 
-@page RN10 Release notes for SCIP 1.0
+@page RN1_0 Release notes for SCIP 1.0
 
 @section RN100 SCIP 1.0.0
 *************************
@@ -8187,7 +8188,7 @@ Fixed bugs
   - fixed bug with primal heuristics reducing the cutoff bound such that the current node is cut off
   - fixed bug in oneopt heuristic: must not be called on pseudo nodes if continuous variables are present
 
-@page RN09 Release notes for SCIP 0.9
+@page RN0_9 Release notes for SCIP 0.9
 
 @section RN090 SCIP 0.9.0
 *************************
@@ -8366,7 +8367,7 @@ Fixed bugs
   - fixed bug in cmir cut separator with weights fixed to zero, thus making the current aggregation invalid
   - fixed bug in cmir cut separator with wrong calculation of cut efficacies
 
-@page RN08 Release notes for SCIP 0.8
+@page RN0_8 Release notes for SCIP 0.8
 
 @section RN082 SCIP 0.8.2
 *************************
@@ -8957,7 +8958,7 @@ Fixed bugs
   - fixed bug in clique separator that reduced performance
   - increased performance of clique separator by allowing only a certain number of zero-weighted fill ins
 
-@page RN07 Release notes for SCIP 0.7
+@page RN0_7 Release notes for SCIP 0.7
 
 @section RN079 SCIP 0.7.9
 *************************
