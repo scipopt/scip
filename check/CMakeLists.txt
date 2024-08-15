@@ -493,6 +493,7 @@ set(pairs_Issue
     "instances/Issue/3722.cip\;1200008400.00755\;default"
     "instances/Issue/3723.cip\;0\;default"
     "instances/Issue/3727.cip\;1922\;vanillafullstrong_reduced_presolving_separating_heuristics"
+    "instances/Issue/3728.cip\;0\;reduced_presolving_heuristics"
 )
 
 #
