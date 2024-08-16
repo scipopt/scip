@@ -111,7 +111,20 @@ SCIP_Real scoring(
          SCIP_Real efficacy;
 
          if( intsupportweight > 0.0 )
-            intsupport = intsupportweight * SCIPgetRowNumIntCols(scip, cuts[i]) / (SCIP_Real) SCIProwGetNNonz(cuts[i]);
+         {
+            int nIntegral = 0;
+            SCIP_COL ** rowcols = SCIProwGetCols(cuts[i]);
+            for( int j = 0; j < SCIProwGetNNonz(cuts[i]); ++j )
+            {
+               SCIP_VAR * var = SCIPcolGetVar(rowcols[j]);
+               if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER){
+                  ++nIntegral;
+               }
+            }
+            double fraction = (SCIP_Real) nIntegral / (SCIP_Real) SCIProwGetNNonz(cuts[i]);
+            intsupport = intsupportweight * fraction;
+//            intsupport = intsupportweight * SCIPgetRowNumIntCols(scip, cuts[i]) / (SCIP_Real) SCIProwGetNNonz(cuts[i]);
+         }
          else
             intsupport = 0.0;
 

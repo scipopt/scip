@@ -357,6 +357,8 @@ SCIP_RETCODE findImpliedIntegers(
    SCIP_NETMATDEC * transdec = NULL;
    SCIP_CALL(SCIPnetmatdecCreate(SCIPblkmem(scip),&transdec,comp->nmatrixcols,comp->nmatrixrows));
 
+   int networkcomponents = 0;
+   int transposednetworkcomponents = 0;
    int planarcomponents = 0;
    int goodcomponents = 0;
    int nbadnumerics = 0;
@@ -446,7 +448,6 @@ SCIP_RETCODE findImpliedIntegers(
       if( !componentnetwork )
       {
          SCIPnetmatdecRemoveComponent(dec,&comp->componentrows[startrow], nrows, &comp->componentcols[startcol], ncols);
-         ++nnonnetwork;
       }
 
       SCIP_Bool componenttransnetwork = TRUE;
@@ -500,6 +501,10 @@ SCIP_RETCODE findImpliedIntegers(
       ++goodcomponents;
       if(componentnetwork && componenttransnetwork){
          ++planarcomponents;
+      }else if(componentnetwork){
+         ++networkcomponents;
+      }else{
+         ++transposednetworkcomponents;
       }
       for( int i = startcol; i < startcol + ncols; ++i )
       {
@@ -513,8 +518,9 @@ SCIP_RETCODE findImpliedIntegers(
       }
    }
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH,NULL,
-                   "implied integer components: %d (%d planar) / %d (disqualified: %d by integrality, %d by numerics, %d not network) \n",
-                   goodcomponents,planarcomponents,comp->ncomponents,nbadintegrality,nbadnumerics,nnonnetwork);
+                   "implied integer components: %d (%d planar, %d network, %d tr. network) / %d (disqualified: %d by integrality, %d by numerics, %d not network) \n",
+                   goodcomponents,planarcomponents,networkcomponents,transposednetworkcomponents,
+                   comp->ncomponents,nbadintegrality,nbadnumerics,nnonnetwork);
 
    SCIPfreeBufferArray(scip,&tempIdxArray);
    SCIPfreeBufferArray(scip,&tempValArray);
