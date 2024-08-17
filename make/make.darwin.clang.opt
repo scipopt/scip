@@ -2,6 +2,8 @@ FLAGS		+=	-DNDEBUG -DSCIP_ROUNDING_FE
 OFLAGS		+=	-O3 -mtune=native -fomit-frame-pointer
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes -flto
 LDFLAGS		+=	-flto
+ifeq ($(SHARED),true)
 LIBBUILDFLAGS	+=	-flto
+endif
 # skip -flto for C++ for now to avoid warnings on violated C++ ODR
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing

@@ -2,6 +2,8 @@ FLAGS		+=	-DNDEBUG -DSCIP_ROUNDING_FE
 OFLAGS		+=	-O3 -fomit-frame-pointer
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -flto=auto -fno-fat-lto-objects
 LDFLAGS		+=	-flto=auto -Wno-stringop-overflow -Wno-alloc-size-larger-than
+ifeq ($(SHARED),true)
 LIBBUILDFLAGS	+=	-flto=auto
+endif
 # skip -flto for C++ for now to avoid warnings on violated C++ ODR
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing
