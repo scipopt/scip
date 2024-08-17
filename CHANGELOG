@@ -279,7 +279,7 @@ Build system
   undefined behavior sanitizer is always enabled if not `SANITIZE=off` (the default)
 - scip-config.cmake now defines a variable SCIP_COMPILE_FLAGS, which could be used to compile code that builds against SCIP via cmake;
   currently, this only passes on the sanitizer flags that were used to build libscip
-- enabled link-time-optimization for Release builds if supported by compiler, use -DENABLE_LTO=off to disable
+- enabled link-time-optimization for Release and RelWithDebInfo builds if supported by compiler, use -DLTO=off to disable
 
 Fixed bugs
 ----------
