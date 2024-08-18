@@ -1,12 +1,13 @@
 FLAGS		+=	-DNDEBUG -DSCIP_ROUNDING_FE
 OFLAGS		+=	-O3 -fomit-frame-pointer
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing
+
 ifeq ($(LTO),true)
   CFLAGS	+=	-flto=auto -fno-fat-lto-objects
-  LDFLAGS	+=	-flto=auto -Wno-stringop-overflow -Wno-alloc-size-larger-than
+  CXXFLAGS	+=	-flto=auto -fno-fat-lto-objects
+  LDFLAGS	+=	-flto=auto -Wno-stringop-overflow -Wno-alloc-size-larger-than -Wno-odr
 ifeq ($(SHARED),true)
-  LIBBUILDFLAGS +=	-flto=auto
+  LIBBUILDFLAGS +=	-flto=auto -Wno-stringop-overflow -Wno-alloc-size-larger-than -Wno-odr
 endif
-# skip -flto for C++ for now to avoid warnings on violated C++ ODR
 endif
-CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing
