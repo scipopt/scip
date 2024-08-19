@@ -7392,7 +7392,7 @@ SCIP_RETCODE branching(
    /* here we include fractionality of integer variables into the branching score
     * but if we know there will be no fractional integer variables, then we can shortcut and turn this off
     */
-   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, SCIPgetNLPBranchCands(scip) > 0, sol, &selected) );
+   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, sol == NULL && SCIPgetNLPBranchCands(scip) > 0, sol, &selected) );
    assert(selected != NULL);
    assert(selected->expr != NULL);
 
