@@ -813,6 +813,7 @@ SCIP_RETCODE freeVarExprs(
 
    assert(consdata->varexprs != NULL);
    assert(consdata->nvarexprs >= 0);
+   assert(!consdata->catchedevents);
 
    /* release variable expressions */
    for( i = 0; i < consdata->nvarexprs; ++i )
