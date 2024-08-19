@@ -6939,7 +6939,7 @@ void scoreBranchingCandidates(
             SCIP_Real solval;
             SCIP_Real rounded;
 
-            solval = SCIPgetSolVal(scip, NULL, cands[c].var);
+            solval = SCIPgetSolVal(scip, sol, cands[c].var);
             rounded = SCIPround(scip, solval);
 
             cands[c].fractionality = REALABS(solval - rounded);
@@ -7038,7 +7038,7 @@ void scoreBranchingCandidates(
                         else if( SCIPgetSolVal(scip, sol, var) <= SCIPadjustedVarUb(scip, var, brpoint) )
                            pscostdown = SCIPgetVarPseudocostVal(scip, var, 0.0);
                         else
-                           pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPgetSolVal(scip, NULL, var) - SCIPadjustedVarUb(scip, var, brpoint)));
+                           pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPgetSolVal(scip, sol, var) - SCIPadjustedVarUb(scip, var, brpoint)));
                         break;
                      default :
                         SCIPerrorMessage("pscost update strategy %c unknown\n", strategy);
@@ -7061,10 +7061,10 @@ void scoreBranchingCandidates(
                      case 'l' :
                         if( SCIPisInfinity(scip, -SCIPgetSolVal(scip, sol, var)) )
                            pscostup = SCIP_INVALID;
-                        else if( SCIPgetSolVal(scip, NULL, var) >= SCIPadjustedVarLb(scip, var, brpoint) )
+                        else if( SCIPgetSolVal(scip, sol, var) >= SCIPadjustedVarLb(scip, var, brpoint) )
                            pscostup = SCIPgetVarPseudocostVal(scip, var, 0.0);
                         else
-                           pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarLb(scip, var, brpoint) - SCIPgetSolVal(scip, NULL, var) );
+                           pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarLb(scip, var, brpoint) - SCIPgetSolVal(scip, sol, var) );
                         break;
                      default :
                         SCIPerrorMessage("pscost update strategy %c unknown\n", strategy);
@@ -7093,7 +7093,7 @@ void scoreBranchingCandidates(
             SCIP_Real pscostup;
             SCIP_Real solval;
 
-            solval = SCIPgetSolVal(scip, NULL, cands[c].var);
+            solval = SCIPgetSolVal(scip, sol, cands[c].var);
 
             /* the calculation for pscostdown/up follows SCIPgetVarPseudocostScore(),
              * i.e., set solvaldelta to the (negated) difference between variable value and rounded down value for pscostdown
@@ -7250,6 +7250,7 @@ SCIP_RETCODE selectBranchingCandidate(
    BRANCHCAND*           cands,              /**< branching candidates */
    int                   ncands,             /**< number of candidates */
    SCIP_Bool             considerfracnl,     /**< whether to consider fractionality for spatial branching candidates */
+   SCIP_SOL*             sol,                /**< relaxation solution, NULL for LP */
    BRANCHCAND**          selected            /**< buffer to store selected branching candidates */
 )
 {
@@ -7276,7 +7277,7 @@ SCIP_RETCODE selectBranchingCandidate(
    assert(conshdlrdata != NULL);
 
    /* compute additional scores on branching candidates and weighted score */
-   scoreBranchingCandidates(scip, conshdlr, cands, ncands, considerfracnl, NULL);
+   scoreBranchingCandidates(scip, conshdlr, cands, ncands, considerfracnl, sol);
 
    /* sort candidates by weighted score */
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, ncands) );
@@ -7391,7 +7392,7 @@ SCIP_RETCODE branching(
    /* here we include fractionality of integer variables into the branching score
     * but if we know there will be no fractional integer variables, then we can shortcut and turn this off
     */
-   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, SCIPgetNLPBranchCands(scip) > 0, &selected) );
+   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, SCIPgetNLPBranchCands(scip) > 0, sol, &selected) );
    assert(selected != NULL);
    assert(selected->expr != NULL);
 
@@ -8079,9 +8080,9 @@ SCIP_RETCODE branchingIntegralOrNonlinear(
 
    /* select a variable for branching
     * to keep things separate, do not include fractionality of integer variables into scores of spatial branching candidates
-    * the same variables appear among the candides for branching on integrality, where its fractionality is considered
+    * the same variables appear among the candidates for branching on integrality, where its fractionality is considered
     */
-   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, FALSE, &selected) );
+   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, FALSE, NULL, &selected) );
    assert(selected != NULL);
 
    if( selected->expr == NULL )
