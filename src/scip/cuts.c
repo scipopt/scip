@@ -3112,7 +3112,7 @@ SCIP_RETCODE cutsTransformMIR(
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   firstcontvar = nvars - SCIPgetNContVars(scip);
+   firstcontvar = nvars - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
 
    /* determine the best bounds for the continuous variables */
    for( i = 0; i < *nnz && cutinds[i] >= firstcontvar; ++i )
@@ -3441,7 +3441,7 @@ SCIP_RETCODE cutsRoundMIR(
     * (due to sorting in cutsTransformMIR the ordering is continuous before integral)
     */
 
-   firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
    vars = SCIPgetVars(scip);
 #ifndef NDEBUG
    /*in debug mode check that all continuous variables of the aggrrow come before the integral variables */
@@ -4271,7 +4271,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    *success = FALSE;
    nvars = SCIPgetNVars(scip);
-   firstcontvar = nvars - SCIPgetNContVars(scip);
+   firstcontvar = nvars - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
    vars = SCIPgetVars(scip);
 
    /* allocate temporary memory */
