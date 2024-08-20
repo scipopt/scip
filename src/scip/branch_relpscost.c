@@ -107,7 +107,7 @@
 #define DEFAULT_DYNAMICLOOKAHEAD TRUE        /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
 #define DEFAULT_GEOMETRICMEANGAINS TRUE      /**< should the geometric mean be used instead of the arithmetic mean for min and max gain? */
 #define DEFAULT_LOOKAHEAD_USEBAYESIAN FALSE  /**< should the update of the parameter estimation use the Bayesian rule or a simple weighted combination? */
-#define DEFAULT_DYNAMICLOOKDISTRIBUTION PARETODISTRIBUTION   /**< which distribution should be used for dynamic lookahead? 0=exponential, 1=Pareto, 2=log-normal */
+#define DEFAULT_DYNAMICLOOKDISTRIBUTION LOGNORMALDISTRIBUTION   /**< which distribution should be used for dynamic lookahead? 0=exponential, 1=Pareto, 2=log-normal */
 #define DEFAULT_RANDINITORDER    FALSE       /**< should slight perturbation of scores be used to break ties in the prior scores? */
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE   /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 #define DEFAULT_DYNAMICWEIGHTS   TRUE        /**< should the weights of the branching rule be adjusted dynamically during solving based
@@ -138,7 +138,8 @@ struct SCIP_BranchruleData
    SCIP_Real             currmeandualgain;   /**< current mean dual gain in current node */
    SCIP_Real             maxmeangain;        /**< maximal dual gain of all strong branchings */
    SCIP_Real             minmeangain;        /**< minimal dual gain of all strong branchings */
-   SCIP_Real             sumlogmeangains;    /**< sum of logarithms of all mean dual gains */
+   SCIP_Real             sumlogmeangains;    /**< sum of logarithms of all means of the dual gains */
+   SCIP_Real             logstdevgain;       /**< logarithm of the standard deviation of the means of the dual gains */
    SCIP_Real             nzerogains;         /**< number of zero dual gains */
    int                   ndualgains;         /**< number of dual gains used in the computation of the mean */
    int                   currndualgains;     /**< number of dual gains used in the computation of the mean from current node */
@@ -796,6 +797,11 @@ SCIP_RETCODE updateMinMaxMeanGain(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata = SCIPbranchruleGetData(branchrule);
+   SCIP_Real logmeangain;
+   SCIP_Real oldlogmeangain;
+   SCIP_Real oldlogstdevgain;
+
+   assert(branchruledata != NULL);
 
    /* TodoSB think about large/infinite gains */
    if (SCIPisRelGE(scip, downgain, 1.0e15) || SCIPisRelGE(scip, upgain, 1.0e15))
@@ -816,11 +822,27 @@ SCIP_RETCODE updateMinMaxMeanGain(
 
    branchruledata->currmeandualgain = ((SCIP_Real) branchruledata->currndualgains /  (branchruledata->currndualgains + 1) ) * branchruledata->currmeandualgain + meangain / ( branchruledata->currndualgains + 1 ) ;
 
+   ++branchruledata->currndualgains;
+
+   if(branchruledata->currndualgains > 1)
+   {
+      oldlogstdevgain = branchruledata->logstdevgain;
+      oldlogmeangain = branchruledata->sumlogmeangains / (branchruledata->currndualgains - 1);
+   }
+
    branchruledata->sumlogmeangains += log(meangain);
    /* update the max mean gain */
+   logmeangain = branchruledata->sumlogmeangains / branchruledata->currndualgains;
+
+   int ngains = branchruledata->currndualgains;
+
+   if (ngains == 1)
+      branchruledata->logstdevgain = pow((log(meangain) - logmeangain), 2 );
+   else
+      branchruledata->logstdevgain = ( (ngains - 2)  * oldlogstdevgain  + (ngains - 1) * pow( oldlogmeangain - logmeangain, 2) +  pow((log(meangain) - logmeangain), 2 ) ) / (ngains - 1) ;
+
    branchruledata->maxmeangain = MAX(branchruledata->maxmeangain, meangain);
    branchruledata->minmeangain = MIN(branchruledata->minmeangain, meangain);
-   ++branchruledata->currndualgains;
    SCIPdebugMsg(scip, " -> downgain: %g upgain: %g minmeangain: %g maxmeangain: %g mean-of-two: %g mean-of-%d-dual-gains: %g\n",downgain, upgain, branchruledata->minmeangain, branchruledata->maxmeangain, meangain, branchruledata->currndualgains, branchruledata->currmeandualgain);
 
    return SCIP_OKAY;
@@ -877,7 +899,7 @@ SCIP_Real cdfProbability(
    else
    {
       assert(distributioncdf == LOGNORMALDISTRIBUTION);
-      return zeroprob + 0.5 * erfc(-(log(proposedgain) - logmeangain) / (logstdevgain * SQRT(2.0)));
+      return zeroprob + (1.0 - zeroprob)  * 0.5 * erfc(-(log(proposedgain) - logmeangain) / (logstdevgain * SQRT(2.0)));
    }
 }
 
@@ -929,8 +951,8 @@ SCIP_Real expectedTreeSize(
 
       if( pbetter < 1e-5 )
          return SCIPinfinity(scip);
-      
-      SCIP_Real p; 
+
+      SCIP_Real p;
       p = 0.0;
       while (pbetter >= 1e-5 && ptotal + pnotbetter < 1.0)
       {
@@ -1031,7 +1053,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
       return TRUE;
 
    /* TodoSB: if we do not have a large enough sample to estimate the rate of the exponential distribution we continue with strong branching */
-   if ( branchruledata->currndualgains < 5 )
+   if ( branchruledata->currndualgains < branchruledata->minsamplesize )
       return TRUE;
 
    maxmeangain = branchruledata->maxmeangain;
@@ -1062,31 +1084,13 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    }
    else if (branchruledata->dynamiclookdistribution == EXPONENTIALDISTRIBUTION)
    {
-      /* update the rate for the exponential distribution */
-      if (branchruledata->ndualgains == 0 || branchruledata->currndualgains >= branchruledata->minsamplesize )
-      {
-         lambda = 1 / (branchruledata->currmeandualgain);
-      }
-      else
-      {
-         int npreviousgains = MAX(branchruledata->minsamplesize - branchruledata->currndualgains, 0);
-
-         int total = branchruledata->minsamplesize;
-         if ( branchruledata->lookaheadbayesian )
-         {
-            lambda = ((SCIP_Real) branchruledata->currndualgains + 1.0) / (branchruledata->meandualgain + branchruledata->currndualgains * branchruledata->currmeandualgain);
-         } else {
-            SCIP_Real oldgainfrac = (SCIP_Real) npreviousgains / total;
-            SCIP_Real mean = oldgainfrac * branchruledata->meandualgain + (1.0 - oldgainfrac) * branchruledata->currmeandualgain;
-            lambda = 1 / mean;
-         }
-      }
+      lambda = 1 / (branchruledata->currmeandualgain);
    }
    else
    {
       assert(branchruledata->dynamiclookdistribution == LOGNORMALDISTRIBUTION);
-      // TODOSB CONTINUE and compute lognormal distribution parameters here
-      // logmeangain, logstdevgain
+      logmeangain = branchruledata->sumlogmeangains / branchruledata->currndualgains;
+      logstdevgain = branchruledata->logstdevgain;
    }
 
    /* TodoSB too large depth can cause overflow. Set limit of 50 */
@@ -2383,6 +2387,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
    branchruledata->maxmeangain = -SCIPinfinity(scip);
    branchruledata->minmeangain = SCIPinfinity(scip);
    branchruledata->sumlogmeangains = 0.0;
+   branchruledata->logstdevgain = 0.0;
    branchruledata->nzerogains = 0;
    if( branchruledata->ndualgains + branchruledata->currndualgains > 0 )
    {
@@ -2470,6 +2475,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    branchruledata->maxmeangain = -SCIPinfinity(scip);
    branchruledata->minmeangain = SCIPinfinity(scip);
    branchruledata->sumlogmeangains = 0.0;
+   branchruledata->logstdevgain = 0.0;
    branchruledata->nzerogains = 0;
 
    /* include branching rule */
