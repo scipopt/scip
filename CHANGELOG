@@ -22,6 +22,7 @@ Fixed bugs
 - expression handler for absolute value computes now also a cut when one of the bounds is infinite as long as the sign of the argument is known
 - check for more data to be freed before modifying nonlinear constraints in SCIPaddExprNonlinear()
 - allow for terms with zero coefficients when checking sum in SCIPexprCheckQuadratic()
+- do not abort writing of constraints to lp/pip files (and forget to free buffer memory) when encountering unsupported nonlinear constraint
 
 Performance improvements
 ------------------------
