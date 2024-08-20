@@ -807,7 +807,7 @@ SCIP_RETCODE freeVarExprs(
 
    assert(consdata != NULL);
 
-   /* skip if we have stored the variable expressions already*/
+   /* skip if we have stored the variable expressions already */
    if( consdata->varexprs == NULL )
       return SCIP_OKAY;
 
@@ -14095,7 +14095,7 @@ SCIP_RETCODE SCIPaddExprNonlinear(
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
-      SCIPerrorMessage("SCIPaddLinearVarNonlinear can only be called in problem stage.\n");
+      SCIPerrorMessage("SCIPaddExprNonlinear can only be called in problem stage.\n");
       return SCIP_INVALIDCALL;
    }
 
