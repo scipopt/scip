@@ -4,10 +4,15 @@ CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing
 
 ifeq ($(LTO),true)
-  CFLAGS	+=	-flto=auto -fno-fat-lto-objects
-  CXXFLAGS	+=	-flto=auto -fno-fat-lto-objects
-  LDFLAGS	+=	-flto=auto -Wno-stringop-overflow -Wno-alloc-size-larger-than -Wno-odr
+  # for GCC < 10, use just -flto, otherwise use -flto=auto, which should give faster link times
+  # -fno-fat-lto-objects (since GCC 5) should improve compilation time a bit
+  GCCVERSION := $(shell $(CC) -dumpversion | cut -f1 -d.)
+  LTOFLAG := $(word $(shell expr \( $(GCCVERSION) \>= 10 \) + 1), -flto -flto=auto)
+
+  CFLAGS	+=	$(LTOFLAG) -fno-fat-lto-objects
+  CXXFLAGS	+=	$(LTOFLAG) -fno-fat-lto-objects
+  LDFLAGS	+=	$(LTOFLAG) -Wno-stringop-overflow -Wno-alloc-size-larger-than -Wno-odr
 ifeq ($(SHARED),true)
-  LIBBUILDFLAGS +=	-flto=auto -Wno-stringop-overflow -Wno-alloc-size-larger-than -Wno-odr
+  LIBBUILDFLAGS +=	$(LTOFLAG) -Wno-stringop-overflow -Wno-alloc-size-larger-than -Wno-odr
 endif
 endif
