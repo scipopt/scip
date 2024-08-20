@@ -66,6 +66,7 @@ Fixed bugs
 - maintain definition of artificial integral variables in xor constraints to avoid invalidations of conflict constraints
 - free childless nodes only after the deactivation of the old focus path in treeSwitchPath() of tree.c
 - only normalize rows for column norm evaluations in heur_shiftandpropagate.c to avoid unscaled violations
+- expression handler for absolute value computes now also a cut when one of the bounds is infinite as long as the sign of the argument is known
 
 Performance improvements
 ------------------------
