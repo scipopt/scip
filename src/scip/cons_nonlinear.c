@@ -8107,7 +8107,8 @@ SCIP_RETCODE branchingIntegralOrNonlinear(
 static
 SCIP_Bool branchingIntegralFirst(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SOL*             sol                 /**< solution to be enforced */
 )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -8116,12 +8117,42 @@ SCIP_Bool branchingIntegralFirst(
    assert(conshdlrdata != NULL);
 
    /* if LP still unbounded, then work on nonlinear constraints first */
-   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+   if( sol == NULL && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       return FALSE;
 
-   /* no branching in cons_integral if no fractional integer variables */
-   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 || SCIPgetNLPBranchCands(scip) == 0 )
+   /* no branching in cons_integral if no integer variables */
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
       return FALSE;
+
+   /* no branching in cons_integral if LP solution not fractional */
+   if( sol == NULL && SCIPgetNLPBranchCands(scip) == 0 )
+      return FALSE;
+
+   /* no branching in cons_integral if relax solution not fractional */
+   if( sol != NULL )
+   {
+      SCIP_Bool isfractional = FALSE;
+      SCIP_VAR** vars;
+      int nbinvars;
+      int nintvars;
+      int i;
+
+      vars = SCIPgetVars(scip);
+      nbinvars = SCIPgetNBinVars(scip);
+      nintvars = SCIPgetNIntVars(scip);
+
+      for( i = 0; i < nbinvars + nintvars && !isfractional; ++i )
+      {
+         assert(vars[i] != NULL);
+         assert(SCIPvarIsIntegral(vars[i]));
+
+         if( !SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[i])) )
+            isfractional = TRUE;
+      }
+
+      if( !isfractional )
+         return FALSE;
+   }
 
    /* branchmixfractional being infinity means that integral should always go first */
    if( SCIPisInfinity(scip, conshdlrdata->branchmixfractional) )
@@ -8345,7 +8376,7 @@ SCIP_RETCODE consEnfo(
    int nnotify;
    int c;
 
-   if( sol == NULL && branchingIntegralFirst(scip, conshdlr) )
+   if( branchingIntegralFirst(scip, conshdlr, sol) )
    {
       /* let cons_integral handle enforcement */
       *result = SCIP_INFEASIBLE;
