@@ -1634,9 +1634,9 @@ void invalidateSolution(SCIP_LPI* lpi)
 char* initSpxDesc( );
 
 #if (SOPLEX_SUBVERSION > 0)
-   const static char spxname[20]= {'S', 'o', 'p', 'l', 'e', 'x', '1', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '.', SOPLEX_SUBVERSION + '0'};
+   const static char spxname[20]= {'S', 'o', 'p', 'l', 'e', 'x', '1', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '.', SOPLEX_SUBVERSION + '0', '\0'};
 #else
-   const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', '1', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0'};
+   const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', '1', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '\0'};
 #endif
 
 static char* spxdesc = initSpxDesc();

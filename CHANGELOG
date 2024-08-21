@@ -23,6 +23,7 @@ Fixed bugs
 - check for more data to be freed before modifying nonlinear constraints in SCIPaddExprNonlinear()
 - allow for terms with zero coefficients when checking sum in SCIPexprCheckQuadratic()
 - do not abort writing of constraints to lp/pip files (and forget to free buffer memory) when encountering unsupported nonlinear constraint
+- fixed that names and description of the LPI's were not null-terminated
 
 Performance improvements
 ------------------------
