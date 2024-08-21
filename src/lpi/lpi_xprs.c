@@ -655,7 +655,7 @@ void invalidateSolution(
 #ifdef _Thread_local
 static _Thread_local char xprsname[100];
 #else
-static char xprsname[] = {'X', 'p', 'r', 'e', 's', 's', ' ', '0' + XPVERSION / 10, '0' + XPVERSION % 10};
+static char xprsname[] = {'X', 'p', 'r', 'e', 's', 's', ' ', '0' + XPVERSION / 10, '0' + XPVERSION % 10, '\0'};
 #endif
 /** gets name and version of LP solver */
 const char* SCIPlpiGetSolverName(

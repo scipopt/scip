@@ -1022,6 +1022,7 @@ static const char cpxname[]= {'C', 'P', 'L', 'E', 'X', ' ',
 #else
    (CPX_VERSION / 100) + '0', '.', ((CPX_VERSION % 100) / 10) + '0', '.', (CPX_VERSION % 10) + '0', '.', CPX_SUBVERSION + '0'
 #endif
+   , '\0'
 };
 
 
