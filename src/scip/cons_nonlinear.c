@@ -813,6 +813,7 @@ SCIP_RETCODE freeVarExprs(
 
    assert(consdata->varexprs != NULL);
    assert(consdata->nvarexprs >= 0);
+   assert(!consdata->catchedevents);
 
    /* release variable expressions */
    for( i = 0; i < consdata->nvarexprs; ++i )
@@ -14113,12 +14114,13 @@ SCIP_RETCODE SCIPaddExprNonlinear(
    assert(consdata != NULL);
    assert(consdata->expr != NULL);
 
-   /* we should not have collected additional data for it
-    * if some of these asserts fail, we may have to remove it and add some code to keep information up to date
+   /* free quadratic representation, if any is stored */
+   SCIPfreeExprQuadratic(scip, consdata->expr);
+
+   /* free varexprs in consdata, in case they have been stored
+    * (e.g., by a call to consGet(N)VarsNonlinear)
     */
-   assert(consdata->nvarexprs == 0);
-   assert(consdata->varexprs == NULL);
-   assert(!consdata->catchedevents);
+   SCIP_CALL( freeVarExprs(scip, consdata) );
 
    /* copy expression, thereby map variables expressions to already existing variables expressions in var2expr map, or augment var2expr map */
    SCIP_CALL( SCIPduplicateExpr(scip, expr, &exprowned, mapexprvar, conshdlr, exprownerCreate, (void*)conshdlr) );
