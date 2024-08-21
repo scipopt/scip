@@ -3903,14 +3903,14 @@ SCIP_RETCODE SCIPwriteLp(
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
             SCIPinfoMessage(scip, file, ";\n");
-
-            return SCIP_OKAY;
          }
+         else
+         {
+            SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprNonlinear(cons),
+               SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed) );
 
-         SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprNonlinear(cons),
-            SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed) );
-
-         consExpr[nConsExpr++] = cons;
+            consExpr[nConsExpr++] = cons;
+         }
       }
       else if( strcmp(conshdlrname, "and") == 0 )
       {

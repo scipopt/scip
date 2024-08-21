@@ -2959,29 +2959,28 @@ SCIP_RETCODE SCIPwritePip(
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
             SCIPinfoMessage(scip, file, ";\n");
-
-            SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedexpr) );
-            return SCIP_OKAY;
-         }
-
-         /* check whether constraint is even quadratic
-          * (we could also skip this and print as polynomial, but the code exists already)
-          */
-         SCIP_CALL( SCIPcheckExprQuadratic(scip, simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons), &isquadratic) );
-         if( isquadratic )
-            isquadratic = SCIPexprAreQuadraticExprsVariables(simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons));
-
-         if( isquadratic )
-         {
-            SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons),
-               SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed) );
          }
          else
          {
-            SCIP_CALL( printNonlinearCons(scip, file, consname, simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons), SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons)) );
-         }
+            /* check whether constraint is even quadratic
+             * (we could also skip this and print as polynomial, but the code exists already)
+             */
+            SCIP_CALL( SCIPcheckExprQuadratic(scip, simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons), &isquadratic) );
+            if( isquadratic )
+               isquadratic = SCIPexprAreQuadraticExprsVariables(simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons));
 
-         consNonlinear[nConsNonlinear++] = cons;
+            if( isquadratic )
+            {
+               SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons),
+                  SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed) );
+            }
+            else
+            {
+               SCIP_CALL( printNonlinearCons(scip, file, consname, simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons), SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons)) );
+            }
+
+            consNonlinear[nConsNonlinear++] = cons;
+         }
 
          if( simplifiedexpr != NULL )
          {
