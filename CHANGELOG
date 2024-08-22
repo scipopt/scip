@@ -24,6 +24,7 @@ Fixed bugs
 - allow for terms with zero coefficients when checking sum in SCIPexprCheckQuadratic()
 - do not abort writing of constraints to lp/pip files (and forget to free buffer memory) when encountering unsupported nonlinear constraint
 - fixed that names and description of the LPI's were not null-terminated
+- fixed decision on when to enforce nonlinear constraints on relaxation solutions if integer variables present
 
 Performance improvements
 ------------------------
