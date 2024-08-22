@@ -1898,7 +1898,7 @@ void SCIPgetSolOrigObjExact(
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolOrigObjExact", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
+   SCIP_CALL_ABORT( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
    if( sol != NULL )
    {
       SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob, tmp);
@@ -1910,12 +1910,12 @@ void SCIPgetSolOrigObjExact(
             FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
       if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       {
-         SCIPlpExactGetObjval(scip->lp, scip->set, tmp);
+         SCIPlpExactGetObjval(scip->lpexact, scip->set, tmp);
          SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, res);
       }
       else
       {
-         SCIPlpExactGetPseudoObjval(scip->lp, scip->set, tmp);
+         SCIPlpExactGetPseudoObjval(scip->lpexact, scip->set, tmp);
          SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, res);
       }
    }
