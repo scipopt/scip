@@ -14164,6 +14164,14 @@ SCIP_RETCODE SCIPvarResetBounds(
    SCIP_CALL( SCIPvarChgLbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->data.original.origdom.lb) );
    SCIP_CALL( SCIPvarChgUbLocal(var, blkmem, set, stat, NULL, NULL, NULL, var->data.original.origdom.ub) );
 
+   if( var->exactdata != NULL )
+   {
+      SCIP_CALL( SCIPvarChgLbGlobalExact(var, blkmem, set, stat, NULL, NULL, NULL, NULL, var->exactdata->origdom.lb) );
+      SCIP_CALL( SCIPvarChgUbGlobalExact(var, blkmem, set, stat, NULL, NULL, NULL, NULL, var->exactdata->origdom.ub) );
+      SCIP_CALL( SCIPvarChgLbLocalExact(var, blkmem, set, stat, NULL, NULL, NULL, var->exactdata->origdom.lb) );
+      SCIP_CALL( SCIPvarChgUbLocalExact(var, blkmem, set, stat, NULL, NULL, NULL, var->exactdata->origdom.ub) );
+   }
+
    /* free the global and local holelists and duplicate the original ones */
    /**@todo this has also to be called recursively with methods similar to SCIPvarChgLbGlobal() */
    holelistFree(&var->glbdom.holelist, blkmem);
