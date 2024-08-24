@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   bounding_exact.h
+/**@file   bounding_exact.c
  * @brief  safe exact rational bounding methods
  * @author Leon Eifler
  *

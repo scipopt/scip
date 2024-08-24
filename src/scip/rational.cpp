@@ -1477,7 +1477,7 @@ SCIP_Bool RatIsAbsInfinity(
    return rational->isinf;
 }
 
-/** check if the rational is negative infinity */
+/** check if the rational is integral*/
 SCIP_Bool RatIsIntegral(
    SCIP_Rational*        rational            /**< the rational to check */
    )

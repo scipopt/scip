@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_linear.c
+/**@file   cons_exactlp.c
  * @brief Constraint handler for exact linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Leon Eifler
  * @author Sander Borst
@@ -18874,7 +18874,7 @@ void SCIPgetActivityExactLinear(
    if( consdata->rowexact != NULL )
       SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, FALSE, ret);
    else
-      consdataGetActivity(scip, consdata, sol, FALSE, ret);
+      consdataGetActivity(scip, consdata, sol, TRUE, ret);
 }
 
 /** gets the feasibility of the linear constraint in the given solution */

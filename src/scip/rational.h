@@ -584,7 +584,7 @@ SCIP_Bool RatIsAbsInfinity(
    SCIP_Rational*        r                   /**< the rational to check */
    );
 
-/** checks if the rational is of infinite value */
+/** checks if the rational is integral */
 SCIP_EXPORT
 SCIP_Bool RatIsIntegral(
    SCIP_Rational*        r                   /**< the rational to check */

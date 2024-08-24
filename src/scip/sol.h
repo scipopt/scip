@@ -90,6 +90,18 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates exact primal CIP solution in original problem space, initialized to the offset in the original problem */
+SCIP_RETCODE SCIPsolCreateOriginalExact(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates a copy of a primal CIP solution */
 SCIP_RETCODE SCIPsolCopy(
    SCIP_SOL**            sol,                /**< pointer to store the copy of the primal CIP solution */
