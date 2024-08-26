@@ -998,7 +998,7 @@ SCIP_RETCODE extractFlowRows(
           *    integer:    score  +500
           *    binary:     score  +100
           */
-         if( ncontvars == rowlen || nimplintvars == rowlen)
+         if( ncontvars == rowlen )
             flowrowscores[r] += 1000.0;
          else if( nintvars + nimplintvars == rowlen )
             flowrowscores[r] += 500.0;

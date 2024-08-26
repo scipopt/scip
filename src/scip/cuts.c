@@ -2626,7 +2626,7 @@ SCIP_RETCODE findBestLb(
 
    *simplebound = *bestlb;
 
-   if( usevbds && (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT))
+   if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
       SCIP_Real bestvlb;
       int bestvlbidx;
@@ -2687,7 +2687,7 @@ SCIP_RETCODE findBestUb(
 
    *simplebound = *bestub;
 
-   if( usevbds && (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT))
+   if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
       SCIP_Real bestvub;
       int bestvubidx;
@@ -3084,11 +3084,9 @@ SCIP_RETCODE cutsTransformMIR(
    int* bestubtypes;
    SCIP_BOUNDTYPE* selectedbounds;
    int i;
-   int aggrrowimplintstart;
    int aggrrowintstart;
    int nvars;
    int firstcontvar;
-   int firstimplvar;
    SCIP_VAR** vars;
 
    assert(varsign != NULL);
@@ -3115,7 +3113,6 @@ SCIP_RETCODE cutsTransformMIR(
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    firstcontvar = nvars - SCIPgetNContVars(scip);
-   firstimplvar = nvars - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
 
    /* determine the best bounds for the continuous variables */
    for( i = 0; i < *nnz && cutinds[i] >= firstcontvar; ++i )
@@ -3128,11 +3125,11 @@ SCIP_RETCODE cutsTransformMIR(
          goto TERMINATE;
    }
 
-   /* remember start of implied integer variables in the aggrrow */
-   aggrrowimplintstart = i;
+   /* remember start of integer variables in the aggrrow */
+   aggrrowintstart = i;
 
    /* perform bound substitution for continuous variables */
-   for( i = 0; i < aggrrowimplintstart; ++i )
+   for( i = 0; i < aggrrowintstart; ++i )
    {
       int v = cutinds[i];
 
@@ -3156,80 +3153,16 @@ SCIP_RETCODE cutsTransformMIR(
 
          performBoundSubstitution(scip, cutinds, cutcoefs, QUAD(cutrhs), nnz, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
       }
-   }
-
-   /* remove implied integer variables that now have a zero coefficient due to variable bound usage of continuous
-    * variables and determine the bound to use for the implied integer variables that are left */
-   while(i < *nnz && cutinds[i] >= firstimplvar)
-   {
-      assert(SCIPvarGetType(vars[cutinds[i]]) == SCIP_VARTYPE_IMPLINT);
-      SCIP_Real QUAD(coef);
-      int v = cutinds[i];
-
-      QUAD_ARRAY_LOAD(coef, cutcoefs, v);
-
-      /* due to variable bound usage for the continuous variables cancellation may have occurred */
-      if( EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON) )
-      {
-         QUAD_ASSIGN(coef, 0.0);
-         QUAD_ARRAY_STORE(cutcoefs, v, coef);
-         --(*nnz);
-         cutinds[i] = cutinds[*nnz];
-         /* do not increase i, since last element is copied to the i-th position */
-         continue;
-      }
-
-      /* determine the best bounds for the implied integer variable. */
-      SCIP_CALL( determineBestBounds(scip, vars[v], sol, boundswitch,  usevbds ? 2 : 0, allowlocal, fixintegralrhs,
-                                     ignoresol, boundsfortrans, boundtypesfortrans,
-                                     bestlbs + i, bestubs + i, bestlbtypes + i, bestubtypes + i, selectedbounds + i, freevariable) );
-
-      /* increase i */
-      ++i;
-
-      if( *freevariable )
-         goto TERMINATE;
-
-   }
-
-   aggrrowintstart = i;
-   /* now perform the bound substitution on the implied integer variables */
-   for( i = aggrrowimplintstart; i < aggrrowintstart; ++i )
-   {
-      int v = cutinds[i];
-
-      if( selectedbounds[i] == SCIP_BOUNDTYPE_LOWER )
-      {
-         assert(!SCIPisInfinity(scip, -bestlbs[i]));
-
-         /* use lower bound as transformation bound: x'_j := x_j - lb_j */
-         boundtype[i] = bestlbtypes[i];
-         varsign[i] = +1;
-
-         performBoundSubstitution(scip, cutinds, cutcoefs, QUAD(cutrhs), nnz, varsign[i], boundtype[i], bestlbs[i], v, localbdsused);
-      }
-      else
-      {
-         assert(!SCIPisInfinity(scip, bestubs[i]));
-
-         /* use upper bound as transformation bound: x'_j := ub_j - x_j */
-         boundtype[i] = bestubtypes[i];
-         varsign[i] = -1;
-
-         performBoundSubstitution(scip, cutinds, cutcoefs, QUAD(cutrhs), nnz, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
-      }
-
    }
 
    /* remove integral variables that now have a zero coefficient due to variable bound usage of continuous variables
-    * and implied integer variables, and determine the bound to use for the integer variables that are left
+    * and determine the bound to use for the integer variables that are left
     */
    while( i < *nnz )
    {
       SCIP_Real QUAD(coef);
       int v = cutinds[i];
-      assert(cutinds[i] < firstimplvar);
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY);
+      assert(cutinds[i] < firstcontvar);
 
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
 
@@ -3286,10 +3219,6 @@ SCIP_RETCODE cutsTransformMIR(
       }
    }
 
-   if(aggrrowimplintstart != 0 && aggrrowintstart != aggrrowimplintstart && aggrrowintstart != *nnz)
-   {
-      int pause = 3;
-   }
    if( fixintegralrhs )
    {
       SCIP_Real f0;
@@ -3541,7 +3470,6 @@ SCIP_RETCODE cutsRoundMIR(
       assert(var != NULL);
       assert(SCIPvarGetProbindex(var) == v);
       assert(varsign[i] == +1 || varsign[i] == -1);
-      assert(SCIPvarIsIntegral(var));
 
       /* calculate the coefficient in the retransformed cut */
       {
@@ -3582,93 +3510,44 @@ SCIP_RETCODE cutsRoundMIR(
       QUAD_ARRAY_STORE(cutcoefs, v, cutaj);
 
       /* integral var uses standard bound */
-      if(boundtype[i] < 0)
+      assert(boundtype[i] < 0);
+
+      /* move the constant term  -a~_j * lb_j == -a^_j * lb_j , or  a~_j * ub_j == -a^_j * ub_j  to the rhs */
+      if( varsign[i] == +1 )
       {
-         /* move the constant term  -a~_j * lb_j == -a^_j * lb_j , or  a~_j * ub_j == -a^_j * ub_j  to the rhs */
-         if( varsign[i] == +1 )
+         /* lower bound was used */
+         if( boundtype[i] == -1 )
          {
-            /* lower bound was used */
-            if( boundtype[i] == -1 )
-            {
-               assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
-               SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbGlobal(var));
-               SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp); /* rhs += cutaj * SCIPvarGetLbGlobal(var) */
-            }
-            else
-            {
-               assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
-               SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbLocal(var));
-               SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp); /* rhs += cutaj * SCIPvarGetLbLocal(var) */
-            }
+            assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
+            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbGlobal(var));
+            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp); /* rhs += cutaj * SCIPvarGetLbGlobal(var) */
          }
          else
          {
-            /* upper bound was used */
-            if( boundtype[i] == -1 )
-            {
-               assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
-               SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbGlobal(var));
-               SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp); /* rhs += cutaj * SCIPvarGetUbGlobal(var) */
-            }
-            else
-            {
-               assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
-               SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbLocal(var));
-               SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp); /* rhs += cutaj * SCIPvarGetUbLocal(var) */
-            }
+            assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
+            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbLocal(var));
+            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp); /* rhs += cutaj * SCIPvarGetLbLocal(var) */
          }
       }
       else
       {
-         SCIP_VAR** vbz;
-         SCIP_Real* vbb;
-         SCIP_Real* vbd;
-         SCIP_Real QUAD(zcoef);
-         int vbidx;
-         int zidx;
-
-         /* variable bound */
-         vbidx = boundtype[i];
-
-         /* change mirrhs and cutaj of integer variable z_j of variable bound */
-         if( varsign[i] == +1 )
+         /* upper bound was used */
+         if( boundtype[i] == -1 )
          {
-            /* variable lower bound was used */
-            assert(0 <= vbidx && vbidx < SCIPvarGetNVlbs(var));
-            vbz = SCIPvarGetVlbVars(var);
-            vbb = SCIPvarGetVlbCoefs(var);
-            vbd = SCIPvarGetVlbConstants(var);
+            assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
+            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbGlobal(var));
+            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp); /* rhs += cutaj * SCIPvarGetUbGlobal(var) */
          }
          else
          {
-            /* variable upper bound was used */
-            assert(0 <= vbidx && vbidx < SCIPvarGetNVubs(var));
-            vbz = SCIPvarGetVubVars(var);
-            vbb = SCIPvarGetVubCoefs(var);
-            vbd = SCIPvarGetVubConstants(var);
+            assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
+            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbLocal(var));
+            SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp); /* rhs += cutaj * SCIPvarGetUbLocal(var) */
          }
-         assert(SCIPvarIsActive(vbz[vbidx]));
-         zidx = SCIPvarGetProbindex(vbz[vbidx]);
-         assert(0 <= zidx && zidx < firstcontvar);
-
-         SCIPquadprecProdQD(tmp, cutaj, vbd[vbidx]);
-         SCIPquadprecSumQQ(*cutrhs, *cutrhs, tmp);
-
-         SCIPquadprecProdQD(tmp, cutaj, vbb[vbidx]);
-         QUAD_ARRAY_LOAD(zcoef, cutcoefs, zidx);
-
-         /* update sparsity pattern */
-         if( QUAD_HI(zcoef) == 0.0 )
-            cutinds[(*nnz)++] = zidx;
-
-         SCIPquadprecSumQQ(zcoef, zcoef, -tmp);
-         QUAD_HI(zcoef) = NONZERO(QUAD_HI(zcoef));
-         QUAD_ARRAY_STORE(cutcoefs, zidx, zcoef);
-         assert(QUAD_HI(zcoef) != 0.0);
       }
    }
 
-   /* now process the continuous variables; postpone deletion of zeros until all continuous variables have been processed */
+   /* now process the continuous variables; postpone deletion of zeros untill all continuous variables have been processed */
    ndelcontvars = 0;
    while( i >= ndelcontvars )
    {
@@ -4392,7 +4271,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    *success = FALSE;
    nvars = SCIPgetNVars(scip);
-   firstcontvar = nvars - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
+   firstcontvar = nvars - SCIPgetNContVars(scip);
    vars = SCIPgetVars(scip);
 
    /* allocate temporary memory */
@@ -5419,7 +5298,7 @@ SCIP_RETCODE determineBoundForSNF(
       bestlb[varposinrow] = bestslb[varposinrow];
       bestlbtype[varposinrow] = bestslbtype[varposinrow];
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT)
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
          SCIP_Real bestvlb;
          int bestvlbidx;
@@ -5441,7 +5320,7 @@ SCIP_RETCODE determineBoundForSNF(
       bestub[varposinrow] = bestsub[varposinrow];
       bestubtype[varposinrow] = bestsubtype[varposinrow];
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT  )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
          SCIP_Real bestvub;
          int bestvubidx;
