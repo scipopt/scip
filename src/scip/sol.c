@@ -1764,12 +1764,12 @@ SCIP_RETCODE SCIPsolSetValExact(
 
    SCIPsetDebugMsg(set, "setting value of <%s> in exact solution %p to %g\n", SCIPvarGetName(var), (void*)sol, RatApproxReal(val));
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &oldval) );
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
    switch( SCIPvarGetStatusExact(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
+      SCIP_CALL( RatCreateBuffer(set->buffer, &oldval) );
       if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
       {
          solGetArrayValExact(oldval, sol, var);
@@ -1785,13 +1785,18 @@ SCIP_RETCODE SCIPsolSetValExact(
             RatAddProd(sol->valsexact->obj, obj, val);
          }
 
+         RatFreeBuffer(set->buffer, &oldval);
          return SCIP_OKAY;
       }
       else
+      {
+         RatFreeBuffer(set->buffer, &oldval);
          return SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetTransVar(var), val);
+      }
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
+      SCIP_CALL( RatCreateBuffer(set->buffer, &oldval) );
 
       solGetArrayValExact(oldval, sol, var);
 
@@ -1803,6 +1808,7 @@ SCIP_RETCODE SCIPsolSetValExact(
          RatDiffProd(sol->valsexact->obj, obj, oldval);
          RatAddProd(sol->valsexact->obj, obj, val);
       }
+      RatFreeBuffer(set->buffer, &oldval);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:

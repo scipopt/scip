@@ -2204,14 +2204,14 @@ SCIP_RETCODE boundShift(
    SCIPintervalSetRoundingModeDownwards();
    {
       SCIP_Real objcontrib = 0;
-      for (int i = 0; i < lp->ncols; i++)
+      for (int k = 0; k < lp->ncols; k++)
       {
-         if(obj[i].sup < 0)
+         if(obj[k].sup < 0)
          {
-            objcontrib += obj[i].sup * SCIPcolGetUb(lp->cols[i]);
+            objcontrib += obj[k].sup * SCIPcolGetUb(lp->cols[k]);
          }
-         else if(obj[i].inf > 0)
-            objcontrib += (-obj[i].inf) * SCIPcolGetLb(lp->cols[i]);
+         else if(obj[k].inf > 0)
+            objcontrib += (-obj[k].inf) * SCIPcolGetLb(lp->cols[k]);
       }
       SCIPintervalScalprod(SCIPsetInfinity(set), &safeboundinterval, lp->ncols, productcoldualval, ublbcol);
       SCIPintervalAddScalar(SCIPsetInfinity(set), &safeboundinterval, safeboundinterval, objcontrib);
