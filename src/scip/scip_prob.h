@@ -574,7 +574,7 @@ SCIP_Real SCIPgetOrigObjoffset(
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_EXPORT
-SCIP_Real SCIPgetOrigObjoffsetExact(
+SCIP_Rational* SCIPgetOrigObjoffsetExact(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

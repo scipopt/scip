@@ -66,6 +66,7 @@
 #include "scip/reader.h"
 #include "scip/reopt.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
