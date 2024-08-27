@@ -3400,9 +3400,14 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
    for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
    {
       SCIP_EXPR* child;
+      SCIP_Real coef;
 
       child = SCIPexprGetChildren(expr)[c];
       assert(child != NULL);
+
+      coef = SCIPgetCoefsExprSum(expr)[c];
+      if( coef == 0.0 )
+         continue;
 
       if( SCIPexprIsPower(set, child) && SCIPgetExponentExprPow(child) == 2.0 ) /* quadratic term */
       {
@@ -3464,10 +3469,11 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
       SCIP_Real coef;
 
       child = SCIPexprGetChildren(expr)[c];
-      coef = SCIPgetCoefsExprSum(expr)[c];
-
       assert(child != NULL);
-      assert(coef != 0.0);
+
+      coef = SCIPgetCoefsExprSum(expr)[c];
+      if( coef == 0.0 )
+         continue;
 
       if( SCIPexprIsPower(set, child) && SCIPgetExponentExprPow(child) == 2.0 ) /* quadratic term */
       {

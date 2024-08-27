@@ -275,10 +275,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, FALSE) );
    SCIP_CALL( SCIPincludeNlpSolverAll(scip) );
 
-#ifdef TPI_TNY
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "TinyCThread", "Small, portable implementation of the C11 threads API (tinycthread.github.io)") );
-#endif
-
    SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
 
    return SCIP_OKAY;

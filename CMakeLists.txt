@@ -17,7 +17,7 @@ set(SCIP_VERSION_MAJOR 10)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
 set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 119)
+set(SCIP_VERSION_API 121)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
@@ -98,7 +98,7 @@ option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
 option(EXACTSOLVE "compile with support for exact rational solve (requires Boost and GMP to work)" ON)
 
-set(TPI none CACHE STRING "options for thread support library")  #create the variable
+set(TPI tny CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
 
 set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create the variable
@@ -435,16 +435,8 @@ endif()
 if(PAPILO OR AUTOBUILD)
     message(STATUS "Finding PAPILO")
     find_package(PAPILO CONFIG HINTS ${PAPILO_DIR})
-    if(NOT PAPILO_FOUND)
-        # Utilities to automatically download missing dependencies
-        include(cmake/Dependencies.cmake)
-        find_or_download_package(
-          NAME PAPILO
-          VERSION 2.2.1
-          URL https://github.com/scipopt/papilo/archive/refs/tags/v2.2.1.tar.gz
-          URL_HASH SHA256=b022af82bda3db1a594fe67524d98be82e67279f9d9d645b2fcdfc9349cdc6f7
-          COMPONENTS papilo)
-        find_package(PAPILO REQUIRED CONFIG HINTS _deps/local)
+    if((NOT PAPILO_FOUND) AND (NOT AUTOBUILD))
+        message(FATAL_ERROR "PAPILO not found, try specifying PAPILO_DIR. ${AUTOBUILD_MSG}")
     endif()
 endif()
 if(PAPILO_FOUND)
@@ -460,18 +452,7 @@ endif()
 message(STATUS "Finding Solver \"${LPS}\"")
 if(LPS STREQUAL "spx")
     message(STATUS "Finding Soplex")
-    find_package(SOPLEX CONFIG HINTS ${SOPLEX_DIR})
-    if(NOT SOPLEX_FOUND)
-        # Utilities to automatically download missing dependencies
-        include(cmake/Dependencies.cmake)
-        find_or_download_package(
-          NAME SOPLEX
-          VERSION 7.0.1
-          URL https://github.com/scipopt/soplex/archive/refs/tags/release-701.tar.gz
-          URL_HASH SHA256=80cce994dcbe45fd52b60e31a3aeb5d2c60a7ddbaae495e0ce6bf58481675696
-          COMPONENTS soplex)
-        find_package(SOPLEX REQUIRED CONFIG HINTS _deps/local)
-    endif()
+    find_package(SOPLEX REQUIRED CONFIG HINTS ${SOPLEX_DIR})
     if (DEFINED SOPLEX_WITH_PAPILO)
         message(STATUS "SOPLEX links PAPILO")
         if((NOT SCIP_WITH_PAPILO)) # TODO not sure how to handle AUTOBUILD
@@ -599,12 +580,11 @@ else()
 endif()
 
 if(HIGHS_FOUND)
-    include_directories(${HIGHS_INCLUDE_DIRS})
     if(LPS STREQUAL "highs")
         set(lpi lpi/lpi_highs.cpp)
     endif()
-    set(LPS_LIBRARIES ${LPS_LIBRARIES} ${HIGHS_LIBRARIES} Threads::Threads)
-    set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} ${HIGHS_LIBRARIES} Threads::Threads)
+    set(LPS_LIBRARIES ${LPS_LIBRARIES} highs::highs)
+    set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} highs::highs)
     message(WARNING "EXPERIMENTAL: You are using the experimental HiGHS interface. Please report any issues on https://github.com/scipopt/scip.")
 endif()
 

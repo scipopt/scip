@@ -457,8 +457,8 @@ SCIP_DECL_HASHGETKEY(overlapHashGetKey)
 static
 SCIP_DECL_HASHKEYEQ(overlapHashKeyEqPtr)
 {
-   long o1;
-   long o2;
+   size_t o1;
+   size_t o2;
    SCIP_HYPERGRAPH* hypergraph;
    int begin1;
    int beyond1;
@@ -466,8 +466,8 @@ SCIP_DECL_HASHKEYEQ(overlapHashKeyEqPtr)
    int beyond2;
    int i2;
 
-   o1 = (long)key1 - 1;
-   o2 = (long)key2 - 1;
+   o1 = (size_t)key1 - 1;
+   o2 = (size_t)key2 - 1;
    hypergraph = (SCIP_HYPERGRAPH*) userptr;
    begin1 = hypergraph->overlapsverticesbeg[o1];
    beyond1 = hypergraph->overlapsverticesbeg[o1 + 1];
@@ -492,14 +492,14 @@ SCIP_DECL_HASHKEYEQ(overlapHashKeyEqPtr)
 static
 SCIP_DECL_HASHKEYVAL(overlapHashKeyValPtr)
 {
-   long o;
+   size_t o;
    SCIP_HYPERGRAPH* hypergraph;
    int begin;
    int beyond;
    int i;
    uint32_t hash;
 
-   o = (long)key - 1;
+   o = (size_t)key - 1;
    hypergraph = (SCIP_HYPERGRAPH*) userptr;
    begin = hypergraph->overlapsverticesbeg[o];
    beyond = hypergraph->overlapsverticesbeg[o + 1];
@@ -534,6 +534,7 @@ SCIP_RETCODE findOverlap(
    int first;
    int beyond;
    void* element;
+   size_t nextoverlap;
 
    assert(hypergraph);
    assert(nvertices > 0);
@@ -550,16 +551,17 @@ SCIP_RETCODE findOverlap(
       hypergraph->overlapsvertices[first + i] = vertices[i];
    hypergraph->overlapsverticesbeg[hypergraph->noverlaps + 1] = beyond;
 
-   element = SCIPhashtableRetrieve(hypergraph->overlaphashtable, (void*) (hypergraph->noverlaps + 1UL));
+   nextoverlap = (size_t) hypergraph->noverlaps + 1UL; /*lint !e571 */
+   element = SCIPhashtableRetrieve(hypergraph->overlaphashtable, (void*) nextoverlap);
    if( element != NULL )
    {
-      *poverlap = (long) element - 1; /*lint !e712*/
+      *poverlap = (size_t)element - 1; /*lint !e712*/
       if( padded )
          *padded = FALSE;
    }
    else if( add )
    {
-      SCIP_CALL_ABORT( SCIPhashtableInsert(hypergraph->overlaphashtable, (void*) (hypergraph->noverlaps + 1UL)) );
+      SCIP_CALL_ABORT( SCIPhashtableInsert(hypergraph->overlaphashtable, (void*) nextoverlap) );
 
       *poverlap = hypergraph->noverlaps;
       hypergraph->noverlaps++;
@@ -575,7 +577,7 @@ SCIP_RETCODE findOverlap(
 /**
  * @brief computes all overlaps and stores overlaps' vertices and all edges' overlaps
  *
- * Requires \ref SCIPhypergraphHasVerticesEdges to be \c TRUE which results from \ref SCIPhypergraphComputeVerticesEdges.
+ * Requires \ref SCIPhypergraphHasVertexEdges to be \c TRUE which results from \ref SCIPhypergraphComputeVerticesEdges.
  */
 SCIP_RETCODE SCIPhypergraphComputeOverlaps(
    SCIP_HYPERGRAPH*      hypergraph,         /**< The hypergraph. */
@@ -1733,7 +1735,7 @@ SCIP_HYPERGRAPH_OVERLAP SCIPhypergraphIterOverlap(
 #undef SCIPhypergraphOverlapData
 #undef SCIPhypergraphEdgeSize
 #undef SCIPhypergraphEdgeVertices
-#undef SCIPhypergraphHasVerticesEdges
+#undef SCIPhypergraphHasVertexEdges
 #undef SCIPhypergraphVerticesEdgesFirst
 #undef SCIPhypergraphVerticesEdgesBeyond
 #undef SCIPhypergraphVerticesEdgesGet
@@ -2073,7 +2075,7 @@ SCIP_HYPERGRAPH_OVERLAP SCIPhypergraphOverlapsEdgesGetAtIndex(
 /**
  * @brief returns whether vertices' incident overlaps are known
  *
- * Use \ref SCIPhypergraphComputeVertexOverlaps to compute them.
+ * Use \ref SCIPhypergraphComputeOverlaps to compute them.
  */
 SCIP_Bool SCIPhypergraphHasVertexOverlaps(
    SCIP_HYPERGRAPH*      hypergraph          /**< The hypergraph. */

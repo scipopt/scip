@@ -1307,7 +1307,6 @@ SCIP_RETCODE cutTightenCoefsQuad(
       {
          /* if successful, apply the scaling */
          intscalar *= equiscale;
-
          SCIPquadprecProdQD(*cutrhs, *cutrhs, intscalar);
 
          for( i = 0; i < *cutnnz; )
@@ -1380,24 +1379,14 @@ SCIP_RETCODE cutTightenCoefsQuad(
             }
          }
 
-         maxact = QUAD_TO_DBL(maxacttmp);
-
-         assert(EPSISINT(maxact, 1e-4));
-         maxact = SCIPround(scip, maxact);
-         QUAD_ASSIGN(maxacttmp, maxact);
-
-         /* check again for redundancy */
-         if( SCIPisFeasLE(scip, maxact, QUAD_TO_DBL(*cutrhs)) )
-         {
-            *redundant = TRUE;
-            return SCIP_OKAY;
-         }
+         assert(EPSISINT(QUAD_TO_DBL(maxacttmp), 1e-4));
+         SCIPquadprecSumQD(maxacttmp, maxacttmp, 0.5);
+         SCIPquadprecFloorQ(maxacttmp, maxacttmp);
       }
       else
       {
          /* perform the scaling */
          SCIPquadprecProdQD(maxacttmp, maxacttmp, equiscale);
-
          SCIPquadprecProdQD(*cutrhs, *cutrhs, equiscale);
          maxabsintval *= equiscale;
 
@@ -1425,8 +1414,6 @@ SCIP_RETCODE cutTightenCoefsQuad(
 
       /* perform the scaling */
       SCIPquadprecProdQD(maxacttmp, maxacttmp, scale);
-      maxact = QUAD_TO_DBL(maxacttmp);
-
       SCIPquadprecProdQD(*cutrhs, *cutrhs, scale);
       maxabsintval *= scale;
 
@@ -1438,6 +1425,15 @@ SCIP_RETCODE cutTightenCoefsQuad(
          SCIPquadprecProdQD(val, val, scale);
          QUAD_ARRAY_STORE(cutcoefs, cutinds[i], val);
       }
+   }
+
+   maxact = QUAD_TO_DBL(maxacttmp);
+
+   /* check again for redundancy after scaling */
+   if( SCIPisFeasLE(scip, maxact, QUAD_TO_DBL(*cutrhs)) )
+   {
+      *redundant = TRUE;
+      return SCIP_OKAY;
    }
 
    /* no coefficient tightening can be performed since the precondition doesn't hold for any of the variables */

@@ -303,7 +303,7 @@ SCIP_RETCODE SCIPgetConsVals(
       SCIP_Real* linvals;
 
       linvals = SCIPgetValsLinear(scip, cons);
-      assert(linvals != NULL);
+      assert(nvars == 0 || linvals != NULL);
 
       for( i = 0; i < nvars; i++ )
       {
@@ -329,7 +329,7 @@ SCIP_RETCODE SCIPgetConsVals(
       SCIP_Longint* weights;
 
       weights = SCIPgetWeightsKnapsack(scip, cons);
-      assert(weights != NULL);
+      assert(nvars == 0 || weights != NULL);
 
       for( i = 0; i < nvars; i++ )
       {
@@ -348,7 +348,7 @@ SCIP_RETCODE SCIPgetConsVals(
       SCIP_Real* weights;
 
       weights = SCIPgetWeightsSOS1(scip, cons);
-      assert(weights != NULL);
+      assert(nvars == 0 || weights != NULL);
 
       for( i = 0; i < nvars; i++ )
       {
@@ -360,7 +360,7 @@ SCIP_RETCODE SCIPgetConsVals(
       SCIP_Real* weights;
 
       weights = SCIPgetWeightsSOS2(scip, cons);
-      assert(weights != NULL);
+      assert(nvars == 0 || weights != NULL);
 
       for( i = 0; i < nvars; i++ )
       {

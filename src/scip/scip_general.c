@@ -74,6 +74,7 @@
 #include "scip/struct_stat.h"
 #include "scip/syncstore.h"
 #include "scip/lapack_calls.h"
+#include "tpi/tpi.h"
 
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
@@ -302,11 +303,16 @@ SCIP_RETCODE doScipCreate(
    SCIPerrorMessage("SCIP was compiled with exact solve support, but without MPFR. Please recompile SCIP with MPFR.\n");
    return SCIP_ERROR;
 #endif
-#ifndef SCIP_WITH_MPFR
-   SCIPerrorMessage("SCIP was compiled with exact solve support, but without GMP. Please recompile SCIP with GMP.\n");
-   return SCIP_ERROR;
 #endif
-#endif
+   if( SCIPtpiIsAvailable() )
+   {
+      char name[20];
+      char desc[80];
+      SCIPtpiGetLibraryName(name, (int)sizeof(name));
+      SCIPtpiGetLibraryDesc(desc, (int)sizeof(desc));
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, desc) );
+   }
+
    return SCIP_OKAY;
 }
 

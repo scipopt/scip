@@ -121,21 +121,21 @@ SCIP_Bool debugSolutionAvailable(
    debugsoldata = SCIPsetGetDebugSolData(set);
 
    /* check whether a debug solution is specified */
-    if( strcmp(set->misc_debugsol, "-") == 0 )
-    {
-       if( !debugsoldata->warningprinted )
-       {
-          SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "SCIP is compiled with 'DEBUGSOL=true' but no debug solution is given:\n ");
-          SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "*** Please set the parameter 'misc/debugsol' and reload the problem again to use the debugging-mechanism ***\n\n");
-          debugsoldata->warningprinted = TRUE;
-       }
-       return FALSE;
-    }
-    else
-    {
-       debugsoldata->warningprinted = FALSE;
-       return TRUE;
-    }
+   if( strcmp(set->misc_debugsol, "-") == 0 )
+   {
+      if( !debugsoldata->warningprinted )
+      {
+         SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "SCIP is compiled with 'DEBUGSOL=true' but no debug solution is given:\n");
+         SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "*** Please set the parameter 'misc/debugsol' and reload the problem again to use the debugging-mechanism ***\n\n");
+         debugsoldata->warningprinted = TRUE;
+      }
+      return FALSE;
+   }
+   else
+   {
+      debugsoldata->warningprinted = FALSE;
+      return TRUE;
+   }
 }
 
 /** reads solution from given file into given arrays */
@@ -713,6 +713,35 @@ SCIP_RETCODE SCIPdebugFreeSol(
    {
       SCIP_CALL( SCIPfreeSol(set->scip, &debugsoldata->debugsol) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** clears the debug solution */
+SCIP_RETCODE SCIPdebugClearSol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+   int s;
+
+   assert(scip != NULL);
+
+   debugsoldata = SCIPsetGetDebugSolData(scip->set);
+   assert(debugsoldata != NULL);
+
+   if( debugsoldata->debugsol != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &debugsoldata->debugsol) );
+   }
+   SCIP_CALL( SCIPcreateOrigSol(scip, &debugsoldata->debugsol, NULL) );
+
+   for( s = debugsoldata->nsolvals - 1; s >= 0; --s )
+      BMSfreeMemoryArrayNull(&(debugsoldata->solnames[s]));
+
+   debugsoldata->nsolvals = 0;
+   debugsoldata->debugsolval= 0.0;
+   debugsoldata->solisachieved = FALSE;
 
    return SCIP_OKAY;
 }

@@ -6193,7 +6193,7 @@ SCIP_Bool isEquallyCenteredOrbitope(
    assert( vardomaincenter != NULL );
    assert( varidxmatrix != NULL );
    assert( 0 <= startrow && startrow < endrow );
-   assert( 0 <= startcol && startrow < endcol );
+   assert( 0 <= startcol && startcol < endcol );
 
    if ( equalrowcenters )
    {

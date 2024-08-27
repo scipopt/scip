@@ -14,8 +14,6 @@ set -e
 EXAMPLES=$(for f in *;do if [[ -d $f  ]]; then echo $f;fi; done)
 # Sudoku doesn't have a test
 EXAMPLES=$(echo "$EXAMPLES" |grep -v Sudoku)
-# Binpacking tests are known to fail, #3712
-EXAMPLES=$(echo "$EXAMPLES" |grep -v Binpacking)
 
 LPSOLVERS=(spx2)
 OPTS=(dbg)
