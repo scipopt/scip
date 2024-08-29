@@ -3190,7 +3190,7 @@ SCIP_RETCODE netMatDecDataCreateDiGraph(
          }
          rootmember = parent;
       }
-      while( TRUE );
+      while( TRUE ); /*lint !e506*/
 
       calldata[0].member = rootmember;
       ++ncalldata;
@@ -3271,7 +3271,7 @@ SCIP_RETCODE netMatDecDataCreateDiGraph(
                         if( SPQRelementIsRow(element) ){
                            ind = SPQRelementToRow(element);
                         }else{
-                           ind = SPQRelementToColumn(element) + dec->memRows;
+                           ind = (SPQRelementToColumn(element) + dec->memRows); /*lint !e776 */
                         }
                         SCIP_CALL( SCIPdigraphAddArc(digraph, dectographnode[tail], dectographnode[head],
                                                      (void*) ind) );
@@ -3323,7 +3323,7 @@ SCIP_RETCODE netMatDecDataCreateDiGraph(
                         if( SPQRelementIsRow(element) ){
                            ind = SPQRelementToRow(element);
                         }else{
-                           ind = SPQRelementToColumn(element) + dec->memRows;
+                           ind = (SPQRelementToColumn(element) + dec->memRows); /*lint !e776 */
                         }
                         if( arcIsReversedNonRigid(dec, explore.arc) == arcIsReversedNonRigid(dec, arc))
                         {
@@ -3381,7 +3381,7 @@ SCIP_RETCODE netMatDecDataCreateDiGraph(
                         if( SPQRelementIsRow(element) ){
                            ind = SPQRelementToRow(element);
                         }else{
-                           ind = SPQRelementToColumn(element) + dec->memRows;
+                           ind = (SPQRelementToColumn(element) + dec->memRows); /*lint !e776 */
                         }
 
                         if( arcIsReversedNonRigid(dec, explore.arc) == arcIsReversedNonRigid(dec, arc) )

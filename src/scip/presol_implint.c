@@ -98,9 +98,9 @@ typedef struct{
 
 static
 SCIP_RETCODE createMatrixComponents(
-   SCIP* scip,
-   SCIP_MATRIX* matrix,
-   MATRIX_COMPONENTS** pmatrixcomponents
+   SCIP*                 scip,
+   SCIP_MATRIX*          matrix,
+   MATRIX_COMPONENTS**   pmatrixcomponents
 )
 {
    SCIP_CALL( SCIPallocBlockMemory(scip, pmatrixcomponents) );
@@ -145,8 +145,8 @@ SCIP_RETCODE createMatrixComponents(
 
 static
 void freeMatrixInfo(
-   SCIP* scip,
-   MATRIX_COMPONENTS** pmatrixcomponents
+   SCIP*                 scip,
+   MATRIX_COMPONENTS**   pmatrixcomponents
 )
 {
    MATRIX_COMPONENTS* comp = *pmatrixcomponents;
@@ -163,9 +163,11 @@ void freeMatrixInfo(
    SCIPfreeBlockMemory(scip, pmatrixcomponents);
 }
 
-static int disjointSetFind(int * disjointset, int index){
+static int disjointSetFind(int * disjointset,
+                           int ind
+                           ){
    assert(disjointset);
-   int current = index;
+   int current = ind;
    int next;
    //traverse down tree
    while( (next = disjointset[current]) >= 0 ){
@@ -174,7 +176,7 @@ static int disjointSetFind(int * disjointset, int index){
    int root = current;
 
    //compress indices along path
-   current = index;
+   current = ind;
    while( (next = disjointset[current]) >= 0 ){
       disjointset[current] = root;
       current = next;
@@ -233,8 +235,8 @@ SCIP_RETCODE computeContinuousComponents(
       for( int i = 0; i < colnnonzs; ++i )
       {
          int colrow = colrows[i];
-         int index = colrow + comp->nmatrixcols;
-         int rowrep = disjointSetFind(disjointset,index);
+         int ind = colrow + comp->nmatrixcols;
+         int rowrep = disjointSetFind(disjointset,ind);
          if(colrep != rowrep){
             colrep = disjointSetMerge(disjointset,colrep,rowrep);
          }
@@ -304,8 +306,8 @@ SCIP_RETCODE computeContinuousComponents(
          if(component < 0){
             continue;
          }
-         int index = comp->componentcolstart[component] + componentnextcolindex[component];
-         comp->componentcols[index] = i;
+         int ind = comp->componentcolstart[component] + componentnextcolindex[component];
+         comp->componentcols[ind] = i;
          ++componentnextcolindex[component];
       }
       for( int i = 0; i < comp->nmatrixrows; ++i )
@@ -314,8 +316,8 @@ SCIP_RETCODE computeContinuousComponents(
          if(component < 0){
             continue;
          }
-         int index = comp->componentrowstart[component] + componentnextrowindex[component];
-         comp->componentrows[index] = i;
+         int ind = comp->componentrowstart[component] + componentnextrowindex[component];
+         comp->componentrows[ind] = i;
          ++componentnextrowindex[component];
       }
 
@@ -715,7 +717,7 @@ SCIP_DECL_PRESOLEXITPRE(presolExitpreImplint)
 
 static
 SCIP_DECL_PRESOLEXEC(presolExecImplint)
-{
+{  /*lint --e{715}*/
    *result = SCIP_DIDNOTRUN;
 
    //TODO: re-check these conditions again
