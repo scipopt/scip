@@ -41,36 +41,36 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_network.h"
+#include "scip/pub_presol.h"
 #include "scip/pub_var.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_nlp.h"
 #include "scip/scip_numerics.h"
+#include "scip/scip_param.h"
 #include "scip/scip_presol.h"
 #include "scip/scip_pricer.h"
+#include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include "scip/scip_timing.h"
 #include "scip/scip_var.h"
 
-
 #define PRESOL_NAME            "implint"
 #define PRESOL_DESC            "detects implicit integer variables"
-#define PRESOL_PRIORITY               100 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
-#define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_PRIORITY         100 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
+#define PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
-
-/*
- * Data structures
- */
-
-/* TODO: fill in the necessary presolver data */
+#define DEFAULT_CONVERTINTEGERS FALSE
+#define DEFAULT_COLUMNROWRATIO  50.0
 
 /** presolver data */
 struct SCIP_PresolData
 {
-   int temp; //TODO fix to stop complaining compiler
+   SCIP_Bool convertintegers; /**< Should we detect implied integrality of columns that are integer? */
+   double columnrowratio; /**< Use the network row addition algorithm when the column to row ratio becomes larger than
+                            *  this threshold. Otherwise, use the column addition algorithm. */
 };
 
 
@@ -163,6 +163,48 @@ void freeMatrixInfo(
    SCIPfreeBlockMemory(scip, pmatrixcomponents);
 }
 
+static int disjointSetFind(int * disjointset, int index){
+   assert(disjointset);
+   int current = index;
+   int next;
+   //traverse down tree
+   while( (next = disjointset[current]) >= 0 ){
+      current = next;
+   }
+   int root = current;
+
+   //compress indices along path
+   current = index;
+   while( (next = disjointset[current]) >= 0 ){
+      disjointset[current] = root;
+      current = next;
+   }
+   return root;
+}
+
+static int disjointSetMerge(int * disjointset, int first, int second){
+   assert(disjointset);
+   assert(disjointset[first] < 0);
+   assert(disjointset[second] < 0);
+   assert(first != second);//We cannot merge a node into itself
+
+   //The rank is stored as a negative number: we decrement it making the negative number larger.
+   //We want the new root to be the one with 'largest' rank, so smallest number. If they are equal, we decrement.
+   int firstRank = disjointset[first];
+   int secondRank = disjointset[second];
+   if( firstRank > secondRank )
+   {
+      SCIPswapInts(&first, &second);
+   }
+   //first becomes representative
+   disjointset[second] = first;
+   if( firstRank == secondRank )
+   {
+      --disjointset[first];
+   }
+   return first;
+}
+
 static
 SCIP_RETCODE computeContinuousComponents(
    SCIP * scip,
@@ -170,82 +212,127 @@ SCIP_RETCODE computeContinuousComponents(
    MATRIX_COMPONENTS* comp
 )
 {
-   int currentcomponent = 0;
-   int rowindex = 0;
-   int colindex = 0;
    /* We let rows and columns share an index by mapping column i to index nrows + i*/
-   int* dfsstack = NULL;
-   int ndfsstack = 0;
-   SCIP_CALL(SCIPallocBufferArray(scip, &dfsstack, comp->nmatrixcols + comp->nmatrixrows));
-
-   for( int i = 0; i < comp->nmatrixcols; ++i )
+   int* disjointset = NULL;
+   SCIP_CALL(SCIPallocBufferArray(scip, &disjointset, comp->nmatrixcols + comp->nmatrixrows));
+   //First n entries belong to columns, last entries to rows
+   for( int i = 0; i < comp->nmatrixcols + comp->nmatrixrows; ++i )
    {
-      /* Check if earlier DFS already found column */
-      if( comp->colcomponent[i] != -1 || comp->coltype[i] != SCIP_VARTYPE_CONTINUOUS){
+      disjointset[i] = -1;
+   }
+
+   for( int col = 0; col < comp->nmatrixcols; ++col )
+   {
+      if( comp->coltype[col] != SCIP_VARTYPE_CONTINUOUS){
          continue;
       }
-      /* If not, then we have a new component, and perform a DFS to find all connected columns and rows */
-      comp->componentrowstart[currentcomponent] = rowindex;
-      comp->componentcolstart[currentcomponent] = colindex;
+      int colnnonzs = SCIPmatrixGetColNNonzs(matrix, col);
+      int* colrows = SCIPmatrixGetColIdxPtr(matrix, col);
 
-      assert(ndfsstack == 0);
-      /* Push column to DFS search */
-      dfsstack[ndfsstack] = comp->nmatrixrows + i;
-      ++ndfsstack;
-      comp->colcomponent[i] = currentcomponent;
-
-      while( ndfsstack != 0 ){
-         --ndfsstack;
-         int ind  = dfsstack[ndfsstack];
-         /* process column or row, adding new connected rows/columns to the dfs stack */
-         if( ind >= comp->nmatrixrows ){
-            int column = ind - comp->nmatrixrows;
-            assert(comp->coltype[column] == SCIP_VARTYPE_CONTINUOUS);
-            comp->componentcols[colindex] = column;
-            ++colindex;
-
-            /* Push connected rows to the dfs stack */
-            int colnnonzs = SCIPmatrixGetColNNonzs(matrix, column);
-            int* colrows = SCIPmatrixGetColIdxPtr(matrix, column);
-            for( int j = 0; j < colnnonzs; ++j )
-            {
-               int row = colrows[j];
-               if( comp->rowcomponent[row] == -1 ){
-                  dfsstack[ndfsstack] = row;
-                  ++ndfsstack;
-                  comp->rowcomponent[row] = currentcomponent;
-               }
-            }
-         }
-         else
-         {
-            int row = ind;
-            comp->componentrows[rowindex] = row;
-            ++rowindex;
-
-            /* Push any connected continuous columns on the dfs search stack */
-            int rownnonzs = SCIPmatrixGetRowNNonzs(matrix,row);
-            int* rowcols = SCIPmatrixGetRowIdxPtr(matrix,row);
-            for( int j = 0; j < rownnonzs; ++j )
-            {
-               int col = rowcols[j];
-               if( comp->colcomponent[col] == -1 && comp->coltype[col] == SCIP_VARTYPE_CONTINUOUS){
-                  comp->colcomponent[col] = currentcomponent;
-                  dfsstack[ndfsstack] = comp->nmatrixrows + col;
-                  ++ndfsstack;
-               }
-            }
+      int colrep = disjointSetFind(disjointset,col);
+      for( int i = 0; i < colnnonzs; ++i )
+      {
+         int colrow = colrows[i];
+         int index = colrow + comp->nmatrixcols;
+         int rowrep = disjointSetFind(disjointset,index);
+         if(colrep != rowrep){
+            colrep = disjointSetMerge(disjointset,colrep,rowrep);
          }
       }
-
-      /* We are done with DFS for this component, save the sizes */
-      comp->ncomponentrows[currentcomponent] = rowindex - comp->componentrowstart[currentcomponent];
-      comp->ncomponentcols[currentcomponent] = colindex - comp->componentcolstart[currentcomponent];
-      ++currentcomponent;
-      ++comp->ncomponents;
-      assert(currentcomponent == comp->ncomponents);
    }
-   SCIPfreeBufferArray(scip,&dfsstack);
+
+   /** Now, fill in the relevant data. */
+   int * representativecomponent;
+   SCIP_CALL(SCIPallocBufferArray(scip, &representativecomponent, comp->nmatrixcols + comp->nmatrixrows));
+   for( int i = 0; i < comp->nmatrixcols + comp->nmatrixrows; ++i )
+   {
+      representativecomponent[i] = -1;
+   }
+   comp->ncomponents = 0;
+   for( int col = 0; col < comp->nmatrixcols; ++col )
+   {
+      if( comp->coltype[col] != SCIP_VARTYPE_CONTINUOUS )
+      {
+         continue;
+      }
+      int colroot = disjointSetFind(disjointset,col);
+      int component = representativecomponent[colroot];
+      if( component < 0){
+         //add new component
+         component = comp->ncomponents;
+         representativecomponent[colroot] = component;
+         comp->ncomponentcols[component] = 0;
+         comp->ncomponentrows[component] = 0;
+         ++comp->ncomponents;
+      }
+      comp->colcomponent[col] = component;
+      ++comp->ncomponentcols[component];
+   }
+   for( int row = 0; row < comp->nmatrixrows; ++row )
+   {
+      int rowroot = disjointSetFind(disjointset,row + comp->nmatrixcols);
+      int component = representativecomponent[rowroot];
+      if( component < 0){
+         //Any rows that have roots that we have not seen yet are rows that have no continuous columns
+         //We can safely skip these for finding the continuous connected components
+         continue;
+      }
+      comp->rowcomponent[row] = component;
+      ++comp->ncomponentrows[component];
+   }
+   if(comp->ncomponents != 0){
+      comp->componentrowstart[0] = 0;
+      comp->componentcolstart[0] = 0;
+      for( int i = 1; i < comp->ncomponents; ++i )
+      {
+         comp->componentrowstart[i] = comp->componentrowstart[i-1] + comp->ncomponentrows[i-1];
+         comp->componentcolstart[i] = comp->componentcolstart[i-1] + comp->ncomponentcols[i-1];
+      }
+      int * componentnextrowindex;
+      int * componentnextcolindex;
+      SCIP_CALL( SCIPallocBufferArray(scip,&componentnextrowindex,comp->ncomponents) );
+      SCIP_CALL( SCIPallocBufferArray(scip,&componentnextcolindex,comp->ncomponents) );
+      for( int i = 0; i < comp->ncomponents; ++i )
+      {
+         componentnextcolindex[i] = 0;
+         componentnextrowindex[i] = 0;
+      }
+
+      for( int i = 0; i < comp->nmatrixcols; ++i )
+      {
+         int component = comp->colcomponent[i];
+         if(component < 0){
+            continue;
+         }
+         int index = comp->componentcolstart[component] + componentnextcolindex[component];
+         comp->componentcols[index] = i;
+         ++componentnextcolindex[component];
+      }
+      for( int i = 0; i < comp->nmatrixrows; ++i )
+      {
+         int component = comp->rowcomponent[i];
+         if(component < 0){
+            continue;
+         }
+         int index = comp->componentrowstart[component] + componentnextrowindex[component];
+         comp->componentrows[index] = i;
+         ++componentnextrowindex[component];
+      }
+
+#ifndef NDEBUG
+      for( int i = 0; i < comp->ncomponents; ++i )
+      {
+         assert(componentnextrowindex[i] == comp->ncomponentrows[i]);
+         assert(componentnextcolindex[i] == comp->ncomponentcols[i]);
+      }
+#endif
+
+      SCIPfreeBufferArray(scip,&componentnextcolindex);
+      SCIPfreeBufferArray(scip,&componentnextrowindex);
+   }
+
+   SCIPfreeBufferArray(scip,&representativecomponent);
+   SCIPfreeBufferArray(scip,&disjointset);
    return SCIP_OKAY;
 }
 
@@ -344,6 +431,7 @@ void freeMatrixStatistics(
 static
 SCIP_RETCODE findImpliedIntegers(
    SCIP * scip,
+   SCIP_PRESOLDATA* presoldata,
    SCIP_MATRIX* matrix,
    MATRIX_COMPONENTS* comp,
    MATRIX_STATISTICS* stats,
@@ -406,11 +494,9 @@ SCIP_RETCODE findImpliedIntegers(
 
       /* We use the row-wise algorithm only if the number of columns is much larger than the number of rows.
        * Generally, the column-wise algorithm will be faster, but in these extreme cases, the row algorithm is faster.
-       * TODO: test/tune this parameter
+       * Only very little instances should have this at all.
        */
-      //TODO for ~50-150 seems to be about even on neos-...-inde and neos-...-isar, test further
-      if(nrows * 20 < ncols){
-         printf("Row addition: %f \n",(double) ncols / (double) nrows);
+      if( nrows * presoldata->columnrowratio < ncols){
          for( int i = startrow; i < startrow + nrows && componentnetwork; ++i )
          {
             int row = comp->componentrows[i];
@@ -432,7 +518,9 @@ SCIP_RETCODE findImpliedIntegers(
 
             SCIP_CALL( SCIPnetmatdecTryAddRow(dec,row,tempIdxArray,tempValArray,ncontnonz,&componentnetwork) );
          }
-      }else{
+      }
+      else
+      {
          for( int i = startcol; i < startcol + ncols && componentnetwork; ++i )
          {
             int col = comp->componentcols[i];
@@ -446,14 +534,12 @@ SCIP_RETCODE findImpliedIntegers(
       if( !componentnetwork )
       {
          SCIPnetmatdecRemoveComponent(dec,&comp->componentrows[startrow], nrows, &comp->componentcols[startcol], ncols);
-         ++nnonnetwork;
       }
 
       SCIP_Bool componenttransnetwork = TRUE;
 
       /* For the transposed matrix, the situation is exactly reversed because the row/column algorithms are swapped */
-      //TODO: tune parameter
-      if(nrows < ncols * 20){
+      if(nrows < ncols * presoldata->columnrowratio){
          for( int i = startrow; i < startrow + nrows && componenttransnetwork ; ++i )
          {
             int row = comp->componentrows[i];
@@ -476,7 +562,9 @@ SCIP_RETCODE findImpliedIntegers(
             SCIP_CALL( SCIPnetmatdecTryAddCol(transdec,row,tempIdxArray,tempValArray,ncontnonz,
                                               &componenttransnetwork) );
          }
-      }else{
+      }
+      else
+      {
          for( int i = startcol; i < startcol + ncols && componenttransnetwork; ++i )
          {
             int col = comp->componentcols[i];
@@ -508,13 +596,12 @@ SCIP_RETCODE findImpliedIntegers(
          SCIP_Bool infeasible = FALSE;
          SCIP_CALL(SCIPchgVarType(scip,var,SCIP_VARTYPE_IMPLINT,&infeasible));
          (*nchgvartypes)++;
-         //TODO: inform of changed variable types
          assert(!infeasible);
       }
    }
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH,NULL,
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
                    "implied integer components: %d (%d planar) / %d (disqualified: %d by integrality, %d by numerics, %d not network) \n",
-                   goodcomponents,planarcomponents,comp->ncomponents,nbadintegrality,nbadnumerics,nnonnetwork);
+                   goodcomponents, planarcomponents, comp->ncomponents, nbadintegrality, nbadnumerics, nnonnetwork);
 
    SCIPfreeBufferArray(scip,&tempIdxArray);
    SCIPfreeBufferArray(scip,&tempValArray);
@@ -547,18 +634,21 @@ SCIP_DECL_PRESOLCOPY(presolCopyImplint)
 
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
-#if 0
+
 static
 SCIP_DECL_PRESOLFREE(presolFreeImplint)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of implint presolver not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+{
+   SCIP_PRESOLDATA* presoldata;
+
+   /* free presolver data */
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   SCIPfreeBlockMemory(scip, &presoldata);
+   SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
 }
-#else
-#define presolFreeImplint NULL
-#endif
 
 
 /** initialization method of presolver (called after problem was transformed) */
@@ -642,6 +732,13 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
 
    *result = SCIP_DIDNOTFIND;
 
+   /* Exit early if there are no candidates variables to upgrade */
+   SCIP_PRESOLDATA* presoldata = SCIPpresolGetData(presol);
+   if(!presoldata->convertintegers && SCIPgetNContVars(scip) == 0)
+   {
+      return SCIP_OKAY;
+   }
+
    double starttime = SCIPgetSolvingTime(scip);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                    "   (%.1fs) implied integer detection started\n", starttime);
@@ -671,7 +768,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
       {
          SCIPmatrixFree(scip, &matrix);
       }
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
                       "   (%.1fs) implied integer detection stopped because problem is not an MILP\n",
                       SCIPgetSolvingTime(scip));
       return SCIP_OKAY;
@@ -683,7 +780,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    SCIP_CALL( createMatrixComponents(scip, matrix, &comp) );
    SCIP_CALL( computeMatrixStatistics(scip, matrix, &stats) );
    SCIP_CALL( computeContinuousComponents(scip, matrix, comp) );
-   SCIP_CALL( findImpliedIntegers(scip,matrix,comp, stats, nchgvartypes) );
+   SCIP_CALL( findImpliedIntegers(scip, presoldata, matrix, comp, stats, nchgvartypes) );
    int afterchanged = *nchgvartypes;
 
 
@@ -692,7 +789,12 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                       "   (%.1fs) no implied integers detected (time: %.2fs)\n", endtime,endtime-starttime);
       *result = SCIP_DIDNOTFIND;
-   }else{
+   }
+   else
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+                      "   (%.1fs) %d implied integers detected (time: %.2fs)\n",endtime,*nchgvartypes,endtime-starttime);
+
       *result = SCIP_SUCCESS;
    }
    freeMatrixStatistics(scip,&stats);
@@ -715,14 +817,9 @@ SCIP_RETCODE SCIPincludePresolImplint(
    SCIP_PRESOL* presol;
 
    /* create implint presolver data */
-   presoldata = NULL;
-   /* TODO: (optional) create presolver specific data here */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
 
-   presol = NULL;
-
-   /* use SCIPincludePresolBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
+   /* include implint presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
                                      PRESOL_TIMING, presolExecImplint, presoldata) );
 
@@ -736,8 +833,15 @@ SCIP_RETCODE SCIPincludePresolImplint(
    SCIP_CALL( SCIPsetPresolInitpre(scip, presol, presolInitpreImplint) );
    SCIP_CALL( SCIPsetPresolExitpre(scip, presol, presolExitpreImplint) );
 
-   /* add implint presolver parameters */
-   /* TODO: (optional) add presolver specific parameters with SCIPaddTypeParam() here */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+                               "presolving/implint/convertintegers",
+                               "should we detect implied integrality for integer variables in the problem?",
+                               &presoldata->convertintegers, TRUE, DEFAULT_CONVERTINTEGERS, NULL, NULL) );
 
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+                               "presolving/implint/columnrowratio",
+                               "Use the network row addition algorithm when the column to row ratio becomes larger than this threshold.",
+                               &presoldata->columnrowratio, TRUE, DEFAULT_COLUMNROWRATIO,0.0,1e12, NULL, NULL) );
    return SCIP_OKAY;
 }
