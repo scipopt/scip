@@ -40,6 +40,8 @@ Unit tests
 Testing
 -------
 
+- allow unknown parameters to let tests pass if only optional dependencies are missing
+
 Build system
 ------------
 
