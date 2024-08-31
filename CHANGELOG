@@ -25,6 +25,7 @@ Fixed bugs
 - do not abort writing of constraints to lp/pip files (and forget to free buffer memory) when encountering unsupported nonlinear constraint
 - fixed that names and description of the LPI's were not null-terminated
 - fixed decision on when to enforce nonlinear constraints on relaxation solutions if integer variables present
+- fixed write of strings with at least 1024 characters when compiling with MSVS 2015 (14.0) or later (earlier MSVS still have an issue, which will not be fixed)
 
 Performance improvements
 ------------------------
