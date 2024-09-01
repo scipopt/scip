@@ -448,7 +448,7 @@ SCIP_Bool getNextLine(
 
    fzninput->linenumber++;
 
-   if( fzninput->linebuf[fzninput->linebufsize - 2] != '\0' )
+   while( fzninput->linebuf[fzninput->linebufsize - 2] != '\0' )
    {
       int newsize;
 
