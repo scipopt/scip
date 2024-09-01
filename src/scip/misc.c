@@ -10889,7 +10889,7 @@ int SCIPsnprintf(
 
    va_start(ap, s); /*lint !e826*/
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER) && _MSC_VER < 1900
    n = _vsnprintf(t, (size_t) len, s, ap);
 #else
    n = vsnprintf(t, (size_t) len, s, ap); /*lint !e571*/
