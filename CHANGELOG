@@ -72,6 +72,7 @@ Fixed bugs
 - do not abort writing of constraints to lp/pip files (and forget to free buffer memory) when encountering unsupported nonlinear constraint
 - fixed that names and description of the LPI's were not null-terminated
 - fixed decision on when to enforce nonlinear constraints on relaxation solutions if integer variables present
+- fixed reading of very long lines (>78000 characters) in FlatZinc reader
 
 Performance improvements
 ------------------------
