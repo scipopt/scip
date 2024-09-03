@@ -1,0 +1,125 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*                                                                           */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
+/*                                                                           */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+#define PBCOMPETITION
+
+#include <stdio.h>
+#include <string.h>
+
+#include "scip/scip.h"
+#include "message_pbscip.h"
+
+
+static
+void printMessage(
+      SCIP_MESSAGEHDLR *messagehdlr,        /**< message handler */
+      FILE *file,                           /**< file stream to print message into */
+      const char *msg                       /**< message to print */
+) {
+   SCIP_MESSAGEHDLRDATA *messagehdlrdata;
+
+   assert(messagehdlr != NULL);
+
+   messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
+   assert(messagehdlrdata != NULL);
+
+   if( messagehdlrdata->comment )
+   {
+      if (msg && !msg[0])
+         return;
+      fputs("c ", file);
+   }
+
+   fputs(msg, file);
+   fflush(file);
+}
+
+/** default error printing method which is used to print all occurring errors */
+static
+SCIP_DECL_ERRORPRINTING(messageErrorPbscip) {  /*lint --e{715}*/
+
+#ifdef PBCOMPETITION
+   fputs("c ", stderr);
+#endif
+   fputs(msg, stderr);
+   fflush(stderr);
+}
+
+/** warning message print method of default message handler */
+static
+SCIP_DECL_MESSAGEWARNING(messageWarningPbscip) {  /*lint --e{715}*/
+   printMessage(messagehdlr, file, msg);
+}
+
+/** dialog message print method of default message handler */
+static
+SCIP_DECL_MESSAGEDIALOG(messageDialogPbscip) {  /*lint --e{715}*/
+   printMessage(messagehdlr, file, msg);
+}
+
+/** info message print method of default message handler */
+static
+SCIP_DECL_MESSAGEINFO(messageInfoPbscip) {  /*lint --e{715}*/
+   printMessage(messagehdlr, file, msg);
+}
+
+static
+SCIP_DECL_MESSAGEHDLRFREE(messagehdlrFreePbscip) {  /*lint --e{715}*/
+   SCIP_MESSAGEHDLRDATA *messagehdlrdata;
+
+   assert(messagehdlr != NULL);
+
+   messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
+   assert(messagehdlrdata != NULL);
+
+   BMSfreeMemory(&messagehdlrdata);
+
+   return SCIP_OKAY;
+}
+
+
+/** creates default PBSCIP message handler */
+SCIP_RETCODE SCIPcreateMessagehdlrPbscip(
+      SCIP_MESSAGEHDLR **messagehdlr,        /**< pointer to message handler */
+      SCIP_Bool buffered,           /**< should the output be buffered */
+      const char *filename,           /**< name of log file, or NULL (stdout) */
+      SCIP_Bool quiet               /**< should screen messages be suppressed? */
+) {
+   SCIP_MESSAGEHDLRDATA *messagehdlrdata;
+
+   SCIP_ALLOC(BMSallocMemory(&messagehdlrdata));
+
+#ifdef PBCOMPETITION
+   messagehdlrdata->comment = TRUE;
+#else
+   messagehdlrdata->comment = FALSE;
+#endif
+   SCIP_CALL(SCIPmessagehdlrCreate(messagehdlr, buffered, filename, quiet,
+                                   messageWarningPbscip, messageDialogPbscip, messageInfoPbscip, messagehdlrFreePbscip,
+                                   messagehdlrdata));
+
+   SCIPmessageSetErrorPrinting(messageErrorPbscip, NULL);
+
+   return SCIP_OKAY;
+}

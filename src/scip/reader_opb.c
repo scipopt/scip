@@ -134,6 +134,18 @@
 #define OPB_MAX_LINELEN        65536  /**< size of the line buffer for reading or writing */
 #define OPB_MAX_PUSHEDTOKENS   2
 #define OPB_INIT_COEFSSIZE     8192
+#define OPB_MAX_INTSIZE        47     /**< maximum allowed "intsize" (i.e., the number of bits required to represent the
+                                       *   sum of absolute values of all integers that appear in a constraint or objective
+                                       *   function) */
+#define MAX_BITSIZE            53     /**< maximum bit size of an integer that is safely allowed in SCIP */
+
+/** MPS reading data */
+struct SCIP_ReaderData
+{
+   int                   maxintsize;                  /**< maximum allowed "intsize" (i.e., the number of bits required
+                                                       *   to represent the sum of absolute values of all integers that
+                                                       *   appear in a constraint or objective function) */
+};
 
 /** Section in OPB File */
 enum OpbExpType
@@ -1480,13 +1492,17 @@ SCIP_RETCODE readConstraints(
    return SCIP_OKAY;
 }
 
-/** tries to read the first comment line which usually contains information about the max size of "and" products */
+/** read the first comment line which usually contains information about (1) the max size of "and" products and (2)
+ *  "intsize" which represents the number of bits required to represent, for any constraint, the sum of the absolute
+ *  value of all integers that appear in the constraint. This also considers the objective function by re-writing it as a
+ *  pseudo-constraint. */
 static
-SCIP_RETCODE getMaxAndConsDim(
+SCIP_RETCODE getCommentLineData(
    SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput,           /**< OPB reading data */
    SCIP_Real*            objscale,           /**< pointer to store objective scale */
-   SCIP_Real*            objoffset           /**< pointer to store objective offset */
+   SCIP_Real*            objoffset,          /**< pointer to store objective offset */
+   int*                  intsize             /**< pointer to store intsize value */
    )
 {
    SCIP_Bool stop;
@@ -1498,12 +1514,14 @@ SCIP_RETCODE getMaxAndConsDim(
    assert(scip != NULL);
    assert(opbinput != NULL);
    assert(objoffset != NULL);
+   assert(intsize != NULL);
 
    stop = FALSE;
    commentstart = NULL;
    nproducts = NULL;
    *objscale = 1.0;
    *objoffset = 0.0;
+   *intsize = -1;
    opbinput->linebuf[opbinput->linebufsize - 2] = '\0';
 
    do
@@ -1567,6 +1585,27 @@ SCIP_RETCODE getMaxAndConsDim(
                stop = TRUE;
             }
 
+            /* search for "intsize= xyz" in comment line, where xyz represents the number of bits required to represent
+             * the largest coefficient in the given instance */
+            str = strstr(opbinput->linebuf, "intsize= ");
+            if( str != NULL )
+            {
+               const char delimchars[] = " \t";
+               char* pos;
+
+               str += strlen("intsize= ");
+
+               pos = strtok(str, delimchars);
+
+               if( pos != NULL )
+               {
+                  *intsize = atoi(pos);
+                  SCIPdebugMsg(scip, "number of bits required to represent sum of the absolute values of all integers appearing in a constraint or objective function = %d.\n", *intsize);
+               }
+
+               stop = TRUE;
+            }
+
             /* search for "Obj. scale       : <number>" in comment line */
             str = strstr(opbinput->linebuf, "Obj. scale       : ");
             if( str != NULL )
@@ -1607,6 +1646,7 @@ SCIP_RETCODE readOPBFile(
 {
    SCIP_Real objscale;
    SCIP_Real objoffset;
+   int intsize = -1;
    int nNonlinearConss;
    int i;
 
@@ -1626,8 +1666,16 @@ SCIP_RETCODE readOPBFile(
     * "opbinput.andconss"
     */
 
-   /* tries to read the first comment line which usually contains information about the max size of "and" products */
-   SCIP_CALL( getMaxAndConsDim(scip, opbinput, &objscale, &objoffset) );
+   /* read the first comment line which usually contains information about (1) the max size of "and" products and (2)
+    * "intsize" which represents the number of bits required to represent, for any constraint, the sum of the absolute
+    * value of all integers that appear in the constraint. This also considers the objective function by re-writing it as a
+    * pseudo-constraint. */
+   SCIP_CALL( getCommentLineData(scip, opbinput, &objscale, &objoffset, &intsize) );
+
+   if( intsize > OPB_MAX_INTSIZE)
+   {
+      return SCIP_BIGINT;
+   }
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -3954,7 +4002,12 @@ SCIP_RETCODE SCIPreadOpb(
    SCIPfreeBlockMemoryArray(scip, &opbinput.token, OPB_MAX_LINELEN);
    SCIPfreeBlockMemoryArray(scip, &opbinput.linebuf, opbinput.linebufsize);
 
-   if( retcode == SCIP_PLUGINNOTFOUND )
+   if(retcode == SCIP_BIGINT)
+   {
+      *result = SCIP_SUSPENDED;
+      return SCIP_OKAY;
+   }
+   else if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;
 
    SCIP_CALL( retcode );
@@ -4172,6 +4225,21 @@ SCIP_DECL_READERCOPY(readerCopyOpb)
 }
 
 
+/** destructor of reader to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_READERFREE(readerFreeOpb)
+{
+   SCIP_READERDATA* readerdata;
+
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+   SCIPfreeBlockMemory(scip, &readerdata);
+
+   return SCIP_OKAY;
+}
+
+
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadOpb)
@@ -4203,13 +4271,18 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
 
+   /* create reader data */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
+
    /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyOpb) );
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeOpb) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadOpb) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteOpb) );
 
@@ -4220,6 +4293,9 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/" READER_NAME "/multisymbol", "use '*' between coefficients and variables by writing to problem?",
          NULL, TRUE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "reading/" READER_NAME "/maxintsize", "maximum allowed 'intsize' (i.e., the number of "
+         "bits required to represent the sum of absolute values of all integers that appear in a constraint or "
+         "objective function)", &readerdata->maxintsize, TRUE, OPB_MAX_INTSIZE, 0, MAX_BITSIZE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

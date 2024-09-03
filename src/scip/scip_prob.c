@@ -384,7 +384,7 @@ SCIP_RETCODE SCIPreadProb(
             extension != NULL ? extension : fileextension, &result);
 
       /* check for reader errors */
-      if( retcode == SCIP_NOFILE || retcode == SCIP_READERROR )
+      if( retcode == SCIP_NOFILE || retcode == SCIP_READERROR || result == SCIP_SUSPENDED )
          goto TERMINATE;
       SCIP_CALL( retcode );
    }
@@ -488,6 +488,9 @@ SCIP_RETCODE SCIPreadProb(
  TERMINATE:
    /* free buffer array */
    SCIPfreeBufferArray(scip, &tmpfilename);
+
+   if (result == SCIP_SUSPENDED)
+      return SCIP_BIGINT;
 
    return retcode;
 }
