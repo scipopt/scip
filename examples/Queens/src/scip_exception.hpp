@@ -102,6 +102,9 @@ inline char* SCIPgetErrorString(SCIP_RETCODE retcode, char* buffer_str, int buff
    case SCIP_NOTIMPLEMENTED:
       (void) SCIPsnprintf(buffer_str, buffersize, "function not implemented");
       return buffer_str;
+   case SCIP_BIGINT:
+      (void) SCIPsnprintf(buffer_str, buffersize, "unsupported type detected");
+      return buffer_str;
    }
    return NULL;
 }
