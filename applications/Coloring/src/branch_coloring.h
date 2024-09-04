@@ -25,6 +25,7 @@
 /**@file   branch_coloring.h
  * @brief  default branching rule for the vertex coloring problem
  * @author Gerald Gamrath
+ * @author Julian Meffert
  *
  * This file implements the standard branching rule for the coloring algorithm.
  *
