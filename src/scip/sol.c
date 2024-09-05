@@ -3001,6 +3001,7 @@ SCIP_RETCODE SCIPsolRetransform(
    if( SCIPsolIsExact(sol) )
    {
       SCIP_CALL( SCIPsolRetransformExact(sol, set, stat, origprob, transprob, hasinfval) );
+      SCIP_CALL( SCIPsolOverwriteFPSolWithExact(sol, set, stat, origprob, transprob, NULL) );
       return SCIP_OKAY;
    }
 
