@@ -3987,7 +3987,14 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
          RatRoundReal(solval, roundmode)) );
    }
 
-   SCIPsolGetObjExact(sol, set, transprob, origprob, solval);
+   if( SCIPsolIsOriginal(sol) )
+   {
+      RatSet(solval, SCIPsolGetOrigObjExact(sol));
+   }
+   else
+   {
+      SCIPsolGetObjExact(sol, set, transprob, origprob, solval);
+   }
    /* hard-set the obj value of the solution  */
    sol->obj = RatRoundReal(solval, SCIP_R_ROUND_UPWARDS);
 
