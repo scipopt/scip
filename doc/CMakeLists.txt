@@ -9,13 +9,13 @@
 #
 # a couple of programs are required on the path
 #
-find_program(PYTHON python)
+find_program(PYTHON python3)
 find_program(BASH bash)
 find_program(DOXYGEN doxygen)
 
 
 if(NOT (PYTHON AND BASH AND DOXYGEN))
-    message(WARNING "Could not find all of doxygen, python, and bash in system path, which are required for generation of documentation")
+    message(WARNING "Could not find all of doxygen, python3, and bash in system path, which are required for generation of documentation")
 else()
 
     # change this variable to 'php' the web page
