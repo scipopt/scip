@@ -2398,7 +2398,7 @@ void SCIPprobInternObjvalExact(
    else
    {
       RatDiff(objvalint, objval, origprob->objoffsetexact);
-      RatDivReal(objval, objvalint, transprob->objscale);
+      RatDivReal(objvalint, objvalint, transprob->objscale);
       RatMultReal(objvalint, objvalint, (SCIP_Real) transprob->objsense);
       RatDiff(objvalint, objvalint, transprob->objoffsetexact);
    }
