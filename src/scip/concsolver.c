@@ -500,7 +500,7 @@ SCIP_RETCODE SCIPconcsolverSync(
       SCIPdebugMessage("syncfreq after reading the next syncdata is %g\n", concsolver->syncfreq);
       syncdata = SCIPsyncstoreGetNextSyncdata(syncstore, concsolver->syncdata, concsolver->syncfreq, concsolver->nsyncs, &concsolver->syncdelay);
    }
-
+   SCIPsyncstoreCheckGapAndStop(syncstore,set->limit_gap);
    SCIP_CALL( SCIPstopClock(set->scip, concsolver->totalsynctime) );
 
    return SCIP_OKAY;

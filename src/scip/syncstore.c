@@ -235,6 +235,18 @@ SCIP_RETCODE SCIPsyncstoreExit(
    return SCIP_OKAY;
 }
 
+/** Checks the current concurrent gap against a specified limit gap and stops the synchronization store if the gap is smaller.*/
+void SCIPsyncstoreCheckGapAndStop(
+   SCIP_SYNCSTORE*       syncstore,           /**< the synchronization store */
+   double                limit_gap
+   )
+{
+   double gap;
+   gap = SCIPgetConcurrentGap(syncstore->mainscip);
+   if(gap < limit_gap)
+      syncstore->stopped = TRUE;
+}
+
 /** checks whether the solve-is-stopped flag in the syncstore has been set by any thread */
 SCIP_Bool SCIPsyncstoreSolveIsStopped(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
