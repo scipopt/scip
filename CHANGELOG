@@ -1,5 +1,35 @@
 @page RN9 Release notes for SCIP 9
 
+@section RN912 SCIP 9.1.2
+*************************
+
+Fixed bugs
+----------
+
+- Fixed an issue where concurrent solver sync was not correctly handled after `SCIPconcsolverSync()`. The logic has been moved to `concurrent.c:execConcsolver()` for better clarity and effect. 
+
+Performance improvements
+------------------------
+
+Examples and applications
+-------------------------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Miscellaneous
+-------------
+
 @section RN911 SCIP 9.1.1
 *************************
 
