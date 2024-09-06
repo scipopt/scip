@@ -476,7 +476,6 @@ SCIP_RETCODE execConcsolver(
 
    SCIP_CALL( SCIPconcsolverExec(scip->set->concsolvers[SCIPtpiGetThreadNum()]) );
    SCIP_CALL( SCIPconcsolverSync(scip->set->concsolvers[SCIPtpiGetThreadNum()], scip->set) );
-
    return SCIP_OKAY;
 }
 

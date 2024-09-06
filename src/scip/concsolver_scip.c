@@ -561,7 +561,7 @@ SCIP_DECL_CONCSOLVEREXEC(concsolverScipExec)
 
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
-
+   
    /* print info message that solving has started */
    SCIPinfoMessage(data->solverscip, NULL, "starting solve in concurrent solver '%s'\n", SCIPconcsolverGetName(concsolver));
 

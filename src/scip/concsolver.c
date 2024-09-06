@@ -332,7 +332,6 @@ SCIP_RETCODE SCIPconcsolverExec(
 
    /* set the stopped flag to false */
    concsolver->stopped = FALSE;
-
    /* then call the execute callback */
    SCIP_CALL( concsolver->type->concsolverexec(concsolver, &concsolver->solvingtime, &concsolver->nlpiterations, &concsolver->nnodes) );
 
