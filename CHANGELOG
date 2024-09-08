@@ -57,6 +57,8 @@ Build system
 Miscellaneous
 -------------
 
+- setup PaPILO presolve object in a separate function setupPresolve() of presol_milp.cpp
+
 @section RN910 SCIP 9.1.0
 *************************
 
