@@ -211,108 +211,24 @@ Problem<SCIP_Real> buildProblem(
    /* init objective offset - the value itself is irrelevant */
    builder.setObjOffset(0);
 
+#ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
+   /* show problem name */
+   builder.setProblemName(SCIPgetProbName(scip));
+#endif
+
    return builder.build();
 }
 
-/*
- * Callback methods of presolver
- */
-
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+/** sets up the presolvelib presolve datastructure from the data */
 static
-SCIP_DECL_PRESOLCOPY(presolCopyMILP)
-{  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludePresolMILP(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** destructor of presolver to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_PRESOLFREE(presolFreeMILP)
-{  /*lint --e{715}*/
-   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
-   assert(data != NULL);
-
-   SCIPpresolSetData(presol, NULL);
-   SCIPfreeBlockMemory(scip, &data);
-   return SCIP_OKAY;
-}
-
-/** initialization method of presolver (called after problem was transformed) */
-static
-SCIP_DECL_PRESOLINIT(presolInitMILP)
-{  /*lint --e{715}*/
-   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
-   assert(data != NULL);
-
-   data->lastncols = -1;
-   data->lastnrows = -1;
-
-   return SCIP_OKAY;
-}
-
-/** execution method of presolver */
-static
-SCIP_DECL_PRESOLEXEC(presolExecMILP)
-{  /*lint --e{715}*/
-   SCIP_MATRIX* matrix;
-   SCIP_PRESOLDATA* data;
-   SCIP_Bool initialized;
-   SCIP_Bool complete;
-   SCIP_Bool infeasible;
-   SCIP_Real timelimit;
-
-   *result = SCIP_DIDNOTRUN;
-
-   data = SCIPpresolGetData(presol);
-
-   int nvars = SCIPgetNVars(scip);
-   int nconss = SCIPgetNConss(scip);
-
-   /* run only if the problem size reduced by some amount since the last call or if it is the first call */
-   if( data->lastncols != -1 && data->lastnrows != -1 &&
-       nvars > data->lastncols * 0.85 &&
-       nconss > data->lastnrows * 0.85 )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
-      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
-
-   /* if infeasibility was detected during matrix creation, return here */
-   if( infeasible )
-   {
-      if( initialized )
-         SCIPmatrixFree(scip, &matrix);
-
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-
-   /* we only work on pure MIPs, also disable to try building the matrix again if it failed once */
-   if( !initialized || !complete )
-   {
-      data->lastncols = 0;
-      data->lastnrows = 0;
-
-      if( initialized )
-         SCIPmatrixFree(scip, &matrix);
-
-      return SCIP_OKAY;
-   }
-
-   /* only allow communication of constraint modifications by deleting all constraints when some already have been upgraded */
-   SCIP_CONSHDLR* linconshdlr = SCIPfindConshdlr(scip, "linear");
-   assert(linconshdlr != NULL);
-   bool allowconsmodification = (SCIPconshdlrGetNCheckConss(linconshdlr) == SCIPmatrixGetNRows(matrix));
-
-   Problem<SCIP_Real> problem = buildProblem(scip, matrix);
+Presolve<SCIP_Real> setupPresolve(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOLDATA*      data,               /**< presolver data structure */
+   SCIP_Bool             allowconsmodification /**< whether constraint modifications are allowed */
+   )
+{
    Presolve<SCIP_Real> presolve;
-
-   /* store current numbers of aggregations, fixings, and changed bounds for statistics */
-   int oldnaggrvars = *naggrvars;
-   int oldnfixedvars = *nfixedvars;
-   int oldnchgbds = *nchgbds;
+   SCIP_Real timelimit;
 
    /* important so that SCIP does not throw an error, e.g. when an integer variable is substituted
     * into a knapsack constraint */
@@ -350,9 +266,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 #endif
 
    /* disable dual reductions that are not permitted */
-   if( !complete )
-      presolve.getPresolveOptions().dualreds = 0;
-   else if( SCIPallowStrongDualReds(scip) )
+   if( SCIPallowStrongDualReds(scip) )
       presolve.getPresolveOptions().dualreds = 2;
    else if( SCIPallowWeakDualReds(scip) )
       presolve.getPresolveOptions().dualreds = 1;
@@ -426,17 +340,104 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
    presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
 
+#ifndef SCIP_PRESOLLIB_ENABLE_OUTPUT
    /* adjust output settings of presolve library */
-#ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
-   problem.setName(SCIPgetProbName(scip));
-#else
    presolve.setVerbosityLevel((VerbosityLevel) data->verbosity);
 #endif
 
    /* communicate the time limit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   SCIPgetRealParam(scip, "limits/time", &timelimit);
    if( !SCIPisInfinity(scip, timelimit) )
       presolve.getPresolveOptions().tlim = timelimit - SCIPgetSolvingTime(scip);
+
+   return presolve;
+}
+
+/*
+ * Callback methods of presolver
+ */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyMILP)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPincludePresolMILP(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of presolver to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_PRESOLFREE(presolFreeMILP)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
+   assert(data != NULL);
+
+   SCIPpresolSetData(presol, NULL);
+   SCIPfreeBlockMemory(scip, &data);
+   return SCIP_OKAY;
+}
+
+/** initialization method of presolver (called after problem was transformed) */
+static
+SCIP_DECL_PRESOLINIT(presolInitMILP)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
+   assert(data != NULL);
+
+   data->lastncols = -1;
+   data->lastnrows = -1;
+
+   return SCIP_OKAY;
+}
+
+/** execution method of presolver */
+static
+SCIP_DECL_PRESOLEXEC(presolExecMILP)
+{  /*lint --e{715}*/
+   SCIP_MATRIX* matrix;
+   SCIP_PRESOLDATA* data;
+   SCIP_Bool initialized;
+   SCIP_Bool complete;
+   SCIP_Bool infeasible;
+
+   *result = SCIP_DIDNOTRUN;
+
+   data = SCIPpresolGetData(presol);
+
+   int nvars = SCIPgetNVars(scip);
+   int nconss = SCIPgetNConss(scip);
+
+   /* run only if the problem size reduced by some amount since the last call or if it is the first call */
+   if( data->lastncols != -1 && data->lastnrows != -1 &&
+       nvars > data->lastncols * 0.85 &&
+       nconss > data->lastnrows * 0.85 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
+      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
+
+   /* if infeasibility was detected during matrix creation, return here */
+   if( infeasible )
+   {
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+
+   /* we only work on pure MIPs, also disable to try building the matrix again if it failed once */
+   if( !initialized || !complete )
+   {
+      data->lastncols = 0;
+      data->lastnrows = 0;
+
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      return SCIP_OKAY;
+   }
 
    if( 0 != strncmp(data->filename, DEFAULT_FILENAME_PROBLEM, strlen(DEFAULT_FILENAME_PROBLEM)) )
    {
@@ -445,10 +446,24 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       SCIP_CALL(SCIPwriteTransProblem(scip, data->filename, NULL, FALSE));
    }
 
+   /* only allow communication of constraint modifications by deleting all constraints when some already have been upgraded */
+   SCIP_CONSHDLR* linconshdlr = SCIPfindConshdlr(scip, "linear");
+   assert(linconshdlr != NULL);
+   SCIP_Bool allowconsmodification = (SCIPconshdlrGetNCheckConss(linconshdlr) == SCIPmatrixGetNRows(matrix));
+
+   /* store current numbers of aggregations, fixings, and changed bounds for statistics */
+   int oldnaggrvars = *naggrvars;
+   int oldnfixedvars = *nfixedvars;
+   int oldnchgbds = *nchgbds;
+
+   /* create presolving objects */
+   Problem<SCIP_Real> problem = buildProblem(scip, matrix);
+   int oldnnz = problem.getConstraintMatrix().getNnz();
+   Presolve<SCIP_Real> presolve = setupPresolve(scip, data, allowconsmodification);
+
    /* call the presolving */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
-   int oldnnz = problem.getConstraintMatrix().getNnz();
 
    /*call presolving without storing information for dual postsolve*/
 #if (PAPILO_VERSION_MAJOR >= 2)
