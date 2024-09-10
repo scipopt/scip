@@ -179,7 +179,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
       break;
    }
 
-
    assert(bestcand >= 0);
    assert(SCIPisFeasPositive(scip, bestfractionality));
 
