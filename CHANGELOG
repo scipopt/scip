@@ -16,17 +16,17 @@ Fixed bugs
 - calling SCIPsolveConcurrent() when SCIP was compiled without a TPI now results in a plugin-not-found error
 - fixed LPI status functions of lpi_cpx if the barrier is called
 - check cuts for redundancy after scaling in cutTightenCoefs() and cutTightenCoefsQuad() of cuts.c
-- maintain definition of artificial integral variables in xor constraints to avoid invalidations of conflict constraints
+- maintain definition of artificial integral variables in xor constraints to avoid invalidation of conflict constraints
 - free childless nodes only after the deactivation of the old focus path in treeSwitchPath() of tree.c
-- only normalize rows for column norm evaluations in heur_shiftandpropagate.c to avoid unscaled violations
+- only normalize rows for column norm evaluations in shift-and-propagate heuristic to avoid unscaled violations
 - expression handler for absolute value computes now also a cut when one of the bounds is infinite as long as the sign of the argument is known
 - check for more data to be freed before modifying nonlinear constraints in SCIPaddExprNonlinear()
 - allow for terms with zero coefficients when checking sum in SCIPexprCheckQuadratic()
 - do not abort writing of constraints to lp/pip files (and forget to free buffer memory) when encountering unsupported nonlinear constraint
-- fixed that names and description of the LPI's were not null-terminated
-- fixed decision on when to enforce nonlinear constraints on relaxation solutions if integer variables present
+- fixed that strings with names and descriptions of the LPI's were not null-terminated
+- fixed decision on when to enforce nonlinear constraints on relaxation solutions if integer variables are present
 - fixed reading of very long lines (>78000 characters) in FlatZinc reader
-- fixed write of strings with at least 1024 characters when compiling with MSVS 2015 (14.0) or later (earlier MSVS still have an issue, which will not be fixed)
+- fixed write of strings with at least 1024 characters when compiling with MSVS 2015 (14.0) or later (still an issue with earlier MSVS, which will not be fixed)
 - keep epsilon coefficients in applyFixings() of cons_linear.c until multiples are merged to avoid loss of relevant contributions
 
 Performance improvements
@@ -50,15 +50,9 @@ Build system
 
 ### Cmake
 
-- Fixed compilation and linking with HiGHS. To use HiGHS, cmake now requires to specify the directory containing the `highs-config.cmake` file via `-DHIGHS_DIR`.
-- Extended identification of Ipopt library on Windows to also look for ipopt.dll.lib, as this is used since Ipopt 3.13.0 (2019)
+- fixed compilation and linking with HiGHS; to use HiGHS, cmake now requires to specify the directory containing the `highs-config.cmake` file via `-DHIGHS_DIR`
+- extended identification of Ipopt library on Windows to also look for ipopt.dll.lib, as this is used since Ipopt 3.13.0 (2019)
 
-### Makefile
-
-Miscellaneous
--------------
-
-- setup PaPILO presolve object in a separate function setupPresolve() of presol_milp.cpp
 
 @section RN910 SCIP 9.1.0
 *************************
