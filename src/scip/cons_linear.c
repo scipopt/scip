@@ -898,18 +898,16 @@ SCIP_RETCODE consdataCreate(
    constant = 0.0;
    if( nvars > 0 )
    {
-      int k;
-
       SCIP_VAR** varsbuffer;
       SCIP_Real* valsbuffer;
 
       /* copy variables into temporary buffer */
       SCIP_CALL( SCIPallocBufferArray(scip, &varsbuffer, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &valsbuffer, nvars) );
-      k = 0;
+      nvars = 0;
 
       /* loop over variables and sort out fixed ones */
-      for( v = 0; v < nvars; ++v )
+      for( v = 0; v < (*consdata)->nvars; ++v )
       {
          SCIP_VAR* var;
          SCIP_Real val;
@@ -927,9 +925,9 @@ SCIP_RETCODE consdataCreate(
             }
             else
             {
-               varsbuffer[k] = var;
-               valsbuffer[k] = val;
-               k++;
+               varsbuffer[nvars] = var;
+               valsbuffer[nvars] = val;
+               ++nvars;
 
                /* update hascontvar and hasnonbinvar flags */
                if( !(*consdata)->hascontvar )
@@ -947,14 +945,14 @@ SCIP_RETCODE consdataCreate(
             }
          }
       }
-      (*consdata)->nvars = k;
+      (*consdata)->nvars = nvars;
 
-      if( k > 0 )
+      if( nvars > 0 )
       {
          /* copy the possibly reduced buffer arrays into block */
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, k) );
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vals, valsbuffer, k) );
-         (*consdata)->varssize = k;
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, nvars) );
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vals, valsbuffer, nvars) );
+         (*consdata)->varssize = nvars;
       }
       /* free temporary buffer */
       SCIPfreeBufferArray(scip, &valsbuffer);
@@ -3946,7 +3944,8 @@ SCIP_RETCODE chgCoefPos(
       locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
 
    /* if necessary, update the rounding locks of the variable */
-   if( locked && newval * val < 0.0 )
+   if( locked && ( !SCIPisNegative(scip, val) || !SCIPisNegative(scip, newval) )
+              && ( !SCIPisPositive(scip, val) || !SCIPisPositive(scip, newval) ) )
    {
       assert(SCIPconsIsTransformed(cons));
 
@@ -14773,7 +14772,9 @@ SCIP_RETCODE fullDualPresolve(
             int arrayindex;
 
             var = consdata->vars[i];
+            assert(var != NULL);
             val = consdata->vals[i];
+            assert(!SCIPisZero(scip, val));
 
             /* check if still all integer variables have integral coefficients */
             if( SCIPvarIsIntegral(var) )
