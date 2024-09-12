@@ -75,6 +75,7 @@ Fixed bugs
 - fixed reading of very long lines (>78000 characters) in FlatZinc reader
 - fixed write of strings with at least 1024 characters when compiling with MSVS 2015 (14.0) or later (still an issue with earlier MSVS, which will not be fixed)
 - keep epsilon coefficients in applyFixings() of cons_linear.c until multiples are merged to avoid loss of relevant contributions
+- fixed that some variable type changes were not accounted correctly in presolve of linear constraints
 
 Performance improvements
 ------------------------
