@@ -405,6 +405,7 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
+ * - \subpage RN10         "SCIP 10"
  * - \subpage RN9          "SCIP 9"
  * - \subpage RN8          "SCIP 8"
  * - \subpage RN7          "SCIP 7.0"
