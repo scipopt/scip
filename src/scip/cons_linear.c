@@ -898,18 +898,16 @@ SCIP_RETCODE consdataCreate(
    constant = 0.0;
    if( nvars > 0 )
    {
-      int k;
-
       SCIP_VAR** varsbuffer;
       SCIP_Real* valsbuffer;
 
       /* copy variables into temporary buffer */
       SCIP_CALL( SCIPallocBufferArray(scip, &varsbuffer, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &valsbuffer, nvars) );
-      k = 0;
+      nvars = 0;
 
       /* loop over variables and sort out fixed ones */
-      for( v = 0; v < nvars; ++v )
+      for( v = 0; v < (*consdata)->nvars; ++v )
       {
          SCIP_VAR* var;
          SCIP_Real val;
@@ -927,9 +925,9 @@ SCIP_RETCODE consdataCreate(
             }
             else
             {
-               varsbuffer[k] = var;
-               valsbuffer[k] = val;
-               k++;
+               varsbuffer[nvars] = var;
+               valsbuffer[nvars] = val;
+               ++nvars;
 
                /* update hascontvar and hasnonbinvar flags */
                if( !(*consdata)->hascontvar )
@@ -947,14 +945,14 @@ SCIP_RETCODE consdataCreate(
             }
          }
       }
-      (*consdata)->nvars = k;
+      (*consdata)->nvars = nvars;
 
-      if( k > 0 )
+      if( nvars > 0 )
       {
          /* copy the possibly reduced buffer arrays into block */
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, k) );
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vals, valsbuffer, k) );
-         (*consdata)->varssize = k;
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, varsbuffer, nvars) );
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vals, valsbuffer, nvars) );
+         (*consdata)->varssize = nvars;
       }
       /* free temporary buffer */
       SCIPfreeBufferArray(scip, &valsbuffer);
@@ -3946,7 +3944,8 @@ SCIP_RETCODE chgCoefPos(
       locked = SCIPconsIsLockedType(cons, (SCIP_LOCKTYPE) i);
 
    /* if necessary, update the rounding locks of the variable */
-   if( locked && newval * val < 0.0 )
+   if( locked && ( !SCIPisNegative(scip, val) || !SCIPisNegative(scip, newval) )
+              && ( !SCIPisPositive(scip, val) || !SCIPisPositive(scip, newval) ) )
    {
       assert(SCIPconsIsTransformed(cons));
 
@@ -9624,7 +9623,8 @@ SCIP_RETCODE convertLongEquality(
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  naggrvars,          /**< pointer to count number of aggregated variables */
-   int*                  ndelconss           /**< pointer to count number of deleted constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
+   int*                  nchgvartypes        /**< pointer to count number of changed variable types */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -9762,6 +9762,7 @@ SCIP_RETCODE convertLongEquality(
       if( absval > maxabsval )
          maxabsval = absval;
 
+      /*TODO: why exit here when implied integrality can still be derived?!*/
       /* do not try to multi aggregate, when numerical bad */
       if( maxabsval / minabsval > conshdlrdata->maxmultaggrquot )
          return SCIP_OKAY;
@@ -9943,6 +9944,7 @@ SCIP_RETCODE convertLongEquality(
    }
    assert(!samevar || (supinf > 0 && infinf > 0));
 
+   /*TODO: implint detection again terminates early here*/
    /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
     * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */
    if( (samevar && (supinf > 1 || infinf > 1)) || (!samevar && supinf > 0 && infinf > 0) )
@@ -10050,6 +10052,7 @@ SCIP_RETCODE convertLongEquality(
             SCIPdebugMsg(scip, "linear constraint <%s>: converting continuous variable <%s> to implicit integer variable\n",
                SCIPconsGetName(cons), SCIPvarGetName(var));
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+            (*nchgvartypes)++;
             if( infeasible )
             {
                SCIPdebugMsg(scip, "infeasible upgrade of variable <%s> to integral type, domain is empty\n", SCIPvarGetName(var));
@@ -10144,6 +10147,7 @@ SCIP_RETCODE convertLongEquality(
          SCIPdebugMsg(scip, "linear constraint <%s>: converting integer variable <%s> to implicit integer variable\n",
             SCIPconsGetName(cons), SCIPvarGetName(var));
          SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+         (*nchgvartypes)++;
          if( infeasible )
          {
             SCIPdebugMsg(scip, "infeasible upgrade of variable <%s> to integral type, domain is empty\n", SCIPvarGetName(var));
@@ -10488,7 +10492,8 @@ SCIP_RETCODE convertEquality(
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  nfixedvars,         /**< pointer to count number of fixed variables */
    int*                  naggrvars,          /**< pointer to count number of aggregated variables */
-   int*                  ndelconss           /**< pointer to count number of deleted constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
+   int*                  nchgvartypes        /**< pointer to count number of changed variable types */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -10526,7 +10531,7 @@ SCIP_RETCODE convertEquality(
       SCIP_CALL( checkPartialObjective(scip, cons, conshdlrdata) );
 
       /* try to multi-aggregate one of the variables */
-      SCIP_CALL( convertLongEquality(scip, conshdlrdata, cons, cutoff, naggrvars, ndelconss) );
+      SCIP_CALL( convertLongEquality(scip, conshdlrdata, cons, cutoff, naggrvars, ndelconss, nchgvartypes) );
    }
 
    return SCIP_OKAY;
@@ -10614,7 +10619,8 @@ SCIP_RETCODE dualPresolve(
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  nfixedvars,         /**< pointer to count number of fixed variables */
    int*                  naggrvars,          /**< pointer to count number of aggregated variables */
-   int*                  ndelconss           /**< pointer to count number of deleted constraints */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
+   int*                  nchgvartypes        /**< pointer to count number of changed variable types */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -11041,6 +11047,7 @@ SCIP_RETCODE dualPresolve(
                if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_IMPLINT )
                {
                   SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasiblevartypechg) );
+                  (*nchgvartypes)++;
                   assert(!infeasiblevartypechg);
                }
             }
@@ -14598,7 +14605,8 @@ SCIP_RETCODE fullDualPresolve(
    SCIP_CONS**           conss,              /**< constraint set */
    int                   nconss,             /**< number of constraints */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
-   int*                  nchgbds             /**< pointer to count the number of bound changes */
+   int*                  nchgbds,            /**< pointer to count the number of bound changes */
+   int*                  nchgvartypes        /**< pointer to count the number of variable type changes */
    )
 {
    SCIP_Real* redlb;
@@ -14773,7 +14781,9 @@ SCIP_RETCODE fullDualPresolve(
             int arrayindex;
 
             var = consdata->vars[i];
+            assert(var != NULL);
             val = consdata->vals[i];
+            assert(!SCIPisZero(scip, val));
 
             /* check if still all integer variables have integral coefficients */
             if( SCIPvarIsIntegral(var) )
@@ -15031,7 +15041,7 @@ SCIP_RETCODE fullDualPresolve(
       {
          /* since we locally copied the variable array we can change the variable type immediately */
          SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
-
+         (*nchgvartypes)++;
          if( infeasible )
          {
             SCIPdebugMsg(scip, "infeasible upgrade of variable <%s> to integral type, domain is empty\n", SCIPvarGetName(var));
@@ -16591,13 +16601,13 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          /* convert special equalities */
          if( !cutoff && SCIPconsIsActive(cons) )
          {
-            SCIP_CALL( convertEquality(scip, cons, conshdlrdata, &cutoff, nfixedvars, naggrvars, ndelconss) );
+            SCIP_CALL( convertEquality(scip, cons, conshdlrdata, &cutoff, nfixedvars, naggrvars, ndelconss, nchgvartypes) );
          }
 
          /* apply dual presolving for variables that appear in only one constraint */
          if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) )
          {
-            SCIP_CALL( dualPresolve(scip, conshdlrdata, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+            SCIP_CALL( dualPresolve(scip, conshdlrdata, cons, &cutoff, nfixedvars, naggrvars, ndelconss, nchgvartypes) );
          }
 
          /* check if an inequality is parallel to the objective function */
@@ -16731,7 +16741,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
    {
       if( conshdlrdata->dualpresolving && SCIPallowStrongDualReds(scip) && !SCIPisStopped(scip) )
       {
-         SCIP_CALL( fullDualPresolve(scip, conss, nconss, &cutoff, nchgbds) );
+         SCIP_CALL( fullDualPresolve(scip, conss, nconss, &cutoff, nchgbds, nchgvartypes) );
       }
    }
 

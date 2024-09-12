@@ -5684,7 +5684,7 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
 
       setppconsssort[nsetppconss++] = cons;
    }
-   SCIPsortPtr((void**) setppconsssort, sortByPointerValue, nsetppcconss);
+   SCIPsortPtr((void**) setppconsssort, sortByPointerValue, nsetppconss);
 
    /* For each permvar, introduce an array of setppc constraints (initially NULL) for each variable,
     * and populate it with the setppc constraints that it contains. This array follows the ordering by cons ptr address.
