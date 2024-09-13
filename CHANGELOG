@@ -78,6 +78,9 @@ Fixed bugs
 - fixed that some variable type changes were not accounted correctly in presolve of linear constraints
 - fix constraint sorting in setpp-orbitope upgrade in symmetry code
 - fixed that SCIPnodeGetConsProps() also counted bound changes from propagators
+- use original and-constraints of an untransformed pseudoboolean constraint when copying original problems to avert segmentation faults
+- sort and-constraints of a pseudoboolean constraint with respect to the resultant problem indices to avoid shuffled copies
+- treat pseudoboolean constraints as nonlinear constraints in OPB reader to prevent duplication mistakes
 
 Performance improvements
 ------------------------
