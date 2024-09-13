@@ -7919,7 +7919,7 @@ void SCIPnodeGetAncestorBranchingsPart(
    }
 }
 
-/** return all bound changes based on constraint propagation; stop saving the bound changes if we reach a branching
+/** return all bound changes on non-continuous variables based on constraint propagation; stop saving the bound changes if we reach a branching
  *  decision based on a dual information
  */
 void SCIPnodeGetConsProps(
@@ -7935,9 +7935,9 @@ void SCIPnodeGetConsProps(
 {  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
-   int first_dual;
-   int nskip;
+   int nbranchings;
    int i;
+   int pos;
 
    assert(node != NULL);
    assert(vars != NULL);
@@ -7946,7 +7946,7 @@ void SCIPnodeGetConsProps(
    assert(nconspropvars != NULL);
    assert(conspropvarssize >= 0);
 
-   (*nconspropvars) = 0;
+   *nconspropvars = 0;
 
    if( SCIPnodeGetDepth(node) == 0 || node->domchg == NULL )
       return;
@@ -7957,52 +7957,49 @@ void SCIPnodeGetConsProps(
    assert(boundchgs != NULL);
    assert(nboundchgs >= 0);
 
-   SCIPnodeGetNDomchg(node, &nskip, NULL, NULL);
-   i = nskip;
-
-   while( i < nboundchgs
-       && !(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons == NULL)
-       && !(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop == NULL) )
-      i++;
-
-   first_dual = i;
-
-   /* count the number of bound changes because of constraint propagation */
-   for( i = nskip; i < first_dual; i++ )
+   /* get index of first bound change, after the branching decisions, that is not from a known constraint or propagator (CONSINFER or PROPINFER without reason)
+    * count the number of bound changes because of constraint propagation
+    */
+   SCIPnodeGetNDomchg(node, &nbranchings, NULL, NULL);
+   for( i = nbranchings; i < nboundchgs; ++i )
    {
+      /* as we start at nbranchings, there should be no BRANCHING boundchanges anymore */
       assert(boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING);
 
-      if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL) )
+      if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
       {
+         if( boundchgs[i].data.inferencedata.reason.cons == NULL )
+            break;
          if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             (*nconspropvars)++;
       }
-      else if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons == NULL)
-            || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop == NULL) )
-         break;
-   }
-
-   /* if the arrays have enough space store the constraint propagations */
-   if( conspropvarssize >= *nconspropvars )
-   {
-      int pos;
-
-      for( i = nskip, pos = 0; i < first_dual; i++ )
+      else
       {
-         if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL )
-         {
-            if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
-            {
-               vars[pos] = boundchgs[i].var;
-               varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
-               varbounds[pos] = boundchgs[i].newbound;
-               pos++;
-            }
-         }
+         assert(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+         if( boundchgs[i].data.inferencedata.reason.prop == NULL )
+            break;
       }
    }
 
-   return;
+   /* return if arrays do not have enough space to store the constraint propagations */
+   if( conspropvarssize < *nconspropvars )
+      return;
+
+   for( i = nbranchings, pos = 0; pos < *nconspropvars; ++i ) /*lint !e440*/
+   {
+      assert(i < nboundchgs);
+      if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
+      {
+         assert(boundchgs[i].data.inferencedata.reason.cons != NULL);
+         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
+         {
+            vars[pos] = boundchgs[i].var;
+            varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
+            varbounds[pos] = boundchgs[i].newbound;
+            pos++;
+         }
+      }
+   }
 }
 
 /** gets all bound changes applied after the first bound change based on dual information.
