@@ -194,6 +194,23 @@ void SCIPnodeGetConsProps(
    int                   conspropvarssize    /**< available slots in arrays */
    );
 
+/** return all bound changes on non-continuous variables based on constraint and propagator propagation
+ *
+ * Stop saving the bound changes when a branching decision based on a dual information is reached.
+ *
+ * In difference to SCIPnodeGetConsProps(), this function does not omit propagator propagations.
+ */
+void SCIPnodeGetProps(
+   SCIP_NODE*            node,               /**< node */
+   SCIP_VAR**            vars,               /**< array of variables on which propagation triggers a bound change */
+   SCIP_Real*            varbounds,          /**< array of bounds set by propagation */
+   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes set by propagation */
+   int*                  npropvars,          /**< number of variables on which propagation triggers a bound change
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   propvarssize        /**< available slots in arrays */
+   );
+
 /** gets all bound changes applied after the first bound change based on dual information.
  *
  *  @note: currently, we can only detect bound changes based in dual information if they arise from strong branching.
