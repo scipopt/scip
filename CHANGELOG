@@ -35,16 +35,10 @@ Fixed bugs
 - sort and-constraints of a pseudoboolean constraint with respect to the resultant problem indices to avoid shuffled copies
 - treat pseudoboolean constraints as nonlinear constraints in OPB reader to prevent duplication mistakes
 
-Performance improvements
-------------------------
-
 Examples and applications
 -------------------------
 
-- in example Binpacking implement Farkas pricing for packings because branching can actually lead to infeasible restricted master LPs
-
-Unit tests
-----------
+- Binpacking example: implement Farkas pricing for packings because branching can actually lead to infeasible restricted master LPs
 
 Testing
 -------
@@ -58,6 +52,11 @@ Build system
 
 - fixed compilation and linking with HiGHS; to use HiGHS, cmake now requires to specify the directory containing the `highs-config.cmake` file via `-DHIGHS_DIR`
 - extended identification of Ipopt library on Windows to also look for ipopt.dll.lib, as this is used since Ipopt 3.13.0 (2019)
+
+Known Issues
+------------
+
+- recent changes in HiGHS can lead to errors when using HiGHS as LP solver under SCIP (https://github.com/scipopt/scip/issues/102)
 
 
 @section RN910 SCIP 9.1.0
