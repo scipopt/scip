@@ -1380,11 +1380,11 @@ SCIP_RETCODE cleanActiveConss(
    return SCIP_OKAY;
 }
 
-/** update the bound changes made by constraint propagations during current iteration; stop saving the bound changes if
- *  we reach a branching decision based on a dual information.
+/** update the bound changes made by propagations during current iteration; stop saving the bound changes if
+ *  we reach a branching decision based on a dual information
  */
 static
-SCIP_RETCODE updateConstraintPropagation(
+SCIP_RETCODE updatePropagation(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1395,6 +1395,7 @@ SCIP_RETCODE updateConstraintPropagation(
 {
    int nvars;
    int nconsprops;
+   int npropprops;
    int naddedbndchgs;
 
    assert(reopt != NULL);
@@ -1403,16 +1404,16 @@ SCIP_RETCODE updateConstraintPropagation(
    assert(0 < id && id < reopt->reopttree->reoptnodessize);
    assert(reopt->reopttree->reoptnodes[id] != NULL );
 
-   /* get the number of all stored constraint propagations */
-   SCIPnodeGetNDomchg(node, NULL, &nconsprops, NULL);
+   /* get the number of all stored constraint and propagator propagations */
+   SCIPnodeGetNDomchg(node, NULL, &nconsprops, &npropprops);
    nvars = reopt->reopttree->reoptnodes[id]->nvars;
 
-   if( nconsprops > 0 )
+   if( nconsprops > 0 || npropprops > 0 )
    {
       /* check the memory */
-      SCIP_CALL( reoptnodeCheckMemory(reopt->reopttree->reoptnodes[id], set, blkmem, nvars + nconsprops, 0, 0) );
+      SCIP_CALL( reoptnodeCheckMemory(reopt->reopttree->reoptnodes[id], set, blkmem, nvars + nconsprops + npropprops, 0, 0) );
 
-      SCIPnodeGetConsProps(node,
+      SCIPnodeGetProps(node,
             &reopt->reopttree->reoptnodes[id]->vars[nvars],
             &reopt->reopttree->reoptnodes[id]->varbounds[nvars],
             &reopt->reopttree->reoptnodes[id]->varboundtypes[nvars],
@@ -1686,13 +1687,14 @@ SCIP_RETCODE getLastSavedNode(
    {
       int nbranchings = 0;
       int nconsprop = 0;
+      int npropprops = 0;
 
-      if( set->reopt_saveconsprop )
-         SCIPnodeGetNDomchg((*parent), &nbranchings, &nconsprop, NULL);
+      if( set->reopt_saveprop )
+         SCIPnodeGetNDomchg((*parent), &nbranchings, &nconsprop, &npropprops);
       else
          SCIPnodeGetNDomchg((*parent), &nbranchings, NULL, NULL);
 
-      (*nbndchgs) = (*nbndchgs) + nbranchings + nconsprop;
+      (*nbndchgs) = (*nbndchgs) + nbranchings + nconsprop + npropprops;
       (*parent) = SCIPnodeGetParent(*parent);
       (*parentid) = SCIPnodeGetReoptID(*parent);
 
@@ -2710,10 +2712,10 @@ SCIP_RETCODE addNode(
          SCIP_CALL( saveAfterDualBranchings(reopt, set, blkmem, node, id, &transintoorig) );
       }
 
-      /* update constraint propagations */
-      if( set->reopt_saveconsprop )
+      /* update propagations */
+      if( set->reopt_saveprop )
       {
-         SCIP_CALL( updateConstraintPropagation(reopt, set, blkmem, node, id, &transintoorig) );
+         SCIP_CALL( updatePropagation(reopt, set, blkmem, node, id, &transintoorig) );
       }
 
       /* ensure that all variables describing the branching path are original */
