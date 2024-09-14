@@ -95,9 +95,9 @@
 #undef SCIPhasPerformedPresolve
 #undef SCIPisStopped
 
-/** returns complete SCIP version number in the format "major . minor tech"
+/** returns SCIP version number as major + minor / 100
  *
- *  @return complete SCIP version
+ *  @return SCIP major and minor version number
  */
 SCIP_Real SCIPversion(
    void
