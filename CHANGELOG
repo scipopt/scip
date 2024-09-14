@@ -47,6 +47,31 @@ Miscellaneous
 
 - Event `BESTSOLFOUND` is thrown before scanning the current node list and removing nodes potentially throwing the `NODEDELETE` event
 
+@section RN912 SCIP 9.1.2
+*************************
+
+Fixed bugs
+----------
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
 @section RN911 SCIP 9.1.1
 *************************
 
