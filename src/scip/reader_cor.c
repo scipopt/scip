@@ -53,6 +53,7 @@ struct SCIP_ReaderData
    int                   consnamessize;
    int                   nvarnames;
    int                   nconsnames;
+   SCIP_Bool             created;
    SCIP_Bool             read;
 };
 
@@ -66,14 +67,18 @@ SCIP_RETCODE createReaderdata(
    assert(scip != NULL);
    assert(readerdata != NULL);
 
-   readerdata->read = FALSE;
-   readerdata->nvarnames = 0;
-   readerdata->nconsnames = 0;
-   readerdata->varnamessize = SCIP_DEFAULT_ARRAYSIZE;
-   readerdata->consnamessize = SCIP_DEFAULT_ARRAYSIZE;
+   if( !readerdata->created )
+   {
+      readerdata->created = TRUE;
+      readerdata->read = FALSE;
+      readerdata->nvarnames = 0;
+      readerdata->nconsnames = 0;
+      readerdata->varnamessize = SCIP_DEFAULT_ARRAYSIZE;
+      readerdata->consnamessize = SCIP_DEFAULT_ARRAYSIZE;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->varnames, readerdata->varnamessize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->consnames, readerdata->consnamessize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->varnames, readerdata->varnamessize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->consnames, readerdata->consnamessize) );
+   }
 
    return SCIP_OKAY;
 }
@@ -90,14 +95,19 @@ SCIP_RETCODE freeReaderdata(
    assert(scip != NULL);
    assert(readerdata != NULL);
 
-   for( i = readerdata->nvarnames - 1; i >= 0; i-- )
-      SCIPfreeBlockMemoryArray(scip, &readerdata->varnames[i], strlen(readerdata->varnames[i]) + 1);
+   if( readerdata->created )
+   {
+      for( i = readerdata->nvarnames - 1; i >= 0; i-- )
+         SCIPfreeBlockMemoryArray(scip, &readerdata->varnames[i], strlen(readerdata->varnames[i]) + 1);
 
-   for( i = readerdata->nconsnames - 1; i >= 0; i-- )
-      SCIPfreeBlockMemoryArray(scip, &readerdata->consnames[i], strlen(readerdata->consnames[i]) + 1);
+      for( i = readerdata->nconsnames - 1; i >= 0; i-- )
+         SCIPfreeBlockMemoryArray(scip, &readerdata->consnames[i], strlen(readerdata->consnames[i]) + 1);
 
-   SCIPfreeBlockMemoryArray(scip, &readerdata->consnames, readerdata->consnamessize);
-   SCIPfreeBlockMemoryArray(scip, &readerdata->varnames, readerdata->varnamessize);
+      SCIPfreeBlockMemoryArray(scip, &readerdata->consnames, readerdata->consnamessize);
+      SCIPfreeBlockMemoryArray(scip, &readerdata->varnames, readerdata->varnamessize);
+   }
+
+   readerdata->created = FALSE;
 
    return SCIP_OKAY;
 }
@@ -199,11 +209,35 @@ SCIP_RETCODE SCIPreadCor(
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
 
+   /* creating the reader data at the start of the instance read */
+   SCIP_CALL( createReaderdata(scip, readerdata) );
+
    SCIP_CALL( SCIPreadMps(scip, reader, filename, result, &readerdata->varnames, &readerdata->consnames,
          &readerdata->varnamessize, &readerdata->consnamessize, &readerdata->nvarnames, &readerdata->nconsnames) );
 
    if( (*result) == SCIP_SUCCESS )
       readerdata->read = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** frees the COR reader data */
+SCIP_RETCODE SCIPfreeCorReaderdata(
+   SCIP*                 scip                /**< the SCIP data structure */
+   )
+{
+   SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
+
+   assert(scip != NULL);
+
+   reader = SCIPfindReader(scip, READER_NAME);
+   assert(reader != NULL);
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   SCIP_CALL( freeReaderdata(scip, readerdata) );
 
    return SCIP_OKAY;
 }

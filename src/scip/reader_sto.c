@@ -82,6 +82,7 @@ typedef struct StoScenario STOSCENARIO;
 /** STO reading data */
 struct SCIP_ReaderData
 {
+   SCIP_Bool             created;            /**< flag to indicate that the reader data has been created */
    SCIP_Bool             usebenders;
    STOSCENARIO*          scenariotree;       /**< the multi stage scenario tree */
    int                   numscenarios;       /**< the total number of scenarios in the scenario tree */
@@ -1011,12 +1012,17 @@ SCIP_RETCODE createReaderdata(
    assert(scip != NULL);
    assert(readerdata != NULL);
 
-   /* creating the initial scenario */
-   SCIP_CALL( createScenarioData(scip, &readerdata->scenariotree) );
+   if( !readerdata->created )
+   {
+      readerdata->created = TRUE;
 
-   /* setting the scenario name and stage name */
-   SCIP_CALL( setScenarioName(scip, readerdata->scenariotree, "ROOT") );
-   SCIP_CALL( setScenarioStageName(scip, readerdata->scenariotree, SCIPtimGetStageName(scip, 0)) );
+      /* creating the initial scenario */
+      SCIP_CALL( createScenarioData(scip, &readerdata->scenariotree) );
+
+      /* setting the scenario name and stage name */
+      SCIP_CALL( setScenarioName(scip, readerdata->scenariotree, "ROOT") );
+      SCIP_CALL( setScenarioStageName(scip, readerdata->scenariotree, SCIPtimGetStageName(scip, 0)) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1031,11 +1037,14 @@ SCIP_RETCODE freeReaderdata(
    assert(scip != NULL);
    assert(readerdata != NULL);
 
-   /* freeing the scenario tree */
-   if( readerdata->scenariotree != NULL )
-      SCIP_CALL( freeScenarioTree(scip, &readerdata->scenariotree) );
+   if( readerdata->created )
+   {
+      /* freeing the scenario tree */
+      if( readerdata->scenariotree != NULL )
+         SCIP_CALL( freeScenarioTree(scip, &readerdata->scenariotree) );
 
-   SCIPfreeBlockMemory(scip, &readerdata);
+      readerdata->created = FALSE;
+   }
 
    return SCIP_OKAY;
 }
@@ -2727,6 +2736,8 @@ SCIP_DECL_READERFREE(readerFreeSto)
 
    SCIP_CALL( freeReaderdata(scip, readerdata) );
 
+   SCIPfreeBlockMemory(scip, &readerdata);
+
    return SCIP_OKAY;
 }
 
@@ -2792,6 +2803,7 @@ SCIP_RETCODE SCIPincludeReaderSto(
 
    /* create reader data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
+   readerdata->created = FALSE;
    readerdata->scenariotree = NULL;
    readerdata->numscenarios = 0;
 
@@ -2863,4 +2875,25 @@ int SCIPstoGetNScenarios(
    assert(readerdata != NULL);
 
    return readerdata->numscenarios;
+}
+
+/** frees the COR reader data */
+SCIP_RETCODE SCIPfreeStoReaderdata(
+   SCIP*                 scip                /**< the SCIP data structure */
+   )
+{
+   SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
+
+   assert(scip != NULL);
+
+   reader = SCIPfindReader(scip, READER_NAME);
+   assert(reader != NULL);
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   SCIP_CALL( freeReaderdata(scip, readerdata) );
+
+   return SCIP_OKAY;
 }

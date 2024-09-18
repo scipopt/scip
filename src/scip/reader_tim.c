@@ -329,9 +329,9 @@ void freeReaderdata(
       SCIPfreeBlockMemoryArray(scip, &readerdata->stagenames, readerdata->nstages);
       SCIPfreeBlockMemoryArray(scip, &readerdata->stagestartcons, readerdata->nstages);
       SCIPfreeBlockMemoryArray(scip, &readerdata->stagestartvars, readerdata->nstages);
-   }
 
-   SCIPfreeBlockMemory(scip, &readerdata);
+      readerdata->read = FALSE;
+   }
 }
 
 
@@ -811,6 +811,8 @@ SCIP_DECL_READERFREE(readerFreeTim)
 {
    freeReaderdata(scip, reader);
 
+   SCIPfreeBlockMemory(scip, &readerdata);
+
    return SCIP_OKAY;
 }
 
@@ -912,6 +914,24 @@ SCIP_RETCODE SCIPreadTim(
 
    return SCIP_OKAY;
 }
+
+/** frees the reader data for the tim file */
+SCIP_RETCODE SCIPfreeTimReaderdata(
+   SCIP*                 scip                /**< the SCIP data structure */
+   )
+{
+   SCIP_READER* reader;
+
+   assert(scip != NULL);
+
+   reader = SCIPfindReader(scip, READER_NAME);
+   assert(reader != NULL);
+
+   freeReaderdata(scip, reader);
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Interface methods for the cor and sto files
