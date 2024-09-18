@@ -6708,6 +6708,19 @@ SCIP_Bool SCIPbendersSubproblemIsEnabled(
    return benders->subprobenabled[probnumber];
 }
 
+/** sets the flag to indicate whether the subproblems must be freed by the Benders' decomposition core.
+ * NOTE: this is only used if the array of subproblems is freed after initialising the Benders' decomposition.
+ */
+void SCIPbendersSetFreeSubproblems(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_Bool             freesubprobs        /**< flag to indicate whether the subproblems must be freed by the core */
+   )
+{
+   assert(benders != NULL);
+
+   benders->freesubprobs = freesubprobs;
+}
+
 /** sets a flag to indicate whether the master variables are all set to continuous */
 SCIP_RETCODE SCIPbendersSetMastervarsCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */

@@ -2576,6 +2576,11 @@ SCIP_RETCODE buildDecompProblem(
          getScenarioLowerbound(scip, getScenarioChild(readerdata->scenariotree, i)));
    }
 
+   /* setting the flag to inform the Benders' core that the subproblems need to be freed. This is needed because the
+    * scenario tree in the reader is freed at the end of reading
+    */
+   SCIPbendersSetFreeSubproblems(benders, TRUE);
+
    /* removing the variable and constraints that were included as part of the core file */
    SCIP_CALL( removeCoreVariablesAndConstraints(scip) );
 
@@ -2680,6 +2685,10 @@ SCIP_RETCODE readSto(
 TERMINATE:
    stoinputFree(scip, &stoi);
    SCIPfclose(fp);
+
+   /* freeing the scenario tree after the decomposition problem has been built */
+   if( readerdata->scenariotree != NULL )
+      SCIP_CALL( freeScenarioTree(scip, &readerdata->scenariotree) );
 
    if( error || retcode != SCIP_OKAY )
       return SCIP_READERROR;
