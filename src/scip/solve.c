@@ -5269,16 +5269,18 @@ SCIP_RETCODE SCIPsolveCIP(
                SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, relaxation, tree, reopt,
                      lp, eventqueue, eventfilter, FALSE) );
 
+               /* issue NODEFEASIBLE event */
+               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
+               SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
+               SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+
+
                /* update the cutoff pointer if the new solution made the cutoff bound equal to the lower bound */
                SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, conflict, cliquetable, &cutoff) );
 
                /* increment number of feasible leaf nodes */
                stat->nfeasleaves++;
 
-               /* issue NODEFEASIBLE event */
-               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
-               SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
-               SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
                if( set->reopt_enable )
                {

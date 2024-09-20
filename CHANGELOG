@@ -129,7 +129,7 @@ Build system
 Miscellaneous
 -------------
 
-- Event `BESTSOLFOUND` is thrown before scanning the current node list and removing nodes potentially throwing the `NODEDELETE` event
+- reorder events: BESTSOLFOUND/NODE_FEASIBLE is now processed before the nodes are cut off and before NODE_DELETE events are processed
 
 @section RN912 SCIP 9.1.2
 *************************
