@@ -7621,16 +7621,31 @@ void SCIPnodeGetNDomchg(
    if( count_prop )
       *nprop = 0;
 
-   if( node->domchg != NULL )
+   if( node->domchg == NULL )
+      return;
+
+   /* branching bound changes are always at beginning, count them in i */
+   for( i = 0; i < (int) node->domchg->domchgbound.nboundchgs; ++i )
+      if( node->domchg->domchgbound.boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
+         break;
+   if( count_branchings )
+      *nbranchings = i;
+
+   if( !count_consprop && !count_prop )
+      return;
+
+   for( ; i < (int) node->domchg->domchgbound.nboundchgs; ++i )
    {
-      for( i = 0; i < (int) node->domchg->domchgbound.nboundchgs; i++ )
+      assert(node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER || node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+      if( node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
       {
-         if( count_branchings && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
-            (*nbranchings)++; /*lint !e413*/
-         else if( count_consprop && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
-            (*nconsprop)++; /*lint !e413*/
-         else if( count_prop && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER )
-            (*nprop)++; /*lint !e413*/
+         if( count_consprop )
+            ++(*nconsprop);
+      }
+      else
+      {
+         if( count_prop )
+            ++(*nprop);
       }
    }
 }
