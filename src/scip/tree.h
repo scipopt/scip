@@ -196,11 +196,11 @@ void SCIPnodeGetConsProps(
 
 /** return all bound changes on non-continuous variables based on constraint and propagator propagation
  *
- * Stop saving the bound changes when a branching decision based on a dual information is reached.
+ * Stop saving the bound changes when a propagation based on a dual information is reached.
  *
  * In difference to SCIPnodeGetConsProps(), this function does not omit propagator propagations.
  */
-void SCIPnodeGetProps(
+void SCIPnodeGetPropsBeforeDual(
    SCIP_NODE*            node,               /**< node */
    SCIP_VAR**            vars,               /**< array of variables on which propagation triggers a bound change */
    SCIP_Real*            varbounds,          /**< array of bounds set by propagation */
@@ -211,20 +211,21 @@ void SCIPnodeGetProps(
    int                   propvarssize        /**< available slots in arrays */
    );
 
-/** gets all bound changes applied after the first bound change based on dual information.
+/** return bound changes on non-continuous variables based on constraint and propagator propagation
  *
- *  @note: currently, we can only detect bound changes based in dual information if they arise from strong branching.
+ * Start saving the bound changes when a propagation based on a dual information is reached.
+ *
+ * @note Currently, we can only detect bound changes based in dual information if they arise from strong branching.
  */
-void SCIPnodeGetBdChgsAfterDual(
+void SCIPnodeGetPropsAfterDual(
    SCIP_NODE*            node,               /**< node */
-   SCIP_VAR**            vars,               /**< array of variables on which the branching has been performed in the parent node */
-   SCIP_Real*            varbounds,          /**< array of bounds which the branching in the parent node set */
-   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes which the branching in the parent node set */
-   int                   start,              /**< first free slot in the arrays */
-   int*                  nbranchvars,        /**< number of variables on which branching has been performed in the parent node
-                                              *   if this is larger than the array size, arrays should be reallocated and method
-                                              *   should be called again */
-   int                   branchvarssize      /**< available slots in arrays */
+   SCIP_VAR**            vars,               /**< array where to store variables with bound changes */
+   SCIP_Real*            varbounds,          /**< array where to store changed bounds */
+   SCIP_BOUNDTYPE*       varboundtypes,      /**< array where to store type of changed bound*/
+   int*                  nvars,              /**< buffer to store number of bound changes;
+                                               *   if this is larger than varssize, arrays should be reallocated and method
+                                               *   should be called again */
+   int                   varssize            /**< available slots in provided arrays */
    );
 
 /** adds bound change with inference information to focus node, child of focus node, or probing node;

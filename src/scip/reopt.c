@@ -1413,7 +1413,7 @@ SCIP_RETCODE updatePropagation(
       /* check the memory */
       SCIP_CALL( reoptnodeCheckMemory(reopt->reopttree->reoptnodes[id], set, blkmem, nvars + nconsprops + npropprops, 0, 0) );
 
-      SCIPnodeGetProps(node,
+      SCIPnodeGetPropsBeforeDual(node,
             &reopt->reopttree->reoptnodes[id]->vars[nvars],
             &reopt->reopttree->reoptnodes[id]->varbounds[nvars],
             &reopt->reopttree->reoptnodes[id]->varboundtypes[nvars],
@@ -1480,17 +1480,16 @@ SCIP_RETCODE saveAfterDualBranchings(
    assert(reopt->reopttree->reoptnodes[id]->afterdualvarssize > 0);
    assert(reopt->reopttree->reoptnodes[id]->nafterdualvars >= 0);
 
-   SCIPnodeGetBdChgsAfterDual(node,
-         reopt->reopttree->reoptnodes[id]->afterdualvars,
-         reopt->reopttree->reoptnodes[id]->afterdualvarbounds,
-         reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes,
-         reopt->reopttree->reoptnodes[id]->nafterdualvars,
+   SCIPnodeGetPropsAfterDual(node,
+         reopt->reopttree->reoptnodes[id]->afterdualvars + reopt->reopttree->reoptnodes[id]->nafterdualvars,
+         reopt->reopttree->reoptnodes[id]->afterdualvarbounds + reopt->reopttree->reoptnodes[id]->nafterdualvars,
+         reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes + reopt->reopttree->reoptnodes[id]->nafterdualvars,
          &nbranchvars,
-         reopt->reopttree->reoptnodes[id]->afterdualvarssize);
+         reopt->reopttree->reoptnodes[id]->afterdualvarssize - reopt->reopttree->reoptnodes[id]->nafterdualvars);
 
-   if( nbranchvars > reopt->reopttree->reoptnodes[id]->afterdualvarssize )
+   if( nbranchvars > reopt->reopttree->reoptnodes[id]->afterdualvarssize - reopt->reopttree->reoptnodes[id]->nafterdualvars )
    {
-      int newsize = SCIPsetCalcMemGrowSize(set, nbranchvars+1);
+      int newsize = SCIPsetCalcMemGrowSize(set, reopt->reopttree->reoptnodes[id]->nafterdualvars + nbranchvars);
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvars), \
             reopt->reopttree->reoptnodes[id]->afterdualvarssize, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarbounds), \
@@ -1499,13 +1498,12 @@ SCIP_RETCODE saveAfterDualBranchings(
             reopt->reopttree->reoptnodes[id]->afterdualvarssize, newsize) );
       reopt->reopttree->reoptnodes[id]->afterdualvarssize = newsize;
 
-      SCIPnodeGetBdChgsAfterDual(node,
-            reopt->reopttree->reoptnodes[id]->afterdualvars,
-            reopt->reopttree->reoptnodes[id]->afterdualvarbounds,
-            reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes,
-            reopt->reopttree->reoptnodes[id]->nafterdualvars,
+      SCIPnodeGetPropsAfterDual(node,
+            reopt->reopttree->reoptnodes[id]->afterdualvars + reopt->reopttree->reoptnodes[id]->nafterdualvars,
+            reopt->reopttree->reoptnodes[id]->afterdualvarbounds + reopt->reopttree->reoptnodes[id]->nafterdualvars,
+            reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes + reopt->reopttree->reoptnodes[id]->nafterdualvars,
             &nbranchvars,
-            reopt->reopttree->reoptnodes[id]->afterdualvarssize);
+            reopt->reopttree->reoptnodes[id]->afterdualvarssize - reopt->reopttree->reoptnodes[id]->nafterdualvars);
    }
 
    /* the stored variables of this node need to be transformed into the original space */
@@ -1514,7 +1512,7 @@ SCIP_RETCODE saveAfterDualBranchings(
 
    SCIPsetDebugMsg(set, " -> save %d bound changes after dual reductions\n", nbranchvars);
 
-   assert(nbranchvars <= reopt->reopttree->reoptnodes[id]->afterdualvarssize); /* this should be the case */
+   assert(reopt->reopttree->reoptnodes[id]->nafterdualvars + nbranchvars <= reopt->reopttree->reoptnodes[id]->afterdualvarssize); /* this should be the case */
 
    reopt->reopttree->reoptnodes[id]->nafterdualvars = nbranchvars;
 
