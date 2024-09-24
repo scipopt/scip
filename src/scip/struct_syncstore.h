@@ -57,6 +57,8 @@ struct SCIP_SyncStore
                                               *   by all threads */
 
    SCIP*                 mainscip;           /**< the SCIP instance that was used for initializing the syncstore */
+   SCIP_Real             limit_gap;          /**< relative gap limit in main SCIP */
+   SCIP_Real             limit_absgap;       /**< absolute gap limit in main SCIP */
    SCIP_Bool             stopped;            /**< flag to indicate if the solving is stopped */
    SCIP_LOCK*            lock;               /**< lock to protect the syncstore data structure from data races */
 
