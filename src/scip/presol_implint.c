@@ -375,6 +375,7 @@ typedef struct{
    int* rownnonz;                            /**< Number of nonzeros in the row */
    int* rowncontinuous;                      /**< The number of those nonzeros that are in continuous columns */
    int* rowncontinuouspmone;                 /**< The number of +-1 entries in continuous columns */
+   SCIP_Bool* colintegralbounds;             /**< Does the column have integral bounds? */
 
 } MATRIX_STATISTICS;
 
@@ -392,14 +393,17 @@ SCIP_RETCODE computeMatrixStatistics(
    MATRIX_STATISTICS* stats = *pstats;
 
    int nrows = SCIPmatrixGetNRows(matrix);
+   int ncols = SCIPmatrixGetNColumns(matrix);
 
-   SCIP_CALL( SCIPallocBufferArray(scip,&stats->rowintegral,nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip,&stats->rowequality,nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip,&stats->rowbadnumerics,nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stats->rowintegral, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stats->rowequality, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stats->rowbadnumerics, nrows) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip,&stats->rownnonz,nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip,&stats->rowncontinuous,nrows) );
-   SCIP_CALL( SCIPallocBufferArray(scip,&stats->rowncontinuouspmone,nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stats->rownnonz, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stats->rowncontinuous, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stats->rowncontinuouspmone, nrows) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &stats->colintegralbounds, ncols) );
 
 
    for( int i = 0; i < nrows; ++i )
@@ -445,6 +449,17 @@ SCIP_RETCODE computeMatrixStatistics(
       stats->rowintegral[i] = integral;
       stats->rowbadnumerics[i] = badnumerics;
    }
+   for( int i = 0; i < ncols; ++i )
+   {
+
+      SCIP_Real lb = SCIPmatrixGetColLb(matrix,i);
+      SCIP_Real ub = SCIPmatrixGetColUb(matrix,i);
+      stats->colintegralbounds[i] = ( SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip,lb) )
+                                 && ( SCIPisInfinity(scip, ub) || SCIPisIntegral(scip,ub) );
+
+      /* Check that integer variables have integer bounds, as expected. */
+      assert(SCIPvarGetType(SCIPmatrixGetVar(matrix,i)) == SCIP_VARTYPE_CONTINUOUS || stats->colintegralbounds[i]);
+   }
 
 
    return SCIP_OKAY;
@@ -458,12 +473,13 @@ void freeMatrixStatistics(
 )
 {
    MATRIX_STATISTICS* stats= *pstats;
-   SCIPfreeBufferArray(scip,&stats->rowncontinuouspmone);
-   SCIPfreeBufferArray(scip,&stats->rowncontinuous);
-   SCIPfreeBufferArray(scip,&stats->rownnonz);
-   SCIPfreeBufferArray(scip,&stats->rowbadnumerics);
-   SCIPfreeBufferArray(scip,&stats->rowequality);
-   SCIPfreeBufferArray(scip,&stats->rowintegral);
+   SCIPfreeBufferArray(scip, &stats->colintegralbounds);
+   SCIPfreeBufferArray(scip, &stats->rowncontinuouspmone);
+   SCIPfreeBufferArray(scip, &stats->rowncontinuous);
+   SCIPfreeBufferArray(scip, &stats->rownnonz);
+   SCIPfreeBufferArray(scip, &stats->rowbadnumerics);
+   SCIPfreeBufferArray(scip, &stats->rowequality);
+   SCIPfreeBufferArray(scip, &stats->rowintegral);
 
    SCIPfreeBuffer(scip,pstats);
 }
@@ -528,12 +544,23 @@ SCIP_RETCODE findImpliedIntegers(
             break;
          }
       }
+      int startcol = comp->componentcolstart[component];
+      int ncols = comp->ncomponentcols[component];
+
+      for( int i = startcol; i < startcol + ncols && componentokay; ++i )
+      {
+         int col = comp->componentcols[i];
+         if( !stats->colintegralbounds[col] ){
+            componentokay = FALSE;
+            ++nbadintegrality;
+            break;
+         }
+      }
+
       if(!componentokay)
       {
          continue;
       }
-      int startcol = comp->componentcolstart[component];
-      int ncols = comp->ncomponentcols[component];
 
       /* Check if the component is a network matrix */
       SCIP_Bool componentnetwork = TRUE;
