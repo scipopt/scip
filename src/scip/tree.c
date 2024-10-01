@@ -8540,28 +8540,27 @@ void SCIPnodeGetConsProps(
 
    first_dual = i;
 
-   /* count the number of bound changes because of constraint propagation and propagation */
-   for(i = nskip; i < first_dual; i++)
+   /* count the number of bound changes because of constraint propagation */
+   for( i = nskip; i < first_dual; i++ )
    {
       assert(boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING);
 
-      if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
-       || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL) )
+      if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL) )
       {
          if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             (*nconspropvars)++;
       }
       else if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons == NULL)
-            || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop == NULL))
+            || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop == NULL) )
          break;
    }
 
-   /* if the arrays have enough space store the branching decisions */
+   /* if the arrays have enough space store the constraint propagations */
    if( conspropvarssize >= *nconspropvars )
    {
       int pos;
 
-      for(i = nskip, pos = 0; i < first_dual; i++)
+      for( i = nskip, pos = 0; i < first_dual; i++ )
       {
          if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL )
          {

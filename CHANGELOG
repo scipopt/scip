@@ -19,6 +19,8 @@ Performance improvements
 Examples and applications
 -------------------------
 
+- Coloring: new parameter branching/coloring/strategy to choose the least/most fractional variable for branching
+
 Interface changes
 -----------------
 
@@ -88,6 +90,10 @@ Known bugs
 Features
 --------
 
+- added check for absolute and relative gap limits at end of synchronization in concurrent solving mode, in order to terminate earlier;
+  note that if the concurrent solve is stopped due to a gap limit, the "winner" solver will have an interrupted solution status and
+  its primal and dual bounds may not be the best possible ones (use SCIPgetConcurrentPrimalbound() and SCIPgetConcurrentDualbound() instead)
+
 Performance improvements
 ------------------------
 
@@ -127,7 +133,34 @@ Build system
 Miscellaneous
 -------------
 
-- Event `BESTSOLFOUND` is thrown before scanning the current node list and removing nodes potentially throwing the `NODEDELETE` event
+- reorder events: BESTSOLFOUND/NODE_FEASIBLE is now processed before the nodes are cut off and before NODE_DELETE events are processed
+
+@section RN912 SCIP 9.1.2
+*************************
+
+Fixed bugs
+----------
+
+- skip constraint propagation if the residual activity bound cancels the side precision in tightenVarBounds() of cons_linear.c
+
+Unit tests
+----------
+
+Testing
+-------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Miscellaneous
+-------------
+
+Known bugs
+----------
 
 @section RN911 SCIP 9.1.1
 *************************
@@ -145,15 +178,24 @@ Fixed bugs
 - calling SCIPsolveConcurrent() when SCIP was compiled without a TPI now results in a plugin-not-found error
 - fixed LPI status functions of lpi_cpx if the barrier is called
 - check cuts for redundancy after scaling in cutTightenCoefs() and cutTightenCoefsQuad() of cuts.c
-- maintain definition of artificial integral variables in xor constraints to avoid invalidations of conflict constraints
+- maintain definition of artificial integral variables in xor constraints to avoid invalidation of conflict constraints
 - free childless nodes only after the deactivation of the old focus path in treeSwitchPath() of tree.c
-- only normalize rows for column norm evaluations in heur_shiftandpropagate.c to avoid unscaled violations
+- only normalize rows for column norm evaluations in shift-and-propagate heuristic to avoid unscaled violations
 - expression handler for absolute value computes now also a cut when one of the bounds is infinite as long as the sign of the argument is known
 - check for more data to be freed before modifying nonlinear constraints in SCIPaddExprNonlinear()
 - allow for terms with zero coefficients when checking sum in SCIPexprCheckQuadratic()
 - do not abort writing of constraints to lp/pip files (and forget to free buffer memory) when encountering unsupported nonlinear constraint
-- fixed that names and description of the LPI's were not null-terminated
-- fixed decision on when to enforce nonlinear constraints on relaxation solutions if integer variables present
+- fixed that strings with names and descriptions of the LPI's were not null-terminated
+- fixed decision on when to enforce nonlinear constraints on relaxation solutions if integer variables are present
+- fixed reading of very long lines (>78000 characters) in FlatZinc reader
+- fixed write of strings with at least 1024 characters when compiling with MSVS 2015 (14.0) or later (still an issue with earlier MSVS, which will not be fixed)
+- keep epsilon coefficients in applyFixings() of cons_linear.c until multiples are merged to avoid loss of relevant contributions
+- fixed that some variable type changes were not accounted correctly in presolve of linear constraints
+- fix constraint sorting in setpp-orbitope upgrade in symmetry code
+- fixed that SCIPnodeGetConsProps() also counted bound changes from propagators
+- use original and-constraints of an untransformed pseudoboolean constraint when copying original problems to avert segmentation faults
+- sort and-constraints of a pseudoboolean constraint with respect to the resultant problem indices to avoid shuffled copies
+- treat pseudoboolean constraints as nonlinear constraints in OPB reader to prevent duplication mistakes
 
 Performance improvements
 ------------------------
@@ -169,18 +211,16 @@ Unit tests
 Testing
 -------
 
+- allow unknown parameters to let tests pass if only optional dependencies are missing
+
 Build system
 ------------
 
 ### Cmake
 
-- Fixed compilation and linking with HiGHS. To use HiGHS, cmake now requires to specify the directory containing the `highs-config.cmake` file via `-DHIGHS_DIR`.
-- Extended identification of Ipopt library on Windows to also look for ipopt.dll.lib, as this is used since Ipopt 3.13.0 (2019)
+- fixed compilation and linking with HiGHS; to use HiGHS, cmake now requires to specify the directory containing the `highs-config.cmake` file via `-DHIGHS_DIR`
+- extended identification of Ipopt library on Windows to also look for ipopt.dll.lib, as this is used since Ipopt 3.13.0 (2019)
 
-### Makefile
-
-Miscellaneous
--------------
 
 @section RN910 SCIP 9.1.0
 *************************

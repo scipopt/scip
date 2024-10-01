@@ -77,7 +77,7 @@ int SCIPfprintf(SCIP_FILE *stream, const char *format, ...)
    int n;
 
    va_start(ap, format); /*lint !e826*/
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER) && _MSC_VER < 1900
    n = _vsnprintf(buffer, BUFFER_LEN, format, ap);
 #else
    n = vsnprintf(buffer, BUFFER_LEN, format, ap);
