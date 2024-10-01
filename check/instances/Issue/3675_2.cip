@@ -1,0 +1,13 @@
+STATISTICS
+  Problem name     : original
+  Variables        : 2 (0 binary, 0 integer, 0 implicit integer, 2 continuous)
+  Constraints      : 0 initial, 2 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [continuous] <Bl_773787165>: obj=0, original bounds=[0,+inf]
+  [continuous] <Bl_n851284021>: obj=0, original bounds=[25.29577886646666,25.29577886646666]
+CONSTRAINTS
+  [linear] <Bl_751395283>:  +6.14276318700036e-09<Bl_773787165>[C] +7.40596294403076<Bl_n851284021>[C] == 187.339600950748;
+  [linear] <Bl_1194330149>:  +57<Bl_773787165>[C] == 234.759179076058;
+END
