@@ -2274,7 +2274,7 @@ SCIP_RETCODE SCIPprintSol(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   if( SCIPisExactSolve(scip) && SCIPsolIsExact(sol))
+   if( SCIPsolIsExact(sol) )
    {
       SCIP_CALL( SCIPprintSolExact(scip, sol, file, printzeros) );
       return SCIP_OKAY;

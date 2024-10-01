@@ -1769,9 +1769,10 @@ SCIP_RETCODE SCIPsolSetValExact(
    switch( SCIPvarGetStatusExact(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      SCIP_CALL( RatCreateBuffer(set->buffer, &oldval) );
       if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
       {
+         SCIP_CALL( RatCreateBuffer(set->buffer, &oldval) );
+
          solGetArrayValExact(oldval, sol, var);
 
          if( !RatIsEqual(val, oldval) )
@@ -1789,10 +1790,7 @@ SCIP_RETCODE SCIPsolSetValExact(
          return SCIP_OKAY;
       }
       else
-      {
-         RatFreeBuffer(set->buffer, &oldval);
          return SCIPsolSetValExact(sol, set, stat, tree, SCIPvarGetTransVar(var), val);
-      }
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
@@ -1808,6 +1806,7 @@ SCIP_RETCODE SCIPsolSetValExact(
          RatDiffProd(sol->valsexact->obj, obj, oldval);
          RatAddProd(sol->valsexact->obj, obj, val);
       }
+
       RatFreeBuffer(set->buffer, &oldval);
       return SCIP_OKAY;
 
