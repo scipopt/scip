@@ -6793,8 +6793,11 @@ SCIP_RETCODE tightenVarBounds(
 
    if( val > 0.0 )
    {
-      /* check, if we can tighten the variable's bounds */
-      if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) && ismintight )
+      /* check, if we can tighten the variable's bounds reliably, therefore only consider sides which are small or
+       * relatively different to the residual activity bound to avoid cancellation leading to numerical difficulties
+       */
+      if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) && ismintight
+         && ( SCIPisLT(scip, ABS(rhs), 1.0) || !SCIPisEQ(scip, minresactivity / rhs, 1.0) ) )
       {
          SCIP_Real newub;
 
@@ -6847,7 +6850,8 @@ SCIP_RETCODE tightenVarBounds(
          }
       }
 
-      if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) && ismaxtight )
+      if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) && ismaxtight
+         && ( SCIPisLT(scip, ABS(lhs), 1.0) || !SCIPisEQ(scip, maxresactivity / lhs, 1.0) ) )
       {
          SCIP_Real newlb;
 
@@ -6896,8 +6900,11 @@ SCIP_RETCODE tightenVarBounds(
    }
    else
    {
-      /* check, if we can tighten the variable's bounds */
-      if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) && ismintight )
+      /* check, if we can tighten the variable's bounds reliably, therefore only consider sides which are small or
+       * relatively different to the residual activity bound to avoid cancellation leading to numerical difficulties
+       */
+      if( !isminsettoinfinity && !SCIPisInfinity(scip, rhs) && ismintight
+         && ( SCIPisLT(scip, ABS(rhs), 1.0) || !SCIPisEQ(scip, minresactivity / rhs, 1.0) ) )
       {
          SCIP_Real newlb;
 
@@ -6948,7 +6955,8 @@ SCIP_RETCODE tightenVarBounds(
          }
       }
 
-      if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) && ismaxtight )
+      if( !ismaxsettoinfinity && !SCIPisInfinity(scip, -lhs) && ismaxtight
+         && ( SCIPisLT(scip, ABS(lhs), 1.0) || !SCIPisEQ(scip, maxresactivity / lhs, 1.0) ) )
       {
          SCIP_Real newub;
 
