@@ -1735,7 +1735,7 @@ SCIP_RETCODE probScaleObjExact(
       SCIP_CALL( SCIPcalcIntegralScalarExact(set->buffer, objvals, nints, OBJSCALE_MAXFINALSCALE,
          intscalar, &success) );
 
-      RatPrintf("integral objective scalar: success=%u, intscalar=%q\n", success, intscalar);
+      RatDebugMessage("integral objective scalar: success=%u, intscalar=%q\n", success, intscalar);
 
       /* apply scaling */
       if(  success && !RatIsEqualReal(intscalar, 1.0) )
@@ -2398,7 +2398,7 @@ void SCIPprobInternObjvalExact(
    else
    {
       RatDiff(objvalint, objval, origprob->objoffsetexact);
-      RatDivReal(objval, objvalint, transprob->objscale);
+      RatDivReal(objvalint, objvalint, transprob->objscale);
       RatMultReal(objvalint, objvalint, (SCIP_Real) transprob->objsense);
       RatDiff(objvalint, objvalint, transprob->objoffsetexact);
    }

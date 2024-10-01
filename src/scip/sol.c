@@ -1764,7 +1764,6 @@ SCIP_RETCODE SCIPsolSetValExact(
 
    SCIPsetDebugMsg(set, "setting value of <%s> in exact solution %p to %g\n", SCIPvarGetName(var), (void*)sol, RatApproxReal(val));
 
-   SCIP_CALL( RatCreateBuffer(set->buffer, &oldval) );
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
    switch( SCIPvarGetStatusExact(var) )
@@ -1772,6 +1771,8 @@ SCIP_RETCODE SCIPsolSetValExact(
    case SCIP_VARSTATUS_ORIGINAL:
       if( sol->solorigin == SCIP_SOLORIGIN_ORIGINAL )
       {
+         SCIP_CALL( RatCreateBuffer(set->buffer, &oldval) );
+
          solGetArrayValExact(oldval, sol, var);
 
          if( !RatIsEqual(val, oldval) )
@@ -1785,6 +1786,7 @@ SCIP_RETCODE SCIPsolSetValExact(
             RatAddProd(sol->valsexact->obj, obj, val);
          }
 
+         RatFreeBuffer(set->buffer, &oldval);
          return SCIP_OKAY;
       }
       else
@@ -1792,6 +1794,7 @@ SCIP_RETCODE SCIPsolSetValExact(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
+      SCIP_CALL( RatCreateBuffer(set->buffer, &oldval) );
 
       solGetArrayValExact(oldval, sol, var);
 
@@ -1803,6 +1806,8 @@ SCIP_RETCODE SCIPsolSetValExact(
          RatDiffProd(sol->valsexact->obj, obj, oldval);
          RatAddProd(sol->valsexact->obj, obj, val);
       }
+
+      RatFreeBuffer(set->buffer, &oldval);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -2995,6 +3000,7 @@ SCIP_RETCODE SCIPsolRetransform(
    if( SCIPsolIsExact(sol) )
    {
       SCIP_CALL( SCIPsolRetransformExact(sol, set, stat, origprob, transprob, hasinfval) );
+      SCIP_CALL( SCIPsolOverwriteFPSolWithExact(sol, set, stat, origprob, transprob, NULL) );
       return SCIP_OKAY;
    }
 
@@ -3980,7 +3986,14 @@ SCIP_RETCODE SCIPsolOverwriteFPSolWithExact(
          RatRoundReal(solval, roundmode)) );
    }
 
-   SCIPsolGetObjExact(sol, set, transprob, origprob, solval);
+   if( SCIPsolIsOriginal(sol) )
+   {
+      RatSet(solval, SCIPsolGetOrigObjExact(sol));
+   }
+   else
+   {
+      SCIPsolGetObjExact(sol, set, transprob, origprob, solval);
+   }
    /* hard-set the obj value of the solution  */
    sol->obj = RatRoundReal(solval, SCIP_R_ROUND_UPWARDS);
 
