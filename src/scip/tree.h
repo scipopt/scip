@@ -180,25 +180,9 @@ SCIP_RETCODE SCIPnodeDelCons(
    SCIP_CONS*            cons                /**< constraint to locally delete */
    );
 
-/** return all bound changes based on constraint propagation; stop saving the bound changes if we reach a branching
- *  decision based on a dual information
- */
-void SCIPnodeGetConsProps(
-   SCIP_NODE*            node,               /**< node */
-   SCIP_VAR**            vars,               /**< array of variables on which constraint propagation triggers a bound change */
-   SCIP_Real*            varbounds,          /**< array of bounds set by constraint propagation */
-   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes set by constraint propagation */
-   int*                  nconspropvars,      /**< number of variables on which constraint propagation triggers a bound change
-                                              *   if this is larger than the array size, arrays should be reallocated and method
-                                              *   should be called again */
-   int                   conspropvarssize    /**< available slots in arrays */
-   );
-
 /** return all bound changes on non-continuous variables based on constraint and propagator propagation
  *
  * Stop saving the bound changes when a propagation based on a dual information is reached.
- *
- * In difference to SCIPnodeGetConsProps(), this function does not omit propagator propagations.
  */
 void SCIPnodeGetPropsBeforeDual(
    SCIP_NODE*            node,               /**< node */

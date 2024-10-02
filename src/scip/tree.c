@@ -7934,94 +7934,9 @@ void SCIPnodeGetAncestorBranchingsPart(
    }
 }
 
-/** return all bound changes on non-continuous variables based on constraint propagation; stop saving the bound changes if we reach a branching
- *  decision based on a dual information
- */
-void SCIPnodeGetConsProps(
-   SCIP_NODE*            node,               /**< node */
-   SCIP_VAR**            vars,               /**< array of variables on which constraint propagation triggers a bound change */
-   SCIP_Real*            varbounds,          /**< array of bounds set by constraint propagation */
-   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes set by constraint propagation */
-   int*                  nconspropvars,      /**< number of variables on which constraint propagation triggers a bound change
-                                              *   if this is larger than the array size, arrays should be reallocated and method
-                                              *   should be called again */
-   int                   conspropvarssize    /**< available slots in arrays */
-   )
-{  /*lint --e{641}*/
-   SCIP_BOUNDCHG* boundchgs;
-   int nboundchgs;
-   int nbranchings;
-   int i;
-   int pos;
-
-   assert(node != NULL);
-   assert(vars != NULL);
-   assert(varbounds != NULL);
-   assert(varboundtypes != NULL);
-   assert(nconspropvars != NULL);
-   assert(conspropvarssize >= 0);
-
-   *nconspropvars = 0;
-
-   if( SCIPnodeGetDepth(node) == 0 || node->domchg == NULL )
-      return;
-
-   nboundchgs = (int)node->domchg->domchgbound.nboundchgs;
-   boundchgs = node->domchg->domchgbound.boundchgs;
-
-   assert(boundchgs != NULL);
-   assert(nboundchgs >= 0);
-
-   /* get index of first bound change, after the branching decisions, that is not from a known constraint or propagator (CONSINFER or PROPINFER without reason)
-    * count the number of bound changes because of constraint propagation
-    */
-   SCIPnodeGetNDomchg(node, &nbranchings, NULL, NULL);
-   for( i = nbranchings; i < nboundchgs; ++i )
-   {
-      /* as we start at nbranchings, there should be no BRANCHING boundchanges anymore */
-      assert(boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING);
-
-      if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
-      {
-         if( boundchgs[i].data.inferencedata.reason.cons == NULL )
-            break;
-         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
-            (*nconspropvars)++;
-      }
-      else
-      {
-         assert(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
-         if( boundchgs[i].data.inferencedata.reason.prop == NULL )
-            break;
-      }
-   }
-
-   /* return if arrays do not have enough space to store the constraint propagations */
-   if( conspropvarssize < *nconspropvars )
-      return;
-
-   for( i = nbranchings, pos = 0; pos < *nconspropvars; ++i ) /*lint !e440*/
-   {
-      assert(i < nboundchgs);
-      if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
-      {
-         assert(boundchgs[i].data.inferencedata.reason.cons != NULL);
-         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
-         {
-            vars[pos] = boundchgs[i].var;
-            varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
-            varbounds[pos] = boundchgs[i].newbound;
-            pos++;
-         }
-      }
-   }
-}
-
 /** return all bound changes on non-continuous variables based on constraint and propagator propagation
  *
  * Stop saving the bound changes when a propagation based on a dual information is reached.
- *
- * In difference to SCIPnodeGetConsProps(), this function does not omit propagator propagations.
  */
 void SCIPnodeGetPropsBeforeDual(
    SCIP_NODE*            node,               /**< node */
