@@ -180,34 +180,36 @@ SCIP_RETCODE SCIPnodeDelCons(
    SCIP_CONS*            cons                /**< constraint to locally delete */
    );
 
-/** return all bound changes based on constraint propagation; stop saving the bound changes if we reach a branching
- *  decision based on a dual information
+/** return all bound changes on non-continuous variables based on constraint and propagator propagation
+ *
+ * Stop saving the bound changes when a propagation based on a dual information is reached.
  */
-void SCIPnodeGetConsProps(
+void SCIPnodeGetPropsBeforeDual(
    SCIP_NODE*            node,               /**< node */
-   SCIP_VAR**            vars,               /**< array of variables on which constraint propagation triggers a bound change */
-   SCIP_Real*            varbounds,          /**< array of bounds set by constraint propagation */
-   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes set by constraint propagation */
-   int*                  nconspropvars,      /**< number of variables on which constraint propagation triggers a bound change
+   SCIP_VAR**            vars,               /**< array of variables on which propagation triggers a bound change */
+   SCIP_Real*            varbounds,          /**< array of bounds set by propagation */
+   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes set by propagation */
+   int*                  npropvars,          /**< number of variables on which propagation triggers a bound change
                                               *   if this is larger than the array size, arrays should be reallocated and method
                                               *   should be called again */
-   int                   conspropvarssize    /**< available slots in arrays */
+   int                   propvarssize        /**< available slots in arrays */
    );
 
-/** gets all bound changes applied after the first bound change based on dual information.
+/** return bound changes on non-continuous variables based on constraint and propagator propagation
  *
- *  @note: currently, we can only detect bound changes based in dual information if they arise from strong branching.
+ * Start saving the bound changes when a propagation based on a dual information is reached.
+ *
+ * @note Currently, we can only detect bound changes based in dual information if they arise from strong branching.
  */
-void SCIPnodeGetBdChgsAfterDual(
+void SCIPnodeGetPropsAfterDual(
    SCIP_NODE*            node,               /**< node */
-   SCIP_VAR**            vars,               /**< array of variables on which the branching has been performed in the parent node */
-   SCIP_Real*            varbounds,          /**< array of bounds which the branching in the parent node set */
-   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes which the branching in the parent node set */
-   int                   start,              /**< first free slot in the arrays */
-   int*                  nbranchvars,        /**< number of variables on which branching has been performed in the parent node
-                                              *   if this is larger than the array size, arrays should be reallocated and method
-                                              *   should be called again */
-   int                   branchvarssize      /**< available slots in arrays */
+   SCIP_VAR**            vars,               /**< array where to store variables with bound changes */
+   SCIP_Real*            varbounds,          /**< array where to store changed bounds */
+   SCIP_BOUNDTYPE*       varboundtypes,      /**< array where to store type of changed bound*/
+   int*                  nvars,              /**< buffer to store number of bound changes;
+                                               *   if this is larger than varssize, arrays should be reallocated and method
+                                               *   should be called again */
+   int                   varssize            /**< available slots in provided arrays */
    );
 
 /** adds bound change with inference information to focus node, child of focus node, or probing node;
