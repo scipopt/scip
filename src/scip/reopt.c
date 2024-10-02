@@ -1514,7 +1514,7 @@ SCIP_RETCODE saveAfterDualBranchings(
 
    assert(reopt->reopttree->reoptnodes[id]->nafterdualvars + nbranchvars <= reopt->reopttree->reoptnodes[id]->afterdualvarssize); /* this should be the case */
 
-   reopt->reopttree->reoptnodes[id]->nafterdualvars = nbranchvars;
+   reopt->reopttree->reoptnodes[id]->nafterdualvars += nbranchvars;
 
    return SCIP_OKAY;
 }
