@@ -97,6 +97,9 @@ Features
 Performance improvements
 ------------------------
 
+- reoptimization now also stores propagations from propagators if reoptimization/saveconsprop is enabled;
+  the parameter will be renamed to reoptimization/saveprop in a next major release
+
 Fixed bugs
 ----------
 
