@@ -239,6 +239,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecConcurrentOpt);
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecPresolve);
 
+/** dialog execution method for the iis command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS);
+
 /** dialog execution method for the quit command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecQuit);

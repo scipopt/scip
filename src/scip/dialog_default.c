@@ -35,6 +35,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
 #include "scip/dialog_default.h"
+#include "scip/iis_deletionfilter.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_branch.h"
 #include "scip/pub_compr.h"
@@ -89,6 +90,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_validation.h"
 #include "scip/scip_var.h"
+#include <scip/scipdefplugins.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -2246,6 +2248,60 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecPresolve)
    case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_EXITSOLVE:
+   case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_FREE:
+   default:
+      SCIPerrorMessage("invalid SCIP stage\n");
+      return SCIP_INVALIDCALL;
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the iis command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   switch( SCIPgetStage(scip) )
+   {
+   case SCIP_STAGE_INIT:
+      SCIPdialogMessage(scip, NULL, "no problem exists\n");
+      break;
+
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_EXITSOLVE:
+      SCIPdialogMessage(scip, NULL, "problem is not yet solved\n");
+      break;
+
+   case SCIP_STAGE_SOLVED:
+   {
+      if ( SCIPgetStatus(scip) != SCIP_STATUS_INFEASIBLE )
+         SCIPdialogMessage(scip, NULL, "need infeasible model to compute an IIS\n");
+      else
+      {
+         int sizeIS;
+         SCIP_Bool isIIS;
+         SCIP_Bool success;
+
+         SCIP_CALL( SCIPrunDeletionFilter(scip, FALSE, &sizeIS, &isIIS, &success) );
+      }
+
+      break;
+   }
+
    case SCIP_STAGE_FREETRANS:
    case SCIP_STAGE_FREE:
    default:
@@ -4569,6 +4625,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
             NULL,
             SCIPdialogExecPresolve, NULL, NULL,
             "presolve", "solve the problem, but stop after presolving stage", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* IIS */
+   if( !SCIPdialogHasEntry(root, "iis") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecIIS, NULL, NULL,
+            "iis", "compute IIS for an infeasible probleme", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

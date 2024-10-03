@@ -692,6 +692,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_zeroobj.o \
 			scip/heur_zirounding.o \
 			scip/hypergraph.o \
+			scip/iis_deletionfilter.o \
 			scip/message_default.o \
 			scip/nlhdlr_bilinear.o \
 			scip/nlhdlr_convex.o \
