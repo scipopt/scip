@@ -2847,7 +2847,7 @@ SCIP_RETCODE SCIPdelCons(
 {
    assert(cons != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -2859,6 +2859,7 @@ SCIP_RETCODE SCIPdelCons(
       /* only added constraints can be removed in (de-)initialization process of presolving, otherwise the reduction
        * might be wrong
        */
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_EXITPRESOLVE:
       assert(SCIPconsIsAdded(cons));
