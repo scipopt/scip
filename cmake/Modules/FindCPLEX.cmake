@@ -22,17 +22,24 @@ if(MSVC)
          set(CPLEX_WIN_RUNTIME mda)
       endif(MT)
    endif()
-endif(MSVC)
 
-find_library(CPLEX_LIBRARY
-    NAMES cplex
-    HINTS ${CPLEX_DIR} $ENV{CPLEX_DIR}
-    PATH_SUFFIXES lib/x86-64_linux/static_pic
-                  lib/x86-64_osx/static_pic
-                  lib/x64_windows_vs${CPLEX_WIN_VS_VERSION}/stat_${CPLEX_WIN_RUNTIME}
-                  lib/arm64_linux/static_pic
-                  lib/arm64_osx/static_pic
-                  lib)
+   find_library(CPLEX_LIBRARY
+      NAMES cplex2212 cplex2211 cplex2210 cplex2010 cplex
+      HINTS ${CPLEX_DIR} $ENV{CPLEX_DIR}
+      PATH_SUFFIXES lib/x64_windows_vs${CPLEX_WIN_VS_VERSION}/stat_${CPLEX_WIN_RUNTIME})
+
+else(MSVC)
+
+   find_library(CPLEX_LIBRARY
+      NAMES cplex
+      HINTS ${CPLEX_DIR} $ENV{CPLEX_DIR}
+      PATH_SUFFIXES lib/x86-64_linux/static_pic
+                    lib/x86-64_osx/static_pic
+                    lib/arm64_linux/static_pic
+                    lib/arm64_osx/static_pic
+                    lib)
+
+endif(MSVC)
 
 # todo properly check when pthread is necessary
 set(CPLEX_LIBRARIES ${CPLEX_LIBRARY} pthread ${CMAKE_DL_LIBS})
