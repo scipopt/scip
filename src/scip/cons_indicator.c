@@ -317,6 +317,7 @@
 #define DEFAULT_CONFLICTSUPGRADE    FALSE    /**< Try to upgrade bounddisjunction conflicts by replacing slack variables? */
 #define DEFAULT_FORCERESTART        FALSE    /**< Force restart if absolute gap is 1 or enough binary variables have been fixed? */
 #define DEFAULT_RESTARTFRAC           0.9    /**< fraction of binary variables that need to be fixed before restart occurs (in forcerestart) */
+#define DEFAULT_USESAMESLACKVAR     FALSE    /**< Use same slack variable for each binary variable? */
 
 
 /* other values */
@@ -415,6 +416,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             trysolfromcover;    /**< Try to construct a feasible solution from a cover? */
    SCIP_Bool             upgradelinear;      /**< Try to upgrade linear constraints to indicator constraints? */
    char                  normtype;           /**< norm type for cut computation */
+   SCIP_Bool             usesameslackvar;    /**< Use same slack variable for each binary variable? */
    /* parameters that should not be changed after problem stage: */
    SCIP_Bool             sepaalternativelp;  /**< Separate using the alternative LP? */
    SCIP_Bool             sepaalternativelp_; /**< used to store the sepaalternativelp parameter */
@@ -7864,6 +7866,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "Try to upgrade linear constraints to indicator constraints?",
          &conshdlrdata->upgradelinear, TRUE, DEFAULT_UPGRADELINEAR, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/usesameslackvar",
+         "Use same slack variable for each binary variable?",
+         &conshdlrdata->usesameslackvar, TRUE, DEFAULT_USESAMESLACKVAR, NULL, NULL) );
+
    /* parameters that should not be changed after problem stage: */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/sepaalternativelp",
@@ -8032,7 +8039,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       }
    }
 
-   /* Check whether binary variable has been used for a different constraint; then use the same slack variable. */
+   /* Check whether the same slack variable should be use for constraints with a common binary variable. This can
+    * reduce the size of the problem, because only one coupling constraint is needed. However, it is less tight. */
    if ( binvar != NULL )
    {
       SCIP_VAR* binvarinternal;
@@ -8045,14 +8053,13 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
          SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
       }
 
-      /* make sure that the hashmap exists */
-      if ( conshdlrdata->binslackvarhash == NULL )
+      /* make sure that the hashmap exists if we want to use the same slack variable */
+      if ( conshdlrdata->binslackvarhash == NULL && conshdlrdata->usesameslackvar )
       {
          SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binslackvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
       }
 
-      assert( conshdlrdata->binslackvarhash != NULL );
-      if ( SCIPhashmapExists(conshdlrdata->binslackvarhash, (void*) binvarinternal) )
+      if ( conshdlrdata->binslackvarhash != NULL && SCIPhashmapExists(conshdlrdata->binslackvarhash, (void*) binvarinternal) )
       {
          SCIP_Bool infeasible;
 
@@ -8080,7 +8087,10 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
          /* mark slack variable not to be multi-aggregated */
          SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
 
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binslackvarhash, (void*) binvarinternal, (void*) slackvar) );
+         if ( conshdlrdata->binslackvarhash != NULL )
+         {
+            SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binslackvarhash, (void*) binvarinternal, (void*) slackvar) );
+         }
       }
    }
    else
@@ -8611,14 +8621,14 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
-   /* Check awhether binary variable has been used for a different constraint; then use the same slack variable. */
-   if ( conshdlrdata->binslackvarhash == NULL )
+   /* Check whether the same slack variable should be use for constraints with a common binary variable. This can
+    * reduce the size of the problem, because only one coupling constraint is needed. However, it is less tight. */
+   if ( conshdlrdata->binslackvarhash == NULL && conshdlrdata->usesameslackvar )
    {
       SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binslackvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
    }
 
-   assert( conshdlrdata->binslackvarhash != NULL );
-   if ( SCIPhashmapExists(conshdlrdata->binslackvarhash, (void*) binvarinternal) )
+   if ( conshdlrdata->binslackvarhash != NULL && SCIPhashmapExists(conshdlrdata->binslackvarhash, (void*) binvarinternal) )
    {
       /* determine slack variable */
       slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
@@ -8646,7 +8656,10 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       /* mark slack variable not to be multi-aggregated */
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
 
-      SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binslackvarhash, (void*) binvarinternal, (void*) slackvar) );
+      if ( conshdlrdata->binslackvarhash != NULL )
+      {
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binslackvarhash, (void*) binvarinternal, (void*) slackvar) );
+      }
    }
    assert( slackvar != NULL );
 
