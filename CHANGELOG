@@ -163,6 +163,8 @@ Build system
 Miscellaneous
 -------------
 
+- adjusted Gurobi interface for Gurobi 12
+
 Known bugs
 ----------
 
