@@ -113,6 +113,7 @@ Interface changes
 
 - added SCIPtpiIsAvailable() to check whether a working task processing interface is available (TPI != none)
 - added SCIPtpiGetLibraryName() and SCIPtpiGetLibraryDesc()
+- SCIPdelCons() can now also be called in SCIP_STAGE_TRANSFORMED
 
 ### Command line interface
 ### Interfaces to external software
