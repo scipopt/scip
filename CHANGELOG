@@ -34,10 +34,9 @@ Interface changes
 ### Command line interface
 ### Interfaces to external software
 
-New parameters
---------------
+### New parameters
 
-- new parameter "constraints/indicator/usesameslackvar" to decide whether the same slack variable should be used for constraints with a common binary variable
+- constraints/indicator/usesameslackvar to decide whether the same slack variable should be used for indicators with common binary variable
 
 ### Data structures
 
