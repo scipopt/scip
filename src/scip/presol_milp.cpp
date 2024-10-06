@@ -99,7 +99,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define PRESOL_TIMING              SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
 /* default parameter values */
-#define DEFAULT_THREADS            0         /**< maximum number of threads presolving may use (0: automatic) */
+#define DEFAULT_THREADS            1         /**< maximum number of threads presolving may use (0: automatic) */
 #define DEFAULT_MAXFILLINPERSUBST  3         /**< maximal possible fillin for substitutions to be considered */
 #define DEFAULT_MAXSHIFTPERROW     10        /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
 #define DEFAULT_DETECTLINDEP       0         /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
