@@ -202,7 +202,7 @@ SCIP_RETCODE runVanillaStrongBranching(
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
             "(node %" SCIP_LONGINT_FORMAT ") error in strong branching call for variable <%s> with solution %g\n",
             SCIPgetNNodes(scip), SCIPvarGetName(var), val);
-         break;
+         continue;
       }
 
       /* evaluate strong branching */
