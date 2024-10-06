@@ -350,8 +350,8 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    *bestpseudocand = 0;
    *bestdown = lpobjval;
    *bestup = lpobjval;
-   *bestdownvalid = TRUE;
-   *bestupvalid = TRUE;
+   *bestdownvalid = FALSE;
+   *bestupvalid = FALSE;
    *bestscore = -SCIPinfinity(scip);
    *provedbound = lpobjval;
    if( npseudocands > 1 )

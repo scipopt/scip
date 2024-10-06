@@ -256,8 +256,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    *bestcand = 0;
    *bestdown = lpobjval;
    *bestup = lpobjval;
-   *bestdownvalid = TRUE;
-   *bestupvalid = TRUE;
+   *bestdownvalid = FALSE;
+   *bestupvalid = FALSE;
    *bestscore = -SCIPinfinity(scip);
 
    /* if only one candidate exists, choose this one without applying strong branching; also, when SCIP is about to be

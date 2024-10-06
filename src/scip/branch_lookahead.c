@@ -4779,9 +4779,9 @@ SCIP_RETCODE selectVarRecursive(
    decision->branchvar = candidatelist->candidates[0]->branchvar;
    decision->branchval = candidatelist->candidates[0]->branchval;
    decision->downdb = lpobjval;
-   decision->downdbvalid = TRUE;
+   decision->downdbvalid = FALSE;
    decision->updb = lpobjval;
-   decision->updbvalid = TRUE;
+   decision->updbvalid = FALSE;
    decision->proveddb = lpobjval;
    decision->score = 0.0;
 
@@ -5373,9 +5373,9 @@ SCIP_RETCODE selectVarStart(
       decision->branchvar = candidatelist->candidates[0]->branchvar;
       decision->branchval = candidatelist->candidates[0]->branchval;
       decision->downdb = lpobjval;
-      decision->downdbvalid = TRUE;
+      decision->downdbvalid = FALSE;
       decision->updb = lpobjval;
-      decision->updbvalid = TRUE;
+      decision->updbvalid = FALSE;
       decision->proveddb = lpobjval;
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Only one candidate (<%s>) is given. This one is chosen without "
@@ -5428,9 +5428,9 @@ SCIP_RETCODE selectVarStart(
       decision->branchvar = candidatelist->candidates[0]->branchvar;
       decision->branchval = candidatelist->candidates[0]->branchval;
       decision->downdb = lpobjval;
-      decision->downdbvalid = TRUE;
+      decision->downdbvalid = FALSE;
       decision->updb = lpobjval;
-      decision->updbvalid = TRUE;
+      decision->updbvalid = FALSE;
       decision->proveddb = lpobjval;
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Only one candidate (<%s>) is given. This one is chosen without "
