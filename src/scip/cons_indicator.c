@@ -8063,7 +8063,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
          SCIP_Bool infeasible;
 
          slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
-         assert( slackvar != NULL );
 
          /* make sure that the type of the slackvariable is as general as possible */
          if ( SCIPvarGetType(slackvar) == SCIP_VARTYPE_IMPLINT && slackvartype != SCIP_VARTYPE_IMPLINT )
@@ -8104,6 +8103,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       /* mark slack variable not to be multi-aggregated */
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
    }
+   assert( slackvar != NULL );
 
    /* if the problem should be decomposed if only non-integer variables are present */
    if ( conshdlrdata->nolinconscont )
@@ -8612,7 +8612,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    {
       /* determine slack variable */
       slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
-      assert( slackvar != NULL );
 
       /* make sure that the type of the slackvariable is as general as possible */
       if ( SCIPvarGetType(slackvar) == SCIP_VARTYPE_IMPLINT && slackvartype != SCIP_VARTYPE_IMPLINT )
