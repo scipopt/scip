@@ -7975,6 +7975,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    SCIP_CONSDATA* consdata = NULL;
    SCIP_CONS* lincons;
    SCIP_VAR* slackvar = NULL;
+   SCIP_VAR* binvarinternal;
    SCIP_Bool modifiable = FALSE;
    SCIP_Bool linconsactive = TRUE;
    SCIP_VARTYPE slackvartype;
@@ -8039,20 +8040,18 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       }
    }
 
+   /* if active on 0, a provided binary variable is reversed */
+   if ( activeone || binvar == NULL )
+      binvarinternal = binvar;
+   else
+   {
+      SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+   }
+
    /* Check whether the same slack variable should be use for constraints with a common binary variable. This can
     * reduce the size of the problem, because only one coupling constraint is needed. However, it is less tight. */
-   if ( binvar != NULL )
+   if ( binvarinternal != NULL )
    {
-      SCIP_VAR* binvarinternal;
-
-      /* if active on 0, the binary variable is reversed */
-      if ( activeone )
-         binvarinternal = binvar;
-      else
-      {
-         SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
-      }
-
       /* make sure that the hashmap exists if we want to use the same slack variable */
       if ( conshdlrdata->binslackvarhash == NULL && conshdlrdata->usesameslackvar )
       {
@@ -8174,15 +8173,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    if ( conshdlrdata->generatebilinear )
    {
       SCIP_Real val = 1.0;
-      SCIP_VAR* binvarinternal;
-
-      /* if active on 0, the binary variable is reversed */
-      if ( activeone )
-         binvarinternal = binvar;
-      else
-      {
-         SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
-      }
 
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
       SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, cons, name, 0, NULL, NULL, 1, &binvarinternal, &slackvar, &val, 0.0, 0.0,
@@ -8212,19 +8202,9 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
          /* make sure that binary variable hash exists */
          if ( conshdlrdata->sepaalternativelp )
          {
-            SCIP_VAR* binvarinternal;
-
             if ( conshdlrdata->binvarhash == NULL )
             {
                SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
-            }
-
-            /* if active on 0, the binary variable is reversed */
-            if ( activeone )
-               binvarinternal = binvar;
-            else
-            {
-               SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
             }
 
             /* check whether binary variable is present: note that a binary variable might appear several times, but this seldomly happens. */
@@ -8618,7 +8598,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       binvarinternal = binvar;
    else
    {
-      SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+      SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
    /* Check whether the same slack variable should be use for constraints with a common binary variable. This can
