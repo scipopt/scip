@@ -28,6 +28,9 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- SCIPcreateRow*(), SCIPaddVarToRow(), SCIPaddVarsToRow(), SCIPaddVarsToRowSameCoef() can now only be called in the solving stage,
+  because otherwise the LP is not yet available and the row data is invalid.
+
 ### New API functions
 
 - SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
