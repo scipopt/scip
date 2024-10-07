@@ -36,7 +36,7 @@ Interface changes
 
 ### New parameters
 
-- constraints/indicator/usesameslackvar to decide whether the same slack variable should be used for indicators with common binary variable
+- constraints/indicator/usesameslackvar to decide whether the same slack variable should be used for indicators constraints with common binary variable
 
 ### Data structures
 

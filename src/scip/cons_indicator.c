@@ -317,7 +317,7 @@
 #define DEFAULT_CONFLICTSUPGRADE    FALSE    /**< Try to upgrade bounddisjunction conflicts by replacing slack variables? */
 #define DEFAULT_FORCERESTART        FALSE    /**< Force restart if absolute gap is 1 or enough binary variables have been fixed? */
 #define DEFAULT_RESTARTFRAC           0.9    /**< fraction of binary variables that need to be fixed before restart occurs (in forcerestart) */
-#define DEFAULT_USESAMESLACKVAR     FALSE    /**< Use same slack variable for indicators with common binary variable? */
+#define DEFAULT_USESAMESLACKVAR     FALSE    /**< Use same slack variable for indicator constraints with common binary variable? */
 
 
 /* other values */
@@ -416,7 +416,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             trysolfromcover;    /**< Try to construct a feasible solution from a cover? */
    SCIP_Bool             upgradelinear;      /**< Try to upgrade linear constraints to indicator constraints? */
    char                  normtype;           /**< norm type for cut computation */
-   SCIP_Bool             usesameslackvar;    /**< Use same slack variable for indicators with common binary variable? */
+   SCIP_Bool             usesameslackvar;    /**< Use same slack variable for indicator constraints with common binary variable? */
    /* parameters that should not be changed after problem stage: */
    SCIP_Bool             sepaalternativelp;  /**< Separate using the alternative LP? */
    SCIP_Bool             sepaalternativelp_; /**< used to store the sepaalternativelp parameter */
@@ -7868,7 +7868,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/usesameslackvar",
-         "Use same slack variable for indicators with common binary variable?",
+         "Use same slack variable for indicator constraints with common binary variable?",
          &conshdlrdata->usesameslackvar, TRUE, DEFAULT_USESAMESLACKVAR, NULL, NULL) );
 
    /* parameters that should not be changed after problem stage: */
