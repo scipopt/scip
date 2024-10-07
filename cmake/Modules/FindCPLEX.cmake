@@ -29,14 +29,16 @@ if(MSVC)
       PATH_SUFFIXES lib/x64_windows_vs${CPLEX_WIN_VS_VERSION}/stat_${CPLEX_WIN_RUNTIME})
 
 else(MSVC)
+   set(CPLEX_ARCH ${CMAKE_SYSTEM_PROCESSOR})
+   if(CPLEX_ARCH STREQUAL "x86_64")
+     set(CPLEX_ARCH "x86-64")
+   endif()
 
    find_library(CPLEX_LIBRARY
       NAMES cplex
       HINTS ${CPLEX_DIR} $ENV{CPLEX_DIR}
-      PATH_SUFFIXES lib/x86-64_linux/static_pic
-                    lib/x86-64_osx/static_pic
-                    lib/arm64_linux/static_pic
-                    lib/arm64_osx/static_pic
+      PATH_SUFFIXES lib/${CPLEX_ARCH}_linux/static_pic
+                    lib/${CPLEX_ARCH}_osx/static_pic
                     lib)
 
 endif(MSVC)
