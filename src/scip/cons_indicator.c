@@ -8053,7 +8053,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    if ( binvarinternal != NULL )
    {
       /* make sure that the hashmap exists if we want to use the same slack variable */
-      if ( conshdlrdata->binslackvarhash == NULL && conshdlrdata->usesameslackvar )
+      if ( conshdlrdata->usesameslackvar && conshdlrdata->binslackvarhash == NULL )
       {
          SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binslackvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
       }
@@ -8603,7 +8603,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
 
    /* Check whether the same slack variable should be use for constraints with a common binary variable. This can
     * reduce the size of the problem, because only one coupling constraint is needed. However, it is less tight. */
-   if ( conshdlrdata->binslackvarhash == NULL && conshdlrdata->usesameslackvar )
+   if ( conshdlrdata->usesameslackvar && conshdlrdata->binslackvarhash == NULL )
    {
       SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binslackvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
    }
