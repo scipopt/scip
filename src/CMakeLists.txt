@@ -296,6 +296,7 @@ set(scipsources
     scip/heuristics.c
     scip/compr.c
     scip/history.c
+    scip/iis_deletionfilter.c
     scip/implics.c
     scip/interrupt.c
     scip/intervalarith.c
@@ -647,6 +648,7 @@ set(scipheaders
     scip/heur_zirounding.h
     scip/history.h
     scip/hypergraph.h
+    scip/iis_deletionfilter.h
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
