@@ -1978,14 +1978,16 @@ SCIP_RETCODE applyFixings(
                SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize) );
 
                /* if space was not enough (we found another multi-aggregation), we need to resize the buffers */
-               if( requiredsize > nconsvars )
+               if( requiredsize > size )
                {
-                  SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
-                  SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
+                  size = requiredsize;
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, size) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, size) );
 
-                  SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize) );
-                  assert(requiredsize <= nconsvars);
+                  SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize) );
+                  assert(requiredsize == size);
                }
+               assert(nconsvars <= size);
 
                /* compute sides */
                if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
