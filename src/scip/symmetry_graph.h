@@ -44,7 +44,7 @@ extern "C" {
 #endif
 
 
-/**@addtogroup PublicSymmetryGraphMethods
+/**@addtogroup SymGraph
  *
  * @{
  */

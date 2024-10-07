@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   symmetry_graph.c
- * @ingroup PUBLICCOREAPI
+ * @ingroup OTHER_CFILES
  * @brief  methods for dealing with symmetry detection graphs
  * @author Christopher Hojny
  */
