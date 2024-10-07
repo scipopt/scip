@@ -33,8 +33,8 @@
 #include "scip/symmetry_graph.h"
 #include "scip/scip.h"
 #include "scip/misc.h"
-#include <symmetry/struct_symmetry.h>
-#include <symmetry/type_symmetry.h>
+#include "symmetry/struct_symmetry.h"
+#include "symmetry/type_symmetry.h"
 
 
 /** creates and initializes a symmetry detection graph with memory for the given number of nodes and edges

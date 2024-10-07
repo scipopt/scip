@@ -8798,10 +8798,12 @@
   * - There is a <a href="https://github.com/scipopt/MatlabSCIPInterface">Matlab interface</a>
   *   to use SCIP and SCIP-SDP from Matlab and Octave.
   * - <a href="https://github.com/scipopt/JSCIPOpt">JSCIPOpt</a> is an interface for Java.
+  * - <a href="https://github.com/scipopt/russcip">Russcip</a> is an interface for Rust.
+  * - <a href="https://github.com/scipopt/SCIPpp">SCIP++</a> is a modeling interfaces for C++.
   *
   * Contributions to these projects are very welcome.
   *
-  * There are also several third-party python interfaces to the \SCIP Optimization Suite:
+  * There are also many third-party python interfaces to the \SCIP Optimization Suite, for example:
   * - <a href="https://github.com/eomahony/Numberjack">NUMBERJACK</a> is a constraint programming platform implemented in python.
   *   It supports a variety of different solvers, one of them being the \SCIP Optimization Suite .
   * - <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
