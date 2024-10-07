@@ -371,7 +371,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
             SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "(node %" SCIP_LONGINT_FORMAT ") error in strong branching call%s for variable <%s> with solution %g\n",
                SCIPgetNNodes(scip), propagate ? " with propagation" : "", SCIPvarGetName(lpcands[c]), lpcandssol[c]);
-            continue;
+            break;
          }
 
          /* evaluate strong branching */

@@ -1436,7 +1436,7 @@ SCIP_RETCODE execRelpscost(
                   "(node %" SCIP_LONGINT_FORMAT ") error in strong branching call for variable <%s> with solution %g\n",
                   SCIPgetNNodes(scip), SCIPvarGetName(branchcands[c]), branchcandssol[c]);
             }
-            continue;
+            break;
          }
 
          /* Strong branching might have found a new primal solution which updated the cutoff bound. In this case, the
