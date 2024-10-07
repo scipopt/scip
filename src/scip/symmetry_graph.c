@@ -39,7 +39,7 @@
 
 /** creates and initializes a symmetry detection graph with memory for the given number of nodes and edges
  *
- *  @note At some point, the graph needs to be freed!
+ *  @note at some point, the graph needs to be freed!
  */
 SCIP_RETCODE SCIPcreateSymgraph(
    SCIP*                 scip,               /**< SCIP data structure */
