@@ -9455,8 +9455,13 @@
  */
 
 /**@defgroup PublicSymmetryMethods Symmetry
- * @ingroup INTERNALAPI
+ * @ingroup PUBLICCOREAPI
  * @brief methods for symmetry handling
+ */
+
+/**@defgroup PublicSymmetryGraphMethods Symmetry Graph
+ * @ingroup PublicSymmetryMethods
+ * @brief methods for symmetry graph handling
  */
 
 /**@defgroup FileReaderIncludes Inclusion methods
