@@ -106,8 +106,8 @@
 #include "scip/struct_tree.h"
 #include "scip/symmetry.h"
 #include "scip/debug.h"
+#include "symmetry/type_symmetry.h"
 #include <string.h>
-#include <symmetry/type_symmetry.h>
 
 
 /* symmetry handler properties */
