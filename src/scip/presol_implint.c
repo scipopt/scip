@@ -282,6 +282,7 @@ SCIP_RETCODE computeContinuousComponents(
       int component = representativecomponent[colroot];
       if( component < 0)
       {
+         assert(component == -1);
          /* add new component */
          component = comp->ncomponents;
          representativecomponent[colroot] = component;
@@ -297,6 +298,7 @@ SCIP_RETCODE computeContinuousComponents(
       int rowroot = disjointSetFind(disjointset,row + comp->nmatrixcols);
       int component = representativecomponent[rowroot];
       if( component < 0){
+         assert(component == -1);
          //Any rows that have roots that we have not seen yet are rows that have no continuous columns
          //We can safely skip these for finding the continuous connected components
          continue;
@@ -328,6 +330,7 @@ SCIP_RETCODE computeContinuousComponents(
          int component = comp->colcomponent[col];
          if(component < 0)
          {
+            assert(component == -1);
             continue;
          }
          int ind = componentnextcolindex[component];
@@ -339,6 +342,7 @@ SCIP_RETCODE computeContinuousComponents(
          int component = comp->rowcomponent[row];
          if(component < 0)
          {
+            assert(component == -1);
             continue;
          }
          int ind = componentnextrowindex[component];
@@ -424,12 +428,11 @@ SCIP_RETCODE computeMatrixStatistics(
          if( continuous )
          {
             ++ncontinuous;
+            if(SCIPisEQ(scip,ABS(value),1.0)){
+               ++ncontinuouspmone;
+            }
          }
-         if(continuous && ABS(value) == 1.0)
-         {
-            ++ncontinuouspmone;
-         }
-         if(!continuous)
+         else
          {
             integral = integral && SCIPisIntegral(scip,value);
          }
@@ -581,7 +584,7 @@ SCIP_RETCODE findImpliedIntegers(
                   tempIdxArray[ncontnonz] = col;
                   tempValArray[ncontnonz] = rowvals[j];
                   ++ncontnonz;
-                  assert(ABS(rowvals[j]) == 1.0);
+                  assert(SCIPisEQ(scip,ABS(rowvals[j]),1.0));
                }
             }
 
@@ -625,7 +628,7 @@ SCIP_RETCODE findImpliedIntegers(
                   tempIdxArray[ncontnonz] = col;
                   tempValArray[ncontnonz] = rowvals[j];
                   ++ncontnonz;
-                  assert(ABS(rowvals[j]) == 1.0);
+                  assert(SCIPisEQ(scip,ABS(rowvals[j]),1.0));
                }
             }
 
