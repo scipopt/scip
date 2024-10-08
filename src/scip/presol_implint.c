@@ -59,7 +59,7 @@
 #define PRESOL_NAME            "implint"
 #define PRESOL_DESC            "detects implicit integer variables"
 #define PRESOL_PRIORITY         100 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
-#define PRESOL_MAXROUNDS        0 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS        1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_CONVERTINTEGERS FALSE
@@ -108,7 +108,7 @@ SCIP_RETCODE createMatrixComponents(
    MATRIX_COMPONENTS**   pmatrixcomponents   /**< Pointer to create the matrix components data structure */
    )
 {
-   SCIP_CALL( SCIPallocBlockMemory(scip, pmatrixcomponents) );
+   SCIP_CALL( SCIPallocBuffer(scip, pmatrixcomponents) );
    MATRIX_COMPONENTS * comp = *pmatrixcomponents;
 
    int nrows = SCIPmatrixGetNRows(matrix);
@@ -117,29 +117,29 @@ SCIP_RETCODE createMatrixComponents(
    comp->nmatrixrows = nrows;
    comp->nmatrixcols = ncols;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->coltype, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comp->coltype, ncols) );
    for( int i = 0; i < ncols; ++i )
    {
       SCIP_VAR * var = SCIPmatrixGetVar(matrix,i);
       comp->coltype[i] = SCIPvarGetType(var);
    }
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->rowcomponent, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comp->rowcomponent, nrows) );
    for( int i = 0; i < nrows; ++i )
    {
       comp->rowcomponent[i] = -1;
    }
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->colcomponent, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comp->colcomponent, ncols) );
    for( int i = 0; i < ncols; ++i )
    {
       comp->colcomponent[i] = -1;
    }
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->componentrows, nrows) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->componentcols, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comp->componentrows, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comp->componentcols, ncols) );
    /* There will be at most ncols components */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->componentrowend, ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->componentcolend, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comp->componentrowend, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comp->componentcolend, ncols) );
 
    comp->ncomponents = 0;
 
@@ -148,22 +148,22 @@ SCIP_RETCODE createMatrixComponents(
 
 /**< Frees the matrix components data structure */
 static
-void freeMatrixInfo(
+void freeMatrixComponents(
    SCIP*                 scip,               /**< SCIP data structure */
    MATRIX_COMPONENTS**   pmatrixcomponents   /**< Pointer to the allocated matrix components data structure */
    )
 {
    MATRIX_COMPONENTS* comp = *pmatrixcomponents;
+   /**< Make sure to free in reverse */
+   SCIPfreeBufferArray(scip, &comp->componentcolend);
+   SCIPfreeBufferArray(scip, &comp->componentrowend);
+   SCIPfreeBufferArray(scip, &comp->componentcols);
+   SCIPfreeBufferArray(scip, &comp->componentrows);
+   SCIPfreeBufferArray(scip, &comp->colcomponent);
+   SCIPfreeBufferArray(scip, &comp->rowcomponent);
+   SCIPfreeBufferArray(scip, &comp->coltype);
 
-   SCIPfreeBlockMemoryArray(scip, &comp->componentcolend, comp->nmatrixcols);
-   SCIPfreeBlockMemoryArray(scip, &comp->componentrowend, comp->nmatrixcols);
-   SCIPfreeBlockMemoryArray(scip, &comp->componentcols, comp->nmatrixcols);
-   SCIPfreeBlockMemoryArray(scip, &comp->componentrows, comp->nmatrixrows);
-   SCIPfreeBlockMemoryArray(scip, &comp->colcomponent, comp->nmatrixcols);
-   SCIPfreeBlockMemoryArray(scip, &comp->rowcomponent, comp->nmatrixrows);
-   SCIPfreeBlockMemoryArray(scip, &comp->coltype, comp->nmatrixcols);
-
-   SCIPfreeBlockMemory(scip, pmatrixcomponents);
+   SCIPfreeBuffer(scip, pmatrixcomponents);
 }
 
 /**< Finds the representative of an element in the disjoint set datastructure.
@@ -370,6 +370,8 @@ SCIP_RETCODE computeContinuousComponents(
    return SCIP_OKAY;
 }
 
+/**< A temporary data structure that stores some statistics/data on the rows and columns.
+ * This is freed again after implied integer detection is finished. */
 typedef struct{
    SCIP_Bool* rowintegral;                   /**< Are all row entries of non-continuous columns and the row sides integral? */
    SCIP_Bool* rowequality;                   /**< Is the row an equality? */
@@ -475,6 +477,7 @@ void freeMatrixStatistics(
 )
 {
    MATRIX_STATISTICS* stats= *pstats;
+   /**< make sure, for performance, that these frees occur in reverse */
    SCIPfreeBufferArray(scip, &stats->colintegralbounds);
    SCIPfreeBufferArray(scip, &stats->rowncontinuouspmone);
    SCIPfreeBufferArray(scip, &stats->rowncontinuous);
@@ -511,7 +514,7 @@ SCIP_RETCODE findImpliedIntegers(
    SCIP_NETMATDEC * transdec = NULL;
    SCIP_CALL( SCIPnetmatdecCreate(SCIPblkmem(scip),&transdec,comp->nmatrixcols,comp->nmatrixrows) );
 
-   int nplanarcomponents = 0;
+
    int ngoodcomponents = 0;
    int nbadnumerics = 0;
    int nbadintegrality = 0;
@@ -615,40 +618,44 @@ SCIP_RETCODE findImpliedIntegers(
       SCIP_Bool componenttransnetwork = TRUE;
 
       /* For the transposed matrix, the situation is exactly reversed because the row/column algorithms are swapped */
-      if( nrows <= ncols * presoldata->columnrowratio )
+      /* We only run transposed network detection if network detection failed */
+      if(!componentnetwork)
       {
-         for( int i = startrow; i < startrow + nrows && componenttransnetwork ; ++i )
+         if( nrows <= ncols * presoldata->columnrowratio )
          {
-            int row = comp->componentrows[i];
-            int nrownnoz = SCIPmatrixGetRowNNonzs(matrix,row);
-            int* rowcols = SCIPmatrixGetRowIdxPtr(matrix,row);
-            SCIP_Real* rowvals = SCIPmatrixGetRowValPtr(matrix,row);
-            int ncontnonz = 0;
-            for( int j = 0; j < nrownnoz; ++j )
+            for( int i = startrow; i < startrow + nrows && componenttransnetwork; ++i )
             {
-               int col = rowcols[j];
-               if( comp->coltype[col] == SCIP_VARTYPE_CONTINUOUS )
+               int row = comp->componentrows[i];
+               int nrownnoz = SCIPmatrixGetRowNNonzs(matrix, row);
+               int* rowcols = SCIPmatrixGetRowIdxPtr(matrix, row);
+               SCIP_Real* rowvals = SCIPmatrixGetRowValPtr(matrix, row);
+               int ncontnonz = 0;
+               for( int j = 0; j < nrownnoz; ++j )
                {
-                  tempIdxArray[ncontnonz] = col;
-                  tempValArray[ncontnonz] = rowvals[j];
-                  ++ncontnonz;
-                  assert(SCIPisEQ(scip,ABS(rowvals[j]),1.0));
+                  int col = rowcols[j];
+                  if( comp->coltype[col] == SCIP_VARTYPE_CONTINUOUS )
+                  {
+                     tempIdxArray[ncontnonz] = col;
+                     tempValArray[ncontnonz] = rowvals[j];
+                     ++ncontnonz;
+                     assert(SCIPisEQ(scip, ABS(rowvals[j]), 1.0));
+                  }
                }
-            }
 
-            SCIP_CALL( SCIPnetmatdecTryAddCol(transdec,row,tempIdxArray,tempValArray,ncontnonz,
-                                              &componenttransnetwork) );
+               SCIP_CALL(SCIPnetmatdecTryAddCol(transdec, row, tempIdxArray, tempValArray, ncontnonz,
+                                                &componenttransnetwork));
+            }
          }
-      }
-      else
-      {
-         for( int i = startcol; i < startcol + ncols && componenttransnetwork; ++i )
+         else
          {
-            int col = comp->componentcols[i];
-            int ncolnnonz = SCIPmatrixGetColNNonzs(matrix,col);
-            int* colrows = SCIPmatrixGetColIdxPtr(matrix,col);
-            SCIP_Real* colvals = SCIPmatrixGetColValPtr(matrix,col);
-            SCIP_CALL( SCIPnetmatdecTryAddRow(transdec,col,colrows,colvals,ncolnnonz,&componenttransnetwork) );
+            for( int i = startcol; i < startcol + ncols && componenttransnetwork; ++i )
+            {
+               int col = comp->componentcols[i];
+               int ncolnnonz = SCIPmatrixGetColNNonzs(matrix, col);
+               int* colrows = SCIPmatrixGetColIdxPtr(matrix, col);
+               SCIP_Real* colvals = SCIPmatrixGetColValPtr(matrix, col);
+               SCIP_CALL(SCIPnetmatdecTryAddRow(transdec, col, colrows, colvals, ncolnnonz, &componenttransnetwork));
+            }
          }
       }
 
@@ -663,10 +670,7 @@ SCIP_RETCODE findImpliedIntegers(
          continue;
       }
       ++ngoodcomponents;
-      if(componentnetwork && componenttransnetwork)
-      {
-         ++nplanarcomponents;
-      }
+
       for( int i = startcol; i < startcol + ncols; ++i )
       {
          int col = comp->componentcols[i];
@@ -677,9 +681,14 @@ SCIP_RETCODE findImpliedIntegers(
          assert(!infeasible);
       }
    }
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-                   "implied integer components: %d (%d planar) / %d (disqualified: %d by integrality, %d by numerics, %d not network) \n",
-                   ngoodcomponents, nplanarcomponents, comp->ncomponents, nbadintegrality, nbadnumerics, nnonnetwork);
+   if(*nchgvartypes == 0){
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No implied integers detected \n");
+   }else{
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+                      "%d implied integers in %d / %d components (disqualified: %d by integrality, %d by numerics, %d not network) \n",
+                      *nchgvartypes, ngoodcomponents, comp->ncomponents, nbadintegrality, nbadnumerics, nnonnetwork);
+   }
+
 
    SCIPfreeBufferArray(scip,&tempIdxArray);
    SCIPfreeBufferArray(scip,&tempValArray);
@@ -878,7 +887,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
       *result = SCIP_SUCCESS;
    }
    freeMatrixStatistics(scip,&stats);
-   freeMatrixInfo(scip, &comp);
+   freeMatrixComponents(scip, &comp);
    SCIPmatrixFree(scip, &matrix);
    return SCIP_OKAY;
 }
