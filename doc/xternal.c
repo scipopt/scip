@@ -9054,6 +9054,13 @@
  * @brief methods for creating and accessing user decompositions
  */
 
+/**@defgroup SymGraph Symmetry Detection Graph
+ * @ingroup DataStructures
+ * @brief methods for creating and manipulating symmetry detection graphs
+ *
+ * Below you find a list of functions to create and manipulate symmetry detection graphs.
+ */
+
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
  * @ingroup PUBLICCOREAPI
  * @brief commonly used methods from different categories
@@ -9460,7 +9467,7 @@
  */
 
 /**@defgroup PublicSymmetryMethods Symmetry
- * @ingroup INTERNALAPI
+ * @ingroup PUBLICCOREAPI
  * @brief methods for symmetry handling
  */
 
