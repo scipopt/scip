@@ -9039,15 +9039,6 @@ SCIP_RETCODE varProcessAddHoleLocal(
    assert(SCIPsetIsEQ(set, newlb, var->locdom.lb));
    assert(SCIPsetIsEQ(set, newub, var->locdom.ub));
 
-#if 0
-   /* issue bound change event */
-   assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
-   {
-      SCIP_CALL( varEventLholeAdded(var, blkmem, set, lp, branchcand, eventqueue, left, right) );
-   }
-#endif
-
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
    {
