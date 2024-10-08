@@ -92,11 +92,8 @@ typedef struct{
 
    int* componentrows;                       /**< Flattened array of arrays of rows that are in a given component. */
    int* componentcols;                       /**< Flattened array of arrays of columns that are in a given component. */
-   int* componentrowstart;                   /**< The index of componentrows where the given component starts. */
-   int* componentcolstart;                   /**< The index of componentcols where the given component starts. */
-   int* ncomponentrows;                      /**< The number of rows in the given component. */
-   int* ncomponentcols;                      /**< The number of columns in the given component */
-
+   int* componentrowend;                     /**< The index of componentrows where the given component ends. */
+   int* componentcolend;                     /**< The index of componentcols where the given component ends. */
    int ncomponents;
 } MATRIX_COMPONENTS;
 
@@ -137,11 +134,9 @@ SCIP_RETCODE createMatrixComponents(
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->componentrows, nrows) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->componentcols, ncols) );
-   //There will be at most ncols components
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->componentrowstart, ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->componentcolstart, ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->ncomponentrows, ncols) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->ncomponentcols, ncols) );
+   /* There will be at most ncols components */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->componentrowend, ncols) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comp->componentcolend, ncols) );
 
    comp->ncomponents = 0;
 
@@ -156,10 +151,9 @@ void freeMatrixInfo(
    )
 {
    MATRIX_COMPONENTS* comp = *pmatrixcomponents;
-   SCIPfreeBlockMemoryArray(scip, &comp->ncomponentcols, comp->nmatrixcols);
-   SCIPfreeBlockMemoryArray(scip, &comp->ncomponentrows, comp->nmatrixcols);
-   SCIPfreeBlockMemoryArray(scip, &comp->componentcolstart, comp->nmatrixcols);
-   SCIPfreeBlockMemoryArray(scip, &comp->componentrowstart, comp->nmatrixcols);
+
+   SCIPfreeBlockMemoryArray(scip, &comp->componentcolend, comp->nmatrixcols);
+   SCIPfreeBlockMemoryArray(scip, &comp->componentrowend, comp->nmatrixcols);
    SCIPfreeBlockMemoryArray(scip, &comp->componentcols, comp->nmatrixcols);
    SCIPfreeBlockMemoryArray(scip, &comp->componentrows, comp->nmatrixrows);
    SCIPfreeBlockMemoryArray(scip, &comp->colcomponent, comp->nmatrixcols);
@@ -272,6 +266,7 @@ SCIP_RETCODE computeContinuousComponents(
    /** Now, fill in the relevant data. */
    int * representativecomponent;
    SCIP_CALL(SCIPallocBufferArray(scip, &representativecomponent, comp->nmatrixcols + comp->nmatrixrows));
+
    for( int i = 0; i < comp->nmatrixcols + comp->nmatrixrows; ++i )
    {
       representativecomponent[i] = -1;
@@ -290,12 +285,12 @@ SCIP_RETCODE computeContinuousComponents(
          /* add new component */
          component = comp->ncomponents;
          representativecomponent[colroot] = component;
-         comp->ncomponentcols[component] = 0;
-         comp->ncomponentrows[component] = 0;
+         comp->componentcolend[component] = 0;
+         comp->componentrowend[component] = 0;
          ++comp->ncomponents;
       }
       comp->colcomponent[col] = component;
-      ++comp->ncomponentcols[component];
+      ++comp->componentcolend[component];
    }
    for( int row = 0; row < comp->nmatrixrows; ++row )
    {
@@ -307,25 +302,25 @@ SCIP_RETCODE computeContinuousComponents(
          continue;
       }
       comp->rowcomponent[row] = component;
-      ++comp->ncomponentrows[component];
+      ++comp->componentrowend[component];
    }
    if( comp->ncomponents >= 1 )
    {
-      comp->componentrowstart[0] = 0;
-      comp->componentcolstart[0] = 0;
       for( int i = 1; i < comp->ncomponents; ++i )
       {
-         comp->componentrowstart[i] = comp->componentrowstart[i-1] + comp->ncomponentrows[i-1];
-         comp->componentcolstart[i] = comp->componentcolstart[i-1] + comp->ncomponentcols[i-1];
+         comp->componentrowend[i] += comp->componentrowend[i-1];
+         comp->componentcolend[i] += comp->componentcolend[i-1];
       }
       int * componentnextrowindex;
       int * componentnextcolindex;
       SCIP_CALL( SCIPallocBufferArray(scip, &componentnextrowindex, comp->ncomponents) );
       SCIP_CALL( SCIPallocBufferArray(scip, &componentnextcolindex, comp->ncomponents) );
-      for( int i = 0; i < comp->ncomponents; ++i )
+      componentnextrowindex[0] = 0;
+      componentnextcolindex[0] = 0;
+      for( int i = 1; i < comp->ncomponents; ++i )
       {
-         componentnextcolindex[i] = comp->componentcolstart[i];
-         componentnextrowindex[i] = comp->componentrowstart[i];
+         componentnextcolindex[i] = comp->componentcolend[i-1];
+         componentnextrowindex[i] = comp->componentrowend[i-1];
       }
 
       for( int col = 0; col < comp->nmatrixcols; ++col )
@@ -354,8 +349,8 @@ SCIP_RETCODE computeContinuousComponents(
 #ifndef NDEBUG
       for( int i = 0; i < comp->ncomponents; ++i )
       {
-         assert(componentnextrowindex[i] == comp->ncomponentrows[i]);
-         assert(componentnextcolindex[i] == comp->ncomponentcols[i]);
+         assert(componentnextrowindex[i] == comp->componentrowend[i]);
+         assert(componentnextcolindex[i] == comp->componentcolend[i]);
       }
 #endif
 
@@ -525,8 +520,8 @@ SCIP_RETCODE findImpliedIntegers(
 
    for( int component = 0; component < comp->ncomponents; ++component )
    {
-      int startrow = comp->componentrowstart[component];
-      int nrows = comp->ncomponentrows[component];
+      int startrow = (component == 0) ? 0 : comp->componentrowend[component-1];
+      int nrows = comp->componentrowend[component] - startrow;
       SCIP_Bool componentokay = TRUE;
       for( int i = startrow; i < startrow + nrows; ++i )
       {
@@ -544,8 +539,8 @@ SCIP_RETCODE findImpliedIntegers(
             break;
          }
       }
-      int startcol = comp->componentcolstart[component];
-      int ncols = comp->ncomponentcols[component];
+      int startcol = (component == 0) ? 0 : comp->componentcolend[component-1];
+      int ncols = comp->componentcolend[component] - startcol;
 
       for( int i = startcol; i < startcol + ncols && componentokay; ++i )
       {
