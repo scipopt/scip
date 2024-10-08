@@ -7217,8 +7217,8 @@ SCIP_RETCODE findAggregation(
                (*ndelconss) += 2;
             }
          }
-         /* @todo handle case nvars > 2*/
-         /* delete allvars[samepos] from all and-constraints which appear in this pseudoboolean constraint, and delete
+         /* @todo handle case nvars > 2:
+          * delete allvars[samepos] from all and-constraints which appear in this pseudoboolean constraint, and delete
           * all but one of the remaining and-constraint
           *
           * it is the same as aggregating linvar with the resultant of the product, which is the same in all and-
@@ -7226,7 +7226,6 @@ SCIP_RETCODE findAggregation(
           *
           * e.g. x1 + x2*x_3*...x_n + ~x2*x_3*...x_n = 1 => x1 = 1 - x_3*...x_n
           */
-
       } /*lint !e438*/
       /* we have a constraint in the form of: x1 + x2 * x3 + ~x2 * x3 + ~x2 * ~x3 == 1
        * this leads to the aggregation x1 = x2 * ~x3
