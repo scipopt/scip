@@ -79,7 +79,10 @@ struct SCIP_PresolData
 
 
 /**
- * Struct that contains information about the blocks/components of the submatrix given by the continuous columns
+ * Struct that contains information about the blocks/components of the submatrix given by the continuous columns.
+ * Note that currently, the matrix is given exactly the SCIP_MATRIX created using SCIPmatrixCreate, but this may change
+ * once MINLP problems are also accounted for.
+ * @todo extend the plugin to also work for MINLP problems. This changes the computed matrix.
  */
 typedef struct{
    int nmatrixrows;                          /**< Number of rows in the matrix for the linear part of the problem */
