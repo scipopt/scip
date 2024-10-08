@@ -383,6 +383,7 @@ static
 SCIP_RETCODE computeMatrixStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MATRIX*          matrix,             /**< The constraint matrix to compute the statistics for */
+   MATRIX_COMPONENTS*    comp,               /**< Datastructure that contains the components of the matrix */
    MATRIX_STATISTICS**   pstats,             /**< Pointer to allocate the statistics data structure at */
    SCIP_Real             numericslimit       /**< The limit beyond which we consider integrality of coefficients
                                                 * to be unreliable */
@@ -423,7 +424,7 @@ SCIP_RETCODE computeMatrixStatistics(
       int ncontinuouspmone = 0;
       for( int j = 0; j < nnonz; ++j )
       {
-         SCIP_Bool continuous = SCIPvarGetType(SCIPmatrixGetVar(matrix,cols[j])) == SCIP_VARTYPE_CONTINUOUS;
+         SCIP_Bool continuous = comp->coltype[cols[j]] == SCIP_VARTYPE_CONTINUOUS;
          SCIP_Real value = vals[j];
          if( continuous )
          {
@@ -456,7 +457,7 @@ SCIP_RETCODE computeMatrixStatistics(
                                  && ( SCIPisInfinity(scip, ub) || SCIPisIntegral(scip,ub) );
 
       /* Check that integer variables have integer bounds, as expected. */
-      assert(SCIPvarGetType(SCIPmatrixGetVar(matrix,i)) == SCIP_VARTYPE_CONTINUOUS || stats->colintegralbounds[i]);
+      assert(comp->coltype[i] == SCIP_VARTYPE_CONTINUOUS || stats->colintegralbounds[i]);
    }
 
 
@@ -853,7 +854,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    MATRIX_COMPONENTS* comp = NULL;
    MATRIX_STATISTICS* stats = NULL;
    SCIP_CALL( createMatrixComponents(scip, matrix, &comp) );
-   SCIP_CALL( computeMatrixStatistics(scip, matrix, &stats, presoldata->numericslimit) );
+   SCIP_CALL( computeMatrixStatistics(scip, matrix, comp, &stats, presoldata->numericslimit) );
    SCIP_CALL( computeContinuousComponents(scip, matrix, comp) );
    SCIP_CALL( findImpliedIntegers(scip, presoldata, matrix, comp, stats, nchgvartypes) );
    int afterchanged = *nchgvartypes;
