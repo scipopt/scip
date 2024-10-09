@@ -56,9 +56,10 @@
 #include "scip/debug.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
+#include "scip/struct_scip.h"
+#include "scip/struct_mem.h"
 #include "scip/struct_event.h"
 #include "scip/pub_message.h"
-#include "scip/struct_branch.h"
 #include "lpi/lpi.h"
 
 
@@ -1261,49 +1262,52 @@ SCIP_RETCODE SCIPnodeCutoff(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_Real oldbound;
+   SCIP_NODETYPE nodetype = SCIPnodeGetType(node);
 
-   assert(node != NULL);
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
-
-   if( set->reopt_enable )
-   {
-      assert(reopt != NULL);
-      /* check if the node should be stored for reoptimization */
-      SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
-            tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
-   }
-
-   oldbound = node->lowerbound;
-   node->cutoff = TRUE;
-   node->lowerbound = SCIPsetInfinity(set);
-   node->estimate = SCIPsetInfinity(set);
-   if( node->active )
-      tree->cutoffdepth = MIN(tree->cutoffdepth, (int)node->depth);
-
-   /* update primal integral */
-   if( node->depth == 0 )
-   {
-      stat->rootlowerbound = SCIPsetInfinity(set);
-      if( set->misc_calcintegral )
-         SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), SCIPsetInfinity(set));
-   }
-   else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) )
-   {
-      SCIP_Real lowerbound;
-      lowerbound = SCIPtreeGetLowerbound(tree, set);
-
-      /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
-      if( lowerbound > stat->lastlowerbound )
-         SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), SCIPsetInfinity(set));
-   }
-
-   SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
+   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE) || !set->misc_calcintegral || SCIPtreeGetLowerbound(tree, set) == stat->lastlowerbound); /*lint !e777*/
 
    SCIPsetDebugMsg(set, "cutting off %s node #%" SCIP_LONGINT_FORMAT " at depth %d (cutoffdepth: %d)\n",
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
+
+   /* check if the node should be stored for reoptimization */
+   if( set->reopt_enable )
+   {
+      SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
+         SCIPlpGetSolstat(lp), tree->root == node, tree->focusnode == node, node->lowerbound,
+         tree->effectiverootdepth) );
+   }
+
+   assert(nodetype != SCIP_NODETYPE_LEAF);
+
+   node->cutoff = TRUE;
+   node->lowerbound = SCIPsetInfinity(set);
+   node->estimate = SCIPsetInfinity(set);
+
+   if( node->active && tree->cutoffdepth > node->depth )
+      tree->cutoffdepth = node->depth;
+
+   if( node->depth == 0 )
+      stat->rootlowerbound = SCIPsetInfinity(set);
+
+   if( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING )
+   {
+      /* update primal-dual integrals */
+      if( set->misc_calcintegral )
+      {
+         SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
+
+         assert(lowerbound <= SCIPsetInfinity(set));
+
+         /* updating the primal integral is only necessary if lower bound has increased since last evaluation */
+         if( lowerbound > stat->lastlowerbound )
+            SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
+      }
+
+      SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
+   }
 
    return SCIP_OKAY;
 }
@@ -1557,7 +1561,9 @@ SCIP_RETCODE nodeActivate(
    SCIPsetDebugMsg(set, "activate node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d (reprop subtree mark: %u)\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
 
-   /* apply domain and constraint set changes */
+   /* apply lower bound, variable domain, and constraint set changes */
+   if( node->parent != NULL )
+      SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, node->parent->lowerbound);
    SCIP_CALL( SCIPconssetchgApply(node->conssetchg, blkmem, set, stat, (int) node->depth,
          (SCIPnodeGetType(node) == SCIP_NODETYPE_FOCUSNODE)) );
    SCIP_CALL( SCIPdomchgApply(node->domchg, blkmem, set, stat, lp, branchcand, eventqueue, (int) node->depth, cutoff) );
@@ -2782,37 +2788,39 @@ void SCIPnodeUpdateLowerbound(
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    )
 {
-   assert(node != NULL);
    assert(stat != NULL);
+   assert(set != NULL);
+   assert(!SCIPsetIsInfinity(set, newbound));
+   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE) || !set->misc_calcintegral || SCIPtreeGetLowerbound(tree, set) == stat->lastlowerbound); /*lint !e777*/
 
-   if( newbound > node->lowerbound )
+   if( SCIPnodeGetLowerbound(node) < newbound )
    {
-      SCIP_Real oldbound;
+      SCIP_NODETYPE nodetype = SCIPnodeGetType(node);
 
-      oldbound = node->lowerbound;
+      assert(nodetype != SCIP_NODETYPE_LEAF);
+
       node->lowerbound = newbound;
-      node->estimate = MAX(node->estimate, newbound);
+
       if( set->exact_enabled && RatIsLTReal(node->lowerboundexact, newbound) )
          RatSetReal(node->lowerboundexact, newbound);
 
+      if( node->estimate < newbound )
+         node->estimate = newbound;
+
       if( node->depth == 0 )
-      {
          stat->rootlowerbound = newbound;
-         if( set->misc_calcintegral )
-            SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), newbound);
-         SCIPvisualLowerbound(stat->visual, set, stat, newbound);
-      }
-      else if ( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+
+      if( nodetype == SCIP_NODETYPE_FOCUSNODE || nodetype == SCIP_NODETYPE_CHILD || nodetype == SCIP_NODETYPE_SIBLING )
       {
-         SCIP_Real lowerbound;
+         SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
 
-         lowerbound = SCIPtreeGetLowerbound(tree, set);
-         assert(newbound >= lowerbound);
-         SCIPvisualLowerbound(stat->visual, set, stat, lowerbound);
+         assert(lowerbound <= newbound);
 
-         /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
-         if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) && lowerbound > stat->lastlowerbound )
+         /* updating the primal integral is only necessary if lower bound has increased since last evaluation */
+         if( set->misc_calcintegral && lowerbound > stat->lastlowerbound )
             SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
+
+         SCIPvisualLowerbound(stat->visual, set, stat, lowerbound);
       }
    }
 }
@@ -2914,6 +2922,7 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_Real lpobjval;
 
    assert(set != NULL);
+   assert(lp != NULL);
    assert(lp->flushed);
 
    /* in case of iteration or time limit, the LP value may not be a valid dual bound */
@@ -2926,11 +2935,12 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
       SCIPerrorMessage("Trying to update lower bound with non-proven value in exact solving mode \n.");
       SCIPABORT();
    }
+
    lpobjval = SCIPlpGetObjval(lp, set, transprob);
 
-
-   if( !SCIPtreeProbing(tree) && set->exact_enabled
-     && (lpobjval > SCIPnodeGetLowerbound(node) || RatIsGT(lp->lpexact->lpobjval, SCIPnodeGetLowerboundExact(node))) )
+   if( set->exact_enabled && !SCIPtreeProbing(tree)
+      && ( lpobjval > SCIPnodeGetLowerbound(node)
+      || RatIsGT(lp->lpexact->lpobjval, SCIPnodeGetLowerboundExact(node)) ) )
    {
       SCIP_Bool usefarkas;
       usefarkas = (lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
@@ -2938,11 +2948,18 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
       SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, node, transprob, usefarkas) );
    }
 
-   SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
+   /* check for cutoff */
+   if( lp->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT )
+   {
+      SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, transprob, origprob, set->scip->reopt, lp, set->scip->mem->probmem) );
+   }
+   else
+   {
+      SCIPnodeUpdateLowerbound(node, stat, set, tree, transprob, origprob, lpobjval);
+   }
 
    return SCIP_OKAY;
 }
-
 
 /** change the node selection priority of the given child */
 void SCIPchildChgNodeselPrio(
@@ -3773,12 +3790,10 @@ SCIP_RETCODE treeSwitchPath(
             conflict, eventfilter, eventqueue, cliquetable, cutoff) );
    }
 
-   /* mark last node of path to be cut off, if a cutoff was found */
+   /* mark new focus node to be cut off, if a cutoff was found */
    if( *cutoff )
    {
-      assert(tree->pathlen > 0);
-      assert(tree->path[tree->pathlen-1]->active);
-      SCIP_CALL( SCIPnodeCutoff(tree->path[tree->pathlen-1], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    /* count the new LP sizes of the path */
@@ -4271,14 +4286,6 @@ SCIP_RETCODE nodeToLeaf(
       || SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_FORK
       || SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT);
 
-   /* convert node into leaf */
-   SCIPsetDebugMsg(set, "convert node #%" SCIP_LONGINT_FORMAT " at depth %d to leaf with lpstatefork #%" SCIP_LONGINT_FORMAT " at depth %d\n",
-      SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node),
-      lpstatefork == NULL ? -1 : SCIPnodeGetNumber(lpstatefork),
-      lpstatefork == NULL ? -1 : SCIPnodeGetDepth(lpstatefork));
-   (*node)->nodetype = SCIP_NODETYPE_LEAF; /*lint !e641*/
-   (*node)->data.leaf.lpstatefork = lpstatefork;
-
 #ifndef NDEBUG
    /* check, if the LP state fork is the first node with LP state information on the path back to the root */
    if( !SCIPsetIsInfinity(set, -cutoffbound) ) /* if the node was cut off in SCIPnodeFocus(), the lpstatefork is invalid */
@@ -4299,6 +4306,14 @@ SCIP_RETCODE nodeToLeaf(
    if( (!SCIPsetIsInfinity(set, (*node)->lowerbound) && SCIPsetIsLT(set, (*node)->lowerbound, cutoffbound))
          || (set->exact_enabled && (*node)->lowerbound < cutoffbound) )
    {
+      /* convert node into leaf */
+      SCIPsetDebugMsg(set, "convert node #%" SCIP_LONGINT_FORMAT " at depth %d to leaf with lpstatefork #%" SCIP_LONGINT_FORMAT " at depth %d\n",
+         SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node),
+         lpstatefork == NULL ? -1 : SCIPnodeGetNumber(lpstatefork),
+         lpstatefork == NULL ? -1 : SCIPnodeGetDepth(lpstatefork));
+      (*node)->nodetype = SCIP_NODETYPE_LEAF; /*lint !e641*/
+      (*node)->data.leaf.lpstatefork = lpstatefork;
+
       /* insert leaf in node queue */
       SCIP_CALL( SCIPnodepqInsert(tree->leaves, set, *node) );
 
@@ -4310,16 +4325,12 @@ SCIP_RETCODE nodeToLeaf(
    }
    else
    {
-      if( set->reopt_enable )
-      {
-         assert(reopt != NULL);
-         /* check if the node should be stored for reoptimization */
-         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
-               tree->root == *node, tree->focusnode == *node, (*node)->lowerbound, tree->effectiverootdepth) );
-      }
-
       /* delete node due to bound cut off */
-      SCIPvisualCutoffNode(stat->visual, set, stat, *node, FALSE);
+      SCIP_CALL( SCIPnodeCutoff(*node, set, stat, tree, set->scip->transprob, set->scip->origprob, reopt, lp, blkmem) );
+      if( SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD && lpstatefork != NULL )
+      {
+         SCIP_CALL( SCIPnodeReleaseLPIState(lpstatefork, blkmem, lp) );
+      }
       SCIP_CALL( SCIPnodeFree(node, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
    }
    assert(*node == NULL);
@@ -4836,19 +4847,21 @@ SCIP_RETCODE treeNodesToQueue(
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
-   int i;
-
    assert(tree != NULL);
    assert(set != NULL);
    assert(nnodes != NULL);
    assert(*nnodes == 0 || nodes != NULL);
 
-   for( i = *nnodes; --i >= 0; )
+   /* as long as the node array has slots */
+   while( *nnodes >= 1 )
    {
-      /* convert node to LEAF and put it into leaves queue, or delete it if it's lower bound exceeds the cutoff bound */
-      SCIP_CALL( nodeToLeaf(&nodes[i], blkmem, set, stat, eventfilter, eventqueue, tree, reopt, lp, lpstatefork, cutoffbound) );
-      assert(nodes[i] == NULL);
-      --(*nnodes);
+      /* convert last node to LEAF and put it into leaves queue, or delete it if its lower bound exceeds the cutoff bound */
+      if( nodes[*nnodes-1] != NULL )
+      {
+         SCIP_CALL( nodeToLeaf(&nodes[*nnodes-1], blkmem, set, stat, eventfilter, eventqueue, tree, reopt, lp, lpstatefork, cutoffbound) );
+      }
+      else
+         --(*nnodes);
    }
 
    return SCIP_OKAY;
@@ -4964,20 +4977,50 @@ SCIP_RETCODE SCIPnodeFocus(
    {
       assert(*node != NULL);
       assert(tree->cutoffdepth == oldcutoffdepth);
+
+      /* cut off node */
       if( SCIPnodeGetType(*node) == SCIP_NODETYPE_LEAF )
       {
-         SCIP_CALL( SCIPnodepqRemove(tree->leaves, set, *node) );
-      }
-      SCIPvisualCutoffNode(stat->visual, set, stat, *node, FALSE);
+         assert(!(*node)->active);
+         assert((*node)->depth != 0 || tree->focusnode == NULL);
 
-      if( set->reopt_enable )
-      {
-         assert(reopt != NULL);
+         SCIPsetDebugMsg(set, "cutting off leaf node #%lld (queuelen=%d) at depth %d with lowerbound=%g\n",
+            SCIPnodeGetNumber(*node), SCIPnodepqLen(tree->leaves), SCIPnodeGetDepth(*node), SCIPnodeGetLowerbound(*node));
+
          /* check if the node should be stored for reoptimization */
-         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
-               tree->root == (*node), tree->focusnode == (*node), (*node)->lowerbound, tree->effectiverootdepth) );
+         if( set->reopt_enable )
+         {
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
+               SCIPlpGetSolstat(lp), tree->root == *node, FALSE, (*node)->lowerbound, tree->effectiverootdepth) );
+         }
+
+         /* remove node from the queue */
+         SCIP_CALL( SCIPnodepqRemove(tree->leaves, set, *node) );
+         (*node)->cutoff = TRUE;
+
+         if( (*node)->depth == 0 )
+            stat->rootlowerbound = SCIPsetInfinity(set);
+
+         /* update primal-dual integrals */
+         if( set->misc_calcintegral )
+         {
+            SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
+
+            assert(lowerbound <= SCIPsetInfinity(set));
+
+            /* updating the primal integral is only necessary if lower bound has increased since last evaluation */
+            if( lowerbound > stat->lastlowerbound )
+               SCIPstatUpdatePrimalDualIntegrals(stat, set, transprob, origprob, SCIPsetInfinity(set), lowerbound);
+         }
+
+         SCIPvisualCutoffNode(stat->visual, set, stat, *node, TRUE);
+      }
+      else
+      {
+         SCIP_CALL( SCIPnodeCutoff(*node, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
       }
 
+      /* free node memory */
       SCIP_CALL( SCIPnodeFree(node, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
 
       return SCIP_OKAY;
@@ -5715,23 +5758,12 @@ SCIP_RETCODE SCIPtreeCutoff(
    for( i = tree->nsiblings-1; i >= 0; --i )
    {
       node = tree->siblings[i];
-      if( SCIPsetIsInfinity(set, node->lowerbound) || SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
+
+      if( node->lowerbound >= cutoffbound
+         || ( !set->exact_enabled && SCIPsetIsGE(set, node->lowerbound, cutoffbound) ) )
       {
-         if( set->exact_enabled && node->lowerbound < cutoffbound )
-            continue;
-
-         SCIPsetDebugMsg(set, "cut off sibling #%" SCIP_LONGINT_FORMAT " at depth %d with lowerbound=%g at position %d\n",
-            SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
-
-         if( set->reopt_enable )
-         {
-            assert(reopt != NULL);
-            /* check if the node should be stored for reoptimization */
-            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
-                  tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
-         }
-
-         SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
+         /* delete sibling due to bound cut off */
+         SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, set->scip->transprob, set->scip->origprob, reopt, lp, blkmem) );
 
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
       }
@@ -5741,23 +5773,12 @@ SCIP_RETCODE SCIPtreeCutoff(
    for( i = tree->nchildren-1; i >= 0; --i )
    {
       node = tree->children[i];
-      if( SCIPsetIsInfinity(set, node->lowerbound) || SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
+
+      if( node->lowerbound >= cutoffbound
+         || ( !set->exact_enabled && SCIPsetIsGE(set, node->lowerbound, cutoffbound) ) )
       {
-         if( set->exact_enabled && node->lowerbound < cutoffbound )
-            continue;
-
-         SCIPsetDebugMsg(set, "cut off child #%" SCIP_LONGINT_FORMAT " at depth %d with lowerbound=%g at position %d\n",
-            SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
-
-         if( set->reopt_enable )
-         {
-            assert(reopt != NULL);
-            /* check if the node should be stored for reoptimization */
-            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
-                  tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
-         }
-
-         SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
+         /* delete child due to bound cut off */
+         SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, set->scip->transprob, set->scip->origprob, reopt, lp, blkmem) );
 
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
       }
@@ -8194,16 +8215,31 @@ void SCIPnodeGetNDomchg(
    if( count_prop )
       *nprop = 0;
 
-   if( node->domchg != NULL )
+   if( node->domchg == NULL )
+      return;
+
+   /* branching bound changes are always at beginning, count them in i */
+   for( i = 0; i < (int) node->domchg->domchgbound.nboundchgs; ++i )
+      if( node->domchg->domchgbound.boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
+         break;
+   if( count_branchings )
+      *nbranchings = i;
+
+   if( !count_consprop && !count_prop )
+      return;
+
+   for( ; i < (int) node->domchg->domchgbound.nboundchgs; ++i )
    {
-      for( i = 0; i < (int) node->domchg->domchgbound.nboundchgs; i++ )
+      assert(node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER || node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+      if( node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
       {
-         if( count_branchings && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
-            (*nbranchings)++; /*lint !e413*/
-         else if( count_consprop && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
-            (*nconsprop)++; /*lint !e413*/
-         else if( count_prop && node->domchg->domchgbound.boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER )
-            (*nprop)++; /*lint !e413*/
+         if( count_consprop )
+            ++(*nconsprop);
+      }
+      else
+      {
+         if( count_prop )
+            ++(*nprop);
       }
    }
 }
@@ -8492,34 +8528,35 @@ void SCIPnodeGetAncestorBranchingsPart(
    }
 }
 
-/** return all bound changes based on constraint propagation; stop saving the bound changes if we reach a branching
- *  decision based on a dual information
+/** return all bound changes on non-continuous variables based on constraint and propagator propagation
+ *
+ * Stop saving the bound changes when a propagation based on a dual information is reached.
  */
-void SCIPnodeGetConsProps(
+void SCIPnodeGetPropsBeforeDual(
    SCIP_NODE*            node,               /**< node */
-   SCIP_VAR**            vars,               /**< array of variables on which constraint propagation triggers a bound change */
-   SCIP_Real*            varbounds,          /**< array of bounds set by constraint propagation */
-   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes set by constraint propagation */
-   int*                  nconspropvars,      /**< number of variables on which constraint propagation triggers a bound change
+   SCIP_VAR**            vars,               /**< array of variables on which propagation triggers a bound change */
+   SCIP_Real*            varbounds,          /**< array of bounds set by propagation */
+   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes set by propagation */
+   int*                  npropvars,          /**< number of variables on which propagation triggers a bound change
                                               *   if this is larger than the array size, arrays should be reallocated and method
                                               *   should be called again */
-   int                   conspropvarssize    /**< available slots in arrays */
+   int                   propvarssize        /**< available slots in arrays */
    )
 {  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
-   int first_dual;
-   int nskip;
+   int nbranchings;
    int i;
+   int pos;
 
    assert(node != NULL);
    assert(vars != NULL);
    assert(varbounds != NULL);
    assert(varboundtypes != NULL);
-   assert(nconspropvars != NULL);
-   assert(conspropvarssize >= 0);
+   assert(npropvars != NULL);
+   assert(propvarssize >= 0);
 
-   (*nconspropvars) = 0;
+   *npropvars = 0;
 
    if( SCIPnodeGetDepth(node) == 0 || node->domchg == NULL )
       return;
@@ -8530,83 +8567,78 @@ void SCIPnodeGetConsProps(
    assert(boundchgs != NULL);
    assert(nboundchgs >= 0);
 
-   SCIPnodeGetNDomchg(node, &nskip, NULL, NULL);
-   i = nskip;
-
-   while( i < nboundchgs
-       && !(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons == NULL)
-       && !(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop == NULL) )
-      i++;
-
-   first_dual = i;
-
-   /* count the number of bound changes because of constraint propagation */
-   for( i = nskip; i < first_dual; i++ )
+   /* get index of first bound change, after the branching decisions, that is not from a known constraint or propagator (CONSINFER or PROPINFER without reason)
+    * count the number of bound changes because of constraint propagation
+    */
+   SCIPnodeGetNDomchg(node, &nbranchings, NULL, NULL);
+   for( i = nbranchings; i < nboundchgs; ++i )
    {
+      /* as we start at nbranchings, there should be no BRANCHING boundchanges anymore */
       assert(boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING);
 
-      if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL) )
+      if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
       {
-         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
-            (*nconspropvars)++;
+         if( boundchgs[i].data.inferencedata.reason.cons == NULL )
+            break;
       }
-      else if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons == NULL)
-            || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop == NULL) )
-         break;
+      else
+      {
+         assert(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+         if( boundchgs[i].data.inferencedata.reason.prop == NULL )
+            break;
+      }
+      if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
+         (*npropvars)++;
    }
 
-   /* if the arrays have enough space store the constraint propagations */
-   if( conspropvarssize >= *nconspropvars )
+   /* return if the arrays do not have enough space to store the propagations */
+   if( propvarssize < *npropvars )
+      return;
+
+   for( i = nbranchings, pos = 0; pos < *npropvars; ++i ) /*lint !e440*/
    {
-      int pos;
-
-      for( i = nskip, pos = 0; i < first_dual; i++ )
+      assert(i < nboundchgs);
+      if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
       {
-         if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL )
-         {
-            if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
-            {
-               vars[pos] = boundchgs[i].var;
-               varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
-               varbounds[pos] = boundchgs[i].newbound;
-               pos++;
-            }
-         }
+         vars[pos] = boundchgs[i].var;
+         varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
+         varbounds[pos] = boundchgs[i].newbound;
+         pos++;
       }
    }
-
-   return;
 }
 
-/** gets all bound changes applied after the first bound change based on dual information.
+/** return bound changes on non-continuous variables based on constraint and propagator propagation
  *
- *  @note: currently, we can only detect bound changes based in dual information if they arise from strong branching.
+ * Start saving the bound changes when a propagation based on a dual information is reached.
+ *
+ * @note Currently, we can only detect bound changes based in dual information if they arise from strong branching.
  */
-void SCIPnodeGetBdChgsAfterDual(
+void SCIPnodeGetPropsAfterDual(
    SCIP_NODE*            node,               /**< node */
-   SCIP_VAR**            vars,               /**< array of variables on which the branching has been performed in the parent node */
-   SCIP_Real*            varbounds,          /**< array of bounds which the branching in the parent node set */
-   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes which the branching in the parent node set */
-   int                   start,              /**< first free slot in the arrays */
-   int*                  nbranchvars,        /**< number of variables on which branching has been performed in the parent node
-                                              *   if this is larger than the array size, arrays should be reallocated and method
-                                              *   should be called again */
-   int                   branchvarssize      /**< available slots in arrays */
+   SCIP_VAR**            vars,               /**< array where to store variables with bound changes */
+   SCIP_Real*            varbounds,          /**< array where to store changed bounds */
+   SCIP_BOUNDTYPE*       varboundtypes,      /**< array where to store type of changed bound*/
+   int*                  nvars,              /**< buffer to store number of bound changes;
+                                               *   if this is larger than varssize, arrays should be reallocated and method
+                                               *   should be called again */
+   int                   varssize            /**< available slots in provided arrays */
    )
 {  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
-   int first_dual;
    int i;
+   int first_dual;
+   int pos;
 
    assert(node != NULL);
    assert(vars != NULL);
    assert(varbounds != NULL);
    assert(varboundtypes != NULL);
-   assert(nbranchvars != NULL);
-   assert(branchvarssize >= 0);
+   assert(nvars != NULL);
+   assert(varssize >= 0);
 
-   (*nbranchvars) = 0;
+   *nvars = 0;
 
    if( SCIPnodeGetDepth(node) == 0 || node->domchg == NULL )
       return;
@@ -8617,45 +8649,67 @@ void SCIPnodeGetBdChgsAfterDual(
    assert(boundchgs != NULL);
    assert(nboundchgs >= 0);
 
-   /* find the first based on dual information */
-   i = 0;
-   while( i < nboundchgs
-       && !(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons == NULL)
-       && !(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop == NULL) )
-      i++;
-
-   first_dual = i;
-
-   /* count the number of branching decisions; branching decisions have to be in the beginning of the bound change array */
-   for( ; i < nboundchgs; i++)
+   /* get index of first bound change, after the branching decisions, that is not from a known constraint or propagator (CONSINFER or PROPINFER without reason) */
+   for( i = 0; i < nboundchgs; ++i )
    {
-      assert(boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING);
-
-      if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
-       || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL) )
+      if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
+         continue;
+      if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
       {
-         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
-            (*nbranchvars)++;
+         if( boundchgs[i].data.inferencedata.reason.cons == NULL )
+            break;
+      }
+      else
+      {
+         assert(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+         if( boundchgs[i].data.inferencedata.reason.prop == NULL )
+            break;
       }
    }
-
-   /* if the arrays have enough space store the branching decisions */
-   if( branchvarssize >= *nbranchvars )
+   first_dual = i;
+   /* count following bound changes on non-continuous variables from known constraint or propagator */
+   for( ; i < nboundchgs; ++i )
    {
-      int p;
-      for(i = first_dual, p = start; i < nboundchgs; i++)
+      if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
       {
-         if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
-          || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL)  )
-         {
-            if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
-            {
-               vars[p] = boundchgs[i].var;
-               varboundtypes[p] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
-               varbounds[p] = boundchgs[i].newbound;
-               p++;
-            }
-         }
+         if( boundchgs[i].data.inferencedata.reason.cons == NULL )
+            continue;
+      }
+      else
+      {
+         assert(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+         if( boundchgs[i].data.inferencedata.reason.prop == NULL )
+            continue;
+      }
+      if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
+         ++(*nvars);
+   }
+
+   /* return if the arrays do not have enough space to store the propagations */
+   if( varssize < *nvars )
+      return;
+
+   /* store bound changes in given arrays */
+   for( i = first_dual, pos = 0; pos < *nvars; ++i ) /*lint !e440*/
+   {
+      assert(i < nboundchgs);
+      if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER )
+      {
+         if( boundchgs[i].data.inferencedata.reason.cons == NULL )
+            continue;
+      }
+      else
+      {
+         assert(boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER);
+         if( boundchgs[i].data.inferencedata.reason.prop == NULL )
+            continue;
+      }
+      if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
+      {
+         vars[pos] = boundchgs[i].var;
+         varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
+         varbounds[pos] = boundchgs[i].newbound;
+         pos++;
       }
    }
 }

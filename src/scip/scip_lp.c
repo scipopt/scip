@@ -1222,7 +1222,6 @@ void SCIPmarkColNotRemovableLocal(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcreateRowConshdlr(
@@ -1242,7 +1241,8 @@ SCIP_RETCODE SCIPcreateRowConshdlr(
 {
    assert(conshdlr != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowConshdlr", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /* Note: Rows can only be created in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowConshdlr", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_CONSHDLR, (void*) conshdlr, local, modifiable, removable) );
@@ -1256,7 +1256,6 @@ SCIP_RETCODE SCIPcreateRowConshdlr(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcreateRowCons(
@@ -1276,7 +1275,8 @@ SCIP_RETCODE SCIPcreateRowCons(
 {
    assert(cons != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /* Note: Rows can only be created in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_CONS, (void*) cons, local, modifiable, removable) );
@@ -1290,7 +1290,6 @@ SCIP_RETCODE SCIPcreateRowCons(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcreateRowSepa(
@@ -1310,7 +1309,8 @@ SCIP_RETCODE SCIPcreateRowSepa(
 {
    assert(sepa != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /* Note: Rows can only be created in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, (void*) sepa, local, modifiable, removable) );
@@ -1324,7 +1324,6 @@ SCIP_RETCODE SCIPcreateRowSepa(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcreateRowUnspec(
@@ -1341,7 +1340,8 @@ SCIP_RETCODE SCIPcreateRowUnspec(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowUnspec", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /* Note: Rows can only be created in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowUnspec", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_UNSPEC, NULL, local, modifiable, removable) );
@@ -1355,7 +1355,6 @@ SCIP_RETCODE SCIPcreateRowUnspec(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
  *  @deprecated Please use SCIPcreateRowConshdlr() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
@@ -1375,7 +1374,8 @@ SCIP_RETCODE SCIPcreateRow(
    SCIP_Bool             removable           /**< should the row be removed from the LP due to aging or cleanup? */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /* Note: Rows can only be created in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPcreateRowUnspec(scip, row, name, len, cols, vals, lhs, rhs, local, modifiable, removable) );
 
@@ -1682,7 +1682,6 @@ SCIP_RETCODE SCIPflushRowExtensions(
  *  @attention If the absolute value of val is below the SCIP epsilon tolerance, the variable will not added.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
  *  @note In case calling this method in the enforcement process of an lp solution, it might be that some variables,
@@ -1708,7 +1707,8 @@ SCIP_RETCODE SCIPaddVarToRow(
    SCIP_Real             val                 /**< value of coefficient */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarToRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /* Note: Variables can only be added to rows in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarToRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPvarAddToRow(var, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->transprob, scip->lp, row, val) );
 
@@ -1724,7 +1724,6 @@ SCIP_RETCODE SCIPaddVarToRow(
  *  @attention If a coefficients absolute value is below the SCIP epsilon tolerance, the variable with its value is not added.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPaddVarsToRow(
@@ -1740,7 +1739,8 @@ SCIP_RETCODE SCIPaddVarsToRow(
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarsToRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /* Note: Variables can only be added to rows in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarsToRow", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* resize the row to be able to store all variables (at least, if they are COLUMN variables) */
    SCIP_CALL( SCIProwEnsureSize(row, scip->mem->probmem, scip->set, SCIProwGetNNonz(row) + nvars) );
@@ -1770,7 +1770,6 @@ SCIP_RETCODE SCIPaddVarsToRow(
  *  @attention If the absolute value of val is below the SCIP epsilon tolerance, the variables will not added.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPaddVarsToRowSameCoef(
@@ -1785,7 +1784,8 @@ SCIP_RETCODE SCIPaddVarsToRowSameCoef(
 
    assert(nvars == 0 || vars != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarsToRowSameCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   /* Note: Variables can only be added to rows in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPaddVarsToRowSameCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* resize the row to be able to store all variables (at least, if they are COLUMN variables) */
    SCIP_CALL( SCIProwEnsureSize(row, scip->mem->probmem, scip->set, SCIProwGetNNonz(row) + nvars) );

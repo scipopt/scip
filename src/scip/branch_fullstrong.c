@@ -257,8 +257,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    *bestcand = 0;
    *bestdown = lpobjval;
    *bestup = lpobjval;
-   *bestdownvalid = TRUE;
-   *bestupvalid = TRUE;
+   *bestdownvalid = FALSE;
+   *bestupvalid = FALSE;
    *bestscore = -SCIPinfinity(scip);
 
    /* if only one candidate exists, choose this one without applying strong branching; also, when SCIP is about to be
@@ -601,28 +601,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
          branchruledata->maxproprounds, branchruledata->probingbounds, branchruledata->forcestrongbranch, &bestcand,
          &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
-   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
+   if( *result != SCIP_CUTOFF )
    {
-      SCIP_NODE* downchild;
-      SCIP_NODE* upchild;
-      SCIP_VAR* var;
-      SCIP_Real val;
       SCIP_Bool allcolsinlp;
       SCIP_Bool exactsolve;
-
-      assert(*result == SCIP_DIDNOTRUN);
-      assert(0 <= bestcand && bestcand < nlpcands);
-      assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
-
-      var = lpcands[bestcand];
-      val = lpcandssol[bestcand];
-
-      /* perform the branching */
-      SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
-         nlpcands, bestcand, SCIPvarGetName(var), lpcandssol[bestcand], bestdown, bestup, bestscore);
-      SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
-      assert(downchild != NULL);
-      assert(upchild != NULL);
 
       /* check, if we want to solve the problem exactly, meaning that strong branching information is not useful
        * for cutting off sub problems and improving lower bounds of children
@@ -632,16 +614,51 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
       /* check, if all existing columns are in LP, and thus the strong branching results give lower bounds */
       allcolsinlp = SCIPallColsInLP(scip);
 
-      /* update the lower bounds in the children */
+      /* update lower bound of current node */
       if( allcolsinlp && !exactsolve )
       {
-         SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
-         SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
+         SCIP_CALL( SCIPupdateLocalLowerbound(scip, provedbound) );
       }
-      SCIPdebugMsg(scip, " -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
-      SCIPdebugMsg(scip, " -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
 
-      *result = SCIP_BRANCHED;
+      if( *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
+      {
+         SCIP_NODE* downchild;
+         SCIP_NODE* upchild;
+         SCIP_VAR* var;
+         SCIP_Real val;
+
+         assert(*result == SCIP_DIDNOTRUN);
+         assert(0 <= bestcand && bestcand < nlpcands);
+         assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
+
+         var = lpcands[bestcand];
+         val = lpcandssol[bestcand];
+
+         /* perform the branching */
+         SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
+            nlpcands, bestcand, SCIPvarGetName(var), lpcandssol[bestcand], bestdown, bestup, bestscore);
+         SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
+         assert(downchild != NULL);
+         assert(upchild != NULL);
+
+         /* update the lower bounds in the children */
+         if( allcolsinlp && !exactsolve )
+         {
+            if( bestdownvalid )
+            {
+               SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdown) );
+            }
+            if( bestupvalid )
+            {
+               SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestup) );
+            }
+         }
+
+         SCIPdebugMsg(scip, " -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
+         SCIPdebugMsg(scip, " -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
+
+         *result = SCIP_BRANCHED;
+      }
    }
 
    SCIPfreeBufferArray(scip, &lpcandsfrac);

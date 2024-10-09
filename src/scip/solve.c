@@ -3025,12 +3025,7 @@ SCIP_RETCODE priceAndCutLoop(
    }
 
    /* update lower bound w.r.t. the LP solution */
-   if( *cutoff && tree->focusnodehaslp )
-   {
-      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
-      SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, TRUE) );
-   }
-   else if( !(*lperror) )
+   if( !(*cutoff) && !(*lperror) )
    {
       assert(lp->flushed);
       assert(lp->solved);
@@ -3062,14 +3057,23 @@ SCIP_RETCODE priceAndCutLoop(
          *cutoff = TRUE;
       }
    }
+
    /* check for unboundedness */
    if( !(*lperror) )
-   {
       *unbounded = (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-      /* assert(!(*unbounded) || root); */ /* unboundedness can only happen in the root node; no, of course it can also happens in the tree if a branching did not help to resolve unboundedness */
-   }
 
    lp->installing = FALSE;
+
+   /* check for cutoff */
+   if( *cutoff )
+   {
+      SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+
+      if( tree->focusnodehaslp )
+      {
+         SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, TRUE) );
+      }
+   }
 
    SCIPsetDebugMsg(set, " -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
       SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp),
@@ -3130,6 +3134,8 @@ SCIP_RETCODE applyBounding(
       if( (!set->exact_enabled && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound))
             || (set->exact_enabled && RatIsGE(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact)) )
       {
+         *cutoff = TRUE;
+
          if( set->exact_enabled && RatIsLT(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact) && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
          {
             /* if the pseudoobjval is cutting of the node with tolerances, but not exactly, we use the exact pseudo objval */
@@ -3151,11 +3157,6 @@ SCIP_RETCODE applyBounding(
             else
                return SCIP_OKAY;
          }
-
-         SCIPsetDebugMsg(set, "node is cut off by bounding (lower=%g, upper=%g)\n",
-            SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
-         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
-         *cutoff = TRUE;
 
          /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
          if( pseudoobjval >= primal->cutoffbound && !SCIPsetIsInfinity(set, primal->cutoffbound) && !SCIPsetIsInfinity(set, -pseudoobjval) )
@@ -4948,11 +4949,7 @@ SCIP_RETCODE solveNode(
    /* check for cutoff */
    if( *cutoff )
    {
-      SCIPsetDebugMsg(set, "node is cut off\n");
-
-      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
-      *infeasible = TRUE;
-      SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
+      SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
       /** @todo exip: these ifs are temporary */
       if( !(lp->solved && lp->flushed) )
@@ -4966,6 +4963,7 @@ SCIP_RETCODE solveNode(
 
       /* the LP might have been unbounded but not enforced, because the node is cut off anyway */
       *unbounded = FALSE;
+      *infeasible = TRUE;
    }
    else if( !(*unbounded) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && lp->looseobjvalinf == 0 )
    {

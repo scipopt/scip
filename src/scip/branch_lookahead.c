@@ -2584,15 +2584,15 @@ SCIP_RETCODE branchOnVar(
     * (e.g., because we are doing branch-and-price) or the problem should be solved exactly */
    if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
    {
-      SCIP_Real bestdown = decision->downdb;
-      SCIP_Bool bestdownvalid = decision->downdbvalid;
-      SCIP_Real bestup = decision->updb;
-      SCIP_Bool bestupvalid = decision->updbvalid;
-      SCIP_Real provedbound = decision->proveddb;
-
       /* update the lower bound for the LPs for further children of both created nodes */
-      SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
-      SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
+      if( decision->downdbvalid )
+      {
+         SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, decision->downdb) );
+      }
+      if( decision->updbvalid )
+      {
+         SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, decision->updb) );
+      }
 
       if( decision->boundsvalid && config->applychildbounds )
       {
@@ -4780,9 +4780,9 @@ SCIP_RETCODE selectVarRecursive(
    decision->branchvar = candidatelist->candidates[0]->branchvar;
    decision->branchval = candidatelist->candidates[0]->branchval;
    decision->downdb = lpobjval;
-   decision->downdbvalid = TRUE;
+   decision->downdbvalid = FALSE;
    decision->updb = lpobjval;
-   decision->updbvalid = TRUE;
+   decision->updbvalid = FALSE;
    decision->proveddb = lpobjval;
    decision->score = 0.0;
 
@@ -5374,9 +5374,9 @@ SCIP_RETCODE selectVarStart(
       decision->branchvar = candidatelist->candidates[0]->branchvar;
       decision->branchval = candidatelist->candidates[0]->branchval;
       decision->downdb = lpobjval;
-      decision->downdbvalid = TRUE;
+      decision->downdbvalid = FALSE;
       decision->updb = lpobjval;
-      decision->updbvalid = TRUE;
+      decision->updbvalid = FALSE;
       decision->proveddb = lpobjval;
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Only one candidate (<%s>) is given. This one is chosen without "
@@ -5429,9 +5429,9 @@ SCIP_RETCODE selectVarStart(
       decision->branchvar = candidatelist->candidates[0]->branchvar;
       decision->branchval = candidatelist->candidates[0]->branchval;
       decision->downdb = lpobjval;
-      decision->downdbvalid = TRUE;
+      decision->downdbvalid = FALSE;
       decision->updb = lpobjval;
-      decision->updbvalid = TRUE;
+      decision->updbvalid = FALSE;
       decision->proveddb = lpobjval;
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Only one candidate (<%s>) is given. This one is chosen without "
@@ -6047,41 +6047,49 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          branchruledata->statistics->ncutoffproofnodes += localstats->ncutoffproofnodes;
 #endif
       }
-      else if( status->addedbinconss )
+      else
       {
-         *result = SCIP_CONSADDED;
-      }
-      else if( status->domred )
-      {
-         *result = SCIP_REDUCEDDOM;
-      }
-      else if( status->lperror )
-      {
-#ifdef SCIP_STATISTIC
-         ++branchruledata->statistics->nlperrorcalls;
-#endif
-         if( !branchingDecisionIsValid(decision) )
+         if( status->addedbinconss )
          {
-            LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "LP error with no valid candidate: select first candidate variable\n");
+            *result = SCIP_CONSADDED;
+         }
+         else if( status->domred )
+         {
+            *result = SCIP_REDUCEDDOM;
+         }
+         else if( status->lperror )
+         {
+#ifdef SCIP_STATISTIC
+            ++branchruledata->statistics->nlperrorcalls;
+#endif
+            if( !branchingDecisionIsValid(decision) )
+            {
+               LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "LP error with no valid candidate: select first candidate variable\n");
 
-            assert(candidatelist->ncandidates > 0);
-            decision->branchvar = candidatelist->candidates[0]->branchvar;
-            decision->branchval = candidatelist->candidates[0]->branchval;
+               assert(candidatelist->ncandidates > 0);
+               decision->branchvar = candidatelist->candidates[0]->branchvar;
+               decision->branchval = candidatelist->candidates[0]->branchval;
+            }
+         }
+         else if( status->maxnconsreached )
+         {
+            /* this case may occure if the domain reductions that reached the limit were already applied via domain
+             * propagation
+             */
+            *result = SCIP_REDUCEDDOM;
+         }
+#ifdef SCIP_STATISTIC
+         else if( status->limitreached )
+         {
+            ++branchruledata->statistics->nlimitcalls;
+         }
+#endif
+         /* update lower bound of current node */
+         if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
+         {
+            SCIP_CALL( SCIPupdateLocalLowerbound(scip, decision->proveddb) );
          }
       }
-      else if( status->maxnconsreached )
-      {
-         /* this case may occure if the domain reductions that reached the limit were already applied via domain
-          * propagation
-          */
-         *result = SCIP_REDUCEDDOM;
-      }
-#ifdef SCIP_STATISTIC
-      else if( status->limitreached )
-      {
-         ++branchruledata->statistics->nlimitcalls;
-      }
-#endif
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Result before branching is %s\n", getStatusString(*result));
 

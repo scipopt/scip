@@ -28,6 +28,9 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- SCIPcreateRow*(), SCIPaddVarToRow(), SCIPaddVarsToRow(), SCIPaddVarsToRowSameCoef() can now only be called in the solving stage,
+  because otherwise the LP is not yet available and the row data is invalid.
+
 ### New API functions
 
 - SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
@@ -97,6 +100,9 @@ Features
 Performance improvements
 ------------------------
 
+- reoptimization now also stores propagations from propagators if reoptimization/saveconsprop is enabled;
+  the parameter will be renamed to reoptimization/saveprop in a next major release
+
 Fixed bugs
 ----------
 
@@ -110,6 +116,7 @@ Interface changes
 
 - added SCIPtpiIsAvailable() to check whether a working task processing interface is available (TPI != none)
 - added SCIPtpiGetLibraryName() and SCIPtpiGetLibraryDesc()
+- SCIPdelCons() can now also be called in SCIP_STAGE_TRANSFORMED
 
 ### Command line interface
 ### Interfaces to external software
@@ -142,6 +149,8 @@ Fixed bugs
 ----------
 
 - skip constraint propagation if the residual activity bound cancels the side precision in tightenVarBounds() of cons_linear.c
+- use indices of negation counterparts and accept fixings when ordering and-resultants of pseudoboolean constraints
+- correct bound tracking to make the evaluation of primal-dual-integrals work
 
 Unit tests
 ----------
@@ -158,6 +167,8 @@ Build system
 
 Miscellaneous
 -------------
+
+- adjusted Gurobi interface for Gurobi 12
 
 Known bugs
 ----------
