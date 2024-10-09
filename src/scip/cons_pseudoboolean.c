@@ -237,25 +237,44 @@ struct SCIP_ConshdlrData
 /** comparison method for sorting and-resultants according to their problem index, which is used instead of the
  *  original index because the implicit resultants are shuffled when creating the constraints that otherwise results in
  *  shuffled problem copies,
- *  if an and-resultant is deleted, it will be put in front with respect to its original index while sorting
+ *  if an and-resultant is fixed, it will be put in front with respect to its original index
+ *  if an and-resultant is negated, it will be put in front of its negation counterpart
  */
 static
 SCIP_DECL_SORTPTRCOMP(resvarComp)
 {
-   int varind1 = SCIPvarGetProbindex((SCIP_VAR*)elem1);
-   int varind2 = SCIPvarGetProbindex((SCIP_VAR*)elem2);
+   SCIP_VAR* var1 = elem1;
+   SCIP_VAR* var2 = elem2;
+   SCIP_Bool varneg1 = SCIPvarIsNegated(var1);
+   SCIP_Bool varneg2 = SCIPvarIsNegated(var2);
+
+   if( varneg1 )
+      var1 = SCIPvarGetNegatedVar(var1);
+
+   if( varneg2 )
+      var2 = SCIPvarGetNegatedVar(var2);
+
+   int varind1 = SCIPvarGetProbindex(var1);
+   int varind2 = SCIPvarGetProbindex(var2);
+
+   if( varind1 == -1 && varind2 == -1 )
+   {
+      varind1 = SCIPvarGetIndex(var1);
+      varind2 = SCIPvarGetIndex(var2);
+   }
 
    if( varind1 < varind2 )
       return -1;
-   else if( varind1 > varind2 )
+   if( varind1 > varind2 )
       return +1;
-   else if( varind1 != -1 )
-   {
-      assert(elem1 == elem2);
-      return 0;
-   }
 
-   return SCIPvarComp(elem1, elem2);
+   if( varneg1 && !varneg2 )
+      return -1;
+   if( !varneg1 && varneg2 )
+      return +1;
+
+   assert(elem1 == elem2);
+   return 0;
 }
 
 /** comparison method for sorting consanddatas according to the problem index of their corresponding and-resultants,
@@ -4219,6 +4238,7 @@ SCIP_RETCODE correctLocksAndCaptures(
       SCIP_CONS* andcons;
       SCIP_VAR* res1;
       SCIP_VAR* res2;
+      int compval;
 
       assert(consanddatas[c] != NULL);
 
@@ -4263,8 +4283,11 @@ SCIP_RETCODE correctLocksAndCaptures(
       assert(res2 != NULL);
       assert(SCIPhashmapGetImage(conshdlrdata->hashmap, (void*)res2) != NULL);
 
+      /* get comparison value */
+      compval = resvarComp((void*)res1, (void*)res2);
+
       /* collect new consanddata objects sorted with respect to the problem index of corresponding and-resultants */
-      if( SCIPvarGetProbindex(res1) < SCIPvarGetProbindex(res2) )
+      if( compval == -1 )
       {
          assert(!SCIPisZero(scip, oldandcoefs[c]));
          assert(consanddatas[c]->nuses > 0);
@@ -4279,7 +4302,7 @@ SCIP_RETCODE correctLocksAndCaptures(
          consdata->propagated = FALSE;
          consdata->presolved = FALSE;
       }
-      else if( SCIPvarGetProbindex(res1) > SCIPvarGetProbindex(res2) )
+      else if( compval == +1 )
       {
          assert(!SCIPisZero(scip, andcoefs[c1]));
          assert(SCIPhashmapExists(conshdlrdata->hashmap, (void*)res2));
@@ -4462,6 +4485,10 @@ SCIP_RETCODE correctLocksAndCaptures(
    {
       SCIP_VAR* res1;
       SCIP_VAR* res2;
+      SCIP_Bool resneg1;
+      SCIP_Bool resneg2;
+      int resind1;
+      int resind2;
 
       assert(consanddatas[c] != NULL);
       assert(consanddatas[c]->cons != NULL);
@@ -4471,8 +4498,32 @@ SCIP_RETCODE correctLocksAndCaptures(
       assert(consanddatas[c - 1]->cons != NULL);
       res2 = SCIPgetResultantAnd(scip, consanddatas[c - 1]->cons);
       assert(res2 != NULL);
+      resneg1 = SCIPvarIsNegated(res1);
+      if( resneg1 )
+      {
+         res1 = SCIPvarGetNegatedVar(res1);
+         assert(res1 != NULL);
+      }
+      resneg2 = SCIPvarIsNegated(res2);
+      if( resneg2 )
+      {
+         res2 = SCIPvarGetNegatedVar(res2);
+         assert(res2 != NULL);
+      }
+      resind1 = SCIPvarGetProbindex(res1);
+      resind2 = SCIPvarGetProbindex(res2);
+      if( resind1 == -1 && resind2 == -1 )
+      {
+         resind1 = SCIPvarGetIndex(res1);
+         resind2 = SCIPvarGetIndex(res2);
+      }
 
-      assert(SCIPvarGetProbindex(res1) > SCIPvarGetProbindex(res2));
+      if( resind1 <= resind2 )
+      {
+         assert(resind1 == resind2);
+         assert(!resneg1);
+         assert(resneg2);
+      }
    }
 #endif
 
