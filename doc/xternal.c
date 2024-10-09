@@ -9056,7 +9056,7 @@
 
 /**@defgroup NetworkMatrix Network Matrix
  * @ingroup DataStructures
- * @brief Methods for detecting network matrices and converting them to the underlying graphs.
+ * @brief methods for detecting network matrices and converting them to the underlying graphs
  */
 
 /**@defgroup SymGraph Symmetry Detection Graph

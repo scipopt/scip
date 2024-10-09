@@ -34,10 +34,10 @@
 #include "include/scip_test.h"
 
 /**
- * Because the algorithm and data structures used to check for network matrices are rather complex,
+ * Because the algorithm and data structures used for detecting network matrices are rather complex,
  * we extensively test them in this file. We do this by checking if the cycles of the graphs represented by
  * the decomposition match the nonzero entries of the columns of the matrix that we supplied, for many different graphs.
- * Most of the the specific graphs tested either contain some special case or posed challenges during development.
+ * Most of the specific graphs tested either contain some special case or posed challenges during development.
  */
 
 static SCIP* scip;
@@ -46,38 +46,39 @@ static
 void setup(void)
 {
    /* create scip */
-   SCIP_CALL(SCIPcreate(&scip));
-
+   SCIP_CALL( SCIPcreate(&scip) );
 }
 
 static
 void teardown(void)
 {
    /* free scip */
-   SCIP_CALL(SCIPfree(&scip));
+   SCIP_CALL( SCIPfree(&scip) );
 }
 
-/** CSR/CSC matrix type to encode testing matrices **/
+/* CSR/CSC matrix type to encode testing matrices */
 typedef struct
 {
    int nrows;
    int ncols;
    int nnonzs;
 
-   bool isRowWise; //True -> CSR matrix, False -> CSC matrix
+   bool isRowWise;                           /* True -> CSR matrix, False -> CSC matrix */
 
-   int* primaryIndexStart; //
-   int* entrySecondaryIndex; // column with CSR and row with CSC matrix
-   double* entryValue;
+   int* firstIndex;                          /* Array containing the index of the first nonzero of the row (column)
+                                              * for the CSR (CSC) matrix */
+   int* entryIndex;                          /* Array containing the entries columns (rows) for the CSR (CSC) matrix */
+   double* entryValue;                       /* Array containing the entry values */
 } DirectedTestCase;
 
-static DirectedTestCase stringToTestCase(
-   const char* string,
-   int rows,
-   int cols
-)
+/**< Create a testcase from a string */
+static
+DirectedTestCase stringToTestCase(
+   const char*           string,             /**< The string to convert to a test case */
+   int                   rows,               /**< The number of rows of the matrix to create */
+   int                   cols                /**< The number of columns of the matrix to create */
+   )
 {
-
    DirectedTestCase testCase;
    testCase.nrows = rows;
    testCase.ncols = cols;
@@ -85,23 +86,23 @@ static DirectedTestCase stringToTestCase(
    testCase.isRowWise = true;
 
 
-   testCase.primaryIndexStart = malloc(sizeof(int) * ( rows + 1 ));
+   testCase.firstIndex = malloc(sizeof(int) * ( rows + 1 ));
 
    int nonzeroArraySize = 8;
-   testCase.entrySecondaryIndex = malloc(sizeof(int) * nonzeroArraySize);
+   testCase.entryIndex = malloc(sizeof(int) * nonzeroArraySize);
    testCase.entryValue = malloc(sizeof(double) * nonzeroArraySize);
 
 
-   const char* current = &string[0];
+   const char* current = string;
    int i = 0;
 
-   while( *current != '\0' )
+   while(i < rows * cols && *current != '\0' )
    {
       char* next = NULL;
       double num = strtod(current, &next);
       if( i % cols == 0 )
       {
-         testCase.primaryIndexStart[i / cols] = testCase.nnonzs;
+         testCase.firstIndex[i / cols] = testCase.nnonzs;
       }
       if( num != 0.0 )
       {
@@ -109,26 +110,26 @@ static DirectedTestCase stringToTestCase(
          {
             int newSize = nonzeroArraySize * 2;
             testCase.entryValue = realloc(testCase.entryValue, sizeof(double) * newSize);
-            testCase.entrySecondaryIndex = realloc(testCase.entrySecondaryIndex, sizeof(int) * newSize);
+            testCase.entryIndex = realloc(testCase.entryIndex, sizeof(int) * newSize);
             nonzeroArraySize = newSize;
          }
          testCase.entryValue[testCase.nnonzs] = num;
-         testCase.entrySecondaryIndex[testCase.nnonzs] = i % cols;
+         testCase.entryIndex[testCase.nnonzs] = i % cols;
          ++testCase.nnonzs;
       }
       current = next;
       ++i;
-      if( i == rows * cols )
-      {
-         break;
-      }
    }
-   testCase.primaryIndexStart[testCase.nrows] = testCase.nnonzs;
+   testCase.firstIndex[testCase.nrows] = testCase.nnonzs;
 
    return testCase;
 }
 
-static void transposeMatrixStorage(DirectedTestCase* testCase)
+/**< Transposes a testcase */
+static
+void transposeMatrixStorage(
+   DirectedTestCase*     testCase            /**< The testcase to transpose (in place) */
+   )
 {
    int numPrimaryDimension = testCase->isRowWise ? testCase->nrows : testCase->ncols;
    int numSecondaryDimension = testCase->isRowWise ? testCase->ncols : testCase->nrows;
@@ -143,7 +144,7 @@ static void transposeMatrixStorage(DirectedTestCase* testCase)
    }
    for( int i = 0; i < testCase->nnonzs; ++i )
    {
-      ++( transposedFirstIndex[testCase->entrySecondaryIndex[i] + 1] );
+      ++( transposedFirstIndex[testCase->entryIndex[i] + 1] );
    }
 
    for( int i = 1; i < numSecondaryDimension; ++i )
@@ -153,11 +154,11 @@ static void transposeMatrixStorage(DirectedTestCase* testCase)
 
    for( int i = 0; i < numPrimaryDimension; ++i )
    {
-      int first = testCase->primaryIndexStart[i];
-      int beyond = testCase->primaryIndexStart[i + 1];
+      int first = testCase->firstIndex[i];
+      int beyond = testCase->firstIndex[i + 1];
       for( int entry = first; entry < beyond; ++entry )
       {
-         int index = testCase->entrySecondaryIndex[entry];
+         int index = testCase->entryIndex[entry];
          int transIndex = transposedFirstIndex[index];
          transposedEntryIndex[transIndex] = i;
          transposedEntryValue[transIndex] = testCase->entryValue[entry];
@@ -170,18 +171,22 @@ static void transposeMatrixStorage(DirectedTestCase* testCase)
    }
    transposedFirstIndex[0] = 0;
 
-   free(testCase->entrySecondaryIndex);
+   free(testCase->entryIndex);
    free(testCase->entryValue);
-   free(testCase->primaryIndexStart);
+   free(testCase->firstIndex);
 
-   testCase->primaryIndexStart = transposedFirstIndex;
-   testCase->entrySecondaryIndex = transposedEntryIndex;
+   testCase->firstIndex = transposedFirstIndex;
+   testCase->entryIndex = transposedEntryIndex;
    testCase->entryValue = transposedEntryValue;
 
    testCase->isRowWise = !testCase->isRowWise;
 }
 
-static DirectedTestCase copyTestCase(DirectedTestCase* testCase)
+/**< Copies a test case */
+static
+DirectedTestCase copyTestCase(
+   DirectedTestCase*     testCase            /**< The test case to copy */
+   )
 {
    DirectedTestCase copy;
    copy.nrows = testCase->nrows;
@@ -190,75 +195,85 @@ static DirectedTestCase copyTestCase(DirectedTestCase* testCase)
    copy.isRowWise = testCase->isRowWise;
 
    int size = ( testCase->isRowWise ? testCase->nrows : testCase->ncols ) + 1;
-   copy.primaryIndexStart = malloc(sizeof(int) * size);
+   copy.firstIndex = malloc(sizeof(int) * size);
    for( int i = 0; i < size; ++i )
    {
-      copy.primaryIndexStart[i] = testCase->primaryIndexStart[i];
+      copy.firstIndex[i] = testCase->firstIndex[i];
    }
-   copy.entrySecondaryIndex = malloc(sizeof(int) * testCase->nnonzs);
+   copy.entryIndex = malloc(sizeof(int) * testCase->nnonzs);
    copy.entryValue = malloc(sizeof(double) * testCase->nnonzs);
 
    for( int i = 0; i < testCase->nnonzs; ++i )
    {
-      copy.entrySecondaryIndex[i] = testCase->entrySecondaryIndex[i];
+      copy.entryIndex[i] = testCase->entryIndex[i];
       copy.entryValue[i] = testCase->entryValue[i];
    }
    return copy;
 }
 
-static void freeTestCase(DirectedTestCase* testCase)
+/**< Frees a testcase */
+static
+void freeTestCase(
+   DirectedTestCase*     testCase            /**< The test case to free */
+   )
 {
-   free(testCase->primaryIndexStart);
-   free(testCase->entrySecondaryIndex);
+   free(testCase->firstIndex);
+   free(testCase->entryIndex);
    free(testCase->entryValue);
-
 }
 
-static SCIP_RETCODE runColumnTestCase(
-   DirectedTestCase* testCase,
-   bool isExpectedNetwork,
-   bool isExpectedNotNetwork
-)
+/**< Runs and checks whether a testcase is executed correctly with the network column addition algorithm.
+ *  This checks the cycles of the network matrix at every step. If isExpected(Not)Network is set, we check if the
+ *  complete matrix is (not) network, and return an error otherwise.
+ */
+static
+SCIP_RETCODE runColumnTestCase(
+   DirectedTestCase*     testCase,           /**< The testcase to check */
+   bool                  expectedNetwork,    /**< If the complete matrix is not detected to be a network matrix, return an error */
+   bool                  expectedNotNetwork  /**< If the complete matrix is detected to be a network matrix, return an error */
+   )
 {
    if( testCase->isRowWise )
    {
       transposeMatrixStorage(testCase);
    }
-   cr_expect(!testCase->isRowWise);
+   cr_assert(!testCase->isRowWise);
    SCIP_NETMATDEC* dec = NULL;
-   BMS_BLKMEM * blkmem = SCIPblkmem(scip);
-   BMS_BUFMEM * bufmem = SCIPbuffer(scip);
-   SCIP_CALL(SCIPnetmatdecCreate(blkmem, &dec, testCase->nrows, testCase->ncols));
+   BMS_BLKMEM* blkmem = SCIPblkmem(scip);
+   BMS_BUFMEM* bufmem = SCIPbuffer(scip);
+   SCIP_CALL( SCIPnetmatdecCreate(blkmem, &dec, testCase->nrows, testCase->ncols) );
 
    SCIP_Bool isNetwork = TRUE;
 
    int* tempColumnStorage;
    SCIP_Bool* tempSignStorage;
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &tempColumnStorage, testCase->nrows));
-   SCIP_CALL(SCIPallocBufferArray(scip, &tempSignStorage, testCase->nrows));
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempColumnStorage, testCase->nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempSignStorage, testCase->nrows) );
 
    for( int i = 0; i < testCase->ncols; ++i )
    {
-      int colEntryStart = testCase->primaryIndexStart[i];
-      int colEntryEnd = testCase->primaryIndexStart[i + 1];
-      int* nonzeroRows = &testCase->entrySecondaryIndex[colEntryStart];
+      int colEntryStart = testCase->firstIndex[i];
+      int colEntryEnd = testCase->firstIndex[i + 1];
+      int* nonzeroRows = &testCase->entryIndex[colEntryStart];
       double* nonzeroValues = &testCase->entryValue[colEntryStart];
       int nonzeros = colEntryEnd - colEntryStart;
       cr_assert(nonzeros >= 0);
-      //Check if adding the column preserves the network matrix
-      SCIP_CALL(SCIPnetmatdecTryAddCol(dec,i,nonzeroRows,nonzeroValues,nonzeros,&isNetwork));
-      if(!isNetwork){
+      /* Check if adding the column preserves the network matrix */
+      SCIP_CALL( SCIPnetmatdecTryAddCol(dec, i, nonzeroRows, nonzeroValues, nonzeros, &isNetwork) );
+      if( !isNetwork )
+      {
          break;
       }
       cr_expect(SCIPnetmatdecIsMinimal(dec));
-      //Check if the computed network matrix indeed reflects the network matrix,
-      //by checking if the fundamental cycles are all correct
+      /* Check if the computed network matrix indeed reflects the network matrix,
+       * by checking if the fundamental cycles are all correct
+       */
       for( int j = 0; j <= i; ++j )
       {
-         int jColEntryStart = testCase->primaryIndexStart[j];
-         int jColEntryEnd = testCase->primaryIndexStart[j + 1];
-         int* jNonzeroRows = &testCase->entrySecondaryIndex[jColEntryStart];
+         int jColEntryStart = testCase->firstIndex[j];
+         int jColEntryEnd = testCase->firstIndex[j + 1];
+         int* jNonzeroRows = &testCase->entryIndex[jColEntryStart];
          double* jNonzeroValues = &testCase->entryValue[jColEntryStart];
          int jNonzeros = jColEntryEnd - jColEntryStart;
          SCIP_Bool cycleIsCorrect = SCIPnetmatdecVerifyCycle(bufmem, dec, j,
@@ -271,88 +286,98 @@ static SCIP_RETCODE runColumnTestCase(
    }
 
 
-   if( isExpectedNetwork )
+   if( expectedNetwork )
    {
-      //We expect that the given matrix is a network matrix. If not, something went wrong.
+      /* We expect that the given matrix is a network matrix. If not, something went wrong */
       cr_expect(isNetwork);
    }
-   if( isExpectedNotNetwork )
+   if( expectedNotNetwork )
    {
-      //We expect that the given matrix is not a network matrix. If not, something went wrong.
+      /* We expect that the given matrix is not a network matrix. If not, something went wrong */
       cr_expect(!isNetwork);
    }
    SCIPfreeBufferArray(scip, &tempColumnStorage);
    SCIPfreeBufferArray(scip, &tempSignStorage);
 
    SCIPnetmatdecFree(&dec);
+   cr_assert(dec == NULL);
+
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE runRowTestCase(
-   DirectedTestCase* testCase,
-   bool isExpectedNetwork,
-   bool isExpectedNotNetwork
-)
+/**< Runs and checks whether a testcase is executed correctly with the network row addition algorithm.
+ *  This checks the cycles of the network matrix at every step. If isExpected(Not)Network is set, we check if the
+ *  complete matrix is (not) network, and return an error otherwise.
+ */
+static
+SCIP_RETCODE runRowTestCase(
+   DirectedTestCase*     testCase,           /**< The testcase to check */
+   bool                  expectedNetwork,    /**< If the complete matrix is not detected to be a network matrix, return an error */
+   bool                  expectedNotNetwork  /**< If the complete matrix is detected to be a network matrix, return an error */
+   )
 {
    if( !testCase->isRowWise )
    {
       transposeMatrixStorage(testCase);
    }
-   cr_expect(testCase->isRowWise);
+   cr_assert(testCase->isRowWise);
 
-   //We keep a column-wise copy to check the columns easily
+   /* We keep a column-wise copy to check the columns easily */
    DirectedTestCase colWiseCase = copyTestCase(testCase);
    transposeMatrixStorage(&colWiseCase);
 
-   BMS_BLKMEM * blkmem = SCIPblkmem(scip);
-   BMS_BUFMEM * bufmem = SCIPbuffer(scip);
+   BMS_BLKMEM* blkmem = SCIPblkmem(scip);
+   BMS_BUFMEM* bufmem = SCIPbuffer(scip);
 
    SCIP_NETMATDEC* dec = NULL;
-   SCIP_CALL(SCIPnetmatdecCreate(blkmem, &dec, testCase->nrows, testCase->ncols));
+   SCIP_CALL( SCIPnetmatdecCreate(blkmem, &dec, testCase->nrows, testCase->ncols) );
 
    SCIP_Bool isNetwork = TRUE;
 
    int* tempColumnStorage;
    SCIP_Bool* tempSignStorage;
 
-   SCIP_CALL(SCIPallocBufferArray(scip, &tempColumnStorage, testCase->nrows));
-   SCIP_CALL(SCIPallocBufferArray(scip, &tempSignStorage, testCase->nrows));
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempColumnStorage, testCase->nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempSignStorage, testCase->nrows) );
 
    for( int i = 0; i < testCase->nrows; ++i )
    {
-      int rowEntryStart = testCase->primaryIndexStart[i];
-      int rowEntryEnd = testCase->primaryIndexStart[i + 1];
-      int* nonzeroCols = &testCase->entrySecondaryIndex[rowEntryStart];
+      int rowEntryStart = testCase->firstIndex[i];
+      int rowEntryEnd = testCase->firstIndex[i + 1];
+      int* nonzeroCols = &testCase->entryIndex[rowEntryStart];
       double* nonzeroValues = &testCase->entryValue[rowEntryStart];
       int nonzeros = rowEntryEnd - rowEntryStart;
       cr_assert(nonzeros >= 0);
-      //Check if adding the row preserves the network matrix
-      SCIP_CALL(SCIPnetmatdecTryAddRow(dec,i,nonzeroCols,nonzeroValues,nonzeros,&isNetwork));
-      if(!isNetwork){
+      /* Check if adding the row preserves the network matrix */
+      SCIP_CALL( SCIPnetmatdecTryAddRow(dec, i, nonzeroCols, nonzeroValues, nonzeros, &isNetwork) );
+      if( !isNetwork )
+      {
          break;
       }
       cr_expect(SCIPnetmatdecIsMinimal(dec));
-      //Check if the computed network matrix indeed reflects the network matrix,
-      //by checking if the fundamental cycles are all correct
+      /* Check if the computed network matrix indeed reflects the network matrix,
+       * by checking if the fundamental cycles are all correct
+       */
       for( int j = 0; j < colWiseCase.ncols; ++j )
       {
-         int jColEntryStart = colWiseCase.primaryIndexStart[j];
-         int jColEntryEnd = colWiseCase.primaryIndexStart[j + 1];
+         int jColEntryStart = colWiseCase.firstIndex[j];
+         int jColEntryEnd = colWiseCase.firstIndex[j + 1];
 
-         //Count the number of rows in the column that should be in the current decomposition
+         /* Count the number of rows in the column that should be in the current decomposition */
          int finalEntryIndex = jColEntryStart;
          for( int testEntry = jColEntryStart; testEntry < jColEntryEnd; ++testEntry )
          {
-            if( colWiseCase.entrySecondaryIndex[testEntry] <= i )
+            if( colWiseCase.entryIndex[testEntry] <= i )
             {
                ++finalEntryIndex;
-            } else
+            }
+            else
             {
                break;
             }
          }
 
-         int* jNonzeroRows = &colWiseCase.entrySecondaryIndex[jColEntryStart];
+         int* jNonzeroRows = &colWiseCase.entryIndex[jColEntryStart];
          double* jNonzeroValues = &colWiseCase.entryValue[jColEntryStart];
 
          int jNonzeros = finalEntryIndex - jColEntryStart;
@@ -365,14 +390,14 @@ static SCIP_RETCODE runRowTestCase(
       }
    }
 
-   if( isExpectedNetwork )
+   if( expectedNetwork )
    {
-      //We expect that the given matrix is a network matrix. If not, something went wrong.
+      /* We expect that the given matrix is a network matrix. If not, something went wrong */
       cr_expect(isNetwork);
    }
-   if( isExpectedNotNetwork )
+   if( expectedNotNetwork )
    {
-      //We expect that the given matrix is not a network matrix. If not, something went wrong.
+      /* We expect that the given matrix is not a network matrix. If not, something went wrong */
       cr_expect(!isNetwork);
    }
 
@@ -382,52 +407,61 @@ static SCIP_RETCODE runRowTestCase(
    SCIPfreeBufferArray(scip, &tempSignStorage);
 
    SCIPnetmatdecFree(&dec);
+   cr_assert(dec == NULL);
+
    return SCIP_OKAY;
 }
 
-static SCIP_RETCODE runRowTestCaseGraph(
-   DirectedTestCase* testCase
-)
+/**< Runs the network row addition, and attempts to construct the graph.
+ * This functions main purpose is to check if SCIPnetmatdecCreateDiGraph() correctly creates the graph without errors.
+ */
+static
+SCIP_RETCODE runRowTestCaseGraph(
+   DirectedTestCase*     testCase            /**< The testcase to check */
+   )
 {
    if( !testCase->isRowWise )
    {
       transposeMatrixStorage(testCase);
    }
-   cr_expect(testCase->isRowWise);
+   cr_assert(testCase->isRowWise);
 
-   //We keep a column-wise copy to check the columns easily
+   /* We keep a column-wise copy to check the columns easily */
    DirectedTestCase colWiseCase = copyTestCase(testCase);
    transposeMatrixStorage(&colWiseCase);
 
-   BMS_BLKMEM * blkmem = SCIPblkmem(scip);
+   BMS_BLKMEM* blkmem = SCIPblkmem(scip);
 
    SCIP_NETMATDEC* dec = NULL;
-   SCIP_CALL(SCIPnetmatdecCreate(blkmem, &dec, testCase->nrows, testCase->ncols));
+   SCIP_CALL( SCIPnetmatdecCreate(blkmem, &dec, testCase->nrows, testCase->ncols) );
 
    SCIP_Bool isNetwork = TRUE;
 
    for( int i = 0; i < testCase->nrows; ++i )
    {
-      int rowEntryStart = testCase->primaryIndexStart[i];
-      int rowEntryEnd = testCase->primaryIndexStart[i + 1];
-      int* nonzeroCols = &testCase->entrySecondaryIndex[rowEntryStart];
+      int rowEntryStart = testCase->firstIndex[i];
+      int rowEntryEnd = testCase->firstIndex[i + 1];
+      int* nonzeroCols = &testCase->entryIndex[rowEntryStart];
       double* nonzeroValues = &testCase->entryValue[rowEntryStart];
       int nonzeros = rowEntryEnd - rowEntryStart;
       cr_assert(nonzeros >= 0);
-      //Check if adding the row preserves the network matrix
-      SCIP_CALL(SCIPnetmatdecTryAddRow(dec,i,nonzeroCols,nonzeroValues,nonzeros,&isNetwork));
-      assert(isNetwork);
+      /* Check if adding the row preserves the network matrix */
+      SCIP_CALL( SCIPnetmatdecTryAddRow(dec, i, nonzeroCols, nonzeroValues, nonzeros, &isNetwork) );
+      cr_assert(isNetwork);
    }
    SCIP_DIGRAPH* graph;
    SCIP_CALL( SCIPnetmatdecCreateDiGraph(dec, blkmem, &graph, TRUE) );
 
-   SCIPdigraphPrint(graph, SCIPgetMessagehdlr(scip),stdout);
+   SCIPdigraphPrint(graph, SCIPgetMessagehdlr(scip), stdout);
    SCIPdigraphFree(&graph);
    freeTestCase(&colWiseCase);
 
    SCIPnetmatdecFree(&dec);
+   cr_assert(dec == NULL);
+
    return SCIP_OKAY;
 }
+
 TestSuite(network, .init = setup, .fini = teardown);
 
 Test(network, coladd_single_column, .description = "Try adding a single column")
@@ -1941,7 +1975,7 @@ Test(network, rowadd_singlerigid_8, .description = "Updating a single rigid memb
    runRowTestCase(&testCase, true, false);
    freeTestCase(&testCase);
 }
-//TODO: test interleaved addition, test using random sampling + test erdos-renyi generated graphs
+/* TODO: test interleaved addition, test using random sampling + test erdos-renyi generated graphs */
 
 Test(network, rowadd_singlerigid_graph, .description = "Computing the graph for a single rigid member")
 {
