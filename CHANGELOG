@@ -7,6 +7,7 @@ Fixed bugs
 ----------
 
 - skip constraint propagation if the residual activity bound cancels the side precision in tightenVarBounds() of cons_linear.c
+- use indices of negation counterparts and accept fixings when ordering and-resultants of pseudoboolean constraints
 
 Unit tests
 ----------
