@@ -1231,7 +1231,10 @@ SCIP_RETCODE SCIPnodeFree(
    return SCIP_OKAY;
 }
 
-/** cuts off node and whole sub tree from branch and bound tree */
+/** cuts off node and whole sub tree from branch and bound tree
+ *
+ *  @note must not be used on a leaf because the node priority queue remains untouched
+ */
 SCIP_RETCODE SCIPnodeCutoff(
    SCIP_NODE*            node,               /**< node that should be cut off */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -2377,7 +2380,10 @@ SCIP_RETCODE treeApplyPendingBdchgs(
    return SCIP_OKAY;
 }
 
-/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value */
+/** if given value is larger than the node's lower bound, sets the node's lower bound to the new value
+ *
+ *  @note must not be used on a leaf because the node priority queue remains untouched
+ */
 void SCIPnodeUpdateLowerbound(
    SCIP_NODE*            node,               /**< node to update lower bound for */
    SCIP_STAT*            stat,               /**< problem statistics */
