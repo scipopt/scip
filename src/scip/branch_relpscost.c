@@ -1233,8 +1233,8 @@ SCIP_RETCODE execRelpscost(
          for( c = 0; c < nbranchcands; ++c )
          {
             if( needsStrongBranching(scip, branchrule, branchcands[c], branchcandsfrac[c],
-                  bestpscand > 0 ? branchcands[bestpscand] : NULL,
-                  bestpscand > 0 ? branchcandsfrac[bestpscand] : 0.0,
+                  bestpscand >= 0 ? branchcands[bestpscand] : NULL,
+                  bestpscand >= 0 ? branchcandsfrac[bestpscand] : 0.0,
                   reliable, relerrorthreshold, clevel, useancpscost) )
             {
                useancpscost = FALSE;
@@ -1336,8 +1336,8 @@ SCIP_RETCODE execRelpscost(
             size = MIN(downsize, upsize);
 
             usesb = needsStrongBranching(scip, branchrule, branchcands[c], branchcandsfrac[c],
-                  bestpscand > 0 ? branchcands[bestpscand] : NULL,
-                  bestpscand > 0 ? branchcandsfrac[bestpscand] : 0.0,
+                  bestpscand >= 0 ? branchcands[bestpscand] : NULL,
+                  bestpscand >= 0 ? branchcandsfrac[bestpscand] : 0.0,
                   reliable, relerrorthreshold, clevel, FALSE);
 
             /* count the number of variables that are completely uninitialized */
