@@ -104,10 +104,6 @@ SCIP_RETCODE branch(
    int npseudocands;
    int npriopseudocands;
    int bestpseudocand;
-#ifndef NDEBUG
-   SCIP_Real cutoffbound;
-   cutoffbound = SCIPgetCutoffbound(scip);
-#endif
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -165,7 +161,7 @@ SCIP_RETCODE branch(
 
          assert(*result == SCIP_DIDNOTRUN);
          assert(0 <= bestpseudocand && bestpseudocand < npseudocands);
-         assert(SCIPisLT(scip, provedbound, cutoffbound));
+         assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
 
          var = pseudocandscopy[bestpseudocand];
 
@@ -316,10 +312,6 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
    SCIP_Real lpobjval;
    SCIP_Bool allcolsinlp;
    SCIP_Bool exactsolve;
-#ifndef NDEBUG
-   SCIP_Real cutoffbound;
-   cutoffbound = SCIPgetCutoffbound(scip);
-#endif
 
    assert(scip != NULL);
    assert(pseudocands != NULL);
@@ -442,8 +434,8 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
          up = MAX(up, lpobjval);
          downgain = down - lpobjval;
          upgain = up - lpobjval;
-         assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, cutoffbound));
-         assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, cutoffbound));
+         assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
+         assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
