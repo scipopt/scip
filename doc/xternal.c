@@ -8799,7 +8799,7 @@
   *   to use SCIP and SCIP-SDP from Matlab and Octave.
   * - <a href="https://github.com/scipopt/JSCIPOpt">JSCIPOpt</a> is an interface for Java.
   * - <a href="https://github.com/scipopt/russcip">Russcip</a> is an interface for Rust.
-  * - <a href="https://github.com/scipopt/SCIPpp">SCIP++</a> is a modeling interfaces for C++.
+  * - <a href="https://github.com/scipopt/SCIPpp">SCIP++</a> is a modeling interface for C++.
   *
   * Contributions to these projects are very welcome.
   *
