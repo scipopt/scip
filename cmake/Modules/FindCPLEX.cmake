@@ -47,8 +47,10 @@ else(MSVC)
 
 endif(MSVC)
 
-# todo properly check when pthread is necessary
-set(CPLEX_LIBRARIES ${CPLEX_LIBRARY} pthread ${CMAKE_DL_LIBS})
+if(CPLEX_INCLUDE_DIRS AND CPLEX_LIBRARY)
+  # todo properly check when pthread is necessary
+  set(CPLEX_LIBRARIES ${CPLEX_LIBRARY} pthread ${CMAKE_DL_LIBS})
 
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(CPLEX DEFAULT_MSG CPLEX_INCLUDE_DIRS CPLEX_LIBRARIES)
+  include(FindPackageHandleStandardArgs)
+  find_package_handle_standard_args(CPLEX DEFAULT_MSG CPLEX_INCLUDE_DIRS CPLEX_LIBRARIES)
+endif()
