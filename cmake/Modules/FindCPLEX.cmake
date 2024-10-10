@@ -28,6 +28,10 @@ if(MSVC)
       HINTS ${CPLEX_DIR} $ENV{CPLEX_DIR}
       PATH_SUFFIXES lib/x64_windows_vs${CPLEX_WIN_VS_VERSION}/stat_${CPLEX_WIN_RUNTIME})
 
+   if(CPLEX_LIBRARY)
+     set(CPLEX_LIBRARIES ${CPLEX_LIBRARY})
+   endif()
+
 else(MSVC)
    if(CMAKE_OSX_ARCHITECTURES)
      set(CPLEX_ARCH ${CMAKE_OSX_ARCHITECTURES})
@@ -45,12 +49,14 @@ else(MSVC)
                     lib/${CPLEX_ARCH}_osx/static_pic
                     lib)
 
+   if(CPLEX_LIBRARY)
+     # todo properly check when pthread and dl is necessary
+     set(CPLEX_LIBRARIES ${CPLEX_LIBRARY} pthread ${CMAKE_DL_LIBS})
+   endif()
+
 endif(MSVC)
 
 if(CPLEX_INCLUDE_DIRS AND CPLEX_LIBRARY)
-  # todo properly check when pthread is necessary
-  set(CPLEX_LIBRARIES ${CPLEX_LIBRARY} pthread ${CMAKE_DL_LIBS})
-
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(CPLEX DEFAULT_MSG CPLEX_INCLUDE_DIRS CPLEX_LIBRARIES)
 endif()
