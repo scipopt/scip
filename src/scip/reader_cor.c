@@ -34,6 +34,8 @@
 #include "scip/pub_reader.h"
 #include "scip/reader_cor.h"
 #include "scip/reader_mps.h"
+#include "scip/reader_tim.h"
+#include "scip/reader_sto.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_reader.h"
 #include <string.h>
@@ -176,7 +178,7 @@ SCIP_RETCODE SCIPincludeReaderCor(
 
    /* create reader data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
-   SCIP_CALL( createReaderdata(scip, readerdata) );
+   readerdata->created = FALSE;
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
@@ -208,6 +210,14 @@ SCIP_RETCODE SCIPreadCor(
 
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
+
+   /* when the COR file is read, it is necessary to free the reader data from the COR, TIM and STO readers. This is
+    * because the COR file is the base file for the TIM and STO files. For most readers, there is no problem data stored
+    * in the reader data, and hence the data doesn't need to be freed.
+    */
+   SCIP_CALL( SCIPfreeCorReaderdata(scip) );
+   SCIP_CALL( SCIPfreeTimReaderdata(scip) );
+   SCIP_CALL( SCIPfreeStoReaderdata(scip) );
 
    /* creating the reader data at the start of the instance read */
    SCIP_CALL( createReaderdata(scip, readerdata) );

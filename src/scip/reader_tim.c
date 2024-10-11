@@ -37,6 +37,7 @@
 #include "scip/pub_reader.h"
 #include "scip/reader_cor.h"
 #include "scip/reader_tim.h"
+#include "scip/reader_sto.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -293,17 +294,12 @@ SCIP_RETCODE createReaderdata(
 static
 void freeReaderdata(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader              /**< the reader structure */
+   SCIP_READERDATA*      readerdata          /**< the reader data structure */
    )
 {
-   SCIP_READERDATA* readerdata;
    int i;
 
    assert(scip != NULL);
-   assert(reader != NULL);
-
-   readerdata = SCIPreaderGetData(reader);
-
    assert(readerdata != NULL);
 
    /* only free the reader data is a file has been read */
@@ -809,7 +805,15 @@ SCIP_DECL_READERCOPY(readerCopyTim)
 static
 SCIP_DECL_READERFREE(readerFreeTim)
 {
-   freeReaderdata(scip, reader);
+   SCIP_READERDATA* readerdata;
+
+   assert(scip != NULL);
+   assert(reader != NULL);
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   freeReaderdata(scip, readerdata);
 
    SCIPfreeBlockMemory(scip, &readerdata);
 
@@ -841,6 +845,13 @@ SCIP_DECL_READERREAD(readerReadTim)
       (*result) = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
+
+   /* when reading the TIM file, it is necessary to free the TIM and STO reader data. This is the STO file generates
+    * data based on the data from the TIM file. For most readers, there is no problem data stored in the reader data,
+    * and hence the reader data doesn't need to be freed.
+    */
+   SCIP_CALL( SCIPfreeTimReaderdata(scip) );
+   SCIP_CALL( SCIPfreeStoReaderdata(scip) );
 
    SCIP_CALL( SCIPreadTim(scip, filename, result) );
 
@@ -921,13 +932,17 @@ SCIP_RETCODE SCIPfreeTimReaderdata(
    )
 {
    SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
 
    assert(scip != NULL);
 
    reader = SCIPfindReader(scip, READER_NAME);
    assert(reader != NULL);
 
-   freeReaderdata(scip, reader);
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   freeReaderdata(scip, readerdata);
 
    return SCIP_OKAY;
 }

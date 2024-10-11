@@ -2843,6 +2843,12 @@ SCIP_RETCODE SCIPreadSto(
    assert(reader != NULL);
    readerdata = SCIPreaderGetData(reader);
 
+   /* before the STO file can be read, the reader data needs to be freed. This is because the reader data stores problem
+    * data, which needs to be removed before the next instance is read. For most readers, there is no problem data
+    * stored in the reader data, and hence the reader data doesn't need to be freed.
+    */
+   SCIP_CALL( freeReaderdata(scip, readerdata) );
+
    retcode = readSto(scip, filename, readerdata);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
@@ -2877,7 +2883,7 @@ int SCIPstoGetNScenarios(
    return readerdata->numscenarios;
 }
 
-/** frees the COR reader data */
+/** frees the STO reader data */
 SCIP_RETCODE SCIPfreeStoReaderdata(
    SCIP*                 scip                /**< the SCIP data structure */
    )
