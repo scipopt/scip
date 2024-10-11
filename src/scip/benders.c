@@ -2609,14 +2609,17 @@ SCIP_RETCODE SCIPbendersActivate(
          SCIP_CALL( SCIPpqueueInsert(benders->subprobqueue, benders->solvestat[i]) );
       }
 
-      /* adding an eventhandler for updating the lower bound when the root node is solved. */
-      eventhdlrdata = (SCIP_EVENTHDLRDATA*)benders;
+      if( SCIPsetFindEventhdlr(set, NODESOLVED_EVENTHDLR_NAME) == NULL )
+      {
+         /* adding an eventhandler for updating the lower bound when the root node is solved. */
+         eventhdlrdata = (SCIP_EVENTHDLRDATA*)benders;
 
-      /* include event handler into SCIP */
-      SCIP_CALL( SCIPincludeEventhdlrBasic(set->scip, &eventhdlr, NODESOLVED_EVENTHDLR_NAME, NODESOLVED_EVENTHDLR_DESC,
-            eventExecBendersNodesolved, eventhdlrdata) );
-      SCIP_CALL( SCIPsetEventhdlrInitsol(set->scip, eventhdlr, eventInitsolBendersNodesolved) );
-      assert(eventhdlr != NULL);
+         /* include event handler into SCIP */
+         SCIP_CALL( SCIPincludeEventhdlrBasic(set->scip, &eventhdlr, NODESOLVED_EVENTHDLR_NAME, NODESOLVED_EVENTHDLR_DESC,
+               eventExecBendersNodesolved, eventhdlrdata) );
+         SCIP_CALL( SCIPsetEventhdlrInitsol(set->scip, eventhdlr, eventInitsolBendersNodesolved) );
+         assert(eventhdlr != NULL);
+      }
    }
 
    return SCIP_OKAY;
@@ -2636,6 +2639,7 @@ SCIP_RETCODE SCIPbendersDeactivate(
 
    if( benders->active )
    {
+      SCIP_EVENTHDLR* eventhdlr;
       int nsubproblems;
 
       nsubproblems = SCIPbendersGetNSubproblems(benders);
@@ -2680,6 +2684,13 @@ SCIP_RETCODE SCIPbendersDeactivate(
       BMSfreeMemoryArray(&benders->auxiliaryvars);
       BMSfreeMemoryArray(&benders->solvestat);
       BMSfreeMemoryArray(&benders->subproblems);
+
+      /* dropping the event from the node solved event handler */
+      eventhdlr = SCIPsetFindEventhdlr(set, NODESOLVED_EVENTHDLR_NAME);
+      if( eventhdlr != NULL && SCIPsetGetStage(set) >= SCIP_STAGE_INITSOLVE )
+      {
+         SCIP_CALL( SCIPdropEvent(set->scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, -1) );
+      }
    }
 
    return SCIP_OKAY;
