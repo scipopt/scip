@@ -192,10 +192,6 @@ struct SCIP_ConsData
    int                   nconsanddatas;      /**< number of and-constraints-data-objects */
    int                   sconsanddatas;      /**< size of and-constraints-data-objects array */
 
-   SCIP_VAR*             intvar;             /**< a artificial variable which was added only for the objective function,
-                                              *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective function */
-
    SCIP_VAR*             indvar;             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight;             /**< weight of the soft constraint, if it is one */
 
@@ -1173,9 +1169,6 @@ SCIP_RETCODE consdataCreate(
    SCIP_VAR*const        indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real const       weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool const       issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR* const       intvar,             /**< a artificial variable which was added only for the objective function,
-                                              *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of row */
    SCIP_Real             rhs,                /**< right hand side of row */
    SCIP_Bool             check,              /**< is the new constraint a check constraint? */
@@ -1231,19 +1224,6 @@ SCIP_RETCODE consdataCreate(
    }
    else
       (*consdata)->indvar = NULL;
-
-   /* copy artificial integer variable if it exist */
-   if( intvar != NULL )
-   {
-      if( transformed )
-      {
-         SCIP_CALL( SCIPgetTransformedVar(scip, intvar, &((*consdata)->intvar)) );
-      }
-      else
-         (*consdata)->intvar = intvar;
-   }
-   else
-      (*consdata)->intvar = NULL;
 
    /* copy linear constraint */
    (*consdata)->lincons = lincons;
@@ -3908,14 +3888,12 @@ SCIP_RETCODE copyConsPseudoboolean(
          SCIP_Real targetrhs;
          SCIP_Real targetlhs;
 
-         SCIP_VAR* intvar;
          SCIP_VAR* indvar;
          const char* consname;
 
          /* third the indicator and artificial integer variable part */
          assert(sourceconsdata->issoftcons == (sourceconsdata->indvar != NULL));
          indvar = sourceconsdata->indvar;
-         intvar = sourceconsdata->intvar;
 
          /* copy indicator variable */
          if( indvar != NULL )
@@ -3923,12 +3901,6 @@ SCIP_RETCODE copyConsPseudoboolean(
             assert(*valid);
             SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, indvar, &indvar, varmap, consmap, global, valid) );
             assert(!(*valid) || indvar != NULL);
-         }
-         /* copy artificial integer variable */
-         if( intvar != NULL && *valid )
-         {
-            SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, intvar, &intvar, varmap, consmap, global, valid) );
-            assert(!(*valid) || intvar != NULL);
          }
 
          if( *valid )
@@ -3947,10 +3919,10 @@ SCIP_RETCODE copyConsPseudoboolean(
             /* coverity[var_deref_op] */
             /* coverity[var_deref_model] */
             /* Note that due to compression the and constraints might have disappeared in which case ntargetandconss == 0. */
-            SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname,
-                  targetlincons, targetlinconstype, targetandconss, targetandcoefs, ntargetandconss,
-                  indvar, sourceconsdata->weight, sourceconsdata->issoftcons, intvar, targetlhs, targetrhs,
-                  initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            SCIP_CALL( SCIPcreateConsPseudobooleanWithConss(targetscip, targetcons, consname, targetlincons,
+                  targetlinconstype, targetandconss, targetandcoefs, ntargetandconss, indvar, sourceconsdata->weight,
+                  sourceconsdata->issoftcons, targetlhs, targetrhs, initial, separate, enforce, check, propagate,
+                  local, modifiable, dynamic, removable, stickingatnode) );
          }
       }
 
@@ -7442,7 +7414,7 @@ SCIP_RETCODE addSymmetryInformation(
    rhs = SCIPgetRhsPseudoboolean(scip, cons);
    SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, lhs, rhs, &rootnodeidx) );
 
-   /* possibly add nodes and edges encoding whether constraint is soft or an objective constraint */
+   /* possibly add node and edge encoding whether constraint is soft */
    vars[0] = SCIPgetIndVarPseudoboolean(scip, cons);
    if( vars[0] != NULL )
    {
@@ -7452,20 +7424,6 @@ SCIP_RETCODE addSymmetryInformation(
 
       SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int)SYM_CONSOPTYPE_PB_SOFT, &nodeidx) );
       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnodeidx, nodeidx, TRUE, consdata->weight) );
-      SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &tmpnvars, &constant,
-            SCIPisTransformed(scip)) );
-      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, nodeidx, vars, vals, tmpnvars, constant) );
-   }
-
-   if( consdata->intvar != NULL )
-   {
-      vars[0] = consdata->intvar;
-      vals[0] = 1.0;
-      tmpnvars = 1;
-      constant = 0.0;
-
-      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int)SYM_CONSOPTYPE_PB_OBJ, &nodeidx) );
-      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnodeidx, nodeidx, FALSE, 0.0) );
       SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &tmpnvars, &constant,
             SCIPisTransformed(scip)) );
       SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, nodeidx, vars, vals, tmpnvars, constant) );
@@ -7640,7 +7598,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdPseudoboolean)
    lhs = SCIPgetLhsNonlinear(scip, cons);
    rhs = SCIPgetRhsNonlinear(scip, cons);
 
-   /* we need all linear variables to be binary, except for one that was added to reformulate an objective function */
+   /* we need all linear variables to be binary */
    for( i = 0; i < SCIPgetNLinearVarsNonlinear(scip, cons); ++i )
    {
       var = SCIPgetLinearVarsNonlinear(scip, cons)[i];
@@ -7649,20 +7607,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdPseudoboolean)
       if( SCIPvarIsBinary(var) )
          continue;
 
-#ifdef SCIP_DISABLED_CODE /* not working in cons_pseudoboolean yet, see cons_pseudoboolean.c:7925 */
-      /* check whether the variable may have been added to represent the objective function */
-      if( objvar == NULL && SCIPgetLinearCoefsNonlinear(scip, cons)[i] == -1.0 && /*TODO we could divide by the coefficient*/
-          SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == (SCIPisInfinity(scip,  rhs) ? 0 : 1) &&  /*TODO correct?*/
-          SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == (SCIPisInfinity(scip, -lhs) ? 0 : 1) &&  /*TODO correct?*/
-          SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) &&
-          SCIPvarGetObj(var) == 1.0 )  /*TODO we need this or just positive?*/
-      {
-         objvar = var;
-         continue;
-      }
-#endif
-
-      SCIPdebugMsg(scip, "not pseudoboolean because linear variable <%s> is not binary or objective\n", SCIPvarGetName(var));
+      SCIPdebugMsg(scip, "not pseudoboolean because linear variable <%s> is not binary\n", SCIPvarGetName(var));
       return SCIP_OKAY;
    }
 
@@ -7930,9 +7875,6 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
             assert(consdata->weight != 0);
             assert(consdata->indvar != NULL);
 
-            /* if it is a soft constraint, there should be no integer variable */
-            assert(consdata->intvar == NULL);
-
             /* get negation of indicator variable */
             SCIP_CALL( SCIPgetNegatedVar(scip, consdata->indvar, &negindvar) );
             assert(negindvar != NULL);
@@ -8129,13 +8071,6 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
             /* update and constraint flags */
             SCIP_CALL( updateAndConss(scip, cons) );
 
-#if 0 /* not implemented correctly */
-            if( consdata->intvar != NULL )
-            {
-               /* add auxiliary integer variables to linear constraint */
-               SCIP_CALL( SCIPaddCoefLinear(scip, lincons, consdata->intvar, -1.0) );
-            }
-#endif
             /* remove pseudo boolean constraint, old linear constraint is still active, and-constraints too */
             SCIP_CALL( SCIPdelCons(scip, cons) );
          }
@@ -8226,10 +8161,9 @@ SCIP_DECL_CONSTRANS(consTransPseudoboolean)
    }
 
    /* create pseudoboolean constraint data for target constraint */
-   SCIP_CALL( consdataCreate(scip, conshdlr, &targetdata, sourcedata->lincons, sourcedata->linconstype,
-         andconss, sourcedata->andcoefs, sourcedata->andnegs, sourcedata->nconsanddatas, sourcedata->indvar, sourcedata->weight,
-         sourcedata->issoftcons, sourcedata->intvar, sourcedata->lhs, sourcedata->rhs, SCIPconsIsChecked(sourcecons),
-         TRUE) );
+   SCIP_CALL( consdataCreate(scip, conshdlr, &targetdata, sourcedata->lincons, sourcedata->linconstype, andconss,
+         sourcedata->andcoefs, sourcedata->andnegs, sourcedata->nconsanddatas, sourcedata->indvar, sourcedata->weight,
+         sourcedata->issoftcons, sourcedata->lhs, sourcedata->rhs, SCIPconsIsChecked(sourcecons), TRUE) );
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &andconss);
@@ -9116,10 +9050,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    return SCIP_OKAY;
 }
 
-/** creates and captures a pseudoboolean constraint, with given linear and and-constraints
- *
- *  @note intvar must currently be NULL
- */
+/** creates and captures a pseudoboolean constraint, with given linear and and-constraints */
 SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -9132,9 +9063,6 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR*             intvar,             /**< an artificial variable which was added only for the objective function,
-                                              *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -9180,13 +9108,6 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    assert(linconstype > SCIP_LINEARCONSTYPE_INVALIDCONS);
    assert(nandconss == 0 || (andconss != NULL && andcoefs != NULL));
    assert(issoftcons == (indvar != NULL));
-
-   if( intvar != NULL )
-   {
-      /* FIXME should work or really be removed */
-      SCIPerrorMessage("intvar currently not supported by pseudo boolean constraint handler\n");
-      return SCIP_INVALIDDATA;
-   }
 
    /* find the pseudoboolean constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -9378,7 +9299,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    /* create constraint data */
    /* checking for and-constraints will be FALSE, we check all information in this constraint handler */
    SCIP_CALL( consdataCreate(scip, conshdlr, &consdata, lincons, linconstype, andconss, andcoefs, NULL, nandconss,
-         indvar, weight, issoftcons, intvar, lhs, rhs, check, FALSE) );
+         indvar, weight, issoftcons, lhs, rhs, check, FALSE) );
    assert(consdata != NULL);
 
    /* create constraint */
@@ -9394,8 +9315,6 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
  *        respectively
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
- *
- *  @note intvar must currently be NULL
  */
 SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9411,9 +9330,6 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR*             intvar,             /**< an artificial variable which was added only for the objective function,
-                                              *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -9458,13 +9374,6 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    assert(nlinvars == 0 || (linvars != NULL && linvals != NULL));
    assert(nterms == 0 || (terms != NULL && termvals != NULL && ntermvars != NULL));
    assert(issoftcons == (indvar != NULL));
-
-   if( intvar != NULL )
-   {
-      /* FIXME should work or really be removed */
-      SCIPerrorMessage("intvar currently not supported by pseudo boolean constraint handler\n");
-      return SCIP_INVALIDDATA;
-   }
 
    /* find the pseudoboolean constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -9530,7 +9439,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    /* create constraint data */
    /* checking for and-constraints will be FALSE, we check all information in this constraint handler */
    SCIP_CALL( consdataCreate(scip, conshdlr, &consdata, lincons, linconstype, andconss, andcoefs, andnegs, nandconss,
-         indvar, weight, issoftcons, intvar, lhs, rhs, check, FALSE) );
+         indvar, weight, issoftcons, lhs, rhs, check, FALSE) );
    assert(consdata != NULL);
 
    /* free temporary memory */
@@ -9550,8 +9459,6 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
  *  in its most basic variant, i. e., with all constraint flags set to their default values
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
- *
- *  @note intvar must currently be NULL
  */
 SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9567,16 +9474,13 @@ SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
-                                              *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs                 /**< right hand side of constraint */
    )
 {
-   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, cons, name, linvars, nlinvars, linvals,
-         terms, nterms, ntermvars, termvals, indvar, weight, issoftcons, intvar, lhs, rhs,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, cons, name, linvars, nlinvars, linvals, terms, nterms, ntermvars,
+         termvals, indvar, weight, issoftcons, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE,
+         FALSE) );
 
    return SCIP_OKAY;
 }
