@@ -3629,7 +3629,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
 
    assert(var != NULL);
    assert(lperror != NULL);
-   assert(!SCIPtreeProbing(scip->tree)); /* we should not be in strong branching with propagation mode */
+   assert(!SCIPinProbing(scip)); /* we should not be in strong branching with propagation mode */
    assert(var->scip == scip);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetVarStrongbranchFrac", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
@@ -3727,15 +3727,13 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    {
       if( !idempotent ) /*lint !e774*/
       {
-         SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+         SCIP_CALL( analyzeStrongbranch(scip, var, NULL, NULL, downconflict, upconflict) );
       }
-      else
-      {
-         if( downinf != NULL )
-            *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
-         if( upinf != NULL )
-            *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
-      }
+
+      if( downinf != NULL )
+         *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
+      if( upinf != NULL )
+         *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
    }
 
    if( down != NULL )
@@ -4449,10 +4447,11 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    SCIP_Bool localdownvalid;
    SCIP_Bool localupvalid;
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetVarStrongbranchInt", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
+   assert(var != NULL);
    assert(lperror != NULL);
    assert(var->scip == scip);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetVarStrongbranchInt", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    lpobjval = SCIPgetLPObjval(scip);
    if( downvalid != NULL )
@@ -4547,15 +4546,13 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    {
       if( !idempotent ) /*lint !e774*/
       {
-         SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+         SCIP_CALL( analyzeStrongbranch(scip, var, NULL, NULL, downconflict, upconflict) );
       }
-      else
-      {
-         if( downinf != NULL )
-            *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
-         if( upinf != NULL )
-            *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
-      }
+
+      if( downinf != NULL )
+         *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
+      if( upinf != NULL )
+         *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
    }
 
    if( down != NULL )

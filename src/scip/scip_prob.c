@@ -3776,7 +3776,9 @@ SCIP_RETCODE SCIPupdateLocalLowerbound(
 }
 
 /** if given value is tighter (higher for minimization, lower for maximization) than the node's dual bound, sets the
- *  node's dual bound to the new value. Only applicable to non-leafs because the node priority queue remains untouched.
+ *  node's dual bound to the new value.
+ *
+ *  @note must not be used on a leaf because the node priority queue remains untouched
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -3798,7 +3800,9 @@ SCIP_RETCODE SCIPupdateNodeDualbound(
 }
 
 /** if given value is higher than the node's lower bound (in transformed problem), sets the node's lower bound to the
- *  new value. Only applicable to non-leafs because the node priority queue remains untouched.
+ *  new value.
+ *
+ *  @note must not be used on a leaf because the node priority queue remains untouched
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
