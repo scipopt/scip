@@ -2404,15 +2404,6 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSoc)
    return SCIP_OKAY;
 }
 
-
-/** callback to be called in initialization */
-#define nlhdlrInitSoc NULL
-
-
-/** callback to be called in deinitialization */
-#define nlhdlrExitSoc NULL
-
-
 /** callback to detect structure in expression tree */
 static
 SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
@@ -3142,7 +3133,6 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrSoc);
    SCIPnlhdlrSetFreeHdlrData(nlhdlr, nlhdlrFreehdlrdataSoc);
    SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataSoc);
-   SCIPnlhdlrSetInitExit(nlhdlr, nlhdlrInitSoc, nlhdlrExitSoc);
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, NULL, nlhdlrExitSepaSoc);
    SCIPnlhdlrSetSollinearize(nlhdlr, nlhdlrSollinearizeSoc);
 
