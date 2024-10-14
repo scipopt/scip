@@ -15,6 +15,7 @@ Performance improvements
 
 - reoptimization now also stores propagations from propagators if reoptimization/saveconsprop is enabled;
   the parameter will be renamed to reoptimization/saveprop in a next major release
+- when computing symmetries using Nauty, iteration limits are now available to terminate Nauty early
 
 Fixed bugs
 ----------
@@ -39,6 +40,8 @@ Interface changes
 - presolving/milp/abortfacexhaustive to control the abort threshold for exhaustive presolving in PAPILO
 - presolving/milp/abortfacmedium to control the abort threshold for medium presolving in PAPILO
 - presolving/milp/abortfacfast to control the abort threshold for fast presolving in PAPILO
+- when compiled using the SYM=nauty or SYM=snauty option, parameters propagating/symmetry/nautymaxncells
+  and propagating/symmetry/nautymaxnnodes can be used to set iteration limits in the external software Nauty
 
 ### Changed parameters
 
