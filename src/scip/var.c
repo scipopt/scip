@@ -9039,6 +9039,14 @@ SCIP_RETCODE varProcessAddHoleLocal(
    assert(SCIPsetIsEQ(set, newlb, var->locdom.lb));
    assert(SCIPsetIsEQ(set, newub, var->locdom.ub));
 
+#ifdef SCIP_DISABLED_CODE
+   /* issue LHOLEADDED event */
+   SCIP_EVENT event;
+   assert(var->eventfilter != NULL);
+   SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_LHOLEADDED) );
+   SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, var->eventfilter) );
+#endif
+
    /* process parent variables */
    for( i = 0; i < var->nparentvars; ++i )
    {
