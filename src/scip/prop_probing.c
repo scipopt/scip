@@ -1292,20 +1292,6 @@ SCIP_RETCODE SCIPapplyProbingVar(
       {
          proplbs[i] = SCIPvarGetLbLocal(vars[i]);
          propubs[i] = SCIPvarGetUbLocal(vars[i]);
-#if 0
-#ifdef SCIP_DEBUG
-         if( SCIPisGT(scip, proplbs[i], SCIPvarGetLbGlobal(vars[i])) )
-         {
-            SCIPdebugMsg(scip, " -> <%s>[%g,%g] >= %g\n", SCIPvarGetName(vars[i]),
-               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), proplbs[i]);
-         }
-         if( SCIPisLT(scip, propubs[i], SCIPvarGetUbGlobal(vars[i])) )
-         {
-            SCIPdebugMsg(scip, " -> <%s>[%g,%g] <= %g\n", SCIPvarGetName(vars[i]),
-               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), propubs[i]);
-         }
-#endif
-#endif
       }
    }
 

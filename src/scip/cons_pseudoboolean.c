@@ -5157,9 +5157,6 @@ SCIP_RETCODE correctConshdlrdata(
             if( !looseorcolumn )
             {
                SCIP_CALL( SCIPsetConsInitial(scip, consanddata->cons, FALSE) );
-#if 0
-               SCIP_CALL( SCIPsetConsSeparated(scip, consanddata->cons, FALSE) );
-#endif
             }
             SCIP_CALL( SCIPsetConsChecked(scip, consanddata->cons, TRUE) );
          }
@@ -5341,9 +5338,6 @@ SCIP_RETCODE updateConsanddataUses(
             if( !looseorcolumn )
             {
                SCIP_CALL( SCIPsetConsInitial(scip, consanddata->cons, FALSE) );
-#if 0
-               SCIP_CALL( SCIPsetConsSeparated(scip, consanddata->cons, FALSE) );
-#endif
             }
             SCIP_CALL( SCIPsetConsChecked(scip, consanddata->cons, TRUE) );
          }
@@ -7246,20 +7240,15 @@ SCIP_RETCODE findAggregation(
                (*ndelconss) += 2;
             }
          }
-#if 0
-         else
-         {
-            /* @todo */
-            /* delete allvars[samepos] from all and-constraints which appear in this pseudoboolean constraint, and delete
-             * all but one of the remaining and-constraint
-             *
-             * it is the same like aggregating linvar with the resultant of the product, which is the same in all and-
-             * constraints without allvars[samepos]
-             *
-             * e.g. x1 + x2*x_3*...x_n + ~x2*x_3*...x_n = 1 => x1 = 1 - x_3*...x_n
-             */
-         }
-#endif
+         /* @todo handle case nvars > 2:
+          * delete allvars[samepos] from all and-constraints which appear in this pseudoboolean constraint, and delete
+          * all but one of the remaining and-constraint
+          *
+          * it is the same as aggregating linvar with the resultant of the product, which is the same in all and-
+          * constraints without allvars[samepos]
+          *
+          * e.g. x1 + x2*x_3*...x_n + ~x2*x_3*...x_n = 1 => x1 = 1 - x_3*...x_n
+          */
       } /*lint !e438*/
       /* we have a constraint in the form of: x1 + x2 * x3 + ~x2 * x3 + ~x2 * ~x3 == 1
        * this leads to the aggregation x1 = x2 * ~x3

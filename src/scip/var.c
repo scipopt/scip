@@ -9047,13 +9047,12 @@ SCIP_RETCODE varProcessAddHoleLocal(
    assert(SCIPsetIsEQ(set, newlb, var->locdom.lb));
    assert(SCIPsetIsEQ(set, newub, var->locdom.ub));
 
-#if 0
-   /* issue bound change event */
-   assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
-   {
-      SCIP_CALL( varEventLholeAdded(var, blkmem, set, lp, branchcand, eventqueue, left, right) );
-   }
+#ifdef SCIP_DISABLED_CODE
+   /* issue LHOLEADDED event */
+   SCIP_EVENT event;
+   assert(var->eventfilter != NULL);
+   SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_LHOLEADDED) );
+   SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, var->eventfilter) );
 #endif
 
    /* process parent variables */
