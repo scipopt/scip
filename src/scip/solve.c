@@ -1313,8 +1313,6 @@ SCIP_RETCODE initLP(
    {
       assert(SCIPlpGetNCols(lp) == 0);
       assert(SCIPlpGetNRows(lp) == 0);
-      assert(lp->nremovablecols == 0);
-      assert(lp->nremovablerows == 0);
 
       /* store number of variables for later */
       oldnvars = transprob->nvars;
@@ -1324,7 +1322,7 @@ SCIP_RETCODE initLP(
 
       /* add all initial variables to LP */
       SCIPsetDebugMsg(set, "init LP: initial columns\n");
-      for( v = 0; v < transprob->nvars && !(*cutoff); ++v )
+      for( v = 0; v < transprob->nvars; ++v )
       {
          var = transprob->vars[v];
          assert(SCIPvarGetProbindex(var) >= 0);
@@ -1332,35 +1330,43 @@ SCIP_RETCODE initLP(
          if( SCIPvarIsInitial(var) )
          {
             SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
-         }
 
-         /* check for empty domains (necessary if no presolving was performed) */
-         if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
-            *cutoff = TRUE;
+            /* check for empty domains (necessary if no presolving was performed) */
+            if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            {
+               *cutoff = TRUE;
+               break;
+            }
+         }
       }
+
       assert(lp->nremovablecols == 0);
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, eventqueue, transprob, tree, lp) );
+      assert(lp->nremovablerows == 0);
 
       /* inform pricing storage, that initial LP setup is now finished */
       SCIPpricestoreEndInitialLP(pricestore);
-   }
 
-   if( *cutoff )
-      return SCIP_OKAY;
+      if( *cutoff )
+         return SCIP_OKAY;
+   }
 
    /* put all initial constraints into the LP */
    /* @todo check whether we jumped through the tree */
    SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
          eventfilter, cliquetable, root, TRUE, cutoff) );
 
+   if( *cutoff )
+      return SCIP_OKAY;
+
    /* putting all initial constraints into the LP might have added new variables */
-   if( root && !(*cutoff) && transprob->nvars > oldnvars )
+   if( root && transprob->nvars > oldnvars )
    {
       /* inform pricing storage, that LP is now filled with initial data */
       SCIPpricestoreStartInitialLP(pricestore);
 
       /* check all initial variables */
-      for( v = 0; v < transprob->nvars && !(*cutoff); ++v )
+      for( v = 0; v < transprob->nvars; ++v )
       {
          var = transprob->vars[v];
          assert(SCIPvarGetProbindex(var) >= 0);
@@ -1368,13 +1374,16 @@ SCIP_RETCODE initLP(
          if( SCIPvarIsInitial(var) && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN || !SCIPcolIsInLP(SCIPvarGetCol(var))) )
          {
             SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
-         }
 
-         /* check for empty domains (necessary if no presolving was performed) */
-         if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
-            *cutoff = TRUE;
+            /* check for empty domains (necessary if no presolving was performed) */
+            if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            {
+               *cutoff = TRUE;
+               break;
+            }
+         }
       }
-      assert(lp->nremovablecols == 0);
+
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, eventqueue, transprob, tree, lp) );
 
       /* inform pricing storage, that initial LP setup is now finished */
