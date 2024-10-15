@@ -40,15 +40,10 @@ extern "C" {
 
 /** deletion filter to greedily remove constraints to obtain an (I)IS -- detailed function call */
 SCIP_EXPORT
-SCIP_RETCODE deletionFilterCons(
+SCIP_RETCODE deletionFilterBatchCons(
    SCIP*                 scip,               /**< SCIP instance to analyze */
    SCIP_Bool             conservative,       /**< whether we treat a subproblem to be feasible, if it reached its node limt */
-   SCIP_Real             timelimit,          /**< total time limit */
-   SCIP_Longint          nodelimit,          /**< maximal node limit for each run */
    SCIP_Bool             silent,             /**< run silently? */
-   SCIP_Bool*            IS,                 /**< output: array indicating which constraints take part in (I)IS */
-   int*                  sizeIS,             /**< pointer to store the size of the (I)IS */
-   SCIP_Bool*            isIIS,              /**< pointer to store whether we found an IIS */
    SCIP_Longint*         nnodes,             /**< pointer to store the total number of nodes needed (or NULL) */
    SCIP_Bool*            success             /**< pointer to store whether we have obtained an (I)IS */
    );
