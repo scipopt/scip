@@ -76,6 +76,8 @@ Build system
 
 ### Cmake
 
+- attempted to fix detection of CPLEX library on macOS and Windows systems
+
 ### Makefile
 
 Miscellaneous
