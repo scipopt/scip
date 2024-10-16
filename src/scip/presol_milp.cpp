@@ -361,7 +361,7 @@ Presolve<SCIP_Real> setupPresolve(
 #endif
 
 #if PAPILO_APIVERSION >= 2
-   presolve.getPresolveOptions().abortfacexhaustive = data->abortfacexhaustive;
+   presolve.getPresolveOptions().abortfac = data->abortfacexhaustive;
    presolve.getPresolveOptions().abortfacmedium = data->abortfacmedium;
    presolve.getPresolveOptions().abortfacfast = data->abortfacfast;
 #endif
