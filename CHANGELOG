@@ -34,6 +34,15 @@ Interface changes
 ### Command line interface
 ### Interfaces to external software
 ### New parameters
+
+- presolving/milp/abortfacexhaustive to control the abort threshold for exhaustive presolving in PAPILO
+- presolving/milp/abortfacmedium to control the abort threshold for medium presolving in PAPILO
+- presolving/milp/abortfacfast to control the abort threshold for fast presolving in PAPILO
+
+### Changed parameters
+
+- presolving/milp/threads only configurable if PaPILO is built with TBB
+
 ### Data structures
 
 Deleted files
