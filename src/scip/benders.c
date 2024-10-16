@@ -1927,7 +1927,7 @@ SCIP_RETCODE createSubproblems(
                 * during the solving process.
                 */
                if( infeasible )
-                  benders->subprobsinfeasible = TRUE;
+                  SCIPbendersSetSubproblemsAreInfeasible(benders, set);
             }
          }
          else
@@ -4422,10 +4422,11 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
       assert(success == !infeasible);
 
       /* if the problem is identified as infeasible, this means that the underlying LP is infeasible. Since no variable
-       * fixings have been applied at this stage, this means that the complete problem is infeasible
+       * fixings have been applied at this stage, this means that the complete problem is infeasible. It is only
+       * possible to set this parameter if we are at the root node or in an initialisation stage.
        */
       if( infeasible )
-         benders->subprobsinfeasible = TRUE;
+         SCIPbendersSetSubproblemsAreInfeasible(benders, set);
 
       if( !success )
       {
@@ -6476,6 +6477,21 @@ SCIP_Bool SCIPbendersInStrengthenRound(
    return benders->strengthenround;
 }
 
+/** sets the flag to indicate that at least one subproblem is always infeasible
+ *  NOTE: this is without any variable fixing being performed
+ */
+void SCIPbendersSetSubproblemsAreInfeasible(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(benders != NULL);
+   assert(set != NULL);
+
+   if( SCIPgetDepth(set->scip) <= 0 )
+      benders->subprobsinfeasible = TRUE;
+}
+
 /** returns whether at least one of the subproblems has been identified as infeasible.
  *  NOTE: this is without any variable fixing being performed
  */
@@ -6565,7 +6581,7 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
              * during the solving process.
              */
             if( infeasible )
-               benders->subprobsinfeasible = TRUE;
+               SCIPbendersSetSubproblemsAreInfeasible(benders, set);
          }
       }
 
