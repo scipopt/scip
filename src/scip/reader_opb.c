@@ -119,10 +119,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
-
 #define READER_NAME             "opbreader"
 #define READER_DESC             "file reader for pseudo-Boolean problem in opb format"
 #define READER_EXTENSION        "opb"
@@ -575,7 +571,7 @@ SCIP_Bool isValue(
    assert(opbinput != NULL);
    assert(value != NULL);
 
-   if( strcasecmp(opbinput->token, "INFINITY") == 0 || strcasecmp(opbinput->token, "INF") == 0 )
+   if( SCIPstrcasecmp(opbinput->token, "INFINITY") == 0 || SCIPstrcasecmp(opbinput->token, "INF") == 0 )
    {
       *value = SCIPinfinity(scip);
       return TRUE;

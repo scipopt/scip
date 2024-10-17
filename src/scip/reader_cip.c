@@ -49,9 +49,6 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
 
 
 #define READER_NAME             "cipreader"
@@ -303,7 +300,7 @@ SCIP_RETCODE getObjective(
    /* remove white space */
    SCIP_CALL( SCIPskipSpace(&buf) );
 
-   if( strncasecmp(buf, "Sense", 5) == 0 )
+   if( SCIPstrncasecmp(buf, "Sense", 5) == 0 )
    {
       SCIP_OBJSENSE objsense;
 
@@ -321,9 +318,9 @@ SCIP_RETCODE getObjective(
       /* remove white space in front of the name */
       SCIP_CALL( SCIPskipSpace(&name) );
 
-      if( strncasecmp(name, "minimize", 3) == 0 )
+      if( SCIPstrncasecmp(name, "min", 3) == 0 )
          objsense = SCIP_OBJSENSE_MINIMIZE;
-      else if( strncasecmp(name, "maximize", 3) == 0 )
+      else if( SCIPstrncasecmp(name, "max", 3) == 0 )
          objsense = SCIP_OBJSENSE_MAXIMIZE;
       else
       {
@@ -335,7 +332,7 @@ SCIP_RETCODE getObjective(
       SCIP_CALL( SCIPsetObjsense(scip, objsense) );
       SCIPdebugMsg(scip, "objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
    }
-   else if( strncasecmp(buf, "Offset", 6) == 0 )
+   else if( SCIPstrncasecmp(buf, "Offset", 6) == 0 )
    {
       SCIP_Real off = 0;
       char* endptr;
@@ -365,7 +362,7 @@ SCIP_RETCODE getObjective(
          return SCIP_OKAY;
       }
    }
-   else if( strncasecmp(buf, "Scale", 5) == 0 )
+   else if( SCIPstrncasecmp(buf, "Scale", 5) == 0 )
    {
       SCIP_Real scale = 1.0;
       char* endptr;
