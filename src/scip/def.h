@@ -105,7 +105,6 @@
 #ifdef _WIN32
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
-#define getcwd _getcwd
 #endif
 
 /*

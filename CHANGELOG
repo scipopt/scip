@@ -30,6 +30,7 @@ Interface changes
 - added SCIPtpiIsAvailable() to check whether a working task processing interface is available (TPI != none)
 - added SCIPtpiGetLibraryName() and SCIPtpiGetLibraryDesc()
 - SCIPdelCons() can now also be called in SCIP_STAGE_TRANSFORMED
+- added SCIPstrcasecmp() and SCIPstrncasecmp() for case-insensitive string comparison
 
 ### Command line interface
 ### Interfaces to external software
@@ -63,6 +64,9 @@ Miscellaneous
 -------------
 
 - reorder events: BESTSOLFOUND/NODE_FEASIBLE is now processed before the nodes are cut off and before NODE_DELETE events are processed
+- removed `#define` of `getcwd` (in case of Windows builds) in scip/def.h
+- the `#define` of `strcasecmp` and `strncasecmp` (in case of Windows builds) in scip/def.h will be removed with SCIP 10;
+  use `SCIPstr(n)casecmp()` (scip/pub_misc.h) instead
 
 @section RN912 SCIP 9.1.2
 *************************

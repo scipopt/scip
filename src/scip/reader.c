@@ -175,7 +175,7 @@ SCIP_Bool readerIsApplicable(
    assert(reader != NULL);
    assert(reader->extension != NULL);
 
-   return (extension != NULL && strcasecmp(reader->extension, extension) == 0)
+   return (extension != NULL && SCIPstrcasecmp(reader->extension, extension) == 0)
       || (extension == NULL && *(reader->extension) == '\0');
 }
 
