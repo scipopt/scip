@@ -45,6 +45,9 @@
 #include <errno.h>
 #include <ctype.h>
 #include <math.h>
+#ifndef _MSC_VER
+#include <strings.h>
+#endif
 
 #include "scip/def.h"
 #include "scip/pub_message.h"
@@ -10907,6 +10910,33 @@ int SCIPsnprintf(
       t[len-1] = '\0';
    }
    return n;
+}
+
+/** portable version of strcasecmp for case-insensitive comparison of two strings  */
+int SCIPstrcasecmp(
+   const char*           s1,                 /**< first string */
+   const char*           s2                  /**< second string */
+   )
+{
+#ifdef _MSC_VER
+   return _stricmp(s1, s2);
+#else
+   return strcasecmp(s1, s2);
+#endif
+}
+
+/** portable version of strncasecmp for case-insensitive comparison of two strings up to a given number of characters */
+int SCIPstrncasecmp(
+   const char*           s1,                 /**< first string */
+   const char*           s2,                 /**< second string */
+   size_t                length              /**< maximal length to compare */
+   )
+{
+#ifdef _MSC_VER
+   return _strnicmp(s1, s2, length);
+#else
+   return strncasecmp(s1, s2, length);
+#endif
 }
 
 /** safe version of strncpy
