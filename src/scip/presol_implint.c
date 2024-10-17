@@ -60,14 +60,12 @@
 #define PRESOL_MAXROUNDS        0 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
-#define DEFAULT_CONVERTINTEGERS FALSE
 #define DEFAULT_COLUMNROWRATIO  50.0
 #define DEFAULT_NUMERICSLIMIT   1e7
 
 /** presolver data */
 struct SCIP_PresolData
 {
-   SCIP_Bool             convertintegers;    /**< Should we detect implied integrality of columns that are integer? */
    SCIP_Real             columnrowratio;     /**< Use the network row addition algorithm when the column to row ratio
                                                * becomes larger than this threshold. Otherwise, use column addition. */
    SCIP_Real             numericslimit;      /**< A row that contains variables with coefficients that are greater in
@@ -764,7 +762,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
 
    /* Exit early if there are no candidates variables to upgrade */
    SCIP_PRESOLDATA* presoldata = SCIPpresolGetData(presol);
-   if( !presoldata->convertintegers && SCIPgetNContVars(scip) == 0 )
+   if( SCIPgetNContVars(scip) == 0 )
    {
       return SCIP_OKAY;
    }
@@ -858,12 +856,6 @@ SCIP_RETCODE SCIPincludePresolImplint(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeImplint) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-                               "presolving/implint/convertintegers",
-                               "should we detect implied integrality for integer variables in the problem?",
-                               &presoldata->convertintegers, TRUE, DEFAULT_CONVERTINTEGERS, NULL, NULL) );
-
 
    SCIP_CALL( SCIPaddRealParam(scip,
                                "presolving/implint/columnrowratio",
