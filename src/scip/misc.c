@@ -10929,13 +10929,14 @@ int SCIPstrcasecmp(
 int SCIPstrncasecmp(
    const char*           s1,                 /**< first string */
    const char*           s2,                 /**< second string */
-   size_t                length              /**< maximal length to compare */
+   int                   length              /**< maximal length to compare */
    )
 {
+   assert(length >= 0);
 #ifdef _MSC_VER
-   return _strnicmp(s1, s2, length);
+   return _strnicmp(s1, s2, (size_t)length);
 #else
-   return strncasecmp(s1, s2, length);
+   return strncasecmp(s1, s2, (size_t)length);  /*lint !e571*/
 #endif
 }
 

@@ -2323,7 +2323,7 @@ SCIP_EXPORT
 int SCIPstrncasecmp(
    const char*           s1,                 /**< first string */
    const char*           s2,                 /**< second string */
-   size_t                length              /**< maximal length to compare */
+   int                   length              /**< maximal length to compare */
    );
 
 /** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str
