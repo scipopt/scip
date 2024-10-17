@@ -100,14 +100,6 @@
 #endif
 
 /*
- * Add some macros for differing functions on Windows
- */
-#ifdef _WIN32
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
-#endif
-
-/*
  * Define the macro SCIP_EXPORT if it is not included from the generated header
  */
 #ifndef SCIP_EXPORT
