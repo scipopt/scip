@@ -61,7 +61,7 @@
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_COLUMNROWRATIO  50.0
-#define DEFAULT_NUMERICSLIMIT   1e7
+#define DEFAULT_NUMERICSLIMIT   1e6
 
 /** presolver data */
 struct SCIP_PresolData
