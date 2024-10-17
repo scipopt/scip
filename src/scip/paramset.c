@@ -1247,11 +1247,11 @@ SCIP_RETCODE paramParseBool(
    assert(set != NULL);
    assert(valuestr != NULL);
 
-   if( strcasecmp(valuestr, "TRUE") == 0 )
+   if( SCIPstrcasecmp(valuestr, "TRUE") == 0 )
    {
       SCIP_CALL( SCIPparamSetBool(param, set, messagehdlr, TRUE, FALSE, TRUE) );
    }
-   else if( strcasecmp(valuestr, "FALSE") == 0 )
+   else if( SCIPstrcasecmp(valuestr, "FALSE") == 0 )
    {
       SCIP_CALL( SCIPparamSetBool(param, set, messagehdlr, FALSE, FALSE, TRUE) );
    }
