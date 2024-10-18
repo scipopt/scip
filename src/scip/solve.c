@@ -1210,8 +1210,6 @@ SCIP_RETCODE initLP(
    {
       assert(SCIPlpGetNCols(lp) == 0);
       assert(SCIPlpGetNRows(lp) == 0);
-      assert(lp->nremovablecols == 0);
-      assert(lp->nremovablerows == 0);
 
       /* store number of variables for later */
       oldnvars = transprob->nvars;
@@ -1221,7 +1219,7 @@ SCIP_RETCODE initLP(
 
       /* add all initial variables to LP */
       SCIPsetDebugMsg(set, "init LP: initial columns\n");
-      for( v = 0; v < transprob->nvars && !(*cutoff); ++v )
+      for( v = 0; v < transprob->nvars; ++v )
       {
          var = transprob->vars[v];
          assert(SCIPvarGetProbindex(var) >= 0);
@@ -1229,35 +1227,43 @@ SCIP_RETCODE initLP(
          if( SCIPvarIsInitial(var) )
          {
             SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
-         }
 
-         /* check for empty domains (necessary if no presolving was performed) */
-         if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
-            *cutoff = TRUE;
+            /* check for empty domains (necessary if no presolving was performed) */
+            if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            {
+               *cutoff = TRUE;
+               break;
+            }
+         }
       }
+
       assert(lp->nremovablecols == 0);
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, eventqueue, transprob, tree, lp) );
+      assert(lp->nremovablerows == 0);
 
       /* inform pricing storage, that initial LP setup is now finished */
       SCIPpricestoreEndInitialLP(pricestore);
-   }
 
-   if( *cutoff )
-      return SCIP_OKAY;
+      if( *cutoff )
+         return SCIP_OKAY;
+   }
 
    /* put all initial constraints into the LP */
    /* @todo check whether we jumped through the tree */
    SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
          eventfilter, cliquetable, root, TRUE, cutoff) );
 
+   if( *cutoff )
+      return SCIP_OKAY;
+
    /* putting all initial constraints into the LP might have added new variables */
-   if( root && !(*cutoff) && transprob->nvars > oldnvars )
+   if( root && transprob->nvars > oldnvars )
    {
       /* inform pricing storage, that LP is now filled with initial data */
       SCIPpricestoreStartInitialLP(pricestore);
 
       /* check all initial variables */
-      for( v = 0; v < transprob->nvars && !(*cutoff); ++v )
+      for( v = 0; v < transprob->nvars; ++v )
       {
          var = transprob->vars[v];
          assert(SCIPvarGetProbindex(var) >= 0);
@@ -1265,13 +1271,16 @@ SCIP_RETCODE initLP(
          if( SCIPvarIsInitial(var) && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN || !SCIPcolIsInLP(SCIPvarGetCol(var))) )
          {
             SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
-         }
 
-         /* check for empty domains (necessary if no presolving was performed) */
-         if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
-            *cutoff = TRUE;
+            /* check for empty domains (necessary if no presolving was performed) */
+            if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            {
+               *cutoff = TRUE;
+               break;
+            }
+         }
       }
-      assert(lp->nremovablecols == 0);
+
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, eventqueue, transprob, tree, lp) );
 
       /* inform pricing storage, that initial LP setup is now finished */
@@ -2903,11 +2912,7 @@ SCIP_RETCODE priceAndCutLoop(
    }
 
    /* update lower bound w.r.t. the LP solution */
-   if( *cutoff )
-   {
-      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
-   }
-   else if( !(*lperror) )
+   if( !(*cutoff) && !(*lperror) )
    {
       assert(lp->flushed);
       assert(lp->solved);
@@ -2939,14 +2944,18 @@ SCIP_RETCODE priceAndCutLoop(
          *cutoff = TRUE;
       }
    }
+
    /* check for unboundedness */
    if( !(*lperror) )
-   {
       *unbounded = (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-      /* assert(!(*unbounded) || root); */ /* unboundedness can only happen in the root node; no, of course it can also happens in the tree if a branching did not help to resolve unboundedness */
-   }
 
    lp->installing = FALSE;
+
+   /* check for cutoff */
+   if( *cutoff )
+   {
+      SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
+   }
 
    SCIPsetDebugMsg(set, " -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
       SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp),
@@ -3001,16 +3010,13 @@ SCIP_RETCODE applyBounding(
       if( (set->misc_exactsolve && SCIPnodeGetLowerbound(focusnode) >= primal->cutoffbound)
          || (!set->misc_exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)) )
       {
-         SCIPsetDebugMsg(set, "node is cut off by bounding (lower=%g, upper=%g)\n",
-            SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
-         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
-         *cutoff = TRUE;
-
          /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
          if( pseudoobjval >= primal->cutoffbound && !SCIPsetIsInfinity(set, primal->cutoffbound) && !SCIPsetIsInfinity(set, -pseudoobjval) )
          {
             SCIP_CALL( SCIPconflictAnalyzePseudo(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, NULL) );
          }
+
+         *cutoff = TRUE;
       }
    }
 
@@ -4770,14 +4776,11 @@ SCIP_RETCODE solveNode(
    /* check for cutoff */
    if( *cutoff )
    {
-      SCIPsetDebugMsg(set, "node is cut off\n");
-
-      SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
-      *infeasible = TRUE;
-      SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
+      SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
       /* the LP might have been unbounded but not enforced, because the node is cut off anyway */
       *unbounded = FALSE;
+      *infeasible = TRUE;
    }
    else if( !(*unbounded) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && lp->looseobjvalinf == 0 )
    {
