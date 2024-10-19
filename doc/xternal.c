@@ -9054,6 +9054,11 @@
  * @brief methods for creating and accessing user decompositions
  */
 
+/**@defgroup NetworkMatrix Network Matrix
+ * @ingroup DataStructures
+ * @brief methods for detecting network matrices and converting them to the underlying graphs
+ */
+
 /**@defgroup SymGraph Symmetry Detection Graph
  * @ingroup DataStructures
  * @brief methods for creating and manipulating symmetry detection graphs
