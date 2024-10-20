@@ -8716,7 +8716,6 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
    int nmonomials;
    int nterms;
    int nlinvars;
-   int nvars;
    int i;
    int j;
 
@@ -8916,6 +8915,7 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
    /* initialize buffers for storing the terms and coefficients */
    SCIP_CALL( SCIPallocBufferArray(scip, &terms, nmonomials) );
    SCIP_CALL( SCIPallocBufferArray(scip, &termvals, nmonomials) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ntermvars, nmonomials) );
    SCIP_CALL( SCIPallocBufferArray(scip, &linvars, nmonomials) );
    SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nmonomials) );
 
@@ -8928,7 +8928,7 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
       if( SCIPisZero(scip, monomialcoefs[i]) )
          continue;
 
-      nvars = 0;
+      ntermvars[nterms] = 0;
 
       /* collect relevant variables */
       for( j = 0; j < monomialnvars[i]; ++j )
@@ -8942,17 +8942,16 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
          if( monomialexps[i][j] == 0.0 )
             continue;
 
-         monomialvars[i][nvars++] = monomialvars[i][j];
+         monomialvars[i][ntermvars[nterms]++] = monomialvars[i][j];
       }
 
-      if( nvars > 1 )
+      if( ntermvars[nterms] > 1 )
       {
          terms[nterms] = monomialvars[i];
          termvals[nterms] = monomialcoefs[i];
-         ntermvars[nterms] = nvars;
          ++nterms;
       }
-      else if( nvars == 1 )
+      else if( ntermvars[nterms] == 1 )
       {
          linvars[nlinvars] = monomialvars[i][0];
          linvals[nlinvars] = monomialcoefs[i];
@@ -8960,7 +8959,7 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
       }
       else
       {
-         assert(nvars == 0);
+         assert(ntermvars[nterms] == 0);
 
          if( !SCIPisInfinity(scip, -lhs) )
             lhs -= monomialcoefs[i];
@@ -8977,6 +8976,7 @@ TERMINATE:
    /* free buffers for storing the terms and coefficients */
    SCIPfreeBufferArray(scip, &linvals);
    SCIPfreeBufferArray(scip, &linvars);
+   SCIPfreeBufferArray(scip, &ntermvars);
    SCIPfreeBufferArray(scip, &termvals);
    SCIPfreeBufferArray(scip, &terms);
 
