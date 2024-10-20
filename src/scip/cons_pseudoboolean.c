@@ -1804,11 +1804,6 @@ SCIP_RETCODE consdataPrint(
    assert(scip != NULL);
    assert(cons != NULL);
 
-#ifdef WITHEQKNAPSACK
-   if( SCIPconsIsDeleted(cons) )
-      return SCIP_OKAY;
-#endif
-
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->intvar == NULL);
