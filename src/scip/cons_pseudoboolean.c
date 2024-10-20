@@ -1912,6 +1912,7 @@ SCIP_RETCODE consdataPrint(
       /* print non-linear term */
       else
       {
+         /* @todo: write as polynomial */
          SCIPinfoMessage(scip, file, "%s(", var == vars[v] ? "" : "~");
 
          /* @todo: better write new method SCIPwriteProduct */
@@ -1941,6 +1942,13 @@ SCIP_RETCODE consdataPrint(
       SCIPinfoMessage(scip, file, " >= %.15g", lhs);
    else
       SCIPinfoMessage(scip, file, " [free]");
+
+   /* @todo: print indicator variable */
+   assert(!consdata->issoftcons);
+   assert(consdata->indvar == NULL);
+
+   /* @todo: print penalty weight */
+   assert(consdata->weight == 0.0);
 
    return SCIP_OKAY;
 }
@@ -6854,7 +6862,7 @@ SCIP_RETCODE tryUpgrading(
       SCIPconsAddUpgradeLocks(consdata->lincons, -1);
       assert(SCIPconsGetNUpgradeLocks(consdata->lincons) == 0);
 
-      /* @TODO: maybe it is better to create everytime a standard linear constraint instead of letting the special
+      /* @todo: maybe it is better to create everytime a standard linear constraint instead of letting the special
        *        linear constraint stay
        */
       SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -8647,7 +8655,7 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintPseudoboolean)
-{  /*lint --e{715}*/
+{
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -8677,6 +8685,302 @@ SCIP_DECL_CONSCOPY(consCopyPseudoboolean)
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global,
          valid) );
    assert(cons != NULL || *valid == FALSE);
+
+   return SCIP_OKAY;
+}
+
+/** constraint parsing method of constraint handler */
+static
+SCIP_DECL_CONSPARSE(consParsePseudoboolean)
+{
+   SCIP_VAR*** monomialvars;
+   SCIP_VAR*** terms;
+   SCIP_VAR** linvars;
+   SCIP_VAR* indvar;
+   SCIP_Real** monomialexps;
+   SCIP_Real* monomialcoefs;
+   SCIP_Real* termvals;
+   SCIP_Real* linvals;
+   SCIP_Real weight;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   SCIP_Bool issoftcons;
+   const char* endptr;
+   const char* firstcomp;
+   const char* secondcomp;
+   const char* lhsstrptr;
+   const char* rhsstrptr;
+   const char* varstrptr;
+   int* monomialnvars;
+   int* ntermvars;
+   int nmonomials;
+   int nterms;
+   int nlinvars;
+   int nvars;
+   int i;
+   int j;
+
+   assert(scip != NULL);
+   assert(success != NULL);
+   assert(str != NULL);
+   assert(name != NULL);
+   assert(cons != NULL);
+
+   *success = FALSE;
+
+   /* ignore whitespace */
+   SCIP_CALL( SCIPskipSpace((char**)&str) );
+
+   /* return of string empty */
+   if( !(*str) )
+      return SCIP_OKAY;
+
+   /* find comparators in the line first, all other remaining parsing depends on occurence of
+    * the comparators '<=', '>=', '==', and the special word [free]
+    */
+   firstcomp = NULL;
+   secondcomp = NULL;
+   endptr = str;
+
+   /* loop over the input string to find all comparators */
+   while( *endptr )
+   {
+      SCIP_Bool found = FALSE;
+      int increment = 1;
+
+      /* try if we found a possible comparator */
+      switch( endptr[0] )
+      {
+      case '<':
+      case '=':
+      case '>':
+         /* check if the two characters endptr[0,1] form a comparator together */
+         if( endptr[1] == '=' )
+         {
+            found = TRUE;
+
+            /* update increment to continue after this comparator */
+            increment = 2;
+         }
+         break;
+      case '[':
+         if( strncmp(endptr, "[free]", 6) == 0 )
+         {
+            found = TRUE;
+
+            /* update increment to continue after this comparator */
+            increment = 6;
+         }
+         break;
+      default:
+         break;
+      }
+
+      /* assign the found comparator to the first or second pointer and check for syntactical violations */
+      if( found )
+      {
+         if( firstcomp == NULL )
+         {
+            firstcomp = endptr;
+         }
+         else
+         {
+            if( secondcomp != NULL )
+            {
+               SCIPerrorMessage("Found more than two comparators in line %s\n", str);
+               return SCIP_OKAY;
+            }
+            else if( strncmp(firstcomp, "<=", 2) != 0 )
+            {
+               SCIPerrorMessage("Two comparators in line that do not range: %s", str);
+               return SCIP_OKAY;
+            }
+            else if( strncmp(endptr, "<=", 2) != 0 )
+            {
+               SCIPerrorMessage("Bad second comparator, expected ranged specification: %s", str);
+               return SCIP_OKAY;
+            }
+
+            secondcomp = endptr;
+         }
+      }
+
+      endptr += increment;
+   }
+
+   /* check if we did find at least one comparator */
+   if( firstcomp == NULL )
+   {
+      SCIPerrorMessage("Could not find any comparator in line %s\n", str);
+      return SCIP_OKAY;
+   }
+
+   /* initialize side pointers to the free state */
+   lhsstrptr = NULL;
+   rhsstrptr = NULL;
+   varstrptr = str;
+
+   /* assign the strings for parsing the left hand side, right hand side, and pseudoboolean polynomial */
+   switch( *firstcomp )
+   {
+      case '<':
+         assert(firstcomp[1] == '=');
+         /* we have ranged row lhs <= ... <= rhs */
+         if( secondcomp != NULL )
+         {
+            assert(secondcomp[0] == '<' && secondcomp[1] == '=');
+            lhsstrptr = str;
+            rhsstrptr = secondcomp + 2;
+            varstrptr = firstcomp + 2;
+         }
+         /* we have an inequality with infinite left hand side ... <= rhs */
+         else
+            rhsstrptr = firstcomp + 2;
+         break;
+      case '>':
+         assert(firstcomp[1] == '=');
+         assert(secondcomp == NULL);
+         /* we have ... >= lhs */
+         lhsstrptr = firstcomp + 2;
+         break;
+      case '=':
+         assert(firstcomp[1] == '=');
+         assert(secondcomp == NULL);
+         /* we have ... == lhs (rhs) */
+         rhsstrptr = firstcomp + 2;
+         lhsstrptr = firstcomp + 2;
+         break;
+      case '[':
+         assert(strncmp(firstcomp, "[free]", 6) == 0);
+         assert(secondcomp == NULL);
+         /* nothing to assign in case of a free ... [free] */
+         break;
+      default:
+         /* it should not be possible that a different character appears in that position */
+         SCIPerrorMessage("Parsing has wrong comparator character '%c', should be one of <=>[", *firstcomp);
+         return SCIP_READERROR;
+   }
+
+   /* initialize sides to the free state */
+   lhs = -SCIPinfinity(scip);
+   rhs =  SCIPinfinity(scip);
+
+   /* parse left hand side, if necessary */
+   if( lhsstrptr != NULL )
+   {
+      if( !SCIPparseReal(scip, lhsstrptr, &lhs, (char**)&endptr) )
+      {
+         SCIPerrorMessage("error parsing left hand side number from <%s>\n", lhsstrptr);
+         return SCIP_OKAY;
+      }
+
+      /* in case of an equation, assign the left also to the right hand side */
+      if( rhsstrptr == lhsstrptr )
+         rhs = lhs;
+   }
+
+   /* parse right hand side, if different from left hand side */
+   if( rhsstrptr != NULL && rhsstrptr != lhsstrptr )
+   {
+      if( !SCIPparseReal(scip, rhsstrptr, &rhs, (char**)&endptr) )
+      {
+         SCIPerrorMessage("error parsing right hand side number from <%s>\n", lhsstrptr);
+         return SCIP_OKAY;
+      }
+   }
+
+   /* @todo: parse indicator variable */
+   issoftcons = FALSE;
+   indvar = NULL;
+
+   /* @todo: parse penalty weight */
+   weight = 0.0;
+
+   /* parse pseudoboolean polynomial */
+   SCIP_CALL( SCIPparseVarsPolynomial(scip, varstrptr, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, (char**)&endptr, success) );
+
+   /* check polynomial syntax */
+   if( !(*success) )
+   {
+      SCIPerrorMessage("no luck in parsing pseudoboolean polynomial '%s'\n", varstrptr);
+      return SCIP_OKAY;
+   }
+   else if( endptr != MAX(firstcomp, secondcomp) )
+   {
+      SCIPerrorMessage("no completion of parsing pseudoboolean polynomial '%s'\n", varstrptr);
+      SCIPfreeParseVarsPolynomialData(scip, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, nmonomials);
+      return SCIP_OKAY;
+   }
+
+   /* initialize buffers for storing the terms and coefficients */
+   SCIP_CALL( SCIPallocBufferArray(scip, &terms, nmonomials) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termvals, nmonomials) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvars, nmonomials) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals, nmonomials) );
+
+   nterms = 0;
+   nlinvars = 0;
+
+   /* separate linear terms */
+   for( i = 0; i < nmonomials; ++i )
+   {
+      if( SCIPisZero(scip, monomialcoefs[i]) )
+         continue;
+
+      nvars = 0;
+
+      /* collect relevant variables */
+      for( j = 0; j < monomialnvars[i]; ++j )
+      {
+         if( monomialexps[i][j] < 0.0 )
+         {
+            SCIPerrorMessage("invalid exponent '%f' on variable <%s> in pseudoboolean polynomial '%s'\n", monomialexps[i][j], SCIPvarGetName(monomialvars[i][j]), varstrptr);
+            goto TERMINATE;
+         }
+
+         if( monomialexps[i][j] == 0.0 )
+            continue;
+
+         monomialvars[i][nvars++] = monomialvars[i][j];
+      }
+
+      if( nvars > 1 )
+      {
+         terms[nterms] = monomialvars[i];
+         termvals[nterms] = monomialcoefs[i];
+         ntermvars[nterms] = nvars;
+         ++nterms;
+      }
+      else if( nvars == 1 )
+      {
+         linvars[nlinvars] = monomialvars[i][0];
+         linvals[nlinvars] = monomialcoefs[i];
+         ++nlinvars;
+      }
+      else
+      {
+         assert(nvars == 0);
+
+         if( !SCIPisInfinity(scip, -lhs) )
+            lhs -= monomialcoefs[i];
+
+         if( !SCIPisInfinity(scip, rhs) )
+            rhs -= monomialcoefs[i];
+      }
+   }
+
+   /* create pseudoboolean constraint */
+   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, cons, name, linvars, nlinvars, linvals, terms, nterms, ntermvars, termvals, indvar, weight, issoftcons, NULL, lhs, rhs, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+TERMINATE:
+   /* free buffers for storing the terms and coefficients */
+   SCIPfreeBufferArray(scip, &linvals);
+   SCIPfreeBufferArray(scip, &linvars);
+   SCIPfreeBufferArray(scip, &termvals);
+   SCIPfreeBufferArray(scip, &terms);
+
+   /* free pseudoboolean polynomial */
+   SCIPfreeParseVarsPolynomialData(scip, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, nmonomials);
 
    return SCIP_OKAY;
 }
@@ -9016,6 +9320,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsPseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsPseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParsePseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitprePseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolPseudoboolean, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_PRESOLTIMING) );
