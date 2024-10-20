@@ -8909,6 +8909,7 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
    {
       SCIPerrorMessage("no completion of parsing pseudoboolean polynomial '%s'\n", varstrptr);
       SCIPfreeParseVarsPolynomialData(scip, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, nmonomials);
+      *success = FALSE;
       return SCIP_OKAY;
    }
 
