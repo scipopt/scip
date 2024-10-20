@@ -1793,12 +1793,15 @@ SCIP_RETCODE consdataPrint(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_VAR*** monomialvars;
    SCIP_VAR** vars;
    SCIP_Real* coefs;
+   SCIP_Real* monomialcoefs;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   SCIP_Bool printed;
+   int* monomialnvars;
    int nvars;
+   int nmonomials;
    int v;
 
    assert(scip != NULL);
@@ -1808,15 +1811,22 @@ SCIP_RETCODE consdataPrint(
    assert(consdata != NULL);
    assert(consdata->intvar == NULL);
    assert(consdata->lincons != NULL);
-   /* more than one and-constraint is needed, otherwise this pseudoboolean constraint should be upgraded to a linear constraint */
-   assert(consdata->nconsanddatas >= 0);
 
    /* gets number of variables in linear constraint */
    SCIP_CALL( getLinearConsNVars(scip, consdata->lincons, consdata->linconstype, &nvars) );
 
-   /* allocate temporary memory */
+   /* every variable in the linear constraint is either a linear variable or a term variable
+    * but there can be additional fixed or negation-paired and-resultants with relevant and-constraints
+    * whose values are already resolved in the linear constraint
+    */
+   assert(consdata->nlinvars + consdata->nconsanddatas >= nvars);
+
+   /* initialize buffers for storing the terms and coefficients */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &monomialvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &monomialcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &monomialnvars, nvars) );
 
    /* get sides of linear constraint */
    SCIP_CALL( getLinearConsSides(scip, consdata->lincons, consdata->linconstype, &lhs, &rhs) );
@@ -1828,26 +1838,15 @@ SCIP_RETCODE consdataPrint(
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
    assert(nvars == 0 || (coefs != NULL));
 
-   /* every variable in the linear constraint is either a linear variable or a term variable
-    * but there can be additional fixed or negation-paired and-resultants with relevant and-constraints
-    * whose values are already resolved in the linear constraint
-    */
-   assert(consdata->nlinvars + consdata->nconsanddatas >= nvars);
-
-   /* print left hand side for ranged rows */
-   if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && !SCIPisEQ(scip, lhs, rhs) )
-      SCIPinfoMessage(scip, file, "%.15g <= ", lhs);
-
+   /* get and-data hashmap */
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
-
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->hashmap != NULL);
+   nmonomials = 0;
 
-   printed = FALSE;
-
-   /* print all terms */
+   /* collect all terms */
    for( v = 0; v < nvars; ++v )
    {
       CONSANDDATA* consanddata = NULL;
@@ -1868,7 +1867,6 @@ SCIP_RETCODE consdataPrint(
 
             andvars = SCIPgetVarsAnd(scip, andcons);
             nandvars = SCIPgetNVarsAnd(scip, andcons);
-            assert(nandvars == 0 || andvars != NULL);
 
             break;
          }
@@ -1877,59 +1875,53 @@ SCIP_RETCODE consdataPrint(
       }
       while( var != vars[v] );
 
-      /* print general coefficient */
-      if( consanddata != NULL && nandvars == 0 )
-      {
-         if( var == vars[v] )
-         {
-            printed = TRUE;
-            SCIPinfoMessage(scip, file, " %+.15g ", coefs[v]);
-         }
-         continue;
-      }
-      else if( coefs[v] == 1.0 )
-      {
-         if( v > 0 )
-            SCIPinfoMessage(scip, file, " +");
-      }
-      else if( coefs[v] == -1.0 )
-         SCIPinfoMessage(scip, file, " -");
-      else
-         SCIPinfoMessage(scip, file, " %+.15g", coefs[v]);
-
-      printed = TRUE;
-
-      /* print linear term */
       if( consanddata == NULL )
       {
-         SCIP_CALL( SCIPwriteVarName(scip, file, var, TRUE) );
+         assert(var != NULL);
+         assert(var == vars[v]);
+         monomialvars[nmonomials] = vars + v;
+         monomialnvars[nmonomials] = 1;
       }
-      /* print non-linear term */
       else
       {
-         /* @todo: write as polynomial */
-         SCIPinfoMessage(scip, file, "%s(", var == vars[v] ? "" : "~");
+         SCIP_Bool fixed = nandvars == 0;
+         SCIP_Bool negated = var != vars[v];
 
-         /* @todo: better write new method SCIPwriteProduct */
-         /* print variable list */
-         SCIP_CALL( SCIPwriteVarsList(scip, file, andvars, nandvars, TRUE, '*') );
+         if( fixed != negated )
+         {
+            if( !SCIPisInfinity(scip, -lhs) )
+               lhs -= coefs[v];
 
-         SCIPinfoMessage(scip, file, ")");
+            if( !SCIPisInfinity(scip, rhs) )
+               rhs -= coefs[v];
+         }
+
+         if( fixed )
+            continue;
+
+         if( negated )
+            coefs[v] *= -1.0;
+
+         assert(andvars != NULL);
+         monomialvars[nmonomials] = andvars;
+         assert(nandvars >= 1);
+         monomialnvars[nmonomials] = nandvars;
       }
+
+      assert(!SCIPisZero(scip, coefs[v]));
+      monomialcoefs[nmonomials] = coefs[v];
+      ++nmonomials;
    }
 
-   /* print zero value */
-   if( !printed )
-   {
-      SCIPinfoMessage(scip, file, " 0 ");
-   }
+   /* print left side */
+   if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && lhs != rhs )
+      SCIPinfoMessage(scip, file, "%.15g <= ", lhs);
 
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &coefs);
-   SCIPfreeBufferArray(scip, &vars);
+   /* print pseudoboolean polynomial */
+   SCIP_CALL( SCIPwriteVarsPolynomial(scip, file, monomialvars, NULL, monomialcoefs, monomialnvars, nmonomials, TRUE) );
 
-   /* print right hand side */
-   if( SCIPisEQ(scip, lhs, rhs) )
+   /* print right side */
+   if( lhs == rhs )
       SCIPinfoMessage(scip, file, " == %.15g", rhs);
    else if( !SCIPisInfinity(scip, rhs) )
       SCIPinfoMessage(scip, file, " <= %.15g", rhs);
@@ -1937,6 +1929,13 @@ SCIP_RETCODE consdataPrint(
       SCIPinfoMessage(scip, file, " >= %.15g", lhs);
    else
       SCIPinfoMessage(scip, file, " [free]");
+
+   /* free buffers for storing the terms and coefficients */
+   SCIPfreeBufferArray(scip, &monomialnvars);
+   SCIPfreeBufferArray(scip, &monomialcoefs);
+   SCIPfreeBufferArray(scip, &monomialvars);
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
 
    /* @todo: print indicator variable */
    assert(!consdata->issoftcons);
