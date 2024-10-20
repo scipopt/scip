@@ -3380,13 +3380,13 @@ SCIP_RETCODE consdataCreate(
    assert( eventhdlrrestart != NULL );
 
    /* if active on 0, the binary variable is reversed */
-   if ( activeone )
+   if ( activeone || binvar == NULL )
    {
       binvarinternal = binvar;
    }
    else
    {
-      SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+      SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
    /* create constraint data */
