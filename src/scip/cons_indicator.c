@@ -3379,7 +3379,7 @@ SCIP_RETCODE consdataCreate(
    assert( slackvar != NULL );
    assert( eventhdlrrestart != NULL );
 
-   /* if active on 0, the binary variable is reversed */
+   /* if active on 0, a provided binary variable is reversed */
    if ( activeone || binvar == NULL )
    {
       binvarinternal = binvar;
