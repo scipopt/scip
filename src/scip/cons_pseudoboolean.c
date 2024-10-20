@@ -8655,7 +8655,7 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
 /** constraint display method of constraint handler */
 static
 SCIP_DECL_CONSPRINT(consPrintPseudoboolean)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -8692,7 +8692,7 @@ SCIP_DECL_CONSCOPY(consCopyPseudoboolean)
 /** constraint parsing method of constraint handler */
 static
 SCIP_DECL_CONSPARSE(consParsePseudoboolean)
-{
+{  /*lint --e{715}*/
    SCIP_VAR*** monomialvars;
    SCIP_VAR*** terms;
    SCIP_VAR** linvars;
