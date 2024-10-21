@@ -1943,7 +1943,7 @@ SCIP_RETCODE consdataPrint(
       SCIPinfoMessage(scip, file, " (indvar = ");
       SCIP_CALL( SCIPwriteVarName(scip, file, consdata->indvar, TRUE) );
       SCIPinfoMessage(scip, file, ")");
-      assert(consdata->weight == SCIPvarGetObj(consdata->indvar));
+      assert(consdata->weight == SCIPvarGetObj(consdata->indvar)); /*lint !e777*/
    }
 
    return SCIP_OKAY;
