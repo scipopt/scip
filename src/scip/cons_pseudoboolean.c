@@ -8938,6 +8938,7 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
    SCIP_CALL( SCIPparseVarsPolynomial(scip, polynomialstr, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, (char**)&endptr, success) );
 
    /* free polynomial string */
+   polynomialsize -= endptr - polynomialstr + 1;
    SCIPfreeBufferArray(scip, &polynomialstr);
 
    /* check polynomial syntax */
@@ -8946,7 +8947,7 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
       SCIPerrorMessage("no luck in parsing pseudoboolean polynomial '%s'\n", varstrptr);
       return SCIP_OKAY;
    }
-   else if( *endptr != '\0' )
+   else if( polynomialsize >= 1 )
    {
       SCIPerrorMessage("no completion of parsing pseudoboolean polynomial '%s'\n", varstrptr);
       SCIPfreeParseVarsPolynomialData(scip, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, nmonomials);
