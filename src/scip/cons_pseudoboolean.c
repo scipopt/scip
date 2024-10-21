@@ -1937,12 +1937,14 @@ SCIP_RETCODE consdataPrint(
    SCIPfreeBufferArray(scip, &coefs);
    SCIPfreeBufferArray(scip, &vars);
 
-   /* @todo: print indicator variable */
-   assert(!consdata->issoftcons);
-   assert(consdata->indvar == NULL);
-
-   /* @todo: print penalty weight */
-   assert(consdata->weight == 0.0);
+   /* print indicator variable if soft constraint */
+   if( consdata->issoftcons )
+   {
+      SCIPinfoMessage(scip, file, " (indvar = ");
+      SCIP_CALL( SCIPwriteVarName(scip, file, consdata->indvar, TRUE) );
+      SCIPinfoMessage(scip, file, ")");
+      assert(consdata->weight == SCIPvarGetObj(consdata->indvar));
+   }
 
    return SCIP_OKAY;
 }
