@@ -8707,8 +8707,10 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
    const char* lhsstrptr;
    const char* rhsstrptr;
    const char* varstrptr;
+   char* polynomialstr;
    int* monomialnvars;
    int* ntermvars;
+   int polynomialsize;
    int nmonomials;
    int nterms;
    int nlinvars;
@@ -8927,8 +8929,16 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
       issoftcons = TRUE;
    }
 
+   /* initialize polynomial string */
+   polynomialsize = MAX(firstcomp, secondcomp) - varstrptr + 1;
+   SCIP_CALL( SCIPallocBufferArray(scip, &polynomialstr, polynomialsize) );
+   SCIPstrncpy(polynomialstr, varstrptr, polynomialsize);
+
    /* parse pseudoboolean polynomial */
-   SCIP_CALL( SCIPparseVarsPolynomial(scip, varstrptr, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, (char**)&endptr, success) );
+   SCIP_CALL( SCIPparseVarsPolynomial(scip, polynomialstr, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, (char**)&endptr, success) );
+
+   /* free polynomial string */
+   SCIPfreeBufferArray(scip, &polynomialstr);
 
    /* check polynomial syntax */
    if( !(*success) )
@@ -8936,7 +8946,7 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
       SCIPerrorMessage("no luck in parsing pseudoboolean polynomial '%s'\n", varstrptr);
       return SCIP_OKAY;
    }
-   else if( endptr != MAX(firstcomp, secondcomp) )
+   else if( *endptr != '\0' )
    {
       SCIPerrorMessage("no completion of parsing pseudoboolean polynomial '%s'\n", varstrptr);
       SCIPfreeParseVarsPolynomialData(scip, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, nmonomials);
