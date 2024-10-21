@@ -8932,7 +8932,7 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
    /* initialize polynomial string */
    polynomialsize = (int)(MAX(firstcomp, secondcomp) + 1 - varstrptr);
    SCIP_CALL( SCIPallocBufferArray(scip, &polynomialstr, polynomialsize) );
-   SCIPstrncpy(polynomialstr, varstrptr, polynomialsize);
+   (void)SCIPstrncpy(polynomialstr, varstrptr, polynomialsize);
 
    /* parse pseudoboolean polynomial */
    SCIP_CALL( SCIPparseVarsPolynomial(scip, polynomialstr, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, (char**)&endptr, success) );
