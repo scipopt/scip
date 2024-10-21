@@ -1914,14 +1914,14 @@ SCIP_RETCODE consdataPrint(
    }
 
    /* print left side */
-   if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && lhs != rhs )
+   if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && lhs != rhs ) /*lint !e777*/
       SCIPinfoMessage(scip, file, "%.15g <= ", lhs);
 
    /* print pseudoboolean polynomial */
    SCIP_CALL( SCIPwriteVarsPolynomial(scip, file, monomialvars, NULL, monomialcoefs, monomialnvars, nmonomials, TRUE) );
 
    /* print right side */
-   if( lhs == rhs )
+   if( lhs == rhs ) /*lint !e777*/
       SCIPinfoMessage(scip, file, " == %.15g", rhs);
    else if( !SCIPisInfinity(scip, rhs) )
       SCIPinfoMessage(scip, file, " <= %.15g", rhs);
