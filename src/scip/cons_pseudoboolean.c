@@ -8846,7 +8846,8 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
       case '[':
          assert(strncmp(firstcomp, "[free]", 6) == 0);
          assert(secondcomp == NULL);
-         /* nothing to assign in case of a free ... [free] */
+         /* we have ... [free] */
+         endptr = firstcomp + 6;
          break;
       default:
          /* it should not be possible that a different character appears in that position */
@@ -8882,12 +8883,47 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
       }
    }
 
-   /* @todo: parse indicator variable */
-   issoftcons = FALSE;
+   /* initialize indicator data to the hard state */
    indvar = NULL;
-
-   /* @todo: parse penalty weight */
    weight = 0.0;
+   issoftcons = FALSE;
+
+   /* skip white spaces */
+   SCIP_CALL( SCIPskipSpace((char**)&endptr) );
+   str = endptr;
+
+   /* parse indicator variable, should look like (indvar = var) */
+   if( *endptr == '(' )
+   {
+      endptr = strchr(endptr + 1, '=');
+
+      if( endptr == NULL )
+      {
+         SCIPerrorMessage("variable assignment missing in '%s'\n", str);
+         return SCIP_OKAY;
+      }
+
+      /* parse variable name */
+      SCIP_CALL( SCIPparseVarName(scip, endptr + 1, &indvar, (char**)&endptr) );
+
+      if( indvar == NULL )
+      {
+         SCIPerrorMessage("indicator variable not found in '%s'\n", str);
+         return SCIP_OKAY;
+      }
+
+      /* parse closing parenthesis */
+      endptr = strchr(endptr, ')');
+
+      if( endptr == NULL )
+      {
+         SCIPerrorMessage("closing parenthesis missing in '%s'\n", str);
+         return SCIP_OKAY;
+      }
+
+      weight = SCIPvarGetObj(indvar);
+      issoftcons = TRUE;
+   }
 
    /* parse pseudoboolean polynomial */
    SCIP_CALL( SCIPparseVarsPolynomial(scip, varstrptr, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, (char**)&endptr, success) );
