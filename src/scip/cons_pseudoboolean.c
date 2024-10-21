@@ -8930,7 +8930,7 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
    }
 
    /* initialize polynomial string */
-   polynomialsize = MAX(firstcomp, secondcomp) - varstrptr + 1;
+   polynomialsize = (int)(MAX(firstcomp, secondcomp) + 1 - varstrptr);
    SCIP_CALL( SCIPallocBufferArray(scip, &polynomialstr, polynomialsize) );
    SCIPstrncpy(polynomialstr, varstrptr, polynomialsize);
 
@@ -8938,7 +8938,7 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
    SCIP_CALL( SCIPparseVarsPolynomial(scip, polynomialstr, &monomialvars, &monomialexps, &monomialcoefs, &monomialnvars, &nmonomials, (char**)&endptr, success) );
 
    /* free polynomial string */
-   polynomialsize -= endptr - polynomialstr + 1;
+   polynomialsize -= (int)(endptr + 1 - polynomialstr);
    SCIPfreeBufferArray(scip, &polynomialstr);
 
    /* check polynomial syntax */
