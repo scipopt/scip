@@ -19,6 +19,9 @@ Performance improvements
 Fixed bugs
 ----------
 
+- Benders' decomposition subproblems that are always infeasible are correctly handled and the complete problem is
+  declared as infeasible.
+
 Examples and applications
 -------------------------
 
@@ -31,6 +34,8 @@ Interface changes
 - added SCIPtpiGetLibraryName() and SCIPtpiGetLibraryDesc()
 - SCIPdelCons() can now also be called in SCIP_STAGE_TRANSFORMED
 - added SCIPstrcasecmp() and SCIPstrncasecmp() for case-insensitive string comparison
+- added SCIPbendersSubproblemsAreInfeasible() to return if at least one subproblem has been identified as being
+  infeasible prior to performing any variable fixing.
 
 ### Command line interface
 ### Interfaces to external software
