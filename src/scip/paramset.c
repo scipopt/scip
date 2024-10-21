@@ -1448,17 +1448,12 @@ void SCIPparamsetFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_PARAM* objectivestop;
    int i;
 
    assert(paramset != NULL);
    assert(*paramset != NULL);
    assert((*paramset)->paramssize == 0 || (*paramset)->params != NULL);
    assert((*paramset)->paramssize >= (*paramset)->nparams);
-
-   /* free deprecated objectivestop */
-   objectivestop = SCIPparamsetGetParam(*paramset, "limits/objectivestop");
-   paramFree(&objectivestop, blkmem);
 
    for( i = (*paramset)->nparams - 1; i >= 0; --i )
    {
