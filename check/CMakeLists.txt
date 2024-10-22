@@ -503,7 +503,7 @@ set(pairs_Issue
 )
 
 #
-# available reader file extensions for SCIP readers
+# available reader file extensions for MIP problems
 #
 set(reader_extensions_MIP
   "mps"
