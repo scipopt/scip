@@ -38,6 +38,15 @@
 extern "C" {
 #endif
 
+/** addition filter to greedily add constraints to obtain an (I)IS -- detailed function call */
+SCIP_EXPORT
+SCIP_RETCODE additionFilterBatchCons(
+   SCIP*                 scip,               /**< SCIP instance to analyze */
+   SCIP_Bool             silent,             /**< run silently? */
+   SCIP_Longint*         nnodes,             /**< pointer to store the total number of nodes needed (or NULL) */
+   SCIP_Bool*            success             /**< pointer to store whether we have obtained an (I)IS */
+);
+
 /** deletion filter to greedily remove constraints to obtain an (I)IS -- detailed function call */
 SCIP_EXPORT
 SCIP_RETCODE deletionFilterBatchCons(

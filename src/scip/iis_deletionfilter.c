@@ -135,7 +135,7 @@ SCIP_RETCODE deletionFilterConsSubproblem(
    /* check status */
    switch ( status )
    {
-   case SCIP_STATUS_TIMELIMIT:        /* if we reached the time limit, then stop */
+   case SCIP_STATUS_TIMELIMIT:        /* if we reached the time limit */
       if ( ! silent )
          SCIPinfoMessage(scip, NULL, "Time limit exceeded. Not removing batch.\n");
       for( j = 0; j < ndelconss; j++ )
@@ -143,7 +143,6 @@ SCIP_RETCODE deletionFilterConsSubproblem(
          SCIP_CALL( SCIPaddCons(scip, conss[idxs[j]]) );
          SCIP_CALL( SCIPreleaseCons(scip, &conss[idxs[j]]) );
       }
-      *stop = TRUE;
       break;
 
    case SCIP_STATUS_USERINTERRUPT:    /* if an user interrupt occurred, just stop */
@@ -204,6 +203,74 @@ SCIP_RETCODE deletionFilterConsSubproblem(
       return SCIP_ERROR;
    }
 
+   return SCIP_OKAY;
+}
+
+/** solve subproblem for additionFilter */
+static
+SCIP_RETCODE additionFilterConsSubproblem(
+   SCIP*                 scip,               /**< SCIP instance to analyze */
+   SCIP_Bool             silent,             /**< run silently? */
+   SCIP_Bool*            feasible,           /**< pointer to store whether the problem is now feasible */
+   SCIP_Bool*            stop                /**< pointer to store whether we have to stop */
+)
+{
+   SCIP_STATUS status;
+   
+   assert( stop != NULL );
+   
+   *stop = FALSE;
+   *feasible = FALSE;
+   
+   /* solve problem until first solution is found or infeasibility has been proven */
+   SCIP_CALL( SCIPsolve(scip) );
+   status = SCIPgetStatus(scip);
+   
+   /* check status */
+   switch ( status )
+   {
+      case SCIP_STATUS_TIMELIMIT:        /* if we reached the time limit, then stop */
+         if ( ! silent )
+            SCIPinfoMessage(scip, NULL, "Time limit exceeded. Added conss failed to induce infeasibility.\n");
+         break;
+      
+      case SCIP_STATUS_USERINTERRUPT:    /* if an user interrupt occurred, just stop */
+         if ( ! silent )
+            SCIPinfoMessage(scip, NULL, "User interrupt. Stopping. \n");
+         *stop = TRUE;
+         break;
+      
+      case SCIP_STATUS_NODELIMIT:        /* if we reached the node limit */
+         if ( ! silent )
+            SCIPinfoMessage(scip, NULL, "Node limit reached. Added batch failed to induce infeasibility. \n");
+         break;
+      
+      case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
+         if ( ! silent )
+            SCIPinfoMessage(scip, NULL, "Subproblem infeasible. Final batch of constraints added.\n");
+         break;
+      
+      case SCIP_STATUS_BESTSOLLIMIT:     /* we found a solution */
+      case SCIP_STATUS_OPTIMAL:
+         if ( ! silent )
+            SCIPinfoMessage(scip, NULL, "Found solution. Keep adding constraint batches\n");
+         *feasible = TRUE;
+         break;
+      
+      case SCIP_STATUS_UNKNOWN:
+      case SCIP_STATUS_TOTALNODELIMIT:
+      case SCIP_STATUS_STALLNODELIMIT:
+      case SCIP_STATUS_MEMLIMIT:
+      case SCIP_STATUS_GAPLIMIT:
+      case SCIP_STATUS_SOLLIMIT:
+      case SCIP_STATUS_RESTARTLIMIT:
+      case SCIP_STATUS_UNBOUNDED:
+      case SCIP_STATUS_INFORUNBD:
+      default:
+         SCIPerrorMessage("unexpected return status %d. Exiting ...\n", status);
+         return SCIP_ERROR;
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -298,6 +365,147 @@ SCIP_RETCODE deletionFilterBatchCons(
    return SCIP_OKAY;
 }
 
+/** addition filter to greedily add constraints to obtain an (I)IS -- detailed function call */
+SCIP_RETCODE additionFilterBatchCons(
+   SCIP*                 scip,               /**< SCIP instance to analyze */
+   SCIP_Bool             silent,             /**< run silently? */
+   SCIP_Longint*         nnodes,             /**< pointer to store the total number of nodes needed (or NULL) */
+   SCIP_Bool*            success             /**< pointer to store whether we have obtained an (I)IS */
+)
+{
+   SCIP_RANDNUMGEN* randnumgen;
+   SCIP_CLOCK* totalTimeClock = NULL;
+   int nconss;
+   SCIP_CONS** conss;
+   SCIP_SOL* sol;
+   SCIP_SOL* copysol;
+   SCIP_Bool* inIS;
+   int* order;
+   SCIP_Bool feasible;
+   SCIP_Bool stopiter;
+   SCIP_RESULT result;
+   int i;
+   int j;
+   int k;
+   
+   assert( success != NULL );
+   
+   *success = FALSE;
+   if ( nnodes != NULL )
+      *nnodes = 0;
+   
+   /* create and start clock */
+   SCIP_CALL( SCIPcreateClock(scip, &totalTimeClock) );
+   SCIP_CALL( SCIPstartClock(scip, totalTimeClock) );
+   
+   /* Get constraint information */
+   nconss = SCIPgetNOrigConss(scip);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conss, nconss) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, SCIPgetOrigConss(scip), nconss) );
+   
+   /* Initialise information for whether a constraint is in the final infeasible system */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &inIS, nconss) );
+   
+   /* reset problem */
+   SCIP_CALL( SCIPfreeTransform(scip) );
+   assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
+   for( i = 0; i < nconss; ++i )
+   {
+      assert( SCIPconsIsInProb(conss[i]) );
+      SCIP_CALL( SCIPcaptureCons(scip, conss[i]) );
+      SCIP_CALL( SCIPdelCons(scip, conss[i]) );
+      inIS[i] = FALSE;
+   }
+   
+   /* prepare random order */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &order, nconss) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 4678, FALSE) );
+   for (i = 0; i < nconss; ++i)
+      order[i] = i;
+   SCIPrandomPermuteIntArray(randnumgen, order, 0, nconss);
+   SCIPfreeRandom(scip, &randnumgen);
+   i = 0;
+   feasible = TRUE;
+   stopiter = FALSE;
+   result = SCIP_FEASIBLE;
+   
+   /* Continue to add constraints until an infeasible status is reached */
+   while( feasible && !stopiter )
+   {
+      /* Add the next batch of constraints */
+      k = 0;
+      for( j = i; j < nconss; ++j )
+      {
+         if( k >= DEFAULT_BATCHSIZE )
+            break;
+         if( !inIS[order[j]] )
+         {
+            SCIP_CALL( SCIPaddCons(scip, conss[order[j]]) );
+            SCIP_CALL( SCIPreleaseCons(scip, &conss[order[j]]) );
+            inIS[order[j]] = TRUE;
+            ++k;
+         }
+      }
+      i = i + k;
+      
+      /* Solve the reduced problem */
+      SCIP_CALL( additionFilterConsSubproblem(scip, silent, &feasible, &stopiter) );
+   
+      if ( nnodes != NULL )
+         *nnodes += SCIPgetNTotalNodes(scip);
+   
+      /* free transform */
+      // TODO: Figure out the correct way to handle the solution copying. Need to copy -> freeTransform -> checkCons -> deleteSol (not sure on last step)
+      sol = SCIPgetBestSol(scip);
+      if( sol != NULL )
+      {
+         SCIP_CALL( SCIPcreateSolCopyOrig(scip, &copysol, sol) );
+         SCIP_CALL( SCIPunlinkSol(scip, copysol) );
+      }
+      SCIP_CALL( SCIPfreeTransform(scip) );
+      assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
+      
+      /* Add any other constraints that are also feasible for the current solution */
+      if( feasible && !stopiter && copysol != NULL )
+      {
+         for( j = i; j < nconss; ++j )
+         {
+            if( !inIS[order[j]] )
+            {
+               SCIP_CALL(SCIPcheckCons(scip, conss[order[j]], copysol, FALSE, FALSE, FALSE, &result) );
+               if( result == SCIP_FEASIBLE )
+               {
+                  SCIP_CALL( SCIPaddCons(scip, conss[order[j]]) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &conss[order[j]]) );
+                  inIS[order[j]] = TRUE;
+               }
+            }
+         }
+      }
+   
+      if ( stopiter )
+         break;
+      
+   }
+   
+   /* Release any cons not in the IS */
+   for( i = 0; i < nconss; ++i )
+   {
+      if( !inIS[order[i]] )
+         SCIP_CALL( SCIPreleaseCons(scip, &conss[order[i]]) );
+         
+   }
+   
+   SCIPfreeBlockMemoryArray(scip, &order, nconss);
+   SCIPfreeBlockMemoryArray(scip, &inIS, nconss);
+   SCIPfreeBlockMemoryArray(scip, &conss, nconss);
+   
+   SCIP_CALL( SCIPfreeClock(scip, &totalTimeClock) );
+   assert( totalTimeClock == NULL );
+   
+   return SCIP_OKAY;
+}
+
 
 /** run deletion filter to obtain an (I)IS */
 SCIP_RETCODE SCIPrunDeletionFilter(
@@ -312,6 +520,8 @@ SCIP_RETCODE SCIPrunDeletionFilter(
    
    SCIP_CALL( createSubscipCopy(scip, &subscip) );
    SCIP_CALL( deletionFilterBatchCons(subscip, TRUE, FALSE, NULL, success) );
+   // SCIP_CALL( additionFilterBatchCons(subscip, FALSE, NULL, success) );
+   SCIPinfoMessage(scip, NULL, "NCONSS: %d\n", SCIPgetNConss(subscip));
 
    return SCIP_OKAY;
 }
