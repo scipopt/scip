@@ -505,7 +505,7 @@ set(pairs_Issue
 #
 # available reader file extensions for SCIP readers
 #
-set(scip_reader_extensions
+set(reader_extensions_MIP
   "mps"
   "lp"
   "opb"
@@ -516,9 +516,16 @@ set(scip_reader_extensions
   )
 
 #
-# Writer output formats that are not also readers (all writers are scip_reader_extensions + scip_only_writer_extensions)
+# available reader file extensions for PB problems
 #
-set(scip_writer_only_extensions
+set(reader_extensions_PB
+  "cip"
+  )
+
+#
+# Writer output formats that are not also readers (all writers are reader_extensions_MIP + writer_only_extensions)
+#
+set(writer_only_extensions
   "wbo"
   )
 
@@ -783,7 +790,7 @@ set(message_format_lp "WARNING: violation of LP format - a constraint name start
 # test writing and reading from and to different file extensions for MIP
 #
 foreach(instance ${instances_MIP_write})
-  foreach(extension ${scip_writer_only_extensions})
+  foreach(extension ${writer_only_extensions})
     split_instance(instance)
     configure_file(interactiveshell/writeronlytest.bat.in interactiveshell/writeronlytest-${extension}-${basename}.bat)
     set(regex "written original problem to file")
@@ -804,7 +811,7 @@ endforeach(instance)
 #
 foreach(instance ${instances_MIP})
     split_instance(instance)
-    foreach(extension ${scip_reader_extensions})
+    foreach(extension ${reader_extensions_MIP})
         #
         # configure the batch file for this test by substituting placeholders in the in.file
         #
@@ -826,6 +833,28 @@ foreach(instance ${instances_MIP})
         set_tests_properties(MIP-readertest-${extension}-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION ${regex}
+                                FAIL_REGULAR_EXPRESSION "ERROR"
+                                DEPENDS scip-build
+                            )
+    endforeach(extension)
+endforeach(instance)
+
+#
+# test writing and reading from and to different file extensions for PB
+#
+foreach(instance ${instances_PB})
+    split_instance(instance)
+    foreach(extension ${reader_extensions_PB})
+        #
+        # configure the batch file for this test by substituting placeholders in the in.file
+        #
+        configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+        add_test(NAME PB-readertest-${extension}-${basename}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
+                )
+        set_tests_properties(PB-readertest-${extension}-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "Validation         : Success.*Validation         : Success"
                                 FAIL_REGULAR_EXPRESSION "ERROR"
                                 DEPENDS scip-build
                             )
