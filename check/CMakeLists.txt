@@ -339,9 +339,9 @@ set(instances_Bilinrelax
   )
 
 #
-# PseudoBoolean instances
+# PB instances
 #
-set(instances_PseudoBoolean
+set(instances_PB
     "instances/PseudoBoolean/factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B.opb\;3"
     "instances/PseudoBoolean/normalized-bsg_10_4_5.opb\;-4"
     "instances/PseudoBoolean/normalized-mds_10_4_3.opb\;2"
@@ -672,7 +672,7 @@ add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_branch settings_branch "Branch")
 add_instancetests(instances_Bilinrelax settings_default "Bilinrelax")
-add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
+add_instancetests(instances_PB settings_default "PseudoBoolean")
 add_instancetests(instances_sparsify settings_sparsify "Sparsify")
 add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
