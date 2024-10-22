@@ -849,10 +849,10 @@ foreach(instance ${instances_PB})
         # configure the batch file for this test by substituting placeholders in the in.file
         #
         configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
-        add_test(NAME PB-readertest-${extension}-${basename}
+        add_test(NAME PseudoBoolean-readertest-${extension}-${basename}
                 COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
                 )
-        set_tests_properties(PB-readertest-${extension}-${basename}
+        set_tests_properties(PseudoBoolean-readertest-${extension}-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success.*Validation         : Success"
                                 FAIL_REGULAR_EXPRESSION "ERROR"
