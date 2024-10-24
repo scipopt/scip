@@ -1820,7 +1820,7 @@ SCIP_RETCODE propdataInit(
    propdata->glbpropagated = FALSE;
    propdata->glbpseudoobjval = SCIPgetGlobalPseudoObjval(scip);
    propdata->cutoffbound = SCIPgetCutoffbound(scip);
-   assert(SCIPgetDepth(scip) > 0 || SCIPisFeasEQ(scip, propdata->glbpseudoobjval, SCIPgetPseudoObjval(scip)));
+   assert(SCIPgetDepth(scip) > 0 || SCIPisRelEQ(scip, propdata->glbpseudoobjval, SCIPgetPseudoObjval(scip)));
 
    /* create hash table which is used for resolving bound changes */
    if( nminactvars > 0 )
@@ -2430,11 +2430,11 @@ SCIP_RETCODE propagateCutoffboundBinvar(
    /* if the lbobjchg and ubobjchg are both able to fix the variable to its upper (1.0) or lower (0.0) bound,
     * respectively, we detected an cutoff
     *
-    * @note There is no need to use SCIPisFeasLT() in case the objective is integral since the cutoff bound in that case
+    * @note There is no need to use SCIPisLT() in case the objective is integral since the cutoff bound in that case
     *       is the upper bound minus 1 plus the SCIPcutoffbounddelta() (which is MIN(100.0 * feastol, 0.0001)). However,
     *       if the objective is not integral we have to check w.r.t. an epsilon to avoid numerical problems.
     */
-   if( SCIPisFeasLT(scip, cutoffbound, pseudoobjval + ubobjchg) && SCIPisFeasLT(scip, cutoffbound, pseudoobjval + lbobjchg) )
+   if( SCIPisLT(scip, cutoffbound, pseudoobjval + ubobjchg) && SCIPisLT(scip, cutoffbound, pseudoobjval + lbobjchg) )
    {
       /* check if conflict analysis is applicable */
       if( local && SCIPisConflictAnalysisApplicable(scip) )
