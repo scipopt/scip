@@ -1532,8 +1532,8 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    data_.symtype = symtype;
    data_.restricttovars = FALSE;
    data_.ntreenodes = 0;
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxncells", &data_.maxncells) );
-   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxnnodes", &data_.maxnnodes) );
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxncells", &data_.maxncells) ); /*lint !e641*//*lint !e732*/
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxnnodes", &data_.maxnnodes) ); /*lint !e641*//*lint !e732*/
 
    /* call nauty/traces */
 #ifdef NAUTY

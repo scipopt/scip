@@ -6967,7 +6967,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    /* for symmetry detection tool Nauty, we add further parameters to terminate it early */
    assert( strlen(SYMsymmetryGetName()) >= 5 );
-   if ( memcmp(SYMsymmetryGetName(), "Nauty", 5) == 0 )
+   if ( memcmp(SYMsymmetryGetName(), "Nauty", 5) == 0 ) /*lint !e747*/
    {
       SCIP_CALL( SCIPaddIntParam(scip,
             "propagating/" PROP_NAME "/nautymaxncells",
