@@ -51,6 +51,7 @@ Interface changes
 ### Changed parameters
 
 - presolving/milp/threads only configurable if PaPILO is built with TBB
+- numerics/recomputefac gets default value 1e+6 to aim at relative epsilon precision
 
 ### Data structures
 
