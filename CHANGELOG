@@ -15,6 +15,7 @@ Performance improvements
 
 - reoptimization now also stores propagations from propagators if reoptimization/saveconsprop is enabled;
   the parameter will be renamed to reoptimization/saveprop in a next major release
+- use individual slack variables also for constraints indicated by a common binary variable to use tighter formulation by default
 
 Fixed bugs
 ----------
