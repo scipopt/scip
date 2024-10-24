@@ -15,10 +15,14 @@ Performance improvements
 
 - reoptimization now also stores propagations from propagators if reoptimization/saveconsprop is enabled;
   the parameter will be renamed to reoptimization/saveprop in a next major release
+- Imposed stricter limits on the size of disconnected components which may be solved separately during presolve by cons_components
 - when computing symmetries using Nauty, iteration limits are now available to terminate Nauty early
 
 Fixed bugs
 ----------
+
+- Benders' decomposition subproblems that are always infeasible are correctly handled and the complete problem is
+  declared as infeasible.
 
 Examples and applications
 -------------------------
@@ -31,12 +35,25 @@ Interface changes
 - added SCIPtpiIsAvailable() to check whether a working task processing interface is available (TPI != none)
 - added SCIPtpiGetLibraryName() and SCIPtpiGetLibraryDesc()
 - SCIPdelCons() can now also be called in SCIP_STAGE_TRANSFORMED
+- added SCIPstrcasecmp() and SCIPstrncasecmp() for case-insensitive string comparison
+- added SCIPbendersSubproblemsAreInfeasible() to return if at least one subproblem has been identified as being
+  infeasible prior to performing any variable fixing.
 
 ### Command line interface
 ### Interfaces to external software
 ### New parameters
+- presolving/milp/abortfacexhaustive to control the abort threshold for exhaustive presolving in PAPILO
+- presolving/milp/abortfacmedium to control the abort threshold for medium presolving in PAPILO
+- presolving/milp/abortfacfast to control the abort threshold for fast presolving in PAPILO
+- constraints/components/maxcompweight to determine the maximum weight for a disconnected component that is solved during presolve
+- constraints/components/contfactor counts the contributing factor of a single continuous variables with respect to the weight limit specified by constraints/components/maxcompweight
 - when compiled using the SYM=nauty or SYM=snauty option, parameters propagating/symmetry/nautymaxncells
   and propagating/symmetry/nautymaxnnodes can be used to set iteration limits in the external software Nauty
+
+### Changed parameters
+
+- presolving/milp/threads only configurable if PaPILO is built with TBB
+
 ### Data structures
 
 Deleted files
@@ -57,6 +74,9 @@ Miscellaneous
 -------------
 
 - reorder events: BESTSOLFOUND/NODE_FEASIBLE is now processed before the nodes are cut off and before NODE_DELETE events are processed
+- removed `#define` of `getcwd` (in case of Windows builds) in scip/def.h
+- the `#define` of `strcasecmp` and `strncasecmp` (in case of Windows builds) in scip/def.h will be removed with SCIP 10;
+  use `SCIPstr(n)casecmp()` (scip/pub_misc.h) instead
 
 @section RN912 SCIP 9.1.2
 *************************
@@ -67,6 +87,7 @@ Fixed bugs
 - skip constraint propagation if the residual activity bound cancels the side precision in tightenVarBounds() of cons_linear.c
 - use indices of negation counterparts and accept fixings when ordering and-resultants of pseudoboolean constraints
 - correct bound tracking to make the evaluation of primal-dual-integrals work
+- update locks on model variables before removing pseudoboolean constraints in consPresolPseudoboolean()
 
 Unit tests
 ----------
@@ -78,6 +99,8 @@ Build system
 ------------
 
 ### Cmake
+
+- attempted to fix detection of CPLEX library on macOS and Windows systems
 
 ### Makefile
 

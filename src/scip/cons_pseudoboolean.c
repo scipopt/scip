@@ -8426,17 +8426,6 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
       assert(consdata != NULL);
       assert(consdata->lincons != NULL);
 
-      /* if linear constraint is redundant, than pseudoboolean constraint is redundant too */
-      if( SCIPconsIsDeleted(consdata->lincons) )
-      {
-         /* update and constraint flags */
-         SCIP_CALL( updateAndConss(scip, cons) );
-
-         SCIP_CALL( SCIPdelCons(scip, cons) );
-         ++(*ndelconss);
-         continue;
-      }
-
       /* get sides of linear constraint */
       SCIP_CALL( getLinearConsSides(scip, consdata->lincons, consdata->linconstype, &newlhs, &newrhs) );
       assert(!SCIPisInfinity(scip, newlhs));
@@ -8465,6 +8454,18 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
 
       /* update all locks inside this constraint and all captures on all and-constraints */
       SCIP_CALL( correctLocksAndCaptures(scip, cons, conshdlrdata, newlhs, newrhs, andress, andcoefs, andnegs, nandress) );
+
+      /* if linear constraint is redundant, pseudoboolean constraint is redundant too */
+      if( SCIPconsIsDeleted(consdata->lincons) )
+      {
+         /* update and-constraint flags */
+         SCIP_CALL( updateAndConss(scip, cons) );
+
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+
+         goto CONTTERMINATE;
+      }
 
       /* we can only presolve pseudoboolean constraints, that are not modifiable */
       if( SCIPconsIsModifiable(cons) )
@@ -8671,9 +8672,9 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
          {
             for( v = nandvars - 1; v >= 0; --v )
             {
-               SCIP_CALL( SCIPaddVarLocksType(scip, andvars[v], SCIP_LOCKTYPE_MODEL, nlocksneg, nlockspos) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, andvars[v], locktype, nlocksneg, nlockspos) );
             }
-            SCIP_CALL( SCIPaddVarLocksType(scip, andres, SCIP_LOCKTYPE_MODEL, nlocksneg + nlockspos, nlocksneg + nlockspos) );
+            SCIP_CALL( SCIPaddVarLocksType(scip, andres, locktype, nlocksneg + nlockspos, nlocksneg + nlockspos) );
 
             SCIP_CALL( checkLocksAndRes(scip, andres) );
          }
@@ -8681,12 +8682,12 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
          {
             for( v = nandvars - 1; v >= 0; --v )
             {
-               SCIP_CALL( SCIPaddVarLocksType(scip, andvars[v], SCIP_LOCKTYPE_MODEL, nlockspos, nlocksneg) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, andvars[v], locktype, nlockspos, nlocksneg) );
             }
             /* don't double the locks on the and-resultant */
             if( !haslhs )
             {
-               SCIP_CALL( SCIPaddVarLocksType(scip, andres, SCIP_LOCKTYPE_MODEL, nlocksneg + nlockspos, nlocksneg + nlockspos) );
+               SCIP_CALL( SCIPaddVarLocksType(scip, andres, locktype, nlocksneg + nlockspos, nlocksneg + nlockspos) );
 
                SCIP_CALL( checkLocksAndRes(scip, andres) );
             }

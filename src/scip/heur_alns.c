@@ -71,10 +71,6 @@
 #include "scip/scip_var.h"
 #include <string.h>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
-
 #define HEUR_NAME             "alns"
 #define HEUR_DESC             "Large neighborhood search heuristic that orchestrates the popular neighborhoods Local Branching, RINS, RENS, DINS etc."
 #define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
@@ -3824,7 +3820,7 @@ SCIP_DECL_HEURINIT(heurInitAlns)
    }
 
    /* open reward file for reading */
-   if( strncasecmp(heurdata->rewardfilename, DEFAULT_REWARDFILENAME, strlen(DEFAULT_REWARDFILENAME)) != 0 )
+   if( strcmp(heurdata->rewardfilename, DEFAULT_REWARDFILENAME) != 0 )
    {
       heurdata->rewardfile = fopen(heurdata->rewardfilename, "w");
 
