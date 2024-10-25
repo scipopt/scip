@@ -168,24 +168,9 @@ SCIP_RETCODE applyBoundHeur(
          SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &infeasible, NULL) );
       }
 
-      /* try to repair probing */
+      /* stop if infeasible (todo: could also try to backtrack) */
       if( infeasible )
-      {
-#if 0
-         SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
-
-         /* fix the last variable, which was fixed the reverse bound */
-         SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetUbLocal(var)) );
-
-         /* propagate fixings */
-         SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &infeasible, NULL) );
-
-         SCIPdebugMsg(scip, "backtracking ended with %sfeasible problem\n", (infeasible ? "in" : ""));
-
-         if( infeasible )
-#endif
-            break;
-      }
+         break;
    }
 
    SCIPdebugMsg(scip, "probing ended with %sfeasible problem\n", infeasible ? "in" : "");
