@@ -200,7 +200,7 @@
 #define MAXGENNUMERATOR          64000000    /**< determine maximal number of generators by dividing this number by the number of variables */
 #define COMPRESSNVARSLB             25000    /**< lower bound on the number of variables above which compression could be performed */
 #define DEFAULT_NAUTYMAXNCELLS    1000000    /**< terminate symmetry detection using Nauty when number of cells in color refinment is at least this number */
-#define DEFAULT_NAUTYMAXNNODES      10000   /**< terminate symmetry detection using Nauty when Nauty's search tree has at least this number of nodes */
+#define DEFAULT_NAUTYMAXNNODES      10000   /**< terminate symmetry detection using Nauty when its search tree has at least this number of nodes */
 
 /* macros for getting activeness of symmetry handling methods */
 #define ISSYMRETOPESACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_SYMBREAK) != 0)
@@ -6976,7 +6976,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
       SCIP_CALL( SCIPaddIntParam(scip,
             "propagating/" PROP_NAME "/nautymaxnnodes",
-            "terminate symmetry detection using Nauty when Nauty's search tree has at least this number of nodes",
+            "terminate symmetry detection using Nauty when its search tree has at least this number of nodes",
             NULL, TRUE, DEFAULT_NAUTYMAXNNODES, 0, INT_MAX, NULL, NULL) );
    }
 

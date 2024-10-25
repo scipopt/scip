@@ -72,7 +72,7 @@ struct NAUTY_Data
    int                   nmaxperms;          /**< maximal number of permutations */
    int                   maxgenerators;      /**< maximal number of generators to be constructed (= 0 if unlimited) */
    SCIP_Bool             restricttovars;     /**< whether permutations shall be restricted to variables */
-   int                   ntreenodes;         /**< number of nodes visitied in nauty's search tree */
+   int                   ntreenodes;         /**< number of nodes visited in nauty's search tree */
    int                   maxncells;          /**< maximum number of cells in nauty's search tree */
    int                   maxnnodes;          /**< maximum number of nodes in nauty's search tree */
 };
