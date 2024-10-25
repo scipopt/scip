@@ -2526,6 +2526,15 @@ SCIP_RETCODE SCIPsolPrintRay(
    return SCIP_OKAY;
 }
 
+/** set new origin type for a solution */
+void SCIPsolSetOrigin(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SOLORIGIN        origin              /**< new origin type of the solution */
+   )
+{
+   sol->solorigin = origin;
+}
+
 /*
  * methods for accumulated numerical violations of a solution
  */

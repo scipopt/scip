@@ -61,6 +61,7 @@
 #include "scip/type_nlpi.h"
 #include "scip/type_concsolver.h"
 #include "scip/type_benders.h"
+#include "scip/type_iis.h"
 #include "scip/type_expr.h"
 #include "scip/type_message.h"
 #include "scip/debug.h"
@@ -96,6 +97,7 @@ struct SCIP_Set
    SCIP_NODESEL**        nodesels;           /**< node selectors */
    SCIP_NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
    SCIP_BRANCHRULE**     branchrules;        /**< branching rules */
+   SCIP_IIS**            iis;                /**< irreducible infeasible subsystem (IIS) rules */
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_TABLE**          tables;             /**< statistics tables */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
@@ -142,6 +144,8 @@ struct SCIP_Set
    int                   nodeselssize;       /**< size of nodesels array */
    int                   nbranchrules;       /**< number of branching rules */
    int                   branchrulessize;    /**< size of branchrules array */
+   int                   niis;               /**< number of IIS rules */
+   int                   iissize;            /**< size of IIS array */
    int                   ndisps;             /**< number of display columns */
    int                   dispssize;          /**< size of disps array */
    int                   ntables;            /**< number of statistics tables */
@@ -183,6 +187,7 @@ struct SCIP_Set
    SCIP_Bool             comprsnamesorted;   /**< are the compressions sorted by name? */
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
+   SCIP_Bool             iissorted;          /**< are the IIS rules sorted by priority */
    SCIP_Bool             tablessorted;       /**< are the tables sorted by position? */
    SCIP_Bool             exprhdlrssorted;    /**< are the expression handlers sorted by name? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */

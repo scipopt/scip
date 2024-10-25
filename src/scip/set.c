@@ -67,6 +67,7 @@
 #include "scip/benders.h"
 #include "scip/expr.h"
 #include "scip/nlpi.h"
+#include "scip/iis.h"
 #include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
 #include "scip/struct_paramset.h" /* for objectivestop deprecation */
@@ -844,6 +845,9 @@ void SCIPsetEnableOrDisablePluginClocks(
 
    for( i = set->nbranchrules - 1; i >= 0; --i )
       SCIPbranchruleEnableOrDisableClocks(set->branchrules[i], enabled);
+   
+   for ( i = set->niis - 1; i >= 0; --i )
+      SCIPiisEnableOrDisableClocks(set->iis[i], enabled);
 }
 
 /* method to be invoked when the parameter timing/statistictiming is changed */
@@ -875,6 +879,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copyiis,            /**< should the IIS rules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
@@ -1043,6 +1048,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset) );
       }
    }
+   
+   /* copy all cut selector plugins */
+   if( copyiis && sourceset->iis != NULL )
+   {
+      for( p = sourceset->niis - 1; p >= 0; --p )
+      {
+         SCIP_CALL( SCIPiisCopyInclude(sourceset->iis[p], targetset) );
+      }
+   }
 
    /* copy all display plugins */
    if( copydisplays && sourceset->disps != NULL )
@@ -1206,6 +1220,10 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->branchrulessize = 0;
    (*set)->branchrulessorted = FALSE;
    (*set)->branchrulesnamesorted = FALSE;
+   (*set)->iis = NULL;
+   (*set)->niis = 0;
+   (*set)->iissize = 0;
+   (*set)->iissorted = FALSE;
    (*set)->banditvtables = NULL;
    (*set)->banditvtablessize = 0;
    (*set)->nbanditvtables = 0;
@@ -2886,6 +2904,13 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPbranchruleFree(&(*set)->branchrules[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->branchrules);
+   
+   /* free IIS */
+   for( i = 0; i < (*set)->niis; ++i)
+   {
+      SCIP_CALL( SCIPiisFree(&(*set)->iis[i], *set) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->iis);
 
    /* free statistics tables */
    for( i = 0; i < (*set)->ntables; ++i )
@@ -4937,6 +4962,63 @@ void SCIPsetSortBranchrulesName(
       SCIPsortPtr((void**)set->branchrules, SCIPbranchruleCompName, set->nbranchrules);
       set->branchrulessorted = FALSE;
       set->branchrulesnamesorted = TRUE;
+   }
+}
+
+/** inserts IIS in IIS list */
+SCIP_RETCODE SCIPsetIncludeIIS(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_IIS*             iis                 /**< IIS */
+)
+{
+   assert(set != NULL);
+   assert(iis != NULL);
+   
+   if( set->niis >= set->iissize )
+   {
+      set->iissize = SCIPsetCalcMemGrowSize(set, set->niis + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->iis, set->iissize) );
+   }
+   assert(set->niis < set->iissize);
+   
+   set->iis[set->niis] = iis;
+   set->niis++;
+   set->iissorted = FALSE;
+   
+   return SCIP_OKAY;
+}
+
+/** returns the IIS of the given name, or NULL if not existing */
+SCIP_IIS* SCIPsetFindIIS(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of IIS */
+)
+{
+   int i;
+   
+   assert(set != NULL);
+   assert(name != NULL);
+   
+   for( i = 0; i < set->niis; ++i )
+   {
+      if( strcmp(SCIPiisGetName(set->iis[i]), name) == 0 )
+         return set->iis[i];
+   }
+   
+   return NULL;
+}
+
+/** sorts IIS rules by priorities */
+void SCIPsetSortIIS(
+   SCIP_SET*             set                 /**< global SCIP settings */
+)
+{
+   assert(set != NULL);
+   
+   if( !set->iissorted )
+   {
+      SCIPsortPtr((void**)set->iis, SCIPiisComp, set->niis);
+      set->iissorted = TRUE;
    }
 }
 

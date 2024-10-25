@@ -258,6 +258,7 @@ SCIP_RETCODE createSubSCIP(
          TRUE,  /* eventhandler */
          TRUE,  /* nodeselectors (SCIP gives an error if there is none) */
          FALSE, /* branchrules */
+         FALSE, /* iis */
          TRUE,  /* displays */
          FALSE, /* tables */
          FALSE, /* dialogs */

@@ -37,15 +37,41 @@
  * We cannot guarantee that we are minimal at the end, so we might just obtain an infeasible subsystem (IS).
  */
 
+#include <assert.h>
 #include <string.h>
 
-#include <scip/scipdefplugins.h>
+#include "scip/scip_iis.h"
 #include <scip/iis_deletionfilter.h>
 
-/* default values */
-#define DEFAULT_MINNNODES 50
-#define DEFAULT_FACTORNODES 2.0
-#define DEFAULT_BATCHSIZE 1
+#define IIS_NAME                 "greedy"
+#define IIS_DESC                 "greedy deletion or addition constraint deletion"
+#define IIS_PRIORITY              8000
+#define RANDSEED                  0x5EED
+
+#define DEFAULT_BATCHSIZE         4
+#define DEFAULT_MAXNNODESPERITER -1
+#define DEFAULT_TIMELIMPERITER   SCIP_INVALID/10.0
+#define DEFAULT_MINIFY           TRUE
+#define DEFAULT_ADDITIVE         FALSE
+
+/*
+ * Data structures
+ */
+
+/** IIS data */
+struct SCIP_IISData
+{
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random generator for sorting constraints */
+   SCIP_Real             timelimperiter;
+   SCIP_Bool             minify;
+   SCIP_Bool             additive;
+   int                   maxnnodesperiter;
+   int                   batchsize;
+};
+
+/*
+ * Local methods
+ */
 
 /** creates a sub-SCIP and sets parameters */
 static
@@ -276,6 +302,7 @@ SCIP_RETCODE additionFilterConsSubproblem(
 
 
 /** deletion filter to greedily remove constraints to obtain an (I)IS -- detailed function call */
+static
 SCIP_RETCODE deletionFilterBatchCons(
    SCIP*                 scip,               /**< SCIP instance to analyze */
    SCIP_Bool             conservative,       /**< whether we treat a subproblem to be feasible, if it reached its node limt */
@@ -366,12 +393,13 @@ SCIP_RETCODE deletionFilterBatchCons(
 }
 
 /** addition filter to greedily add constraints to obtain an (I)IS -- detailed function call */
+static
 SCIP_RETCODE additionFilterBatchCons(
    SCIP*                 scip,               /**< SCIP instance to analyze */
    SCIP_Bool             silent,             /**< run silently? */
    SCIP_Longint*         nnodes,             /**< pointer to store the total number of nodes needed (or NULL) */
    SCIP_Bool*            success             /**< pointer to store whether we have obtained an (I)IS */
-)
+   )
 {
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_CLOCK* totalTimeClock = NULL;
@@ -506,22 +534,150 @@ SCIP_RETCODE additionFilterBatchCons(
    return SCIP_OKAY;
 }
 
+/*
+ * Callback methods of cut selector
+ */
 
-/** run deletion filter to obtain an (I)IS */
-SCIP_RETCODE SCIPrunDeletionFilter(
-   SCIP*                 scip,               /**< SCIP instance to analyze */
-   SCIP_Bool             silent,             /**< run silently? */
-   int*                  sizeIS,             /**< pointer to store the size of the (I)IS */
-   SCIP_Bool*            isIIS,              /**< pointer to store whether we found an IIS */
-   SCIP_Bool*            success             /**< pointer to store whether we have obtained an (I)IS */
+
+/** copy method for IIS plugin (called when SCIP copies plugins) */
+static
+SCIP_DECL_IISCOPY(iisCopyGreedy)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(iis != NULL);
+   assert(strcmp(SCIPiisGetName(iis), IIS_NAME) == 0);
+   
+   /* call inclusion method of cut selector */
+   SCIP_CALL( SCIPincludeIISGreedy(scip) );
+   
+   return SCIP_OKAY;
+}
+
+/** destructor of IIS to free user data (called when SCIP is exiting) */
+/**! [SnippetIISFreeGreedy] */
+static
+SCIP_DECL_IISFREE(iisFreeGreedy)
+{  /*lint --e{715}*/
+   SCIP_IISDATA* iisdata;
+   
+   iisdata = SCIPiisGetData(iis);
+   
+   SCIPfreeBlockMemory(scip, &iisdata);
+   
+   SCIPiisSetData(iis, NULL);
+   
+   return SCIP_OKAY;
+}
+/**! [SnippetIISFreeGreedy] */
+
+/** IIS generation method of IIS */
+static
+SCIP_DECL_IISGENERATE(iisGenerateGreedy)
+{  /*lint --e{715}*/
+   struct SCIP_IISData* iisdata;
+   
+   assert(iis != NULL);
+   assert(result != NULL);
+   
+   *result = SCIP_SUCCESS;
+   
+   iisdata = SCIPiisGetData(iis);
+   assert(iisdata != NULL);
+   
+   SCIP_CALL( SCIPgenerateIISGreedy(scip, iisdata->randnumgen, iisdata->timelim, iisdata->timelimperiter,
+                                   iisdata->maxnnodes, iisdata->maxnnodesperiter, iisdata->batchsize) );
+   
+   return SCIP_OKAY;
+}
+
+
+/*
+ * IIS specific interface methods
+ */
+
+/** creates the greedy IIS and includes it in SCIP */
+SCIP_RETCODE SCIPincludeIISGreedy(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_IISDATA* iisdata;
+   SCIP_IIS* iis;
+   
+   /* create greedy IIS data */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &iisdata) );
+   BMSclearMemory(iisdata);
+   SCIP_CALL( SCIPcreateRandom(scip, &(iisdata)->randnumgen, RANDSEED, TRUE) );
+   
+   SCIP_CALL( SCIPincludeIISBasic(scip, &iis, IIS_NAME, IIS_DESC, IIS_PRIORITY, iisGenerateGreedy,
+                                     iisdata) );
+   
+   assert(iis != NULL);
+   
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetIISCopy(scip, iis, iisCopyGreedy) );
+   SCIP_CALL( SCIPsetIISFree(scip, iis, iisFreeGreedy) );
+   
+   /* add greedy IIS parameters */
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "iis/" IIS_NAME "/batchsize",
+         "batch size of constraints that are removed or added in one iteration",
+         &iisdata->batchsize, FALSE, DEFAULT_BATCHSIZE, 1, INT_MAX, NULL, NULL) );
+   
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "iis/" IIS_NAME "/timelimperiter",
+         "time limit of optimization process for each individual subproblem",
+         &iisdata->timelimperiter, FALSE, DEFAULT_TIMELIMPERITER, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "iis/" IIS_NAME "/maxnnodesperiter",
+         "node limit of optimization process for each individual subproblem",
+         &iisdata->maxnnodesperiter, FALSE, DEFAULT_MAXNNODESPERITER, 1, INT_MAX, NULL, NULL) );
+   
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "iis/" IIS_NAME "/minify",
+         "should the resultant IS always be an IIS",
+         &iisdata->minify, FALSE, DEFAULT_MINIFY, NULL, NULL) );
+   
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "iis/" IIS_NAME "/additive",
+         "should an additive constraint approach be used instead of deletion",
+         &iisdata->additive, FALSE, DEFAULT_ADDITIVE, NULL, NULL) );
+   
+   return SCIP_OKAY;
+}
+
+/** perform a greedy addition or deletion algorithm to obtain an infeasible subsystem (IS).
+ *
+ *  This is the generation method for the greedy IIS rule.
+ *  Depending on the parameter choices, constraints are either greedily added from an empty problem,
+ *  or deleted from a complete problem. In the case of constraints being added, this is done until the problem
+ *  becomes infeasible, after which one can then begin deleting constraints. In the case of deleting constraints,
+ *  this is done until no more constraints (or batches of constraints) can be deleted withough making
+ *  the problem feasible.
+ */
+SCIP_RETCODE SCIPgenerateIISGreedy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN*      randnumgen,
+   SCIP_Real             timelimsingle,
+   SCIP_Bool             minify,
+   SCIP_Bool             additive,
+   int                   maxnnodessingle,
+   int                   batchsize
    )
 {
    SCIP* subscip;
+   SCIP_Bool* success;
    
    SCIP_CALL( createSubscipCopy(scip, &subscip) );
-   SCIP_CALL( deletionFilterBatchCons(subscip, TRUE, FALSE, NULL, success) );
-   // SCIP_CALL( additionFilterBatchCons(subscip, FALSE, NULL, success) );
+   if( additive )
+      SCIP_CALL( additionFilterBatchCons(subscip, FALSE, NULL, success) );
+   else
+      SCIP_CALL( deletionFilterBatchCons(subscip, TRUE, FALSE, NULL, success) );
+   
+   if( minify && *success && (additive || (batchsize != 1)) )
+      SCIP_CALL( deletionFilterBatchCons(subscip, TRUE, FALSE, NULL, success) );
+      
    SCIPinfoMessage(scip, NULL, "NCONSS: %d\n", SCIPgetNConss(subscip));
-
+   
    return SCIP_OKAY;
 }

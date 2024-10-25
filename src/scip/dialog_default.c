@@ -35,7 +35,6 @@
 #include "blockmemshell/memory.h"
 #include "scip/cons_linear.h"
 #include "scip/dialog_default.h"
-#include "scip/iis_deletionfilter.h"
 #include "scip/pub_benders.h"
 #include "scip/pub_branch.h"
 #include "scip/pub_compr.h"
@@ -70,6 +69,7 @@
 #include "scip/scip_expr.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
+#include "scip/scip_iis.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -90,7 +90,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_validation.h"
 #include "scip/scip_var.h"
-#include <scip/scipdefplugins.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -2292,11 +2291,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS)
          SCIPdialogMessage(scip, NULL, "need infeasible model to compute an IIS\n");
       else
       {
-         int sizeIS;
-         SCIP_Bool isIIS;
-         SCIP_Bool success;
 
-         SCIP_CALL( SCIPrunDeletionFilter(scip, FALSE, &sizeIS, &isIIS, &success) );
+         SCIP_CALL( SCIPgenerateIIS(scip) );
       }
 
       break;

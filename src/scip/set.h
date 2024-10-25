@@ -90,6 +90,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copyiis,            /**< should the IIS rules be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
@@ -836,6 +837,23 @@ void SCIPsetSortBranchrules(
 
 /** sorts branching rules by name */
 void SCIPsetSortBranchrulesName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** inserts IIS in IIS list */
+SCIP_RETCODE SCIPsetIncludeIIS(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_IIS*             iis                 /**< IIS */
+   );
+
+/** returns the IIS of the given name, or NULL if not existing */
+SCIP_IIS* SCIPsetFindIIS(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of separator */
+   );
+
+/** sorts the IIS rules by priorities */
+void SCIPsetSortIIS(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
