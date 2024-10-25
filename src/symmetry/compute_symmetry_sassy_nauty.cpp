@@ -311,7 +311,7 @@ SCIP_RETCODE computeAutomorphisms(
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
    SCIP_Bool             restricttovars,     /**< whether permutations shall be restricted to variables */
    SCIP_Real*            symcodetime,        /**< pointer to store the time for symmetry code */
-   SCIP_Bool             allowearlytermination /**< whether we allow to interrupt symmetry detection early
+   SCIP_Bool             canterminateearly   /**< whether we allow to interrupt symmetry detection early
                                                 *   (e.g., because of iteration limits) */
    )
 {
@@ -384,7 +384,7 @@ SCIP_RETCODE computeAutomorphisms(
    options.writeautoms = FALSE;
    options.userautomproc = sassy::preprocessor::nauty_hook;
    options.defaultptn = FALSE; /* use color classes */
-   if ( allowearlytermination )
+   if ( canterminateearly )
       options.usernodeproc = nautyterminationhook;
    *log10groupsize = 0.0;
    if(sg.nv > 0) {
