@@ -86,7 +86,7 @@ SCIP_RETCODE SCIPgenerateIISGreedy(
    SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
    SCIP_Bool             conservative,       /**< should a node or time limit solve be counted as feasible when deleting constraints */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
-   int                   maxnnodesperiter,   /**< maximum number of nodes per individual solve call */
+   SCIP_Longint          maxnnodesperiter,   /**< maximum number of nodes per individual solve call */
    int                   batchsize           /**< the number of constraints to delete or add per iteration */
 );
 

@@ -245,6 +245,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeCutselEnsemble(scip) );
    SCIP_CALL( SCIPincludeCutselHybrid(scip) );
    SCIP_CALL( SCIPincludeCutselDynamic(scip) );
+   SCIP_CALL( SCIPincludeIISGreedy(scip) );
    SCIP_CALL( SCIPincludeExprhdlrAbs(scip) );
    SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
    SCIP_CALL( SCIPincludeExprhdlrEntropy(scip) );
