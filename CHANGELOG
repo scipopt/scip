@@ -15,7 +15,8 @@ Performance improvements
 
 - reoptimization now also stores propagations from propagators if reoptimization/saveconsprop is enabled;
   the parameter will be renamed to reoptimization/saveprop in a next major release
-- Imposed stricter limits on the size of disconnected components which may be solved separately during presolve by cons_components
+- imposed stricter limits on the size of disconnected components which may be solved separately during presolve by cons_components
+- use individual slack variables also for constraints indicated by a common binary variable to use tighter formulation by default
 
 Fixed bugs
 ----------
@@ -40,6 +41,7 @@ Interface changes
 
 ### Command line interface
 ### Interfaces to external software
+
 ### New parameters
 
 - presolving/milp/abortfacexhaustive to control the abort threshold for exhaustive presolving in PAPILO
@@ -47,6 +49,7 @@ Interface changes
 - presolving/milp/abortfacfast to control the abort threshold for fast presolving in PAPILO
 - constraints/components/maxcompweight to determine the maximum weight for a disconnected component that is solved during presolve
 - constraints/components/contfactor counts the contributing factor of a single continuous variables with respect to the weight limit specified by constraints/components/maxcompweight
+- constraints/indicator/usesameslackvar to decide whether the same slack variable should be used for indicators constraints with common binary variable
 
 ### Changed parameters
 
