@@ -410,7 +410,8 @@ SCIP_RETCODE computeImpliedEst(
    int*                  est                 /**< pointer to store the implied earliest start time */
    )
 {  /*lint --e{715}*/
-#if 0
+#ifdef SCIP_DISABLED_CODE
+   /* there is a bug below */
    SCIP_VAR** vbdvars;
    SCIP_VAR* vbdvar;
    SCIP_Real* vbdcoefs;
@@ -422,7 +423,7 @@ SCIP_RETCODE computeImpliedEst(
 
    (*est) = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(var));
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* the code contains a bug; we need to check if an implication forces that the jobs do not run in parallel */
 
    nvbdvars = SCIPvarGetNVlbs(var);
@@ -479,7 +480,8 @@ SCIP_RETCODE computeImpliedLct(
    int*                  lct                 /**< pointer to store the implied latest completion time */
    )
 {  /*lint --e{715}*/
-#if 0
+#ifdef SCIP_DISABLED_CODE
+   /* there is a bug below */
    SCIP_VAR** vbdvars;
    SCIP_VAR* vbdvar;
    SCIP_Real* vbdcoefs;
@@ -490,7 +492,7 @@ SCIP_RETCODE computeImpliedLct(
 
    (*lct) = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(var)) + duration;
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* the code contains a bug; we need to check if an implication forces that the jobs do not run in parallel */
 
    nvbdvars = SCIPvarGetNVubs(var);
