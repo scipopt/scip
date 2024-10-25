@@ -10984,9 +10984,6 @@ SCIP_RETCODE presolveCons(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing of presolving call */
    int*                  nfixedvars,         /**< pointer to store the number of fixed variables */
-#if 0
-   int*                  naggrvars,          /**< pointer to counter which is increased by the number of deduced variable aggregations */
-#endif
    int*                  nchgbds,            /**< pointer to store the number of changed bounds */
    int*                  ndelconss,          /**< pointer to store the number of deleted constraints */
    int*                  naddconss,          /**< pointer to store the number of added constraints */
@@ -12963,9 +12960,6 @@ SCIP_DECL_CONSPROP(consPropCumulative)
    int nchgbds;
    int ndelconss;
    int c;
-#if 0
-   int naggrvars = 0;
-#endif
 
    SCIPdebugMsg(scip, "propagate %d of %d useful cumulative constraints\n", nusefulconss, nconss);
 
@@ -12992,13 +12986,9 @@ SCIP_DECL_CONSPROP(consPropCumulative)
 
       if( SCIPgetDepth(scip) == 0 )
       {
-#if 0
-         SCIP_CALL( presolveCons(scip, cons, conshdlrdata, SCIP_PRESOLTIMING_ALWAYS,
-               &nchgbds, &naggrvars, &nchgbds, &ndelconss, &nchgbds, &nchgbds, &nchgbds, &cutoff, &cutoff) );
-#else
          SCIP_CALL( presolveCons(scip, cons, conshdlrdata, SCIP_PRESOLTIMING_ALWAYS,
                &nchgbds, &nchgbds, &ndelconss, &nchgbds, &nchgbds, &nchgbds, &cutoff, &cutoff) );
-#endif
+
          if( cutoff )
             break;
 
@@ -13085,13 +13075,8 @@ SCIP_DECL_CONSPRESOL(consPresolCumulative)
 
       if( presoltiming != SCIP_PRESOLTIMING_MEDIUM )
       {
-#if 0
-         SCIP_CALL( presolveCons(scip, cons, conshdlrdata, presoltiming,
-               nfixedvars, naggrvars, nchgbds, ndelconss, naddconss, nchgcoefs, nchgsides, &cutoff, &unbounded) );
-#else
          SCIP_CALL( presolveCons(scip, cons, conshdlrdata, presoltiming,
                nfixedvars, nchgbds, ndelconss, naddconss, nchgcoefs, nchgsides, &cutoff, &unbounded) );
-#endif
 
          if( cutoff || unbounded )
             break;
