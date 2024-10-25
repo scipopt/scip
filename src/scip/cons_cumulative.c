@@ -1444,7 +1444,9 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
    return SCIP_OKAY;
 }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
+/* The following code should work, but is currently not used. */
+
 /** solve single cumulative condition using SCIP and the time indexed formulation */
 static
 SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
@@ -10797,7 +10799,9 @@ SCIP_RETCODE tightenCoefs(
    return SCIP_OKAY;
 }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
+/* The following should work, but does not seem to be tested well. */
+
 /** try to reformulate constraint by replacing certain jobs */
 static
 SCIP_RETCODE reformulateCons(
@@ -11050,7 +11054,8 @@ SCIP_RETCODE presolveCons(
 
    assert(checkDemands(scip, cons) || *cutoff);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
+   /* The following should work, but does not seem to be tested well. */
    SCIP_CALL( reformulateCons(scip, cons, naggrvars) );
 #endif
 
@@ -12631,7 +12636,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreCumulative)
    {
       SCIP_CALL( evaluateCumulativeness(scip, conss[c]) );
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
       SCIP_CALL( SCIPvisualizeConsCumulative(scip, conss[c]) );
 #endif
    }
@@ -14193,7 +14198,8 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
          }
       }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
+      /* uncomment to also output variable bounds */
       vbdvars = SCIPvarGetVubVars(var);
       nvbdvars = SCIPvarGetNVubs(var);
 
