@@ -22,8 +22,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   iis_deletionfilter.h
- * @brief  deletion filter heuristic to compute IISs
+/**@file   iis_greedy.h
+ * @brief  greedy deletion and addition filter heuristic to compute IISs
  * @author Marc Pfetsch
  * @author Mark Turner
  *
@@ -80,12 +80,14 @@ SCIP_RETCODE SCIPincludeIISGreedy(
 SCIP_EXPORT
 SCIP_RETCODE SCIPgenerateIISGreedy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RANDNUMGEN*      randnumgen,
-   SCIP_Real             timelim,
-   SCIP_Real             timelimsingle,
-   int                   maxnnodes,
-   int                   maxnnodessingle,
-   int                   batchsize
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
+   SCIP_Bool             minify,             /**< whether the computed IS should undergo a final deletion round to ensure an IIS */
+   SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
+   SCIP_Bool             conservative,       /**< should a node or time limit solve be counted as feasible when deleting constraints */
+   SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
+   int                   maxnnodesperiter,   /**< maximum number of nodes per individual solve call */
+   int                   batchsize           /**< the number of constraints to delete or add per iteration */
 );
 
 /** @} */

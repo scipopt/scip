@@ -692,7 +692,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_zeroobj.o \
 			scip/heur_zirounding.o \
 			scip/hypergraph.o \
-			scip/iis_deletionfilter.o \
+			scip/iis_greedy.o \
 			scip/message_default.o \
 			scip/nlhdlr_bilinear.o \
 			scip/nlhdlr_convex.o \
@@ -851,6 +851,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/heuristics.o \
 			scip/compr.o \
 			scip/history.o \
+			scip/iis.o \
 			scip/implics.o \
 			scip/interrupt.o \
 			scip/intervalarith.o \
@@ -896,6 +897,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_expr.o \
 			scip/scip_general.o \
 			scip/scip_heur.o \
+			scip/scip_iis.o \
 			scip/scip_lp.o \
 			scip/scip_mem.o \
 			scip/scip_message.o \

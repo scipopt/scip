@@ -92,7 +92,6 @@ SCIP_RETCODE doIISCreate(
    (*iis)->iisdata = iisdata;
 
    /* create clocks */
-   SCIP_CALL( SCIPclockCreate(&(*iis)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*iis)->iistime, SCIP_CLOCKTYPE_DEFAULT) );
 
    /* add parameters */
@@ -165,7 +164,7 @@ SCIP_RETCODE SCIPiisGenerate(
       /* start timing */
       SCIPclockStart(iis->iistime, set);
 
-      SCIP_CALL( iis->iisgenerate(set->scip, &result) );
+      SCIP_CALL( iis->iisgenerate(set->scip, iis, &result) );
 
       /* stop timing */
       SCIPclockStop(iis->iistime, set);
@@ -225,7 +224,6 @@ SCIP_RETCODE SCIPiisFree(
 
    /* free clocks */
    SCIPclockFree(&(*iis)->iistime);
-   SCIPclockFree(&(*iis)->setuptime);
 
    BMSfreeMemoryArrayNull(&(*iis)->name);
    BMSfreeMemoryArrayNull(&(*iis)->desc);

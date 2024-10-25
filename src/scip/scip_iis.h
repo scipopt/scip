@@ -109,20 +109,20 @@ SCIP_RETCODE SCIPgenerateIIS(
 
 /** returns the IIS of the given name, or NULL if not existing */
 SCIP_EXPORT
-SCIP_IIS* SCIPfindISS(
+SCIP_IIS* SCIPfindIIS(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of ISS */
+   const char*           name                /**< name of IIS */
    );
 
-/** returns the array of currently available ISSs */
+/** returns the array of currently available IISs */
 SCIP_EXPORT
-SCIP_IIS** SCIPgetISS(
+SCIP_IIS** SCIPgetIIS(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the number of currently available ISSs */
+/** returns the number of currently available IISs */
 SCIP_EXPORT
-int SCIPgetNISS(
+int SCIPgetNIIS(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

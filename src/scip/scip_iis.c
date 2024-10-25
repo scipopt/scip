@@ -51,7 +51,7 @@ SCIP_RETCODE SCIPincludeIIS(
    const char*           name,               /**< name of IIS */
    const char*           desc,               /**< description of IIS */
    int                   priority,           /**< priority of the IIS */
-   SCIP_DECL_IISCOPY     ((*iiscop)),        /**< copy method of IIS or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_IISCOPY     ((*iiscopy)),        /**< copy method of IIS or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_IISFREE     ((*iisfree)),       /**< destructor of IIS */
    SCIP_DECL_IISGENERATE ((*iisgenerate)),   /**< IIS generation method */
    SCIP_IISDATA*         iisdata             /**< IIS data */
@@ -151,8 +151,9 @@ SCIP_RETCODE SCIPgenerateIIS(
    )
 {
    assert(scip != NULL);
-   SCIP_CALL( SCIPiisGenerate(scip->set) )
+   SCIP_CALL( SCIPiisGenerate(scip->set) );
    
+   return SCIP_OKAY;
 }
 
 /** returns the IIS of the given name, or NULL if not existing */
@@ -169,20 +170,20 @@ SCIP_IIS* SCIPfindIIS(
 }
 
 /** returns the array of currently available IISs */
-SCIP_IIS** SCIPgetISS(
+SCIP_IIS** SCIPgetIIS(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   SCIPsetSortISS(scip->set);
+   SCIPsetSortIIS(scip->set);
 
-   return scip->set->iss;
+   return scip->set->iis;
 }
 
-/** returns the number of currently available ISSs */
-int SCIPgetNISS(
+/** returns the number of currently available IISs */
+int SCIPgetNIIS(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {

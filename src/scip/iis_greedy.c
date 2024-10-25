@@ -22,8 +22,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   iis_deletionfilter.c
- * @brief  deletion filter heuristic to compute (I)ISs
+/**@file   iis_greedy.c
+ * @brief  greedy deletion and addition filter heuristic to compute (I)ISs
  * @author Marc Pfetsch
  * @author Mark Turner
  *
@@ -41,7 +41,7 @@
 #include <string.h>
 
 #include "scip/scip_iis.h"
-#include <scip/iis_deletionfilter.h>
+#include <scip/iis_greedy.h>
 
 #define IIS_NAME                 "greedy"
 #define IIS_DESC                 "greedy deletion or addition constraint deletion"
@@ -53,6 +53,8 @@
 #define DEFAULT_TIMELIMPERITER   SCIP_INVALID/10.0
 #define DEFAULT_MINIFY           TRUE
 #define DEFAULT_ADDITIVE         FALSE
+#define DEFAULT_CONSERVATIVE     TRUE
+#define DEFAULT_SILENT           FALSE
 
 /*
  * Data structures
@@ -65,6 +67,8 @@ struct SCIP_IISData
    SCIP_Real             timelimperiter;
    SCIP_Bool             minify;
    SCIP_Bool             additive;
+   SCIP_Bool             conservative;
+   SCIP_Bool             silent;
    int                   maxnnodesperiter;
    int                   batchsize;
 };
@@ -77,7 +81,9 @@ struct SCIP_IISData
 static
 SCIP_RETCODE createSubscipCopy(
    SCIP*                 scip,               /**< main SCIP data structure */
-   SCIP**                subscip             /**< pointer to store created sub-SCIP */
+   SCIP**                subscip,            /**< pointer to store created sub-SCIP */
+   SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
+   int                   maxnnodesperiter    /**< maximum number of nodes per individual solve call */
    )
 {
    SCIP_Bool success;
@@ -103,9 +109,6 @@ SCIP_RETCODE createSubscipCopy(
    
    /* disable expensive presolving */
    SCIP_CALL( SCIPsetPresolving(*subscip, SCIP_PARAMSETTING_FAST, TRUE) );
-   
-   /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(*subscip, "misc/catchctrlc", FALSE) );
 
 #ifdef SCIP_DEBUG
    /* for debugging, enable full output */
@@ -116,6 +119,10 @@ SCIP_RETCODE createSubscipCopy(
    SCIP_CALL( SCIPsetIntParam(*subscip, "display/verblevel", 0) );
    SCIP_CALL( SCIPsetBoolParam(*subscip, "timing/statistictiming", FALSE) );
 #endif
+   
+   /* set parameter for time and node limit */
+   SCIP_CALL( SCIPsetRealParam(*subscip, "limits/time", timelimperiter) );
+   SCIP_CALL( SCIPsetIntParam(*subscip, "limits/totalnodes", maxnnodesperiter) );
    
    /* set parameter for solve to stop after finding a single solution (only need to prove feasibility) */
    SCIP_CALL( SCIPsetIntParam(*subscip, "limits/bestsol", 1) );
@@ -305,30 +312,24 @@ SCIP_RETCODE additionFilterConsSubproblem(
 static
 SCIP_RETCODE deletionFilterBatchCons(
    SCIP*                 scip,               /**< SCIP instance to analyze */
-   SCIP_Bool             conservative,       /**< whether we treat a subproblem to be feasible, if it reached its node limt */
-   SCIP_Bool             silent,             /**< run silently? */
-   SCIP_Longint*         nnodes,             /**< pointer to store the total number of nodes needed (or NULL) */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   SCIP_Bool             conservative,       /**< should a node or time limit solve be counted as feasible when deleting constraints */
+   SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
+   int                   batchsize,          /**< the number of constraints to delete or add per iteration */
    SCIP_Bool*            success             /**< pointer to store whether we have obtained an (I)IS */
    )
 {
-   SCIP_RANDNUMGEN* randnumgen;
-   SCIP_CLOCK* totalTimeClock = NULL;
    int nconss;
    int nbatches;
    SCIP_CONS** conss;
    int* order;
    int* idxs;
+   SCIP_Real nnodes = 0;
    int i;
    
    assert( success != NULL );
 
    *success = FALSE;
-   if ( nnodes != NULL )
-      *nnodes = 0;
-
-   /* create and start clock */
-   SCIP_CALL( SCIPcreateClock(scip, &totalTimeClock) );
-   SCIP_CALL( SCIPstartClock(scip, totalTimeClock) );
    
    /* Get constraint information */
    nconss = SCIPgetNOrigConss(scip);
@@ -341,15 +342,13 @@ SCIP_RETCODE deletionFilterBatchCons(
 
    /* prepare random order */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &order, nconss) );
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 4678, FALSE) );
    for (i = 0; i < nconss; ++i)
       order[i] = i;
    SCIPrandomPermuteIntArray(randnumgen, order, 0, nconss);
-   SCIPfreeRandom(scip, &randnumgen);
    
    /* Calculate the number of batches */
-   nbatches = (int) SCIPceil(scip, (SCIP_Real) nconss / DEFAULT_BATCHSIZE);
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &idxs, DEFAULT_BATCHSIZE) );
+   nbatches = (int) SCIPceil(scip, (SCIP_Real) nconss / batchsize);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &idxs, batchsize) );
 
    /* Loop through all batches of constraints in random order */
    for (i = 0; i < nbatches; ++i)
@@ -360,34 +359,30 @@ SCIP_RETCODE deletionFilterBatchCons(
       int ndelconss;
       SCIP_Bool stopiter = FALSE;
    
-      minconsidx = i * DEFAULT_BATCHSIZE;
+      minconsidx = i * batchsize;
       if( minconsidx >= nconss )
          break;
-      maxconsidx = MIN((i + 1) * DEFAULT_BATCHSIZE, nconss);
+      maxconsidx = MIN((i + 1) * batchsize, nconss);
       ndelconss = maxconsidx - minconsidx;
       for( j = 0; j < ndelconss; j++ )
       {
-         idxs[j] = order[i*DEFAULT_BATCHSIZE+j];
+         idxs[j] = order[i*batchsize+j];
       }
 
       /* treat subproblem */
       SCIP_CALL( deletionFilterConsSubproblem(scip, conservative, ndelconss, idxs, conss,
             silent, &stopiter) );
 
-      if ( nnodes != NULL )
-         *nnodes += SCIPgetNTotalNodes(scip);
+      nnodes += SCIPgetNTotalNodes(scip);
       assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
 
       if ( stopiter )
          break;
    }
    
-   SCIPfreeBlockMemoryArray(scip, &idxs, DEFAULT_BATCHSIZE);
+   SCIPfreeBlockMemoryArray(scip, &idxs, batchsize);
    SCIPfreeBlockMemoryArray(scip, &order, nconss);
    SCIPfreeBlockMemoryArray(scip, &conss, nconss);
-   
-   SCIP_CALL( SCIPfreeClock(scip, &totalTimeClock) );
-   assert( totalTimeClock == NULL );
 
    return SCIP_OKAY;
 }
@@ -396,13 +391,12 @@ SCIP_RETCODE deletionFilterBatchCons(
 static
 SCIP_RETCODE additionFilterBatchCons(
    SCIP*                 scip,               /**< SCIP instance to analyze */
-   SCIP_Bool             silent,             /**< run silently? */
-   SCIP_Longint*         nnodes,             /**< pointer to store the total number of nodes needed (or NULL) */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
+   int                   batchsize,          /**< the number of constraints to delete or add per iteration */
    SCIP_Bool*            success             /**< pointer to store whether we have obtained an (I)IS */
    )
 {
-   SCIP_RANDNUMGEN* randnumgen;
-   SCIP_CLOCK* totalTimeClock = NULL;
    int nconss;
    SCIP_CONS** conss;
    SCIP_SOL* sol;
@@ -412,6 +406,7 @@ SCIP_RETCODE additionFilterBatchCons(
    SCIP_Bool feasible;
    SCIP_Bool stopiter;
    SCIP_RESULT result;
+   SCIP_Real nnodes = 0;
    int i;
    int j;
    int k;
@@ -419,12 +414,6 @@ SCIP_RETCODE additionFilterBatchCons(
    assert( success != NULL );
    
    *success = FALSE;
-   if ( nnodes != NULL )
-      *nnodes = 0;
-   
-   /* create and start clock */
-   SCIP_CALL( SCIPcreateClock(scip, &totalTimeClock) );
-   SCIP_CALL( SCIPstartClock(scip, totalTimeClock) );
    
    /* Get constraint information */
    nconss = SCIPgetNOrigConss(scip);
@@ -447,11 +436,9 @@ SCIP_RETCODE additionFilterBatchCons(
    
    /* prepare random order */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &order, nconss) );
-   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 4678, FALSE) );
    for (i = 0; i < nconss; ++i)
       order[i] = i;
    SCIPrandomPermuteIntArray(randnumgen, order, 0, nconss);
-   SCIPfreeRandom(scip, &randnumgen);
    i = 0;
    feasible = TRUE;
    stopiter = FALSE;
@@ -464,7 +451,7 @@ SCIP_RETCODE additionFilterBatchCons(
       k = 0;
       for( j = i; j < nconss; ++j )
       {
-         if( k >= DEFAULT_BATCHSIZE )
+         if( k >= batchsize )
             break;
          if( !inIS[order[j]] )
          {
@@ -479,8 +466,7 @@ SCIP_RETCODE additionFilterBatchCons(
       /* Solve the reduced problem */
       SCIP_CALL( additionFilterConsSubproblem(scip, silent, &feasible, &stopiter) );
    
-      if ( nnodes != NULL )
-         *nnodes += SCIPgetNTotalNodes(scip);
+      nnodes += SCIPgetNTotalNodes(scip);
    
       /* free transform */
       // TODO: Figure out the correct way to handle the solution copying. Need to copy -> freeTransform -> checkCons -> deleteSol (not sure on last step)
@@ -500,7 +486,7 @@ SCIP_RETCODE additionFilterBatchCons(
          {
             if( !inIS[order[j]] )
             {
-               SCIP_CALL(SCIPcheckCons(scip, conss[order[j]], copysol, FALSE, FALSE, FALSE, &result) );
+               SCIP_CALL( SCIPcheckCons(scip, conss[order[j]], copysol, FALSE, FALSE, FALSE, &result) );
                if( result == SCIP_FEASIBLE )
                {
                   SCIP_CALL( SCIPaddCons(scip, conss[order[j]]) );
@@ -527,9 +513,6 @@ SCIP_RETCODE additionFilterBatchCons(
    SCIPfreeBlockMemoryArray(scip, &order, nconss);
    SCIPfreeBlockMemoryArray(scip, &inIS, nconss);
    SCIPfreeBlockMemoryArray(scip, &conss, nconss);
-   
-   SCIP_CALL( SCIPfreeClock(scip, &totalTimeClock) );
-   assert( totalTimeClock == NULL );
    
    return SCIP_OKAY;
 }
@@ -561,6 +544,7 @@ SCIP_DECL_IISFREE(iisFreeGreedy)
    SCIP_IISDATA* iisdata;
    
    iisdata = SCIPiisGetData(iis);
+   SCIPfreeRandom(scip, &(iisdata->randnumgen));
    
    SCIPfreeBlockMemory(scip, &iisdata);
    
@@ -584,8 +568,9 @@ SCIP_DECL_IISGENERATE(iisGenerateGreedy)
    iisdata = SCIPiisGetData(iis);
    assert(iisdata != NULL);
    
-   SCIP_CALL( SCIPgenerateIISGreedy(scip, iisdata->randnumgen, iisdata->timelim, iisdata->timelimperiter,
-                                   iisdata->maxnnodes, iisdata->maxnnodesperiter, iisdata->batchsize) );
+   SCIP_CALL( SCIPgenerateIISGreedy(scip, iisdata->randnumgen, iisdata->timelimperiter, iisdata->minify,
+                                    iisdata->additive, iisdata->conservative, iisdata->silent,
+                                    iisdata->maxnnodesperiter, iisdata->batchsize) );
    
    return SCIP_OKAY;
 }
@@ -643,6 +628,16 @@ SCIP_RETCODE SCIPincludeIISGreedy(
          "should an additive constraint approach be used instead of deletion",
          &iisdata->additive, FALSE, DEFAULT_ADDITIVE, NULL, NULL) );
    
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "iis/" IIS_NAME "/conservative",
+         "should a node or time limit solve be counted as feasible when deleting constraints",
+         &iisdata->conservative, TRUE, DEFAULT_CONSERVATIVE, NULL, NULL) );
+   
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "iis/" IIS_NAME "/silent",
+         "should the output of each solve be silenced",
+         &iisdata->silent, TRUE, DEFAULT_SILENT, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 
@@ -657,25 +652,27 @@ SCIP_RETCODE SCIPincludeIISGreedy(
  */
 SCIP_RETCODE SCIPgenerateIISGreedy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_RANDNUMGEN*      randnumgen,
-   SCIP_Real             timelimsingle,
-   SCIP_Bool             minify,
-   SCIP_Bool             additive,
-   int                   maxnnodessingle,
-   int                   batchsize
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
+   SCIP_Bool             minify,             /**< whether the computed IS should undergo a final deletion round to ensure an IIS */
+   SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
+   SCIP_Bool             conservative,       /**< should a node or time limit solve be counted as feasible when deleting constraints */
+   SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
+   int                   maxnnodesperiter,   /**< maximum number of nodes per individual solve call */
+   int                   batchsize           /**< the number of constraints to delete or add per iteration */
    )
 {
    SCIP* subscip;
    SCIP_Bool* success;
    
-   SCIP_CALL( createSubscipCopy(scip, &subscip) );
+   SCIP_CALL( createSubscipCopy(scip, &subscip, timelimperiter, maxnnodesperiter) );
    if( additive )
-      SCIP_CALL( additionFilterBatchCons(subscip, FALSE, NULL, success) );
+      SCIP_CALL( additionFilterBatchCons(subscip, randnumgen, silent, batchsize, success) );
    else
-      SCIP_CALL( deletionFilterBatchCons(subscip, TRUE, FALSE, NULL, success) );
+      SCIP_CALL( deletionFilterBatchCons(subscip, randnumgen, conservative, silent, batchsize, success) );
    
    if( minify && *success && (additive || (batchsize != 1)) )
-      SCIP_CALL( deletionFilterBatchCons(subscip, TRUE, FALSE, NULL, success) );
+      SCIP_CALL( deletionFilterBatchCons(subscip, randnumgen, conservative, silent, 1, success) );
       
    SCIPinfoMessage(scip, NULL, "NCONSS: %d\n", SCIPgetNConss(subscip));
    
