@@ -11162,30 +11162,6 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
    SCIPdebugMessage("####### max clique %d\n", cliqueweight);
 }
 
-/** print the tclique graph */
-#if 0
-static
-void tcliquePrint(
-   SCIP*                 scip,               /**< SCIP data structure */
-   TCLIQUE_GRAPH*        tcliquegraph        /**< tclique graph */
-   )
-{
-   int nnodes;
-   int i;
-   int j;
-
-   nnodes = tcliquegraph->nnodes;
-
-   for( i = 0; i < nnodes; ++i )
-   {
-      for( j = 0; j < nnodes; ++j )
-      {
-         SCIPinfoMessage(scip, NULL, "(%d/%d) ", tcliquegraph->precedencematrix[i][j], tcliquegraph->demandmatrix[i][j]);
-      }
-      SCIPinfoMessage(scip, NULL, "\n");
-   }
-}
-#endif
 
 /** @} */
 
@@ -11718,14 +11694,6 @@ SCIP_RETCODE findCumulativeConss(
 
          demandrow[c] = tcliquegraph->demandmatrix[v][c];
          demandcol[c] = tcliquegraph->demandmatrix[c][v];
-
-#if 0
-         if( precedencerow[c] || precedencecol[c] )
-         {
-            tcliquegraph->demandmatrix[v][c] = FALSE;
-            tcliquegraph->demandmatrix[c][v] = FALSE;
-         }
-#endif
 
          tcliquegraph->precedencematrix[c][v] = FALSE;
          tcliquegraph->precedencematrix[v][c] = FALSE;
@@ -13049,13 +13017,6 @@ SCIP_DECL_CONSPROP(consPropCumulative)
          SCIP_CALL( propagateCons(scip, conss[c], conshdlrdata, SCIP_PRESOLTIMING_ALWAYS, &nchgbds, &ndelconss, &cutoff) );
       }
    }
-
-#if 0
-   if( !cutoff && conshdlrdata->dualpresolve && SCIPallowStrongDualReds(scip) && nconss > 1 )
-   {
-      SCIP_CALL( propagateAllConss(scip, conss, nconss, TRUE, &nchgbds, &cutoff, NULL) );
-   }
-#endif
 
    if( cutoff )
    {
