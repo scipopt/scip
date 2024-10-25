@@ -2582,7 +2582,8 @@ SCIP_RETCODE propagateCutoffboundGlobally(
          return SCIP_OKAY;
    }
 
-#if 0 /* might fail, but is not a real error, still need to investigate */
+#ifdef SCIP_DISABLED_CODE
+   /* might fail, but is not a real error, still need to investigate */
 #ifndef NDEBUG
    /* check that the abort criteria for the binary variables works */
    for( ; v < nminactvars; ++v )
@@ -2732,7 +2733,8 @@ SCIP_RETCODE propagateCutoffboundBinvars(
          return SCIP_OKAY;
    }
 
-#if 0 /* might fail, but is not a real error, still need to investigate */
+#ifdef SCIP_DISABLED_CODE
+   /* might fail, but is not a real error, still need to investigate */
 #ifndef NDEBUG
    /* check that the abort criteria for the binary variables works */
    for( ; v < nminactvars; ++v )
@@ -3363,7 +3365,8 @@ SCIP_RETCODE propagateLowerbound(
             }
          }
 
-#if 0 /* might fail, but is not a real error, still need to investigate */
+#ifdef SCIP_DISABLED_CODE
+         /* might fail, but is not a real error, still need to investigate */
 #ifndef NDEBUG
          /* check that the abort criteria for the binary variables works */
          for( ; v < nmaxactvars && !cutoff; ++v )

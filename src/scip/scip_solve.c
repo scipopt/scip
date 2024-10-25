@@ -673,7 +673,7 @@ SCIP_RETCODE presolveRound(
    SCIP_EVENT event;
    SCIP_Bool aborted;
    SCIP_Bool lastranpresol;
-#if 0
+#ifdef SCIP_DISABLED_CODE
    int oldpresolstart = 0;
    int oldpropstart = 0;
    int oldconsstart = 0;
@@ -723,7 +723,7 @@ SCIP_RETCODE presolveRound(
       i = *presolstart;
       j = *propstart;
       k = *consstart;
-#if 0
+#ifdef SCIP_DISABLED_CODE
       oldpresolstart = i;
       oldpropstart = j;
       oldconsstart = k;
@@ -1078,7 +1078,7 @@ SCIP_RETCODE presolveRound(
             SCIP_CALL( presolveRound(scip, timing, unbounded, infeasible, lastround, presolstart, presolend,
                   propstart, propend, consstart, consend) );
          }
-#if 0
+#ifdef SCIP_DISABLED_CODE
          /* run remaining exhaustive presolvers (if we did not start from the beginning anyway) */
          else if( (oldpresolstart > 0 || oldpropstart > 0 || oldconsstart > 0) && presolend == scip->set->npresols
             && propend == scip->set->nprops && consend == scip->set->nconshdlrs )

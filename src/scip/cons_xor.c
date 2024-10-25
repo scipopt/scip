@@ -3464,7 +3464,8 @@ SCIP_RETCODE cliquePresolve(
    if( !consdata->deleteintvar )
       return SCIP_OKAY;
 
-#if 0 /* try to evaluate if clique presolving should only be done multiple times when the constraint changed */
+#ifdef SCIP_DISABLED_CODE
+   /* try to evaluate if clique presolving should only be done multiple times when the constraint changed */
    if( !consdata->changed )
       return SCIP_OKAY;
 #endif
@@ -4468,7 +4469,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             consdataSort(consdata0);
          assert(consdata0->sorted);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
       /* if aggregation in the core of SCIP is not changed we do not need to call applyFixing, this would be the correct
        * way
        */

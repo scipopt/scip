@@ -485,10 +485,11 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
    /* store the index of the variable which is not globally fixed */
    propdata->glbfirstnonfixed = v;
 
-#if 0 /* due to numerics it might be that the abort criteria did not work correctly, because the sorting mechanism may
-       * have evaluated variables with a really small difference in their reduced cost values but with really huge
-       * lpobjval as the same
-       */
+#ifdef SCIP_DISABLED_CODE
+   /* due to numerics it might be that the abort criteria did not work correctly, because the sorting mechanism may
+    * have evaluated variables with a really small difference in their reduced cost values but with really huge
+    * lpobjval as the same
+    */
 #ifndef NDEBUG
    /* check that the abort criteria works; that means none of the remaining binary variables can be fixed */
    for( ; v < propdata->nredcostbinvars && !(*cutoff); ++v )
