@@ -11,6 +11,7 @@ Fixed bugs
 - correct bound tracking to make the evaluation of primal-dual-integrals work
 - update locks on model variables before removing pseudoboolean constraints in consPresolPseudoboolean()
 - skip aggregations on fixed variables in milp presolver to avoid errors for earlier versions of PaPILO
+- in lpi_highs set the presolve option in lpiSolve() to not reset the model status directly after solving the LP
 
 Unit tests
 ----------
