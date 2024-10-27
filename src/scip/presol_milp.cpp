@@ -733,6 +733,16 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             SCIP_CALL( SCIPgetProbvarSum(scip, &vary, &scalary, &constant) );
             assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
 
+            /* If PaPILO tries to aggregate fixed variables then it missed some obvious fixings.
+             * This might happen if another aggregation leads to fixings which are not applied immediately by PaPILO.
+             * With the latest version of PaPILO, this should not occur. 
+             */
+            if( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_FIXED && SCIPvarGetStatus(vary) == SCIP_VARSTATUS_FIXED )
+            {
+               assert(false);
+               break;
+            }
+
             updatedSide = side - constant;
 
             SCIP_CALL( SCIPaggregateVars(scip, varx, vary, scalarx, scalary, updatedSide, &infeas, &redundant, &aggregated) );
@@ -766,6 +776,16 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
             SCIP_CALL( SCIPgetProbvarSum(scip, &aggrvar, &colCoef, &constant) );
             assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
+
+            /* If PaPILO tries to multi-aggregate a fixed variable, then it missed some obvious fixings.
+             * This might happen if another aggregation leads to fixings which are not applied immediately by PaPILO.
+             * With the latest version of PaPILO, this should not occur. 
+             */
+            if( SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_FIXED )
+            {
+               assert(false);
+               break;
+            }
 
             updatedSide = side - constant;
 
