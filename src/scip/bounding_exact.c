@@ -2004,7 +2004,7 @@ SCIP_RETCODE boundShift(
    SCIP_Real*            safebound           /**< pointer to store the computed safe bound (usually lpobj) */
    )
 {
-   SCIP_ROUNDMODE roundmode;
+   // SCIP_ROUNDMODE roundmode;
    SCIP_INTERVAL* rhslhsrow; // the rhs or lhs of row depending on sign of dual solution
    SCIP_INTERVAL* ublbcol; // the ub or lb of col depending on sign of dual solution
    SCIP_INTERVAL* constantinter;
@@ -2200,23 +2200,26 @@ SCIP_RETCODE boundShift(
          }
       }
    }
-   roundmode = SCIPintervalGetRoundingMode();
-   SCIPintervalSetRoundingModeDownwards();
-   {
-      SCIP_Real objcontrib = 0;
-      for (int k = 0; k < lp->ncols; k++)
-      {
-         if(obj[k].sup < 0)
-         {
-            objcontrib += obj[k].sup * SCIPcolGetUb(lp->cols[k]);
-         }
-         else if(obj[k].inf > 0)
-            objcontrib += (-obj[k].inf) * SCIPcolGetLb(lp->cols[k]);
-      }
-      SCIPintervalScalprod(SCIPsetInfinity(set), &safeboundinterval, lp->ncols, productcoldualval, ublbcol);
-      SCIPintervalAddScalar(SCIPsetInfinity(set), &safeboundinterval, safeboundinterval, objcontrib);
-   }
-   SCIPintervalSetRoundingMode(roundmode);
+   // roundmode = SCIPintervalGetRoundingMode();
+   // SCIPintervalSetRoundingModeDownwards();
+   // {
+   //    SCIP_Real objcontrib = 0;
+   //    for (int k = 0; k < lp->ncols; k++)
+   //    {
+   //       if(obj[k].sup < 0)
+   //       {
+   //          objcontrib += obj[k].sup * SCIPcolGetUb(lp->cols[k]);
+   //       }
+   //       else if(obj[k].inf > 0)
+   //          objcontrib += (-obj[k].inf) * SCIPcolGetLb(lp->cols[k]);
+   //    }
+   //    SCIPintervalScalprod(SCIPsetInfinity(set), &safeboundinterval, lp->ncols, productcoldualval, ublbcol);
+   //    SCIPintervalAddScalar(SCIPsetInfinity(set), &safeboundinterval, safeboundinterval, objcontrib);
+   // }
+   // SCIPintervalSetRoundingMode(roundmode);
+
+   SCIPintervalAddVectors(SCIPsetInfinity(set), productcoldualval, lp->ncols, productcoldualval, obj);
+   SCIPintervalScalprod(SCIPsetInfinity(set), &safeboundinterval, lp->ncols, productcoldualval, ublbcol);
 
 
    /* add dualsol * rhs/lhs (or farkas * rhs/lhs) */

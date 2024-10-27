@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <assert.h>
 /*
  * include build configuration flags
@@ -39,8 +40,6 @@
 
 #pragma GCC diagnostic ignored "-Wpedantic"
 
-#ifndef __clang_analyzer__
-
 #ifdef SCIP_WITH_GMP
 static QSnum_type qsnum_zeroLpNum;
 static QSnum_type qsnum_oneLpNum;
@@ -51,13 +50,16 @@ void *CGutil_allocrus (
    size_t                size                /**< length of array to be allocated */
    )
 {
-   void *mem;
+   void *mem = (void *) NULL;
    if( size == 0 )
    {
       fprintf (stderr, "Warning: 0 bytes allocated\n");
    }
    mem = (void *) malloc (size);
-   assert(mem != (void *) NULL);
+   if( mem == (void *) NULL )
+   {
+      fprintf (stderr, "Out of memory. Asked for %d bytes\n", (int) size);
+   }
    return mem;
 }
 
@@ -160,7 +162,7 @@ void QSnum_factor_free_factor_work(
    CG_IFFREE (f->uc_inf, qsnum_uc_info);
    if( f->dimr + f->max_k > 0 && f->ur_inf )
    {
-      int i = f->dimr + f->max_k + 1;
+      unsigned int i = f->dimr + f->max_k + 1;
       while( i-- )
          QSnum_Clear (f->ur_inf[i].max);
    }
@@ -204,16 +206,16 @@ int QSnum_factor_create_factor_work(
    f->dimr = dimr;
    f->dimc = dimc;
    f->etacnt = 0;
-   f->work_coef = QSnum_AllocArray (maxdim); /*lint !e160 !e429*/
-   CG_SAFE_MALLOC (f->work_indx, maxdim, int); /*lint !e571 !e776*/
-   CG_SAFE_MALLOC (f->uc_inf, dimc + (f->max_k + 1), qsnum_uc_info); /*lint !e571 !e776*/
-   CG_SAFE_MALLOC (f->ur_inf, dimr + (f->max_k + 1), qsnum_ur_info); /*lint !e571 !e776*/
-   CG_SAFE_MALLOC (f->lc_inf, dimr, qsnum_lc_info); /*lint !e571 !e776*/
-   CG_SAFE_MALLOC (f->lr_inf, dimr, qsnum_lr_info); /*lint !e571 !e776*/
-   CG_SAFE_MALLOC (f->rperm, dimr, int); /*lint !e571 !e776*/
-   CG_SAFE_MALLOC (f->rrank, dimr, int); /*lint !e571 !e776*/
-   CG_SAFE_MALLOC (f->cperm, dimc, int); /*lint !e571 !e776*/
-   CG_SAFE_MALLOC (f->crank, dimc, int); /*lint !e571 !e776*/
+   f->work_coef = QSnum_AllocArray (maxdim);
+   CG_SAFE_MALLOC (f->work_indx, maxdim, int);
+   CG_SAFE_MALLOC (f->uc_inf, dimc + (f->max_k + 1), qsnum_uc_info);
+   CG_SAFE_MALLOC (f->ur_inf, dimr + (f->max_k + 1), qsnum_ur_info);
+   CG_SAFE_MALLOC (f->lc_inf, dimr, qsnum_lc_info);
+   CG_SAFE_MALLOC (f->lr_inf, dimr, qsnum_lr_info);
+   CG_SAFE_MALLOC (f->rperm, dimr, int);
+   CG_SAFE_MALLOC (f->rrank, dimr, int);
+   CG_SAFE_MALLOC (f->cperm, dimc, int);
+   CG_SAFE_MALLOC (f->crank, dimc, int);
 
    for (i = dimr + f->max_k + 1; i--;)
       QSnum_Init (f->ur_inf[i].max);
@@ -322,8 +324,8 @@ static int qsnum_make_ur_space (
    int                   space               /**< new space */
    )
 {
-   QSnum_type *new_urcoef;
-   int *new_urindx;
+   QSnum_type *new_urcoef = 0;
+   int *new_urindx = 0;
    int *new_urcind = 0;
    QSnum_type *urcoef = f->urcoef;
    int *urindx = f->urindx;
@@ -344,20 +346,19 @@ static int qsnum_make_ur_space (
       nzcnt += ur_inf[i].nzcnt;
    while( nzcnt * 2 >= minspace )
    {
-      minspace = 1+minspace*(int)f->grow_mul;
+      minspace = 1+minspace*f->grow_mul;
    }
 
-   assert(minspace >= 0);
-
-   new_urcoef = QSnum_AllocArray (minspace); /*lint !e160 !e429*/
-   CG_SAFE_MALLOC (new_urindx, minspace + 1, int); /*lint !e571 !e776*/
-
-   assert(new_urindx != NULL);
+   new_urcoef = QSnum_AllocArray (minspace);
+   CG_SAFE_MALLOC (new_urindx, minspace + 1, int);
 
    if( urcind )
    {
-      CG_SAFE_MALLOC (new_urcind, minspace, int); /*lint !e571 !e776*/
+      CG_SAFE_MALLOC (new_urcind, minspace, int);
+   }
 
+   if( urcind )
+   {
       for( j = 0; j < dimr; j++ )
       {
          rbeg = ur_inf[j].rbeg;
@@ -366,7 +367,7 @@ static int qsnum_make_ur_space (
          for( i = 0; i < nzcnt; i++ )
          {
             new_urindx[new_nzcnt] = urindx[rbeg + i];
-            QSnum_Copy (new_urcoef[new_nzcnt], urcoef[rbeg + i]); /*lint !e613*/
+            QSnum_Copy (new_urcoef[new_nzcnt], urcoef[rbeg + i]);
             new_urcind[new_nzcnt] = urcind[rbeg + i];
             new_nzcnt++;
          }
@@ -382,13 +383,11 @@ static int qsnum_make_ur_space (
          for( i = 0; i < nzcnt; i++ )
          {
             new_urindx[new_nzcnt] = urindx[rbeg + i];
-            QSnum_Copy (new_urcoef[new_nzcnt], urcoef[rbeg + i]); /*lint !e613*/
+            QSnum_Copy (new_urcoef[new_nzcnt], urcoef[rbeg + i]);
             new_nzcnt++;
          }
       }
    }
-
-   assert(new_nzcnt <= minspace);
 
    for( i = new_nzcnt; i < minspace; i++ )
    {
@@ -416,7 +415,7 @@ static int qsnum_make_ur_space (
    CG_IFFREE (new_urcoef, QSnum_type);
    CG_IFFREE (new_urindx, int);
    CG_IFFREE (new_urcind, int);
-   return rval; /*lint !e438*/
+   return rval;
 }
 
 /** allocate additional column space for U */
@@ -426,7 +425,7 @@ static int qsnum_make_uc_space (
    )
 {
    QSnum_type *new_uccoef = 0;
-   int *new_ucindx;
+   int *new_ucindx = 0;
    int *new_ucrind = 0;
    int uc_freebeg = f->uc_freebeg;
    QSnum_type *uccoef = f->uccoef;
@@ -444,16 +443,19 @@ static int qsnum_make_uc_space (
 
    if( f->uc_space * f->grow_mul > minspace )
    {
-      minspace = (int) f->uc_space * (int) f->grow_mul;
+      minspace = f->uc_space * f->grow_mul;
    }
 
-   CG_SAFE_MALLOC (new_ucindx, minspace + 1, int); /*lint !e571 !e776*/
+   CG_SAFE_MALLOC (new_ucindx, minspace + 1, int);
 
    if( ucrind )
    {
-      new_uccoef = QSnum_AllocArray (minspace); /*lint !e160 !e429*/
-      CG_SAFE_MALLOC (new_ucrind, minspace, int); /*lint !e571 !e776*/
+      new_uccoef = QSnum_AllocArray (minspace);
+      CG_SAFE_MALLOC (new_ucrind, minspace, int);
+   }
 
+   if( ucrind )
+   {
       for( j = 0; j < dimc; j++ )
       {
          cbeg = uc_inf[j].cbeg;
@@ -462,7 +464,7 @@ static int qsnum_make_uc_space (
          for( i = 0; i < nzcnt; i++ )
          {
             new_ucindx[new_nzcnt] = ucindx[cbeg + i];
-            QSnum_Copy (new_uccoef[new_nzcnt], uccoef[cbeg + i]); /*lint !e613*/
+            QSnum_Copy (new_uccoef[new_nzcnt], uccoef[cbeg + i]);
             new_ucrind[new_nzcnt] = ucrind[cbeg + i];
             new_nzcnt++;
          }
@@ -510,7 +512,7 @@ static int qsnum_make_uc_space (
    CG_IFFREE (new_uccoef, QSnum_type);
    CG_IFFREE (new_ucindx, int);
    CG_IFFREE (new_ucrind, int);
-   return rval; /*lint !e438*/
+   return rval;
 }
 
 /** allocate additional column storage space for L */
@@ -519,8 +521,8 @@ static int qsnum_make_lc_space (
    int                   space               /**< new space */
    )
 {
-   QSnum_type *new_lccoef;
-   int *new_lcindx;
+   QSnum_type *new_lccoef = 0;
+   int *new_lcindx = 0;
    int lc_freebeg = f->lc_freebeg;
    QSnum_type *lccoef = f->lccoef;
    int *lcindx = f->lcindx;
@@ -529,23 +531,15 @@ static int qsnum_make_lc_space (
    int rval;
    if( f->lc_space * f->grow_mul > minspace )
    {
-      minspace = (int) f->lc_space * (int) f->grow_mul;
+      minspace = f->lc_space * f->grow_mul;
    }
 
-   assert(minspace >= 0);
-
-   if( lc_freebeg > minspace )
-      return -1;
-
-   new_lccoef = QSnum_AllocArray (minspace); /*lint !e160 !e429*/
-   CG_SAFE_MALLOC (new_lcindx, minspace, int); /*lint !e571 !e776*/
-
-   assert(new_lcindx != NULL);
-   assert(lc_freebeg <= minspace);
+   new_lccoef = QSnum_AllocArray (minspace);
+   CG_SAFE_MALLOC (new_lcindx, minspace, int);
 
    for( i = 0; i < lc_freebeg; i++ )
    {
-      QSnum_Copy (new_lccoef[i], lccoef[i]); /*lint !e613*/
+      QSnum_Copy (new_lccoef[i], lccoef[i]);
       new_lcindx[i] = lcindx[i];
    }
 
@@ -564,7 +558,7 @@ static int qsnum_make_lc_space (
  CLEANUP:
    CG_IFFREE (new_lccoef, QSnum_type);
    CG_IFFREE (new_lcindx, int);
-   return rval; /*lint !e438*/
+   return rval;
 }
 
 /** move column c to end of list */
@@ -667,14 +661,14 @@ static void qsnum_remove_row_nz(
          --pivcnt;
          CG_SWAP (urindx[i], urindx[pivcnt], tind);
          QSnum_SWAP (urcoef[i], urcoef[pivcnt], tcoef);
-         --i; /*lint !e850*/
+         --i;
       }
       else
       {
          QSnum_CopyMaxAbs (max, urcoef[i]);
       }
    }
-   ur_inf[r].pivcnt = pivcnt; /*lint !e850*/
+   ur_inf[r].pivcnt = pivcnt;
    QSnum_Copy (ur_inf[r].max, max);
    qsnum_set_row_nz (f, r);
    QSnum_Clear (max);
@@ -852,7 +846,7 @@ static int qsnum_elim_row(
    QSnum_Init (x);
    QSnum_Init (elim_coef);
    QSnum_SetZero (max);
-   qsnum_find_coef (f, r, c, &elim_coef); /*lint !e545*/
+   qsnum_find_coef (f, r, c, &elim_coef);
    QSnum_CopyDiv (elim_coef, work_coef[c]);
    QSnum_Copy (*p_pivot_coef, elim_coef);
 
@@ -863,7 +857,7 @@ static int qsnum_elim_row(
       {
          QSnum_Copy (x, urcoef[prow_beg + i]);
          QSnum_CopySubProd (x, elim_coef, work_coef[j]);
-         if( !QSnum_NeqZeroTol (x, f->fzero_tol) || j == c ) /*lint !e663*/
+         if( !QSnum_NeqZeroTol (x, f->fzero_tol) || j == c )
          {
             cancel++;
             if( j != c )
@@ -912,7 +906,7 @@ static int qsnum_elim_row(
       }
    }
 
-   if( fill > 0 )  /*lint !e850*/
+   if( fill > 0 )
    {
       ur_inf[r].nzcnt = prow_nzcnt;
       ur_inf[r].pivcnt = prow_pivcnt;
@@ -951,7 +945,7 @@ static int qsnum_elim_row(
          {
             QSnum_CopyNeg (x, elim_coef);
             QSnum_CopyMult (x, urcoef[erow_beg + i]);
-            if( QSnum_NeqZeroTol (x, f->fzero_tol) ) /*lint !e663*/
+            if( QSnum_NeqZeroTol (x, f->fzero_tol) )
             {
                rval = qsnum_add_col_nz (f, r, j);
                CG_CLEANUP_IF (rval);
@@ -980,7 +974,7 @@ static int qsnum_elim_row(
          {
             QSnum_CopyNeg (x, elim_coef);
             QSnum_CopyMult (x, urcoef[erow_beg + i]);
-            if( QSnum_NeqZeroTol (x, f->fzero_tol) )  /*lint !e663*/
+            if( QSnum_NeqZeroTol (x, f->fzero_tol) )
             {
                rval = qsnum_add_col_nz (f, r, j);
                CG_CLEANUP_IF (rval);
@@ -1118,12 +1112,13 @@ static int qsnum_elim(
       lcindx = f->lcindx;
       lccoef = f->lccoef;
       qsnum_load_row (f, r);
+      ucindx = f->ucindx + uc_inf[c].cbeg;
       for( i = 0; i < nzcnt; i++ )
       {
          j = f->ucindx[uc_inf[c].cbeg + i];
          if( j != r )
          {
-            rval = qsnum_elim_row (f, r, j, c, &pivot_coef);  /*lint !e545*/
+            rval = qsnum_elim_row (f, r, j, c, &pivot_coef);
             CG_CLEANUP_IF (rval);
             lcindx[lc_freebeg] = j;
             QSnum_Copy (lccoef[lc_freebeg], pivot_coef);
@@ -1181,7 +1176,7 @@ static void qsnum_find_pivot_column(
       r = ucindx[cbeg + i];
       if( (bestnz == -1 || ur_inf[r].pivcnt < bestnz) )
       {
-         qsnum_find_coef (f, r, c, &num_tmp[0]);  /*lint !e545*/
+         qsnum_find_coef (f, r, c, &num_tmp[0]);
          if( QSnum_Less (num_tmp[0], qsnum_zeroLpNum) )
             QSnum_Sign (num_tmp[0]);
          QSnum_Copy (num_tmp[1], f->partial_cur);
@@ -1218,7 +1213,7 @@ static void qsnum_find_pivot_row(
    QSnum_Init (thresh[1]);
    QSnum_Copy (thresh[0], f->partial_cur);
    QSnum_CopyMult (thresh[0], ur_inf[r].max);
-   QSnum_CopyAbs (thresh[1], urcoef[rbeg + i]); /*lint !e845*/
+   QSnum_CopyAbs (thresh[1], urcoef[rbeg + i]);
    *p_c = -1;
    for( i = 0; i < pivcnt; i++ )
    {
@@ -1308,7 +1303,7 @@ static int qsnum_find_pivot(
                return 0;
             }
          }
-      } /*lint !e850*/
+      }
 
       if( ur_inf[dimr + k].next != dimr + k )
       {
@@ -1369,26 +1364,26 @@ static int qsnum_create_factor_space(
 
    if( f->ucindx == 0 )
    {
-      f->uc_space = nzcnt * (int) f->uc_space_mul; 
-      CG_SAFE_MALLOC (f->ucindx, f->uc_space + 1, int); /*lint !e571 !e776*/
+      f->uc_space = nzcnt * f->uc_space_mul;
+      CG_SAFE_MALLOC (f->ucindx, f->uc_space + 1, int);
    }
 
    if( f->urindx == 0 || f->urcoef == 0 )
    {
       CG_IFFREE (f->urindx, int);
       QSnum_FreeArray (f->urcoef, f->ur_space);
-      f->ur_space = nzcnt * (int) f->ur_space_mul;
-      CG_SAFE_MALLOC (f->urindx, f->ur_space + 1, int); /*lint !e571 !e776*/
-      f->urcoef = QSnum_AllocArray (f->ur_space); /*lint !e160 !e429*/
+      f->ur_space = nzcnt * f->ur_space_mul;
+      CG_SAFE_MALLOC (f->urindx, f->ur_space + 1, int);
+      f->urcoef = QSnum_AllocArray (f->ur_space);
    }
 
    if( f->lcindx == 0 || f->lccoef == 0 )
    {
       CG_IFFREE (f->lcindx, int);
       QSnum_FreeArray (f->lccoef, f->lc_space);
-      f->lc_space = nzcnt * (int) f->lc_space_mul;
-      CG_SAFE_MALLOC (f->lcindx, f->lc_space, int); /*lint !e571 !e776*/
-      f->lccoef = QSnum_AllocArray (f->lc_space); /*lint !e160 !e429*/
+      f->lc_space = nzcnt * f->lc_space_mul;
+      CG_SAFE_MALLOC (f->lcindx, f->lc_space, int);
+      f->lccoef = QSnum_AllocArray (f->lc_space);
    }
 
    nzcnt = 0;
@@ -1419,10 +1414,10 @@ static int qsnum_create_factor_space(
 /** init and copy basis matrix into factorization work */
 static int qsnum_init_matrix(
    qsnum_factor_work *   f,                  /**< factorization work */
-   const int *           basis,              /**< indices of basis matrix */
-   const int *           cbeg,               /**< column beginning positions */
-   const int *           clen,               /**< column lengths */
-   const int *           in_ucindx,          /**< row indices for nonzeros */
+   int *                 basis,              /**< indices of basis matrix */
+   int *                 cbeg,               /**< column beginning positions */
+   int *                 clen,               /**< column lengths */
+   int *                 in_ucindx,          /**< row indices for nonzeros */
    QSnum_type *          in_uccoef           /**< coefficient values */
    )
 {
@@ -1439,7 +1434,7 @@ static int qsnum_init_matrix(
    int i;
    int j;
    int r;
-   int rval;
+   int rval = 0;
    QSnum_type v;
    QSnum_type max;
    QSnum_Init (v);
@@ -1475,7 +1470,7 @@ static int qsnum_init_matrix(
       for( j = 0; j < nzcnt; j++ )
       {
          QSnum_Copy (v, in_uccoef[beg + j]);
-         if( !QSnum_NeqZeroTol (v, f->fzero_tol) ) /*lint !e663*/
+         if( !QSnum_NeqZeroTol (v, f->fzero_tol) )
             continue;
          r = in_ucindx[beg + j];
          ucindx[uc_inf[i].nzcnt++] = r;
@@ -1567,11 +1562,11 @@ static int qsnum_build_iteration_u_data(
    int dimc = f->dimc;
    qsnum_ur_info *ur_inf = f->ur_inf;
    qsnum_uc_info *uc_inf = f->uc_inf;
-   QSnum_type *uccoef;
+   QSnum_type *uccoef = 0;
    int *ucindx = 0;
    int *urindx = f->urindx;
    QSnum_type *urcoef = f->urcoef;
-   int *ucrind;
+   int *ucrind = 0;
    int *urcind = 0;
    int nzcnt;
    int beg;
@@ -1590,21 +1585,21 @@ static int qsnum_build_iteration_u_data(
    }
 
    QSnum_FreeArray (f->uccoef, f->uc_space);
-   uccoef = QSnum_AllocArray (nzcnt); /*lint !e160 !e429*/
+   uccoef = QSnum_AllocArray (nzcnt);
    f->uccoef = uccoef;
 
    CG_IFFREE (f->ucrind, int);
-   CG_SAFE_MALLOC (ucrind, nzcnt, int); /*lint !e571 !e776*/
+   CG_SAFE_MALLOC (ucrind, nzcnt, int);
    f->ucrind = ucrind;
 
    CG_IFFREE (f->urcind, int);
-   CG_SAFE_MALLOC (urcind, f->ur_space, int); /*lint !e571 !e776*/
+   CG_SAFE_MALLOC (urcind, f->ur_space, int);
    f->urcind = urcind;
 
    if( uc_space < nzcnt )
    {
       CG_IFFREE (f->ucindx, int);
-      CG_SAFE_MALLOC (f->ucindx, nzcnt + 1, int); /*lint !e571 !e776*/
+      CG_SAFE_MALLOC (f->ucindx, nzcnt + 1, int);
    }
    f->uc_space = nzcnt;
    uc_space = nzcnt;
@@ -1652,12 +1647,12 @@ static int qsnum_build_iteration_u_data(
       if( cnzcnt != 0 )
       {
          ucindx[cbeg + cnzcnt] = ucindx[cbeg];
-         QSnum_Copy (uccoef[cbeg + cnzcnt], uccoef[cbeg]); /*lint !e613*/
+         QSnum_Copy (uccoef[cbeg + cnzcnt], uccoef[cbeg]);
          ucrind[cbeg + cnzcnt] = ucrind[cbeg];
          urcind[ur_inf[ucindx[cbeg]].rbeg + ucrind[cbeg]] = cnzcnt;
       }
       ucindx[cbeg] = i;
-      QSnum_Copy (uccoef[cbeg], urcoef[beg]); /*lint !e613*/
+      QSnum_Copy (uccoef[cbeg], urcoef[beg]);
       ucrind[cbeg] = 0;
       urcind[beg] = 0;
       uc_inf[k].nzcnt = cnzcnt + 1;
@@ -1667,7 +1662,7 @@ static int qsnum_build_iteration_u_data(
          cbeg = uc_inf[k].cbeg;
          cnzcnt = uc_inf[k].nzcnt;
          ucindx[cbeg + cnzcnt] = i;
-         QSnum_Copy (uccoef[cbeg + cnzcnt], urcoef[beg + j]); /*lint !e613*/
+         QSnum_Copy (uccoef[cbeg + cnzcnt], urcoef[beg + j]);
          ucrind[cbeg + cnzcnt] = j;
          urcind[beg + j] = cnzcnt;
          uc_inf[k].nzcnt++;
@@ -1689,10 +1684,10 @@ static int qsnum_build_iteration_u_data(
 
    qsnum_clear_work (f);
 
-   er_space = (int)f->er_space_mul * (int)f->etamax;
-   CG_SAFE_MALLOC (f->er_inf, f->etamax, qsnum_er_info); /*lint !e571 !e776*/
-   CG_SAFE_MALLOC (f->erindx, er_space, int); /*lint !e571 !e776*/
-   f->ercoef = QSnum_AllocArray (er_space); /*lint !e160 !e429*/
+   er_space = f->er_space_mul * f->etamax;
+   CG_SAFE_MALLOC (f->er_inf, f->etamax, qsnum_er_info);
+   CG_SAFE_MALLOC (f->erindx, er_space, int);
+   f->ercoef = QSnum_AllocArray (er_space);
    f->etacnt = 0;
    f->er_freebeg = 0;
    f->er_space = er_space;
@@ -1712,7 +1707,7 @@ static int qsnum_build_iteration_l_data(
    qsnum_lc_info *lc_inf = f->lc_inf;
    qsnum_lr_info *lr_inf = f->lr_inf;
    QSnum_type *lrcoef = 0;
-   int *lrindx;
+   int *lrindx = 0;
    QSnum_type *lccoef = f->lccoef;
    int *lcindx = f->lcindx;
    int nzcnt;
@@ -1737,13 +1732,13 @@ static int qsnum_build_iteration_l_data(
    QSnum_FreeArray (f->lrcoef, f->lr_space);
    if( nzcnt )
    {
-      lrcoef = QSnum_AllocArray (nzcnt); /*lint !e160 !e429*/
+      lrcoef = QSnum_AllocArray (nzcnt);
       f->lr_space = nzcnt; /* added by dan */
       f->lrcoef = lrcoef;
    }
 
    CG_IFFREE (f->lrindx, int);
-   CG_SAFE_MALLOC (lrindx, nzcnt + 1, int); /*lint !e571 !e776*/
+   CG_SAFE_MALLOC (lrindx, nzcnt + 1, int);
    f->lrindx = lrindx;
 
    for( i = 0; i < dimr; i++ )
@@ -1778,7 +1773,7 @@ static int qsnum_build_iteration_l_data(
          rbeg = lr_inf[k].rbeg;
          rnzcnt = lr_inf[k].nzcnt;
          lrindx[rbeg + rnzcnt] = c;
-         QSnum_Copy (lrcoef[rbeg + rnzcnt], lccoef[beg + j]); /*lint !e613*/
+         QSnum_Copy (lrcoef[rbeg + rnzcnt], lccoef[beg + j]);
          lr_inf[k].nzcnt++;
       }
    }
@@ -1796,7 +1791,7 @@ static int qsnum_handle_singularity(
 {
    int rval = 0;
    int nsing;
-   int *singr;
+   int *singr = 0;
    int *singc = 0;
    int i;
 
@@ -1807,19 +1802,13 @@ static int qsnum_handle_singularity(
    }
 
    nsing = f->nstages - f->stage;
+   CG_SAFE_MALLOC (singr, nsing, int);
+   CG_SAFE_MALLOC (singc, nsing, int);
 
-   assert(nsing > 0);
-
-   CG_SAFE_MALLOC (singr, nsing, int); /*lint !e571 !e776*/
-   CG_SAFE_MALLOC (singc, nsing, int); /*lint !e571 !e776*/
-
-   assert(singr != NULL);
-   assert(singc != NULL);
-
-   for( i = 0; i < nsing; i++ )
+   for( i = f->stage; i < f->nstages; i++ )
    {
-      singr[i] = f->rperm[i + f->stage];
-      singc[i] = f->cperm[i + f->stage];
+      singr[i - f->stage] = f->rperm[i];
+      singc[i - f->stage] = f->cperm[i];
    }
    *f->p_nsing = nsing;
    *f->p_singr = singr;
@@ -1830,7 +1819,7 @@ static int qsnum_handle_singularity(
  CLEANUP:
    CG_IFFREE (singr, int);
    CG_IFFREE (singc, int);
-   return rval; /*lint !e438*/
+   return rval;
 }
 
 /** build dense matrix */
@@ -1838,7 +1827,7 @@ static int qsnum_dense_build_matrix(
    qsnum_factor_work *   f                   /**< factorization work */
    )
 {
-   QSnum_type *dmat;
+   QSnum_type *dmat = 0;
    int stage = f->stage;
    int drows = f->nstages - stage;
    int dcols = f->dimr - stage;
@@ -1853,11 +1842,11 @@ static int qsnum_dense_build_matrix(
    int j;
    int rval = 0;
 
-   dmat = QSnum_AllocArray (dsize); /*lint !e160 !e429*/
+   dmat = QSnum_AllocArray (dsize);
    /*  WHY no check for NULL?  -- Bico */
 
    for( i = 0; i < dsize; i++ )
-      QSnum_SetZero (dmat[i]); /*lint !e613*/
+      QSnum_SetZero (dmat[i]);
 
    for( i = 0; i < drows; i++ )
    {
@@ -1867,7 +1856,7 @@ static int qsnum_dense_build_matrix(
       for( j = 0; j < nzcnt; j++ )
       {
          QSnum_Copy (dmat[i * dcols - stage + crank[urindx[beg + j]]],
-            urcoef[beg + j]); /*lint !e613*/
+            urcoef[beg + j]);
       }
    }
 
@@ -1876,6 +1865,7 @@ static int qsnum_dense_build_matrix(
    f->dense_base = f->stage;
    f->dmat = dmat;
    f->dsize = dsize;
+   dmat = 0;
 
    /* CLEANUP:  */
    return rval;
@@ -1919,7 +1909,7 @@ static int qsnum_dense_find_pivot(
    max_c = -1;
    for( i = s; i < drows; i++ )
    {
-      QSnum_CopyMaxAbsAndDo (maxval, dmat[max_r * dcols + i], max_c = i); /*lint !e665 !e663 !e666*/
+      QSnum_CopyMaxAbsAndDo (maxval, dmat[max_r * dcols + i], max_c = i);
    }
    if( max_c == -1 )
    {
@@ -2002,10 +1992,10 @@ static void qsnum_dense_elim(
    for( i = s + 1; i < drows; i++ )
    {
       QSnum_Copy (v, dmat[i * dcols + s]);
-      if( QSnum_NeqZero (v) ) /*lint !e663*/
+      if( QSnum_NeqZero (v) )
       {
          QSnum_CopyMult (v, pivval);
-         if( QSnum_NeqZeroTol (v, f->fzero_tol) ) /*lint !e663*/
+         if( QSnum_NeqZeroTol (v, f->fzero_tol) )
          {
             QSnum_Copy (dmat[i * dcols + s], v);
             QSnum_SetZero (max);
@@ -2058,7 +2048,7 @@ static int qsnum_dense_replace_row(
    nzcnt = 0;
    for( j = i; j < dcols; j++ )
    {
-      if( QSnum_NeqZeroTol (dmat[j], f->fzero_tol) ) /*lint !e663*/
+      if( QSnum_NeqZeroTol (dmat[j], f->fzero_tol) )
       {
          nzcnt++;
       }
@@ -2083,7 +2073,7 @@ static int qsnum_dense_replace_row(
    urindx = f->urindx;
    for( j = i; j < dcols; j++ )
    {
-      if( QSnum_NeqZeroTol (dmat[j], f->fzero_tol) ) /*lint !e663*/
+      if( QSnum_NeqZeroTol (dmat[j], f->fzero_tol) )
       {
          QSnum_Copy (urcoef[beg], dmat[j]);
          urindx[beg] = cperm[dense_base + j];
@@ -2117,7 +2107,7 @@ static int qsnum_dense_create_col(
    nzcnt = 0;
    for( j = i + 1; j < drows; j++ )
    {
-      if( QSnum_NeqZeroTol (dmat[j * dcols + i], f->fzero_tol) )  /*lint !e663*/
+      if( QSnum_NeqZeroTol (dmat[j * dcols + i], f->fzero_tol) )
       {
          nzcnt++;
       }
@@ -2136,7 +2126,7 @@ static int qsnum_dense_create_col(
 
    for( j = i + 1; j < drows; j++ )
    {
-      if( QSnum_NeqZeroTol (dmat[j * dcols + i], f->fzero_tol) ) /*lint !e663*/
+      if( QSnum_NeqZeroTol (dmat[j * dcols + i], f->fzero_tol) )
       {
          QSnum_Copy (lccoef[beg], dmat[j * dcols + i]);
          lcindx[beg] = rperm[dense_base + j];
@@ -2181,7 +2171,7 @@ static int qsnum_dense_factor(
 {
    int r;
    int c;
-   int rval;
+   int rval = 0;
 
    rval = qsnum_dense_build_matrix (f);
    CG_CLEANUP_IF (rval);
@@ -2226,7 +2216,7 @@ static int qsnum_factor_try(
    QSnum_type *          ccoef               /**< coef in each position of cons. matrix */
    )
 {
-   int rval;
+   int rval = 0;
    int r;
    int c;
 
@@ -2307,7 +2297,7 @@ int QSnum_factor(
    {
       if( QSnum_LessDbl (f->partial_cur, 0.1) )
       {
-         QSnum_CopyMultUi (f->partial_cur, 10); /*lint !e663*/
+         QSnum_CopyMultUi (f->partial_cur, 10);
       }
       else if( QSnum_LessDbl (f->partial_cur, 0.25) )
       {
@@ -2350,7 +2340,7 @@ static void qsnum_factor_ftranl(
    for( i = 0; i < dimr; i++ )
    {
       QSnum_Copy (v, a[lc_inf[i].c]);
-      if( QSnum_NeqZero (v) )  /*lint !e663*/
+      if( QSnum_NeqZero (v) )
       {
          nzcnt = lc_inf[i].nzcnt;
          beg = lc_inf[i].cbeg;
@@ -2416,7 +2406,7 @@ static void qsnum_ftranl3_process2(
    do {
       QSnum_Copy (v, work[c]);
       QSnum_SetZero (work[c]);
-      if( QSnum_NeqZero (v) )  /*lint !e663*/
+      if( QSnum_NeqZero (v) )
       {
          x->indx[x->nzcnt] = c;
          QSnum_Copy (x->coef[x->nzcnt], v);
@@ -2546,7 +2536,7 @@ static void qsnum_factor_ftrane2(
       {
          QSnum_CopySubProd (v, ercoef[beg + j], work_coef[erindx[beg + j]]);
       }
-      if( QSnum_NeqZero (v) )  /*lint !e663*/
+      if( QSnum_NeqZero (v) )
       {
          QSnum_Copy (work_coef[r], v);
          if( work_indx[r] == 0 )
@@ -2575,7 +2565,7 @@ static void qsnum_factor_ftrane2(
    {
       QSnum_SetZero (work_coef[aindx[i]]);
       work_indx[aindx[i]] = 0;
-      if( QSnum_NeqZeroTol (acoef[i], f->fzero_tol) )  /*lint !e663*/
+      if( QSnum_NeqZeroTol (acoef[i], f->fzero_tol) )
       {
          /*if (acoef[i] > fzero_tol || acoef[i] < -fzero_tol) */
          i++;
@@ -2618,13 +2608,13 @@ static void qsnum_factor_ftranu(
    for( i = dimr - 1; i >= 0; i-- )
    {
       QSnum_Copy (v, a[rperm[i]]);
-      if( QSnum_NeqZero (v) )  /*lint !e663*/
+      if( QSnum_NeqZero (v) )
       {
          /*((v = a[rperm[i]]) != 0.0) */
          j = cperm[i];
          beg = uc_inf[j].cbeg;
          QSnum_CopyDiv (v, uccoef[beg]);
-         if( QSnum_NeqZeroTol (v, f->szero_tol) )  /*lint !e663*/
+         if( QSnum_NeqZeroTol (v, f->szero_tol) )
          {
             /*if (v > szero_tol || v < -szero_tol) */
             xindx[xnzcnt] = j;
@@ -2701,7 +2691,7 @@ static void qsnum_ftranu3_process2(
       indx = f->ucindx + uc_inf[c].cbeg;
       coef = f->uccoef + uc_inf[c].cbeg;
       QSnum_CopyDiv (v, coef[0]);
-      if( QSnum_NeqZeroTol (v, f->szero_tol) )  /*lint !e663*/
+      if( QSnum_NeqZeroTol (v, f->szero_tol) )
       {
          /*if (v > szero_tol || v < -szero_tol) */
          x->indx[x->nzcnt] = c;
@@ -2863,7 +2853,7 @@ static void qsnum_factor_btranl2(
    for( i = dimr - 1; i >= 0; i-- )
    {
       QSnum_Copy (v, x[lr_inf[i].r]);
-      if( QSnum_NeqZero (v) )  /*lint !e663*/
+      if( QSnum_NeqZero (v) )
       {
          nzcnt = lr_inf[i].nzcnt;
          beg = lr_inf[i].rbeg;
@@ -2929,7 +2919,7 @@ static void qsnum_btranl3_process2(
    do {
       QSnum_Copy (v, work[r]);
       QSnum_SetZero (work[r]);
-      if( QSnum_NeqZeroTol (v, f->szero_tol) )  /*lint !e663*/
+      if( QSnum_NeqZeroTol (v, f->szero_tol) )
       {
          /*if (v > szero_tol || v < -szero_tol) */
          x->indx[x->nzcnt] = r;
@@ -3011,7 +3001,7 @@ static void qsnum_factor_btrane(
    for( i = etacnt - 1; i >= 0; i-- )
    {
       QSnum_Copy (v, x[er_inf[i].r]);
-      if( QSnum_NeqZero (v) )  /*lint !e663*/
+      if( QSnum_NeqZero (v) )
       {
          nzcnt = er_inf[i].nzcnt;
          beg = er_inf[i].rbeg;
@@ -3054,7 +3044,7 @@ static void qsnum_factor_btrane2(
    for( i = etacnt - 1; i >= 0; i-- )
    {
       QSnum_Copy (v, work_coef[er_inf[i].r]);
-      if( QSnum_NeqZero (v) )  /*lint !e663*/
+      if( QSnum_NeqZero (v) )
       {
          nzcnt = er_inf[i].nzcnt;
          beg = er_inf[i].rbeg;
@@ -3117,12 +3107,12 @@ static void qsnum_factor_btranu(
    for( i = 0; i < dimc; i++ )
    {
       QSnum_Copy (v, a[cperm[i]]);
-      if( QSnum_NeqZero (v) )  /*lint !e663*/
+      if( QSnum_NeqZero (v) )
       {
          j = rperm[i];
          beg = ur_inf[j].rbeg;
          QSnum_CopyDiv (v, urcoef[beg]);
-         if( QSnum_NeqZeroTol (v, f->szero_tol) )  /*lint !e663*/
+         if( QSnum_NeqZeroTol (v, f->szero_tol) )
          {
             /* if (v > szero_tol || v < -szero_tol) */
             xindx[xnzcnt] = j;
@@ -3199,7 +3189,7 @@ static void qsnum_btranu3_process2(
       indx = f->urindx + ur_inf[r].rbeg;
       coef = f->urcoef + ur_inf[r].rbeg;
       QSnum_CopyDiv (v, coef[0]);
-      if( QSnum_NeqZero (v) )  /*lint !e663*/
+      if( QSnum_NeqZero (v) )
       {
          x->indx[x->nzcnt] = r;
          QSnum_Copy (x->coef[x->nzcnt], v);
@@ -3269,10 +3259,13 @@ void QSnum_factor_btran (
    int *aindx = a->indx;
    QSnum_type *acoef = a->coef;
    QSnum_type *work_coef = f->work_coef;
-   int dimr;
+   int dimr = f->dimr;
 
    if( a->nzcnt >= SPARSE_FACTOR * f->dimr )
    {
+      aindx = a->indx;
+      acoef = a->coef;
+      work_coef = f->work_coef;
       nzcnt = a->nzcnt;
       for( i = 0; i < nzcnt; i++ )
       {
@@ -3345,9 +3338,9 @@ void QSnum_factor_btran (
       acoef = x->coef;
       for( i = 0; i < dimr; i++ )
       {
-         if( QSnum_NeqZero (work_coef[i]) )  /*lint !e663*/
+         if( QSnum_NeqZero (work_coef[i]) )
          {
-            if( QSnum_NeqZeroTol (work_coef[i], f->szero_tol) )  /*lint !e663*/
+            if( QSnum_NeqZeroTol (work_coef[i], f->szero_tol) )
             {
                /*if (work_coef[i] > szero_tol || work_coef[i] < -szero_tol) */
                aindx[nzcnt] = i;
@@ -3430,6 +3423,7 @@ int QSnum_svector_alloc(
    )
 {
    int rval = 0;
+
    s->nzcnt = nzcnt;
    if( nzcnt == 0 )
    {
@@ -3438,8 +3432,8 @@ int QSnum_svector_alloc(
    }
    else
    {
-      CG_SAFE_MALLOC (s->indx, nzcnt, int); /*lint !e571 !e776*/
-      s->coef = QSnum_AllocArray (nzcnt); /*lint !e160 !e429*/
+      CG_SAFE_MALLOC (s->indx, nzcnt, int);
+      s->coef = QSnum_AllocArray (nzcnt);
    }
    return 0;
  CLEANUP:
@@ -3499,7 +3493,7 @@ int RECTLUsolveSystem(
    mpq_t*                sol                 /**< solution to system, initialized to zero */
    )
 {
-   int rval;
+   int rval = 0;
    qsnum_svector srhs, ssol;
    int i;
    int rhsnz;
@@ -3508,7 +3502,7 @@ int RECTLUsolveSystem(
    rhsnz =0;
    for( i=0; i < n; i++ )
    {
-      if( mpq_sgn(rhs[i]) )  /*lint !e663*/
+      if( mpq_sgn(rhs[i]) )
          rhsnz++;
    }
 
@@ -3520,7 +3514,7 @@ int RECTLUsolveSystem(
    temp = 0;
    for( i=0; i < n; i++ )
    {
-      if( mpq_sgn(rhs[i]) )  /*lint !e663*/
+      if( mpq_sgn(rhs[i]) )
       {
          mpq_set(srhs.coef[temp],rhs[i]);
          srhs.indx[temp] = i;
@@ -3538,17 +3532,17 @@ int RECTLUsolveSystem(
 
 
    for( i = 0; i < m; i++ )
-      mpq_set_si(sol[i],0L,1L);
+      mpq_set_si(sol[i],0,1);
 
    /* assign the solution value */
    for( i = 0 ; i < ssol.nzcnt; i++ )
       mpq_set(sol[ssol.indx[i]],ssol.coef[i]);
 
  CLEANUP:
-   (void)clear_sxvector( &srhs );
+   clear_sxvector( &srhs );
    /* ssol.nzcnt is increased to make sure all mpqs freed */
    ssol.nzcnt = n;
-   (void)clear_sxvector( &ssol );
+   clear_sxvector( &ssol );
    return rval;
 }
 
@@ -3557,12 +3551,8 @@ void RECTLUfreeFactorization(
    qsnum_factor_work*    f                   /**< factor work */
    )
 {
-   if(f)
-   {
-      QSnum_factor_free_factor_work (f);
-      QSnum_factor_clear ();
-   }
+   QSnum_factor_free_factor_work (f);
+   QSnum_factor_clear ();
    if (f) free (f);
 }
-#endif
 #endif

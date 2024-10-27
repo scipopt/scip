@@ -3069,10 +3069,12 @@ SCIP_RETCODE priceAndCutLoop(
    {
       SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
-      if( tree->focusnodehaslp )
-      {
+      if( !(lp->solved && lp->flushed) )
+         SCIP_CALL( SCIPcertificatePrintInheritedBound(set, stat->certificate, focusnode) );
+      else if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE && tree->focusnodehaslp )
          SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, TRUE) );
-      }
+      else if( tree->focusnodehaslp )
+         SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, FALSE) );
    }
 
    SCIPsetDebugMsg(set, " -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
