@@ -10,6 +10,7 @@ Fixed bugs
 - use indices of negation counterparts and accept fixings when ordering and-resultants of pseudoboolean constraints
 - correct bound tracking to make the evaluation of primal-dual-integrals work
 - update locks on model variables before removing pseudoboolean constraints in consPresolPseudoboolean()
+- skip aggregations on fixed variables in milp presolver to avoid errors for earlier versions of PaPILO
 
 Unit tests
 ----------
