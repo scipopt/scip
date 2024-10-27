@@ -15,7 +15,6 @@ Performance improvements
 
 - reoptimization now also stores propagations from propagators if reoptimization/saveconsprop is enabled;
   the parameter will be renamed to reoptimization/saveprop in a next major release
-- Imposed stricter limits on the size of disconnected components which may be solved separately during presolve by cons_components
 - when computing symmetries using Nauty, iteration limits are now available to terminate Nauty early
 
 Fixed bugs
@@ -45,8 +44,6 @@ Interface changes
 - presolving/milp/abortfacexhaustive to control the abort threshold for exhaustive presolving in PAPILO
 - presolving/milp/abortfacmedium to control the abort threshold for medium presolving in PAPILO
 - presolving/milp/abortfacfast to control the abort threshold for fast presolving in PAPILO
-- constraints/components/maxcompweight to determine the maximum weight for a disconnected component that is solved during presolve
-- constraints/components/contfactor counts the contributing factor of a single continuous variables with respect to the weight limit specified by constraints/components/maxcompweight
 - when compiled using the SYM=nauty or SYM=snauty option, parameters propagating/symmetry/nautymaxncells
   and propagating/symmetry/nautymaxnnodes can be used to set iteration limits in the external software Nauty
 
