@@ -14144,8 +14144,8 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
          }
       }
 
-#ifdef SCIP_DISABLED_CODE
-      /* uncomment to also output variable bounds */
+#ifdef SCIP_MORE_OUTPUT
+      /* define to also output variable bounds */
       vbdvars = SCIPvarGetVubVars(var);
       nvbdvars = SCIPvarGetNVubs(var);
 

@@ -168,7 +168,8 @@ SCIP_RETCODE applyBoundHeur(
          SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &infeasible, NULL) );
       }
 
-      /* stop if infeasible (todo: could also try to backtrack) */
+      /* todo: try to backtrack */
+      /* stop if infeasible */
       if( infeasible )
          break;
    }

@@ -2925,7 +2925,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
    /* The following should work, but does not seem to be tested well. */
 
    /* transfer aggregated linking variables to the corresponding binary variables */
-   assert(conshdlrdata->varmap != NULL);
    SCIP_CALL( aggregateVariables(scip, conshdlrdata->varmap, conss, nconss, naggrvars, &cutoff) );
 #endif
 
