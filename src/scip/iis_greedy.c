@@ -52,9 +52,10 @@
 #define DEFAULT_MAXNNODESPERITER INT_MAX
 #define DEFAULT_TIMELIMPERITER   1e+20
 #define DEFAULT_MINIFY           TRUE
-#define DEFAULT_ADDITIVE         FALSE
+#define DEFAULT_ADDITIVE         TRUE
 #define DEFAULT_CONSERVATIVE     TRUE
 #define DEFAULT_SILENT           FALSE
+#define DEFAULT_DYNAMICREORDERING TRUE
 
 /*
  * Data structures
@@ -69,6 +70,7 @@ struct SCIP_IISData
    SCIP_Bool             additive;           /**< whether an additive approach instead of deletion based approach should be used */
    SCIP_Bool             conservative;       /**< should a node or time limit solve be counted as feasible when deleting constraints */
    SCIP_Bool             silent;             /**< should the run be performed silently without printing progress information */
+   SCIP_Bool             dynamicreordering;  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
    SCIP_Longint          maxnnodesperiter;   /**< maximum number of nodes per individual solve call */
    int                   batchsize;          /**< the number of constraints to delete or add per iteration */
 };
@@ -383,6 +385,7 @@ SCIP_RETCODE deletionFilterBatchCons(
    SCIPfreeBlockMemoryArray(scip, &idxs, batchsize);
    SCIPfreeBlockMemoryArray(scip, &order, nconss);
    SCIPfreeBlockMemoryArray(scip, &conss, nconss);
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -393,6 +396,7 @@ SCIP_RETCODE additionFilterBatchCons(
    SCIP*                 scip,               /**< SCIP instance to analyze */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
+   SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
    int                   batchsize,          /**< the number of constraints to delete or add per iteration */
    SCIP_Bool*            success             /**< pointer to store whether we have obtained an (I)IS */
    )
@@ -480,8 +484,9 @@ SCIP_RETCODE additionFilterBatchCons(
       assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
       
       /* Add any other constraints that are also feasible for the current solution */
-      if( feasible && !stopiter && copysol != NULL )
+      if( feasible && !stopiter && copysol != NULL && dynamicreordering )
       {
+         k = 0;
          for( j = i; j < nconss; ++j )
          {
             if( !inIS[order[j]] )
@@ -492,9 +497,12 @@ SCIP_RETCODE additionFilterBatchCons(
                   SCIP_CALL( SCIPaddCons(scip, conss[order[j]]) );
                   SCIP_CALL( SCIPreleaseCons(scip, &conss[order[j]]) );
                   inIS[order[j]] = TRUE;
+                  k++;
                }
             }
          }
+         if( k > 0 )
+            SCIPinfoMessage(scip, NULL, "Added %d many constraints dynamically.\n", k);
       }
    
       if ( stopiter )
@@ -513,6 +521,7 @@ SCIP_RETCODE additionFilterBatchCons(
    SCIPfreeBlockMemoryArray(scip, &order, nconss);
    SCIPfreeBlockMemoryArray(scip, &inIS, nconss);
    SCIPfreeBlockMemoryArray(scip, &conss, nconss);
+   *success = TRUE;
    
    return SCIP_OKAY;
 }
@@ -569,8 +578,8 @@ SCIP_DECL_IISGENERATE(iisGenerateGreedy)
    assert(iisdata != NULL);
    
    SCIP_CALL( SCIPgenerateIISGreedy(scip, iisdata->randnumgen, iisdata->timelimperiter, iisdata->minify,
-                                    iisdata->additive, iisdata->conservative, iisdata->silent,
-                                    iisdata->maxnnodesperiter, iisdata->batchsize) );
+                                    iisdata->additive, iisdata->conservative, iisdata->silent, iisdata->dynamicreordering,
+                                    iisdata->maxnnodesperiter, iisdata->batchsize, result) );
    
    return SCIP_OKAY;
 }
@@ -638,6 +647,11 @@ SCIP_RETCODE SCIPincludeIISGreedy(
          "should the output of each solve be silenced",
          &iisdata->silent, TRUE, DEFAULT_SILENT, NULL, NULL) );
    
+   SCIP_CALL( SCIPaddBoolParam(scip,
+      "iis/" IIS_NAME "/dynamicreordering",
+      "should satisfied constraints outside the batch of an intermediate solve be added during the additive method",
+      &iisdata->dynamicreordering, TRUE, DEFAULT_DYNAMICREORDERING, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 
@@ -658,8 +672,10 @@ SCIP_RETCODE SCIPgenerateIISGreedy(
    SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
    SCIP_Bool             conservative,       /**< should a node or time limit solve be counted as feasible when deleting constraints */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
+   SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
    SCIP_Longint          maxnnodesperiter,   /**< maximum number of nodes per individual solve call */
-   int                   batchsize           /**< the number of constraints to delete or add per iteration */
+   int                   batchsize,          /**< the number of constraints to delete or add per iteration */
+   SCIP_RESULT*          result              /**< pointer to store the result os the IIS run */
    )
 {
    SCIP* subscip;
@@ -668,14 +684,35 @@ SCIP_RETCODE SCIPgenerateIISGreedy(
    success = FALSE;
    SCIP_CALL( createSubscipCopy(scip, &subscip, timelimperiter, maxnnodesperiter) );
    if( additive )
-      SCIP_CALL( additionFilterBatchCons(subscip, randnumgen, silent, batchsize, &success) );
+   {
+      if( !silent )
+         SCIPinfoMessage(scip, NULL, "Starting greedy addition algorithm\n");
+      SCIP_CALL( additionFilterBatchCons(subscip, randnumgen, silent, dynamicreordering, batchsize, &success) );
+   }
    else
+   {
+      if( !silent )
+         SCIPinfoMessage(scip, NULL, "Starting greedy deletion algorithm\n");
       SCIP_CALL( deletionFilterBatchCons(subscip, randnumgen, conservative, silent, batchsize, &success) );
+   }
+   
    
    if( minify && success && (additive || (batchsize != 1)) )
+   {
+      if( !silent )
+         SCIPinfoMessage(scip, NULL, "Minifying result with greedy deletion algorithm\n");
       SCIP_CALL( deletionFilterBatchCons(subscip, randnumgen, conservative, silent, 1, &success) );
-      
-   SCIPinfoMessage(scip, NULL, "NCONSS: %d\n", SCIPgetNConss(subscip));
+   }
+   
+   if( success )
+   {
+      SCIPinfoMessage(scip, NULL, "NCONSS: %d\n", SCIPgetNConss(subscip));
+   }
+   else
+   {
+      *result = SCIP_DIDNOTFIND;
+      SCIPinfoMessage(scip, NULL, "Failed to compute an (I)IS.\n");
+   }
    
    return SCIP_OKAY;
 }

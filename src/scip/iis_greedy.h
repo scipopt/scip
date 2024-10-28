@@ -86,8 +86,10 @@ SCIP_RETCODE SCIPgenerateIISGreedy(
    SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
    SCIP_Bool             conservative,       /**< should a node or time limit solve be counted as feasible when deleting constraints */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
+   SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
    SCIP_Longint          maxnnodesperiter,   /**< maximum number of nodes per individual solve call */
-   int                   batchsize           /**< the number of constraints to delete or add per iteration */
+   int                   batchsize,          /**< the number of constraints to delete or add per iteration */
+   SCIP_RESULT*          result              /**< pointer to store the result os the IIS run */
 );
 
 /** @} */
