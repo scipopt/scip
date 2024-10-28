@@ -27,14 +27,6 @@
  * @author Marc Pfetsch
  * @author Mark Turner
  *
- * An irreducibly infeasible subsystem (IIS) is a subset of the constraints that is infeasible and (set-wise) minimial
- * in this respect. The deletion filter heuristic greedily removes constraints and checks whether the remaining problem
- * is still infeasible. The method is based on
- *
- * O. Guieu and J. Chinneck, Analyzing infeasible mixed-integer and integer linear programs,@p
- * INFORMS J. Comput. 11, no. 1 (1999), pp. 63–77.
- *
- * We cannot guarantee that we are minimal at the end, so we might just obtain an infeasible subsystem (IS).
  */
 
 #include <assert.h>
@@ -527,7 +519,7 @@ SCIP_RETCODE additionFilterBatchCons(
 }
 
 /*
- * Callback methods of cut selector
+ * Callback methods of IIS
  */
 
 
@@ -539,7 +531,7 @@ SCIP_DECL_IISCOPY(iisCopyGreedy)
    assert(iis != NULL);
    assert(strcmp(SCIPiisGetName(iis), IIS_NAME) == 0);
    
-   /* call inclusion method of cut selector */
+   /* call inclusion method of IIS */
    SCIP_CALL( SCIPincludeIISGreedy(scip) );
    
    return SCIP_OKAY;
