@@ -4470,9 +4470,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          assert(consdata0->sorted);
 
 #ifdef SCIP_DISABLED_CODE
-      /* if aggregation in the core of SCIP is not changed we do not need to call applyFixing, this would be the correct
-       * way
-       */
+      /* TODO: consider running applyFixings() on the persistent constraint to detect a cutoff */
       /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
        * merge multiple entries of the same or negated variables
        */
