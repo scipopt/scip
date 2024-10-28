@@ -2774,12 +2774,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
          *ival = 2;
       break;
    case SCIP_LPPAR_PRESOLVING:
-      {
-         std::string presolve;
-         HIGHS_CALL( lpi->highs->getOptionValue("presolve", presolve) );
-         assert(presolve == "on" || presolve == "off"); /* values used in SCIPlpiSetIntpar() */
-         *ival = (presolve == "on");
-      }
+      *ival = lpi->presolve;
       break;
    case SCIP_LPPAR_PRICING:
       *ival = (int)lpi->pricing; /* store pricing method in LPI struct */
