@@ -3182,7 +3182,7 @@ static
 SCIP_DECL_CONSENABLE(consEnableLinking)
 {  /*lint --e{715}*/
 #ifdef SCIP_DISABLED_CODE
-   /* The following might help, but it would need to be tested whether it speeds up the solution process. */
+   /** @todo The following might help, but it would need to be tested whether it speeds up the solution process. */
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
 
