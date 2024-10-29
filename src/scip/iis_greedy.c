@@ -183,9 +183,14 @@ SCIP_RETCODE deletionFilterConsSubproblem(
       *stop = TRUE;
       break;
 
-   case SCIP_STATUS_NODELIMIT:        /* if we reached the node limit */
+   case SCIP_STATUS_NODELIMIT:        /* if we reached some limit */
+   case SCIP_STATUS_TOTALNODELIMIT:
+   case SCIP_STATUS_STALLNODELIMIT:
+   case SCIP_STATUS_MEMLIMIT:
+   case SCIP_STATUS_GAPLIMIT:
+   case SCIP_STATUS_RESTARTLIMIT:
       if ( ! silent )
-         SCIPinfoMessage(scip, NULL, "Node limit reached. Removing batch if set as non-conservative. \n");
+         SCIPinfoMessage(scip, NULL, "Some limit reached. Removing batch if set as non-conservative. \n");
       
       for( j = 0; j < ndelconss; j++ )
       {
@@ -196,6 +201,7 @@ SCIP_RETCODE deletionFilterConsSubproblem(
       break;
 
    case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
+   case SCIP_STATUS_INFORUNBD:
       if ( ! silent )
          SCIPinfoMessage(scip, NULL, "Subproblem infeasible. Remove constraint batch.\n");
       
@@ -206,7 +212,9 @@ SCIP_RETCODE deletionFilterConsSubproblem(
       break;
 
    case SCIP_STATUS_BESTSOLLIMIT:     /* we found a solution */
+   case SCIP_STATUS_SOLLIMIT:
    case SCIP_STATUS_OPTIMAL:
+   case SCIP_STATUS_UNBOUNDED:
       if ( ! silent )
          SCIPinfoMessage(scip, NULL, "Found solution. Keeping constraint batch\n");
       for( j = 0; j < ndelconss; j++ )
@@ -217,14 +225,6 @@ SCIP_RETCODE deletionFilterConsSubproblem(
       break;
 
    case SCIP_STATUS_UNKNOWN:
-   case SCIP_STATUS_TOTALNODELIMIT:
-   case SCIP_STATUS_STALLNODELIMIT:
-   case SCIP_STATUS_MEMLIMIT:
-   case SCIP_STATUS_GAPLIMIT:
-   case SCIP_STATUS_SOLLIMIT:
-   case SCIP_STATUS_RESTARTLIMIT:
-   case SCIP_STATUS_UNBOUNDED:
-   case SCIP_STATUS_INFORUNBD:
    default:
       SCIPerrorMessage("unexpected return status %d. Exiting ...\n", status);
       return SCIP_ERROR;
@@ -267,32 +267,32 @@ SCIP_RETCODE additionFilterConsSubproblem(
          *stop = TRUE;
          break;
       
-      case SCIP_STATUS_NODELIMIT:        /* if we reached the node limit */
-         if ( ! silent )
-            SCIPinfoMessage(scip, NULL, "Node limit reached. Added batch failed to induce infeasibility. \n");
-         break;
-      
-      case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
-         if ( ! silent )
-            SCIPinfoMessage(scip, NULL, "Subproblem infeasible. Final batch of constraints added.\n");
-         break;
-      
-      case SCIP_STATUS_BESTSOLLIMIT:     /* we found a solution */
-      case SCIP_STATUS_OPTIMAL:
-         if ( ! silent )
-            SCIPinfoMessage(scip, NULL, "Found solution. Keep adding constraint batches\n");
-         *feasible = TRUE;
-         break;
-      
-      case SCIP_STATUS_UNKNOWN:
+      case SCIP_STATUS_NODELIMIT:        /* if we reached some limit */
       case SCIP_STATUS_TOTALNODELIMIT:
       case SCIP_STATUS_STALLNODELIMIT:
       case SCIP_STATUS_MEMLIMIT:
       case SCIP_STATUS_GAPLIMIT:
       case SCIP_STATUS_SOLLIMIT:
       case SCIP_STATUS_RESTARTLIMIT:
-      case SCIP_STATUS_UNBOUNDED:
+         if ( ! silent )
+            SCIPinfoMessage(scip, NULL, "Some limit reached. Added batch failed to induce infeasibility. \n");
+         break;
+      
+      case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
       case SCIP_STATUS_INFORUNBD:
+         if ( ! silent )
+            SCIPinfoMessage(scip, NULL, "Subproblem infeasible. Final batch of constraints added.\n");
+         break;
+      
+      case SCIP_STATUS_BESTSOLLIMIT:     /* we found a solution */
+      case SCIP_STATUS_OPTIMAL:
+      case SCIP_STATUS_UNBOUNDED:
+         if ( ! silent )
+            SCIPinfoMessage(scip, NULL, "Found solution. Keep adding constraint batches\n");
+         *feasible = TRUE;
+         break;
+      
+      case SCIP_STATUS_UNKNOWN:
       default:
          SCIPerrorMessage("unexpected return status %d. Exiting ...\n", status);
          return SCIP_ERROR;
@@ -631,7 +631,7 @@ SCIP_RETCODE SCIPincludeIISGreedy(
    
    SCIP_CALL( SCIPaddBoolParam(scip,
          "iis/" IIS_NAME "/conservative",
-         "should a node or time limit solve be counted as feasible when deleting constraints",
+         "should a hit limit (e.g. node  time) solve be counted as feasible when deleting constraints",
          &iisdata->conservative, TRUE, DEFAULT_CONSERVATIVE, NULL, NULL) );
    
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -662,7 +662,7 @@ SCIP_RETCODE SCIPgenerateIISGreedy(
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
    SCIP_Bool             minify,             /**< whether the computed IS should undergo a final deletion round to ensure an IIS */
    SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
-   SCIP_Bool             conservative,       /**< should a node or time limit solve be counted as feasible when deleting constraints */
+   SCIP_Bool             conservative,       /**< should a hit limit (e.g. node / time) solve be counted as feasible when deleting constraints */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
    SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
    SCIP_Longint          maxnnodesperiter,   /**< maximum number of nodes per individual solve call */

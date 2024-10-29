@@ -84,7 +84,7 @@ SCIP_RETCODE SCIPgenerateIISGreedy(
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
    SCIP_Bool             minify,             /**< whether the computed IS should undergo a final deletion round to ensure an IIS */
    SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
-   SCIP_Bool             conservative,       /**< should a node or time limit solve be counted as feasible when deleting constraints */
+   SCIP_Bool             conservative,       /**< should a hit limit (e.g. node / time) solve be counted as feasible when deleting constraints */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
    SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
    SCIP_Longint          maxnnodesperiter,   /**< maximum number of nodes per individual solve call */
