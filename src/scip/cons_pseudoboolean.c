@@ -1859,6 +1859,8 @@ SCIP_RETCODE consdataPrint(
       /* find and-constraint to standard or negated and-resultant */
       do
       {
+         /* @todo: drop indicator variable */
+         assert(!consdata->issoftcons || var != consdata->indvar);
          consanddata = (CONSANDDATA*)SCIPhashmapGetImage(conshdlrdata->hashmap, (void*)var);
 
          if( consanddata != NULL )
@@ -3375,6 +3377,7 @@ SCIP_RETCODE createAndAddLinearCons(
    SCIPdebugPrintCons(scip, cons, NULL);
    *lincons = cons;
 
+   /* @todo: add indicator variable */
    /* add hard constraint */
    if( !issoftcons )
    {
@@ -8996,6 +8999,12 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
       }
       else if( ntermvars[nterms] == 1 )
       {
+         if( issoftcons && ( monomialvars[i][0] == indvar || SCIPvarGetNegatedVar(monomialvars[i][0]) == indvar ) )
+         {
+            SCIPerrorMessage("indicator variable <%s> part of indicated constraint '%s'\n", SCIPvarGetName(indvar), varstrptr);
+            goto TERMINATE;
+         }
+
          linvars[nlinvars] = monomialvars[i][0];
          linvals[nlinvars] = monomialcoefs[i];
          ++nlinvars;
