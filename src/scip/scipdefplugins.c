@@ -109,6 +109,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolDualinfer(scip) );
    SCIP_CALL( SCIPincludePresolGateextraction(scip) );
    SCIP_CALL( SCIPincludePresolImplics(scip) );
+   SCIP_CALL( SCIPincludePresolImplint(scip) );
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
 #ifdef SCIP_WITH_PAPILO
    SCIP_CALL( SCIPincludePresolMILP(scip) );
@@ -232,6 +233,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaMcf(scip) );
    SCIP_CALL( SCIPincludeSepaMinor(scip) );
    SCIP_CALL( SCIPincludeSepaMixing(scip) );
+   SCIP_CALL( SCIPincludeSepaMultilinear(scip) );
    SCIP_CALL( SCIPincludeSepaOddcycle(scip) );
    SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
    SCIP_CALL( SCIPincludeSepaRlt(scip) );

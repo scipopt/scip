@@ -104,7 +104,7 @@
  *
  * \verbinclude output.log
  *
- * @version  9.2.0
+ * @version  10.0.0
  *
  * \image html scippy.png
  */
@@ -405,6 +405,7 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
+ * - \subpage RN10         "SCIP 10"
  * - \subpage RN9          "SCIP 9"
  * - \subpage RN8          "SCIP 8"
  * - \subpage RN7          "SCIP 7.0"
@@ -673,6 +674,10 @@
  *   the comment starts at column 46 (if column-count starts with 1).
  * - Maximal line length is 120 characters.
  * - Always only one declaration in a line.
+ * - Joint declaration and initialization is possible at the top-level of a function and in the header of loops.
+ *
+ *   @refsnippet{src/scip/cuts.c,SnippetCodeStyleInLoopDeclaration}
+ *
  * - Variable names should be all lower case.
  *
  *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleDeclaration}
@@ -9047,6 +9052,11 @@
 /**@defgroup DecompMethods Decomposition data structure
  * @ingroup DataStructures
  * @brief methods for creating and accessing user decompositions
+ */
+
+/**@defgroup NetworkMatrix Network Matrix
+ * @ingroup DataStructures
+ * @brief methods for detecting network matrices and converting them to the underlying graphs
  */
 
 /**@defgroup SymGraph Symmetry Detection Graph

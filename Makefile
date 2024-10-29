@@ -691,6 +691,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_veclendiving.o \
 			scip/heur_zeroobj.o \
 			scip/heur_zirounding.o \
+			scip/hypergraph.o \
 			scip/message_default.o \
 			scip/nlhdlr_bilinear.o \
 			scip/nlhdlr_convex.o \
@@ -716,6 +717,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/presol_dualinfer.o\
 			scip/presol_gateextraction.o \
 			scip/presol_implics.o \
+			scip/presol_implint.o \
 			scip/presol_inttobinary.o \
 			scip/presol_qpkktref.o \
 			scip/presol_redvub.o \
@@ -775,6 +777,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/sepa_mcf.o \
 			scip/sepa_minor.o \
 			scip/sepa_mixing.o \
+			scip/sepa_multilinear.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_rlt.o \
@@ -858,6 +861,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/misc.o \
 			scip/misc_linear.o \
 			scip/misc_rowprep.o \
+			scip/network.o \
 			scip/nlhdlr.o \
 			scip/nlp.o \
 			scip/nlpi.o \
