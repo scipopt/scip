@@ -339,9 +339,9 @@ set(instances_Bilinrelax
   )
 
 #
-# PseudoBoolean instances
+# PB instances
 #
-set(instances_PseudoBoolean
+set(instances_PB
     "instances/PseudoBoolean/factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B.opb\;3"
     "instances/PseudoBoolean/normalized-bsg_10_4_5.opb\;-4"
     "instances/PseudoBoolean/normalized-mds_10_4_3.opb\;2"
@@ -503,9 +503,9 @@ set(pairs_Issue
 )
 
 #
-# available reader file extensions for SCIP readers
+# available reader file extensions for MIP problems
 #
-set(scip_reader_extensions
+set(reader_extensions_MIP
   "mps"
   "lp"
   "opb"
@@ -516,9 +516,16 @@ set(scip_reader_extensions
   )
 
 #
-# Writer output formats that are not also readers (all writers are scip_reader_extensions + scip_only_writer_extensions)
+# available reader file extensions for PB problems
 #
-set(scip_writer_only_extensions
+set(reader_extensions_PB
+  "cip"
+  )
+
+#
+# Writer output formats that are not also readers (all writers are reader_extensions_MIP + writer_only_extensions)
+#
+set(writer_only_extensions
   "wbo"
   )
 
@@ -665,7 +672,7 @@ add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_branch settings_branch "Branch")
 add_instancetests(instances_Bilinrelax settings_default "Bilinrelax")
-add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
+add_instancetests(instances_PB settings_default "PseudoBoolean")
 add_instancetests(instances_sparsify settings_sparsify "Sparsify")
 add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
@@ -783,7 +790,7 @@ set(message_format_lp "WARNING: violation of LP format - a constraint name start
 # test writing and reading from and to different file extensions for MIP
 #
 foreach(instance ${instances_MIP_write})
-  foreach(extension ${scip_writer_only_extensions})
+  foreach(extension ${writer_only_extensions})
     split_instance(instance)
     configure_file(interactiveshell/writeronlytest.bat.in interactiveshell/writeronlytest-${extension}-${basename}.bat)
     set(regex "written original problem to file")
@@ -804,7 +811,7 @@ endforeach(instance)
 #
 foreach(instance ${instances_MIP})
     split_instance(instance)
-    foreach(extension ${scip_reader_extensions})
+    foreach(extension ${reader_extensions_MIP})
         #
         # configure the batch file for this test by substituting placeholders in the in.file
         #
@@ -826,6 +833,28 @@ foreach(instance ${instances_MIP})
         set_tests_properties(MIP-readertest-${extension}-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION ${regex}
+                                FAIL_REGULAR_EXPRESSION "ERROR"
+                                DEPENDS scip-build
+                            )
+    endforeach(extension)
+endforeach(instance)
+
+#
+# test writing and reading from and to different file extensions for PB
+#
+foreach(instance ${instances_PB})
+    split_instance(instance)
+    foreach(extension ${reader_extensions_PB})
+        #
+        # configure the batch file for this test by substituting placeholders in the in.file
+        #
+        configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+        add_test(NAME PseudoBoolean-readertest-${extension}-${basename}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
+                )
+        set_tests_properties(PseudoBoolean-readertest-${extension}-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "Validation         : Success.*Validation         : Success"
                                 FAIL_REGULAR_EXPRESSION "ERROR"
                                 DEPENDS scip-build
                             )
