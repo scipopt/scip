@@ -8983,7 +8983,9 @@ SCIP_DECL_CONSPARSE(consParsePseudoboolean)
    }
 
    /* create pseudoboolean constraint */
-   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, cons, name, linvars, nlinvars, linvals, terms, nterms, ntermvars, termvals, indvar, weight, issoftcons, NULL, lhs, rhs, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, cons, name, linvars, nlinvars, linvals, terms, nterms, ntermvars,
+         termvals, indvar, weight, issoftcons, lhs, rhs, initial, separate, enforce, check, propagate, local,
+         modifiable, dynamic, removable, stickingatnode) );
 
 TERMINATE:
    /* free buffers for storing the terms and coefficients */
