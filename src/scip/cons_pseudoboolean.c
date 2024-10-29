@@ -85,13 +85,12 @@
 
 #define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
-#define DEFAULT_DECOMPOSENORMALPBCONS FALSE /**< decompose all normal pseudo boolean constraint into a "linear" constraint and "and" constraints */
-#define DEFAULT_DECOMPOSEINDICATORPBCONS TRUE /**< decompose all indicator pseudo boolean constraint into a "linear" constraint and "and" constraints */
+#define DEFAULT_DECOMPOSENORMALPBCONS FALSE /**< decompose every normal pseudo boolean constraint into a "linear" constraint and "and" constraints */
+#define DEFAULT_DECOMPOSEINDICATORPBCONS TRUE /**< decompose every soft pseudo boolean constraint into "indicator" constraints and "and" constraints */
 
 #define DEFAULT_SEPARATENONLINEAR  TRUE /**< if decomposed, should the nonlinear constraints be separated during LP processing */
 #define DEFAULT_PROPAGATENONLINEAR TRUE /**< if decomposed, should the nonlinear constraints be propagated during node processing */
 #define DEFAULT_REMOVABLENONLINEAR TRUE /**< if decomposed, should the nonlinear constraints be removable */
-#define USEINDICATOR               TRUE
 #define NONLINCONSUPGD_PRIORITY   60000 /**< priority of upgrading nonlinear constraints */
 
 /* remove this line to compile the upgrade from nonlinear to pseudoboolean constraints */
@@ -222,8 +221,8 @@ struct SCIP_ConshdlrData
    SCIP_HASHMAP*         hashmap;            /**< hash map for mapping all resultant to and-constraint */
    int                   hashmapsize;        /**< size for hash map for mapping all resultant to and-constraint */
 
-   SCIP_Bool             decomposenormalpbcons;/**< decompose the pseudo boolean constraint into a "linear" constraint and "and" constraints */
-   SCIP_Bool             decomposeindicatorpbcons;/**< decompose the indicator pseudo boolean constraint into a "linear" constraint and "and" constraints */
+   SCIP_Bool             decomposenormalpbcons; /**< decompose every normal pseudo boolean constraint into a "linear" constraint and "and" constraints */
+   SCIP_Bool             decomposeindicatorpbcons; /**< decompose every soft pseudo boolean constraint into "indicator" constraints and "and" constraints */
    SCIP_Bool             inithashmapandtable;/**< flag to store if the hashmap and -table is initialized */
    int                   nlinconss;          /**< for counting number of created linear constraints */
    int                   noriguses;          /**< how many consanddata objects are used by original constraints */
@@ -1812,6 +1811,7 @@ SCIP_RETCODE consdataPrint(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->intvar == NULL);
    assert(consdata->lincons != NULL);
    /* more than one and-constraint is needed, otherwise this pseudoboolean constraint should be upgraded to a linear constraint */
    assert(consdata->nconsanddatas >= 0);
@@ -1833,10 +1833,11 @@ SCIP_RETCODE consdataPrint(
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
    assert(nvars == 0 || (coefs != NULL));
 
-   /* number of variables should be consistent, number of 'real' linear variables plus number of and-constraints should
-    * have to be equal to the number of variables in the linear constraint
+   /* every variable in the linear constraint is either a linear variable or a term variable
+    * but there can be additional fixed or negation-paired and-resultants with relevant and-constraints
+    * whose values are already resolved in the linear constraint
     */
-   assert(consdata->nlinvars + consdata->nconsanddatas == nvars);
+   assert(consdata->nlinvars + consdata->nconsanddatas >= nvars);
 
    /* print left hand side for ranged rows */
    if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && !SCIPisEQ(scip, lhs, rhs) )
@@ -1861,34 +1862,6 @@ SCIP_RETCODE consdataPrint(
 
       assert(SCIPvarIsBinary(var));
 
-      if( !SCIPconsIsOriginal(cons) )
-      {
-         /* if the and resultant was fixed we print a constant */
-         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
-         {
-            if( SCIPvarGetLbGlobal(var) > 0.5 )
-            {
-               printed = TRUE;
-               SCIPinfoMessage(scip, file, " %+.15g ", coefs[v]);
-            }
-            continue;
-         }
-         else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
-         {
-            SCIP_VAR* aggrvar;
-            SCIP_Bool negated;
-
-            SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &aggrvar, &negated) );
-            assert(aggrvar != NULL);
-            assert(SCIPvarGetType(aggrvar) == SCIP_VARTYPE_BINARY);
-
-            printed = TRUE;
-            SCIPinfoMessage(scip, file, " %+.15g %s<%s>[B]", coefs[v], negated ? "~" : "", SCIPvarGetName(aggrvar));
-
-            continue;
-         }
-      }
-
       /* find and-constraint to standard or negated and-resultant */
       do
       {
@@ -1896,13 +1869,7 @@ SCIP_RETCODE consdataPrint(
 
          if( consanddata != NULL )
          {
-            SCIP_CONS* andcons;
-
-            if( SCIPconsIsOriginal(cons) )
-               andcons = consanddata->origcons;
-            else
-               andcons = consanddata->cons;
-            assert(andcons != NULL);
+            SCIP_CONS* andcons = SCIPconsIsOriginal(cons) ? consanddata->origcons : consanddata->cons;
 
             andvars = SCIPgetVarsAnd(scip, andcons);
             nandvars = SCIPgetNVarsAnd(scip, andcons);
@@ -1911,10 +1878,7 @@ SCIP_RETCODE consdataPrint(
             break;
          }
 
-         if( var == vars[v] )
-            var = SCIPvarGetNegatedVar(var);
-         else
-            var = vars[v];
+         var = var == vars[v] ? SCIPvarGetNegatedVar(var) : vars[v];
       }
       while( var != vars[v] );
 
@@ -2099,16 +2063,15 @@ SCIP_RETCODE createAndAddAndCons(
       SCIP_CALL( SCIPcreateVar(scip, &resultant, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
             TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
 
-#if 1 /* @todo: check whether we want to branch on artificial variables, the test results show that it is of advantage */
+      /* @todo: branch on artificial variables, the test results show that it is of advantage */
       /* change branching priority of artificial variable to -1 */
       SCIP_CALL( SCIPchgVarBranchPriority(scip, resultant, -1) );
-#endif
 
       /* add auxiliary variable to the problem */
       SCIP_CALL( SCIPaddVar(scip, resultant) );
 
-#if 0 /* does not work for since the value of artificial resultants must not be equal to the value computed by their
-       * product, since these variables are irrelevant */
+      /* @todo: keep and-resultants defined to check debug solution */
+#ifdef SCIP_DISABLED_CODE
 #ifdef WITH_DEBUG_SOLUTION
       if( SCIPdebugIsMainscip(scip) )
       {
@@ -2807,6 +2770,7 @@ SCIP_RETCODE createAndAddLinearCons(
    SCIP_Bool*const       andnegs,            /**< and-resultant negation status */
    SCIP_Real*const       lhs,                /**< pointer to left hand side of linear constraint */
    SCIP_Real*const       rhs,                /**< pointer to right hand side of linear constraint */
+   SCIP_Bool const       issoftcons,         /**< is this a soft constraint */
    SCIP_Bool const       initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool const       separate,           /**< should the constraint be separated during LP processing?
@@ -3404,17 +3368,19 @@ SCIP_RETCODE createAndAddLinearCons(
    }
 
    assert(cons != NULL && *linconstype > SCIP_LINEARCONSTYPE_INVALIDCONS);
-
-   SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugPrintCons(scip, cons, NULL);
-
    *lincons = cons;
-   SCIP_CALL( SCIPcaptureCons(scip, *lincons) );
 
-   /* mark linear constraint not to be upgraded - otherwise we loose control over it */
-   SCIPconsAddUpgradeLocks(cons, 1);
+   /* add hard constraint */
+   if( !issoftcons )
+   {
+      SCIP_CALL( SCIPaddCons(scip, cons) );
 
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      /* mark linear constraint not to be upgraded - otherwise we loose control over it */
+      SCIP_CALL( SCIPcaptureCons(scip, cons) );
+      SCIPconsAddUpgradeLocks(cons, 1);
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
 
    return SCIP_OKAY;
 }
@@ -3479,10 +3445,11 @@ SCIP_RETCODE checkOrigPbCons(
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
    assert(nvars == 0 || (coefs != NULL));
 
-   /* number of variables should be consistent, number of 'real' linear variables plus number of and-constraints should
-    * have to be equal to the number of variables in the linear constraint
+   /* every variable in the linear constraint is either a linear variable or a term variable
+    * but there can be additional fixed or negation-paired and-resultants with relevant and-constraints
+    * whose values are already resolved in the linear constraint
     */
-   assert(consdata->nlinvars + consdata->nconsanddatas == nvars);
+   assert(consdata->nlinvars + consdata->nconsanddatas >= nvars);
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
@@ -3508,10 +3475,7 @@ SCIP_RETCODE checkOrigPbCons(
          if( consanddata != NULL )
             break;
 
-         if( var == vars[v] )
-            var = SCIPvarGetNegatedVar(var);
-         else
-            var = vars[v];
+         var = var == vars[v] ? SCIPvarGetNegatedVar(var) : vars[v];
       }
       while( var != vars[v] );
 
@@ -3800,9 +3764,9 @@ SCIP_RETCODE copyConsPseudoboolean(
       {
          assert(targetlincons != NULL);
          assert(SCIPconsGetHdlr(targetlincons) != NULL);
-         /* @note  due to copying special linear constraints, now leads only to simple linear constraints, we check that
-          *        our target constraint handler is the same as our source constraint handler of the linear constraint,
-          *        if copying was not valid
+         /* @note due to copying special linear constraints, now leads only to simple linear constraints, we check that
+          *       our target constraint handler is the same as our source constraint handler of the linear constraint,
+          *       if copying was not valid
           */
          if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(targetlincons)), "linear") == 0 )
             targetlinconstype = SCIP_LINEARCONSTYPE_LINEAR;
@@ -3867,10 +3831,7 @@ SCIP_RETCODE copyConsPseudoboolean(
 
             consanddata = sourceconsdata->consanddatas[c];
             assert(consanddata != NULL);
-
-            oldcons = consanddata->istransformed ? consanddata->cons : consanddata->origcons;
-            assert(oldcons != NULL);
-
+            oldcons = SCIPconsIsOriginal(sourcecons) ? consanddata->origcons : consanddata->cons;
             targetandresultant = (SCIP_VAR*) SCIPhashmapGetImage(varmap, SCIPgetResultantAnd(sourcescip, oldcons));
             assert(targetandresultant != NULL);
 
@@ -5134,9 +5095,9 @@ SCIP_RETCODE correctConshdlrdata(
          varstatus = SCIPvarGetStatus(SCIPgetResultantAnd(scip, consanddata->cons));
          looseorcolumn = (varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN);
 
-         /* @note  due to aggregations or fixings the resultant may need to be propagated later on, so we can only
-          *        delete the and-constraint if the resultant is of column or loose status
-          *        and is not an active variable of another (multi-)aggregated/negated variable
+         /* @note due to aggregations or fixings the resultant may need to be propagated later on, so we can only
+          *       delete the and-constraint if the resultant is of column or loose status
+          *       and is not an active variable of another (multi-)aggregated/negated variable
           */
          if( looseorcolumn )
          {
@@ -5185,9 +5146,6 @@ SCIP_RETCODE correctConshdlrdata(
             if( !looseorcolumn )
             {
                SCIP_CALL( SCIPsetConsInitial(scip, consanddata->cons, FALSE) );
-#if 0
-               SCIP_CALL( SCIPsetConsSeparated(scip, consanddata->cons, FALSE) );
-#endif
             }
             SCIP_CALL( SCIPsetConsChecked(scip, consanddata->cons, TRUE) );
          }
@@ -5345,9 +5303,9 @@ SCIP_RETCODE updateConsanddataUses(
          varstatus = SCIPvarGetStatus(resvar);
          looseorcolumn = (varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN);
 
-         /* @note  due to aggregations or fixings the resultant may need to be propagated later on, so we can only
-          *        delete the and-constraint if the resultant is of column or loose status
-          *        and is not an active variable of another (multi-)aggregated/negated variable
+         /* @note due to aggregations or fixings the resultant may need to be propagated later on, so we can only
+          *       delete the and-constraint if the resultant is of column or loose status
+          *       and is not an active variable of another (multi-)aggregated/negated variable
           */
          if( looseorcolumn )
          {
@@ -5369,9 +5327,6 @@ SCIP_RETCODE updateConsanddataUses(
             if( !looseorcolumn )
             {
                SCIP_CALL( SCIPsetConsInitial(scip, consanddata->cons, FALSE) );
-#if 0
-               SCIP_CALL( SCIPsetConsSeparated(scip, consanddata->cons, FALSE) );
-#endif
             }
             SCIP_CALL( SCIPsetConsChecked(scip, consanddata->cons, TRUE) );
          }
@@ -5574,7 +5529,7 @@ SCIP_RETCODE checkSolution(
 /** try upgrading pseudoboolean linear constraint to an XOR constraint and/or remove possible and-constraints
  *
  *  @note An XOR(x_1,..,x_n) = 1 <=> XOR(x1,..,~x_j,..,x_n) = 0, for j in {1,..,n}, which is not yet checked while
- *  trying to upgrade
+ *        trying to upgrade
  */
 static
 SCIP_RETCODE tryUpgradingXor(
@@ -7274,20 +7229,13 @@ SCIP_RETCODE findAggregation(
                (*ndelconss) += 2;
             }
          }
-#if 0
-         else
-         {
-            /* @todo */
-            /* delete allvars[samepos] from all and-constraints which appear in this pseudoboolean constraint, and delete
-             * all but one of the remaining and-constraint
-             *
-             * it is the same like aggregating linvar with the resultant of the product, which is the same in all and-
-             * constraints without allvars[samepos]
-             *
-             * e.g. x1 + x2*x_3*...x_n + ~x2*x_3*...x_n = 1 => x1 = 1 - x_3*...x_n
-             */
-         }
-#endif
+         /* @todo: otherwise delete in this constraint allvars[samepos] from all terms and delete all but one of them
+          *
+          * it is the same like aggregating linvar with the resultant of the product, which is the same in all and-
+          * constraints without allvars[samepos]
+          *
+          * e.g. x1 + x2*x_3*...x_n + ~x2*x_3*...x_n = 1 => x1 = 1 - x_3*...x_n
+          */
       } /*lint !e438*/
       /* we have a constraint in the form of: x1 + x2 * x3 + ~x2 * x3 + ~x2 * ~x3 == 1
        * this leads to the aggregation x1 = x2 * ~x3
@@ -7640,7 +7588,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdPseudoboolean)
    lhs = SCIPgetLhsNonlinear(scip, cons);
    rhs = SCIPgetRhsNonlinear(scip, cons);
 
-   /* we need all linear variables to be binary, except for one that was added to reformulate an objective function */
+   /* we need all linear variables to be binary */
    for( i = 0; i < SCIPgetNLinearVarsNonlinear(scip, cons); ++i )
    {
       var = SCIPgetLinearVarsNonlinear(scip, cons)[i];
@@ -7649,20 +7597,7 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdPseudoboolean)
       if( SCIPvarIsBinary(var) )
          continue;
 
-#ifdef SCIP_DISABLED_CODE /* not working in cons_pseudoboolean yet, see cons_pseudoboolean.c:7925 */
-      /* check whether the variable may have been added to represent the objective function */
-      if( objvar == NULL && SCIPgetLinearCoefsNonlinear(scip, cons)[i] == -1.0 && /*TODO we could divide by the coefficient*/
-          SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == (SCIPisInfinity(scip,  rhs) ? 0 : 1) &&  /*TODO correct?*/
-          SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == (SCIPisInfinity(scip, -lhs) ? 0 : 1) &&  /*TODO correct?*/
-          SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) &&
-          SCIPvarGetObj(var) == 1.0 )  /*TODO we need this or just positive?*/
-      {
-         objvar = var;
-         continue;
-      }
-#endif
-
-      SCIPdebugMsg(scip, "not pseudoboolean because linear variable <%s> is not binary or objective\n", SCIPvarGetName(var));
+      SCIPdebugMsg(scip, "not pseudoboolean because linear variable <%s> is not binary\n", SCIPvarGetName(var));
       return SCIP_OKAY;
    }
 
@@ -7877,75 +7812,146 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
    assert(conshdlrdata != NULL);
 
    /* decompose all pseudo boolean constraints into a "linear" constraint and "and" constraints */
-   if( conshdlrdata->decomposeindicatorpbcons || conshdlrdata->decomposenormalpbcons )
+   for( c = 0; c < nconss; ++c )
    {
-      for( c = 0; c < nconss; ++c )
+      SCIP_CONS* cons;
+      SCIP_CONSDATA* consdata;
+      SCIP_VAR** vars;
+      SCIP_Real* coefs;
+      int nvars;
+
+      cons = conss[c];
+      assert(cons != NULL);
+
+      /* only added constraints can be upgraded */
+      if( !SCIPconsIsAdded(cons) )
+         continue;
+
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+      assert(consdata->intvar == NULL);
+
+      /* only keep hard constraints if desired */
+      if( !conshdlrdata->decomposenormalpbcons && !consdata->issoftcons )
+         continue;
+
+      /* gets number of variables in linear constraint */
+      SCIP_CALL( getLinearConsNVars(scip, consdata->lincons, consdata->linconstype, &nvars) );
+
+      /* allocate temporary memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
+
+      /* get variables and coefficient of linear constraint */
+      SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
+      assert(nvars == 0 || (coefs != NULL));
+
+      /* hard constraint */
+      if( !consdata->issoftcons )
       {
-         SCIP_CONS* cons;
-         SCIP_CONSDATA* consdata;
-         SCIP_VAR** vars;
-         SCIP_Real* coefs;
-         int nvars;
+         /* @todo: maybe better create a new linear constraint and let scip do the upgrade */
 
-         cons = conss[c];
-         assert(cons != NULL);
+         /* mark linear constraint not to be upgraded - otherwise we loose control over it */
+         SCIPconsAddUpgradeLocks(consdata->lincons, 1);
 
-         /* only added constraints can be upgraded */
-         if( !SCIPconsIsAdded(cons) )
-            continue;
+         /* update and constraint flags */
+         SCIP_CALL( updateAndConss(scip, cons) );
+      }
+      /* soft constraint */
+      else
+      {
+         SCIP_VAR* negindvar;
+         char name[SCIP_MAXSTRLEN];
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+         SCIP_Bool initial;
+         SCIP_Bool updateandconss;
+         int v;
 
-         consdata = SCIPconsGetData(cons);
-         assert(consdata != NULL);
+         assert(consdata->weight != 0);
+         assert(consdata->indvar != NULL);
 
-         /* gets number of variables in linear constraint */
-         SCIP_CALL( getLinearConsNVars(scip, consdata->lincons, consdata->linconstype, &nvars) );
+         /* get negation of indicator variable */
+         SCIP_CALL( SCIPgetNegatedVar(scip, consdata->indvar, &negindvar) );
+         assert(negindvar != NULL);
 
-         /* allocate temporary memory */
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
+         /* get sides of linear constraint */
+         SCIP_CALL( getLinearConsSides(scip, consdata->lincons, consdata->linconstype, &lhs, &rhs) );
+         assert(!SCIPisInfinity(scip, lhs));
+         assert(!SCIPisInfinity(scip, -rhs));
+         assert(SCIPisLE(scip, lhs, rhs));
 
-         /* get variables and coefficient of linear constraint */
-         SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-         assert(nvars == 0 || (coefs != NULL));
+         /* @todo: split up sides into separate soft constraints in advance */
+         /* assert(SCIPisInfinity(scip, -lhs) || SCIPisInfinity(scip, rhs)); */
 
-         if( consdata->issoftcons && conshdlrdata->decomposeindicatorpbcons )
+         updateandconss = FALSE;
+
+         /* with indicator */
+         if( conshdlrdata->decomposeindicatorpbcons )
          {
-            SCIP_VAR* negindvar;
-            char name[SCIP_MAXSTRLEN];
-            SCIP_Real lhs;
-            SCIP_Real rhs;
-            SCIP_Bool initial;
-            SCIP_Bool updateandconss;
-            int v;
-#if USEINDICATOR == FALSE
+            SCIP_CONS* indcons;
+
+            /* @todo check whether it's better to set the initial flag to false */
+            initial = SCIPconsIsInitial(cons); /* FALSE; */
+
+            if( !SCIPisInfinity(scip, rhs) )
+            {
+               /* first we are modelling the implication that if the negation of the indicator variable is on, the constraint
+                * is enabled */
+               /* indvar == 0 => a^T*x <= rhs */
+
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_rhs_ind", SCIPconsGetName(cons));
+
+               SCIP_CALL( SCIPcreateConsIndicator(scip, &indcons, name, negindvar, nvars, vars, coefs, rhs,
+                     initial, SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                     SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+                     SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+               /* update and constraint flags */
+               SCIP_CALL( updateAndConss(scip, cons) );
+               updateandconss = TRUE;
+
+               SCIP_CALL( SCIPaddCons(scip, indcons) );
+               SCIPdebugPrintCons(scip, indcons, NULL);
+               SCIP_CALL( SCIPreleaseCons(scip, &indcons) );
+            }
+
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               /* second we are modelling the implication that if the negation of the indicator variable is on, the constraint
+                * is enabled */
+               /* change the a^T*x >= lhs to -a^Tx<= -lhs, for indicator constraint */
+
+               for( v = nvars - 1; v >= 0; --v )
+                  coefs[v] *= -1;
+
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lhs_ind", SCIPconsGetName(cons));
+
+               SCIP_CALL( SCIPcreateConsIndicator(scip, &indcons, name, negindvar, nvars, vars, coefs, -lhs,
+                     initial, SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                     SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+                     SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+
+               if( !updateandconss )
+               {
+                  /* update and constraint flags */
+                  SCIP_CALL( updateAndConss(scip, cons) );
+               }
+
+               SCIP_CALL( SCIPaddCons(scip, indcons) );
+               SCIPdebugPrintCons(scip, indcons, NULL);
+               SCIP_CALL( SCIPreleaseCons(scip, &indcons) );
+            }
+         }
+         /* with linear */
+         else
+         {
             SCIP_CONS* lincons;
             SCIP_Real maxact;
             SCIP_Real minact;
             SCIP_Real lb;
             SCIP_Real ub;
-#else
-            SCIP_CONS* indcons;
-#endif
 
-            assert(consdata->weight != 0);
-            assert(consdata->indvar != NULL);
-
-            /* if it is a soft constraint, there should be no integer variable */
-            assert(consdata->intvar == NULL);
-
-            /* get negation of indicator variable */
-            SCIP_CALL( SCIPgetNegatedVar(scip, consdata->indvar, &negindvar) );
-            assert(negindvar != NULL);
-
-            /* get sides of linear constraint */
-            SCIP_CALL( getLinearConsSides(scip, consdata->lincons, consdata->linconstype, &lhs, &rhs) );
-            assert(!SCIPisInfinity(scip, lhs));
-            assert(!SCIPisInfinity(scip, -rhs));
-            assert(SCIPisLE(scip, lhs, rhs));
-
-            updateandconss = FALSE;
-
-#if USEINDICATOR == FALSE
             maxact = 0.0;
             minact = 0.0;
 
@@ -8059,91 +8065,20 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
                SCIPdebugPrintCons(scip, lincons, NULL);
                SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
             }
-#else /* with indicator */
-            /* @todo check whether it's better to set the initial flag to false */
-            initial = SCIPconsIsInitial(cons); /* FALSE; */
-
-            if( !SCIPisInfinity(scip, rhs) )
-            {
-               /* first we are modelling the implication that if the negation of the indicator variable is on, the constraint
-                * is enabled */
-               /* indvar == 0 => a^T*x <= rhs */
-
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_rhs_ind", SCIPconsGetName(cons));
-
-               SCIP_CALL( SCIPcreateConsIndicator(scip, &indcons, name, negindvar, nvars, vars, coefs, rhs,
-                     initial, SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-                     SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-                     SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-
-               /* update and constraint flags */
-               SCIP_CALL( updateAndConss(scip, cons) );
-               updateandconss = TRUE;
-
-               SCIP_CALL( SCIPaddCons(scip, indcons) );
-               SCIPdebugPrintCons(scip, indcons, NULL);
-               SCIP_CALL( SCIPreleaseCons(scip, &indcons) );
-            }
-
-            if( !SCIPisInfinity(scip, -lhs) )
-            {
-               /* second we are modelling the implication that if the negation of the indicator variable is on, the constraint
-                * is enabled */
-               /* change the a^T*x >= lhs to -a^Tx<= -lhs, for indicator constraint */
-
-               for( v = nvars - 1; v >= 0; --v )
-                  coefs[v] *= -1;
-
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lhs_ind", SCIPconsGetName(cons));
-
-               SCIP_CALL( SCIPcreateConsIndicator(scip, &indcons, name, negindvar, nvars, vars, coefs, -lhs,
-                     initial, SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-                     SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-                     SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-
-               if( !updateandconss )
-               {
-                  /* update and constraint flags */
-                  SCIP_CALL( updateAndConss(scip, cons) );
-               }
-
-               SCIP_CALL( SCIPaddCons(scip, indcons) );
-               SCIPdebugPrintCons(scip, indcons, NULL);
-               SCIP_CALL( SCIPreleaseCons(scip, &indcons) );
-            }
-#endif
-            /* remove pseudo boolean and corresponding linear constraint, new linear constraints were created,
-             * and-constraints still active
-             */
-            SCIP_CALL( SCIPdelCons(scip, consdata->lincons) );
-            SCIP_CALL( SCIPdelCons(scip, cons) );
-         }
-         /* no soft constraint */
-         else if( !consdata->issoftcons && conshdlrdata->decomposenormalpbcons )
-         {
-            /* todo: maybe better create a new linear constraint and let scip do the upgrade */
-
-            /* mark linear constraint not to be upgraded - otherwise we loose control over it */
-            SCIPconsAddUpgradeLocks(consdata->lincons, 1);
-
-            /* update and constraint flags */
-            SCIP_CALL( updateAndConss(scip, cons) );
-
-#if 0 /* not implemented correctly */
-            if( consdata->intvar != NULL )
-            {
-               /* add auxiliary integer variables to linear constraint */
-               SCIP_CALL( SCIPaddCoefLinear(scip, lincons, consdata->intvar, -1.0) );
-            }
-#endif
-            /* remove pseudo boolean constraint, old linear constraint is still active, and-constraints too */
-            SCIP_CALL( SCIPdelCons(scip, cons) );
          }
 
-         /* free temporary memory */
-         SCIPfreeBufferArray(scip, &coefs);
-         SCIPfreeBufferArray(scip, &vars);
+         /* release corresponding unadded linear constraint, other constraints were added */
+         assert(!SCIPconsIsAdded(consdata->lincons));
+         SCIP_CALL( SCIPreleaseCons(scip, &consdata->lincons) );
       }
+
+      /* free temporary memory */
+      SCIPfreeBufferArray(scip, &coefs);
+      SCIPfreeBufferArray(scip, &vars);
+
+      /* @todo: maintain soft inequality constraint if not decomposeindicatorpbcons */
+      /* remove pseudo boolean constraint, and-constraints are still active */
+      SCIP_CALL( SCIPdelCons(scip, cons) );
    }
 
    return SCIP_OKAY;
@@ -9093,11 +9028,11 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    /* add pseudoboolean constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/decomposenormal",
-         "decompose all normal pseudo boolean constraint into a \"linear\" constraint and \"and\" constraints",
+         "decompose every normal pseudo boolean constraint into a \"linear\" constraint and \"and\" constraints",
          &conshdlrdata->decomposenormalpbcons, TRUE, DEFAULT_DECOMPOSENORMALPBCONS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/decomposeindicator",
-         "decompose all indicator pseudo boolean constraint into a \"linear\" constraint and \"and\" constraints",
+         "decompose every soft pseudo boolean constraint into \"indicator\" constraints and \"and\" constraints",
          &conshdlrdata->decomposeindicatorpbcons, TRUE, DEFAULT_DECOMPOSEINDICATORPBCONS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/nlcseparate", "should the nonlinear constraints be separated during LP processing?",
@@ -9119,7 +9054,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
 
 /** creates and captures a pseudoboolean constraint, with given linear and and-constraints
  *
- *  @note intvar must currently be NULL
+ *  @note intvar must currently be NULL and will be removed
  */
 SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9372,7 +9307,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    /* capture linear constraint */
    SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
-   /* todo: make the constraint upgrade flag global, now it works only for the common linear constraint */
+   /* @todo: make the constraint upgrade flag global, now it works only for the common linear constraint */
    /* mark linear constraint not to be upgraded - otherwise we loose control over it */
    SCIPconsAddUpgradeLocks(lincons, 1);
 
@@ -9396,7 +9331,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  *
- *  @note intvar must currently be NULL
+ *  @note intvar must currently be NULL and will be removed
  */
 SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9475,13 +9410,11 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
       return SCIP_PLUGINNOTFOUND;
    }
 
-#if USEINDICATOR == TRUE
-   if( issoftcons && modifiable )
+   if( modifiable && issoftcons )
    {
-      SCIPerrorMessage("Indicator constraint handler can't work with modifiable constraints\n");
+      SCIPerrorMessage("soft constraints must not be modifiable\n");
       return SCIP_INVALIDDATA;
    }
-#endif
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -9523,8 +9456,8 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
     * pseudoboolean constraint, in this constraint handler we only will check all and-constraints
     */
    SCIP_CALL( createAndAddLinearCons(scip, conshdlr, linvars, nlinvars, linvals, andress, nandconss, andcoefs, andnegs,
-         &lhs, &rhs, initial, separate, enforce, FALSE/*check*/, propagate, local, modifiable, dynamic, removable,
-         stickingatnode, &lincons, &linconstype) );
+         &lhs, &rhs, issoftcons, initial, separate, enforce, FALSE/*check*/, propagate, local, modifiable, dynamic,
+         removable, stickingatnode, &lincons, &linconstype) );
    assert(lincons != NULL);
    assert(linconstype > SCIP_LINEARCONSTYPE_INVALIDCONS);
 
@@ -9548,11 +9481,14 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
 }
 
 /** creates and captures a pseudoboolean constraint
- *  in its most basic variant, i. e., with all constraint flags set to their default values
+ *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
+ *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+ *
+ *  @see SCIPcreateConsPseudoboolean() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  *
- *  @note intvar must currently be NULL
+ *  @note intvar must currently be NULL and will be removed
  */
 SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9584,10 +9520,10 @@ SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
 
 /** adds a variable to the pseudo boolean constraint (if it is not zero)
  *
- * @note  you can only add a coefficient if the special type of linear constraint won't changed
+ *  @note you can only add a coefficient if the special type of linear constraint won't changed
  *
- * @todo  if adding a coefficient would change the type of the special linear constraint, we need to erase it and
- *         create a new linear constraint
+ *  @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
+ *        create a new linear constraint
  */
 SCIP_RETCODE SCIPaddCoefPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -9661,10 +9597,10 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
 
 /** adds nonlinear term to pseudo boolean constraint (if it is not zero)
  *
- * @note  you can only add a coefficient if the special type of linear constraint won't changed
+ *  @note you can only add a coefficient if the special type of linear constraint won't changed
  *
- * @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
- *         create a new linear constraint
+ *  @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
+ *        create a new linear constraint
  */
 SCIP_RETCODE SCIPaddTermPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -9936,10 +9872,10 @@ int SCIPgetNAndsPseudoboolean(
 
 /** changes left hand side of pseudoboolean constraint
  *
- * @note you can only change the left hand side if the special type of linear constraint won't changed
+ *  @note you can only change the left hand side if the special type of linear constraint won't changed
  *
- * @todo if changing the left hand side would change the type of the special linear constraint, we need to erase it
- *       and create a new linear constraint
+ *  @todo if changing the left hand side would change the type of the special linear constraint, we need to erase it
+ *        and create a new linear constraint
  */
 SCIP_RETCODE SCIPchgLhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
@@ -9987,10 +9923,10 @@ SCIP_RETCODE SCIPchgLhsPseudoboolean(
 
 /** changes right hand side of pseudoboolean constraint
  *
- * @note you can only change the right hand side if the special type of linear constraint won't changed
+ *  @note you can only change the right hand side if the special type of linear constraint won't changed
  *
- * @todo if changing the right hand side would change the type of the special linear constraint, we need to erase it
- *       and create a new linear constraint
+ *  @todo if changing the right hand side would change the type of the special linear constraint, we need to erase it
+ *        and create a new linear constraint
  */
 SCIP_RETCODE SCIPchgRhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
