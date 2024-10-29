@@ -8651,7 +8651,10 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
    return SCIP_OKAY;
 }
 
-/** constraint display method of constraint handler */
+/** constraint display method of constraint handler
+ *
+ *  @warning The linear-and-reformulation is part of the model and is separately printed by other constraint handlers
+ */
 static
 SCIP_DECL_CONSPRINT(consPrintPseudoboolean)
 {  /*lint --e{715}*/
@@ -8688,7 +8691,10 @@ SCIP_DECL_CONSCOPY(consCopyPseudoboolean)
    return SCIP_OKAY;
 }
 
-/** constraint parsing method of constraint handler */
+/** constraint parsing method of constraint handler
+ *
+ *  @warning The linear-and-reformulation is added even if equivalent variables and constraints are part of the model
+ */
 static
 SCIP_DECL_CONSPARSE(consParsePseudoboolean)
 {  /*lint --e{715}*/
