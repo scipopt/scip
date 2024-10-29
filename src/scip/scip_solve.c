@@ -112,6 +112,7 @@
 #include "scip/tree.h"
 #include "scip/var.h"
 #include "scip/visual.h"
+#include "tpi/tpi.h"
 
 /** calculates number of nonzeros in problem */
 static
@@ -2864,10 +2865,6 @@ SCIP_RETCODE SCIPsolveConcurrent(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-#ifdef TPI_NONE
-   SCIPerrorMessage("SCIP was compiled without task processing interface. Concurrent solve not possible\n");
-   return SCIP_PLUGINNOTFOUND;
-#else
    SCIP_RETCODE     retcode;
    int              i;
    SCIP_RANDNUMGEN* rndgen;
@@ -2876,7 +2873,13 @@ SCIP_RETCODE SCIPsolveConcurrent(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsolveConcurrent", FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", SCIP_CLOCKTYPE_WALL) );
+   if( !SCIPtpiIsAvailable() )
+   {
+      SCIPerrorMessage("SCIP was compiled without task processing interface. Concurrent solve not possible\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", (int)SCIP_CLOCKTYPE_WALL) );
 
    minnthreads = scip->set->parallel_minnthreads;
    maxnthreads = scip->set->parallel_maxnthreads;
@@ -2890,7 +2893,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
    {
       int                   nconcsolvertypes;
       SCIP_CONCSOLVERTYPE** concsolvertypes;
-      SCIP_Longint          nthreads;
+      int                   nthreads;
       SCIP_Real             memorylimit;
       int*                  solvertypes;
       SCIP_Longint*         weights;
@@ -2936,8 +2939,8 @@ SCIP_RETCODE SCIPsolveConcurrent(
          /* estimate maximum number of copies that be created based on memory limit */
          if( !scip->set->misc_avoidmemout )
          {
-            nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "estimated a maximum of %lli threads based on memory limit\n", nthreads);
+            nthreads = MAX(1, memorylimit / (4.0*SCIPgetMemExternEstim(scip)/1048576.0));  /*lint !e666 !e524*/
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "estimated a maximum of %d threads based on memory limit\n", nthreads);
          }
          else
          {
@@ -2965,7 +2968,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
          return SCIPsolve(scip);
       }
       nthreads = MIN(nthreads, maxnthreads);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "using %lli threads for concurrent solve\n", nthreads);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "using %d threads for concurrent solve\n", nthreads);
 
       /* now set up nthreads many concurrent solvers that will be used for the concurrent solve
        * using the preferred priorities of each concurrent solver
@@ -2973,6 +2976,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
       prefpriosum = 0.0;
       for( i = 0; i < nconcsolvertypes; ++i )
          prefpriosum += SCIPconcsolverTypeGetPrefPrio(concsolvertypes[i]);
+      assert(prefpriosum != 0.0);
 
       ncandsolvertypes = 0;
       SCIP_CALL( SCIPallocBufferArray(scip, &solvertypes, nthreads + nconcsolvertypes) );
@@ -3008,7 +3012,7 @@ SCIP_RETCODE SCIPsolveConcurrent(
 
          SCIP_CALL( SCIPconcsolverCreateInstance(scip->set, concsolvertypes[solvertypes[i]], &concsolver) );
          if( scip->set->concurrent_changeseeds && SCIPgetNConcurrentSolvers(scip) > 1 )
-            SCIP_CALL( SCIPconcsolverInitSeeds(concsolver, SCIPrandomGetInt(rndgen, 0, INT_MAX)) );
+            SCIP_CALL( SCIPconcsolverInitSeeds(concsolver, (unsigned int)SCIPrandomGetInt(rndgen, 0, INT_MAX)) );
       }
       SCIPfreeRandom(scip, &rndgen);
       SCIPfreeBufferArray(scip, &prios);
@@ -3032,7 +3036,6 @@ SCIP_RETCODE SCIPsolveConcurrent(
    SCIP_CALL( displayRelevantStats(scip) );
 
    return retcode;
-#endif
 }
 
 /** include specific heuristics and branching rules for reoptimization

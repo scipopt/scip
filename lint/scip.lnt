@@ -158,7 +158,6 @@
 // avoid significant prototype coercion (this is usually happening
 // because the length of the string is given by an integer constant,
 // while the argument is unsigned long):
--ecall(747,strncasecmp)
 -ecall(747,strncpy)
 -ecall(747,strncat)
 -ecall(747,strncpy)

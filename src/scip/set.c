@@ -409,7 +409,7 @@
                                                  *   branching
                                                  */
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
-#define SCIP_DEFAULT_REOPT_SAVECONSPROP     FALSE/**< save constraint propagation */
+#define SCIP_DEFAULT_REOPT_SAVEPROP       FALSE /**< save constraint and propagator propagation */
 #define SCIP_DEFAULT_REOPT_USESPLITCONS    TRUE /**< use constraints to reconstruct the subtree pruned be dual reduction
                                                  *   when reactivating the node
                                                  */
@@ -2410,8 +2410,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/saveconsprop",
-         "save constraint propagations",
-         &(*set)->reopt_saveconsprop, TRUE, SCIP_DEFAULT_REOPT_SAVECONSPROP,
+         "save constraint and propagator propagations",
+         &(*set)->reopt_saveprop, TRUE, SCIP_DEFAULT_REOPT_SAVEPROP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/usesplitcons", "use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node",

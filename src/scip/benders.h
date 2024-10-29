@@ -393,6 +393,14 @@ void SCIPbendersSetSubproblemEnabled(
    SCIP_Bool             enabled             /**< flag to indicate whether the subproblem is enabled */
    );
 
+/** sets the flag to indicate that at least one subproblem is always infeasible
+ *  NOTE: this is without any variable fixing being performed
+ */
+void SCIPbendersSetSubproblemsAreInfeasible(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** changes all of the master problem variables in the given subproblem to continuous */
 SCIP_RETCODE SCIPbendersChgMastervarsToCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
