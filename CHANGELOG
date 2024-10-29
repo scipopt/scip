@@ -9,6 +9,7 @@ Features
 - added check for absolute and relative gap limits at end of synchronization in concurrent solving mode, in order to terminate earlier;
   note that if the concurrent solve is stopped due to a gap limit, the "winner" solver will have an interrupted solution status and
   its primal and dual bounds may not be the best possible ones (use SCIPgetConcurrentPrimalbound() and SCIPgetConcurrentDualbound() instead)
+- parse pseudoboolean constraint in polynomial cip format (and add linear-and-reformulation)
 
 Performance improvements
 ------------------------
