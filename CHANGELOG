@@ -192,6 +192,7 @@ Fixed bugs
 - skip aggregations on fixed variables in milp presolver to avoid errors for earlier versions of PaPILO
 - reformulate soft pseudoboolean constraints with linear constraints if the indicator decomposition is disabled
 - in lpi_highs set the presolve option in lpiSolve() to not reset the model status directly after solving the LP
+- update constraints and hashmap after each multi-aggregation to avoid key error in removeDoubleAndSingletonsAndPerformDualpresolve() of cons_setppc.c
 
 Unit tests
 ----------
