@@ -87,20 +87,14 @@ Miscellaneous
 Fixed bugs
 ----------
 
-- skip constraint propagation if the residual activity bound cancels the side precision in tightenVarBounds() of cons_linear.c
-- use indices of negation counterparts and accept fixings when ordering and-resultants of pseudoboolean constraints
+- skip linear constraint propagation if the residual activity bound cancels the side precision
 - correct bound tracking to make the evaluation of primal-dual-integrals work
-- update locks on model variables before removing pseudoboolean constraints in consPresolPseudoboolean()
 - skip aggregations on fixed variables in milp presolver to avoid errors for earlier versions of PaPILO
+- use indices of negation counterparts and accept fixings when ordering and-resultants of pseudoboolean constraints
+- update locks on model variables before removing pseudoboolean constraints in presolve
 - reformulate soft pseudoboolean constraints with linear constraints if the indicator decomposition is disabled
-- in lpi_highs set the presolve option in lpiSolve() to not reset the model status directly after solving the LP
-- update constraints and hashmap after each multi-aggregation to avoid key error in removeDoubleAndSingletonsAndPerformDualpresolve() of cons_setppc.c
-
-Unit tests
-----------
-
-Testing
--------
+- add workaround for recent HiGHS versions resetting the model status when changing the presolve option after a solve
+- avoid hashmap key error in removal of doubletons and singletons in dual presolve of setppc constraints by updating constraints and corresponding hashmaps after each multi-aggregation
 
 Build system
 ------------
@@ -109,15 +103,10 @@ Build system
 
 - attempted to fix detection of CPLEX library on macOS and Windows systems
 
-### Makefile
-
 Miscellaneous
 -------------
 
 - adjusted Gurobi interface for Gurobi 12
-
-Known bugs
-----------
 
 @section RN911 SCIP 9.1.1
 *************************

@@ -2149,10 +2149,6 @@ SCIP_RETCODE SCIPnodeAddHoleinfer(
    SCIP_Bool*            added               /**< pointer to store whether the hole was added, or NULL */
    )
 {
-#if 0
-   SCIP_VAR* infervar;
-#endif
-
    assert(node != NULL);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE
@@ -2195,10 +2191,6 @@ SCIP_RETCODE SCIPnodeAddHoleinfer(
       left, right, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), infercons != NULL ? "cons" : "prop",
       infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo);
 
-#if 0
-   /* remember variable as inference variable, and get corresponding active variable, bound and bound type */
-   infervar = var;
-#endif
    SCIP_CALL( SCIPvarGetProbvarHole(&var, &left, &right) );
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )

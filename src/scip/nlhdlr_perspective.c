@@ -1241,7 +1241,6 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataPerspective)
    return SCIP_OKAY;
 }
 
-
 /** callback to be called in deinitialization */
 static
 SCIP_DECL_NLHDLREXIT(nlhdlrExitPerspective)
@@ -1486,7 +1485,6 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaPerspective)
 
    return SCIP_OKAY;
 }
-
 
 /** nonlinear handler enforcement callback
  *
