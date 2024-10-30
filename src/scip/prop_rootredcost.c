@@ -153,7 +153,7 @@ SCIP_DECL_SORTPTRCOMP(varCompRedcost)
    else if( key1 > key2 )
       return +1;
 
-   /* second criteria use the problem index
+   /* second criterion: use the problem index
     *
     * @note The problem index is unique. That means the resulting sorting is unique.
     */
@@ -391,7 +391,7 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
    assert(!(*cutoff));
 
    /* the binary variables are stored in the beginning of the variable array; these variables are sorted w.r.t. cutoff
-    * bound which would lead to a fixing; that give us an abort criteria (see below)
+    * bound which would lead to a fixing; that give us an abort criterion (see below)
     */
    redcostvars = propdata->redcostvars;
    assert(redcostvars != NULL);
@@ -485,12 +485,13 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
    /* store the index of the variable which is not globally fixed */
    propdata->glbfirstnonfixed = v;
 
-#if 0 /* due to numerics it might be that the abort criteria did not work correctly, because the sorting mechanism may
-       * have evaluated variables with a really small difference in their reduced cost values but with really huge
-       * lpobjval as the same
-       */
+#ifdef SCIP_DISABLED_CODE
+   /* Due to numerics it might be that the abort criterion did not work correctly, because the sorting mechanism may
+    * have evaluated variables with a really small difference in their reduced cost values but with really huge
+    * lpobjval as the same. Thus, we disable the check below for now.
+    */
 #ifndef NDEBUG
-   /* check that the abort criteria works; that means none of the remaining binary variables can be fixed */
+   /* check that the abort criterion works; that means none of the remaining binary variables can be fixed */
    for( ; v < propdata->nredcostbinvars && !(*cutoff); ++v )
    {
       SCIP_VAR* var;

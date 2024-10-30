@@ -699,7 +699,8 @@ SCIP_RETCODE primalAddSol(
 
    SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
 
-#if 0 /* this is not a valid debug check, but can be used to track down numerical troubles */
+#ifdef SCIP_DISABLED_CODE
+   /* this is not a valid debug check, but can be used to track down numerical troubles */
 #ifndef NDEBUG
    /* check solution again completely
     * it fail for different reasons:

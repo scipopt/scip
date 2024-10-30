@@ -8709,7 +8709,7 @@ void btnodeFreeLeaf(
    assert((*node)->left == NULL);
    assert((*node)->right == NULL);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* remove reference from parent node */
    if( (*node)->parent != NULL )
    {

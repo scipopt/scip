@@ -1146,13 +1146,6 @@ SCIP_RETCODE addRelaxation(
 
    consdata->relaxadded = TRUE;
 
-#if 0
-   if( !conshdlrdata->rowrelax )
-   {
-      SCIP_CALL( SCIPrestartSolve(scip) );
-   }
-#endif
-
    return SCIP_OKAY;
 }
 
@@ -1876,75 +1869,6 @@ SCIP_RETCODE enfopsCons(
 
    return SCIP_OKAY;
 }
-
-#if 0
-/** enforce the LP or pseudo solution */
-static
-SCIP_RETCODE enfoCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint to be checked */
-   SCIP_Bool*            violated,           /**< pointer to store if the constraint is violated */
-   SCIP_Bool*            rowadded            /**< pointer to store if a row was added */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   SCIP_VAR** binvars;
-   SCIP_VAR** vars;
-   int* demands;
-   int* durations;
-   SCIP_Bool auxiliary;
-   SCIP_Bool cutoff;
-   int nvars;
-
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(violated != NULL);
-
-   SCIPdebugMessage("check optcumulative constraints <%s>\n", SCIPconsGetName(cons));
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &binvars, consdata->nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &durations, consdata->nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &demands, consdata->nvars) );
-
-   /* collect information of all activities which are assigned to that machine in the given solution */
-   collectSolActivities(scip, consdata, NULL, binvars, vars, durations, demands, &nvars, &auxiliary);
-
-   if( nvars > 0 )
-   {
-      /* check the cumulative condition */
-      SCIP_CALL( SCIPcheckCumulativeCondition(scip, NULL, nvars, vars,
-            durations, demands, consdata->capacity, consdata->hmin, consdata->hmax, violated, cons, FALSE) );
-
-      if( *violated )
-      {
-#if 0
-         /* create row */
-         SCIP_CALL( createRow(scip, SCIPconsGetName(cons), binvars, vars, durations, demands, nvars,
-               consdata->capacity, TRUE, &cutoff) );
-#endif
-         /* reset constraint age since it successfully detected infeasibility */
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
-      }
-      else
-      {
-         /* increase constraint age since it did not detected infeasibility */
-         SCIP_CALL( SCIPincConsAge(scip, cons) );
-      }
-   }
-
-   /* free all buffers */
-   SCIPfreeBufferArray(scip, &demands);
-   SCIPfreeBufferArray(scip, &durations);
-   SCIPfreeBufferArray(scip, &vars);
-   SCIPfreeBufferArray(scip, &binvars);
-
-   return SCIP_OKAY;
-}
-#endif
 
 /** upgrade constraints to an cumulative constraint */
 static

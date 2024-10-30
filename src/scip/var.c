@@ -2702,7 +2702,7 @@ SCIP_RETCODE varFreeParents(
          parentvar->data.aggregate.var = NULL;
          break;
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
       /* The following code is unclear: should the current variable be removed from its parents? */
       case SCIP_VARSTATUS_MULTAGGR:
          assert(parentvar->data.multaggr.vars != NULL);
@@ -9039,7 +9039,7 @@ SCIP_RETCODE varProcessAddHoleLocal(
    assert(SCIPsetIsEQ(set, newlb, var->locdom.lb));
    assert(SCIPsetIsEQ(set, newub, var->locdom.ub));
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
    if( var->eventfilter != NULL )
@@ -13551,7 +13551,7 @@ SCIP_Real SCIPvarGetImplRedcost(
                int probindex = SCIPvarGetProbindex(clqvar) + 1;
                assert(0 < probindex && probindex < nentries);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
                /* check that the variable was not yet visited or does not appear with two contradicting implications, ->
                 * can appear since there is no guarantee that all these infeasible bounds were found
                 */
