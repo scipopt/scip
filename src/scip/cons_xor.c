@@ -3464,7 +3464,8 @@ SCIP_RETCODE cliquePresolve(
    if( !consdata->deleteintvar )
       return SCIP_OKAY;
 
-#if 0 /* try to evaluate if clique presolving should only be done multiple times when the constraint changed */
+#ifdef SCIP_DISABLED_CODE
+   /* try to evaluate if clique presolving should only be done multiple times when the constraint changed */
    if( !consdata->changed )
       return SCIP_OKAY;
 #endif
@@ -4468,10 +4469,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             consdataSort(consdata0);
          assert(consdata0->sorted);
 
-#if 0
-      /* if aggregation in the core of SCIP is not changed we do not need to call applyFixing, this would be the correct
-       * way
-       */
+#ifdef SCIP_DISABLED_CODE
+      /* TODO: consider running applyFixings() on the persistent constraint to detect a cutoff */
       /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
        * merge multiple entries of the same or negated variables
        */

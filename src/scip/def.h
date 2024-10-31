@@ -185,7 +185,7 @@
 #define SCIP_DEFAULT_BOUNDSTREPS       0.05  /**< default minimal relative improve for strengthening bounds */
 #define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01  /**< default minimal variable distance value to use for pseudo cost updates */
 #define SCIP_DEFAULT_PSEUDOCOSTDELTA  1e-04  /**< default minimal objective distance value to use for pseudo cost updates */
-#define SCIP_DEFAULT_RECOMPFAC        1e+07  /**< default minimal decrease factor that causes the recomputation of a value (e.g., pseudo objective) instead of an update */
+#define SCIP_DEFAULT_RECOMPFAC        1e+06  /**< default minimal decrease factor that causes the recomputation of a value (e.g., pseudo objective) instead of an update */
 #define SCIP_DEFAULT_HUGEVAL          1e+15  /**< values larger than this are considered huge and should be handled separately (e.g., in activity computation) */
 #define SCIP_MAXEPSILON               1e-03  /**< maximum value for any numerical epsilon */
 #define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */

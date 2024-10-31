@@ -1099,7 +1099,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
     */
    implbinvarsexist = (SCIPprobGetNImplBinVars(scip->transprob) > 0);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* @todo do the cleanup here rather than before calling SCIPshrinkDisjunctiveVarSet()? */
    if( usebin )
    {
