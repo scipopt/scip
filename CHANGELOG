@@ -111,16 +111,10 @@ Fixed bugs
 - sort and-constraints of a pseudoboolean constraint with respect to the resultant problem indices to avoid shuffled copies
 - treat pseudoboolean constraints as nonlinear constraints in OPB reader to prevent duplication mistakes
 
-Performance improvements
-------------------------
-
 Examples and applications
 -------------------------
 
 - in example Binpacking implement Farkas pricing for packings because branching can actually lead to infeasible restricted master LPs
-
-Unit tests
-----------
 
 Testing
 -------
