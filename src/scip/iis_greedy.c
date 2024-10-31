@@ -71,38 +71,21 @@ struct SCIP_IISData
  * Local methods
  */
 
-/** creates a sub-SCIP and sets parameters */
+/** changes parameter values of the sub-SCIP for this IIS finder */
 static
-SCIP_RETCODE createSubscipCopy(
+SCIP_RETCODE chgScipGreedyIISParams(
    SCIP*                 scip,               /**< main SCIP data structure */
-   SCIP**                subscip,            /**< pointer to store created sub-SCIP */
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
    SCIP_Longint          maxnnodesperiter    /**< maximum number of nodes per individual solve call */
    )
 {
-   SCIP_Bool success;
-   
    assert(scip != NULL);
-   assert(subscip != NULL);
-   
-   /* create a new SCIP instance */
-   SCIP_CALL( SCIPcreate(subscip) );
-   
-   /* create problem in sub-SCIP */
-   SCIP_CALL( SCIPcopyOrig(scip, *subscip, NULL, NULL, "iis", TRUE, FALSE, FALSE, &success) );
-   
-   if( success == FALSE )
-   {
-      return SCIP_ERROR;
-   }
-   /* copy parameter settings */
-   SCIP_CALL( SCIPcopyParamSettings(scip, *subscip) );
    
    /* avoid recursive calls */
-   SCIP_CALL( SCIPsetSubscipsOff(*subscip, TRUE) );
+   SCIP_CALL( SCIPsetSubscipsOff(scip, TRUE) );
    
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolving(*subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_FAST, TRUE) );
 
 #ifdef SCIP_DEBUG
    /* for debugging, enable full output */
@@ -110,16 +93,16 @@ SCIP_RETCODE createSubscipCopy(
    SCIP_CALL( SCIPsetIntParam(*subscip, "display/freq", 100000000) );
 #else
    /* disable statistic timing inside sub SCIP and output to console */
-   SCIP_CALL( SCIPsetIntParam(*subscip, "display/verblevel", 0) );
-   SCIP_CALL( SCIPsetBoolParam(*subscip, "timing/statistictiming", FALSE) );
+   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(scip, "timing/statistictiming", FALSE) );
 #endif
    
    /* set parameter for time and node limit */
-   SCIP_CALL( SCIPsetRealParam(*subscip, "limits/time", timelimperiter) );
-   SCIP_CALL( SCIPsetLongintParam(*subscip, "limits/totalnodes", maxnnodesperiter) );
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", timelimperiter) );
+   SCIP_CALL( SCIPsetLongintParam(scip, "limits/totalnodes", maxnnodesperiter) );
    
    /* set parameter for solve to stop after finding a single solution (only need to prove feasibility) */
-   SCIP_CALL( SCIPsetIntParam(*subscip, "limits/bestsol", 1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "limits/bestsol", 1) );
    
    return SCIP_OKAY;
 }
@@ -670,22 +653,21 @@ SCIP_RETCODE SCIPgenerateIISGreedy(
    SCIP_RESULT*          result              /**< pointer to store the result os the IIS run */
    )
 {
-   SCIP* subscip;
    SCIP_Bool success;
    
    success = FALSE;
-   SCIP_CALL( createSubscipCopy(scip, &subscip, timelimperiter, maxnnodesperiter) );
+   SCIP_CALL( chgScipGreedyIISParams(scip, timelimperiter, maxnnodesperiter) );
    if( additive )
    {
       if( !silent )
          SCIPinfoMessage(scip, NULL, "Starting greedy addition algorithm\n");
-      SCIP_CALL( additionFilterBatchCons(subscip, randnumgen, silent, dynamicreordering, batchsize, &success) );
+      SCIP_CALL( additionFilterBatchCons(scip, randnumgen, silent, dynamicreordering, batchsize, &success) );
    }
    else
    {
       if( !silent )
          SCIPinfoMessage(scip, NULL, "Starting greedy deletion algorithm\n");
-      SCIP_CALL( deletionFilterBatchCons(subscip, randnumgen, conservative, silent, batchsize, &success) );
+      SCIP_CALL( deletionFilterBatchCons(scip, randnumgen, conservative, silent, batchsize, &success) );
    }
    
    
@@ -693,12 +675,12 @@ SCIP_RETCODE SCIPgenerateIISGreedy(
    {
       if( !silent )
          SCIPinfoMessage(scip, NULL, "Minifying result with greedy deletion algorithm\n");
-      SCIP_CALL( deletionFilterBatchCons(subscip, randnumgen, conservative, silent, 1, &success) );
+      SCIP_CALL( deletionFilterBatchCons(scip, randnumgen, conservative, silent, 1, &success) );
    }
    
    if( success )
    {
-      SCIPinfoMessage(scip, NULL, "NCONSS: %d\n", SCIPgetNConss(subscip));
+      SCIPinfoMessage(scip, NULL, "NCONSS: %d\n", SCIPgetNConss(scip));
    }
    else
    {

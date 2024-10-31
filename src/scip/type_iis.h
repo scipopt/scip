@@ -50,6 +50,7 @@ extern "C" {
 
 typedef struct SCIP_IIS SCIP_IIS;               /**< IIS data structure */
 typedef struct SCIP_IISData SCIP_IISDATA;       /**< IIS specific data */
+typedef struct SCIP_IISSTORE SCIP_IISSTORE;     /**< IIS storage data structure */
 
 
 /** copy method for IIS plugins (called when SCIP copies plugins)

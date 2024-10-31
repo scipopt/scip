@@ -99,7 +99,18 @@ void SCIPiisSetFree(
 void SCIPiisSetPriority(
    SCIP_IIS*             iis,                /**< IIS */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
    int                   priority            /**< new priority of the IIS */
+   );
+
+/** creates and captures a new IIS store */
+SCIP_RETCODE SCIPiisstoreCreate(
+   SCIP_IISSTORE**      iisstore             /**< pointer to return the created IIS store */
+   );
+
+/** releases an IIS store */
+SCIP_RETCODE SCIPiisstoreRelease(
+   SCIP_IISSTORE**      iisstore             /**< pointer to the IIS store */
    );
 
 #ifdef __cplusplus

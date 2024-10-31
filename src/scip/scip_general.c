@@ -48,6 +48,7 @@
 #include "scip/clock.h"
 #include "scip/debug.h"
 #include "scip/dialog.h"
+#include "scip/iis.h"
 #include "scip/interrupt.h"
 #include "scip/mem.h"
 #include "scip/message_default.h"
@@ -254,6 +255,7 @@ SCIP_RETCODE doScipCreate(
    SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
    SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
+   SCIP_CALL( SCIPiisstoreCreate(&(*scip)->iisstore) );
 
    /* include additional core functionality */
    SCIP_CALL( SCIPincludeCorePlugins(*scip) );
@@ -362,6 +364,7 @@ SCIP_RETCODE SCIPfree(
    /* switch stage to FREE */
    (*scip)->set->stage = SCIP_STAGE_FREE;
 
+   SCIP_CALL( SCIPiisstoreRelease(&(*scip)->iisstore) );
    SCIP_CALL( SCIPsyncstoreRelease(&(*scip)->syncstore) );
    SCIP_CALL( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );
    SCIP_CALL( SCIPdialoghdlrFree(*scip, &(*scip)->dialoghdlr) );

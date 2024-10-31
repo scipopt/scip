@@ -146,13 +146,41 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   SCIP_IISSTORE* iisstore;
    int i;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
+   SCIP_Bool success;
 
    /* sort the iis's by priority */
    SCIPsetSortIIS(set);
+   
+   /* Get the IIS storage data. Then create the subscip used for storing the IIS */
+   iisstore = SCIPgetIISstore(set->scip);
+   if( iisstore->subscip != NULL )
+   {
+      SCIPinfoMessage(set->scip, NULL, "An IIS for this problem already exists. Removing it before starting search procedure again.\n");
+      
+      /* free sub-SCIP */
+      SCIP_CALL( SCIPfree(&(iisstore->subscip)) );
+      iisstore->subscip = NULL;
+   }
+   
+   assert( iisstore->subscip == NULL );
+   
+   /* create a new SCIP instance */
+   SCIP_CALL( SCIPcreate(&(iisstore->subscip)) );
 
-   /* try all IIS generators until one succeeds */
+   /* create problem in sub-SCIP */
+   SCIP_CALL( SCIPcopyOrig(set->scip, iisstore->subscip, NULL, NULL, "iis", TRUE, FALSE, FALSE, &success) );
+
+   if( success == FALSE )
+   {
+      return SCIP_ERROR;
+   }
+   /* copy parameter settings */
+   SCIP_CALL( SCIPcopyParamSettings(set->scip, iisstore->subscip) );
+
+   /* Try all IIS generators until one succeeds */
    for( i = 0; i < set->niis && result == SCIP_DIDNOTFIND; ++i )
    {
       SCIP_IIS* iis;
@@ -164,12 +192,12 @@ SCIP_RETCODE SCIPiisGenerate(
       /* start timing */
       SCIPclockStart(iis->iistime, set);
 
-      SCIP_CALL( iis->iisgenerate(set->scip, iis, &result) );
+      SCIP_CALL( iis->iisgenerate(iisstore->subscip, iis, &result) );
 
       /* stop timing */
       SCIPclockStop(iis->iistime, set);
 
-      assert(result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND);
+      assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
    }
 
    return SCIP_OKAY;
@@ -331,6 +359,46 @@ SCIP_Longint SCIPiisGetNCalls(
   assert(iis != NULL);
 
   return iis->ncalls;
+}
+
+/** creates and captures a new IIS store */
+SCIP_RETCODE SCIPiisstoreCreate(
+   SCIP_IISSTORE**      iisstore             /**< pointer to return the created IIS store */
+)
+{
+   assert(iisstore != NULL);
+   
+   SCIPdebugMessage("SCIPsyncstoreCreate()\n");
+   
+   SCIP_ALLOC( BMSallocMemory(iisstore) );
+   
+   (*iisstore)->subscip = NULL;
+   // TODO: Add other stuff here. Need to decide on what I need.
+   
+   return SCIP_OKAY;
+}
+
+/** releases an IIS store */
+SCIP_RETCODE SCIPiisstoreRelease(
+   SCIP_IISSTORE**      iisstore             /**< pointer to the IIS store */
+)
+{
+   int references;
+   
+   assert(iisstore != NULL);
+   if( *iisstore == NULL )
+      return SCIP_OKAY;
+   
+   if( (*iisstore)->subscip != NULL )
+   {
+      SCIP_CALL( SCIPfree(&((*iisstore)->subscip)) );
+      (*iisstore)->subscip = NULL;
+   }
+   
+   BMSfreeMemory(iisstore);
+   *iisstore = NULL;
+   
+   return SCIP_OKAY;
 }
 
 /** compares two IIS's w. r. to their priority */

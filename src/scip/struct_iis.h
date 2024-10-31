@@ -55,6 +55,15 @@ struct SCIP_IIS
    SCIP_Longint          ncalls;             /**< number of times, this IIS was called */
 };
 
+/** IIS */
+struct SCIP_IISSTORE
+{
+   SCIP*                 subscip;            /**< The subscip that stores the IIS */
+   SCIP_CLOCK*           iistime;            /**< IIS execution time */
+   SCIP_Longint          nnodes;             /**< The number of nodes used over all IIS solves */
+   SCIP_Longint          ncalls;             /**< number of times, this IIS was called */
+};
+
 #ifdef __cplusplus
 }
 #endif
