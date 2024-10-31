@@ -3946,7 +3946,7 @@ SCIP_RETCODE computeConsAndDataChanges(
 
    allconsanddatas = conshdlrdata->allconsanddatas;
    assert(allconsanddatas != NULL);
-   assert(conshdlrdata->nallconsanddatas > 0);
+   assert(conshdlrdata->nallconsanddatas >= 0);
    assert(conshdlrdata->nallconsanddatas <= conshdlrdata->sallconsanddatas);
 
    for( c = conshdlrdata->nallconsanddatas - 1; c >= 0; --c )
