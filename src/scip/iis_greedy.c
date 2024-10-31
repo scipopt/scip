@@ -120,6 +120,7 @@ SCIP_RETCODE deletionFilterConsSubproblem(
    SCIP_Bool*            stop                /**< pointer to store whether we have to stop */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_STATUS status;
    int j;
 
@@ -136,7 +137,19 @@ SCIP_RETCODE deletionFilterConsSubproblem(
    }
 
    /* solve problem until first solution is found or infeasibility has been proven */
-   SCIP_CALL( SCIPsolve(scip) );
+   retcode = SCIPsolve(scip);
+   if( retcode != SCIP_OKAY )
+   {
+      SCIP_CALL( SCIPfreeTransform(scip) );
+      if ( ! silent )
+         SCIPinfoMessage(scip, NULL, "Error in sub-scip. Re-add deleted constraints. \n");
+      for( j = 0; j < ndelconss; j++ )
+      {
+         SCIP_CALL( SCIPaddCons(scip, conss[idxs[j]]) );
+         SCIP_CALL( SCIPreleaseCons(scip, &conss[idxs[j]]) );
+      }
+      return SCIP_ERROR;
+   }
    status = SCIPgetStatus(scip);
 
    /* free transform */
@@ -225,6 +238,7 @@ SCIP_RETCODE additionFilterConsSubproblem(
    SCIP_Bool*            stop                /**< pointer to store whether we have to stop */
 )
 {
+   SCIP_RETCODE retcode;
    SCIP_STATUS status;
    
    assert( stop != NULL );
@@ -233,7 +247,13 @@ SCIP_RETCODE additionFilterConsSubproblem(
    *feasible = FALSE;
    
    /* solve problem until first solution is found or infeasibility has been proven */
-   SCIP_CALL( SCIPsolve(scip) );
+   retcode = SCIPsolve(scip);
+   if( retcode != SCIP_OKAY )
+   {
+      if ( !silent )
+         SCIPinfoMessage(scip, NULL, "Error in sub-scip. Re-add deleted constraints. \n");
+      return SCIP_ERROR;
+   }
    status = SCIPgetStatus(scip);
    
    /* check status */
@@ -335,6 +355,7 @@ SCIP_RETCODE deletionFilterBatchCons(
       int j;
       int ndelconss;
       SCIP_Bool stopiter = FALSE;
+      SCIP_RETCODE retcode;
    
       minconsidx = i * batchsize;
       if( minconsidx >= nconss )
@@ -347,10 +368,12 @@ SCIP_RETCODE deletionFilterBatchCons(
       }
 
       /* treat subproblem */
-      SCIP_CALL( deletionFilterConsSubproblem(scip, conservative, ndelconss, idxs, conss,
-            silent, &stopiter) );
+      retcode = deletionFilterConsSubproblem(scip, conservative, ndelconss, idxs, conss,
+            silent, &stopiter);
 
-      nnodes += SCIPgetNTotalNodes(scip);
+      if( retcode == SCIP_OKAY )
+         nnodes += SCIPgetNTotalNodes(scip);
+      
       assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
 
       if ( stopiter )
@@ -384,6 +407,7 @@ SCIP_RETCODE additionFilterBatchCons(
    int* order;
    SCIP_Bool feasible;
    SCIP_Bool stopiter;
+   SCIP_RETCODE retcode;
    SCIP_RESULT result;
    SCIP_Real nnodes = 0;
    int i;
@@ -443,45 +467,58 @@ SCIP_RETCODE additionFilterBatchCons(
       i = i + k;
       
       /* Solve the reduced problem */
-      SCIP_CALL( additionFilterConsSubproblem(scip, silent, &feasible, &stopiter) );
-   
-      nnodes += SCIPgetNTotalNodes(scip);
-   
-      /* free transform */
-      // TODO: Figure out the correct way to handle the solution copying. Need to copy -> freeTransform -> checkCons -> deleteSol (not sure on last step)
-      sol = SCIPgetBestSol(scip);
-      if( sol != NULL )
-      {
-         SCIP_CALL( SCIPcreateSolCopyOrig(scip, &copysol, sol) );
-         SCIP_CALL( SCIPunlinkSol(scip, copysol) );
-      }
-      SCIP_CALL( SCIPfreeTransform(scip) );
-      assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
+      retcode = additionFilterConsSubproblem(scip, silent, &feasible, &stopiter);
       
-      /* Add any other constraints that are also feasible for the current solution */
-      if( feasible && !stopiter && copysol != NULL && dynamicreordering )
+      if( retcode == SCIP_OKAY )
       {
-         k = 0;
-         for( j = i; j < nconss; ++j )
+         nnodes += SCIPgetNTotalNodes(scip);
+   
+         /* free transform and copy solution if there is one */
+         sol = SCIPgetBestSol(scip);
+         if( sol != NULL )
          {
-            if( !inIS[order[j]] )
+            SCIP_CALL( SCIPcreateSolCopyOrig(scip, &copysol, sol) );
+            SCIP_CALL( SCIPunlinkSol(scip, copysol) );
+         }
+         SCIP_CALL( SCIPfreeTransform(scip) );
+         assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
+   
+         /* Add any other constraints that are also feasible for the current solution */
+         if( feasible && !stopiter && copysol != NULL && dynamicreordering )
+         {
+            k = 0;
+            for( j = i; j < nconss; ++j )
             {
-               SCIP_CALL( SCIPcheckCons(scip, conss[order[j]], copysol, FALSE, FALSE, FALSE, &result) );
-               if( result == SCIP_FEASIBLE )
+               if( !inIS[order[j]] )
                {
-                  SCIP_CALL( SCIPaddCons(scip, conss[order[j]]) );
-                  SCIP_CALL( SCIPreleaseCons(scip, &conss[order[j]]) );
-                  inIS[order[j]] = TRUE;
-                  k++;
+                  SCIP_CALL( SCIPcheckCons(scip, conss[order[j]], copysol, FALSE, FALSE, FALSE, &result) );
+                  if( result == SCIP_FEASIBLE )
+                  {
+                     SCIP_CALL( SCIPaddCons(scip, conss[order[j]]) );
+                     SCIP_CALL( SCIPreleaseCons(scip, &conss[order[j]]) );
+                     inIS[order[j]] = TRUE;
+                     k++;
+                  }
                }
             }
+            if( k > 0 )
+               SCIPinfoMessage(scip, NULL, "Added %d many constraints dynamically.\n", k);
          }
-         if( k > 0 )
-            SCIPinfoMessage(scip, NULL, "Added %d many constraints dynamically.\n", k);
-      }
    
-      if ( stopiter )
-         break;
+         if ( stopiter )
+            break;
+      }
+      else if( retcode == SCIP_ERROR )
+      {
+         SCIP_CALL( SCIPfreeTransform(scip) );
+         assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
+         if ( stopiter )
+            break;
+      }
+      else
+      {
+         return retcode;
+      }
       
    }
    

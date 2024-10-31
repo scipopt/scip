@@ -383,7 +383,6 @@ SCIP_RETCODE SCIPiisstoreRelease(
    SCIP_IISSTORE**      iisstore             /**< pointer to the IIS store */
 )
 {
-   int references;
    
    assert(iisstore != NULL);
    if( *iisstore == NULL )
