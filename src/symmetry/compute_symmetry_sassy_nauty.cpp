@@ -113,7 +113,7 @@ struct NAUTY_Data
    int                   maxnnodes;          /**< maximum number of nodes in nauty's search tree */
 };
 
-/* static data for nauty callback */
+/** static data for nauty callback */
 static struct NAUTY_Data nautydata_;
 #endif
 
