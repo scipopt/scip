@@ -99,7 +99,6 @@ void SCIPiisSetFree(
 void SCIPiisSetPriority(
    SCIP_IIS*             iis,                /**< IIS */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_SET*             set,                /**< global SCIP settings */
    int                   priority            /**< new priority of the IIS */
    );
 
