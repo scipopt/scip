@@ -202,6 +202,11 @@
 /* other defines */
 #define MAXGENNUMERATOR          64000000    /**< determine maximal number of generators by dividing this number by the number of variables */
 #define COMPRESSNVARSLB             25000    /**< lower bound on the number of variables above which compression could be performed */
+#define DEFAULT_NAUTYMAXNCELLS     100000    /**< terminate symmetry detection using Nauty when number of cells in color refinment is at least this number
+                                              *   (avoids segfaults due to Nauty for large graphs) */
+#define DEFAULT_NAUTYMAXNNODES   10000000    /**< terminate symmetry detection using Nauty when its search tree has at least this number of nodes */
+/*@todo investigate why the Nauty works well for some large instances (miplib2010/mspp16.mps) but not for PB instances (e.g., normalized-celar6-sub0_wcsp.wbo) */
+
 
 /* macros for getting activeness of symmetry handling methods */
 #define ISSYMRETOPESACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_SYMBREAK) != 0)
@@ -8077,6 +8082,21 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/symtiming",
          "timing of symmetry computation and handling (0 = before presolving, 1 = during presolving, 2 = after presolving)",
          &propdata->symtiming, TRUE, DEFAULT_SYMCOMPTIMING, 0, 2, NULL, NULL) );
+
+   /* for symmetry detection tool Nauty, we add further parameters to terminate it early */
+   assert( strlen(SYMsymmetryGetName()) >= 5 );
+   if ( memcmp(SYMsymmetryGetName(), "Nauty", 5) == 0 ) /*lint !e747*/
+   {
+      SCIP_CALL( SCIPaddIntParam(scip,
+            "propagating/" PROP_NAME "/nautymaxncells",
+            "terminate symmetry detection using Nauty when number of cells in color refinment is at least this number",
+            NULL, TRUE, DEFAULT_NAUTYMAXNCELLS, 0, INT_MAX, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddIntParam(scip,
+            "propagating/" PROP_NAME "/nautymaxnnodes",
+            "terminate symmetry detection using Nauty when its search tree has at least this number of nodes",
+            NULL, TRUE, DEFAULT_NAUTYMAXNNODES, 0, INT_MAX, NULL, NULL) );
+   }
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
