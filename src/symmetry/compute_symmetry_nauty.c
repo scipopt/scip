@@ -182,17 +182,20 @@ void nautyterminationhook(
    if ( numcells >= data_.maxncells )
    {
       terminate = TRUE;
-      SCIPwarningMessage(data_.scip, "symmetry computation terminated early, because number of"
-         " cells %d in Nauty exceeds limit of %d\n", numcells, data_.maxncells);
-      SCIPinfoMessage(data_.scip, NULL, "      for running full symmetry detection, increase value of"
-         " parameter propagating/symmetry/nautymaxncells\n");
+      SCIPverbMessage(data_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "symmetry computation terminated early, because number of cells %d in Nauty exceeds limit of %d\n",
+         numcells, data_.maxncells);
+      SCIPverbMessage(data_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "for running full symmetry detection, increase value of parameter propagating/symmetry/nautymaxncells\n");
    }
    else if ( data_.ntreenodes >= data_.maxnnodes )
    {
       terminate = TRUE;
-      SCIPwarningMessage(data_.scip, "symmetry computation terminated early, because number of"
+      SCIPverbMessage(data_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "symmetry computation terminated early, because number of"
          " nodes %d in Nauty's search tree exceeds limit of %d\n", data_.ntreenodes, data_.maxnnodes);
-      SCIPinfoMessage(data_.scip, NULL, "      for running full symmetry detection, increase value of"
+      SCIPverbMessage(data_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "for running full symmetry detection, increase value of"
          " parameter propagating/symmetry/nautymaxnnodes\n");
    }
 
