@@ -4976,6 +4976,9 @@ SCIP_RETCODE correctConshdlrdata(
    assert(conshdlrdata != NULL);
    assert(ndelconss != NULL);
 
+   if( conshdlrdata->nallconsanddatas == 0 )
+      return SCIP_OKAY;
+
    allconsanddatas = conshdlrdata->allconsanddatas;
    assert(allconsanddatas != NULL);
    assert(conshdlrdata->nallconsanddatas >= 1);
