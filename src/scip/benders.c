@@ -2685,6 +2685,24 @@ SCIP_RETCODE SCIPbendersDeactivate(
       BMSfreeMemoryArray(&benders->solvestat);
       BMSfreeMemoryArray(&benders->subproblems);
 
+      benders->ncalls = 0;
+      benders->ncutsfound = 0;
+      benders->ntransferred = 0;
+
+      benders->naddedsubprobs = 0;
+      benders->nconvexsubprobs = 0;
+      benders->nnonlinearsubprobs = 0;
+      benders->subprobscreated = FALSE;
+      benders->freesubprobs = FALSE;
+      benders->masterisnonlinear = FALSE;
+
+      benders->nstrengthencuts = 0;
+      benders->nstrengthencalls = 0;
+      benders->nstrengthenfails = 0;
+
+      benders->npseudosols = 0;
+      benders->feasibilityphase = FALSE;
+
       /* dropping the event from the node solved event handler */
       eventhdlr = SCIPsetFindEventhdlr(set, NODESOLVED_EVENTHDLR_NAME);
       if( eventhdlr != NULL && SCIPsetGetStage(set) >= SCIP_STAGE_INITSOLVE )
