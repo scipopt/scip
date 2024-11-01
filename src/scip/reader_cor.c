@@ -38,6 +38,7 @@
 #include "scip/reader_sto.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_reader.h"
+#include "scip/scip_prob.h"
 #include <string.h>
 
 #define READER_NAME             "correader"
@@ -215,6 +216,7 @@ SCIP_RETCODE SCIPreadCor(
     * because the COR file is the base file for the TIM and STO files. For most readers, there is no problem data stored
     * in the reader data, and hence the data doesn't need to be freed.
     */
+   SCIP_CALL( SCIPfreeProb(scip) );
    SCIP_CALL( SCIPfreeCorReaderdata(scip) );
    SCIP_CALL( SCIPfreeTimReaderdata(scip) );
    SCIP_CALL( SCIPfreeStoReaderdata(scip) );
