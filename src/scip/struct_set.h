@@ -308,6 +308,11 @@ struct SCIP_Set
    SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
    SCIP_Bool             history_allowmerge; /**< should variable histories be merged from sub-SCIPs whenever possible? */
    SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
+   
+   /* IIS settings */
+   SCIP_Real             iis_time;
+   SCIP_Real             iis_nodes;
+   
 
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */

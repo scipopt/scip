@@ -62,6 +62,8 @@ struct SCIP_IISSTORE
    SCIP_CLOCK*           iistime;            /**< IIS execution time */
    SCIP_Longint          nnodes;             /**< The number of nodes used over all IIS solves */
    SCIP_Longint          ncalls;             /**< number of times, this IIS was called */
+   SCIP_Bool             valid;
+   SCIP_Bool             irreducible;
 };
 
 #ifdef __cplusplus

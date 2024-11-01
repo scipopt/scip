@@ -251,7 +251,7 @@ SCIP_RETCODE additionFilterConsSubproblem(
    if( retcode != SCIP_OKAY )
    {
       if ( !silent )
-         SCIPinfoMessage(scip, NULL, "Error in sub-scip. Re-add deleted constraints. \n");
+         SCIPinfoMessage(scip, NULL, "Error in sub-scip. Be safe and keep added constraints. \n");
       return SCIP_ERROR;
    }
    status = SCIPgetStatus(scip);
