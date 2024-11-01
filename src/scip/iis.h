@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPiisstoreCreate(
    );
 
 /** releases an IIS store */
-SCIP_RETCODE SCIPiisstoreRelease(
+SCIP_RETCODE SCIPiisstoreFree(
    SCIP_IISSTORE**      iisstore             /**< pointer to the IIS store */
    );
 

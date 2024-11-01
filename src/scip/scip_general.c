@@ -364,7 +364,7 @@ SCIP_RETCODE SCIPfree(
    /* switch stage to FREE */
    (*scip)->set->stage = SCIP_STAGE_FREE;
 
-   SCIP_CALL( SCIPiisstoreRelease(&(*scip)->iisstore) );
+   SCIP_CALL( SCIPiisstoreFree(&(*scip)->iisstore) );
    SCIP_CALL( SCIPsyncstoreRelease(&(*scip)->syncstore) );
    SCIP_CALL( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );
    SCIP_CALL( SCIPdialoghdlrFree(*scip, &(*scip)->dialoghdlr) );

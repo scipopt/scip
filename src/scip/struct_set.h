@@ -310,8 +310,12 @@ struct SCIP_Set
    SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
    
    /* IIS settings */
-   SCIP_Real             iis_time;
-   SCIP_Real             iis_nodes;
+   SCIP_Bool             iis_minimal;       /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
+   SCIP_Bool             iis_removebounds;  /**< should bounds of the problem be considered for removal */
+   SCIP_Bool             iis_checkinitfeas; /**< should the initial problem be checked for infeasibility */
+   SCIP_Bool             iis_silent;        /**< should the IIS algorithms be run silently */
+   SCIP_Real             iis_time;          /**< maximal time in seconds for the IIS finder to run */
+   SCIP_Longint          iis_nodes;         /**< maximal number of nodes to process for IIS finder (-1: no limit) */
    
 
    /* limit settings */

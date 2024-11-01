@@ -2271,8 +2271,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS)
    case SCIP_STAGE_INIT:
       SCIPdialogMessage(scip, NULL, "no problem exists\n");
       break;
-
+      
    case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPgenerateIIS(scip) );
+      break;
+      
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
@@ -2282,19 +2285,17 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS)
    case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_EXITSOLVE:
-      SCIPdialogMessage(scip, NULL, "problem is not yet solved\n");
+      SCIPdialogMessage(scip, NULL, "problem is in some intermediate stage\n");
       break;
-
+      
    case SCIP_STAGE_SOLVED:
    {
       if ( SCIPgetStatus(scip) != SCIP_STATUS_INFEASIBLE )
-         SCIPdialogMessage(scip, NULL, "need infeasible model to compute an IIS\n");
+         SCIPdialogMessage(scip, NULL, "cannot find an IIS for model that is not infeasible\n");
       else
       {
-
          SCIP_CALL( SCIPgenerateIIS(scip) );
       }
-
       break;
    }
 
@@ -4631,7 +4632,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecIIS, NULL, NULL,
-            "iis", "compute IIS for an infeasible probleme", FALSE, NULL) );
+            "iis", "compute an (irreducible) infeasible set, i.e., (I)IS, for an infeasible problem", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

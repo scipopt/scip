@@ -83,8 +83,9 @@ typedef struct SCIP_IISSTORE SCIP_IISSTORE;     /**< IIS storage data structure 
  *  possible return values for *result (if more than one applies, the first in the list should be used):
  *  - SCIP_SUCCESS    : the IIS succeeded
  *  - SCIP_DIDNOTFIND : the IIS did not find a small enough infeasible subsystem.
+ *  - SCIP_DIDNOTRUN  : the IIS did not run because some criteria was not satisfied
  */
-#define SCIP_DECL_IISGENERATE(x) SCIP_RETCODE x (SCIP* scip, SCIP_IIS* iis, SCIP_RESULT* result)
+#define SCIP_DECL_IISGENERATE(x) SCIP_RETCODE x (SCIP* scip, SCIP_IIS* iis, SCIP_Bool* valid, SCIP_Bool* irreducible, SCIP_Real* timelim, SCIP_Longint* nodelim, SCIP_Bool silent, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

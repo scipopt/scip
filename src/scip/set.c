@@ -199,6 +199,14 @@
 #define SCIP_DEFAULT_HISTORY_ALLOWMERGE   FALSE /**< should variable histories be merged from sub-SCIPs whenever possible? */
 #define SCIP_DEFAULT_HISTORY_ALLOWTRANSFER FALSE /**< should variable histories be transferred to initialize SCIP copies? */
 
+/* IIS */
+#define SCIP_DEFAULT_IIS_MINIMAL          TRUE /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
+#define SCIP_DEFAULT_IIS_REMOVEBOUNDS     TRUE /**< should bounds of the problem be considered for removal */
+#define SCIP_DEFAULT_IIS_CHECKINITFEAS    TRUE /**< should the initial problem be checked for infeasibility */
+#define SCIP_DEFAULT_IIS_SILENT           FALSE /**< should bounds of the problem be considered for removal */
+#define SCIP_DEFAULT_IIS_TIMELIM         1e+20 /**< maximal time in seconds for the IIS finder to run */
+#define SCIP_DEFAULT_IIS_NODELIM           -1  /**< maximal number of nodes to process for IIS finder (-1: no limit) */
+
 /* Limits */
 
 #define SCIP_DEFAULT_LIMIT_TIME           1e+20 /**< maximal time in seconds to run */
@@ -1641,6 +1649,38 @@ SCIP_RETCODE SCIPsetCreate(
          "should variable histories be transferred to initialize SCIP copies?",
          &(*set)->history_allowtransfer, FALSE, SCIP_DEFAULT_HISTORY_ALLOWTRANSFER,
          NULL, NULL) );
+   
+   /* IIS parameter */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/minimal",
+         "should the resultant infeasible set be irreducible, i.e., an IIS not an IS",
+         &(*set)->iis_minimal, FALSE, SCIP_DEFAULT_IIS_MINIMAL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/removebounds",
+         "should bounds of the problem be considered for removal",
+         &(*set)->iis_removebounds, FALSE, SCIP_DEFAULT_IIS_REMOVEBOUNDS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/checkinitfeas",
+         "should the initial problem be checked for infeasibility",
+         &(*set)->iis_checkinitfeas, FALSE, SCIP_DEFAULT_IIS_CHECKINITFEAS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/silent",
+         "should the IIS algorithms be run silently",
+         &(*set)->iis_silent, FALSE, SCIP_DEFAULT_IIS_SILENT,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "iis/time",
+         "maximal time in seconds for the IIS finder to run",
+         &(*set)->iis_time, FALSE, SCIP_DEFAULT_IIS_TIMELIM, 0.0, SCIP_DEFAULT_IIS_TIMELIM,
+         SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "iis/nodes",
+         "maximal number of nodes to process for IIS finder (-1: no limit)",
+         &(*set)->iis_nodes, FALSE, SCIP_DEFAULT_IIS_NODELIM, -1LL, SCIP_LONGINT_MAX,
+         SCIPparamChgdLimit, NULL) );
 
    /* limit parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

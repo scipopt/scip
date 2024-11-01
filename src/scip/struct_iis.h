@@ -52,18 +52,18 @@ struct SCIP_IIS
    SCIP_CLOCK*           iistime;            /**< IIS execution time */
    SCIP_IISDATA*         iisdata;            /**< IIS data */
    int                   priority;           /**< priority of the IIS */
-   SCIP_Longint          ncalls;             /**< number of times, this IIS was called */
 };
 
 /** IIS */
 struct SCIP_IISSTORE
 {
    SCIP*                 subscip;            /**< The subscip that stores the IIS */
-   SCIP_CLOCK*           iistime;            /**< IIS execution time */
+   SCIP_HASHMAP*         varsmap;            /**< The variable hashmap from the original SCIP to IIS subscip */
+   SCIP_HASHMAP*         conssmap;           /**< The constraints hashmap from the original SCIP to IIS subscip */
+   SCIP_CLOCK*           iistime;            /**< IIS total execution time */
    SCIP_Longint          nnodes;             /**< The number of nodes used over all IIS solves */
-   SCIP_Longint          ncalls;             /**< number of times, this IIS was called */
-   SCIP_Bool             valid;
-   SCIP_Bool             irreducible;
+   SCIP_Bool             valid;              /**< Whether the returned subscip is a valid (I)IS */
+   SCIP_Bool             irreducible;        /**< Whether the returned subscip is a minimal IIS */
 };
 
 #ifdef __cplusplus

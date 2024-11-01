@@ -80,13 +80,17 @@ SCIP_RETCODE SCIPincludeIISGreedy(
 SCIP_EXPORT
 SCIP_RETCODE SCIPgenerateIISGreedy(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            valid,              /**< Whether the returned subscip is a valid (I)IS */
+   SCIP_Bool*            irreducible,        /**< Whether the returned subscip is a minimal IIS */
+   SCIP_Real*            timelim,            /**< The global time limit on the IIS call */
+   SCIP_Longint*         nodelim,            /**< The global node limit on the IIS call */
+   SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
-   SCIP_Bool             minify,             /**< whether the computed IS should undergo a final deletion round to ensure an IIS */
    SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
    SCIP_Bool             conservative,       /**< should a hit limit (e.g. node / time) solve be counted as feasible when deleting constraints */
-   SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
    SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
+   SCIP_Bool             delafteradd,        /**< should the deletion routine be performed after the addition routine (in the case of additive) */
    SCIP_Longint          maxnnodesperiter,   /**< maximum number of nodes per individual solve call */
    int                   batchsize,          /**< the number of constraints to delete or add per iteration */
    SCIP_RESULT*          result              /**< pointer to store the result os the IIS run */

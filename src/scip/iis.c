@@ -150,12 +150,22 @@ SCIP_RETCODE SCIPiisGenerate(
    int i;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
    SCIP_Bool success;
+   SCIP_Bool silent;
+   SCIP_Real timelim;
+   SCIP_Longint nodelim;
+   
+   /* start timing */
+   SCIP_CALL( SCIPgetRealParam(set->scip, "iis/time", &timelim) );
+   SCIP_CALL( SCIPgetLongintParam(set->scip, "iis/nodes", &nodelim) );
 
    /* sort the iis's by priority */
    SCIPsetSortIIS(set);
    
-   /* Get the IIS storage data. Then create the subscip used for storing the IIS */
+   /* Get the IIS storage data. */
    iisstore = SCIPgetIISstore(set->scip);
+   SCIPclockStart(iisstore->iistime, set);
+   
+   /* Create the subscip used for storing the IIS */
    if( iisstore->subscip != NULL )
    {
       SCIPinfoMessage(set->scip, NULL, "An IIS for this problem already exists. Removing it before starting search procedure again.\n");
@@ -164,41 +174,119 @@ SCIP_RETCODE SCIPiisGenerate(
       SCIP_CALL( SCIPfree(&(iisstore->subscip)) );
       iisstore->subscip = NULL;
    }
+   if( iisstore->varsmap != NULL )
+      SCIPhashmapFree(&(iisstore->varsmap));
+   if( iisstore->conssmap != NULL )
+      SCIPhashmapFree(&(iisstore->conssmap));
    
    assert( iisstore->subscip == NULL );
+   assert( iisstore->varsmap == NULL );
+   assert( iisstore->conssmap == NULL );
    
    /* create a new SCIP instance */
    SCIP_CALL( SCIPcreate(&(iisstore->subscip)) );
 
    /* create problem in sub-SCIP */
-   SCIP_CALL( SCIPcopyOrig(set->scip, iisstore->subscip, NULL, NULL, "iis", TRUE, FALSE, FALSE, &success) );
+   SCIP_CALL( SCIPcopyOrig(set->scip, iisstore->subscip, iisstore->varsmap, iisstore->conssmap, "iis", TRUE, FALSE, FALSE, &success) );
 
    if( success == FALSE )
    {
       return SCIP_ERROR;
    }
    /* copy parameter settings */
+   // TODO: Do we really want to copy the parameter settings?
    SCIP_CALL( SCIPcopyParamSettings(set->scip, iisstore->subscip) );
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(iisstore->subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(iisstore->subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
+   SCIP_CALL( SCIPsetIntParam(iisstore->subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(iisstore->subscip, "timing/statistictiming", FALSE) );
+#endif
+   SCIP_CALL( SCIPsetSubscipsOff(iisstore->subscip, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(iisstore->subscip, "limits/bestsol", 1) );
+   SCIP_CALL( SCIPsetRealParam(iisstore->subscip, "limits/time", timelim - SCIPclockGetTime(iisstore->iistime)) );
+   SCIP_CALL( SCIPsetLongintParam(iisstore->subscip, "limits/nodes", nodelim) );
+   
+   /* If the model is not yet shown to be infeasible then check for infeasibility */
+   if( SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM && set->iis_checkinitfeas )
+   {
+      SCIP_CALL( SCIPsolve(iisstore->subscip) );
+      if( SCIPgetStage(iisstore->subscip) == SCIP_STAGE_SOLVED )
+      {
+         switch( SCIPgetStatus(iisstore->subscip) )
+         {
+            case SCIP_STATUS_TIMELIMIT:
+               SCIPinfoMessage(iisstore->subscip, NULL, "Time limit reached.\n");
+               SCIPclockStop(iisstore->iistime, set);
+               return SCIP_OKAY;
+               
+            case SCIP_STATUS_NODELIMIT:
+               SCIPinfoMessage(iisstore->subscip, NULL, "Node limit reached.\n");
+               
+               return SCIP_OKAY;
+               
+            case SCIP_STATUS_INFEASIBLE:
+               break;
+            
+            default:
+               SCIPinfoMessage(iisstore->subscip, NULL, "Initial solve to verify infeasibility failed.\n");
+               SCIPclockStop(iisstore->iistime, set);
+               return SCIP_INVALIDCALL;
+         }
+      }
+      else
+      {
+         SCIPinfoMessage(iisstore->subscip, NULL, "Initial solve to verify infeasibility failed.\n");
+         SCIPclockStop(iisstore->iistime, set);
+         return SCIP_OKAY;
+      }
+      iisstore->nnodes += SCIPgetNTotalNodes(iisstore->subscip);
+      timelim -= SCIPclockGetTime(iisstore->iistime);
+      if( nodelim != -1 )
+      {
+         nodelim -= SCIPgetNTotalNodes(iisstore->subscip);
+         if( nodelim <= -1 )
+         {
+            SCIPinfoMessage(iisstore->subscip, NULL, "Node limit reached.\n");
+            SCIPclockStop(iisstore->iistime, set);
+            return SCIP_OKAY;
+         }
+      }
+      SCIP_CALL( SCIPfreeTransform(iisstore->subscip) );
+      iisstore->valid = TRUE;
+   }
+   else if( SCIPgetStage(set->scip) == SCIP_STAGE_SOLVED )
+   {
+      iisstore->valid = TRUE;
+   }
 
    /* Try all IIS generators until one succeeds */
+   SCIPgetBoolParam(set->scip, "iis/silent", &silent);
    for( i = 0; i < set->niis && result == SCIP_DIDNOTFIND; ++i )
    {
       SCIP_IIS* iis;
-
       iis = set->iis[i];
-
       assert(iis != NULL);
 
       /* start timing */
       SCIPclockStart(iis->iistime, set);
 
-      SCIP_CALL( iis->iisgenerate(iisstore->subscip, iis, &result) );
-
+      SCIP_CALL( iis->iisgenerate(iisstore->subscip, iis, &(iisstore->valid), &(iisstore->irreducible), &timelim, &nodelim, silent, &result) );
+      SCIPinfoMessage(set->scip, NULL, "After IIS algorithm %s: Have IS of size %d that is valid (%d) and irreducible (%d).\n", iis->name, SCIPgetNOrigConss(iisstore->subscip), iisstore->valid, iisstore->irreducible);
       /* stop timing */
       SCIPclockStop(iis->iistime, set);
 
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
+      
+      if( timelim <= 0 || nodelim <= -2 )
+         SCIPinfoMessage(set->scip, NULL, "Time or node limit hit. Stopping Search.\n");
    }
+   
+   /* stop timing */
+   SCIPclockStop(iisstore->iistime, set);
 
    return SCIP_OKAY;
 }
@@ -351,16 +439,6 @@ SCIP_Real SCIPiisGetTime(
    return SCIPclockGetTime(iis->iistime);
 }
 
-/** get number of times the IIS was called */
-SCIP_Longint SCIPiisGetNCalls(
-   SCIP_IIS*             iis                 /**< IIS */
-   )
-{
-  assert(iis != NULL);
-
-  return iis->ncalls;
-}
-
 /** creates and captures a new IIS store */
 SCIP_RETCODE SCIPiisstoreCreate(
    SCIP_IISSTORE**      iisstore             /**< pointer to return the created IIS store */
@@ -368,18 +446,25 @@ SCIP_RETCODE SCIPiisstoreCreate(
 {
    assert(iisstore != NULL);
    
-   SCIPdebugMessage("SCIPsyncstoreCreate()\n");
+   SCIPdebugMessage("SCIPiisstoreCreate()\n");
    
    SCIP_ALLOC( BMSallocMemory(iisstore) );
    
    (*iisstore)->subscip = NULL;
+   (*iisstore)->subscip = NULL;
+   (*iisstore)->varsmap = NULL;
+   (*iisstore)->conssmap = NULL;
+   SCIP_CALL( SCIPclockCreate(&(*iisstore)->iistime, SCIP_CLOCKTYPE_DEFAULT) );
+   (*iisstore)->nnodes = 0;
+   (*iisstore)->valid = FALSE;
+   (*iisstore)->irreducible = FALSE;
    // TODO: Add other stuff here. Need to decide on what I need.
    
    return SCIP_OKAY;
 }
 
 /** releases an IIS store */
-SCIP_RETCODE SCIPiisstoreRelease(
+SCIP_RETCODE SCIPiisstoreFree(
    SCIP_IISSTORE**      iisstore             /**< pointer to the IIS store */
 )
 {
@@ -393,6 +478,20 @@ SCIP_RETCODE SCIPiisstoreRelease(
       SCIP_CALL( SCIPfree(&((*iisstore)->subscip)) );
       (*iisstore)->subscip = NULL;
    }
+   
+   if( (*iisstore)->varsmap != NULL )
+   {
+      SCIPhashmapFree(&((*iisstore)->varsmap));
+      (*iisstore)->varsmap = NULL;
+   }
+   
+   if( (*iisstore)->conssmap != NULL )
+   {
+      SCIPhashmapFree(&((*iisstore)->conssmap));
+      (*iisstore)->conssmap = NULL;
+   }
+   
+   SCIPclockFree(&(*iisstore)->iistime);
    
    BMSfreeMemory(iisstore);
    *iisstore = NULL;
