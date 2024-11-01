@@ -98,69 +98,34 @@ Known bugs
 
 @page RN9 Release notes for SCIP 9
 
-@section RN920 SCIP 9.2.0
+@section RN930 SCIP 9.3.0
 *************************
 
 Features
 --------
 
-- added check for absolute and relative gap limits at end of synchronization in concurrent solving mode, in order to terminate earlier;
-  note that if the concurrent solve is stopped due to a gap limit, the "winner" solver will have an interrupted solution status and
-  its primal and dual bounds may not be the best possible ones (use SCIPgetConcurrentPrimalbound() and SCIPgetConcurrentDualbound() instead)
-- parse pseudoboolean constraint in polynomial cip format (and add linear-and-reformulation)
-
 Performance improvements
 ------------------------
-
-- reoptimization now also stores propagations from propagators if reoptimization/saveconsprop is enabled;
-  the parameter will be renamed to reoptimization/saveprop in a next major release
-- imposed stricter limits on the size of disconnected components which may be solved separately during presolve by cons_components
-- use individual slack variables also for constraints indicated by a common binary variable to use tighter formulation by default
-- when computing symmetries using Nauty, iteration limits are now available to terminate Nauty early
-
-Fixed bugs
-----------
-
-- Benders' decomposition subproblems that are always infeasible are correctly handled and the complete problem is
-  declared as infeasible.
 
 Examples and applications
 -------------------------
 
 Interface changes
 -----------------
-### New callbacks
+
+### New and changed callbacks
+
 ### New API functions
 
-- added SCIPtpiIsAvailable() to check whether a working task processing interface is available (TPI != none)
-- added SCIPtpiGetLibraryName() and SCIPtpiGetLibraryDesc()
-- SCIPdelCons() can now also be called in SCIP_STAGE_TRANSFORMED
-- added SCIPstrcasecmp() and SCIPstrncasecmp() for case-insensitive string comparison
-- added SCIPbendersSubproblemsAreInfeasible() to return if at least one subproblem has been identified as being
-  infeasible prior to performing any variable fixing.
-
 ### Command line interface
-### Interfaces to external software
 
-### New parameters
-- presolving/milp/abortfacexhaustive to control the abort threshold for exhaustive presolving in PAPILO
-- presolving/milp/abortfacmedium to control the abort threshold for medium presolving in PAPILO
-- presolving/milp/abortfacfast to control the abort threshold for fast presolving in PAPILO
-- constraints/components/maxcompweight to determine the maximum weight for a disconnected component that is solved during presolve
-- constraints/components/contfactor counts the contributing factor of a single continuous variables with respect to the weight limit specified by constraints/components/maxcompweight
-- constraints/indicator/usesameslackvar to decide whether the same slack variable should be used for indicators constraints with common binary variable
-- when compiled using the SYM=nauty or SYM=snauty option, parameters propagating/symmetry/nautymaxncells
-  and propagating/symmetry/nautymaxnnodes can be used to set iteration limits in the external software Nauty
+### Interfaces to external software
 
 ### Changed parameters
 
-- presolving/milp/threads only configurable if PaPILO is built with TBB
-- numerics/recomputefac gets default value 1e+6 to aim at relative epsilon precision
+### New parameters
 
 ### Data structures
-
-Deleted files
--------------
 
 Unit tests
 ----------
@@ -170,23 +135,44 @@ Testing
 
 Build system
 ------------
+
 ### Cmake
+
 ### Makefile
-
-Miscellaneous
--------------
-
-- reorder events: BESTSOLFOUND/NODE_FEASIBLE is now processed before the nodes are cut off and before NODE_DELETE events are processed
-- removed `#define` of `getcwd` (in case of Windows builds) in scip/def.h
-- the `#define` of `strcasecmp` and `strncasecmp` (in case of Windows builds) in scip/def.h will be removed with SCIP 10;
-  use `SCIPstr(n)casecmp()` (scip/pub_misc.h) instead
-
-@section RN912 SCIP 9.1.2
-*************************
 
 Fixed bugs
 ----------
 
+Miscellaneous
+-------------
+
+Known bugs
+----------
+
+@section RN920 SCIP 9.2.0
+*************************
+
+Features
+--------
+
+- added check for absolute and relative gap limits at end of synchronization in concurrent solving mode, in order to terminate earlier;
+  note that if the concurrent solve is stopped due to a gap limit, the "winner" solver will have an interrupted solution status and
+  its primal and dual bounds may not be the best possible ones (use SCIPgetConcurrentPrimalbound() and SCIPgetConcurrentDualbound() instead)
+- parse pseudoboolean constraint from CIP format (and add linear-"and"-reformulation)
+
+Performance improvements
+------------------------
+
+- reoptimization now also stores propagations from propagators if reoptimization/saveconsprop is enabled;
+  the parameter will be renamed to reoptimization/saveprop in a next major release
+- imposed stricter limits on the size of disconnected components which may be solved separately during presolve
+- use individual slack variables also for constraints indicated by a common binary variable to use tighter formulation by default
+- when computing symmetries using Nauty, iteration limits are now available to terminate Nauty early
+
+Fixed bugs
+----------
+
+- Benders' decomposition subproblems that are always infeasible are correctly handled and the complete problem is declared infeasible
 - skip linear constraint propagation if the residual activity bound cancels the side precision
 - correct bound tracking to make the evaluation of primal-dual-integrals work
 - skip aggregations on fixed variables in milp presolver to avoid errors for earlier versions of PaPILO
@@ -195,6 +181,33 @@ Fixed bugs
 - reformulate soft pseudoboolean constraints with linear constraints if the indicator decomposition is disabled
 - add workaround for recent HiGHS versions resetting the model status when changing the presolve option after a solve
 - avoid hashmap key error in removal of doubletons and singletons in dual presolve of setppc constraints by updating constraints and corresponding hashmaps after each multi-aggregation
+
+Interface changes
+-----------------
+
+### New API functions
+
+- added SCIPtpiIsAvailable() to check whether a working task processing interface is available (TPI != none)
+- added SCIPtpiGetLibraryName() and SCIPtpiGetLibraryDesc()
+- SCIPdelCons() can now also be called in SCIP_STAGE_TRANSFORMED
+- added SCIPstrcasecmp() and SCIPstrncasecmp() for case-insensitive string comparison
+- added SCIPbendersSubproblemsAreInfeasible() to return if at least one subproblem has been identified as being
+  infeasible prior to performing any variable fixing
+
+### New parameters
+
+- presolving/milp/abortfacexhaustive to control the abort threshold for exhaustive presolving in PAPILO
+- presolving/milp/abortfacmedium to control the abort threshold for medium presolving in PAPILO
+- presolving/milp/abortfacfast to control the abort threshold for fast presolving in PAPILO
+- constraints/components/maxcompweight to determine the maximum weight for a disconnected component that is solved during presolve
+- constraints/components/contfactor counts the contributing factor of a single continuous variables with respect to the weight limit specified by constraints/components/maxcompweight
+- constraints/indicator/usesameslackvar to decide whether the same slack variable should be used for indicators constraints with common binary variable
+- propagating/symmetry/nautymaxncells and propagating/symmetry/nautymaxnnodes to set iteration limits in Nauty (only available if build with SYM=nauty or SYM=snauty)
+
+### Changed parameters
+
+- presolving/milp/threads is now only available if PaPILO is built with TBB
+- changed default of numerics/recomputefac to 1e+6 to aim at relative epsilon precision
 
 Build system
 ------------
@@ -207,6 +220,10 @@ Miscellaneous
 -------------
 
 - adjusted Gurobi interface for Gurobi 12
+- reordered events: BESTSOLFOUND/NODE_FEASIBLE are now processed before the nodes are cut off and before NODE_DELETE events are processed
+- removed `#define` of `getcwd` (in case of Windows builds) in scip/def.h
+- the `#define` of `strcasecmp` and `strncasecmp` (in case of Windows builds) in scip/def.h will be removed with SCIP 10;
+  use `SCIPstr(n)casecmp()` (scip/pub_misc.h) instead
 
 @section RN911 SCIP 9.1.1
 *************************
@@ -243,16 +260,10 @@ Fixed bugs
 - sort and-constraints of a pseudoboolean constraint with respect to the resultant problem indices to avoid shuffled copies
 - treat pseudoboolean constraints as nonlinear constraints in OPB reader to prevent duplication mistakes
 
-Performance improvements
-------------------------
-
 Examples and applications
 -------------------------
 
 - in example Binpacking implement Farkas pricing for packings because branching can actually lead to infeasible restricted master LPs
-
-Unit tests
-----------
 
 Testing
 -------
