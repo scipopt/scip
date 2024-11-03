@@ -739,7 +739,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
              */
             if( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_FIXED && SCIPvarGetStatus(vary) == SCIP_VARSTATUS_FIXED )
             {
-               assert(false);
+               SCIPdebugMsg(scip, "Aggregation of <%s> and <%s> rejected because they are already fixed.\n",
+                     SCIPvarGetName(varx), SCIPvarGetName(vary));
+
                break;
             }
 
@@ -783,7 +785,9 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
              */
             if( SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_FIXED )
             {
-               assert(false);
+               SCIPdebugMsg(scip, "Multi-aggregation of <%s> rejected because it is already fixed.\n",
+                     SCIPvarGetName(aggrvar));
+
                break;
             }
 
