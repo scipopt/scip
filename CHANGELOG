@@ -216,6 +216,11 @@ Build system
 
 - attempted to fix detection of CPLEX library on macOS and Windows systems
 
+Testing
+-------
+
+- added parameter FILTER for tests/Makefile to run only tests with a specific pattern (ctest with -R FILTER)
+
 Miscellaneous
 -------------
 

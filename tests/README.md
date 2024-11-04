@@ -89,9 +89,13 @@ This creates `CTestTestfile.cmake` with a list of the test to run and then calls
 make BUGS=true
 ```
 
-You can also run a single test, e.g. `
+You can also run a single test, e.g.
 ```
  >> ./bin/cons/quadratic/gauge.linux.x86_64.gnu.dbg.spx2
+```
+To run all tests that match a regular expression, use
+```
+ >> make FILTER=gauge
 ```
 
 Note, that parameterized tests will not work on systems that have address
