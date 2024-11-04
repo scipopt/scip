@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
 
-project(PBCompetition)
+project(PBSolver)
 
 if(TARGET SCIP::SCIP)
   # find package by SCIP PATH

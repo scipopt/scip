@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#define PBCOMPETITION
+#define PBSOLVER
 
 #include <cstdio>
 #include <cstring>
@@ -99,7 +99,7 @@ SCIP_RETCODE readParams(
    return SCIP_OKAY;
 }
 
-#ifdef PBCOMPETITION
+#ifdef PBSOLVER
 static
 SCIP_RETCODE printSolution(
    SCIP*                      scip,               /**< SCIP data structure */
@@ -343,7 +343,7 @@ SCIP_RETCODE fromCommandLine(
       }
    }
 
-#ifdef PBCOMPETITION
+#ifdef PBSOLVER
    /* create event handler for best solution found if an objective exists  */
    if( !hasnoobj )
    {
@@ -397,7 +397,7 @@ SCIP_RETCODE fromCommandLine(
    if( conshdlr != NULL && SCIPconshdlrGetNActiveConss(conshdlr) == SCIPgetNConss(scip) )
       puresat = TRUE;
 
-#ifdef PBCOMPETITION
+#ifdef PBSOLVER
    // nonlinear = FALSE;
    conshdlr = SCIPfindConshdlr(scip, "and");
    // if( conshdlr != NULL && SCIPconshdlrGetNActiveConss(conshdlr) > 0 )
@@ -457,7 +457,7 @@ SCIP_RETCODE fromCommandLine(
    SCIP_CALL( SCIPsolve(scip) );
 
    /* printing solution */
-#ifdef PBCOMPETITION
+#ifdef PBSOLVER
    SCIP_CALL( printSolution(scip, vars, nvars, hasnoobj));
 #else
    SCIP_CALL( SCIPprintBestSol( scip, NULL, FALSE) );
@@ -592,7 +592,7 @@ SCIP_RETCODE processShellArguments(
             paramerror = TRUE;
          }
       }
-#ifndef PBCOMPETITION
+#ifndef PBSOLVER
       else if( strcmp(argv[i], "-c") == 0 )
       {
          i++;
@@ -672,7 +672,7 @@ SCIP_RETCODE processShellArguments(
    else
    {
       SCIPinfoMessage(scip, NULL, "syntax: %s [-l <logfile>] [-q] [-s <settings>] [-f <problem>] [-b <batchfile>]", argv[0]);
-#ifndef PBCOMPETITION
+#ifndef PBSOLVER
       SCIPinfoMessage(scip, NULL, " [-c \"command\"]");
 #endif
       SCIPinfoMessage(scip, NULL, " [-t <timelimit>] [-m <memlimit>] [-d <dispfreq>]\n");
@@ -682,7 +682,7 @@ SCIP_RETCODE processShellArguments(
       SCIPinfoMessage(scip, NULL, "  -s <settings>  : load parameter settings (.set) file\n");
       SCIPinfoMessage(scip, NULL, "  -f <problem>   : load and solve problem file\n");
       SCIPinfoMessage(scip, NULL, "  -d <batchfile> : load batchfile\n");
-#ifndef PBCOMPETITION
+#ifndef PBSOLVER
       SCIPinfoMessage(scip, NULL, "  -c <command>   : execute command on command line\n");
 #endif
       SCIPinfoMessage(scip, NULL, "  -t <timelimit> : sets the time limit\n");

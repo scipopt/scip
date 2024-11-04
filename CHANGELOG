@@ -33,7 +33,7 @@ Performance improvements
 
 Examples and applications
 -------------------------
-- Add pseudoboolean competition application example
+- Add pseudoboolean solver application
 
 - Coloring: new parameter branching/coloring/strategy to choose the least/most fractional variable for branching
 

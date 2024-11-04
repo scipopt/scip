@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#define PBCOMPETITION
+#define PBSOLVER
 
 #include <stdio.h>
 #include <string.h>
@@ -59,7 +59,7 @@ void printMessage(
 static
 SCIP_DECL_ERRORPRINTING(messageErrorPbscip) {  /*lint --e{715}*/
 
-#ifdef PBCOMPETITION
+#ifdef PBSOLVER
    fputs("c ", stderr);
 #endif
    fputs(msg, stderr);
@@ -110,7 +110,7 @@ SCIP_RETCODE SCIPcreateMessagehdlrPbscip(
 
    SCIP_ALLOC(BMSallocMemory(&messagehdlrdata));
 
-#ifdef PBCOMPETITION
+#ifdef PBSOLVER
    messagehdlrdata->comment = TRUE;
 #else
    messagehdlrdata->comment = FALSE;
