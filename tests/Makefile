@@ -173,7 +173,7 @@ endif
 .PHONY: all
 all:            Criterion $(OBJDIR) $(OBJDIRS) $(BINDIRS) $(UNITTESTSBIN)
 		make ctestrunner
-		setarch `uname -m` -R ctest --output-on-failure
+		setarch `uname -m` -R ctest --output-on-failure $(if $(FILTER), -R $(FILTER))
 
 .PHONY: lint
 lint:		$(UNITTESTSSRC)
@@ -200,7 +200,7 @@ $(BINDIRS):
 .PHONY: test
 test:           $(UNITTESTSBIN)
 		make ctestrunner
-		setarch `uname -m` -R ctest --output-on-failure
+		setarch `uname -m` -R ctest --output-on-failure $(if $(FILTER), -R $(FILTER))
 
 .PHONY: ctestrunner
 ctestrunner: 	$(UNITTESTSBIN)
