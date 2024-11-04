@@ -56,6 +56,65 @@ SCIP_DECL_PARAMCHGD(paramChgdIISPriority)
    return SCIP_OKAY;
 }
 
+/** internal method for creating the subscip that will hold the IIS */
+static
+SCIP_RETCODE createSubscipIIS(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_IISSTORE*        iisstore,           /**< pointer to store IISstore */
+   SCIP_Real             timelim,            /**< timelimit */
+   SCIP_Longint          nodelim             /**< nodelimit */
+   )
+{
+   SCIP_Bool success;
+   
+   /* Create the subscip used for storing the IIS */
+   if( iisstore->subscip != NULL )
+   {
+      SCIPinfoMessage(set->scip, NULL, "An IIS for this problem already exists. Removing it before starting search procedure again.\n");
+      
+      /* free sub-SCIP */
+      SCIP_CALL( SCIPfree(&(iisstore->subscip)) );
+      iisstore->subscip = NULL;
+   }
+   if( iisstore->varsmap != NULL )
+      SCIPhashmapFree(&(iisstore->varsmap));
+   if( iisstore->conssmap != NULL )
+      SCIPhashmapFree(&(iisstore->conssmap));
+   
+   assert( iisstore->subscip == NULL );
+   assert( iisstore->varsmap == NULL );
+   assert( iisstore->conssmap == NULL );
+   
+   /* create a new SCIP instance */
+   SCIP_CALL( SCIPcreate(&(iisstore->subscip)) );
+   
+   /* create problem in sub-SCIP */
+   SCIP_CALL( SCIPcopyOrig(set->scip, iisstore->subscip, iisstore->varsmap, iisstore->conssmap, "iis", TRUE, FALSE, FALSE, &success) );
+   
+   if( success == FALSE )
+   {
+      return SCIP_ERROR;
+   }
+   /* copy parameter settings */
+   // TODO: Do we really want to copy the parameter settings?
+   SCIP_CALL( SCIPcopyParamSettings(set->scip, iisstore->subscip) );
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(iisstore->subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(iisstore->subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
+   SCIP_CALL( SCIPsetIntParam(iisstore->subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(iisstore->subscip, "timing/statistictiming", FALSE) );
+#endif
+   SCIP_CALL( SCIPsetSubscipsOff(iisstore->subscip, TRUE) );
+   SCIP_CALL( SCIPsetIntParam(iisstore->subscip, "limits/bestsol", 1) );
+   SCIP_CALL( SCIPsetRealParam(iisstore->subscip, "limits/time", timelim - SCIPclockGetTime(iisstore->iistime)) );
+   SCIP_CALL( SCIPsetLongintParam(iisstore->subscip, "limits/nodes", nodelim) );
+   
+   return SCIP_OKAY;
+}
+
 /** internal method for creating a IIS */
 static
 SCIP_RETCODE doIISCreate(
@@ -149,7 +208,6 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_IISSTORE* iisstore;
    int i;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
-   SCIP_Bool success;
    SCIP_Bool silent;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
@@ -166,49 +224,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIPclockStart(iisstore->iistime, set);
    
    /* Create the subscip used for storing the IIS */
-   if( iisstore->subscip != NULL )
-   {
-      SCIPinfoMessage(set->scip, NULL, "An IIS for this problem already exists. Removing it before starting search procedure again.\n");
-      
-      /* free sub-SCIP */
-      SCIP_CALL( SCIPfree(&(iisstore->subscip)) );
-      iisstore->subscip = NULL;
-   }
-   if( iisstore->varsmap != NULL )
-      SCIPhashmapFree(&(iisstore->varsmap));
-   if( iisstore->conssmap != NULL )
-      SCIPhashmapFree(&(iisstore->conssmap));
-   
-   assert( iisstore->subscip == NULL );
-   assert( iisstore->varsmap == NULL );
-   assert( iisstore->conssmap == NULL );
-   
-   /* create a new SCIP instance */
-   SCIP_CALL( SCIPcreate(&(iisstore->subscip)) );
-
-   /* create problem in sub-SCIP */
-   SCIP_CALL( SCIPcopyOrig(set->scip, iisstore->subscip, iisstore->varsmap, iisstore->conssmap, "iis", TRUE, FALSE, FALSE, &success) );
-
-   if( success == FALSE )
-   {
-      return SCIP_ERROR;
-   }
-   /* copy parameter settings */
-   // TODO: Do we really want to copy the parameter settings?
-   SCIP_CALL( SCIPcopyParamSettings(set->scip, iisstore->subscip) );
-#ifdef SCIP_DEBUG
-   /* for debugging, enable full output */
-   SCIP_CALL( SCIPsetIntParam(iisstore->subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(iisstore->subscip, "display/freq", 100000000) );
-#else
-   /* disable statistic timing inside sub SCIP and output to console */
-   SCIP_CALL( SCIPsetIntParam(iisstore->subscip, "display/verblevel", 0) );
-   SCIP_CALL( SCIPsetBoolParam(iisstore->subscip, "timing/statistictiming", FALSE) );
-#endif
-   SCIP_CALL( SCIPsetSubscipsOff(iisstore->subscip, TRUE) );
-   SCIP_CALL( SCIPsetIntParam(iisstore->subscip, "limits/bestsol", 1) );
-   SCIP_CALL( SCIPsetRealParam(iisstore->subscip, "limits/time", timelim - SCIPclockGetTime(iisstore->iistime)) );
-   SCIP_CALL( SCIPsetLongintParam(iisstore->subscip, "limits/nodes", nodelim) );
+   createSubscipIIS(set, iisstore, timelim, nodelim);
    
    /* If the model is not yet shown to be infeasible then check for infeasibility */
    if( SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM && set->iis_checkinitfeas )
@@ -263,19 +279,24 @@ SCIP_RETCODE SCIPiisGenerate(
       iisstore->valid = TRUE;
    }
 
-   /* Try all IIS generators until one succeeds */
+   /* Try all IIS generators */
    SCIPgetBoolParam(set->scip, "iis/silent", &silent);
    for( i = 0; i < set->niis && result == SCIP_DIDNOTFIND; ++i )
    {
       SCIP_IIS* iis;
       iis = set->iis[i];
       assert(iis != NULL);
+      
+      /* Recreate the subscip if one of the IIS finder algorithms has produced an invalid IS */
+      if( !(iisstore->valid) )
+         createSubscipIIS(set, iisstore, timelim, nodelim);
 
       /* start timing */
       SCIPclockStart(iis->iistime, set);
 
       SCIP_CALL( iis->iisgenerate(iisstore->subscip, iis, &(iisstore->valid), &(iisstore->irreducible), &timelim, &nodelim, silent, &result) );
       SCIPinfoMessage(set->scip, NULL, "After IIS algorithm %s: Have IS of size %d that is valid (%d) and irreducible (%d).\n", iis->name, SCIPgetNOrigConss(iisstore->subscip), iisstore->valid, iisstore->irreducible);
+      
       /* stop timing */
       SCIPclockStop(iis->iistime, set);
 
