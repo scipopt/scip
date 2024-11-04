@@ -28,9 +28,23 @@ Note that compilation is tested on MSVC version >= 12.
 
 Alternatively, you may use the command line to configure and build SCIP by creating a `build` directory and then building the configuration:
 
+```bash
+cmake -Bbuild [-DSOPLEX_DIR=/path/to/soplex]
+cmake --build build --config Release (Debug)
 ```
-cmake -Bbuild -H. [-DSOPLEX_DIR=/path/to/soplex]
-cmake --build build --config Release [Debug]
+
+We also include predefined presets for different use cases defined in the `CMakePresets.json` file.
+To use them, specify `--preset <preset>`, e.g.,
+```bash
+# configure in directory build with the preset for a bare mip solver
+cmake -Bbuild --preset mip
+# build the configuration in release (or debug) mode
+cmake --build build --config Release (Debug)
+```
+
+The available presets can be listed with:
+```bash
+cmake --list-presets
 ```
 
 Command line instructions (Linux, macOS)
