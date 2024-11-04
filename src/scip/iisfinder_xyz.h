@@ -22,76 +22,44 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   pub_iis.h
- * @ingroup PUBLICCOREAPI
- * @brief  public methods for irreducible infeasible subsytems (IIS)
+/**@file   iisfinder_xyz.h
+ * @ingroup IISFINDERS
+ * @brief  xyz iisfinder
  * @author Mark Turner
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PUB_IIS_H__
-#define __SCIP_PUB_IIS_H__
+#ifndef __SCIP_IISFINDER_XYZ_H__
+#define __SCIP_IISFINDER_XYZ_H__
 
 
-#include "scip/def.h"
-#include "scip/type_misc.h"
-#include "scip/type_iis.h"
+#include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**@addtogroup PublicIISMethods
+/** creates the xyz IIS finder and includes it in SCIP
+ *
+ * @ingroup IISfinderIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeIISfinderXyz(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup IISFINDERS
  *
  * @{
  */
 
-/** gets name of IIS */
+/** perform an IIS find for the given infeasible SCIP instance
+ */
 SCIP_EXPORT
-const char* SCIPiisGetName(
-   SCIP_IIS*             iis                 /**< IIS */
+SCIP_RETCODE SCIPexecIISfinderXyz(
+   SCIP*                 scip                /**< SCIP data structure */
    );
-
-/** gets user data of IIS */
-SCIP_EXPORT
-SCIP_IISDATA* SCIPiisGetData(
-   SCIP_IIS*             iis                 /**< IIS */
-   );
-
-/** gets description of IIS */
-SCIP_EXPORT
-const char* SCIPiisGetDesc(
-   SCIP_IIS*             iis                 /**< IIS */
-   );
-
-/** gets priority of IIS */
-SCIP_EXPORT
-int SCIPiisGetPriority(
-   SCIP_IIS*             iis                 /**< IIS */
-   );
-
-/** sets user data of IIS; user has to free old data in advance! */
-SCIP_EXPORT
-void SCIPiisSetData(
-   SCIP_IIS*             iis ,               /**< IIS */
-   SCIP_IISDATA*         iisdata             /**< new IIS user data */
-   );
-
-/** gets time in seconds used in this IIS */
-SCIP_EXPORT
-SCIP_Real SCIPiisGetTime(
-   SCIP_IIS*             iis                 /**< IIS */
-   );
-
-/** get number of times the IIS was called */
-SCIP_Longint SCIPiisGetNCalls(
-   SCIP_IIS*             iis                 /**< IIS */
-   );
-
-/** compares two IIS w. r. to their priority */
-SCIP_EXPORT
-SCIP_DECL_SORTPTRCOMP(SCIPiisComp);
 
 /** @} */
 

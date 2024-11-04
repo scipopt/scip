@@ -22,44 +22,76 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   iis_xyz.h
- * @ingroup IIS
- * @brief  xyz iis
+/**@file   pub_iisfinder.h
+ * @ingroup PUBLICCOREAPI
+ * @brief  public methods for irreducible infeasible subsytems (IIS) finders
  * @author Mark Turner
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_IIS_XYZ_H__
-#define __SCIP_IIS_XYZ_H__
+#ifndef __SCIP_PUB_IISFINDER_H__
+#define __SCIP_PUB_IISFINDER_H__
 
 
-#include "scip/scip.h"
+#include "scip/def.h"
+#include "scip/type_misc.h"
+#include "scip/type_iisfinder.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates the xyz iis and includes it in SCIP
- *
- * @ingroup IISIncludes
- */
-SCIP_EXPORT
-SCIP_RETCODE SCIPincludeIISXyz(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/**@addtogroup IIS
+/**@addtogroup PublicIISfinderMethods
  *
  * @{
  */
 
-/** perform an IIS for the given infeasible SCIP instance
- */
+/** gets name of IIS finder */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgenerateIISXyz(
-   SCIP*                 scip                /**< SCIP data structure */
+const char* SCIPiisfinderGetName(
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
    );
+
+/** gets user data of IIS finder */
+SCIP_EXPORT
+SCIP_IISFINDERDATA* SCIPiisfinderGetData(
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
+   );
+
+/** gets description of IIS finder */
+SCIP_EXPORT
+const char* SCIPiisfinderGetDesc(
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
+   );
+
+/** gets priority of IIS finder */
+SCIP_EXPORT
+int SCIPiisfinderGetPriority(
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
+   );
+
+/** sets user data of IIS finder; user has to free old data in advance! */
+SCIP_EXPORT
+void SCIPiisfinderSetData(
+   SCIP_IISFINDER*       iisfinder,          /**< IIS finder */
+   SCIP_IISFINDERDATA*   iisfinderdata       /**< new IIS finder user data */
+   );
+
+/** gets time in seconds used in this IIS finder */
+SCIP_EXPORT
+SCIP_Real SCIPiisfinderGetTime(
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
+   );
+
+/** get number of times the IIS finder was called */
+SCIP_Longint SCIPiisfinderGetNCalls(
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
+   );
+
+/** compares two IIS finders w. r. to their priority */
+SCIP_EXPORT
+SCIP_DECL_SORTPTRCOMP(SCIPiisfinderComp);
 
 /** @} */
 

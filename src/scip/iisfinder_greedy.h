@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   iis_greedy.h
+/**@file   iisfinder_greedy.h
  * @brief  greedy deletion and addition filter heuristic to compute IISs
  * @author Marc Pfetsch
  * @author Mark Turner
@@ -45,8 +45,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __IIS_GREEDY_H__
-#define __IIS_GREEDY_H__
+#ifndef __IISFINDER_GREEDY_H__
+#define __IISFINDER_GREEDY_H__
 
 #include <scip/scip.h>
 
@@ -54,31 +54,31 @@
 extern "C" {
 #endif
 
-/** creates the greedy IIS rule and includes it in SCIP
+/** creates the greedy IIS finder rule and includes it in SCIP
  *
- * @ingroup IISIncludes
+ * @ingroup IISfinderIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeIISGreedy(
+SCIP_RETCODE SCIPincludeIISfinderGreedy(
    SCIP*                 scip                /**< SCIP data structure */
 );
 
-/**@addtogroup IIS
+/**@addtogroup IISFINDERS
  *
  * @{
  */
 
 /** perform a greedy addition or deletion algorithm to obtain an infeasible subsystem (IS).
  *
- *  This is the generation method for the greedy IIS rule.
+ *  This is the generation method for the greedy IIS finder rule.
  *  Depending on the parameter choices, constraints are either greedily added from an empty problem,
  *  or deleted from a complete problem. In the case of constraints being added, this is done until the problem
  *  becomes infeasible, after which one can then begin deleting constraints. In the case of deleting constraints,
- *  this is done until no more constraints (or batches of constraints) can be deleted withough making
+ *  this is done until no more constraints (or batches of constraints) can be deleted without making
  *  the problem feasible.
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPgenerateIISGreedy(
+SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            valid,              /**< Whether the returned subscip is a valid (I)IS */
    SCIP_Bool*            irreducible,        /**< Whether the returned subscip is a minimal IIS */

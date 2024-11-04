@@ -22,20 +22,20 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scip_iis.h
+/**@file   scip_iisfinder.h
  * @ingroup PUBLICCOREAPI
- * @brief  public methods for IIS plugins
+ * @brief  public methods for IIS finder plugins
  * @author Mark Turner
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_SCIP_IIS_H__
-#define __SCIP_SCIP_IIS_H__
+#ifndef __SCIP_SCIP_IISFINDER_H__
+#define __SCIP_SCIP_IISFINDER_H__
 
 
 #include "scip/def.h"
-#include "scip/type_iis.h"
+#include "scip/type_iisfinder.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_tree.h"
@@ -44,99 +44,99 @@
 extern "C" {
 #endif
 
-/**@addtogroup PublicIISMethods
+/**@addtogroup PublicIISfinderMethods
  *
  * @{
  */
 
-/** creates an IIS and includes it in SCIP
+/** creates an IIS finder and includes it in SCIP
  *
- *  @note this method has all IIS callbacks as arguments and is thus changed every time a new
- *        callback is added in future releases; consider using SCIPincludeIISBasic() and setter functions
+ *  @note this method has all IIS finder callbacks as arguments and is thus changed every time a new
+ *        callback is added in future releases; consider using SCIPincludeIISfinderBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeIIS(
+SCIP_RETCODE SCIPincludeIISfinder(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< name of cut selector */
-   const char*           desc,               /**< description of cut selector */
-   int                   priority,           /**< priority of the cut selector */
-   SCIP_DECL_IISCOPY     ((*iiscopy)),        /**< copy method of IIS or NULL if you don't want to copy your plugin into sub-SCIPs */
-   SCIP_DECL_IISFREE     ((*iisfree)),       /**< destructor of IIS */
-   SCIP_DECL_IISGENERATE ((*iisgenerate)),   /**< IIS generation method */
-   SCIP_IISDATA*         iisdata             /**< IIS data */
+   const char*           name,               /**< name of IIS finder */
+   const char*           desc,               /**< description of IIS finder */
+   int                   priority,           /**< priority of the IIS finder */
+   SCIP_DECL_IISFINDERCOPY ((*iisfindercopy)), /**< copy method of IIS finder or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_IISFINDERFREE ((*iisfinderfree)), /**< destructor of IIS finder */
+   SCIP_DECL_IISFINDEREXEC ((*iisfinderexec)), /**< IIS finder execution method */
+   SCIP_IISFINDERDATA*   iisfinderdata       /**< IIS finder data */
    );
 
-/** Creates a cut selector and includes it in SCIP with its most fundamental callbacks.
+/** Creates an IIS finder and includes it in SCIP with its most fundamental callbacks.
  *
  *  All non-fundamental (or optional) callbacks as, e.g., copy and free callbacks, will be set to NULL. Optional
- *  callbacks can be set via specific setter functions, see SCIPsetIISCopy() and SCIPsetIISFree(),
+ *  callbacks can be set via specific setter functions, see SCIPsetIISfinderCopy() and SCIPsetIISfinderFree(),
  *
- *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeIIS() instead
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeIISfinder() instead
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeIISBasic(
+SCIP_RETCODE SCIPincludeIISfinderBasic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_IIS**            iis,                /**< reference to an IIS, or NULL */
-   const char*           name,               /**< name of IIS */
-   const char*           desc,               /**< description of IIS */
-   int                   priority,           /**< priority of the IIS in standard mode */
-   SCIP_DECL_IISGENERATE((*iisgenerate)),    /**< IIS generation method */
-   SCIP_IISDATA*         iisdata             /**< IIS data */
+   SCIP_IISFINDER**      iisfinder,          /**< reference to an IIS finder, or NULL */
+   const char*           name,               /**< name of IIS finder */
+   const char*           desc,               /**< description of IIS finder */
+   int                   priority,           /**< priority of the IIS finder in standard mode */
+   SCIP_DECL_IISFINDEREXEC((*iisfinderexec)), /**< IIS finder execution method */
+   SCIP_IISFINDERDATA*   iisfinderdata       /**< IIS finder data */
    );
 
-/** sets copy method of IIS */
+/** sets copy method of IIS finder */
 SCIP_EXPORT
-SCIP_RETCODE SCIPsetIISCopy(
+SCIP_RETCODE SCIPsetIISfinderCopy(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_IIS*             iis,                /**< IIS */
-   SCIP_DECL_IISCOPY     ((*iiscop))         /**< copy method of IIS or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_IISFINDER*       iisfinder,          /**< IIS finder */
+   SCIP_DECL_IISFINDERCOPY ((*iisfindercopy)) /**< copy method of IIS finder or NULL if you don't want to copy your plugin into sub-SCIPs */
    );
 
-/** sets destructor method of IIS */
+/** sets destructor method of IIS finder */
 SCIP_EXPORT
-SCIP_RETCODE SCIPsetIISFree(
+SCIP_RETCODE SCIPsetIISfinderFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_IIS*             iis,                /**< IIS */
-   SCIP_DECL_IISFREE     ((*iisfree))        /**< destructor of IIS */
+   SCIP_IISFINDER*       iisfinder,          /**< IIS finder */
+   SCIP_DECL_IISFINDERFREE ((*iisfinderfree)) /**< destructor of IIS finder */
    );
 
-/** the execution method that iterates over the IIS plugins */
+/** the execution method that iterates over the IIS finder plugins */
 SCIP_EXPORT
 SCIP_RETCODE SCIPgenerateIIS(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the IIS of the given name, or NULL if not existing */
+/** returns the IIS finder of the given name, or NULL if not existing */
 SCIP_EXPORT
-SCIP_IIS* SCIPfindIIS(
+SCIP_IISFINDER* SCIPfindIISfinder(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of IIS */
+   const char*           name                /**< name of IIS finder */
    );
 
-/** returns the array of currently available IISs */
+/** returns the array of currently available IIS finders */
 SCIP_EXPORT
-SCIP_IIS** SCIPgetIIS(
+SCIP_IISFINDER** SCIPgetIISfinders(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the number of currently available IISs */
+/** returns the number of currently available IIS finders */
 SCIP_EXPORT
-int SCIPgetNIIS(
+int SCIPgetNIISfinders(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** sets the priority of an IIS */
+/** sets the priority of an IIS finder */
 SCIP_EXPORT
-SCIP_RETCODE SCIPsetIISPriority(
+SCIP_RETCODE SCIPsetIISfinderPriority(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_IIS*             iis,                /**< IIS */
-   int                   priority            /**< new priority of the IIS */
+   SCIP_IISFINDER*       iisfinder,          /**< IIS finder */
+   int                   priority            /**< new priority of the IIS finder */
    );
 
 /** Gets the IIS storage.
  *
- *  @return the \ref SCIP_IISSTORE iis storage.
+ *  @return the \ref SCIP_IIS iis storage.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
@@ -155,7 +155,7 @@ SCIP_RETCODE SCIPsetIISPriority(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-SCIP_IISSTORE* SCIPgetIISstore(
+SCIP_IIS* SCIPgetIIS(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

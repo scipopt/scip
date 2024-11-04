@@ -90,7 +90,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
-   SCIP_Bool             copyiis,            /**< should the IIS rules be copied */
+   SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
@@ -840,20 +840,20 @@ void SCIPsetSortBranchrulesName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** inserts IIS in IIS list */
-SCIP_RETCODE SCIPsetIncludeIIS(
+/** inserts IIS finders in IIS finder list */
+SCIP_RETCODE SCIPsetIncludeIISfinder(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_IIS*             iis                 /**< IIS */
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
    );
 
-/** returns the IIS of the given name, or NULL if not existing */
-SCIP_IIS* SCIPsetFindIIS(
+/** returns the IIS finder of the given name, or NULL if not existing */
+SCIP_IISFINDER* SCIPsetFindIISfinder(
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           name                /**< name of separator */
+   const char*           name                /**< name of IIS finder */
    );
 
-/** sorts the IIS rules by priorities */
-void SCIPsetSortIIS(
+/** sorts the IIS finders by priorities */
+void SCIPsetSortIISfinders(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

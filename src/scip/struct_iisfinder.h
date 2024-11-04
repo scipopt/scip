@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_iis.h
+/**@file   struct_iisfinder.h
  * @ingroup INTERNALAPI
  * @brief  data structures for irreducible infeasible subsystems (IIS)
  * @author Mark Turner
@@ -30,32 +30,32 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_STRUCT_IIS_H__
-#define __SCIP_STRUCT_IIS_H__
+#ifndef __SCIP_STRUCT_IISFINDER_H__
+#define __SCIP_STRUCT_IISFINDER_H__
 
 
 #include "scip/def.h"
-#include "scip/type_iis.h"
+#include "scip/type_iisfinder.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /** IIS */
-struct SCIP_IIS
+struct SCIP_IISfinder
 {
-   char*                 name;               /**< name of IIS */
-   char*                 desc;               /**< description of IIS */
-   SCIP_DECL_IISCOPY     ((*iiscopy));       /**< copy method of IIS or NULL if you don't want to copy your plugin into sub-SCIPs */
-   SCIP_DECL_IISFREE     ((*iisfree));       /**< destructor of IIS */
-   SCIP_DECL_IISGENERATE ((*iisgenerate));   /**< IIS generation method */
-   SCIP_CLOCK*           iistime;            /**< IIS execution time */
-   SCIP_IISDATA*         iisdata;            /**< IIS data */
-   int                   priority;           /**< priority of the IIS */
+   char*                 name;               /**< name of IIS finder */
+   char*                 desc;               /**< description of IIS finder */
+   SCIP_DECL_IISFINDERCOPY ((*iisfindercopy)); /**< copy method of IIS finder or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_IISFINDERFREE ((*iisfinderfree)); /**< destructor of IIS finder */
+   SCIP_DECL_IISFINDEREXEC ((*iisfinderexec)); /**< IIS finder generation method */
+   SCIP_CLOCK*           iisfindertime;      /**< IIS finder execution time */
+   SCIP_IISFINDERDATA*   iisfinderdata;      /**< IIS finder data */
+   int                   priority;           /**< priority of the IIS finder */
 };
 
 /** IIS */
-struct SCIP_IISSTORE
+struct SCIP_IIS
 {
    SCIP*                 subscip;            /**< The subscip that stores the IIS */
    SCIP_HASHMAP*         varsmap;            /**< The variable hashmap from the original SCIP to IIS subscip */
@@ -63,7 +63,7 @@ struct SCIP_IISSTORE
    SCIP_CLOCK*           iistime;            /**< IIS total execution time */
    SCIP_Longint          nnodes;             /**< The number of nodes used over all IIS solves */
    SCIP_Bool             valid;              /**< Whether the returned subscip is a valid (I)IS */
-   SCIP_Bool             irreducible;        /**< Whether the returned subscip is a minimal IIS */
+   SCIP_Bool             irreducible;        /**< Whether the returned subscip is an irreducible infeasible subsystem */
 };
 
 #ifdef __cplusplus

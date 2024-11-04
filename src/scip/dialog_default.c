@@ -69,7 +69,7 @@
 #include "scip/scip_expr.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
-#include "scip/scip_iis.h"
+#include "scip/scip_iisfinder.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
