@@ -112,6 +112,11 @@ SCIP_RETCODE SCIPiisFree(
    SCIP_IIS**            iis                 /**< pointer to the IIS */
    );
 
+/** get the subscip of an IIS */
+SCIP* SCIPiisGetSubscip(
+   SCIP_IIS*            iis                  /**< pointer to the IIS */
+   );
+
 #ifdef __cplusplus
 }
 #endif

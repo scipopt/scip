@@ -45,6 +45,7 @@
 #include "scip/pub_disp.h"
 #include "scip/pub_expr.h"
 #include "scip/pub_heur.h"
+#include "scip/pub_iisfinder.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
@@ -3971,6 +3972,28 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteGenTransproblem)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the write IIS command */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteIIS)
+{  /*lint --e{715}*/
+   SCIP* subscip;
+   
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+   
+   subscip = SCIPgetIISsubscip(scip);
+   
+   if( subscip != NULL )
+   {
+      SCIP_CALL( writeProblem(subscip, dialog, dialoghdlr, nextdialog, FALSE, FALSE) );
+   }
+   else
+      SCIPdialogMessage(scip, NULL, "no IIS available\n");
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for solution validation */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
@@ -4632,7 +4655,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecIIS, NULL, NULL,
-            "iis", "compute an (irreducible) infeasible set, i.e., (I)IS, for an infeasible problem", FALSE, NULL) );
+            "iis", "compute an (I)IS for an infeasible problem, i.e., an (irreducible) infeasible set.", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -4825,6 +4848,19 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
             SCIPdialogExecWriteCommandHistory, NULL, NULL,
             "history",
             "write command line history to a file (only works if SCIP was compiled with 'readline')",
+            FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* write IIS of problem */
+   if( !SCIPdialogHasEntry(submenu, "iis") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecWriteIIS, NULL, NULL,
+            "iis",
+            "write (I)IS (irreducible infeasible subsystem) of infeasible problem to file (format is given by file extension, e.g., iis.{lp,rlp,cip,mps})",
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );

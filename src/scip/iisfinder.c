@@ -520,6 +520,14 @@ SCIP_RETCODE SCIPiisFree(
    return SCIP_OKAY;
 }
 
+/** get the subscip of an IIS */
+SCIP* SCIPiisGetSubscip(
+   SCIP_IIS*            iis                  /**< pointer to the IIS */
+   )
+{
+   return iis->subscip;
+}
+
 /** compares two IIS finders w. r. to their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPiisfinderComp)
 {  /*lint --e{715}*/
