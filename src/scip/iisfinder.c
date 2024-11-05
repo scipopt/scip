@@ -37,6 +37,7 @@
 #include "scip/paramset.h"
 #include "scip/scip.h"
 #include "scip/iisfinder.h"
+#include "scip/iisfinder_greedy.h"
 
 #include "scip/struct_iisfinder.h"
 
@@ -210,6 +211,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_RESULT result = SCIP_DIDNOTFIND;
    SCIP_Bool silent;
    SCIP_Bool removebounds;
+   SCIP_Bool minimal;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
    
@@ -308,9 +310,35 @@ SCIP_RETCODE SCIPiisGenerate(
          SCIPinfoMessage(set->scip, NULL, "Time or node limit hit. Stopping Search.\n");
    }
    
+   /* Ensure the problem is irreducible if requested */
+   SCIPgetBoolParam(set->scip, "iis/minimal", &minimal);
+   if( !iis->irreducible && minimal )
+   {
+      SCIP_IISFINDER* iisfinder;
+      SCIP_RANDNUMGEN* randnumgen;
+      iisfinder = SCIPfindIISfinder(set->scip, "greedy");
+      if( iisfinder == NULL )
+         return SCIP_OKAY;
+      
+      SCIPinfoMessage(set->scip, NULL, " Performing greedy deletion with batchsize = 1 to ensure irreducible result.\n");
+      
+      if( !(iis->valid) )
+         createSubscipIIS(set, iis, timelim, nodelim);
+   
+      SCIP_CALL( SCIPcreateRandom(set->scip, &randnumgen, 0x5EED, TRUE) );
+      SCIP_CALL( SCIPexecIISfinderGreedy(iis->subscip, &(iis)->valid, &(iis->irreducible), &timelim, &nodelim, removebounds, silent, randnumgen, timelim, FALSE, TRUE, TRUE, TRUE, nodelim, 1, &result) );
+      SCIPfreeRandom(set->scip, &randnumgen);
+      
+      assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
+      if( timelim <= 0 || nodelim <= -2 )
+         SCIPinfoMessage(set->scip, NULL, "Time or node limit hit. Stopping Search.\n");
+   }
+   
    /* stop timing */
    SCIPclockStop(iis->iistime, set);
-
+   SCIPinfoMessage(set->scip, NULL, "The original problem has %d many constraints.\n", SCIPgetNOrigConss(set->scip));
+   SCIPinfoMessage(set->scip, NULL, "The IIS has %d many constraints, has valid status (%d), and irreducible status (%d).\n", SCIPgetNOrigConss(iis->subscip), iis->valid, iis->irreducible);
+   
    return SCIP_OKAY;
 }
 
