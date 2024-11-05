@@ -7377,11 +7377,11 @@ SCIP_RETCODE calcCliquePartitionGreedy(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcalcCliquePartition(
-   SCIP*const            scip,               /**< SCIP data structure */
-   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int const             nvars,              /**< number of variables in the clique */
-   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
-   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int                   nvars,              /**< number of variables in the clique */
+   int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    )
 {
    SCIP_VAR** tmpvars;
@@ -7596,11 +7596,11 @@ SCIP_RETCODE SCIPcalcCliquePartition(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcalcNegatedCliquePartition(
-   SCIP*const            scip,               /**< SCIP data structure */
-   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int const             nvars,              /**< number of variables in the clique */
-   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
-   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int                   nvars,              /**< number of variables in the clique */
+   int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    )
 {
    SCIP_VAR** negvars;
