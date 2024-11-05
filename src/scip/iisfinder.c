@@ -314,11 +314,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIPgetBoolParam(set->scip, "iis/minimal", &minimal);
    if( !iis->irreducible && minimal )
    {
-      SCIP_IISFINDER* iisfinder;
       SCIP_RANDNUMGEN* randnumgen;
-      iisfinder = SCIPfindIISfinder(set->scip, "greedy");
-      if( iisfinder == NULL )
-         return SCIP_OKAY;
       
       SCIPinfoMessage(set->scip, NULL, " Performing greedy deletion with batchsize = 1 to ensure irreducible result.\n");
       

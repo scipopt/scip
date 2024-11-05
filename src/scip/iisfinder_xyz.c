@@ -32,6 +32,7 @@
 
 #include <assert.h>
 
+#include "scip/iisfinder.h"
 #include "scip/iisfinder_xyz.h"
 
 
@@ -134,8 +135,8 @@ SCIP_RETCODE SCIPincludeIISfinderXyz(
    /* use SCIPincludeIISfinderBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independently of new callbacks being added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeIISfinderBasic(scip, &iisfinder, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY, iisfinderExecXyz,
-                                     iisfinderdata) );
+   SCIP_CALL( SCIPincludeIISfinderBasic(scip, &iisfinder, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY,
+                                        iisfinderExecXyz, iisfinderdata) );
    
    assert(iisfinder != NULL);
    

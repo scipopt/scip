@@ -74,10 +74,11 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
  *
  *  This is the generation method for the greedy IIS finder rule.
  *  Depending on the parameter choices, constraints are either greedily added from an empty problem,
- *  or deleted from a complete problem. In the case of constraints being added, this is done until the problem
+ *  or deleted from a valid problem state. In the case of constraints being added, this is done until the problem
  *  becomes infeasible, after which one can then begin deleting constraints. In the case of deleting constraints,
  *  this is done until no more constraints (or batches of constraints) can be deleted without making
  *  the problem feasible.
+ *  The algorithm also extends to variable bounds.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexecIISfinderGreedy(
