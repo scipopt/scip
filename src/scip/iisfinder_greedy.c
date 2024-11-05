@@ -216,6 +216,7 @@ SCIP_RETCODE deletionFilterBoundsSubproblem(
       case SCIP_STATUS_MEMLIMIT:
       case SCIP_STATUS_GAPLIMIT:
       case SCIP_STATUS_RESTARTLIMIT:
+      case SCIP_STATUS_INFORUNBD:
          *alldeletionssolved = FALSE;
          if ( ! silent )
             SCIPinfoMessage(scip, NULL, "Some limit reached. Removing batch if set as non-conservative. \n");
@@ -226,7 +227,6 @@ SCIP_RETCODE deletionFilterBoundsSubproblem(
          break;
       
       case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
-      case SCIP_STATUS_INFORUNBD:
          if ( ! silent )
             SCIPinfoMessage(scip, NULL, "Subproblem infeasible. Remove bound batch.\n");
          *valid = TRUE;
@@ -335,6 +335,7 @@ SCIP_RETCODE deletionFilterConsSubproblem(
    case SCIP_STATUS_MEMLIMIT:
    case SCIP_STATUS_GAPLIMIT:
    case SCIP_STATUS_RESTARTLIMIT:
+   case SCIP_STATUS_INFORUNBD:
       *alldeletionssolved = FALSE;
       if ( ! silent )
          SCIPinfoMessage(scip, NULL, "Some limit reached. Removing batch if set as non-conservative. \n");
@@ -344,7 +345,6 @@ SCIP_RETCODE deletionFilterConsSubproblem(
       break;
 
    case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
-   case SCIP_STATUS_INFORUNBD:
       if ( ! silent )
          SCIPinfoMessage(scip, NULL, "Subproblem infeasible. Remove constraint batch.\n");
       *valid = TRUE;
@@ -436,12 +436,12 @@ SCIP_RETCODE additionFilterConsSubproblem(
       case SCIP_STATUS_GAPLIMIT:
       case SCIP_STATUS_SOLLIMIT:
       case SCIP_STATUS_RESTARTLIMIT:
+      case SCIP_STATUS_INFORUNBD:
          if ( ! silent )
             SCIPinfoMessage(scip, NULL, "Some limit reached. Added batch failed to induce infeasibility. \n");
          break;
       
       case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
-      case SCIP_STATUS_INFORUNBD:
          if ( ! silent )
             SCIPinfoMessage(scip, NULL, "Subproblem infeasible. Final batch of constraints added.\n");
          break;
