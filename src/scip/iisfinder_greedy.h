@@ -27,20 +27,22 @@
  * @author Marc Pfetsch
  * @author Mark Turner
  *
- * An irreducibly infeasible subsystem (IIS) is a subset of the constraints that is infeasible and (set-wise) minimial
- * in this respect.
- * The deletion filter heuristic greedily removes constraints and checks whether the remaining problem
- * is still infeasible.
- * The addition filter heuristic greedily adds constraints from an empty problem until the problem becomes
- * infeasible. The deletion filter can then be applied as a post-processing step.
- * The method is based on
+ * An irreducible infeasible subsystem (IIS) is a subset of the constraints and bounds from a problem
+ * that is infeasible.
+ * The greedy filter heuristic has two different approaches for producing an (I)IS:
+ * - Remove constraints such that the remaining problem is still infeasible.
+ * - Add constraints from an empty problem until the problem becomes infeasible.
+ * Both these approaches can be augmented to include bounds. That is, existing bounds can be deleted
+ * while the IS remains infeasible. A common approach is to also apply the deletion based
+ * filter after applying the additive based filter.
+ * This greedy algorithm is based on
  *
  * O. Guieu and J. Chinneck, Analyzing infeasible mixed-integer and integer linear programs,@p
  * INFORMS J. Comput. 11, no. 1 (1999), pp. 63–77.
  *
  * If the appropriate parameters are set then we can guarantee that the result is minimal, i.e.,
  * an irreducible infeasible subsystem (IIS). Otherwise we may only obtain an infeasible subsystem (IS).
- * For no settings can guarantee the smallest possible infeasible subsystem.
+ * For no settings can we guarantee the smallest possible infeasible subsystem.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -84,6 +86,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Bool*            irreducible,        /**< Whether the returned subscip is a minimal IIS */
    SCIP_Real*            timelim,            /**< The global time limit on the IIS call */
    SCIP_Longint*         nodelim,            /**< The global node limit on the IIS call */
+   SCIP_Bool             removebounds,       /**< Whether the algorithm should remove bounds as well as constraints */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */

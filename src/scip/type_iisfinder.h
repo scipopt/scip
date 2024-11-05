@@ -85,7 +85,7 @@ typedef struct SCIP_IIS SCIP_IIS;                     /**< IIS storage data stru
  *  - SCIP_DIDNOTFIND : the IIS finder did not find a small enough infeasible subsystem.
  *  - SCIP_DIDNOTRUN  : the IIS finder did not run because some criteria was not satisfied
  */
-#define SCIP_DECL_IISFINDEREXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_IISFINDER* iisfinder, SCIP_Bool* valid, SCIP_Bool* irreducible, SCIP_Real* timelim, SCIP_Longint* nodelim, SCIP_Bool silent, SCIP_RESULT* result)
+#define SCIP_DECL_IISFINDEREXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_IISFINDER* iisfinder, SCIP_Bool* valid, SCIP_Bool* irreducible, SCIP_Real* timelim, SCIP_Longint* nodelim, SCIP_Bool removebounds, SCIP_Bool silent, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

@@ -209,6 +209,7 @@ SCIP_RETCODE SCIPiisGenerate(
    int i;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
    SCIP_Bool silent;
+   SCIP_Bool removebounds;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
    
@@ -281,7 +282,8 @@ SCIP_RETCODE SCIPiisGenerate(
 
    /* Try all IIS generators */
    SCIPgetBoolParam(set->scip, "iis/silent", &silent);
-   for( i = 0; i < set->niisfinders && result == SCIP_DIDNOTFIND; ++i )
+   SCIPgetBoolParam(set->scip, "iis/removebounds", &removebounds);
+   for( i = 0; i < set->niisfinders; ++i )
    {
       SCIP_IISFINDER* iisfinder;
       iisfinder = set->iisfinders[i];
@@ -294,7 +296,7 @@ SCIP_RETCODE SCIPiisGenerate(
       /* start timing */
       SCIPclockStart(iisfinder->iisfindertime, set);
 
-      SCIP_CALL( iisfinder->iisfinderexec(iis->subscip, iisfinder, &(iis->valid), &(iis->irreducible), &timelim, &nodelim, silent, &result) );
+      SCIP_CALL( iisfinder->iisfinderexec(iis->subscip, iisfinder, &(iis->valid), &(iis->irreducible), &timelim, &nodelim, removebounds, silent, &result) );
       SCIPinfoMessage(set->scip, NULL, "After IIS algorithm %s: Have IS of size %d that is valid (%d) and irreducible (%d).\n", iisfinder->name, SCIPgetNOrigConss(iis->subscip), iis->valid, iis->irreducible);
       
       /* stop timing */
