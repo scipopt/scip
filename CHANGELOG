@@ -38,6 +38,8 @@ Fixed bugs
 Fixed bugs
 ----------
 
+- apply same feasibility definition in PaPILO as SCIP to avoid numerical inconsistencies
+
 Unit tests
 ----------
 
