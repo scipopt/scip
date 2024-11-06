@@ -29,6 +29,15 @@ Interface changes
 
 ### Data structures
 
+Fixed bugs
+----------
+
+@section RN921 SCIP 9.2.1
+*************************
+
+Fixed bugs
+----------
+
 Unit tests
 ----------
 
@@ -41,9 +50,6 @@ Build system
 ### Cmake
 
 ### Makefile
-
-Fixed bugs
-----------
 
 Miscellaneous
 -------------
