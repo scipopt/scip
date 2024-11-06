@@ -41,7 +41,7 @@
 #define RANDSEED                  0x5EED
 
 #define DEFAULT_BATCHSIZE        3
-#define DEFAULT_MAXNNODESPERITER INT_MAX
+#define DEFAULT_MAXNNODESPERITER -1L
 #define DEFAULT_TIMELIMPERITER   1e+20
 #define DEFAULT_ADDITIVE         TRUE
 #define DEFAULT_CONSERVATIVE     TRUE
@@ -379,7 +379,7 @@ SCIP_RETCODE additionFilterConsSubproblem(
    SCIP_Longint*         nodelim,            /**< The global node limit on the IIS finder call */
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
    SCIP_Longint          maxnnodesperiter,   /**< maximum number of nodes per individual solve call */
-   SCIP_Bool*            feasible,           /**< pointer to store whether the problem is now feasible */
+   SCIP_Bool*            feasible,           /**< pointer to store whether the problem is feasible */
    SCIP_Bool*            stop                /**< pointer to store whether we have to stop */
 )
 {
@@ -389,7 +389,6 @@ SCIP_RETCODE additionFilterConsSubproblem(
    assert( stop != NULL );
    
    *stop = FALSE;
-   *feasible = FALSE;
    
    /* solve problem until first solution is found or infeasibility has been proven */
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time", MIN(*timelim, timelimperiter)) );
@@ -444,6 +443,7 @@ SCIP_RETCODE additionFilterConsSubproblem(
       case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
          if ( ! silent )
             SCIPinfoMessage(scip, NULL, "Subproblem infeasible. Final batch of constraints added.\n");
+         *feasible = FALSE;
          break;
       
       case SCIP_STATUS_BESTSOLLIMIT:     /* we found a solution */
@@ -515,7 +515,7 @@ SCIP_RETCODE deletionFilterBatch(
    while( i < nconss && !stopiter && *timelim > 0 && *nodelim > -2 )
    {
       k = 0;
-      for( j = i; j < batchsize * (i + 1) && j < nconss; j++ )
+      for( j = i; j < MIN(i + batchsize, nconss); j++ )
       {
          idxs[k] = order[j];
          k++;
@@ -656,7 +656,6 @@ SCIP_RETCODE additionFilterBatch(
    i = 0;
    feasible = TRUE;
    stopiter = FALSE;
-   result = SCIP_FEASIBLE;
    while( feasible && !stopiter )
    {
       /* Add the next batch of constraints */
@@ -743,7 +742,10 @@ SCIP_RETCODE additionFilterBatch(
    SCIPfreeBlockMemoryArray(scip, &order, nconss);
    SCIPfreeBlockMemoryArray(scip, &inIS, nconss);
    SCIPfreeBlockMemoryArray(scip, &conss, nconss);
-   *valid = TRUE;
+   if( feasible )
+      *valid = FALSE;
+   else
+      *valid = TRUE;
    
    return SCIP_OKAY;
 }
@@ -848,7 +850,7 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
    SCIP_CALL( SCIPaddLongintParam(scip,
          "iis/" IISFINDER_NAME "/maxnnodesperiter",
          "node limit of optimization process for each individual subproblem",
-         &iisfinderdata->maxnnodesperiter, FALSE, DEFAULT_MAXNNODESPERITER, 1, INT_MAX, NULL, NULL) );
+         &iisfinderdata->maxnnodesperiter, FALSE, DEFAULT_MAXNNODESPERITER, -1, INT_MAX, NULL, NULL) );
    
    SCIP_CALL( SCIPaddBoolParam(scip,
          "iis/" IISFINDER_NAME "/additive",
