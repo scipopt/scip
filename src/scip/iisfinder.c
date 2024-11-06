@@ -96,10 +96,10 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, &success) );
    
    /* Remove the objective */
-   vars = SCIPgetOrigVars(set->scip);
-   nvars = SCIPgetNOrigVars(set->scip);
+   vars = SCIPgetOrigVars(iis->subscip);
+   nvars = SCIPgetNOrigVars(iis->subscip);
    for( i = 0; i < nvars; i++ )
-      SCIP_CALL( SCIPchgVarObj(set->scip, vars[i], 0.0 ) );
+      SCIP_CALL( SCIPchgVarObj(iis->subscip, vars[i], 0.0 ) );
    
    if( success == FALSE )
    {
