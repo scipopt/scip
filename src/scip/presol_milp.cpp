@@ -354,6 +354,9 @@ Presolve<SCIP_Real> setupPresolve(
    /* set tolerances */
    presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
    presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
+#if PAPILO_APIVERSION >= 3
+   presolve.getPresolveOptions().useabsfeas = false;
+#endif
 
 #ifndef SCIP_PRESOLLIB_ENABLE_OUTPUT
    /* adjust output settings of presolve library */
