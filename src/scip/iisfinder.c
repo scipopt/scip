@@ -212,6 +212,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_Bool silent;
    SCIP_Bool removebounds;
    SCIP_Bool minimal;
+   SCIP_Bool stopafterone;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
    
@@ -284,6 +285,7 @@ SCIP_RETCODE SCIPiisGenerate(
 
    /* Try all IIS generators */
    SCIPgetBoolParam(set->scip, "iis/silent", &silent);
+   SCIPgetBoolParam(set->scip, "iis/stopafterone", &stopafterone);
    SCIPgetBoolParam(set->scip, "iis/removebounds", &removebounds);
    for( i = 0; i < set->niisfinders; ++i )
    {
@@ -308,6 +310,9 @@ SCIP_RETCODE SCIPiisGenerate(
       
       if( timelim <= 0 || nodelim <= -2 )
          SCIPinfoMessage(set->scip, NULL, "Time or node limit hit. Stopping Search.\n");
+      
+      if( (stopafterone && (result == SCIP_SUCCESS)) || (iis->irreducible == TRUE) )
+         break;
    }
    
    /* Ensure the problem is irreducible if requested */
@@ -316,7 +321,7 @@ SCIP_RETCODE SCIPiisGenerate(
    {
       SCIP_RANDNUMGEN* randnumgen;
       
-      SCIPinfoMessage(set->scip, NULL, " Performing greedy deletion with batchsize = 1 to ensure irreducible result.\n");
+      SCIPinfoMessage(set->scip, NULL, "Performing greedy deletion with batchsize = 1 to ensure irreducible result.\n");
       
       if( !(iis->valid) )
          createSubscipIIS(set, iis, timelim, nodelim);

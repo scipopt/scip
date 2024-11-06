@@ -314,6 +314,7 @@ struct SCIP_Set
    SCIP_Bool             iisfinder_removebounds;  /**< should bounds of the problem be considered for removal */
    SCIP_Bool             iisfinder_checkinitfeas; /**< should the initial problem be checked for infeasibility */
    SCIP_Bool             iisfinder_silent;        /**< should the IIS finders be run silently */
+   SCIP_Bool             iisfinder_stopafterone;  /**< should the IIS search stop after a single IIS finder is run even if the result is not irreducible */
    SCIP_Real             iisfinder_time;          /**< maximal time in seconds for all IIS finders to run */
    SCIP_Longint          iisfinder_nodes;         /**< maximal number of nodes to process for all IIS finders (-1: no limit) */
    
