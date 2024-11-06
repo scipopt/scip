@@ -66,7 +66,10 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_Longint          nodelim             /**< nodelimit */
    )
 {
+   SCIP_VAR** vars;
    SCIP_Bool success;
+   int nvars;
+   int i;
    
    /* Create the subscip used for storing the IIS */
    if( iis->subscip != NULL )
@@ -91,6 +94,12 @@ SCIP_RETCODE createSubscipIIS(
    
    /* create problem in sub-SCIP */
    SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, &success) );
+   
+   /* Remove the objective */
+   vars = SCIPgetOrigVars(set->scip);
+   nvars = SCIPgetNOrigVars(set->scip);
+   for( i = 0; i < nvars; i++ )
+      SCIP_CALL( SCIPchgVarObj(set->scip, vars[i], 0.0 ) );
    
    if( success == FALSE )
    {
