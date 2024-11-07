@@ -254,7 +254,6 @@ SCIP_RETCODE SCIPiisGenerate(
                
             case SCIP_STATUS_NODELIMIT:
                SCIPinfoMessage(iis->subscip, NULL, "Node limit reached.\n");
-               
                return SCIP_OKAY;
                
             case SCIP_STATUS_INFEASIBLE:
@@ -270,14 +269,12 @@ SCIP_RETCODE SCIPiisGenerate(
       {
          SCIPinfoMessage(iis->subscip, NULL, "Initial solve to verify infeasibility failed.\n");
          SCIPclockStop(iis->iistime, set);
-         return SCIP_OKAY;
+         return SCIP_INVALIDCALL;
       }
       iis->nnodes += SCIPgetNTotalNodes(iis->subscip);
-      timelim -= SCIPclockGetTime(iis->iistime);
       if( nodelim != -1 )
       {
-         nodelim -= SCIPgetNTotalNodes(iis->subscip);
-         if( nodelim <= -1 )
+         if( iis->nnodes > nodelim )
          {
             SCIPinfoMessage(iis->subscip, NULL, "Node limit reached.\n");
             SCIPclockStop(iis->iistime, set);
@@ -304,12 +301,12 @@ SCIP_RETCODE SCIPiisGenerate(
       
       /* Recreate the subscip if one of the IIS finder algorithms has produced an invalid IS */
       if( !(iis->valid) )
-         createSubscipIIS(set, iis, timelim, nodelim);
+         createSubscipIIS(set, iis, timelim - SCIPclockGetTime(iis->iistime), nodelim);
 
       /* start timing */
       SCIPclockStart(iisfinder->iisfindertime, set);
 
-      SCIP_CALL( iisfinder->iisfinderexec(iis->subscip, iisfinder, &(iis->valid), &(iis->irreducible), &timelim, &nodelim, removebounds, silent, &result) );
+      SCIP_CALL( iisfinder->iisfinderexec(iis, iisfinder, timelim, nodelim, removebounds, silent, &result) );
       SCIPinfoMessage(set->scip, NULL, "After IIS algorithm %s: Have IS of size %d that is valid (%d) and irreducible (%d).\n", iisfinder->name, SCIPgetNOrigConss(iis->subscip), iis->valid, iis->irreducible);
       
       /* stop timing */
@@ -317,7 +314,7 @@ SCIP_RETCODE SCIPiisGenerate(
 
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
       
-      if( timelim <= 0 || nodelim <= -2 )
+      if( timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 || iis->nnodes > nodelim) )
          SCIPinfoMessage(set->scip, NULL, "Time or node limit hit. Stopping Search.\n");
       
       if( (stopafterone && (result == SCIP_SUCCESS)) || (iis->irreducible == TRUE) )
@@ -336,7 +333,7 @@ SCIP_RETCODE SCIPiisGenerate(
          createSubscipIIS(set, iis, timelim, nodelim);
    
       SCIP_CALL( SCIPcreateRandom(set->scip, &randnumgen, 0x5EED, TRUE) );
-      SCIP_CALL( SCIPexecIISfinderGreedy(iis->subscip, &(iis)->valid, &(iis->irreducible), &timelim, &nodelim, removebounds, silent, randnumgen, timelim, FALSE, TRUE, TRUE, TRUE, nodelim, 1, &result) );
+      SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, randnumgen, timelim, FALSE, TRUE, TRUE, TRUE, nodelim, 1, &result) );
       SCIPfreeRandom(set->scip, &randnumgen);
       
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
@@ -500,10 +497,43 @@ SCIP_Real SCIPiisfinderGetTime(
    return SCIPclockGetTime(iisfinder->iisfindertime);
 }
 
+/** prints output line during IIS calculations */
+void SCIPiisfinderInfoMessage(
+   SCIP_IIS*            iis,                 /**< pointer to the IIS */
+   SCIP_Bool            printheaders         /**< whether the headers should be printed instead of the info */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP* scip;
+   int i;
+   int nvars;
+   int nbounds;
+   
+   
+   if( printheaders )
+   {
+      SCIPinfoMessage(scip, NULL, "  cons  | bounds | valid |minimal|  time \n");
+      return;
+   }
+   
+   scip = SCIPiisGetSubscip(iis);
+   nvars = SCIPgetNOrigVars(scip);
+   nbounds = 0;
+   for( i = 0; i < nvars; i++ )
+   {
+      if( SCIPisInfinity(scip, -SCIPvarGetLbOriginal(vars[i])) )
+         nbounds += 1;
+      if( SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
+         nbounds += 1;
+   }
+   SCIPinfoMessage(scip, NULL, "%7d|%7d|%7d|%7d|%7f\n", SCIPgetNOrigConss(scip), nbounds, iis->valid, iis->irreducible, SCIPiisGetTime(iis));
+   return;
+}
+
 /** creates and captures a new IIS */
 SCIP_RETCODE SCIPiisCreate(
    SCIP_IIS**           iis                  /**< pointer to return the created IIS */
-)
+   )
 {
    assert(iis != NULL);
    
@@ -527,7 +557,7 @@ SCIP_RETCODE SCIPiisCreate(
 /** releases an IIS */
 SCIP_RETCODE SCIPiisFree(
    SCIP_IIS**           iis                  /**< pointer to the IIS */
-)
+   )
 {
    
    assert(iis != NULL);
@@ -558,6 +588,73 @@ SCIP_RETCODE SCIPiisFree(
    *iis = NULL;
    
    return SCIP_OKAY;
+}
+
+/** gets time in seconds used in the IIS */
+SCIP_Real SCIPiisGetTime(
+   SCIP_IIS*             iis                 /**< IIS */
+   )
+{
+   assert( iis != NULL );
+   
+   return SCIPclockGetTime(iis->iistime);
+}
+
+/** Gets whether the IIS subscip is valid. */
+SCIP_Bool SCIPiisGetValid(
+   SCIP_IIS*             iis                 /**< IIS data structure */
+   )
+{
+   assert( iis != NULL );
+   
+   return iis->valid;
+}
+
+/** Gets whether the IIS subscip is irreducible. */
+SCIP_Bool SCIPiisGetIrreducible(
+   SCIP_IIS*             iis                 /**< IIS data structure */
+   )
+{
+   assert( iis != NULL );
+   
+   return iis->irreducible;
+}
+
+/** Gets the number of nodes in the IIS solve. */
+SCIP_Longint SCIPiisGetNNodes(
+   SCIP_IIS*             iis                 /**< IIS data structure */
+   )
+{
+   assert( iis != NULL );
+   
+   return iis->nnodes;
+}
+
+/** Sets the flag that states whether the IIS subscip is valid. */
+void SCIPiisSetValid(
+   SCIP_IIS*             iis,                /**< IIS data structure */
+   SCIP_Bool             valid               /**< The new validity status of the IIS */
+)
+{
+   iis->valid = valid;
+}
+
+/** Sets the flag that states whether the IIS subscip is irreducible. */
+void SCIPiisSetIrreducible(
+   SCIP_IIS*             iis,                /**< IIS data structure */
+   SCIP_Bool             irreducible         /**< The new irreducible status of the IIS */
+)
+{
+   iis->irreducible = irreducible;
+}
+
+/** Increments the number of nodes in the IIS solve. */
+void SCIPiisAddNNodes(
+   SCIP_IIS*             iis,                /**< IIS data structure */
+   SCIP_Longint          nnodes              /**< The number of nodes to add to the IIS */
+)
+{
+   iis->nnodes += nnodes;
 }
 
 /** get the subscip of an IIS */

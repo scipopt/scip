@@ -3977,10 +3977,12 @@ static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteIIS)
 {  /*lint --e{715}*/
    SCIP* subscip;
+   SCIP_IIS* iis;
    
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
-   subscip = SCIPgetIISsubscip(scip);
+   iis = SCIPgetIIS(scip);
+   subscip = SCIPgetIISsubscip(iis);
    
    if( subscip != NULL )
    {

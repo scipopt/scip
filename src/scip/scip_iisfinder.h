@@ -134,6 +134,12 @@ SCIP_RETCODE SCIPsetIISfinderPriority(
    int                   priority            /**< new priority of the IIS finder */
    );
 
+/** prints output line during IIS calculations */
+void SCIPinfoIISfinderMessage(
+   SCIP_IIS*            iis,                 /**< pointer to the return the created IIS */
+   SCIP_Bool            printheaders         /**< whether the headers should be printed instead of the info */
+   );
+
 /** Gets the IIS storage.
  *
  *  @return the \ref SCIP_IIS iis storage.
@@ -159,29 +165,27 @@ SCIP_IIS* SCIPgetIIS(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** Gets the IIS subscip.
- *
- *  @return the \ref SCIP IIS subscip.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- *       - \ref SCIP_STAGE_FREETRANS
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
+/** Sets the flag that states whether the IIS subscip is valid. */
+void SCIPsetIISValid(
+   SCIP_IIS*             iis,                /**< IIS data structure */
+   SCIP_Bool             valid               /**< The new validity status of the IIS */
+   );
+
+/** Sets the flag that states whether the IIS subscip is irreducible. */
+void SCIPsetIISIrreducible(
+   SCIP_IIS*             iis,                /**< IIS data structure */
+   SCIP_Bool             irreducible         /**< The new irreducible status of the IIS */
+   );
+
+/** Increments the number of nodes in the IIS solve. */
+void SCIPaddIISNNodes(
+   SCIP_IIS*             iis,                /**< IIS data structure */
+   SCIP_Longint          nnodes              /**< The number of nodes to add to the IIS */
+   );
+
+/** Gets the IIS subscip. */
 SCIP* SCIPgetIISsubscip(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP_IIS*             iis               /**< IIS data structure */
    );
 
 /** @} */

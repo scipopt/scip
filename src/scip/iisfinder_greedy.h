@@ -82,11 +82,9 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPexecIISfinderGreedy(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            valid,              /**< Whether the returned subscip is a valid (I)IS */
-   SCIP_Bool*            irreducible,        /**< Whether the returned subscip is a minimal IIS */
-   SCIP_Real*            timelim,            /**< The global time limit on the IIS call */
-   SCIP_Longint*         nodelim,            /**< The global node limit on the IIS call */
+   SCIP_IIS*             iis,                /**< IIS data structure */
+   SCIP_Real             timelim,            /**< The global time limit on the IIS call */
+   SCIP_Longint          nodelim,            /**< The global node limit on the IIS call */
    SCIP_Bool             removebounds,       /**< Whether the algorithm should remove bounds as well as constraints */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */

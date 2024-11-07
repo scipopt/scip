@@ -89,6 +89,30 @@ SCIP_Longint SCIPiisfinderGetNCalls(
    SCIP_IISFINDER*       iisfinder           /**< IIS finder */
    );
 
+/** gets time in seconds used in the IIS calculations */
+SCIP_EXPORT
+SCIP_Real SCIPiisGetTime(
+   SCIP_IIS*             iis                 /**< IIS */
+   );
+
+/** Gets whether the IIS subscip is valid. */
+SCIP_EXPORT
+SCIP_Bool SCIPiisGetValid(
+   SCIP_IIS*             iis                 /**< IIS data structure */
+   );
+
+/** Gets whether the IIS subscip is irreducible. */
+SCIP_EXPORT
+SCIP_Bool SCIPiisGetIrreducible(
+   SCIP_IIS*             iis                 /**< IIS data structure */
+   );
+
+/** Gets the number of nodes in the IIS solve. */
+SCIP_EXPORT
+SCIP_Longint SCIPiisGetNNodes(
+   SCIP_IIS*             iis                 /**< IIS data structure */
+   );
+
 /** compares two IIS finders w. r. to their priority */
 SCIP_EXPORT
 SCIP_DECL_SORTPTRCOMP(SCIPiisfinderComp);
