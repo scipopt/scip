@@ -87,6 +87,8 @@ Build system
 
 ### Cmake
 
+- increased minimal required cmake version to 3.11
+
 Fixed bugs
 ----------
 
