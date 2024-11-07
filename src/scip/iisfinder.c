@@ -518,6 +518,7 @@ void SCIPiisfinderInfoMessage(
    
    scip = SCIPiisGetSubscip(iis);
    nvars = SCIPgetNOrigVars(scip);
+   vars = SCIPgetOrigVars(scip);
    nbounds = 0;
    for( i = 0; i < nvars; i++ )
    {
