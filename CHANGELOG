@@ -19,6 +19,8 @@ Build system
 
 ### Cmake
 
+- fix SCIP Optimization Suite build with -DSYM=bliss and bliss being downloaded and build during configuration by cmake
+
 ### Makefile
 
 Miscellaneous
