@@ -203,7 +203,7 @@
 #define SCIP_DEFAULT_IISFINDER_MINIMAL       TRUE  /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
 #define SCIP_DEFAULT_IISFINDER_REMOVEBOUNDS  TRUE  /**< should bounds of the problem be considered for removal */
 #define SCIP_DEFAULT_IISFINDER_CHECKINITFEAS TRUE  /**< should the initial problem be checked for infeasibility */
-#define SCIP_DEFAULT_IISFINDER_SILENT        FALSE /**< should bounds of the problem be considered for removal */
+#define SCIP_DEFAULT_IISFINDER_SILENT        FALSE /**< should the IIS finders be run silently and output suppressed */
 #define SCIP_DEFAULT_IISFINDER_STOPAFTERONE  TRUE  /**< should the IIS search stop after a single IIS finder is run even if the result is not irreducible */
 #define SCIP_DEFAULT_IISFINDER_TIMELIM       1e+20 /**< maximal time in seconds for all IIS finders to run */
 #define SCIP_DEFAULT_IISFINDER_NODELIM       -1    /**< maximal number of nodes to process for all IIS finders (-1: no limit) */
@@ -1669,7 +1669,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "iis/silent",
-         "should the IIS finders be run silently",
+         "should the IIS finders be run silently and output suppressed",
          &(*set)->iisfinder_silent, FALSE, SCIP_DEFAULT_IISFINDER_SILENT,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,

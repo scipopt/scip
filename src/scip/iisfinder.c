@@ -227,6 +227,7 @@ SCIP_RETCODE SCIPiisGenerate(
    /* start timing */
    SCIP_CALL( SCIPgetRealParam(set->scip, "iis/time", &timelim) );
    SCIP_CALL( SCIPgetLongintParam(set->scip, "iis/nodes", &nodelim) );
+   SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/silent", &silent) );
 
    /* sort the iis finders by priority */
    SCIPsetSortIISfinders(set);
@@ -289,7 +290,6 @@ SCIP_RETCODE SCIPiisGenerate(
    }
 
    /* Try all IIS generators */
-   SCIPgetBoolParam(set->scip, "iis/silent", &silent);
    SCIPgetBoolParam(set->scip, "iis/stopafterone", &stopafterone);
    SCIPgetBoolParam(set->scip, "iis/removebounds", &removebounds);
    for( i = 0; i < set->niisfinders; ++i )
@@ -304,16 +304,16 @@ SCIP_RETCODE SCIPiisGenerate(
 
       /* start timing */
       SCIPclockStart(iisfinder->iisfindertime, set);
-
+   
+      SCIPinfoMessage(set->scip, NULL, "----- STARTING IIS FINDER %s -----\n", iisfinder->name);
       SCIP_CALL( iisfinder->iisfinderexec(iis, iisfinder, timelim, nodelim, removebounds, silent, &result) );
-      SCIPinfoMessage(set->scip, NULL, "After IIS algorithm %s: Have IS of size %d that is valid (%d) and irreducible (%d).\n", iisfinder->name, SCIPgetNOrigConss(iis->subscip), iis->valid, iis->irreducible);
       
       /* stop timing */
       SCIPclockStop(iisfinder->iisfindertime, set);
 
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
       
-      if( timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 || iis->nnodes > nodelim) )
+      if( timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim) )
          SCIPinfoMessage(set->scip, NULL, "Time or node limit hit. Stopping Search.\n");
       
       if( (stopafterone && (result == SCIP_SUCCESS)) || (iis->irreducible == TRUE) )
@@ -507,12 +507,14 @@ void SCIPiisfinderInfoMessage(
    int i;
    int nvars;
    int nbounds;
+   const char* valid = iis->valid ? "yes" : "no";
+   const char* irreducible = iis->irreducible ? "yes" : "no";
    
    scip = SCIPiisGetSubscip(iis);
    
    if( printheaders )
    {
-      SCIPinfoMessage(scip, NULL, "  cons  | bounds | valid  | minimal| nodes  |  time \n");
+      SCIPinfoMessage(scip, NULL, "  cons  | bounds | valid  | irreducible | nodes  |  time \n");
       return;
    }
    
@@ -526,7 +528,7 @@ void SCIPiisfinderInfoMessage(
       if( !SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
          nbounds += 1;
    }
-   SCIPinfoMessage(scip, NULL, "%7d |%7d |%7d |%7d |%7lld | %7f\n", SCIPgetNOrigConss(scip), nbounds, iis->valid, iis->irreducible, SCIPiisGetNNodes(iis), SCIPiisGetTime(iis));
+   SCIPinfoMessage(scip, NULL, "%7d |%7d |%7s | %11s |%7lld | %7f\n", SCIPgetNOrigConss(scip), nbounds, valid, irreducible, SCIPiisGetNNodes(iis), SCIPiisGetTime(iis));
    return;
 }
 

@@ -209,8 +209,7 @@ SCIP_RETCODE deletionSubproblem(
    if( retcode != SCIP_OKAY )
    {
       SCIP_CALL( SCIPfreeTransform(scip) );
-      if ( ! silent )
-         SCIPinfoMessage(scip, NULL, "Error in sub-scip with deleted constraints / bounds. Re-adding them.\n");
+      SCIPdebugMessage("Error in sub-scip with deleted constraints / bounds. Re-adding them.\n");
       if( delbounds )
          revertBndChgs(scip, vars, bounds, idxs, ndels, islb);
       else
