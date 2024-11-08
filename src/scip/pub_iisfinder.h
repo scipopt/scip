@@ -85,8 +85,16 @@ SCIP_Real SCIPiisfinderGetTime(
    );
 
 /** get number of times the IIS finder was called */
+SCIP_EXPORT
 SCIP_Longint SCIPiisfinderGetNCalls(
    SCIP_IISFINDER*       iisfinder           /**< IIS finder */
+   );
+
+/** prints output line during IIS calculations */
+SCIP_EXPORT
+void SCIPiisfinderInfoMessage(
+   SCIP_IIS*            iis,                 /**< pointer to the IIS */
+   SCIP_Bool            printheaders         /**< whether the headers should be printed instead of the info */
    );
 
 /** gets time in seconds used in the IIS calculations */
@@ -111,6 +119,33 @@ SCIP_Bool SCIPiisGetIrreducible(
 SCIP_EXPORT
 SCIP_Longint SCIPiisGetNNodes(
    SCIP_IIS*             iis                 /**< IIS data structure */
+   );
+
+/** Sets the flag that states whether the IIS subscip is valid. */
+SCIP_EXPORT
+void SCIPiisSetValid(
+   SCIP_IIS*             iis,                /**< IIS data structure */
+   SCIP_Bool             valid               /**< The new validity status of the IIS */
+   );
+
+/** Sets the flag that states whether the IIS subscip is irreducible. */
+SCIP_EXPORT
+void SCIPiisSetIrreducible(
+   SCIP_IIS*             iis,                /**< IIS data structure */
+   SCIP_Bool             irreducible         /**< The new irreducible status of the IIS */
+   );
+
+/** Increments the number of nodes in the IIS solve. */
+SCIP_EXPORT
+void SCIPiisAddNNodes(
+   SCIP_IIS*             iis,                /**< IIS data structure */
+   SCIP_Longint          nnodes              /**< The number of nodes to add to the IIS */
+   );
+
+/** get the subscip of an IIS */
+SCIP_EXPORT
+SCIP* SCIPiisGetSubscip(
+   SCIP_IIS*            iis                  /**< pointer to the IIS */
    );
 
 /** compares two IIS finders w. r. to their priority */

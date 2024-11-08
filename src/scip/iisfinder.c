@@ -340,6 +340,8 @@ SCIP_RETCODE SCIPiisGenerate(
          SCIPinfoMessage(set->scip, NULL, "Time or node limit hit. Stopping Search.\n");
    }
    
+   SCIPiisfinderInfoMessage(iis, FALSE);
+   
    /* stop timing */
    SCIPclockStop(iis->iistime, set);
    

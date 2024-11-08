@@ -134,12 +134,6 @@ SCIP_RETCODE SCIPsetIISfinderPriority(
    int                   priority            /**< new priority of the IIS finder */
    );
 
-/** prints output line during IIS calculations */
-void SCIPinfoIISfinderMessage(
-   SCIP_IIS*            iis,                 /**< pointer to the return the created IIS */
-   SCIP_Bool            printheaders         /**< whether the headers should be printed instead of the info */
-   );
-
 /** Gets the IIS storage.
  *
  *  @return the \ref SCIP_IIS iis storage.
@@ -163,29 +157,6 @@ void SCIPinfoIISfinderMessage(
  */
 SCIP_IIS* SCIPgetIIS(
    SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** Sets the flag that states whether the IIS subscip is valid. */
-void SCIPsetIISValid(
-   SCIP_IIS*             iis,                /**< IIS data structure */
-   SCIP_Bool             valid               /**< The new validity status of the IIS */
-   );
-
-/** Sets the flag that states whether the IIS subscip is irreducible. */
-void SCIPsetIISIrreducible(
-   SCIP_IIS*             iis,                /**< IIS data structure */
-   SCIP_Bool             irreducible         /**< The new irreducible status of the IIS */
-   );
-
-/** Increments the number of nodes in the IIS solve. */
-void SCIPaddIISNNodes(
-   SCIP_IIS*             iis,                /**< IIS data structure */
-   SCIP_Longint          nnodes              /**< The number of nodes to add to the IIS */
-   );
-
-/** Gets the IIS subscip. */
-SCIP* SCIPgetIISsubscip(
-   SCIP_IIS*             iis               /**< IIS data structure */
    );
 
 /** @} */

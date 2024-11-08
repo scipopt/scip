@@ -3982,7 +3982,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteIIS)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    
    iis = SCIPgetIIS(scip);
-   subscip = SCIPgetIISsubscip(iis);
+   subscip = SCIPiisGetSubscip(iis);
    
    if( subscip != NULL )
    {
