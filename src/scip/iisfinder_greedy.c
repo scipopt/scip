@@ -144,17 +144,19 @@ SCIP_RETCODE revertConssDeletions(
 
 /** solve subproblem for deletionFilter */
 static
-SCIP_RETCODE deletionFilterBoundsSubproblem(
+SCIP_RETCODE deletionSubproblem(
    SCIP_IIS*             iis,                /**< IIS data structure containing subscip */
-   SCIP_Bool             silent,             /**< run silently? */
+   SCIP_CONS**           conss,              /**< The array of constraints (may be a superset of the current constraints) */
+   SCIP_VAR**            vars,               /**< the array of vars */
+   int*                  idxs,               /**< the indices of the constraints / vars that will be deleted / bounds removed */
+   int                   ndels,              /**< the number of bounds that will be deleted */
    SCIP_Real             timelim,            /**< The global time limit on the IIS finder call */
-   SCIP_Longint          nodelim,            /**< The global node limit on the IIS finder call */
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
+   SCIP_Longint          nodelim,            /**< The global node limit on the IIS finder call */
    SCIP_Longint          nodelimperiter,     /**< maximum number of nodes per individual solve call */
-   SCIP_Bool             conservative,       /**< whether we treat a subproblem to be feasible, if it reached its node limt */
-   int                   ndelbounds,         /**< the number of bounds that will be deleted */
-   int*                  idxs,               /**< the indices of the constraints (in the conss array) that will be deleted */
-   SCIP_VAR**            vars,               /**< the array of constraints (may be a superset of the current constraints) */
+   SCIP_Bool             silent,             /**< run silently? */
+   SCIP_Bool             conservative,       /**< whether we treat a subproblem to be feasible, if it reaches some status that could result in infeasible, e.g. node limit */
+   SCIP_Bool             delbounds,          /**< whether bounds should be deleted instead of constraints */
    SCIP_Bool             islb,               /**< are the bounds that are being deleted LBs? */
    SCIP_Bool*            stop,               /**< pointer to store whether we have to stop */
    SCIP_Bool*            alldeletionssolved  /**< pointer to store whether all the subscips solved */
@@ -164,63 +166,78 @@ SCIP_RETCODE deletionFilterBoundsSubproblem(
    SCIP_Real* bounds;
    SCIP_RETCODE retcode;
    SCIP_STATUS status;
-   int j;
+   int i;
    
    *stop = FALSE;
    scip = SCIPgetIISsubscip(iis);
    
-   /* remove bounds */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &bounds, ndelbounds) );
-   for (j = 0; j < ndelbounds; ++j)
+   /* remove bounds or constraints*/
+   if( delbounds )
    {
-      if( islb )
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &bounds, ndels) );
+      for (i = 0; i < ndels; ++i)
       {
-         bounds[j] = SCIPvarGetLbOriginal(vars[idxs[j]]);
-         if( !SCIPisInfinity(scip, -bounds[j]) )
-            SCIPchgVarLb(scip, vars[idxs[j]], -SCIPinfinity(scip));
+         if( islb )
+         {
+            bounds[i] = SCIPvarGetLbOriginal(vars[idxs[i]]);
+            if( !SCIPisInfinity(scip, -bounds[i]) )
+               SCIPchgVarLb(scip, vars[idxs[i]], -SCIPinfinity(scip));
+         }
+         else
+         {
+            bounds[i] = SCIPvarGetUbOriginal(vars[idxs[i]]);
+            if( !SCIPisInfinity(scip, bounds[i]) )
+               SCIPchgVarUb(scip, vars[idxs[i]], SCIPinfinity(scip));
+         }
       }
-      else
+   }
+   else
+   {
+      for (i = 0; i < ndels; ++i)
       {
-         bounds[j] = SCIPvarGetUbOriginal(vars[idxs[j]]);
-         if( !SCIPisInfinity(scip, bounds[j]) )
-            SCIPchgVarUb(scip, vars[idxs[j]], SCIPinfinity(scip));
+         assert( SCIPconsIsInProb(conss[idxs[i]]) );
+         SCIP_CALL( SCIPcaptureCons(scip, conss[idxs[i]]) );
+         SCIP_CALL( SCIPdelCons(scip, conss[idxs[i]]) );
       }
    }
    
    /* solve problem until first solution is found or infeasibility has been proven */
    setLimits(scip, iis, timelim, timelimperiter, nodelim, nodelimperiter);
    retcode = SCIPsolve(scip);
-   
    SCIPaddIISNNodes(iis, SCIPgetNTotalNodes(scip));
    
    if( retcode != SCIP_OKAY )
    {
       SCIP_CALL( SCIPfreeTransform(scip) );
       if ( ! silent )
-         SCIPinfoMessage(scip, NULL, "Error in sub-scip with deleted bounds. Re-adding bounds.\n");
-      revertBndChgs(scip, vars, bounds, idxs, ndelbounds, islb);
+         SCIPinfoMessage(scip, NULL, "Error in sub-scip with deleted constraints / bounds. Re-adding them.\n");
+      if( delbounds )
+         revertBndChgs(scip, vars, bounds, idxs, ndels, islb);
+      else
+         SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, FALSE) );
       *alldeletionssolved = FALSE;
-      SCIPfreeBlockMemoryArray(scip, &bounds, ndelbounds);
+      SCIPfreeBlockMemoryArray(scip, &bounds, ndels);
       return SCIP_OKAY;
    }
    
    status = SCIPgetStatus(scip);
-   
-   /* free transform */
    SCIP_CALL( SCIPfreeTransform(scip) );
    
-   /* check status */
+   /* check status and handle accordingly */
    switch ( status )
    {
-      case SCIP_STATUS_USERINTERRUPT:    /* if an user interrupt occurred, just stop */
+      case SCIP_STATUS_USERINTERRUPT:    /* if a user interrupt occurred, just stop */
          if ( ! silent )
             SCIPinfoMessage(scip, NULL, "User interrupt. Stopping. \n");
-         revertBndChgs(scip, vars, bounds, idxs, ndelbounds, islb);
+         if( delbounds )
+            revertBndChgs(scip, vars, bounds, idxs, ndels, islb);
+         else
+            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, FALSE) );
          *stop = TRUE;
          *alldeletionssolved = FALSE;
          break;
       
-      case SCIP_STATUS_TIMELIMIT:        /* if we reached some limit */
+      case SCIP_STATUS_TIMELIMIT:        /* if we reached some status that may have ended up in an infeasible problem */
       case SCIP_STATUS_NODELIMIT:
       case SCIP_STATUS_TOTALNODELIMIT:
       case SCIP_STATUS_STALLNODELIMIT:
@@ -230,17 +247,20 @@ SCIP_RETCODE deletionFilterBoundsSubproblem(
       case SCIP_STATUS_INFORUNBD:
          *alldeletionssolved = FALSE;
          if ( ! silent )
-            SCIPinfoMessage(scip, NULL, "Some limit reached. Keeping bounds removed if non-conservative. \n");
+            SCIPinfoMessage(scip, NULL, "Some limit reached. Keeping bounds / constraints removed if non-conservative. \n");
          if( !conservative )
             SCIPsetIISValid(iis, FALSE);
-         if( conservative )
-            revertBndChgs(scip, vars, bounds, idxs, ndelbounds, islb);
+         if( conservative && delbounds )
+            revertBndChgs(scip, vars, bounds, idxs, ndels, islb);
+         SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, !conservative) );
          break;
       
       case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
          if ( ! silent )
-            SCIPinfoMessage(scip, NULL, "Subproblem with bounds removed infeasible. Keep bounds removed.\n");
+            SCIPinfoMessage(scip, NULL, "Subproblem with bounds / constraints removed infeasible. Keep them removed.\n");
          SCIPsetIISValid(iis, TRUE);
+         if( !delbounds )
+            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, TRUE) );
          break;
       
       case SCIP_STATUS_BESTSOLLIMIT:     /* we found a solution */
@@ -248,127 +268,25 @@ SCIP_RETCODE deletionFilterBoundsSubproblem(
       case SCIP_STATUS_OPTIMAL:
       case SCIP_STATUS_UNBOUNDED:
          if ( ! silent )
-            SCIPinfoMessage(scip, NULL, "Found solution to subproblem with bounds removed. Add bounds back.\n");
-         revertBndChgs(scip, vars, bounds, idxs, ndelbounds, islb);
+            SCIPinfoMessage(scip, NULL, "Found solution to subproblem with bounds / constraints removed. Add them back.\n");
+         if( delbounds )
+            revertBndChgs(scip, vars, bounds, idxs, ndels, islb);
+         else
+            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, FALSE) );
          break;
       
       case SCIP_STATUS_UNKNOWN:
       default:
          *alldeletionssolved = FALSE;
          SCIPerrorMessage("Unexpected return status %d in removed bounds subproblem. Exiting... \n", status);
-         SCIPfreeBlockMemoryArray(scip, &bounds, ndelbounds);
+         if( delbounds )
+            SCIPfreeBlockMemoryArray(scip, &bounds, ndels);
          return SCIP_ERROR;
    }
    
-   SCIPfreeBlockMemoryArray(scip, &bounds, ndelbounds);
-   return SCIP_OKAY;
-}
-
-/** solve subproblem for deletionFilter */
-static
-SCIP_RETCODE deletionFilterConsSubproblem(
-   SCIP_IIS*             iis,                /**< IIS data structure containing subscip  */
-   SCIP_Bool             silent,             /**< run silently? */
-   SCIP_Real             timelim,            /**< The global time limit on the IIS finder call */
-   SCIP_Longint          nodelim,            /**< The global node limit on the IIS finder call */
-   SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
-   SCIP_Longint          nodelimperiter,     /**< maximum number of nodes per individual solve call */
-   SCIP_Bool             conservative,       /**< whether we treat a subproblem to be feasible, if it reached its node limt */
-   int                   ndelconss,          /**< the number of constraints that will be deleted */
-   int*                  idxs,               /**< the indices of the constraints (in the conss array) that will be deleted */
-   SCIP_CONS**           conss,              /**< the array of constraints (may be a superset of the current constraints) */
-   SCIP_Bool*            stop,               /**< pointer to store whether we have to stop */
-   SCIP_Bool*            alldeletionssolved  /**< pointer to store whether all the subscips solved */
-   )
-{
-   SCIP* scip;
-   SCIP_RETCODE retcode;
-   SCIP_STATUS status;
-   int j;
-
-   assert( stop != NULL );
-   scip = SCIPgetIISsubscip(iis);
-
-   *stop = FALSE;
-
-   /* remove constraints */
-   for (j = 0; j < ndelconss; ++j)
-   {
-      assert( SCIPconsIsInProb(conss[idxs[j]]) );
-      SCIP_CALL( SCIPcaptureCons(scip, conss[idxs[j]]) );
-      SCIP_CALL( SCIPdelCons(scip, conss[idxs[j]]) );
-   }
-
-   /* solve problem until first solution is found or infeasibility has been proven */
-   setLimits(scip, iis, timelim, timelimperiter, nodelim, nodelimperiter);
-   retcode = SCIPsolve(scip);
+   if( delbounds )
+      SCIPfreeBlockMemoryArray(scip, &bounds, ndels);
    
-   SCIPaddIISNNodes(iis, SCIPgetNTotalNodes(scip));
-   
-   if( retcode != SCIP_OKAY )
-   {
-      SCIP_CALL( SCIPfreeTransform(scip) );
-      if ( ! silent )
-         SCIPinfoMessage(scip, NULL, "Error in sub-scip with deleted constraints. Re-add deleted constraints.\n");
-      SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndelconss, FALSE) );
-      *alldeletionssolved = FALSE;
-      return SCIP_OKAY;
-   }
-   status = SCIPgetStatus(scip);
-
-   /* free transform */
-   SCIP_CALL( SCIPfreeTransform(scip) );
-
-   /* check status */
-   switch ( status )
-   {
-   case SCIP_STATUS_USERINTERRUPT:    /* if an user interrupt occurred, just stop */
-      if ( ! silent )
-         SCIPinfoMessage(scip, NULL, "User interrupt. Stopping. \n");
-      SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndelconss, FALSE) );
-      *stop = TRUE;
-      *alldeletionssolved = FALSE;
-      break;
-
-   case SCIP_STATUS_TIMELIMIT:        /* if we reached some limit */
-   case SCIP_STATUS_NODELIMIT:
-   case SCIP_STATUS_TOTALNODELIMIT:
-   case SCIP_STATUS_STALLNODELIMIT:
-   case SCIP_STATUS_MEMLIMIT:
-   case SCIP_STATUS_GAPLIMIT:
-   case SCIP_STATUS_RESTARTLIMIT:
-   case SCIP_STATUS_INFORUNBD:
-      *alldeletionssolved = FALSE;
-      if ( ! silent )
-         SCIPinfoMessage(scip, NULL, "Some limit reached. Removing constraint batch if set as non-conservative. \n");
-      if( !conservative )
-         SCIPsetIISValid(iis, FALSE);
-      SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndelconss, !conservative) );
-      break;
-
-   case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
-      if ( ! silent )
-         SCIPinfoMessage(scip, NULL, "Subproblem with removed constraints infeasible. Remove constraint batch.\n");
-      SCIPsetIISValid(iis, TRUE);
-      SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndelconss, TRUE) );
-      break;
-
-   case SCIP_STATUS_BESTSOLLIMIT:     /* we found a solution */
-   case SCIP_STATUS_SOLLIMIT:
-   case SCIP_STATUS_OPTIMAL:
-   case SCIP_STATUS_UNBOUNDED:
-      if ( ! silent )
-         SCIPinfoMessage(scip, NULL, "Found solution for subproblem with constraints removed. Keeping constraint batch\n");
-      SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndelconss, FALSE) );
-      break;
-
-   case SCIP_STATUS_UNKNOWN:
-   default:
-      *alldeletionssolved = FALSE;
-      SCIPerrorMessage("Unexpected return status %d. Exiting ...\n", status);
-      return SCIP_ERROR;
-   }
-
    return SCIP_OKAY;
 }
 
@@ -516,9 +434,8 @@ SCIP_RETCODE deletionFilterBatch(
       i = i + k;
 
       /* treat subproblem */
-      SCIP_CALL( deletionFilterConsSubproblem(iis, silent, timelim, nodelim, timelimperiter,
-                                              nodelimperiter, conservative, k, idxs, conss,
-                                              &stopiter, alldeletionssolved) );
+      SCIP_CALL( deletionSubproblem(iis, conss, NULL, idxs, k, timelim, timelimperiter, nodelim, nodelimperiter,
+                                    silent, conservative, FALSE, FALSE, &stopiter, alldeletionssolved) );
       SCIPinfoIISfinderMessage(iis, FALSE);
       
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) > nodelim ) || stopiter )
@@ -569,16 +486,14 @@ SCIP_RETCODE deletionFilterBatch(
          i = i + k;
          
          /* treat subproblem with LB deletions */
-         SCIP_CALL( deletionFilterBoundsSubproblem(iis, silent, timelim, nodelim, timelimperiter,
-                                                   nodelimperiter, conservative, k, idxs, vars, TRUE,
-                                                   &stopiter, alldeletionssolved) );
+         SCIP_CALL( deletionSubproblem(iis, NULL, vars, idxs, k, timelim, timelimperiter, nodelim, nodelimperiter,
+                                       silent, conservative, TRUE, TRUE, &stopiter, alldeletionssolved) );
          if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) > nodelim ) || stopiter )
             break;
          
          /* treat subproblem with UB deletions */
-         SCIP_CALL( deletionFilterBoundsSubproblem(iis, silent, timelim, nodelim, timelimperiter,
-                                                   nodelimperiter, conservative, k, idxs, vars, FALSE,
-                                                   &stopiter, alldeletionssolved) );
+         SCIP_CALL( deletionSubproblem(iis, NULL, vars, idxs, k, timelim, timelimperiter, nodelim, nodelimperiter,
+                                       silent, conservative, TRUE, FALSE, &stopiter, alldeletionssolved) );
    
          if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) > nodelim ) || stopiter )
             break;

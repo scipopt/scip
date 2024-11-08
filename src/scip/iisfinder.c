@@ -95,16 +95,15 @@ SCIP_RETCODE createSubscipIIS(
    /* create problem in sub-SCIP */
    SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, &success) );
    
+   if( success == FALSE )
+      return SCIP_ERROR;
+   
    /* Remove the objective */
    vars = SCIPgetOrigVars(iis->subscip);
    nvars = SCIPgetNOrigVars(iis->subscip);
    for( i = 0; i < nvars; i++ )
       SCIP_CALL( SCIPchgVarObj(iis->subscip, vars[i], 0.0 ) );
    
-   if( success == FALSE )
-   {
-      return SCIP_ERROR;
-   }
    /* copy parameter settings */
    // TODO: Do we really want to copy the parameter settings?
    SCIP_CALL( SCIPcopyParamSettings(set->scip, iis->subscip) );
@@ -509,9 +508,6 @@ void SCIPiisfinderInfoMessage(
    
    scip = SCIPiisGetSubscip(iis);
    
-   if( SCIPgetVerbLevel(scip) <= SCIP_VERBLEVEL_DIALOG )
-      return;
-   
    if( printheaders )
    {
       SCIPinfoMessage(scip, NULL, "  cons  | bounds | valid  | minimal| nodes  |  time \n");
@@ -528,7 +524,7 @@ void SCIPiisfinderInfoMessage(
       if( !SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
          nbounds += 1;
    }
-   SCIPinfoMessage(scip, NULL, "%7d |%7d |%7d |%7d |%7lld |%7f\n", SCIPgetNOrigConss(scip), nbounds, iis->valid, iis->irreducible, SCIPiisGetNNodes(iis), SCIPiisGetTime(iis));
+   SCIPinfoMessage(scip, NULL, "%7d |%7d |%7d |%7d |%7lld | %7f\n", SCIPgetNOrigConss(scip), nbounds, iis->valid, iis->irreducible, SCIPiisGetNNodes(iis), SCIPiisGetTime(iis));
    return;
 }
 
