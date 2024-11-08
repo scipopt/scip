@@ -511,7 +511,7 @@ void SCIPiisfinderInfoMessage(
    
    if( printheaders )
    {
-      SCIPinfoMessage(scip, NULL, "  cons  | bounds | valid  | minimal|  time \n");
+      SCIPinfoMessage(scip, NULL, "  cons  | bounds | valid  | minimal| nodes  |  time \n");
       return;
    }
    
@@ -525,7 +525,7 @@ void SCIPiisfinderInfoMessage(
       if( !SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
          nbounds += 1;
    }
-   SCIPinfoMessage(scip, NULL, "%7d |%7d |%7d |%7d |%7f\n", SCIPgetNOrigConss(scip), nbounds, iis->valid, iis->irreducible, SCIPiisGetTime(iis));
+   SCIPinfoMessage(scip, NULL, "%7d |%7d |%7d |%7d |%7lld |%7f\n", SCIPgetNOrigConss(scip), nbounds, iis->valid, iis->irreducible, SCIPiisGetNNodes(iis), SCIPiisGetTime(iis));
    return;
 }
 
