@@ -519,6 +519,7 @@ SCIP_RETCODE deletionFilterBatch(
       SCIP_CALL( deletionFilterConsSubproblem(iis, silent, timelim, nodelim, timelimperiter,
                                               nodelimperiter, conservative, k, idxs, conss,
                                               &stopiter, alldeletionssolved) );
+      SCIPinfoIISfinderMessage(iis, FALSE);
       
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) > nodelim ) || stopiter )
          break;
@@ -581,6 +582,7 @@ SCIP_RETCODE deletionFilterBatch(
    
          if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) > nodelim ) || stopiter )
             break;
+         SCIPinfoIISfinderMessage(iis, FALSE);
       }
    
       SCIPfreeBlockMemoryArray(scip, &order, nvars);
@@ -679,6 +681,7 @@ SCIP_RETCODE additionFilterBatch(
       
       /* Solve the reduced problem */
       retcode = additionFilterConsSubproblem(iis, silent, timelim, nodelim, timelimperiter, nodelimperiter, &feasible, &stopiter);
+      SCIPinfoIISfinderMessage(iis, FALSE);
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) > nodelim ) || stopiter )
       {
          SCIP_CALL( SCIPfreeTransform(scip) );
@@ -716,7 +719,11 @@ SCIP_RETCODE additionFilterBatch(
                }
             }
             if( k > 0 )
-               SCIPinfoMessage(scip, NULL, "Added %d many constraints dynamically.\n", k);
+            {
+               if( !silent )
+                  SCIPinfoMessage(scip, NULL, "Added %d many constraints dynamically.\n", k);
+               SCIPinfoIISfinderMessage(iis, FALSE);
+            }
          }
       }
       else
@@ -904,7 +911,10 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    if( additive )
    {
       if( !silent )
-         SCIPinfoMessage(scip, NULL, "Starting greedy addition algorithm\n");
+      {
+         SCIPinfoMessage(scip, NULL, "----- STARTING GREEDY ADDITION ALGORITHM -----\n");
+      }
+      SCIPinfoIISfinderMessage(iis, TRUE);
       SCIP_CALL( additionFilterBatch(iis, timelim, nodelim, silent, randnumgen, timelimperiter, nodelimperiter, dynamicreordering, batchsize) );
       SCIPsetIISIrreducible(iis, FALSE);
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) > nodelim ) )
@@ -916,7 +926,10 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    else
    {
       if( !silent )
-         SCIPinfoMessage(scip, NULL, "Starting greedy deletion algorithm\n");
+      {
+         SCIPinfoMessage(scip, NULL, "----- STARTING GREEDY DELETION ALGORITHM -----\n");
+      }
+      SCIPinfoIISfinderMessage(iis, TRUE);
       SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, randnumgen, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) > nodelim ) )
       {
@@ -930,7 +943,10 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    if( delafteradd && additive )
    {
       if( !silent )
-         SCIPinfoMessage(scip, NULL, "Starting greedy deletion algorithm on reduced problem\n");
+      {
+         SCIPinfoMessage(scip, NULL, "----- STARTING GREEDY DELETION ALGORITHM FOLLOWING COMPLETED ADDITION ALGORITHM -----\n");
+      }
+      SCIPinfoIISfinderMessage(iis, TRUE);
       SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, randnumgen, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
       if( alldeletionssolved && batchsize == 1 )
          SCIPsetIISIrreducible(iis, TRUE);

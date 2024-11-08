@@ -327,7 +327,7 @@ SCIP_RETCODE SCIPiisGenerate(
    {
       SCIP_RANDNUMGEN* randnumgen;
       
-      SCIPinfoMessage(set->scip, NULL, "Performing greedy deletion with batchsize = 1 to ensure irreducible result.\n");
+      SCIPinfoMessage(set->scip, NULL, "----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
       
       if( !(iis->valid) )
          createSubscipIIS(set, iis, timelim, nodelim);
@@ -343,8 +343,6 @@ SCIP_RETCODE SCIPiisGenerate(
    
    /* stop timing */
    SCIPclockStop(iis->iistime, set);
-   SCIPinfoMessage(set->scip, NULL, "The original problem has %d many constraints.\n", SCIPgetNOrigConss(set->scip));
-   SCIPinfoMessage(set->scip, NULL, "The IIS has %d many constraints, has valid status (%d), and irreducible status (%d).\n", SCIPgetNOrigConss(iis->subscip), iis->valid, iis->irreducible);
    
    return SCIP_OKAY;
 }
@@ -509,25 +507,25 @@ void SCIPiisfinderInfoMessage(
    int nvars;
    int nbounds;
    
+   scip = SCIPiisGetSubscip(iis);
    
    if( printheaders )
    {
-      SCIPinfoMessage(scip, NULL, "  cons  | bounds | valid |minimal|  time \n");
+      SCIPinfoMessage(scip, NULL, "  cons  | bounds | valid  | minimal|  time \n");
       return;
    }
    
-   scip = SCIPiisGetSubscip(iis);
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);
    nbounds = 0;
    for( i = 0; i < nvars; i++ )
    {
-      if( SCIPisInfinity(scip, -SCIPvarGetLbOriginal(vars[i])) )
+      if( !SCIPisInfinity(scip, -SCIPvarGetLbOriginal(vars[i])) )
          nbounds += 1;
-      if( SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
+      if( !SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
          nbounds += 1;
    }
-   SCIPinfoMessage(scip, NULL, "%7d|%7d|%7d|%7d|%7f\n", SCIPgetNOrigConss(scip), nbounds, iis->valid, iis->irreducible, SCIPiisGetTime(iis));
+   SCIPinfoMessage(scip, NULL, "%7d |%7d |%7d |%7d |%7f\n", SCIPgetNOrigConss(scip), nbounds, iis->valid, iis->irreducible, SCIPiisGetTime(iis));
    return;
 }
 
