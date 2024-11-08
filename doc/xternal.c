@@ -339,6 +339,7 @@
 /**@page PROGRAMMING Programming with SCIP
  *
  * - @subpage CODE    "Coding style guidelines"
+ * - @subpage SRCORGA "Organization of source code"
  * - @subpage OBJ     "Creating, capturing, releasing, and adding data objects"
  * - @subpage MEMORY  "Using the memory functions of SCIP"
  * - @subpage DEBUG   "Debugging"
@@ -7839,6 +7840,30 @@
  * SCIP_STAGE_FREE         = 13         /**< SCIP data structures are being freed
  * \endcode
  * Most functions can be called in a subset of the stages, this is then documented, a runtime check is often added and will throw a \ref SCIP_INVALIDCALL if the stage is not allowed.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page SRCORGA Organization of Source Code
+ *
+ * The SCIP source code has different types of files, marked by their prefix. The following list gives an overview of the most important file types and their purpose.
+ *  @section COMPONENTS Modifying/Extending SCIP components
+ *  - Implementation of each component is split into a public API and an internal implementation.
+ *  - The internal implementation should be in a file <code><component>.c,h</code> and should not be included in the public API.
+ *  - <code>src/scip/pub_*.h</code> contains the public API of the corresponding component that does not need a SCIP instance, e.g., <code>src/scip/pub_var.h</code> contains the public API of the variable manipulation.
+ *  - <code>src/scip/scip_*.h</code> contains the public API of the corresponding component that needs a SCIP instance, e.g., <code>src/scip/scip_var.h</code> contains the public API of the variable manipulation.
+ *  These should be thin wrappers that call the internal methods in <code>var.h</code> and take a <code>SCIP *</code> as the first argument.
+ *  - All functions in the public API files, should be documented with doxygen comments, and prepended with <code>SCIP_EXPORT</code>.
+ *   These methods should be named SCIP<operation><component>, e.g., <code>SCIPcreateVar()</code>.
+ *  - The internal implementation should be in a file <code><component>.c,h</code> and should not be included in the public API. They should be functions that take a reference to the component and <code>SCIP_SET*,</code>, <code>SCIP_BLKMEM*</code> or <code>SCIP_STAT*</code>.
+ *    These internal methods should be named SCIP<component><operation>, e.g., <code>SCIPvarCreate()</code> and take a reference to the component as the first argument.
+ *  - Public types should be defined in <code>src/scip/type_*.h</code>.
+ *  - Structs used by the component should be defined in <code>src/scip/struct_<component>.h</code>.
+ *
+ *  @section PLUGINS Adding new plugins
+ *  - Each plugin implementation is in a file <code>src/scip/<plugin_name>_*.c,h</code>, e.g.,
+ *     <code>src/scip/cons_knapsack.c</code> is the Knapsack constraint handler plugin.
+ *  - The new plugin should be registered in default plugins in <code>src/scip/scipdefplugins.c</code>.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
