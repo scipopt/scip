@@ -1498,7 +1498,10 @@ SCIP_Real SCIPgetFirstLPLowerboundRoot(
       return SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->stat->firstlpdualbound);
 }
 
-/** the primal bound of the very first solution */
+/** gets the primal bound of the very first solution
+ *
+ * @return the primal bound of the very first solution
+ */
 SCIP_Real SCIPgetFirstPrimalBound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -4513,7 +4516,10 @@ void SCIPstoreSolutionGap(
    }
 }
 
-/** recomputes and returns the primal dual gap stored in the stats */
+/** recomputes and returns the primal dual gap stored in the stats
+ *
+ * @return returns the primal dual gap stored in the stats
+ */
 SCIP_EXPORT
 SCIP_Real SCIPgetPrimalDualIntegral(
    SCIP*                 scip                /**< SCIP data structure */

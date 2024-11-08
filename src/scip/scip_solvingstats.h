@@ -1003,7 +1003,15 @@ int SCIPgetNEnabledConss(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets average dual bound of all unprocessed nodes for original problem */
+/** gets average dual bound of all unprocessed nodes for original problem
+ *
+ *  @return the average dual bound of all unprocessed nodes for original problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_EXPORT
 SCIP_Real SCIPgetAvgDualbound(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1130,7 +1138,10 @@ SCIP_Real SCIPgetFirstLPLowerboundRoot(
    );
 
 
-/** the primal bound of the very first solution */
+/** gets the primal bound of the very first solution
+ *
+ * @return the primal bound of the very first solution
+ */
 SCIP_EXPORT
 SCIP_Real SCIPgetFirstPrimalBound(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1457,7 +1468,14 @@ SCIP_Real SCIPgetAvgPseudocostScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the average conflict score value over all variables */
+/** gets the average conflict score value over all variables
+ *
+ *  @return the average conflict score value over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 SCIP_EXPORT
 SCIP_Real SCIPgetAvgConflictScore(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2240,7 +2258,10 @@ void SCIPstoreSolutionGap(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** recomputes and returns the primal dual gap stored in the stats */
+/** recomputes and returns the primal dual gap stored in the stats
+ *
+ * @return returns the primal dual gap stored in the stats
+ */
 SCIP_EXPORT
 SCIP_Real SCIPgetPrimalDualIntegral(
    SCIP*                 scip                /**< SCIP data structure */
