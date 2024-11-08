@@ -509,6 +509,9 @@ void SCIPiisfinderInfoMessage(
    
    scip = SCIPiisGetSubscip(iis);
    
+   if( SCIPgetVerbLevel(scip) <= SCIP_VERBLEVEL_DIALOG )
+      return;
+   
    if( printheaders )
    {
       SCIPinfoMessage(scip, NULL, "  cons  | bounds | valid  | minimal| nodes  |  time \n");
