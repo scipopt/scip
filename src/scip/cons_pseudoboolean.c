@@ -5103,7 +5103,7 @@ SCIP_RETCODE correctConshdlrdata(
                activeconstant = 0.0;
                nactivevars = 1;
                SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activescalars, &nactivevars, nvars,
-                     &activeconstant, &requiredsize, TRUE) );
+                     &activeconstant, &requiredsize) );
                assert(requiredsize <= nvars);
 
                for( i = 0; i < nactivevars && del; ++i )
