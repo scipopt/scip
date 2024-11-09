@@ -2255,7 +2255,7 @@ void SCIPincAvgGMIeff(
    SCIPhistoryIncGMIeffSum(scip->stat->glbhistory, gmieff);
 }
 
-/** Increases the cumulative normalized efficacy of average (over all variables) GMI cuts
+/** returns the average normalized efficacy of a GMI cut over all variables
  *
  *  @return the average normalized efficacy of a GMI cut over all variables
  *
@@ -4485,7 +4485,6 @@ int SCIPgetNImplications(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
  *  @deprecated because binary implications are now stored as cliques, please use SCIPwriteCliqueGraph() instead
- *
  */ /*lint -e715*/
 SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -792,9 +792,9 @@ int SCIPgetNSepaRounds(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** get total number of cuts found so far; this includes global cuts from the cut pool as often as they are separated
+/** get total number of cuts added to the sepastore so far; this includes global cuts from the cut pool as often as they are separated
  *
- *  @return the total number of cuts found so far
+ *  @return the total number of cuts added to the sepastore so far
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
@@ -834,9 +834,9 @@ int SCIPgetNCutsApplied(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** get total number of constraints found in conflict analysis (conflict and reconvergence constraints)
+/** get total number of constraints found in conflict analysis (conflict, reconvergence constraints, and dual proofs)
  *
- *  @return the total number of constraints found in conflict analysis (conflict and reconvergence constraints)
+ *  @return the total number of constraints found in conflict analysis (conflict, reconvergence constraints, and dual proofs)
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -1044,6 +1044,7 @@ SCIP_Real SCIPgetAvgLowerbound(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetDualbound(
@@ -1227,6 +1228,7 @@ SCIP_Real SCIPgetCutoffbound(
  *       - \ref SCIP_STAGE_SOLVING
  *
  *  @note the given cutoff bound has to better or equal to known one (SCIPgetCutoffbound())
+ *  @note a given cutoff bound is also used for updating the objective limit, if possible
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPupdateCutoffbound(
@@ -1262,7 +1264,10 @@ SCIP_Bool SCIPisPrimalboundSol(
  *  or infinity, if they have opposite sign
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
@@ -1481,9 +1486,9 @@ SCIP_Real SCIPgetAvgConflictScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the average conflict score value over all variables, only using the conflict information of the current run
+/** gets the average conflict score value over all variables, only using the conflict score information of the current run
  *
- *  @return the average conflict score value over all variables, only using the conflict information of the current run
+ *  @return the average conflict score value over all variables, only using the conflict score information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -1623,9 +1628,9 @@ SCIP_Real SCIPgetAvgCutoffScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets the average cutoff score value over all variables, only using the cutoff information of the current run
+/** gets the average cutoff score value over all variables, only using the cutoff score information of the current run
  *
- *  @return the average cutoff score value over all variables, only using the cutoff information of the current run
+ *  @return the average cutoff score value over all variables, only using the cutoff score information of the current run
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -1661,11 +1666,12 @@ void SCIPincAvgGMIeff(
    SCIP_Real             gmieff              /**< average normalized GMI efficacy over all variables */
    );
 
-/** gets deterministic time number of LPs solved so far
+/** computes a deterministic measure of time from statistics
  *
- *  @return the total number of LPs solved so far
+ *  @return the deterministic  time
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
@@ -2242,7 +2248,7 @@ int SCIPgetNImplications(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
- *  @deprecated because binary implications are now stored as cliques
+ *  @deprecated because binary implications are now stored as cliques, please use SCIPwriteCliqueGraph() instead
  */
 SCIP_EXPORT
 SCIP_DEPRECATED
