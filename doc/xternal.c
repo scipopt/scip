@@ -7875,6 +7875,7 @@
  *     \ref cons_knapsack.c implements the Knapsack constraint handler plugin and
  *     \ref cons_knapsack.h declares its public API functions.
  *  - Public types that belong to a plugin are declared in its header, <code><type>_<name>.h</code>.
+ *  - API functions of plugins are named as <code>SCIP<operation>...<Name></code>, e.g., <code>SCIPincludeConshdlrAnd()</code>, <code>SCIPcreateConsAnd()</code>, or <code>SCIPgetNVarsAnd()</code>.
  *  - Plugins access only the public API.
  *  - Plugins that need to be included by default should be registered in <code>src/scip/scipdefplugins.c</code>.
  */
