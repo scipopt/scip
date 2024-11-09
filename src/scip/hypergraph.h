@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPhypergraphComputeVerticesEdges(
 /**
  * @brief computes all overlaps and stores overlaps' vertices and all edges' overlaps
  *
- * Requires \ref SCIPhypergraphHasVerticesEdges to be \c TRUE which results from
+ * Requires \ref SCIPhypergraphHasVertexEdges to be \c TRUE which results from
  * \ref SCIPhypergraphComputeVerticesEdges.
  */
 SCIP_RETCODE SCIPhypergraphComputeOverlaps(
@@ -267,7 +267,7 @@ SCIP_Bool SCIPhypergraphHasOverlapsEdges(
 /**
  * @brief returns whether vertices' incident overlaps are known
  *
- * Use \ref SCIPhypergraphComputeVertexOverlaps to compute them.
+ * Use \ref SCIPhypergraphComputeOverlaps to compute them.
  */
 SCIP_Bool SCIPhypergraphHasVertexOverlaps(
    SCIP_HYPERGRAPH*      hypergraph          /**< The hypergraph. */

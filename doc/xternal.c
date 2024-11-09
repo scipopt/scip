@@ -252,7 +252,7 @@
  * Alex is now ready to write his very first example, he creates a new folder `MinEx` under `examples` and puts two files in there:
  * `CMakeLists.txt`:
  * ```
- * cmake_minimum_required(VERSION 3.3)
+ * cmake_minimum_required(VERSION 3.11)
  *
  * project(minex)
  * find_package(SCIP REQUIRED)
@@ -405,23 +405,24 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
- * - \subpage RN81         "SCIP 8.1"
- * - \subpage RN80         "SCIP 8.0"
- * - \subpage RN70         "SCIP 7.0"
- * - \subpage RN60         "SCIP 6.0"
- * - \subpage RN50         "SCIP 5.0"
- * - \subpage RN40         "SCIP 4.0"
- * - \subpage RN32         "SCIP 3.2"
- * - \subpage RN31         "SCIP 3.1"
- * - \subpage RN30         "SCIP 3.0"
- * - \subpage RN21         "SCIP 2.1"
- * - \subpage RN20         "SCIP 2.0"
- * - \subpage RN12         "SCIP 1.2"
- * - \subpage RN11         "SCIP 1.1"
- * - \subpage RN10         "SCIP 1.0"
- * - \subpage RN09         "SCIP 0.9"
- * - \subpage RN08         "SCIP 0.8"
- * - \subpage RN07         "SCIP 0.7"
+ * - \subpage RN10         "SCIP 10"
+ * - \subpage RN9          "SCIP 9"
+ * - \subpage RN8          "SCIP 8"
+ * - \subpage RN7          "SCIP 7.0"
+ * - \subpage RN6          "SCIP 6.0"
+ * - \subpage RN5          "SCIP 5.0"
+ * - \subpage RN4          "SCIP 4.0"
+ * - \subpage RN3_2        "SCIP 3.2"
+ * - \subpage RN3_1        "SCIP 3.1"
+ * - \subpage RN3_0        "SCIP 3.0"
+ * - \subpage RN2_1        "SCIP 2.1"
+ * - \subpage RN2_0        "SCIP 2.0"
+ * - \subpage RN1_2        "SCIP 1.2"
+ * - \subpage RN1_1        "SCIP 1.1"
+ * - \subpage RN1_0        "SCIP 1.0"
+ * - \subpage RN0_9        "SCIP 0.9"
+ * - \subpage RN0_8        "SCIP 0.8"
+ * - \subpage RN0_7        "SCIP 0.7"
  *
  */
 
@@ -8797,10 +8798,12 @@
   * - There is a <a href="https://github.com/scipopt/MatlabSCIPInterface">Matlab interface</a>
   *   to use SCIP and SCIP-SDP from Matlab and Octave.
   * - <a href="https://github.com/scipopt/JSCIPOpt">JSCIPOpt</a> is an interface for Java.
+  * - <a href="https://github.com/scipopt/russcip">Russcip</a> is an interface for Rust.
+  * - <a href="https://github.com/scipopt/SCIPpp">SCIP++</a> is a modeling interface for C++.
   *
   * Contributions to these projects are very welcome.
   *
-  * There are also several third-party python interfaces to the \SCIP Optimization Suite:
+  * There are also many third-party python interfaces to the \SCIP Optimization Suite, for example:
   * - <a href="https://github.com/eomahony/Numberjack">NUMBERJACK</a> is a constraint programming platform implemented in python.
   *   It supports a variety of different solvers, one of them being the \SCIP Optimization Suite .
   * - <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
@@ -9049,6 +9052,18 @@
 /**@defgroup DecompMethods Decomposition data structure
  * @ingroup DataStructures
  * @brief methods for creating and accessing user decompositions
+ */
+
+/**@defgroup NetworkMatrix Network Matrix
+ * @ingroup DataStructures
+ * @brief methods for detecting network matrices and converting them to the underlying graphs
+ */
+
+/**@defgroup SymGraph Symmetry Detection Graph
+ * @ingroup DataStructures
+ * @brief methods for creating and manipulating symmetry detection graphs
+ *
+ * Below you find a list of functions to create and manipulate symmetry detection graphs.
  */
 
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
@@ -9457,7 +9472,7 @@
  */
 
 /**@defgroup PublicSymmetryMethods Symmetry
- * @ingroup INTERNALAPI
+ * @ingroup PUBLICCOREAPI
  * @brief methods for symmetry handling
  */
 

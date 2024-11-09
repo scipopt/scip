@@ -1,0 +1,16 @@
+STATISTICS
+  Problem name     : original
+  Variables        : 3 (0 binary, 0 integer, 0 implicit integer, 3 continuous)
+  Constraints      : 0 initial, 4 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [continuous] <Un_n1031422386>: obj=0, original bounds=[0,+inf]
+  [continuous] <Un_n1661446047>: obj=0, original bounds=[0,+inf]
+  [continuous] <Er_1730044232>: obj=0, original bounds=[-inf,+inf]
+CONSTRAINTS
+  [linear] <Av_n1485851798>:  +18<Un_n1031422386>[C] -82<Un_n1661446047>[C] == 0;
+  [linear] <Er_1725877638>:  +9.92489450183082<Un_n1031422386>[C] +130.800636512258<Un_n1661446047>[C] -<Er_1730044232>[C] == 0;
+  [linear] <Er_n249450092>:  +7.73294079669803e-07<Un_n1031422386>[C] +6.35687243279333e-09<Un_n1661446047>[C] == 1.41663814878146e-05;
+  [linear] <Er_n677581376>: <Un_n1031422386>[C] == 18.2865285485763;
+END

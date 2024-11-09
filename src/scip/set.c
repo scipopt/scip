@@ -69,7 +69,6 @@
 #include "scip/nlpi.h"
 #include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
-#include "scip/struct_paramset.h" /* for objectivestop deprecation */
 
 /*
  * Default settings
@@ -410,7 +409,7 @@
                                                  *   branching
                                                  */
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
-#define SCIP_DEFAULT_REOPT_SAVECONSPROP     FALSE/**< save constraint propagation */
+#define SCIP_DEFAULT_REOPT_SAVEPROP       FALSE /**< save constraint and propagator propagation */
 #define SCIP_DEFAULT_REOPT_USESPLITCONS    TRUE /**< use constraints to reconstruct the subtree pruned be dual reduction
                                                  *   when reactivating the node
                                                  */
@@ -1661,15 +1660,8 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->limit_absgap, FALSE, SCIP_DEFAULT_LIMIT_ABSGAP, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "limits/objectivestop",
-         "solving stops, if primal bound is at least as good as given value (deprecated primal)",
-         &(*set)->limit_primal, FALSE, SCIP_DEFAULT_LIMIT_PRIMAL, SCIP_REAL_MIN, SCIP_REAL_MAX,
-         SCIPparamChgdLimit, NULL) );
-   /* drop deprecated objectivestop */
-   --(*set)->paramset->nparams;
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/primal",
-         "solving stops, if primal bound is at least as good as given value (alias objectivestop)",
+         "solving stops, if primal bound is at least as good as given value",
          &(*set)->limit_primal, FALSE, SCIP_DEFAULT_LIMIT_PRIMAL, SCIP_REAL_MIN, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -2416,8 +2408,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/saveconsprop",
-         "save constraint propagations",
-         &(*set)->reopt_saveconsprop, TRUE, SCIP_DEFAULT_REOPT_SAVECONSPROP,
+         "save constraint and propagator propagations",
+         &(*set)->reopt_saveprop, TRUE, SCIP_DEFAULT_REOPT_SAVEPROP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/usesplitcons", "use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node",

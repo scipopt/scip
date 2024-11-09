@@ -449,12 +449,6 @@ SCIP_RETCODE initPresolve(
    assert(scip->transprob != NULL);
    assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
 
-   /* retransform all existing solutions to original problem space, because the transformed problem space may
-    * get modified in presolving and the solutions may become invalid for the transformed problem
-    */
-   SCIP_CALL( SCIPprimalRetransformSolutions(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
-         scip->eventqueue, scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp) );
-
    /* reset statistics for presolving and current branch and bound run */
    SCIPstatResetPresolving(scip->stat, scip->set, scip->transprob, scip->origprob);
 
@@ -471,6 +465,23 @@ SCIP_RETCODE initPresolve(
    SCIP_CALL( SCIPtreeCreatePresolvingRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->messagehdlr,
          scip->stat, scip->transprob, scip->origprob, scip->primal, scip->lp, scip->branchcand, scip->conflict,
          scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable) );
+
+   /* retransform all existing solutions to original problem space, because the transformed problem space may
+    * get modified in presolving and the solutions may become invalid for the transformed problem
+    */
+   SCIP_CALL( SCIPprimalRetransformSolutions(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter,
+         scip->eventqueue, scip->origprob, scip->transprob, scip->tree, scip->reopt, scip->lp) );
+
+   /* initialize lower bound of the presolving root node if a valid dual bound is at hand */
+   if( scip->transprob->dualbound != SCIP_INVALID ) /*lint !e777*/
+   {
+      scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
+      scip->tree->root->estimate = scip->tree->root->lowerbound;
+      scip->stat->rootlowerbound = scip->tree->root->lowerbound;
+
+      if( scip->set->misc_calcintegral )
+         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
+   }
 
    /* GCG wants to perform presolving during the reading process of a file reader;
     * hence the number of used buffers does not need to be zero, however, it should not
@@ -605,14 +616,6 @@ SCIP_RETCODE exitPresolve(
       /* if possible, scale objective function such that it becomes integral with gcd 1 */
       SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->primal,
             scip->tree, scip->reopt, scip->lp, scip->eventfilter, scip->eventqueue) );
-
-      scip->stat->lastlowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
-
-      /* we need to update the primal dual integral here to update the last{upper/dual}bound values after a restart */
-      if( scip->set->misc_calcintegral )
-      {
-         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
-      }
    }
 
    /* free temporary presolving root node */
@@ -671,7 +674,7 @@ SCIP_RETCODE presolveRound(
    SCIP_EVENT event;
    SCIP_Bool aborted;
    SCIP_Bool lastranpresol;
-#if 0
+#ifdef SCIP_DISABLED_CODE
    int oldpresolstart = 0;
    int oldpropstart = 0;
    int oldconsstart = 0;
@@ -721,7 +724,7 @@ SCIP_RETCODE presolveRound(
       i = *presolstart;
       j = *propstart;
       k = *consstart;
-#if 0
+#ifdef SCIP_DISABLED_CODE
       oldpresolstart = i;
       oldpropstart = j;
       oldconsstart = k;
@@ -1076,7 +1079,7 @@ SCIP_RETCODE presolveRound(
             SCIP_CALL( presolveRound(scip, timing, unbounded, infeasible, lastround, presolstart, presolend,
                   propstart, propend, consstart, consend) );
          }
-#if 0
+#ifdef SCIP_DISABLED_CODE
          /* run remaining exhaustive presolvers (if we did not start from the beginning anyway) */
          else if( (oldpresolstart > 0 || oldpropstart > 0 || oldconsstart > 0) && presolend == scip->set->npresols
             && propend == scip->set->nprops && consend == scip->set->nconshdlrs )
@@ -1532,21 +1535,21 @@ SCIP_RETCODE initSolve(
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventfilter, scip->eventqueue,
          scip->lp) );
 
-   /* update dual bound of the root node if a valid dual bound is at hand */
-   if( scip->transprob->dualbound < SCIP_INVALID )
-   {
-      SCIP_Real internobjval = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
-
-      scip->stat->lastlowerbound = internobjval;
-
-      SCIPnodeUpdateLowerbound(SCIPtreeGetRootNode(scip->tree), scip->stat, scip->set, scip->tree, scip->transprob,
-         scip->origprob, internobjval);
-   }
-
    /* try to transform original solutions to the transformed problem space */
    if( scip->set->misc_transorigsols )
    {
       SCIP_CALL( transformSols(scip) );
+   }
+
+   /* restore lower bound of the root node if a valid dual bound is at hand */
+   if( scip->transprob->dualbound != SCIP_INVALID ) /*lint !e777*/
+   {
+      scip->tree->root->lowerbound = SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->transprob->dualbound);
+      scip->tree->root->estimate = scip->tree->root->lowerbound;
+      scip->stat->rootlowerbound = scip->tree->root->lowerbound;
+
+      if( scip->set->misc_calcintegral )
+         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPinfinity(scip), scip->tree->root->lowerbound);
    }
 
    /* inform the transformed problem that the branch and bound process starts now */

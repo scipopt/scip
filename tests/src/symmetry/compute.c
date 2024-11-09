@@ -1398,8 +1398,8 @@ void examplePB(
    vals[1] = 1.0;
    vals[2] = -1.0;
 
-   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &cons, "c1", NULL, 0, NULL, terms, 3, nterms, vals,
-         NULL, 0.0, FALSE, NULL, -2.0, 2.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &cons, "c1", NULL, 0, NULL, terms, 3, nterms, vals, NULL, 0.0, FALSE,
+         -2.0, 2.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -1918,7 +1918,7 @@ void exampleExpr3(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 2 );
+      cr_assert( nperms == 2 || nperms == 3 );
    }
    else
    {

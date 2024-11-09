@@ -147,6 +147,7 @@ struct SCIP_LPi
    SCIP_CPXPARAM         curparam;           /**< current CPLEX parameters in the environment */
    CPXLPptr              cpxlp;              /**< CPLEX LP pointer */
    int                   solstat;            /**< solution status of last optimization call */
+   int                   method;             /**< solution method of last optimization call */
    SCIP_CPXPARAM         cpxparam;           /**< current parameter values for this LP */
    char*                 larray;             /**< array with 'L' entries for changing lower bounds */
    char*                 uarray;             /**< array with 'U' entries for changing upper bounds */
@@ -711,6 +712,7 @@ void invalidateSolution(
 {
    assert(lpi != NULL);
    lpi->solstat = -1;
+   lpi->method = CPX_ALG_NONE;
    lpi->instabilityignored = FALSE;
 }
 
@@ -1020,6 +1022,7 @@ static const char cpxname[]= {'C', 'P', 'L', 'E', 'X', ' ',
 #else
    (CPX_VERSION / 100) + '0', '.', ((CPX_VERSION % 100) / 10) + '0', '.', (CPX_VERSION % 10) + '0', '.', CPX_SUBVERSION + '0'
 #endif
+   , '\0'
 };
 
 
@@ -2293,15 +2296,15 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    }
 
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
+   lpi->method = CPX_ALG_PRIMAL;
    lpi->instabilityignored = FALSE;
 
    /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
-   if( lpi->solstat != CPX_STAT_INForUNBD )
+   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, &primalfeasible, &dualfeasible) );
+   if( lpi->solstat != CPX_STAT_INForUNBD && solntype != CPX_NO_SOLN )
       lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
    else
       lpi->iterations = 0;
-
-   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
 
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
@@ -2349,6 +2352,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
          assert( lpi->solstat != CPX_STAT_INForUNBD );
 
          lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
+         CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
@@ -2365,7 +2369,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
     * also for some pathological cases of infeasibility, e.g., contradictory bounds */
-   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
    lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    assert( lpi->solisbasic || lpi->solstat != CPX_STAT_OPTIMAL );
 
@@ -2418,15 +2421,15 @@ SCIP_RETCODE SCIPlpiSolveDual(
    }
 
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
+   lpi->method = CPX_ALG_DUAL;
    lpi->instabilityignored = FALSE;
 
    /* CPLEX outputs an error if the status is CPX_STAT_INForUNBD and the iterations are determined */
-   if( lpi->solstat != CPX_STAT_INForUNBD )
+   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, &primalfeasible, &dualfeasible) );
+   if( lpi->solstat != CPX_STAT_INForUNBD && solntype != CPX_NO_SOLN )
       lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
    else
       lpi->iterations = 0;
-
-   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
 
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
@@ -2460,7 +2463,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
          assert( lpi->solstat != CPX_STAT_INForUNBD );
 
          lpi->iterations += CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
-         CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
+         CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
          SCIPdebugMessage(" -> CPLEX returned solstat=%d (%d iterations)\n", lpi->solstat, lpi->iterations);
 
@@ -2478,7 +2481,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
    /* check whether the solution is basic: if Cplex, e.g., hits a time limit in data setup, this might not be the case,
     * also for some pathological cases of infeasibility, e.g., contradictory bounds
     */
-   CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
    lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    assert( lpi->solisbasic || lpi->solstat != CPX_STAT_OPTIMAL );
 
@@ -2601,9 +2603,10 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
 
    lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
    lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
+   lpi->method = CPX_ALG_BARRIER;
    lpi->instabilityignored = FALSE;
 
-   if( lpi->solstat != CPX_STAT_INForUNBD )
+   if( lpi->solstat != CPX_STAT_INForUNBD && solntype != CPX_NO_SOLN )
       lpi->iterations = CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
    else
       lpi->iterations = 0;
@@ -2635,12 +2638,17 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       lpi->solisbasic = (solntype == CPX_BASIC_SOLN);
       lpi->solstat = CPXgetstat(lpi->cpxenv, lpi->cpxlp);
       lpi->instabilityignored = FALSE;
-      assert( lpi->solstat != CPX_STAT_INForUNBD );
 
       lpi->iterations += CPXgetbaritcnt(lpi->cpxenv, lpi->cpxlp);
       SCIPdebugMessage(" -> CPLEX returned solstat=%d\n", lpi->solstat);
 
       setIntParam(lpi, CPX_PARAM_PREIND, CPX_ON);
+
+      if( lpi->solstat == CPX_STAT_INForUNBD )
+      {
+         /* if we could not resolve CPX_STAT_INForUNBD, we use the dual simplex */
+         SCIP_CALL( SCIPlpiSolveDual(lpi) );
+      }
    }
 
    return SCIP_OKAY;
@@ -3089,10 +3097,10 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
 
    /* If the solution status of CPLEX is CPX_STAT_UNBOUNDED, it only means, there is an unbounded ray,
     * but not necessarily a feasible primal solution. If primalfeasible == FALSE, we cannot conclude,
-    * that the problem is unbounded
+    * that the problem is unbounded.
     */
    return ((primalfeasible && (lpi->solstat == CPX_STAT_UNBOUNDED || lpi->solstat == CPX_STAT_INForUNBD))
-      || lpi->solstat == CPX_STAT_OPTIMAL_FACE_UNBOUNDED);
+      || lpi->solstat == CPX_STAT_OPTIMAL_FACE_UNBOUNDED || (primalfeasible && lpi->solstat == CPX_STAT_ABORT_PRIM_OBJ_LIM && lpi->method == CPX_ALG_BARRIER));
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -3111,7 +3119,8 @@ SCIP_Bool SCIPlpiIsPrimalInfeasible(
 
    ABORT_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
 
-   return (lpi->solstat == CPX_STAT_INFEASIBLE || (lpi->solstat == CPX_STAT_INForUNBD && dualfeasible));
+   return (lpi->solstat == CPX_STAT_INFEASIBLE || (lpi->solstat == CPX_STAT_INForUNBD && dualfeasible)
+      || (lpi->solstat == CPX_STAT_ABORT_DUAL_OBJ_LIM && lpi->method == CPX_ALG_BARRIER));
 }
 
 /** returns TRUE iff LP is proven to be primal feasible */
@@ -3158,7 +3167,7 @@ SCIP_Bool SCIPlpiHasDualRay(
    assert(lpi->cpxenv != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == CPX_STAT_INFEASIBLE && CPXgetmethod(lpi->cpxenv, lpi->cpxlp) == CPX_ALG_DUAL);
+   return (lpi->solstat == CPX_STAT_INFEASIBLE && lpi->method == CPX_ALG_DUAL);
 }
 
 /** returns TRUE iff LP is proven to be dual unbounded */
@@ -3177,7 +3186,8 @@ SCIP_Bool SCIPlpiIsDualUnbounded(
 
    ABORT_ZERO( CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, NULL, &dualfeasible) );
 
-   return (dualfeasible && (lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_INForUNBD));
+   return (dualfeasible && ((lpi->solstat == CPX_STAT_INFEASIBLE || lpi->solstat == CPX_STAT_INForUNBD)
+         || (lpi->solstat == CPX_STAT_ABORT_DUAL_OBJ_LIM && lpi->method == CPX_ALG_BARRIER)));
 }
 
 /** returns TRUE iff LP is proven to be dual infeasible */
@@ -3198,7 +3208,8 @@ SCIP_Bool SCIPlpiIsDualInfeasible(
 
    return (lpi->solstat == CPX_STAT_UNBOUNDED
       || lpi->solstat == CPX_STAT_OPTIMAL_FACE_UNBOUNDED
-      || (lpi->solstat == CPX_STAT_INForUNBD && primalfeasible));
+      || (lpi->solstat == CPX_STAT_INForUNBD && primalfeasible)
+      || (lpi->solstat == CPX_STAT_ABORT_PRIM_OBJ_LIM && lpi->method == CPX_ALG_BARRIER));
 }
 
 /** returns TRUE iff LP is proven to be dual feasible */
@@ -3300,9 +3311,14 @@ SCIP_Bool SCIPlpiIsObjlimExc(
    assert(lpi != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == CPX_STAT_ABORT_OBJ_LIM
-      || lpi->solstat == CPX_STAT_ABORT_DUAL_OBJ_LIM
-      || lpi->solstat == CPX_STAT_ABORT_PRIM_OBJ_LIM);
+   if( lpi->solstat == CPX_STAT_ABORT_OBJ_LIM )
+      return TRUE;
+   else if( lpi->solstat == CPX_STAT_ABORT_DUAL_OBJ_LIM || lpi->solstat == CPX_STAT_ABORT_PRIM_OBJ_LIM )
+   {
+      if( lpi->method != CPX_ALG_BARRIER )
+         return TRUE;
+   }
+   return FALSE;
 }
 
 /** returns TRUE iff the iteration limit was reached */
@@ -3491,7 +3507,6 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
    )
 {
    int solntype;
-   int what;
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -3502,26 +3517,28 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 
    SCIPdebugMessage("requesting solution quality from CPLEX: quality %d\n", qualityindicator);
 
-   switch( qualityindicator )
-   {
-   case SCIP_LPSOLQUALITY_ESTIMCONDITION:
-      what = CPX_KAPPA;
-      break;
-
-   case SCIP_LPSOLQUALITY_EXACTCONDITION:
-      what = CPX_EXACT_KAPPA;
-      break;
-
-   default:
-      SCIPerrorMessage("Solution quality %d unknown.\n", qualityindicator);
-      return SCIP_INVALIDDATA;
-   }
-
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, &solntype, NULL, NULL) );
 
    if( solntype == CPX_BASIC_SOLN )
    {
-      CHECK_ZERO( lpi->messagehdlr, CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what) );
+      int what;
+
+      switch( qualityindicator )
+      {
+      case SCIP_LPSOLQUALITY_ESTIMCONDITION:
+         what = CPX_KAPPA;
+         break;
+
+      case SCIP_LPSOLQUALITY_EXACTCONDITION:
+         what = CPX_EXACT_KAPPA;
+         break;
+
+      default:
+         SCIPerrorMessage("Solution quality %d unknown.\n", qualityindicator);
+         return SCIP_INVALIDDATA;
+      }
+
+      (void) CPXgetdblquality(lpi->cpxenv, lpi->cpxlp, quality, what);
    }
 
    return SCIP_OKAY;
