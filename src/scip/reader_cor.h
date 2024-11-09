@@ -85,7 +85,7 @@ SCIP_RETCODE SCIPreadCor(
 
 /** frees the COR reader data */
 SCIP_EXPORT
-SCIP_RETCODE SCIPfreeCorReaderdata(
+SCIP_RETCODE SCIPfreeReaderdataCor(
    SCIP*                 scip                /**< the SCIP data structure */
    );
 

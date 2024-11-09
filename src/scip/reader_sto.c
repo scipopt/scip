@@ -2878,7 +2878,7 @@ int SCIPstoGetNScenarios(
 }
 
 /** frees the STO reader data */
-SCIP_RETCODE SCIPfreeStoReaderdata(
+SCIP_RETCODE SCIPfreeReaderdataSto(
    SCIP*                 scip                /**< the SCIP data structure */
    )
 {

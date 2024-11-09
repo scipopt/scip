@@ -850,8 +850,8 @@ SCIP_DECL_READERREAD(readerReadTim)
     * data based on the data from the TIM file. For most readers, there is no problem data stored in the reader data,
     * and hence the reader data doesn't need to be freed.
     */
-   SCIP_CALL( SCIPfreeTimReaderdata(scip) );
-   SCIP_CALL( SCIPfreeStoReaderdata(scip) );
+   SCIP_CALL( SCIPfreeReaderdataTim(scip) );
+   SCIP_CALL( SCIPfreeReaderdataSto(scip) );
 
    SCIP_CALL( SCIPreadTim(scip, filename, result) );
 
@@ -927,7 +927,7 @@ SCIP_RETCODE SCIPreadTim(
 }
 
 /** frees the reader data for the tim file */
-SCIP_RETCODE SCIPfreeTimReaderdata(
+SCIP_RETCODE SCIPfreeReaderdataTim(
    SCIP*                 scip                /**< the SCIP data structure */
    )
 {

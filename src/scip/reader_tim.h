@@ -86,7 +86,7 @@ SCIP_RETCODE SCIPreadTim(
 
 /** frees the reader data for the tim file */
 SCIP_EXPORT
-SCIP_RETCODE SCIPfreeTimReaderdata(
+SCIP_RETCODE SCIPfreeReaderdataTim(
    SCIP*                 scip                /**< the SCIP data structure */
    );
 

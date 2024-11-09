@@ -217,9 +217,9 @@ SCIP_RETCODE SCIPreadCor(
     * in the reader data, and hence the data doesn't need to be freed.
     */
    SCIP_CALL( SCIPfreeProb(scip) );
-   SCIP_CALL( SCIPfreeCorReaderdata(scip) );
-   SCIP_CALL( SCIPfreeTimReaderdata(scip) );
-   SCIP_CALL( SCIPfreeStoReaderdata(scip) );
+   SCIP_CALL( SCIPfreeReaderdataCor(scip) );
+   SCIP_CALL( SCIPfreeReaderdataTim(scip) );
+   SCIP_CALL( SCIPfreeReaderdataSto(scip) );
 
    /* creating the reader data at the start of the instance read */
    SCIP_CALL( createReaderdata(scip, readerdata) );
@@ -234,7 +234,7 @@ SCIP_RETCODE SCIPreadCor(
 }
 
 /** frees the COR reader data */
-SCIP_RETCODE SCIPfreeCorReaderdata(
+SCIP_RETCODE SCIPfreeReaderdataCor(
    SCIP*                 scip                /**< the SCIP data structure */
    )
 {
