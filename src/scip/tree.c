@@ -1252,7 +1252,8 @@ SCIP_RETCODE SCIPnodeCutoff(
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
-   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE) || !set->misc_calcintegral || SCIPtreeGetLowerbound(tree, set) == stat->lastlowerbound); /*lint !e777*/
+   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
+      || !set->misc_calcintegral || SCIPsetIsRelEQ(set, SCIPtreeGetLowerbound(tree, set), stat->lastlowerbound));
 
    SCIPsetDebugMsg(set, "cutting off %s node #%" SCIP_LONGINT_FORMAT " at depth %d (cutoffdepth: %d)\n",
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
@@ -2389,7 +2390,8 @@ void SCIPnodeUpdateLowerbound(
    assert(stat != NULL);
    assert(set != NULL);
    assert(!SCIPsetIsInfinity(set, newbound));
-   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE) || !set->misc_calcintegral || SCIPtreeGetLowerbound(tree, set) == stat->lastlowerbound); /*lint !e777*/
+   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
+      || !set->misc_calcintegral || SCIPsetIsRelEQ(set, SCIPtreeGetLowerbound(tree, set), stat->lastlowerbound));
 
    if( SCIPnodeGetLowerbound(node) < newbound )
    {
@@ -4495,7 +4497,10 @@ SCIP_RETCODE SCIPnodeFocus(
 
          /* remove node from the queue */
          SCIP_CALL( SCIPnodepqRemove(tree->leaves, set, *node) );
+
          (*node)->cutoff = TRUE;
+         (*node)->lowerbound = SCIPsetInfinity(set);
+         (*node)->estimate = SCIPsetInfinity(set);
 
          if( (*node)->depth == 0 )
             stat->rootlowerbound = SCIPsetInfinity(set);
