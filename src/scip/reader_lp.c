@@ -783,7 +783,7 @@ SCIP_Bool isValueRational(
    assert(lpinput != NULL);
    assert(value != NULL);
 
-   if( strcasecmp(lpinput->token, "INFINITY") == 0 || strcasecmp(lpinput->token, "INF") == 0 )
+   if( SCIPstrcasecmp(lpinput->token, "INFINITY") == 0 || SCIPstrcasecmp(lpinput->token, "INF") == 0 )
    {
       RatSetString(value, "inf");
       return TRUE;
@@ -2600,7 +2600,7 @@ SCIP_RETCODE readBoundsRational(
                goto TERMINATE;
             }
          }
-         else if( strcasecmp(lpinput->token, "FREE") == 0 )
+         else if( SCIPstrcasecmp(lpinput->token, "FREE") == 0 )
          {
             if( leftsense != LP_SENSE_NOTHING )
             {
