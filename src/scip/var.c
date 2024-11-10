@@ -4127,7 +4127,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
                {
                   activevarssize *= 2;
                   SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
-                  assert(nactivevars <= activevarssize);
+                  assert(nactivevars < activevarssize);
                }
                activevars[nactivevars++] = multvar;
             }
