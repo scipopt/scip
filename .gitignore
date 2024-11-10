@@ -27,6 +27,7 @@ build*
 debug/
 release/
 cmake-build-debug/
+cmake-build-release/
 
 # check folder, files created by or for `make test`
 check/results/

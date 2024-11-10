@@ -413,6 +413,14 @@ SCIP_Bool SCIPbendersInStrengthenRound(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
+/** returns whether at least one of the subproblems has been identified as infeasible.
+ *  NOTE: this is without any variable fixing being performed
+ */
+SCIP_EXPORT
+SCIP_Bool SCIPbendersSubproblemsAreInfeasible(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
 /** solves the LP of the Benders' decomposition subproblem
  *
  *  This requires that the subproblem is in probing mode.

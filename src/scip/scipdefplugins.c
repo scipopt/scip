@@ -111,6 +111,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolDualinfer(scip) );
    SCIP_CALL( SCIPincludePresolGateextraction(scip) );
    SCIP_CALL( SCIPincludePresolImplics(scip) );
+   SCIP_CALL( SCIPincludePresolImplint(scip) );
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
 #ifdef SCIP_WITH_PAPILO
    SCIP_CALL( SCIPincludePresolMILP(scip) );

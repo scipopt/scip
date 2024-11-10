@@ -40,7 +40,8 @@
 
 #include <assert.h>
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _MSC_VER
+#define strcasecmp _stricmp
 #else
 #include <strings.h> /*lint --e{766}*/
 #endif

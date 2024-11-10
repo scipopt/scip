@@ -175,12 +175,12 @@ SCIP_RETCODE branch(
          /* update the lower bounds in the children */
          if( allcolsinlp && !exactsolve )
          {
-            if( bestdownvalid )
+            if( downchild != NULL && bestdownvalid )
             {
                SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdown) );
                SCIPdebugMsg(scip, " -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
             }
-            if( bestupvalid )
+            if( upchild != NULL && bestupvalid )
             {
                SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestup) );
                SCIPdebugMsg(scip, " -> up child's lowerbound:   %g\n", SCIPnodeGetLowerbound(upchild));

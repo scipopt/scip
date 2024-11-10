@@ -2404,37 +2404,6 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSoc)
    return SCIP_OKAY;
 }
 
-
-/** callback to be called in initialization */
-#ifdef SCIP_DISABLED_CODE
-static
-SCIP_DECL_NLHDLRINIT(nlhdlrInitSoc)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrInitSoc NULL
-#endif
-
-
-/** callback to be called in deinitialization */
-#ifdef SCIP_DISABLED_CODE
-static
-SCIP_DECL_NLHDLREXIT(nlhdlrExitSoc)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrExitSoc NULL
-#endif
-
-
 /** callback to detect structure in expression tree */
 static
 SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
@@ -3164,7 +3133,6 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrSoc);
    SCIPnlhdlrSetFreeHdlrData(nlhdlr, nlhdlrFreehdlrdataSoc);
    SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataSoc);
-   SCIPnlhdlrSetInitExit(nlhdlr, nlhdlrInitSoc, nlhdlrExitSoc);
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, NULL, nlhdlrExitSepaSoc);
    SCIPnlhdlrSetSollinearize(nlhdlr, nlhdlrSollinearizeSoc);
 

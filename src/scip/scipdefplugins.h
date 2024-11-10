@@ -184,6 +184,7 @@
 #include "scip/presol_dualinfer.h"
 #include "scip/presol_gateextraction.h"
 #include "scip/presol_implics.h"
+#include "scip/presol_implint.h"
 #include "scip/presol_inttobinary.h"
 #include "scip/presol_milp.h"
 #include "scip/presol_redvub.h"

@@ -385,7 +385,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
       /* if the new solution cuts off the current node due to a new primal solution (via the cutoff bound) interrupt
        * calling the remaining heuristics
        */
-      if( (result == SCIP_FOUNDSOL && lowerbound > primal->cutoffbound) || SCIPsolveIsStopped(set, stat, FALSE) )
+      if( SCIPsolveIsStopped(set, stat, FALSE) || ( result == SCIP_FOUNDSOL && SCIPsetIsGE(set, lowerbound, primal->cutoffbound) ) )
          break;
 
       /* check if the problem is proven to be unbounded, currently this happens only in reoptimization */
@@ -1320,8 +1320,6 @@ SCIP_RETCODE initLP(
    {
       assert(SCIPlpGetNCols(lp) == 0);
       assert(SCIPlpGetNRows(lp) == 0);
-      assert(lp->nremovablecols == 0);
-      assert(lp->nremovablerows == 0);
 
       /* store number of variables for later */
       oldnvars = transprob->nvars;
@@ -1331,7 +1329,7 @@ SCIP_RETCODE initLP(
 
       /* add all initial variables to LP */
       SCIPsetDebugMsg(set, "init LP: initial columns\n");
-      for( v = 0; v < transprob->nvars && !(*cutoff); ++v )
+      for( v = 0; v < transprob->nvars; ++v )
       {
          var = transprob->vars[v];
          assert(SCIPvarGetProbindex(var) >= 0);
@@ -1339,35 +1337,43 @@ SCIP_RETCODE initLP(
          if( SCIPvarIsInitial(var) )
          {
             SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
-         }
 
-         /* check for empty domains (necessary if no presolving was performed) */
-         if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
-            *cutoff = TRUE;
+            /* check for empty domains (necessary if no presolving was performed) */
+            if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            {
+               *cutoff = TRUE;
+               break;
+            }
+         }
       }
+
       assert(lp->nremovablecols == 0);
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, eventqueue, transprob, tree, lp) );
+      assert(lp->nremovablerows == 0);
 
       /* inform pricing storage, that initial LP setup is now finished */
       SCIPpricestoreEndInitialLP(pricestore);
-   }
 
-   if( *cutoff )
-      return SCIP_OKAY;
+      if( *cutoff )
+         return SCIP_OKAY;
+   }
 
    /* put all initial constraints into the LP */
    /* @todo check whether we jumped through the tree */
    SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
          eventfilter, cliquetable, root, TRUE, cutoff) );
 
+   if( *cutoff )
+      return SCIP_OKAY;
+
    /* putting all initial constraints into the LP might have added new variables */
-   if( root && !(*cutoff) && transprob->nvars > oldnvars )
+   if( root && transprob->nvars > oldnvars )
    {
       /* inform pricing storage, that LP is now filled with initial data */
       SCIPpricestoreStartInitialLP(pricestore);
 
       /* check all initial variables */
-      for( v = 0; v < transprob->nvars && !(*cutoff); ++v )
+      for( v = 0; v < transprob->nvars; ++v )
       {
          var = transprob->vars[v];
          assert(SCIPvarGetProbindex(var) >= 0);
@@ -1375,13 +1381,16 @@ SCIP_RETCODE initLP(
          if( SCIPvarIsInitial(var) && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN || !SCIPcolIsInLP(SCIPvarGetCol(var))) )
          {
             SCIP_CALL( SCIPpricestoreAddVar(pricestore, blkmem, set, eventqueue, lp, var, 0.0, TRUE) );
-         }
 
-         /* check for empty domains (necessary if no presolving was performed) */
-         if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
-            *cutoff = TRUE;
+            /* check for empty domains (necessary if no presolving was performed) */
+            if( SCIPsetIsGT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            {
+               *cutoff = TRUE;
+               break;
+            }
+         }
       }
-      assert(lp->nremovablecols == 0);
+
       SCIP_CALL( SCIPpricestoreApplyVars(pricestore, blkmem, set, stat, eventqueue, transprob, tree, lp) );
 
       /* inform pricing storage, that initial LP setup is now finished */
@@ -3161,7 +3170,7 @@ SCIP_RETCODE applyBounding(
          }
 
          /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
-         if( pseudoobjval >= primal->cutoffbound && !SCIPsetIsInfinity(set, primal->cutoffbound) && !SCIPsetIsInfinity(set, -pseudoobjval) )
+         if( !SCIPsetIsInfinity(set, -pseudoobjval) && !SCIPsetIsInfinity(set, primal->cutoffbound) && SCIPsetIsGE(set, pseudoobjval, primal->cutoffbound) )
          {
             SCIP_CALL( SCIPconflictAnalyzePseudo(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, NULL) );
          }
@@ -3644,7 +3653,7 @@ SCIP_RETCODE enforceConstraints(
    else
    {
       pseudoobjval = SCIPlpGetPseudoObjval(lp, set, prob);
-      objinfeasible = SCIPsetIsFeasLT(set, pseudoobjval, SCIPnodeGetLowerbound(SCIPtreeGetFocusNode(tree)));
+      objinfeasible = SCIPsetIsDualfeasLT(set, pseudoobjval, SCIPnodeGetLowerbound(SCIPtreeGetFocusNode(tree)));
    }
 
    /* during constraint enforcement, generated cuts should enter the LP in any case; otherwise, a constraint handler
@@ -4943,7 +4952,7 @@ SCIP_RETCODE solveNode(
    if( actdepth == 0 && !(*cutoff) && !(*unbounded) && !(*postpone) )
    {
       /* the root pseudo objective value and pseudo objective value should be equal in the root node */
-      assert(SCIPsetIsFeasEQ(set, SCIPlpGetGlobalPseudoObjval(lp, set, transprob), SCIPlpGetPseudoObjval(lp, set, transprob)));
+      assert(SCIPsetIsRelEQ(set, SCIPlpGetGlobalPseudoObjval(lp, set, transprob), SCIPlpGetPseudoObjval(lp, set, transprob)));
 
       SCIPprobStoreRootSol(transprob, set, stat, lp, SCIPtreeHasFocusNodeLP(tree));
    }

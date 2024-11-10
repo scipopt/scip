@@ -252,7 +252,7 @@
  * Alex is now ready to write his very first example, he creates a new folder `MinEx` under `examples` and puts two files in there:
  * `CMakeLists.txt`:
  * ```
- * cmake_minimum_required(VERSION 3.3)
+ * cmake_minimum_required(VERSION 3.11)
  *
  * project(minex)
  * find_package(SCIP REQUIRED)
@@ -9080,6 +9080,11 @@
 /**@defgroup DecompMethods Decomposition data structure
  * @ingroup DataStructures
  * @brief methods for creating and accessing user decompositions
+ */
+
+/**@defgroup NetworkMatrix Network Matrix
+ * @ingroup DataStructures
+ * @brief methods for detecting network matrices and converting them to the underlying graphs
  */
 
 /**@defgroup SymGraph Symmetry Detection Graph

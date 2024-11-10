@@ -70,7 +70,6 @@
 #include "scip/nlpi.h"
 #include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
-#include "scip/struct_paramset.h" /* for objectivestop deprecation */
 
 /*
  * Default settings
@@ -1695,15 +1694,8 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->limit_absgap, FALSE, SCIP_DEFAULT_LIMIT_ABSGAP, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "limits/objectivestop",
-         "solving stops, if primal bound is at least as good as given value (deprecated primal)",
-         &(*set)->limit_primal, FALSE, SCIP_DEFAULT_LIMIT_PRIMAL, SCIP_REAL_MIN, SCIP_REAL_MAX,
-         SCIPparamChgdLimit, NULL) );
-   /* drop deprecated objectivestop */
-   --(*set)->paramset->nparams;
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/primal",
-         "solving stops, if primal bound is at least as good as given value (alias objectivestop)",
+         "solving stops, if primal bound is at least as good as given value",
          &(*set)->limit_primal, FALSE, SCIP_DEFAULT_LIMIT_PRIMAL, SCIP_REAL_MIN, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

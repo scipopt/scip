@@ -211,12 +211,12 @@ SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
 
-/** adds linear term pseudo boolean constraint (if it is not zero)
+/** adds a variable to the pseudo boolean constraint (if it is not zero)
  *
- * @note you can only add a coefficient if the special type of linear constraint won't changed
+ *  @note you can only add a coefficient if the special type of linear constraint won't changed
  *
- * @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
- *       create a new linear constraint
+ *  @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
+ *        create a new linear constraint
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddCoefPseudoboolean(
@@ -228,10 +228,10 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
 
 /** adds nonlinear term to pseudo boolean constraint (if it is not zero)
  *
- * @note you can only add a coefficient if the special type of linear constraint won't changed
+ *  @note you can only add a coefficient if the special type of linear constraint won't changed
  *
- * @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
- *       create a new linear constraint
+ *  @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
+ *        create a new linear constraint
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddTermPseudoboolean(
@@ -301,10 +301,10 @@ int SCIPgetNAndsPseudoboolean(
 
 /** changes left hand side of pseudoboolean constraint
  *
- * @note you can only change the left hand side if the special type of linear constraint won't changed
+ *  @note you can only change the left hand side if the special type of linear constraint won't changed
  *
- * @todo if changing the left hand side would change the type of the special linear constraint, we need to erase it
- *       and create a new linear constraint
+ *  @todo if changing the left hand side would change the type of the special linear constraint, we need to erase it
+ *        and create a new linear constraint
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPchgLhsPseudoboolean(
@@ -315,10 +315,10 @@ SCIP_RETCODE SCIPchgLhsPseudoboolean(
 
 /** changes right hand side of pseudoboolean constraint
  *
- * @note you can only change the right hand side if the special type of linear constraint won't changed
+ *  @note you can only change the right hand side if the special type of linear constraint won't changed
  *
- * @todo if changing the right hand side would change the type of the special linear constraint, we need to erase it
- *       and create a new linear constraint
+ *  @todo if changing the right hand side would change the type of the special linear constraint, we need to erase it
+ *        and create a new linear constraint
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPchgRhsPseudoboolean(
