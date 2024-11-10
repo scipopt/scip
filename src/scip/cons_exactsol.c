@@ -188,6 +188,8 @@ void solCreateSolAssignment(
    assert(scip != NULL);
 
    SCIPallocBlockMemory(scip, assignment);
+   if( *assignment == NULL )
+      return;
    SCIPallocClearBlockMemoryArray(scip, &(*assignment)->vals, SCIPgetNIntVars(scip) + SCIPgetNBinVars(scip));
    SCIPallocClearBlockMemoryArray(scip, &(*assignment)->idx, SCIPgetNIntVars(scip) + SCIPgetNBinVars(scip));
 
