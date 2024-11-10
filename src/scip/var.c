@@ -4191,8 +4191,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    {
       assert(vars != NULL);
 
-      *nvars = *requiredsize;
-
       if( !SCIPsetIsInfinity(set, *constant) && !SCIPsetIsInfinity(set, -(*constant)) )
       {
          /* if activeconstant is infinite, the constant pointer gets the same value, otherwise add the value */
