@@ -3997,7 +3997,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpvars, tmpvarssize) );
 
    /* allocate memory for list of active variables */
-   activevarssize = 2 * (*nvars);
+   activevarssize = MAX(10, 2 * (*nvars));  /* take the maximum to avoid small reallocations */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
 
    /* allocate dense array for storing scalars (to avoid checking for duplicate variables) */
