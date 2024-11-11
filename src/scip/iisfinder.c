@@ -234,10 +234,11 @@ SCIP_RETCODE SCIPiisGenerate(
    
    /* Get the IIS data. */
    iis = SCIPgetIIS(set->scip);
-   SCIPclockStart(iis->iistime, set);
    
    /* Create the subscip used for storing the IIS */
    createSubscipIIS(set, iis, timelim, nodelim);
+   
+   SCIPclockStart(iis->iistime, set);
    
    /* If the model is not yet shown to be infeasible then check for infeasibility */
    if( SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM && set->iisfinder_checkinitfeas )
