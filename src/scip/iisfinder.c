@@ -74,7 +74,7 @@ SCIP_RETCODE createSubscipIIS(
    /* Create the subscip used for storing the IIS */
    if( iis->subscip != NULL )
    {
-      SCIPinfoMessage(set->scip, NULL, "An IIS for this problem already exists. Removing it before starting search procedure again.\n");
+      SCIPdebugMessage("An IIS for this problem already exists. Removing it before starting search procedure again.\n");
       
       /* free sub-SCIP */
       SCIP_CALL( SCIPiisReset(&iis) );
@@ -221,6 +221,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_Bool removebounds;
    SCIP_Bool minimal;
    SCIP_Bool stopafterone;
+   SCIP_Bool removeunusedvars;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
    
@@ -335,13 +336,30 @@ SCIP_RETCODE SCIPiisGenerate(
       SCIP_CALL( SCIPcreateRandom(set->scip, &randnumgen, 0x5EED, TRUE) );
       SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, randnumgen, timelim, FALSE, TRUE, TRUE, TRUE, nodelim, 1, &result) );
       SCIPfreeRandom(set->scip, &randnumgen);
-      
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
-      if( timelim <= 0 || nodelim <= -2 )
-         SCIPinfoMessage(set->scip, NULL, "Time or node limit hit. Stopping Search.\n");
    }
    
    SCIPiisfinderInfoMessage(iis, FALSE);
+   
+   SCIPgetBoolParam(set->scip, "iis/removeunusedvars", &removeunusedvars);
+   if( removeunusedvars )
+   {
+      SCIP_VAR** vars;
+      SCIP_Bool deleted;
+      int nvars;
+      
+      nvars = SCIPgetNOrigVars(iis->subscip);
+      vars = SCIPgetOrigVars(iis->subscip);
+      // TODO: Ask someone if this is safe. It is passing basic tests.
+      for( i = nvars - 1; i >= 0; i-- )
+      {
+         if( SCIPvarGetNUses(vars[i]) <= 1 )
+         {
+            SCIP_CALL( SCIPdelVar(iis->subscip, vars[i], &deleted) );
+            assert( deleted );
+         }
+      }
+   }
    
    /* stop timing */
    SCIPclockStop(iis->iistime, set);
@@ -551,7 +569,6 @@ SCIP_RETCODE SCIPiisCreate(
    (*iis)->nnodes = 0;
    (*iis)->valid = FALSE;
    (*iis)->irreducible = FALSE;
-   // TODO: Add other stuff here. Need to decide on what I need.
    
    return SCIP_OKAY;
 }

@@ -12,7 +12,6 @@ Features
 - detailed information about applied symmetry handling techniques can be printed to the terminal
 - added a new separator sepa_multilinear to generate flower cuts from AND constraints nonlinear product expressions.
 - added functionality to deal with hypergraphs by means of efficient access to vertices, edges and intersections edges.
-- added iis (irreducible infeasible subsystem) functionality to scip. can only be called after model is found to be infeasible.
 
 Performance improvements
 ------------------------
@@ -44,8 +43,6 @@ Interface changes
 
 
 ### Command line interface
-
-- added iis option that is callable from command line
 
 ### Interfaces to external software
 
