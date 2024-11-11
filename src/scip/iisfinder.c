@@ -77,13 +77,8 @@ SCIP_RETCODE createSubscipIIS(
       SCIPinfoMessage(set->scip, NULL, "An IIS for this problem already exists. Removing it before starting search procedure again.\n");
       
       /* free sub-SCIP */
-      SCIP_CALL( SCIPfree(&(iis->subscip)) );
-      iis->subscip = NULL;
+      SCIP_CALL( SCIPiisReset(&iis) );
    }
-   if( iis->varsmap != NULL )
-      SCIPhashmapFree(&(iis->varsmap));
-   if( iis->conssmap != NULL )
-      SCIPhashmapFree(&(iis->conssmap));
    
    assert( iis->subscip == NULL );
    assert( iis->varsmap == NULL );
@@ -91,6 +86,11 @@ SCIP_RETCODE createSubscipIIS(
    
    /* create a new SCIP instance */
    SCIP_CALL( SCIPcreate(&(iis->subscip)) );
+   
+   /* Create hash maps */
+   SCIP_CALL( SCIPhashmapCreate(&(iis->varsmap), SCIPblkmem(set->scip), SCIPgetNOrigVars(set->scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&(iis->conssmap), SCIPblkmem(set->scip), SCIPgetNOrigConss(set->scip)) );
+   
    
    /* create problem in sub-SCIP */
    SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, &success) );
@@ -587,6 +587,43 @@ SCIP_RETCODE SCIPiisFree(
    
    BMSfreeMemory(iis);
    *iis = NULL;
+   
+   return SCIP_OKAY;
+}
+
+/** reset an IIS (in case one exists from a previous solve */
+SCIP_RETCODE SCIPiisReset(
+   SCIP_IIS**           iis                  /**< pointer to the IIS */
+   )
+{
+   assert(iis != NULL);
+   if( *iis == NULL )
+      return SCIP_OKAY;
+   
+   if( (*iis)->subscip != NULL )
+   {
+      SCIP_CALL( SCIPfree(&((*iis)->subscip)) );
+      (*iis)->subscip = NULL;
+   }
+   
+   if( (*iis)->varsmap != NULL )
+   {
+      SCIPhashmapFree(&((*iis)->varsmap));
+      (*iis)->varsmap = NULL;
+   }
+   
+   if( (*iis)->conssmap != NULL )
+   {
+      SCIPhashmapFree(&((*iis)->conssmap));
+      (*iis)->conssmap = NULL;
+   }
+   
+   if( (*iis)->iistime != NULL )
+      SCIPclockReset((*iis)->iistime);
+   
+   (*iis)->nnodes = 0;
+   (*iis)->valid = FALSE;
+   (*iis)->irreducible = FALSE;
    
    return SCIP_OKAY;
 }

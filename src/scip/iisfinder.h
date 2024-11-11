@@ -112,6 +112,11 @@ SCIP_RETCODE SCIPiisFree(
    SCIP_IIS**            iis                 /**< pointer to the IIS */
    );
 
+/** reset an IIS (in case one exists from a previous solve */
+SCIP_RETCODE SCIPiisReset(
+   SCIP_IIS**           iis                  /**< pointer to the IIS */
+   );
+
 #ifdef __cplusplus
 }
 #endif
