@@ -103,36 +103,36 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <scip/cons_linear.h>
-#include <scip/cons_knapsack.h>
-#include <scip/cons_varbound.h>
-#include <scip/cons_setppc.h>
-#include <scip/cons_and.h>
-#include <scip/cons_logicor.h>
-#include <scip/cons_or.h>
-#include <scip/cons_orbitope.h>
-#include <scip/cons_symresack.h>
-#include <scip/cons_xor.h>
-#include <scip/cons_linking.h>
-#include <scip/cons_bounddisjunction.h>
-#include <scip/cons_indicator.h>
-#include <scip/cons_nonlinear.h>
-#include <scip/cons_sos1.h>
-#include <scip/cons_sos2.h>
-#include <scip/expr_pow.h>
-#include <scip/expr_product.h>
-#include <scip/pub_expr.h>
-#include <scip/misc.h>
-#include <scip/scip_datastructures.h>
+#include "scip/cons_linear.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_varbound.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_and.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_or.h"
+#include "scip/cons_orbitope.h"
+#include "scip/cons_symresack.h"
+#include "scip/cons_xor.h"
+#include "scip/cons_linking.h"
+#include "scip/cons_bounddisjunction.h"
+#include "scip/cons_indicator.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_sos1.h"
+#include "scip/cons_sos2.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_product.h"
+#include "scip/pub_expr.h"
+#include "scip/misc.h"
+#include "scip/scip_datastructures.h"
 
-#include <scip/prop_symmetry.h>
-#include <symmetry/compute_symmetry.h>
-#include <scip/event_shadowtree.h>
-#include <scip/symmetry.h>
-#include <scip/symmetry_graph.h>
-#include <scip/symmetry_orbitopal.h>
-#include <scip/symmetry_orbital.h>
-#include <scip/symmetry_lexred.h>
+#include "scip/prop_symmetry.h"
+#include "symmetry/compute_symmetry.h"
+#include "scip/event_shadowtree.h"
+#include "scip/symmetry.h"
+#include "scip/symmetry_graph.h"
+#include "scip/symmetry_orbitopal.h"
+#include "scip/symmetry_orbital.h"
+#include "scip/symmetry_lexred.h"
 
 #include <math.h>
 #include <string.h>
@@ -202,6 +202,11 @@
 /* other defines */
 #define MAXGENNUMERATOR          64000000    /**< determine maximal number of generators by dividing this number by the number of variables */
 #define COMPRESSNVARSLB             25000    /**< lower bound on the number of variables above which compression could be performed */
+#define DEFAULT_NAUTYMAXNCELLS     100000    /**< terminate symmetry detection using Nauty when number of cells in color refinment is at least this number
+                                              *   (avoids segfaults due to Nauty for large graphs) */
+#define DEFAULT_NAUTYMAXNNODES   10000000    /**< terminate symmetry detection using Nauty when its search tree has at least this number of nodes */
+/*@todo investigate why the Nauty works well for some large instances (miplib2010/mspp16.mps) but not for PB instances (e.g., normalized-celar6-sub0_wcsp.wbo) */
+
 
 /* macros for getting activeness of symmetry handling methods */
 #define ISSYMRETOPESACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_SYMBREAK) != 0)
@@ -8077,6 +8082,21 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/symtiming",
          "timing of symmetry computation and handling (0 = before presolving, 1 = during presolving, 2 = after presolving)",
          &propdata->symtiming, TRUE, DEFAULT_SYMCOMPTIMING, 0, 2, NULL, NULL) );
+
+   /* for symmetry detection tool Nauty, we add further parameters to terminate it early */
+   assert( strlen(SYMsymmetryGetName()) >= 5 );
+   if ( memcmp(SYMsymmetryGetName(), "Nauty", 5) == 0 ) /*lint !e747*/
+   {
+      SCIP_CALL( SCIPaddIntParam(scip,
+            "propagating/" PROP_NAME "/nautymaxncells",
+            "terminate symmetry detection using Nauty when number of cells in color refinment is at least this number",
+            NULL, TRUE, DEFAULT_NAUTYMAXNCELLS, 0, INT_MAX, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddIntParam(scip,
+            "propagating/" PROP_NAME "/nautymaxnnodes",
+            "terminate symmetry detection using Nauty when its search tree has at least this number of nodes",
+            NULL, TRUE, DEFAULT_NAUTYMAXNNODES, 0, INT_MAX, NULL, NULL) );
+   }
 
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )

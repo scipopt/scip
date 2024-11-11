@@ -27,6 +27,7 @@ build*
 debug/
 release/
 cmake-build-debug/
+cmake-build-release/
 
 # check folder, files created by or for `make test`
 check/results/
@@ -45,8 +46,9 @@ check/coverage/
 # vim swap files
 .*.swp
 
-# thumbnails and os system information
+# directories created by file managers (KDE Dolphin, macOS Finder)
 .directory
+.DS_Store
 
 # lint and pclint configurations files
 lint.out

@@ -252,7 +252,7 @@
  * Alex is now ready to write his very first example, he creates a new folder `MinEx` under `examples` and puts two files in there:
  * `CMakeLists.txt`:
  * ```
- * cmake_minimum_required(VERSION 3.3)
+ * cmake_minimum_required(VERSION 3.11)
  *
  * project(minex)
  * find_package(SCIP REQUIRED)
@@ -8798,10 +8798,12 @@
   * - There is a <a href="https://github.com/scipopt/MatlabSCIPInterface">Matlab interface</a>
   *   to use SCIP and SCIP-SDP from Matlab and Octave.
   * - <a href="https://github.com/scipopt/JSCIPOpt">JSCIPOpt</a> is an interface for Java.
+  * - <a href="https://github.com/scipopt/russcip">Russcip</a> is an interface for Rust.
+  * - <a href="https://github.com/scipopt/SCIPpp">SCIP++</a> is a modeling interface for C++.
   *
   * Contributions to these projects are very welcome.
   *
-  * There are also several third-party python interfaces to the \SCIP Optimization Suite:
+  * There are also many third-party python interfaces to the \SCIP Optimization Suite, for example:
   * - <a href="https://github.com/eomahony/Numberjack">NUMBERJACK</a> is a constraint programming platform implemented in python.
   *   It supports a variety of different solvers, one of them being the \SCIP Optimization Suite .
   * - <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
@@ -9050,6 +9052,18 @@
 /**@defgroup DecompMethods Decomposition data structure
  * @ingroup DataStructures
  * @brief methods for creating and accessing user decompositions
+ */
+
+/**@defgroup NetworkMatrix Network Matrix
+ * @ingroup DataStructures
+ * @brief methods for detecting network matrices and converting them to the underlying graphs
+ */
+
+/**@defgroup SymGraph Symmetry Detection Graph
+ * @ingroup DataStructures
+ * @brief methods for creating and manipulating symmetry detection graphs
+ *
+ * Below you find a list of functions to create and manipulate symmetry detection graphs.
  */
 
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
@@ -9458,7 +9472,7 @@
  */
 
 /**@defgroup PublicSymmetryMethods Symmetry
- * @ingroup INTERNALAPI
+ * @ingroup PUBLICCOREAPI
  * @brief methods for symmetry handling
  */
 

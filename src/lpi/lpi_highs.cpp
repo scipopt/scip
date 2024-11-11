@@ -180,6 +180,7 @@ struct SCIP_LPi
    int                   nthreads;           /**< number of threads to be used */
    SCIP_Bool             fromscratch;        /**< shall solves be performed from scratch? */
    SCIP_Bool             solved;             /**< was the current LP solved? */
+   SCIP_Bool             presolve;           /**< shall the current LP be presolved? */
    SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< messagehdlr handler for printing messages, or NULL */
 };
@@ -452,6 +453,7 @@ SCIP_RETCODE lpiSolve(
 
    lpi->highs->zeroAllClocks();
 
+   HIGHS_CALL( lpi->highs->setOptionValue("presolve", lpi->presolve ? "on" : "off") );
    /* the optimization result may be reliable even if HiGHS returns a warning status, e.g., HiGHS always returns with a
     * warning status if the iteration limit was hit
     */
@@ -503,12 +505,13 @@ SCIP_RETCODE lpiSolve(
    /* if basis factorization is unavailable, this may be due to presolving; then solve again without presolve */
    HIGHS_CALL( lpi->highs->getOptionValue("presolve", presolvestring) );
    assert(presolvestring == "on" || presolvestring == "off"); /* values used in SCIPlpiSetIntpar() */
+
    if( !lpi->highs->hasInvert() && presolvestring == "on" )
    {
       SCIP_RETCODE retcode;
 
       SCIPdebugMessage("No inverse: running HiGHS again without presolve . . .\n");
-      HIGHS_CALL( lpi->highs->setOptionValue("presolve", "off") );
+      lpi->presolve = FALSE;
       retcode = lpiSolve(lpi);
       if( retcode != SCIP_OKAY )
       {
@@ -516,7 +519,7 @@ SCIP_RETCODE lpiSolve(
          SCIPerrorMessage("HiGHS terminated with model status <%s> (%d) after trying to recover inverse\n",
             lpi->highs->modelStatusToString(model_status2).c_str(), (int)model_status2);
       }
-      HIGHS_CALL( lpi->highs->setOptionValue("presolve", "on") );
+      lpi->presolve = TRUE;
       SCIP_CALL( retcode );
    }
 
@@ -659,6 +662,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->nthreads = 1;
    (*lpi)->fromscratch = FALSE;
    (*lpi)->solved = FALSE;
+   (*lpi)->presolve = TRUE;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->messagehdlr = messagehdlr;
 
@@ -2770,12 +2774,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
          *ival = 2;
       break;
    case SCIP_LPPAR_PRESOLVING:
-      {
-         std::string presolve;
-         HIGHS_CALL( lpi->highs->getOptionValue("presolve", presolve) );
-         assert(presolve == "on" || presolve == "off"); /* values used in SCIPlpiSetIntpar() */
-         *ival = (presolve == "on");
-      }
+      *ival = lpi->presolve;
       break;
    case SCIP_LPPAR_PRICING:
       *ival = (int)lpi->pricing; /* store pricing method in LPI struct */
@@ -2832,6 +2831,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);
+      lpi->presolve = ival;
       HIGHS_CALL( lpi->highs->setOptionValue("presolve", ival ? "on" : "off") );
       break;
    case SCIP_LPPAR_PRICING:

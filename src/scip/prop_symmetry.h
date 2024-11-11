@@ -35,9 +35,8 @@
 #ifndef __SCIP_PROP_SYMMETRY_H_
 #define __SCIP_PROP_SYMMETRY_H_
 
-#include <scip/scip.h>
-
-#include <symmetry/type_symmetry.h>
+#include "scip/scip.h"
+#include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
 extern "C" {

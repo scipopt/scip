@@ -22,46 +22,58 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   varboundnumerics.c
- * @brief  unit test for problem with difficult numerics
- * @author Gioni Mexi
+/**@file   presol_implint.h
+ * @ingroup PRESOLVERS
+ * @brief  Presolver that detects implicit integer variables
+ * @author Rolf van der Hulst
+ *
+ * This presolver looks for implicit integer variables, which are variables whose integrality is implied.
+ * The linear constraint handler handles the simple (primal) case such as 2x + 2y + z = 3, where z is implied integer by
+ * x and y. It also handles a more complicated dual case, where we have 'dual' implied integrality if z occurs only in
+ * inequalities of the primal form (where the equality becomes an inequality), and has integral bounds.
+ *
+ * In this plugin we explicitly look for the following structure in the constraint matrix:
+ * \f[
+ * \begin{array}{llll}
+ * A x & + B y &       & \leq c\\
+ * D x &       & + E z & \leq f\\
+ *
+ * & &               x & \in Z^{p_1} \\
+ * & &               y & \in Z^{p_2} \times R^{n_2-p_2}\\
+ * & &               z & \in Z^{p_3} \times R^{n_3-p_3}
+ * \end{array}
+ * \f]
+ * where A and c are integral and B is totally unimodular. It is not difficult to see that after fixing the x variables,
+ * that the remaining problem on the y variables is an integral polyhedron (and independent of the z variables).
+ * Hence, y is implied integer by x.
+ *
+ * Note that this presolver only treats integral rows, where SCIPisIntegral() is used to check integrality.
  */
 
-#include "scip/scipdefplugins.h"
-#include "include/scip_test.h"
+#ifndef __SCIP_PRESOL_IMPLINT_H__
+#define __SCIP_PRESOL_IMPLINT_H__
 
-/** GLOBAL VARIABLES **/
-static SCIP* scip = NULL;
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
 
-/* TEST SUITE */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/** create SCIP instance */
-static
-void setup(void)
-{
-   SCIP_CALL( SCIPcreate(&scip) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-   SCIP_CALL( SCIPcreateProbBasic(scip, "varboundnumerics") );
+
+/** creates the implicit integer presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludePresolImplint(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+#ifdef __cplusplus
 }
+#endif
 
-/** free SCIP instance */
-static
-void teardown(void)
-{
-   SCIPfree(&scip);
-}
-
-TestSuite(problem, .init = setup, .fini = teardown);
-
-/* TESTS  */
-Test(problem, tolerance, .description = "test whether propagating a var bound constraint does not falsely remove it")
-{
-   SCIP_CALL( SCIPreadProb(scip, "src/bugs/varboundnumerics.cip", NULL) );
-   SCIP_CALL( SCIPsolve(scip) );
-   int nvars = SCIPgetNOrigVars(scip);
-   int nconss = SCIPgetNOrigConss(scip);
-   cr_assert_eq(nvars, 19);
-   cr_assert_eq(nconss, 7);
-   SCIP_SOL* sol = SCIPgetSols(scip)[0];
-   cr_assert_float_eq(SCIPgetSolOrigObj(scip, sol), 57138036.3824479, 1e-5);
-}
+#endif /* __SCIP_PRESOL_IMPLINT_H__ */

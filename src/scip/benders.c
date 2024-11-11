@@ -1491,18 +1491,19 @@ SCIP_RETCODE initialiseSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the lp is detected as infeasible */
    SCIP_Bool*            success             /**< was the initialisation process successful */
    )
 {
    SCIP* subproblem;
    SCIP_STATUS solvestatus;
-   SCIP_Bool cutoff;
 
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
    assert(success != NULL);
 
    (*success) = FALSE;
+   (*infeasible) = FALSE;
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
    assert(subproblem != NULL);
@@ -1516,8 +1517,9 @@ SCIP_RETCODE initialiseSubproblem(
    {
       assert(SCIPgetStage(subproblem) == SCIP_STAGE_SOLVING);
 
-      SCIP_CALL( SCIPconstructLP(subproblem, &cutoff) );
-      (*success) = TRUE;
+      SCIP_CALL( SCIPconstructLP(subproblem, infeasible) );
+
+      (*success) = !(*infeasible);
    }
 
    return SCIP_OKAY;
@@ -1531,7 +1533,8 @@ static
 SCIP_RETCODE initialiseLPSubproblem(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
-   int                   probnumber          /**< the subproblem number */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the lp is detected as infeasible */
    )
 {
    SCIP* subproblem;
@@ -1541,6 +1544,7 @@ SCIP_RETCODE initialiseLPSubproblem(
 
    assert(benders != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+   assert(infeasible != NULL);
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
    assert(subproblem != NULL);
@@ -1559,7 +1563,7 @@ SCIP_RETCODE initialiseLPSubproblem(
    assert(eventhdlr != NULL);
 
    /* calling an initial solve to put the problem into probing mode */
-   SCIP_CALL( initialiseSubproblem(benders, set, probnumber, &success) );
+   SCIP_CALL( initialiseSubproblem(benders, set, probnumber, infeasible, &success) );
 
    return SCIP_OKAY; /*lint !e438*/
 }
@@ -1915,7 +1919,15 @@ SCIP_RETCODE createSubproblems(
             if( benders->benderssolvesubconvex == NULL && benders->benderssolvesub == NULL
                && SCIPgetStage(subproblem) <= SCIP_STAGE_PROBLEM )
             {
-               SCIP_CALL( initialiseLPSubproblem(benders, set, i) );
+               SCIP_Bool infeasible;
+               SCIP_CALL( initialiseLPSubproblem(benders, set, i, &infeasible) );
+
+               /* if the initialisation process indicates that the LP is infeasible, then the complete problem is
+                * infeasible. The subprobsinfeasible flag is set so that SCIP can be informed at the correct point
+                * during the solving process.
+                */
+               if( infeasible )
+                  SCIPbendersSetSubproblemsAreInfeasible(benders, set);
             }
          }
          else
@@ -4403,9 +4415,18 @@ SCIP_RETCODE SCIPbendersSetupSubproblem(
    }
    else
    {
+      SCIP_Bool infeasible;
       SCIP_Bool success;
 
-      SCIP_CALL( initialiseSubproblem(benders, set, probnumber, &success) );
+      SCIP_CALL( initialiseSubproblem(benders, set, probnumber, &infeasible, &success) );
+      assert(success == !infeasible);
+
+      /* if the problem is identified as infeasible, this means that the underlying LP is infeasible. Since no variable
+       * fixings have been applied at this stage, this means that the complete problem is infeasible. It is only
+       * possible to set this parameter if we are at the root node or in an initialisation stage.
+       */
+      if( infeasible )
+         SCIPbendersSetSubproblemsAreInfeasible(benders, set);
 
       if( !success )
       {
@@ -4523,6 +4544,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    assert(set != NULL);
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
+   assert(infeasible != NULL);
    (*infeasible) = FALSE;
 
    /* the subproblem must be set up before this function is called. */
@@ -4588,7 +4610,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
          }
          else
          {
-            SCIP_CALL( initialiseSubproblem(benders, set, probnumber, &success) );
+            SCIP_CALL( initialiseSubproblem(benders, set, probnumber, infeasible, &success) );
          }
 
          /* if setting up the subproblem was successful */
@@ -6455,6 +6477,33 @@ SCIP_Bool SCIPbendersInStrengthenRound(
    return benders->strengthenround;
 }
 
+/** sets the flag to indicate that at least one subproblem is always infeasible
+ *  NOTE: this is without any variable fixing being performed
+ */
+void SCIPbendersSetSubproblemsAreInfeasible(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(benders != NULL);
+   assert(set != NULL);
+
+   if( SCIPgetDepth(set->scip) <= 0 )
+      benders->subprobsinfeasible = TRUE;
+}
+
+/** returns whether at least one of the subproblems has been identified as infeasible.
+ *  NOTE: this is without any variable fixing being performed
+ */
+SCIP_Bool SCIPbendersSubproblemsAreInfeasible(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->subprobsinfeasible;
+}
+
 /** changes all of the master problem variables in the given subproblem to continuous. */
 SCIP_RETCODE SCIPbendersChgMastervarsToCont(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
@@ -6525,7 +6574,14 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
           */
          if( SCIPbendersGetSubproblemType(benders, probnumber) == SCIP_BENDERSSUBTYPE_CONVEXCONT )
          {
-            SCIP_CALL( initialiseLPSubproblem(benders, set, probnumber) );
+            SCIP_CALL( initialiseLPSubproblem(benders, set, probnumber, &infeasible) );
+
+            /* if the initialisation process indicates that the LP is infeasible, then the complete problem is
+             * infeasible. The subprobsinfeasible flag is set so that SCIP can be informed at the correct point
+             * during the solving process.
+             */
+            if( infeasible )
+               SCIPbendersSetSubproblemsAreInfeasible(benders, set);
          }
       }
 

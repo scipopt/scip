@@ -169,6 +169,7 @@ set(scipsources
     scip/hypergraph.c
     scip/iisfinder_greedy.c
     scip/message_default.c
+    scip/network.c
     scip/nlhdlr_bilinear.c
     scip/nlhdlr_convex.c
     scip/nlhdlr_default.c
@@ -195,6 +196,7 @@ set(scipsources
     scip/presol_dualinfer.c
     scip/presol_gateextraction.c
     scip/presol_implics.c
+    scip/presol_implint.c
     scip/presol_inttobinary.c
     scip/presol_qpkktref.c
     scip/presol_redvub.c
@@ -696,6 +698,7 @@ set(scipheaders
     scip/presol_gateextraction.h
     scip/presol.h
     scip/presol_implics.h
+    scip/presol_implint.h
     scip/presol_inttobinary.h
     scip/presol_qpkktref.h
     scip/presol_redvub.h
@@ -752,6 +755,7 @@ set(scipheaders
     scip/pub_misc_rowprep.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
+    scip/pub_network.h
     scip/pub_nlhdlr.h
     scip/pub_nlp.h
     scip/pub_nlpi.h

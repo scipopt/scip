@@ -81,11 +81,13 @@
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
 
 #define DEFAULT_MAXDEPTH             -1      /**< maximum depth of a node to run components detection (-1: disable component detection during solving) */
-#define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
+#define DEFAULT_MAXINTVARS          200      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
 #define DEFAULT_MINSIZE              50      /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
 #define DEFAULT_MINRELSIZE          0.1      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
 #define DEFAULT_NODELIMIT       10000LL      /**< maximum number of nodes to be solved in subproblems during presolving */
+#define DEFAULT_MAXCOMPWEIGHT     200.0      /**< The maximum weight of a component to be presolved*/
 #define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
+#define DEFAULT_CONTFACTOR          0.2      /**< the weight of a continuous variable compared to a binary variable */
 #define DEFAULT_FEASTOLFACTOR       1.0      /**< default value for parameter to increase the feasibility tolerance in all sub-SCIPs */
 
 /*
@@ -145,7 +147,9 @@ struct Problem
 struct SCIP_ConshdlrData
 {
    SCIP_Longint          nodelimit;          /**< maximum number of nodes to be solved in subproblems */
+   SCIP_Real             maxcompweight;      /**< The maximum weight sum of a component */
    SCIP_Real             intfactor;          /**< the weight of an integer variable compared to binary variables */
+   SCIP_Real             contfactor;         /**< the weight of a continuous variable compared to binary variables */
    SCIP_Real             feastolfactor;      /**< parameter to increase the feasibility tolerance in all sub-SCIPs */
    int                   maxintvars;         /**< maximum number of integer (or binary) variables to solve a subproblem
                                               *   directly (-1: no solving) */
@@ -1546,11 +1550,13 @@ SCIP_RETCODE sortComponents(
             nintvars++;
       }
       ncontvars = ncvars - nintvars - nbinvars;
+      /* TODO: come up with a more reasonable formula based on data.
+       * This formula weights integer variables very strongly, but ignores the impact of continuous variables somewhat*/
       ndiscvars = (int)(nbinvars + conshdlrdata->intfactor * nintvars);
-      compsize[c] = ((1000.0 * ndiscvars + (950.0 * ncontvars)/nvars));
+      compsize[c] = nbinvars + conshdlrdata->intfactor * nintvars + conshdlrdata->contfactor * ncontvars;
 
-      /* component fulfills the maxsize requirement */
-      if( ndiscvars <= conshdlrdata->maxintvars )
+      /* component fulfills the maxsize and maxcompweight requirement */
+      if( ndiscvars <= conshdlrdata->maxintvars && compsize[c] <= conshdlrdata->maxcompweight )
          ++(*ncompsmaxsize);
 
       /* component fulfills the minsize requirement */
@@ -2609,9 +2615,17 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
          "maximum number of nodes to be solved in subproblems during presolving",
          &conshdlrdata->nodelimit, FALSE, DEFAULT_NODELIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/maxcompweight",
+         "the maximum weight of a component, in terms of the used factors",
+         &conshdlrdata->maxcompweight, FALSE, DEFAULT_MAXCOMPWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/" CONSHDLR_NAME "/intfactor",
          "the weight of an integer variable compared to binary variables",
          &conshdlrdata->intfactor, FALSE, DEFAULT_INTFACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/" CONSHDLR_NAME "/contfactor",
+         "the weight of a continuous variable compared to binary variables",
+         &conshdlrdata->contfactor, FALSE, DEFAULT_CONTFACTOR, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/" CONSHDLR_NAME "/feastolfactor",
          "factor to increase the feasibility tolerance of the main SCIP in all sub-SCIPs, default value 1.0",

@@ -2938,19 +2938,20 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    )
 {
    SCIP_COL* col;
+   SCIP_Real lpobjval;
    SCIP_Real localdown;
    SCIP_Real localup;
    SCIP_Bool localdownvalid;
    SCIP_Bool localupvalid;
 
-   assert(scip != NULL);
    assert(var != NULL);
    assert(lperror != NULL);
-   assert(!SCIPtreeProbing(scip->tree)); /* we should not be in strong branching with propagation mode */
+   assert(!SCIPinProbing(scip)); /* we should not be in strong branching with propagation mode */
    assert(var->scip == scip);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetVarStrongbranchFrac", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   lpobjval = SCIPgetLPObjval(scip);
    if( downvalid != NULL )
       *downvalid = FALSE;
    if( upvalid != NULL )
@@ -2991,6 +2992,51 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    SCIP_CALL( SCIPcolGetStrongbranch(col, FALSE, scip->set, scip->stat, scip->transprob, scip->lp, itlim, !idempotent, !idempotent,
          &localdown, &localup, &localdownvalid, &localupvalid, lperror) );
 
+   /* update lower bound by the higher pseudo objective value */
+   if( !SCIPisZero(scip, SCIPvarGetObj(var)) )
+   {
+      SCIP_Real oldbound;
+      SCIP_Real newbound;
+      SCIP_Real pseudoobjval;
+      SCIP_BOUNDTYPE boundtype = SCIPvarGetBestBoundType(var);
+
+      if( boundtype == SCIP_BOUNDTYPE_UPPER )
+      {
+         oldbound = SCIPvarGetUbLocal(var);
+         newbound = SCIPfeasFloor(scip, SCIPvarGetLPSol(var));
+      }
+      else
+      {
+         oldbound = SCIPvarGetLbLocal(var);
+         newbound = SCIPfeasCeil(scip, SCIPvarGetLPSol(var));
+      }
+
+      if( scip->set->misc_exactsolve )
+         pseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(scip->lp, scip->set, var, oldbound, newbound, boundtype);
+      else
+         pseudoobjval = SCIPlpGetModifiedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
+
+      if( pseudoobjval > lpobjval )
+      {
+         if( boundtype == SCIP_BOUNDTYPE_UPPER )
+         {
+            if( !localdownvalid || localdown < pseudoobjval )
+            {
+               localdown = pseudoobjval;
+               localdownvalid = TRUE;
+            }
+         }
+         else
+         {
+            if( !localupvalid || localup < pseudoobjval )
+            {
+               localup = pseudoobjval;
+               localupvalid = TRUE;
+            }
+         }
+      }
+   }
+
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
     */
@@ -2998,15 +3044,13 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    {
       if( !idempotent ) /*lint !e774*/
       {
-         SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+         SCIP_CALL( analyzeStrongbranch(scip, var, NULL, NULL, downconflict, upconflict) );
       }
-      else
-      {
-         if( downinf != NULL )
-            *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
-         if( upinf != NULL )
-            *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
-      }
+
+      if( downinf != NULL )
+         *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
+      if( upinf != NULL )
+         *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
    }
 
    if( down != NULL )
@@ -3394,7 +3438,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    int oldnconflicts;
    int nvars;
 
-   assert(scip != NULL);
    assert(var != NULL);
    assert(SCIPvarIsIntegral(var));
    assert(down != NULL);
@@ -3551,18 +3594,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
       if( downchild )
       {
-         SCIP_CALL( performStrongbranchWithPropagation(scip, var, downchild, firstchild, propagate, newub, itlim, maxproprounds,
+         SCIP_CALL( performStrongbranchWithPropagation(scip, var, downchild, firstchild || cutoff, propagate, newub, itlim, maxproprounds,
                down, &downvalidlocal, ndomredsdown, downconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
-
-         /* check whether a new solutions rendered the previous child infeasible */
-         if( foundsol && !firstchild && allcolsinlp )
-         {
-            if( SCIPisGE(scip, *up, SCIPgetCutoffbound(scip)) )
-            {
-               if( upinf != NULL )
-                  *upinf = TRUE;
-            }
-         }
 
          /* check for infeasibility */
          if( cutoff )
@@ -3570,33 +3603,25 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
             if( downinf != NULL )
                *downinf = TRUE;
 
-            if( downconflict != NULL &&
-               (SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
-            {
+            if( downconflict != NULL
+               && ( SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts ) )
                *downconflict = TRUE;
-            }
+         }
 
-            if( !scip->set->branch_forceall )
-            {
-               /* if this is the first call, we do not regard the up branch, its valid pointer is initially set to FALSE */
-               break;
-            }
+         /* check whether new solutions rendered the other child infeasible */
+         if( foundsol && allcolsinlp && SCIPisGE(scip, upvalidlocal ? *up : lpobjval, SCIPgetCutoffbound(scip)) )
+         {
+            if( upinf != NULL )
+               *upinf = TRUE;
+
+            upvalidlocal = TRUE;
+            cutoff = TRUE;
          }
       }
       else
       {
-         SCIP_CALL( performStrongbranchWithPropagation(scip, var, downchild, firstchild, propagate, newlb, itlim, maxproprounds,
+         SCIP_CALL( performStrongbranchWithPropagation(scip, var, downchild, firstchild || cutoff, propagate, newlb, itlim, maxproprounds,
                up, &upvalidlocal, ndomredsup, upconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
-
-         /* check whether a new solutions rendered the previous child infeasible */
-         if( foundsol && !firstchild && allcolsinlp )
-         {
-            if( SCIPisGE(scip, *down, SCIPgetCutoffbound(scip)) )
-            {
-               if( downinf != NULL )
-                  *downinf = TRUE;
-            }
-         }
 
          /* check for infeasibility */
          if( cutoff )
@@ -3604,26 +3629,78 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
             if( upinf != NULL )
                *upinf = TRUE;
 
-            assert(upinf == NULL || (*upinf) == TRUE);
-
-            if( upconflict != NULL &&
-               (SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
-            {
+            if( upconflict != NULL
+               && ( SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts ) )
                *upconflict = TRUE;
-            }
+         }
 
-            if( !scip->set->branch_forceall )
-            {
-               /* if this is the first call, we do not regard the down branch, its valid pointer is initially set to FALSE */
-               break;
-            }
+         /* check whether new solutions rendered the other child infeasible */
+         if( foundsol && allcolsinlp && SCIPisGE(scip, downvalidlocal ? *down : lpobjval, SCIPgetCutoffbound(scip)) )
+         {
+            if( downinf != NULL )
+               *downinf = TRUE;
+
+            downvalidlocal = TRUE;
+            cutoff = TRUE;
          }
       }
 
       downchild = !downchild;
       firstchild = !firstchild;
    }
-   while( !firstchild );
+   /* if a child is cut off and forceall is FALSE, we do not regard the other child */
+   while( !firstchild && ( !cutoff || scip->set->branch_forceall ) );
+
+   /* update lower bound by the higher pseudo objective value */
+   if( ( downinf == NULL || !(*downinf) ) && ( upinf == NULL || !(*upinf) ) && !SCIPisZero(scip, SCIPvarGetObj(var)) )
+   {
+      SCIP_Real oldbound;
+      SCIP_Real newbound;
+      SCIP_Real pseudoobjval;
+      SCIP_BOUNDTYPE boundtype = SCIPvarGetBestBoundType(var);
+
+      if( boundtype == SCIP_BOUNDTYPE_UPPER )
+      {
+         oldbound = SCIPvarGetUbLocal(var);
+         newbound = newub;
+      }
+      else
+      {
+         oldbound = SCIPvarGetLbLocal(var);
+         newbound = newlb;
+      }
+
+      if( scip->set->misc_exactsolve )
+         pseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(scip->lp, scip->set, var, oldbound, newbound, boundtype);
+      else
+         pseudoobjval = SCIPlpGetModifiedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
+
+      if( pseudoobjval > lpobjval )
+      {
+         if( boundtype == SCIP_BOUNDTYPE_UPPER )
+         {
+            if( !downvalidlocal || *down < pseudoobjval )
+            {
+               *down = pseudoobjval;
+               downvalidlocal = TRUE;
+
+               if( downinf != NULL && allcolsinlp && SCIPisGE(scip, *down, SCIPgetCutoffbound(scip)) )
+                  *downinf = TRUE;
+            }
+         }
+         else
+         {
+            if( !upvalidlocal || *up < pseudoobjval )
+            {
+               *up = pseudoobjval;
+               upvalidlocal = TRUE;
+
+               if( upinf != NULL && allcolsinlp && SCIPisGE(scip, *up, SCIPgetCutoffbound(scip)) )
+                  *upinf = TRUE;
+            }
+         }
+      }
+   }
 
    /* set strong branching information in column */
    if( *lperror )
@@ -3681,16 +3758,19 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    )
 {
    SCIP_COL* col;
+   SCIP_Real lpobjval;
    SCIP_Real localdown;
    SCIP_Real localup;
    SCIP_Bool localdownvalid;
    SCIP_Bool localupvalid;
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetVarStrongbranchInt", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
+   assert(var != NULL);
    assert(lperror != NULL);
    assert(var->scip == scip);
 
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetVarStrongbranchInt", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   lpobjval = SCIPgetLPObjval(scip);
    if( downvalid != NULL )
       *downvalid = FALSE;
    if( upvalid != NULL )
@@ -3731,6 +3811,51 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    SCIP_CALL( SCIPcolGetStrongbranch(col, TRUE, scip->set, scip->stat, scip->transprob, scip->lp, itlim, !idempotent, !idempotent,
          &localdown, &localup, &localdownvalid, &localupvalid, lperror) );
 
+   /* update lower bound by the higher pseudo objective value */
+   if( !SCIPisZero(scip, SCIPvarGetObj(var)) )
+   {
+      SCIP_Real oldbound;
+      SCIP_Real newbound;
+      SCIP_Real pseudoobjval;
+      SCIP_BOUNDTYPE boundtype = SCIPvarGetBestBoundType(var);
+
+      if( boundtype == SCIP_BOUNDTYPE_UPPER )
+      {
+         oldbound = SCIPvarGetUbLocal(var);
+         newbound = SCIPfeasCeil(scip, SCIPvarGetLPSol(var)) - 1.0;
+      }
+      else
+      {
+         oldbound = SCIPvarGetLbLocal(var);
+         newbound = SCIPfeasFloor(scip, SCIPvarGetLPSol(var)) + 1.0;
+      }
+
+      if( scip->set->misc_exactsolve )
+         pseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(scip->lp, scip->set, var, oldbound, newbound, boundtype);
+      else
+         pseudoobjval = SCIPlpGetModifiedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
+
+      if( pseudoobjval > lpobjval )
+      {
+         if( boundtype == SCIP_BOUNDTYPE_UPPER )
+         {
+            if( !localdownvalid || localdown < pseudoobjval )
+            {
+               localdown = pseudoobjval;
+               localdownvalid = TRUE;
+            }
+         }
+         else
+         {
+            if( !localupvalid || localup < pseudoobjval )
+            {
+               localup = pseudoobjval;
+               localupvalid = TRUE;
+            }
+         }
+      }
+   }
+
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
     */
@@ -3738,15 +3863,13 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    {
       if( !idempotent ) /*lint !e774*/
       {
-         SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+         SCIP_CALL( analyzeStrongbranch(scip, var, NULL, NULL, downconflict, upconflict) );
       }
-      else
-      {
-         if( downinf != NULL )
-            *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
-         if( upinf != NULL )
-            *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
-      }
+
+      if( downinf != NULL )
+         *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
+      if( upinf != NULL )
+         *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
    }
 
    if( down != NULL )
@@ -7254,11 +7377,11 @@ SCIP_RETCODE calcCliquePartitionGreedy(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcalcCliquePartition(
-   SCIP*const            scip,               /**< SCIP data structure */
-   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int const             nvars,              /**< number of variables in the clique */
-   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
-   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int                   nvars,              /**< number of variables in the clique */
+   int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    )
 {
    SCIP_VAR** tmpvars;
@@ -7473,11 +7596,11 @@ SCIP_RETCODE SCIPcalcCliquePartition(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcalcNegatedCliquePartition(
-   SCIP*const            scip,               /**< SCIP data structure */
-   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int const             nvars,              /**< number of variables in the clique */
-   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
-   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int                   nvars,              /**< number of variables in the clique */
+   int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    )
 {
    SCIP_VAR** negvars;
