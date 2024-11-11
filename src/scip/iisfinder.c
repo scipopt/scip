@@ -305,7 +305,7 @@ SCIP_RETCODE SCIPiisGenerate(
       /* start timing */
       SCIPclockStart(iisfinder->iisfindertime, set);
    
-      SCIPinfoMessage(set->scip, NULL, "----- STARTING IIS FINDER %s -----\n", iisfinder->name);
+      SCIPdebugMessage("----- STARTING IIS FINDER %s -----\n", iisfinder->name);
       SCIP_CALL( iisfinder->iisfinderexec(iis, iisfinder, timelim, nodelim, removebounds, silent, &result) );
       
       /* stop timing */
@@ -326,7 +326,7 @@ SCIP_RETCODE SCIPiisGenerate(
    {
       SCIP_RANDNUMGEN* randnumgen;
       
-      SCIPinfoMessage(set->scip, NULL, "----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
+      SCIPdebugMessage("----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
       
       if( !(iis->valid) )
          createSubscipIIS(set, iis, timelim, nodelim);

@@ -820,16 +820,13 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_RESULT*          result              /**< pointer to store the result of the IIS finder run */
    )
 {
-   SCIP* scip;
    SCIP_Bool alldeletionssolved = TRUE;
-   
-   scip = SCIPiisGetSubscip(iis);
    
    if( additive )
    {
       if( !silent )
       {
-         SCIPinfoMessage(scip, NULL, "----- STARTING GREEDY ADDITION ALGORITHM -----\n");
+         SCIPdebugMessage("----- STARTING GREEDY ADDITION ALGORITHM -----\n");
       }
       SCIPiisfinderInfoMessage(iis, TRUE);
       SCIP_CALL( additionFilterBatch(iis, timelim, nodelim, silent, randnumgen, timelimperiter, nodelimperiter, dynamicreordering, batchsize) );
@@ -844,7 +841,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    {
       if( !silent )
       {
-         SCIPinfoMessage(scip, NULL, "----- STARTING GREEDY DELETION ALGORITHM -----\n");
+         SCIPdebugMessage("----- STARTING GREEDY DELETION ALGORITHM -----\n");
       }
       SCIPiisfinderInfoMessage(iis, TRUE);
       SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, randnumgen, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
@@ -861,7 +858,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    {
       if( !silent )
       {
-         SCIPinfoMessage(scip, NULL, "----- STARTING GREEDY DELETION ALGORITHM FOLLOWING COMPLETED ADDITION ALGORITHM -----\n");
+         SCIPdebugMessage("----- STARTING GREEDY DELETION ALGORITHM FOLLOWING COMPLETED ADDITION ALGORITHM -----\n");
       }
       SCIPiisfinderInfoMessage(iis, TRUE);
       SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, randnumgen, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
