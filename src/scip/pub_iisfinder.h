@@ -84,12 +84,6 @@ SCIP_Real SCIPiisfinderGetTime(
    SCIP_IISFINDER*       iisfinder           /**< IIS finder */
    );
 
-/** get number of times the IIS finder was called */
-SCIP_EXPORT
-SCIP_Longint SCIPiisfinderGetNCalls(
-   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
-   );
-
 /** prints output line during IIS calculations */
 SCIP_EXPORT
 void SCIPiisfinderInfoMessage(
