@@ -166,8 +166,10 @@ SCIP_RETCODE deletionSubproblem(
    SCIP_Real* bounds;
    SCIP_RETCODE retcode;
    SCIP_STATUS status;
+   SCIP_Bool chgmade;
    int i;
    
+   chgmade = FALSE;
    *deleted = FALSE;
    *stop = FALSE;
    scip = SCIPiisGetSubscip(iis);
@@ -182,24 +184,39 @@ SCIP_RETCODE deletionSubproblem(
          {
             bounds[i] = SCIPvarGetLbOriginal(vars[idxs[i]]);
             if( !SCIPisInfinity(scip, -bounds[i]) )
+            {
                SCIPchgVarLb(scip, vars[idxs[i]], -SCIPinfinity(scip));
+               chgmade = TRUE;
+            }
          }
          else
          {
             bounds[i] = SCIPvarGetUbOriginal(vars[idxs[i]]);
             if( !SCIPisInfinity(scip, bounds[i]) )
+            {
                SCIPchgVarUb(scip, vars[idxs[i]], SCIPinfinity(scip));
+               chgmade = TRUE;
+            }
          }
       }
    }
    else
    {
+      if( ndels > 0 )
+         chgmade = TRUE;
       for (i = 0; i < ndels; ++i)
       {
          assert( SCIPconsIsInProb(conss[idxs[i]]) );
          SCIP_CALL( SCIPcaptureCons(scip, conss[idxs[i]]) );
          SCIP_CALL( SCIPdelCons(scip, conss[idxs[i]]) );
       }
+   }
+   
+   if( !chgmade )
+   {
+      if( delbounds )
+         SCIPfreeBlockMemoryArray(scip, &bounds, ndels);
+      return SCIP_OKAY;
    }
    
    /* solve problem until first solution is found or infeasibility has been proven */
@@ -255,7 +272,8 @@ SCIP_RETCODE deletionSubproblem(
          }
          if( conservative && delbounds )
             revertBndChgs(scip, vars, bounds, idxs, ndels, islb);
-         SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, !conservative) );
+         if( !delbounds )
+            SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, !conservative) );
          break;
       
       case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */

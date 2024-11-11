@@ -529,7 +529,6 @@ void SCIPiisfinderInfoMessage(
          nbounds += 1;
    }
    SCIPinfoMessage(scip, NULL, "%7d |%7d |%7s | %11s |%7lld | %7f\n", SCIPgetNOrigConss(scip), nbounds, valid, irreducible, SCIPiisGetNNodes(iis), SCIPiisGetTime(iis));
-   return;
 }
 
 /** creates and captures a new IIS */
