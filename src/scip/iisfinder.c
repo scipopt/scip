@@ -315,7 +315,7 @@ SCIP_RETCODE SCIPiisGenerate(
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
       
       if( timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim) )
-         SCIPinfoMessage(set->scip, NULL, "Time or node limit hit. Stopping Search.\n");
+         SCIPdebugMessage("Time or node limit hit. Stopping Search.\n");
       
       if( (stopafterone && (result == SCIP_SUCCESS)) || (iis->irreducible == TRUE) )
          break;
@@ -323,7 +323,7 @@ SCIP_RETCODE SCIPiisGenerate(
    
    /* Ensure the problem is irreducible if requested */
    SCIPgetBoolParam(set->scip, "iis/minimal", &minimal);
-   if( !iis->irreducible && minimal )
+   if( !iis->irreducible && minimal &&!(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) )
    {
       SCIP_RANDNUMGEN* randnumgen;
       
@@ -619,10 +619,6 @@ SCIP_RETCODE SCIPiisReset(
       (*iis)->conssmap = NULL;
    }
    
-   if( (*iis)->iistime != NULL )
-      SCIPclockReset((*iis)->iistime);
-   
-   (*iis)->nnodes = 0;
    (*iis)->valid = FALSE;
    (*iis)->irreducible = FALSE;
    
