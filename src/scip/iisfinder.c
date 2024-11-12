@@ -300,6 +300,12 @@ SCIP_RETCODE SCIPiisGenerate(
    }
    else if( SCIPgetStage(set->scip) == SCIP_STAGE_SOLVED )
    {
+      if( SCIPgetStatus(set->scip) != SCIP_STATUS_INFEASIBLE )
+      {
+         SCIPinfoMessage(iis->subscip, NULL, "Initial problem does not have an infeasible status. Not performing an IIS algorithm.\n");
+         SCIPclockStop(iis->iistime, set);
+         return SCIP_OKAY;
+      }
       iis->valid = TRUE;
    }
 
