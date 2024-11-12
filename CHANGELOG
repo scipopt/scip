@@ -95,6 +95,8 @@ Fixed bugs
 Miscellaneous
 -------------
 
+- add objective offset instead of objective offset variable in cip reader
+
 Known bugs
 ----------
 
