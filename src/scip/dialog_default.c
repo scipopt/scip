@@ -279,7 +279,7 @@ SCIP_RETCODE writeProblem(
             SCIPdialogMessage(scip, NULL, "error creating the file <%s>\n", filename);
             SCIPdialoghdlrClearBuffer(dialoghdlr);
             break;
-         }         
+         }
          else if(retcode == SCIP_WRITEERROR )
          {
             SCIPdialogMessage(scip, NULL, "error writing file <%s>\n", filename);
@@ -296,7 +296,7 @@ SCIP_RETCODE writeProblem(
                SCIPdialogMessage(scip, NULL, "The following readers are available for writing:\n");
                displayReaders(scip, FALSE, TRUE);
 
-               SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
+               SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
                      "select a suitable reader by extension (or return): ", &extension, &endoffile) );
 
                if( extension[0] == '\0' )
@@ -403,7 +403,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
             SCIP_CALL( SCIPaddCons(scip, cons) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-            SCIPdialogMessage(scip, NULL, "successfully added constraint\n"); 
+            SCIPdialogMessage(scip, NULL, "successfully added constraint\n");
             SCIPescapeString(consstr, SCIP_MAXSTRLEN, str);
 
             SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, consstr, FALSE) );
@@ -2270,7 +2270,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS)
    switch( SCIPgetStage(scip) )
    {
    case SCIP_STAGE_INIT:
-      SCIPdialogMessage(scip, NULL, "no problem exists\n");
+      SCIPdialogMessage(scip, NULL, "No problem exists.\n");
       break;
       
    case SCIP_STAGE_PROBLEM:
@@ -2292,7 +2292,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS)
    case SCIP_STAGE_SOLVED:
    {
       if ( SCIPgetStatus(scip) != SCIP_STATUS_INFEASIBLE )
-         SCIPdialogMessage(scip, NULL, "cannot find an IIS for model that is not infeasible\n");
+         SCIPdialogMessage(scip, NULL, "Cannot find an IIS for model that is not infeasible. Current status is %d.\n", SCIPgetStatus(scip));
       else
       {
          SCIP_CALL( SCIPgenerateIIS(scip) );
@@ -2303,7 +2303,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS)
    case SCIP_STAGE_FREETRANS:
    case SCIP_STAGE_FREE:
    default:
-      SCIPerrorMessage("invalid SCIP stage\n");
+      SCIPerrorMessage("Invalid SCIP stage.\n");
       return SCIP_INVALIDCALL;
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -4083,7 +4083,7 @@ SCIP_RETCODE SCIPcreateRootDialog(
    SCIP_DIALOG**         root                /**< pointer to store the root dialog */
    )
 {
-   SCIP_CALL( SCIPincludeDialog(scip, root, 
+   SCIP_CALL( SCIPincludeDialog(scip, root,
          dialogCopyDefault,
          SCIPdialogExecMenuLazy, NULL, NULL,
          "SCIP", "SCIP's main menu", TRUE, NULL) );
@@ -4115,7 +4115,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
    /* change */
    if( !SCIPdialogHasEntry(root, "change") )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &submenu, 
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
             NULL,
             SCIPdialogExecMenu, NULL, NULL,
             "change", "change the problem", TRUE, NULL) );
@@ -4175,7 +4175,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
    /* checksol */
    if( !SCIPdialogHasEntry(root, "checksol") )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog, 
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecChecksol, NULL, NULL,
             "checksol", "double checks best solution w.r.t. original problem", FALSE, NULL) );
@@ -5147,7 +5147,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    int nparams;
    int i;
 
-   SCIP_BRANCHRULE** branchrules; 
+   SCIP_BRANCHRULE** branchrules;
    SCIP_CONFLICTHDLR** conflicthdlrs;
    SCIP_CONSHDLR** conshdlrs;
    SCIP_CUTSEL** cutsels;

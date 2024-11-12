@@ -250,39 +250,51 @@ SCIP_RETCODE SCIPiisGenerate(
          switch( SCIPgetStatus(iis->subscip) )
          {
             case SCIP_STATUS_TIMELIMIT:
-               SCIPinfoMessage(iis->subscip, NULL, "Time limit reached.\n");
+            case SCIP_STATUS_NODELIMIT:
+            case SCIP_STATUS_TOTALNODELIMIT:
+            case SCIP_STATUS_STALLNODELIMIT:
+            case SCIP_STATUS_MEMLIMIT:
+            case SCIP_STATUS_GAPLIMIT:
+            case SCIP_STATUS_SOLLIMIT:
+            case SCIP_STATUS_RESTARTLIMIT:
+               SCIPinfoMessage(iis->subscip, NULL, "Some limit reached. Failed to prove infeasibility of initial problem.\n");
                SCIPclockStop(iis->iistime, set);
                return SCIP_OKAY;
-               
-            case SCIP_STATUS_NODELIMIT:
-               SCIPinfoMessage(iis->subscip, NULL, "Node limit reached.\n");
+   
+            case SCIP_STATUS_INFORUNBD:
+               SCIPinfoMessage(iis->subscip, NULL, "Initial problem is infeasible or Unbounded. Not performing IIS generation.\n");
+               SCIPclockStop(iis->iistime, set);
+               return SCIP_OKAY;
+   
+            case SCIP_STATUS_USERINTERRUPT:
+               SCIPdebugMessage("User interrupt. Stopping. \n");
+               SCIPclockStop(iis->iistime, set);
+               return SCIP_OKAY;
+   
+            case SCIP_STATUS_BESTSOLLIMIT:
+            case SCIP_STATUS_OPTIMAL:
+            case SCIP_STATUS_UNBOUNDED:
+               SCIPinfoMessage(iis->subscip, NULL, "Initial problem is feasible. No IIS exists.\n");
+               SCIPclockStop(iis->iistime, set);
                return SCIP_OKAY;
                
             case SCIP_STATUS_INFEASIBLE:
                break;
-            
+   
+            case SCIP_STATUS_UNKNOWN:
             default:
-               SCIPinfoMessage(iis->subscip, NULL, "Initial solve to verify infeasibility failed.\n");
+               SCIPinfoMessage(iis->subscip, NULL, "Unexpected return status %d. Failing to show (in)feasibility of initial problem. Exiting ...\n", SCIPgetStatus(iis->subscip));
                SCIPclockStop(iis->iistime, set);
-               return SCIP_INVALIDCALL;
+               return SCIP_OKAY;
          }
       }
       else
       {
          SCIPinfoMessage(iis->subscip, NULL, "Initial solve to verify infeasibility failed.\n");
          SCIPclockStop(iis->iistime, set);
-         return SCIP_INVALIDCALL;
+         return SCIP_OKAY;
       }
       iis->nnodes += SCIPgetNTotalNodes(iis->subscip);
-      if( nodelim != -1 )
-      {
-         if( iis->nnodes > nodelim )
-         {
-            SCIPinfoMessage(iis->subscip, NULL, "Node limit reached.\n");
-            SCIPclockStop(iis->iistime, set);
-            return SCIP_OKAY;
-         }
-      }
       SCIP_CALL( SCIPfreeTransform(iis->subscip) );
       iis->valid = TRUE;
    }
