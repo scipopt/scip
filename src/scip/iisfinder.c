@@ -327,14 +327,19 @@ SCIP_RETCODE SCIPiisGenerate(
    if( !iis->irreducible && minimal &&!(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) )
    {
       SCIP_RANDNUMGEN* randnumgen;
+      SCIP_Real timelimperiter;
+      SCIP_Longint nodelimperiter;
       
       SCIPdebugMessage("----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
       
       if( !(iis->valid) )
          createSubscipIIS(set, iis, timelim, nodelim);
    
+      // TODO: Is there a better way to access these? I don't want to put a basic deletion filter in iisfinder.c.
       SCIP_CALL( SCIPcreateRandom(set->scip, &randnumgen, 0x5EED, TRUE) );
-      SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, randnumgen, timelim, FALSE, TRUE, TRUE, TRUE, nodelim, 1, &result) );
+      SCIPgetRealParam(set->scip, "iis/greedy/timelimperiter", &timelimperiter);
+      SCIPgetLongintParam(set->scip, "iis/greedy/nodelimperiter", &nodelimperiter);
+      SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, randnumgen, timelimperiter, FALSE, TRUE, TRUE, TRUE, nodelimperiter, 1, &result) );
       SCIPfreeRandom(set->scip, &randnumgen);
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
    }
