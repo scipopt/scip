@@ -1,0 +1,13 @@
+STATISTICS
+  Problem name     : model
+  Variables        : 3 (1 binary, 0 integer, 0 implicit integer, 2 continuous)
+  Constraints      : 0 initial, 1 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <feature_0_0_6>: obj=0, original bounds=[0,1]
+  [continuous] <predictor_3_layer_0_0_3>: obj=0, original bounds=[0,0.156662443660021]
+  [continuous] <predictor_3_layer_0_slack_0_3>: obj=0, original bounds=[0,0.15749458370186]
+CONSTRAINTS
+  [linear] <predictor_3_layer_0_slack_0_3>:  -0.314157027361881<feature_0_0_6>[B] +<predictor_3_layer_0_0_3>[C] -<predictor_3_layer_0_slack_0_3>[C] == -0.157494584183939;
+END
