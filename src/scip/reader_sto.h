@@ -110,6 +110,12 @@ int SCIPstoGetNScenarios(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** frees the STO reader data */
+SCIP_EXPORT
+SCIP_RETCODE SCIPfreeReaderdataSto(
+   SCIP*                 scip                /**< the SCIP data structure */
+   );
+
 /** @} */
 
 #ifdef __cplusplus

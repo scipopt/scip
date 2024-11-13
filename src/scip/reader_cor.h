@@ -83,6 +83,12 @@ SCIP_RETCODE SCIPreadCor(
    SCIP_RESULT*          result              /**< pointer to store the result of the file reading call */
    );
 
+/** frees the COR reader data */
+SCIP_EXPORT
+SCIP_RETCODE SCIPfreeReaderdataCor(
+   SCIP*                 scip                /**< the SCIP data structure */
+   );
+
 /*
  * Interface method for the tim and sto readers
  */

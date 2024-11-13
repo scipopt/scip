@@ -37,6 +37,7 @@
 #include "scip/pub_reader.h"
 #include "scip/reader_cor.h"
 #include "scip/reader_tim.h"
+#include "scip/reader_sto.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -293,17 +294,12 @@ SCIP_RETCODE createReaderdata(
 static
 void freeReaderdata(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_READER*          reader              /**< the reader structure */
+   SCIP_READERDATA*      readerdata          /**< the reader data structure */
    )
 {
-   SCIP_READERDATA* readerdata;
    int i;
 
    assert(scip != NULL);
-   assert(reader != NULL);
-
-   readerdata = SCIPreaderGetData(reader);
-
    assert(readerdata != NULL);
 
    /* only free the reader data is a file has been read */
@@ -329,9 +325,9 @@ void freeReaderdata(
       SCIPfreeBlockMemoryArray(scip, &readerdata->stagenames, readerdata->nstages);
       SCIPfreeBlockMemoryArray(scip, &readerdata->stagestartcons, readerdata->nstages);
       SCIPfreeBlockMemoryArray(scip, &readerdata->stagestartvars, readerdata->nstages);
-   }
 
-   SCIPfreeBlockMemory(scip, &readerdata);
+      readerdata->read = FALSE;
+   }
 }
 
 
@@ -809,7 +805,17 @@ SCIP_DECL_READERCOPY(readerCopyTim)
 static
 SCIP_DECL_READERFREE(readerFreeTim)
 {
-   freeReaderdata(scip, reader);
+   SCIP_READERDATA* readerdata;
+
+   assert(scip != NULL);
+   assert(reader != NULL);
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   freeReaderdata(scip, readerdata);
+
+   SCIPfreeBlockMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }
@@ -839,6 +845,13 @@ SCIP_DECL_READERREAD(readerReadTim)
       (*result) = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
+
+   /* when reading the TIM file, it is necessary to free the TIM and STO reader data. This is the STO file generates
+    * data based on the data from the TIM file. For most readers, there is no problem data stored in the reader data,
+    * and hence the reader data doesn't need to be freed.
+    */
+   SCIP_CALL( SCIPfreeReaderdataTim(scip) );
+   SCIP_CALL( SCIPfreeReaderdataSto(scip) );
 
    SCIP_CALL( SCIPreadTim(scip, filename, result) );
 
@@ -912,6 +925,28 @@ SCIP_RETCODE SCIPreadTim(
 
    return SCIP_OKAY;
 }
+
+/** frees the reader data for the tim file */
+SCIP_RETCODE SCIPfreeReaderdataTim(
+   SCIP*                 scip                /**< the SCIP data structure */
+   )
+{
+   SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
+
+   assert(scip != NULL);
+
+   reader = SCIPfindReader(scip, READER_NAME);
+   assert(reader != NULL);
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   freeReaderdata(scip, readerdata);
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Interface methods for the cor and sto files
