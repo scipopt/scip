@@ -339,6 +339,7 @@
 /**@page PROGRAMMING Programming with SCIP
  *
  * - @subpage CODE    "Coding style guidelines"
+ * - @subpage SRCORGA "Organization of source code"
  * - @subpage OBJ     "Creating, capturing, releasing, and adding data objects"
  * - @subpage MEMORY  "Using the memory functions of SCIP"
  * - @subpage DEBUG   "Debugging"
@@ -7844,6 +7845,44 @@
  * SCIP_STAGE_FREE         = 13         /**< SCIP data structures are being freed
  * \endcode
  * Most functions can be called in a subset of the stages, this is then documented, a runtime check is often added and will throw a \ref SCIP_INVALIDCALL if the stage is not allowed.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page SRCORGA Organization of Source Code
+ *
+ *  The SCIP source code has different types of files, distinguished by their naming style. The following list gives an overview of the most important file types and their purpose.
+ *
+ *  @section SRCORGA_CORE SCIP core components
+ *
+ *  - Each core component has an implementation with an internal API and a public API.
+ *  - The internal implementation should be in a file <code><component>.c,h</code> and should not be included in the public API.
+ *  - Internal API functions usually do not take a <code>SCIP*</code> parameter, but a pointer to the component as first argument and pointers to internal structures like <code>SCIP_SET*</code> or <code>SCIP_STAT*</code>, where necessary.
+ *  - The name of internal API functions follows the style `SCIP<component><operation>...`, e.g., <code>SCIPvarCreate()</code> or <code>SCIPvarAddLocks()</code>.
+ *  - <code>pub_<component>.h</code> declares the functions of the public API that do not need a SCIP pointer.
+ *    Often, these are getter-functions.
+ *    For example, \ref pub_var.h contains public variable API functions.
+ *  - Functions in <code>pub_<component>.h</code> follow the same naming style as those in <code><component>.h</code> and are used by the implementation of the internal API as well.
+ *  - <code>scip_<component>.h</code> declares the functions of the public API that need a SCIP instance (<code>SCIP*</code>), e.g., \ref scip_var.h for public variable manipulation functions.
+ *    Functions declared in <code>scip_<component>.h</code> are often thin wrappers that call the internal API functions from <code><component>.h</code>.
+ *    These functions should follow the naming style `SCIP<operation><component>...`, e.g., <code>SCIPcreateVar()</code> or <code>SCIPaddVarLocks</code>.
+ *  - To ensure functions of the public API being reachable in shared libraries, their declaration needs to contain the <code>SCIP_EXPORT</code> attribute.
+ *  - Public types (typedef's, enumerations) are defined in file <code>type_<component>.h</code>.
+ *    Type names follow the style <code>SCIP_<COMPONENT>...</code>.
+ *  - Structs that need to be accessed by several source files are defined in <code>struct_<component>.h</code>.
+ *    <code>struct_<component>.h</code> is usually included only by <code><component>.c</code> and maybe <code>scip_<component>.c</code>.
+ *    Exceptions are due to manual inlining of functions via macros when compiling for optimized mode.
+ *  - All types, structs, and functions are documented with Doxygen-style comments.
+ *    The documentation of the implementation of a function must repeat the documentation of the function declaration exactly (for doxygen to treat them as identical).
+ *
+ *  @section SRCORGA_PLUGINS Plugins
+ *  - Each plugin is defined in files <code><type>_<name>.c,h</code>, e.g.,
+ *     \ref cons_knapsack.c implements the Knapsack constraint handler plugin and
+ *     \ref cons_knapsack.h declares its public API functions.
+ *  - Public types that belong to a plugin are declared in its header, <code><type>_<name>.h</code>.
+ *  - API functions of plugins are named as <code>SCIP<operation>...<Name></code>, e.g., <code>SCIPincludeConshdlrAnd()</code>, <code>SCIPcreateConsAnd()</code>, or <code>SCIPgetNVarsAnd()</code>.
+ *  - Plugins access only the public API.
+ *  - Plugins that need to be included by default should be registered in <code>src/scip/scipdefplugins.c</code>.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
