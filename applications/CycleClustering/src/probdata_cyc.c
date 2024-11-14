@@ -53,13 +53,6 @@ struct SCIP_ProbData
    int                   ncluster;           /**< the number of clusters */
 };
 
-/** create enum for type of edges, to improve readibility */
-typedef enum{
-   INCLUSTER = 0,                            /*edges inside a single cluster*/
-   CONSECUTIVE_CLUSTER = 1,                              /*edges connecting two consecutive cluster*/
-   NON_CONSECUTIVE_CLUSTER = 2          /*edges connecting two non-consecutive cluster*/
-} EdgeType;
-
 /** Check if the clustering has exactly one state in every cluster. */
 SCIP_Bool isPartition(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -221,7 +214,7 @@ SCIP_RETCODE createVariables(
    int i;
    int j;
    int c;
-   EdgeType edgetype;
+   EDGETYPE edgetype;
    int nbins = probdata->nbins;
    int ncluster = probdata->ncluster;
    char varname[SCIP_MAXSTRLEN];
@@ -245,8 +238,7 @@ SCIP_RETCODE createVariables(
       }
    }
 
-   /* create variables for the edges in each cluster combination.
-    */
+   /* create variables for the edges in each cluster combination.*/
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(probdata->edgevars), nbins) );
 
    for( i = 0; i < nbins; ++i )
@@ -290,6 +282,7 @@ SCIP_RETCODE createProbSimplifiedTest(
    int j;
    int c1;
    int c2;
+   EDGETYPE edgetype;
    char consname[SCIP_MAXSTRLEN];
    SCIP_CONS* temp;
    int nbins = probdata->nbins;
@@ -390,9 +383,9 @@ SCIP_RETCODE createProbSimplifiedTest(
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "sumedge_%d_%d",  i+1, j+1 );
          SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, 1.0, 1.0 ) );
 
-         for( c1 = 0; c1 < 3; ++c1 )
+         for( edgetype = INCLUSTER; edgetype <= NON_CONSECUTIVE_CLUSTER; ++edgetype )
          {
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][c1], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][edgetype], 1.0) );
          }
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][i][CONSECUTIVE_CLUSTER], 1.0) );
 
@@ -431,6 +424,7 @@ SCIP_RETCODE createProbSimplified(
    int i;
    int j;
    int c1;
+   EDGETYPE edgetype;
    int nbins = probdata->nbins;
    int ncluster = probdata->ncluster;
    char consname[SCIP_MAXSTRLEN];
@@ -605,9 +599,9 @@ SCIP_RETCODE createProbSimplified(
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "sumedge_%d_%d",  i, j);
          SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0) );
 
-         for( c1 = 0; c1 < 2; ++c1 )
+         for( edgetype = INCLUSTER; edgetype <= CONSECUTIVE_CLUSTER; ++edgetype )
          {
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][c1], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][edgetype], 1.0) );
          }
 
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][i][CONSECUTIVE_CLUSTER], 1.0) );
@@ -897,8 +891,8 @@ SCIP_RETCODE createProbOnlyEdge(
                      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
                   SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][INCLUSTER], sign[l][0]) );
-                  SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][0], sign[l][1]) );
-                  SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][0], sign[l][2]) );
+                  SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][INCLUSTER], sign[l][1]) );
+                  SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][INCLUSTER], sign[l][2]) );
 
                   SCIP_CALL( SCIPaddCons(scip, temp) );
                   SCIP_CALL( SCIPreleaseCons(scip, &temp) );
@@ -909,9 +903,9 @@ SCIP_RETCODE createProbOnlyEdge(
             SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], 1.0) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][1], 1.0) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][1], -1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][INCLUSTER], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][CONSECUTIVE_CLUSTER], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][CONSECUTIVE_CLUSTER], -1.0) );
 
             SCIP_CALL( SCIPaddCons(scip, temp) );
             SCIP_CALL( SCIPreleaseCons(scip, &temp) );
@@ -920,9 +914,9 @@ SCIP_RETCODE createProbOnlyEdge(
             SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], 1.0) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][j][1], 1.0) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][i][1], -1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][INCLUSTER], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][j][CONSECUTIVE_CLUSTER], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][i][CONSECUTIVE_CLUSTER], -1.0) );
 
             SCIP_CALL( SCIPaddCons(scip, temp) );
             SCIP_CALL( SCIPreleaseCons(scip, &temp) );
@@ -931,9 +925,9 @@ SCIP_RETCODE createProbOnlyEdge(
             SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], -1.0) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][1], 1.0) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][1], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][INCLUSTER], -1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][k][CONSECUTIVE_CLUSTER], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][k][CONSECUTIVE_CLUSTER], 1.0) );
 
             SCIP_CALL( SCIPaddCons(scip, temp) );
             SCIP_CALL( SCIPreleaseCons(scip, &temp) );
@@ -942,9 +936,9 @@ SCIP_RETCODE createProbOnlyEdge(
             SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][0], -1.0) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][j][1], 1.0) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][i][1], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[MAX(i,j)][MIN(i,j)][INCLUSTER], -1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][j][CONSECUTIVE_CLUSTER], 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[k][i][CONSECUTIVE_CLUSTER], 1.0) );
 
             SCIP_CALL( SCIPaddCons(scip, temp) );
             SCIP_CALL( SCIPreleaseCons(scip, &temp) );
@@ -962,7 +956,7 @@ SCIP_DECL_PROBTRANS(probtransCyc)
    int i;
    int j;
    int c;
-   EdgeType edgetype;
+   EDGETYPE edgetype;
    int nbins = sourcedata->nbins;
    int ncluster = sourcedata->ncluster;
 
@@ -1045,7 +1039,7 @@ static
 SCIP_DECL_PROBDELORIG(probdelorigCyc)
 {
    int c;
-   EdgeType edgetype;
+   EDGETYPE edgetype;
    int i;
    int j;
 
@@ -1114,7 +1108,7 @@ static
 SCIP_DECL_PROBDELTRANS(probdeltransCyc)
 {
    int c;
-   EdgeType edgetype;
+   EDGETYPE edgetype;
    int i;
    int j;
 
@@ -1186,7 +1180,7 @@ SCIP_DECL_PROBCOPY(probcopyCyc)
    SCIP_VAR* var;
    int nbins;
    int ncluster;
-   EdgeType edgetype;
+   EDGETYPE edgetype;
    int i;
    int j;
    int c;
@@ -1487,15 +1481,15 @@ SCIP_VAR* getEdgevar(
    SCIP_VAR****          edgevars,           /**< edgevar data structure*/
    int                   state1,             /**< first state */
    int                   state2,             /**< second state */
-   int                   direction           /**< direction, 0 = incluster, 1 = forward */
+   EDGETYPE              edgetype            /**< position in clustering */
    )
 {
    assert(edgevars != NULL);
    assert(edgevars[state1] != NULL);
    assert(edgevars[state1][state2] != NULL);
-   assert(edgevars[state1][state2][direction] != NULL);
+   assert(edgevars[state1][state2][edgetype] != NULL);
 
-   return edgevars[state1][state2][direction];
+   return edgevars[state1][state2][edgetype];
 }
 
 /** check for an array of states, if all possible edge-combinations exist */
