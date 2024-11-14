@@ -366,30 +366,30 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
    return SCIP_OKAY;
 }
 
-
-/** dialog execution method for the set menu*/
+/** dialog execution method for the set menu */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetMenu)
 {  /*lint --e{715}*/
    /* if remaining command string is empty, display menu of available options */
    static int times_opened = 0;
+
    if( SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
    {
       SCIPdialogMessage(scip, NULL, "\n");
       SCIP_CALL( SCIPdialogDisplayMenu(dialog, scip) );
       SCIPdialogMessage(scip, NULL, "\n");
-      if(times_opened==0){
+
+      if(times_opened==0)
+      {
          SCIPdialogMessage(scip, NULL, "Press 'Return' or enter '..' to navigate back in the menu.\n");
-         times_opened ++;}
-      
+         times_opened ++;
+      }
    }
 
    SCIP_CALL( dialogExecMenu(scip, dialog, dialoghdlr, nextdialog) );
 
    return SCIP_OKAY;
 }
-
-
 
 /** dialog execution method for the change add constraint */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
