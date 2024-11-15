@@ -95,7 +95,7 @@ SCIP_RETCODE createSubscipIIS(
    /* create problem in sub-SCIP */
    SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, &success) );
    
-   if( success == FALSE )
+   if( ! success )
       return SCIP_ERROR;
    
    /* Remove the objective */
@@ -237,7 +237,7 @@ SCIP_RETCODE SCIPiisGenerate(
    iis = SCIPgetIIS(set->scip);
    
    /* Create the subscip used for storing the IIS */
-   createSubscipIIS(set, iis, timelim, nodelim);
+   SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
    
    SCIPclockStart(iis->iistime, set);
    
@@ -319,8 +319,8 @@ SCIP_RETCODE SCIPiisGenerate(
       assert(iis != NULL);
       
       /* Recreate the subscip if one of the IIS finder algorithms has produced an invalid IS */
-      if( !(iis->valid) )
-         createSubscipIIS(set, iis, timelim - SCIPclockGetTime(iis->iistime), nodelim);
+      if( ! iis->valid )
+         SCIP_CALL( createSubscipIIS(set, iis, timelim - SCIPclockGetTime(iis->iistime), nodelim) );
 
       /* start timing */
       SCIPclockStart(iisfinder->iisfindertime, set);
@@ -341,17 +341,17 @@ SCIP_RETCODE SCIPiisGenerate(
    }
    
    /* Ensure the problem is irreducible if requested */
-   SCIPgetBoolParam(set->scip, "iis/minimal", &minimal);
-   if( !iis->irreducible && minimal &&!(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) )
+   SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/minimal", &minimal) );
+   if( !iis->irreducible && minimal && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) )
    {
       SCIP_RANDNUMGEN* randnumgen;
       SCIP_Real timelimperiter;
       SCIP_Longint nodelimperiter;
       
-      SCIPdebugMessage("----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
+      SCIPdebugMsg(scip, "----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
       
       if( !(iis->valid) )
-         createSubscipIIS(set, iis, timelim, nodelim);
+         SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
    
       // TODO: Is there a better way to access these? I don't want to put a basic deletion filter in iisfinder.c.
       SCIP_CALL( SCIPcreateRandom(set->scip, &randnumgen, 0x5EED, TRUE) );
@@ -364,7 +364,7 @@ SCIP_RETCODE SCIPiisGenerate(
    
    SCIPiisfinderInfoMessage(iis, FALSE);
    
-   SCIPgetBoolParam(set->scip, "iis/removeunusedvars", &removeunusedvars);
+   SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/removeunusedvars", &removeunusedvars) );
    if( removeunusedvars )
    {
       SCIP_VAR** vars;
@@ -548,12 +548,13 @@ void SCIPiisfinderInfoMessage(
    SCIP* scip;
    int i;
    int nvars;
-   int nbounds;
+   int nbounds = 0;
    const char* valid = iis->valid ? "yes" : "no";
    const char* irreducible = iis->irreducible ? "yes" : "no";
    
    scip = SCIPiisGetSubscip(iis);
-   
+   assert(scip != NULL);
+
    if( printheaders )
    {
       SCIPinfoMessage(scip, NULL, "  cons  | bounds | valid  | irreducible | nodes  |  time \n");
@@ -562,7 +563,6 @@ void SCIPiisfinderInfoMessage(
    
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);
-   nbounds = 0;
    for( i = 0; i < nvars; i++ )
    {
       if( !SCIPisInfinity(scip, -SCIPvarGetLbOriginal(vars[i])) )
@@ -709,7 +709,7 @@ SCIP_Longint SCIPiisGetNNodes(
 void SCIPiisSetValid(
    SCIP_IIS*             iis,                /**< IIS data structure */
    SCIP_Bool             valid               /**< The new validity status of the IIS */
-)
+   )
 {
    iis->valid = valid;
 }
@@ -727,7 +727,7 @@ void SCIPiisSetIrreducible(
 void SCIPiisAddNNodes(
    SCIP_IIS*             iis,                /**< IIS data structure */
    SCIP_Longint          nnodes              /**< The number of nodes to add to the IIS */
-)
+   )
 {
    iis->nnodes += nnodes;
 }

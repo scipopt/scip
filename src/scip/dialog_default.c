@@ -3989,7 +3989,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteIIS)
       SCIP_CALL( writeProblem(subscip, dialog, dialoghdlr, nextdialog, FALSE, FALSE) );
    }
    else
-      SCIPdialogMessage(scip, NULL, "no IIS available\n");
+      SCIPdialogMessage(scip, NULL, "no IIS available.\n");
    
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
    
@@ -4862,7 +4862,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
             NULL,
             SCIPdialogExecWriteIIS, NULL, NULL,
             "iis",
-            "write (I)IS (irreducible infeasible subsystem) of infeasible problem to file (format is given by file extension, e.g., iis.{lp,rlp,cip,mps})",
+            "write (I)IS (irreducible infeasible subsystem) of infeasible problem to file (format is given by file extension (e.g., {.cip, .lp, .mps}),
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );

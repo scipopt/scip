@@ -91,7 +91,7 @@ SCIP_RETCODE setLimits(
 }
 
 static
-void revertBndChgs(
+SCIP_RETCODE revertBndChgs(
    SCIP*                 scip,               /**< SCIP instance to analyze */
    SCIP_VAR**            vars,               /**< the array of variables whose bounds are changed */
    SCIP_Real*            bounds,             /**< the array of original bounds for the variables */
@@ -107,12 +107,12 @@ void revertBndChgs(
       if( islb )
       {
          if( !SCIPisInfinity(scip, -bounds[i]) )
-            SCIPchgVarLb(scip, vars[idxs[i]], bounds[i]);
+            SCIP_CALL( SCIPchgVarLb(scip, vars[idxs[i]], bounds[i]) );
       }
       else
       {
          if( !SCIPisInfinity(scip, bounds[i]) )
-            SCIPchgVarUb(scip, vars[idxs[i]], bounds[i]);
+            SCIP_CALL( SCIPchgVarUb(scip, vars[idxs[i]], bounds[i]) );
       }
    }
 }
@@ -185,7 +185,7 @@ SCIP_RETCODE deletionSubproblem(
             bounds[i] = SCIPvarGetLbOriginal(vars[idxs[i]]);
             if( !SCIPisInfinity(scip, -bounds[i]) )
             {
-               SCIPchgVarLb(scip, vars[idxs[i]], -SCIPinfinity(scip));
+               SCIP_CALL( SCIPchgVarLb(scip, vars[idxs[i]], -SCIPinfinity(scip)) );
                chgmade = TRUE;
             }
          }
@@ -194,7 +194,7 @@ SCIP_RETCODE deletionSubproblem(
             bounds[i] = SCIPvarGetUbOriginal(vars[idxs[i]]);
             if( !SCIPisInfinity(scip, bounds[i]) )
             {
-               SCIPchgVarUb(scip, vars[idxs[i]], SCIPinfinity(scip));
+               SCIP_CALL( SCIPchgVarUb(scip, vars[idxs[i]], SCIPinfinity(scip)) );
                chgmade = TRUE;
             }
          }
@@ -220,7 +220,7 @@ SCIP_RETCODE deletionSubproblem(
    }
    
    /* solve problem until first solution is found or infeasibility has been proven */
-   setLimits(scip, iis, timelim, timelimperiter, nodelim, nodelimperiter);
+   SCIP_CALL( setLimits(scip, iis, timelim, timelimperiter, nodelim, nodelimperiter) );
    retcode = SCIPsolve(scip);
    SCIPiisAddNNodes(iis, SCIPgetNTotalNodes(scip));
    
@@ -248,7 +248,7 @@ SCIP_RETCODE deletionSubproblem(
       case SCIP_STATUS_USERINTERRUPT:    /* if a user interrupt occurred, just stop */
          SCIPdebugMessage("User interrupt. Stopping. \n");
          if( delbounds )
-            revertBndChgs(scip, vars, bounds, idxs, ndels, islb);
+            SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
          else
             SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, FALSE) );
          *stop = TRUE;
@@ -271,7 +271,7 @@ SCIP_RETCODE deletionSubproblem(
             *deleted = TRUE;
          }
          if( conservative && delbounds )
-            revertBndChgs(scip, vars, bounds, idxs, ndels, islb);
+            SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
          if( !delbounds )
             SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, !conservative) );
          break;
@@ -290,7 +290,7 @@ SCIP_RETCODE deletionSubproblem(
       case SCIP_STATUS_UNBOUNDED:
          SCIPdebugMessage("Found solution to subproblem with bounds / constraints removed. Add them back.\n");
          if( delbounds )
-            revertBndChgs(scip, vars, bounds, idxs, ndels, islb);
+            SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
          else
             SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, FALSE) );
          break;
