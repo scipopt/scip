@@ -467,7 +467,7 @@ SCIP_RETCODE deletionFilterBatch(
 
       /* treat subproblem */
       SCIP_CALL( deletionSubproblem(iis, conss, NULL, idxs, k, timelim, timelimperiter, nodelim, nodelimperiter,
-                                    conservative, FALSE, FALSE, &deleted, &stopiter, alldeletionssolved) );
+            conservative, FALSE, FALSE, &deleted, &stopiter, alldeletionssolved) );
       if( !silent && deleted )
          SCIPiisfinderInfoMessage(iis, FALSE);
       
@@ -520,7 +520,7 @@ SCIP_RETCODE deletionFilterBatch(
          
          /* treat subproblem with LB deletions */
          SCIP_CALL( deletionSubproblem(iis, NULL, vars, idxs, k, timelim, timelimperiter, nodelim, nodelimperiter,
-                                       conservative, TRUE, TRUE, &deleted, &stopiter, alldeletionssolved) );
+               conservative, TRUE, TRUE, &deleted, &stopiter, alldeletionssolved) );
          if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) || stopiter )
             break;
          if( !silent && deleted )
@@ -528,7 +528,7 @@ SCIP_RETCODE deletionFilterBatch(
          
          /* treat subproblem with UB deletions */
          SCIP_CALL( deletionSubproblem(iis, NULL, vars, idxs, k, timelim, timelimperiter, nodelim, nodelimperiter,
-                                       conservative, TRUE, FALSE, &deleted, &stopiter, alldeletionssolved) );
+               conservative, TRUE, FALSE, &deleted, &stopiter, alldeletionssolved) );
    
          if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) || stopiter )
             break;
@@ -782,7 +782,7 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
    SCIP_CALL( SCIPcreateRandom(scip, &(iisfinderdata)->randnumgen, RANDSEED, TRUE) );
    
    SCIP_CALL( SCIPincludeIISfinderBasic(scip, &iisfinder, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY,
-                                        iisfinderExecGreedy, iisfinderdata) );
+         iisfinderExecGreedy, iisfinderdata) );
    
    assert(iisfinder != NULL);
    
