@@ -115,6 +115,7 @@ SCIP_RETCODE revertBndChgs(
             SCIP_CALL( SCIPchgVarUb(scip, vars[idxs[i]], bounds[i]) );
       }
    }
+   return SCIP_OKAY;
 }
 
 static

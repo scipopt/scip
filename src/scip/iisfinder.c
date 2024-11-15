@@ -348,7 +348,7 @@ SCIP_RETCODE SCIPiisGenerate(
       SCIP_Real timelimperiter;
       SCIP_Longint nodelimperiter;
       
-      SCIPdebugMsg(scip, "----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
+      SCIPdebugMsg(set->scip, "----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
       
       if( !(iis->valid) )
          SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
