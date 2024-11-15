@@ -91,7 +91,6 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_CALL( SCIPhashmapCreate(&(iis->varsmap), SCIPblkmem(set->scip), SCIPgetNOrigVars(set->scip)) );
    SCIP_CALL( SCIPhashmapCreate(&(iis->conssmap), SCIPblkmem(set->scip), SCIPgetNOrigConss(set->scip)) );
    
-   
    /* create problem in sub-SCIP */
    SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, &success) );
    
@@ -489,9 +488,6 @@ void SCIPiisfinderEnableOrDisableClocks(
    SCIPclockEnableOrDisable(iisfinder->iisfindertime, enable);
 }
 
-
-/* new callback/method setter methods */
-
 /** sets copy method of IIS finder */
 void SCIPiisfinderSetCopy(
    SCIP_IISFINDER*       iisfinder,          /**< IIS finder */
@@ -566,9 +562,9 @@ void SCIPiisfinderInfoMessage(
    for( i = 0; i < nvars; i++ )
    {
       if( !SCIPisInfinity(scip, -SCIPvarGetLbOriginal(vars[i])) )
-         nbounds += 1;
+         ++nbounds;
       if( !SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
-         nbounds += 1;
+         ++nbounds;
    }
    SCIPinfoMessage(scip, NULL, "%7d |%7d |%7s | %11s |%7lld | %7f\n", SCIPgetNOrigConss(scip), nbounds, valid, irreducible, SCIPiisGetNNodes(iis), SCIPiisGetTime(iis));
 }
