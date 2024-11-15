@@ -255,7 +255,7 @@ SCIP_RETCODE doScipCreate(
    SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
    SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
-   SCIP_CALL( SCIPiisCreate(&(*scip)->iis) );
+   SCIP_CALL( SCIPiisCreate(&(*scip)->iis, SCIPblkmem(*scip)) );
 
    /* include additional core functionality */
    SCIP_CALL( SCIPincludeCorePlugins(*scip) );
@@ -364,7 +364,7 @@ SCIP_RETCODE SCIPfree(
    /* switch stage to FREE */
    (*scip)->set->stage = SCIP_STAGE_FREE;
 
-   SCIP_CALL( SCIPiisFree(&(*scip)->iis) );
+   SCIP_CALL( SCIPiisFree(&(*scip)->iis, SCIPblkmem(*scip)) );
    SCIP_CALL( SCIPsyncstoreRelease(&(*scip)->syncstore) );
    SCIP_CALL( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );
    SCIP_CALL( SCIPdialoghdlrFree(*scip, &(*scip)->dialoghdlr) );

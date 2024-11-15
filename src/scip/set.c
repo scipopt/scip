@@ -2952,7 +2952,7 @@ SCIP_RETCODE SCIPsetFree(
    /* free IIS */
    for( i = 0; i < (*set)->niisfinders; ++i)
    {
-      SCIP_CALL( SCIPiisfinderFree(&(*set)->iisfinders[i], *set) );
+      SCIP_CALL( SCIPiisfinderFree(&(*set)->iisfinders[i], *set, blkmem) );
    }
    BMSfreeMemoryArrayNull(&(*set)->iisfinders);
 

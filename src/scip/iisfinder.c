@@ -74,7 +74,7 @@ SCIP_RETCODE createSubscipIIS(
    /* Create the subscip used for storing the IIS */
    if( iis->subscip != NULL )
    {
-      SCIPdebugMessage("An IIS for this problem already exists. Removing it before starting search procedure again.\n");
+      SCIPdebugMsg(set->scip, "An IIS for this problem already exists. Removing it before starting search procedure again.\n");
       
       /* free sub-SCIP */
       SCIP_CALL( SCIPiisReset(&iis) );
@@ -147,11 +147,10 @@ SCIP_RETCODE doIISfinderCreate(
    assert(desc != NULL);
    assert(iisfinderexec != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(iisfinder) );
-   BMSclearMemory(*iisfinder);
+   SCIP_ALLOC( BMSallocClearBlockMemory(blkmem, iisfinder) );
 
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*iisfinder)->name, name, strlen(name)+1) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*iisfinder)->desc, desc, strlen(desc)+1) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*iisfinder)->name, name, strlen(name)+1) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*iisfinder)->desc, desc, strlen(desc)+1) );
    (*iisfinder)->priority = priority;
    (*iisfinder)->iisfindercopy = iisfindercopy;
    (*iisfinder)->iisfinderfree = iisfinderfree;
@@ -193,7 +192,7 @@ SCIP_RETCODE SCIPiisfinderCreate(
    assert(iisfinderexec != NULL);
 
    SCIP_CALL_FINALLY( doIISfinderCreate(iisfinder, set, messagehdlr, blkmem, name, desc, priority,
-         iisfindercopy, iisfinderfree, iisfinderexec, iisfinderdata), (void) SCIPiisfinderFree(iisfinder, set) );
+         iisfindercopy, iisfinderfree, iisfinderexec, iisfinderdata), (void) SCIPiisfinderFree(iisfinder, set, blkmem) );
 
    return SCIP_OKAY;
 }
@@ -266,7 +265,7 @@ SCIP_RETCODE SCIPiisGenerate(
                return SCIP_OKAY;
    
             case SCIP_STATUS_USERINTERRUPT:
-               SCIPdebugMessage("User interrupt. Stopping. \n");
+               SCIPdebugMsg(iis->subscip, "User interrupt. Stopping.\n");
                SCIPclockStop(iis->iistime, set);
                return SCIP_OKAY;
    
@@ -324,7 +323,7 @@ SCIP_RETCODE SCIPiisGenerate(
       /* start timing */
       SCIPclockStart(iisfinder->iisfindertime, set);
    
-      SCIPdebugMessage("----- STARTING IIS FINDER %s -----\n", iisfinder->name);
+      SCIPdebugMsg(set->scip, "----- STARTING IIS FINDER %s -----\n", iisfinder->name);
       SCIP_CALL( iisfinder->iisfinderexec(iis, iisfinder, timelim, nodelim, removebounds, silent, &result) );
       
       /* stop timing */
@@ -333,7 +332,7 @@ SCIP_RETCODE SCIPiisGenerate(
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
       
       if( timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim) )
-         SCIPdebugMessage("Time or node limit hit. Stopping Search.\n");
+         SCIPdebugMsg(set->scip, "Time or node limit hit. Stopping Search.\n");
       
       if( (stopafterone && (result == SCIP_SUCCESS)) || (iis->irreducible == TRUE) )
          break;
@@ -420,7 +419,8 @@ SCIP_RETCODE SCIPiisfinderCopyInclude(
 /** frees memory of IIS finder */
 SCIP_RETCODE SCIPiisfinderFree(
    SCIP_IISFINDER**      iisfinder,          /**< IIS finder */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(iisfinder != NULL);
@@ -439,9 +439,9 @@ SCIP_RETCODE SCIPiisfinderFree(
    /* free clocks */
    SCIPclockFree(&(*iisfinder)->iisfindertime);
 
-   BMSfreeMemoryArrayNull(&(*iisfinder)->name);
-   BMSfreeMemoryArrayNull(&(*iisfinder)->desc);
-   BMSfreeMemory(iisfinder);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*iisfinder)->name, strlen((*iisfinder)->name)+1);
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*iisfinder)->desc, strlen((*iisfinder)->desc)+1);
+   BMSfreeBlockMemory(blkmem, iisfinder);
 
    return SCIP_OKAY;
 }
@@ -536,8 +536,8 @@ SCIP_Real SCIPiisfinderGetTime(
 
 /** prints output line during IIS calculations */
 void SCIPiisfinderInfoMessage(
-   SCIP_IIS*            iis,                 /**< pointer to the IIS */
-   SCIP_Bool            printheaders         /**< whether the headers should be printed instead of the info */
+   SCIP_IIS*             iis,                /**< pointer to the IIS */
+   SCIP_Bool             printheaders        /**< whether the headers should be printed instead of the info */
    )
 {
    SCIP_VAR** vars;
@@ -571,14 +571,13 @@ void SCIPiisfinderInfoMessage(
 
 /** creates and captures a new IIS */
 SCIP_RETCODE SCIPiisCreate(
-   SCIP_IIS**           iis                  /**< pointer to return the created IIS */
+   SCIP_IIS**            iis,                /**< pointer to return the created IIS */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(iis != NULL);
    
-   SCIPdebugMessage("SCIPiisCreate()\n");
-   
-   SCIP_ALLOC( BMSallocMemory(iis) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, iis) );
    
    (*iis)->subscip = NULL;
    (*iis)->subscip = NULL;
@@ -594,7 +593,8 @@ SCIP_RETCODE SCIPiisCreate(
 
 /** releases an IIS */
 SCIP_RETCODE SCIPiisFree(
-   SCIP_IIS**           iis                  /**< pointer to the IIS */
+   SCIP_IIS**            iis,                /**< pointer to the IIS */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    
@@ -622,7 +622,7 @@ SCIP_RETCODE SCIPiisFree(
    
    SCIPclockFree(&(*iis)->iistime);
    
-   BMSfreeMemory(iis);
+   BMSfreeBlockMemory(blkmem, iis);
    *iis = NULL;
    
    return SCIP_OKAY;

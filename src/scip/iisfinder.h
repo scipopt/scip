@@ -86,7 +86,8 @@ void SCIPiisfinderSetCopy(
 /** frees memory of IIS finder */
 SCIP_RETCODE SCIPiisfinderFree(
    SCIP_IISFINDER**      iisfinder,          /**< pointer to IIS finder data structure */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** sets destructor method of IIS finder */
@@ -104,12 +105,14 @@ void SCIPiisfinderSetPriority(
 
 /** creates and captures a new IIS */
 SCIP_RETCODE SCIPiisCreate(
-   SCIP_IIS**            iis                 /**< pointer to return the created IIS */
+   SCIP_IIS**            iis,                /**< pointer to return the created IIS */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** releases an IIS */
 SCIP_RETCODE SCIPiisFree(
-   SCIP_IIS**            iis                 /**< pointer to the IIS */
+   SCIP_IIS**            iis,                /**< pointer to the IIS */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** reset an IIS (in case one exists from a previous solve */

@@ -244,7 +244,7 @@ SCIP_RETCODE deletionSubproblem(
    if( retcode != SCIP_OKAY )
    {
       SCIP_CALL( SCIPfreeTransform(scip) );
-      SCIPdebugMessage("Error in sub-scip with deleted constraints / bounds. Re-adding them.\n");
+      SCIPdebugMsg(scip, "Error in sub-scip with deleted constraints / bounds. Re-adding them.\n");
       if( delbounds )
       {
          revertBndChgs(scip, vars, bounds, idxs, ndels, islb);
@@ -263,7 +263,7 @@ SCIP_RETCODE deletionSubproblem(
    switch ( status )
    {
       case SCIP_STATUS_USERINTERRUPT:    /* if a user interrupt occurred, just stop */
-         SCIPdebugMessage("User interrupt. Stopping. \n");
+         SCIPdebugMsg(scip, "User interrupt. Stopping. \n");
          if( delbounds )
             SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
          else
@@ -281,7 +281,7 @@ SCIP_RETCODE deletionSubproblem(
       case SCIP_STATUS_RESTARTLIMIT:
       case SCIP_STATUS_INFORUNBD:
          *alldeletionssolved = FALSE;
-         SCIPdebugMessage("Some limit reached. Keeping bounds / constraints removed if non-conservative. \n");
+         SCIPdebugMsg(scip, "Some limit reached. Keeping bounds / constraints removed if non-conservative. \n");
          if( !conservative )
          {
             SCIPiisSetValid(iis, FALSE);
@@ -294,7 +294,7 @@ SCIP_RETCODE deletionSubproblem(
          break;
       
       case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
-         SCIPdebugMessage("Subproblem with bounds / constraints removed infeasible. Keep them removed.\n");
+         SCIPdebugMsg(scip, "Subproblem with bounds / constraints removed infeasible. Keep them removed.\n");
          SCIPiisSetValid(iis, TRUE);
          if( !delbounds )
             SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, TRUE) );
@@ -305,7 +305,7 @@ SCIP_RETCODE deletionSubproblem(
       case SCIP_STATUS_SOLLIMIT:
       case SCIP_STATUS_OPTIMAL:
       case SCIP_STATUS_UNBOUNDED:
-         SCIPdebugMessage("Found solution to subproblem with bounds / constraints removed. Add them back.\n");
+         SCIPdebugMsg(scip, "Found solution to subproblem with bounds / constraints removed. Add them back.\n");
          if( delbounds )
             SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
          else
@@ -354,7 +354,7 @@ SCIP_RETCODE additionSubproblem(
    
    if( retcode != SCIP_OKAY )
    {
-      SCIPdebugMessage("Error in sub-scip with added constraints. Keep added constraints.\n");
+      SCIPdebugMsg(scip, "Error in sub-scip with added constraints. Keep added constraints.\n");
       return SCIP_ERROR;
    }
    
@@ -365,7 +365,7 @@ SCIP_RETCODE additionSubproblem(
    switch ( status )
    {
       case SCIP_STATUS_USERINTERRUPT:    /* if an user interrupt occurred, just stop */
-         SCIPdebugMessage("User interrupt. Stopping. \n");
+         SCIPdebugMsg(scip, "User interrupt. Stopping. \n");
          *stop = TRUE;
          break;
       
@@ -378,18 +378,18 @@ SCIP_RETCODE additionSubproblem(
       case SCIP_STATUS_SOLLIMIT:
       case SCIP_STATUS_RESTARTLIMIT:
       case SCIP_STATUS_INFORUNBD:
-         SCIPdebugMessage("Some limit reached. Added constraint batch failed to induce infeasibility. Continue adding.\n");
+         SCIPdebugMsg(scip, "Some limit reached. Added constraint batch failed to induce infeasibility. Continue adding.\n");
          break;
       
       case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
-         SCIPdebugMessage("Subproblem with added constraints infeasible. Final batch of constraints added.\n");
+         SCIPdebugMsg(scip, "Subproblem with added constraints infeasible. Final batch of constraints added.\n");
          *feasible = FALSE;
          break;
       
       case SCIP_STATUS_BESTSOLLIMIT:     /* we found a solution */
       case SCIP_STATUS_OPTIMAL:
       case SCIP_STATUS_UNBOUNDED:
-         SCIPdebugMessage("Found solution of subproblem with added constraints. Keep adding constraint batches.\n");
+         SCIPdebugMsg(scip, "Found solution of subproblem with added constraints. Keep adding constraint batches.\n");
          *feasible = TRUE;
          break;
       
@@ -672,7 +672,7 @@ SCIP_RETCODE additionFilterBatch(
             }
             if( k > 0 )
             {
-               SCIPdebugMessage( "Added %d many constraints dynamically.\n", k);
+               SCIPdebugMsg(scip,  "Added %d many constraints dynamically.\n", k);
                if( ! silent )
                   SCIPiisfinderInfoMessage(iis, FALSE);
             }
@@ -855,13 +855,16 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_RESULT*          result              /**< pointer to store the result of the IIS finder run */
    )
 {
+   SCIP* scip = SCIPiisGetSubscip(iis);
    SCIP_Bool alldeletionssolved = TRUE;
+   
+   assert( scip != NULL );
    
    if( additive )
    {
       if( !silent )
       {
-         SCIPdebugMessage("----- STARTING GREEDY ADDITION ALGORITHM -----\n");
+         SCIPdebugMsg(scip, "----- STARTING GREEDY ADDITION ALGORITHM -----\n");
       }
       SCIPiisfinderInfoMessage(iis, TRUE);
       SCIP_CALL( additionFilterBatch(iis, timelim, nodelim, silent, randnumgen, timelimperiter, nodelimperiter, dynamicreordering, batchsize) );
@@ -876,7 +879,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    {
       if( !silent )
       {
-         SCIPdebugMessage("----- STARTING GREEDY DELETION ALGORITHM -----\n");
+         SCIPdebugMsg(scip, "----- STARTING GREEDY DELETION ALGORITHM -----\n");
       }
       SCIPiisfinderInfoMessage(iis, TRUE);
       SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, randnumgen, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
@@ -893,7 +896,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    {
       if( !silent )
       {
-         SCIPdebugMessage("----- STARTING GREEDY DELETION ALGORITHM FOLLOWING COMPLETED ADDITION ALGORITHM -----\n");
+         SCIPdebugMsg(scip, "----- STARTING GREEDY DELETION ALGORITHM FOLLOWING COMPLETED ADDITION ALGORITHM -----\n");
       }
       SCIPiisfinderInfoMessage(iis, TRUE);
       SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, randnumgen, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
