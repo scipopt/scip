@@ -247,7 +247,7 @@ SCIP_RETCODE deletionSubproblem(
       SCIPdebugMsg(scip, "Error in sub-scip with deleted constraints / bounds. Re-adding them.\n");
       if( delbounds )
       {
-         revertBndChgs(scip, vars, bounds, idxs, ndels, islb);
+         SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
          SCIPfreeBlockMemoryArray(scip, &bounds, ndels);
       }
       else
@@ -349,7 +349,7 @@ SCIP_RETCODE additionSubproblem(
    *stop = FALSE;
    
    /* solve problem until first solution is found or infeasibility has been proven */
-   setLimits(scip, iis, timelim, timelimperiter, nodelim, nodelimperiter);
+   SCIP_CALL( setLimits(scip, iis, timelim, timelimperiter, nodelim, nodelimperiter) );
    retcode = SCIPsolve(scip);
    
    if( retcode != SCIP_OKAY )
@@ -653,7 +653,7 @@ SCIP_RETCODE additionFilterBatch(
          assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
    
          /* Add any other constraints that are also feasible for the current solution */
-         if( feasible && !stopiter && copysol != NULL && dynamicreordering )
+         if( feasible && !stopiter && (copysol != NULL) && dynamicreordering )
          {
             k = 0;
             for( j = i; j < nconss; ++j )
@@ -804,7 +804,7 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
    SCIP_CALL( SCIPaddLongintParam(scip,
          "iis/" IISFINDER_NAME "/nodelimperiter",
          "node limit of optimization process for each individual subproblem",
-         &iisfinderdata->nodelimperiter, FALSE, DEFAULT_NODELIMPERITER, -1, INT_MAX, NULL, NULL) );
+         &iisfinderdata->nodelimperiter, FALSE, DEFAULT_NODELIMPERITER, -1L, SCIP_LONGINT_MAX, NULL, NULL) );
    
    SCIP_CALL( SCIPaddBoolParam(scip,
          "iis/" IISFINDER_NAME "/additive",

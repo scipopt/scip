@@ -308,8 +308,8 @@ SCIP_RETCODE SCIPiisGenerate(
    }
 
    /* Try all IIS generators */
-   SCIPgetBoolParam(set->scip, "iis/stopafterone", &stopafterone);
-   SCIPgetBoolParam(set->scip, "iis/removebounds", &removebounds);
+   SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/stopafterone", &stopafterone) );
+   SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/removebounds", &removebounds) );
    for( i = 0; i < set->niisfinders; ++i )
    {
       SCIP_IISFINDER* iisfinder;
@@ -353,8 +353,8 @@ SCIP_RETCODE SCIPiisGenerate(
    
       // TODO: Is there a better way to access these? I don't want to put a basic deletion filter in iisfinder.c.
       SCIP_CALL( SCIPcreateRandom(set->scip, &randnumgen, 0x5EED, TRUE) );
-      SCIPgetRealParam(set->scip, "iis/greedy/timelimperiter", &timelimperiter);
-      SCIPgetLongintParam(set->scip, "iis/greedy/nodelimperiter", &nodelimperiter);
+      SCIP_CALL( SCIPgetRealParam(set->scip, "iis/greedy/timelimperiter", &timelimperiter) );
+      SCIP_CALL( SCIPgetLongintParam(set->scip, "iis/greedy/nodelimperiter", &nodelimperiter) );
       SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, randnumgen, timelimperiter, FALSE, TRUE, TRUE, TRUE, nodelimperiter, 1, &result) );
       SCIPfreeRandom(set->scip, &randnumgen);
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
