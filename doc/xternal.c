@@ -7863,7 +7863,9 @@
  *    These functions should follow the naming style `SCIP<operation><component>...`, e.g., <code>SCIPcreateVar()</code> or <code>SCIPaddVarLocks</code>.
  *  - To ensure functions of the public API being reachable in shared libraries, their declaration needs to contain the <code>SCIP_EXPORT</code> attribute.
  *  - Public types (typedef's, enumerations) are defined in file <code>type_<component>.h</code>.
- *    Type names follow the style <code>SCIP_<COMPONENT>...</code>.
+ *    Type names follow the style <code>SCIP_<COMPONENT>...</code>. For every struct, we have a typedef that shortens the name 
+ *    (so one could for instance use <code>SCIP_PARAM</code> instead of <code>struct SCIP_Param</code>).
+ *    The convention is to have the mixed-casing for the struct name, and then all-capital for the typedef's type. Similar for enums.
  *  - Structs that need to be accessed by several source files are defined in <code>struct_<component>.h</code>.
  *    <code>struct_<component>.h</code> is usually included only by <code><component>.c</code> and maybe <code>scip_<component>.c</code>.
  *    Exceptions are due to manual inlining of functions via macros when compiling for optimized mode.
