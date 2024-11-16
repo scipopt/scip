@@ -219,6 +219,7 @@ void solFreeAssignment(
    )
 {
    assert(scip != NULL);
+   assert(*assignment != NULL);
 
    SCIPfreeBlockMemoryArray(scip, &(*assignment)->idx, (*assignment)->len);
    SCIPfreeBlockMemoryArray(scip, &(*assignment)->vals, (*assignment)->len);
@@ -326,7 +327,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
    SCIP_VAR** vars;
    SCIP_CONS** consprob;
    SCIP_SOL* exactsol;
-   SOLINTASSIGNMENT* assignment;
+   SOLINTASSIGNMENT* assignment = NULL;
    SCIP_SOL* worksol;
    SCIP_Bool foundsol;
    SCIP_Bool lperror;
@@ -446,7 +447,7 @@ SCIP_DECL_CONSCHECK(consCheckExactSol)
 
    /* first, check if we already tried a solution with this integer assignment */
    solCreateSolAssignment(scip, sol, &assignment);
-   if( SCIPhashtableExists(conshdlrdata->solhash, (void*) assignment) )
+   if( assignment != NULL && SCIPhashtableExists(conshdlrdata->solhash, (void*) assignment) )
    {
       SCIPdebugMessage("rejecting solution that was already checked \n");
       SCIPdebug(SCIPprintSol(scip, sol, NULL, 0));

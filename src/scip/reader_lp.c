@@ -3523,7 +3523,7 @@ SCIP_RETCODE printRowExact(
          appendLine(scip, file, linebuffer, &linecnt, " ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      RatToString(linvals[v], ratbuffer, LP_MAX_PRINTLEN);
+      (void) RatToString(linvals[v], ratbuffer, LP_MAX_PRINTLEN);
       if( !RatIsNegative(linvals[v]) )
          (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "+%s %s", ratbuffer, varname);
       else
@@ -3532,7 +3532,7 @@ SCIP_RETCODE printRowExact(
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
 
-   RatToString(rhs, ratbuffer, LP_MAX_PRINTLEN);
+   (void) RatToString(rhs, ratbuffer, LP_MAX_PRINTLEN);
    (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %s", type, ratbuffer);
 
    /* we start a new line; therefore we tab this line */
