@@ -871,18 +871,7 @@ SCIP_DECL_READERREAD(readerReadCip)
 
    if( !SCIPisZero(scip, objoffset) && !cipinput.haserror )
    {
-      SCIP_VAR* objoffsetvar;
-
-      objoffset *= objscale;
-      SCIP_CALL( SCIPcreateVar(scip, &objoffsetvar, "objoffset", objoffset, objoffset, 1.0, SCIP_VARTYPE_CONTINUOUS,
-         TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
-      if( SCIPisExactSolve(scip) )
-      {
-         SCIP_CALL( SCIPaddVarExactData(scip, objoffsetvar, NULL, NULL, NULL) );
-      }
-      SCIP_CALL( SCIPaddVar(scip, objoffsetvar) );
-      SCIP_CALL( SCIPreleaseVar(scip, &objoffsetvar) );
-      SCIPdebugMsg(scip, "added variables <objoffset> for objective offset of <%g>\n", objoffset);
+      SCIP_CALL( SCIPaddOrigObjoffset(scip, objscale * objoffset) );
    }
 
    if( cipinput.section != CIP_END && !cipinput.haserror )

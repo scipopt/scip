@@ -14966,44 +14966,17 @@ SCIP_RETCODE SCIPvarAddVlb(
    case SCIP_VARSTATUS_FIXED:
       /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
       SCIP_CALL( SCIPvarGetProbvarSum(&vlbvar, set, &vlbcoef, &vlbconstant) );
-      SCIPsetDebugMsg(set, " -> transformed to variable lower bound <%s> >= %g<%s> + %g\n", SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
+      SCIPsetDebugMsg(set, " -> transformed to variable lower bound <%s> >= %g<%s> + %g\n",
+            SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
 
-      /* if the vlb coefficient is zero, just update the lower bound of the variable */
-      if( SCIPsetIsZero(set, vlbcoef) )
+      /* if the variables are the same, just update the corresponding bound */
+      if( var == vlbvar )
       {
-         if( SCIPsetIsFeasGT(set, vlbconstant, SCIPvarGetUbGlobal(var)) )
-            *infeasible = TRUE;
-         else if( SCIPsetIsFeasGT(set, vlbconstant, SCIPvarGetLbGlobal(var)) )
-         {
-            /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
-             * with the local bound, in this case we need to store the bound change as pending bound change
-             */
-            if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
-            {
-               assert(tree != NULL);
-               assert(transprob != NULL);
-               assert(SCIPprobIsTransformed(transprob));
-
-               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
-                     tree, reopt, lp, branchcand, eventqueue, cliquetable, var, vlbconstant, SCIP_BOUNDTYPE_LOWER, FALSE) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, vlbconstant) );
-            }
-
-            if( nbdchgs != NULL )
-               (*nbdchgs)++;
-         }
-      }
-      else if( var == vlbvar )
-      {
-         /* the variables cancels out, the variable bound constraint is either redundant or proves global infeasibility */
+         /* if the variables cancel out, the variable bound constraint is redundant or proves global infeasibility */
          if( SCIPsetIsEQ(set, vlbcoef, 1.0) )
          {
-            if( SCIPsetIsPositive(set, vlbconstant) )
+            if( SCIPsetIsFeasPositive(set, vlbconstant) )
                *infeasible = TRUE;
-            return SCIP_OKAY;
          }
          else
          {
@@ -15086,6 +15059,34 @@ SCIP_RETCODE SCIPvarAddVlb(
                      (*nbdchgs)++;
                }
             }
+         }
+      }
+      /* if the vlb coefficient is zero, just update the lower bound of the variable */
+      else if( SCIPsetIsZero(set, vlbcoef) )
+      {
+         if( SCIPsetIsFeasGT(set, vlbconstant, SCIPvarGetUbGlobal(var)) )
+            *infeasible = TRUE;
+         else if( SCIPsetIsFeasGT(set, vlbconstant, SCIPvarGetLbGlobal(var)) )
+         {
+            /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+             * with the local bound, in this case we need to store the bound change as pending bound change
+             */
+            if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+            {
+               assert(tree != NULL);
+               assert(transprob != NULL);
+               assert(SCIPprobIsTransformed(transprob));
+
+               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
+                     tree, reopt, lp, branchcand, eventqueue, cliquetable, var, vlbconstant, SCIP_BOUNDTYPE_LOWER, FALSE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, vlbconstant) );
+            }
+
+            if( nbdchgs != NULL )
+               (*nbdchgs)++;
          }
       }
       else if( SCIPvarIsActive(vlbvar) )
@@ -15229,7 +15230,7 @@ SCIP_RETCODE SCIPvarAddVlb(
          maxvlb = adjustedLb(set, SCIPvarGetType(var), maxvlb);
 
          /* check bounds for feasibility */
-         if( SCIPsetIsFeasGT(set, minvlb, xub) || (var == vlbvar && SCIPsetIsEQ(set, vlbcoef, 1.0) && SCIPsetIsFeasPositive(set, vlbconstant))  )
+         if( SCIPsetIsFeasGT(set, minvlb, xub) )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
@@ -15336,8 +15337,18 @@ SCIP_RETCODE SCIPvarAddVlb(
       /* x = a*y + c:  x >= b*z + d  <=>  a*y + c >= b*z + d  <=>  y >= b/a * z + (d-c)/a, if a > 0
        *                                                           y <= b/a * z + (d-c)/a, if a < 0
        */
+
+      /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
+      SCIP_CALL( SCIPvarGetProbvarSum(&vlbvar, set, &vlbcoef, &vlbconstant) );
+
+      /* if the variables cancel out, the variable bound constraint is redundant or proves global infeasibility */
       assert(var->data.aggregate.var != NULL);
-      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      if( var->data.aggregate.var == vlbvar && SCIPsetIsEQ(set, var->data.aggregate.scalar, vlbcoef) )
+      {
+         if( SCIPsetIsFeasLT(set, var->data.aggregate.constant, vlbconstant) )
+            *infeasible = TRUE;
+      }
+      else if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> add variable lower bound */
          SCIP_CALL( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
@@ -15431,44 +15442,16 @@ SCIP_RETCODE SCIPvarAddVub(
       /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
       SCIP_CALL( SCIPvarGetProbvarSum(&vubvar, set, &vubcoef, &vubconstant) );
       SCIPsetDebugMsg(set, " -> transformed to variable upper bound <%s> <= %g<%s> + %g\n",
-         SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);
+            SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);
 
-      /* if the vub coefficient is zero, just update the upper bound of the variable */
-      if( SCIPsetIsZero(set, vubcoef) )
+      /* if the variables are the same, just update the corresponding bound */
+      if( var == vubvar )
       {
-         if( SCIPsetIsFeasLT(set, vubconstant, SCIPvarGetLbGlobal(var)) )
-            *infeasible = TRUE;
-         else if( SCIPsetIsFeasLT(set, vubconstant, SCIPvarGetUbGlobal(var)) )
-         {
-            /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
-             * with the local bound, in this case we need to store the bound change as pending bound change
-             */
-            if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
-            {
-               assert(tree != NULL);
-               assert(transprob != NULL);
-               assert(SCIPprobIsTransformed(transprob));
-
-               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
-                     tree, reopt, lp, branchcand, eventqueue, cliquetable, var, vubconstant, SCIP_BOUNDTYPE_UPPER, FALSE) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, vubconstant) );
-            }
-
-            if( nbdchgs != NULL )
-               (*nbdchgs)++;
-         }
-      }
-      else if( var == vubvar )
-      {
-         /* the variables cancels out, the variable bound constraint is either redundant or proves global infeasibility */
+         /* if the variables cancel out, the variable bound constraint is redundant or proves global infeasibility */
          if( SCIPsetIsEQ(set, vubcoef, 1.0) )
          {
-            if( SCIPsetIsNegative(set, vubconstant) )
+            if( SCIPsetIsFeasNegative(set, vubconstant) )
                *infeasible = TRUE;
-            return SCIP_OKAY;
          }
          else
          {
@@ -15551,6 +15534,34 @@ SCIP_RETCODE SCIPvarAddVub(
                      (*nbdchgs)++;
                }
             }
+         }
+      }
+      /* if the vub coefficient is zero, just update the upper bound of the variable */
+      else if( SCIPsetIsZero(set, vubcoef) )
+      {
+         if( SCIPsetIsFeasLT(set, vubconstant, SCIPvarGetLbGlobal(var)) )
+            *infeasible = TRUE;
+         else if( SCIPsetIsFeasLT(set, vubconstant, SCIPvarGetUbGlobal(var)) )
+         {
+            /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+             * with the local bound, in this case we need to store the bound change as pending bound change
+             */
+            if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+            {
+               assert(tree != NULL);
+               assert(transprob != NULL);
+               assert(SCIPprobIsTransformed(transprob));
+
+               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
+                     tree, reopt, lp, branchcand, eventqueue, cliquetable, var, vubconstant, SCIP_BOUNDTYPE_UPPER, FALSE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, vubconstant) );
+            }
+
+            if( nbdchgs != NULL )
+               (*nbdchgs)++;
          }
       }
       else if( SCIPvarIsActive(vubvar) )
@@ -15684,7 +15695,7 @@ SCIP_RETCODE SCIPvarAddVub(
          maxvub = adjustedUb(set, SCIPvarGetType(var), maxvub);
 
          /* check bounds for feasibility */
-         if( SCIPsetIsFeasLT(set, maxvub, xlb) || (var == vubvar && SCIPsetIsEQ(set, vubcoef, 1.0) && SCIPsetIsFeasNegative(set, vubconstant))  )
+         if( SCIPsetIsFeasLT(set, maxvub, xlb) )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
@@ -15781,8 +15792,18 @@ SCIP_RETCODE SCIPvarAddVub(
       /* x = a*y + c:  x <= b*z + d  <=>  a*y + c <= b*z + d  <=>  y <= b/a * z + (d-c)/a, if a > 0
        *                                                           y >= b/a * z + (d-c)/a, if a < 0
        */
+
+      /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
+      SCIP_CALL( SCIPvarGetProbvarSum(&vubvar, set, &vubcoef, &vubconstant) );
+
+      /* if the variables cancel out, the variable bound constraint is redundant or proves global infeasibility */
       assert(var->data.aggregate.var != NULL);
-      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      if( var->data.aggregate.var == vubvar && SCIPsetIsEQ(set, var->data.aggregate.scalar, vubcoef) )
+      {
+         if( SCIPsetIsFeasGT(set, var->data.aggregate.constant, vubconstant) )
+            *infeasible = TRUE;
+      }
+      else if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> add variable upper bound */
          SCIP_CALL( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
