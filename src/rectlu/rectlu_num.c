@@ -69,7 +69,6 @@ void QSnum_FreeArray(QSnum_type* ea, int size)
          mpq_clear(ea[i]);
    }
    free(ea);
-   ea = NULL;
 }
 
 #endif

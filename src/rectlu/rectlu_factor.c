@@ -1890,7 +1890,7 @@ static int qsnum_dense_find_pivot(
    int *                 p_r,                /**< pivot row */
    int *                 p_c                 /**< pivot column */
    )
-{  /*lint --e{663, 522}*/
+{  /*lint --e{663, 522, 666}*/
    int dcols = f->dcols;
    int drows = f->drows;
    QSnum_type *dmat = f->dmat;

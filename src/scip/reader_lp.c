@@ -3478,8 +3478,7 @@ SCIP_RETCODE printRowExact(
    SCIP_VAR**            linvars,            /**< array of linear variables */
    SCIP_Rational**       linvals,            /**< array of linear coefficient values */
    int                   nlinvars,           /**< number of linear variables */
-   SCIP_Rational*        rhs,                /**< right hand side */
-   SCIP_Bool             transformed         /**< transformed constraint? */
+   SCIP_Rational*        rhs                 /**< right hand side */
    )
 {
    int v;
@@ -4831,7 +4830,7 @@ SCIP_RETCODE SCIPwriteLp(
          {
             SCIP_CALL( printRowExact(scip, file, consname, "_", "=",
                SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
-               SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons), transformed) );
+               SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) );
          }
          else
          {
@@ -4839,13 +4838,13 @@ SCIP_RETCODE SCIPwriteLp(
             {
                SCIP_CALL( printRowExact(scip, file, consname, "_lhs", ">=",
                   SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
-                  SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons), transformed) );
+                  SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) );
             }
             if( !RatIsInfinity(SCIPgetRhsExactLinear(scip, cons)) )
             {
                SCIP_CALL( printRowExact(scip, file, consname,  "_rhs", "<=",
                   SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
-                  SCIPgetNVarsExactLinear(scip, cons), SCIPgetRhsExactLinear(scip, cons), transformed) );
+                  SCIPgetNVarsExactLinear(scip, cons), SCIPgetRhsExactLinear(scip, cons)) );
             }
          }
       }
