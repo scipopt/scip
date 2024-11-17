@@ -633,7 +633,7 @@ if(EXACTSOLVE OR AUTOBUILD)
     message(STATUS "Building SCIP with support for exact solving mode.")
 
     # boost is required
-    find_package(Boost 1.65.0)
+    find_package(Boost 1.68.0)
     if((NOT Boost_FOUND) AND (NOT AUTOBUILD))
         message(FATAL_ERROR "Boost Version 1.65 or higher is needed to compile with exact solving support.")
     endif()
@@ -680,7 +680,7 @@ if(EXACTSOLVE OR AUTOBUILD)
             set(SCIP_WITH_EXACTSOLVE off)
         endif()
     else()
-        message(WARNING "Boost Version 1.65 or high is needed to compile with exact solving support.\
+        message(WARNING "Boost Version 1.68 or high is needed to compile with exact solving support.\
         No Boost was found. Continuing without support for exact solving.")
         set(SCIP_WITH_EXACTSOLVE off)
     endif()
