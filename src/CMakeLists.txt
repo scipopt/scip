@@ -447,6 +447,7 @@ set(lpiexactsources
 if(SCIP_WITH_EXACTSOLVE)
 set(rectlusources
    rectlu/rectlu_factor.c
+   rectlu/rectlu_num.c
    )
 
 set(rectluheaders

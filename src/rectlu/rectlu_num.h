@@ -44,19 +44,13 @@
 #ifdef SCIP_WITH_GMP
 #define QSnum_type mpq_t
 
-/* allocates array with size elements of QSnum_type */
-#define QSnum_AllocArray(size) ({                                \
-        int __i__ = (size);                                   \
-        QSnum_type *__res = (QSnum_type *) malloc(size*sizeof(QSnum_type));  \
-        if (__res) while(__i__--) mpq_init(__res[__i__]);        \
-        __res;})
+/*lint --e(160)*/
 
-/* frees array ea with size elements of QSnum_type */
-#define QSnum_FreeArray(ea,size) do{\
-        int __sz = size;\
-        QSnum_type* __ptr__ = (ea);\
-        if (ea) while(__sz--) mpq_clear(__ptr__[__sz]);\
-        if (ea) { free(ea);  ea = NULL;}} while(0)
+/* allocates array with size elements of QSnum_type */
+QSnum_type* QSnum_AllocArray(int size);
+
+/* frees array of QSnum_type */
+void QSnum_FreeArray(QSnum_type* ea, int size);
 
 
 /* initializes an individual element of QSnum_type */

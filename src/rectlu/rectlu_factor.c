@@ -59,7 +59,7 @@ void *CGutil_allocrus (
    size_t                size                /**< length of array to be allocated */
    )
 {
-   void *mem = (void *) NULL;
+   void *mem;
    if( size == 0 )
    {
       fprintf (stderr, "Warning: 0 bytes allocated\n");
@@ -171,7 +171,7 @@ void QSnum_factor_free_factor_work(
    CG_IFFREE (f->uc_inf, qsnum_uc_info);
    if( f->dimr + f->max_k > 0 && f->ur_inf )
    {
-      unsigned int i = f->dimr + f->max_k + 1;
+      int i = f->dimr + f->max_k + 1;
       while( i-- )
          QSnum_Clear (f->ur_inf[i].max);
    }
