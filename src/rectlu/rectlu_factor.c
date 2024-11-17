@@ -348,7 +348,7 @@ static int qsnum_make_ur_space (
    int nzcnt;
    int i;
    int j;
-   int rval;
+   int rval = 0;
 
    minspace = f->ur_space;
    nzcnt = space;
@@ -358,6 +358,9 @@ static int qsnum_make_ur_space (
    {
       minspace = 1+(int)(minspace*f->grow_mul);
    }
+
+   if(minspace == 0)
+      goto CLEANUP;
 
    new_urcoef = QSnum_AllocArray (minspace);
    CG_SAFE_MALLOC (new_urindx, minspace + 1, int);  /*lint !e776*/
@@ -449,12 +452,15 @@ static int qsnum_make_uc_space (
    int nzcnt;
    int i;
    int j;
-   int rval;
+   int rval = 0;
 
    if( f->uc_space * f->grow_mul > minspace )
    {
       minspace = (int) (f->uc_space * f->grow_mul);
    }
+
+   if(minspace == 0)
+      goto CLEANUP;
 
    CG_SAFE_MALLOC (new_ucindx, minspace + 1, int); /*lint !e776*/
 
@@ -1122,7 +1128,6 @@ static int qsnum_elim(
       lcindx = f->lcindx;
       lccoef = f->lccoef;
       qsnum_load_row (f, r);
-      ucindx = f->ucindx + uc_inf[c].cbeg;
       for( i = 0; i < nzcnt; i++ )
       {
          j = f->ucindx[uc_inf[c].cbeg + i];
@@ -1815,6 +1820,9 @@ static int qsnum_handle_singularity(
    }
 
    nsing = f->nstages - f->stage;
+   if( nsing == 0 )
+      goto CLEANUP;
+
    CG_SAFE_MALLOC (singr, nsing, int);
    CG_SAFE_MALLOC (singc, nsing, int);
 
@@ -3269,10 +3277,10 @@ void QSnum_factor_btran (
    int i;
    int nzcnt;
    int sparse;
-   int *aindx = a->indx;
+   int *aindx;
    QSnum_type *acoef = a->coef;
    QSnum_type *work_coef = f->work_coef;
-   int dimr = f->dimr;
+   int dimr;
 
    if( a->nzcnt >= SPARSE_FACTOR * f->dimr )
    {
@@ -3424,7 +3432,8 @@ int clear_sxvector (
    qsnum_svector *       v                   /**< sparse vector */
    )
 {
-   if(v->indx) free(v->indx);
+   if(v->indx)
+      free(v->indx);
    QSnum_FreeArray(v->coef,v->nzcnt);
    return 0;
 }
