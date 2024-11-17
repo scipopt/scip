@@ -174,7 +174,7 @@ int QSnum_factor(
    }
 
 #define CG_UTIL_SAFE_MALLOC(nnum,type,varname)                  \
-   (type *) CGutil_allocrus (((size_t) (nnum)) * sizeof (type))
+   (type *) CGutil_allocrus (((nnum)) * sizeof (type))
 
 #define CG_IFFREE(object,type) {                \
       if ((object)) {                           \

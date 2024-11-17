@@ -209,6 +209,8 @@ int QSnum_factor_create_factor_work(
    int i=0;
    int rval;
    int maxdim;
+   int dimucinf = dimc + (f->max_k + 1);
+   int dimurinf = dimr + (f->max_k + 1);
 
    f->maxdim = (dimc > dimr) ? dimc : dimr;
    maxdim = f->maxdim;
@@ -217,8 +219,8 @@ int QSnum_factor_create_factor_work(
    f->etacnt = 0;
    f->work_coef = QSnum_AllocArray (maxdim);
    CG_SAFE_MALLOC (f->work_indx, maxdim, int);
-   CG_SAFE_MALLOC (f->uc_inf, dimc + (f->max_k + 1), qsnum_uc_info);
-   CG_SAFE_MALLOC (f->ur_inf, dimr + (f->max_k + 1), qsnum_ur_info);
+   CG_SAFE_MALLOC (f->uc_inf, dimucinf, qsnum_uc_info);
+   CG_SAFE_MALLOC (f->ur_inf, dimurinf, qsnum_ur_info);
    CG_SAFE_MALLOC (f->lc_inf, dimr, qsnum_lc_info);
    CG_SAFE_MALLOC (f->lr_inf, dimr, qsnum_lr_info);
    CG_SAFE_MALLOC (f->rperm, dimr, int);
