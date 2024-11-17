@@ -1922,8 +1922,7 @@ static int qsnum_dense_find_pivot(
    max_c = -1;
    for( i = s; i < drows; i++ )
    {
-      max_c = i;
-      QSnum_CopyMaxAbsAndDo (maxval, dmat[max_r * dcols + i], max_c);
+      QSnum_CopyMaxAbsAndDo (maxval, dmat[max_r * dcols + i], max_c = i);
    }
    if( max_c == -1 )
    {

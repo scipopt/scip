@@ -92,10 +92,10 @@ void QSnum_FreeArray(QSnum_type* ea, int size);
 /* a = max(a,abs(b)), execute extra code if update is needed */
 #define QSnum_CopyMaxAbsAndDo(a,b,c)                                   \
     if(mpq_sgn(b) > 0) {                                               \
-        if(QSnum_Less(a,b)){ QSnum_Copy(a,b); c; }                     \
+        if(QSnum_Less(a,b)){ QSnum_Copy(a,b); (c); }                     \
     } else {                                                           \
         QSnum_Sign(a);                                                 \
-        if(QSnum_Less(b,a)){ QSnum_Copy(a,b); c; }                     \
+        if(QSnum_Less(b,a)){ QSnum_Copy(a,b); (c); }                     \
         QSnum_Sign(a); }
 
 /*
