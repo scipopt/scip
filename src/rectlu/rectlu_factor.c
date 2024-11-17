@@ -334,8 +334,8 @@ static int qsnum_make_ur_space (
    qsnum_factor_work *   f,                  /**< factorization work */
    int                   space               /**< new space */
    )
-{
-   QSnum_type *new_urcoef = 0;
+{  /*lint --e438*/
+   QSnum_type *new_urcoef;
    int *new_urindx = 0;
    int *new_urcind = 0;
    QSnum_type *urcoef = f->urcoef;
@@ -357,18 +357,18 @@ static int qsnum_make_ur_space (
       nzcnt += ur_inf[i].nzcnt;
    while( nzcnt * 2 >= minspace )
    {
-      minspace = 1+minspace*f->grow_mul;
+      minspace = (int)1+minspace*f->grow_mul;
    }
 
    new_urcoef = QSnum_AllocArray (minspace);
-   CG_SAFE_MALLOC (new_urindx, minspace + 1, int);
+   CG_SAFE_MALLOC (new_urindx, minspace + 1, int);  /*lint !e776*/
 
    if( urcind )
    {
       CG_SAFE_MALLOC (new_urcind, minspace, int);
    }
 
-   if( urcind )
+   if( urcind && new_urcind )
    {
       for( j = 0; j < dimr; j++ )
       {
@@ -434,7 +434,7 @@ static int qsnum_make_uc_space (
    qsnum_factor_work *   f,                  /**< factorization work */
    int space                                 /**< new space */
    )
-{
+{  /*lint --e438*/
    QSnum_type *new_uccoef = 0;
    int *new_ucindx = 0;
    int *new_ucrind = 0;
@@ -454,10 +454,10 @@ static int qsnum_make_uc_space (
 
    if( f->uc_space * f->grow_mul > minspace )
    {
-      minspace = f->uc_space * f->grow_mul;
+      minspace = (int) f->uc_space * f->grow_mul;
    }
 
-   CG_SAFE_MALLOC (new_ucindx, minspace + 1, int);
+   CG_SAFE_MALLOC (new_ucindx, minspace + 1, int); /*lint !e776*/
 
    if( ucrind )
    {
@@ -465,7 +465,7 @@ static int qsnum_make_uc_space (
       CG_SAFE_MALLOC (new_ucrind, minspace, int);
    }
 
-   if( ucrind )
+   if( ucrind && new_ucrind )
    {
       for( j = 0; j < dimc; j++ )
       {
@@ -531,7 +531,7 @@ static int qsnum_make_lc_space (
    qsnum_factor_work *   f,                  /**< factorization work */
    int                   space               /**< new space */
    )
-{
+{  /* lint --e438 */
    QSnum_type *new_lccoef = 0;
    int *new_lcindx = 0;
    int lc_freebeg = f->lc_freebeg;
@@ -1799,7 +1799,7 @@ static int qsnum_build_iteration_l_data(
 static int qsnum_handle_singularity(
    qsnum_factor_work *   f                   /**< factorization work */
    )
-{
+{  /* lint --e438 */
    int rval = 0;
    int nsing;
    int *singr = 0;
