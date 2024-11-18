@@ -229,9 +229,6 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options("$<$<COMPILE_LANGUAGE:C>:${ADD_C_FLAGS}>$<$<COMPILE_LANGUAGE:CXX>:${ADD_CXX_FLAGS}>")
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb3 ")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -ggdb3 ")
-
 #set options for memory management
 if( NOBLKBUFMEM )
    set(NOBLKMEM ON FORCE)
