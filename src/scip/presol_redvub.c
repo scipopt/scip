@@ -552,11 +552,23 @@ SCIP_RETCODE findVarAggrRedVbcons(
    return SCIP_OKAY;
 }
 
-
 /*
  * Callback methods of presolver
  */
 
+/** copy method for presolving plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyRedvub)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolRedvub(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** execution method of presolver */
 static
@@ -699,6 +711,9 @@ SCIP_RETCODE SCIPincludePresolRedvub(
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
          PRESOL_TIMING, presolExecRedvub, NULL) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyRedvub) );
 
    return SCIP_OKAY;
 }
