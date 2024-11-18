@@ -353,11 +353,6 @@ set(WITH_SCIPDEF on)
 # use C++14 standard
 set(CMAKE_CXX_STANDARD 14)
 
-# set function visibility default to hidden
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_C_VISIBILITY_PRESET hidden)
-set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
-
 # ZLIB
 if(ZLIB OR AUTOBUILD)
     message(STATUS "Finding ZLIB")
@@ -406,7 +401,6 @@ if(GMP_FOUND)
     message(STATUS "Finding GMP - found")
     include_directories(${GMP_INCLUDE_DIRS})
     set(SCIP_WITH_GMP ON)
-    set(SCIP_HAVE_GMP 1)
 else()
     message(STATUS "Support GMP: OFF")
     set(GMP_LIBRARIES "")

@@ -334,8 +334,8 @@ static int qsnum_make_ur_space (
    int                   space               /**< new space */
    )
 {  /*lint --e{438}*/
-   QSnum_type *new_urcoef;
-   int *new_urindx;
+   QSnum_type *new_urcoef = NULL;
+   int *new_urindx = NULL;
    int *new_urcind = 0;
    QSnum_type *urcoef = f->urcoef;
    int *urindx = f->urindx;
@@ -438,7 +438,7 @@ static int qsnum_make_uc_space (
    )
 {  /*lint --e{438}*/
    QSnum_type *new_uccoef = NULL;
-   int *new_ucindx;
+   int *new_ucindx = NULL;
    int *new_ucrind = 0;
    int uc_freebeg = f->uc_freebeg;
    QSnum_type *uccoef = f->uccoef;
@@ -1809,8 +1809,8 @@ static int qsnum_handle_singularity(
 {  /*lint --e{438}*/
    int rval = 0;
    int nsing;
-   int *singr;
-   int *singc = 0;
+   int *singr = NULL;
+   int *singc = NULL;
    int i;
 
    if( f->p_nsing == 0 || f->p_singr == 0 || f->p_singc == 0 )
