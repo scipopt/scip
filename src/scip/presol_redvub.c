@@ -556,7 +556,7 @@ SCIP_RETCODE findVarAggrRedVbcons(
  * Callback methods of presolver
  */
 
-/** copy method for presolving plugins (called when SCIP copies plugins) */
+/** copy method for presolver plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_PRESOLCOPY(presolCopyRedvub)
 {  /*lint --e{715}*/
