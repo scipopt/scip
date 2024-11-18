@@ -49,6 +49,7 @@
 #include "scip/presol_dualagg.h"
 #include "scip/pub_matrix.h"
 #include "scip/pub_message.h"
+#include "scip/pub_presol.h"
 #include "scip/pub_var.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
