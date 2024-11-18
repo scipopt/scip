@@ -107,6 +107,20 @@ struct SCIP_BranchruleData
  * Callback methods of branching rule
  */
 
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_BRANCHCOPY(branchCopyCloud)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   /* call inclusion method of branchrule */
+   SCIP_CALL( SCIPincludeBranchruleCloud(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_BRANCHFREE(branchFreeCloud)
@@ -704,6 +718,7 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
    assert(branchrule != NULL);
 
    /* set non-fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyCloud) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeCloud) );
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitCloud) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpCloud) );
