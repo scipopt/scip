@@ -365,7 +365,7 @@ static int qsnum_make_ur_space (
    new_urcoef = QSnum_AllocArray (minspace);
    CG_SAFE_MALLOC (new_urindx, minspace + 1, int);  /*lint !e776*/
 
-   if(new_urindx == NULL)
+   if(new_urindx == NULL) /*lint !e774*/
       goto CLEANUP;
 
    if( urcind )
@@ -466,7 +466,7 @@ static int qsnum_make_uc_space (
       goto CLEANUP;
 
    CG_SAFE_MALLOC (new_ucindx, minspace + 1, int); /*lint !e776*/
-   if( new_ucindx == NULL )
+   if( new_ucindx == NULL ) /*lint !e774*/
       goto CLEANUP;
 
    if( ucrind )
