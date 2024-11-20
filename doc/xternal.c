@@ -8431,14 +8431,12 @@
  * invariant. To detect such formulation symmetries, SCIP builds an auxiliary colored graph whose
  * color-preserving automorphisms correspond to symmetries of the integer program. The symmetries of
  * the graph, and thus of the integer program, are then computed by an external graph automorphism
- * library that needs to be linked to SCIP. Currently, SCIP ships with two such libraries: The graph
+ * library that needs to be linked to SCIP. Currently, SCIP can use two such libraries: The graph
  * automorphism libraries bliss or nauty/traces are the basic workhorses to detect symmetries. Moreover, one can use
  * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss or nauty/traces.
- * The current default is to use bliss in combination with sassy for symmetry detection.
- *
- * @note To detect symmetries, SCIP needs to be built with sassy/bliss, which can be achieved
- * by using the options <code>SYM=sassy</code> and <code>-DSYM=sassy</code> in the Makefile and CMake
- * system, respectively.
+ * The current default is to use nauty in combination with sassy for symmetry detection.
+ * To use other symmetry packages, options <code>SYM</code> and <code>-DSYM</code> in the Makefile and CMake
+ * system, respectively, need to be set.
  *
  * Besides purely integer linear problems, SCIP also supports symmetry detection for general
  * constraint mixed-integer programs containing most of the constraint types that can be handled
