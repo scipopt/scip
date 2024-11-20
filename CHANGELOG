@@ -160,7 +160,8 @@ Build system
 
 ### Cmake
 
-- fix SCIP Optimization Suite build with -DSYM=bliss and bliss being downloaded and build during configuration by cmake
+- fix SCIP Optimization Suite build with -DSYM=(s)bliss and bliss being downloaded and build during configuration by cmake
+- fix use of a bliss cmake installation (from https://github.com/scipopt/bliss) specified via BLISS_DIR if -DSYM=(s)bliss
 
 ### Makefile
 
