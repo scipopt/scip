@@ -123,6 +123,45 @@ SCIP_RETCODE createSubscipIIS(
    return SCIP_OKAY;
 }
 
+/** checks the problem for trivial infeasibility reasons, e.g. contradicting bounds */
+static
+SCIP_RETCODE checkTrivialInfeas(
+   SCIP*                 scip,               /**< pointer to SCIP */
+   SCIP_Bool*            trivial             /**< pointer to store whether the problem is trivially infeasible */
+   )
+{
+   SCIP_CONS** conss;
+   SCIP_VAR** vars;
+   int nconss;
+   int nvars;
+   int i;
+   
+   *trivial = FALSE;
+   nvars = SCIPgetNOrigVars(scip);
+   vars = SCIPgetOrigVars(scip);
+   for( i = 0; i < nvars; i++ )
+   {
+      if( SCIPvarGetLbOriginal(vars[i]) > SCIPvarGetUbOriginal(vars[i]) )
+      {
+         *trivial = TRUE;
+         break;
+      }
+   }
+   
+   if( *trivial )
+   {
+      nconss = SCIPgetNOrigConss(scip);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conss, nconss) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, SCIPgetOrigConss(scip), nconss) );
+      for( i = 0; i < nconss; i++ )
+      {
+         SCIP_CALL( SCIPdelCons(scip, conss[i]) );
+      }
+      SCIPfreeBlockMemoryArray(scip, &conss, nconss);
+   }
+   return SCIP_OKAY;
+}
+
 /** internal method for creating an IIS finder */
 static
 SCIP_RETCODE doIISfinderCreate(
@@ -220,6 +259,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_Bool minimal;
    SCIP_Bool stopafterone;
    SCIP_Bool removeunusedvars;
+   SCIP_Bool trivial;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
    
@@ -306,11 +346,14 @@ SCIP_RETCODE SCIPiisGenerate(
       }
       iis->valid = TRUE;
    }
+   
+   /* Check for trivial infeasibility reasons */
+   SCIP_CALL( checkTrivialInfeas(iis->subscip, &trivial) );
 
    /* Try all IIS generators */
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/stopafterone", &stopafterone) );
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/removebounds", &removebounds) );
-   for( i = 0; i < set->niisfinders; ++i )
+   for( i = 0; i < set->niisfinders && !trivial; ++i )
    {
       SCIP_IISFINDER* iisfinder;
       iisfinder = set->iisfinders[i];
@@ -340,7 +383,7 @@ SCIP_RETCODE SCIPiisGenerate(
    
    /* Ensure the problem is irreducible if requested */
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/minimal", &minimal) );
-   if( !iis->irreducible && minimal && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) )
+   if( !iis->irreducible && minimal && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) && !trivial )
    {
       SCIP_RANDNUMGEN* randnumgen;
       SCIP_Real timelimperiter;
@@ -374,7 +417,7 @@ SCIP_RETCODE SCIPiisGenerate(
       // TODO: Ask someone if this is safe. It is passing basic tests.
       for( i = nvars - 1; i >= 0; i-- )
       {
-         if( SCIPvarGetNUses(vars[i]) <= 1 )
+         if( SCIPvarGetNUses(vars[i]) <= 1 && SCIPvarGetLbOriginal(vars[i]) <= SCIPvarGetUbOriginal(vars[i]) )
          {
             SCIP_CALL( SCIPdelVar(iis->subscip, vars[i], &deleted) );
             assert( deleted );
