@@ -6969,8 +6969,9 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          &propdata->symtiming, TRUE, DEFAULT_SYMCOMPTIMING, 0, 2, NULL, NULL) );
 
    /* for symmetry detection tool Nauty, we add further parameters to terminate it early */
-   assert( strlen(SYMsymmetryGetName()) >= 5 );
-   if ( memcmp(SYMsymmetryGetName(), "Nauty", 5) == 0 ) /*lint !e747*/
+   assert( (strlen(SYMsymmetryGetName()) == 4 && memcmp(SYMsymmetryGetName(), "none", 4) == 0)
+      || strlen(SYMsymmetryGetName()) >= 5 );
+   if ( strlen(SYMsymmetryGetName()) >= 5 && memcmp(SYMsymmetryGetName(), "Nauty", 5) == 0 ) /*lint !e747*/
    {
       SCIP_CALL( SCIPaddIntParam(scip,
             "propagating/" PROP_NAME "/nautymaxncells",
