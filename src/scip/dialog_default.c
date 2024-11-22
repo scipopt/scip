@@ -1055,6 +1055,33 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the display iis command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayIIS)
+{  /*lint --e{715}*/
+   SCIP_IIS* iis;
+   SCIP* subscip;
+   
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+   
+   SCIPdialogMessage(scip, NULL, "\n");
+   
+   iis = SCIPgetIIS(scip);
+   subscip = SCIPiisGetSubscip(iis);
+   
+   if( subscip != NULL && SCIPgetStage(subscip) >= SCIP_STAGE_PROBLEM )
+   {
+      SCIP_CALL( SCIPprintOrigProblem(subscip, NULL, "cip", FALSE) );
+   }
+   else
+      SCIPdialogMessage(scip, NULL, "no IIS available\n");
+   
+   SCIPdialogMessage(scip, NULL, "\n");
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the display memory command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory)
 {  /*lint --e{715}*/
@@ -4293,6 +4320,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
             NULL,
             SCIPdialogExecDisplayHeuristics, NULL, NULL,
             "heuristics", "display primal heuristics", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+   
+   /* display IIS */
+   if( !SCIPdialogHasEntry(submenu, "iis") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayIIS, NULL, NULL,
+            "iis", "display iis of problem", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

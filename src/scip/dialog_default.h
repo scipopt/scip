@@ -116,6 +116,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayCutselectors);
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics);
 
+/** dialog execution method for the display IIS command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayIIS);
+
 /** dialog execution method for the display memory command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory);
