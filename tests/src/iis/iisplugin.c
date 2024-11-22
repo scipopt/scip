@@ -29,6 +29,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
+#include "scip/scipdefplugins.h"
 #include "scip/scip_iisfinder.h"
 #include "include/scip_test.h"
 
@@ -70,10 +71,12 @@ Test(iisplugin, valid)
    SCIP_IIS* iis;
    
    SCIP_CALL( SCIPsolve(scip) );
+   iis = SCIPgetIIS(scip);
+   /** ensure that the original problem is infeasible */
    cr_expect_eq(SCIPgetStatus(scip), SCIP_STATUS_INFEASIBLE, "got status %d, expected %d", SCIPgetStatus(scip), SCIP_STATUS_INFEASIBLE);
+   /** ensure that the iis does not yet exist and is therefore invalid */
    cr_expect_eq( SCIPiisGetValid(iis), FALSE, "iis is valid before doing any computations");
    SCIP_CALL( SCIPgenerateIIS(scip) );
-   iis = SCIPgetIIS(scip);
+   /** ensure that the iis exists and is therefore valid */
    cr_expect_eq( SCIPiisGetValid(iis), TRUE, "iis is not valid");
-   
 }
