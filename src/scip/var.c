@@ -4211,9 +4211,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       }
 #endif
 
-      /* sort active variables for making the results consistent (todo: check whether this is necessary) */
-      SCIPsortPtr((void**)activevars, SCIPvarComp, nactivevars);
-
       /* copy active variable and scalar array to the given arrays */
       *nvars = 0;
       for( v = 0; v < nactivevars; ++v )
