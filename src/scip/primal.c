@@ -184,6 +184,7 @@ SCIP_RETCODE SCIPprimalFree(
    {
       SCIP_CALL( SCIPsolFree(&(*primal)->sols[s], blkmem, *primal) );
    }
+
    /* free partial CIP solutions */
    for( s = 0; s < (*primal)->npartialsols; ++s )
    {
@@ -228,10 +229,18 @@ SCIP_RETCODE SCIPprimalClear(
       SCIP_CALL( SCIPsolFree(&(*primal)->sols[s], blkmem, *primal) );
    }
 
+   /* free partial CIP solutions */
+   for( s = 0; s < (*primal)->npartialsols; ++s )
+   {
+      SCIP_CALL( SCIPsolFree(&(*primal)->partialsols[s], blkmem, *primal) );
+   }
+   assert((*primal)->nexistingsols == 0);
+
    (*primal)->currentsol = NULL;
    (*primal)->primalray = NULL;
    (*primal)->nsols = 0;
    (*primal)->nsolsfound = 0;
+   (*primal)->npartialsols = 0;
    (*primal)->nlimsolsfound = 0;
    (*primal)->nbestsolsfound = 0;
    (*primal)->nlimbestsolsfound = 0;
