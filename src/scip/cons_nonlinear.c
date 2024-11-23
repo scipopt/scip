@@ -7171,7 +7171,7 @@ void scoreBranchingCandidates(
 
       if( maxscore.fractionality > 0.0 )
       {
-         cands[c].fractionality += conshdlrdata->branchfracweight * cands[c].fractionality / maxscore.fractionality;
+         cands[c].weighted += conshdlrdata->branchfracweight * cands[c].fractionality / maxscore.fractionality;
          weightsum += conshdlrdata->branchfracweight;
 
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%6.2g(frac)", conshdlrdata->branchfracweight, cands[c].fractionality / maxscore.fractionality); )
