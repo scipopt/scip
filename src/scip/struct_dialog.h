@@ -57,6 +57,7 @@ struct SCIP_Dialog
    int                   subdialogssize;     /**< size of subdialogs array */
    int                   nuses;              /**< number of times, the dialog is used */
    SCIP_Bool             issubmenu;          /**< is the dialog a submenu? */
+   SCIP_Bool             hidden;             /**< dialog is hidden in the help list? */
 };
 
 /** linked list of single input lines */
