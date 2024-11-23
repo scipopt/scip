@@ -4614,8 +4614,23 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecQuit, NULL, NULL,
-            "quit", "leave SCIP", FALSE, NULL) );
+            "quit", "leave SCIP (<exit> works as well)", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* exit - same as quit */
+   if( !SCIPdialogHasEntry(root, "exit") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecQuit, NULL, NULL,
+            "exit", "leave SCIP", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+
+      /* mark command as hidden, because "exit" is already there */
+      SCIPdialogSetHidden(dialog);
+
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
