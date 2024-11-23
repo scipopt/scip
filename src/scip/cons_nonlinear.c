@@ -6714,6 +6714,7 @@ SCIP_RETCODE collectBranchingCandidates(
                cands[*ncands].expr = consdata->varexprs[i];
                cands[*ncands].var = var;
                cands[*ncands].auxviol = SCIPgetExprViolScoreNonlinear(consdata->varexprs[i]);
+               cands[*ncands].fractionality = 0.0;
                ++(*ncands);
 
                /* invalidate violscore-tag, so that we do not register variables that appear in multiple constraints
@@ -6752,6 +6753,7 @@ SCIP_RETCODE collectBranchingCandidates(
                cands[*ncands].expr = expr;
                cands[*ncands].var = var;
                cands[*ncands].auxviol = SCIPgetExprViolScoreNonlinear(expr);
+               cands[*ncands].fractionality = 0.0;
                ++(*ncands);
             }
          }
