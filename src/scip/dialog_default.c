@@ -2462,7 +2462,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSave)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
 
-      retcode =  SCIPwriteParams(scip, filename, TRUE, FALSE);
+      retcode = SCIPwriteParams(scip, filename, TRUE, FALSE);
 
       if( retcode == SCIP_FILECREATEERROR )
       {
@@ -3399,7 +3399,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteLp)
       SCIP_RETCODE retcode;
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-      retcode =  SCIPwriteLP(scip, filename);
+      retcode = SCIPwriteLP(scip, filename);
 
       if( retcode == SCIP_FILECREATEERROR )
       {
@@ -3589,7 +3589,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteNlp)
       SCIP_RETCODE retcode;
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-      retcode =  SCIPwriteNLP(scip, filename);
+      retcode = SCIPwriteNLP(scip, filename);
 
       if( retcode == SCIP_FILECREATEERROR )
       {
