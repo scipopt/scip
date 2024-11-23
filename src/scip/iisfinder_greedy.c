@@ -439,7 +439,6 @@ SCIP_RETCODE deletionFilterBatch(
    
    /* Get constraint information */
    nconss = SCIPgetNOrigConss(scip);
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conss, nconss) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, SCIPgetOrigConss(scip), nconss) );
 
    /* reset problem */
@@ -487,7 +486,6 @@ SCIP_RETCODE deletionFilterBatch(
    if( removebounds )
    {
       nvars = SCIPgetNOrigVars(scip);
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, nvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, SCIPgetOrigVars(scip), nvars) );
    
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &order, nvars) );
@@ -583,7 +581,6 @@ SCIP_RETCODE additionFilterBatch(
    
    /* Get constraint information */
    nconss = SCIPgetNOrigConss(scip);
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conss, nconss) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, SCIPgetOrigConss(scip), nconss) );
    
    /* Initialise information for whether a constraint is in the final infeasible system */
