@@ -82,7 +82,7 @@ SCIP_RETCODE getActiveVariables(
    assert(nvars != NULL);
    assert(constant != NULL);
 
-   SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+   SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize) );
 
    if( requiredsize > *nvars )
    {
@@ -90,7 +90,7 @@ SCIP_RETCODE getActiveVariables(
       SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
 
       /* call function a second time with enough memory */
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize) );
       assert(requiredsize <= *nvars);
    }
 

@@ -104,14 +104,14 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyVar)
    {
       int requsize;
 
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize) );
 
       if( requsize > varssize )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requsize) );
          varssize = requsize;
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize) );
          assert(requsize <= nvars);
       }
    }
