@@ -50,6 +50,7 @@ Interface changes
 - SCIPnetmatdecCreate() and SCIPnetmatdecFree() for creating and deleting a network matrix decomposition. SCIPnetmatdecTryAddCol() and SCIPnetmatdecTryAddRow() are used to add columns and rows of the matrix to the decomposition. SCIPnetmatdecContainsRow() and SCIPnetmatdecContainsColumn() check if the decomposition contains the given row or columns. SCIPnetmatdecRemoveComponent() can remove connected components from the decomposition. SCIPnetmatdecCreateDiGraph() can be used to expose the underlying digraph. SCIPnetmatdecIsMinimal() and SCIPnetmatdecVerifyCycle() check if certain invariants of the decomposition are satisfied and are used in tests.
 - SCIPfreeReaderdataCor(), SCIPfreeReaderdataTim() and SCIPfreeReaderdataSto() for freeing the data for the COR, TIM and
   STO readers respectively. These readers are all used when reading an SMPS instance.
+- SCIPdialogIsHidden(), SCIPdialogSetHidden() to determine whether a dialog should be hidden in help list
 
 ### Changes in preprocessor macros
 
@@ -57,6 +58,10 @@ Interface changes
   use SCIPstr(n)casecmp() (scip/pub_misc.h) instead
 
 ### Command line interface
+
+- help <command> now allows to display information on specific command.
+- allow to hide certain commands in the help list
+- add the (hidden) command "exit¨ to exit SCIP.
 
 ### Interfaces to external software
 
