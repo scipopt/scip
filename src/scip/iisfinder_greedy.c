@@ -673,6 +673,7 @@ SCIP_RETCODE additionFilterBatch(
                if( ! silent )
                   SCIPiisfinderInfoMessage(iis, FALSE);
             }
+            SCIP_CALL( SCIPfreeSol(scip, &copysol) );
          }
       }
       else
