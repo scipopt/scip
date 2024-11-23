@@ -40,6 +40,7 @@ Fixed bugs
 
 - apply same feasibility definition in PaPILO as SCIP to avoid numerical inconsistencies
 - check variable cancellation in SCIPvarAddVlb() and SCIPvarAddVub() to avert wrong infeasibility
+- SCIPfreeReoptSolve now also clears the partial solutions
 
 Unit tests
 ----------
