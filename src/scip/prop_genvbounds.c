@@ -2494,7 +2494,6 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
          }
 
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, requiredsize, &genvbound->constant, &requiredsize) );
-         assert(requiredsize <= genvbound->ncoefs);
       }
 
       /* capture new and release old variables */
