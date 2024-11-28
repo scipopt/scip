@@ -95,7 +95,7 @@ Test(copy, MIP, .description="tests MIP copy")
    nsourceparams = SCIPgetNParams(sourcescip);
 
    /* copy target scip */
-   SCIP_CALL( SCIPcopy(sourcescip, targetscip, NULL, NULL, NULL, TRUE, TRUE, TRUE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopy(sourcescip, targetscip, NULL, NULL, "", TRUE, TRUE, TRUE, TRUE, &valid) );
    cr_assert(valid);
    targetparams = SCIPgetParams(targetscip);
    ntargetparams = SCIPgetNParams(targetscip);
