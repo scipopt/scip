@@ -1034,24 +1034,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-   /* copy all display plugins */
-   if( copydisplays && sourceset->disps != NULL )
-   {
-      for( p = 0; p < sourceset->ndisps; ++p )
-      {
-         SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset) );
-      }
-   }
-
-   /* copy all table plugins */
-   if( copytables && sourceset->tables != NULL )
-   {
-      for( p = 0; p < sourceset->ntables; ++p )
-      {
-         SCIP_CALL( SCIPtableCopyInclude(sourceset->tables[p], targetset) );
-      }
-   }
-
    /* copy all cut selector plugins */
    if( copycutselectors && sourceset->cutsels != NULL )
    {
@@ -1076,6 +1058,24 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = 0; p < sourceset->nnlpis; ++p )
       {
          SCIP_CALL( SCIPnlpiCopyInclude(sourceset->nlpis[p], targetset) );
+      }
+   }
+
+   /* copy all display plugins */
+   if( copydisplays && sourceset->disps != NULL )
+   {
+      for( p = 0; p < sourceset->ndisps; ++p )
+      {
+         SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset) );
+      }
+   }
+
+   /* copy all table plugins */
+   if( copytables && sourceset->tables != NULL )
+   {
+      for( p = 0; p < sourceset->ntables; ++p )
+      {
+         SCIP_CALL( SCIPtableCopyInclude(sourceset->tables[p], targetset) );
       }
    }
 
