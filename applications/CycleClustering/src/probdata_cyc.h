@@ -45,7 +45,8 @@
 
 
 /** edge type */
-enum EdgeType{
+enum EdgeType
+{
    INCLUSTER = 0,                            /**< edge inside a single cluster*/
    CONSECUTIVE_CLUSTER = 1,                  /**< edge connecting two consecutive cluster*/
    NON_CONSECUTIVE_CLUSTER = 2               /**< edge connecting two non-consecutive cluster*/

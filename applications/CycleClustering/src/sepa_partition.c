@@ -327,7 +327,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpPartition)
 
                      /* compute what has changed from the violation of the 1-4 inequality */
                      violationchg = -SCIPvarGetLPSol(getEdgevar(edgevars,
-                        MAX(states[0], states[4]), MIN(states[0],states[4]), 0)) - 1.0;
+                        MAX(states[0], states[4]), MIN(states[0],states[4]), INCLUSTER)) - 1.0;
                      violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, states[4], secondpart[0], CONSECUTIVE_CLUSTER));
                      violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, states[4], secondpart[1], CONSECUTIVE_CLUSTER));
                      violationchg += SCIPvarGetLPSol(getEdgevar(edgevars, states[4], secondpart[2], CONSECUTIVE_CLUSTER));
