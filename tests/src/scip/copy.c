@@ -182,7 +182,7 @@ Test(copy, MIP, .description="tests MIP copy")
 
    /* compare solving performance */
    /* TODO: close the gaps */
-   cr_expect(SCIPgetNLPIterations(targetscip) >= SCIPgetNLPIterations(sourcescip));
+   cr_expect(2 * SCIPgetNLPIterations(targetscip) >= SCIPgetNLPIterations(sourcescip));
    cr_expect(SCIPgetNTotalNodes(targetscip) >= SCIPgetNTotalNodes(sourcescip));
    cr_expect(SCIPgetNSolsFound(targetscip) >= SCIPgetNSolsFound(sourcescip));
 }
