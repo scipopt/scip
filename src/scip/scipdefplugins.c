@@ -33,19 +33,27 @@
 #include "scip/scipdefplugins.h"
 #include "scip/debug.h"
 
-/** includes default SCIP plugins into SCIP */
+/** includes default plugins into SCIP with respect to priorities */
 SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   /* include some default dialogs, since other plugins require that at least the root dialog is available */
+   /* default dialogs must be before since other plugins require the root dialog */
    SCIP_CALL( SCIPincludeDialogDefaultBasic(scip) );
-
-   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) ); /* nonlinear constraint handler must be before linear due to constraint upgrading */
-   SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be before its specializations due to constraint upgrading */
+   /* nonlinear constraint handler must be before linear due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrNonlinear(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrDefault(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrConvex(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrConcave(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrBilinear(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrPerspective(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrQuadratic(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrQuotient(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrSignomial(scip) );
+   SCIP_CALL( SCIPincludeNlhdlrSoc(scip) );
+   /* linear must be before its specializations due to constraint upgrading */
+   SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
-   SCIP_CALL( SCIPincludeConshdlrBenders(scip) );
-   SCIP_CALL( SCIPincludeConshdlrBenderslp(scip) );
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrCardinality(scip) );
    SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
@@ -70,8 +78,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
    SCIP_CALL( SCIPincludeConshdlrComponents(scip) );
-
-   /* include readers in order of chances to be necessary */
+   SCIP_CALL( SCIPincludeConshdlrBenders(scip) );
+   SCIP_CALL( SCIPincludeConshdlrBenderslp(scip) );
    SCIP_CALL( SCIPincludeReaderMps(scip) );
    SCIP_CALL( SCIPincludeReaderLp(scip) );
    SCIP_CALL( SCIPincludeReaderSol(scip) );
@@ -100,7 +108,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderPpm(scip) );
    SCIP_CALL( SCIPincludeReaderPbm(scip) );
    SCIP_CALL( SCIPincludeReaderCcg(scip) );
-
    SCIP_CALL( SCIPincludePresolBoundshift(scip) );
    SCIP_CALL( SCIPincludePresolConvertinttobin(scip) );
    SCIP_CALL( SCIPincludePresolDomcol(scip) );
@@ -120,30 +127,31 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolSparsify(scip) );
    SCIP_CALL( SCIPincludePresolDualsparsify(scip) );
    SCIP_CALL( SCIPincludePresolStuffing(scip) );
-   SCIP_CALL( SCIPincludeNodeselBfs(scip) );
-   SCIP_CALL( SCIPincludeNodeselBreadthfirst(scip) );
-   SCIP_CALL( SCIPincludeNodeselDfs(scip) );
    SCIP_CALL( SCIPincludeNodeselEstimate(scip) );
+   SCIP_CALL( SCIPincludeNodeselBfs(scip) );
    SCIP_CALL( SCIPincludeNodeselHybridestim(scip) );
    SCIP_CALL( SCIPincludeNodeselRestartdfs(scip) );
    SCIP_CALL( SCIPincludeNodeselUct(scip) );
-   SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
-   SCIP_CALL( SCIPincludeBranchruleCloud(scip) );
-   SCIP_CALL( SCIPincludeBranchruleDistribution(scip) );
-   SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
-   SCIP_CALL( SCIPincludeBranchruleGomory(scip) );
-   SCIP_CALL( SCIPincludeBranchruleInference(scip) );
-   SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
-   SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
-   SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
-   SCIP_CALL( SCIPincludeBranchruleMultAggr(scip) );
-   SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
-   SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
-   SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
+   SCIP_CALL( SCIPincludeNodeselDfs(scip) );
+   SCIP_CALL( SCIPincludeNodeselBreadthfirst(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
+   SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
+   SCIP_CALL( SCIPincludeBranchruleInference(scip) );
+   SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
+   SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
+   SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
+   SCIP_CALL( SCIPincludeBranchruleDistribution(scip) );
+   SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
+   SCIP_CALL( SCIPincludeBranchruleMultAggr(scip) );
+   SCIP_CALL( SCIPincludeBranchruleCloud(scip) );
+   SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
+   SCIP_CALL( SCIPincludeBranchruleGomory(scip) );
+   SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
+   SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
    SCIP_CALL( SCIPincludeBranchruleVanillafullstrong(scip) );
    SCIP_CALL( SCIPincludeEventHdlrEstim(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
    SCIP_CALL( SCIPincludeComprLargestrepr(scip) );
    SCIP_CALL( SCIPincludeComprWeakcompr(scip) );
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );
@@ -238,9 +246,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
    SCIP_CALL( SCIPincludeTableDefault(scip) );
-   SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
-   SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
-   SCIP_CALL( SCIPincludeBendersDefault(scip) );
    SCIP_CALL( SCIPincludeCutselEnsemble(scip) );
    SCIP_CALL( SCIPincludeCutselHybrid(scip) );
    SCIP_CALL( SCIPincludeCutselDynamic(scip) );
@@ -257,20 +262,14 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeExprhdlrValue(scip) );
    SCIP_CALL( SCIPincludeExprhdlrVar(scip) );
    SCIP_CALL( SCIPincludeExprhdlrVaridx(scip) );
-   SCIP_CALL( SCIPincludeNlhdlrDefault(scip) );
-   SCIP_CALL( SCIPincludeNlhdlrConvex(scip) );
-   SCIP_CALL( SCIPincludeNlhdlrConcave(scip) );
-   SCIP_CALL( SCIPincludeNlhdlrBilinear(scip) );
-   SCIP_CALL( SCIPincludeNlhdlrPerspective(scip) );
-   SCIP_CALL( SCIPincludeNlhdlrQuadratic(scip) );
-   SCIP_CALL( SCIPincludeNlhdlrQuotient(scip) );
-   SCIP_CALL( SCIPincludeNlhdlrSignomial(scip) );
-   SCIP_CALL( SCIPincludeNlhdlrSoc(scip) );
    SCIP_CALL( SCIPincludeNlpSolverIpopt(scip) );
    SCIP_CALL( SCIPincludeNlpSolverFilterSQP(scip) );
    SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, TRUE) );
    SCIP_CALL( SCIPincludeNlpSolverWorhp(scip, FALSE) );
    SCIP_CALL( SCIPincludeNlpSolverAll(scip) );
+   /* include advanced features */
+   SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
+   SCIP_CALL( SCIPincludeBendersDefault(scip) );
 
    SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
 

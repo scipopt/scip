@@ -902,15 +902,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-   /* copy all reader plugins */
-   if( copyreaders && sourceset->readers != NULL )
-   {
-      for( p = 0; p < sourceset->nreaders; ++p )
-      {
-         SCIP_CALL( SCIPreaderCopyInclude(sourceset->readers[p], targetset) );
-      }
-   }
-
    /* copy all variable pricer plugins */
    if( copypricers && sourceset->pricers != NULL )
    {
@@ -952,6 +943,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
+   /* copy all reader plugins */
+   if( copyreaders && sourceset->readers != NULL )
+   {
+      for( p = 0; p < sourceset->nreaders; ++p )
+      {
+         SCIP_CALL( SCIPreaderCopyInclude(sourceset->readers[p], targetset) );
+      }
+   }
+
    /* copy all conflict handler plugins */
    if( copyconflicthdlrs && sourceset->conflicthdlrs != NULL )
    {
@@ -967,61 +967,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = 0; p < sourceset->npresols; ++p )
       {
          SCIP_CALL( SCIPpresolCopyInclude(sourceset->presols[p], targetset) );
-      }
-   }
-
-   /* copy all relaxator plugins */
-   if( copyrelaxators && sourceset->relaxs != NULL )
-   {
-      for( p = 0; p < sourceset->nrelaxs; ++p )
-      {
-         SCIP_CALL( SCIPrelaxCopyInclude(sourceset->relaxs[p], targetset) );
-      }
-   }
-
-   /* copy all separator plugins */
-   if( copyseparators && sourceset->sepas != NULL )
-   {
-      for( p = 0; p < sourceset->nsepas; ++p )
-      {
-         SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset) );
-      }
-   }
-
-   /* copy all cut selector plugins */
-   if( copycutselectors && sourceset->cutsels != NULL )
-   {
-      for( p = 0; p < sourceset->ncutsels; ++p )
-      {
-         SCIP_CALL( SCIPcutselCopyInclude(sourceset->cutsels[p], targetset) );
-      }
-   }
-
-   /* copy all propagators plugins */
-   if( copypropagators && sourceset->props != NULL )
-   {
-      for( p = 0; p < sourceset->nprops; ++p )
-      {
-         SCIP_CALL( SCIPpropCopyInclude(sourceset->props[p], targetset) );
-      }
-   }
-
-   /* copy all primal heuristics plugins */
-   if( copyheuristics && sourceset->heurs != NULL )
-   {
-      for( p = 0; p < sourceset->nheurs; ++p )
-      {
-         SCIP_CALL( SCIPheurCopyInclude(sourceset->heurs[p], targetset) );
-      }
-   }
-
-   /* copy all event handler plugins */
-   if( copyeventhdlrs && sourceset->eventhdlrs != NULL )
-   {
-      for( p = 0; p < sourceset->neventhdlrs; ++p )
-      {
-         /* @todo: the copying process of event handlers is currently not checked for consistency */
-         SCIP_CALL( SCIPeventhdlrCopyInclude(sourceset->eventhdlrs[p], targetset) );
       }
    }
 
@@ -1043,6 +988,52 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
+   /* copy all event handler plugins */
+   if( copyeventhdlrs && sourceset->eventhdlrs != NULL )
+   {
+      for( p = 0; p < sourceset->neventhdlrs; ++p )
+      {
+         /* @todo: the copying process of event handlers is currently not checked for consistency */
+         SCIP_CALL( SCIPeventhdlrCopyInclude(sourceset->eventhdlrs[p], targetset) );
+      }
+   }
+
+   /* copy all relaxator plugins */
+   if( copyrelaxators && sourceset->relaxs != NULL )
+   {
+      for( p = 0; p < sourceset->nrelaxs; ++p )
+      {
+         SCIP_CALL( SCIPrelaxCopyInclude(sourceset->relaxs[p], targetset) );
+      }
+   }
+
+   /* copy all primal heuristics plugins */
+   if( copyheuristics && sourceset->heurs != NULL )
+   {
+      for( p = 0; p < sourceset->nheurs; ++p )
+      {
+         SCIP_CALL( SCIPheurCopyInclude(sourceset->heurs[p], targetset) );
+      }
+   }
+
+   /* copy all propagators plugins */
+   if( copypropagators && sourceset->props != NULL )
+   {
+      for( p = 0; p < sourceset->nprops; ++p )
+      {
+         SCIP_CALL( SCIPpropCopyInclude(sourceset->props[p], targetset) );
+      }
+   }
+
+   /* copy all separator plugins */
+   if( copyseparators && sourceset->sepas != NULL )
+   {
+      for( p = 0; p < sourceset->nsepas; ++p )
+      {
+         SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset) );
+      }
+   }
+
    /* copy all display plugins */
    if( copydisplays && sourceset->disps != NULL )
    {
@@ -1058,6 +1049,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = 0; p < sourceset->ntables; ++p )
       {
          SCIP_CALL( SCIPtableCopyInclude(sourceset->tables[p], targetset) );
+      }
+   }
+
+   /* copy all cut selector plugins */
+   if( copycutselectors && sourceset->cutsels != NULL )
+   {
+      for( p = 0; p < sourceset->ncutsels; ++p )
+      {
+         SCIP_CALL( SCIPcutselCopyInclude(sourceset->cutsels[p], targetset) );
       }
    }
 
