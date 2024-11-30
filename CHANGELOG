@@ -42,6 +42,7 @@ Fixed bugs
 - check variable cancellation in SCIPvarAddVlb() and SCIPvarAddVub() to avert wrong infeasibility
 - SCIPfreeReoptSolve now also clears the partial solutions
 - fixed bug in calculation of "fractionality score" for spatial branching candidates in cons_nonlinear
+- add copy callbacks for default plugins presolver dualagg, presolver redvub, branchrule lookahead, branchrule cloud, heuristic dualval, heuristic repair, propagator nlobbt, separator gauge, and separator convexproj missing in SCIPsetCopyPlugins()
 
 Unit tests
 ----------
