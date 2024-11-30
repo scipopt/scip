@@ -6795,19 +6795,21 @@ SCIP_RETCODE SCIPincludePropSymmetry(
 
    /* include display dialog */
    rootdialog = SCIPgetRootDialog(scip);
-   assert(rootdialog != NULL);
-   if( SCIPdialogFindEntry(rootdialog, "display", &displaymenu) != 1 )
+   if( rootdialog != NULL )
    {
-      SCIPerrorMessage("display sub menu not found\n");
-      return SCIP_PLUGINNOTFOUND;
+      if( SCIPdialogFindEntry(rootdialog, "display", &displaymenu) != 1 )
+      {
+         SCIPerrorMessage("display sub menu not found\n");
+         return SCIP_PLUGINNOTFOUND;
+      }
+      assert( ! SCIPdialogHasEntry(displaymenu, "symmetries") );
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL, dialogExecDisplaySymmetry, NULL, NULL,
+            "symmetry", "display generators of symmetry group in cycle notation, if available",
+            FALSE, (SCIP_DIALOGDATA*)propdata) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, displaymenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
-   assert( ! SCIPdialogHasEntry(displaymenu, "symmetries") );
-   SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-      NULL, dialogExecDisplaySymmetry, NULL, NULL,
-      "symmetry", "display generators of symmetry group in cycle notation, if available",
-         FALSE, (SCIP_DIALOGDATA*)propdata) );
-   SCIP_CALL( SCIPaddDialogEntry(scip, displaymenu, dialog) );
-   SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
 
    /* add parameters for computing symmetry */
    SCIP_CALL( SCIPaddIntParam(scip,
