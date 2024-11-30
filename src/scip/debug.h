@@ -70,6 +70,11 @@ SCIP_RETCODE SCIPdebugFreeSol(
    SCIP_SET*             set
    );
 
+/** clears the debug solution */
+SCIP_RETCODE SCIPdebugClearSol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** resets the data structure after restart */
 SCIP_RETCODE SCIPdebugReset(
    SCIP_SET*             set

@@ -37,6 +37,8 @@
  * sense more "reliable" at an early stage of the search,
  * at the price of a higher computational cost at the beginning of the search.
  *
+ * When reliable, we consider discounted pseudocosts in the same manner as for the pseudo costs branching rule.
+ *
  * For a more mathematical description and a comparison between the reliable pseudo costs rule and other branching rules
  * in SCIP, we refer to
  *

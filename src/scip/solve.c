@@ -778,6 +778,7 @@ SCIP_RETCODE updatePseudocost(
       int nvalidupdates;
       int d;
       int i;
+      int ancestordepth;
 
       assert(SCIPnodeIsActive(tree->focuslpstatefork));
       assert(tree->path[tree->focuslpstatefork->depth] == tree->focuslpstatefork);
@@ -1052,6 +1053,108 @@ SCIP_RETCODE updatePseudocost(
 
       /* free the buffer for the collected bound changes */
       SCIPsetFreeBufferArray(set, &updates);
+
+      /* update the ancestor pscost fields */
+      if( tree->focuslpstatefork->depth >= 1 && set->branch_collectancpscost )
+      {
+         /* if the last fork is not the root node, we have more ancestors */
+         ancestordepth = -1;
+         for ( d = tree->focuslpstatefork->depth - 1; d >=0; --d )
+         {
+            node = tree->path[d];
+            if ( SCIPnodeGetType(node) == SCIP_NODETYPE_FORK )
+            {
+               ancestordepth = d;
+               break;
+            }
+         }
+         if( ancestordepth >= 0 )
+         {
+            /* ancestor pseudo cost updates for an ancestor */
+            assert(SCIPnodeIsActive(tree->path[ancestordepth]));
+
+            /* get a buffer for the collected bound changes; start with a size twice as large as the number of nodes between
+            * current LP fork and the previous LP fork
+            */
+            SCIP_CALL( SCIPsetAllocBufferArray(set, &updates, (int)(2*(tree->focuslpstatefork->depth - ancestordepth))) );
+            nupdates = 0;
+            nvalidupdates = 0;
+            for( d = ancestordepth + 1; d <= tree->focuslpstatefork->depth; ++d )
+            {
+               node = tree->path[d];
+
+               if( node->domchg != NULL )
+               {
+                  SCIP_BOUNDCHG* boundchgs;
+                  int nboundchgs;
+
+                  boundchgs = node->domchg->domchgbound.boundchgs;
+                  nboundchgs = (int) node->domchg->domchgbound.nboundchgs;
+                  for( i = 0; i < nboundchgs; ++i )
+                  {
+                     var = boundchgs[i].var;
+                     assert(var != NULL);
+
+                     /* we even collect redundant bound changes, since they were not redundant in the LP branching decision
+                     * and therefore should be regarded in the ancestor pseudocost updates
+                     */
+                     if( (SCIP_BOUNDCHGTYPE)boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING &&
+                        (PSEUDOCOSTFLAG)var->pseudocostflag == PSEUDOCOST_NONE )
+                     {
+                        /* remember the bound change and mark the variable */
+                        SCIP_CALL( SCIPsetReallocBufferArray(set, &updates, nupdates+1) );
+                        updates[nupdates] = &boundchgs[i];
+                        nupdates++;
+
+                        /* check for valid pseudocost updates for integer variables */
+                        if( isPseudocostUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval, updateintegers, updatecontinuous) &&
+                           SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+                        {
+                           var->pseudocostflag = PSEUDOCOST_UPDATE; /*lint !e641*/
+                           nvalidupdates++;
+                        }
+                        else
+                           var->pseudocostflag = PSEUDOCOST_IGNORE; /*lint !e641*/
+                     }
+                  }
+               }
+            }
+
+            /* update the ancestor pseudo cost values and reset the variables' flags; assume, that the
+            * responsibility for the dual gain is equally spread on all bound changes that lead to valid
+            * ancestor pseudo cost updates
+            */
+            assert(SCIPnodeGetType(tree->path[ancestordepth]) == SCIP_NODETYPE_FORK);
+            weight = (nvalidupdates > 0 ? 1.0 / (SCIP_Real)nvalidupdates : 1.0);
+            /* lp gain is same as above but with different weight */
+            lpgain = (SCIPlpGetObjval(lp, set, prob) - tree->focuslpstatefork->data.fork->lpobjval) * weight;
+            lpgain = MAX(lpgain, 0.0);
+
+            for( i = 0; i < nupdates; ++i )
+            {
+               assert((SCIP_BOUNDCHGTYPE)updates[i]->boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING);
+
+               var = updates[i]->var;
+               assert(var != NULL);
+               assert((PSEUDOCOSTFLAG)var->pseudocostflag != PSEUDOCOST_NONE);
+
+               if( (PSEUDOCOSTFLAG)var->pseudocostflag == PSEUDOCOST_UPDATE )
+               {
+                  assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
+                  /* we use updates[i]->newbound as new lp value for measuring change in the LP value. */
+                  SCIPsetDebugMsg(set, "updating ancestor pseudocosts of <%s>: sol: %g -> %g, LP: %e -> %e => solvaldelta = %g, gain=%g, weight: %g\n",
+                     SCIPvarGetName(var), updates[i]->data.branchingdata.lpsolval, updates[i]->newbound,
+                     tree->focuslpstatefork->data.fork->lpobjval, SCIPlpGetObjval(lp, set, prob),
+                     updates[i]->newbound - updates[i]->data.branchingdata.lpsolval, lpgain, weight);
+                  SCIP_CALL( SCIPvarUpdateAncPseudocost(var, set, stat,
+                     updates[i]->newbound - updates[i]->data.branchingdata.lpsolval, lpgain, weight) );
+               }
+               var->pseudocostflag = PSEUDOCOST_NONE; /*lint !e641*/
+            }
+            /* free the buffer for the collected bound changes */
+            SCIPsetFreeBufferArray(set, &updates);
+         }
+      }
    }
 
    return SCIP_OKAY;

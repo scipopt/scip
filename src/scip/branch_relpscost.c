@@ -29,6 +29,7 @@
  * @author Timo Berthold
  * @author Gerald Gamrath
  * @author Marc Pfetsch
+ * @author Krunal Patel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -110,6 +111,9 @@
 #define DEFAULT_FILTERCANDSSYM   FALSE       /**< Use symmetry to filter branching candidates? */
 #define DEFAULT_TRANSSYMPSCOST   FALSE       /**< Transfer pscost information to symmetric variables if filtering is performed? */
 
+/* discounted pseudo cost */
+#define BRANCHRULE_DISCOUNTFACTOR        0.2 /**< default discount factor for discounted pseudo costs.*/
+
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -169,6 +173,9 @@ struct SCIP_BranchruleData
    SCIP_VAR**            permvars;           /**< variables on which permutations act */
    int                   npermvars;          /**< number of variables for permutations */
    SCIP_HASHMAP*         permvarmap;         /**< map of variables to indices in permvars array */
+
+   /* for discounted pseudo costs */
+   SCIP_Real             discountfactor;     /**< discount factor for discounted pseudo costs.*/
 };
 
 /*
@@ -332,9 +339,48 @@ SCIP_RETCODE SCIPupdateVarPseudocostSymmetric(
 {
    int orbitidx;
    int j;
+   SCIP_Bool useancpscost;
 
    assert( scip != NULL );
    assert( branchruledata != NULL );
+
+   /* update the discounted pseudo cost of the current node branched variable */
+   SCIP_CALL(SCIPgetBoolParam(scip, "branching/collectancpscost", &useancpscost));
+   if( useancpscost )
+   {
+      SCIP_NODE* currentnode;
+
+      currentnode = SCIPgetFocusNode(scip);
+      if( SCIPnodeGetDepth(currentnode) > 0 )
+      {
+         SCIP_DOMCHG* domchange;
+         SCIP_BOUNDCHG* boundchg;
+         int nboundchgs;
+         SCIP_VAR* var;
+         int i;
+         SCIP_Real parentlpsolval;
+         SCIP_Real parentsolvedelta;
+
+         domchange = SCIPnodeGetDomchg(currentnode);
+         nboundchgs = SCIPdomchgGetNBoundchgs(domchange);
+         for( i = 0; i < nboundchgs; ++i )
+         {
+            boundchg = SCIPdomchgGetBoundchg(domchange, i);
+            var = SCIPboundchgGetVar(boundchg);
+            assert(var != NULL);
+
+            if( SCIPboundchgGetBoundchgtype(boundchg) == SCIP_BOUNDCHGTYPE_BRANCHING &&
+               SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            {
+               parentlpsolval = SCIPboundchgGetLPSolVal(boundchg);
+               if( parentlpsolval >= SCIP_INVALID )
+                  continue;
+               parentsolvedelta = SCIPboundchgGetNewbound(boundchg) - parentlpsolval;
+               SCIP_CALL( SCIPupdateVarAncPseudocost(scip, var, parentsolvedelta, objdelta, weight) );
+            }
+         }
+      }
+   }
 
    if( branchruledata->nosymmetry || ! branchruledata->transsympscost || branchorbitidx == NULL )
    {
@@ -764,6 +810,69 @@ SCIP_RETCODE applyBdchgs(
    return SCIP_OKAY;
 }
 
+/** determine if strong branching is needed on the given candidate variable */
+static
+SCIP_Bool needsStrongBranching(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_VAR*             branchcand,         /**< branching candidate */
+   SCIP_Real             branchcandfrac,     /**< fractional part of the branching candidate */
+   SCIP_VAR*             bestpscand,         /**< best candidate as per pscost score, must be present if usehyptestforreliability is used */
+   SCIP_Real             bestpscandfrac,     /**< fractional part of the best candidate as per pscost score, must be present if usehyptestforreliability is used */
+   SCIP_Real             reliable,           /**< size threshold for reliability */
+   SCIP_Real             relerrorthreshold,  /**< relative error threshold for reliability */
+   SCIP_CONFIDENCELEVEL  clevel,             /**< confidence level */
+   SCIP_Bool             useancpscost        /**< check reliability for ancpscost as well */
+   )
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+   SCIP_Real pscostdownsize;
+   SCIP_Real pscostupsize;
+   SCIP_Real pscostsize;
+   SCIP_Real dpscostdownsize;
+   SCIP_Real dpscostupsize;
+   SCIP_Real dpscostsize;
+
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* check, if the pseudo cost score and the discounted pseudocost score of the variable is reliable */
+   pscostdownsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcand, SCIP_BRANCHDIR_DOWNWARDS);
+   pscostupsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcand, SCIP_BRANCHDIR_UPWARDS);
+   pscostsize = MIN(pscostdownsize, pscostupsize);
+   dpscostdownsize = SCIPgetVarAncPseudocostCountCurrentRun(scip, branchcand, SCIP_BRANCHDIR_DOWNWARDS);
+   dpscostupsize = SCIPgetVarAncPseudocostCountCurrentRun(scip, branchcand, SCIP_BRANCHDIR_UPWARDS);
+   dpscostsize = MIN(dpscostdownsize, dpscostupsize);
+
+   /* determine if variable is considered reliable based on the current reliability setting */
+   /* check fixed number threshold (aka original) reliability first */
+   assert(!branchruledata->usehyptestforreliability || bestpscand != NULL );
+   if( pscostsize < reliable || ( useancpscost && dpscostsize < reliable ) )
+      return TRUE;
+   if( branchruledata->userelerrorforreliability && branchruledata->usehyptestforreliability )
+   {
+      if( !SCIPisVarPscostRelerrorReliable(scip, branchcand, relerrorthreshold, clevel) &&
+            !SCIPsignificantVarPscostDifference(scip, bestpscand, bestpscandfrac,
+               branchcand, branchcandfrac, SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) &&
+            !SCIPsignificantVarPscostDifference(scip, bestpscand, 1 - bestpscandfrac,
+               branchcand, 1 - branchcandfrac, SCIP_BRANCHDIR_UPWARDS, clevel, TRUE) )
+         return TRUE;
+   }
+   /* check if relative error is tolerable */
+   if( branchruledata->userelerrorforreliability &&
+         !SCIPisVarPscostRelerrorReliable(scip, branchcand, relerrorthreshold, clevel))
+      return TRUE;
+   /* check if best pseudo-candidate is significantly better in both directions, use strong-branching otherwise */
+   if( branchruledata->usehyptestforreliability &&
+         !SCIPsignificantVarPscostDifference(scip, bestpscand, bestpscandfrac,
+               branchcand, branchcandfrac, SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) &&
+         !SCIPsignificantVarPscostDifference(scip, bestpscand, 1 - bestpscandfrac,
+               branchcand, 1 - branchcandfrac, SCIP_BRANCHDIR_UPWARDS, clevel, TRUE) )
+      return TRUE;
+   return FALSE;
+}
+
 /** execute reliability pseudo cost branching */
 static
 SCIP_RETCODE execRelpscost(
@@ -870,6 +979,7 @@ SCIP_RETCODE execRelpscost(
       SCIP_Real avginferencescore;
       SCIP_Real avgcutoffscore;
       SCIP_Real avgpscostscore;
+      SCIP_Real avgdpscostscore;
       SCIP_Real bestpsscore;
       SCIP_Real bestpsfracscore;
       SCIP_Real bestpsdomainscore;
@@ -900,6 +1010,9 @@ SCIP_RETCODE execRelpscost(
       int c;
       SCIP_CONFIDENCELEVEL clevel;
       SCIP_Real degeneracyfactor = 1.0;
+      SCIP_Bool useancpscost;
+
+      SCIP_CALL(SCIPgetBoolParam(scip, "branching/collectancpscost", &useancpscost));
 
       /* get LP degeneracy information and compute a factor to change weighting of pseudo cost score vs. other scores */
       if( branchruledata->degeneracyaware > 0 && (SCIPgetDepth(scip) > 0 || branchruledata->degeneracyaware > 1) )
@@ -943,6 +1056,8 @@ SCIP_RETCODE execRelpscost(
       avgcutoffscore = MAX(avgcutoffscore, 0.1);
       avgpscostscore = SCIPgetAvgPseudocostScore(scip);
       avgpscostscore = MAX(avgpscostscore, 0.1);
+      avgdpscostscore = SCIPgetAvgDPseudocostScore(scip, branchruledata->discountfactor);
+      avgdpscostscore = MAX(avgdpscostscore, 0.1);
 
       /* get nonlinear counts according to parameters */
       SCIP_CALL( branchruledataEnsureNlcount(scip, branchruledata) );
@@ -1068,6 +1183,18 @@ SCIP_RETCODE execRelpscost(
                SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchcands[c], &down, &up, NULL, NULL, NULL, &lastlpobjval) );
                downgain = MAX(down - lastlpobjval, 0.0);
                upgain = MAX(up - lastlpobjval, 0.0);
+               if( useancpscost )
+               {
+                  /* add discounted gains as stored in dpscost */
+                  SCIP_Real downsol;
+                  SCIP_Real upsol;
+                  downsol = SCIPfeasCeil(scip, branchcandssol[c]-1.0);
+                  upsol = SCIPfeasFloor(scip, branchcandssol[c]+1.0);
+                  downgain += branchruledata->discountfactor * SCIPgetVarAncPseudocostVal(scip, branchcands[c], downsol-branchcandssol[c]);
+                  upgain += branchruledata->discountfactor * SCIPgetVarAncPseudocostVal(scip, branchcands[c], upsol-branchcandssol[c]);
+                  downgain /= (1 + branchruledata->discountfactor);
+                  upgain /= (1 + branchruledata->discountfactor);
+               }
                pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
                SCIPdebugMsg(scip, " -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), pscostscore=%g)\n",
@@ -1098,6 +1225,26 @@ SCIP_RETCODE execRelpscost(
             }
          }
       }
+
+      /* use discounted pseudocosts only if all candidates are reliable. */
+      if( useancpscost && maxninitcands > 0 )
+      {
+         /* look for at least one unreliable candidate */
+         for( c = 0; c < nbranchcands; ++c )
+         {
+            if( needsStrongBranching(scip, branchrule, branchcands[c], branchcandsfrac[c],
+                  bestpscand >= 0 ? branchcands[bestpscand] : NULL,
+                  bestpscand >= 0 ? branchcandsfrac[bestpscand] : 0.0,
+                  reliable, relerrorthreshold, clevel, useancpscost) )
+            {
+               useancpscost = FALSE;
+               break;
+            }
+         }
+      }
+
+      if( useancpscost )
+         avgpscostscore = avgdpscostscore;
 
       for( c = 0; c < nbranchcands; ++c )
       {
@@ -1140,6 +1287,8 @@ SCIP_RETCODE execRelpscost(
          nlscore = calcNlscore(scip, branchruledata->nlcount, branchruledata->nlcountmax, SCIPvarGetProbindex(branchcands[c]));
          pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
          usesb = FALSE;
+         if( useancpscost )
+            pscostscore = SCIPgetVarDPseudocostScore(scip, branchcands[c], branchcandssol[c],branchruledata->discountfactor);
 
          /* don't use strong branching on variables that have already been initialized at the current node;
           * instead replace the pseudo cost score with the already calculated one;
@@ -1155,6 +1304,18 @@ SCIP_RETCODE execRelpscost(
             SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchcands[c], &down, &up, NULL, NULL, NULL, &lastlpobjval) );
             downgain = MAX(down - lastlpobjval, 0.0);
             upgain = MAX(up - lastlpobjval, 0.0);
+            /* add discounted gains as stored in anspscost */
+            if( useancpscost ) {
+               /* the anspscost must be reliable here */
+               SCIP_Real downsol;
+               SCIP_Real upsol;
+               downsol = SCIPfeasCeil(scip, branchcandssol[c]-1.0);
+               upsol = SCIPfeasFloor(scip, branchcandssol[c]+1.0);
+               downgain += branchruledata->discountfactor * SCIPgetVarAncPseudocostVal(scip, branchcands[c], downsol-branchcandssol[c]);
+               upgain += branchruledata->discountfactor * SCIPgetVarAncPseudocostVal(scip, branchcands[c], upsol-branchcandssol[c]);
+               downgain /= (1 + branchruledata->discountfactor);
+               upgain /= (1 + branchruledata->discountfactor);
+            }
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
 
             mingains[c] = MIN(downgain, upgain);
@@ -1174,32 +1335,10 @@ SCIP_RETCODE execRelpscost(
             upsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_UPWARDS);
             size = MIN(downsize, upsize);
 
-            /* determine if variable is considered reliable based on the current reliability setting */
-            /* check fixed number threshold (aka original) reliability first */
-            assert(!branchruledata->usehyptestforreliability || bestpscand >= 0);
-            usesb = FALSE;
-            if( size < reliable )
-               usesb = TRUE;
-            else if( branchruledata->userelerrorforreliability && branchruledata->usehyptestforreliability )
-            {
-               if( !SCIPisVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold, clevel) &&
-                     !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], branchcandsfrac[bestpscand],
-                        branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) &&
-                     !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], 1 - branchcandsfrac[bestpscand],
-                        branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_UPWARDS, clevel, TRUE) )
-                  usesb = TRUE;
-            }
-            /* check if relative error is tolerable */
-            else if( branchruledata->userelerrorforreliability &&
-                  !SCIPisVarPscostRelerrorReliable(scip, branchcands[c], relerrorthreshold, clevel))
-               usesb = TRUE;
-            /* check if best pseudo-candidate is significantly better in both directions, use strong-branching otherwise */
-            else if( branchruledata->usehyptestforreliability &&
-                  !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], branchcandsfrac[bestpscand],
-                        branchcands[c], branchcandsfrac[c], SCIP_BRANCHDIR_DOWNWARDS, clevel, TRUE) &&
-                  !SCIPsignificantVarPscostDifference(scip, branchcands[bestpscand], 1 - branchcandsfrac[bestpscand],
-                        branchcands[c], 1 - branchcandsfrac[c], SCIP_BRANCHDIR_UPWARDS, clevel, TRUE))
-               usesb = TRUE;
+            usesb = needsStrongBranching(scip, branchrule, branchcands[c], branchcandsfrac[c],
+                  bestpscand >= 0 ? branchcands[bestpscand] : NULL,
+                  bestpscand >= 0 ? branchcandsfrac[bestpscand] : 0.0,
+                  reliable, relerrorthreshold, clevel, FALSE);
 
             /* count the number of variables that are completely uninitialized */
             if( size < 0.1 )
@@ -1501,6 +1640,7 @@ SCIP_RETCODE execRelpscost(
          up = MAX(up, lpobjval);
          downgain = down - lpobjval;
          upgain = up - lpobjval;
+         assert(!useancpscost);
          assert(!allcolsinlp || exactsolve || !downvalid || downinf == SCIPisGE(scip, down, SCIPgetCutoffbound(scip)));
          assert(!allcolsinlp || exactsolve || !upvalid || upinf == SCIPisGE(scip, up, SCIPgetCutoffbound(scip)));
          assert(downinf || !downconflict);
@@ -2240,6 +2380,10 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/transsympscost",
          "Transfer pscost information to symmetric variables?",
          &branchruledata->transsympscost, TRUE, DEFAULT_TRANSSYMPSCOST, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/discountfactor",
+         "discount factor for ancestral pseudo costs (0.0: disable discounted pseudo costs)",
+         &branchruledata->discountfactor, FALSE, BRANCHRULE_DISCOUNTFACTOR, 0.0, 1.0, NULL, NULL) );
 
    /* initialise the Treemodel parameters */
    SCIP_CALL( SCIPtreemodelInit(scip, &branchruledata->treemodel) );

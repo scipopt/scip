@@ -1443,6 +1443,23 @@ SCIP_Real SCIPgetAvgPseudocostScore(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets the average discounted pseudo cost score value over all variables, assuming a fractionality of 0.5
+ *
+ *  This combines both pscost and ancpscost fields.
+ *
+ *  @return the average discounted pseudo cost score value over all variables, assuming a fractionality of 0.5,
+ *  combining both pscost and ancpscost fields
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetAvgDPseudocostScore(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_Real             discountfac          /**< discount factor for discounted pseudocost */
+   );
+
 /** returns the variance of pseudo costs for all variables in the requested direction
  *
  *  @return the variance of pseudo costs for all variables in the requested direction

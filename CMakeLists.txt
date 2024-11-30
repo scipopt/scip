@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.11)
 
 # option() honors normal variables.
 if(POLICY CMP0077)
@@ -10,11 +10,14 @@ if(POLICY CMP0091)
    cmake_policy(SET CMP0091 NEW)
 endif()
 
-set(SCIP_VERSION_MAJOR 9)
-set(SCIP_VERSION_MINOR 3)
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
+
+set(SCIP_VERSION_MAJOR 10)
+set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
 set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 115)
+set(SCIP_VERSION_API 127)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
@@ -93,7 +96,7 @@ SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
 
-set(TPI none CACHE STRING "options for thread support library")  #create the variable
+set(TPI tny CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
 
 set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create the variable
@@ -137,33 +140,7 @@ if(SYM STREQUAL "bliss" OR SYM STREQUAL "sbliss")
         set(SYM_PIC_LIBRARIES Bliss::libbliss)
         message(STATUS "Found Bliss: ${Bliss_DIR}")
     else()
-        # Utilities to automatically download missing dependencies
-        include(cmake/Dependencies.cmake)
-        # modify configuration for bliss
-        set(BUILD_SHARED_LIBS OFF)
-        set(TMPFLAGS ${CMAKE_C_FLAGS})
-        set(TMXFLAGS ${CMAKE_CXX_FLAGS})
-        set(CMAKE_C_FLAGS -w)
-        set(CMAKE_CXX_FLAGS -w)
-        find_or_download_package(
-          NAME Bliss
-          VERSION 0.77
-          URL https://github.com/scipopt/bliss/archive/refs/tags/v0.77.tar.gz
-          URL_HASH SHA256=34c9cec2cb4dd73f881852bd1b1e0429859c8adcc6a61bc0d70a446a23b51d53
-          COMPONENTS libbliss)
-        # undo modification
-        set(CMAKE_C_FLAGS ${TMPFLAGS})
-        set(CMAKE_CXX_FLAGS ${TMXFLAGS})
-        set(BUILD_SHARED_LIBS ${SHARED})
-
-        find_package(Bliss CONFIG HINTS _deps/local)
-        if (NOT Bliss_FOUND)
-            message(FATAL_ERROR "Automatic download of Bliss failed. Please specify the BLISS_DIR.")
-        endif()
-        include_directories(${CMAKE_BINARY_DIR}/_deps/local/include)
-        set(SYM_LIBRARIES ${CMAKE_BINARY_DIR}/_deps/local/lib/libbliss.a)
-        set(SYM_PIC_LIBRARIES ${CMAKE_BINARY_DIR}/_deps/local/lib/libbliss.a)
-        message(STATUS "Installed Bliss in: ${CMAKE_BINARY_DIR}/_deps/local")
+        message(FATAL_ERROR "Bliss not found, try installing https://github.com/scipopt/bliss and specifying BLISS_DIR.")
     endif()
 elseif(SYM STREQUAL "nauty" OR SYM STREQUAL "snauty")
     if(NAUTY_DIR)
@@ -413,18 +390,7 @@ endif()
 message(STATUS "Finding Solver \"${LPS}\"")
 if(LPS STREQUAL "spx")
     message(STATUS "Finding Soplex")
-    find_package(SOPLEX CONFIG HINTS ${SOPLEX_DIR})
-    if(NOT SOPLEX_FOUND)
-        # Utilities to automatically download missing dependencies
-        include(cmake/Dependencies.cmake)
-        find_or_download_package(
-          NAME SOPLEX
-          VERSION 7.0.1
-          URL https://github.com/scipopt/soplex/archive/refs/tags/release-701.tar.gz
-          URL_HASH SHA256=80cce994dcbe45fd52b60e31a3aeb5d2c60a7ddbaae495e0ce6bf58481675696
-          COMPONENTS soplex)
-        find_package(SOPLEX REQUIRED CONFIG HINTS _deps/local)
-    endif()
+    find_package(SOPLEX REQUIRED CONFIG HINTS ${SOPLEX_DIR})
     if(NOT SOPLEX_FOUND)
         message(FATAL_ERROR "Requested LP solver SoPlex not found.")
     endif()

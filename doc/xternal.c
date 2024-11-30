@@ -104,7 +104,7 @@
  *
  * \verbinclude output.log
  *
- * @version  9.3.0
+ * @version  10.0.0
  *
  * \image html scippy.png
  */
@@ -252,7 +252,7 @@
  * Alex is now ready to write his very first example, he creates a new folder `MinEx` under `examples` and puts two files in there:
  * `CMakeLists.txt`:
  * ```
- * cmake_minimum_required(VERSION 3.3)
+ * cmake_minimum_required(VERSION 3.11)
  *
  * project(minex)
  * find_package(SCIP REQUIRED)
@@ -406,6 +406,7 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
+ * - \subpage RN10         "SCIP 10"
  * - \subpage RN9          "SCIP 9"
  * - \subpage RN8          "SCIP 8"
  * - \subpage RN7          "SCIP 7.0"
@@ -674,6 +675,10 @@
  *   the comment starts at column 46 (if column-count starts with 1).
  * - Maximal line length is 120 characters.
  * - Always only one declaration in a line.
+ * - Joint declaration and initialization is possible at the top-level of a function and in the header of loops.
+ *
+ *   @refsnippet{src/scip/cuts.c,SnippetCodeStyleInLoopDeclaration}
+ *
  * - Variable names should be all lower case.
  *
  *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleDeclaration}
@@ -7863,7 +7868,9 @@
  *    These functions should follow the naming style `SCIP<operation><component>...`, e.g., <code>SCIPcreateVar()</code> or <code>SCIPaddVarLocks</code>.
  *  - To ensure functions of the public API being reachable in shared libraries, their declaration needs to contain the <code>SCIP_EXPORT</code> attribute.
  *  - Public types (typedef's, enumerations) are defined in file <code>type_<component>.h</code>.
- *    Type names follow the style <code>SCIP_<COMPONENT>...</code>.
+ *    Type names follow the style <code>SCIP_<COMPONENT>...</code>. For every struct, we have a typedef that shortens the name 
+ *    (so one could for instance use <code>SCIP_PARAM</code> instead of <code>struct SCIP_Param</code>).
+ *    The convention is to have the mixed-casing for the struct name, and then all-capital for the typedef's type. Similar for enums.
  *  - Structs that need to be accessed by several source files are defined in <code>struct_<component>.h</code>.
  *    <code>struct_<component>.h</code> is usually included only by <code><component>.c</code> and maybe <code>scip_<component>.c</code>.
  *    Exceptions are due to manual inlining of functions via macros when compiling for optimized mode.
@@ -9084,6 +9091,11 @@
 /**@defgroup DecompMethods Decomposition data structure
  * @ingroup DataStructures
  * @brief methods for creating and accessing user decompositions
+ */
+
+/**@defgroup NetworkMatrix Network Matrix
+ * @ingroup DataStructures
+ * @brief methods for detecting network matrices and converting them to the underlying graphs
  */
 
 /**@defgroup SymGraph Symmetry Detection Graph

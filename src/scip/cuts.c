@@ -71,14 +71,15 @@ void printCutQuad(
 {
    SCIP_Real QUAD(activity);
    SCIP_VAR** vars;
-   int i;
 
    assert(scip != NULL);
    vars = SCIPgetVars(scip);
 
    SCIPdebugMsg(scip, "CUT:");
    QUAD_ASSIGN(activity, 0.0);
-   for( i = 0; i < cutnnz; ++i )
+
+   /**! [SnippetCodeStyleInLoopDeclaration] */
+   for( int i = 0; i < cutnnz; ++i )
    {
       SCIP_Real QUAD(coef);
 
@@ -109,6 +110,7 @@ void printCutQuad(
 
       SCIPquadprecSumQQ(activity, activity, coef);
    }
+   /**! [SnippetCodeStyleInLoopDeclaration] */
    SCIPdebugMsgPrint(scip, " <= %.6f (activity: %g)\n", QUAD_TO_DBL(cutrhs), QUAD_TO_DBL(activity));
 }
 #endif

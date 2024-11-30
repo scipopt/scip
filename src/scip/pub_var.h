@@ -1372,6 +1372,12 @@ SCIP_Real SCIPboundchgGetNewbound(
    SCIP_BOUNDCHG*        boundchg            /**< bound change data */
    );
 
+/** returns the lp solution value in the branching data of the bound change data */
+SCIP_EXPORT
+SCIP_Real SCIPboundchgGetLPSolVal(
+   SCIP_BOUNDCHG*        boundchg            /**< bound change data */
+   );
+
 /** returns the variable of the bound change in the bound change data */
 SCIP_EXPORT
 SCIP_VAR* SCIPboundchgGetVar(
@@ -1475,6 +1481,7 @@ SCIP_HOLELIST* SCIPholelistGetNext(
 #define SCIPbdchginfoIsTighter(bdchginfo1,bdchginfo2) ((bdchginfo1)->boundtype == SCIP_BOUNDTYPE_LOWER \
       ? (bdchginfo1)->newbound > bdchginfo2->newbound : (bdchginfo1)->newbound < bdchginfo2->newbound)
 #define SCIPboundchgGetNewbound(boundchg)      ((boundchg)->newbound)
+#define SCIPboundchgGetLPSolVal(boundchg) ((boundchg)->data.branchingdata.lpsolval)
 #define SCIPboundchgGetVar(boundchg)           ((boundchg)->var)
 #define SCIPboundchgGetBoundchgtype(boundchg)  ((SCIP_BOUNDCHGTYPE)((boundchg)->boundchgtype))
 #define SCIPboundchgGetBoundtype(boundchg)     ((SCIP_BOUNDTYPE)((boundchg)->boundtype))

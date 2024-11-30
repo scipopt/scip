@@ -102,7 +102,7 @@ SCIP_RETCODE readVariables(
    *vars = NULL;
    *nvars = 0;
 
-   variables = xmlFindNodeMaxdepth(datanode, "variables", 0, 1);
+   variables = SCIPxmlFindNodeMaxdepth(datanode, "variables", 0, 1);
 
    if( variables == NULL )
    {
@@ -111,7 +111,7 @@ SCIP_RETCODE readVariables(
    }
 
    /* get number of variables */
-   attrval = xmlGetAttrval(variables, "numberOfVariables");
+   attrval = SCIPxmlGetAttrval(variables, "numberOfVariables");
    if( attrval == NULL )
    {
       SCIPerrorMessage("Attribute \"numberOfVariables\" not found in <variables> node.\n");
@@ -122,7 +122,7 @@ SCIP_RETCODE readVariables(
    varssize = (int)strtol(attrval, (char**)&attrval, 10);
    if( *attrval != '\0' || varssize < 0 )
    {
-      SCIPerrorMessage("Invalid value '%s' for \"numberOfVariables\" attribute.\n", xmlGetAttrval(variables, "numberOfVariables"));
+      SCIPerrorMessage("Invalid value '%s' for \"numberOfVariables\" attribute.\n", SCIPxmlGetAttrval(variables, "numberOfVariables"));
       *doingfine = FALSE;
       return SCIP_OKAY;
    }
@@ -133,7 +133,7 @@ SCIP_RETCODE readVariables(
    /* parse variable nodes, create SCIP vars and add to problem
     * create bounddisjunction constraints for semicontinuous/semiinteger variables
     */
-   for( varnode = xmlFirstChild(variables); varnode != NULL; varnode = xmlNextSibl(varnode) )
+   for( varnode = SCIPxmlFirstChild(variables); varnode != NULL; varnode = SCIPxmlNextSibl(varnode) )
    {
       const char* varname;
       SCIP_VARTYPE vartype;
@@ -149,10 +149,10 @@ SCIP_RETCODE readVariables(
       }
 
       /* find variable name */
-      varname = xmlGetAttrval(varnode, "name");
+      varname = SCIPxmlGetAttrval(varnode, "name");
 
       /* check for mult attribute */
-      attrval = xmlGetAttrval(varnode, "mult");
+      attrval = SCIPxmlGetAttrval(varnode, "mult");
       if( attrval != NULL && strcmp(attrval, "1") != 0 )
       {
          SCIPerrorMessage("Variable attribute 'mult' not supported (while parsing variable <%s>)\n", varname);
@@ -161,7 +161,7 @@ SCIP_RETCODE readVariables(
       }
 
       /* find variable lower bound (default is 0.0 !) */
-      attrval = xmlGetAttrval(varnode, "lb");
+      attrval = SCIPxmlGetAttrval(varnode, "lb");
       if( attrval == NULL )
          varlb = 0.0;
       else if( strcmp(attrval, "-INF") == 0 )
@@ -180,7 +180,7 @@ SCIP_RETCODE readVariables(
       }
 
       /* find variable upper bound (default is infinity) */
-      attrval = xmlGetAttrval(varnode, "ub");
+      attrval = SCIPxmlGetAttrval(varnode, "ub");
       if( attrval == NULL )
          varub = SCIPinfinity(scip);
       else if( strcmp(attrval, "-INF") == 0 )
@@ -203,7 +203,7 @@ SCIP_RETCODE readVariables(
       /* find variable type (default is continuous)
        * adjust variable lower bound for semicontinuous variables
        */
-      attrval = xmlGetAttrval(varnode, "type");
+      attrval = SCIPxmlGetAttrval(varnode, "type");
       if( attrval == NULL )
          vartype = SCIP_VARTYPE_CONTINUOUS;
       else switch( *attrval )
@@ -309,14 +309,14 @@ SCIP_RETCODE readObjective(
    assert(doingfine != NULL);
 
    /* check for first objective */
-   objective = xmlFindNodeMaxdepth(datanode, "obj", 0, 2);
+   objective = SCIPxmlFindNodeMaxdepth(datanode, "obj", 0, 2);
 
    /* if no objective, then nothing to do here */
    if( objective == NULL )
       return SCIP_OKAY;
 
    /* check for mult attribute */
-   attrval = xmlGetAttrval(objective, "mult");
+   attrval = SCIPxmlGetAttrval(objective, "mult");
    if( attrval != NULL && strcmp(attrval, "1") != 0 )
    {
       SCIPerrorMessage("Objective attribute 'mult' not supported.\n");
@@ -325,7 +325,7 @@ SCIP_RETCODE readObjective(
    }
 
    /* objective sense */
-   attrval = xmlGetAttrval(objective, "maxOrMin");
+   attrval = SCIPxmlGetAttrval(objective, "maxOrMin");
    if( attrval == NULL )
    {
       SCIPerrorMessage("Objective sense missing.\n");
@@ -348,13 +348,13 @@ SCIP_RETCODE readObjective(
    }
 
    /* objective coefficients */
-   for( coefnode = xmlFirstChild(objective); coefnode != NULL; coefnode = xmlNextSibl(coefnode) )
+   for( coefnode = SCIPxmlFirstChild(objective); coefnode != NULL; coefnode = SCIPxmlNextSibl(coefnode) )
    {
       SCIP_Real val;
       int idx;
 
       /* get variable index */
-      attrval = xmlGetAttrval(coefnode, "idx");
+      attrval = SCIPxmlGetAttrval(coefnode, "idx");
       if( attrval == NULL )
       {
          SCIPerrorMessage("Missing \"idx\" attribute in objective coefficient.\n");
@@ -364,7 +364,7 @@ SCIP_RETCODE readObjective(
       idx = (int)strtol(attrval, (char**)&attrval, 10);
       if( *attrval != '\0' )
       {
-         SCIPerrorMessage("Error parsing variable index '%s' of objective coefficient.\n", xmlGetAttrval(coefnode, "idx"));
+         SCIPerrorMessage("Error parsing variable index '%s' of objective coefficient.\n", SCIPxmlGetAttrval(coefnode, "idx"));
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
@@ -377,18 +377,18 @@ SCIP_RETCODE readObjective(
       }
 
       /* get coefficient value */
-      if( xmlFirstChild(coefnode) == NULL || xmlGetData(xmlFirstChild(coefnode)) == NULL )
+      if( SCIPxmlFirstChild(coefnode) == NULL || SCIPxmlGetData(SCIPxmlFirstChild(coefnode)) == NULL )
       {
          SCIPerrorMessage("No objective coefficient stored for %d'th variable (<%s>).\n", idx, SCIPvarGetName(vars[idx]));  /*lint !e613*/
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
 
-      attrval = xmlGetData(xmlFirstChild(coefnode));
+      attrval = SCIPxmlGetData(SCIPxmlFirstChild(coefnode));
       val = strtod(attrval, (char**)&attrval);
       if( *attrval != '\0' )
       {
-         SCIPerrorMessage("Error parsing objective coefficient value '%s' for %d'th variable (<%s>).\n", xmlGetData(xmlFirstChild(coefnode)), idx, SCIPvarGetName(vars[idx]));  /*lint !e613*/
+         SCIPerrorMessage("Error parsing objective coefficient value '%s' for %d'th variable (<%s>).\n", SCIPxmlGetData(SCIPxmlFirstChild(coefnode)), idx, SCIPvarGetName(vars[idx]));  /*lint !e613*/
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
@@ -398,7 +398,7 @@ SCIP_RETCODE readObjective(
    }
 
    /* objective constant: model as fixed variable, if nonzero */
-   attrval = xmlGetAttrval(objective, "constant");
+   attrval = SCIPxmlGetAttrval(objective, "constant");
    if( attrval != NULL )
    {
       SCIP_Real objconst;
@@ -406,7 +406,7 @@ SCIP_RETCODE readObjective(
       objconst = strtod(attrval, (char**)&attrval);
       if( *attrval != '\0' )
       {
-         SCIPerrorMessage("Error parsing objective constant '%s'\n", xmlGetAttrval(objective, "constant"));
+         SCIPerrorMessage("Error parsing objective constant '%s'\n", SCIPxmlGetAttrval(objective, "constant"));
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
@@ -421,7 +421,7 @@ SCIP_RETCODE readObjective(
       }
    }
 
-   if( xmlNextSibl(objective) != NULL )
+   if( SCIPxmlNextSibl(objective) != NULL )
    {
       SCIPerrorMessage("Multiple objectives not supported by SCIP.\n");
       *doingfine = FALSE;
@@ -450,14 +450,14 @@ SCIP_RETCODE readNConstraints(
 
    *nconss = 0;
 
-   constraints = xmlFindNodeMaxdepth(datanode, "constraints", 0, 1);
+   constraints = SCIPxmlFindNodeMaxdepth(datanode, "constraints", 0, 1);
 
    /* if no constraints, then nothing to do here */
    if( constraints == NULL )
       return SCIP_OKAY;
 
    /* read number of constraints */
-   attrval = xmlGetAttrval(constraints, "numberOfConstraints");
+   attrval = SCIPxmlGetAttrval(constraints, "numberOfConstraints");
    if( attrval == NULL )
    {
       SCIPerrorMessage("Attribute \"numberOfConstraints\" not found in <constraints> node.\n");
@@ -468,7 +468,7 @@ SCIP_RETCODE readNConstraints(
    *nconss = (int)strtol(attrval, (char**)&attrval, 10);
    if( *attrval != '\0' || *nconss < 0 )
    {
-      SCIPerrorMessage("Invalid value '%s' for \"numberOfConstraints\" attribute.\n", xmlGetAttrval(constraints, "numberOfConstraints"));
+      SCIPerrorMessage("Invalid value '%s' for \"numberOfConstraints\" attribute.\n", SCIPxmlGetAttrval(constraints, "numberOfConstraints"));
       *doingfine = FALSE;
       return SCIP_OKAY;
    }
@@ -660,14 +660,14 @@ SCIP_RETCODE readConstraints(
    assert(nquadterms != NULL);
    assert(nlexprs != NULL);
 
-   constraints = xmlFindNodeMaxdepth(datanode, "constraints", 0, 1);
+   constraints = SCIPxmlFindNodeMaxdepth(datanode, "constraints", 0, 1);
 
    /* if no constraints, then nothing to do here */
    if( constraints == NULL )
       return SCIP_OKAY;
 
    /* read constraint names, lhs, rhs, constant */
-   for( consnode = xmlFirstChild(constraints); consnode != NULL; consnode = xmlNextSibl(consnode) )
+   for( consnode = SCIPxmlFirstChild(constraints); consnode != NULL; consnode = SCIPxmlNextSibl(consnode) )
    {
       const char* consname;
       SCIP_Real conslhs;
@@ -681,7 +681,7 @@ SCIP_RETCODE readConstraints(
       }
 
       /* find constraint name */
-      consname = xmlGetAttrval(consnode, "name");
+      consname = SCIPxmlGetAttrval(consnode, "name");
       if( consname == NULL )
       {
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cons%d", c);
@@ -689,7 +689,7 @@ SCIP_RETCODE readConstraints(
       }
 
       /* check for mult attribute */
-      attrval = xmlGetAttrval(consnode, "mult");
+      attrval = SCIPxmlGetAttrval(consnode, "mult");
       if( attrval != NULL && strcmp(attrval, "1") != 0 )
       {
          SCIPerrorMessage("Constraint attribute 'mult' not supported (while parsing constraint <%s>).\n", consname);
@@ -698,7 +698,7 @@ SCIP_RETCODE readConstraints(
       }
 
       /* find constraint lower bound (=lhs) (default is -infinity) */
-      attrval = xmlGetAttrval(consnode, "lb");
+      attrval = SCIPxmlGetAttrval(consnode, "lb");
       if( attrval == NULL )
          conslhs = -SCIPinfinity(scip);
       else if( strcmp(attrval, "-INF") == 0 )
@@ -717,7 +717,7 @@ SCIP_RETCODE readConstraints(
       }
 
       /* find constraint upper bound (=rhs) (default is +infinity) */
-      attrval = xmlGetAttrval(consnode, "ub");
+      attrval = SCIPxmlGetAttrval(consnode, "ub");
       if( attrval == NULL )
          consrhs = SCIPinfinity(scip);
       else if( strcmp(attrval, "-INF") == 0 )
@@ -736,7 +736,7 @@ SCIP_RETCODE readConstraints(
       }
 
       /* find constraint constant (default is 0.0) and substract from lhs/rhs */
-      attrval = xmlGetAttrval(consnode, "constant");
+      attrval = SCIPxmlGetAttrval(consnode, "constant");
       if( attrval != NULL )
       {
          SCIP_Real consconstant;
@@ -798,7 +798,7 @@ void readMultIncr(
    if( incrreal != NULL )
       *incrreal = 0.0;
 
-   attrval = xmlGetAttrval(node, "mult");
+   attrval = SCIPxmlGetAttrval(node, "mult");
    if( attrval == NULL )
       return;
 
@@ -806,7 +806,7 @@ void readMultIncr(
    *mult = (int)strtol(attrval, (char**)&attrval, 10);
    if( *attrval != '\0' || *mult < 1 )
    {
-      SCIPerrorMessage("Invalid value '%s' in \"mult\" attribute of node.\n", xmlGetAttrval(node, "mult"));
+      SCIPerrorMessage("Invalid value '%s' in \"mult\" attribute of node.\n", SCIPxmlGetAttrval(node, "mult"));
       *doingfine = FALSE;
       return;
    }
@@ -815,7 +815,7 @@ void readMultIncr(
       return;
 
    /* read "incr" attribute */
-   attrval = xmlGetAttrval(node, "incr");
+   attrval = SCIPxmlGetAttrval(node, "incr");
    if( attrval == NULL )
       return;
 
@@ -824,7 +824,7 @@ void readMultIncr(
       *incrint = (int)strtol(attrval, (char**)&attrval, 10);
       if( *attrval != '\0' )
       {
-         SCIPerrorMessage("Invalid value '%s' in \"incr\" attribute of node.\n", xmlGetAttrval(node, "incr"));
+         SCIPerrorMessage("Invalid value '%s' in \"incr\" attribute of node.\n", SCIPxmlGetAttrval(node, "incr"));
          *doingfine = FALSE;
          return;
       }
@@ -835,7 +835,7 @@ void readMultIncr(
       *incrreal = strtod(attrval, (char**)&attrval);
       if( *attrval != '\0' || !SCIPisFinite(*incrreal) )
       {
-         SCIPerrorMessage("Invalid value '%s' in \"incr\" attribute of node.\n", xmlGetAttrval(node, "incr"));
+         SCIPerrorMessage("Invalid value '%s' in \"incr\" attribute of node.\n", SCIPxmlGetAttrval(node, "incr"));
          *doingfine = FALSE;
          return;
       }
@@ -877,13 +877,13 @@ SCIP_RETCODE readLinearCoefs(
    assert(vars != NULL || nvars == 0);
    assert(doingfine != NULL);
 
-   lincoef = xmlFindNodeMaxdepth(datanode, "linearConstraintCoefficients", 0, 1);
+   lincoef = SCIPxmlFindNodeMaxdepth(datanode, "linearConstraintCoefficients", 0, 1);
 
    if( lincoef == NULL )
       return SCIP_OKAY;
 
    /* get number of linear constraint coefficients */
-   attrval = xmlGetAttrval(lincoef, "numberOfValues");
+   attrval = SCIPxmlGetAttrval(lincoef, "numberOfValues");
    if( attrval == NULL )
    {
       SCIPerrorMessage("Attribute \"numberOfValues\" not found for <linearConstraintCoefficients> node.\n");
@@ -894,14 +894,14 @@ SCIP_RETCODE readLinearCoefs(
    nnz = (int)strtol(attrval, (char**)&attrval, 10);
    if( *attrval != '\0' || nnz < 0 )
    {
-      SCIPerrorMessage("Invalid value '%s' for \"numberOfValues\" attribute in <linearConstraintCoefficients> node.\n", xmlGetAttrval(lincoef, "numberOfValues"));
+      SCIPerrorMessage("Invalid value '%s' for \"numberOfValues\" attribute in <linearConstraintCoefficients> node.\n", SCIPxmlGetAttrval(lincoef, "numberOfValues"));
       *doingfine = FALSE;
       return SCIP_OKAY;
    }
    assert(nnz >= 0);
 
    /* check for start, rowIdx, colIdx, and value nodes */
-   startnode = xmlFindNodeMaxdepth(lincoef, "start", 0, 1);
+   startnode = SCIPxmlFindNodeMaxdepth(lincoef, "start", 0, 1);
    if( startnode == NULL )
    {
       SCIPerrorMessage("Node <start> not found inside <linearConstraintCoefficients> node.\n");
@@ -909,10 +909,10 @@ SCIP_RETCODE readLinearCoefs(
       return SCIP_OKAY;
    }
 
-   idxnode = xmlFindNodeMaxdepth(lincoef, "rowIdx", 0, 1);
+   idxnode = SCIPxmlFindNodeMaxdepth(lincoef, "rowIdx", 0, 1);
    if( idxnode != NULL )
    {
-      if( xmlFindNodeMaxdepth(lincoef, "colIdx", 0, 1) != NULL )
+      if( SCIPxmlFindNodeMaxdepth(lincoef, "colIdx", 0, 1) != NULL )
       {
          SCIPerrorMessage("Both <rowIdx> and <colIdx> found under <linearConstraintCoefficients> node.\n");
          *doingfine = FALSE;
@@ -922,7 +922,7 @@ SCIP_RETCODE readLinearCoefs(
    }
    else
    {
-      idxnode = xmlFindNodeMaxdepth(lincoef, "colIdx", 0, 1);
+      idxnode = SCIPxmlFindNodeMaxdepth(lincoef, "colIdx", 0, 1);
       if( idxnode == NULL )
       {
          SCIPerrorMessage("Both <rowIdx> and <colIdx> not found under <linearConstraintCoefficients> node.\n");
@@ -932,7 +932,7 @@ SCIP_RETCODE readLinearCoefs(
       rowmajor = TRUE;
    }
 
-   valnode = xmlFindNodeMaxdepth(lincoef, "value", 0, 1);
+   valnode = SCIPxmlFindNodeMaxdepth(lincoef, "value", 0, 1);
    if( valnode == NULL )
    {
       SCIPerrorMessage("<value> node not found under <linearConstraintCoefficients> node.\n");
@@ -948,12 +948,12 @@ SCIP_RETCODE readLinearCoefs(
    SCIP_CALL( SCIPallocBufferArray(scip, &start, (rowmajor ? nconss : nvars) + 1) );
 
    count = 0;
-   for( elnode = xmlFirstChild(startnode); elnode != NULL; elnode = xmlNextSibl(elnode), ++count )
+   for( elnode = SCIPxmlFirstChild(startnode); elnode != NULL; elnode = SCIPxmlNextSibl(elnode), ++count )
    {
       /* check for <el> node and read it's data */
-      if( strcmp(xmlGetName(elnode), "el") != 0 )
+      if( strcmp(SCIPxmlGetName(elnode), "el") != 0 )
       {
-         SCIPerrorMessage("Expected <el> node under <start> node in <linearConstraintCoefficients>, but got '%s'.\n", xmlGetName(elnode));
+         SCIPerrorMessage("Expected <el> node under <start> node in <linearConstraintCoefficients>, but got '%s'.\n", SCIPxmlGetName(elnode));
          *doingfine = FALSE;
          goto CLEANUP;
       }
@@ -963,18 +963,18 @@ SCIP_RETCODE readLinearCoefs(
          *doingfine = FALSE;
          goto CLEANUP;
       }
-      if( xmlFirstChild(elnode) == NULL || xmlGetData(xmlFirstChild(elnode)) == NULL )
+      if( SCIPxmlFirstChild(elnode) == NULL || SCIPxmlGetData(SCIPxmlFirstChild(elnode)) == NULL )
       {
          SCIPerrorMessage("No data in <el> node in <linearConstraintCoefficients>.\n");
          *doingfine = FALSE;
          goto CLEANUP;
       }
 
-      start[count] = (int)strtol(xmlGetData(xmlFirstChild(elnode)), (char**)&attrval, 10);
+      start[count] = (int)strtol(SCIPxmlGetData(SCIPxmlFirstChild(elnode)), (char**)&attrval, 10);
 
       if( *attrval != '\0' || start[count] < 0 || (start[count] > nnz) )
       {
-         SCIPerrorMessage("Invalid value '%s' in <el> node under <start> node in <linearConstraintCoefficients>.\n", xmlGetData(elnode));
+         SCIPerrorMessage("Invalid value '%s' in <el> node under <start> node in <linearConstraintCoefficients>.\n", SCIPxmlGetData(elnode));
          *doingfine = FALSE;
          goto CLEANUP;
       }
@@ -1007,12 +1007,12 @@ SCIP_RETCODE readLinearCoefs(
    SCIP_CALL( SCIPallocBufferArray(scip, &idx, nnz) );
 
    count = 0;
-   for( elnode = xmlFirstChild(idxnode); elnode != NULL; elnode = xmlNextSibl(elnode), ++count )
+   for( elnode = SCIPxmlFirstChild(idxnode); elnode != NULL; elnode = SCIPxmlNextSibl(elnode), ++count )
    {
       /* check for <el> node and read it's data */
-      if( strcmp(xmlGetName(elnode), "el") != 0 )
+      if( strcmp(SCIPxmlGetName(elnode), "el") != 0 )
       {
-         SCIPerrorMessage("Expected <el> node under <%s> node in <linearConstraintCoefficients>, but got '%s'.\n", rowmajor ? "colIdx" : "rowIdx", xmlGetName(elnode));
+         SCIPerrorMessage("Expected <el> node under <%s> node in <linearConstraintCoefficients>, but got '%s'.\n", rowmajor ? "colIdx" : "rowIdx", SCIPxmlGetName(elnode));
          *doingfine = FALSE;
          goto CLEANUP;
       }
@@ -1022,18 +1022,18 @@ SCIP_RETCODE readLinearCoefs(
          *doingfine = FALSE;
          goto CLEANUP;
       }
-      if( xmlFirstChild(elnode) == NULL || xmlGetData(xmlFirstChild(elnode)) == NULL )
+      if( SCIPxmlFirstChild(elnode) == NULL || SCIPxmlGetData(SCIPxmlFirstChild(elnode)) == NULL )
       {
          SCIPerrorMessage("No data in <el> node under <%s> node in <linearConstraintCoefficients>.\n", rowmajor ? "colIdx" : "rowIdx");
          *doingfine = FALSE;
          goto CLEANUP;
       }
 
-      idx[count] = (int)strtol(xmlGetData(xmlFirstChild(elnode)), (char**)&attrval, 10);
+      idx[count] = (int)strtol(SCIPxmlGetData(SCIPxmlFirstChild(elnode)), (char**)&attrval, 10);
 
       if( *attrval != '\0' || idx[count] < 0 || (idx[count] >= (rowmajor ? nvars : nconss)) )
       {
-         SCIPerrorMessage("Invalid value '%s' in <el> node under <%s> node in <linearConstraintCoefficients>.\n", xmlGetData(elnode), rowmajor ? "colIdx" : "rowIdx");
+         SCIPerrorMessage("Invalid value '%s' in <el> node under <%s> node in <linearConstraintCoefficients>.\n", SCIPxmlGetData(elnode), rowmajor ? "colIdx" : "rowIdx");
          *doingfine = FALSE;
          goto CLEANUP;
       }
@@ -1066,12 +1066,12 @@ SCIP_RETCODE readLinearCoefs(
    SCIP_CALL( SCIPallocBufferArray(scip, &val, nnz) );
 
    count = 0;
-   for( elnode = xmlFirstChild(valnode); elnode != NULL; elnode = xmlNextSibl(elnode), ++count )
+   for( elnode = SCIPxmlFirstChild(valnode); elnode != NULL; elnode = SCIPxmlNextSibl(elnode), ++count )
    {
       /* check for <el> node and read it's data */
-      if( strcmp(xmlGetName(elnode), "el") != 0 )
+      if( strcmp(SCIPxmlGetName(elnode), "el") != 0 )
       {
-         SCIPerrorMessage("Expected <el> node under <value> node in <linearConstraintCoefficients>, but got '%s'.\n", xmlGetName(elnode));
+         SCIPerrorMessage("Expected <el> node under <value> node in <linearConstraintCoefficients>, but got '%s'.\n", SCIPxmlGetName(elnode));
          *doingfine = FALSE;
          goto CLEANUP;
       }
@@ -1081,18 +1081,18 @@ SCIP_RETCODE readLinearCoefs(
          *doingfine = FALSE;
          goto CLEANUP;
       }
-      if( xmlFirstChild(elnode) == NULL || xmlGetData(xmlFirstChild(elnode)) == NULL )
+      if( SCIPxmlFirstChild(elnode) == NULL || SCIPxmlGetData(SCIPxmlFirstChild(elnode)) == NULL )
       {
          SCIPerrorMessage("No data in <el> node under <value> node in <linearConstraintCoefficients>.\n");
          *doingfine = FALSE;
          goto CLEANUP;
       }
 
-      val[count] = strtod(xmlGetData(xmlFirstChild(elnode)), (char**)&attrval);
+      val[count] = strtod(SCIPxmlGetData(SCIPxmlFirstChild(elnode)), (char**)&attrval);
 
       if( *attrval != '\0' || !SCIPisFinite(val[count]) )
       {
-         SCIPerrorMessage("Invalid value '%s' in <el> node under <value> node in <linearConstraintCoefficients>.\n", xmlGetData(elnode));
+         SCIPerrorMessage("Invalid value '%s' in <el> node under <value> node in <linearConstraintCoefficients>.\n", SCIPxmlGetData(elnode));
          *doingfine = FALSE;
          goto CLEANUP;
       }
@@ -1257,13 +1257,13 @@ SCIP_RETCODE readQuadraticCoefs(
    assert(nquadterms != NULL);
    assert(doingfine != NULL);
 
-   quadcoef = xmlFindNodeMaxdepth(datanode, "quadraticCoefficients", 0, 1);
+   quadcoef = SCIPxmlFindNodeMaxdepth(datanode, "quadraticCoefficients", 0, 1);
 
    if( quadcoef == NULL )
       return SCIP_OKAY;
 
    /* read number of quadratic terms */
-   attrval = xmlGetAttrval(quadcoef, "numberOfQuadraticTerms");
+   attrval = SCIPxmlGetAttrval(quadcoef, "numberOfQuadraticTerms");
    if( attrval == NULL )
    {
       SCIPerrorMessage("Attribute \"numberOfQuadraticTerms\" not found for <quadraticCoefficients> node.\n");
@@ -1274,7 +1274,7 @@ SCIP_RETCODE readQuadraticCoefs(
    nqterms = (int)strtol(attrval, (char**)&attrval, 10);
    if( *attrval != '\0' || nqterms < 0 )
    {
-      SCIPerrorMessage("Invalid value '%s' for \"numberOfQuadraticTerms\" attribute of <quadraticCoefficients> node.\n", xmlGetAttrval(quadcoef, "numberOfQuadraticTerms"));
+      SCIPerrorMessage("Invalid value '%s' for \"numberOfQuadraticTerms\" attribute of <quadraticCoefficients> node.\n", SCIPxmlGetAttrval(quadcoef, "numberOfQuadraticTerms"));
       *doingfine = FALSE;
       return SCIP_OKAY;
    }
@@ -1286,12 +1286,12 @@ SCIP_RETCODE readQuadraticCoefs(
    assert(vars != NULL);
 
    count = 0;
-   for( qterm = xmlFirstChild(quadcoef); qterm != NULL; qterm = xmlNextSibl(qterm), ++count )
+   for( qterm = SCIPxmlFirstChild(quadcoef); qterm != NULL; qterm = SCIPxmlNextSibl(qterm), ++count )
    {
       /* check for qterm node */
-      if( strcmp(xmlGetName(qterm), "qTerm") != 0 )
+      if( strcmp(SCIPxmlGetName(qterm), "qTerm") != 0 )
       {
-         SCIPerrorMessage("Expected <qTerm> node under <quadraticCoefficients> node, but got <%s>\n", xmlGetName(qterm));
+         SCIPerrorMessage("Expected <qTerm> node under <quadraticCoefficients> node, but got <%s>\n", SCIPxmlGetName(qterm));
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
@@ -1303,7 +1303,7 @@ SCIP_RETCODE readQuadraticCoefs(
       }
 
       /* get constraint index, or -1 for objective */
-      attrval = xmlGetAttrval(qterm, "idx");
+      attrval = SCIPxmlGetAttrval(qterm, "idx");
       if( attrval == NULL )
       {
          SCIPerrorMessage("Missing \"idx\" attribute in %d'th <qTerm> node under <quadraticCoefficients> node.\n", count);
@@ -1314,13 +1314,13 @@ SCIP_RETCODE readQuadraticCoefs(
       considx = (int)strtol(attrval, (char**)&attrval, 10);
       if( *attrval != '\0' || considx < -1 || considx >= nconss )
       {
-         SCIPerrorMessage("Invalid value '%s' in \"idx\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "idx"), count);
+         SCIPerrorMessage("Invalid value '%s' in \"idx\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", SCIPxmlGetAttrval(qterm, "idx"), count);
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
 
       /* get index of first variable */
-      attrval = xmlGetAttrval(qterm, "idxOne");
+      attrval = SCIPxmlGetAttrval(qterm, "idxOne");
       if( attrval == NULL )
       {
          SCIPerrorMessage("Missing \"idxOne\" attribute in %d'th <qTerm> node under <quadraticCoefficients> node.\n", count);
@@ -1331,13 +1331,13 @@ SCIP_RETCODE readQuadraticCoefs(
       varidx1 = (int)strtol(attrval, (char**)&attrval, 10);
       if( *attrval != '\0' || varidx1 < 0 || varidx1 >= nvars )
       {
-         SCIPerrorMessage("Invalid value '%s' in \"idxOne\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "idxOne"), count);
+         SCIPerrorMessage("Invalid value '%s' in \"idxOne\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", SCIPxmlGetAttrval(qterm, "idxOne"), count);
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
 
       /* get index of second variable */
-      attrval = xmlGetAttrval(qterm, "idxTwo");
+      attrval = SCIPxmlGetAttrval(qterm, "idxTwo");
       if( attrval == NULL )
       {
          SCIPerrorMessage("Missing \"idxTwo\" attribute in %d'th <qTerm> node under <quadraticCoefficients> node.\n", count);
@@ -1348,19 +1348,19 @@ SCIP_RETCODE readQuadraticCoefs(
       varidx2 = (int)strtol(attrval, (char**)&attrval, 10);
       if( *attrval != '\0' || varidx2 < 0 || varidx2 >= nvars )
       {
-         SCIPerrorMessage("Invalid value '%s' in \"idxTwo\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "idxTwo"), count);
+         SCIPerrorMessage("Invalid value '%s' in \"idxTwo\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", SCIPxmlGetAttrval(qterm, "idxTwo"), count);
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
 
       /* get (optional) coefficient of quadratic term */
-      attrval = xmlGetAttrval(qterm, "coef");
+      attrval = SCIPxmlGetAttrval(qterm, "coef");
       if( attrval != NULL )
       {
          coef = strtod(attrval, (char**)&attrval);
          if( *attrval != '\0' || (coef != coef) )  /*lint !e777*/
          {
-            SCIPerrorMessage("Invalid value '%s' in \"coef\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", xmlGetAttrval(qterm, "coef"), count);
+            SCIPerrorMessage("Invalid value '%s' in \"coef\" attribute of %d'th <qTerm> node under <quadraticCoefficients> node.\n", SCIPxmlGetAttrval(qterm, "coef"), count);
             *doingfine = FALSE;
             return SCIP_OKAY;
          }
@@ -1424,7 +1424,7 @@ SCIP_RETCODE readExpression(
    assert(vars != NULL);
    assert(doingfine != NULL);
 
-   exprname = xmlGetName(node);
+   exprname = SCIPxmlGetName(node);
    assert(exprname != NULL);
 
    *expr = NULL;
@@ -1437,7 +1437,7 @@ SCIP_RETCODE readExpression(
       int idx;
 
       /* read variable index */
-      attrval = xmlGetAttrval(node, "idx");
+      attrval = SCIPxmlGetAttrval(node, "idx");
       if( attrval == NULL )
       {
          SCIPerrorMessage("Attribute \"idx\" required for <variable> node in nonlinear expression\n");
@@ -1448,19 +1448,19 @@ SCIP_RETCODE readExpression(
       idx = (int)strtol(attrval, (char**)&attrval, 10);
       if( *attrval != '\0' || idx < 0 || idx >= nvars )
       {
-         SCIPerrorMessage("Invalid value '%s' in \"idx\" attribute of <variable> node in nonlinear expression.\n", xmlGetAttrval(node, "idx"));
+         SCIPerrorMessage("Invalid value '%s' in \"idx\" attribute of <variable> node in nonlinear expression.\n", SCIPxmlGetAttrval(node, "idx"));
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
 
       /* read variable coefficient */
-      attrval = xmlGetAttrval(node, "coef");
+      attrval = SCIPxmlGetAttrval(node, "coef");
       if( attrval != NULL )
       {
          coef = strtod(attrval, (char**)&attrval);
          if( *attrval != '\0' || !SCIPisFinite(coef) )
          {
-            SCIPerrorMessage("Invalid value '%s' in \"coef\" attribute of <variable> node in nonlinear expression.\n", xmlGetAttrval(node, "coef"));
+            SCIPerrorMessage("Invalid value '%s' in \"coef\" attribute of <variable> node in nonlinear expression.\n", SCIPxmlGetAttrval(node, "coef"));
             *doingfine = FALSE;
             return SCIP_OKAY;
          }
@@ -1493,7 +1493,7 @@ SCIP_RETCODE readExpression(
       const char* attrval;
       SCIP_Real val;
 
-      attrval = xmlGetAttrval(node, "type");
+      attrval = SCIPxmlGetAttrval(node, "type");
       if( attrval != NULL && (strcmp(attrval, "real") != 0) )
       {
          SCIPerrorMessage("Type '%s' for <number> node in nonlinear expression not supported.\n", attrval);
@@ -1501,13 +1501,13 @@ SCIP_RETCODE readExpression(
          return SCIP_OKAY;
       }
 
-      attrval = xmlGetAttrval(node, "value");
+      attrval = SCIPxmlGetAttrval(node, "value");
       if( attrval != NULL )
       {
          val = strtod(attrval, (char**)&attrval);
          if( *attrval != '\0' || !SCIPisFinite(val) )
          {
-            SCIPerrorMessage("Invalid value '%s' in \"value\" attribute of <number> node in nonlinear expression.\n", xmlGetAttrval(node, "value"));
+            SCIPerrorMessage("Invalid value '%s' in \"value\" attribute of <number> node in nonlinear expression.\n", SCIPxmlGetAttrval(node, "value"));
             *doingfine = FALSE;
             return SCIP_OKAY;
          }
@@ -1559,7 +1559,7 @@ SCIP_RETCODE readExpression(
       SCIP_EXPR* arg;
 
       /* check number of children */
-      if( xmlFirstChild(node) == NULL || xmlNextSibl(xmlFirstChild(node)) != NULL )
+      if( SCIPxmlFirstChild(node) == NULL || SCIPxmlNextSibl(SCIPxmlFirstChild(node)) != NULL )
       {
          SCIPerrorMessage("Expected exactly one child in <%s> node in nonlinear expression\n", exprname);
          *doingfine = FALSE;
@@ -1567,7 +1567,7 @@ SCIP_RETCODE readExpression(
       }
 
       /* read child expression */
-      SCIP_CALL( readExpression(scip, &arg, xmlFirstChild(node), vars, nvars, doingfine) );
+      SCIP_CALL( readExpression(scip, &arg, SCIPxmlFirstChild(node), vars, nvars, doingfine) );
 
       if( !*doingfine )
          return SCIP_OKAY;
@@ -1644,9 +1644,9 @@ SCIP_RETCODE readExpression(
       SCIP_EXPR* args[2] = {NULL, NULL};
 
       /* check number of children */
-      if( xmlFirstChild(node) == NULL ||
-         xmlNextSibl(xmlFirstChild(node)) == NULL ||
-         xmlNextSibl(xmlNextSibl(xmlFirstChild(node))) != NULL )
+      if( SCIPxmlFirstChild(node) == NULL ||
+         SCIPxmlNextSibl(SCIPxmlFirstChild(node)) == NULL ||
+         SCIPxmlNextSibl(SCIPxmlNextSibl(SCIPxmlFirstChild(node))) != NULL )
       {
          SCIPerrorMessage("Expected exactly two children in <%s> node in nonlinear expression.\n", exprname);
          *doingfine = FALSE;
@@ -1654,13 +1654,13 @@ SCIP_RETCODE readExpression(
       }
 
       /* read first child expression */
-      SCIP_CALL( readExpression(scip, &args[0], xmlFirstChild(node), vars, nvars, doingfine) );
+      SCIP_CALL( readExpression(scip, &args[0], SCIPxmlFirstChild(node), vars, nvars, doingfine) );
       if( !*doingfine )
          goto TERMINATE_TWO_ARGS;
       assert(args[0] != NULL);
 
       /* read second child expression */
-      SCIP_CALL( readExpression(scip, &args[1], xmlNextSibl(xmlFirstChild(node)), vars, nvars, doingfine) );
+      SCIP_CALL( readExpression(scip, &args[1], SCIPxmlNextSibl(SCIPxmlFirstChild(node)), vars, nvars, doingfine) );
       if( !*doingfine )
          goto TERMINATE_TWO_ARGS;
       assert(args[1] != NULL);
@@ -1812,7 +1812,7 @@ TERMINATE_TWO_ARGS:
       int i;
 
       /* a sum or product w.r.t. 0 arguments is constant */
-      if( xmlFirstChild(node) == NULL )
+      if( SCIPxmlFirstChild(node) == NULL )
       {
          SCIP_CALL( SCIPcreateExprValue(scip, expr, (strcmp(exprname, "sum") == 0) ? 0.0 : 1.0, NULL, NULL) );
 
@@ -1824,7 +1824,7 @@ TERMINATE_TWO_ARGS:
       SCIP_CALL( SCIPallocBufferArray(scip, &args, argssize) );
 
       nargs = 0;
-      for( argnode = xmlFirstChild(node); argnode != NULL; argnode = xmlNextSibl(argnode), ++nargs )
+      for( argnode = SCIPxmlFirstChild(node); argnode != NULL; argnode = SCIPxmlNextSibl(argnode), ++nargs )
       {
          if( nargs >= argssize )
          {
@@ -1912,12 +1912,12 @@ TERMINATE_TWO_ARGS:
       nquadelems = 0;
 
       /* read quadratic terms */
-      for( qterm = xmlFirstChild(node); qterm != NULL; qterm = xmlNextSibl(qterm), ++nquadelems )
+      for( qterm = SCIPxmlFirstChild(node); qterm != NULL; qterm = SCIPxmlNextSibl(qterm), ++nquadelems )
       {
          /* check for qpTerm node */
-         if( strcmp(xmlGetName(qterm), "qpTerm") != 0 )
+         if( strcmp(SCIPxmlGetName(qterm), "qpTerm") != 0 )
          {
-            SCIPerrorMessage("Unexpected <%s> node under <quadratic> node in nonlinear expression, expected <qpTerm>.\n", xmlGetName(qterm));
+            SCIPerrorMessage("Unexpected <%s> node under <quadratic> node in nonlinear expression, expected <qpTerm>.\n", SCIPxmlGetName(qterm));
             *doingfine = FALSE;
             return SCIP_OKAY;
          }
@@ -1932,7 +1932,7 @@ TERMINATE_TWO_ARGS:
          assert(quadelemssize > nquadelems);
 
          /* get index of first variable */
-         attrval = xmlGetAttrval(qterm, "idxOne");
+         attrval = SCIPxmlGetAttrval(qterm, "idxOne");
          if( attrval == NULL )
          {
             SCIPerrorMessage("Missing \"idxOne\" attribute in %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", nquadelems);
@@ -1943,14 +1943,14 @@ TERMINATE_TWO_ARGS:
          idx = (int)strtol(attrval, (char**)&attrval, 10);
          if( *attrval != '\0' || idx < 0 || idx >= nvars )
          {
-            SCIPerrorMessage("Invalid value '%s' for \"idxOne\" attribute of %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", xmlGetAttrval(qterm, "idxOne"), nquadelems);
+            SCIPerrorMessage("Invalid value '%s' for \"idxOne\" attribute of %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", SCIPxmlGetAttrval(qterm, "idxOne"), nquadelems);
             *doingfine = FALSE;
             return SCIP_OKAY;
          }
          quadvars1[nquadelems] = vars[idx];
 
          /* get index of second variable */
-         attrval = xmlGetAttrval(qterm, "idxTwo");
+         attrval = SCIPxmlGetAttrval(qterm, "idxTwo");
          if( attrval == NULL )
          {
             SCIPerrorMessage("Missing \"idxTwo\" attribute in %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", nquadelems);
@@ -1961,20 +1961,20 @@ TERMINATE_TWO_ARGS:
          idx = (int)strtol(attrval, (char**)&attrval, 10);
          if( *attrval != '\0' || idx < 0 || idx >= nvars )
          {
-            SCIPerrorMessage("Invalid value '%s' for \"idxTwo\" attribute of %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", xmlGetAttrval(qterm, "idxTwo"), nquadelems);
+            SCIPerrorMessage("Invalid value '%s' for \"idxTwo\" attribute of %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", SCIPxmlGetAttrval(qterm, "idxTwo"), nquadelems);
             *doingfine = FALSE;
             return SCIP_OKAY;
          }
          quadvars2[nquadelems] = vars[idx];
 
          /* get coefficient */
-         attrval = xmlGetAttrval(qterm, "coef");
+         attrval = SCIPxmlGetAttrval(qterm, "coef");
          if( attrval != NULL )
          {
             quadcoefs[nquadelems] = strtod(attrval, (char**)&attrval);
             if( *attrval != '\0' || !SCIPisFinite(quadcoefs[nquadelems]) )  /*lint !e777*/
             {
-               SCIPerrorMessage("Invalid value '%s' for \"coef\" attribute of %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", xmlGetAttrval(qterm, "coef"), nquadelems);
+               SCIPerrorMessage("Invalid value '%s' for \"coef\" attribute of %d'th <qpTerm> node under <quadratic> node in nonlinear expression.\n", SCIPxmlGetAttrval(qterm, "coef"), nquadelems);
                *doingfine = FALSE;
                return SCIP_OKAY;
             }
@@ -2021,13 +2021,13 @@ SCIP_RETCODE readNonlinearExprs(
    assert(exprs != NULL);
    assert(doingfine != NULL);
 
-   nlexprs = xmlFindNodeMaxdepth(datanode, "nonlinearExpressions", 0, 1);
+   nlexprs = SCIPxmlFindNodeMaxdepth(datanode, "nonlinearExpressions", 0, 1);
 
    if( nlexprs == NULL )
       return SCIP_OKAY;
 
    /* get number of nonlinear expressions */
-   attrval = xmlGetAttrval(nlexprs, "numberOfNonlinearExpressions");
+   attrval = SCIPxmlGetAttrval(nlexprs, "numberOfNonlinearExpressions");
    if( attrval == NULL )
    {
       SCIPerrorMessage("Attribute \"numberOfNonlinearExpressions\" in <nonlinearExpressions> node not found.\n");
@@ -2038,7 +2038,7 @@ SCIP_RETCODE readNonlinearExprs(
    nnlexprs = (int)strtol(attrval, (char**)&attrval, 10);
    if( *attrval != '\0' || nnlexprs < 0 )
    {
-      SCIPerrorMessage("Invalid value '%s' for \"numberOfNonlinearExpressions\" attribute in <nonlinearExpressions>.\n", xmlGetAttrval(nlexprs, "numberOfNonlinearExpressions"));
+      SCIPerrorMessage("Invalid value '%s' for \"numberOfNonlinearExpressions\" attribute in <nonlinearExpressions>.\n", SCIPxmlGetAttrval(nlexprs, "numberOfNonlinearExpressions"));
       *doingfine = FALSE;
       return SCIP_OKAY;
    }
@@ -2046,11 +2046,11 @@ SCIP_RETCODE readNonlinearExprs(
 
    /* read nonlinear expressions and store in constraints */
    count = 0;
-   for( nlexpr = xmlFirstChild(nlexprs); nlexpr != NULL; nlexpr = xmlNextSibl(nlexpr), ++count )
+   for( nlexpr = SCIPxmlFirstChild(nlexprs); nlexpr != NULL; nlexpr = SCIPxmlNextSibl(nlexpr), ++count )
    {
-      if( strcmp(xmlGetName(nlexpr), "nl") != 0 )
+      if( strcmp(SCIPxmlGetName(nlexpr), "nl") != 0 )
       {
-         SCIPerrorMessage("Expected <nl> node under <nonlinearExpressions> node, but got '%s'.\n", xmlGetName(nlexpr));
+         SCIPerrorMessage("Expected <nl> node under <nonlinearExpressions> node, but got '%s'.\n", SCIPxmlGetName(nlexpr));
          *doingfine = FALSE;
          break;
       }
@@ -2062,11 +2062,11 @@ SCIP_RETCODE readNonlinearExprs(
       }
 
       /* treat empty expression as 0.0 and continue */
-      if( xmlFirstChild(nlexprs) == NULL )
+      if( SCIPxmlFirstChild(nlexprs) == NULL )
          continue;
 
       /* get constraint index, or -1 for objective */
-      attrval = xmlGetAttrval(nlexpr, "idx");
+      attrval = SCIPxmlGetAttrval(nlexpr, "idx");
       if( attrval == NULL )
       {
          SCIPerrorMessage("Missing \"idx\" attribute in %d'th <nl> node under <nonlinearExpressions> node.\n", count);
@@ -2077,14 +2077,14 @@ SCIP_RETCODE readNonlinearExprs(
       considx = (int)strtol(attrval, (char**)&attrval, 10);
       if( *attrval != '\0' || considx < -1 || considx >= nconss )
       {
-         SCIPerrorMessage("Invalid value '%s' in \"idx\" attribute of %d'th <nl> node under <nonlinearExpressions> node.\n", xmlGetAttrval(nlexpr, "idx"), count);
+         SCIPerrorMessage("Invalid value '%s' in \"idx\" attribute of %d'th <nl> node under <nonlinearExpressions> node.\n", SCIPxmlGetAttrval(nlexpr, "idx"), count);
          *doingfine = FALSE;
          break;
       }
 
       /* turn OSiL expression into SCIP expression and assign indices to variables; store a nonlinear objective at position nconss */
       SCIP_CALL( readExpression(scip, considx == -1 ? &exprs[nconss] : &exprs[considx],
-         xmlFirstChild(nlexpr), vars, nvars, doingfine) );
+         SCIPxmlFirstChild(nlexpr), vars, nvars, doingfine) );
       if( !*doingfine )
          return SCIP_OKAY;
    }
@@ -2149,13 +2149,13 @@ SCIP_RETCODE readSOScons(
    dynamic = dynamicconss;
    removable = dynamicrows;
 
-   soscons= xmlFindNodeMaxdepth(datanode, "specialOrderedSets", 0, 1);
+   soscons= SCIPxmlFindNodeMaxdepth(datanode, "specialOrderedSets", 0, 1);
 
    if( soscons== NULL )
       return SCIP_OKAY;
 
    /* get number of sos constraints */
-   attrval = xmlGetAttrval(soscons, "numberOfSOS");
+   attrval = SCIPxmlGetAttrval(soscons, "numberOfSOS");
    if( attrval == NULL )
    {
       SCIPerrorMessage("Attribute \"numberOfSOS in <specialOrderedSets> node not found.\n");
@@ -2166,7 +2166,7 @@ SCIP_RETCODE readSOScons(
    nsoscons = (int)strtol(attrval, (char**)&attrval, 10);
    if( *attrval != '\0' || nsoscons < 0 )
    {
-      SCIPerrorMessage("Invalid value '%s' for \"numberOfSOS\" attribute in <specialOrderedSets>.\n", xmlGetAttrval(soscons, "numberOfSOS"));
+      SCIPerrorMessage("Invalid value '%s' for \"numberOfSOS\" attribute in <specialOrderedSets>.\n", SCIPxmlGetAttrval(soscons, "numberOfSOS"));
       *doingfine = FALSE;
       return SCIP_OKAY;
    }
@@ -2174,14 +2174,14 @@ SCIP_RETCODE readSOScons(
 
    /* read sos constraints and create corresponding constraint */
    count = 0;
-   for( soscons = xmlFirstChild(soscons); soscons != NULL; soscons = xmlNextSibl(soscons), ++count )
+   for( soscons = SCIPxmlFirstChild(soscons); soscons != NULL; soscons = SCIPxmlNextSibl(soscons), ++count )
    {
       SCIP_CONS* cons;
 
       /* Make sure we get a sos node and not more then announced*/
-      if( strcmp(xmlGetName(soscons), "sos") != 0 )
+      if( strcmp(SCIPxmlGetName(soscons), "sos") != 0 )
       {
-         SCIPerrorMessage("Expected <sos> node under <specialOrderedSet> node, but got '%s'.\n", xmlGetName(soscons));
+         SCIPerrorMessage("Expected <sos> node under <specialOrderedSet> node, but got '%s'.\n", SCIPxmlGetName(soscons));
          *doingfine = FALSE;
          break;
       }
@@ -2194,7 +2194,7 @@ SCIP_RETCODE readSOScons(
       }
 
       /* get number of variables in this sos constraint */
-      attrval = xmlGetAttrval(soscons, "numberOfVar");
+      attrval = SCIPxmlGetAttrval(soscons, "numberOfVar");
       if( attrval == NULL )
       {
          SCIPerrorMessage("Attribute \"numberOfVar in <sos> node not found.\n");
@@ -2205,14 +2205,14 @@ SCIP_RETCODE readSOScons(
       nsosvars = (int)strtol(attrval, (char**)&attrval, 10);
       if( *attrval != '\0' || nsosvars < 0 )
       {
-         SCIPerrorMessage("Invalid value '%s' for \"numberOfVar\" attribute in <sos>.\n", xmlGetAttrval(soscons, "numberOfVar"));
+         SCIPerrorMessage("Invalid value '%s' for \"numberOfVar\" attribute in <sos>.\n", SCIPxmlGetAttrval(soscons, "numberOfVar"));
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
       assert(nsosvars >= 0);
 
       /* get order of this sos constraint */
-      attrval = xmlGetAttrval(soscons, "type");
+      attrval = SCIPxmlGetAttrval(soscons, "type");
       if( attrval == NULL )
       {
          SCIPerrorMessage("Attribute \"order\" in <sos> node not found.\n");
@@ -2223,7 +2223,7 @@ SCIP_RETCODE readSOScons(
       sosorder = (int)strtol(attrval, (char**)&attrval, 10);
       if( *attrval != '\0' || sosorder < 0 || sosorder > 2 )
       {
-         SCIPerrorMessage("Invalid/unsupported value '%s' for \"order\" attribute in <sos>.\n", xmlGetAttrval(soscons, "order"));
+         SCIPerrorMessage("Invalid/unsupported value '%s' for \"order\" attribute in <sos>.\n", SCIPxmlGetAttrval(soscons, "order"));
          *doingfine = FALSE;
          return SCIP_OKAY;
       }
@@ -2251,10 +2251,10 @@ SCIP_RETCODE readSOScons(
       }
 
       varcount = 0;
-      for( sosvar = xmlFirstChild(soscons); sosvar!= NULL; sosvar = xmlNextSibl(sosvar), ++varcount )
+      for( sosvar = SCIPxmlFirstChild(soscons); sosvar!= NULL; sosvar = SCIPxmlNextSibl(sosvar), ++varcount )
       {
          /* get variable id*/
-          attrval = xmlGetAttrval(sosvar, "idx");
+          attrval = SCIPxmlGetAttrval(sosvar, "idx");
           if( attrval == NULL )
           {
              SCIPerrorMessage("Attribute \"idx\" in <var> node below <specialOrderedSets> node not found.\n");
@@ -2265,7 +2265,7 @@ SCIP_RETCODE readSOScons(
           idx = (int)strtol(attrval, (char**)&attrval, 10);
           if( *attrval != '\0' || idx < 0  || idx > nvars - 1 )
           {
-             SCIPerrorMessage("Invalid value '%s' for \"idx\" attribute in <var>.\n", xmlGetAttrval(sosvar, "idx"));
+             SCIPerrorMessage("Invalid value '%s' for \"idx\" attribute in <var>.\n", SCIPxmlGetAttrval(sosvar, "idx"));
              *doingfine = FALSE;
              return SCIP_OKAY;
           }
@@ -2360,7 +2360,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
    nconss = -1;
 
    /* read OSiL xml file */
-   start = xmlProcess(filename);
+   start = SCIPxmlProcess(filename);
 
    if( start == NULL )
    {
@@ -2368,25 +2368,25 @@ SCIP_DECL_READERREAD(readerReadOsil)
       goto CLEANUP;
    }
 
-   SCIPdebug( xmlShowNode(start) );
+   SCIPdebug( SCIPxmlShowNode(start) );
 
    /* parse header to get problem name */
    name = filename;
-   header = xmlFindNodeMaxdepth(start, "instanceHeader", 0, 2);
+   header = SCIPxmlFindNodeMaxdepth(start, "instanceHeader", 0, 2);
    if( header != NULL )
    {
       const XML_NODE* namenode;
 
-      namenode = xmlFindNodeMaxdepth(header, "name", 0, 2);
+      namenode = SCIPxmlFindNodeMaxdepth(header, "name", 0, 2);
 
-      if( namenode != NULL && xmlFirstChild(namenode) != NULL )
-         name = xmlGetData(xmlFirstChild(namenode));
+      if( namenode != NULL && SCIPxmlFirstChild(namenode) != NULL )
+         name = SCIPxmlGetData(SCIPxmlFirstChild(namenode));
       else
       {
-         namenode = xmlFindNodeMaxdepth(header, "description", 0, 2);
+         namenode = SCIPxmlFindNodeMaxdepth(header, "description", 0, 2);
 
-         if( namenode != NULL && xmlFirstChild(namenode) != NULL )
-            name = xmlGetData(xmlFirstChild(namenode));
+         if( namenode != NULL && SCIPxmlFirstChild(namenode) != NULL )
+            name = SCIPxmlGetData(SCIPxmlFirstChild(namenode));
       }
    }
 
@@ -2394,7 +2394,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
    SCIP_CALL( SCIPcreateProb(scip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* process instance data */
-   data = xmlFindNodeMaxdepth(start, "instanceData", 0, 2);
+   data = SCIPxmlFindNodeMaxdepth(start, "instanceData", 0, 2);
    if( data == NULL )
    {
       SCIPerrorMessage("Node <instanceData> not found.\n");
@@ -2477,7 +2477,7 @@ SCIP_DECL_READERREAD(readerReadOsil)
  CLEANUP:
    /* free xml data */
    if( start != NULL )
-      xmlFreeNode(start);
+      SCIPxmlFreeNode(start);
 
    /* free memory for constraint information (position nconss belongs to the nonlinear objective function) */
    assert(termssize != NULL);

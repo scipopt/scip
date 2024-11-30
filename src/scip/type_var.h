@@ -135,8 +135,8 @@ typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
  *  Because the original variable and the user data of the original variable should not be
  *  modified during the solving process, a transformed variable is created as a copy of
  *  the original variable. If the user variable data is never modified during the solving
- *  process anyways, it is enough to simple copy the user data's pointer. This is the
- *  default implementation, which is used when a NULL is given as VARTRANS method.
+ *  process anyways, it is enough to simply copy the user data's pointer. This is the
+ *  default implementation, which is used when NULL is given as the VARTRANS method.
  *  If the user data may be modified during the solving process (e.g. during preprocessing),
  *  the VARTRANS method must be given and has to copy the user variable data to a different
  *  memory location.
@@ -166,13 +166,13 @@ typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
 /** copies variable data of source SCIP variable for the target SCIP variable
  *
  *  This method should copy the variable data of the source SCIP and create a target variable data for target
- *  variable. This callback is optimal. If the copying process was successful the target variable gets this variable
- *  data assigned. In case the result pointer is set to SCIP_DIDNOTRUN the target variable will have no variable data at
+ *  variable. This callback is optional. If the copying process was successful, the target variable gets this variable
+ *  data assigned. In case the result pointer is set to SCIP_DIDNOTRUN, the target variable will have no variable data at
  *  all.
  *
  *  The variable map and the constraint map can be used via the function SCIPgetVarCopy() and SCIPgetConsCopy(),
  *  respectively, to get for certain variables and constraints of the source SCIP the counter parts in the target
- *  SCIP. You should be very carefully in using these two methods since they could lead to infinity loop.
+ *  SCIP. You should be very careful in using these two methods since they could lead to infinite loop.
  *
  *  input:
  *  - scip            : target SCIP data structure

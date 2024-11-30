@@ -69,7 +69,6 @@
 #include "scip/nlpi.h"
 #include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
-#include "scip/struct_paramset.h" /* for objectivestop deprecation */
 
 /*
  * Default settings
@@ -89,6 +88,7 @@
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
 #define SCIP_DEFAULT_BRANCH_DIVINGPSCOST   TRUE /**< should pseudo costs be updated also in diving and probing mode? */
+#define SCIP_DEFAULT_BRANCH_COLLECTANCPSCOST   FALSE /**< should ancestral pseudo costs be updated? */
 #define SCIP_DEFAULT_BRANCH_FORCEALL      FALSE /**< should all strong branching children be regarded even if
                                                  *   one is detected to be infeasible? (only with propagation) */
 #define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'a' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, 'h'istory-based, or 'a'utomatic */
@@ -1294,6 +1294,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->branch_divingpscost, FALSE, SCIP_DEFAULT_BRANCH_DIVINGPSCOST,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/collectancpscost",
+         "should ancestral pseudo costs be updated?",
+         &(*set)->branch_collectancpscost, FALSE, SCIP_DEFAULT_BRANCH_COLLECTANCPSCOST,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "branching/forceallchildren",
          "should all strong branching children be regarded even if one is detected to be infeasible? (only with propagation)",
          &(*set)->branch_forceall, TRUE, SCIP_DEFAULT_BRANCH_FORCEALL,
@@ -1655,15 +1660,8 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->limit_absgap, FALSE, SCIP_DEFAULT_LIMIT_ABSGAP, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "limits/objectivestop",
-         "solving stops, if primal bound is at least as good as given value (deprecated primal)",
-         &(*set)->limit_primal, FALSE, SCIP_DEFAULT_LIMIT_PRIMAL, SCIP_REAL_MIN, SCIP_REAL_MAX,
-         SCIPparamChgdLimit, NULL) );
-   /* drop deprecated objectivestop */
-   --(*set)->paramset->nparams;
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/primal",
-         "solving stops, if primal bound is at least as good as given value (alias objectivestop)",
+         "solving stops, if primal bound is at least as good as given value",
          &(*set)->limit_primal, FALSE, SCIP_DEFAULT_LIMIT_PRIMAL, SCIP_REAL_MIN, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

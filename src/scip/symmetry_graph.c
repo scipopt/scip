@@ -147,6 +147,56 @@ SCIP_RETCODE SCIPfreeSymgraph(
    return SCIP_OKAY;
 }
 
+/**  clears data of symmetry detection graph */
+SCIP_RETCODE SCIPclearSymgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_VAR**            symvars,            /**< variables used in symmetry detection */
+   int                   nsymvars,           /**< number of variables used in symmetry detection */
+   SYM_SYMTYPE           symtype             /**< type of symmetries encoded in graph */
+   )
+{
+   assert(scip != NULL);
+   assert(graph != NULL);
+
+   graph->nnodes = 0;
+   graph->nopnodes = 0;
+   graph->nvalnodes = 0;
+   graph->nconsnodes = 0;
+   graph->islocked = FALSE;
+   graph->nedges = 0;
+   graph->symvars = symvars;
+   graph->nsymvars = nsymvars;
+   graph->nvarcolors = -1;
+   graph->uniqueedgetype = FALSE;
+   graph->symtype = symtype;
+   graph->infinity = SCIPinfinity(scip);
+   SCIPfreeBlockMemoryArrayNull(scip, &graph->consnodeperm, graph->nconsnodes);
+   graph->consnodeperm = NULL;
+
+   SCIPfreeBlockMemoryArrayNull(scip, &graph->edgecolors, graph->nedges);
+   SCIPfreeBlockMemoryArrayNull(scip, &graph->conscolors, graph->nconsnodes);
+   SCIPfreeBlockMemoryArrayNull(scip, &graph->valcolors, graph->nvalnodes);
+   SCIPfreeBlockMemoryArrayNull(scip, &graph->opcolors, graph->nopnodes);
+   switch( graph->symtype )
+   {
+   case SYM_SYMTYPE_PERM:
+      SCIPfreeBlockMemoryArrayNull(scip, &graph->varcolors, graph->nsymvars);
+      break;
+   default:
+      assert(graph->symtype == SYM_SYMTYPE_SIGNPERM);
+      SCIPfreeBlockMemoryArrayNull(scip, &graph->varcolors, 2 * graph->nsymvars);
+   } /*lint !e788*/
+
+   graph->opcolors = NULL;
+   graph->valcolors = NULL;
+   graph->conscolors = NULL;
+   graph->edgecolors = NULL;
+   graph->varcolors = NULL;
+
+   return SCIP_OKAY;
+}
+
 /** copies an existing graph and changes variable nodes according to a permutation */
 SCIP_RETCODE SCIPcopySymgraph(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -212,6 +262,104 @@ SCIP_RETCODE SCIPcopySymgraph(
    }
 
    SCIP_CALL( SCIPcomputeSymgraphColors(scip, *graph, fixedtype) );
+
+   return SCIP_OKAY;
+}
+
+/** copies a symmetry detection graph into another symmetry detection graph */
+SCIP_RETCODE SCIPcopySymgraphAsSubgraph(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_GRAPH*            sourcegraph,        /**< graph to be copied */
+   SYM_GRAPH*            targetgraph,        /**< graph into which copy shall be included */
+   SCIP_CONS*            sourcecons,         /**< constraint associated with sourcegraph */
+   int*                  rootidx             /**< pointer to hold index of root node of sourcegraph in targetgraph
+                                              *   (or -1 if root cannot be detected) */
+   )
+{  /*lint --e{788}*/
+   SYM_NODETYPE nodetype;
+   int* nodeinfopos;
+   int* nodemap;
+   int nnodes;
+   int first;
+   int second;
+   int nodeidx;
+   int i;
+
+   assert(scip != NULL);
+   assert(sourcegraph != NULL);
+   assert(targetgraph != NULL);
+   assert(sourcecons != NULL);
+   assert(rootidx != NULL);
+
+   *rootidx = -1;
+
+   /* copy nodes */
+   nnodes = sourcegraph->nnodes;
+   nodeinfopos = sourcegraph->nodeinfopos;
+
+   /* prepare map of node index from sourcegraph to indices in copied graph */
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodemap, nnodes) );
+
+   for( i = 0; i < nnodes; ++i )
+   {
+      nodetype = sourcegraph->nodetypes[i];
+
+      switch( nodetype )
+      {
+      case SYM_NODETYPE_OPERATOR:
+         SCIP_CALL( SCIPaddSymgraphOpnode(scip, targetgraph, sourcegraph->ops[nodeinfopos[i]], &nodeidx) );
+         break;
+      case SYM_NODETYPE_VAL:
+         SCIP_CALL( SCIPaddSymgraphValnode(scip, targetgraph, sourcegraph->vals[nodeinfopos[i]], &nodeidx) );
+         break;
+      default:
+         assert(nodetype == SYM_NODETYPE_CONS);
+         SCIP_CALL( SCIPaddSymgraphConsnode(scip, targetgraph, sourcegraph->conss[nodeinfopos[i]],
+               sourcegraph->lhs[nodeinfopos[i]], sourcegraph->rhs[nodeinfopos[i]], &nodeidx) );
+
+         if( sourcegraph->conss[nodeinfopos[i]] == sourcecons )
+         {
+            /* store the root node of sourcegraph; if there are multiple nodes that could qualify
+             * as root, stop; we cannot identify root node unambiguously
+             */
+            if( *rootidx == -1 )
+               *rootidx = nodeidx;
+            else
+            {
+               *rootidx = -1;
+               SCIPfreeBufferArray(scip, &nodemap);
+               return SCIP_OKAY;
+            }
+         }
+      }
+      assert(0 <= nodeidx && nodeidx < targetgraph->nnodes);
+
+      nodemap[i] = nodeidx;
+   }
+
+   /* terminate early if root node could not be detected */
+   if( *rootidx == -1 )
+   {
+      SCIPfreeBufferArray(scip, &nodemap);
+      return SCIP_OKAY;
+   }
+
+   /* copy edges */
+   for( i = 0; i < sourcegraph->nedges; ++i )
+   {
+      first = SCIPgetSymgraphEdgeFirst(sourcegraph, i);
+      second = SCIPgetSymgraphEdgeSecond(sourcegraph, i);
+
+      /* adapt indices from source graph to target graph in case of non-variable nodes  */
+      if( first >= 0 )
+         first = nodemap[first];
+      if( second >= 0 )
+         second = nodemap[second];
+
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, targetgraph, first, second,
+            !SCIPisInfinity(scip, sourcegraph->edgevals[i]), sourcegraph->edgevals[i]) );
+   }
+   SCIPfreeBufferArray(scip, &nodemap);
 
    return SCIP_OKAY;
 }
@@ -1708,15 +1856,14 @@ SCIP_RETCODE SCIPgetSymActiveVariables(
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize) );
 
       if( requiredsize > *nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
-         assert(requiredsize <= *nvars);
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize) );
       }
    }
    else

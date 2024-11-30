@@ -203,6 +203,7 @@ struct SCIP_Set
    char                  branch_lpgainnorm;  /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
    SCIP_Bool             branch_delaypscost; /**< whether to delay pseudo costs updates for continuous variables to after separation */
    SCIP_Bool             branch_divingpscost;/**< should pseudo costs be updated also in diving and probing mode? */
+   SCIP_Bool             branch_collectancpscost;  /**< should ancestral pseudo costs be updated? */
    SCIP_Bool             branch_forceall;    /**< should all strong branching children be regarded even if
                                               *   one is detected to be infeasible? (only with propagation) */
    SCIP_Bool             branch_checksbsol;  /**< should LP solutions during strong branching with propagation be checked for feasibility? */

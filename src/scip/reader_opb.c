@@ -123,12 +123,7 @@
 #define READER_DESC             "file reader for pseudo-Boolean problem in opb format"
 #define READER_EXTENSION        "opb"
 
-#define GENCONSNAMES            TRUE  /* remove if no constraint names should be generated */
-#define LINEAROBJECTIVE         TRUE  /* will all non-linear parts inside the objective function be linearized or will
-                                       * an artificial integer variable be created which will represent the objective
-                                       * function
-                                       */
-
+#define GENCONSNAMES            TRUE           /* remove if no constraint names should be generated */
 #define INDICATORVARNAME        "indicatorvar" /* standard part of name for all indicator variables */
 #define INDICATORSLACKVARNAME   "indslack"     /* standard part of name for all indicator slack variables; should be the same in cons_indicator */
 #define TOPCOSTCONSNAME         "topcostcons"  /* standard name for artificial topcost constraint in wbo problems */
@@ -1161,17 +1156,9 @@ SCIP_RETCODE setObjective(
       if( strcmp(sense, "max" ) == 0 )
          opbinput->objsense = SCIP_OBJSENSE_MAXIMIZE;
 
-      /* @todo: what todo with non-linear objectives, maybe create the necessary and-constraints and add the arising linear
-       * objective (with and-resultants) or add a integer variable to this constraint and put only this variable in the
-       * objective, for this we need to expand the pseudo-boolean constraints to handle integer variables
-       *
-       * integer variant is not implemented
-       */
+      /* handle non-linear terms by and-constraints */
       if( ntermcoefs > 0 )
       {
-#if (LINEAROBJECTIVE == TRUE)
-         /* all non-linear parts are created as and-constraints, even if the same non-linear part was already part of the objective function */
-
          SCIP_VAR** vars;
          int nvars;
          int t;
@@ -1188,6 +1175,7 @@ SCIP_RETCODE setObjective(
             assert(vars != NULL);
             assert(nvars > 1);
 
+            /* @todo: reuse equivalent terms */
             /* create auxiliary variable */
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, ARTIFICIALVARNAMEPREFIX"obj_%d", t);
             SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, termcoefs[t], SCIP_VARTYPE_BINARY,
@@ -1231,90 +1219,6 @@ SCIP_RETCODE setObjective(
 
             SCIP_CALL( SCIPreleaseVar(scip, &var) );
          }
-#else    /* now the integer variant */
-         SCIP_CONS* pseudocons;
-         SCIP_Real lb;
-         SCIP_Real ub;
-
-         lb = 0.0;
-         ub = 0.0;
-
-         /* add all non linear coefficients up */
-         for( v = 0; v < ntermcoefs; ++v )
-         {
-            if( termcoefs[v] < 0 )
-               lb += termcoefs[v];
-            else
-               ub += termcoefs[v];
-         }
-         /* add all linear coefficients up */
-         for( v = 0; v < ncoefs; ++v )
-         {
-            if( coefs[v] < 0 )
-               lb += coefs[v];
-            else
-               ub += coefs[v];
-         }
-         assert(lb < ub);
-
-         /* create auxiliary variable */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "artificial_int_obj");
-         SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 1.0, SCIP_VARTYPE_INTEGER,
-               TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
-
-         /* @todo: check if it is better to change the branching priority for the artificial variables */
-#if 1
-         /* change branching priority of artificial variable to -1 */
-         SCIP_CALL( SCIPchgVarBranchPriority(scip, var, -1) );
-#endif
-         /* add auxiliary variable to the problem */
-         SCIP_CALL( SCIPaddVar(scip, var) );
-
-#ifdef WITH_DEBUG_SOLUTION
-         if( SCIPdebugIsMainscip(scip) )
-         {
-            SCIP_Real artval = 0.0;
-            SCIP_Real val;
-
-            for( t = 0; t < ntermcoefs; ++t )
-            {
-               vars = terms[t];
-               nvars = ntermvars[t];
-               assert(vars != NULL);
-               assert(nvars > 1);
-
-               for( v = nvars - 1; v >= 0; --v )
-               {
-                  SCIP_CALL( SCIPdebugGetSolVal(scip, vars[v], &val) );
-                  assert(SCIPisFeasZero(scip, val) || SCIPisFeasEQ(scip, val, 1.0));
-
-                  if( val < 0.5 )
-                     break;
-               }
-
-               artval += (((val < 0.5) ? 0.0 : 1.0) * termcoefs[t]);
-            }
-            assert(SCIPisFeasLE(scip, lb, artval) && SCIPisFeasGE(scip, ub, artval));
-
-            SCIP_CALL( SCIPdebugAddSolVal(scip, var, artval) );
-         }
-#endif
-
-         /* create artificial objection function constraint containing the artificial integer variable */
-         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "artificial_obj_cons");
-         SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &pseudocons, name, linvars, ncoefs, coefs, terms, ntermcoefs,
-               ntermvars, termcoefs, NULL, 0.0, FALSE, var, 0.0, 0.0,
-               TRUE, TRUE, TRUE, TRUE, TRUE,
-               FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-         SCIP_CALL( SCIPaddCons(scip, pseudocons) );
-         SCIPdebugPrintCons(scip, pseudocons, NULL);
-         SCIP_CALL( SCIPreleaseCons(scip, &pseudocons) );
-
-         SCIP_CALL( SCIPreleaseVar(scip, &var) );
-
-         return SCIP_OKAY;
-#endif
       }
       /* set the objective values */
       for( v = 0; v < ncoefs; ++v )
@@ -1529,8 +1433,8 @@ SCIP_RETCODE readConstraints(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "pseudoboolean");
 #endif
       retcode = SCIPcreateConsPseudoboolean(scip, &cons, name, linvars, nlincoefs, lincoefs, terms, ntermcoefs,
-            ntermvars, termcoefs, indvar, weight, issoftcons, NULL, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
+            ntermvars, termcoefs, indvar, weight, issoftcons, lhs, rhs, initial, separate, enforce, check, propagate,
+            local, modifiable, dynamic, removable, FALSE);
       if( retcode != SCIP_OKAY )
          goto TERMINATE;
    }
@@ -1883,14 +1787,14 @@ SCIP_RETCODE getActiveVariables(
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize) );
 
       if( requiredsize > *nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize) );
          assert( requiredsize <= *nvars );
       }
    }

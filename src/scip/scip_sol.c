@@ -2591,7 +2591,7 @@ SCIP_RETCODE readXmlSolFile(
    assert(error != NULL);
 
    /* read xml file */
-   start = xmlProcess(filename);
+   start = SCIPxmlProcess(filename);
 
    if( start == NULL )
    {
@@ -2604,11 +2604,11 @@ SCIP_RETCODE readXmlSolFile(
 
    /* find variable sections */
    tag = "variables";
-   varsnode = xmlFindNodeMaxdepth(start, tag, 0, 3);
+   varsnode = SCIPxmlFindNodeMaxdepth(start, tag, 0, 3);
    if( varsnode == NULL )
    {
       /* free xml data */
-      xmlFreeNode(start);
+      SCIPxmlFreeNode(start);
 
       SCIPerrorMessage("Variable section not found.\n");
       return SCIP_READERROR;
@@ -2616,7 +2616,7 @@ SCIP_RETCODE readXmlSolFile(
 
    /* loop through all variables */
    unknownvariablemessage = FALSE;
-   for( varnode = xmlFirstChild(varsnode); varnode != NULL; varnode = xmlNextSibl(varnode) )
+   for( varnode = SCIPxmlFirstChild(varsnode); varnode != NULL; varnode = SCIPxmlNextSibl(varnode) )
    {
       SCIP_VAR* var;
       const char* varname;
@@ -2625,7 +2625,7 @@ SCIP_RETCODE readXmlSolFile(
       int nread;
 
       /* find variable name */
-      varname = xmlGetAttrval(varnode, "name");
+      varname = SCIPxmlGetAttrval(varnode, "name");
       if( varname == NULL )
       {
          SCIPerrorMessage("Attribute \"name\" of variable not found.\n");
@@ -2648,7 +2648,7 @@ SCIP_RETCODE readXmlSolFile(
       }
 
       /* find value of variable */
-      valuestring = xmlGetAttrval(varnode, "value");
+      valuestring = SCIPxmlGetAttrval(varnode, "value");
       if( valuestring == NULL )
       {
          SCIPerrorMessage("Attribute \"value\" of variable not found.\n");
@@ -2711,7 +2711,7 @@ SCIP_RETCODE readXmlSolFile(
    }
 
    /* free xml data */
-   xmlFreeNode(start);
+   SCIPxmlFreeNode(start);
 
    if( localpartial && !SCIPsolIsPartial(sol)  )
    {

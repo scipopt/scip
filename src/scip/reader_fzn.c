@@ -3883,14 +3883,14 @@ SCIP_RETCODE getActiveVariables(
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize) );
 
       if( requiredsize > *nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize) );
          assert( requiredsize <= *nvars );
       }
    }
@@ -4230,7 +4230,7 @@ SCIP_RETCODE printLinearCons(
    return SCIP_OKAY;
 }
 
-/* writes problem to a flatzinc conform file, including introduction of several auxiliary variables and constraints */
+/** writes problem to a flatzinc conforming file, including introduction of several auxiliary variables and constraints */
 static
 SCIP_RETCODE writeFzn(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4338,7 +4338,7 @@ SCIP_RETCODE writeFzn(
          }
          else
          {
-            /* Real valued bounds have to be made type conform */
+            /* real valued bounds have to be made type conforming */
             if( fixed )
             {
                flattenFloat(scip, lb, buffy);
@@ -4879,7 +4879,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
 
       legal = TRUE;
 
-      /* Scan whether all variable names are flatzinc conform */
+      /* scan whether all variable names are flatzinc conforming */
       for( i = 0; i < nvars; i++ )
       {
          const char* varname;
@@ -4890,7 +4890,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
          legal = isIdentifier(varname);
          if( !legal )
          {
-            SCIPwarningMessage(scip, "The name of variable <%d>: \"%s\" is not conform to the fzn standard.\n", i, varname);
+            SCIPwarningMessage(scip, "The name of variable <%d>: \"%s\" does not conform to the fzn standard.\n", i, varname);
             break;
          }
 
@@ -4903,7 +4903,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
          }
       }
 
-      /* If there is at least one name, which is not conform, use generic names */
+      /* if there is at least one name, which does not conform, use generic names */
       if( legal )
       {
          SCIP_CALL( writeFzn(scip, file, name, transformed, objsense, objscale, objoffset, vars,

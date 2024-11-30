@@ -26,6 +26,7 @@
  * @ingroup BRANCHINGRULES
  * @brief  pseudo costs branching rule
  * @author Tobias Achterberg
+ * @author Krunal Patel
  *
  * The pseudo costs branching rule selects the branching variable with respect to the so-called pseudo costs
  * of the variables. Pseudo costs measure the average gain per unit in the objective function when the variable
@@ -33,6 +34,12 @@
  * the solving process.
  *
  * The selected variable maximizes the expected gain of the dual bound in the created subtree.
+ *
+ * Discounted pseudo costs are an extension of classic pseudo costs. If we interpret pseudo costs as the
+ * immediate reward for branching on a variable, then discounted pseudo costs can be considered to give the
+ * discounted total reward for branching on a variable, including gains of nodes a few level below branched node.
+ * In the current implementation, we consider discounted pseudo costs from one additional level according to
+ * the parameter discountfactor .
  *
  * For a more mathematical description and a comparison between the pseudo costs branching rule
  * and other branching rules in SCIP, we refer to

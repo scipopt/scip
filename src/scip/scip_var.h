@@ -769,11 +769,12 @@ SCIP_RETCODE SCIPflattenVarAggregationGraph(
  *  active variables, that is b_1*y_1 + ... + b_m*y_m + d.
  *
  *  If the number of needed active variables is greater than the available slots in the variable array, nothing happens
- *  except that the required size is stored in the corresponding variable (requiredsize). Otherwise, the active variable
- *  representation is stored in the variable array, scalar array and constant.
+ *  except that an upper bound on the required size is stored in the variable requiredsize; otherwise, the active
+ *  variable representation is stored in the arrays.
  *
  *  The reason for this approach is that we cannot reallocate memory, since we do not know how the memory has been
- *  allocated (e.g., by a C++ 'new' or SCIP functions).
+ *  allocated (e.g., by a C++ 'new' or SCIP functions). Note that requiredsize is an upper bound due to possible
+ *  cancelations.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -813,9 +814,8 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c which
                                               *   will chnage to constant d in the linear sum b_1*y_1 + ... + b_m*y_m +
                                               *   d w.r.t. the active variables */
-   int*                  requiredsize,       /**< pointer to store the required array size for the linear sum w.r.t. the
-                                              *   active variables */
-   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   int*                  requiredsize        /**< pointer to store an upper bound on the required size for the linear sum
+                                              *   w.r.t. the active variables */
    );
 
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or
@@ -2502,11 +2502,11 @@ SCIP_RETCODE SCIPaddClique(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcalcCliquePartition(
-   SCIP*const            scip,               /**< SCIP data structure */
-   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int const             nvars,              /**< number of variables in the clique */
-   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
-   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int                   nvars,              /**< number of variables in the clique */
+   int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    );
 
 /** calculates a partition of the given set of binary variables into negated cliques;
@@ -2528,11 +2528,11 @@ SCIP_RETCODE SCIPcalcCliquePartition(
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcalcNegatedCliquePartition(
-   SCIP*const            scip,               /**< SCIP data structure */
-   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int const             nvars,              /**< number of variables in the clique */
-   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
-   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int                   nvars,              /**< number of variables in the clique */
+   int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    );
 
 /** force SCIP to clean up all cliques; cliques do not get automatically cleaned up after presolving. Use
@@ -3134,6 +3134,26 @@ SCIP_RETCODE SCIPupdateVarPseudocost(
    SCIP_Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
    );
 
+/** updates the ancestor pseudo costs of the given variable and the global ancestor pseudo costs after a change of "solvaldelta" in the
+ *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value;
+ *  the update is ignored, if the objective value difference is infinite
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPupdateVarAncPseudocost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   SCIP_Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   SCIP_Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
+   );
+
 /** gets the variable's pseudo cost value for the given change of the variable's LP value
  *
  *  @return the variable's pseudo cost value for the given change of the variable's LP value
@@ -3149,6 +3169,26 @@ SCIP_RETCODE SCIPupdateVarPseudocost(
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetVarPseudocostVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
+/** gets the variable's ancestral pseudo cost value for the given change of the variable's LP value
+ *
+ *  @return the variable's ancestral pseudo cost value for the given change of the variable's LP value
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetVarAncPseudocostVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
@@ -3255,6 +3295,28 @@ SCIP_Real SCIPgetVarPseudocostCount(
  */
 SCIP_EXPORT
 SCIP_Real SCIPgetVarPseudocostCountCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** gets the variable's (possible fractional) number of ancestor pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ *
+ *  @return the variable's (possible fractional) number of ancestor pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetVarAncPseudocostCountCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -3383,6 +3445,30 @@ SCIP_Real SCIPgetVarPseudocostScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             solval              /**< variable's LP solution value */
+   );
+
+/** gets the variable's discounted pseudo cost score value for the given LP solution value.
+ *
+ *  This combines both pscost and ancpscost fields.
+ *
+ *  @return the variable's discounted pseudo cost score value for the given LP solution value,
+ *  combining both pscost and ancpscost fields.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_Real SCIPgetVarDPseudocostScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             solval,             /**< variable's LP solution value */
+   SCIP_Real             discountfac         /**< discount factor for discounted pseudocost */
    );
 
 /** gets the variable's pseudo cost score value for the given LP solution value,

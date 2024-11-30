@@ -93,11 +93,11 @@ EMPHBENCHMARK	=	true
 CLOCKTYPE	=	1
 
 # set SCIP version here for external projects
-SCIP_VERSION_MAJOR = 9
-SCIP_VERSION_MINOR = 3
+SCIP_VERSION_MAJOR = 10
+SCIP_VERSION_MINOR = 0
 SCIP_VERSION_PATCH = 0
 SCIP_VERSION_SUB = 0
-SCIP_VERSION_API = 115
+SCIP_VERSION_API = 127
 SCIP_VERSION = $(SCIP_VERSION_MAJOR).$(SCIP_VERSION_MINOR).$(SCIP_VERSION_PATCH).$(SCIP_VERSION_SUB)
 
 # compiling and linking parameters
@@ -105,7 +105,7 @@ VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
-TPI		=	none
+TPI		=	tny
 SYM		=	snauty
 PAPILO		=	false
 LAPACK		=	false
