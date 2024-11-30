@@ -616,6 +616,20 @@ SCIP_RETCODE applyNlobbt(
  * Callback methods of propagator
  */
 
+/** copy method for propagating plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PROPCOPY(propCopyNlobbt)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* call inclusion method of propagator */
+   SCIP_CALL( SCIPincludePropNlobbt(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PROPFREE(propFreeNlobbt)
@@ -738,6 +752,8 @@ SCIP_RETCODE SCIPincludePropNlobbt(
          propExecNlobbt, propdata) );
    assert(prop != NULL);
 
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyNlobbt) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeNlobbt) );
    SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolNlobbt) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolNlobbt) );
