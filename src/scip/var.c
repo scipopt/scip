@@ -4190,8 +4190,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
     * actual size, but this would need another loop through the active variables. We therefore take the upper bound. */
 
    /* return results */
-   *requiredsize = nactivevars;
-   if( varssize >= *requiredsize )
+   if( varssize >= nactivevars )
    {
       assert(vars != NULL);
 
@@ -4232,6 +4231,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          /* clean buffer again */
          tmpscalars[var->index] = 0.0;
       }
+      /* set requiredsize to space actually needed */
+      *requiredsize = *nvars;
    }
    else
    {
@@ -4242,6 +4243,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          assert( 0 <= var->index && var->index < ntotalvars );
          tmpscalars[var->index] = 0.0;
       }
+      *requiredsize = nactivevars;
    }
 
    assert(SCIPsetIsInfinity(set, *constant) == ((*constant) == SCIPsetInfinity(set))); /*lint !e777*/
