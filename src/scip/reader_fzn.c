@@ -3891,8 +3891,8 @@ SCIP_RETCODE getActiveVariables(
          SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
 
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize) );
-         assert( requiredsize <= *nvars );
       }
+      assert( requiredsize == *nvars );
    }
    else
    {

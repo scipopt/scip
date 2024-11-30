@@ -1852,7 +1852,7 @@ SCIP_RETCODE applyFixings(
                SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, consvarssize, &constant, &requiredsize) );
                assert(requiredsize <= consvarssize);
             }
-            assert(nconsvars <= consvarssize);
+            assert(requiredsize == nconsvars);
 
             easycase = FALSE;
 
@@ -1988,9 +1988,9 @@ SCIP_RETCODE applyFixings(
                   SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, size) );
 
                   SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize) );
-                  assert(requiredsize == size);
+                  assert(requiredsize <= size);
                }
-               assert(nconsvars <= size);
+               assert(requiredsize == nconsvars);
 
                /* compute sides */
                if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )

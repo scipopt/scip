@@ -112,8 +112,9 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyVar)
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requsize) );
          varssize = requsize;
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize) );
-         assert(requsize <= nvars);
+         assert(requsize <= varssize);
       }
+      assert(requsize == nvars);
    }
 
    /* create expression for constant + sum coefs_i vars_i */

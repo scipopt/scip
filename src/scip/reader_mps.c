@@ -2969,8 +2969,8 @@ SCIP_RETCODE getLinearCoeffs(
          SCIP_CALL( SCIPreallocBufferArray(scip, &activevals, requiredsize) );
 
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, requiredsize, &activeconstant, &requiredsize) );
-         assert( requiredsize <= nactivevars );
       }
+      assert( requiredsize == nactivevars );
    }
    else
    {

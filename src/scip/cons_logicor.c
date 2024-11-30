@@ -1014,9 +1014,9 @@ SCIP_RETCODE applyFixings(
             size = requiredsize;
 
             SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize) );
-            assert(nconsvars <= size);
             assert(requiredsize <= size);
          }
+         assert(requiredsize == nconsvars);
 
          easycase = FALSE;
 
@@ -1092,9 +1092,9 @@ SCIP_RETCODE applyFixings(
                size = requiredsize;
 
                SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize) );
-               assert(nconsvars <= size);
                assert(requiredsize <= size);
             }
+            assert(requiredsize == nconsvars);
 
             lhs = 1.0 - constant;
             rhs = SCIPinfinity(scip);
