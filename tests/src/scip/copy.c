@@ -90,9 +90,9 @@ Test(copy, MIP, .description="tests MIP copy")
 
    /* setup source scip */
    SCIP_CALL( SCIPincludeDefaultPlugins(sourcescip) );
-   SCIP_CALL( SCIPreadProb(sourcescip, "../check/instances/MIP/misc03.mps", NULL) );
    /* TODO: remove symmetry restriction */
    SCIP_CALL( SCIPsetIntParam(sourcescip, "misc/usesymmetry", 0) );
+   SCIP_CALL( SCIPreadProb(sourcescip, "../check/instances/MIP/misc03.mps", NULL) );
    sourceparams = SCIPgetParams(sourcescip);
    nsourceparams = SCIPgetNParams(sourcescip);
 
