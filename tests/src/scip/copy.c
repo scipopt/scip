@@ -91,6 +91,8 @@ Test(copy, MIP, .description="tests MIP copy")
    /* setup source scip */
    SCIP_CALL( SCIPincludeDefaultPlugins(sourcescip) );
    SCIP_CALL( SCIPreadProb(sourcescip, "../check/instances/MIP/misc03.mps", NULL) );
+   /* TODO: remove symmetry restriction */
+   SCIP_CALL( SCIPsetIntParam(sourcescip, "misc/usesymmetry", 0) );
    sourceparams = SCIPgetParams(sourcescip);
    nsourceparams = SCIPgetNParams(sourcescip);
 
@@ -175,14 +177,13 @@ Test(copy, MIP, .description="tests MIP copy")
    SCIP_CALL( SCIPsolve(sourcescip) );
    SCIP_CALL( SCIPsolve(targetscip) );
 
-   /* check optimal equivalence */
-   cr_expect(SCIPisRelEQ(sourcescip, SCIPgetDualbound(targetscip), SCIPgetPrimalbound(targetscip)));
-   cr_expect(SCIPisRelEQ(sourcescip, SCIPgetDualbound(targetscip), SCIPgetDualbound(sourcescip)));
-   cr_expect(SCIPisRelEQ(sourcescip, SCIPgetPrimalbound(targetscip), SCIPgetPrimalbound(sourcescip)));
+   /* compare optimal bounds */
+   cr_expect(SCIPgetDualbound(targetscip) == SCIPgetPrimalbound(targetscip));
+   cr_expect(SCIPgetDualbound(targetscip) == SCIPgetDualbound(sourcescip));
+   cr_expect(SCIPgetPrimalbound(targetscip) == SCIPgetPrimalbound(sourcescip));
 
    /* compare solving performance */
-   /* TODO: close the gaps */
-   cr_expect(2 * SCIPgetNLPIterations(targetscip) >= SCIPgetNLPIterations(sourcescip));
-   cr_expect(SCIPgetNTotalNodes(targetscip) >= SCIPgetNTotalNodes(sourcescip));
-   cr_expect(SCIPgetNSolsFound(targetscip) >= SCIPgetNSolsFound(sourcescip));
+   cr_expect(SCIPgetNLPIterations(targetscip) == SCIPgetNLPIterations(sourcescip));
+   cr_expect(SCIPgetNTotalNodes(targetscip) == SCIPgetNTotalNodes(sourcescip));
+   cr_expect(SCIPgetNSolsFound(targetscip) == SCIPgetNSolsFound(sourcescip));
 }
