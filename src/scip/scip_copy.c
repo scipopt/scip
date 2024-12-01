@@ -2830,8 +2830,8 @@ SCIP_RETCODE doCopy(
 }
 
 /** copies source SCIP to target SCIP; the copying process is done in the following order:
- *  1) copy the plugins
- *  2) copy the settings
+ *  1) copy those plugins that have copy callbacks
+ *  2) copy the settings for the present parameters
  *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
  *  4) copy all active variables except those that are marked as relaxation-only
  *  5) copy all constraints
