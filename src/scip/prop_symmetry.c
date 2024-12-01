@@ -575,42 +575,6 @@ SCIP_RETCODE displaySymmetriesWithComponents(
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the display symmetry information command */
-static
-SCIP_DECL_DIALOGEXEC(dialogExecDisplaySymmetry)
-{  /*lint --e{715}*/
-   SCIP_PROPDATA* propdata;
-
-   /* add your dialog to history of dialogs that have been executed */
-   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
-
-   propdata = (SCIP_PROPDATA*)SCIPdialogGetData(dialog);
-   assert( propdata != NULL );
-
-   if ( propdata->nperms == -1 )
-   {
-      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. Symmetries have not been computed yet.\n");
-   }
-   else if ( propdata->nperms == 0 )
-   {
-      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. No symmetries detected.\n");
-   }
-   else if ( propdata->ncomponents < 0 )
-   {
-      SCIP_CALL( displaySymmetriesWithoutComponents(scip, propdata) );
-   }
-   else
-   {
-      SCIP_CALL( displaySymmetriesWithComponents(scip, propdata) );
-   }
-
-   /* next dialog will be root dialog again */
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
-   return SCIP_OKAY;
-}
-
-
 /*
  * Table callback methods
  */
@@ -6712,9 +6676,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_TABLEDATA* tabledata;
    SCIP_PROPDATA* propdata = NULL;
    SCIP_PROP* prop = NULL;
-   SCIP_DIALOG* rootdialog;
-   SCIP_DIALOG* displaymenu;
-   SCIP_DIALOG* dialog;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
    assert( propdata != NULL );
@@ -6792,24 +6753,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SYMMETRY, TABLE_DESC_SYMMETRY, TRUE,
          NULL, tableFreeSymmetry, NULL, NULL, NULL, NULL, tableOutputSymmetry,
          tabledata, TABLE_POSITION_SYMMETRY, TABLE_EARLIEST_SYMMETRY) );
-
-   /* include display dialog */
-   rootdialog = SCIPgetRootDialog(scip);
-   if( rootdialog != NULL )
-   {
-      if( SCIPdialogFindEntry(rootdialog, "display", &displaymenu) != 1 )
-      {
-         SCIPerrorMessage("display sub menu not found\n");
-         return SCIP_PLUGINNOTFOUND;
-      }
-      assert( ! SCIPdialogHasEntry(displaymenu, "symmetries") );
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-            NULL, dialogExecDisplaySymmetry, NULL, NULL,
-            "symmetry", "display generators of symmetry group in cycle notation, if available",
-            FALSE, (SCIP_DIALOGDATA*)propdata) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, displaymenu, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-   }
 
    /* add parameters for computing symmetry */
    SCIP_CALL( SCIPaddIntParam(scip,
@@ -7131,6 +7074,41 @@ int SCIPgetSymmetryNGenerators(
       return 0;
    else
       return propdata->nperms;
+}
+
+/** displays generators of symmetry group, if available */
+SCIP_RETCODE SCIPdisplaySymmetryGenerators(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop                /**< symmetry propagator or NULL */
+   )
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   if ( prop == NULL )
+      prop = SCIPfindProp(scip, PROP_NAME);
+   assert( prop != NULL );
+
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
+
+   if ( propdata->nperms == -1 )
+   {
+      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. Symmetries have not been computed yet.\n");
+   }
+   else if ( propdata->nperms == 0 )
+   {
+      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. No symmetries detected.\n");
+   }
+   else if ( propdata->ncomponents < 0 )
+   {
+      SCIP_CALL( displaySymmetriesWithoutComponents(scip, propdata) );
+   }
+   else
+   {
+      SCIP_CALL( displaySymmetriesWithComponents(scip, propdata) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** creates new operator node type (used for symmetry detection) and returns its representation
