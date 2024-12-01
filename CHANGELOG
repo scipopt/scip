@@ -18,8 +18,11 @@ Interface changes
 ### New and changed callbacks
 
 ### New API functions
+- SCIPdisplaySymmetryGenerators() to display generators of symmetry group
 
 ### Command line interface
+- the implementation of interactive shell functionality `display symmetry` has been moved
+  from `prop_symmetry.c` to `dialog_default.c`
 
 ### Interfaces to external software
 
