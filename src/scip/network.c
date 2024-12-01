@@ -2417,7 +2417,7 @@ int decompositionGetFundamentalCycleRows(
             break;
          }
          case SPQR_MEMBERTYPE_UNASSIGNED:
-            assert(FALSE);
+            SCIPABORT();
       }
    }
    BMSfreeBlockMemoryArray(dec->env, &pathSearchCallStack, dec->numNodes);
@@ -4465,7 +4465,7 @@ void determineSingleComponentType(
       }
       case SPQR_MEMBERTYPE_UNASSIGNED:
       {
-         assert(FALSE);
+         SCIPABORT();
          break;
       }
    }
@@ -4580,7 +4580,7 @@ void determinePathSeriesType(
          }
          default:
          {
-            assert(FALSE);
+            SCIPABORT();
          }
       }
       redMem->pathType = currentType;
@@ -5047,7 +5047,7 @@ void determinePathMemberType(
       {
          //In release
          newCol->remainsNetwork = FALSE;
-         assert(FALSE);
+         SCIPABORT();
          break;
       }
    }
@@ -5271,7 +5271,7 @@ ReducedMemberType checkLeaf(
       }
       case SPQR_MEMBERTYPE_UNASSIGNED:
       {
-         assert(FALSE);
+         SCIPABORT();
          break;
       }
    }
@@ -6372,7 +6372,7 @@ SCIP_RETCODE transformAndMerge(
       case SPQR_MEMBERTYPE_LOOP:
       case SPQR_MEMBERTYPE_UNASSIGNED:
       {
-         assert(FALSE);
+         SCIPABORT();
          break;
       }
    }
@@ -6637,7 +6637,7 @@ SCIP_RETCODE transformComponent(
          case SPQR_MEMBERTYPE_UNASSIGNED:
          default:
          {
-            assert(FALSE);
+            SCIPABORT();
             break;
          }
       }
@@ -8574,7 +8574,7 @@ RowReducedMemberType determineType(
       case SPQR_MEMBERTYPE_UNASSIGNED:
       default:
          newRow->reducedMembers[toCheckMember].type = TYPE_NOT_NETWORK;
-         assert(FALSE);
+         SCIPABORT();
    }
 
    return newRow->reducedMembers[toCheckMember].type;
@@ -9211,7 +9211,7 @@ SplitOrientation getRelativeOrientation(
       case SPQR_MEMBERTYPE_UNASSIGNED:
       default:
       {
-         assert(FALSE);
+         SCIPABORT();
          SplitOrientation orientation; /*lint !e527*/
          orientation.headSplit = FALSE; /*lint !e527*/
          orientation.otherIsSource = FALSE;
@@ -9485,7 +9485,7 @@ void determineSplitTypeNext(
       case SPQR_MEMBERTYPE_UNASSIGNED:
       default:
          newRow->remainsNetwork = FALSE;
-         assert(FALSE);
+         SCIPABORT();
    }
 }
 
@@ -9519,7 +9519,7 @@ void determineMergeableTypes(
             case SPQR_MEMBERTYPE_UNASSIGNED:
             default:
                newRow->remainsNetwork = FALSE;
-               assert(FALSE);
+               SCIPABORT();
          }
       }
       return;
@@ -11118,7 +11118,7 @@ SCIP_RETCODE splitAndMerge(
       case SPQR_MEMBERTYPE_UNASSIGNED:
       default:
          newRow->remainsNetwork = FALSE;
-         assert(FALSE);
+         SCIPABORT();
    }
    return SCIP_OKAY;
 }
@@ -11248,7 +11248,7 @@ SCIP_RETCODE transformComponentRowAddition(
          }
          case SPQR_MEMBERTYPE_UNASSIGNED:
          default:
-            assert(FALSE);
+            SCIPABORT();
             break;
       }
 

@@ -75,13 +75,13 @@ int mtx_init(mtx_t *mtx, int type)
 #else
   int ret;
   pthread_mutexattr_t attr;
-  pthread_mutexattr_init(&attr);
+  (void) pthread_mutexattr_init(&attr);
   if (type & mtx_recursive)
   {
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+     (void) pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
   }
   ret = pthread_mutex_init(mtx, &attr);
-  pthread_mutexattr_destroy(&attr);
+  (void) pthread_mutexattr_destroy(&attr);
   return ret == 0 ? thrd_success : thrd_error;
 #endif
 }
@@ -98,7 +98,7 @@ void mtx_destroy(mtx_t *mtx)
     CloseHandle(mtx->mHandle.mut);
   }
 #else
-  pthread_mutex_destroy(mtx);
+  (void) pthread_mutex_destroy(mtx);
 #endif
 }
 
@@ -327,7 +327,7 @@ void cnd_destroy(cnd_t *cond)
   }
   DeleteCriticalSection(&cond->mWaitersCountLock);
 #else
-  pthread_cond_destroy(cond);
+  (void) pthread_cond_destroy(cond);
 #endif
 }
 
@@ -617,7 +617,7 @@ int thrd_create(thrd_t *thr, thrd_start_t func, void *arg)
     return thrd_error;
   }
 
-  return thrd_success;
+  return thrd_success; /*lint !e429*/
 }
 
 thrd_t thrd_current(void)
@@ -743,7 +743,7 @@ void thrd_yield(void)
 #if defined(_TTHREAD_WIN32_)
   Sleep(0);
 #else
-  sched_yield();
+  (void) sched_yield();
 #endif
 }
 
@@ -798,7 +798,7 @@ void tss_delete(tss_t key)
   _tinycthread_tss_dtors[key] = NULL;
   TlsFree(key);
 #else
-  pthread_key_delete(key);
+  (void) pthread_key_delete(key);
 #endif
 }
 
