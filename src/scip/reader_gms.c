@@ -118,6 +118,7 @@ SCIP_RETCODE getActiveVariables(
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *varssize, constant, &requiredsize) );
          assert(requiredsize <= *varssize);
       }
+      assert(requiredsize == *nvars);
    }
    else
    {

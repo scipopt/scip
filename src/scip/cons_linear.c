@@ -17947,8 +17947,8 @@ SCIP_RETCODE SCIPcreateConsLinear(
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
 
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize) );
-         assert(requiredsize <= nconsvars);
       }
+      assert(requiredsize == nconsvars);
 
       /* adjust sides and check that we do not subtract infinity values */
       if( SCIPisInfinity(scip, REALABS(constant)) )
@@ -18165,8 +18165,8 @@ SCIP_RETCODE SCIPcopyConsLinear(
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requiredsize) );
 
          SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, requiredsize, &constant, &requiredsize) );
-         assert(requiredsize <= nvars);
       }
+      assert(requiredsize == nvars);
    }
    else
    {
@@ -18263,8 +18263,8 @@ SCIP_RETCODE SCIPaddCoefLinear(
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
 
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize) );
-         assert(requiredsize <= nconsvars);
       }
+      assert(requiredsize == nconsvars);
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
