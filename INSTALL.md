@@ -13,31 +13,12 @@ For that we refer to the `README.md` file of the SCIP Optimization Suite (in cas
 Building SCIP using CMake {#CMAKE}
 ==================================
 
-[CMake](https://cmake.org/) is a build system generator that can create, e.g., Makefiles for UNIX and Mac or Visual Studio project files for Windows.
+[CMake](https://cmake.org/) is a build system generator that can create, e.g., Makefiles or MS Visual Studio project files.
 
 CMake provides an [extensive documentation](https://cmake.org/cmake/help/latest/manual/cmake.1.html) explaining available features and use cases as well as an [FAQ section](https://gitlab.kitware.com/cmake/community/-/wikis/FAQ).
 It's recommended to use the latest stable CMake version available.  `cmake --help` is also a good first step to see available options and usage information.
 
-Windows and platform independent build instructions
----------------------------------------------------
-
-To build SCIP you may use the CMake GUI to specify the path to SCIP and the desired location for the build.
-Available options are listed and can be modified to fit your needs.
-After the configuration step is done, open the generated Visual Studio solution file and compile it.
-Note that compilation is tested on MSVC version >= 12.
-
-Alternatively, you may use the command line to configure and build SCIP by creating a `build` directory and then building the configuration:
-
-```
-cmake -Bbuild -H. [-DSOPLEX_DIR=/path/to/soplex]
-cmake --build build --config Release [Debug]
-```
-
-Command line instructions (Linux, macOS)
-----------------------------------------
-
-Compiling SCIP directly can be done as follows:
-
+To configure, compile, and install SCIP from a source tarball on a command line via cmake, use the following commands:
 ```
 tar xvzf scip-x.y.z.tgz                                                       # unpack the tarball
 cd scip-x.y.z                                                                 # change into the directory
@@ -51,20 +32,32 @@ make install                                                                  # 
 
 Note: For a full ctest run `ctest` instead of `make check` after compilation.
 
-CMake checks for available third-party libraries like GMP or ZLIB and sets up the configuration accordingly.
+CMake checks for available dependencies like PaPILO, SoPlex, or ZLIB and sets up the configuration accordingly.
+Currently, it is necessary to either explicitly disable dependencies that should not be used, or use `-DAUTOBUILD=ON` as parameter to the cmake call to automatically disable dependencies that cannot be found.
 Note that the symmetry codes [Nauty](https://pallini.di.uniroma1.it/) and [Sassy](https://github.com/markusa4/sassy) are shipped with SCIP.
 A version of Bliss that is compatible with SCIP is available at https://github.com/scipopt/bliss.
 
-Note: Here is a list of apt package requirements for ubuntu or debian users that want to build the entire SCIP Optimization Suite from source tarball:
+Predefined presets for different use cases are also included in the `CMakePresets.json` file.
+To use them, specify `--preset <preset>` as argument to `cmake`.
+For example, to build only with dependencies needed for a MIP solver, use `--preset mip`.
+
+The available presets can be listed with
 ```
-apt-get install wget cmake g++ m4 xz-utils libgmp-dev unzip zlib1g-dev libboost-program-options-dev libboost-serialization-dev libboost-regex-dev libboost-iostreams-dev libtbb-dev libreadline-dev pkg-config git liblapack-dev libgsl-dev flex bison libcliquer-dev gfortran file dpkg-dev libopenblas-dev rpm
+cmake --list-presets
+```
+
+Alternatively to the cmake command line, also the CMake GUI can be used to build.
+Here, one may specify the path to SCIP and the desired location for the build.
+Available options are listed and can be modified to fit your needs.
+
+Note: Here is a list of apt package requirements for Ubuntu or Debian users that want to build the entire SCIP Optimization Suite from source tarball:
+```
+apt-get install wget cmake g++ m4 xz-utils libgmp-dev unzip zlib1g-dev libboost-program-options-dev libboost-serialization-dev libboost-regex-dev libboost-iostreams-dev libtbb-dev libreadline-dev pkg-config git liblapack-dev libgsl-dev flex bison libcliquer-dev gfortran file dpkg-dev libopenblas-dev rpm libmetis-dev
 ```
 Additionally the following dependencies need to be downloaded, compiled and installed:
  - [Hmetis](http://glaros.dtc.umn.edu/gkhome/metis/hmetis/download)
- - [Metis](http://glaros.dtc.umn.edu/gkhome/metis/metis/download)
  - [Ipopt](https://github.com/coin-or/Ipopt/releases) with [Mumps](https://github.com/coin-or-tools/ThirdParty-Mumps/releases)
- - [Gmp](https://gmplib.org/#DOWNLOAD)
-During the CMake configuration of the SCIP Optimization Suite the can be specified, see [CMake](https://scipopt.org/doc/html/md_INSTALL.php#CMAKE) [(local link)](@ref CMAKE) .
+ - [GMP](https://gmplib.org/#DOWNLOAD)
 
 
 Troubleshooting
