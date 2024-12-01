@@ -41,11 +41,13 @@ freely, subject to the following restrictions:
 #ifndef NULL
   #define NULL (void*)0
 #endif
+#if defined(_TTHREAD_WIN32_)
 #ifndef TRUE
   #define TRUE 1
 #endif
 #ifndef FALSE
   #define FALSE 0
+#endif
 #endif
 
 #ifdef __cplusplus
