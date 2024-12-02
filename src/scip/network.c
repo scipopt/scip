@@ -4576,6 +4576,7 @@ void determinePathSeriesType(
             currentType = inSameDirection ? OUT_TAIL : OUT_HEAD;
             break;
          }
+         case OUT_TAIL:
          default:
          {
             assert(previousType == OUT_TAIL);
