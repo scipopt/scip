@@ -268,7 +268,7 @@
 extern "C" {
 #endif
 
-/** includes default SCIP plugins into SCIP */
+/** includes default plugins into SCIP with respect to priorities */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */

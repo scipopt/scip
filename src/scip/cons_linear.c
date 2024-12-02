@@ -17938,7 +17938,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
       SCIP_CALL( SCIPduplicateBufferArray(scip, &consvals, vals, nconsvars) );
 
       /* get active variables for new constraint */
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize) );
 
       /* if space was not enough we need to resize the buffers */
       if( requiredsize > nconsvars )
@@ -17946,9 +17946,9 @@ SCIP_RETCODE SCIPcreateConsLinear(
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize, TRUE) );
-         assert(requiredsize <= nconsvars);
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize) );
       }
+      assert(requiredsize == nconsvars);
 
       /* adjust sides and check that we do not subtract infinity values */
       if( SCIPisInfinity(scip, REALABS(constant)) )
@@ -18157,16 +18157,16 @@ SCIP_RETCODE SCIPcopyConsLinear(
     */
    if( !SCIPvarIsOriginal(vars[0]) )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, nvars, &constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, nvars, &constant, &requiredsize) );
 
       if( requiredsize > nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, requiredsize, &constant, &requiredsize, TRUE) );
-         assert(requiredsize <= nvars);
+         SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, requiredsize, &constant, &requiredsize) );
       }
+      assert(requiredsize == nvars);
    }
    else
    {
@@ -18254,7 +18254,7 @@ SCIP_RETCODE SCIPaddCoefLinear(
       consvals[0] = val;
 
       /* get active variables for new constraint */
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize) );
 
       /* if space was not enough we need to resize the buffers */
       if( requiredsize > nconsvars )
@@ -18262,9 +18262,9 @@ SCIP_RETCODE SCIPaddCoefLinear(
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize, TRUE) );
-         assert(requiredsize <= nconsvars);
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize) );
       }
+      assert(requiredsize == nconsvars);
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);

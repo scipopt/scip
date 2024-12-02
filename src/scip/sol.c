@@ -2126,7 +2126,7 @@ SCIP_RETCODE SCIPsolRetransform(
 
       /* get active representation of the original variable */
       SCIP_CALL( SCIPvarGetActiveRepresentatives(set, activevars, activevals, &nactivevars, ntransvars + 1, &constant,
-            &requiredsize, TRUE) );
+            &requiredsize) );
       assert(requiredsize <= ntransvars);
 
       /* compute solution value of the original variable */

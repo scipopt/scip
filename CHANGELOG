@@ -18,6 +18,8 @@ Features
 Performance improvements
 ------------------------
 
+- Reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
+
 Examples and applications
 -------------------------
 
@@ -30,6 +32,7 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- SCIPgetProbvarLinearSum: remove parameter mergemultiples, which is now automatically true with the new implementation of SCIPvarGetActiveRepresentatives.
 - SCIPcreateRow*(), SCIPaddVarToRow(), SCIPaddVarsToRow(), SCIPaddVarsToRowSameCoef() can now only be called in the solving stage,
   because otherwise the LP is not yet available and the row data is invalid.
 - intvar removed from arguments for SCIPcreateConsPseudobooleanWithConss(), SCIPcreateConsPseudoboolean(), and SCIPcreateConsBasicPseudoboolean() due to dysfunctionality of non-linear objective reformulation with pseudoboolean constraint
@@ -155,6 +158,9 @@ Fixed bugs
 
 - apply same feasibility definition in PaPILO as SCIP to avoid numerical inconsistencies
 - check variable cancellation in SCIPvarAddVlb() and SCIPvarAddVub() to avert wrong infeasibility
+- SCIPfreeReoptSolve now also clears the partial solutions
+- fixed bug in calculation of "fractionality score" for spatial branching candidates in cons_nonlinear
+- add copy callbacks for default plugins presolver dualagg, presolver redvub, branchrule lookahead, branchrule cloud, heuristic dualval, heuristic repair, propagator nlobbt, separator gauge, and separator convexproj missing in SCIPsetCopyPlugins()
 
 Unit tests
 ----------

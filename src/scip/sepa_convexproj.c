@@ -662,11 +662,23 @@ SCIP_RETCODE storeNonlinearConvexNlrows(
    return SCIP_OKAY;
 }
 
-
 /*
  * Callback methods of separator
  */
 
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyConvexproj)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of separator */
+   SCIP_CALL( SCIPincludeSepaConvexproj(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
@@ -854,6 +866,7 @@ SCIP_RETCODE SCIPincludeSepaConvexproj(
    assert(sepa != NULL);
 
    /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyConvexproj) );
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeConvexproj) );
    SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolConvexproj) );
 

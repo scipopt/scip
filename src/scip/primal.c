@@ -162,34 +162,10 @@ SCIP_RETCODE SCIPprimalFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   int s;
-
    assert(primal != NULL);
    assert(*primal != NULL);
 
-   /* free temporary solution for storing current solution */
-   if( (*primal)->currentsol != NULL )
-   {
-      SCIP_CALL( SCIPsolFree(&(*primal)->currentsol, blkmem, *primal) );
-   }
-
-   /* free solution for storing primal ray */
-   if( (*primal)->primalray != NULL )
-   {
-      SCIP_CALL( SCIPsolFree(&(*primal)->primalray, blkmem, *primal) );
-   }
-
-   /* free feasible primal CIP solutions */
-   for( s = 0; s < (*primal)->nsols; ++s )
-   {
-      SCIP_CALL( SCIPsolFree(&(*primal)->sols[s], blkmem, *primal) );
-   }
-   /* free partial CIP solutions */
-   for( s = 0; s < (*primal)->npartialsols; ++s )
-   {
-      SCIP_CALL( SCIPsolFree(&(*primal)->partialsols[s], blkmem, *primal) );
-   }
-   assert((*primal)->nexistingsols == 0);
+   SCIP_CALL( SCIPprimalClear(*primal, blkmem) );
 
    BMSfreeMemoryArrayNull(&(*primal)->sols);
    BMSfreeMemoryArrayNull(&(*primal)->partialsols);
@@ -201,43 +177,50 @@ SCIP_RETCODE SCIPprimalFree(
 
 /** clears primal data */
 SCIP_RETCODE SCIPprimalClear(
-   SCIP_PRIMAL**         primal,             /**< pointer to primal data */
+   SCIP_PRIMAL*          primal,             /**< pointer to primal data */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    int s;
 
    assert(primal != NULL);
-   assert(*primal != NULL);
 
    /* free temporary solution for storing current solution */
-   if( (*primal)->currentsol != NULL )
+   if( primal->currentsol != NULL )
    {
-      SCIP_CALL( SCIPsolFree(&(*primal)->currentsol, blkmem, *primal) );
+      SCIP_CALL( SCIPsolFree(&primal->currentsol, blkmem, primal) );
    }
 
    /* free solution for storing primal ray */
-   if( (*primal)->primalray != NULL )
+   if( primal->primalray != NULL )
    {
-      SCIP_CALL( SCIPsolFree(&(*primal)->primalray, blkmem, *primal) );
+      SCIP_CALL( SCIPsolFree(&primal->primalray, blkmem, primal) );
    }
 
    /* free feasible primal CIP solutions */
-   for( s = 0; s < (*primal)->nsols; ++s )
+   for( s = 0; s < primal->nsols; ++s )
    {
-      SCIP_CALL( SCIPsolFree(&(*primal)->sols[s], blkmem, *primal) );
+      SCIP_CALL( SCIPsolFree(&primal->sols[s], blkmem, primal) );
    }
 
-   (*primal)->currentsol = NULL;
-   (*primal)->primalray = NULL;
-   (*primal)->nsols = 0;
-   (*primal)->nsolsfound = 0;
-   (*primal)->nlimsolsfound = 0;
-   (*primal)->nbestsolsfound = 0;
-   (*primal)->nlimbestsolsfound = 0;
-   (*primal)->upperbound = SCIP_INVALID;
-   (*primal)->cutoffbound = SCIP_INVALID;
-   (*primal)->updateviolations = TRUE;
+   /* free partial CIP solutions */
+   for( s = 0; s < primal->npartialsols; ++s )
+   {
+      SCIP_CALL( SCIPsolFree(&primal->partialsols[s], blkmem, primal) );
+   }
+   assert(primal->nexistingsols == 0);
+
+   primal->currentsol = NULL;
+   primal->primalray = NULL;
+   primal->nsols = 0;
+   primal->nsolsfound = 0;
+   primal->npartialsols = 0;
+   primal->nlimsolsfound = 0;
+   primal->nbestsolsfound = 0;
+   primal->nlimbestsolsfound = 0;
+   primal->upperbound = SCIP_INVALID;
+   primal->cutoffbound = SCIP_INVALID;
+   primal->updateviolations = TRUE;
 
    return SCIP_OKAY;
 }
