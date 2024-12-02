@@ -2416,8 +2416,10 @@ int decompositionGetFundamentalCycleRows(
             }
             break;
          }
-         case SPQR_MEMBERTYPE_UNASSIGNED:
+         case SPQR_MEMBERTYPE_UNASSIGNED:{
             SCIPABORT();
+            return -1;
+         }
       }
    }
    BMSfreeBlockMemoryArray(dec->env, &pathSearchCallStack, dec->numNodes);
@@ -4466,6 +4468,7 @@ void determineSingleComponentType(
       case SPQR_MEMBERTYPE_UNASSIGNED:
       {
          SCIPABORT();
+         newCol->reducedMembers[reducedMember].type = REDUCEDMEMBER_TYPE_NOT_NETWORK;
          break;
       }
    }
@@ -4573,14 +4576,11 @@ void determinePathSeriesType(
             currentType = inSameDirection ? OUT_TAIL : OUT_HEAD;
             break;
          }
-         case OUT_TAIL:
-         {
-            currentType = inSameDirection ? OUT_HEAD : OUT_TAIL;
-            break;
-         }
          default:
          {
-            SCIPABORT();
+            assert(previousType == OUT_TAIL);
+            currentType = inSameDirection ? OUT_HEAD : OUT_TAIL;
+            break;
          }
       }
       redMem->pathType = currentType;
@@ -5272,6 +5272,7 @@ ReducedMemberType checkLeaf(
       case SPQR_MEMBERTYPE_UNASSIGNED:
       {
          SCIPABORT();
+         newCol->reducedMembers[leaf].type = REDUCEDMEMBER_TYPE_NOT_NETWORK;
          break;
       }
    }
@@ -6373,7 +6374,7 @@ SCIP_RETCODE transformAndMerge(
       case SPQR_MEMBERTYPE_UNASSIGNED:
       {
          SCIPABORT();
-         break;
+         return SCIP_ERROR;
       }
    }
    return SCIP_OKAY;
@@ -6638,7 +6639,7 @@ SCIP_RETCODE transformComponent(
          default:
          {
             SCIPABORT();
-            break;
+            return SCIP_ERROR;
          }
       }
       return SCIP_OKAY;
@@ -11117,8 +11118,11 @@ SCIP_RETCODE splitAndMerge(
       case SPQR_MEMBERTYPE_LOOP:
       case SPQR_MEMBERTYPE_UNASSIGNED:
       default:
+      {
          newRow->remainsNetwork = FALSE;
          SCIPABORT();
+         return SCIP_ERROR;
+      }
    }
    return SCIP_OKAY;
 }
@@ -11248,8 +11252,10 @@ SCIP_RETCODE transformComponentRowAddition(
          }
          case SPQR_MEMBERTYPE_UNASSIGNED:
          default:
+         {
             SCIPABORT();
-            break;
+            return SCIP_ERROR;
+         }
       }
 
       return SCIP_OKAY;
