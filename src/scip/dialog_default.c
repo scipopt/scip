@@ -2030,7 +2030,42 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecHelp)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPdialogDisplayMenu(SCIPdialogGetParent(dialog), scip) );
+
+   /* check whether the user entered "help <command>" */
+   if( ! SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
+   {
+      SCIP_DIALOG* rootdialog;
+      SCIP_DIALOG* subdialog;
+      SCIP_Bool endoffile;
+      char* command;
+
+      /* get command as next word on line */
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, NULL, &command, &endoffile) );
+
+      /* search for command */
+      rootdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      if ( SCIPdialogFindEntry(rootdialog, command, &subdialog) )
+      {
+         /* if the command has subdialogs */
+         if( SCIPdialogGetNSubdialogs(subdialog) > 0 )
+         {
+            /* print information on command itself and its subdialogs */
+            SCIP_CALL( SCIPdialogDisplayMenuEntry(subdialog, scip) );
+            SCIPdialogMessage(scip, NULL, "\n");
+            SCIP_CALL( SCIPdialogDisplayMenu(subdialog, scip) );
+         }
+         else
+         {
+            /* print information on command */
+            SCIP_CALL( SCIPdialogDisplayMenuEntry(subdialog, scip) );
+         }
+      }
+   }
+   else
+   {
+      /* print information on all subdialogs */
+      SCIP_CALL( SCIPdialogDisplayMenu(SCIPdialogGetParent(dialog), scip) );
+   }
    SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialogGetParent(dialog);
@@ -2427,7 +2462,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSave)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
 
-      retcode =  SCIPwriteParams(scip, filename, TRUE, FALSE);
+      retcode = SCIPwriteParams(scip, filename, TRUE, FALSE);
 
       if( retcode == SCIP_FILECREATEERROR )
       {
@@ -3364,7 +3399,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteLp)
       SCIP_RETCODE retcode;
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-      retcode =  SCIPwriteLP(scip, filename);
+      retcode = SCIPwriteLP(scip, filename);
 
       if( retcode == SCIP_FILECREATEERROR )
       {
@@ -3554,7 +3589,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteNlp)
       SCIP_RETCODE retcode;
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-      retcode =  SCIPwriteNLP(scip, filename);
+      retcode = SCIPwriteNLP(scip, filename);
 
       if( retcode == SCIP_FILECREATEERROR )
       {
@@ -4511,7 +4546,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecHelp, NULL, NULL,
-            "help", "display this help", FALSE, NULL) );
+            "help", "display this help (add <command> to show information on specific command)", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -4579,8 +4614,23 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecQuit, NULL, NULL,
-            "quit", "leave SCIP", FALSE, NULL) );
+            "quit", "leave SCIP (<exit> works as well)", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* exit - same as quit */
+   if( !SCIPdialogHasEntry(root, "exit") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecQuit, NULL, NULL,
+            "exit", "leave SCIP", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+
+      /* mark command as hidden, because "exit" is already there */
+      SCIPdialogSetHidden(dialog);
+
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
