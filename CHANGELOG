@@ -18,7 +18,7 @@ Interface changes
 ### New and changed callbacks
 
 ### New API functions
-- SCIPdisplaySymmetryGenerators() to display generators of symmetry group
+- SCIPdisplaySymmetryGenerators() and SCIPdialogExecDisplaySymmetry() to display generators of symmetry group
 
 ### Command line interface
 - the implementation of interactive shell functionality `display symmetry` has been moved
