@@ -4014,6 +4014,8 @@ SCIP_RETCODE SCIPwriteOpb(
    SCIP_CONSHDLR* indicatorhdlr = SCIPfindConshdlr(scip, "indicator");
    int nindicatorconss = indicatorhdlr != NULL ? SCIPconshdlrGetNConss(indicatorhdlr) : 0;
 
+   assert( nbinvars >= 0 );
+
    /* computes all and-resultants and their corresponding constraint variables */
    /* coverity[leaked_storage] */
    SCIP_CALL( computeAndConstraintInfos(scip, transformed, &resvars, &nresvars, &andvars, &nandvars, &existandconshdlr, &existands) );

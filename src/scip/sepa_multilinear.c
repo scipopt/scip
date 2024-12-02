@@ -243,7 +243,7 @@ SCIP_RETCODE constructHypergraph(
 
             /* Iterate through all expressions of the nonlinear constraint that we haven't seen so far. */
             expr = SCIPgetExprNonlinear(conss[c]);
-            for( expr = SCIPexpriterRestartDFS(it, expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441 */
+            for( expr = SCIPexpriterRestartDFS(it, expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441 *//*lint !e440 */
             {
                if( SCIPisExprProduct(scip, expr) )
                {
