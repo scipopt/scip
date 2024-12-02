@@ -543,15 +543,17 @@ SCIP_RETCODE displaySymmetriesWithComponents(
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, permlen) );
 
+   if ( symtype == SYM_SYMTYPE_PERM )
+      SCIPinfoMessage(scip, NULL, "   Symmetries of different components are displayed as permutations.\n\n");
+   else
+      SCIPinfoMessage(scip, NULL, "   Symmetries of different components are displayed as permutations,\n"
+      "   or signed permutations (allowing translations) if the component has signed permutations.\n\n");
    for (c = 0; c < propdata->ncomponents; ++c)
    {
       int cnt;
 
-      SCIPinfoMessage(scip, NULL, "Display symmetries of component %d.\n", c);
-      if ( propdata->componenthassignedperm[c] )
-         SCIPinfoMessage(scip, NULL, "   Symmetries are displayed as signed permutations (allowing translations).\n");
-      else
-         SCIPinfoMessage(scip, NULL, "   Symmetries are displayed as permutations.\n");
+      SCIPinfoMessage(scip, NULL, "Display symmetries of component %d%s.\n", c,
+         propdata->componenthassignedperm[c] ? " as signed permutations" : "");
 
       comppermlen = propdata->componenthassignedperm[c] ? 2 * npermvars : npermvars;
 
