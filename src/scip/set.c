@@ -200,7 +200,7 @@
 
 /* IIS */
 #define SCIP_DEFAULT_IISFINDER_MINIMAL       TRUE  /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
-#define SCIP_DEFAULT_IISFINDER_REMOVEBOUNDS  TRUE  /**< should bounds of the problem be considered for removal */
+#define SCIP_DEFAULT_IISFINDER_REMOVEBOUNDS  FALSE /**< should bounds of the problem be considered for removal */
 #define SCIP_DEFAULT_IISFINDER_CHECKINITFEAS TRUE  /**< should the initial problem be checked for infeasibility */
 #define SCIP_DEFAULT_IISFINDER_SILENT        FALSE /**< should the IIS finders be run silently and output suppressed */
 #define SCIP_DEFAULT_IISFINDER_STOPAFTERONE  TRUE  /**< should the IIS search stop after a single IIS finder is run (excluding post processing) */
@@ -854,7 +854,7 @@ void SCIPsetEnableOrDisablePluginClocks(
 
    for( i = set->nbranchrules - 1; i >= 0; --i )
       SCIPbranchruleEnableOrDisableClocks(set->branchrules[i], enabled);
-   
+
    for ( i = set->niisfinders - 1; i >= 0; --i )
       SCIPiisfinderEnableOrDisableClocks(set->iisfinders[i], enabled);
 }
@@ -1057,7 +1057,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
          SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset) );
       }
    }
-   
+
    /* copy all cut selector plugins */
    if( copyiisfinders && sourceset->iisfinders != NULL )
    {
@@ -1650,7 +1650,7 @@ SCIP_RETCODE SCIPsetCreate(
          "should variable histories be transferred to initialize SCIP copies?",
          &(*set)->history_allowtransfer, FALSE, SCIP_DEFAULT_HISTORY_ALLOWTRANSFER,
          NULL, NULL) );
-   
+
    /* IIS parameter */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "iis/minimal",
@@ -2948,7 +2948,7 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPbranchruleFree(&(*set)->branchrules[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->branchrules);
-   
+
    /* free IIS */
    for( i = 0; i < (*set)->niisfinders; ++i)
    {
@@ -5017,18 +5017,18 @@ SCIP_RETCODE SCIPsetIncludeIISfinder(
 {
    assert(set != NULL);
    assert(iisfinder != NULL);
-   
+
    if( set->niisfinders >= set->iisfinderssize )
    {
       set->iisfinderssize = SCIPsetCalcMemGrowSize(set, set->niisfinders + 1);
       SCIP_ALLOC( BMSreallocMemoryArray(&set->iisfinders, set->iisfinderssize) );
    }
    assert(set->niisfinders < set->iisfinderssize);
-   
+
    set->iisfinders[set->niisfinders] = iisfinder;
    set->niisfinders++;
    set->iisfinderssorted = FALSE;
-   
+
    return SCIP_OKAY;
 }
 
@@ -5039,16 +5039,16 @@ SCIP_IISFINDER* SCIPsetFindIISfinder(
 )
 {
    int i;
-   
+
    assert(set != NULL);
    assert(name != NULL);
-   
+
    for( i = 0; i < set->niisfinders; ++i )
    {
       if( strcmp(SCIPiisfinderGetName(set->iisfinders[i]), name) == 0 )
          return set->iisfinders[i];
    }
-   
+
    return NULL;
 }
 
@@ -5058,7 +5058,7 @@ void SCIPsetSortIISfinders(
 )
 {
    assert(set != NULL);
-   
+
    if( !set->iisfinderssorted )
    {
       SCIPsortPtr((void**)set->iisfinders, SCIPiisfinderComp, set->niisfinders);
