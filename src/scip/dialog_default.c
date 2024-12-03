@@ -352,6 +352,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenu)
       SCIPdialogMessage(scip, NULL, "\n");
       SCIP_CALL( SCIPdialogDisplayMenu(dialog, scip) );
       SCIPdialogMessage(scip, NULL, "\n");
+      SCIPdialogMessage(scip, NULL, "Press 'Return' or enter '..' to navigate back in the menu.\n");
    }
 
    SCIP_CALL( dialogExecMenu(scip, dialog, dialoghdlr, nextdialog) );
@@ -2092,6 +2093,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecHelp)
       SCIP_CALL( SCIPdialogDisplayMenu(SCIPdialogGetParent(dialog), scip) );
    }
    SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, "Press 'Return' or enter '..' to navigate back in the menu.\n");
 
    *nextdialog = SCIPdialogGetParent(dialog);
 
