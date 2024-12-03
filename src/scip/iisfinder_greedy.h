@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   iisfinder_greedy.h
+ * @ingroup IISFINDERS
  * @brief  greedy deletion and addition filter heuristic to compute IISs
  * @author Marc Pfetsch
  * @author Mark Turner

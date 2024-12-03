@@ -42,6 +42,7 @@
 #include "objscip/objdisp.h"
 #include "objscip/objeventhdlr.h"
 #include "objscip/objheur.h"
+#include "objscip/objiisfinder.h"
 #include "objscip/objmessagehdlr.h"
 #include "objscip/objnodesel.h"
 #include "objscip/objpresol.h"
