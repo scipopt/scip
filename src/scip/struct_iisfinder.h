@@ -61,6 +61,7 @@ struct SCIP_IIS
    SCIP_HASHMAP*         varsmap;            /**< The variable hashmap from the original SCIP to IIS subscip */
    SCIP_HASHMAP*         conssmap;           /**< The constraints hashmap from the original SCIP to IIS subscip */
    SCIP_CLOCK*           iistime;            /**< IIS total execution time */
+   int                   niismessagecalls;   /**< The number of times an iis info message has been displayed */
    SCIP_Longint          nnodes;             /**< The number of nodes used over all IIS solves */
    SCIP_Bool             valid;              /**< Whether the returned subscip is a valid (I)IS */
    SCIP_Bool             irreducible;        /**< Whether the returned subscip is an irreducible infeasible subsystem */

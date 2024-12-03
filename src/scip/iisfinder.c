@@ -70,39 +70,39 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_Bool success;
    int nvars;
    int i;
-   
+
    /* Create the subscip used for storing the IIS */
    if( iis->subscip != NULL )
    {
       SCIPdebugMsg(set->scip, "An IIS for this problem already exists. Removing it before starting search procedure again.\n");
-      
+
       /* free sub-SCIP */
       SCIP_CALL( SCIPiisReset(&iis) );
    }
-   
+
    assert( iis->subscip == NULL );
    assert( iis->varsmap == NULL );
    assert( iis->conssmap == NULL );
-   
+
    /* create a new SCIP instance */
    SCIP_CALL( SCIPcreate(&(iis->subscip)) );
-   
+
    /* Create hash maps */
    SCIP_CALL( SCIPhashmapCreate(&(iis->varsmap), SCIPblkmem(set->scip), SCIPgetNOrigVars(set->scip)) );
    SCIP_CALL( SCIPhashmapCreate(&(iis->conssmap), SCIPblkmem(set->scip), SCIPgetNOrigConss(set->scip)) );
-   
+
    /* create problem in sub-SCIP */
    SCIP_CALL( SCIPcopyOrig(set->scip, iis->subscip, iis->varsmap, iis->conssmap, "iis", TRUE, FALSE, FALSE, &success) );
-   
+
    if( ! success )
       return SCIP_ERROR;
-   
+
    /* Remove the objective */
    vars = SCIPgetOrigVars(iis->subscip);
    nvars = SCIPgetNOrigVars(iis->subscip);
    for( i = 0; i < nvars; i++ )
       SCIP_CALL( SCIPchgVarObj(iis->subscip, vars[i], 0.0 ) );
-   
+
    /* copy parameter settings */
    // TODO: Do we really want to copy the parameter settings?
    SCIP_CALL( SCIPcopyParamSettings(set->scip, iis->subscip) );
@@ -119,7 +119,7 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_CALL( SCIPsetIntParam(iis->subscip, "limits/bestsol", 1) );
    SCIP_CALL( SCIPsetRealParam(iis->subscip, "limits/time", timelim - SCIPclockGetTime(iis->iistime)) );
    SCIP_CALL( SCIPsetLongintParam(iis->subscip, "limits/nodes", nodelim) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -135,7 +135,7 @@ SCIP_RETCODE checkTrivialInfeas(
    int nconss;
    int nvars;
    int i;
-   
+
    *trivial = FALSE;
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);
@@ -147,7 +147,7 @@ SCIP_RETCODE checkTrivialInfeas(
          break;
       }
    }
-   
+
    if( *trivial )
    {
       nconss = SCIPgetNOrigConss(scip);
@@ -262,7 +262,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_Bool trivial;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
-   
+
    /* start timing */
    SCIP_CALL( SCIPgetRealParam(set->scip, "iis/time", &timelim) );
    SCIP_CALL( SCIPgetLongintParam(set->scip, "iis/nodes", &nodelim) );
@@ -270,15 +270,15 @@ SCIP_RETCODE SCIPiisGenerate(
 
    /* sort the iis finders by priority */
    SCIPsetSortIISfinders(set);
-   
+
    /* Get the IIS data. */
    iis = SCIPgetIIS(set->scip);
-   
+
    /* Create the subscip used for storing the IIS */
    SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
-   
+
    SCIPclockStart(iis->iistime, set);
-   
+
    /* If the model is not yet shown to be infeasible then check for infeasibility */
    if( SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM && set->iisfinder_checkinitfeas )
    {
@@ -298,27 +298,27 @@ SCIP_RETCODE SCIPiisGenerate(
                SCIPinfoMessage(iis->subscip, NULL, "Some limit reached. Failed to prove infeasibility of initial problem.\n");
                SCIPclockStop(iis->iistime, set);
                return SCIP_OKAY;
-   
+
             case SCIP_STATUS_INFORUNBD:
                SCIPinfoMessage(iis->subscip, NULL, "Initial problem is infeasible or Unbounded. Not performing IIS generation.\n");
                SCIPclockStop(iis->iistime, set);
                return SCIP_OKAY;
-   
+
             case SCIP_STATUS_USERINTERRUPT:
                SCIPdebugMsg(iis->subscip, "User interrupt. Stopping.\n");
                SCIPclockStop(iis->iistime, set);
                return SCIP_OKAY;
-   
+
             case SCIP_STATUS_BESTSOLLIMIT:
             case SCIP_STATUS_OPTIMAL:
             case SCIP_STATUS_UNBOUNDED:
                SCIPinfoMessage(iis->subscip, NULL, "Initial problem is feasible. No IIS exists.\n");
                SCIPclockStop(iis->iistime, set);
                return SCIP_OKAY;
-               
+
             case SCIP_STATUS_INFEASIBLE:
                break;
-   
+
             case SCIP_STATUS_UNKNOWN:
             default:
                SCIPinfoMessage(iis->subscip, NULL, "Unexpected return status %d. Failing to show (in)feasibility of initial problem. Exiting ...\n", SCIPgetStatus(iis->subscip));
@@ -346,7 +346,7 @@ SCIP_RETCODE SCIPiisGenerate(
       }
       iis->valid = TRUE;
    }
-   
+
    /* Check for trivial infeasibility reasons */
    SCIP_CALL( checkTrivialInfeas(iis->subscip, &trivial) );
 
@@ -358,29 +358,29 @@ SCIP_RETCODE SCIPiisGenerate(
       SCIP_IISFINDER* iisfinder;
       iisfinder = set->iisfinders[i];
       assert(iis != NULL);
-      
+
       /* Recreate the subscip if one of the IIS finder algorithms has produced an invalid IS */
       if( ! iis->valid )
          SCIP_CALL( createSubscipIIS(set, iis, timelim - SCIPclockGetTime(iis->iistime), nodelim) );
 
       /* start timing */
       SCIPclockStart(iisfinder->iisfindertime, set);
-   
+
       SCIPdebugMsg(set->scip, "----- STARTING IIS FINDER %s -----\n", iisfinder->name);
       SCIP_CALL( iisfinder->iisfinderexec(iis, iisfinder, timelim, nodelim, removebounds, silent, &result) );
-      
+
       /* stop timing */
       SCIPclockStop(iisfinder->iisfindertime, set);
 
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
-      
+
       if( timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim) )
          SCIPdebugMsg(set->scip, "Time or node limit hit. Stopping Search.\n");
-      
+
       if( (stopafterone && (result == SCIP_SUCCESS)) || (iis->irreducible == TRUE) )
          break;
    }
-   
+
    /* Ensure the problem is irreducible if requested */
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/minimal", &minimal) );
    if( !iis->irreducible && minimal && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) && !trivial )
@@ -388,12 +388,12 @@ SCIP_RETCODE SCIPiisGenerate(
       SCIP_RANDNUMGEN* randnumgen;
       SCIP_Real timelimperiter;
       SCIP_Longint nodelimperiter;
-      
+
       SCIPdebugMsg(set->scip, "----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
-      
+
       if( !(iis->valid) )
          SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
-   
+
       // TODO: Is there a better way to access these? I don't want to put a basic deletion filter in iisfinder.c.
       SCIP_CALL( SCIPcreateRandom(set->scip, &randnumgen, 0x5EED, TRUE) );
       SCIP_CALL( SCIPgetRealParam(set->scip, "iis/greedy/timelimperiter", &timelimperiter) );
@@ -402,16 +402,17 @@ SCIP_RETCODE SCIPiisGenerate(
       SCIPfreeRandom(set->scip, &randnumgen);
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
    }
-   
-   SCIPiisfinderInfoMessage(iis, FALSE);
-   
+
+   if( !silent )
+      SCIPiisfinderInfoMessage(iis, FALSE);
+
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/removeunusedvars", &removeunusedvars) );
    if( removeunusedvars )
    {
       SCIP_VAR** vars;
       SCIP_Bool deleted;
       int nvars;
-      
+
       nvars = SCIPgetNOrigVars(iis->subscip);
       vars = SCIPgetOrigVars(iis->subscip);
       // TODO: Ask someone if this is safe. It is passing basic tests.
@@ -424,10 +425,10 @@ SCIP_RETCODE SCIPiisGenerate(
          }
       }
    }
-   
+
    /* stop timing */
    SCIPclockStop(iis->iistime, set);
-   
+
    return SCIP_OKAY;
 }
 
@@ -590,16 +591,19 @@ void SCIPiisfinderInfoMessage(
    int nbounds = 0;
    const char* valid = iis->valid ? "yes" : "no";
    const char* irreducible = iis->irreducible ? "yes" : "no";
-   
+
    scip = SCIPiisGetSubscip(iis);
    assert(scip != NULL);
 
    if( printheaders )
    {
-      SCIPinfoMessage(scip, NULL, "  cons  | bounds | valid  | irreducible | nodes  |  time \n");
+      SCIPinfoMessage(scip, NULL, "  conss | bounds |  valid | irreducible |  nodes | time  \n");
       return;
    }
-   
+   if( iis->niismessagecalls % 15 == 0 )
+      SCIPinfoMessage(scip, NULL, "  conss | bounds |  valid | irreducible |  nodes | time  \n");
+   iis->niismessagecalls += 1;
+
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);
    for( i = 0; i < nvars; i++ )
@@ -619,18 +623,19 @@ SCIP_RETCODE SCIPiisCreate(
    )
 {
    assert(iis != NULL);
-   
+
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, iis) );
-   
+
    (*iis)->subscip = NULL;
    (*iis)->subscip = NULL;
    (*iis)->varsmap = NULL;
    (*iis)->conssmap = NULL;
    SCIP_CALL( SCIPclockCreate(&(*iis)->iistime, SCIP_CLOCKTYPE_DEFAULT) );
+   (*iis)->niismessagecalls = 0;
    (*iis)->nnodes = 0;
    (*iis)->valid = FALSE;
    (*iis)->irreducible = FALSE;
-   
+
    return SCIP_OKAY;
 }
 
@@ -640,34 +645,34 @@ SCIP_RETCODE SCIPiisFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   
+
    assert(iis != NULL);
    if( *iis == NULL )
       return SCIP_OKAY;
-   
+
    if( (*iis)->subscip != NULL )
    {
       SCIP_CALL( SCIPfree(&((*iis)->subscip)) );
       (*iis)->subscip = NULL;
    }
-   
+
    if( (*iis)->varsmap != NULL )
    {
       SCIPhashmapFree(&((*iis)->varsmap));
       (*iis)->varsmap = NULL;
    }
-   
+
    if( (*iis)->conssmap != NULL )
    {
       SCIPhashmapFree(&((*iis)->conssmap));
       (*iis)->conssmap = NULL;
    }
-   
+
    SCIPclockFree(&(*iis)->iistime);
-   
+
    BMSfreeBlockMemory(blkmem, iis);
    *iis = NULL;
-   
+
    return SCIP_OKAY;
 }
 
@@ -679,28 +684,31 @@ SCIP_RETCODE SCIPiisReset(
    assert(iis != NULL);
    if( *iis == NULL )
       return SCIP_OKAY;
-   
+
    if( (*iis)->subscip != NULL )
    {
       SCIP_CALL( SCIPfree(&((*iis)->subscip)) );
       (*iis)->subscip = NULL;
    }
-   
+
    if( (*iis)->varsmap != NULL )
    {
       SCIPhashmapFree(&((*iis)->varsmap));
       (*iis)->varsmap = NULL;
    }
-   
+
    if( (*iis)->conssmap != NULL )
    {
       SCIPhashmapFree(&((*iis)->conssmap));
       (*iis)->conssmap = NULL;
    }
-   
+
+   SCIPclockReset((*iis)->iistime);
+   (*iis)->niismessagecalls = 0;
+   (*iis)->nnodes = 0;
    (*iis)->valid = FALSE;
    (*iis)->irreducible = FALSE;
-   
+
    return SCIP_OKAY;
 }
 
@@ -710,7 +718,7 @@ SCIP_Real SCIPiisGetTime(
    )
 {
    assert( iis != NULL );
-   
+
    return SCIPclockGetTime(iis->iistime);
 }
 
@@ -720,7 +728,7 @@ SCIP_Bool SCIPiisGetValid(
    )
 {
    assert( iis != NULL );
-   
+
    return iis->valid;
 }
 
@@ -730,7 +738,7 @@ SCIP_Bool SCIPiisGetIrreducible(
    )
 {
    assert( iis != NULL );
-   
+
    return iis->irreducible;
 }
 
@@ -740,7 +748,7 @@ SCIP_Longint SCIPiisGetNNodes(
    )
 {
    assert( iis != NULL );
-   
+
    return iis->nnodes;
 }
 

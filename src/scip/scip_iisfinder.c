@@ -151,7 +151,7 @@ SCIP_RETCODE SCIPgenerateIIS(
 {
    assert(scip != NULL);
    SCIP_CALL( SCIPiisGenerate(scip->set) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -233,6 +233,6 @@ SCIP_IIS* SCIPgetIIS(
    )
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetIIS", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-   
+
    return scip->iis;
 }
