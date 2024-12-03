@@ -8444,6 +8444,9 @@
  * Moreover, symmetries can also be detected in code containing customized constraints.
  * To this end, a suitable callback needs to be implemented, see \ref SYMDETECTCUSTOM.
  *
+ * The (generators of the) symmetry group detected by SCIP can be printed to the terminal
+ * by querying <code>display symmetry</code> in SCIP's interactive shell.
+ *
  * @subsection SYMPROCESS Processing symmetry information
  *
  * After symmetries have been computed, SCIP has access to a list \f$\gamma_1,\dots,\gamma_m\f$ of

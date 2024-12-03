@@ -89,6 +89,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_validation.h"
 #include "scip/scip_var.h"
+#include "scip/prop_symmetry.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -1855,6 +1856,30 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
 
    SCIPdialogMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPprintStatistics(scip, NULL) );
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display symmetry command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySymmetry)
+{  /*lint --e{715}*/
+   SCIP_PROP* prop;
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   prop = SCIPfindProp(scip, "symmetry");
+   if( prop == NULL )
+   {
+      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. Symmetry propagator has not been included.\n");
+      return SCIP_OKAY;
+   }
+   SCIP_CALL( SCIPdisplaySymmetryGenerators(scip, prop) );
+
    SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -4413,6 +4438,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
             NULL,
             SCIPdialogExecDisplayStatistics, NULL, NULL,
             "statistics", "display problem and optimization statistics", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display symmetry information */
+   if( !SCIPdialogHasEntry(submenu, "symmetry") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplaySymmetry, NULL, NULL,
+            "symmetry", "display generators of symmetry group in cycle notation, if available", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
