@@ -1735,22 +1735,6 @@ SCIP_RETCODE findImpliedIntegers(
          ++numCandidates;
       }
 
-//      int typecount[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-//
-//      for( int i = 0; i < numCandidates; ++i )
-//      {
-//         SCIP_Bool first = candidates[i].numContNetworkEntries > 0;
-//         SCIP_Bool second = candidates[i].numContTransNetworkEntries > 0;
-//         SCIP_Bool third = candidates[i].numContPlanarEntries > 0;
-//
-//         int index = ( third ? 4 : 0 ) + ( second ? 2 : 0 ) + ( first ? 1 : 0 );
-//         typecount[index]++;
-//      }
-//      for( int i = 0; i < 8; ++i )
-//      {
-//         printf("type %d: %d \n", i, typecount[i]);
-//      }
-
       SCIP_Real* candidateScores;
       SCIP_CALL(SCIPallocBufferArray(scip, &candidateScores, numCandidates));
 
