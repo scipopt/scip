@@ -220,11 +220,13 @@ void SCIPdialogSetData(
    );
 
 /** is dialog hidden */
+SCIP_EXPORT
 SCIP_Bool SCIPdialogIsHidden(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** set dialog to be hidden */
+SCIP_EXPORT
 void SCIPdialogSetHidden(
    SCIP_DIALOG*          dialog              /**< dialog */
    );
