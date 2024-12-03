@@ -63,7 +63,7 @@ SCIP_Bool isPartition(
 {
    int i;
    int j;
-   
+
    /* check if the assignment violates paritioning, e.g. because we are in a subscip */
    for( i = 0; i < nbins; ++i )
    {
