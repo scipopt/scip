@@ -1802,7 +1802,7 @@ SCIP_RETCODE findImpliedIntegers(
       }
       if( integerNetwork >= integerTransNetwork )
       {
-         //We add all integer columns from the network matrix
+         /* We add all integer columns from the network matrix */
          for( int i = 0; i < numCandidates; ++i )
          {
             int col = ptrArray[i]->column;
@@ -1820,7 +1820,7 @@ SCIP_RETCODE findImpliedIntegers(
       }
       else
       {
-         //We add all integer columns from the transposed network matrix
+         /* We add all integer columns from the transposed network matrix */
          for( int i = 0; i < numCandidates; ++i )
          {
             int col = ptrArray[i]->column;
