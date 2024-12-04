@@ -119,7 +119,7 @@ namespace scip
        *
        *  @see SCIP_DECL_IISFINDEREXEC(x) in @ref type_iisfinder.h
        */
-      virtual SCIP_DECL_IISFINDEREXEC(scip_select) = 0;
+      virtual SCIP_DECL_IISFINDEREXEC(scip_exec) = 0;
    };
 
 } /* namespace scip */
