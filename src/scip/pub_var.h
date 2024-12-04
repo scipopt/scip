@@ -458,6 +458,12 @@ SCIP_VARTYPE SCIPvarGetType(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets the implied integer type of the variable */
+SCIP_EXPORT
+SCIP_VARIMPLTYPE SCIPvarGetImplType(
+   SCIP_VAR*             var
+   );
+
 /** returns TRUE if the variable is of binary type; this is the case if:
  *  (1) variable type is binary
  *  (2) variable type is integer or implicit integer and 
@@ -473,6 +479,12 @@ SCIP_Bool SCIPvarIsBinary(
 SCIP_EXPORT
 SCIP_Bool SCIPvarIsIntegral(
    SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns whether the variable is implied integer by other variables */
+SCIP_EXPORT
+SCIP_Bool SCIPvarIsImpliedIntegral(
+   SCIP_VAR*             var
    );
 
 /** returns whether variable's column should be present in the initial root LP */

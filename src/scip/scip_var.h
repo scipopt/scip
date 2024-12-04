@@ -2878,10 +2878,37 @@ SCIP_RETCODE SCIPchgVarBranchDirection(
 SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarType(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_VAR*             var,                /**< variable to change the type for */
    SCIP_VARTYPE          vartype,            /**< new type of variable */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected (, due to
                                               *   integrality condition of the new variable type) */
+   );
+
+/** changes implied integer type of variable in the problem;
+ *
+ *  @warning This type change might change the variable array returned from SCIPgetVars() and SCIPgetVarsData();
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *
+ *  @note If SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed, the implied integer type of the
+ *        corresponding transformed variable is changed; the type of the original variable does not change
+ *
+ *  @note If the implied integer type to weak or strong for a continuous variable  the bounds of the variable get
+ *        adjusted w.r.t. to integrality information
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPchgVarImplType(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the type for */
+   SCIP_VARIMPLTYPE      impltype,           /**< New implied integer type of the variable */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected (due to
+                                              *   integrality condition for the new variable type) */
    );
 
 /** in problem creation and solving stage, both bounds of the variable are set to the given value;

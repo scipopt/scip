@@ -852,6 +852,29 @@ SCIP_RETCODE SCIPeventCreateTypeChanged(
    return SCIP_OKAY;
 }
 
+/** creates an event for a changing the implied integer type of a variable */
+SCIP_RETCODE SCIPeventCreateImplTypeChanged(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR*             var,                /**< variable whose objective value changed */
+   SCIP_VARIMPLTYPE      oldtype,            /**< old variable implied integer type */
+   SCIP_VARIMPLTYPE      newtype             /**< new variable implied integer type */
+   )
+{
+   assert(event != NULL);
+   assert(blkmem != NULL);
+   assert(oldtype != newtype);
+
+   /* create event data */
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
+   (*event)->eventtype = SCIP_EVENTTYPE_IMPLTYPECHANGED;
+   (*event)->data.eventtypeimplchg.var = var;
+   (*event)->data.eventtypeimplchg.oldtype = oldtype;
+   (*event)->data.eventtypeimplchg.newtype = newtype;
+
+   return SCIP_OKAY;
+}
+
 /** creates an event for the addition of a linear row to the separation storage */
 SCIP_RETCODE SCIPeventCreateRowAddedSepa(
    SCIP_EVENT**          event,              /**< pointer to store the event */

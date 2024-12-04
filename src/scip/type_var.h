@@ -61,16 +61,22 @@ enum SCIP_Vartype
 {
    SCIP_VARTYPE_BINARY     = 0,         /**< binary variable: \f$ x \in \{0,1\} \f$ */
    SCIP_VARTYPE_INTEGER    = 1,         /**< integer variable: \f$ x in \{lb, \dots, ub\} \f$ */
-   SCIP_VARTYPE_IMPLINT    = 2,         /**< continuous variable with optional integrality restriction:
-                                             assigning a fractional value for the variable is feasible and the solver will not enforce
-                                             integrality for this variable, but it may treat the variable as if an additional integrality
-                                             restriction exists in certain cases, e.g., during boundtightening;
-                                             typically, this variable type is used for implicit integer variables, that is, variables which
-                                             are known to take an integral value in a feasible or optimal solution due to other constraints or
-                                             optimality conditions */
    SCIP_VARTYPE_CONTINUOUS = 3          /**< continuous variable: \f$ lb \leq x \leq ub \f$ */
 };
 typedef enum SCIP_Vartype SCIP_VARTYPE;
+
+/** implied integer type */
+enum SCIP_VarImplType
+{
+  SCIP_VARIMPLTYPE_NONE   = 0,               /**< The variable is not implied integer by other variables */
+  SCIP_VARIMPLTYPE_WEAK   = 1,               /**< After fixing a set of other implying variables to integers, there
+                                               *  exists a solution in the optimal face where this variable is integral. */
+  SCIP_VARIMPLTYPE_STRONG = 2                /**< After fixing a set of other implying variables to integers,
+                                                * every feasible solution of the relaxation has this variable as an
+                                                * integer value. For example, this occurs for z if we have the constraint
+                                                * 4x + 3y + z = 10 */
+};
+typedef enum SCIP_VarImplType SCIP_VARIMPLTYPE;
 
 /** domain change data type */
 enum SCIP_DomchgType

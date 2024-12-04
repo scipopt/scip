@@ -2153,6 +2153,144 @@ int SCIPgetNImplVars(
    }  /*lint !e788*/
 }
 
+/** gets number of binary implicit integer active problem variables
+ *
+ *  @return the number of implicit integer active problem variables
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+int SCIPgetNBinImplVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+      case SCIP_STAGE_PROBLEM:
+         return scip->origprob->nbinimplvars;
+
+      case SCIP_STAGE_TRANSFORMED:
+      case SCIP_STAGE_INITPRESOLVE:
+      case SCIP_STAGE_PRESOLVING:
+      case SCIP_STAGE_EXITPRESOLVE:
+      case SCIP_STAGE_PRESOLVED:
+      case SCIP_STAGE_INITSOLVE:
+      case SCIP_STAGE_SOLVING:
+      case SCIP_STAGE_SOLVED:
+      case SCIP_STAGE_EXITSOLVE:
+         return scip->transprob->nbinimplvars;
+
+      default:
+         SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+         SCIPABORT();
+         return 0; /*lint !e527*/
+   }  /*lint !e788*/
+}
+
+/** gets number of implicit integer active problem variables that were originally integer
+ *
+ *  @return the number of originally integer implicit integer active problem variables
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+int SCIPgetNIntImplVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+      case SCIP_STAGE_PROBLEM:
+         return scip->origprob->nintimplvars;
+
+      case SCIP_STAGE_TRANSFORMED:
+      case SCIP_STAGE_INITPRESOLVE:
+      case SCIP_STAGE_PRESOLVING:
+      case SCIP_STAGE_EXITPRESOLVE:
+      case SCIP_STAGE_PRESOLVED:
+      case SCIP_STAGE_INITSOLVE:
+      case SCIP_STAGE_SOLVING:
+      case SCIP_STAGE_SOLVED:
+      case SCIP_STAGE_EXITSOLVE:
+         return scip->transprob->nintimplvars;
+
+      default:
+         SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+         SCIPABORT();
+         return 0; /*lint !e527*/
+   }  /*lint !e788*/
+}
+
+/** gets number of implicit integer active problem variables that were originally continuous
+ *
+ *  @return the number of originally continuous implicit integer active problem variables
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+int SCIPgetNContImplVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+      case SCIP_STAGE_PROBLEM:
+         return scip->origprob->ncontimplvars;
+
+      case SCIP_STAGE_TRANSFORMED:
+      case SCIP_STAGE_INITPRESOLVE:
+      case SCIP_STAGE_PRESOLVING:
+      case SCIP_STAGE_EXITPRESOLVE:
+      case SCIP_STAGE_PRESOLVED:
+      case SCIP_STAGE_INITSOLVE:
+      case SCIP_STAGE_SOLVING:
+      case SCIP_STAGE_SOLVED:
+      case SCIP_STAGE_EXITSOLVE:
+         return scip->transprob->ncontimplvars;
+
+      default:
+         SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+         SCIPABORT();
+         return 0; /*lint !e527*/
+   }  /*lint !e788*/
+}
+
 /** gets number of continuous active problem variables
  *
  *  @return the number of continuous active problem variables

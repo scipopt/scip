@@ -236,6 +236,7 @@ SCIP_RETCODE branchcandCalcLPCands(
       SCIP_Real primsol;
       SCIP_Real frac;
       SCIP_VARTYPE vartype;
+      SCIP_VARIMPLTYPE impltype;
       int branchpriority;
       int ncols;
       int c;
@@ -279,7 +280,8 @@ SCIP_RETCODE branchcandCalcLPCands(
           * of the candidates array for some rounding heuristics
           */
          vartype = SCIPvarGetType(var);
-         if( vartype == SCIP_VARTYPE_CONTINUOUS )
+         impltype = SCIPvarGetImplType(var);
+         if( vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_NONE )
             continue;
 
          /* ignore fixed variables (due to numerics, it is possible, that the LP solution of a fixed integer variable
@@ -306,15 +308,15 @@ SCIP_RETCODE branchcandCalcLPCands(
          insertpos = branchcand->nlpcands + branchcand->nimpllpfracs;
          assert(insertpos < branchcand->lpcandssize);
 
-         if( vartype == SCIP_VARTYPE_IMPLINT )
+         if( impltype != SCIP_VARIMPLTYPE_NONE )
             branchpriority = INT_MIN;
 
-         assert(vartype == SCIP_VARTYPE_IMPLINT || branchpriority >= INT_MIN/2);
+         assert(impltype != SCIP_VARIMPLTYPE_NONE || branchpriority >= INT_MIN/2);
          /* ensure that implicit variables are stored at the end of the array */
-         if( vartype != SCIP_VARTYPE_IMPLINT && branchcand->nimpllpfracs > 0 )
+         if( impltype == SCIP_VARIMPLTYPE_NONE && branchcand->nimpllpfracs > 0 )
          {
             assert(branchcand->lpcands[branchcand->nlpcands] != NULL
-                  && SCIPvarGetType(branchcand->lpcands[branchcand->nlpcands]) == SCIP_VARTYPE_IMPLINT );
+                  && SCIPvarGetImplType(branchcand->lpcands[branchcand->nlpcands]) != SCIP_VARIMPLTYPE_NONE );
 
             branchcand->lpcands[insertpos] = branchcand->lpcands[branchcand->nlpcands];
             branchcand->lpcandssol[insertpos] = branchcand->lpcandssol[branchcand->nlpcands];
@@ -371,7 +373,7 @@ SCIP_RETCODE branchcandCalcLPCands(
          branchcand->lpcandsfrac[insertpos] = frac;
 
          /* increase the counter depending on the variable type */
-         if( vartype != SCIP_VARTYPE_IMPLINT )
+         if( impltype == SCIP_VARIMPLTYPE_NONE )
             branchcand->nlpcands++;
          else
             branchcand->nimpllpfracs++;
@@ -387,8 +389,8 @@ SCIP_RETCODE branchcandCalcLPCands(
        */
       for( c = 0; c < branchcand->nlpcands + branchcand->nimpllpfracs; ++c )
       {
-         assert(c >= branchcand->nlpcands || SCIPvarGetType(branchcand->lpcands[c]) != SCIP_VARTYPE_IMPLINT);
-         assert(c < branchcand->nlpcands || SCIPvarGetType(branchcand->lpcands[c]) == SCIP_VARTYPE_IMPLINT);
+         assert(c >= branchcand->nlpcands || SCIPvarGetImplType(branchcand->lpcands[c]) == SCIP_VARIMPLTYPE_NONE);
+         assert(c < branchcand->nlpcands || SCIPvarGetImplType(branchcand->lpcands[c]) != SCIP_VARIMPLTYPE_NONE);
       }
 #endif
 

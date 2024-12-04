@@ -2045,6 +2045,7 @@ SCIP_RETCODE varCreate(
    (*var)->donotaggr = FALSE;
    (*var)->donotmultaggr = FALSE;
    (*var)->vartype = vartype; /*lint !e641*/
+   (*var)->varimpltype = SCIP_VARIMPLTYPE_NONE;
    (*var)->pseudocostflag = FALSE;
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
@@ -6059,6 +6060,53 @@ SCIP_RETCODE SCIPvarChgType(
       if( SCIPsetGetStage(set) > SCIP_STAGE_TRANSFORMING )
       {
          SCIP_CALL( SCIPeventCreateTypeChanged(&event, blkmem, var->negatedvar, oldtype, vartype) );
+         SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** changes implied integer type of variable; cannot be called, if var belongs to a problem */
+SCIP_RETCODE SCIPvarChgImplType(
+   SCIP_VAR*             var,                /**< problem variable to change */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VARIMPLTYPE      impltype             /**< new implied integer type of variable */
+)
+{
+   SCIP_EVENT* event;
+   SCIP_VARIMPLTYPE oldtype;
+
+   assert(var != NULL);
+
+   SCIPdebugMessage("change implied integer type of <%s> from %d to %d\n", var->name, SCIPvarGetImplType(var), impltype);
+
+   if( var->probindex >= 0 )
+   {
+      SCIPerrorMessage("cannot change type of variable already in the problem\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   oldtype = (SCIP_VARIMPLTYPE) var->varimpltype;
+   var->varimpltype = impltype; /*lint !e641*/
+
+   if( SCIPsetGetStage(set) > SCIP_STAGE_TRANSFORMING )
+   {
+      SCIP_CALL( SCIPeventCreateImplTypeChanged(&event, blkmem, var, oldtype, impltype) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
+   }
+
+   if( var->negatedvar != NULL )
+   {
+      var->negatedvar->varimpltype = impltype; /*lint !e641*/
+
+      if( SCIPsetGetStage(set) > SCIP_STAGE_TRANSFORMING )
+      {
+         SCIP_CALL( SCIPeventCreateImplTypeChanged(&event, blkmem, var->negatedvar, oldtype, impltype) );
          SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, primal, lp, NULL, NULL, &event) );
       }
    }
@@ -17620,6 +17668,14 @@ SCIP_VARTYPE SCIPvarGetType(
    return (SCIP_VARTYPE)(var->vartype);
 }
 
+SCIP_VARIMPLTYPE SCIPvarGetImplType(
+   SCIP_VAR*             var
+   )
+{
+   assert(var != NULL);
+   return (SCIP_VARIMPLTYPE)(var->varimpltype);
+}
+
 /** returns TRUE if the variable is of binary type; this is the case if:
  *  (1) variable type is binary
  *  (2) variable type is integer or implicit integer and 
@@ -17633,17 +17689,28 @@ SCIP_Bool SCIPvarIsBinary(
    assert(var != NULL);
 
    return (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || 
-      (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && var->glbdom.lb >= 0.0 && var->glbdom.ub <= 1.0));
+      ((SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE)
+      && var->glbdom.lb >= 0.0 && var->glbdom.ub <= 1.0));
 }
 
-/** returns whether variable is of integral type (binary, integer, or implicit integer) */
+/** returns whether variable is of integral type (binary, integer, or a continuous variable that is implied integer) */
 SCIP_Bool SCIPvarIsIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
    assert(var != NULL);
 
-   return (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+   return (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE);
+}
+
+SCIP_EXPORT
+SCIP_Bool SCIPvarIsImpliedIntegral(
+   SCIP_VAR*             var
+   )
+{
+   assert(var != NULL);
+
+   return (SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE);
 }
 
 /** returns whether variable's column should be present in the initial root LP */

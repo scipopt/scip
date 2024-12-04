@@ -72,6 +72,9 @@ struct SCIP_Prob
    int                   nbinvars;           /**< number of binary variables */
    int                   nintvars;           /**< number of general integer variables */
    int                   nimplvars;          /**< number of implicit integer variables */
+   int                   nbinimplvars;       /**< number of implicit integer variables that were originally binary */
+   int                   nintimplvars;       /**< number of implicit integer variables that were originally integer */
+   int                   ncontimplvars;      /**< number of implicit integer variables that were originally continuous */
    int                   ncontvars;          /**< number of continuous variables */
    int                   ncolvars;           /**< number of variables with attached column information */
    int                   fixedvarssize;      /**< available slots in fixedvars array */

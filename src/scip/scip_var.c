@@ -8225,7 +8225,7 @@ static
 SCIP_RETCODE tightenBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
-   SCIP_VARTYPE          vartype,            /**< new type of variable */
+   SCIP_Bool             integral,           /**< did the variable become integral? */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected (, due to
                                               *   integrality condition of the new variable type) */
    )
@@ -8238,7 +8238,7 @@ SCIP_RETCODE tightenBounds(
    *infeasible = FALSE;
 
    /* adjusts bounds if the variable type changed form continuous to non-continuous (integral) */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && vartype != SCIP_VARTYPE_CONTINUOUS )
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && integral )
    {
       SCIP_Bool tightened;
 
@@ -8331,7 +8331,7 @@ SCIP_RETCODE SCIPchgVarType(
       assert(!SCIPvarIsTransformed(var));
 
       /* first adjust the variable due to new integrality information */
-      SCIP_CALL( tightenBounds(scip, var, vartype, infeasible) );
+      SCIP_CALL( tightenBounds(scip, var, vartype != SCIP_VARTYPE_CONTINUOUS, infeasible) );
 
       /* second change variable type */
       if( SCIPvarGetProbindex(var) >= 0 )
@@ -8360,7 +8360,7 @@ SCIP_RETCODE SCIPchgVarType(
       }
 
       /* first adjust the variable due to new integrality information */
-      SCIP_CALL( tightenBounds(scip, var, vartype, infeasible) );
+      SCIP_CALL( tightenBounds(scip, var, vartype != SCIP_VARTYPE_CONTINUOUS, infeasible) );
 
       /* second change variable type */
       if( SCIPvarGetProbindex(var) >= 0 )
@@ -8378,6 +8378,93 @@ SCIP_RETCODE SCIPchgVarType(
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPchgVarImplType(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the type for */
+   SCIP_VARIMPLTYPE      impltype,           /**< new type of variable */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected (, due to
+                                              *   integrality condition of the new variable type) */
+)
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarType", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(var != NULL);
+   assert(var->scip == scip);
+
+   if( SCIPvarIsNegated(var) )
+   {
+      SCIPdebugMsg(scip, "changing implied integer type of negated variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetImplType(var), impltype);
+      var = SCIPvarGetNegationVar(var);
+   }
+#ifndef NDEBUG
+   else
+   {
+      if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
+      {
+         SCIPdebugMsg(scip, "changing implied integer type of variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetImplType(var), impltype);
+      }
+   }
+#endif
+
+   /* change variable type */
+   switch( scip->set->stage )
+   {
+      case SCIP_STAGE_PROBLEM:
+         assert(!SCIPvarIsTransformed(var));
+
+         /* first adjust the variable due to new integrality information */
+         SCIP_CALL( tightenBounds(scip, var, impltype != SCIP_VARIMPLTYPE_NONE, infeasible) );
+
+         /* second change variable type */
+         if( SCIPvarGetProbindex(var) >= 0 )
+         {
+            SCIP_CALL( SCIPprobChgVarImplType(scip->origprob, scip->mem->probmem, scip->set, scip->primal, scip->lp,
+                                          scip->branchcand, scip->eventqueue, scip->cliquetable, var, impltype) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPvarChgImplType(var, scip->mem->probmem, scip->set, scip->primal, scip->lp,
+                                      scip->eventqueue, impltype) );
+         }
+         break;
+
+      case SCIP_STAGE_PRESOLVING:
+         if( !SCIPvarIsTransformed(var) )
+         {
+            SCIP_VAR* transvar;
+
+            SCIP_CALL( SCIPgetTransformedVar(scip, var, &transvar) );
+            assert(transvar != NULL);
+
+            /* recall method with transformed variable */
+            SCIP_CALL( SCIPchgVarImplType(scip, transvar, impltype, infeasible) );
+            return SCIP_OKAY;
+         }
+
+         /* first adjust the variable due to new integrality information */
+         SCIP_CALL( tightenBounds(scip, var, impltype != SCIP_VARIMPLTYPE_NONE, infeasible) );
+
+         /* second change variable type */
+         if( SCIPvarGetProbindex(var) >= 0 )
+         {
+            SCIP_CALL( SCIPprobChgVarType(scip->transprob, scip->mem->probmem, scip->set, scip->primal, scip->lp,
+                                          scip->branchcand, scip->eventqueue, scip->cliquetable, var, vartype) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPvarChgImplType(var, scip->mem->probmem, scip->set, scip->primal, scip->lp,
+                                          scip->eventqueue, impltype) );
+         }
+         break;
+
+      default:
+         SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+         return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 
    return SCIP_OKAY;
