@@ -67,7 +67,7 @@ SCIP_RETCODE SCIPprimalFree(
 
 /** clears primal data */
 SCIP_RETCODE SCIPprimalClear(
-   SCIP_PRIMAL**         primal,             /**< pointer to primal data */
+   SCIP_PRIMAL*          primal,             /**< pointer to primal data */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 

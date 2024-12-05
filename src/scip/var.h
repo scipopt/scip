@@ -403,12 +403,13 @@ SCIP_RETCODE SCIPvarFix(
 
 /** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant
  *
- * If the number of needed active variables is greater than the available slots in the variable array, nothing happens except
- * that the required size is stored in the corresponding variable; hence, if afterwards the required size is greater than the
- * available slots (varssize), nothing happens; otherwise, the active variable representation is stored in the arrays.
+ * If the number of needed active variables is greater than the available slots in the variable array, nothing happens
+ * except that an upper bound on the required size is stored in the variable requiredsize; otherwise, the active
+ * variable representation is stored in the arrays.
  *
- * The reason for this approach is that we cannot reallocate memory, since we do not know how the
- * memory has been allocated (e.g., by a C++ 'new' or SCIP functions).
+ * The reason for this approach is that we cannot reallocate memory, since we do not know how the memory has been
+ * allocated (e.g., by a C++ 'new' or SCIP functions). Note that requiredsize is an upper bound due to possible
+ * cancelations.
  */
 SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -417,8 +418,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
    int                   varssize,           /**< available slots in vars and scalars array */
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
-   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   int*                  requiredsize        /**< pointer to store an uppper bound on the required size for the active variables */
    );
 
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or

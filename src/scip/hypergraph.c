@@ -57,9 +57,10 @@ SCIP_RETCODE ensureNumVertices(
       while( newcapacity < required )
          newcapacity *= 2;
 
+      assert( hypergraph->memvertices >= 0 );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(hypergraph->blkmem, &hypergraph->verticesdata,
             hypergraph->memvertices * hypergraph->sizevertexdata / sizeof(*(hypergraph->verticesdata)),
-            newcapacity * hypergraph->sizevertexdata / sizeof(*(hypergraph->verticesdata))) );
+            newcapacity * hypergraph->sizevertexdata / sizeof(*(hypergraph->verticesdata))) ); /*lint --e{737}*/
       hypergraph->memvertices = newcapacity;
       SCIPdebugMessage("ensuring memory for %d vertices.\n", newcapacity);
    }
@@ -84,9 +85,10 @@ SCIP_RETCODE ensureNumEdges(
       while( newcapacity < required )
          newcapacity *= 2;
 
+      assert( hypergraph->memedges >= 0 );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(hypergraph->blkmem, &hypergraph->edgesdata,
             hypergraph->memedges * hypergraph->sizeedgedata / sizeof(*(hypergraph->edgesdata)),
-            newcapacity * hypergraph->sizeedgedata / sizeof(*(hypergraph->edgesdata))) );
+            newcapacity * hypergraph->sizeedgedata / sizeof(*(hypergraph->edgesdata))) ); /*lint --e{737}*/
 
       if( hypergraph->edgesverticesbeg )
       {
@@ -161,14 +163,15 @@ SCIP_RETCODE ensureNumOverlaps(
       }
       if( hypergraph->overlapsdata )
       {
+         assert( hypergraph->memoverlaps >= 0 );
          SCIP_ALLOC( BMSreallocBlockMemoryArray(hypergraph->blkmem, &hypergraph->overlapsdata,
                hypergraph->memoverlaps * hypergraph->sizeoverlapdata / sizeof(*(hypergraph->overlapsdata)),
-               newcapacity * hypergraph->sizeoverlapdata / sizeof(*(hypergraph->overlapsdata))) );
+               newcapacity * hypergraph->sizeoverlapdata / sizeof(*(hypergraph->overlapsdata))) ); /*lint --e{737}*/
       }
       else
       {
          SCIP_ALLOC( BMSallocBlockMemoryArray(hypergraph->blkmem, &hypergraph->overlapsdata,
-               newcapacity * hypergraph->sizeoverlapdata / sizeof(*(hypergraph->overlapsdata))) );
+               newcapacity * hypergraph->sizeoverlapdata / sizeof(*(hypergraph->overlapsdata))) ); /*lint --e{737}*/
       }
       hypergraph->memoverlaps = newcapacity;
       SCIPdebugMessage("ensuring memory for %d overlaps.\n", newcapacity);
@@ -394,8 +397,9 @@ SCIP_RETCODE SCIPhypergraphAddVertex(
    *pvertex = hypergraph->nvertices;
    if( pvertexdata != NULL )
    {
+      assert( hypergraph->nvertices >= 0 );
       *pvertexdata = (SCIP_HYPERGRAPH_VERTEXDATA*)(hypergraph->verticesdata
-      + hypergraph->nvertices * hypergraph->sizevertexdata / sizeof(*(hypergraph->verticesdata)) );
+         + hypergraph->nvertices * hypergraph->sizevertexdata / sizeof(*(hypergraph->verticesdata)) ); /*lint --e{737}*/
    }
 
    hypergraph->nvertices++;
@@ -437,8 +441,9 @@ SCIP_RETCODE SCIPhypergraphAddEdge(
    *pedge = hypergraph->nedges;
    if( pedgedata != NULL )
    {
+      assert( hypergraph->nedges >= 0 );
       *pedgedata = (SCIP_HYPERGRAPH_EDGEDATA*)(hypergraph->edgesdata +
-         hypergraph->nedges * hypergraph->sizeedgedata / sizeof(*(hypergraph->edgesdata)));
+         hypergraph->nedges * hypergraph->sizeedgedata / sizeof(*(hypergraph->edgesdata))); /*lint --e{737}*/
    }
    hypergraph->nedges++;
    hypergraph->hasvertexedges = FALSE;
@@ -1814,7 +1819,7 @@ SCIP_HYPERGRAPH_VERTEXDATA* SCIPhypergraphVertexData(
    assert(hypergraph != NULL);
 
    return (SCIP_HYPERGRAPH_VERTEXDATA*)(hypergraph->verticesdata
-      + vertex * hypergraph->sizevertexdata / sizeof(*(hypergraph->verticesdata)));
+      + vertex * hypergraph->sizevertexdata / sizeof(*(hypergraph->verticesdata))); /*lint --e{737}*/
 }
 
 /** @brief returns additional data of \p edge */
@@ -1826,7 +1831,7 @@ SCIP_HYPERGRAPH_EDGEDATA* SCIPhypergraphEdgeData(
    assert(hypergraph != NULL);
 
    return (SCIP_HYPERGRAPH_EDGEDATA*)(hypergraph->edgesdata
-      + edge * hypergraph->sizeedgedata / sizeof(*(hypergraph->edgesdata)));
+      + edge * hypergraph->sizeedgedata / sizeof(*(hypergraph->edgesdata))); /*lint --e{737}*/
 }
 
 /** @brief returns additional data of \p overlap */
@@ -1838,7 +1843,7 @@ SCIP_HYPERGRAPH_OVERLAPDATA* SCIPhypergraphOverlapData(
    assert(hypergraph != NULL);
 
    return (SCIP_HYPERGRAPH_OVERLAPDATA*)(hypergraph->overlapsdata
-      + overlap * hypergraph->sizeoverlapdata / sizeof(*(hypergraph->overlapsdata)));
+      + overlap * hypergraph->sizeoverlapdata / sizeof(*(hypergraph->overlapsdata))); /*lint --e{737}*/
 }
 
 /** @brief returns the number of vertices of \p edge */

@@ -242,7 +242,7 @@ set(instances_consecSolve
   "instances/MINLP/meanvarxsc.lp\;14.3692321148754"
   "instances/SOS/sparse2.lp\;26.0"
   "instances/Cardinality/atm_5_25_1.cip\;+1.40606905557936e+05"
-#  "instances/Stochastic/4node1.smps\;480.9"
+  "instances/Stochastic/4node1.smps\;480.9"
   "instances/SAT/bart10.shuffled.cnf\;0"
   )
 
@@ -349,7 +349,7 @@ set(instances_PB
     "instances/PseudoBoolean/normalized-90_rounds_0_errors.opb\;0"
     "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
     "instances/PseudoBoolean/normalized-t2001.13queen13.1110976730--soft-33-100-0.wbo\;4"
-    "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;25"
+    "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;16"
     )
 
 #
@@ -417,7 +417,7 @@ set(instances_Symmetry_A
 
 set(instances_Symmetry_B
     "instances/MIP/stein27_inf.lp\;+infinity"
-    "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;25"
+    "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;16"
     )
 
 #
@@ -494,6 +494,7 @@ set(pairs_Issue
     "instances/Issue/3688.cip\;131882\;reduced_presolving"
     "instances/Issue/3691.cip\;1.862908\;presolvingnolinear"
     "instances/Issue/3693.cip\;7812672.2316\;default"
+    "instances/Issue/3700.cip\;0\;default"
     "instances/Issue/3719.cip\;0\;presolving_off"
     "instances/Issue/3722.cip\;1200008400.00755\;default"
     "instances/Issue/3723.cip\;0\;default"
@@ -808,7 +809,7 @@ foreach(instance ${instances_MIP_write})
 endforeach(instance)
 
 #
-# test writing and reading from and to different file extensions for MIP
+# test writing and reading from and to different file extensions for MIP (only without original objective offset)
 #
 foreach(instance ${instances_MIP})
     split_instance(instance)
@@ -841,7 +842,7 @@ foreach(instance ${instances_MIP})
 endforeach(instance)
 
 #
-# test writing and reading from and to different file extensions for PB
+# test writing and reading from and to different file extensions for PB (only without original objective offset)
 #
 foreach(instance ${instances_PB})
     split_instance(instance)

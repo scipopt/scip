@@ -19,6 +19,8 @@ Features
 Performance improvements
 ------------------------
 
+- Reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
+
 Examples and applications
 -------------------------
 
@@ -31,6 +33,7 @@ Interface changes
 
 ### Deleted and changed API methods
 
+- SCIPgetProbvarLinearSum: remove parameter mergemultiples, which is now automatically true with the new implementation of SCIPvarGetActiveRepresentatives.
 - SCIPcreateRow*(), SCIPaddVarToRow(), SCIPaddVarsToRow(), SCIPaddVarsToRowSameCoef() can now only be called in the solving stage,
   because otherwise the LP is not yet available and the row data is invalid.
 - intvar removed from arguments for SCIPcreateConsPseudobooleanWithConss(), SCIPcreateConsPseudoboolean(), and SCIPcreateConsBasicPseudoboolean() due to dysfunctionality of non-linear objective reformulation with pseudoboolean constraint
@@ -50,6 +53,9 @@ Interface changes
 - Renamed XML functions to avoid name clash with libxml2 by adding "SCIP": SCIPxmlProcess(), SCIPxmlNewNode(), SCIPxmlNewAttr(), SCIPxmlAddAttr(), SCIPxmlAppendChild(), SCIPxmlFreeNode(), SCIPxmlShowNode(), SCIPxmlGetAttrval(), SCIPxmlFirstNode(), SCIPxmlNextNode(), SCIPxmlFindNode(), SCIPxmlFindNodeMaxdepth(), SCIPxmlNextSibl(), SCIPxmlPrevSibl(), SCIPxmlFirstChild(), SCIPxmlLastChild(), SCIPxmlGetName(), SCIPxmlGetLine(), SCIPxmlGetData(), SCIPxmlFindPcdata().
 - SCIPincludePresolImplint() to include the new implied integer presolver
 - SCIPnetmatdecCreate() and SCIPnetmatdecFree() for creating and deleting a network matrix decomposition. SCIPnetmatdecTryAddCol() and SCIPnetmatdecTryAddRow() are used to add columns and rows of the matrix to the decomposition. SCIPnetmatdecContainsRow() and SCIPnetmatdecContainsColumn() check if the decomposition contains the given row or columns. SCIPnetmatdecRemoveComponent() can remove connected components from the decomposition. SCIPnetmatdecCreateDiGraph() can be used to expose the underlying digraph. SCIPnetmatdecIsMinimal() and SCIPnetmatdecVerifyCycle() check if certain invariants of the decomposition are satisfied and are used in tests.
+- SCIPfreeReaderdataCor(), SCIPfreeReaderdataTim() and SCIPfreeReaderdataSto() for freeing the data for the COR, TIM and
+  STO readers respectively. These readers are all used when reading an SMPS instance.
+- SCIPdialogIsHidden(), SCIPdialogSetHidden() to determine whether a dialog should be hidden in help list
 
 IIS:
 - added SCIPincludeIISfinder(), SCIPincludeIISfinderBasic(), SCIPsetIISfinderCopy(), SCIPsetIISfinderFree(), SCIPgenerateIIS(), SCIPfindIISfinder(), SCIPgetIISfinders(), SCIPgetNIISfinders(), SCIPsetIISfinderPriority(), SCIPgetIIS()
@@ -62,8 +68,12 @@ IIS:
 
 ### Command line interface
 
-- Added iis option to create an infeasible subsystem
-- Added write/iis option to write out the infeasible subsystem to file
+- help <command> now allows to display information on specific command.
+- allow to hide certain commands in the help list
+- add the (hidden) command "exit¨ to exit SCIP.
+- Add iis option to create an infeasible subsystem
+- Add write/iis option to write out the infeasible subsystem to file
+- Add display/iis option to write out the infeasible subsystem to console
 
 ### Interfaces to external software
 
@@ -100,12 +110,20 @@ Build system
 ### Cmake
 
 - increased minimal required cmake version to 3.11
+- removed automatic download and build of Bliss during cmake configuration when -DSYM=(s)bliss;
+  please build and install from https://github.com/scipopt/bliss before and specify -DBLISS_DIR
 
 Fixed bugs
 ----------
 
+- fixed bug related to unreleased data for the Benders' decomposition framework. When reading an SMPS file and applying
+  Benders' decomposition, data is created that was not correctly released. Also, data within the Benders' decomposition
+  framework was not appropriately reset. The data is now released/reset as expected.
+
 Miscellaneous
 -------------
+
+- add objective offset instead of objective offset variable in cip reader
 
 Known bugs
 ----------
@@ -130,6 +148,7 @@ Interface changes
 ### New and changed callbacks
 
 ### New API functions
+- SCIPdisplaySymmetryGenerators() and SCIPdialogExecDisplaySymmetry() to display generators of symmetry group
 
 ### Command line interface
 
@@ -151,6 +170,11 @@ Fixed bugs
 ----------
 
 - apply same feasibility definition in PaPILO as SCIP to avoid numerical inconsistencies
+- check variable cancellation in SCIPvarAddVlb() and SCIPvarAddVub() to avert wrong infeasibility
+- SCIPfreeReoptSolve now also clears the partial solutions
+- fixed bug in calculation of "fractionality score" for spatial branching candidates in cons_nonlinear
+- fixed bug with installing symmetry dialog in sub-SCIPs
+- add copy callbacks for default plugins presolver dualagg, presolver redvub, branchrule lookahead, branchrule cloud, heuristic dualval, heuristic repair, propagator nlobbt, separator gauge, and separator convexproj missing in SCIPsetCopyPlugins()
 
 Unit tests
 ----------
@@ -163,7 +187,8 @@ Build system
 
 ### Cmake
 
-- fix SCIP Optimization Suite build with -DSYM=bliss and bliss being downloaded and build during configuration by cmake
+- fix SCIP Optimization Suite build with -DSYM=(s)bliss and bliss being downloaded and build during configuration by cmake
+- fix use of a bliss cmake installation (from https://github.com/scipopt/bliss) specified via BLISS_DIR if -DSYM=(s)bliss
 
 ### Makefile
 

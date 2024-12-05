@@ -1812,7 +1812,7 @@ SCIP_RETCODE freeReoptSolve(
    }
 
    /* free the debug solution which might live in transformed primal data structure */
-   SCIP_CALL( SCIPprimalClear(&scip->primal, scip->mem->probmem) );
+   SCIP_CALL( SCIPprimalClear(scip->primal, scip->mem->probmem) );
 
    if( scip->set->misc_resetstat )
    {

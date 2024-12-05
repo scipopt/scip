@@ -216,12 +216,13 @@
 #define TABLE_EARLIEST_STAGE_NEIGHBORHOOD        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 /** reward types of ALNS */
-enum RewardType {
-   REWARDTYPE_TOTAL,                         /**< combination of the other rewards */
-   REWARDTYPE_BESTSOL,                       /**< 1, if a new solution was found, 0 otherwise */
-   REWARDTYPE_CLOSEDGAP,                           /**< 0 if no solution was found, closed gap otherwise */
-   REWARDTYPE_NOSOLPENALTY,                  /**< 1 if a solution was found, otherwise between 0 and 1 depending on the effort spent  */
-   NREWARDTYPES
+enum RewardType /*lint !e753*/
+{
+   REWARDTYPE_TOTAL        = 0,         /**< combination of the other rewards */
+   REWARDTYPE_BESTSOL      = 1,         /**< 1, if a new solution was found, 0 otherwise */
+   REWARDTYPE_CLOSEDGAP    = 2,         /**< 0 if no solution was found, closed gap otherwise */
+   REWARDTYPE_NOSOLPENALTY = 3,         /**< 1 if a solution was found, otherwise between 0 and 1 depending on the effort spent  */
+   NREWARDTYPES            = 4
 };
 
 /*

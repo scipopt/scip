@@ -769,11 +769,12 @@ SCIP_RETCODE SCIPflattenVarAggregationGraph(
  *  active variables, that is b_1*y_1 + ... + b_m*y_m + d.
  *
  *  If the number of needed active variables is greater than the available slots in the variable array, nothing happens
- *  except that the required size is stored in the corresponding variable (requiredsize). Otherwise, the active variable
- *  representation is stored in the variable array, scalar array and constant.
+ *  except that an upper bound on the required size is stored in the variable requiredsize; otherwise, the active
+ *  variable representation is stored in the arrays.
  *
  *  The reason for this approach is that we cannot reallocate memory, since we do not know how the memory has been
- *  allocated (e.g., by a C++ 'new' or SCIP functions).
+ *  allocated (e.g., by a C++ 'new' or SCIP functions). Note that requiredsize is an upper bound due to possible
+ *  cancelations.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -813,9 +814,8 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c which
                                               *   will chnage to constant d in the linear sum b_1*y_1 + ... + b_m*y_m +
                                               *   d w.r.t. the active variables */
-   int*                  requiredsize,       /**< pointer to store the required array size for the linear sum w.r.t. the
-                                              *   active variables */
-   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   int*                  requiredsize        /**< pointer to store an upper bound on the required size for the linear sum
+                                              *   w.r.t. the active variables */
    );
 
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or

@@ -84,6 +84,12 @@ SCIP_RETCODE SCIPreadTim(
 
 /** @} */
 
+/** frees the reader data for the tim file */
+SCIP_EXPORT
+SCIP_RETCODE SCIPfreeReaderdataTim(
+   SCIP*                 scip                /**< the SCIP data structure */
+   );
+
 /*
  * Interface methods for the cor and sto files
  */

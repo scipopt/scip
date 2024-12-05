@@ -1787,16 +1787,16 @@ SCIP_RETCODE getActiveVariables(
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize) );
 
       if( requiredsize > *nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
-         assert( requiredsize <= *nvars );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize) );
       }
+      assert( requiredsize == *nvars );
    }
    else
       for( v = 0; v < *nvars; ++v )
@@ -4013,6 +4013,8 @@ SCIP_RETCODE SCIPwriteOpb(
    int v;
    SCIP_CONSHDLR* indicatorhdlr = SCIPfindConshdlr(scip, "indicator");
    int nindicatorconss = indicatorhdlr != NULL ? SCIPconshdlrGetNConss(indicatorhdlr) : 0;
+
+   assert( nbinvars >= 0 );
 
    /* computes all and-resultants and their corresponding constraint variables */
    /* coverity[leaked_storage] */

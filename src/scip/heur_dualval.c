@@ -2512,8 +2512,23 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    return SCIP_OKAY;
 }
 
+/*
+ * Callback methods of primal heuristic
+ */
 
-/* Callback methods of primal heuristic */
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyDualval)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurDualval(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
@@ -2811,6 +2826,7 @@ SCIP_RETCODE SCIPincludeHeurDualval(
    assert(heur != NULL);
 
    /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyDualval) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeDualval) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitDualval) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitDualval) );
