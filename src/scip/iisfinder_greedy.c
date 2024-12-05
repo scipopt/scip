@@ -192,6 +192,7 @@ SCIP_RETCODE deletionSubproblem(
    *deleted = FALSE;
    *stop = FALSE;
    scip = SCIPiisGetSubscip(iis);
+   bounds = NULL;
 
    /* remove bounds or constraints*/
    if( delbounds )
@@ -249,7 +250,6 @@ SCIP_RETCODE deletionSubproblem(
       SCIPdebugMsg(scip, "Error in sub-scip with deleted constraints / bounds. Re-adding them.\n");
       if( delbounds )
       {
-         assert( bounds != NULL );
          SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
          SCIPfreeBlockMemoryArray(scip, &bounds, ndels);
       }
@@ -649,6 +649,7 @@ SCIP_RETCODE additionFilterBatch(
       if( retcode == SCIP_OKAY )
       {
          /* free transform and copy solution if there is one */
+         copysol = NULL;
          sol = SCIPgetBestSol(scip);
          if( sol != NULL )
          {
