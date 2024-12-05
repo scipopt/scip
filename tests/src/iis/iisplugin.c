@@ -32,6 +32,8 @@
 #include "scip/scipdefplugins.h"
 #include "scip/scip_iisfinder.h"
 
+#include "include/scip_test.h"
+
 /** GLOBAL VARIABLES **/
 static SCIP* scip;
 
@@ -39,7 +41,6 @@ static SCIP* scip;
 static
 void setup(void)
 {
-
    scip = NULL;
    char filename[SCIP_MAXSTRLEN];
 
@@ -78,5 +79,3 @@ Test(iisplugin, valid)
    /** ensure that the iis exists and is therefore valid */
    cr_expect_eq( SCIPiisGetValid(iis), TRUE, "iis is not valid");
 }
-
-#include "include/scip_test.h"
