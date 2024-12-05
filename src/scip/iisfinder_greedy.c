@@ -80,11 +80,13 @@ SCIP_RETCODE setLimits(
    SCIP_Longint         nodelimperiter       /**< maximum number of nodes per individual solve call */
    )
 {
+   SCIP_Real currtime;
    SCIP_Real mintimelim;
    SCIP_Longint globalnodelim;
 
    /* Set the time limit for the solve call. Take into account the global time limit, the current time used, and the time lim on each individual call */
-   mintimelim = MIN(timelim - SCIPiisGetTime(iis), timelimperiter);
+   currtime = SCIPiisGetTime(iis);
+   mintimelim = MIN(timelim - currtime, timelimperiter);
    mintimelim = MAX(mintimelim, 0);
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time", mintimelim) );
 
@@ -247,6 +249,7 @@ SCIP_RETCODE deletionSubproblem(
       SCIPdebugMsg(scip, "Error in sub-scip with deleted constraints / bounds. Re-adding them.\n");
       if( delbounds )
       {
+         assert( bounds != NULL );
          SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
          SCIPfreeBlockMemoryArray(scip, &bounds, ndels);
       }
@@ -420,7 +423,9 @@ SCIP_RETCODE deletionFilterBatch(
    )
 {
    SCIP* scip;
+   SCIP_CONS** origconss;
    SCIP_CONS** conss;
+   SCIP_VAR** origvars;
    SCIP_VAR** vars;
    int* order;
    int* idxs;
@@ -439,7 +444,8 @@ SCIP_RETCODE deletionFilterBatch(
 
    /* Get constraint information */
    nconss = SCIPgetNOrigConss(scip);
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, SCIPgetOrigConss(scip), nconss) );
+   origconss = SCIPgetOrigConss(scip);
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, origconss, nconss) );
 
    /* reset problem */
    SCIP_CALL( SCIPfreeTransform(scip) );
@@ -486,7 +492,8 @@ SCIP_RETCODE deletionFilterBatch(
    if( removebounds )
    {
       nvars = SCIPgetNOrigVars(scip);
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, SCIPgetOrigVars(scip), nvars) );
+      origvars = SCIPgetOrigVars(scip);
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vars, origvars, nvars) );
 
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &order, nvars) );
       for (i = 0; i < nvars; ++i)
@@ -561,6 +568,7 @@ SCIP_RETCODE additionFilterBatch(
    )
 {
    SCIP* scip;
+   SCIP_CONS** origconss;
    SCIP_CONS** conss;
    SCIP_SOL* sol;
    SCIP_SOL* copysol;
@@ -581,7 +589,8 @@ SCIP_RETCODE additionFilterBatch(
 
    /* Get constraint information */
    nconss = SCIPgetNOrigConss(scip);
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, SCIPgetOrigConss(scip), nconss) );
+   origconss = SCIPgetOrigConss(scip);
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, origconss, nconss) );
 
    /* Initialise information for whether a constraint is in the final infeasible system */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &inIS, nconss) );

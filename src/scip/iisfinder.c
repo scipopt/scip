@@ -130,6 +130,7 @@ SCIP_RETCODE checkTrivialInfeas(
    SCIP_Bool*            trivial             /**< pointer to store whether the problem is trivially infeasible */
    )
 {
+   SCIP_CONS** origconss;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
    int nconss;
@@ -151,8 +152,9 @@ SCIP_RETCODE checkTrivialInfeas(
    if( *trivial )
    {
       nconss = SCIPgetNOrigConss(scip);
+      origconss = SCIPgetOrigConss(scip);
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conss, nconss) );
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, SCIPgetOrigConss(scip), nconss) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, origconss, nconss) );
       for( i = 0; i < nconss; i++ )
       {
          SCIP_CALL( SCIPdelCons(scip, conss[i]) );
