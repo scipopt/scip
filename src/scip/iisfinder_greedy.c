@@ -660,7 +660,7 @@ SCIP_RETCODE additionFilterBatch(
          assert( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM );
 
          /* Add any other constraints that are also feasible for the current solution */
-         if( feasible && !stopiter && copysol != NULL && dynamicreordering )
+         if( feasible && (copysol != NULL) && dynamicreordering )
          {
             k = 0;
             for( j = i; j < nconss; ++j )
