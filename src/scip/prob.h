@@ -710,7 +710,7 @@ void SCIPprobEnableConsCompression(
 #define SCIPprobGetNVars(prob)          ((prob)->nvars)
 #define SCIPprobGetNBinVars(prob)       ((prob)->nbinvars)
 #define SCIPprobGetNIntVars(prob)       ((prob)->nintvars)
-#define SCIPprobGetNImplVars(prob)      ((prob)->nimplvars)
+#define SCIPprobGetNImplVars(prob)      ((prob)->nbinimplvars + (prob)->nintimplvars + (prob)->ncontimplvars)
 #define SCIPprobGetNContVars(prob)      ((prob)->ncontvars)
 #define SCIPprobGetVars(prob)           ((prob)->vars)
 #define SCIPprobGetNFixedVars(prob)     ((prob)->nfixedvars)

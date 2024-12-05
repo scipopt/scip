@@ -308,7 +308,6 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->nvars = 0;
    (*prob)->nbinvars = 0;
    (*prob)->nintvars = 0;
-   (*prob)->nimplvars = 0;
    (*prob)->nbinimplvars = 0;
    (*prob)->nintimplvars = 0;
    (*prob)->ncontimplvars = 0;
@@ -671,7 +670,9 @@ void SCIPprobResortVars(
    SCIP_VAR** vars;
    int nbinvars;
    int nintvars;
-   int nimplvars;
+   int nbinimplvars;
+   int nintimplvars;
+   int ncontimplvars;
    int ncontvars;
    int nvars;
    int v;
@@ -680,14 +681,16 @@ void SCIPprobResortVars(
    nvars = prob->nvars;
    nbinvars = prob->nbinvars;
    nintvars = prob->nintvars;
-   nimplvars = prob->nimplvars;
+   nbinimplvars = prob->nbinimplvars;
+   nintimplvars = prob->nintimplvars;
+   ncontimplvars = prob->ncontimplvars;
    ncontvars = prob->ncontvars;
 
    if( nvars == 0 )
       return;
 
    assert(vars != NULL);
-   assert(nbinvars + nintvars + nimplvars + ncontvars == nvars);
+   assert(nbinvars + nintvars + nbinimplvars + nintimplvars + ncontimplvars + ncontvars == nvars);
 
    SCIPdebugMessage("entering sorting with respect to original block structure! \n");
 
@@ -699,13 +702,20 @@ void SCIPprobResortVars(
    if( nintvars > 0 )
       SCIPsortPtr((void**)&vars[nbinvars], SCIPvarComp, nintvars);
 
-   /* sort implicit variables */
-   if( nimplvars > 0 )
-      SCIPsortPtr((void**)&vars[nbinvars + nintvars], SCIPvarComp, nimplvars);
+   /* sort binary implicit variables */
+   if( nbinimplvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars], SCIPvarComp, nbinimplvars);
 
+   /* sort integer implicit variables */
+   if( nintimplvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars + nbinimplvars], SCIPvarComp, nintimplvars);
+
+   /* sort continuous implicit integer variables */
+   if( ncontimplvars > 0 )
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars + nbinimplvars + nintimplvars], SCIPvarComp, ncontimplvars);
    /* sort continuous variables*/
    if( ncontvars > 0 )
-      SCIPsortPtr((void**)&vars[nbinvars + nintvars + nimplvars], SCIPvarComp, ncontvars);
+      SCIPsortPtr((void**)&vars[nbinvars + nintvars + nbinimplvars + nintimplvars + ncontimplvars], SCIPvarComp, ncontvars);
 
    /* after sorting, the problem index of each variable has to be adjusted */
    for( v = 0; v < nvars; ++v )
@@ -787,7 +797,6 @@ int computeInsertPos(
 
    if( vartype == SCIP_VARTYPE_CONTINUOUS ){
       assert(impltype != SCIP_VARIMPLTYPE_NONE);
-      prob->nimplvars++;
       prob->ncontimplvars++;
       return insertpos;
    }
@@ -801,7 +810,6 @@ int computeInsertPos(
    assert(insertpos == contimplstart);
 
    if( vartype == SCIP_VARTYPE_INTEGER && impltype != SCIP_VARIMPLTYPE_NONE ){
-      prob->nimplvars++;
       prob->nintimplvars++;
       return insertpos;
    }
@@ -815,7 +823,6 @@ int computeInsertPos(
    assert(insertpos == intimplstart);
 
    if( vartype == SCIP_VARTYPE_BINARY && impltype != SCIP_VARIMPLTYPE_NONE ){
-      prob->nimplvars++;
       prob->nbinimplvars++;
       return insertpos;
    }
@@ -873,13 +880,14 @@ void probInsertVar(
    int insertpos = computeInsertPos(prob,vartype,impltype);
    prob->nvars++;
 
-   assert(prob->nvars == prob->nbinvars + prob->nintvars + prob->nimplvars + prob->ncontvars);
+
+   assert(prob->nvars == prob->nbinvars + prob->nintvars + SCIPprobGetNImplVars(prob) + prob->ncontvars);
    assert((vartype == SCIP_VARTYPE_BINARY && impltype == SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars - 1)
       || (vartype == SCIP_VARTYPE_INTEGER && impltype == SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars - 1)
       || (vartype == SCIP_VARTYPE_BINARY && impltype != SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars - 1)
       || (vartype == SCIP_VARTYPE_INTEGER && impltype != SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars - 1)
       || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype != SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars - 1)
-      || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nimplvars + prob->ncontvars - 1));
+      || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + SCIPprobGetNImplVars(prob) + prob->ncontvars - 1));
 
    prob->vars[insertpos] = var;
    SCIPvarSetProbindex(var, insertpos);
@@ -930,17 +938,14 @@ SCIP_RETCODE probRemoveVar(
          case SCIP_VARTYPE_BINARY:
             assert(binimplstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < intimplstart);
             prob->nbinimplvars--;
-            prob->nimplvars--;
             break;
          case SCIP_VARTYPE_INTEGER:
             assert(intimplstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < contimplstart);
             prob->nintimplvars--;
-            prob->nimplvars--;
             break;
          case SCIP_VARTYPE_CONTINUOUS:
             assert(contimplstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < contstart);
             prob->ncontimplvars--;
-            prob->nimplvars--;
             break;
          default:
             SCIPerrorMessage("unknown variable type\n");
@@ -1019,7 +1024,7 @@ SCIP_RETCODE probRemoveVar(
    assert(freepos == prob->nvars-1);
 
    prob->nvars--;
-   assert(prob->nvars == prob->nbinvars + prob->nintvars + prob->nimplvars + prob->ncontvars);
+   assert(prob->nvars == prob->nbinvars + prob->nintvars + SCIPprobGetNImplVars(prob) + prob->ncontvars);
 
    /* update number of column variables in problem */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -1114,7 +1119,7 @@ SCIP_RETCODE SCIPprobAddVar(
    }
 
    SCIPsetDebugMsg(set, "added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
-      SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
+      SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, SCIPprobGetNImplVars(prob), prob->ncontvars);
 
    if( prob->transformed )
    {
@@ -1171,7 +1176,7 @@ SCIP_RETCODE SCIPprobDelVar(
    assert(SCIPvarGetNegatedVar(var) == NULL);
 
    SCIPsetDebugMsg(set, "deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
-      SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
+      SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, SCIPprobGetNImplVars(prob), prob->ncontvars);
 
    /* mark variable to be deleted from the problem */
    SCIPvarMarkDeleted(var);
@@ -1943,7 +1948,7 @@ void SCIPprobStoreRootSol(
       SCIPlpStoreRootObjval(lp, set, prob);
 
       /* compute root LP best-estimate */
-      SCIPstatComputeRootLPBestEstimate(stat, set, SCIPlpGetColumnObjval(lp), prob->vars, prob->nbinvars + prob->nintvars + prob->nimplvars);
+      SCIPstatComputeRootLPBestEstimate(stat, set, SCIPlpGetColumnObjval(lp), prob->vars, prob->nbinvars + prob->nintvars + SCIPprobGetNImplVars(prob));
    }
 }
 
@@ -2194,13 +2199,21 @@ int SCIPprobGetNImplBinVars(
    int v;
    int nimplbinvars = 0;
 
-   for( v = prob->nbinvars + prob->nintvars + prob->nimplvars - 1; v >= prob->nbinvars; --v )
+   for( v = prob->nbinvars + prob->nintvars + SCIPprobGetNImplVars(prob) - 1; v >= prob->nbinvars; --v )
    {
       if( SCIPvarIsBinary(prob->vars[v]) )
          ++nimplbinvars;
    }
 
    return nimplbinvars;
+}
+
+int SCIPprobGetNImplVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars;
 }
 
 /** returns the number of variables with non-zero objective coefficient */
@@ -2416,7 +2429,7 @@ void SCIPprobPrintStatistics(
 
    SCIPmessageFPrintInfo(messagehdlr, file, "  Problem name     : %s\n", prob->name);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
-      prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
+      prob->nvars, prob->nbinvars, prob->nintvars, SCIPprobGetNImplVars(prob), prob->ncontvars);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Objective        : %s, %d non-zeros (abs.min = %g, abs.max = %g)\n",
          !prob->transformed ? (prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize") : "minimize",
@@ -2607,14 +2620,6 @@ int SCIPprobGetNIntVars(
    return prob->nintvars;
 }
 
-/** gets number of implicit integer problem variables */
-int SCIPprobGetNImplVars(
-   SCIP_PROB*            prob                /**< problem data */
-   )
-{
-   assert(prob != NULL);
-   return prob->nimplvars;
-}
 
 /** gets number of continuous problem variables */
 int SCIPprobGetNContVars(
