@@ -155,6 +155,7 @@ SCIP_RETCODE SCIPsetIISfinderPriority(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
+SCIP_EXPORT
 SCIP_IIS* SCIPgetIIS(
    SCIP*                 scip                /**< SCIP data structure */
    );

@@ -29,8 +29,8 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
-#include "scip/scipdefplugins.h"
 #include "scip/scip_iisfinder.h"
+#include "scip/scipdefplugins.h"
 
 #include "include/scip_test.h"
 
@@ -49,7 +49,6 @@ void setup(void)
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
    TESTsetTestfilename(filename, __FILE__, "test_infeasible.lp");
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
-
 }
 
 static
