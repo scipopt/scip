@@ -31,8 +31,6 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/scip_iisfinder.h"
-#include "include/scip_test.h"
-
 
 /** GLOBAL VARIABLES **/
 static SCIP* scip;
@@ -41,23 +39,23 @@ static SCIP* scip;
 static
 void setup(void)
 {
-   
+
    scip = NULL;
    char filename[SCIP_MAXSTRLEN];
-   
+
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
    TESTsetTestfilename(filename, __FILE__, "test_infeasible.lp");
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
-   
+
 }
 
 static
 void teardown(void)
 {
    SCIP_CALL( SCIPfree(&scip) );
-   
+
    cr_assert_null(scip);
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
@@ -69,7 +67,7 @@ TestSuite(iisplugin, .init = setup, .fini = teardown);
 Test(iisplugin, valid)
 {
    SCIP_IIS* iis;
-   
+
    SCIP_CALL( SCIPsolve(scip) );
    iis = SCIPgetIIS(scip);
    /** ensure that the original problem is infeasible */
@@ -80,3 +78,5 @@ Test(iisplugin, valid)
    /** ensure that the iis exists and is therefore valid */
    cr_expect_eq( SCIPiisGetValid(iis), TRUE, "iis is not valid");
 }
+
+#include "include/scip_test.h"
