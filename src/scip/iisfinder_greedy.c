@@ -266,6 +266,7 @@ SCIP_RETCODE deletionSubproblem(
    switch ( status )
    {
       case SCIP_STATUS_USERINTERRUPT:    /* if a user interrupt occurred, just stop */
+      case SCIP_STATUS_TERMINATE:
          SCIPdebugMsg(scip, "User interrupt. Stopping. \n");
          if( delbounds )
             SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
@@ -283,6 +284,7 @@ SCIP_RETCODE deletionSubproblem(
       case SCIP_STATUS_GAPLIMIT:
       case SCIP_STATUS_RESTARTLIMIT:
       case SCIP_STATUS_INFORUNBD:
+      case SCIP_STATUS_DUALLIMIT:
          *alldeletionssolved = FALSE;
          SCIPdebugMsg(scip, "Some limit reached. Keeping bounds / constraints removed if non-conservative. \n");
          if( !conservative )
@@ -308,6 +310,7 @@ SCIP_RETCODE deletionSubproblem(
       case SCIP_STATUS_SOLLIMIT:
       case SCIP_STATUS_OPTIMAL:
       case SCIP_STATUS_UNBOUNDED:
+      case SCIP_STATUS_PRIMALLIMIT:
          SCIPdebugMsg(scip, "Found solution to subproblem with bounds / constraints removed. Add them back.\n");
          if( delbounds )
             SCIP_CALL( revertBndChgs(scip, vars, bounds, idxs, ndels, islb) );
@@ -368,6 +371,7 @@ SCIP_RETCODE additionSubproblem(
    switch ( status )
    {
       case SCIP_STATUS_USERINTERRUPT:    /* if an user interrupt occurred, just stop */
+      case SCIP_STATUS_TERMINATE:
          SCIPdebugMsg(scip, "User interrupt. Stopping. \n");
          *stop = TRUE;
          break;
@@ -381,6 +385,7 @@ SCIP_RETCODE additionSubproblem(
       case SCIP_STATUS_SOLLIMIT:
       case SCIP_STATUS_RESTARTLIMIT:
       case SCIP_STATUS_INFORUNBD:
+      case SCIP_STATUS_DUALLIMIT:
          SCIPdebugMsg(scip, "Some limit reached. Added constraint batch failed to induce infeasibility. Continue adding.\n");
          break;
 
@@ -392,6 +397,7 @@ SCIP_RETCODE additionSubproblem(
       case SCIP_STATUS_BESTSOLLIMIT:     /* we found a solution */
       case SCIP_STATUS_OPTIMAL:
       case SCIP_STATUS_UNBOUNDED:
+      case SCIP_STATUS_PRIMALLIMIT:
          SCIPdebugMsg(scip, "Found solution of subproblem with added constraints. Keep adding constraint batches.\n");
          *feasible = TRUE;
          break;
@@ -640,7 +646,7 @@ SCIP_RETCODE additionFilterBatch(
       retcode = additionSubproblem(iis, timelim, timelimperiter, nodelim, nodelimperiter, &feasible, &stopiter);
       if( !silent )
          SCIPiisfinderInfoMessage(iis, FALSE);
-      if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) || stopiter )
+      if( stopiter || timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
       {
          SCIP_CALL( SCIPfreeTransform(scip) );
          break;

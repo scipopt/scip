@@ -297,6 +297,7 @@ SCIP_RETCODE SCIPiisGenerate(
             case SCIP_STATUS_GAPLIMIT:
             case SCIP_STATUS_SOLLIMIT:
             case SCIP_STATUS_RESTARTLIMIT:
+            case SCIP_STATUS_DUALLIMIT:
                SCIPinfoMessage(iis->subscip, NULL, "Some limit reached. Failed to prove infeasibility of initial problem.\n");
                SCIPclockStop(iis->iistime, set);
                return SCIP_OKAY;
@@ -307,6 +308,7 @@ SCIP_RETCODE SCIPiisGenerate(
                return SCIP_OKAY;
 
             case SCIP_STATUS_USERINTERRUPT:
+            case SCIP_STATUS_TERMINATE:
                SCIPdebugMsg(iis->subscip, "User interrupt. Stopping.\n");
                SCIPclockStop(iis->iistime, set);
                return SCIP_OKAY;
@@ -314,6 +316,7 @@ SCIP_RETCODE SCIPiisGenerate(
             case SCIP_STATUS_BESTSOLLIMIT:
             case SCIP_STATUS_OPTIMAL:
             case SCIP_STATUS_UNBOUNDED:
+            case SCIP_STATUS_PRIMALLIMIT:
                SCIPinfoMessage(iis->subscip, NULL, "Initial problem is feasible. No IIS exists.\n");
                SCIPclockStop(iis->iistime, set);
                return SCIP_OKAY;

@@ -206,7 +206,7 @@
 #define SCIP_DEFAULT_IISFINDER_STOPAFTERONE  TRUE  /**< should the IIS search stop after a single IIS finder is run (excluding post processing) */
 #define SCIP_DEFAULT_IISFINDER_REMOVEUNUSEDVARS TRUE /**< should vars that do not feature in any constraints be removed at the end of the IIS process */
 #define SCIP_DEFAULT_IISFINDER_TIMELIM       1e+20 /**< maximal time in seconds for all IIS finders to run */
-#define SCIP_DEFAULT_IISFINDER_NODELIM       -1    /**< maximal number of nodes to process for all IIS finders (-1: no limit) */
+#define SCIP_DEFAULT_IISFINDER_NODELIM       -1L   /**< maximal number of nodes to process for all IIS finders (-1: no limit) */
 
 /* Limits */
 
@@ -1006,7 +1006,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    /* copy all iis finder plugins */
    if( copyiisfinders && sourceset->iisfinders != NULL )
    {
-      for( p = sourceset->niisfinders - 1; p >= 0; --p )
+      for( p = 0; p < sourceset->niisfinders; ++p )
       {
          SCIP_CALL( SCIPiisfinderCopyInclude(sourceset->iisfinders[p], targetset) );
       }
