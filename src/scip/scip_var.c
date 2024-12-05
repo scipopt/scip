@@ -120,6 +120,7 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< Implied integer type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -145,7 +146,7 @@ SCIP_RETCODE SCIPcreateVar(
    {
    case SCIP_STAGE_PROBLEM:
       SCIP_CALL( SCIPvarCreateOriginal(var, scip->mem->probmem, scip->set, scip->stat,
-            name, lb, ub, obj, vartype, initial, removable, vardelorig, vartrans, vardeltrans, varcopy, vardata) );
+            name, lb, ub, obj, vartype, impltype, initial, removable, vardelorig, vartrans, vardeltrans, varcopy, vardata) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -155,7 +156,7 @@ SCIP_RETCODE SCIPcreateVar(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPvarCreateTransformed(var, scip->mem->probmem, scip->set, scip->stat,
-            name, lb, ub, obj, vartype, initial, removable, vardelorig, vartrans, vardeltrans, varcopy, vardata) );
+            name, lb, ub, obj, vartype, impltype, initial, removable, vardelorig, vartrans, vardeltrans, varcopy, vardata) );
       break;
 
    default:
@@ -204,7 +205,8 @@ SCIP_RETCODE SCIPcreateVarBasic(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateVarBasic", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, SCIP_VARIMPLTYPE_NONE,
+                            TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
    return SCIP_OKAY;
 }

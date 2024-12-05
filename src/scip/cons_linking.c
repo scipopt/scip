@@ -470,7 +470,7 @@ SCIP_RETCODE consdataCreateBinvars(
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s[%d]", SCIPvarGetName(linkvar), lb);
 
       /* creates and captures a fixed binary variables */
-      SCIP_CALL( SCIPcreateVar(scip, &binvar, name, 1.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
+      SCIP_CALL( SCIPcreateVar(scip, &binvar, name, 1.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
             FALSE, TRUE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, binvar) );
 
@@ -484,7 +484,7 @@ SCIP_RETCODE consdataCreateBinvars(
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s[%d]", SCIPvarGetName(linkvar), lb + b);
 
          /* creates and captures variables */
-         SCIP_CALL( SCIPcreateVar(scip, &binvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
+         SCIP_CALL( SCIPcreateVar(scip, &binvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
                TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
 
          /* add variable to the problem */

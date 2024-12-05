@@ -9620,6 +9620,8 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Real* vals;
    SCIP_VARTYPE bestslacktype;
    SCIP_VARTYPE slacktype;
+   SCIP_VARIMPLTYPE slackimpltype;
+   SCIP_VARIMPLTYPE bestslackimpltype;
    SCIP_Real lhs;
    SCIP_Real rhs;
    SCIP_Real bestslackdomrng;
@@ -9708,6 +9710,7 @@ SCIP_RETCODE convertLongEquality(
    vals = consdata->vals;
    bestslackpos = -1;
    bestslacktype = SCIP_VARTYPE_BINARY;
+   bestslackimpltype = SCIP_VARIMPLTYPE_NONE;
    bestnlocks = INT_MAX;
    bestremovescons = FALSE;
    bestslackdomrng = 0.0;
@@ -9756,18 +9759,19 @@ SCIP_RETCODE convertLongEquality(
          return SCIP_OKAY;
 
       slacktype = SCIPvarGetType(var);
+      slackimpltype = SCIPvarGetImplType(var);
       coefszeroone = coefszeroone && SCIPisEQ(scip, absval, 1.0);
       coefsintegral = coefsintegral && SCIPisIntegral(scip, val);
       varsintegral = varsintegral && (slacktype != SCIP_VARTYPE_CONTINUOUS);
-      iscont = (slacktype == SCIP_VARTYPE_CONTINUOUS || slacktype == SCIP_VARTYPE_IMPLINT);
+      iscont = (slacktype == SCIP_VARTYPE_CONTINUOUS || slackimpltype != SCIP_VARIMPLTYPE_NONE);
 
       /* update candidates for continuous -> implint and integer -> implint conversion */
-      if( slacktype == SCIP_VARTYPE_CONTINUOUS )
+      if( slacktype == SCIP_VARTYPE_CONTINUOUS && slackimpltype == SCIP_VARIMPLTYPE_NONE )
       {
          ncontvars++;
          contvarpos = v;
       }
-      else if( slacktype == SCIP_VARTYPE_IMPLINT )
+      else if( slackimpltype != SCIP_VARIMPLTYPE_NONE )
       {
          ++nimplvars;
       }
@@ -9806,7 +9810,25 @@ SCIP_RETCODE convertLongEquality(
             assert(!SCIPisInfinity(scip, slackdomrng));
          }
          equal = FALSE;
-         better = (slacktype > bestslacktype) || (bestslackpos == -1);
+         //continuous -> implied continuous -> implied integer -> implied binary -> integer -> binary
+         SCIP_Bool slackimplied = slackimpltype != SCIP_VARIMPLTYPE_NONE;
+         SCIP_Bool bestslackimplied = bestslackimpltype != SCIP_VARIMPLTYPE_NONE;
+         SCIP_Bool typeBetter = FALSE;
+         if( slackimplied == bestslackimplied )
+         {
+            typeBetter = slacktype > bestslacktype;
+         }
+         else if ( slackimplied )
+         {
+            typeBetter = bestslacktype == SCIP_VARTYPE_INTEGER || bestslacktype == SCIP_VARTYPE_BINARY;
+         }
+         else
+         {
+            assert(!slackimplied && bestslackimplied);
+            typeBetter = slacktype == SCIP_VARTYPE_CONTINUOUS;
+         }
+
+         better = typeBetter || (bestslackpos == -1);
          if( !better && slacktype == bestslacktype )
          {
             better = (nlocks < bestnlocks);
@@ -9874,6 +9896,7 @@ SCIP_RETCODE convertLongEquality(
             {
                bestslackpos = v;
                bestslacktype = slacktype;
+               bestslackimpltype = slackimpltype;
                bestnlocks = nlocks;
                bestslackdomrng = slackdomrng;
                bestremovescons = removescons;
@@ -9947,7 +9970,7 @@ SCIP_RETCODE convertLongEquality(
     * loose the integrality condition for this variable.
     */
    if( bestslackpos >= 0
-      && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_VARTYPE_IMPLINT
+      && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslackimpltype != SCIP_VARIMPLTYPE_NONE
          || (coefsintegral && varsintegral && nimplvars == 0)) )
    {
       SCIP_VAR* slackvar;
@@ -10039,7 +10062,7 @@ SCIP_RETCODE convertLongEquality(
             /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
             SCIPdebugMsg(scip, "linear constraint <%s>: converting continuous variable <%s> to implicit integer variable\n",
                SCIPconsGetName(cons), SCIPvarGetName(var));
-            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+            SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_VARIMPLTYPE_STRONG, &infeasible) );
             (*nchgvartypes)++;
             if( infeasible )
             {
@@ -10064,8 +10087,10 @@ SCIP_RETCODE convertLongEquality(
             (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_impl", SCIPvarGetName(var));
 
             /* create new implicit variable for aggregation */
+            /* TODO: weak or strong? weak for now to be safe */
             SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
-                  SCIP_VARTYPE_IMPLINT, SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
+                  SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_WEAK,
+                  SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
 
             /* add new variable to problem */
             SCIP_CALL( SCIPaddVar(scip, newvar) );
@@ -10134,7 +10159,7 @@ SCIP_RETCODE convertLongEquality(
          /* convert the integer variable with coefficient 1.0 into an implicit integer variable */
          SCIPdebugMsg(scip, "linear constraint <%s>: converting integer variable <%s> to implicit integer variable\n",
             SCIPconsGetName(cons), SCIPvarGetName(var));
-         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_VARIMPLTYPE_STRONG, &infeasible) );
          (*nchgvartypes)++;
          if( infeasible )
          {
@@ -11030,13 +11055,16 @@ SCIP_RETCODE dualPresolve(
             for( j = 0; j < naggrs; ++j)
             {
                /* If the multi-aggregation was not infeasible, then setting implicit integers to integers should not
-                *  lead to infeasibility
+                *  lead to infeasibility. @TODO; how to handle this case properly with new implied integrality?
                 */
-               if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_IMPLINT )
+               if( SCIPvarIsImpliedIntegral(aggrvars[j]) )
                {
                   SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasiblevartypechg) );
-                  (*nchgvartypes)++;
                   assert(!infeasiblevartypechg);
+                  SCIP_CALL( SCIPchgVarImplType(scip, aggrvars[j], SCIP_VARIMPLTYPE_NONE, &infeasiblevartypechg) );
+                  assert(!infeasiblevartypechg);
+
+                  (*nchgvartypes)++;
                }
             }
          }
@@ -11087,12 +11115,13 @@ int getVarWeight(
    SCIP_VAR*             var                 /**< variable to get weight for */
    )
 {
+   if( SCIPvarIsImpliedIntegral(var) )
+      return INTWEIGHT;
    switch( SCIPvarGetType(var) )
    {
    case SCIP_VARTYPE_BINARY:
       return BINWEIGHT;
    case SCIP_VARTYPE_INTEGER:
-   case SCIP_VARTYPE_IMPLINT:
       return INTWEIGHT;
    case SCIP_VARTYPE_CONTINUOUS:
       return CONTWEIGHT;
@@ -15028,7 +15057,7 @@ SCIP_RETCODE fullDualPresolve(
          && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v] )
       {
          /* since we locally copied the variable array we can change the variable type immediately */
-         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_VARIMPLTYPE_WEAK, &infeasible) );
          (*nchgvartypes)++;
          if( infeasible )
          {
@@ -18874,69 +18903,74 @@ SCIP_RETCODE SCIPupgradeConsLinear(
       ub = SCIPvarGetUbLocal(var);
       assert(!SCIPisZero(scip, val));
 
-      switch( SCIPvarGetType(var) )
+      if( SCIPvarIsImpliedIntegral(var))
       {
-      case SCIP_VARTYPE_BINARY:
-         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
-            integral = integral && SCIPisIntegral(scip, val);
-         if( val >= 0.0 )
-            nposbin++;
-         else
-            nnegbin++;
-         break;
-      case SCIP_VARTYPE_INTEGER:
-         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
-            integral = integral && SCIPisIntegral(scip, val);
-         if( val >= 0.0 )
-            nposint++;
-         else
-            nnegint++;
-         break;
-      case SCIP_VARTYPE_IMPLINT:
-         if( SCIPvarIsBinary(var) )
+         if( SCIPvarIsBinary(var))
          {
             if( val >= 0.0 )
                nposimplbin++;
             else
                nnegimplbin++;
          }
-         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub))
             integral = integral && SCIPisIntegral(scip, val);
          if( val >= 0.0 )
             nposimpl++;
          else
             nnegimpl++;
          break;
-      case SCIP_VARTYPE_CONTINUOUS:
-         integral = integral && SCIPisEQ(scip, lb, ub) && SCIPisIntegral(scip, val * lb);
-         if( val >= 0.0 )
-            nposcont++;
-         else
-            nnegcont++;
-         break;
-      default:
-         SCIPerrorMessage("unknown variable type\n");
-         return SCIP_INVALIDDATA;
       }
-      if( SCIPisEQ(scip, val, 1.0) )
-         ncoeffspone++;
-      else if( SCIPisEQ(scip, val, -1.0) )
-         ncoeffsnone++;
-      else if( SCIPisIntegral(scip, val) )
+      else
       {
-         if( SCIPisPositive(scip, val) )
+         switch( SCIPvarGetType(var))
+         {
+            case SCIP_VARTYPE_BINARY:
+               if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub))
+                  integral = integral && SCIPisIntegral(scip, val);
+               if( val >= 0.0 )
+                  nposbin++;
+               else
+                  nnegbin++;
+               break;
+            case SCIP_VARTYPE_INTEGER:
+               if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub))
+                  integral = integral && SCIPisIntegral(scip, val);
+               if( val >= 0.0 )
+                  nposint++;
+               else
+                  nnegint++;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               integral = integral && SCIPisEQ(scip, lb, ub) && SCIPisIntegral(scip, val * lb);
+               if( val >= 0.0 )
+                  nposcont++;
+               else
+                  nnegcont++;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type\n");
+               return SCIP_INVALIDDATA;
+         }
+      }
+      if( SCIPisEQ(scip, val, 1.0))
+         ncoeffspone++;
+      else if( SCIPisEQ(scip, val, -1.0))
+         ncoeffsnone++;
+      else if( SCIPisIntegral(scip, val))
+      {
+         if( SCIPisPositive(scip, val))
             ncoeffspint++;
          else
             ncoeffsnint++;
       }
       else
       {
-         if( SCIPisPositive(scip, val) )
+         if( SCIPisPositive(scip, val))
             ncoeffspfrac++;
          else
             ncoeffsnfrac++;
       }
-      if( SCIPisPositive(scip, val) )
+      if( SCIPisPositive(scip, val))
          poscoeffsum += val;
       else
          negcoeffsum += val;

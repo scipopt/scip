@@ -1653,7 +1653,7 @@ SCIP_RETCODE mergeMultiples(
 	 || (SCIPvarIsBinary(probvar) &&
             ((probidx >= nbinvars && probidx < nbinvars + nintvars && SCIPvarGetType(probvar) == SCIP_VARTYPE_INTEGER) ||
                (probidx >= nbinvars + nintvars && probidx < nbinvars + nintvars + nimplvars &&
-                  SCIPvarGetType(probvar) == SCIP_VARTYPE_IMPLINT))));
+                  SCIPvarIsImpliedIntegral(probvar)))));
 
       /* var is not active yet */
       (*entries)[probidx] = 0;
@@ -5146,14 +5146,14 @@ SCIP_RETCODE SCIPcreateConsAnd(
             else
                activevar = vars[v];
 
-            if( activevar == activeresvar || SCIPvarGetType(activevar) == SCIP_VARTYPE_IMPLINT )
+            if( activevar == activeresvar || SCIPvarIsImpliedIntegral(activevar) )
                break;
          }
 
          /* upgrade the type of the resultant */
          if( v < 0 )
          {
-            SCIP_CALL( SCIPchgVarType(scip, resvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
+            SCIP_CALL( SCIPchgVarImplType(scip, resvar, SCIP_VARIMPLTYPE_WEAK, &infeasible) );
             assert(!infeasible);
          }
       }

@@ -158,6 +158,18 @@ SCIP_VARTYPE SCIPeventGetNewtype(
    SCIP_EVENT*           event               /**< event */
    );
 
+/** gets old implied integer type for an implied integer type change event */
+SCIP_EXPORT
+SCIP_VARIMPLTYPE SCIPeventGetOldImpltype(
+   SCIP_EVENT*           event               /**< event */
+   );
+
+/** gets new implied integer type for an implied integer type change event */
+SCIP_EXPORT
+SCIP_VARIMPLTYPE SCIPeventGetNewImpltype(
+   SCIP_EVENT*           event               /**< event */
+   );
+
 /** gets node for a node or LP event */
 SCIP_EXPORT
 SCIP_NODE* SCIPeventGetNode(

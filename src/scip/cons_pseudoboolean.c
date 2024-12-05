@@ -2048,7 +2048,7 @@ SCIP_RETCODE createAndAddAndCons(
 
       /* create auxiliary variable */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, ARTIFICIALVARNAMEPREFIX"%d", conshdlrdata->nallconsanddatas);
-      SCIP_CALL( SCIPcreateVar(scip, &resultant, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
+      SCIP_CALL( SCIPcreateVar(scip, &resultant, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
             TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
 
       /* @todo: branch on artificial variables, the test results show that it is of advantage */

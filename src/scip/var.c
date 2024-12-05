@@ -1937,6 +1937,7 @@ SCIP_RETCODE varCreate(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable (none, weak or strong) */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
@@ -2045,7 +2046,7 @@ SCIP_RETCODE varCreate(
    (*var)->donotaggr = FALSE;
    (*var)->donotmultaggr = FALSE;
    (*var)->vartype = vartype; /*lint !e641*/
-   (*var)->varimpltype = SCIP_VARIMPLTYPE_NONE;
+   (*var)->varimpltype = impltype;
    (*var)->pseudocostflag = FALSE;
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
@@ -2083,6 +2084,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable (None, weak or strong) */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -2097,7 +2099,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    assert(stat != NULL);
 
    /* create variable */
-   SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
+   SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
          varcopy, vardelorig, vartrans, vardeltrans, vardata) );
 
    /* set variable status and data */
@@ -2126,6 +2128,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable (none, weak or strong) */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -2139,7 +2142,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    assert(blkmem != NULL);
 
    /* create variable */
-   SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
+   SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
          varcopy, vardelorig, vartrans, vardeltrans, vardata) );
 
    /* create event filter for transformed variable */

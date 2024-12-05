@@ -2365,7 +2365,7 @@ SCIP_RETCODE SCIPtransformMinUC(
       /* create a new binary variable with objective coefficient one */
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_master", SCIPconsGetName(cons));
 
-      SCIP_CALL( SCIPcreateVar(scip, &binvar, varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
+      SCIP_CALL( SCIPcreateVar(scip, &binvar, varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
             TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       /* get negated variable, since we want to minimize the number of violated constraints */

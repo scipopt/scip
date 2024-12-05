@@ -864,7 +864,7 @@ SCIP_DECL_EXPR_INTEVALVAR(intEvalVarBoundTightening)
    assert(lb <= ub);  /* SCIP should ensure that variable bounds are not contradicting */
 
    /* implicit integer variables may have non-integer bounds, apparently (run space25a) */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+   if( SCIPvarIsImpliedIntegral(var) )
    {
       lb = EPSROUND(lb, 0.0); /*lint !e835*/
       ub = EPSROUND(ub, 0.0); /*lint !e835*/
@@ -1021,7 +1021,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
     * (mainly to avoid a failing assert, see github issue #70)
     * usually, a change to implicit-integer would result in a boundchange on the variable as well, but not if the bound was already almost integral
     */
-   if( (eventtype & SCIP_EVENTTYPE_TYPECHANGED) && (SCIPeventGetNewtype(event) == SCIP_VARTYPE_IMPLINT) &&
+   if( (eventtype & SCIP_EVENTTYPE_IMPLTYPECHANGED) && ( SCIPeventGetNewImpltype(event) != SCIP_VARIMPLTYPE_NONE ) &&
       (!EPSISINT(SCIPvarGetLbGlobal(SCIPeventGetVar(event)), 0.0) || !EPSISINT(SCIPvarGetUbGlobal(SCIPeventGetVar(event)), 0.0)) ) /*lint !e835*/
       boundtightened = TRUE;
 
@@ -3908,7 +3908,10 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
 
    /* create and add auxiliary variable */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(facvar));
-   SCIP_CALL( SCIPcreateVarBasic(scip, &auxvar, name, minact, maxact, 0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS) );
+
+   SCIP_VARIMPLTYPE impltype = integral ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE;
+   SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, minact, maxact, 0.0, SCIP_VARTYPE_CONTINUOUS, impltype,
+                            TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
 #ifdef WITH_DEBUG_SOLUTION
@@ -4235,7 +4238,8 @@ SCIP_RETCODE getBinaryProductExprDo(
    }
 
    /* create and add variable */
-   SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
+   SCIP_CALL( SCIPcreateVar(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_WEAK,
+                            TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIPdebugMsg(scip, "  created auxiliary variable %s\n", name);
 
@@ -5890,7 +5894,7 @@ SCIP_RETCODE presolveImplint(
          SCIPvarGetName(SCIPgetVarExprVar(cand)), SCIPconsGetName(conss[c]));
 
       /* change variable type */
-      SCIP_CALL( SCIPchgVarType(scip, SCIPgetVarExprVar(cand), SCIP_VARTYPE_IMPLINT, infeasible) );
+      SCIP_CALL( SCIPchgVarImplType(scip, SCIPgetVarExprVar(cand), SCIP_VARIMPLTYPE_WEAK, infeasible) );
 
       if( *infeasible )
          return SCIP_OKAY;
@@ -5915,7 +5919,7 @@ SCIP_RETCODE createAuxVar(
 {
    SCIP_EXPR_OWNERDATA* ownerdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_VARTYPE vartype;
+   SCIP_VARIMPLTYPE impltype;
    SCIP_INTERVAL activity;
    char name[SCIP_MAXSTRLEN];
 
@@ -5955,7 +5959,7 @@ SCIP_RETCODE createAuxVar(
    ++conshdlrdata->auxvarid;
 
    /* type of auxiliary variable depends on integrality information of the expression */
-   vartype = SCIPexprIsIntegral(expr) ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS;
+   impltype = SCIPexprIsIntegral(expr) ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE;
 
    /* get activity of expression to initialize variable bounds, if something valid is available (evalActivity was called in initSepa) */
    if( SCIPexprGetActivityTag(expr) >= conshdlrdata->lastboundrelax )
@@ -5979,11 +5983,14 @@ SCIP_RETCODE createAuxVar(
     */
    if( SCIPgetDepth(scip) == 0 )
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &ownerdata->auxvar, name, MAX(-SCIPinfinity(scip), activity.inf), MIN(SCIPinfinity(scip), activity.sup), 0.0, vartype) );
+      SCIP_CALL( SCIPcreateVar(scip, &ownerdata->auxvar, name, MAX(-SCIPinfinity(scip), activity.inf),
+                               MIN(SCIPinfinity(scip), activity.sup), 0.0, SCIP_VARTYPE_CONTINUOUS, impltype,
+                               TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    }
    else
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &ownerdata->auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, vartype) );
+      SCIP_CALL( SCIPcreateVar(scip, &ownerdata->auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+                                    SCIP_VARTYPE_CONTINUOUS, impltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    }
 
    /* mark the auxiliary variable to be added for the relaxation only
@@ -7131,21 +7138,26 @@ void scoreBranchingCandidates(
 
       if( conshdlrdata->branchvartypeweight > 0.0 )
       {
-         switch( SCIPvarGetType(cands[c].var) )
+         if( SCIPvarIsImpliedIntegral(cands[c].var) )
          {
-            case SCIP_VARTYPE_BINARY :
-               cands[c].vartype = 1.0;
-               break;
-            case SCIP_VARTYPE_INTEGER :
-               cands[c].vartype = 0.1;
-               break;
-            case SCIP_VARTYPE_IMPLINT :
-               cands[c].vartype = 0.01;
-               break;
-            case SCIP_VARTYPE_CONTINUOUS :
-            default:
-               cands[c].vartype = 0.0;
+            cands[c].vartype = 0.01;
          }
+         else
+         {
+            switch( SCIPvarGetType(cands[c].var) )
+            {
+               case SCIP_VARTYPE_BINARY :
+                  cands[c].vartype = 1.0;
+                  break;
+               case SCIP_VARTYPE_INTEGER :
+                  cands[c].vartype = 0.1;
+                  break;
+               case SCIP_VARTYPE_CONTINUOUS :
+               default:
+                  cands[c].vartype = 0.0;
+            }
+         }
+
          maxscore.vartype = MAX(cands[c].vartype, maxscore.vartype);
       }
    }

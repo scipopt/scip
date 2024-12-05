@@ -1326,7 +1326,7 @@ SCIP_RETCODE mergeMultiples(
 	 || (SCIPvarIsBinary(var) &&
             ((pos >= nbinvars && pos < nbinvars + nintvars && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER) ||
                (pos >= nbinvars + nintvars && pos < nbinvars + nintvars + nimplvars &&
-                  SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT))));
+                  SCIPvarIsImpliedIntegral(var)))));
 
       /* var is not active yet */
       (*entries)[pos] = 0;

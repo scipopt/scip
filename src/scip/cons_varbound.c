@@ -2888,10 +2888,8 @@ void prettifyConss(
       /* @note: we allow that the variable type of the bounded variable can be smaller than the variable type of the
        *        bounding variable
        */
-      if( (SCIPvarGetType(consdata->var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(consdata->var) == SCIP_VARTYPE_INTEGER
-	    || SCIPvarGetType(consdata->var) == SCIP_VARTYPE_IMPLINT)
-	 && (SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_IMPLINT)
-	 && SCIPisLT(scip, REALABS(consdata->vbdcoef), 1.0) )
+      if( SCIPvarIsIntegral(consdata->var) && (SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_INTEGER ||
+          SCIPvarIsImpliedIntegral(consdata->vbdvar)) && SCIPisLT(scip, REALABS(consdata->vbdcoef), 1.0) )
       {
          SCIP_Real epsilon;
          SCIP_Longint nominator;
@@ -3533,8 +3531,7 @@ SCIP_RETCODE tightenCoefs(
    consdata->tightened = TRUE;
 
    /* if values and variable are integral the sides should it be too */
-   if( SCIPvarGetType(consdata->var) <= SCIP_VARTYPE_IMPLINT
-      && SCIPvarGetType(consdata->vbdvar) <= SCIP_VARTYPE_IMPLINT
+   if( SCIPvarIsIntegral(consdata->var) && SCIPvarIsIntegral(consdata->vbdvar)
       && SCIPisIntegral(scip, consdata->vbdcoef) )
    {
       if( !SCIPisIntegral(scip, consdata->lhs) )
@@ -3602,8 +3599,7 @@ SCIP_RETCODE tightenCoefs(
     *
     *             x + b*y <= rhs  =>   x + b*y <= floor(rhs)
     */
-   if( (SCIPvarGetType(consdata->var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(consdata->var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(consdata->var) == SCIP_VARTYPE_BINARY)
-      && !SCIPisIntegral(scip, consdata->vbdcoef)
+   if( SCIPvarIsIntegral(consdata->var) && !SCIPisIntegral(scip, consdata->vbdcoef)
       && (!SCIPisIntegral(scip, consdata->lhs) || SCIPisInfinity(scip, -consdata->lhs)
 	 || !SCIPisIntegral(scip, consdata->rhs) || SCIPisInfinity(scip, consdata->rhs)) )
    {
@@ -5057,11 +5053,11 @@ SCIP_DECL_CONSPRINT(consPrintVarbound)
    SCIPinfoMessage(scip, file, "<%s>[%c] %+.15g<%s>[%c]", SCIPvarGetName(consdata->var),
       SCIPvarGetType(consdata->var) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
       SCIPvarGetType(consdata->var) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR :
-      SCIPvarGetType(consdata->var) == SCIP_VARTYPE_IMPLINT ? SCIP_VARTYPE_IMPLINT_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR,
+      SCIPvarIsImpliedIntegral(consdata->var) ? SCIP_VARTYPE_IMPLINT_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR,
       consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar),
       SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
       SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR :
-      SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_IMPLINT ? SCIP_VARTYPE_IMPLINT_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR);
+      SCIPvarIsImpliedIntegral(consdata->vbdvar) ? SCIP_VARTYPE_IMPLINT_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR);
 
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )

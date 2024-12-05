@@ -1319,6 +1319,39 @@ SCIP_VARTYPE SCIPeventGetNewtype(
    return event->data.eventtypechg.newtype;
 }
 
+/** gets old implied integer type for an implied integer type change event */
+SCIP_VARIMPLTYPE SCIPeventGetOldImpltype(
+   SCIP_EVENT*           event               /**< event */
+   )
+{
+   assert(event != NULL);
+
+   if( event->eventtype != SCIP_EVENTTYPE_IMPLTYPECHANGED )
+   {
+      SCIPerrorMessage("event is not an implied integer type change event\n");
+      SCIPABORT();
+      return SCIP_VARIMPLTYPE_NONE;  /*lint !e527*/
+   }
+
+   return event->data.eventimpltypechg.oldtype;
+}
+/** gets new implied integer type for an implied integer type change event */
+SCIP_VARIMPLTYPE SCIPeventGetNewImpltype(
+   SCIP_EVENT*           event               /**< event */
+   )
+{
+   assert(event != NULL);
+
+   if( event->eventtype != SCIP_EVENTTYPE_IMPLTYPECHANGED )
+   {
+      SCIPerrorMessage("event is not an implied integer type change event\n");
+      SCIPABORT();
+      return SCIP_VARIMPLTYPE_NONE;  /*lint !e527*/
+   }
+
+   return event->data.eventimpltypechg.newtype;
+}
+
 /** gets node for a node or LP event */
 SCIP_NODE* SCIPeventGetNode(
    SCIP_EVENT*           event               /**< event */

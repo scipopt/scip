@@ -767,7 +767,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       }
       else
       {
-         SCIP_VARTYPE vartype;
+         SCIP_VARIMPLTYPE impltype;
 
          /* set the variable type of the auxiliary variables to implicit integer if the objective function of the
           * subproblem is guaranteed to be integer. This behaviour is controlled through a user parameter.
@@ -776,13 +776,13 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
           */
          if( benders->auxvarsimplint && SCIPbendersSubproblem(benders, i) != NULL
             && SCIPisObjIntegral(SCIPbendersSubproblem(benders, i)) )
-            vartype = SCIP_VARTYPE_IMPLINT;
+            impltype = SCIP_VARIMPLTYPE_WEAK;
          else
-            vartype = SCIP_VARTYPE_CONTINUOUS;
+            impltype = SCIP_VARIMPLTYPE_NONE;
 
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
-         SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip),
-               0.0, vartype) );
+         SCIP_CALL( SCIPcreateVar(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip),
+               1.0, SCIP_VARTYPE_CONTINUOUS, impltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          SCIPvarSetData(auxiliaryvar, vardata);
 

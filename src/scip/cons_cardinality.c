@@ -544,8 +544,8 @@ SCIP_RETCODE addVarCardinality(
             SCIP_VAR* newvar;
 
             (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "ind_%s", SCIPvarGetName(var));
-            SCIP_CALL( SCIPcreateVar(scip, &newvar, varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, FALSE, FALSE,
-                  NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVar(scip, &newvar, varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
+                                     FALSE, FALSE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, newvar) );
             indvar = newvar;
 
@@ -663,8 +663,8 @@ SCIP_RETCODE appendVarCardinality(
             SCIP_VAR* newvar;
 
             (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "ind_%s", SCIPvarGetName(var));
-            SCIP_CALL( SCIPcreateVar(scip, &newvar, varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, FALSE, FALSE,
-                  NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVar(scip, &newvar, varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
+                                     FALSE, FALSE, NULL, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, newvar) );
             indvar = newvar;
 
@@ -3722,8 +3722,8 @@ SCIP_RETCODE SCIPcreateConsCardinality(
                   SCIP_VAR* var;
 
                   (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "ind_%s", SCIPvarGetName(vars[v]));
-                  SCIP_CALL( SCIPcreateVar(scip, &var, varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, FALSE, FALSE,
-                        NULL, NULL, NULL, NULL, NULL) );
+                  SCIP_CALL( SCIPcreateVar(scip, &var, varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
+                                           FALSE, FALSE, NULL, NULL, NULL, NULL, NULL) );
                   SCIP_CALL( SCIPaddVar(scip, var) );
                   consdata->indvars[v] = var;
                   SCIP_CALL( SCIPreleaseVar(scip, &var) );
