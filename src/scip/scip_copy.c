@@ -1016,23 +1016,27 @@ SCIP_RETCODE copyVars(
       if( SCIPvarIsRelaxationOnly(sourcevars[i]) )
       {
 #ifndef NDEBUG
-         switch( SCIPvarGetType(sourcevars[i]) )
+         if( SCIPvarIsImpliedIntegral(sourcevars[i]) )
          {
-         case SCIP_VARTYPE_BINARY:
-            nrelaxonlybinvars++;
-            break;
-         case SCIP_VARTYPE_INTEGER:
-            nrelaxonlyintvars++;
-            break;
-         case SCIP_VARTYPE_IMPLINT:
-            nrelaxonlyimplvars++;
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
-            nrelaxonlycontvars++;
-            break;
-         default:
-            SCIPerrorMessage("unknown variable type\n");
-            return SCIP_INVALIDDATA;
+            ++nrelaxonlyimplvars;
+         }
+         else
+         {
+            switch( SCIPvarGetType(sourcevars[i]) )
+            {
+               case SCIP_VARTYPE_BINARY:
+                  nrelaxonlybinvars++;
+                  break;
+               case SCIP_VARTYPE_INTEGER:
+                  nrelaxonlyintvars++;
+                  break;
+               case SCIP_VARTYPE_CONTINUOUS:
+                  nrelaxonlycontvars++;
+                  break;
+               default:
+                  SCIPerrorMessage("unknown variable type\n");
+                  return SCIP_INVALIDDATA;
+            }
          }
 #endif
          continue;
@@ -1096,23 +1100,27 @@ SCIP_RETCODE copyVars(
       /* count number of fixed variables for all variable types */
       for( i = 0; i < nsourcefixedvars; ++i )
       {
-         switch( SCIPvarGetType(sourcefixedvars[i]) )
+         if( SCIPvarIsImpliedIntegral(sourcefixedvars[i]) )
          {
-         case SCIP_VARTYPE_BINARY:
-            nfixedbinvars++;
-            break;
-         case SCIP_VARTYPE_INTEGER:
-            nfixedintvars++;
-            break;
-         case SCIP_VARTYPE_IMPLINT:
             nfixedimplvars++;
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
-            nfixedcontvars++;
-            break;
-         default:
-            SCIPerrorMessage("unknown variable type\n");
-            return SCIP_INVALIDDATA;
+         }
+         else
+         {
+            switch( SCIPvarGetType(sourcefixedvars[i]) )
+            {
+               case SCIP_VARTYPE_BINARY:
+                  nfixedbinvars++;
+                  break;
+               case SCIP_VARTYPE_INTEGER:
+                  nfixedintvars++;
+                  break;
+               case SCIP_VARTYPE_CONTINUOUS:
+                  nfixedcontvars++;
+                  break;
+               default:
+                  SCIPerrorMessage("unknown variable type\n");
+                  return SCIP_INVALIDDATA;
+            }
          }
       }
       assert(nsourcefixedvars == nfixedbinvars + nfixedintvars + nfixedimplvars + nfixedcontvars);

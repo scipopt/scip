@@ -7713,8 +7713,7 @@ int SCIPnodeGetNDualBndchgs(
    {
       SCIP_Bool isint;
 
-      isint = boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
-           || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT;
+      isint = SCIPvarIsIntegral(boundchgs[i].var);
 
       if( isint && ((boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
             && boundchgs[i].data.inferencedata.reason.cons == NULL)
@@ -7767,8 +7766,7 @@ void SCIPnodeGetDualBoundchgs(
     */
    for( i = nboundchgs-1; i >= 0; i--)
    {
-      if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
-       || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT )
+      if( SCIPvarIsIntegral(boundchgs[i].var) )
       {
          if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                && boundchgs[i].data.inferencedata.reason.cons == NULL)
@@ -7787,8 +7785,7 @@ void SCIPnodeGetDualBoundchgs(
       j = 0;
       for( i = i+1; i < nboundchgs; i++)
       {
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
-          || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT )
+         if( SCIPvarIsIntegral(boundchgs[i].var) )
          {
             assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
             if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER

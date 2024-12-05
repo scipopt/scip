@@ -36,6 +36,7 @@
  * @author Marc Pfetsch
  * @author Michael Winkler
  * @author Kati Wolter
+ * @author Rolf van der Hulst
  *
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
  */
@@ -8452,8 +8453,8 @@ SCIP_RETCODE SCIPchgVarImplType(
          /* second change variable type */
          if( SCIPvarGetProbindex(var) >= 0 )
          {
-            SCIP_CALL( SCIPprobChgVarType(scip->transprob, scip->mem->probmem, scip->set, scip->primal, scip->lp,
-                                          scip->branchcand, scip->eventqueue, scip->cliquetable, var, vartype) );
+            SCIP_CALL( SCIPprobChgVarImplType(scip->transprob, scip->mem->probmem, scip->set, scip->primal, scip->lp,
+                                          scip->branchcand, scip->eventqueue, scip->cliquetable, var, impltype) );
          }
          else
          {

@@ -2216,6 +2216,9 @@ SCIP_RETCODE SCIPvarCopy(
    (*var)->donotaggr = sourcevar->donotaggr;
    (*var)->donotmultaggr = sourcevar->donotmultaggr;
 
+   /* directly copy implied integer status */
+   (*var)->varimpltype = sourcevar->varimpltype;
+
    /* insert variable into mapping between source SCIP and the target SCIP */
    assert(!SCIPhashmapExists(varmap, sourcevar));
    SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *var) );
@@ -3534,6 +3537,9 @@ SCIP_RETCODE SCIPvarTransform(
       /* copy donot(mult)aggr status */
       (*transvar)->donotaggr = origvar->donotaggr;
       (*transvar)->donotmultaggr = origvar->donotmultaggr;
+
+      /* copy implied integer status */
+      (*transvar)->varimpltype = origvar->varimpltype;
 
       /* copy lazy bounds */
       (*transvar)->lazylb = origvar->lazylb;
@@ -5825,6 +5831,9 @@ SCIP_RETCODE SCIPvarNegate(
       /* copy donot(mult)aggr status */
       (*negvar)->donotaggr = var->donotaggr;
       (*negvar)->donotmultaggr = var->donotmultaggr;
+
+      /* copy implied integer status */
+      (*negvar)->varimpltype = var->varimpltype;
 
       /* copy lazy bounds (they have to be flipped) */
       (*negvar)->lazylb = (*negvar)->data.negate.constant - var->lazyub;
