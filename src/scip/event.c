@@ -1830,6 +1830,16 @@ SCIP_RETCODE SCIPeventProcess(
       SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
 
+   case SCIP_EVENTTYPE_IMPLTYPECHANGED:
+   {
+      var = event->data.eventimpltypechg.var;
+      assert(var != NULL);
+
+      /* process variable's event filter */
+      SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
+      break;
+   }
+
    default:
       SCIPerrorMessage("unknown event type <%" SCIP_EVENTTYPE_FORMAT ">\n", event->eventtype);
       return SCIP_INVALIDDATA;

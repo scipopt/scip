@@ -970,7 +970,7 @@ void branchcandInsertPseudoCand(
          insertpos = branchcand->npriopseudocands;
       }
       branchcand->npriopseudocands++;
-      if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
+      if( !SCIPvarIsImpliedIntegral(var) && (vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER ) )
       {
          if( insertpos != branchcand->npriopseudobins + branchcand->npriopseudoints )
          {
@@ -1159,7 +1159,7 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
    assert(var != NULL);
 
    if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN)
-      && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
+      && SCIPvarIsIntegral(var)
       && SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
    {
       /* variable is neither continuous nor fixed and has non-empty domain: make sure it is member of the pseudo branching candidate list */
@@ -1178,7 +1178,7 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED
-         || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+         || (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(var))
          || SCIPsetIsGE(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
       /* variable is continuous or fixed or has empty domain: make sure it is not member of the pseudo branching candidate list */

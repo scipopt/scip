@@ -3229,8 +3229,9 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
    }
    else
    {
-      SCIP_VARTYPE vartype1 = SCIPvarGetType(var1);
-      SCIP_VARTYPE vartype2 = SCIPvarGetType(var2);
+      /* Weird check but this was the easiest way to keep the old logic when refactoring implied integers */
+      int vartype1 = SCIPvarIsImpliedIntegral(var1) ? 2 : SCIPvarGetType(var1);
+      int vartype2 = SCIPvarIsImpliedIntegral(var2) ? 2 : SCIPvarGetType(var2);
 
       if( vartype1 < vartype2 )
       {
@@ -14762,7 +14763,7 @@ SCIP_RETCODE fullDualPresolve(
                SCIP_VAR* var;
 
                var = consdata->vars[i];
-               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               if( !SCIPvarIsIntegral(var) )
                {
                   int contv;
                   contv = SCIPvarGetProbindex(var) - nintvars;
@@ -14889,7 +14890,7 @@ SCIP_RETCODE fullDualPresolve(
             redub[arrayindex] = MIN(redub[arrayindex], newredub);
 
             /* collect the continuous variables of the constraint */
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+            if( !SCIPvarIsIntegral(var) )
             {
                int contv;
 
