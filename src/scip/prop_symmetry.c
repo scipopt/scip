@@ -2207,23 +2207,27 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
          {
             ++propdata->nmovedpermvars;
 
-            switch ( SCIPvarGetType(propdata->permvars[v]) )
+            if ( SCIPvarIsImpliedIntegral(propdata->permvars[v]) )
             {
-            case SCIP_VARTYPE_BINARY:
-               ++propdata->nmovedbinpermvars;
-               break;
-            case SCIP_VARTYPE_INTEGER:
-               ++propdata->nmovedintpermvars;
-               break;
-            case SCIP_VARTYPE_IMPLINT:
                ++propdata->nmovedimplintpermvars;
-               break;
-            case SCIP_VARTYPE_CONTINUOUS:
-               ++propdata->nmovedcontpermvars;
-               break;
-            default:
-               SCIPerrorMessage("Variable provided with unknown vartype\n");
-               return SCIP_ERROR;
+            }
+            else
+            {
+               switch ( SCIPvarGetType(propdata->permvars[v]) )
+               {
+                  case SCIP_VARTYPE_BINARY:
+                     ++propdata->nmovedbinpermvars;
+                     break;
+                  case SCIP_VARTYPE_INTEGER:
+                     ++propdata->nmovedintpermvars;
+                     break;
+                  case SCIP_VARTYPE_CONTINUOUS:
+                     ++propdata->nmovedcontpermvars;
+                     break;
+                  default:
+                     SCIPerrorMessage("Variable provided with unknown vartype\n");
+                     return SCIP_ERROR;
+               }
             }
          }
       }
@@ -4773,20 +4777,25 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
       leadervar = permvars[orbits[orbitbegins[orbitidx] + orbitleaderidx]];
 
       SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s of type ", orbitsize - 1, SCIPvarGetName(leadervar));
-      switch ( SCIPvarGetType(leadervar) )
+      if( SCIPvarIsImpliedIntegral(leadervar) )
       {
-      case SCIP_VARTYPE_BINARY:
-         SCIPinfoMessage(scip, NULL, "BINARY\n");
-         break;
-      case SCIP_VARTYPE_INTEGER:
-         SCIPinfoMessage(scip, NULL, "INTEGER\n");
-         break;
-      case SCIP_VARTYPE_IMPLINT:
          SCIPinfoMessage(scip, NULL, "IMPLICIT INTEGER\n");
-         break;
-      default:
-         SCIPinfoMessage(scip, NULL, "CONTINUOUS\n");
-      } /*lint !e788*/
+      }
+      else
+      {
+         switch ( SCIPvarGetType(leadervar) )
+         {
+            case SCIP_VARTYPE_BINARY:
+               SCIPinfoMessage(scip, NULL, "BINARY\n");
+               break;
+            case SCIP_VARTYPE_INTEGER:
+               SCIPinfoMessage(scip, NULL, "INTEGER\n");
+               break;
+            default:
+               SCIPinfoMessage(scip, NULL, "CONTINUOUS\n");
+         } /*lint !e788*/
+      }
+
    }
 
    /* (re-)allocate memory for Schreier Sims constraints and leaders */
@@ -5283,7 +5292,7 @@ SCIP_RETCODE addSSTConss(
             if ( perm[i] == i )
                continue;
             vartype = SCIPvarGetType(propdata->permvars[i]);
-            if ( vartype == SCIP_VARTYPE_CONTINUOUS || vartype == SCIP_VARTYPE_IMPLINT )
+            if ( vartype == SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
                goto COMPONENTOK;
          }
       }

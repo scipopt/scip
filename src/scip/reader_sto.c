@@ -2008,8 +2008,8 @@ SCIP_RETCODE addScenarioVarsToProb(
       /* creating a variable as a copy of the original variable. */
       getScenarioEntityName(name, SCIPvarGetName(vars[i]), getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
       SCIP_CALL( SCIPcreateVar(scip, &var, name, SCIPvarGetLbOriginal(vars[i]), SCIPvarGetUbOriginal(vars[i]),
-            obj, vartype, SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL,
-            NULL, NULL) );
+            obj, vartype, SCIPvarGetImplType(vars[i]), SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]),
+            NULL, NULL, NULL, NULL, NULL) );
 
       SCIPdebugMessage("Adding variable <%s>\n", name);
 
@@ -2126,8 +2126,8 @@ SCIP_RETCODE getScenarioDecompVar(
       SCIP_VAR* var;
       /* creating a variable as a copy of the original variable. */
       SCIP_CALL( SCIPcreateVar(scip, &var, varname, SCIPvarGetLbOriginal(searchvar), SCIPvarGetUbOriginal(searchvar),
-            0.0, SCIPvarGetType(searchvar), SCIPvarIsInitial(searchvar), SCIPvarIsRemovable(searchvar), NULL, NULL,
-            NULL, NULL, NULL) );
+            0.0, SCIPvarGetType(searchvar), SCIPvarGetImplType(searchvar), SCIPvarIsInitial(searchvar),
+            SCIPvarIsRemovable(searchvar), NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, var) );
 

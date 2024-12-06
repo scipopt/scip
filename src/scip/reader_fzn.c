@@ -1972,7 +1972,8 @@ SCIP_RETCODE createVariable(
    }
 
    /* create variable */
-   SCIP_CALL( SCIPcreateVar(scip, &varcopy, name, lb, ub, 0.0, vartype, !(fzninput->dynamiccols), fzninput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(scip, &varcopy, name, lb, ub, 0.0, vartype, SCIP_VARIMPLTYPE_NONE,
+                            !(fzninput->dynamiccols), fzninput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, varcopy) );
 
    SCIPdebugMsg(scip, "created variable\n");
@@ -4627,7 +4628,7 @@ SCIP_RETCODE writeFzn(
       }
       else
       {
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+         assert(SCIPvarIsImpliedIntegral(var) || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
          {
@@ -4678,7 +4679,7 @@ SCIP_RETCODE writeFzn(
          obj = objscale * SCIPvarGetObj(vars[floatobjvars[v]]);
          flattenFloat(scip, obj, buffy);
          assert( !SCIPisIntegral(scip, obj) || SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_CONTINUOUS
-            || SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_IMPLINT);
+            || SCIPvarIsImpliedIntegral(vars[floatobjvars[v]]) );
          SCIPinfoMessage(scip, file, "%s%s", buffy, v < nfloatobjvars-1 ? ", " : "" );
       }
 

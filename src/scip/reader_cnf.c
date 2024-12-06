@@ -226,8 +226,8 @@ SCIP_RETCODE readCnf(
    for( v = 0; v < nvars; ++v )
    {
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "x%d", v+1);
-      SCIP_CALL( SCIPcreateVar(scip, &vars[v], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
-            NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(scip, &vars[v], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
+                               !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, vars[v]) );
       varsign[v] = 0;
    }

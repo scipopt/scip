@@ -835,6 +835,7 @@ SCIP_RETCODE addVar(
    SCIP_Real lb;
    SCIP_Real ub;
    SCIP_VARTYPE vartype;
+   SCIP_VARIMPLTYPE varimpltype;
    SCIP_Bool initial;
    SCIP_Bool removable;
    int branchpriority;
@@ -879,12 +880,15 @@ SCIP_RETCODE addVar(
    {
    case VAR_CON:
       vartype = SCIP_VARTYPE_CONTINUOUS;
+      varimpltype = SCIP_VARIMPLTYPE_NONE;
       break;
    case VAR_INT:
       vartype = SCIP_VARTYPE_INTEGER;
+      varimpltype = SCIP_VARIMPLTYPE_NONE;
       break;
-   case VAR_IMP:
-      vartype = SCIP_VARTYPE_IMPLINT;
+   case VAR_IMP:\
+      vartype = SCIP_VARTYPE_CONTINUOUS;
+      varimpltype = SCIP_VARIMPLTYPE_WEAK;
       break;
    default:
       SCIPwarningMessage(scip, "invalid variable class <%d> in ZIMPL callback xlp_addvar()\n", usevarclass);
@@ -896,7 +900,8 @@ SCIP_RETCODE addVar(
    removable = readerdata->dynamiccols;
 
    /* create variable */
-   SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, varimpltype,
+                            initial, removable, NULL, NULL, NULL, NULL, NULL) );
 
    /* add variable to the problem; we are releasing the variable later */
    SCIP_CALL( SCIPaddVar(scip, var) );
@@ -1121,15 +1126,15 @@ VarClass xlp_getclass(
    assert(readerdata != NULL);
 
    scipvar = (SCIP_VAR*)var;
+   /**< TODO; for now only pass implied integer variables that are not enforced. Check if this is correct / if the
+    * definition of zimpl matches with SCIP's definition here. */
    switch( SCIPvarGetType(scipvar) )
    {
    case SCIP_VARTYPE_BINARY:
    case SCIP_VARTYPE_INTEGER:
       return VAR_INT;
-   case SCIP_VARTYPE_IMPLINT:
-      return VAR_IMP;
    case SCIP_VARTYPE_CONTINUOUS:
-      return VAR_CON;
+      return SCIPvarIsImpliedIntegral(scipvar) ? VAR_IMP : VAR_CON;
    default:
       SCIPerrorMessage("invalid SCIP variable type <%d> in ZIMPL callback xlp_getclass()\n", SCIPvarGetType(scipvar));
       readerdata->readerror = TRUE;

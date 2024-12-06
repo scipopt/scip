@@ -1404,7 +1404,7 @@ SCIP_RETCODE SCIPwriteGms(
              * if not active or having coefficient != 1.0, or being binary/integer, then give up
              */
             if( !SCIPvarIsActive(vars[v]) || SCIPvarGetObj(vars[v]) != 1.0 ||
-               SCIPvarGetType(vars[v]) < SCIP_VARTYPE_IMPLINT ) /*lint !e613*/
+               (SCIPvarIsIntegral(vars[v]) && !SCIPvarIsImpliedIntegral(vars[v])) ) /*lint !e613*/
                break;
 
             objvar = vars[v]; /*lint !e613*/

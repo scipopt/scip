@@ -672,7 +672,7 @@ SCIP_RETCODE createVariable(
    /* create new variable of the given name */
    SCIPdebugMsg(scip, "creating new variable: <%s>\n", name);
 
-   SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
+   SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
          initial, removable, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
    *var = newvar;

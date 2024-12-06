@@ -244,7 +244,8 @@ SCIP_RETCODE readVariables(
       }
 
       /* create SCIP variable */
-      SCIP_CALL( SCIPcreateVar(scip, &(*vars)[*nvars], varname, varlb, varub, 0.0, vartype, !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(scip, &(*vars)[*nvars], varname, varlb, varub, 0.0, vartype, SCIP_VARIMPLTYPE_NONE,
+                               !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
       assert((*vars)[*nvars] != NULL);
 
       /* add variable to problem */
@@ -415,7 +416,8 @@ SCIP_RETCODE readObjective(
       {
          SCIP_VAR* objconstvar;
 
-         SCIP_CALL( SCIPcreateVar(scip, &objconstvar, "objconstvar", objconst, objconst, 1.0, SCIP_VARTYPE_CONTINUOUS, !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVar(scip, &objconstvar, "objconstvar", objconst, objconst, 1.0, SCIP_VARTYPE_CONTINUOUS,
+                                  SCIP_VARIMPLTYPE_NONE, !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, objconstvar) );
          SCIP_CALL( SCIPreleaseVar(scip, &objconstvar) );
       }
@@ -508,7 +510,7 @@ SCIP_RETCODE createConstraint(
    if( objcons )
    {
       SCIP_CALL( SCIPcreateVar(scip, &objvar, "nlobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-         SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, objvar) );
    }
 
