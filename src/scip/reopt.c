@@ -3349,7 +3349,7 @@ SCIP_RETCODE addGlobalCut(
          SCIP_Real ubglb;
          SCIP_Real lbglb;
 
-         assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT);
+         assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarIsImpliedIntegral(vars[v]));
 
          reoptconsdata->vars[nvarsadded] = vars[v];
 
@@ -3479,7 +3479,7 @@ SCIP_RETCODE saveGlobalCons(
       {
          if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY )
             ++nbinvars;
-         if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT )
+         if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarIsImpliedIntegral(vars[v]) )
             ++nintvars;
       }
       assert(nbinvars + nintvars == nbranchvars);
@@ -3858,30 +3858,42 @@ SCIP_RETCODE addSplitcons(
       /* count number of binary, integer, and continuous variables */
       for( int v = 0; v < reoptconsdata->nvars; ++v )
       {
-         switch ( SCIPvarGetType(reoptconsdata->vars[v]) )
+         if( SCIPvarIsImpliedIntegral(reoptconsdata->vars[v]) )
          {
-         case SCIP_VARTYPE_BINARY:
-            ++nbinvars;
-            break;
-         case SCIP_VARTYPE_IMPLINT:
-         case SCIP_VARTYPE_INTEGER:
             if( SCIPisEQ(scip, SCIPvarGetLbLocal(reoptconsdata->vars[v]), 0.0)
-               && SCIPisEQ(scip, SCIPvarGetUbLocal(reoptconsdata->vars[v]), 1.0) )
+                && SCIPisEQ(scip, SCIPvarGetUbLocal(reoptconsdata->vars[v]), 1.0) )
                ++nbinvars;
 #ifndef NDEBUG
             else
                ++nintvars;
 #endif
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
+         }
+         else
+         {
+            switch( SCIPvarGetType(reoptconsdata->vars[v]))
+            {
+               case SCIP_VARTYPE_BINARY:
+                  ++nbinvars;
+                  break;
+               case SCIP_VARTYPE_INTEGER:
+                  if( SCIPisEQ(scip, SCIPvarGetLbLocal(reoptconsdata->vars[v]), 0.0)
+                      && SCIPisEQ(scip, SCIPvarGetUbLocal(reoptconsdata->vars[v]), 1.0))
+                     ++nbinvars;
 #ifndef NDEBUG
-            ++ncontvars;
+                  else
+                     ++nintvars;
 #endif
-            break;
-         default:
-            SCIPerrorMessage("Variable <%s> has to be either binary, (implied) integer, or continuous.\n",
-               SCIPvarGetName(reoptconsdata->vars[v]));
-            return SCIP_INVALIDDATA;
+                  break;
+               case SCIP_VARTYPE_CONTINUOUS:
+#ifndef NDEBUG
+                  ++ncontvars;
+#endif
+                  break;
+               default:
+                  SCIPerrorMessage("Variable <%s> has to be either binary, (implied) integer, or continuous.\n",
+                                   SCIPvarGetName(reoptconsdata->vars[v]));
+                  return SCIP_INVALIDDATA;
+            }
          }
       }
 
@@ -3942,9 +3954,7 @@ SCIP_RETCODE addSplitcons(
              * case 2: continuous variable with bound x <= u is transformed to u <= x
              *                                    and l <= x is transformed to x <= l
              */
-            if( SCIPvarGetType(consvars[v]) == SCIP_VARTYPE_BINARY
-             || SCIPvarGetType(consvars[v]) == SCIP_VARTYPE_INTEGER
-             || SCIPvarGetType(consvars[v]) == SCIP_VARTYPE_IMPLINT )
+            if( SCIPvarIsIntegral(consvars[v]) )
             {
                if( consboundtypes[v] == SCIP_BOUNDTYPE_UPPER )
                {
@@ -4855,14 +4865,15 @@ SCIP_RETCODE separateSolution(
       assert(SCIPvarIsOriginal(vars[v]));
       assert(nbinvars + nintvars == w);
 
+      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarIsImpliedIntegral(vars[v]) )
+         ++nintvars;
       /* we do not want to create cuts for continous variables */
-      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(vars[v]) )
          continue;
 
-      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[v]) )
          ++nbinvars;
-      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT )
-         ++nintvars;
+
 
       origvars[v] = vars[v];
       assert(origvars[v] != NULL);
@@ -7026,24 +7037,33 @@ SCIP_RETCODE SCIPreoptSplitRoot(
       /* count number of binary, integer, and continuous varibales */
       for( v = 0; v < nbndchgs; ++v )
       {
-         switch( SCIPvarGetType(reoptnodes[0]->dualredscur->vars[v]) ) {
-         case SCIP_VARTYPE_BINARY:
-            ++nbinvars;
-            break;
-         case SCIP_VARTYPE_INTEGER:
-         case SCIP_VARTYPE_IMPLINT:
+         if( SCIPvarIsImpliedIntegral(reoptnodes[0]->dualredscur->vars[v]) )
+         {
 #ifndef NDEBUG
             ++nintvars;
 #endif
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
+         }
+         else
+         {
+            switch( SCIPvarGetType(reoptnodes[0]->dualredscur->vars[v]))
+            {
+               case SCIP_VARTYPE_BINARY:
+                  ++nbinvars;
+                  break;
+               case SCIP_VARTYPE_INTEGER:
 #ifndef NDEBUG
-            ++ncontvars;
+                  ++nintvars;
 #endif
-            break;
-         default:
-            SCIPerrorMessage("Cannot handle vartype %d\n", SCIPvarGetType(reoptnodes[0]->dualredscur->vars[v]));
-            return SCIP_INVALIDDATA;
+                  break;
+               case SCIP_VARTYPE_CONTINUOUS:
+#ifndef NDEBUG
+                  ++ncontvars;
+#endif
+                  break;
+               default:
+                  SCIPerrorMessage("Cannot handle vartype %d\n", SCIPvarGetType(reoptnodes[0]->dualredscur->vars[v]));
+                  return SCIP_INVALIDDATA;
+            }
          }
       }
 
@@ -7642,11 +7662,11 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
       /* check if we can use a logic-or or if we have to use a bounddisjuction constraint */
       for( int v = 0; v < reopt->glbconss[c]->nvars; ++v )
       {
-         if( SCIPvarGetType(reopt->glbconss[c]->vars[v]) == SCIP_VARTYPE_BINARY )
-            ++nbinvars;
-         else if( SCIPvarGetType(reopt->glbconss[c]->vars[v]) == SCIP_VARTYPE_INTEGER
-               || SCIPvarGetType(reopt->glbconss[c]->vars[v]) == SCIP_VARTYPE_IMPLINT )
+         if( SCIPvarGetType(reopt->glbconss[c]->vars[v]) == SCIP_VARTYPE_INTEGER
+             || SCIPvarIsImpliedIntegral(reopt->glbconss[c]->vars[v]))
             ++nintvars;
+         else if( SCIPvarGetType(reopt->glbconss[c]->vars[v]) == SCIP_VARTYPE_BINARY )
+            ++nbinvars;
          else
          {
             SCIPerrorMessage("Expected variable type binary or (impl.) integer for variable <%s> in global constraint at pos. %d.\n",
