@@ -36,6 +36,7 @@
 #include "scip/clock.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
+#include "scip/cons_linear.h"
 #include "scip/iisfinder.h"
 #include "scip/iisfinder_greedy.h"
 
@@ -253,8 +254,14 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   SCIP_CONS** origconss;
+   SCIP_CONS** conss;
+   SCIP_VAR** vars;
    SCIP_IIS* iis;
    int i;
+   int j;
+   int nconss;
+   int nvars;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
    SCIP_Bool silent;
    SCIP_Bool removebounds;
@@ -262,6 +269,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_Bool stopafterone;
    SCIP_Bool removeunusedvars;
    SCIP_Bool trivial;
+   SCIP_Bool islinear;
    SCIP_Real timelim;
    SCIP_Longint nodelim;
 
@@ -408,15 +416,37 @@ SCIP_RETCODE SCIPiisGenerate(
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
    }
 
+   /* Remove redundant constraints that potentially are left over from indicator constraints.
+    * That is constraints containing a variables with no bounds and that only features in a single constraint */
+   nconss = SCIPgetNOrigConss(iis->subscip);
+   origconss = SCIPgetOrigConss(iis->subscip);
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(iis->subscip, &conss, origconss, nconss) );
+   for( i = 0; i < nconss; ++i )
+   {
+      islinear = strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i])), "linear") == 0;
+      if( islinear && SCIPconsGetNUses(conss[i]) <= 1)
+      {
+         nvars = SCIPgetNVarsLinear(iis->subscip, conss[i]);
+         vars = SCIPgetVarsLinear(iis->subscip, conss[i]);
+         for( j = 0; j < nvars; ++j )
+         {
+            if( SCIPvarGetNUses(vars[j]) <= 2 && SCIPisInfinity(iis->subscip, -SCIPvarGetLbOriginal(vars[j])) && SCIPisInfinity(iis->subscip, SCIPvarGetUbOriginal(vars[j])) )
+            {
+               SCIPdelCons(iis->subscip, conss[i]);
+               break;
+            }
+         }
+      }
+   }
+   SCIPfreeBlockMemoryArray(iis->subscip, &conss, nconss);
+
    if( !silent )
       SCIPiisfinderInfoMessage(iis, FALSE);
 
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/removeunusedvars", &removeunusedvars) );
    if( removeunusedvars )
    {
-      SCIP_VAR** vars;
       SCIP_Bool deleted;
-      int nvars;
 
       nvars = SCIPgetNOrigVars(iis->subscip);
       vars = SCIPgetOrigVars(iis->subscip);

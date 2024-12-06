@@ -72,12 +72,12 @@ struct SCIP_IISfinderData
 /* Set time and node limits on the subproblem */
 static
 SCIP_RETCODE setLimits(
-   SCIP*                scip,                /**< SCIP instance to analyze */
-   SCIP_IIS*            iis,                 /**< IIS data structure containing subscip  */
-   SCIP_Real            timelim,             /**< total time limit allowed of the whole call */
-   SCIP_Real            timelimperiter,      /**< time limit per individual solve call */
-   SCIP_Longint         nodelim,             /**< node limit allowed for the whole call */
-   SCIP_Longint         nodelimperiter       /**< maximum number of nodes per individual solve call */
+   SCIP*                 scip,               /**< SCIP instance to analyze */
+   SCIP_IIS*             iis,                /**< IIS data structure containing subscip  */
+   SCIP_Real             timelim,            /**< total time limit allowed of the whole call */
+   SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
+   SCIP_Longint          nodelim,            /**< node limit allowed for the whole call */
+   SCIP_Longint          nodelimperiter      /**< maximum number of nodes per individual solve call */
    )
 {
    SCIP_Real currtime;
@@ -469,12 +469,15 @@ SCIP_RETCODE deletionFilterBatch(
    while( i < nconss )
    {
       k = 0;
-      for( j = i; j < MIN(i + batchsize, nconss); j++ )
+      for( j = i; j < nconss && k < batchsize; j++ )
       {
-         idxs[k] = order[j];
-         k++;
+         if( SCIPconsGetNUses(conss[order[j]]) == 1 )
+         {
+            idxs[k] = order[j];
+            k++;
+         }
       }
-      i = i + k;
+      i = j;
 
       /* treat subproblem */
       SCIP_CALL( deletionSubproblem(iis, conss, NULL, idxs, k, timelim, timelimperiter, nodelim, nodelimperiter,
@@ -606,9 +609,16 @@ SCIP_RETCODE additionFilterBatch(
    for( i = 0; i < nconss; ++i )
    {
       assert( SCIPconsIsInProb(conss[i]) );
-      SCIP_CALL( SCIPcaptureCons(scip, conss[i]) );
-      SCIP_CALL( SCIPdelCons(scip, conss[i]) );
-      inIS[i] = FALSE;
+      if( SCIPconsGetNUses(conss[i]) > 1 )
+      {
+         inIS[i] = TRUE;
+      }
+      else
+      {
+         SCIP_CALL( SCIPcaptureCons(scip, conss[i]) );
+         SCIP_CALL( SCIPdelCons(scip, conss[i]) );
+         inIS[i] = FALSE;
+      }
    }
    SCIPiisSetValid(iis, FALSE);
 
