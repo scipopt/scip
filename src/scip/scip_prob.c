@@ -402,7 +402,7 @@ SCIP_RETCODE SCIPreadProb(
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
             "original problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
             scip->origprob->nvars, scip->origprob->nbinvars, scip->origprob->nintvars,
-            scip->origprob->nimplvars, scip->origprob->ncontvars,
+            SCIPprobGetNImplVars(scip->origprob), scip->origprob->ncontvars,
             scip->origprob->nconss);
 
          /* in full verbose mode we will also print the number of constraints per constraint handler */
@@ -1887,7 +1887,7 @@ SCIP_RETCODE SCIPgetVarsData(
       if( nintvars != NULL )
          *nintvars = scip->origprob->nintvars;
       if( nimplvars != NULL )
-         *nimplvars = scip->origprob->nimplvars;
+         *nimplvars = SCIPprobGetNImplVars(scip->origprob);
       if( ncontvars != NULL )
          *ncontvars = scip->origprob->ncontvars;
       return SCIP_OKAY;
@@ -1910,7 +1910,7 @@ SCIP_RETCODE SCIPgetVarsData(
       if( nintvars != NULL )
          *nintvars = scip->transprob->nintvars;
       if( nimplvars != NULL )
-         *nimplvars = scip->transprob->nimplvars;
+         *nimplvars = SCIPprobGetNImplVars(scip->transprob);
       if( ncontvars != NULL )
          *ncontvars = scip->transprob->ncontvars;
       return SCIP_OKAY;
@@ -2133,7 +2133,7 @@ int SCIPgetNImplVars(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      return scip->origprob->nimplvars;
+      return SCIPprobGetNImplVars(scip->origprob);
 
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
@@ -2144,7 +2144,7 @@ int SCIPgetNImplVars(
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
    case SCIP_STAGE_EXITSOLVE:
-      return scip->transprob->nimplvars;
+      return SCIPprobGetNImplVars(scip->transprob);
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
@@ -2513,7 +2513,7 @@ SCIP_RETCODE SCIPgetOrigVarsData(
    if( nintvars != NULL )
       *nintvars = scip->origprob->nintvars;
    if( nimplvars != NULL )
-      *nimplvars = scip->origprob->nimplvars;
+      *nimplvars = SCIPprobGetNImplVars(scip->origprob);
    if( ncontvars != NULL )
       *ncontvars = scip->origprob->ncontvars;
 
@@ -2654,7 +2654,7 @@ int SCIPgetNOrigImplVars(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNOrigImplVars", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   return scip->origprob->nimplvars;
+   return SCIPprobGetNImplVars(scip->origprob);
 }
 
 /** gets number of continuous variables in the original problem
@@ -2779,7 +2779,7 @@ SCIP_RETCODE SCIPgetSolVarsData(
       if( nintvars != NULL )
          *nintvars = scip->origprob->nintvars;
       if( nimplvars != NULL )
-         *nimplvars = scip->origprob->nimplvars;
+         *nimplvars = SCIPprobGetNImplVars(scip->origprob);
       if( ncontvars != NULL )
          *ncontvars = scip->origprob->ncontvars;
    }
@@ -2794,7 +2794,7 @@ SCIP_RETCODE SCIPgetSolVarsData(
       if( nintvars != NULL )
          *nintvars = scip->transprob->nintvars;
       if( nimplvars != NULL )
-         *nimplvars = scip->transprob->nimplvars;
+         *nimplvars = SCIPprobGetNImplVars(scip->transprob);
       if( ncontvars != NULL )
          *ncontvars = scip->transprob->ncontvars;
    }
