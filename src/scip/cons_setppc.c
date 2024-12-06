@@ -5715,7 +5715,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    nposvars = 0;
    for( v = nposbinvars - 1; v >= 0; --v )
    {
-      assert(SCIPvarGetType(binvars[v]) != SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarIsIntegral(binvars[v]));
 
       if( v < nbinvars || SCIPvarIsBinary(binvars[v]) )
       {

@@ -8638,13 +8638,13 @@ SCIP_RETCODE cutsRoundStrongCG(
    i = 0;
    while( i < *nnz && cutinds[i] >= firstcontvar )
    {
-      assert(SCIPvarGetType(vars[cutinds[i]]) == SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarGetType(vars[cutinds[i]]) == SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(vars[cutinds[i]]));
       ++i;
    }
    while( i < *nnz )
    {
       assert(cutinds[i] < firstcontvar);
-      assert(SCIPvarGetType(vars[cutinds[i]]) != SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarIsIntegral(vars[cutinds[i]]));
       ++i;
    }
 #endif
