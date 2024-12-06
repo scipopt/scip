@@ -2673,23 +2673,27 @@ unsigned int getScore(
 
    /* score = ( nlcount * ( BASE - 1 ) / maxnlcount ) * BASE^2 + vartype * BASE + boundtype */
    score = (unsigned int) ( counter > 0 ? (OBBT_SCOREBASE * counter * ( OBBT_SCOREBASE - 1 )) / maxnlcount : 0 ); /*lint !e414*/
-   switch( SCIPvarGetType(bound->var) )
+   if( SCIPvarIsImpliedIntegral(bound->var) )
    {
-   case SCIP_VARTYPE_INTEGER:
-      score += 1;
-      break;
-   case SCIP_VARTYPE_IMPLINT:
       score += 2;
-      break;
-   case SCIP_VARTYPE_CONTINUOUS:
-      score += 3;
-      break;
-   case SCIP_VARTYPE_BINARY:
-      score += 4;
-      break;
-   default:
-      break;
    }
+   else{
+      switch( SCIPvarGetType(bound->var) )
+      {
+         case SCIP_VARTYPE_INTEGER:
+            score += 1;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
+            score += 3;
+            break;
+         case SCIP_VARTYPE_BINARY:
+            score += 4;
+            break;
+         default:
+            break;
+      }
+   }
+
 
    score *= OBBT_SCOREBASE;
    if( bound->boundtype == SCIP_BOUNDTYPE_UPPER )
