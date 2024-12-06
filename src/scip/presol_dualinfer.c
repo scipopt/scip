@@ -1642,7 +1642,7 @@ SCIP_RETCODE dualBoundStrengthening(
       var = SCIPmatrixGetVar(matrix, i);
 
       if( SCIPmatrixUplockConflict(matrix, i) || SCIPmatrixDownlockConflict(matrix, i) ||
-         (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(var) != SCIP_VARTYPE_IMPLINT) )
+         (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(var)) )
       {
          /* we don't care about integral variables or variables that have conflicting locks */
          isubimplied[i] = FALSE;
@@ -2001,7 +2001,7 @@ SCIP_RETCODE dualBoundStrengthening(
       for( i = 0; i < nimplubvars; i++ )
       {
          assert(SCIPvarGetType(SCIPmatrixGetVar(matrix, implubvars[i])) == SCIP_VARTYPE_CONTINUOUS ||
-            SCIPvarGetType(SCIPmatrixGetVar(matrix, implubvars[i])) == SCIP_VARTYPE_IMPLINT);
+            SCIPvarIsImpliedIntegral(SCIPmatrixGetVar(matrix, implubvars[i])));
          calcMinColActivity(scip, matrix, implubvars[i], lbdual, ubdual, mincolact, mincolactinf);
       }
 
@@ -2308,7 +2308,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
          /* keep a small statistic which types of variables are fixed */
          if( fixed )
          {
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(var) )
                nconvarsfixed++;
             else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
                nbinvarsfixed++;

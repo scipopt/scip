@@ -2284,7 +2284,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                      nlpsolval = SCIPvarGetNLPSol(covervars[c]);
                      nlpsolval = MIN(nlpsolval,ub);
                      nlpsolval = MAX(nlpsolval,lb);
-                     assert(SCIPvarGetType(covervars[c]) >= SCIP_VARTYPE_IMPLINT || SCIPisFeasIntegral(scip, nlpsolval));
+                     assert(SCIPvarIsImpliedIntegral(covervars[c]) || SCIPvarGetType(covervars[c]) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, nlpsolval));
 
                      /* open a new probing node if this will not exceed the maximal tree depth,
                       * otherwise fix all the remaining variables at the same probing node

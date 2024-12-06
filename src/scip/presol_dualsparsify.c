@@ -569,6 +569,7 @@ SCIP_RETCODE aggregation(
    SCIP_VAR* aggregatedvar;
    SCIP_VAR* newvar;
    SCIP_VARTYPE newvartype;
+   SCIP_VARIMPLTYPE newvarimpltype;
    SCIP_Real constant;
    SCIP_Real newlb;
    SCIP_Real newub;
@@ -637,16 +638,13 @@ SCIP_RETCODE aggregation(
          newub = weight1 * SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
    }
 
-   if( SCIPvarIsIntegral(aggregatedvar) )
-      newvartype = (SCIPvarGetType(aggregatedvar) == SCIP_VARTYPE_IMPLINT) ?
-         SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_INTEGER;
-   else
-      newvartype = SCIP_VARTYPE_CONTINUOUS;
+   newvartype = SCIPvarGetType(aggregatedvar) == SCIP_VARTYPE_CONTINUOUS ? SCIP_VARTYPE_CONTINUOUS : SCIP_VARTYPE_INTEGER;
+   newvarimpltype = SCIPvarIsImpliedIntegral(aggregatedvar) ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE;
 
    lhs = SCIPvarGetLbGlobal(vars[colidx2]);
    rhs = SCIPvarGetUbGlobal(vars[colidx2]);
 
-   SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype,
+   SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype, newvarimpltype,
          SCIPvarIsInitial(aggregatedvar), SCIPvarIsRemovable(aggregatedvar), NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
 
@@ -881,8 +879,7 @@ SCIP_RETCODE cancelCol(
                   /* skip if the hashing variable is an integer variable and
                    * the canceled variable is an implicit integer variable
                    */
-                  if( (SCIPvarGetType(hashingcolvar) != SCIP_VARTYPE_IMPLINT) &&
-                     (SCIPvarGetType(cancelvar) == SCIP_VARTYPE_IMPLINT) )
+                  if( !SCIPvarIsImpliedIntegral(hashingcolvar) && SCIPvarIsImpliedIntegral(cancelvar) )
                      continue;
 
                   /* skip if the scale is non-integral */
