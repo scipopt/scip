@@ -367,7 +367,7 @@ SCIP_RETCODE SCIPtransformProb(
    /* print transformed problem statistics */
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
       "transformed problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
-      scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars, scip->transprob->nimplvars,
+      scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars, SCIPprobGetNImplVars(scip->transprob),
       scip->transprob->ncontvars, scip->transprob->nconss);
 
    for( h = 0; h < scip->set->nconshdlrs; ++h )
@@ -2184,7 +2184,7 @@ SCIP_RETCODE compressReoptTree(
       return SCIP_OKAY;
 
    /* do not run a tree compression if the problem contains (implicit) integer variables */
-   if( scip->transprob->nintvars > 0 || scip->transprob->nimplvars > 0 )
+   if( scip->transprob->nintvars > 0 || SCIPprobGetNImplVars(scip->transprob) > 0 )
       return SCIP_OKAY;
 
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
@@ -2420,8 +2420,8 @@ SCIP_RETCODE SCIPpresolve(
          /* print presolved problem statistics */
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
             "presolved problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
-            scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars, scip->transprob->nimplvars,
-            scip->transprob->ncontvars, scip->transprob->nconss);
+            scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars,
+            SCIPprobGetNImplVars(scip->transprob), scip->transprob->ncontvars, scip->transprob->nconss);
 
          for( h = 0; h < scip->set->nconshdlrs; ++h )
          {

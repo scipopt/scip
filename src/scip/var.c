@@ -2210,7 +2210,7 @@ SCIP_RETCODE SCIPvarCopy(
 
    /* creates and captures the variable in the target SCIP and initialize callback methods and variable data to NULL */
    SCIP_CALL( SCIPvarCreateOriginal(var, blkmem, set, stat, SCIPvarGetName(sourcevar), 
-         lb, ub, SCIPvarGetObj(sourcevar), SCIPvarGetType(sourcevar),
+         lb, ub, SCIPvarGetObj(sourcevar), SCIPvarGetType(sourcevar), SCIPvarGetImplType(sourcevar),
          SCIPvarIsInitial(sourcevar), SCIPvarIsRemovable(sourcevar), 
          NULL, NULL, NULL, NULL, NULL) );
    assert(*var != NULL);
@@ -2218,9 +2218,6 @@ SCIP_RETCODE SCIPvarCopy(
    /* directly copy donot(mult)aggr flag */
    (*var)->donotaggr = sourcevar->donotaggr;
    (*var)->donotmultaggr = sourcevar->donotmultaggr;
-
-   /* directly copy implied integer status */
-   (*var)->varimpltype = sourcevar->varimpltype;
 
    /* insert variable into mapping between source SCIP and the target SCIP */
    assert(!SCIPhashmapExists(varmap, sourcevar));
@@ -2371,6 +2368,7 @@ SCIP_RETCODE varParse(
    SCIP_Real*            ub,                 /**< pointer to store the upper bound */
    SCIP_Real*            obj,                /**< pointer to store the objective coefficient */
    SCIP_VARTYPE*         vartype,            /**< pointer to store the variable type */
+   SCIP_VARIMPLTYPE*     impltype,           /**< pointer to store the implied integer type */
    SCIP_Real*            lazylb,             /**< pointer to store if the lower bound is lazy */
    SCIP_Real*            lazyub,             /**< pointer to store if the upper bound is lazy */
    SCIP_Bool             local,              /**< should the local bound be applied */
@@ -2399,13 +2397,17 @@ SCIP_RETCODE varParse(
    assert(*endptr != str);
    SCIPsetDebugMsg(set, "parsed variable type <%s>\n", token);
 
+   (*impltype) = SCIP_VARIMPLTYPE_NONE;
    /* get variable type */
    if( strncmp(token, "binary", 3) == 0 )
       (*vartype) = SCIP_VARTYPE_BINARY;
    else if( strncmp(token, "integer", 3) == 0 )
       (*vartype) = SCIP_VARTYPE_INTEGER;
    else if( strncmp(token, "implicit", 3) == 0 )
-      (*vartype) = SCIP_VARTYPE_IMPLINT;
+   {
+      (*vartype) = SCIP_VARTYPE_CONTINUOUS;
+      (*impltype) = SCIP_VARIMPLTYPE_WEAK;
+   }
    else if( strncmp(token, "continuous", 3) == 0 )
       (*vartype) = SCIP_VARTYPE_CONTINUOUS;
    else
@@ -2532,6 +2534,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_Real ub;
    SCIP_Real obj;
    SCIP_VARTYPE vartype;
+   SCIP_VARIMPLTYPE impltype;
    SCIP_Real lazylb;
    SCIP_Real lazyub;
 
@@ -2542,12 +2545,12 @@ SCIP_RETCODE SCIPvarParseOriginal(
    assert(success != NULL);
 
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, endptr, success) );
+   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &impltype, &lazylb, &lazyub, FALSE, endptr, success) );
 
    if( *success ) /*lint !e774*/
    {
       /* create variable */
-      SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
+      SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
             varcopy, vardelorig, vartrans, vardeltrans, vardata) );
 
       /* set variable status and data */
@@ -2600,6 +2603,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_Real ub;
    SCIP_Real obj;
    SCIP_VARTYPE vartype;
+   SCIP_VARIMPLTYPE impltype;
    SCIP_Real lazylb;
    SCIP_Real lazyub;
 
@@ -2609,12 +2613,13 @@ SCIP_RETCODE SCIPvarParseTransformed(
    assert(success != NULL);
 
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, endptr, success) );
+   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &impltype, &lazylb, &lazyub,
+                       TRUE, endptr, success) );
 
    if( *success ) /*lint !e774*/
    {
       /* create variable */
-      SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
+      SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, impltype, initial, removable,
             varcopy, vardelorig, vartrans, vardeltrans, vardata) );
 
       /* create event filter for transformed variable */
@@ -3038,25 +3043,29 @@ SCIP_RETCODE SCIPvarPrint(
    assert(var != NULL);
    assert(var->scip == set->scip);
 
-   /* type of variable */
-   switch( SCIPvarGetType(var) )
+   if( SCIPvarIsImpliedIntegral(var) )
    {
-   case SCIP_VARTYPE_BINARY:
-      SCIPmessageFPrintInfo(messagehdlr, file, "  [binary]");
-      break;
-   case SCIP_VARTYPE_INTEGER:
-      SCIPmessageFPrintInfo(messagehdlr, file, "  [integer]");
-      break;
-   case SCIP_VARTYPE_IMPLINT:
       SCIPmessageFPrintInfo(messagehdlr, file, "  [implicit]");
-      break;
-   case SCIP_VARTYPE_CONTINUOUS:
-      SCIPmessageFPrintInfo(messagehdlr, file, "  [continuous]");
-      break;
-   default:
-      SCIPerrorMessage("unknown variable type\n");
-      SCIPABORT();
-      return SCIP_ERROR; /*lint !e527*/
+   }
+   else
+   {
+      /* type of variable */
+      switch( SCIPvarGetType(var) )
+      {
+         case SCIP_VARTYPE_BINARY:
+            SCIPmessageFPrintInfo(messagehdlr, file, "  [binary]");
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            SCIPmessageFPrintInfo(messagehdlr, file, "  [integer]");
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
+            SCIPmessageFPrintInfo(messagehdlr, file, "  [continuous]");
+            break;
+         default:
+            SCIPerrorMessage("unknown variable type\n");
+            SCIPABORT();
+            return SCIP_ERROR; /*lint !e527*/
+      }
    }
 
    /* name */
@@ -3512,7 +3521,7 @@ SCIP_RETCODE SCIPvarTransform(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "t_%s", origvar->name);
       SCIP_CALL( SCIPvarCreateTransformed(transvar, blkmem, set, stat, name,
             origvar->glbdom.lb, origvar->glbdom.ub, (SCIP_Real)objsense * origvar->obj,
-            SCIPvarGetType(origvar), origvar->initial, origvar->removable,
+            SCIPvarGetType(origvar), SCIPvarGetImplType(origvar), origvar->initial, origvar->removable,
             origvar->vardelorig, origvar->vartrans, origvar->vardeltrans, origvar->varcopy, NULL) );
 
       /* copy the branch factor and priority */
@@ -4943,6 +4952,7 @@ SCIP_RETCODE tryAggregateIntVars(
    SCIP_Longint ysol;
    SCIP_Bool success;
    SCIP_VARTYPE vartype;
+   SCIP_VARIMPLTYPE impltype;
 
 #define MAXDNOM 1000000LL
 
@@ -4963,9 +4973,9 @@ SCIP_RETCODE tryAggregateIntVars(
    assert(aggregated != NULL);
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PRESOLVING);
    assert(SCIPvarGetStatus(varx) == SCIP_VARSTATUS_LOOSE);
-   assert(SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT);
+   assert(SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER || SCIPvarIsImpliedIntegral(varx));
    assert(SCIPvarGetStatus(vary) == SCIP_VARSTATUS_LOOSE);
-   assert(SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vary) == SCIP_VARTYPE_IMPLINT);
+   assert(SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER || SCIPvarIsImpliedIntegral(vary));
    assert(!SCIPsetIsZero(set, scalarx));
    assert(!SCIPsetIsZero(set, scalary));
 
@@ -5019,7 +5029,7 @@ SCIP_RETCODE tryAggregateIntVars(
    }
 
    /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
-   if( (a == 1 || a == -1) && SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER )
+   if( (a == 1 || a == -1) && !SCIPvarIsImpliedIntegral(vary) )
    {
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
@@ -5028,7 +5038,7 @@ SCIP_RETCODE tryAggregateIntVars(
       assert(*aggregated);
       return SCIP_OKAY;
    }
-   if( (b == 1 || b == -1) && SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER )
+   if( (b == 1 || b == -1) && !SCIPvarIsImpliedIntegral(varx) )
    {
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
@@ -5094,10 +5104,11 @@ SCIP_RETCODE tryAggregateIntVars(
     * these both variables should be enforced by some other variables, otherwise the new variable needs to be of
     * integral type
     */
-   vartype = ((SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER)
-      ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_IMPLINT);
+   vartype = SCIP_VARTYPE_INTEGER; /*TODO; check if we can also use continuous here if both are implied integers and continuous */
+   impltype = (SCIPvarIsImpliedIntegral(varx) && SCIPvarIsImpliedIntegral(vary)) ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE;
 
-   /* feasible solutions are (x,y) = (x',y') + z*(-b,a)
+
+      /* feasible solutions are (x,y) = (x',y') + z*(-b,a)
     * - create new integer variable z with infinite bounds
     * - aggregate variable x = -b*z + x'
     * - aggregate variable y =  a*z + y'
@@ -5105,7 +5116,7 @@ SCIP_RETCODE tryAggregateIntVars(
     */
    (void) SCIPsnprintf(aggvarname, SCIP_MAXSTRLEN, "agg%d", stat->nvaridx);
    SCIP_CALL( SCIPvarCreateTransformed(&aggvar, blkmem, set, stat,
-         aggvarname, -SCIPsetInfinity(set), SCIPsetInfinity(set), 0.0, vartype,
+         aggvarname, -SCIPsetInfinity(set), SCIPsetInfinity(set), 0.0, vartype, impltype,
          SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary), SCIPvarIsRemovable(varx) && SCIPvarIsRemovable(vary),
          NULL, NULL, NULL, NULL, NULL) );
 
@@ -5276,15 +5287,15 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       /* if the aggregation scalar is fractional, we cannot (for technical reasons) and do not want to aggregate implicit integer variables,
        * since then we would loose the corresponding divisibility property
        */
-      assert(SCIPvarGetType(varx) != SCIP_VARTYPE_IMPLINT || SCIPsetIsFeasIntegral(set, scalar));
+      assert(!SCIPvarIsImpliedIntegral(varx) || SCIPsetIsFeasIntegral(set, scalar));
 
       /* aggregate the variable */
       SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
             branchcand, eventfilter, eventqueue, vary, scalar, constant, infeasible, aggregated) );
       assert(*aggregated || *infeasible || SCIPvarDoNotAggr(varx));
    }
-   else if( (SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT)
-      && (SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vary) == SCIP_VARTYPE_IMPLINT) )
+   else if( (SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER || SCIPvarIsImpliedIntegral(varx) )
+      && (SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER || SCIPvarIsImpliedIntegral(vary)) )
    {
       /* the variables are both integral: we have to try to find an integer aggregation */
       SCIP_CALL( tryAggregateIntVars(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
@@ -5798,7 +5809,7 @@ SCIP_RETCODE SCIPvarNegate(
 
       /* create negated variable */
       SCIP_CALL( varCreate(negvar, blkmem, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,
-            SCIPvarGetType(var), var->initial, var->removable, NULL, NULL, NULL, NULL, NULL) );
+            SCIPvarGetType(var), SCIPvarGetImplType(var), var->initial, var->removable, NULL, NULL, NULL, NULL, NULL) );
       (*negvar)->varstatus = SCIP_VARSTATUS_NEGATED; /*lint !e641*/
       if( SCIPvarIsBinary(var) )
          (*negvar)->data.negate.constant = 1.0;

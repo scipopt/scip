@@ -258,10 +258,18 @@ SCIP_RETCODE SCIPwriteVarName(
    if( type )
    {
       /* print variable type */
-      SCIPinfoMessage(scip, file, "[%c]",
-         SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
-         SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR :
-         SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT ? SCIP_VARTYPE_IMPLINT_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR);
+      char c = SCIP_VARTYPE_BINARY_CHAR;
+      if( SCIPvarIsImpliedIntegral(var) )
+      {
+         c = SCIP_VARTYPE_IMPLINT_CHAR;
+      }
+      else
+      {
+         c = SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
+             SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR;
+      }
+      SCIPinfoMessage(scip, file, "[%c]",c);
+
    }
 
    return SCIP_OKAY;

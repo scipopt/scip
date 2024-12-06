@@ -5186,6 +5186,7 @@ SCIP_RETCODE addSSTConss(
    int tiebreakrule;
    int leadervartype;
    SCIP_VARTYPE selectedtype = SCIP_VARTYPE_CONTINUOUS;
+   SCIP_Bool selectedimplint = FALSE;
    int nvarsselectedtype;
    SCIP_Bool conflictgraphcreated = FALSE;
    SCIP_Bool mixedcomponents;
@@ -5267,7 +5268,7 @@ SCIP_RETCODE addSSTConss(
 
    if ( ISSSTIMPLINTACTIVE(leadervartype) && nmovedimplintpermvars > nvarsselectedtype )
    {
-      selectedtype = SCIP_VARTYPE_IMPLINT;
+      selectedimplint = TRUE;
       nvarsselectedtype = nmovedimplintpermvars;
    }
 
@@ -5368,7 +5369,8 @@ SCIP_RETCODE addSSTConss(
          for (p = 0; p < norbits; ++p)
          {
             /* stop if the first element of an orbits has the wrong vartype */
-            if ( SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype )
+            if ( (selectedimplint && !SCIPvarIsImpliedIntegral(permvars[orbits[orbitbegins[p]]])) ||
+               (SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype) )
             {
                success = FALSE;
                break;
