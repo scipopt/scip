@@ -1320,7 +1320,7 @@ SCIP_Bool isFixedVar(
    if ( (fixedtype & SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       return TRUE;
    if ( (fixedtype & SYM_SPEC_REAL) &&
-      (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT) )
+      (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(var)) )
       return TRUE;
    return FALSE;
 }

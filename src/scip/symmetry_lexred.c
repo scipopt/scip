@@ -1335,11 +1335,8 @@ SCIP_RETCODE propagateStaticLexred(
          if ( !peekfeasible )
          {
             /* both variables cannot be the same, so the non-negated variable must be greater than the domain center */
-            switch ( SCIPvarGetType(vari) )
+            if( SCIPvarIsIntegral(vari) )
             {
-            case SCIP_VARTYPE_BINARY:
-            case SCIP_VARTYPE_IMPLINT:
-            case SCIP_VARTYPE_INTEGER:
                assert( SCIPisIntegral(scip, lb1) );
                SCIP_CALL( SCIPtightenVarLb(scip, vari, lexdata->vardomaincenter[i] + 1.0, TRUE, infeasible, &success) );
                if ( success )
@@ -1348,8 +1345,9 @@ SCIP_RETCODE propagateStaticLexred(
                   goto FREEMEMORY;
                lb1 = lexdata->vardomaincenter[i] + 1.0;
                assert( SCIPsymLE(scip, lb1, ub1) );
-               break;
-            case SCIP_VARTYPE_CONTINUOUS:
+            }
+            else
+            {
                /* continuous variable type: act as if we increase the variable by a very little bit.
                 * This is only possible if we're able to increase the variable bound by a bit.
                 */
@@ -1358,10 +1356,6 @@ SCIP_RETCODE propagateStaticLexred(
                   *infeasible = TRUE;
                   goto FREEMEMORY;
                }
-               break;
-            default:
-               SCIPerrorMessage("unsupported variable type encountered at the lexicographic reduction propagator\n");
-               return SCIP_ERROR;
             }
          }
       }
@@ -1428,11 +1422,8 @@ SCIP_RETCODE propagateStaticLexred(
             if ( !peekfeasible )
             {
                /* vari cannot take value lb1, so we increase the lower bound. (do not use lbi as this is a shifted domain bound) */
-               switch ( SCIPvarGetType(vari) )
+               if( SCIPvarIsIntegral(vari) )
                {
-               case SCIP_VARTYPE_BINARY:
-               case SCIP_VARTYPE_IMPLINT:
-               case SCIP_VARTYPE_INTEGER:
                   /* discrete variable type: increase lower bound by 1. */
                   assert( SCIPisIntegral(scip, lb1) );
                   SCIP_CALL( SCIPtightenVarLb(scip, vari, lb1 + 1.0, TRUE, infeasible, &success) );
@@ -1442,8 +1433,9 @@ SCIP_RETCODE propagateStaticLexred(
                      goto FREEMEMORY;
                   lb1 = lb1 + 1.0;
                   assert( SCIPsymLE(scip, lb1, ub1) );
-                  break;
-               case SCIP_VARTYPE_CONTINUOUS:
+               }
+               else
+               {
                   /* continuous variable type: act as if we increase the variable by a very little bit.
                    * That is only possible if we're able to increase the variable bound by a bit.
                    */
@@ -1452,10 +1444,6 @@ SCIP_RETCODE propagateStaticLexred(
                      *infeasible = TRUE;
                      goto FREEMEMORY;
                   }
-                  break;
-               default:
-                  SCIPerrorMessage("unsupported variable type encountered at the lexicographic reduction propagator\n");
-                  return SCIP_ERROR;
                }
             }
          }
@@ -1483,11 +1471,8 @@ SCIP_RETCODE propagateStaticLexred(
             if ( !peekfeasible )
             {
                /* varj cannot take value ub2, so we decrease the upper or lower bound. (do not use ubj as this is a shifted domain bound)*/
-               switch ( SCIPvarGetType(varj) )
+               if( SCIPvarIsIntegral(varj) )
                {
-               case SCIP_VARTYPE_BINARY:
-               case SCIP_VARTYPE_IMPLINT:
-               case SCIP_VARTYPE_INTEGER:
                   /* discrete variable type: decrease upper bound by 1. */
                   if ( isnegated )
                   {
@@ -1505,8 +1490,9 @@ SCIP_RETCODE propagateStaticLexred(
                      goto FREEMEMORY;
                   ubj = ubj - 1.0;
                   assert( SCIPsymLE(scip, lbj, ubj) );
-                  break;
-               case SCIP_VARTYPE_CONTINUOUS:
+               }
+               else
+               {
                   /* continuous variable type: act as if we decrease the variable by a very little bit.
                    * that is only possible if we're able to decrease the variable bound by a bit. */
                   if ( SCIPsymEQ(scip, lbj, ubj) )
@@ -1514,9 +1500,6 @@ SCIP_RETCODE propagateStaticLexred(
                      *infeasible = TRUE;
                      goto FREEMEMORY;
                   }
-                  break;
-               default:
-                  return SCIP_ERROR;
                }
             }
          }
