@@ -1333,12 +1333,12 @@ SCIP_RETCODE createSubSCIP(
 
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "relax_%s_pos0", SCIPvarGetName(var));
       SCIP_CALL( SCIPcreateVar( heurdata->subscip, &slackvarpos, varname, 0.0, SCIPinfinity(heurdata->subscip),
-            heurdata->lambdaslack * 100, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL,NULL) );
+            heurdata->lambdaslack * 100, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL,NULL) );
       SCIP_CALL( SCIPaddVar(heurdata->subscip, slackvarpos) );
 
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "relax_%s_neg0", SCIPvarGetName(var));
       SCIP_CALL( SCIPcreateVar(heurdata->subscip, &slackvarneg, varname, 0.0, SCIPinfinity(heurdata->subscip),
-            heurdata->lambdaslack * 100, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL,NULL) );
+            heurdata->lambdaslack * 100, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL,NULL) );
       SCIP_CALL( SCIPaddVar(heurdata->subscip, slackvarneg) );
 
       SCIP_CALL( SCIPaddCoefLinear(heurdata->subscip, cons, var, 1.0) );
@@ -1396,7 +1396,7 @@ SCIP_RETCODE createSubSCIP(
 
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "relax_%s_pos2", SCIPvarGetName(var));
          SCIP_CALL( SCIPcreateVar( heurdata->subscip, &slackvarpos, varname, 0.0, SCIPinfinity(heurdata->subscip),
-               heurdata->lambdaslack, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL,NULL) );
+               heurdata->lambdaslack, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL,NULL) );
          SCIP_CALL( SCIPaddVar(heurdata->subscip, slackvarpos) );
 
          SCIP_CALL( SCIPaddCoefLinear(heurdata->subscip, cons, var, 1.0) );
@@ -1415,7 +1415,7 @@ SCIP_RETCODE createSubSCIP(
 
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "relax_%s_neg2", SCIPvarGetName(var));
          SCIP_CALL( SCIPcreateVar( heurdata->subscip, &slackvarneg, varname, 0.0, SCIPinfinity(heurdata->subscip),
-               heurdata->lambdaslack, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL,NULL) );
+               heurdata->lambdaslack, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL,NULL) );
          SCIP_CALL( SCIPaddVar(heurdata->subscip, slackvarneg) );
 
          SCIP_CALL( SCIPaddCoefLinear(heurdata->subscip, cons, var, 1.0) );
