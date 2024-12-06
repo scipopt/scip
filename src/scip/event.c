@@ -868,9 +868,9 @@ SCIP_RETCODE SCIPeventCreateImplTypeChanged(
    /* create event data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, event) );
    (*event)->eventtype = SCIP_EVENTTYPE_IMPLTYPECHANGED;
-   (*event)->data.eventtypeimplchg.var = var;
-   (*event)->data.eventtypeimplchg.oldtype = oldtype;
-   (*event)->data.eventtypeimplchg.newtype = newtype;
+   (*event)->data.eventimpltypechg.var = var;
+   (*event)->data.eventimpltypechg.oldtype = oldtype;
+   (*event)->data.eventimpltypechg.newtype = newtype;
 
    return SCIP_OKAY;
 }
