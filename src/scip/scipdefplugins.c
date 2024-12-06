@@ -150,6 +150,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleVanillafullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
+   SCIP_CALL( SCIPincludeIISfinderGreedy(scip) );
    SCIP_CALL( SCIPincludeEventHdlrEstim(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );
@@ -249,7 +250,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeCutselHybrid(scip) );
    SCIP_CALL( SCIPincludeCutselEnsemble(scip) );
    SCIP_CALL( SCIPincludeCutselDynamic(scip) );
-   SCIP_CALL( SCIPincludeIISfinderGreedy(scip) );
    SCIP_CALL( SCIPincludeExprhdlrCos(scip) );
    SCIP_CALL( SCIPincludeExprhdlrSin(scip) );
    SCIP_CALL( SCIPincludeExprhdlrExp(scip) );
