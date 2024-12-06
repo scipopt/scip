@@ -52,7 +52,9 @@
 #include "scip/type_conflictstore.h"
 #include "scip/type_message.h"
 
+#ifdef NDEBUG
 #include "scip/struct_prob.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
