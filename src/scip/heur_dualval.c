@@ -1160,12 +1160,12 @@ SCIP_RETCODE createSubSCIP(
 
                (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "relax_%s_pos3", SCIPconsGetName(linindicons));
                SCIP_CALL( SCIPcreateVar(heurdata->subscip, &slackvarpos, varname, 0.0, SCIPinfinity(heurdata->subscip),
-                     heurdata->lambdaslack *100 + varobjective, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+                     heurdata->lambdaslack *100 + varobjective, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(heurdata->subscip, slackvarpos) );
 
                (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "relax_%s_neg3", SCIPconsGetName(linindicons));
                SCIP_CALL( SCIPcreateVar(heurdata->subscip, &slackvarneg, varname, 0.0, SCIPinfinity(heurdata->subscip),
-                     heurdata->lambdaslack * 100 + varobjective, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+                     heurdata->lambdaslack * 100 + varobjective, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(heurdata->subscip, slackvarneg) );
 
                /* make a copy of the indicator to relax it if this parameter is set true */
@@ -1190,7 +1190,7 @@ SCIP_RETCODE createSubSCIP(
 
                      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "indicopy_%s", SCIPvarGetName(indicatorbinvar));
                      SCIP_CALL( SCIPcreateVar(heurdata->subscip, &indicatorcopy, varname, SCIPvarGetLbGlobal(indicatorbinvar), SCIPvarGetUbGlobal(indicatorbinvar),
-                           SCIPvarGetObj(indicatorbinvar), SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+                           SCIPvarGetObj(indicatorbinvar), SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
                      SCIP_CALL( SCIPaddVar(heurdata->subscip, indicatorcopy) );
 
@@ -1200,12 +1200,12 @@ SCIP_RETCODE createSubSCIP(
 
                      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "relax_%s_pos1", SCIPvarGetName(indicatorbinvar));
                      SCIP_CALL( SCIPcreateVar(heurdata->subscip, &indislackvarpos, varname, 0.0, SCIPinfinity(heurdata->subscip),
-                           heurdata->lambdaslack * 100 + varobjective, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+                           heurdata->lambdaslack * 100 + varobjective, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
                      SCIP_CALL( SCIPaddVar(heurdata->subscip, indislackvarpos) );
 
                      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "relax_%s_neg1", SCIPvarGetName(indicatorbinvar));
                      SCIP_CALL( SCIPcreateVar(heurdata->subscip, &indislackvarneg, varname, 0.0, SCIPinfinity(heurdata->subscip),
-                           heurdata->lambdaslack * 100 + varobjective, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+                           heurdata->lambdaslack * 100 + varobjective, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
                      SCIP_CALL( SCIPaddVar(heurdata->subscip, indislackvarneg) );
 
                      /* create linking constraint */

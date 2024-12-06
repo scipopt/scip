@@ -122,7 +122,7 @@ SCIP_RETCODE performSimpleRounding(
          newsolval = SCIPfeasFloor(scip, oldsolval);
       else if ( mayroundup )
          newsolval = SCIPfeasCeil(scip, oldsolval);
-      else if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+      else if( SCIPvarIsImpliedIntegral(var) )
       {
          ++nunroundableimplints;
          continue;

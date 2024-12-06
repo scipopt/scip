@@ -1919,7 +1919,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          for( c = 0; c < ncovervars; c++ )
          {
             /* insert variable into hash map */
-            if( SCIPvarGetType(covervars[c]) < SCIP_VARTYPE_IMPLINT )
+            if( SCIPvarIsIntegral(covervars[c]) && !SCIPvarIsImpliedIntegral(covervars[c]) )
             {
                assert(!SCIPhashmapExists(varincover, covervars[c]));
                SCIP_CALL( SCIPhashmapInsertInt(varincover, covervars[c], c+1) );

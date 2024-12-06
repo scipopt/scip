@@ -575,7 +575,7 @@ SCIP_RETCODE decompHorizonInitialize(
       /* determine the block size and the variable types */
       do
       {
-         if( SCIPvarGetType(varscopy[currblockend]) < SCIP_VARTYPE_IMPLINT )
+         if( SCIPvarIsIntegral(varscopy[currblockend]) && !SCIPvarIsImpliedIntegral(varscopy[currblockend]) )
             ++ndiscretevars;
 
          currblockend++;

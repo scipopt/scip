@@ -201,7 +201,7 @@ SCIP_Bool varIsDiscrete(
    SCIP_Bool             impliscontinuous    /**< should implicit integer variables be counted as continuous? */
    )
 {
-   return SCIPvarIsIntegral(var) && (SCIPvarGetType(var) != SCIP_VARTYPE_IMPLINT || !impliscontinuous);
+   return SCIPvarIsIntegral(var) && ( !SCIPvarIsImpliedIntegral(var) || !impliscontinuous);
 }
 
 /** returns whether a given column is counted as discrete, depending on the parameter impliscontinuous */
@@ -211,7 +211,7 @@ SCIP_Bool colIsDiscrete(
    SCIP_Bool             impliscontinuous    /**< should implicit integer variables be counted as continuous? */
    )
 {
-   return SCIPcolIsIntegral(col) && (!impliscontinuous || SCIPvarGetType(SCIPcolGetVar(col)) != SCIP_VARTYPE_IMPLINT);
+   return SCIPcolIsIntegral(col) && (!impliscontinuous || !SCIPvarIsImpliedIntegral(SCIPcolGetVar(col)));
 }
 
 /** returns nonzero values and corresponding columns of given row */
@@ -1266,45 +1266,54 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
    vartype1 = SCIPvarGetType(var1);
    vartype2 = SCIPvarGetType(var2);
 
-   switch (vartype1)
+   if( SCIPvarIsImpliedIntegral(var1) )
    {
-      case SCIP_VARTYPE_BINARY:
-         key1 = 1;
-         break;
-      case SCIP_VARTYPE_INTEGER:
-         key1 = 2;
-         break;
-      case SCIP_VARTYPE_IMPLINT:
-         key1 = 3;
-         break;
-      case SCIP_VARTYPE_CONTINUOUS:
-         key1 = 4;
-         break;
-      default:
-         key1 = -1;
-         SCIPerrorMessage("unknown variable type\n");
-         SCIPABORT();
-         break;
+      key1 = 3;
    }
-   switch (vartype2)
+   else
    {
-      case SCIP_VARTYPE_BINARY:
-         key2 = 1;
-         break;
-      case SCIP_VARTYPE_INTEGER:
-         key2 = 2;
-         break;
-      case SCIP_VARTYPE_IMPLINT:
-         key2 = 3;
-         break;
-      case SCIP_VARTYPE_CONTINUOUS:
-         key2 = 4;
-         break;
-      default:
-         key2 = -1;
-         SCIPerrorMessage("unknown variable type\n");
-         SCIPABORT();
-         break;
+      switch (vartype1)
+      {
+         case SCIP_VARTYPE_BINARY:
+            key1 = 1;
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            key1 = 2;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
+            key1 = 4;
+            break;
+         default:
+            key1 = -1;
+            SCIPerrorMessage("unknown variable type\n");
+            SCIPABORT();
+            break;
+      }
+   }
+
+   if( SCIPvarIsImpliedIntegral(var2) )
+   {
+      key2 = 3;
+   }
+   else
+   {
+      switch( vartype2 )
+      {
+         case SCIP_VARTYPE_BINARY:
+            key2 = 1;
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            key2 = 2;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
+            key2 = 4;
+            break;
+         default:
+            key2 = -1;
+            SCIPerrorMessage("unknown variable type\n");
+            SCIPABORT();
+            break;
+      }
    }
    return key1 - key2;
 }
