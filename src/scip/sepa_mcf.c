@@ -948,25 +948,32 @@ SCIP_RETCODE extractFlowRows(
 
          hasposcoef = hasposcoef || (rowvals[i] > 0.0);
          hasnegcoef = hasnegcoef || (rowvals[i] < 0.0);
-         switch( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) )
+         SCIP_VAR * var = SCIPcolGetVar(rowcols[i]);
+
+         if ( SCIPvarIsImpliedIntegral(var) )
          {
-         case SCIP_VARTYPE_BINARY:
-            nbinvars++;
-            break;
-         case SCIP_VARTYPE_INTEGER:
-            nintvars++;
-            break;
-         case SCIP_VARTYPE_IMPLINT:
             nimplintvars++;
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
-               ncontvars++;
-               break;
-         default:
-            SCIPerrorMessage("unknown variable type\n");
-            SCIPABORT();
-            return SCIP_INVALIDDATA;  /*lint !e527*/
          }
+         else
+         {
+            switch( SCIPvarGetType(var) )
+            {
+               case SCIP_VARTYPE_BINARY:
+                  nbinvars++;
+                  break;
+               case SCIP_VARTYPE_INTEGER:
+                  nintvars++;
+                  break;
+               case SCIP_VARTYPE_CONTINUOUS:
+                  ncontvars++;
+                  break;
+               default:
+                  SCIPerrorMessage("unknown variable type\n");
+                  SCIPABORT();
+                  return SCIP_INVALIDDATA;  /*lint !e527*/
+            }
+         }
+
       }
       if( i == rowlen )
       {

@@ -5827,7 +5827,8 @@ SCIP_RETCODE addConstraintToBendersSubproblem(
          /* creating a variable as a copy of the original variable. */
          SCIP_CALL( SCIPcreateVar(subproblem, &var, SCIPvarGetName(consvars[i]), SCIPvarGetLbGlobal(consvars[i]),
                SCIPvarGetUbGlobal(consvars[i]), SCIPvarGetObj(consvars[i]), SCIPvarGetType(consvars[i]),
-               SCIPvarIsInitial(consvars[i]), SCIPvarIsRemovable(consvars[i]), NULL, NULL, NULL, NULL, NULL) );
+               SCIPvarGetImplType(consvars[i]), SCIPvarIsInitial(consvars[i]), SCIPvarIsRemovable(consvars[i]),
+               NULL, NULL, NULL, NULL, NULL) );
 
          /* adding the variable to the subproblem */
          SCIP_CALL( SCIPaddVar(subproblem, var) );
