@@ -909,7 +909,7 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
       oldsolvalisfrac = !SCIPisFeasIntegral(scip, oldsolval)
          && (SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER);
       obj = SCIPvarGetObj(shiftvar);
-      if( (SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER)
+      if( (!SCIPvarIsImpliedIntegral(shiftvar) && (SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER))
          && oldsolvalisfrac )
       {
          assert(SCIPisFeasIntegral(scip, newsolval));

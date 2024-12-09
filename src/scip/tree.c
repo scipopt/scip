@@ -5584,8 +5584,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetProbindex(var) >= 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
-   assert(SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
    /* update the information for the focus node before creating children */

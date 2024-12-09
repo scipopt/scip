@@ -1354,7 +1354,7 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
    assert(cutoff != NULL);
 
    /* @todo the asserts below could be relaxed by taking domain holes into account */
-   if( SCIPvarGetType(probingvar) != SCIP_VARTYPE_CONTINUOUS )
+   if( SCIPvarIsIntegral(probingvar) )
    {
       /* adjust bounds to actually used ones */
       leftub  = SCIPfloor(scip, leftub);

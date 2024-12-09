@@ -672,7 +672,7 @@ SCIP_RETCODE resolvePropagation(
    case PROPRULE_2:
       /* lhs <= x + c*y: left hand side and upper bound on x -> bound on y */
       assert(infervar == vbdvar);
-      assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarIsIntegral(vbdvar));
       assert(!SCIPisInfinity(scip, -consdata->lhs));
 
       if( usebdwidening )
@@ -859,7 +859,7 @@ SCIP_RETCODE resolvePropagation(
    case PROPRULE_4:
       /* x + c*y <= rhs: right hand side and lower bound on x -> bound on y */
       assert(infervar == vbdvar);
-      assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarIsIntegral(vbdvar));
       assert(!SCIPisInfinity(scip, consdata->rhs));
 
       if( usebdwidening )
@@ -1180,7 +1180,7 @@ SCIP_RETCODE separateCons(
    var = consdata->var;
    vbdvar = consdata->vbdvar;
    vbdcoef = consdata->vbdcoef;
-   assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(vbdvar));
 
    /* if x is not multiaggregated and y is fixed, propagate bounds on x */
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR && SCIPvarGetLbLocal(vbdvar) + 0.5 > SCIPvarGetUbLocal(vbdvar) )
@@ -2002,7 +2002,7 @@ void checkRedundancySide(
          valuex2 = MIN(valuex2, ubvar);
 
          /* if variable is of integral type make values integral too */
-         if( SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
          {
             if( !SCIPisFeasIntegral(scip, valuex1) )
                valuex1 = SCIPfeasFloor(scip, valuex1);
@@ -2018,7 +2018,7 @@ void checkRedundancySide(
          valuex2 = MAX(valuex2, lbvar);
 
          /* if variable is of integral type make values integral too */
-         if( SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
          {
             if( !SCIPisFeasIntegral(scip, valuex1) )
                valuex1 = SCIPfeasCeil(scip, valuex1);

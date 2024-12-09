@@ -1550,10 +1550,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       if( varIsDiscrete(colvar, impliscontinuous) )
          ++ndiscvars;
-      if( SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(colvar) )
          ++nbinvars;
 #ifndef NDEBUG
-      else if( SCIPvarGetType(colvar) == SCIP_VARTYPE_INTEGER )
+      else if( SCIPvarGetType(colvar) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(colvar))
          ++nintvars;
 #endif
 

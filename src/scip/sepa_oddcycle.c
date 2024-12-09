@@ -2324,7 +2324,7 @@ SCIP_RETCODE separateHeur(
    nbinvars = (unsigned int) nscipbinvars;
    for (l = nscipbinvars; l < nintegral; ++l)
    {
-      assert( SCIPvarGetType(scipvars[l]) != SCIP_VARTYPE_CONTINUOUS ); /*lint !e613*/
+      assert( SCIPvarIsIntegral(scipvars[l]) ); /*lint !e613*/
       if ( SCIPvarIsBinary(scipvars[l]) ) /*lint !e613*/
          vars[nbinvars++] = scipvars[l]; /*lint !e613*/
    }
@@ -3056,7 +3056,7 @@ SCIP_RETCODE separateGLS(
    nbinvars = (unsigned int) nscipbinvars;
    for (k = nscipbinvars; k < nintegral; ++k)
    {
-      assert( SCIPvarGetType(scipvars[k]) != SCIP_VARTYPE_CONTINUOUS ); /*lint !e613*/
+      assert( SCIPvarIsIntegral(scipvars[k]) ); /*lint !e613*/
       if ( SCIPvarIsBinary(scipvars[k]) ) /*lint !e613*/
          vars[nbinvars++] = scipvars[k]; /*lint !e613*/
    }
