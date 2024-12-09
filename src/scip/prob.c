@@ -2208,14 +2208,6 @@ int SCIPprobGetNImplBinVars(
    return nimplbinvars;
 }
 
-int SCIPprobGetNImplVars(
-   SCIP_PROB*            prob                /**< problem data */
-   )
-{
-   assert(prob != NULL);
-   return prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars;
-}
-
 /** returns the number of variables with non-zero objective coefficient */
 int SCIPprobGetNObjVars(
    SCIP_PROB*            prob,               /**< problem data */
@@ -2620,6 +2612,13 @@ int SCIPprobGetNIntVars(
    return prob->nintvars;
 }
 
+int SCIPprobGetNImplVars(
+   SCIP_PROB*            prob                /**< problem data */
+)
+{
+   assert(prob != NULL);
+   return prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars;
+}
 
 /** gets number of continuous problem variables */
 int SCIPprobGetNContVars(
