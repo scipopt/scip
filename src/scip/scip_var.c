@@ -8342,7 +8342,7 @@ SCIP_RETCODE SCIPchgVarType(
       assert(!SCIPvarIsTransformed(var));
 
       /* first adjust the variable due to new integrality information */
-      SCIP_CALL( tightenBounds(scip, var, vartype != SCIP_VARTYPE_CONTINUOUS, infeasible) );
+      SCIP_CALL( tightenBounds(scip, var, SCIPvarIsIntegral(var), infeasible) );
 
       /* second change variable type */
       if( SCIPvarGetProbindex(var) >= 0 )
@@ -8371,7 +8371,7 @@ SCIP_RETCODE SCIPchgVarType(
       }
 
       /* first adjust the variable due to new integrality information */
-      SCIP_CALL( tightenBounds(scip, var, vartype != SCIP_VARTYPE_CONTINUOUS, infeasible) );
+      SCIP_CALL( tightenBounds(scip, var, SCIPvarIsIntegral(var), infeasible) );
 
       /* second change variable type */
       if( SCIPvarGetProbindex(var) >= 0 )

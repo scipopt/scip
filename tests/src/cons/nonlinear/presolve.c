@@ -230,7 +230,8 @@ Test(presolve, implint)
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
 
    /* check variable types */
-   checkTypes(SCIP_VARTYPE_IMPLINT, SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsImpliedIntegral(SCIPvarGetTransVar(x)));
+   checkTypes(SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_BINARY);
 }
 
 /* test for presolveImplint()
@@ -261,7 +262,8 @@ Test(presolve, implint2)
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
 
    /* check variable types */
-   checkTypes(SCIP_VARTYPE_IMPLINT, SCIP_VARTYPE_BINARY, SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsImpliedIntegral(SCIPvarGetTransVar(x)));
+   checkTypes(SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY, SCIP_VARTYPE_BINARY);
 }
 
 /* test for presolveImplint()
