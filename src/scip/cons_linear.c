@@ -11060,7 +11060,9 @@ SCIP_RETCODE dualPresolve(
                 */
                if( SCIPvarIsImpliedIntegral(aggrvars[j]) )
                {
-                  SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasiblevartypechg) );
+                  if( SCIPvarGetType(aggrvars[j]) != SCIP_VARTYPE_INTEGER ){
+                     SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasiblevartypechg) );
+                  }
                   assert(!infeasiblevartypechg);
                   SCIP_CALL( SCIPchgVarImplType(scip, aggrvars[j], SCIP_VARIMPLTYPE_NONE, &infeasiblevartypechg) );
                   assert(!infeasiblevartypechg);
