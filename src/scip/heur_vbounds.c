@@ -398,7 +398,7 @@ SCIP_RETCODE dfs(
       /* the current node was completely handled, remove it from the stack */
       stacksize--;
 
-      if( (maxstacksize > 1) && SCIPvarGetType(startvar) != SCIP_VARTYPE_CONTINUOUS )
+      if( (maxstacksize > 1) && SCIPvarIsIntegral(startvar))
       {
          /* store node in the sorted nodes array */
          dfsnodes[(*ndfsnodes)] = curridx;
@@ -584,7 +584,7 @@ SCIP_RETCODE applyVboundsFixings(
          SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetObj(var));*/
 
       /* only check integer or binary variables */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      if( !SCIPvarIsIntegral(var) )
          continue;
 
       /* skip variables which are already fixed */
