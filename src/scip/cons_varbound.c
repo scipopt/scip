@@ -4279,9 +4279,12 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
       int vbdind;
 
       /* decide which variable we want to use as bounding variable y */
-      if( SCIPvarGetType(vars[0]) < SCIPvarGetType(vars[1]) )
+      unsigned int zerotype = SCIPvarIsImpliedIntegral(vars[0]) ? 2 : SCIPvarGetType(vars[0]);
+      unsigned int onetype = SCIPvarIsImpliedIntegral(vars[1]) ? 2 : SCIPvarGetType(vars[1]);
+
+      if( zerotype < onetype )
          vbdind = 0;
-      else if( SCIPvarGetType(vars[0]) > SCIPvarGetType(vars[1]) )
+      else if( zerotype > onetype )
          vbdind = 1;
       else if( SCIPisIntegral(scip, vals[0]) && !SCIPisIntegral(scip, vals[1]) )
          vbdind = 0;
