@@ -346,6 +346,7 @@ SCIP_RETCODE execmain(int argc, char** argv)
                      2.0,                    // upper bound
                      dist[i][j],             // objective
                      SCIP_VARTYPE_INTEGER,   // variable type
+                     SCIP_VARIMPLTYPE_NONE,  // implied integer type
                      true,                   // initial
                      false,                  // forget the rest ...
                      NULL, NULL, NULL, NULL, NULL) );  /*lint !e732 !e747*/

@@ -281,6 +281,7 @@ SCIP_RETCODE ObjPricerVRP::add_tour_variable(
                             SCIPinfinity(scip),      // upper bound
                             0.0,                     // objective
                             SCIP_VARTYPE_CONTINUOUS, // variable type
+                            SCIP_VARIMPLTYPE_NONE,   //implied integer type
                             false, false, NULL, NULL, NULL, NULL, NULL) );
 
    /* add new variable to the list of variables to price into LP (score: leave 1 here) */

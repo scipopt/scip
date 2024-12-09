@@ -568,7 +568,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
          pricerdata->nstablesetsfound += 1;
 
          /* create variable for the stable set and add it to SCIP */
-         SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
+         SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
                TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) ); /*lint !e571*/
 
          SCIP_CALL( COLORprobAddVarForStableSet(scip, setnumber, var) );
@@ -666,7 +666,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
                {
                   /* create variable for the stable set and add it to SCIP */
                   SCIP_CALL( SCIPcreateVar(pricerdata->scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
-                        TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) ); /*lint !e571*/
+                        SCIP_VARIMPLTYPE_NONE, TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) ); /*lint !e571*/
 
                   SCIP_CALL( COLORprobAddVarForStableSet(pricerdata->scip, setnumber, var) );
                   SCIPvarMarkDeletable(var);
@@ -769,7 +769,7 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
       assert(setnumber != -1);
 
       /* create variable for the stable set and add it to SCIP */
-      SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
+      SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
             TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*) (size_t) setnumber) ); /*lint !e571*/
       SCIP_CALL( COLORprobAddVarForStableSet(scip, setnumber, var) );
       SCIPvarMarkDeletable(var);

@@ -473,7 +473,7 @@ SCIP_DECL_READERREAD(ReaderTSP::scip_read)
       // the variable is named after the two nodes connected by the edge it represents
       varname << "x_e_" << edge->back->adjac->id+1 << "-" << edge->adjac->id+1;
       SCIP_CALL( SCIPcreateVar(scip, &var, varname.str().c_str(), 0.0, 1.0, edge->length,
-            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       /* add variable to SCIP and to the graph */
       SCIP_CALL( SCIPaddVar(scip, var) );

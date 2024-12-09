@@ -800,7 +800,7 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
 
       /* create integer starting variable */
       SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, (SCIP_Real)ubmakespan, 0.0, SCIP_VARTYPE_INTEGER,
-            TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, var) );
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );
@@ -810,7 +810,7 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
 
    /* create makespan variable */
    SCIP_CALL( SCIPcreateVar(scip, &var, "makespan", 0.0, (SCIP_Real)ubmakespan, 1.0, SCIP_VARTYPE_INTEGER,
-         TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
    SCIP_CALL( SCIPaddVar(scip, var) );
    SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, var) );

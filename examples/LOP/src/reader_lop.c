@@ -294,7 +294,7 @@ SCIP_DECL_READERREAD(LOPreaderRead)
 	 {
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x#%d#%d", i, j);
 	    SCIP_CALL( SCIPcreateVar(scip, &(vars[i][j]), name, 0.0, 1.0, W[i][j], SCIP_VARTYPE_BINARY,
-		  TRUE, FALSE, NULL, NULL, NULL, NULL, NULL));
+        SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL));
 	    SCIP_CALL( SCIPaddVar(scip, vars[i][j]) );
 	 }
 	 else
