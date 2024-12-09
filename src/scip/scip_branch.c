@@ -1059,7 +1059,7 @@ SCIP_RETCODE SCIPbranchVar(
 
    assert( var->scip == scip );
 
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   if( !SCIPvarIsIntegral(var) )
    {
       SCIPerrorMessage("cannot branch on continuous variable <%s>\n", SCIPvarGetName(var));
       return SCIP_INVALIDDATA;

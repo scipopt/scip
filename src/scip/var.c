@@ -9936,7 +9936,7 @@ SCIP_RETCODE SCIPvarAddVlb(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert(SCIPvarGetType(vlbvar) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(vlbvar));
    assert(infeasible != NULL);
 
    SCIPsetDebugMsg(set, "adding variable lower bound <%s> >= %g<%s> + %g\n", SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
@@ -10411,7 +10411,7 @@ SCIP_RETCODE SCIPvarAddVub(
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert(SCIPvarGetType(vubvar) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(vubvar));
    assert(infeasible != NULL);
 
    SCIPsetDebugMsg(set, "adding variable upper bound <%s> <= %g<%s> + %g\n", SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);

@@ -220,7 +220,7 @@ SCIP_RETCODE SCIPvboundsAdd(
    assert(vbounds != NULL);
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(var));
    assert(added != NULL);
    assert(!SCIPsetIsZero(set, coef));
 

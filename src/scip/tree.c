@@ -5574,7 +5574,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    }
 
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
+   if( !SCIPvarIsIntegral(var) && !validval )
    {
       SCIPerrorMessage("Cannot branch on continuous variable <%s> without a given branching value.", SCIPvarGetName(var));
       SCIPABORT();
@@ -5584,8 +5584,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetProbindex(var) >= 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
+   assert(SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+   assert(SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
    /* update the information for the focus node before creating children */
@@ -5617,7 +5617,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
    /* see comment in SCIPbranchVarVal */
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
+   assert(SCIPvarIsIntegral(var) ||
       SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set) ||
       SCIPsetIsInfinity(set, -2.1*SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, 2.1*SCIPvarGetUbLocal(var)) ||
       (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))) );
@@ -5626,7 +5626,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
    fixval = SCIP_INVALID;
    uplb = SCIP_INVALID;
 
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   if( !SCIPvarIsIntegral(var) )
    {
       if( SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
       {
