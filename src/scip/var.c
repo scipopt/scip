@@ -5276,7 +5276,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       SCIP_Real scalar;
       SCIP_Real constant;
 
-      assert(SCIPvarGetType(varx) >= SCIPvarGetType(vary));
+      assert(xtype >= ytype);
 
       /* calculate aggregation scalar and constant: a*x + b*y == c  =>  x == -b/a * y + c/a */
       scalar = -scalary/scalarx;
