@@ -300,7 +300,7 @@ SCIP_RETCODE consdataCreate(
    )
 {
    assert(consdata != NULL);
-   assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(vbdvar));
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
