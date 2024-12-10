@@ -824,7 +824,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
             SCIP_VAR* var;
 
             var = SCIPcolGetVar(cols[c]);
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+            if(!SCIPvarIsImpliedIntegral(var) && ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ) )
             {
                SCIP_Real act;
 
@@ -983,7 +983,8 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          break;
       }
 
-      assert(SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER);
+      assert(!SCIPvarIsImpliedIntegral(shiftvar) &&
+             (SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER));
 
       SCIPdebugMsg(scip, "intshifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
          SCIPvarGetName(shiftvar), SCIPvarGetLbGlobal(shiftvar), SCIPvarGetUbGlobal(shiftvar), SCIPvarGetType(shiftvar),
