@@ -2621,7 +2621,8 @@
  *
  * \par SEPA_DELAY: the default for whether the separation method should be delayed, if other separators or constraint handlers found cuts.
  * If the separator's separation method is marked to be delayed, it is only executed after no other separator
- * or constraint handler found a cut during the price-and-cut loop.
+ * or constraint handler found a cut during the price-and-cut loop, and in the last separation or stalling round,
+ * either in the end, or in an additional round if only the maximal subsequent round is exceeded.
  * If the separation method of the separator is very expensive, you may want to mark it to be delayed until all cheap
  * separation methods have been executed.
  *
@@ -7851,31 +7852,31 @@
  *  @section SRCORGA_CORE SCIP core components
  *
  *  - Each core component has an implementation with an internal API and a public API.
- *  - The internal implementation should be in a file <code><component>.c,h</code> and should not be included in the public API.
- *  - Internal API functions usually do not take a <code>SCIP*</code> parameter, but a pointer to the component as first argument and pointers to internal structures like <code>SCIP_SET*</code> or <code>SCIP_STAT*</code>, where necessary.
- *  - The name of internal API functions follows the style `SCIP<component><operation>...`, e.g., <code>SCIPvarCreate()</code> or <code>SCIPvarAddLocks()</code>.
- *  - <code>pub_<component>.h</code> declares the functions of the public API that do not need a SCIP pointer.
+ *  - The internal implementation should be in a file `<component>.c,h` and should not be included in the public API.
+ *  - Internal API functions usually do not take a `SCIP*` parameter, but a pointer to the component as first argument and pointers to internal structures like `SCIP_SET*` or `SCIP_STAT*`, where necessary.
+ *  - The name of internal API functions follows the style `SCIP<component><operation>...`, e.g., <code>SCIPvarCreateOriginal()</code> or <code>SCIPvarAddLocks()</code>.
+ *  - `pub_<component>.h` declares the functions of the public API that do not need a SCIP pointer.
  *    Often, these are getter-functions.
  *    For example, \ref pub_var.h contains public variable API functions.
- *  - Functions in <code>pub_<component>.h</code> follow the same naming style as those in <code><component>.h</code> and are used by the implementation of the internal API as well.
- *  - <code>scip_<component>.h</code> declares the functions of the public API that need a SCIP instance (<code>SCIP*</code>), e.g., \ref scip_var.h for public variable manipulation functions.
- *    Functions declared in <code>scip_<component>.h</code> are often thin wrappers that call the internal API functions from <code><component>.h</code>.
- *    These functions should follow the naming style `SCIP<operation><component>...`, e.g., <code>SCIPcreateVar()</code> or <code>SCIPaddVarLocks</code>.
+ *  - Functions in `pub_<component>.h` follow the same naming style as those in `<component>.h` and are used by the implementation of the internal API as well.
+ *  - `scip_<component>.h` declares the functions of the public API that need a SCIP instance (`SCIP*`), e.g., \ref scip_var.h for public variable manipulation functions.
+ *    Functions declared in `scip_<component>.h` are often thin wrappers that call the internal API functions from `<component>.h`.
+ *    These functions should follow the naming style `SCIP<operation><component>...`, e.g., <code>SCIPcreateVarOriginal()</code> or <code>SCIPaddVarLocks()</code>.
  *  - To ensure functions of the public API being reachable in shared libraries, their declaration needs to contain the <code>SCIP_EXPORT</code> attribute.
- *  - Public types (typedef's, enumerations) are defined in file <code>type_<component>.h</code>.
- *    Type names follow the style <code>SCIP_<COMPONENT>...</code>.
- *  - Structs that need to be accessed by several source files are defined in <code>struct_<component>.h</code>.
- *    <code>struct_<component>.h</code> is usually included only by <code><component>.c</code> and maybe <code>scip_<component>.c</code>.
+ *  - Public types (typedef's, enumerations) are defined in file `type_<component>.h`.
+ *    Type names follow the style `SCIP_<COMPONENT>...`.
+ *  - Structs that need to be accessed by several source files are defined in `struct_<component>.h`.
+ *    `struct_<component>.h` is usually included only by `<component>.c` and maybe `scip_<component>.c`.
  *    Exceptions are due to manual inlining of functions via macros when compiling for optimized mode.
  *  - All types, structs, and functions are documented with Doxygen-style comments.
  *    The documentation of the implementation of a function must repeat the documentation of the function declaration exactly (for doxygen to treat them as identical).
  *
  *  @section SRCORGA_PLUGINS Plugins
- *  - Each plugin is defined in files <code><type>_<name>.c,h</code>, e.g.,
+ *  - Each plugin is defined in files `<type>_<name>.c,h`, e.g.,
  *     \ref cons_knapsack.c implements the Knapsack constraint handler plugin and
  *     \ref cons_knapsack.h declares its public API functions.
- *  - Public types that belong to a plugin are declared in its header, <code><type>_<name>.h</code>.
- *  - API functions of plugins are named as <code>SCIP<operation>...<Name></code>, e.g., <code>SCIPincludeConshdlrAnd()</code>, <code>SCIPcreateConsAnd()</code>, or <code>SCIPgetNVarsAnd()</code>.
+ *  - Public types that belong to a plugin are declared in its header, `<type>_<name>.h`.
+ *  - API functions of plugins are named as `SCIP<operation>...<Name>`, e.g., <code>SCIPincludeConshdlrAnd()</code>, <code>SCIPcreateConsAnd()</code>, or <code>SCIPgetNVarsAnd()</code>.
  *  - Plugins access only the public API.
  *  - Plugins that need to be included by default should be registered in <code>src/scip/scipdefplugins.c</code>.
  */
