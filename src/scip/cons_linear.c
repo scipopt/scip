@@ -11049,9 +11049,9 @@ SCIP_RETCODE dualPresolve(
          /* if the multi-aggregate bestvar is integer, we need to convert implicit integers to integers because
           *  the implicitness might rely on the constraint and the integrality of bestvar
           */
-         if( !infeasible && aggregated && SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER )
+         if( !infeasible && aggregated && SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(bestvar) )
          {
-            SCIP_Bool infeasiblevartypechg;
+            SCIP_Bool infeasiblevartypechg = FALSE;
 
             for( j = 0; j < naggrs; ++j)
             {
