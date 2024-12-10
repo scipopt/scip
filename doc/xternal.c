@@ -2621,7 +2621,8 @@
  *
  * \par SEPA_DELAY: the default for whether the separation method should be delayed, if other separators or constraint handlers found cuts.
  * If the separator's separation method is marked to be delayed, it is only executed after no other separator
- * or constraint handler found a cut during the price-and-cut loop.
+ * or constraint handler found a cut during the price-and-cut loop, and in the last separation or stalling round,
+ * either in the end, or in an additional round if only the maximal subsequent round is exceeded.
  * If the separation method of the separator is very expensive, you may want to mark it to be delayed until all cheap
  * separation methods have been executed.
  *
