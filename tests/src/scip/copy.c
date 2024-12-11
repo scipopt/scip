@@ -44,8 +44,7 @@ const char* const missing[] =
    "compression",
    "solvingphases",
    "presolving/implint",
-   "propagating/symmetry",
-   "separating/multilinear"
+   "propagating/symmetry"
 };
 const int nmissing = sizeof(missing) / sizeof(missing[0]);
 

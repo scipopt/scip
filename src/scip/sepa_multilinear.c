@@ -1323,6 +1323,20 @@ SCIP_RETCODE separate(
  * Callback methods of separator.
  */
 
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyMultilinear)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of separator */
+   SCIP_CALL( SCIPincludeSepaMultilinear(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** Destructor of separator to free user data (called when SCIP is exiting). */
 static
 SCIP_DECL_SEPAFREE(sepaFreeMultilinear)
@@ -1430,6 +1444,7 @@ SCIP_RETCODE SCIPincludeSepaMultilinear(
    assert(sepa != NULL);
 
    /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyMultilinear) );
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeMultilinear) );
    SCIP_CALL( SCIPsetSepaInit(scip, sepa, sepaInitMultilinear) );
    SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolMultilinear) );
