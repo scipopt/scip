@@ -355,7 +355,8 @@ SCIP_RETCODE selectShifting(
       solval = SCIPgetSolVal(scip, sol, var);
 
       /* only accept integer variables */
-      if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER )
+      if( SCIPvarIsImpliedIntegral(var) ||
+         (SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER ) )
          continue;
 
       isfrac = !SCIPisFeasIntegral(scip, solval);
