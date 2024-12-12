@@ -82,7 +82,7 @@ SCIP_DECL_EVENTEXEC(eventExecReopt)
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
-   assert(SCIPvarGetType(SCIPeventGetVar(event)) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(SCIPeventGetVar(event)));
 
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
@@ -125,7 +125,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolReopt)
    vars = SCIPgetVars(scip);
    for( int varnr = 0; varnr < SCIPgetNVars(scip); ++varnr )
    {
-      if( SCIPvarGetType(vars[varnr]) != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(vars[varnr]) )
       {
          SCIP_CALL( SCIPcatchVarEvent(scip, vars[varnr], SCIP_EVENTTYPE_GBDCHANGED, eventhdlr, NULL, NULL) );
       }
@@ -1031,7 +1031,7 @@ SCIP_RETCODE soltreeAddSol(
 
       for( int varid = 0; varid < nvars; ++varid )
       {
-         if( SCIPvarGetType(vars[varid]) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(vars[varid]) )
          {
             SCIP_SOLNODE* child;
 
@@ -3306,17 +3306,17 @@ SCIP_RETCODE addGlobalCut(
       assert(nvarsadded < reoptconsdata->varssize);
       assert(vars[v] != NULL);
       assert(SCIPvarIsOriginal(vars[v]));
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsIntegral(set, vals[v]));
+      assert(!SCIPvarIsIntegral(vars[v]) || SCIPsetIsIntegral(set, vals[v]));
 
       /* if no boundtypes are given we skip continuous variables, otherwise we would add trivial clauses:
        * a)       x <= ub
        * b) lb <= x
        * c) (x <= val) or (x >= val)
        */
-      if( boundtypes == NULL && SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+      if( boundtypes == NULL && !SCIPvarIsIntegral(vars[v]) )
          continue;
 
-      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[v]) )
       {
          reoptconsdata->vars[nvarsadded] = vars[v];
 
@@ -3335,7 +3335,7 @@ SCIP_RETCODE addGlobalCut(
          }
          ++nvarsadded;
       }
-      else if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS)
+      else if( !SCIPvarIsIntegral(vars[v]) )
       {
          assert(boundtypes != NULL);
 
@@ -3477,7 +3477,7 @@ SCIP_RETCODE saveGlobalCons(
       nintvars = 0;
       for( int v = 0; v < nbranchvars; ++v )
       {
-         if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY )
+         if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[v]) )
             ++nbinvars;
          if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarIsImpliedIntegral(vars[v]) )
             ++nintvars;
@@ -4199,9 +4199,9 @@ SCIP_RETCODE fixInterdiction(
       if( v == nbndchgs-1 )
       {
          boundtype = (SCIP_BOUNDTYPE)(SCIP_BOUNDTYPE_UPPER - boundtype); /*lint !e656*/
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && boundtype == SCIP_BOUNDTYPE_UPPER )
+         if( SCIPvarIsIntegral(var) && boundtype == SCIP_BOUNDTYPE_UPPER )
             val = val - 1.0;
-         else if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && boundtype == SCIP_BOUNDTYPE_LOWER )
+         else if( SCIPvarIsIntegral(var) && boundtype == SCIP_BOUNDTYPE_LOWER )
             val = val + 1.0;
       }
 
@@ -4868,7 +4868,7 @@ SCIP_RETCODE separateSolution(
       if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarIsImpliedIntegral(vars[v]) )
          ++nintvars;
       /* we do not want to create cuts for continous variables */
-      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(vars[v]) )
+      if( !SCIPvarIsIntegral(vars[v]) )
          continue;
 
       if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[v]) )
@@ -7171,7 +7171,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
          assert(v == c);
          reoptnodes[id]->vars[c] = vars[perm[c]];
          reoptnodes[id]->varbounds[c] = bounds[perm[c]];
-         if( SCIPvarGetType(vars[perm[c]]) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(vars[perm[c]]) )
          {
             if( boundtypes[perm[c]] == SCIP_BOUNDTYPE_LOWER )
                reoptnodes[id]->varbounds[c] -= 1.0;
@@ -8047,6 +8047,7 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
       assert(constype == REOPT_CONSTYPE_DUALREDS || constype == REOPT_CONSTYPE_INFSUBTREE);
 
       SCIPsetDebugMsg(set, "-> constraint has size 1 -> save as normal bound change.\n");
+      assert(!SCIPvarIsImpliedIntegral(vars[0]));
 
       if( SCIPvarGetType(vars[0]) == SCIP_VARTYPE_BINARY )
       {
