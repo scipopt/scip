@@ -250,7 +250,7 @@ SCIP_RETCODE SCIPsolveSlack(
       int d;
       for(d = 0; d < vargroupsizes[c]; d++)
       {
-         if( SCIP_VARTYPE_BINARY == SCIPvarGetType(vargroups[c][d]) )
+         if( SCIPvarGetType(vargroups[c][d]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vargroups[c][d]) )
          {
             SCIPerrorMessage("method <SCIPsolveSlack> cannot relaxe binary variables.\n");
             return SCIP_INVALIDCALL;
@@ -1024,7 +1024,7 @@ SCIP_RETCODE testslack(
    nusedvars = 0;
    for (c = 0; c < nvars; ++c)
    {
-      if ( SCIP_VARTYPE_BINARY != SCIPvarGetType(vars[c]) )
+      if( SCIPvarGetType(vars[c]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(vars[c]) )
       {
          usedvars[nusedvars] = vars[c];
          nusedvars++;
