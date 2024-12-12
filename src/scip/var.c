@@ -495,8 +495,8 @@ SCIP_RETCODE varAddLbchginfo(
 {
    assert(var != NULL);
    assert(SCIPsetIsLT(set, oldbound, newbound));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, oldbound));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, oldbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, newbound));
    assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, oldbound, 0.0));
    assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, 1.0));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
@@ -570,8 +570,8 @@ SCIP_RETCODE varAddUbchginfo(
 {
    assert(var != NULL);
    assert(SCIPsetIsGT(set, oldbound, newbound));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, oldbound));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, oldbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, newbound));
    assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, oldbound, 1.0));
    assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, 0.0));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
@@ -1150,7 +1150,7 @@ SCIP_RETCODE domchgMakeDynamic(
    {
       int i;
       for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
-         assert(SCIPvarGetType((*domchg)->domchgbound.boundchgs[i].var) == SCIP_VARTYPE_CONTINUOUS
+         assert(!SCIPvarIsIntegral((*domchg)->domchgbound.boundchgs[i].var)
             || EPSISINT((*domchg)->domchgbound.boundchgs[i].newbound, 1e-06));
    }
 #endif
@@ -1441,7 +1441,6 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    assert(domchg != NULL);
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
    assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : 0.0));
    assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set,newbound));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
@@ -1508,7 +1507,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    {
       int i;
       for( i = 0; i < (int)(*domchg)->domchgbound.nboundchgs; ++i )
-         assert(SCIPvarGetType((*domchg)->domchgbound.boundchgs[i].var) == SCIP_VARTYPE_CONTINUOUS
+         assert(!SCIPvarIsIntegral((*domchg)->domchgbound.boundchgs[i].var)
             || SCIPsetIsFeasIntegral(set, (*domchg)->domchgbound.boundchgs[i].newbound));
    }
 #endif
@@ -1623,7 +1622,7 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
 
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarIsActive(var) || SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+   assert(SCIPvarIsActive(var) || (SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var)) );
 
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
@@ -3821,7 +3820,7 @@ SCIP_RETCODE SCIPvarFix(
       SCIPsetDebugMsg(set, " -> variable already fixed to %g (fixedval=%g): infeasible=%u\n", var->locdom.lb, fixedval, *infeasible);
       return SCIP_OKAY;
    }
-   else if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(set, fixedval))
+   else if( (SCIPvarIsIntegral(var) && !SCIPsetIsFeasIntegral(set, fixedval))
       || SCIPsetIsFeasLT(set, fixedval, var->locdom.lb)
       || SCIPsetIsFeasGT(set, fixedval, var->locdom.ub) )
    {
@@ -3865,7 +3864,7 @@ SCIP_RETCODE SCIPvarFix(
       if( var->glbdom.lb != var->glbdom.ub )  /*lint !e777*/
       {
          /* explicitly set variable's bounds if the fixed value was in epsilon range of the old bound (so above call didn't set bound) */
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
          {
             /* if not continuous variable, then make sure variable is fixed to integer value */
             assert(SCIPsetIsIntegral(set, fixedval));
@@ -4805,7 +4804,7 @@ SCIP_RETCODE SCIPvarAggregate(
     *  - add all implications again to the variable, thus adding it to the aggregation variable
     *  - free the implications data structures
     */
-   if( var->implics != NULL && SCIPvarGetType(aggvar) == SCIP_VARTYPE_BINARY )
+   if( var->implics != NULL && SCIPvarGetType(aggvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(aggvar) )
    {
       assert(SCIPvarIsBinary(var));
       for( i = 0; i < 2; ++i )
@@ -6790,9 +6789,9 @@ SCIP_RETCODE varProcessChgLbGlobal(
       assert(SCIPsetIsFeasLE(set, newbound, var->glbdom.ub));
       newbound = var->glbdom.ub;
    }
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, newbound));
 
-   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
 
    SCIPsetDebugMsg(set, "process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
 
@@ -6966,9 +6965,9 @@ SCIP_RETCODE varProcessChgUbGlobal(
       assert(SCIPsetIsFeasGE(set, newbound, var->glbdom.lb));
       newbound = var->glbdom.lb;
    }
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, newbound));
 
-   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
 
    SCIPsetDebugMsg(set, "process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
 
@@ -7141,7 +7140,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
       /* we do not want to exceed the upperbound, which could have happened due to numerics */
       newbound = MIN(newbound, var->glbdom.ub);
    }
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, newbound));
 
    /* the new global bound has to be tighter except we are in the original problem; this must be w.r.t. feastol because
     * SCIPvarFix() allows fixings that are outside of the domain within feastol
@@ -7284,7 +7283,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
       /* we do not want to undercut the lowerbound, which could have happened due to numerics */
       newbound = MAX(newbound, var->glbdom.lb);
    }
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, newbound));
 
    /* the new global bound has to be tighter except we are in the original problem; this must be w.r.t. feastol because
     * SCIPvarFix() allows fixings that are outside of the domain within feastol
@@ -7577,9 +7576,9 @@ SCIP_RETCODE varProcessChgLbLocal(
    assert(var->scip == set->scip);
    assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)
             || SCIPsetIsEQ(set, newbound, var->locdom.ub)))
-      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && (SCIPsetIsIntegral(set, newbound)
+      || (SCIPvarIsIntegral(var) && (SCIPsetIsIntegral(set, newbound)
             || SCIPsetIsEQ(set, newbound, var->locdom.ub)))
-      || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+      || !SCIPvarIsIntegral(var) );
 
    /* check that the bound is feasible */
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsLE(set, newbound, var->glbdom.ub));
@@ -7594,7 +7593,7 @@ SCIP_RETCODE varProcessChgLbLocal(
       /* we do not want to undercut the global lower bound, which could have happened due to numerics */
       newbound = MAX(newbound, var->glbdom.lb);
    }
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, newbound));
 
    SCIPsetDebugMsg(set, "process changing lower bound of <%s> from %g to %g\n", var->name, var->locdom.lb, newbound);
 
@@ -7744,9 +7743,9 @@ SCIP_RETCODE varProcessChgUbLocal(
    assert(var->scip == set->scip);
    assert((SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && (SCIPsetIsZero(set, newbound) || SCIPsetIsEQ(set, newbound, 1.0)
             || SCIPsetIsEQ(set, newbound, var->locdom.lb)))
-      || (SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS && (SCIPsetIsIntegral(set, newbound)
+      || (SCIPvarIsIntegral(var) && (SCIPsetIsIntegral(set, newbound)
             || SCIPsetIsEQ(set, newbound, var->locdom.lb)))
-      || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+      || !SCIPvarIsIntegral(var) );
 
    /* check that the bound is feasible */
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsGE(set, newbound, var->glbdom.lb));
@@ -7761,7 +7760,7 @@ SCIP_RETCODE varProcessChgUbLocal(
       /* we do not want to exceed the global upper bound, which could have happened due to numerics */
       newbound = MIN(newbound, var->glbdom.ub);
    }
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, newbound));
 
    SCIPsetDebugMsg(set, "process changing upper bound of <%s> from %g to %g\n", var->name, var->locdom.ub, newbound);
 
@@ -8049,7 +8048,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
       /* we do not want to undercut the lowerbound, which could have happened due to numerics */
       newbound = MAX(newbound, var->locdom.lb);
    }
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, newbound));
 
    SCIPsetDebugMsg(set, "changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
@@ -8809,7 +8808,7 @@ SCIP_RETCODE SCIPvarAddHoleGlobal(
    SCIP_Real childnewright;
 
    assert(var != NULL);
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(var));
    assert(blkmem != NULL);
    assert(added != NULL);
 
@@ -9061,7 +9060,7 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
 
    assert(set != NULL);
    assert(var->scip == set->scip);
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
+   assert(SCIPvarIsIntegral(var));
    assert(blkmem != NULL);
    assert(added != NULL);
 
@@ -9753,7 +9752,7 @@ SCIP_RETCODE varAddTransitiveImplic(
    assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
    /* add transitive closure */
-   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
+   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(implvar) )
    {
       SCIP_Bool implvarfixing;
 
@@ -10265,7 +10264,7 @@ SCIP_RETCODE SCIPvarAddVlb(
          minvlb = xlb;
 
          /* improve variable bound for binary z by moving the variable's global bound to the vlb constant */
-         if( SCIPvarGetType(vlbvar) == SCIP_VARTYPE_BINARY )
+         if( SCIPvarGetType(vlbvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vlbvar) )
          {
             /* b > 0: x >= (maxvlb - minvlb) * z + minvlb
              * b < 0: x >= (minvlb - maxvlb) * z + maxvlb
@@ -10294,7 +10293,7 @@ SCIP_RETCODE SCIPvarAddVlb(
             /* if one of the variables is binary, add the corresponding implication to the variable's implication
              * list, thereby also adding the variable bound (or implication) to the other variable
              */
-            if( SCIPvarGetType(vlbvar) == SCIP_VARTYPE_BINARY )
+            if( SCIPvarGetType(vlbvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vlbvar) )
             {
                /* add corresponding implication:
                 *   b > 0, x >= b*z + d  <->  z == 1 -> x >= b+d
@@ -10304,7 +10303,7 @@ SCIP_RETCODE SCIPvarAddVlb(
                      cliquetable, branchcand, eventqueue, (vlbcoef >= 0.0), var, SCIP_BOUNDTYPE_LOWER, maxvlb, transitive,
                      infeasible, nbdchgs) );
             }
-            else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var) )
             {
                /* add corresponding implication:
                 *   b > 0, x >= b*z + d  <->  x == 0 -> z <= -d/b
@@ -10760,7 +10759,7 @@ SCIP_RETCODE SCIPvarAddVub(
             /* if one of the variables is binary, add the corresponding implication to the variable's implication
              * list, thereby also adding the variable bound (or implication) to the other variable
              */
-            if( SCIPvarGetType(vubvar) == SCIP_VARTYPE_BINARY )
+            if( SCIPvarGetType(vubvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vubvar) )
             {
                /* add corresponding implication:
                 *   b > 0, x <= b*z + d  <->  z == 0 -> x <= d
@@ -10770,7 +10769,7 @@ SCIP_RETCODE SCIPvarAddVub(
                      cliquetable, branchcand, eventqueue, (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, minvub, transitive,
                      infeasible, nbdchgs) );
             }
-            else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+            else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var) )
             {
                /* add corresponding implication:
                 *   b > 0, x <= b*z + d  <->  x == 1 -> z >= (1-d)/b
@@ -10974,7 +10973,7 @@ SCIP_RETCODE SCIPvarAddImplic(
       assert(var->negatedvar->negatedvar == var);
       assert(SCIPvarIsBinary(var->negatedvar));
 
-      if( SCIPvarGetType(var->negatedvar) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(var->negatedvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var->negatedvar) )
       {
          SCIP_CALL( SCIPvarAddImplic(var->negatedvar, blkmem, set, stat,  transprob, origprob, tree, reopt, lp,
                cliquetable, branchcand, eventqueue, !varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
