@@ -1263,7 +1263,7 @@ SCIP_RETCODE extractCapacityRows(
                nnegcapacitycoefs++;
 
             /* a continuous variable is considered to be not so nice*/
-            if( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) == SCIP_VARTYPE_CONTINUOUS )
+            if( !SCIPvarIsIntegral(SCIPcolGetVar(rowcols[i])) )
                nbadcoefs++;
          }
       }

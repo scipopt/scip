@@ -1516,6 +1516,7 @@ SCIP_RETCODE readBounds(
 
          /* remember variable type */
          oldvartype = SCIPvarGetType(var);
+         assert(!SCIPvarIsImpliedIntegral(var));
 
          /* If a bound of a binary variable is given, the variable is converted into an integer variable
           * with default bounds 0 <= x <= infinity before applying the bound. Note that integer variables

@@ -178,7 +178,7 @@ SCIP_RETCODE separateCuts(
       assert(fracvals != NULL);
 
       /* only process binary variables */
-      if( SCIPvarGetType(fracvars[i]) != SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(fracvars[i]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(fracvars[i]) )
          continue;
 
       /* get implications of x == 1 */

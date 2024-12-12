@@ -689,13 +689,13 @@ SCIP_Bool isPseudocostUpdateValid(
 
    assert(var != NULL);
 
-   if( !updatecontinuous && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   if( !updatecontinuous && !SCIPvarIsIntegral(var) )
       return FALSE;
 
-   if( !updateintegers && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+   if( !updateintegers && SCIPvarIsIntegral(var) )
       return FALSE;
 
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && set->branch_lpgainnorm != 'l' )
+   if( !SCIPvarIsIntegral(var) && set->branch_lpgainnorm != 'l' )
    {
       /* if the variable is fixed at +/- infinity or it has an unbounded domain, then the domain-based update strategies will not work */
       if( SCIPsetIsInfinity(set, REALABS(SCIPvarGetLbLocal(var))) || SCIPsetIsInfinity(set, REALABS(SCIPvarGetUbLocal(var))) )
@@ -830,7 +830,7 @@ SCIP_RETCODE updatePseudocost(
                   /* check, if the bound change would lead to a valid pseudo cost update
                    * and see comment above (however, ...) */
                   if( isPseudocostUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval, updateintegers, updatecontinuous) &&
-                      (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || !boundchgs[i].redundant || set->branch_lpgainnorm != 'd')
+                      (SCIPvarIsIntegral(var) || !boundchgs[i].redundant || set->branch_lpgainnorm != 'd')
                     )
                   {
                      var->pseudocostflag = PSEUDOCOST_UPDATE; /*lint !e641*/
@@ -861,7 +861,7 @@ SCIP_RETCODE updatePseudocost(
 
          if( (PSEUDOCOSTFLAG)var->pseudocostflag == PSEUDOCOST_UPDATE )
          {
-            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || set->branch_lpgainnorm == 'l' )
+            if( SCIPvarIsIntegral(var) || set->branch_lpgainnorm == 'l' )
             {
                SCIPsetDebugMsg(set, "updating pseudocosts of <%s>: sol: %g -> %g, LP: %e -> %e => solvaldelta = %g, gain=%g, weight: %g\n",
                   SCIPvarGetName(var), updates[i]->data.branchingdata.lpsolval, SCIPvarGetLPSol(var),
@@ -1108,7 +1108,7 @@ SCIP_RETCODE updatePseudocost(
 
                         /* check for valid pseudocost updates for integer variables */
                         if( isPseudocostUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval, updateintegers, updatecontinuous) &&
-                           SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+                           SCIPvarIsIntegral(var) )
                         {
                            var->pseudocostflag = PSEUDOCOST_UPDATE; /*lint !e641*/
                            nvalidupdates++;
@@ -1140,7 +1140,7 @@ SCIP_RETCODE updatePseudocost(
 
                if( (PSEUDOCOSTFLAG)var->pseudocostflag == PSEUDOCOST_UPDATE )
                {
-                  assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
+                  assert( SCIPvarIsIntegral(var) );
                   /* we use updates[i]->newbound as new lp value for measuring change in the LP value. */
                   SCIPsetDebugMsg(set, "updating ancestor pseudocosts of <%s>: sol: %g -> %g, LP: %e -> %e => solvaldelta = %g, gain=%g, weight: %g\n",
                      SCIPvarGetName(var), updates[i]->data.branchingdata.lpsolval, updates[i]->newbound,
@@ -4679,7 +4679,7 @@ SCIP_RETCODE solveNode(
          {
             SCIP_VAR* var = stat->lastbranchvar;
 
-            if( var != NULL && !stat->branchedunbdvar && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+            if( var != NULL && !stat->branchedunbdvar && !SCIPvarIsIntegral(var)
                && (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))) )
             {
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,

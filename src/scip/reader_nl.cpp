@@ -212,7 +212,7 @@ private:
       if( SCIPisExprVar(scip, expr) )
       {
          var = SCIPgetVarExprVar(expr);
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
          {
             SCIP_Bool infeas;
             SCIP_Bool tightened;
@@ -847,11 +847,13 @@ public:
       // as far as I see, ampl::mp gives -inf, +inf for no-bounds, which is always beyond SCIPinfinity()
       // we ignore bounds outside [-scipinfinity,scipinfinity] here
       // for binary variables, we also ignore bounds outside [0,1]
-      if( variableLB > (SCIPvarGetType(probdata->vars[variableIndex]) == SCIP_VARTYPE_BINARY ? 0.0 : -SCIPinfinity(scip)) )
+      SCIP_Bool binary = SCIPvarGetType(probdata->vars[variableIndex]) == SCIP_VARTYPE_BINARY &&
+                         !SCIPvarIsImpliedIntegral(probdata->vars[variableIndex]);
+      if( variableLB > ( binary ? 0.0 : -SCIPinfinity(scip)) )
       {
          SCIP_CALL_THROW( SCIPchgVarLbGlobal(scip, probdata->vars[variableIndex], variableLB) );
       }
-      if( variableUB < (SCIPvarGetType(probdata->vars[variableIndex]) == SCIP_VARTYPE_BINARY ? 1.0 :  SCIPinfinity(scip)) )
+      if( variableUB < ( binary ? 1.0 :  SCIPinfinity(scip)) )
       {
          SCIP_CALL_THROW( SCIPchgVarUbGlobal(scip, probdata->vars[variableIndex], variableUB) );
       }
