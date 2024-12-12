@@ -4168,7 +4168,7 @@ SCIP_RETCODE printLinearCons(
          assert(activevars != 0);
          var = activevars[v];
 
-         hasfloats = hasfloats || (SCIPvarGetType(var) != SCIP_VARTYPE_BINARY &&  SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER);
+         hasfloats = hasfloats || ( SCIPvarIsImpliedIntegral(var) || !SCIPvarIsIntegral(var) );
          hasfloats = hasfloats || !SCIPisIntegral(scip, activevals[v]);
       }
 
@@ -4188,7 +4188,7 @@ SCIP_RETCODE printLinearCons(
             /* If there was no float representation of the variable before, add an auxiliary variable and a conversion constraint */
             if( idx < fznoutput->ndiscretevars && !fznoutput->varhasfloat[idx] )
             {
-               assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+               assert(SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var));
 
                (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "var float: %s_float;\n", SCIPvarGetName(var));
                SCIP_CALL( appendBuffer(scip, &(fznoutput->varbuffer), &(fznoutput->varbufferlen), &(fznoutput->varbufferpos),buffer) );
@@ -4357,7 +4357,7 @@ SCIP_RETCODE writeFzn(
       }
       else
       {
-         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var));
          assert( v >= nbinvars );
 
          /* declare the variable without any bound */
@@ -4575,7 +4575,7 @@ SCIP_RETCODE writeFzn(
             /* if not happened yet, introduce an auxiliary variable for discrete variables with fractional coefficients */
             if( v < ndiscretevars && !fznoutput.varhasfloat[v] )
             {
-               assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+               assert(SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var));
 
                (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "var float: %s_float;\n", SCIPvarGetName(var));
                SCIP_CALL( appendBuffer(scip, &(fznoutput.varbuffer), &(fznoutput.varbufferlen), &(fznoutput.varbufferpos),buffer) );
@@ -4614,7 +4614,7 @@ SCIP_RETCODE writeFzn(
    {
       var = vars[boundedvars[v]];
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(var) )
       {
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
             SCIPinfoMessage(scip, file,"constraint int_ge(%s, %.f);\n",SCIPvarGetName(var),
@@ -4678,8 +4678,8 @@ SCIP_RETCODE writeFzn(
          SCIP_Real obj;
          obj = objscale * SCIPvarGetObj(vars[floatobjvars[v]]);
          flattenFloat(scip, obj, buffy);
-         assert( !SCIPisIntegral(scip, obj) || SCIPvarGetType(vars[floatobjvars[v]]) == SCIP_VARTYPE_CONTINUOUS
-            || SCIPvarIsImpliedIntegral(vars[floatobjvars[v]]) );
+         assert( !SCIPisIntegral(scip, obj) || !SCIPvarIsIntegral(vars[floatobjvars[v]])
+                 || SCIPvarIsImpliedIntegral(vars[floatobjvars[v]]) );
          SCIPinfoMessage(scip, file, "%s%s", buffy, v < nfloatobjvars-1 ? ", " : "" );
       }
 

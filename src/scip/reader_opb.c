@@ -3357,7 +3357,7 @@ SCIP_RETCODE writeOpbConstraints(
             /* find non-binary variable */
             for( v = 0; v < nconsvars; ++v )
             {
-               if( SCIPvarGetType(consvars[v]) != SCIP_VARTYPE_BINARY )
+               if( SCIPvarGetType(consvars[v]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(consvars[v]) )
                {
                   if( consvars[v] == slackvar )
                   {

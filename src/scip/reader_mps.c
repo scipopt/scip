@@ -3278,7 +3278,7 @@ void printColumnSection(
          continue;
       }
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && intSection )
+      if( !SCIPvarIsIntegral(var) && intSection )
       {
          /* end integer section in MPS format */
          printStart(scip, file, "", "INTEND", (int) maxnamelen);
@@ -3287,7 +3287,7 @@ void printColumnSection(
          SCIPinfoMessage(scip, file, "\n");
          intSection = FALSE;
       }
-      else if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !intSection )
+      else if( SCIPvarIsIntegral(var) && !intSection )
       {
          /* start integer section in MPS format */
          printStart(scip, file, "", "INTSTART", (int) maxnamelen);
@@ -3510,7 +3510,7 @@ void printBoundSection(
       }
 
       /* take care of binary variables */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var))
       {
          if( !sectionName )
          {
@@ -3657,7 +3657,7 @@ void printBoundSection(
       assert(strncmp(varname, SCIPvarGetName(var), maxnamelen) == 0);
 
       /* take care of binary variables */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var))
       {
          printStart(scip, file, "BV", "Bound", (int) maxnamelen);
          printRecord(scip, file, varname, "", maxnamelen);

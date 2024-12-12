@@ -1598,7 +1598,7 @@ SCIP_Bool SCIPisObjIntegral(
                break;
 
             /* if variable with non-zero objective value is continuous, the problem's objective value may be fractional */
-            if ( SCIPvarGetType(scip->origprob->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+            if ( !SCIPvarIsIntegral(scip->origprob->vars[v]) )
                break;
          }
       }
