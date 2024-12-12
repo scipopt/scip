@@ -3362,7 +3362,7 @@ SCIP_RETCODE nlpCalcFracVars(
          assert(primsol < SCIP_INVALID);
 
          /* consider only binary and integer variables */
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER )
+         if( SCIPvarIsImpliedIntegral(var) || !SCIPvarIsIntegral(var) )
             continue;
 
          /* ignore fixed variables (due to numerics, it is possible, that the NLP solution of a fixed integer variable
@@ -4395,7 +4395,7 @@ SCIP_RETCODE SCIPnlpHasContinuousNonlinearity(
 
       for( expr = SCIPexpriterRestartDFS(it, nlrow->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
       {
-         if( SCIPexprIsVar(set, expr) && SCIPvarGetType(SCIPgetVarExprVar(expr)) == SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPexprIsVar(set, expr) && SCIPvarIsIntegral(SCIPgetVarExprVar(expr)) )
          {
             *result = TRUE;
             break;

@@ -2406,7 +2406,7 @@ SCIP_RETCODE computeMonoidalStrengthCoef(
    rows = SCIPgetLPRows(scip);
 
    /* if var corresponding to current ray is integer, we can do monoidal */
-   if( (lppos >= 0 && SCIPvarGetType(SCIPcolGetVar(cols[lppos])) != SCIP_VARTYPE_CONTINUOUS) ||
+   if( (lppos >= 0 && SCIPvarIsIntegral(SCIPcolGetVar(cols[lppos])) ) ||
        (lppos < 0 && SCIProwIsIntegral(rows[- lppos - 1])) )
    {
       SCIP_Real* vapex;

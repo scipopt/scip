@@ -102,7 +102,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
       ub = SCIPvarGetUbGlobal(vars[v]);
 
       /* is variable integral? */
-      if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(vars[v]) )
       {
          SCIP_Real newlb;
          SCIP_Real newub;

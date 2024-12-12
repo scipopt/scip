@@ -232,9 +232,8 @@ void getBinVarIdxInUplockRow(
       var = SCIPmatrixGetVar(matrix, *rowpnt);
 
       /* avoid cases where the binary variable has lb=ub=1 or lb=ub=0 */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY &&
-          SCIPmatrixGetColLb(matrix, *rowpnt) < 0.5 &&
-          SCIPmatrixGetColUb(matrix, *rowpnt) > 0.5 )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var) &&
+          SCIPmatrixGetColLb(matrix, *rowpnt) < 0.5 && SCIPmatrixGetColUb(matrix, *rowpnt) > 0.5 )
       {
          SCIP_Real bincoef;
          bincoef = *valpnt;
@@ -330,9 +329,8 @@ void getBinVarIdxInDownlockRow(
       var = SCIPmatrixGetVar(matrix, *rowpnt);
 
       /* avoid cases where the binary variable has lb=ub=1 or lb=ub=0 */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY &&
-          SCIPmatrixGetColLb(matrix, *rowpnt) < 0.5 &&
-          SCIPmatrixGetColUb(matrix, *rowpnt) > 0.5 )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var) &&
+          SCIPmatrixGetColLb(matrix, *rowpnt) < 0.5 && SCIPmatrixGetColUb(matrix, *rowpnt) > 0.5 )
       {
          SCIP_Real bincoef;
 

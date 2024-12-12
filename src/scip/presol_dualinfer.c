@@ -2000,7 +2000,7 @@ SCIP_RETCODE dualBoundStrengthening(
 
       for( i = 0; i < nimplubvars; i++ )
       {
-         assert(SCIPvarGetType(SCIPmatrixGetVar(matrix, implubvars[i])) == SCIP_VARTYPE_CONTINUOUS ||
+         assert(!SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, implubvars[i])) ||
             SCIPvarIsImpliedIntegral(SCIPmatrixGetVar(matrix, implubvars[i])));
          calcMinColActivity(scip, matrix, implubvars[i], lbdual, ubdual, mincolact, mincolactinf);
       }
@@ -2308,7 +2308,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
          /* keep a small statistic which types of variables are fixed */
          if( fixed )
          {
-            if( !SCIPvarIsImpliedIntegral(var) || SCIPvarIsImpliedIntegral(var) )
+            if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
                nconvarsfixed++;
             else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
                nbinvarsfixed++;

@@ -126,7 +126,7 @@ SCIP_RETCODE singletonColumnStuffing(
    {
       /* consider only rows with minimal one continuous singleton column */
       if( SCIPmatrixGetColNNonzs(matrix, col) == 1
-         && SCIPvarGetType(SCIPmatrixGetVar(matrix, col)) == SCIP_VARTYPE_CONTINUOUS
+         && !SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, col))
          && SCIPvarGetNLocksUpType(SCIPmatrixGetVar(matrix, col), SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNUplocks(matrix, col)
          && SCIPvarGetNLocksDownType(SCIPmatrixGetVar(matrix, col), SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, col) )
       {
@@ -168,7 +168,7 @@ SCIP_RETCODE singletonColumnStuffing(
                 */
                if( SCIPmatrixGetColNNonzs(matrix, idx) == 1
                   && (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1
-                  && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+                  && !SCIPvarIsIntegral(var) )
                {
                   if( SCIPisLT(scip, SCIPvarGetObj(var), 0.0) && SCIPisGT(scip, coef, 0.0) )
                   {
@@ -286,7 +286,7 @@ SCIP_RETCODE singletonColumnStuffing(
                      break;
 
                   assert(SCIPmatrixGetColNNonzs(matrix, idx) == 1);
-                  assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+                  assert(!SCIPvarIsIntegral(var) );
                   assert((SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1);
                   assert(colcoeffs[k] >= 0);
 
@@ -429,7 +429,7 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
                   && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, v));
 
                lb = SCIPvarGetLbGlobal(var);
-               assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+               assert(!SCIPvarIsIntegral(var));
 
                /* avoid fixings to infinite values */
                assert(!SCIPisInfinity(scip, -lb));
@@ -456,7 +456,7 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
                   && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, v));
 
                ub = SCIPvarGetUbGlobal(var);
-               assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+               assert(!SCIPvarIsIntegral(var));
 
                /* avoid fixings to infinite values */
                assert(!SCIPisInfinity(scip, ub));

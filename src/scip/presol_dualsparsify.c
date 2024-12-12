@@ -638,7 +638,7 @@ SCIP_RETCODE aggregation(
          newub = weight1 * SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
    }
 
-   newvartype = SCIPvarGetType(aggregatedvar) == SCIP_VARTYPE_CONTINUOUS ? SCIP_VARTYPE_CONTINUOUS : SCIP_VARTYPE_INTEGER;
+   newvartype = !SCIPvarIsIntegral(aggregatedvar) ? SCIP_VARTYPE_CONTINUOUS : SCIP_VARTYPE_INTEGER;
    newvarimpltype = SCIPvarIsImpliedIntegral(aggregatedvar) ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE;
 
    lhs = SCIPvarGetLbGlobal(vars[colidx2]);
@@ -856,9 +856,7 @@ SCIP_RETCODE cancelCol(
             hashingcolvar = vars[hashingcolconspair->colindex];
             hashingcollb = SCIPvarGetLbGlobal(hashingcolvar);
             hashingcolub = SCIPvarGetUbGlobal(hashingcolvar);
-            hashingcolisbin = (SCIPvarGetType(hashingcolvar) == SCIP_VARTYPE_BINARY) ||
-               (SCIPvarIsIntegral(hashingcolvar) && SCIPisZero(scip, hashingcollb) &&
-                  SCIPisEQ(scip, hashingcolub, 1.0));
+            hashingcolisbin = SCIPvarIsBinary(hashingcolvar);
             scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1;
 
             if( SCIPisZero(scip, scale) )

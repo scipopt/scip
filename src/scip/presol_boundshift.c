@@ -167,7 +167,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       SCIP_Real lb;
       SCIP_Real ub;
 
-      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var));
 
       /* do not shift non-active (fixed or (multi-)aggregated) variables */
       if( !SCIPvarIsActive(var) )
