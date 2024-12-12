@@ -369,8 +369,7 @@ SCIP_RETCODE SCIPupdateVarPseudocostSymmetric(
             var = SCIPboundchgGetVar(boundchg);
             assert(var != NULL);
 
-            if( SCIPboundchgGetBoundchgtype(boundchg) == SCIP_BOUNDCHGTYPE_BRANCHING &&
-               SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+            if( SCIPboundchgGetBoundchgtype(boundchg) == SCIP_BOUNDCHGTYPE_BRANCHING && SCIPvarIsIntegral(var) )
             {
                parentlpsolval = SCIPboundchgGetLPSolVal(boundchg);
                if( parentlpsolval >= SCIP_INVALID )

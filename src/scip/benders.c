@@ -6894,11 +6894,12 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
       {
          SCIP_CALL( SCIPbendersGetVar(benders, set, vars[i], &mastervar, -1) );
 
-         if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS && mastervar != NULL )
+         if( SCIPvarIsIntegral(vars[i]) && mastervar != NULL )
          {
             /* changing the type of the subproblem variable corresponding to mastervar to CONTINUOUS */
             SCIP_CALL( SCIPchgVarType(subproblem, vars[i], SCIP_VARTYPE_CONTINUOUS, &infeasible) );
-
+            assert(!infeasible);
+            SCIP_CALL( SCIPchgVarImplType(subproblem, vars[i], SCIP_VARIMPLTYPE_NONE, &infeasible ) );
             assert(!infeasible);
 
             chgvarscount++;

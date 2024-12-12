@@ -265,12 +265,12 @@ SCIP_RETCODE updateBestCandidate(
    /* we cannot branch on a huge value for a discrete variable, because we simply cannot enumerate such huge integer values in floating point
     * arithmetics
     */
-   if( SCIPvarGetType(cand) != SCIP_VARTYPE_CONTINUOUS && (SCIPisHugeValue(scip, candbrpoint) || SCIPisHugeValue(scip, -candbrpoint)) )
+   if( SCIPvarIsIntegral(cand) && (SCIPisHugeValue(scip, candbrpoint) || SCIPisHugeValue(scip, -candbrpoint)) )
       return SCIP_OKAY;
 
-   assert(SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS || !SCIPisIntegral(scip, candbrpoint));
+   assert(!SCIPvarIsIntegral(cand) || !SCIPisIntegral(scip, candbrpoint));
 
-   if( SCIPvarGetType(cand) == SCIP_VARTYPE_CONTINUOUS )
+   if( !SCIPvarIsIntegral(cand) )
       strategy = (branchruledata->strategy == 'u' ? branchruledata->updatestrategy : branchruledata->strategy);
    else
       strategy = (branchruledata->strategy == 'u' ? 'l' : branchruledata->strategy);
@@ -401,7 +401,9 @@ SCIP_RETCODE updateBestCandidate(
       /* both are equally good */
    }
 
-   if( SCIPvarGetType(*bestvar) == SCIPvarGetType(cand) )
+   unsigned int besttype = SCIPvarIsImpliedIntegral(*bestvar) ? 2 : SCIPvarGetType(*bestvar);
+   unsigned int candtype = SCIPvarIsImpliedIntegral(cand) ? 2 : SCIPvarGetType(cand);
+   if( besttype == candtype )
    {
       /* if both have the same type, take the one with larger relative diameter */
       if( SCIPrelDiff(SCIPvarGetUbLocal(*bestvar), SCIPvarGetLbLocal(*bestvar)) < SCIPrelDiff(SCIPvarGetUbLocal(cand), SCIPvarGetLbLocal(cand)) )
@@ -422,7 +424,7 @@ SCIP_RETCODE updateBestCandidate(
    }
 
    /* take the one with better type ("more discrete") */
-   if( SCIPvarGetType(*bestvar) > SCIPvarGetType(cand) )
+   if( besttype > candtype )
    {
       /* cand is more discrete than bestvar */
       (*bestscore)    = branchscore;
@@ -431,7 +433,7 @@ SCIP_RETCODE updateBestCandidate(
       (*bestbrpoint)  = candbrpoint;
       return SCIP_OKAY;
    }
-   if( SCIPvarGetType(*bestvar) < SCIPvarGetType(cand) )
+   if( besttype < candtype )
    {
       /* bestvar is more discrete than cand */
       return SCIP_OKAY;
