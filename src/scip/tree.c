@@ -8012,7 +8012,7 @@ void SCIPnodeGetPropsBeforeDual(
          if( boundchgs[i].data.inferencedata.reason.prop == NULL )
             break;
       }
-      if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(boundchgs[i].var) )
          (*npropvars)++;
    }
 
@@ -8023,7 +8023,7 @@ void SCIPnodeGetPropsBeforeDual(
    for( i = nbranchings, pos = 0; pos < *npropvars; ++i ) /*lint !e440*/
    {
       assert(i < nboundchgs);
-      if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(boundchgs[i].var) )
       {
          vars[pos] = boundchgs[i].var;
          varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
@@ -8106,7 +8106,7 @@ void SCIPnodeGetPropsAfterDual(
          if( boundchgs[i].data.inferencedata.reason.prop == NULL )
             continue;
       }
-      if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(boundchgs[i].var) )
          ++(*nvars);
    }
 
@@ -8129,7 +8129,7 @@ void SCIPnodeGetPropsAfterDual(
          if( boundchgs[i].data.inferencedata.reason.prop == NULL )
             continue;
       }
-      if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(boundchgs[i].var) )
       {
          vars[pos] = boundchgs[i].var;
          varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
