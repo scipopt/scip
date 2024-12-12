@@ -482,7 +482,7 @@ SCIP_RETCODE chooseVeclenVar(
       score = (objdelta + SCIPsumepsilon(scip))/((SCIP_Real)nlocks+1.0);
 
       /* prefer decisions on binary variables */
-      if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
          score *= 1000.0;
 
       /* prefer decisions on cover variables */

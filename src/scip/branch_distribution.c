@@ -262,7 +262,7 @@ void SCIPvarCalcDistributionParameters(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             varlb,              /**< variable lower bound */
    SCIP_Real             varub,              /**< variable upper bound */
-   SCIP_VARTYPE          vartype,            /**< type of the variable */
+   SCIP_Bool             varintegral,        /**< is the variable integral? */
    SCIP_Real*            mean,               /**< pointer to store mean value */
    SCIP_Real*            variance            /**< pointer to store the variance of the variable uniform distribution */
    )
@@ -286,7 +286,7 @@ void SCIPvarCalcDistributionParameters(
    else
    {
       /* if the variable is continuous, we assume a continuous uniform distribution, otherwise a discrete one */
-      if( vartype == SCIP_VARTYPE_CONTINUOUS )
+      if( varintegral )
          *variance = SQR(varub - varlb);
       else
          *variance = SQR(varub - varlb + 1.0) - 1.0;

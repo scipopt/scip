@@ -3815,7 +3815,7 @@ void computeIntegerVariableBoundsDins(
    lbglobal = SCIPvarGetLbGlobal(var);
    ubglobal = SCIPvarGetUbGlobal(var);
 
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(var));
    /* get the current LP solution for each variable */
    lpsol = SCIPvarGetLPSol(var);
 

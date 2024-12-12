@@ -147,7 +147,7 @@ void computeIntegerVariableBounds(
    lbglobal = SCIPvarGetLbGlobal(var);
    ubglobal = SCIPvarGetUbGlobal(var);
 
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(var));
    /* get the current LP solution for each variable */
    lpsol = SCIPvarGetLPSol(var);
 
@@ -416,7 +416,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
       if( subvars[i] == NULL )
          continue;
 
-      assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(subvars[i]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(subvars[i]));
       if( SCIPvarGetUbGlobal(subvars[i]) - SCIPvarGetLbGlobal(subvars[i]) < 0.5 )
          continue;
 
