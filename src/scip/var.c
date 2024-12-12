@@ -17320,6 +17320,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetType
 #undef SCIPvarIsBinary
 #undef SCIPvarIsIntegral
+#undef SCIPvarIsImpliedIntegral
 #undef SCIPvarIsInitial
 #undef SCIPvarIsRemovable
 #undef SCIPvarIsDeleted
