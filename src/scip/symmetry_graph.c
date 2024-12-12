@@ -836,9 +836,11 @@ int compareVars(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
+   unsigned int type1 = SCIPvarIsImpliedIntegral(var1) ? 2 : SCIPvarGetType(var1);
+   unsigned int type2 = SCIPvarIsImpliedIntegral(var2) ? 2 : SCIPvarGetType(var2);
+   if( type1 < type2 )
       return -1;
-   if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
+   if( type1 > type2 )
       return 1;
 
    /* use SCIP's comparison functions if available */
@@ -972,9 +974,11 @@ int compareVarsSignedPerm(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   if( SCIPvarGetType(var1) < SCIPvarGetType(var2) )
+   unsigned int type1 = SCIPvarIsImpliedIntegral(var1) ? 2 : SCIPvarGetType(var1);
+   unsigned int type2 = SCIPvarIsImpliedIntegral(var2) ? 2 : SCIPvarGetType(var2);
+   if( type1 < type2 )
       return -1;
-   if( SCIPvarGetType(var1) > SCIPvarGetType(var2) )
+   if( type1 > type2 )
       return 1;
 
    obj1 = isneg1 ? -SCIPvarGetObj(var1) : SCIPvarGetObj(var1);
@@ -1315,9 +1319,9 @@ SCIP_Bool isFixedVar(
 {
    assert(var != NULL);
 
-   if ( (fixedtype & SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
+   if ( (fixedtype & SYM_SPEC_INTEGER) && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(var) )
       return TRUE;
-   if ( (fixedtype & SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+   if ( (fixedtype & SYM_SPEC_BINARY) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var) )
       return TRUE;
    if ( (fixedtype & SYM_SPEC_REAL) &&
       (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(var)) )
