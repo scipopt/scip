@@ -5457,7 +5457,7 @@ SCIP_Real SCIPtreeCalcChildEstimate(
    varsol = SCIPvarGetSol(var, SCIPtreeHasFocusNodeLP(tree));
 
    /* compute increase above parent node's (i.e., focus node's) estimate value */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   if( !SCIPvarIsIntegral(var) )
       estimateinc = SCIPvarGetPseudocost(var, stat, targetvalue - varsol);
    else
    {
@@ -5879,8 +5879,8 @@ SCIP_RETCODE SCIPtreeBranchVarHole(
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetProbindex(var) >= 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
    assert(SCIPsetIsFeasGE(set, left, SCIPvarGetLbLocal(var)));
@@ -6060,7 +6060,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    }
 
    /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && !validval )
+   if( !SCIPvarIsIntegral(var)  && !validval )
    {
       SCIPerrorMessage("Cannot branch on continuous variable <%s> without a given branching value.", SCIPvarGetName(var));
       SCIPABORT();
@@ -6070,8 +6070,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    assert(SCIPvarIsActive(var));
    assert(SCIPvarGetProbindex(var) >= 0);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
    /* get value of variable in current LP or pseudo solution */
@@ -6099,7 +6099,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
 
    assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS ||
+   assert(SCIPvarIsIntegral(var) ||
       SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) ||
       (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))) );  /* see comment in SCIPbranchVarVal */
 
@@ -6145,7 +6145,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
       else
          width /= 0.5 + widthfactor * (pow(widthfactor, (SCIP_Real)(n/2)) - 1.0) / (widthfactor - 1.0); /*lint !e653*/
    }
-   if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+   if( SCIPvarIsIntegral(var) )
       minwidth = MAX(1.0, minwidth);
    if( width < minwidth )
       width = minwidth;
@@ -6195,7 +6195,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
       }
       --n;
 
-      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(var) )
       {
          /* if it's a discrete variable, we can use left-1 and right+1 as upper and lower bounds for following nodes on the left and right, resp. */
          left  -= 1.0;
@@ -6206,7 +6206,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    }
    else
    {
-      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPvarIsIntegral(var) )
       {
          left  = SCIPsetFloor(set, val);
          right = SCIPsetCeil(set, val);
@@ -6230,7 +6230,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    for( i = 0; i < n; ++i )
    {
       /* create child node left - width <= x <= left, if left > lb(x) or x is discrete */
-      if( SCIPsetIsRelLT(set, SCIPvarGetLbLocal(var), left) || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPsetIsRelLT(set, SCIPvarGetLbLocal(var), left) || SCIPvarIsIntegral(var) )
       {
          /* new lower bound should be variables lower bound, if we are in the last round or left - width is very close to lower bound
           * otherwise we take left - width
@@ -6276,12 +6276,12 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
             ++*nchildren;
 
          left = bnd;
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
             left -= 1.0;
       }
 
       /* create child node right <= x <= right + width, if right < ub(x) */
-      if( SCIPsetIsRelGT(set, SCIPvarGetUbLocal(var), right) || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPsetIsRelGT(set, SCIPvarGetUbLocal(var), right) || SCIPvarIsIntegral(var) )
       {
          /* new upper bound should be variables upper bound, if we are in the last round or right + width is very close to upper bound
           * otherwise we take right + width
@@ -6327,7 +6327,7 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
             ++*nchildren;
 
          right = bnd;
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
             right += 1.0;
       }
 

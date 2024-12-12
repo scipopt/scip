@@ -266,7 +266,7 @@ SCIP_RETCODE SCIPwriteVarName(
       else
       {
          c = SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
-             SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR;
+             (SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR );
       }
       SCIPinfoMessage(scip, file, "[%c]",c);
 
@@ -6815,7 +6815,7 @@ SCIP_RETCODE SCIPaddVarVlb(
    /* if x is not continuous we add a variable bound for z; do not add it if cofficient would be too small or we already
     * detected infeasibility
     */
-   if( !(*infeasible) && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/vlbcoef) )
+   if( !(*infeasible) && SCIPvarIsIntegral(var) && !SCIPisZero(scip, 1.0/vlbcoef) )
    {
       if( vlbcoef > 0.0 )
       {
@@ -6874,7 +6874,7 @@ SCIP_RETCODE SCIPaddVarVub(
    /* if x is not continuous we add a variable bound for z; do not add it if cofficient would be too small or we already
     * detected infeasibility
     */
-   if( !(*infeasible) && SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, 1.0/vubcoef) )
+   if( !(*infeasible) && SCIPvarIsIntegral(var) && !SCIPisZero(scip, 1.0/vubcoef) )
    {
       if( vubcoef > 0.0 )
       {
@@ -6967,7 +6967,7 @@ SCIP_RETCODE SCIPaddVarImplication(
    }
 
    /* the implication graph can only handle 'real' binary (SCIP_VARTYPE_BINARY) variables, therefore we transform the
-    * implication in variable bounds, (lowerbound of y will be abbreviated by lby, upperbound equivlaent) the follwing
+    * implication in variable bounds, (lowerbound of y will be abbreviated by lby, upperbound equivalent) the following
     * four cases are:
     *
     * 1. (x >= 1 => y >= b) => y >= (b - lby) * x + lby
@@ -6975,6 +6975,7 @@ SCIP_RETCODE SCIPaddVarImplication(
     * 3. (x <= 0 => y >= b) => y >= (lby - b) * x + b
     * 4. (x <= 0 => y <= b) => y <= (uby - b) * x + b
     */
+   /* TODO: check how this works with implied binaries */
    if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
    {
       SCIP_Real lby;
@@ -8249,7 +8250,7 @@ SCIP_RETCODE tightenBounds(
    *infeasible = FALSE;
 
    /* adjusts bounds if the variable type changed form continuous to non-continuous (integral) */
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && integral )
+   if( !SCIPvarIsIntegral(var) && integral )
    {
       SCIP_Bool tightened;
 
@@ -8514,7 +8515,7 @@ SCIP_RETCODE SCIPfixVar(
    /* in the problem creation stage, modify the bounds as requested, independently from the current bounds */
    if( scip->set->stage != SCIP_STAGE_PROBLEM )
    {
-      if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(scip->set, fixedval))
+      if( (SCIPvarIsIntegral(var) && !SCIPsetIsFeasIntegral(scip->set, fixedval))
          || SCIPsetIsFeasLT(scip->set, fixedval, SCIPvarGetLbLocal(var))
          || SCIPsetIsFeasGT(scip->set, fixedval, SCIPvarGetUbLocal(var)) )
       {
