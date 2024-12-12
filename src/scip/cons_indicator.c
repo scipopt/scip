@@ -780,7 +780,8 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
       SCIP_Real oldbound;
       SCIP_Real newbound;
 
-      assert( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_BINARY );
+      assert( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_BINARY &&
+              !SCIPvarIsImpliedIntegral(SCIPeventGetVar(event)) );
       oldbound = SCIPeventGetOldbound(event);
       newbound = SCIPeventGetNewbound(event);
       assert( SCIPisIntegral(scip, oldbound) );
@@ -924,7 +925,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
       var = SCIPbdchginfoGetVar(bdchginfos[i]);
 
       /* quick check for slack variable that is implicitly integral or continuous */
-      if ( SCIPvarIsImpliedIntegral(var) || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      if ( SCIPvarIsImpliedIntegral(var) || !SCIPvarIsIntegral(var) )
       {
          /* check string */
          if ( strstr(SCIPvarGetName(var), "indslack") != NULL )
@@ -976,7 +977,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
             SCIPbdchginfoGetNewbound(bdchginfos[i]));
 
          /* quick check for slack variable that is implicitly integral or continuous */
-         if ( (SCIPvarIsImpliedIntegral(var) || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS) && strstr(SCIPvarGetName(var), "indslack") != NULL )
+         if ( (SCIPvarIsImpliedIntegral(var) || !SCIPvarIsIntegral(var) ) && strstr(SCIPvarGetName(var), "indslack") != NULL )
          {
             SCIP_VAR* slackvar;
 
@@ -3418,7 +3419,7 @@ SCIP_RETCODE consdataCreate(
          (*consdata)->binvar = var;
 
          /* check type */
-         if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+         if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY  || SCIPvarIsImpliedIntegral(var) )
          {
             SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(var), SCIPvarGetType(var));
             return SCIP_ERROR;
@@ -6281,7 +6282,8 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          {
             consdata->slacktypechecked = TRUE;
             /* check if slack variable can be made implicit integer. */
-            if ( SCIPvarGetType(consdata->slackvar) == SCIP_VARTYPE_CONTINUOUS )
+            if ( SCIPvarGetType(consdata->slackvar) == SCIP_VARTYPE_CONTINUOUS
+                 && !SCIPvarIsImpliedIntegral(consdata->slackvar) )
             {
                SCIP_Real* vals;
                SCIP_VAR** vars;
@@ -8346,7 +8348,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
          SCIP_VARTYPE vartype;
 
          vartype = SCIPvarGetType(vars[v]);
-         if ( vartype != SCIP_VARTYPE_CONTINUOUS && SCIPvarIsImpliedIntegral(vars[v]))
+         if ( vartype != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(vars[v]))
          {
             onlyCont = FALSE;
             break;
@@ -8665,7 +8667,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
          SCIP_VARTYPE vartype;
 
          vartype = SCIPvarGetType(vars[j]);
-         if ( vartype != SCIP_VARTYPE_CONTINUOUS && SCIPvarIsImpliedIntegral(vars[j]) )
+         if ( vartype != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(vars[j]) )
          {
             onlyCont = FALSE;
             break;
@@ -8787,12 +8789,14 @@ SCIP_RETCODE SCIPaddVarIndicator(
    SCIP_CALL( SCIPaddCoefLinear(scip, consdata->lincons, var, val) );
 
    /* possibly adapt variable type */
-   if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_CONTINUOUS && (! SCIPvarIsIntegral(var) || ! SCIPisIntegral(scip, val) ) )
+   if ( SCIPvarIsIntegral(consdata->slackvar) && (! SCIPvarIsIntegral(var) || !SCIPisIntegral(scip, val) ) )
    {
       SCIP_Bool infeasible;
 
       SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
-      assert( ! infeasible );
+      assert(!infeasible);
+      SCIP_CALL( SCIPchgVarImplType(scip, consdata->slackvar, SCIP_VARIMPLTYPE_NONE,&infeasible) );
+      assert(!infeasible);
    }
 
    return SCIP_OKAY;
@@ -8872,7 +8876,7 @@ SCIP_RETCODE SCIPsetLinearConsIndicator(
          SCIP_VARTYPE vartype;
 
          vartype = SCIPvarGetType(vars[v]);
-         if ( vartype != SCIP_VARTYPE_CONTINUOUS && SCIPvarIsImpliedIntegral(vars[v]) )
+         if ( vartype != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(vars[v]) )
          {
             onlyCont = FALSE;
             break;
@@ -8958,7 +8962,7 @@ SCIP_RETCODE SCIPsetBinaryVarIndicator(
    assert( consdata != NULL );
 
    /* check type */
-   if ( SCIPvarGetType(binvar) != SCIP_VARTYPE_BINARY )
+   if ( SCIPvarGetType(binvar) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(binvar) )
    {
       SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(binvar), SCIPvarGetType(binvar));
       return SCIP_ERROR;

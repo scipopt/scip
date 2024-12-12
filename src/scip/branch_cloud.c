@@ -302,7 +302,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
          SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], solval) );
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], solval) );
       }
-      else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_INTEGER && !SCIPisIntegral(scip, solval) )
+      else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(vars[i]) &&
+              !SCIPisIntegral(scip, solval) )
       {
          SCIP_CALL( SCIPchgVarLbDive(scip, vars[i], SCIPfloor(scip, solval)) );
          SCIP_CALL( SCIPchgVarUbDive(scip, vars[i], SCIPceil(scip, solval)) );

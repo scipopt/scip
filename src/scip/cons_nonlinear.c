@@ -5541,7 +5541,7 @@ SCIP_Bool isSingleLockedCand(
       && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == ownerdata->nlockspos
       && ownerdata->nconss == 1 && SCIPisZero(scip, SCIPvarGetObj(var))
       && !SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var))
-      && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
+      && (SCIPvarIsImpliedIntegral(var) || SCIPvarGetType(var) != SCIP_VARTYPE_BINARY)
       && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
 }
 
@@ -5741,7 +5741,7 @@ SCIP_RETCODE presolveSingleLockedVars(
          /* try to change the variable type to binary */
          if( conshdlrdata->checkvarlocks == 't' && SCIPisEQ(scip, SCIPvarGetLbGlobal(var), 0.0) && SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0) )
          {
-            assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+            assert(SCIPvarIsImpliedIntegral(var) || SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
             SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, infeasible) );
             ++(*nchgvartypes);
 
@@ -6934,7 +6934,7 @@ void scoreBranchingCandidates(
          maxscore.auxviol = MAX(maxscore.auxviol, cands[c].auxviol);
       }
 
-      if( conshdlrdata->branchfracweight > 0.0 && SCIPvarGetType(cands[c].var) <= SCIP_VARTYPE_INTEGER )
+      if( conshdlrdata->branchfracweight > 0.0 && SCIPvarIsIntegral(cands[c].var) && !SCIPvarIsImpliedIntegral(cands[c].var) )
       {
          /* when collecting for branching on fractionality (cands[c].expr == NULL), only fractional integer variables
           * should appear as candidates here and their fractionality should have been recorded in branchingIntegralOrNonlinear
@@ -7020,7 +7020,7 @@ void scoreBranchingCandidates(
                 * this should be consistent with the way how pseudo-costs are updated in the core, which is decided by
                 * branching/lpgainnormalize for continuous variables and move in LP-value for non-continuous variables
                 */
-               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               if( !SCIPvarIsIntegral(var) )
                   strategy = conshdlrdata->branchpscostupdatestrategy;
                else
                   strategy = 'l';
