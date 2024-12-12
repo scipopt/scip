@@ -1229,7 +1229,7 @@ SCIP_RETCODE predBndStr(
    if( !good ){
       if( !dominatingimplied && !dominatedimplied )
       {
-         good = SCIPvarGetType(dominatingvar) && SCIPvarGetType(dominatedvar);
+         good = SCIPvarGetType(dominatingvar) == SCIPvarGetType(dominatedvar);
       }
       else if ( dominatingimplied )
       {
@@ -1292,7 +1292,7 @@ SCIP_RETCODE predBndStr(
          oldlb = SCIPvarGetLbGlobal(dominatingvar);
          ub = SCIPvarGetUbGlobal(dominatingvar);
 
-         if( SCIPvarGetType(dominatingvar) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(dominatingvar) )
             newlb = SCIPfloor(scip, newlb);
 
          if( SCIPisLT(scip, oldlb, newlb) && SCIPisLE(scip, newlb, ub) )
@@ -1321,7 +1321,7 @@ SCIP_RETCODE predBndStr(
          oldlb = SCIPvarGetLbGlobal(dominatingvar);
          ub = SCIPvarGetUbGlobal(dominatingvar);
 
-         if( SCIPvarGetType(dominatingvar) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(dominatingvar) )
             newlb = SCIPfloor(scip, newlb);
 
          if( SCIPisLT(scip, oldlb, newlb) && SCIPisLE(scip, newlb, ub) )
@@ -1377,7 +1377,7 @@ SCIP_RETCODE predBndStr(
          oldub = SCIPvarGetUbGlobal(dominatedvar);
          lb = SCIPvarGetLbGlobal(dominatedvar);
 
-         if( SCIPvarGetType(dominatedvar) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(dominatedvar) )
             newub = SCIPceil(scip, newub);
 
          if( SCIPisLE(scip, lb, newub) && SCIPisLT(scip, newub, oldub) )
@@ -1444,7 +1444,7 @@ SCIP_RETCODE findFixings(
    if( !good ){
       if( !dominatingimplied && !dominatedimplied )
       {
-         good = SCIPvarGetType(dominatingvar) && SCIPvarGetType(dominatedvar);
+         good = SCIPvarGetType(dominatingvar) == SCIPvarGetType(dominatedvar);
       }
       else if ( dominatingimplied )
       {
@@ -2177,7 +2177,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             if( !varsprocessed[varidx] && varineq[varidx] )
             {
                /* we search only for dominance relations between the same variable type */
-               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               if( !SCIPvarIsIntegral(var) )
                {
                   consearchcols[nconfill++] = varidx;
                }
@@ -2291,7 +2291,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                var = SCIPmatrixGetVar(matrix, varidx);
 
                /* we search only for dominance relations between the same variable type */
-               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               if( !SCIPvarIsIntegral(var) )
                {
                   consearchcols[nconfill++] = varidx;
                }
@@ -2371,7 +2371,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             SCIP_Real lb;
 
             lb = SCIPvarGetLbGlobal(var);
-            assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, lb));
+            assert(!SCIPvarIsIntegral(var) || SCIPisFeasIntegral(scip, lb));
 
             /* fix at lower bound */
             SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
@@ -2386,7 +2386,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             (*nfixedvars)++;
 
 #ifdef SCIP_DEBUG
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+            if( !SCIPvarIsIntegral(var) )
                nconvarsfixed++;
             else if( SCIPvarIsBinary(var) )
                nbinvarsfixed++;
@@ -2399,7 +2399,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
             SCIP_Real ub;
 
             ub = SCIPvarGetUbGlobal(var);
-            assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, ub));
+            assert(!SCIPvarIsIntegral(var) || SCIPisFeasIntegral(scip, ub));
 
             /* fix at upper bound */
             SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );

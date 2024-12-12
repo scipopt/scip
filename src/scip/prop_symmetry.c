@@ -4914,6 +4914,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    int                   leaderrule,         /**< rule to select leader */
    int                   tiebreakrule,       /**< tie break rule to select leader */
    SCIP_VARTYPE          leadervartype,      /**< variable type of leader */
+   SCIP_Bool             leadervarimplint,   /**< Is the leader implied integer? */
    int*                  orbitidx,           /**< pointer to index of selected orbit */
    int*                  leaderidx,          /**< pointer to leader in orbit */
    SCIP_Shortbool*       orbitvarinconflict, /**< array to store whether a var in the orbit is conflicting with leader */
@@ -4960,7 +4961,9 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       {
          /* skip orbits containing vars different to the leader's vartype */
          /* Conflictvars is permvars! */
-         if ( SCIPvarGetType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype )
+         if ( leadervarimplint != SCIPvarIsImpliedIntegral(conflictvars[orbits[orbitbegins[i]]]) )
+            continue;
+         if (!leadervarimplint && SCIPvarGetType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype )
             continue;
 
          if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MINORBIT )
@@ -5079,8 +5082,10 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       /* iterate over variables and select the first one that meets the tiebreak rule */
       for (i = 0; i < nconflictvars; ++i)
       {
+         if ( leadervarimplint != SCIPvarIsImpliedIntegral(conflictvars[i]) )
+            continue;
          /* skip vars different to the leader's vartype */
-         if ( SCIPvarGetType(conflictvars[i]) != leadervartype )
+         if ( !leadervarimplint && SCIPvarGetType(conflictvars[i]) != leadervartype )
             continue;
 
          /* skip variables not affected by symmetry */
@@ -5400,8 +5405,8 @@ SCIP_RETCODE addSSTConss(
 
       /* select orbit and leader */
       SCIP_CALL( selectOrbitLeaderSSTConss(scip, varconflicts, permvars, npermvars, orbits, orbitbegins,
-            norbits, propdata->sstleaderrule, propdata->ssttiebreakrule, selectedtype, &orbitidx, &orbitleaderidx,
-            orbitvarinconflict, &norbitvarinconflict, &success) );
+            norbits, propdata->sstleaderrule, propdata->ssttiebreakrule, selectedtype, selectedimplint,
+            &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, &success) );
 
       if ( ! success )
          break;
@@ -5776,8 +5781,9 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
          if ( i == j )
             continue;
          /* only check for situations where i and j are binary variables */
-         assert( SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) );
-         if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY )
+         assert( SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) ||
+         ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) && SCIPvarIsImpliedIntegral(propdata->permvars[j])) );
+         if( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
             continue;
          /* the permutation must be an involution on binary variables */
          if ( perm[j] != i )
@@ -5840,8 +5846,10 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
             if ( i >= j )
                continue;
             /* only for situations where i and j are binary variables */
-            assert( SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) );
-            if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY )
+            assert( SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) ||
+                    ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) && SCIPvarIsImpliedIntegral(propdata->permvars[j])) );
+            if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY ||
+                 SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
                continue;
             assert( perm[j] == i );
             assert( checkSortedArraysHaveOverlappingEntry((void**) permvarssetppcconss[i], npermvarssetppcconss[i],
