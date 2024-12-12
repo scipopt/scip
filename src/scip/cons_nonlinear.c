@@ -8085,7 +8085,7 @@ SCIP_RETCODE branchingIntegralOrNonlinear(
    for( c = 0; c < nlpcands; ++c )
    {
       assert(ncands < SCIPgetNVars(scip) + SCIPgetNLPBranchCands(scip));
-      assert(SCIPvarGetType(lpcands[c]) <= SCIP_VARTYPE_INTEGER);
+      assert(SCIPvarIsIntegral(lpcands[c]) && !SCIPvarIsImpliedIntegral(lpcands[c]));
       cands[ncands].expr = NULL;
       cands[ncands].var = lpcands[c];
       cands[ncands].auxviol = 0.0;

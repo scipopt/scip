@@ -664,7 +664,7 @@ SCIP_Bool checkRedundancy(
 
       if( SCIPbdchginfoGetBoundtype(bdchginfos[v]) == SCIP_BOUNDTYPE_UPPER )
       {
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
          {
             assert(SCIPsetIsIntegral(set, bound));
             bound += 1.0;
@@ -678,7 +678,7 @@ SCIP_Bool checkRedundancy(
       {
          assert(SCIPbdchginfoGetBoundtype(bdchginfos[v]) == SCIP_BOUNDTYPE_LOWER);
 
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(var) )
          {
             assert(SCIPsetIsIntegral(set, bound));
             bound -= 1.0;
@@ -2389,7 +2389,7 @@ SCIP_Bool isBoundchgUseless(
    boundtype = SCIPbdchginfoGetBoundtype(bdchginfo);
    bound = SCIPbdchginfoGetNewbound(bdchginfo);
 
-   return (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+   return ( !SCIPvarIsImpliedIntegral(var)
       && ((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGE(set, bound, SCIPvarGetUbGlobal(var)))
          || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLE(set, bound, SCIPvarGetLbGlobal(var)))));
 }
