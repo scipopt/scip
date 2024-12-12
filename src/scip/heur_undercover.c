@@ -2367,7 +2367,7 @@ SCIP_RETCODE fixAndPropagate(
          fixingvals[i] = val;
 
          /* statistics */
-         if( SCIPvarGetType(vars[idx]) == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPvarIsIntegral(vars[idx]) )
             (*nfixedconts)++;
          else
             (*nfixedints)++;

@@ -359,7 +359,7 @@ void rowFindSlackVar(
 
       colvar = SCIPcolGetVar(rowcols[v]);
 
-      if( SCIPvarGetType(colvar) == SCIP_VARTYPE_CONTINUOUS
+      if( !SCIPvarIsIntegral(colvar)
          && !SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(colvar), SCIPvarGetUbGlobal(colvar))
          && SCIPcolGetNLPNonz(rowcols[v]) == 1 )
       {
@@ -677,7 +677,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
             SCIP_Real ubgap;
             SCIP_Real lbgap;
 
-            assert(SCIPvarGetType(slackvars[i]) == SCIP_VARTYPE_CONTINUOUS);
+            assert(!SCIPvarIsIntegral(slackvars[i]));
             solvalslackvar = SCIPgetSolVal(scip, sol, slackvars[i]);
             ubslackvar = SCIPvarGetUbGlobal(slackvars[i]);
             lbslackvar = SCIPvarGetLbGlobal(slackvars[i]);
@@ -781,7 +781,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
          down = oldsolval - lowerbound;
 
          /* if the variable is integer or implicit binary, do not shift further than the nearest integer */
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY)
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
          {
             SCIP_Real ceilx;
             SCIP_Real floorx;

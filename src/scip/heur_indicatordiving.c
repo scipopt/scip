@@ -282,7 +282,7 @@ void checkAndGetVarbound(
    *cons = NULL;
    *isvarbound = FALSE;
 
-   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
+   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(cand) )
       return;
 
    *cons = (SCIP_CONS*) SCIPhashmapGetImage(map, cand);
@@ -424,7 +424,7 @@ SCIP_RETCODE varIsSemicontinuous(
     */
    for( c = 0; c < nvlbs; ++c )
    {
-      if( SCIPvarGetType(vlbvars[c]) != SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(vlbvars[c]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(vlbvars[c]) )
          continue;
 
       bvar = vlbvars[c];
@@ -467,7 +467,7 @@ SCIP_RETCODE varIsSemicontinuous(
    for( c = 0; c < nvubs; ++c )
    {
       /* coverity[var_deref_op] */
-      if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY )  /*lint !e613*/
+      if( SCIPvarGetType(vubvars[c]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(vubvars[c]) )  /*lint !e613*/
          continue;
 
       bvar = vubvars[c];  /*lint !e613*/
@@ -677,7 +677,7 @@ void getScoreOfFarkasDiving(
    *score = REALABS(obj) + SCIPrandomGetReal(randnumgen, MIN_RAND, MAX_RAND);
 
    /* prefer decisions on binary variables */
-   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
+   if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(cand) )
       *score = -1.0 / *score;
 }
 

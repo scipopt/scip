@@ -335,7 +335,7 @@ SCIP_RETCODE selectShifting(
       assert(!SCIPisZero(scip, val));
       solval = SCIPgetSolVal(scip, sol, var);
 
-      isinteger = (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+      isinteger = ( SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var) );
       isfrac = (isinteger && !SCIPisFeasIntegral(scip, solval));
       increase = (direction * val > 0.0);
 
@@ -457,7 +457,7 @@ SCIP_RETCODE selectEssentialRounding(
    for( v = 0; v < nlpcands; ++v )
    {
       var = lpcands[v];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+      assert(SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var));
 
       solval = SCIPgetSolVal(scip, sol, var);
       if( !SCIPisFeasIntegral(scip, solval) )
@@ -907,9 +907,9 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
 
       /* update fractionality counter and minimal objective value possible after shifting remaining variables */
       oldsolvalisfrac = !SCIPisFeasIntegral(scip, oldsolval)
-         && (SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER);
+         && ( SCIPvarIsIntegral(shiftvar) && !SCIPvarIsImpliedIntegral(shiftvar) );
       obj = SCIPvarGetObj(shiftvar);
-      if( (!SCIPvarIsImpliedIntegral(shiftvar) && (SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER))
+      if( (!SCIPvarIsImpliedIntegral(shiftvar) && SCIPvarIsIntegral(shiftvar) )
          && oldsolvalisfrac )
       {
          assert(SCIPisFeasIntegral(scip, newsolval));

@@ -772,7 +772,7 @@ SCIP_RETCODE roundPartition(
       isinteger[b] = 1;
       for( i = 0; i < length; i++ )
       {
-         if( SCIPvarGetType(blockvars[i]) == SCIP_VARTYPE_CONTINUOUS ||  !SCIPisIntegral(scip, blockvals[i]) )
+         if( !SCIPvarIsIntegral(blockvars[i]) ||  !SCIPisIntegral(scip, blockvals[i]) )
          {
             isinteger[b] = 0;
             nnonintblocks++;

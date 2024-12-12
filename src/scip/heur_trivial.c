@@ -142,7 +142,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
          solval = (lb+ub)/2.0;
 
          /* if a tie occurs, roughly every third integer variable will be rounded up */
-         if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(vars[i]) )
             solval = i % 3 == 0 ? SCIPceil(scip,solval) : SCIPfloor(scip,solval);
 
          assert(SCIPisFeasLE(scip,SCIPvarGetLbLocal(vars[i]),solval) && SCIPisFeasLE(scip,solval,SCIPvarGetUbLocal(vars[i])));

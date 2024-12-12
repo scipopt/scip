@@ -133,7 +133,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
 
       transvar = vars[i];
 
-      if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY )
+      if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[i]) )
       {
          SCIP_Real obj;
          SCIP_Real newcoef;
