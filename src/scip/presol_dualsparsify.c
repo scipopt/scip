@@ -852,8 +852,6 @@ SCIP_RETCODE cancelCol(
             hashingcolvals = SCIPmatrixGetColValPtr(matrix, hashingcolconspair->colindex);
             hashingcolinds = SCIPmatrixGetColIdxPtr(matrix, hashingcolconspair->colindex);
             hashingcolvar = vars[hashingcolconspair->colindex];
-            hashingcollb = SCIPvarGetLbGlobal(hashingcolvar);
-            hashingcolub = SCIPvarGetUbGlobal(hashingcolvar);
             hashingcolisbin = SCIPvarIsBinary(hashingcolvar);
             scale = -colconspair.conscoef1 / hashingcolconspair->conscoef1;
 
