@@ -934,11 +934,11 @@ SCIP_RETCODE consdataCreate(
                {
                   SCIP_VARTYPE vartype = SCIPvarGetType(var);
 
-                  if( vartype != SCIP_VARTYPE_BINARY )
+                  if( vartype != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
                   {
                      (*consdata)->hasnonbinvar = TRUE;
 
-                     if( vartype == SCIP_VARTYPE_CONTINUOUS )
+                     if( vartype == SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(var) )
                         (*consdata)->hascontvar = TRUE;
                   }
                }
@@ -1482,12 +1482,13 @@ void consdataCheckNonbinvar(
    for( v = consdata->nvars - 1; v >= 0; --v )
    {
       SCIP_VARTYPE vartype = SCIPvarGetType(consdata->vars[v]);
+      SCIP_Bool implied = SCIPvarIsImpliedIntegral(consdata->vars[v]);
 
-      if( vartype != SCIP_VARTYPE_BINARY )
+      if( vartype != SCIP_VARTYPE_BINARY || implied )
       {
          consdata->hasnonbinvar = TRUE;
 
-         if( vartype == SCIP_VARTYPE_CONTINUOUS )
+         if( vartype == SCIP_VARTYPE_CONTINUOUS && !implied )
          {
             consdata->hascontvar = TRUE;
             break;
@@ -3182,8 +3183,8 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
    }
    else
    {
-      SCIP_VARTYPE vartype1 = SCIPvarGetType(var1);
-      SCIP_VARTYPE vartype2 = SCIPvarGetType(var2);
+      unsigned int vartype1 = SCIPvarIsImpliedIntegral(var1) ? 2 : SCIPvarGetType(var1);
+      unsigned int vartype2 = SCIPvarIsImpliedIntegral(var2) ? 2 : SCIPvarGetType(var2);
 
       if( vartype1 < vartype2 )
          return -1;
@@ -3230,8 +3231,8 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
    else
    {
       /* Weird check but this was the easiest way to keep the old logic when refactoring implied integers */
-      int vartype1 = SCIPvarIsImpliedIntegral(var1) ? 2 : SCIPvarGetType(var1);
-      int vartype2 = SCIPvarIsImpliedIntegral(var2) ? 2 : SCIPvarGetType(var2);
+      unsigned int vartype1 = SCIPvarIsImpliedIntegral(var1) ? 2 : SCIPvarGetType(var1);
+      unsigned int vartype2 = SCIPvarIsImpliedIntegral(var2) ? 2 : SCIPvarGetType(var2);
 
       if( vartype1 < vartype2 )
       {
@@ -3782,12 +3783,13 @@ SCIP_RETCODE addCoef(
    if( consdata->hasnonbinvalid && !consdata->hascontvar )
    {
       SCIP_VARTYPE vartype = SCIPvarGetType(var);
+      SCIP_Bool implied = SCIPvarIsImpliedIntegral(var);
 
-      if( vartype != SCIP_VARTYPE_BINARY )
+      if( vartype != SCIP_VARTYPE_BINARY || implied )
       {
          consdata->hasnonbinvar = TRUE;
 
-         if( vartype == SCIP_VARTYPE_CONTINUOUS )
+         if( vartype == SCIP_VARTYPE_CONTINUOUS && !implied )
             consdata->hascontvar = TRUE;
       }
    }
@@ -3897,7 +3899,7 @@ SCIP_RETCODE delCoefPos(
    consdata->rangedrowpropagated = 0;
 
    /* check if hasnonbinvar flag might be incorrect now */
-   if( consdata->hasnonbinvar && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+   if( consdata->hasnonbinvar && (SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) ) )
    {
       consdata->hasnonbinvalid = FALSE;
    }
@@ -5287,6 +5289,7 @@ SCIP_RETCODE tightenVarUb(
          QUAD_TO_DBL(consdata->minactivity), QUAD_TO_DBL(consdata->maxactivity), consdata->lhs, consdata->rhs, newub);
 
       vartype = SCIPvarGetType(var);
+      SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
 
       /* tighten upper bound */
       SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(proprule, pos), force, &infeasible, &tightened) );
@@ -5310,7 +5313,7 @@ SCIP_RETCODE tightenVarUb(
          (*nchgbds)++;
 
          /* if variable type was changed we might be able to upgrade the constraint */
-         if( vartype != SCIPvarGetType(var) )
+         if( vartype != SCIPvarGetType(var) || impltype != SCIPvarGetImplType(var) )
             consdata->upgradetried = FALSE;
       }
    }
@@ -5357,6 +5360,7 @@ SCIP_RETCODE tightenVarLb(
          QUAD_TO_DBL(consdata->minactivity), QUAD_TO_DBL(consdata->maxactivity), consdata->lhs, consdata->rhs, newlb);
 
       vartype = SCIPvarGetType(var);
+      SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
 
       /* tighten lower bound */
       SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(proprule, pos), force, &infeasible, &tightened) );
@@ -5380,7 +5384,7 @@ SCIP_RETCODE tightenVarLb(
          (*nchgbds)++;
 
          /* if variable type was changed we might be able to upgrade the constraint */
-         if( vartype != SCIPvarGetType(var) )
+         if( vartype != SCIPvarGetType(var) || impltype != SCIPvarGetImplType(var) )
             consdata->upgradetried = FALSE;
       }
    }
@@ -5864,12 +5868,12 @@ SCIP_RETCODE rangedRowPropagation(
       ++v;
 
       /* partition the variables, do not change the order of collection, because it might be used later on */
-      while( v < consdata->nvars && (SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS ||
+      while( v < consdata->nvars && (!SCIPvarIsIntegral(consdata->vars[v]) ||
             !SCIPisIntegral(scip, consdata->vals[v]) || SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0)) )
       {
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) )
          {
-            if( SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+            if( !SCIPvarIsIntegral(consdata->vars[v]) )
             {
                ++ncontvars;
             }
@@ -5910,7 +5914,7 @@ SCIP_RETCODE rangedRowPropagation(
       goto TERMINATE;
 
    assert(!SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])));
-   assert(SCIPisIntegral(scip, consdata->vals[v]) && SCIPvarGetType(consdata->vars[v]) != SCIP_VARTYPE_CONTINUOUS && REALABS(consdata->vals[v]) > 1.5);
+   assert(SCIPisIntegral(scip, consdata->vals[v]) && SCIPvarIsIntegral(consdata->vars[v]) && REALABS(consdata->vals[v]) > 1.5);
 
    feastol = SCIPfeastol(scip);
 
@@ -5934,10 +5938,10 @@ SCIP_RETCODE rangedRowPropagation(
             absminbincoef = absval;
       }
 
-      if( !SCIPisIntegral(scip, consdata->vals[v]) || SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS ||
+      if( !SCIPisIntegral(scip, consdata->vals[v]) || !SCIPvarIsIntegral(consdata->vars[v]) ||
          SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0) )
       {
-         if( SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPvarIsIntegral(consdata->vars[v]) )
             ++ncontvars;
 
          gcdisone = gcdisone && SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0);
@@ -8109,7 +8113,7 @@ SCIP_RETCODE extractCliques(
                      }
                   }
                   /* stop when reaching a 'real' binary variable because the variables are sorted after their type */
-                  else if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY )
+                  else if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[v]) )
                      break;
                }
             }
@@ -8254,7 +8258,7 @@ SCIP_RETCODE extractCliques(
             assert(nposbinvars + nnegbinvars <= nvars);
          }
          /* stop searching for binary variables, because the constraint data is sorted */
-         else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS )
+         else if( !SCIPvarIsIntegral(vars[i]) )
             break;
       }
       assert(nposbinvars + nnegbinvars <= nvars);
@@ -8424,7 +8428,7 @@ SCIP_RETCODE extractCliques(
                            assert(nposbinvars + nnegbinvars <= nvars);
                         }
                         /* stop searching for binary variables, because the constraint data is sorted */
-                        else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS )
+                        else if( !SCIPvarIsIntegral(vars[i]) )
                            break;
                      }
                      assert(nposbinvars + nnegbinvars <= nvars);
@@ -8578,7 +8582,7 @@ SCIP_RETCODE extractCliques(
                            assert(nposbinvars + nnegbinvars <= nvars);
                         }
                         /* stop searching for binary variables, because the constraint data is sorted */
-                        else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS )
+                        else if( !SCIPvarIsIntegral(vars[i]) )
                            break;
                      }
                      assert(nposbinvars + nnegbinvars <= nvars);
@@ -8741,7 +8745,7 @@ SCIP_RETCODE extractCliques(
                            assert(nposbinvars + nnegbinvars <= nvars);
                         }
                         /* stop searching for binary variables, because the constraint data is sorted */
-                        else if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS )
+                        else if( !SCIPvarIsIntegral(vars[i]) )
                            break;
                      }
                      assert(nposbinvars + nnegbinvars <= nvars);
@@ -9096,7 +9100,7 @@ SCIP_RETCODE consdataTightenCoefs(
       if( val >= 0.0 )
       {
          /* check, if a deviation from lower/upper bound would make lhs/rhs redundant */
-         isvarrelevant[i] = SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
+         isvarrelevant[i] = SCIPvarIsIntegral(var)
                && SCIPisGE(scip, minactivity + val, consdata->lhs) && SCIPisLE(scip, maxactivity - val, consdata->rhs);
 
          if( isvarrelevant[i] )
@@ -10053,7 +10057,7 @@ SCIP_RETCODE convertLongEquality(
 
       assert(0 <= contvarpos && contvarpos < consdata->nvars);
       var = vars[contvarpos];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+      assert(!SCIPvarIsIntegral(var));
 
       if( coefsintegral && SCIPisFeasIntegral(scip, consdata->rhs) )
       {
@@ -10727,7 +10731,7 @@ SCIP_RETCODE dualPresolve(
          return SCIP_OKAY;
 
       var = consdata->vars[i];
-      isint = (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+      isint = SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var);
 
       /* if we already found a candidate, skip integers */
       if( bestpos >= 0 && isint )
@@ -10942,8 +10946,8 @@ SCIP_RETCODE dualPresolve(
 
       bestvar = consdata->vars[bestpos];
       bestval = consdata->vals[bestpos];
-      assert(bestisint ==
-         (SCIPvarGetType(bestvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER));
+      assert(bestisint == ( !SCIPvarIsImpliedIntegral(bestvar) &&
+         (SCIPvarGetType(bestvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER) ));
 
       /* allocate temporary memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &aggrvars, consdata->nvars-1) );
@@ -11207,7 +11211,7 @@ SCIP_RETCODE aggregateVariables(
          SCIP_Longint val;
 
          /* all coefficients and variables have to be integral */
-         if( !SCIPisIntegral(scip, vals[v]) || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPisIntegral(scip, vals[v]) || !SCIPisIntegral(vars[v]) )
             return SCIP_OKAY;
 
          val = (SCIP_Longint)SCIPfeasFloor(scip, vals[v]);
@@ -11330,20 +11334,20 @@ SCIP_DECL_SORTINDCOMP(consdataCompSim)
    assert(0 <= ind1 && ind1 < consdata->nvars);
    assert(0 <= ind2 && ind2 < consdata->nvars);
 
-   vartype1 = SCIPvarGetType(consdata->vars[ind1]);
-   vartype2 = SCIPvarGetType(consdata->vars[ind2]);
+   SCIP_Bool firstContinuous = !SCIPvarIsIntegral(consdata->vars[ind1]);
+   SCIP_Bool secondContinuous = !SCIPvarIsIntegral(consdata->vars[ind2]);
 
-   if( vartype1 == SCIP_VARTYPE_CONTINUOUS )
+   if( firstContinuous )
    {
-      /* continuous varibles will be sorted to the back */
-      if( vartype2 != vartype1 )
+      /* continuous variables will be sorted to the back */
+      if( firstContinuous != secondContinuous )
          return +1;
       /* both variables are continuous */
       else
          return 0;
    }
    /* continuous variables will be sorted to the back */
-   else if( vartype2 == SCIP_VARTYPE_CONTINUOUS )
+   else if( secondContinuous  )
       return -1;
 
    value = REALABS(consdata->vals[ind2]) - REALABS(consdata->vals[ind1]);
@@ -11617,13 +11621,13 @@ SCIP_RETCODE simplifyInequalities(
    vals = consdata->vals;
    assert(vars != NULL);
    assert(vals != NULL);
-   assert(consdata->validmaxabsval ? (SCIPisFeasEQ(scip, consdata->maxabsval, REALABS(vals[0])) || SCIPvarGetType(vars[nvars - 1]) == SCIP_VARTYPE_CONTINUOUS) : TRUE);
+   assert(consdata->validmaxabsval ? (SCIPisFeasEQ(scip, consdata->maxabsval, REALABS(vals[0])) || !SCIPvarIsIntegral(vars[nvars - 1]) ) : TRUE);
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &perm);
 
    /* only check constraints with at least two non continuous variables */
-   if( SCIPvarGetType(vars[1]) == SCIP_VARTYPE_CONTINUOUS )
+   if( !SCIPvarIsIntegral(vars[1]) )
       return SCIP_OKAY;
 
    /* do not process constraints when all coefficients are 1.0 */
@@ -11703,7 +11707,7 @@ SCIP_RETCODE simplifyInequalities(
          return SCIP_OKAY;
 
       /* cannot work with continuous variables which have a big coefficient */
-      if( v > 0 && SCIPvarGetType(vars[v - 1]) == SCIP_VARTYPE_CONTINUOUS )
+      if( v > 0 && !SCIPvarIsIntegral(vars[v - 1]) )
          return SCIP_OKAY;
 
       /* big negative coefficient, do not try to use the extra coefficient reduction step */
@@ -11713,7 +11717,7 @@ SCIP_RETCODE simplifyInequalities(
       /* all but one variable are processed or the next variable is continuous we cannot perform the extra coefficient
        * reduction
        */
-      if( v == nvars - 1 || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+      if( v == nvars - 1 || !SCIPvarIsIntegral(vars[v]) )
          v = 0;
 
       if( v > 0 )
@@ -11781,7 +11785,7 @@ SCIP_RETCODE simplifyInequalities(
       /* check if some variables always fit into the given constraint */
       for( ; v < nvars - 1; ++v )
       {
-         if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+         if( !SCIPvarIsIntegral(vars[v]) )
             break;
 
          if( !SCIPisIntegral(scip, vals[v]) )
@@ -12000,7 +12004,7 @@ SCIP_RETCODE simplifyInequalities(
             for( v = nvars - 1; v > offsetv; --v )
             {
                assert(!SCIPisZero(scip, vals[v]));
-               if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+               if( !SCIPvarIsIntegral(vars[v]) )
                   break;
 
                if( !SCIPisIntegral(scip, vals[v]) )
@@ -12062,7 +12066,7 @@ SCIP_RETCODE simplifyInequalities(
          assert(offsetv + 1 < nvars);
          assert(0 <= candpos && candpos < nvars);
 
-         if( SCIPvarGetType(vars[candpos]) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(vars[candpos]) )
          {
             SCIP_Bool notchangable = FALSE;
 
@@ -12190,7 +12194,7 @@ SCIP_RETCODE simplifyInequalities(
 
    /* @todo we still can remove continuous variables if they are redundant due to the non-integrality argument */
    /* no continuous variables are left over */
-   if( SCIPvarGetType(vars[nvars - 1]) == SCIP_VARTYPE_CONTINUOUS )
+   if( !SCIPvarIsIntegral(vars[nvars - 1]) )
       return SCIP_OKAY;
 
    onlybin = TRUE;
@@ -12479,7 +12483,7 @@ SCIP_RETCODE simplifyInequalities(
          for( v = nvars - 1; v >= 0; --v )
          {
             assert(!SCIPisZero(scip, vals[v]));
-            assert(SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS);
+            assert(SCIPvarIsIntegral(vars[v]));
 
             if( SCIPvarIsBinary(vars[v]) )
             {
@@ -14119,7 +14123,7 @@ SCIP_RETCODE presolStuffing(
          var = vars[v];
 
          if( (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1
-            && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+            && !SCIPvarIsIntegral(var) )
             break;
       }
    }
@@ -14153,7 +14157,7 @@ SCIP_RETCODE presolStuffing(
 
          /* the variable is a singleton and continuous */
          if( (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1
-            && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+            && !SCIPvarIsIntegral(var) )
          {
             if( SCIPisNegative(scip, obj) && val > 0 )
             {
@@ -14279,7 +14283,7 @@ SCIP_RETCODE presolStuffing(
 
             assert((SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL)
                + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1);
-            assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+            assert(!SCIPvarIsIntegral(var));
 
             /* calculate the change in the row activities if this variable changes
              * its value from its worst to its best bound
@@ -14430,8 +14434,7 @@ SCIP_RETCODE presolStuffing(
           * @todo check size of domain and updated ratio for integer variables already?
           */
          if( ratio > bestratio || ((ratio == bestratio) && downlocks == 0 && (bestdownlocks > 0 /*lint !e777*/
-                  || (SCIPvarGetType(vars[bestindex]) != SCIP_VARTYPE_CONTINUOUS
-                     && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS))) )
+                  || (SCIPvarIsIntegral(vars[bestindex]) && !SCIPvarIsIntegral(var) ))) )
          {
             /* best index becomes second-best*/
             if( bestindex != -1 )
@@ -14495,7 +14498,7 @@ SCIP_RETCODE presolStuffing(
             assert(!SCIPisNegative(scip, obj));
 
             /* the best variable is integer, and we need to overfulfill the constraint when using just the variable */
-            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisIntegral(scip, (maxactivity - rhs)/-val) )
+            if( SCIPvarIsIntegral(var) && !SCIPisIntegral(scip, (maxactivity - rhs)/-val) )
             {
                SCIP_Real bestvarfloor = SCIPfloor(scip, (maxactivity - rhs)/-val);
                SCIP_Real activitydelta = (maxactivity - rhs) - (bestvarfloor * -val);
@@ -14532,7 +14535,7 @@ SCIP_RETCODE presolStuffing(
             assert(!SCIPisPositive(scip, obj));
 
             /* the best variable is integer, and we need to overfulfill the constraint when using just the variable */
-            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS  && !SCIPisIntegral(scip, (maxactivity - rhs)/val))
+            if( SCIPvarIsIntegral(var)  && !SCIPisIntegral(scip, (maxactivity - rhs)/val))
             {
                SCIP_Real bestvarfloor = SCIPfloor(scip, (maxactivity - rhs)/val);
                SCIP_Real activitydelta = (maxactivity - rhs) - (bestvarfloor * val);
@@ -14581,7 +14584,7 @@ SCIP_RETCODE presolStuffing(
                   SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v]), SCIPvarGetObj(vars[v]),
                   SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL),
                   SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL),
-                  SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS ? "C" : "I");
+                  SCIPvarIsIntegral(vars[v]) ? "I" : "C");
             }
             SCIPdebugMsg(scip, "<= %g\n", factor > 0 ? consdata->rhs : -consdata->lhs);
 
@@ -14714,7 +14717,7 @@ SCIP_RETCODE fullDualPresolve(
       SCIP_Real ub;
 
       var = vars[v + nintvars - nbinvars];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+      assert(!SCIPvarIsIntegral(var));
 
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
@@ -15051,7 +15054,7 @@ SCIP_RETCODE fullDualPresolve(
       var = vars[v];
       assert(var != NULL);
 
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+      assert(!SCIPvarIsIntegral(var));
       assert(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) >= nlocksdown[v]);
       assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= nlocksup[v]);
       assert(0 <= v - nintvars + nbinvars && v - nintvars + nbinvars < ncontvars);
@@ -15474,7 +15477,8 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
 
          /* precedence constraints have the same coefficient, but with opposite sign for the same variable type */
          if( SCIPisEQ(scip, consdata->vals[0], -consdata->vals[1])
-               && SCIPvarGetType(consdata->vars[0]) == SCIPvarGetType(consdata->vars[1]))
+               && ( (SCIPvarIsImpliedIntegral(consdata->vars[0]) && SCIPvarIsImpliedIntegral(consdata->vars[1])) ||
+               SCIPvarGetType(consdata->vars[0]) == SCIPvarGetType(consdata->vars[1])))
          {
             constype = SCIP_LINCONSTYPE_PRECEDENCE;
             SCIPdebugMsg(scip, "classified as PRECEDENCE: ");
@@ -15597,7 +15601,7 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
          unmatched = FALSE;
          for( i = 0; i < consdata->nvars && !unmatched; i++ )
          {
-            unmatched = unmatched || SCIPvarGetType(consdata->vars[i]) == SCIP_VARTYPE_CONTINUOUS;
+            unmatched = unmatched || !SCIPvarIsIntegral(consdata->vars[i]);
             unmatched = unmatched || SCIPisLE(scip, SCIPvarGetLbGlobal(consdata->vars[i]), -1.0);
             unmatched = unmatched || SCIPisGE(scip, SCIPvarGetUbGlobal(consdata->vars[i]), 2.0);
             unmatched = unmatched || !SCIPisIntegral(scip, consdata->vals[i]);
@@ -15653,7 +15657,7 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
 
          for( i = 0; i < consdata->nvars && !unmatched; i++ )
          {
-            unmatched = unmatched || SCIPvarGetType(consdata->vars[i]) == SCIP_VARTYPE_CONTINUOUS;
+            unmatched = unmatched || !SCIPvarIsIntegral(consdata->vars[i]);
             unmatched = unmatched || SCIPisNegative(scip, SCIPvarGetLbGlobal(consdata->vars[i]));
             unmatched = unmatched || !SCIPisIntegral(scip, consdata->vals[i]);
             unmatched = unmatched || SCIPisNegative(scip, consdata->vals[i]);
@@ -15680,7 +15684,7 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
          unmatched = FALSE;
          for( i = 0; i < consdata->nvars && !unmatched; i++ )
          {
-            if( SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINUOUS
+            if( SCIPvarIsIntegral(consdata->vars[i])
                && (SCIPisLE(scip, SCIPvarGetLbGlobal(consdata->vars[i]), -1.0)
                   || SCIPisGE(scip, SCIPvarGetUbGlobal(consdata->vars[i]), 2.0)) )
                unmatched = TRUE;
