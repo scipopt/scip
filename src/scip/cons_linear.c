@@ -11211,7 +11211,7 @@ SCIP_RETCODE aggregateVariables(
          SCIP_Longint val;
 
          /* all coefficients and variables have to be integral */
-         if( !SCIPisIntegral(scip, vals[v]) || !SCIPisIntegral(vars[v]) )
+         if( !SCIPisIntegral(scip, vals[v]) || !SCIPvarIsIntegral(vars[v]) )
             return SCIP_OKAY;
 
          val = (SCIP_Longint)SCIPfeasFloor(scip, vals[v]);
@@ -11326,8 +11326,6 @@ static
 SCIP_DECL_SORTINDCOMP(consdataCompSim)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
-   SCIP_VARTYPE vartype1;
-   SCIP_VARTYPE vartype2;
    SCIP_Real value;
 
    assert(consdata != NULL);
