@@ -801,8 +801,6 @@ SCIP_RETCODE cancelCol(
             SCIP_VAR* hashingcolvar;
             SCIP_Real* hashingcolvals;
             int* hashingcolinds;
-            SCIP_Real hashingcollb;
-            SCIP_Real hashingcolub;
             SCIP_Real cancelrate;
             SCIP_Real rowlhs;
             SCIP_Real rowrhs;

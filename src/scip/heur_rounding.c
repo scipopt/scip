@@ -230,7 +230,6 @@ SCIP_RETCODE selectRounding(
    SCIP_Real obj;
    SCIP_Real deltaobj;
    SCIP_Real bestdeltaobj;
-   SCIP_VARTYPE vartype;
    int nrowcols;
    int nlocks;
    int minnlocks;
