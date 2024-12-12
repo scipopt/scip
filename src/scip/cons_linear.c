@@ -14714,6 +14714,8 @@ SCIP_RETCODE fullDualPresolve(
       SCIP_Real ub;
 
       var = vars[v + nintvars - nbinvars];
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
 
@@ -15060,6 +15062,7 @@ SCIP_RETCODE fullDualPresolve(
          && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v] )
       {
          /* since we locally copied the variable array we can change the variable type immediately */
+         assert( !SCIPvarIsIntegral(var) );
          SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_VARIMPLTYPE_WEAK, &infeasible) );
          (*nchgvartypes)++;
          if( infeasible )
