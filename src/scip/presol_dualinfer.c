@@ -1642,7 +1642,7 @@ SCIP_RETCODE dualBoundStrengthening(
       var = SCIPmatrixGetVar(matrix, i);
 
       if( SCIPmatrixUplockConflict(matrix, i) || SCIPmatrixDownlockConflict(matrix, i) ||
-         (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(var)) )
+         (SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var)) )
       {
          /* we don't care about integral variables or variables that have conflicting locks */
          isubimplied[i] = FALSE;
@@ -2308,7 +2308,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
          /* keep a small statistic which types of variables are fixed */
          if( fixed )
          {
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(var) )
+            if( !SCIPvarIsImpliedIntegral(var) || SCIPvarIsImpliedIntegral(var) )
                nconvarsfixed++;
             else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
                nbinvarsfixed++;
