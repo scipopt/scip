@@ -577,8 +577,8 @@ SCIP_RETCODE applyNlobbt(
       assert(var != NULL);
 
       /* skip binary or almost fixed variables */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
-         || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+      if( (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var))
+           || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
       {
          ++(propdata->currpos);
          continue;
