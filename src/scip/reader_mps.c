@@ -2319,7 +2319,7 @@ SCIP_RETCODE readQCMatrix(
    }
    else
    {
-      SCIPwarningMessage(scip, "QCMATRIX section has no entries.\n");
+      SCIPwarningMessage(scip, "QCMATRIX section for constraint <%s> has no entries.\n", SCIPconsGetName(lincons));
    }
 
  TERMINATE:
