@@ -807,9 +807,9 @@ SCIP_RETCODE SCIPbranchcandGetPseudoCands(
 
       /* pseudo branching candidates are non-fixed binary, integer, and implicit integer variables */
       npcs = 0;
-      for( v = 0; v < prob->nbinvars + prob->nintvars + prob->nimplvars; ++v )
+      for( v = 0; v < SCIPprobGetNBinVars(prob) + SCIPprobGetNIntVars(prob) + SCIPprobGetNImplVars(prob); ++v )
       {
-         var = prob->vars[v];
+         var = SCIPprobGetVars(prob)[v];
          assert(var != NULL);
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
