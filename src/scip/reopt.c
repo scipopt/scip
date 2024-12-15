@@ -8194,8 +8194,8 @@ SCIP_RETCODE SCIPreoptSaveActiveConss(
    assert(reopt->nactiveconss == 0);
    assert(reopt->nmaxactiveconss == 0);
 
-   conss = transprob->conss;
-   nconss = transprob->nconss;
+   conss = SCIPprobGetConss(transprob);
+   nconss = SCIPprobGetNConss(transprob);
 
    SCIPsetDebugMsg(set, "save %d active conss\n", nconss);
 
