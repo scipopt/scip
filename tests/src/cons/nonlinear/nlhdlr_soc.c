@@ -983,7 +983,7 @@ Test(nlhdlrsoc, detectandfree15, .description = "detects simple bilinear constra
 }
 
 /* detects -2*x*y <= -1 with x and y nonnegative as soc */
-Test(nlhdlrsoc, detectandfree16, .description = "detects simple bilinear constraint as soc", .disabled = 1)
+Test(nlhdlrsoc, detectandfree16, .description = "detects simple bilinear constraint as soc")
 {
    SCIP_CONS* cons;
    SCIP_NLHDLREXPRDATA* nlhdlrexprdata = NULL;

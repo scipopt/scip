@@ -1624,9 +1624,11 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
    *success = FALSE;
 
-   /* check whether expression is a sum with at least 2 children */
-   if( ! SCIPisExprSum(scip, expr) || SCIPexprGetNChildren(expr) < 2 )
+   /* check whether expression is a sum */
+   if( ! SCIPisExprSum(scip, expr) )
       return SCIP_OKAY;
+
+   assert(SCIPexprGetNChildren(expr) >= 1);
 
    /* get children of the sum */
    children = SCIPexprGetChildren(expr);
@@ -1756,6 +1758,10 @@ SCIP_RETCODE detectSocQuadraticSimple(
    }
    else
    {
+      /* we have x*y - z^2 ... -> we want to write x*y >= z^2 ...
+       * or we have x^2 - y^2 - z^2 ... -> we want to write x^2 >= y^2 + z^2 ...
+       * in any case, we need a finite lhs
+       */
       assert(lhsidx != -1);
 
       /* if lhs is infinity, it can't be soc */
