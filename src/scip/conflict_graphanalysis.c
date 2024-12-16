@@ -2389,7 +2389,7 @@ SCIP_Bool isBoundchgUseless(
    boundtype = SCIPbdchginfoGetBoundtype(bdchginfo);
    bound = SCIPbdchginfoGetNewbound(bdchginfo);
 
-   return ( !SCIPvarIsImpliedIntegral(var)
+   return ( !SCIPvarIsIntegral(var)
       && ((boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGE(set, bound, SCIPvarGetUbGlobal(var)))
          || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLE(set, bound, SCIPvarGetLbGlobal(var)))));
 }
