@@ -761,7 +761,7 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
       /* variable has equal priority as the current maximum:
        * look for it in the correct slot (binaries first, integers next, implicit integers next, continuous last)
        */
-
+      assert(!(SCIPvarIsImpliedIntegral(var) && (vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER)));
       if( SCIPvarIsImpliedIntegral(var) )
       {
          /* the variable is implicit integer, look at the slots containing implicit integers */
@@ -956,8 +956,16 @@ void branchcandInsertPseudoCand(
          insertpos = 0;
       }
       branchcand->npriopseudocands = 1;
-      branchcand->npriopseudobins = (vartype == SCIP_VARTYPE_BINARY ? 1 : 0);
-      branchcand->npriopseudoints = (vartype == SCIP_VARTYPE_INTEGER ? 1 : 0);
+      if( SCIPvarIsImpliedIntegral(var) )
+      {
+         branchcand->npriopseudobins = 0;
+         branchcand->npriopseudoints = 0;
+      }
+      else
+      {
+         branchcand->npriopseudobins = (vartype == SCIP_VARTYPE_BINARY ? 1 : 0);
+         branchcand->npriopseudoints = (vartype == SCIP_VARTYPE_INTEGER ? 1 : 0);
+      }
       branchcand->pseudomaxpriority = branchpriority;
    }
    else if( branchpriority == branchcand->pseudomaxpriority )
@@ -1080,7 +1088,7 @@ void branchcandRemovePseudoCand(
    if( freepos < branchcand->npriopseudobins )
    {
       /* a binary candidate of maximal priority was removed */
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var));
       if( freepos != branchcand->npriopseudobins - 1 )
       {
          branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npriopseudobins - 1];
