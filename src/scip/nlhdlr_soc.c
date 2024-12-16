@@ -1625,18 +1625,32 @@ SCIP_RETCODE detectSocQuadraticSimple(
    *success = FALSE;
 
    /* check whether expression is a sum */
-   if( ! SCIPisExprSum(scip, expr) )
+   if( SCIPisExprSum(scip, expr) )
+   {
+      assert(SCIPexprGetNChildren(expr) >= 1);
+
+      /* get children of the sum */
+      children = SCIPexprGetChildren(expr);
+      nchildren = SCIPexprGetNChildren(expr);
+      constant = SCIPgetConstantExprSum(expr);
+
+      /* we duplicate the child coefficients since we have to manipulate them */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &childcoefs, SCIPgetCoefsExprSum(expr), nchildren) ); /*lint !e666*/
+   }
+   else if( SCIPisExprProduct(scip, expr) && SCIPexprGetNChildren(expr) == 2 )
+   {
+      /* handle bilinear term as SOC, if we have something like x*y >= constant */
+      children = &expr;
+      nchildren = 1;
+      constant = 0.0;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &childcoefs, 1) );
+      childcoefs[0] = 1.0;
+   }
+   else
+   {
       return SCIP_OKAY;
-
-   assert(SCIPexprGetNChildren(expr) >= 1);
-
-   /* get children of the sum */
-   children = SCIPexprGetChildren(expr);
-   nchildren = SCIPexprGetNChildren(expr);
-   constant = SCIPgetConstantExprSum(expr);
-
-   /* we duplicate the child coefficients since we have to manipulate them */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &childcoefs, SCIPgetCoefsExprSum(expr), nchildren) ); /*lint !e666*/
+   }
 
    /* initialize data */
    lhsidx = -1;
@@ -2493,7 +2507,7 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxSoc)
       *auxvalue = sqrt(*auxvalue);
    }
    /* otherwise, evaluate the original quadratic expression w.r.t. the created auxvars of the children */
-   else
+   else if( SCIPisExprSum(scip, expr) )
    {
       SCIP_EXPR** children;
       SCIP_Real* childcoefs;
@@ -2546,6 +2560,21 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxSoc)
             *auxvalue += childcoefs[i] * SCIPgetSolVal(scip, sol, argauxvar);
          }
       }
+   }
+   else
+   {
+      SCIP_VAR* argauxvar1;
+      SCIP_VAR* argauxvar2;
+
+      assert(SCIPisExprProduct(scip, expr));
+      assert(SCIPexprGetNChildren(expr) == 2);
+
+      argauxvar1 = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[0]);
+      argauxvar2 = SCIPgetExprAuxVarNonlinear(SCIPexprGetChildren(expr)[1]);
+      assert(argauxvar1 != NULL);
+      assert(argauxvar2 != NULL);
+
+      *auxvalue = SCIPgetSolVal(scip, sol, argauxvar1) * SCIPgetSolVal(scip, sol, argauxvar2);
    }
 
    return SCIP_OKAY;
