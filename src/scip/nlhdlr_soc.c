@@ -1637,9 +1637,11 @@ SCIP_RETCODE detectSocQuadraticSimple(
       /* we duplicate the child coefficients since we have to manipulate them */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &childcoefs, SCIPgetCoefsExprSum(expr), nchildren) ); /*lint !e666*/
    }
-   else if( SCIPisExprProduct(scip, expr) && SCIPexprGetNChildren(expr) == 2 )
+   else if( SCIPisExprProduct(scip, expr) && SCIPexprGetNChildren(expr) == 2 && conslhs != SCIP_INVALID )  /*lint !e777*/
    {
-      /* handle bilinear term as SOC, if we have something like x*y >= constant */
+      /* handle bilinear term as SOC, if we have a constraint like x*y >= constant
+       * (if conslhs is SCIP_INVALID, then we have not a constraint, but a subexpression)
+       */
       children = &expr;
       nchildren = 1;
       constant = 0.0;
