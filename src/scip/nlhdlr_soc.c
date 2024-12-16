@@ -156,36 +156,37 @@ void printNlhdlrExprData(
 
       startidx = nlhdlrexprdata->termbegins[i];
 
-      /* v_i is 0 */
       if( startidx == nlhdlrexprdata->termbegins[i + 1] )
       {
+         /* v_i is 0 */
          assert(nlhdlrexprdata->offsets[i] != 0.0);
 
          SCIPinfoMessage(scip, NULL, "%g", SQR(nlhdlrexprdata->offsets[i]));
-         continue;
       }
-
-      /* v_i is not 0 */
-      SCIPinfoMessage(scip, NULL, "(");
-
-      for( j = startidx; j < nlhdlrexprdata->termbegins[i + 1]; ++j )
+      else
       {
-         if( nlhdlrexprdata->transcoefs[j] != 1.0 )
-            SCIPinfoMessage(scip, NULL, " %+g*", nlhdlrexprdata->transcoefs[j]);
-         else
-            SCIPinfoMessage(scip, NULL, " +");
-         if( SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]) != NULL )
-         {
-            SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]])));
-            SCIPinfoMessage(scip, NULL, "(%p)", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
-         }
-         else
-            SCIPinfoMessage(scip, NULL, "%p", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
-      }
-      if( nlhdlrexprdata->offsets[i] != 0.0 )
-         SCIPinfoMessage(scip, NULL, " %+g", nlhdlrexprdata->offsets[i]);
+         /* v_i is not 0 */
+         SCIPinfoMessage(scip, NULL, "(");
 
-      SCIPinfoMessage(scip, NULL, ")^2");
+         for( j = startidx; j < nlhdlrexprdata->termbegins[i + 1]; ++j )
+         {
+            if( nlhdlrexprdata->transcoefs[j] != 1.0 )
+               SCIPinfoMessage(scip, NULL, " %+g*", nlhdlrexprdata->transcoefs[j]);
+            else
+               SCIPinfoMessage(scip, NULL, " +");
+            if( SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]) != NULL )
+            {
+               SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(SCIPgetExprAuxVarNonlinear(nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]])));
+               SCIPinfoMessage(scip, NULL, "(%p)", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
+            }
+            else
+               SCIPinfoMessage(scip, NULL, "%p", (void*)nlhdlrexprdata->vars[nlhdlrexprdata->transcoefsidx[j]]);
+         }
+         if( nlhdlrexprdata->offsets[i] != 0.0 )
+            SCIPinfoMessage(scip, NULL, " %+g", nlhdlrexprdata->offsets[i]);
+
+         SCIPinfoMessage(scip, NULL, ")^2");
+      }
 
       if( i < nterms - 2 )
          SCIPinfoMessage(scip, NULL, " + ");
