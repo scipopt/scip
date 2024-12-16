@@ -1294,7 +1294,7 @@ SCIP_RETCODE determineBestBounds(
    for(i = 0; i < ncols; i++)
    {
       var = SCIPmatrixGetVar(matrix, i);
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+      if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
       {
          colmap[i] = numberconvars; /* start numbering with 0 */
          numberconvars++;
@@ -1357,7 +1357,7 @@ SCIP_RETCODE determineBestBounds(
    for(i = 0; i < ncols; i++)
    {
       var = SCIPmatrixGetVar(matrix, i);
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
+      if( !SCIPvarIsIntegral(var) || !SCIPvarIsImpliedIntegral(var) )
       {
          SCIP_Real objval = SCIPvarGetObj(var);
          int cidx = colmap[i];

@@ -226,7 +226,6 @@ SCIP_RETCODE printDomRelInfo(
       type='B';
       break;
    case SCIP_VARTYPE_INTEGER:
-   case SCIP_VARTYPE_IMPLINT:
       type='I';
       break;
    default:
