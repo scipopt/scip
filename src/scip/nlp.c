@@ -4395,7 +4395,7 @@ SCIP_RETCODE SCIPnlpHasContinuousNonlinearity(
 
       for( expr = SCIPexpriterRestartDFS(it, nlrow->expr); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
       {
-         if( SCIPexprIsVar(set, expr) && SCIPvarIsIntegral(SCIPgetVarExprVar(expr)) )
+         if( SCIPexprIsVar(set, expr) && !SCIPvarIsIntegral(SCIPgetVarExprVar(expr)) )
          {
             *result = TRUE;
             break;
