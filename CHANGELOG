@@ -11,6 +11,8 @@ Features
 Performance improvements
 ------------------------
 
+- extended SOC detection to simple bilinear constraints, e.g., x*y >= 1
+
 Examples and applications
 -------------------------
 
