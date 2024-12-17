@@ -33,6 +33,11 @@ Interface changes
 Fixed bugs
 ----------
 
+Miscellaneous
+-------------
+
+- updated description of paramater misc/usesymmetry
+
 @section RN921 SCIP 9.2.1
 *************************
 
