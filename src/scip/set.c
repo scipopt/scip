@@ -306,7 +306,7 @@
 #define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
-#define SCIP_DEFAULT_MISC_USESYMMETRY         7 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes, symresacks and/or lexicographic reduction)
+#define SCIP_DEFAULT_MISC_USESYMMETRY         7 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and symresacks, lexicographic and orbitopal reduction if dynamic)
                                                  *   2: orbital reduction; 3: polyhedral methods and orbital reduction; 4: Schreier Sims cuts; 5: Schreier Sims cuts and polyhedral
                                                  *   methods); 6: Schreier Sims cuts and orbital reduction; 7: Schreier Sims cuts, polyhedral methods, and orbital
                                                  *   reduction, see type_symmetry.h */
@@ -2066,7 +2066,7 @@ SCIP_RETCODE SCIPsetCreate(
          "misc/usesymmetry",
          "bitset describing used symmetry handling technique: " \
          "(0: off; " \
-         "1: constraint-based (orbitopes, symresacks) and/or lexicographic reduction); " \
+         "1: constraint-based (orbitopes, symresacks); lexicographic and orbitopal reduction) if dynamic; " \
          "2: orbital reduction; " \
          "3: orbitopes and symresacks, and lexicographic/orbital reduction; " \
          "4: Schreier Sims cuts; " \
