@@ -2461,12 +2461,25 @@ SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
    /* inform what we can do */
    *participating = enforcebelow ? SCIP_NLHDLR_METHOD_SEPABELOW : SCIP_NLHDLR_METHOD_SEPAABOVE;
 
-   /* if we have been successful on sqrt(...) <= auxvar, then we enforce
-    * otherwise, expr is quadratic and we separate for expr <= ub(auxvar) only
-    * in that case, we enforce only if expr is the root of a constraint, since then replacing auxvar by up(auxvar) does not relax anything (auxvar <= ub(auxvar) is the only constraint on auxvar)
+   /*
     */
-   if( (SCIPisExprPower(scip, expr) && SCIPgetExponentExprPow(expr) == 0.5) || (cons != NULL) )
+   if( SCIPisExprPower(scip, expr) && SCIPgetExponentExprPow(expr) == 0.5 )
+   {
+      /* if we have been successful on sqrt(...) <= auxvar, then we enforce */
       *enforcing |= *participating;
+   }
+   else if( cons != NULL )
+   {
+      /* expr is quadratic (product or sum) and we separate for expr <= ub(auxvar) or expr >= lb(auxvar) only
+       * in that case, we enforce only if expr is the root of a constraint, since then replacing auxvar by up(auxvar) does not relax anything (auxvar <= ub(auxvar) is the only constraint on auxvar)
+       * however, if the constraint has both lhs and rhs and has only one bilinear term (x*y=constant), then it seems that handling both sides by nlhdlr_bilinear can still be beneficial
+       * (the latter means lhs or rhs disappear, or expr is not a product and not a sum with only 1 term)
+       */
+      if( SCIPisInfinity(scip, -SCIPgetLhsNonlinear(cons)) || SCIPisInfinity(scip, SCIPgetRhsNonlinear(cons)) )
+         *enforcing |= *participating;
+      else if( !SCIPisExprProduct(scip, expr) && SCIPexprGetNChildren(expr) > 1 )
+         *enforcing |= *participating;
+   }
 
    return SCIP_OKAY;
 }
