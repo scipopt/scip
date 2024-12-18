@@ -1531,7 +1531,7 @@ SCIP_Bool RatIsFpRepresentable(
 int RatToString(
    SCIP_Rational*        rational,           /**< the rational to print */
    char*                 str,                /**< the string to save the rational in */
-   int                   strlen              /**< maximal length that can be copied to str */
+   SCIP_Longint          strlen              /**< maximal length that can be copied to str */
    )
 {
    int ret = 0;
@@ -1551,6 +1551,7 @@ int RatToString(
    }
    if( ret == strlen )
    {
+      //TODO: what is done then in this case?
       RatDebugMessage("Rational string to long to fit in buffer. Rational : %q \n", rational);
    }
 
@@ -2065,13 +2066,13 @@ void chooseSemiconv(
 }
 #endif
 
-/* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
+/* choose the best semi-convergent with denominator <= maxdenom between p1/q1 and p2/q2 */
 static
 void chooseSemiconvLong(
    SCIP_Longint&         resnum,             /**< the resulting numerator */
    SCIP_Longint&         resden,             /**< the resulting denominator */
-   SCIP_Longint*         p,                  /**< the last 3 numerators of convergents */
-   SCIP_Longint*         q,                  /**< the last 3 denominators of convergents */
+   const SCIP_Longint*   p,                  /**< the last 3 numerators of convergents */
+   const SCIP_Longint*   q,                  /**< the last 3 denominators of convergents */
    long                  ai,                 /**< the coefficient in the continuous fraction */
    long                  maxdenom            /**< the maximal denominator */
    )

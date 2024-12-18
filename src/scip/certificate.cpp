@@ -53,10 +53,11 @@ void updateFilesize(
    SCIP_Real             nchars              /**< number of characters printed */
    )
 {
+   //TODO: number maybe should be excluded to a const with a good naming
    certificate->filesize += nchars/1048576.0;
 }
 
-/** checks whether node is a left node or not */
+/** checks whether node is a left node or not */ //TODO: leftbranch assumption is <=
 static
 SCIP_Bool certificateIsLeftNode(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
@@ -110,7 +111,7 @@ SCIP_Longint printBoundAssumption(
    RatSet(certificate->lastinfo->boundval, boundval);
 #endif
 
-   /** @todo: it could be better to seperate the printing from insertion of variable bound */
+   /** @todo: it could be better to separate the printing from insertion of variable bound */
    SCIPcertificatePrintProofMessage(certificate, "A%lld %c ", certificate->indexcounter, (boundtype == SCIP_BOUNDTYPE_LOWER) ? 'G' : 'L');
 
    SCIPcertificatePrintProofRational(certificate, boundval, 10);
@@ -213,6 +214,8 @@ SCIP_RETCODE SCIPcertificatePrintSol(
    return SCIP_OKAY;
 }
 
+//TODO: I do not like the naming of the function. It checks whether the new bound is worse than the inherited one and "merges them"
+// but the naming implies that the inhertied bound is set?
 /** set the node to have its own bound proof */
 SCIP_RETCODE SCIPcertificateSetInheritanceData(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
@@ -338,7 +341,6 @@ SCIP_RETCODE SCIPcertificateInit(
     * the whole compression code currently makes no sense, since the certificate has to be unpacked to be read by vipr
     * again anyway, so it is just disabled.
     */
-   //SCIPsplitFilename(name, NULL, NULL, NULL, &compression);
 
    SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       "storing certificate information in file <%s>\n", set->certificate_filename);
@@ -519,6 +521,7 @@ SCIP_RETCODE SCIPcertificateInit(
    return SCIP_OKAY;
 }
 
+//TODO: refactor this to one function with SCIPcertificateInit
 /** initializes certificate information and creates files for certificate output */
 SCIP_RETCODE SCIPcertificateInitTransFile(
    SCIP*                 scip                /**< scip data structure */
@@ -838,7 +841,7 @@ SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
 /** sets the objective function used when printing dual bounds */
 SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Rational**       coefs,              /**< objective function coefficients */
    int                   nvars               /**< number of variables */
@@ -890,7 +893,7 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
 /** prints the last part of the certificate header (RTP range/sol, ...) */
 SCIP_RETCODE SCIPcertificatePrintResult(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
@@ -1011,7 +1014,7 @@ SCIP_RETCODE SCIPcertificateSaveFinalbound(
 /** prints a string to the problem section of the certificate file */
 void SCIPcertificatePrintProblemMessage(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
    )
@@ -1060,7 +1063,7 @@ void SCIPcertificatePrintProofMessage(
 /** prints a rational number to the problem section of the certificate file */
 void SCIPcertificatePrintProblemRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    SCIP_Rational*        val,                /**< Rational to print to the problem*/
    int                   base                /**< The base representation*/
    )
@@ -1110,7 +1113,7 @@ void SCIPcertificatePrintProofRational(
 /** prints a comment to the problem section of the certificate file */
 void SCIPcertificatePrintProblemComment(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
    )
@@ -1161,7 +1164,7 @@ void SCIPcertificatePrintProofComment(
 /** prints version header */
 void SCIPcertificatePrintVersionHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile          /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile          /**< should the line be printed to the origfile or the transfile */
    )
 {
    assert(certificate != NULL);
@@ -1176,7 +1179,7 @@ void SCIPcertificatePrintVersionHeader(
 /** prints variable section header */
 void SCIPcertificatePrintVarHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    int                   nvars               /**< number of variables */
    )
 {
@@ -1193,7 +1196,7 @@ void SCIPcertificatePrintVarHeader(
 /** prints integer section header */
 void SCIPcertificatePrintIntHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    int                   nints               /**< number of integer variables */
    )
 {
@@ -1210,7 +1213,7 @@ void SCIPcertificatePrintIntHeader(
 /** prints constraint section header */
 void SCIPcertificatePrintConsHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    int                   nconss,             /**< number of all constraints */
    int                   nboundconss         /**< number of bound constraints */
    )
@@ -1228,10 +1231,10 @@ void SCIPcertificatePrintConsHeader(
 /** prints derivation section header */
 void SCIPcertificatePrintDerHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile          /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile          /**< should the line be printed to the origfile or the transfile */
    )
 {
-   int nders;
+   SCIP_Longint nders;
    assert(certificate != NULL);
 
    /* check if certificate output should be created */
@@ -1249,7 +1252,7 @@ void SCIPcertificatePrintDerHeader(
 /** prints constraint */
 void SCIPcertificatePrintCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    const char*           consname,           /**< name of the constraint */
    const char            sense,              /**< sense of the constraint, i.e., G, L, or E */
    SCIP_Rational*        side,               /**< left/right-hand side */
@@ -1298,9 +1301,10 @@ void SCIPcertificatePrintCons(
    }
 }
 
-/** print a line for an exact row to the certificate (without derivation), @param alternativerhs is used instead
- * of the real rhs of the row (infinity if real rhs should be used). This is necessary for integer cuts
- * where the rhs was rounded down from the original rhs */
+/** print a line for an exact row to the certificate (without derivation),
+ * @param alternativerhs is used instead of the real rhs of the row (infinity if real rhs should be used).
+ * This is necessary for integer cut where the rhs was rounded down from the original rhs
+ */
 static
 SCIP_RETCODE SCIPcertificatePrintRow(
       SCIP_SET*          set,                /**< global SCIP settings */
@@ -1435,11 +1439,11 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
-   for( auto it = coefs.begin(); it != coefs.end(); ++it )
+   for(auto & coef : coefs)
    {
       /** @todo exip: perform line breaking before exceeding maximum line length */
-      int varindex = it->first;
-      RatSetReal(val, it->second);
+      int varindex = coef.first;
+      RatSetReal(val, coef.second);
 
       assert(RatIsIntegral(val));
 
@@ -1459,11 +1463,11 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
-   for( auto it = coefs.begin(); it != coefs.end(); ++it )
+   for(auto & coef : coefs)
    {
       /** @todo exip: perform line breaking before exceeding maximum line length */
-      int varindex = it->first;
-      RatSetReal(val, it->second);
+      int varindex = coef.first;
+      RatSetReal(val, coef.second);
 
       assert(RatIsIntegral(val));
 
@@ -1933,7 +1937,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 /** prints a variable bound to the problem section of the certificate file and returns line index */
 SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    const char*           boundname,          /**< name of the bound constraint */
    SCIP_VAR*             var,                /**< variable to print the bound cons for */
    SCIP_Rational*        boundval,           /**< value of the bound */
@@ -2096,7 +2100,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
       return SCIP_OKAY;
    }
 
-   /* if at root node set, objintegral flag */
+   /* if at root node set init the flag ObjIntegral */
    if( SCIPnodeGetParent(node) == NULL )
       certificate->objintegral = SCIPprobIsObjIntegral(prob);
 
@@ -2200,9 +2204,6 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    if( usefarkas )
    {
       RatSetString(lowerbound, "inf");
-      /* Scale proof to have RHS = 1 */
-      // for( i = 0; i < len; ++i)
-      //    RatDiv(vals[i], vals[i], farkasrhs);
    }
    else
    {
@@ -2237,7 +2238,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    SCIP_NODE*            node,               /**< current node */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Bool             lowerchanged,       /**< to the modified indices address a change in lb or ub? */
+   SCIP_Bool             lowerchanged,       /**< do the modified indices address a change in lb or ub? */
    int                   modifiedvarindex,   /**< index of modified variable, or -1 */
    SCIP_Longint          boundchangeindex,   /**< index of unprocessed bound change in the certificate, or -1 */
    SCIP_Real             psval               /**< the pseudo obj value (or inf to use exact lp value) */
@@ -2257,6 +2258,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    assert(set != NULL);
    assert((modifiedvarindex >= 0 && boundchangeindex >= 0) || (modifiedvarindex == -1 && boundchangeindex == -1) );
 
+   //TODO: why this checked here and not at other places?
    /* only print if not -infinity and certificate is active */
    if( !set->exact_enabled || !SCIPsetCertificateEnabled(set) || SCIPsetIsInfinity(set, -psval) )
       return SCIP_OKAY;
@@ -2692,7 +2694,7 @@ SCIP_RETCODE SCIPcertificateClearAggrinfo(
    SCIP*                 scip                /**< global SCIP data structure */
    )
 {
-   int i;
+   SCIP_Longint i;
    SCIP_CERTIFICATE* certificate;
 
    certificate = SCIPgetCertificate(scip);
@@ -2769,7 +2771,7 @@ SCIP_RETCODE SCIPcertificateFreeAggrInfo(
    SCIP_ROW*             row                 /**< row that should be freed, or NULL if not needed */
    )
 {
-   int arraypos;
+   SCIP_Longint arraypos;
    int i;
 
    /* remove the (no longer needed aggrinfo), move last element to now freed spot */
@@ -2815,7 +2817,7 @@ SCIP_RETCODE SCIPcertificateFreeMirInfo(
    SCIP_ROW*             row                 /**< row that should be freed, or NULL if not needed */
    )
 {
-   int arraypos;
+   SCIP_Longint arraypos;
    int i;
 
    /* remove the mirinfo, move last element to the now freed up one */
