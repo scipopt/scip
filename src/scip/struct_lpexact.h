@@ -327,7 +327,7 @@ struct SCIP_LpExact
    SCIP_Bool             lpihasscaling;      /**< does the LPI support the SCALING parameter? */
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
    SCIP_Bool             projshiftpossible;  /**< can a safe bound be computed with project-and-shift? */
-   SCIP_Bool             boundshiftviable;   /**< is bound-shift viable? set to FALSE if success rate too low */
+   SCIP_Bool             boundshiftviable;   /**< is bound-shift viable? set to FALSE if success rate too low */ //TODO: I would like to call this differently
    SCIP_Bool             forceexactsolve;    /**< should the next safe bounding step be forced to solve the lp exactly? */
    SCIP_Bool             allowexactsolve;    /**< is the next bounding call allowed to be an exact solve? (this should only happen for the last call at each node) */
    SCIP_Bool             diving;             /**< LP is used for exact diving: col bounds and obj don't correspond to variables */

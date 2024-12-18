@@ -21,7 +21,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include <stdio.h>
 #include <assert.h>
-#include <time.h>
 
 #include "scip/bounding_exact.h"
 #include "scip/struct_set.h"
@@ -37,7 +36,6 @@
 #include "scip/scip_prob.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
-#include "scip/sol.h"
 #include "scip/primal.h"
 #include "scip/sepastoreexact.h"
 #include "scip/struct_scip.h"
@@ -1722,7 +1720,7 @@ SCIP_RETCODE projectShift(
    {
       if( !RatIsZero(violation[i]) )
       {
-         SCIPdebugMessage("   dual solution incorrect, violates equalties\n");
+         SCIPdebugMessage("   dual solution incorrect, violates equalities\n");
          rval = 1;
       }
    }
@@ -1903,7 +1901,7 @@ char chooseInitialBoundingMethod(
       }
       else
       {
-         /* check if neumair-shcherbina is possible */
+         /* check if Neumaier-Shcherbina is possible */
          if( SCIPlpExactBSpossible(lpexact) )
             dualboundmethod = 'n';
          /* check if project and shift is possible */
@@ -2004,14 +2002,13 @@ SCIP_RETCODE boundShift(
    SCIP_Real*            safebound           /**< pointer to store the computed safe bound (usually lpobj) */
    )
 {
-   // SCIP_ROUNDMODE roundmode;
-   SCIP_INTERVAL* rhslhsrow; // the rhs or lhs of row depending on sign of dual solution
-   SCIP_INTERVAL* ublbcol; // the ub or lb of col depending on sign of dual solution
+   SCIP_INTERVAL* rhslhsrow;
+   SCIP_INTERVAL* ublbcol;
    SCIP_INTERVAL* constantinter;
-   SCIP_INTERVAL* lpcolvals; // values in a column of the constraint matrix
-   SCIP_INTERVAL* productcoldualval; // scalar product of lp column with dual solution vector
-   SCIP_INTERVAL* obj; // objective (or 0 in farkas proof)
-   SCIP_INTERVAL productsidedualval; //scalar product of sides with dual solution vector
+   SCIP_INTERVAL* lpcolvals;
+   SCIP_INTERVAL* productcoldualval;
+   SCIP_INTERVAL* obj;
+   SCIP_INTERVAL productsidedualval;
    SCIP_INTERVAL safeboundinterval;
    SCIP_ROW* row;
    SCIP_COL* col;
@@ -2060,7 +2057,7 @@ SCIP_RETCODE boundShift(
 
    /* calculate y^Tb */
    SCIPintervalSet(&productsidedualval, 0.0);
-   SCIPdebugMessage("productsidedualval intervall computation with vectors:\n");
+   SCIPdebugMessage("productsidedualval interval computation with vectors:\n");
 
    /* create dual vector, sides and constant vector in interval arithmetic */
    for( j = 0; j < lp->nrows; ++j )
@@ -2102,7 +2099,7 @@ SCIP_RETCODE boundShift(
       SCIPdebugMessage("   j=%d: b=[%g,%g] (lhs=%g, rhs=%g, const=%g, fpdual=%g)\n", j, rhslhsrow[j].inf, rhslhsrow[j].sup, row->lhs,
             row->rhs, row->constant, fpdual[j]);
    }
-   /* substract constant from sides in interval arithmetic and calculate fpdual * side */
+   /* subtract constant from sides in interval arithmetic and calculate fpdual * side */
    SCIPintervalAddVectors(SCIPsetInfinity(set), rhslhsrow, lp->nrows, rhslhsrow, constantinter);
    SCIPintervalScalprodScalars(SCIPsetInfinity(set), &productsidedualval, lp->nrows, rhslhsrow, fpdual);
 
@@ -2173,7 +2170,7 @@ SCIP_RETCODE boundShift(
       assert(SCIPcolGetUb(col) >= RatRoundReal(SCIPvarGetUbLocalExact(col->var), SCIP_R_ROUND_UPWARDS));
       SCIPintervalSetBounds(&ublbcol[j], SCIPcolGetLb(col), SCIPcolGetUb(col));
 
-      /* opt out if there are infinity bounds and a non-infinte value */
+      /* opt out if there are infinity bounds and a non-infinty value */
       if( (SCIPsetIsInfinity(set, -SCIPcolGetLb(col)) || SCIPsetIsInfinity(set, SCIPcolGetUb(col))) )
       {
          if( productcoldualval[j].inf + obj[j].inf != 0 || productcoldualval[j].sup + obj[j].sup != 0 )
@@ -2334,12 +2331,14 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
-   SCIP_Bool             usefarkas,          /**< should infeasiblity be proven? */
+   SCIP_Bool             usefarkas,          /**< should infeasibility be proven? */
    SCIP_Real*            safebound,          /**< pointer to store the calculated safe bound */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    )
 {  /*lint --e{715}*/
+
+   //TODO: what happens in general in the exact case if SCIP_WITH_BOOST is false
 #ifdef SCIP_WITH_BOOST
    char dualboundmethod;
    char lastboundmethod;
@@ -2380,17 +2379,21 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       SCIPlpExactAllowExactSolve(lpexact, set, FALSE);
       nattempts++;
 
+      /**
+       * For the methods used please refer to
+       * "Valid Linear Programming Bounds for Exact Mixed-Integer Programming" from Steffy and Wolter (2011)
+       */
       switch( dualboundmethod )
       {
          case 'n':
-            /* Neumaier-Shcherbina */
+            /* Safe Bounding introduced by Neumaier and Shcherbina (Chapter 2)*/
             *lperror = FALSE;
             SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                   prob, usefarkas, safebound) );
             break;
       #ifdef SCIP_WITH_GMP
          case 'p':
-            /* project-and-shift */
+            /* Project-and-Shift (Chapter 3)*/
             *lperror = FALSE;
             SCIP_CALL( projectShift(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                   prob, blkmem, usefarkas, safebound) );
