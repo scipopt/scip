@@ -110,7 +110,7 @@ struct SCIP_Certnodedata
    SCIP_Rational*        derbound_inherit;   /**< inherited bound */
    unsigned int          leftfilled:1;       /**< Is the left node filled ? */
    unsigned int          leftinfeas:1;       /**< Is the left node infeasible ? */
-   unsigned int          rightfilled:1;      /**< Is the node right filled ? */
+   unsigned int          rightfilled:1;      /**< Is the node right filled ? */ //what does filled mean
    unsigned int          rightinfeas:1;      /**< Is the node right infeasible ? */
    unsigned int          inheritedbound:1;   /**< did the node inherit its bound from its parent node? */
 };
@@ -121,13 +121,13 @@ struct SCIP_Certificate
    SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler to use */
    SCIP_HASHMAP*         nodedatahash;       /**< Hashmap storing pointer to data of each node */
    SCIP_HASHMAP*         aggrinfohash;       /**< Hashmap storing aggregation information of rows */
-   SCIP_HASHMAP*         mirinfohash;      /**< Hashmap storing split disjunctions */
+   SCIP_HASHMAP*         mirinfohash;        /**< Hashmap storing split disjunctions */
    SCIP_AGGREGATIONINFO** aggrinfo;          /**< array to store the aggregation info to avoid memory leaks */
-   SCIP_MIRINFO**        mirinfo;          /**< array to store the split info to avoid memory leaks */
+   SCIP_MIRINFO**        mirinfo;            /**< array to store the split info to avoid memory leaks */
    SCIP_Longint          aggrinfosize;       /**< size of aggrinfo array */
    SCIP_Longint          naggrinfos;         /**< number of elements in aggrinfo array */
-   SCIP_Longint          mirinfosize;      /**< size of mirinfo array */
-   SCIP_Longint          nmirinfos;        /**< number of elements in mirinfo array */
+   SCIP_Longint          mirinfosize;        /**< size of mirinfo array */
+   SCIP_Longint          nmirinfos;          /**< number of elements in mirinfo array */
    SCIP_CERTIFICATEBOUND* lastinfo;          /**< information on last printed certificate index */
    BMS_BLKMEM*           blkmem;             /**< SCIP block memory */
    SCIP_Longint          indexcounter;       /**< counter for line indices in file */
@@ -148,7 +148,7 @@ struct SCIP_Certificate
    SCIP_Bool             rootinfeas;         /**< is the root node infeasible */
    SCIP_Bool             objintegral;        /**< is the objective always integral? copy this so we don't need the prob everywhere */
    SCIP_Bool             workingmirinfo;     /**< true if mirinfo is under construction and not sparsely stored, false otherwise */
-   SCIP_Bool             workingaggrinfo;     /**< true if aggrinfo is under construction (last entry not in hashmap), false otherwise */
+   SCIP_Bool             workingaggrinfo;    /**< true if aggrinfo is under construction (last entry not in hashmap), false otherwise */
    SCIP_Rational**       vals;               /**< we maintain an array for solvals so we don't have to reallocate at every bounding call */
    int                   valssize;           /**< the size of the vals array */
 };
