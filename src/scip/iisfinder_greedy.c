@@ -826,7 +826,7 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
    SCIP_CALL( SCIPaddRealParam(scip,
          "iis/" IISFINDER_NAME "/maxrelbatchsize",
          "maximum number of constraints (or bounds) relative to the original problem that are added / removed in one iteration",
-         &iisfinderdata->maxrelbatchsize, FALSE, DEFAULT_MAXRELBATCHSIZE, 0, 1, NULL, NULL) );
+         &iisfinderdata->maxrelbatchsize, FALSE, DEFAULT_MAXRELBATCHSIZE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "iis/" IISFINDER_NAME "/timelimperiter",
@@ -888,13 +888,19 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_RESULT*          result              /**< pointer to store the result of the IIS finder run */
    )
 {
+   int nconss;
+   int nvars;
    int batchsize;
    SCIP* scip = SCIPiisGetSubscip(iis);
    SCIP_Bool alldeletionssolved = TRUE;
 
    assert( scip != NULL );
 
-   batchsize = (int)SCIPceil(scip, maxrelbatchsize * MAX(SCIPgetNOrigConss(scip), SCIPgetNOrigVars(scip)));
+   nconss = SCIPgetNOrigConss(scip);
+   nvars = SCIPgetNOrigVars(scip);
+   batchsize = MAX(nconss, nvars);
+   batchsize *= batchsize;
+   batchsize = (int)SCIPceil(scip, batchsize);
    batchsize = MIN(batchsize, maxbatchsize);
    batchsize = MAX(batchsize, 1);
 
