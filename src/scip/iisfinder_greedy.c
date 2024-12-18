@@ -899,8 +899,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    nconss = SCIPgetNOrigConss(scip);
    nvars = SCIPgetNOrigVars(scip);
    batchsize = MAX(nconss, nvars);
-   batchsize *= batchsize;
-   batchsize = (int)SCIPceil(scip, batchsize);
+   batchsize = (int)SCIPceil(scip, maxrelbatchsize * batchsize);
    batchsize = MIN(batchsize, maxbatchsize);
    batchsize = MAX(batchsize, 1);
 

@@ -406,7 +406,7 @@ SCIP_RETCODE SCIPiisGenerate(
          SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
 
       SCIP_CALL( SCIPcreateRandom(set->scip, &randnumgen, 0x5EED, TRUE) );
-      SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, randnumgen, 1e+20, FALSE, TRUE, TRUE, TRUE, -1L, 1, 1, &result) );
+      SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, randnumgen, 1e+20, FALSE, TRUE, TRUE, TRUE, -1L, 1, 1.0, &result) );
       SCIPfreeRandom(set->scip, &randnumgen);
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
    }
@@ -427,7 +427,7 @@ SCIP_RETCODE SCIPiisGenerate(
          {
             if( SCIPvarGetNUses(vars[j]) <= 2 && SCIPisInfinity(iis->subscip, -SCIPvarGetLbOriginal(vars[j])) && SCIPisInfinity(iis->subscip, SCIPvarGetUbOriginal(vars[j])) )
             {
-               SCIPdelCons(iis->subscip, conss[i]);
+               SCIP_CALL( SCIPdelCons(iis->subscip, conss[i]) );
                break;
             }
          }
