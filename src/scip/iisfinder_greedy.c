@@ -40,7 +40,8 @@
 #define IISFINDER_PRIORITY        8000
 #define RANDSEED                  0x5EED
 
-#define DEFAULT_BATCHSIZE        10    /**< the number of constraints (or bounds) that are added / removed in one subproblem call */
+#define DEFAULT_MAXBATCHSIZE     20    /**< the maximum number of constraints (or bounds) that are added / removed in one subproblem call */
+#define DEFAULT_MAXRELBATCHSIZE  0.035 /**< the maximum number of constraints (or bounds) relative to the original problem that are added / removed in one subproblem call */
 #define DEFAULT_NODELIMPERITER   -1L   /**< maximum number of nodes per individual solve call */
 #define DEFAULT_TIMELIMPERITER   1e+20 /**< time limit per individual solve call */
 #define DEFAULT_ADDITIVE         TRUE  /**< whether an additive approach instead of deletion based approach should be used */
@@ -57,12 +58,13 @@ struct SCIP_IISfinderData
 {
    SCIP_RANDNUMGEN*      randnumgen;         /**< random generator for sorting constraints */
    SCIP_Real             timelimperiter;     /**< time limit per individual solve call */
+   SCIP_Real             maxrelbatchsize;    /**< the maximum number of constraints relative to the original problem to delete or add per iteration */
    SCIP_Bool             additive;           /**< whether an additive approach instead of deletion based approach should be used */
    SCIP_Bool             conservative;       /**< should a solve that reached some limit be counted as feasible when deleting constraints */
    SCIP_Bool             dynamicreordering;  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
    SCIP_Bool             delafteradd;        /**< should the deletion routine be performed after the addition routine (in the case of additive) */
    SCIP_Longint          nodelimperiter;     /**< maximum number of nodes per individual solve call */
-   int                   batchsize;          /**< the number of constraints to delete or add per iteration */
+   int                   maxbatchsize;       /**< the maximum number of constraints to delete or add per iteration */
 };
 
 /*
@@ -782,7 +784,8 @@ SCIP_DECL_IISFINDEREXEC(iisfinderExecGreedy)
    SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, iisfinderdata->randnumgen,
             iisfinderdata->timelimperiter, iisfinderdata->additive, iisfinderdata->conservative,
             iisfinderdata->dynamicreordering, iisfinderdata->delafteradd,
-            iisfinderdata->nodelimperiter, iisfinderdata->batchsize, result) );
+            iisfinderdata->nodelimperiter, iisfinderdata->maxbatchsize,
+            iisfinderdata->maxrelbatchsize, result) );
 
    return SCIP_OKAY;
 }
@@ -816,9 +819,14 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
 
    /* add greedy IIS finder parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "iis/" IISFINDER_NAME "/batchsize",
-         "batch size of constraints that are removed or added in one iteration",
-         &iisfinderdata->batchsize, FALSE, DEFAULT_BATCHSIZE, 1, INT_MAX, NULL, NULL) );
+         "iis/" IISFINDER_NAME "/maxbatchsize",
+         "maximum batch size of constraints (or bounds) that are removed or added in one iteration",
+         &iisfinderdata->maxbatchsize, FALSE, DEFAULT_MAXBATCHSIZE, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "iis/" IISFINDER_NAME "/maxrelbatchsize",
+         "maximum number of constraints (or bounds) relative to the original problem that are added / removed in one iteration",
+         &iisfinderdata->maxrelbatchsize, FALSE, DEFAULT_MAXRELBATCHSIZE, 0, 1, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "iis/" IISFINDER_NAME "/timelimperiter",
@@ -875,14 +883,20 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
    SCIP_Bool             delafteradd,        /**< should the deletion routine be performed after the addition routine (in the case of additive) */
    SCIP_Longint          nodelimperiter,     /**< maximum number of nodes per individual solve call */
-   int                   batchsize,          /**< the number of constraints to delete or add per iteration */
+   int                   maxbatchsize,       /**< the maximum number of constraints to delete or add per iteration */
+   SCIP_Real             maxrelbatchsize,    /**< the maximum number of constraints relative to the original problem to delete or add per iteration */
    SCIP_RESULT*          result              /**< pointer to store the result of the IIS finder run */
    )
 {
+   int batchsize;
    SCIP* scip = SCIPiisGetSubscip(iis);
    SCIP_Bool alldeletionssolved = TRUE;
 
    assert( scip != NULL );
+
+   batchsize = (int)SCIPceil(scip, maxrelbatchsize * MAX(SCIPgetNOrigConss(scip), SCIPgetNOrigVars(scip)));
+   batchsize = MIN(batchsize, maxbatchsize);
+   batchsize = MAX(batchsize, 1);
 
    if( additive )
    {
