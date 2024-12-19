@@ -184,7 +184,7 @@ char SCIPdualBoundMethod(
    return (scip->set->exact_safedbmethod);
 }
 
-/** returns whether the certificate output is activated? */
+/** returns whether the certificate output is activated */
 SCIP_Bool SCIPisCertificateActive(
    SCIP*                 scip                /**< certificate information */
    )
@@ -192,7 +192,7 @@ SCIP_Bool SCIPisCertificateActive(
    assert(scip != NULL);
    assert(scip->stat != NULL);
 
-   return (scip->stat->certificate != NULL && scip->stat->certificate->transfile != NULL);
+   return SCIPcertificateIsEnabled(scip->stat->certificate);
 }
 
 /** returns certificate data structure

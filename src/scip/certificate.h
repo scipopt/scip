@@ -80,9 +80,9 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
    SCIP*                 scip                /**< scip data structure */
    );
 
-/** returns whether the certificate output is activated? */
-SCIP_Bool SCIPsetCertificateEnabled(
-   SCIP_SET*             set                 /**< SCIP settings */
+/** returns whether the certificate output is activated */
+SCIP_Bool SCIPcertificateIsEnabled(
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
 /** returns current certificate index (return -1 if certificate not active) */
@@ -228,7 +228,7 @@ SCIP_RETCODE SCIPcertificateTransAggrrow(
    int                   naggrrows           /**< length of the arrays */
    );
 
-/** Print cutoff bound for objective value **/
+/** prints cutoff bound for objective value **/
 SCIP_RETCODE SCIPcertificatePrintCutoffBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
@@ -268,7 +268,7 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
    SCIP_Rational*        newbound            /**< pointer to value of new bound, NULL if infeasible */
    );
 
-/** prints dual bound to proof section */
+/** prints dual bound to proof section and increments indexcounter */
 SCIP_Longint SCIPcertificatePrintDualbound(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    const char*           linename,           /**< name of the unsplitting line */
@@ -278,7 +278,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    SCIP_Rational**       val                 /**< array of dual multipliers */
    );
 
-/** Print a dual bound from an exact lp solution */
+/** prints a dual bound from an exact lp solution */
 SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
    SCIP_LPEXACT*         lpexact,            /**< the exact lp */
@@ -288,7 +288,11 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_Bool             usefarkas           /**< should an infeasibility proof be printed? */
    );
 
-/** Print a dual bound from an exact lp solution */
+/** prints a dual bound from an exact lp solution
+ *
+ *  in case of a bound change (branching), this happens before the bound change is processed;
+ *  therefore we add the option to give on varindex, boundchgindex pair to pass directly to the method
+ */
 SCIP_RETCODE SCIPcertificatePrintDualboundPseudo(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
    SCIP_LPEXACT*         lpexact,            /**< the exact lp */

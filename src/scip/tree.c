@@ -1133,7 +1133,7 @@ SCIP_RETCODE SCIPnodeFree(
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
    /* if certificate is active, unsplit current node and free the memory in hashmap of certificate */
-   SCIPcertificatePrintUnsplitting(set, SCIPgetCertificate(set->scip), *node);
+   SCIPcertificatePrintUnsplitting(set, stat->certificate, *node);
 
    /* check lower bound w.r.t. debugging solution */
    SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
@@ -1896,15 +1896,15 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       oldlb = SCIPvarGetLbLocal(var);
       oldub = SCIPvarGetUbLocal(var);
    }
-   if( set->exact_enabled && useglobal && SCIPsetCertificateEnabled(set) )
+   if( set->exact_enabled && useglobal )
    {
       SCIP_Rational* newboundex;
 
-      SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &newboundex));
+      SCIP_CALL( RatCreateBuffer(SCIPbuffer(set->scip), &newboundex) );
 
       RatSetReal(newboundex, newbound);
-      SCIP_CALL( SCIPcertificatePrintGlobalBound(set->scip, SCIPgetCertificate(set->scip), var, boundtype,
-         newboundex, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(set->scip)) - 1) );
+      SCIP_CALL( SCIPcertificatePrintGlobalBound(set->scip, stat->certificate, var, boundtype,
+         newboundex, SCIPcertificateGetCurrentIndex(stat->certificate) - 1) );
       SCIP_CALL( SCIPvarChgBdGlobalExact(var, blkmem, set, stat, lp->lpexact, branchcand,
          eventqueue, cliquetable, newboundex, boundtype) );
 
@@ -2101,11 +2101,14 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
 
       /* update the child's lower bound */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
-      if( !SCIPtreeProbing(tree) && newpseudoobjval > SCIPnodeGetLowerbound(node)
-        && SCIPsetCertificateEnabled(set) )
+
+      /* print bound to certificate */
+      if( set->exact_enabled && SCIPcertificateIsEnabled(stat->certificate)
+         && !SCIPtreeProbing(tree) && newpseudoobjval > SCIPnodeGetLowerbound(node) )
       {
-         /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate
-         * @todo exip could this be done differently somewhere else? */
+         /* @todo exip could this be done differently somewhere else? */
+         /* we change the exact local bound here temporarily such that the correct pseudo solution gets printed to the
+            certificate */
          SCIP_Rational* bound;
          bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
          RatSetReal(bound, newbound);
@@ -2209,10 +2212,10 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
       oldlb = SCIPvarGetLbLocalExact(var);
       oldub = SCIPvarGetUbLocalExact(var);
    }
-   if( set->stage > SCIP_STAGE_PRESOLVING && useglobal && SCIPsetCertificateEnabled(set) )
+   if( set->stage > SCIP_STAGE_PRESOLVING && useglobal )
    {
-      SCIP_CALL( SCIPcertificatePrintGlobalBound(set->scip, SCIPgetCertificate(set->scip), var,
-            boundtype, newbound, SCIPcertificateGetCurrentIndex(SCIPgetCertificate(set->scip)) - 1) );
+      SCIP_CALL( SCIPcertificatePrintGlobalBound(set->scip, stat->certificate, var,
+            boundtype, newbound, SCIPcertificateGetCurrentIndex(stat->certificate) - 1) );
    }
 
    assert(node != NULL);
@@ -2415,10 +2418,13 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
 
       /* update the child's lower bound (pseudoobjval is safe, so can use the fp version) */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lpexact->fplp, set, transprob, var, oldboundreal, newboundreal, boundtype);
-      if( newpseudoobjval > SCIPnodeGetLowerbound(node) && SCIPsetCertificateEnabled(set) )
+
+      /* print bound to the certificate */
+      if( SCIPcertificateIsEnabled(stat->certificate) && newpseudoobjval > SCIPnodeGetLowerbound(node) )
       {
-         /* exip: we change the bound here temporarily so the correct pseudo solution gets printed to the certificate */
-         /** @todo exip could this be done differently somewhere else? */
+         /* @todo exip could this be done differently somewhere else? */
+         /* we change the exact local bound here temporarily such that the correct pseudo solution gets printed to the
+            certificate */
          SCIP_Rational* bound;
          bound = inferboundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbLocalExact(var) : SCIPvarGetUbLocalExact(var);
          RatSet(bound, newbound);
@@ -6306,21 +6312,18 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
       /* print branching information to certificate, if certificate is active */
-      if( set->exact_enabled )
+      if( downub == SCIP_INVALID ) /*lint !e777*/
       {
-         if( downub == SCIP_INVALID ) /*lint !e777*/
-         {
-            SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
-         }
-         else if( uplb == SCIP_INVALID ) /*lint !e777*/
-         {
-            SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
-         }
-         else
-         {
-            SCIPerrorMessage("Cannot resolve 3-way branching in certificate currently \n");
-            SCIPABORT();
-         }
+         SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, fixval) );
+      }
+      else if( uplb == SCIP_INVALID ) /*lint !e777*/
+      {
+         SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, fixval) );
+      }
+      else if( SCIPcertificateIsEnabled(stat->certificate) )
+      {
+         SCIPerrorMessage("Cannot resolve 3-way branching in certificate currently \n");
+         SCIPABORT();
       }
 
       if( !SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), fixval) )
@@ -6352,7 +6355,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
          SCIPvarGetName(var), uplb, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
-      /* print branching information to certificate, if certificate is active */
+      /* print branching information to certificate */
       SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, uplb) );
 
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
