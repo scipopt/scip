@@ -1830,7 +1830,7 @@ SCIP_RETCODE SCIPeventProcess(
       SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
 
-   case SCIP_EVENTTYPE_IMPLTYPECHANGED:
+   case SCIP_EVENTTYPE_IMPLTYPECHANGED: /*lint !e30 !e142*/
    {
       var = event->data.eventimpltypechg.var;
       assert(var != NULL);
