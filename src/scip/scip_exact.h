@@ -99,7 +99,7 @@ SCIP_RETCODE SCIPcheckIntegralityExact(
    SCIP_RESULT*          result
    );
 
-/** returns whether the certificate output is activated? */
+/** returns whether the certificate output is activated */
 SCIP_EXPORT
 SCIP_Bool SCIPisCertificateActive(
    SCIP*                 scip                /**< certificate information */

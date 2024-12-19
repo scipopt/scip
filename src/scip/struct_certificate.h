@@ -98,10 +98,10 @@ struct SCIP_Certnodedata
    SCIP_Rational*        derbound_right;     /**< Bound of right derivation */
    SCIP_Longint          derindex_inherit;   /**< Line index of bound inherited from parent */
    SCIP_Rational*        derbound_inherit;   /**< inherited bound */
-   unsigned int          leftfilled:1;       /**< Is the left node filled ? */
-   unsigned int          leftinfeas:1;       /**< Is the left node infeasible ? */
-   unsigned int          rightfilled:1;      /**< Is the node right filled ? */ //what does filled mean
-   unsigned int          rightinfeas:1;      /**< Is the node right infeasible ? */
+   unsigned int          leftfilled:1;       /**< is the data for the left child node set? */
+   unsigned int          leftinfeas:1;       /**< is the left node infeasible ? */
+   unsigned int          rightfilled:1;      /**< is the data for the right child node set? */
+   unsigned int          rightinfeas:1;      /**< is the node right infeasible ? */
    unsigned int          inheritedbound:1;   /**< did the node inherit its bound from its parent node? */
 };
 
