@@ -642,7 +642,7 @@ SCIP_EXPORT
 int RatToString(
    SCIP_Rational*        r,                  /**< the rational to print */
    char*                 str,                /**< the string to save the rational in */
-   SCIP_Longint          strlen              /**< maximal length that can be copied to str */
+   int                   strlen              /**< maximal length that can be copied to str */
    );
 
 /** returns the strlen of a rational number */
