@@ -795,7 +795,8 @@ int computeInsertPos(
    }
    assert(insertpos == contstart);
 
-   if( vartype == SCIP_VARTYPE_CONTINUOUS ){
+   if( vartype == SCIP_VARTYPE_CONTINUOUS )
+   {
       assert(impltype != SCIP_VARIMPLTYPE_NONE);
       prob->ncontimplvars++;
       return insertpos;
@@ -809,7 +810,8 @@ int computeInsertPos(
    }
    assert(insertpos == contimplstart);
 
-   if( vartype == SCIP_VARTYPE_INTEGER && impltype != SCIP_VARIMPLTYPE_NONE ){
+   if( vartype == SCIP_VARTYPE_INTEGER && impltype != SCIP_VARIMPLTYPE_NONE )
+   {
       prob->nintimplvars++;
       return insertpos;
    }
@@ -822,7 +824,8 @@ int computeInsertPos(
    }
    assert(insertpos == intimplstart);
 
-   if( vartype == SCIP_VARTYPE_BINARY && impltype != SCIP_VARIMPLTYPE_NONE ){
+   if( vartype == SCIP_VARTYPE_BINARY && impltype != SCIP_VARIMPLTYPE_NONE )
+   {
       prob->nbinimplvars++;
       return insertpos;
    }
@@ -836,7 +839,8 @@ int computeInsertPos(
    assert(insertpos == binimplstart);
 
 
-   if( vartype == SCIP_VARTYPE_INTEGER ){
+   if( vartype == SCIP_VARTYPE_INTEGER )
+   {
       assert(impltype == SCIP_VARIMPLTYPE_NONE);
       prob->nintvars++;
       return insertpos;
@@ -856,6 +860,7 @@ int computeInsertPos(
 
    return insertpos;
 }
+
 /** inserts variable at the correct position in vars array, depending on its type */
 static
 void probInsertVar(
