@@ -5268,7 +5268,7 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt,
                lp, branchcand, conflict, conflictstore, eventfilter, eventqueue, cliquetable, &cutoff, FALSE, FALSE) );
 
-         if( SCIPisExactSolve(set->scip) && !SCIPisLPConstructed(set->scip) )
+         if( SCIPisExactSolve(set->scip) && !SCIPisLPConstructed(set->scip) && focusnode != NULL )
          {
             SCIP_CALL( SCIPconstructLP(set->scip, &cutoff) );
             assert(!cutoff);
