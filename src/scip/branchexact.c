@@ -24,26 +24,22 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "scip/set.h"
-#include "scip/stat.h"
-#include "scip/clock.h"
-#include "scip/paramset.h"
-#include "scip/event.h"
-#include "scip/lp.h"
-#include "scip/var.h"
-#include "scip/prob.h"
-#include "scip/tree.h"
-#include "scip/sepastore.h"
-#include "scip/scip.h"
 #include "scip/branch.h"
 #include "scip/branchexact.h"
-#include "scip/solve.h"
-#include "scip/visual.h"
 #include "scip/certificate.h"
-
+#include "scip/def.h"
+#include "scip/event.h"
+#include "scip/lp.h"
+#include "scip/prob.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/scip.h"
 #include "scip/struct_branch.h"
+#include "scip/tree.h"
+#include "scip/var.h"
+#include "scip/visual.h"
+
 
 /** ensures, that lpcands array can store at least num entries */
 static
@@ -165,9 +161,9 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
       if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
          continue;
 
-      /* check, if the LP solution value is fractional */
       RatSetReal(tmp, primsol);
 
+      /* check, if the LP solution value is fractional */
       if( RatIsIntegral(tmp) )
          continue;
 
@@ -276,6 +272,7 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
    return SCIP_OKAY;
 }
 
+//TODO the first like is confusing?
 /** branches on a variable x; unlike the fp-version this will also branch x <= floor(x'), x >= ceil(x')
  * if x' is very close to being integral at one of its bounds;
  * in the fp version this case would be branched in the middle of the domain;
