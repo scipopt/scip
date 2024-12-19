@@ -238,7 +238,7 @@ struct SCIP_ConsData
    unsigned int          hascontvar:1;       /**< does the constraint contain at least one continuous variable? */
    unsigned int          hasnonbinvar:1;     /**< does the constraint contain at least one non-binary variable? */
    unsigned int          hasnonbinvalid:1;   /**< is the information stored in hasnonbinvar and hascontvar valid? */
-   unsigned int          checkabsolute:1;    /**< should the constraint be checked w.r.t. an absolute feasibilty tolerance? */
+   unsigned int          checkabsolute:1;    /**< should the constraint be checked w.r.t. an absolute feasibility tolerance? */
    unsigned int          onerowrelax:1;      /**< is one floating-point row enough for the fp-relaxation? if so only rowlhs is used */
    unsigned int          hasfprelax:1;       /**< is the constraint possible to be represented as a fp relaxation (only false if var without bound is present) */
 };
@@ -312,6 +312,7 @@ struct SCIP_ConshdlrData
                                               *   removed afterwards? */
 };
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** linear constraint update method */
 struct SCIP_LinConsUpgrade
@@ -355,6 +356,7 @@ struct InferInfo
 
 typedef struct InferInfo INFERINFO;
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** converts an integer into an inference information */
 static
@@ -379,6 +381,7 @@ int inferInfoToInt(
    return inferinfo.val.asint;
 }
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** returns the propagation rule stored in the inference information */
 static
@@ -428,6 +431,7 @@ int getInferInt(
    return inferInfoToInt(getInferInfo(proprule, pos));
 }
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /*
  * memory growing methods for dynamically allocated arrays
@@ -500,6 +504,7 @@ SCIP_RETCODE consdataEnsureVarsSize(
  * local methods for managing linear constraint update methods
  */
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** creates a linear constraint upgrade data object */
 static
@@ -579,6 +584,7 @@ void conshdlrdataFree(
    SCIPfreeBlockMemory(scip, conshdlrdata);
 }
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** creates a linear constraint upgrade data object */
 static
@@ -1355,6 +1361,7 @@ void consdataComputePseudoActivity(
    }
 
    if( pseudoactivityneginf > 0 && pseudoactivityposinf > 0 )
+      //TODO is then currently now the activity of the non infinity vars returned?
       return; /** @todo exip what to do in this case? */
    else if( pseudoactivityneginf > 0 )
       RatSetString(pseudoactivity, "-inf");
@@ -2426,6 +2433,8 @@ void consdataUpdateChgCoef(
    consdataUpdateAddCoef(scip, consdata, var, newvalExact, newval);
 }
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** returns the maximum absolute value of all coefficients in the constraint */
 static
@@ -2864,6 +2873,7 @@ void consdataGetActivityBounds(
       maxactivity, maxisrelax, ismaxsettoinfinity);
 }
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** calculates activity bounds for constraint after setting variable to zero */
 static
@@ -3110,6 +3120,7 @@ void consdataGetActivityResiduals(
    SCIPintervalSetRoundingMode(prevmode);
 }
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** gets global activity bounds for constraint */
 static
@@ -3511,6 +3522,7 @@ void consdataUpdateSignatures(
       consdata->negsignature |= varsignature;
 }
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** calculates the bit signatures of the given constraint data */
 static
@@ -4602,6 +4614,7 @@ SCIP_RETCODE delCoefPos(
    }
    consdata->nvars--;
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
    /* if at most one variable is left, the activities should be recalculated (to correspond exactly to the bounds
     * of the remaining variable, or give exactly 0.0)
@@ -4739,6 +4752,7 @@ SCIP_RETCODE chgCoefPos(
    return SCIP_OKAY;
 }
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** scales a linear constraint with a constant scalar */
 static
@@ -4868,6 +4882,7 @@ SCIP_RETCODE performVarDeletions(
    return SCIP_OKAY;
 }
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** normalizes a linear constraint with the following rules:
  *  - if all coefficients have them same absolute value, change them to (-)1.0
@@ -5587,6 +5602,7 @@ SCIP_RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** for each variable in the linear constraint, except the inferred variable, adds one bound to the conflict analysis'
  *  candidate store (bound depends on sign of coefficient and whether the left or right hand side was the reason for the
@@ -8121,7 +8137,8 @@ SCIP_RETCODE separateCons(
       SCIP_CALL( addRelaxation(scip, cons, cutoff) );
       (*ncuts)++;
    }
-   #ifdef SCIP_DISABLED_CODE
+   //TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
+#ifdef SCIP_DISABLED_CODE
    else if( !SCIPconsIsModifiable(cons) && separatecards )
    {
       /* relax linear constraint into knapsack constraint and separate lifted cardinality cuts */
@@ -8316,6 +8333,7 @@ SCIP_RETCODE propagateCons(
  * Presolving methods
  */
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** converts all variables with fixed domain into FIXED variables */
 static
@@ -8452,6 +8470,7 @@ SCIP_RETCODE fixVariables(
  *     as clique, (this part is done at the end of the method)
  *
  */
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 static
 SCIP_RETCODE extractCliques(
@@ -8820,6 +8839,7 @@ SCIP_RETCODE extractCliques(
 
             i = 0;
             j = i + 1;
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check that it is possible to choose binvar[i], otherwise it should have been fixed to zero */
             assert(SCIPisFeasLE(scip, binvarvals[i], threshold));
@@ -8969,6 +8989,7 @@ SCIP_RETCODE extractCliques(
 
             i = nposbinvars + nnegbinvars - 1;
             j = i - 1;
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check that it is possible to choose binvar[i], otherwise it should have been fixed to zero */
             assert(SCIPisFeasGE(scip, binvarvals[i], threshold));
@@ -9129,6 +9150,7 @@ SCIP_RETCODE extractCliques(
             i = nposbinvars + nnegbinvars - 1;
             j = i - 1;
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check if the variable should not have already been fixed to one */
             assert(!SCIPisFeasGT(scip, binvarvals[i], threshold));
@@ -9289,6 +9311,7 @@ SCIP_RETCODE extractCliques(
             i = 0;
             j = i + 1;
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE /* assertion should only holds when constraints were fully propagated and boundstightened */
             /* check if the variable should not have already been fixed to one */
             assert(!SCIPisFeasLT(scip, -binvarvals[i], threshold));
@@ -10823,6 +10846,7 @@ SCIP_RETCODE checkPartialObjective(
 }
 #endif
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** updates the cutoff if the given primal bound (which is implied by the given constraint) is better */
 static
@@ -10867,6 +10891,7 @@ SCIP_RETCODE updateCutoffbound(
 }
 #endif
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** check if the linear constraint is parallel to objective function; if so update the cutoff bound and avoid that the
  *  constraint enters the LP by setting the initial and separated flag to FALSE
@@ -11075,6 +11100,7 @@ SCIP_Bool consdataIsResidualIntegral(
 }
 #endif
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /* check if lhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i
  * check if rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i
@@ -11132,6 +11158,7 @@ void calculateMinvalAndMaxval(
 }
 #endif
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /* applies dual presolving for variables that are locked only once in a direction, and this locking is due to a
  * linear inequality
@@ -11779,6 +11806,7 @@ SCIP_RETCODE aggregateVariables(
 }
 #endif
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** sorting method for constraint data, compares two variables on given indices, continuous variables will be sorted to
  *  the end and for all other variables the sortation will be in non-increasing order of their absolute value of the
@@ -11819,6 +11847,7 @@ SCIP_DECL_SORTINDCOMP(consdataCompSim)
 }
 #endif
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** tries to simplify coefficients and delete variables in ranged row of the form lhs <= a^Tx <= rhs, e.g. using the greatest
  *  common divisor
@@ -13481,6 +13510,7 @@ SCIP_RETCODE aggregateConstraints(
 }
 #endif
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** gets the key of the given element */
 static
@@ -13578,6 +13608,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
                        SCIPhashTwo(maxidx, SCIPrealHashCode(RatApproxReal(consdata->vals[consdata->nvars - 1]) * scale))); /*lint !e571*/
 }
 #endif
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** returns the key for deciding which of two parallel constraints should be kept (smaller key should be kept);
  *  prefers non-upgraded constraints and as second criterion the constraint with the smallest position
@@ -13598,6 +13629,7 @@ unsigned int getParallelConsKey(
 }
 #endif
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** updates the hashtable such that out of all constraints in the hashtable that are detected
  *  to be parallel to *querycons, only one is kept in the hashtable and stored into *querycons,
@@ -15692,6 +15724,7 @@ SCIP_DECL_CONSEXIT(consExitExactLinear)
    return SCIP_OKAY;
 }
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** is constraint ranged row, i.e., -inf < lhs < rhs < inf? */
 static
@@ -15706,6 +15739,7 @@ SCIP_Bool isRangedRow(
    return !(RatIsEqual(lhs, rhs) || RatIsNegInfinity(lhs) || RatIsInfinity(rhs) );
 }
 #endif
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** is constraint ranged row, i.e., -inf < lhs < rhs < inf? */
 static
@@ -15720,6 +15754,7 @@ SCIP_Bool isFiniteNonnegativeIntegral(
 }
 #endif
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** performs linear constraint type classification as used for MIPLIB
  *
@@ -16073,6 +16108,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
 {  /*lint --e{715}*/
    int c;
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 #ifdef SCIP_STATISTIC
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -16086,6 +16122,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreExactLinear)
     */
    assert(scip != NULL);
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 #ifdef SCIP_STATISTIC
    /* count number of well behaved linear constraints */
@@ -17785,6 +17822,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
  * Callback methods of conflict handler
  */
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 static
 SCIP_DECL_CONFLICTEXEC(conflictExecExactLinear)
@@ -18055,6 +18093,7 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
 }
 
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** includes a linear constraint update method into the linear constraint handler */
 SCIP_RETCODE SCIPincludeExactLinconsUpgrade(
@@ -19073,6 +19112,7 @@ void SCIPgetPropStatsExactLinear(
    *avgnonzerospropconflict = (SCIP_Real) conshdlrdata->propnonzerosnoninit / conshdlrdata->nconspropnoninit;
 }
 
+//TODO: IMHO if there is disabled code there shoudl be a) a comment why it is disabled or b) removed
 #ifdef SCIP_DISABLED_CODE
 /** tries to automatically convert a linear constraint into a more specific and more specialized constraint */
 SCIP_RETCODE SCIPupgradeConsLinear(
