@@ -1531,7 +1531,7 @@ SCIP_Bool RatIsFpRepresentable(
 int RatToString(
    SCIP_Rational*        rational,           /**< the rational to print */
    char*                 str,                /**< the string to save the rational in */
-   SCIP_Longint          strlen              /**< maximal length that can be copied to str */
+   int                   strlen              /**< maximal length that can be copied to str */
    )
 {
    int ret = 0;
