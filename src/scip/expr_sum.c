@@ -720,7 +720,7 @@ SCIP_DECL_EXPRPRINT(printSum)
          /* print constant, if nonzero */
          if( exprdata->constant != 0.0 )
          {
-            SCIPinfoMessage(scip, file, "%g", exprdata->constant);
+            SCIPinfoMessage(scip, file, "%.15g", exprdata->constant);
          }
          break;
       }
@@ -748,7 +748,7 @@ SCIP_DECL_EXPRPRINT(printSum)
          else
          {
             /* force "+" sign on positive coefficient if not the first term */
-            SCIPinfoMessage(scip, file, (exprdata->constant != 0.0 || currentchild > 0) ? "%+g*" : "%g*", coef);
+            SCIPinfoMessage(scip, file, (exprdata->constant != 0.0 || currentchild > 0) ? "%+.15g*" : "%.15g*", coef);
          }
 
          break;
