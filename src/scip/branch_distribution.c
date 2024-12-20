@@ -286,7 +286,7 @@ void SCIPvarCalcDistributionParameters(
    else
    {
       /* if the variable is continuous, we assume a continuous uniform distribution, otherwise a discrete one */
-      if( varintegral )
+      if( !varintegral )
          *variance = SQR(varub - varlb);
       else
          *variance = SQR(varub - varlb + 1.0) - 1.0;
