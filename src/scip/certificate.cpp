@@ -293,6 +293,7 @@ void SCIPcertificateFree(
    BMSfreeMemory(certificate);
 }
 
+/* @todo exip: replace scip pointer by set->scip */
 /** initializes certificate information and creates files for certificate output */
 SCIP_RETCODE SCIPcertificateInit(
    SCIP*                 scip,               /**< scip data structure */
@@ -407,7 +408,7 @@ SCIP_RETCODE SCIPcertificateInit(
    SCIP_CALL( SCIPgetOrigVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    SCIP_CALL( SCIPgetVarsData(scip, &transvars, &ntransvars, NULL, NULL, NULL, NULL) );
    nboundconss = 0;
-   for ( j = 0 ; j < nvars ; j++ )
+   for( j = 0 ; j < nvars ; j++ )
    {
       lb = SCIPvarGetLbGlobalExact(vars[j]);
       ub = SCIPvarGetUbGlobalExact(vars[j]);
