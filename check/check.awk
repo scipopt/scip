@@ -1355,7 +1355,7 @@ BEGIN {
             modelstat = 8;
             solverstat = 1;
          }
-         else if( status == "ok" || status == "solved not verified" || status == "ok (vipr verified)" )
+         else if( status == "ok" || status == "solved not verified" || status == "ok (vipr-verified)" )
          {
             modelstat = 1;
             solverstat = 1;
