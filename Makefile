@@ -498,6 +498,7 @@ ifneq ($(PAPILO),true)   # add boost softlink only once
 SOFTLINKS	+=    $(LIBDIR)/include/boost
 LPIINSTMSG	+=    "\n  -> \"boost\" is the path to the boost include folder\n"
 endif
+LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/rectlu
 endif
 
 #-----------------------------------------------------------------------------
@@ -1012,6 +1013,10 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			tclique/tclique_graph.o \
 			dijkstra/dijkstra.o \
 			xml/xmlparse.o
+
+ifeq ($(EXACTSOLVE),true)
+SCIPLIBOBJ	+=	rectlu/rectlu_factor.o rectlu/rectlu_num.o
+endif
 
 SCIPLIBBASE	=	$(SCIPLIBBASENAME).$(BASE)
 SCIPLIBBASEFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBBASE).$(LIBEXT)
