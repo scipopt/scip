@@ -1706,9 +1706,11 @@ ifneq ($(GMP),false)
 		$(error invalid GMP flag selected: GMP=$(GMP). Possible options are: true false)
 endif
 endif
+ifneq ($(MPFR),auto)
 ifneq ($(MPFR),true)
 ifneq ($(MPFR),false)
-		$(error invalid MPFR flag selected: MPFR=$(MPFR). Possible options are: true false)
+		$(error invalid MPFR flag selected: MPFR=$(MPFR). Possible options are: true false auto)
+endif
 endif
 endif
 ifneq ($(ZIMPL),true)

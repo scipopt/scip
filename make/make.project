@@ -151,7 +151,7 @@ OPENSOURCE   	=	true
 READLINE	=	true
 ZLIB		=	true
 GMP		=	true
-MPFR		= false
+MPFR		=	auto
 ZIMPL		=	false
 AMPL		=	true
 IPOPT		=	false
@@ -601,17 +601,19 @@ FLAGS		+=	$(GMP_FLAGS)
 LDFLAGS		+=	$(GMP_LDFLAGS)
 endif
 
-ifeq ($(MPFR_LDFLAGS),)
-MPFR		=	false
-endif
-
 ifeq ($(EXACTSOLVE),true)
+ifeq ($(MPFR),auto)
+MPFR		=	true
+endif
 ifeq ($(MPFR),false)
-$(error Exact solving requires MPFR to be linked. Use either EXACTSOLVE=false or MPFR=true)
+$(error Exact solving requires MPFR to be linked)
 endif
 endif
 
 ifeq ($(MPFR),true)
+ifeq ($(MPFR_LDFLAGS),)
+$(error MPFR_LDFLAGS is empty. Do not know how to link MPFR, but MPFR=true)
+endif
 FLAGS		+=	$(MPFR_FLAGS)
 LDFLAGS	+=	$(MPFR_LDFLAGS)
 endif
