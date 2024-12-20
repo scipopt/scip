@@ -79,6 +79,6 @@ ctest -R MIPEX
 
 # USAGE
 
-Enabling/disabling the exact solving mode is done with parameter `exact/exact_enabled`, note that this has to be done before reading a problem instance. Further advanced parameters for exact solving can be set in the `exact` submenu.
+Enabling/disabling the exact solving mode is done with parameter `exact/enabled`, note that this has to be done before reading a problem instance. Further advanced parameters for exact solving can be set in the `exact` submenu.
 
 Certificate printing can be enabled by setting `certificate/filename` to a non-default value. If cutting planes are enabled, then the certificate file needs to be completed using the `viprcomp` script prior to verifiaction.
