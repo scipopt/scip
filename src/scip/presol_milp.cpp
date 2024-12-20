@@ -102,6 +102,10 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define PAPILO_APIVERSION PAPILO_API_VERSION
 #endif
 
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && !defined(PAPILO_HAVE_GMP)
+#warning SCIP with GMP and exact solving but Papilo without GMP disables exact presolving.
+#endif
+
 #define PRESOL_NAME                "milp"
 #define PRESOL_DESC                "MILP specific presolving methods"
 #define PRESOL_PRIORITY            9999999   /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
@@ -248,7 +252,7 @@ Problem<SCIP_Real> buildProblem(
    return builder.build();
 }
 
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
 /** builds the presolvelib problem datastructure from the matrix */
 static
 Problem<papilo::Rational> buildProblemRational(
@@ -1195,7 +1199,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       SCIP_CALL(SCIPwriteTransProblem(scip, data->filename, NULL, FALSE));
    }
 
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
    if( SCIPisExactSolve(scip) )
    {
       SCIP_Retcode retcode;
