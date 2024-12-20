@@ -2,7 +2,6 @@ include(CTest)
 
 #
 # add a custom SCIP check target 'scip_check'
-
 #
 add_custom_target(scip_check
                 COMMAND ${CMAKE_CTEST_COMMAND} -R "-default" -E "applications" --output-on-failure

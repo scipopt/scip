@@ -123,7 +123,7 @@ LPILIBSHORTNAME	=	lpi$(LPS)
 LPILIBNAME	=	$(LPILIBSHORTNAME)-$(VERSION)
 LPILIBOBJ	=
 LPSOPTIONS	=
-LPSEXOPTIONS =
+LPSEXOPTIONS	=
 LPIINSTMSG	=
 
 LPSOPTIONS	+=	cpx
@@ -287,11 +287,11 @@ endif
 LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIB).$(LIBEXT)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
-LPIEXLIBOBJFILES = $(addprefix $(LIBOBJDIR)/,$(LPIEXLIBOBJ))
+LPIEXLIBOBJFILES	= $(addprefix $(LIBOBJDIR)/,$(LPIEXLIBOBJ))
 LPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
 LPILIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(LPILIBSRC)
-ALLSRC 		+= $(LPIEXLIBSRC)
+ALLSRC		+= $(LPIEXLIBSRC)
 
 ifeq ($(SHARED),true)
 LPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LPSLDFLAGS)
@@ -494,8 +494,8 @@ endif
 ifeq ($(GMP),false)
 $(error exact solving mode requires the GMP library to be linked. Use either EXACTSOLVE=false or GMP=true.)
 endif
-SOFTLINKS    +=    $(LIBDIR)/include/boost
-LPIINSTMSG    +=    "\n  -> \"boost\" is the path to the boost include folder\n"
+SOFTLINKS	+=    $(LIBDIR)/include/boost
+LPIINSTMSG	+=    "\n  -> \"boost\" is the path to the boost include folder\n"
 endif
 
 #-----------------------------------------------------------------------------
@@ -1708,7 +1708,7 @@ endif
 endif
 ifneq ($(MPFR),true)
 ifneq ($(MPFR),false)
-		$(error invalid GMP flag selected: MPFR=$(MPFR). Possible options are: true false)
+		$(error invalid MPFR flag selected: MPFR=$(MPFR). Possible options are: true false)
 endif
 endif
 ifneq ($(ZIMPL),true)

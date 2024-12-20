@@ -106,7 +106,7 @@ VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
-LPSEX = none
+LPSEX		= none
 TPI		=	tny
 SYM		=	snauty
 PAPILO		=	false
@@ -151,7 +151,7 @@ OPENSOURCE   	=	true
 READLINE	=	true
 ZLIB		=	true
 GMP		=	true
-MPFR  = false
+MPFR		= false
 ZIMPL		=	false
 AMPL		=	true
 IPOPT		=	false
@@ -277,7 +277,7 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/blockmemshell \
 			$(LIBOBJDIR)/tclique \
 			$(LIBOBJDIR)/lpi \
-      $(LIBOBJDIR)/lpiexact \
+			$(LIBOBJDIR)/lpiexact \
 			$(LIBOBJDIR)/amplmp/src \
 			$(LIBOBJDIR)/amplmp \
 			$(LIBOBJDIR)/tpi \
@@ -607,13 +607,13 @@ endif
 
 ifeq ($(EXACTSOLVE),true)
 ifeq ($(MPFR),false)
-$(error exact Solving requires MPFR to be linked. Use either EXACTSOLVE=false or MPFR=true)
+$(error Exact solving requires MPFR to be linked. Use either EXACTSOLVE=false or MPFR=true)
 endif
 endif
 
 ifeq ($(MPFR),true)
 FLAGS		+=	$(MPFR_FLAGS)
-LDFLAGS		+=	$(MPFR_LDFLAGS)
+LDFLAGS	+=	$(MPFR_LDFLAGS)
 endif
 
 ifeq ($(READLINE_LDFLAGS),)
