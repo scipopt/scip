@@ -136,7 +136,9 @@ echo "-----------------------------"        >> "${OUTFILE}"
 date +"@03 %s"                              >> "${OUTFILE}"
 echo "@05 ${TIMELIMIT}"                     >> "${OUTFILE}"
 
-ulimit -S -s unlimited
+# zimpl may ran into a stack limit when model equations have too many terms, so we remove that limit
+case "${FILENAME}" in *.zpl ) ulimit -S -s unlimited ;; esac
+
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
 EXECNAME="${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}"
