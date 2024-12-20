@@ -89,6 +89,18 @@
 #include "spxgithash.h"
 #endif
 
+#ifndef SOPLEX_WITH_GMP
+#error "SOPLEX_WITH_GMP not defined: SoPlex must be build with GMP to be used with LPIEX=spx"
+#endif
+
+#ifndef SOPLEX_WITH_MPFR
+#error "SOPLEX_WITH_MPFR not defined: SoPlex must be build with MPFR to be used with LPIEX=spx"
+#endif
+
+#ifndef SOPLEX_WITH_BOOST
+#error "SOPLEX_WITH_BOOST not defined: SoPlex must be build with BOOST to be used with LPIEX=spx"
+#endif
+
 /* reset the SCIP_DEBUG define to its original SCIP value */
 #undef SCIP_DEBUG
 #ifdef ___DEBUG
