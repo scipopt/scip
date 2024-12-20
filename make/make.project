@@ -510,6 +510,14 @@ LPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIB).$(LIBEXT)
 LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIBNAME).$(LIBEXT)
 
 
+#-------------------------------------------------------
+# add flags for exact SoPlex
+ifeq ($(LPSEX),spx)
+LPSLDFLAGS	+=	$(LINKCXX_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCXX_l)soplex.exact.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLIBFILES	+=	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.exact.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+endif
+
+
 #-----------------------------------------------------------------------------
 # Parallel Interface
 #-----------------------------------------------------------------------------
