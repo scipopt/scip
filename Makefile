@@ -494,8 +494,10 @@ endif
 ifeq ($(GMP),false)
 $(error exact solving mode requires the GMP library to be linked. Use either EXACTSOLVE=false or GMP=true.)
 endif
+ifneq ($(PAPILO),true)   # add boost softlink only once
 SOFTLINKS	+=    $(LIBDIR)/include/boost
 LPIINSTMSG	+=    "\n  -> \"boost\" is the path to the boost include folder\n"
+endif
 endif
 
 #-----------------------------------------------------------------------------
