@@ -488,9 +488,6 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(EXACTSOLVE),true)
-ifeq ($(MPFR),false)
-$(error exact solving mode requires the MPFR library to be linked. Use either EXACTSOLVE=false or MPFR=true.)
-endif
 ifeq ($(GMP),false)
 $(error exact solving mode requires the GMP library to be linked. Use either EXACTSOLVE=false or GMP=true.)
 endif
