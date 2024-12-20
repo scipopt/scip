@@ -385,7 +385,7 @@
  * - @subpage TRAINESTIMATION "How to train custom tree size estimation for SCIP"
  * - @subpage SYMMETRY "How to use symmetry handling in SCIP"
  * - @subpage PROBINGDIVING "How to use probing and diving mode"
- * - @subpage PROBINGDIVING "How to use exact solving mode"
+ * - @subpage EXACTSOLVE "How to use exact solving mode"
  */
 
 /**@page AUTHORS SCIP Authors
@@ -7561,7 +7561,7 @@
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page PROBINGDIVING How to use exact solving mode
+/**@page EXACTSOLVE How to use exact solving mode
  *
  * SCIP is the only MIP solver that can solve problems exactly, i.e., without any numerical inaccuracies or errror tolerances.
  * 
