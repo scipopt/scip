@@ -121,11 +121,11 @@ SCIP_DECL_EXPRPRINT(printValue)
       SCIP_Real v = SCIPexprGetData(expr)->value;
       if( v < 0.0 && EXPRHDLR_PRECEDENCE <= parentprecedence )
       {
-         SCIPinfoMessage(scip, file, "(%g)", v);
+         SCIPinfoMessage(scip, file, "(%.15g)", v);
       }
       else
       {
-         SCIPinfoMessage(scip, file, "%g", v);
+         SCIPinfoMessage(scip, file, "%.15g", v);
       }
    }
 

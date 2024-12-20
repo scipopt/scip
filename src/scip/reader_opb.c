@@ -2153,7 +2153,7 @@ SCIP_RETCODE writeOpbObjective(
             assert(conshdlr != NULL);
 
             if( strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 )
-               (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %g;\n", SCIPgetRhsLinear(scip, topcostcons));
+               (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %.15g;\n", SCIPgetRhsLinear(scip, topcostcons));
             else if( strcmp(SCIPconshdlrGetName(conshdlr), "knapsack") == 0 )
                (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %" SCIP_LONGINT_FORMAT ";\n",
                   SCIPgetCapacityKnapsack(scip, topcostcons));
@@ -2215,7 +2215,7 @@ SCIP_RETCODE writeOpbObjective(
 
                   if( topcostfound )
                   {
-                     (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %g;\n", SCIPgetRhsLinear(scip, cons));
+                     (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "soft: %.15g;\n", SCIPgetRhsLinear(scip, cons));
                      appendBuffer(scip, file, linebuffer, &linecnt, buffer);
                      writeBuffer(scip, file, linebuffer, &linecnt);
                      printed = TRUE;
@@ -3540,7 +3540,7 @@ SCIP_RETCODE writeOpbFixedVars(
          if( SCIPhashtableExists(printedfixing, (void*)var) )
             continue;
 
-         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "+1%s%s%s = %g ;\n", multisymbol, neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), lb);
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "+1%s%s%s = %.15g ;\n", multisymbol, neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), lb);
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
          /* add variable to the hashmap */
@@ -3614,7 +3614,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, resvar, &var, &neg) );
 
          assert(SCIPisFeasIntegral(scip, lb));
-         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "+1%s%s%s = %g ;\n", multisymbol, neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), lb);
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "+1%s%s%s = %.15g ;\n", multisymbol, neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), lb);
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
          /* add variable to the hashmap */
@@ -3647,7 +3647,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
             SCIP_CALL( SCIPgetBinvarRepresentative(scip, andvars[r][v], &var, &neg) ); /*lint !e613 */
 
             assert(SCIPisFeasIntegral(scip, lb));
-            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "+1%s%s%s = %g ;\n", multisymbol, neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), lb);
+            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "+1%s%s%s = %.15g ;\n", multisymbol, neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), lb);
             appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
             /* add variable to the hashmap */
