@@ -4023,6 +4023,14 @@ SCIP_RETCODE propAndSolve(
 
    newinitconss = FALSE;
 
+   /* @todo exip: check if this is really necessary and explain why */
+   /* in exact solving mode, we need the LP already during propagation for ... */
+   if( SCIPisExactSolve(set->scip) )
+   {
+      SCIP_CALL( SCIPconstructCurrentLP(blkmem, set, stat, transprob, origprob, tree, reopt, lp, pricestore, sepastore, cutpool,
+            branchcand, eventqueue, eventfilter, cliquetable, newinitconss, cutoff) );
+   }
+
    if( !(*cutoff) && !(*postpone) )
    {
       SCIP_Longint oldninitconssadded;
@@ -5268,15 +5276,6 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt,
                lp, branchcand, conflict, conflictstore, eventfilter, eventqueue, cliquetable, &cutoff, FALSE, FALSE) );
 
-         if( SCIPisExactSolve(set->scip) && !SCIPisLPConstructed(set->scip) && focusnode != NULL )
-         {
-            SCIP_CALL( SCIPconstructLP(set->scip, &cutoff) );
-            assert(!cutoff);
-            if ( SCIPisCertificateActive(set->scip) )
-            {
-               SCIP_CALL( SCIPcertificateInitTransFile(set->scip) );
-            }
-         }
          if( cutoff )
             stat->ndelayedcutoffs++;
 
