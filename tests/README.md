@@ -60,8 +60,8 @@ Go to `Criterion/dependencies/klib` and execute `git co cdb7e92` and then go to 
 
 Create a build directory and build the unittests
 ```bash
-mkdir build
-cd build
+mkdir build 
+cd build 
 cmake .. YOUR_CMAKE_CONFIGURATION
 make unittests -j
 ```
@@ -115,12 +115,12 @@ Alternatively, one can disable ASLR system-wide (requires root access):
 
 TODO: Define a policy for moving/removing tests in `src/bugs` once the bugs are fixed.
 
-### With the CMake System
+### With the CMake System 
 
 To run all tests:
 ```
 ctest
-```
+``` 
 
 To run tests with pattern filter:
 ```

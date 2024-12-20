@@ -63,11 +63,11 @@ struct SCIP_CutselData
  * Callback methods of cut selector
  */
 
-/* TODO: Implement all necessary cut selector methods. The methods with an #ifdef SCIP_DISABLED_CODE ... #else #define ... are optional */
+/* TODO: Implement all necessary cut selector methods. The methods with an #if 0 ... #else #define ... are optional */
 
 
 /** copy method for cut selector plugin (called when SCIP copies plugins) */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_CUTSELCOPY(cutselCopyXyz)
 {  /*lint --e{715}*/
@@ -82,7 +82,7 @@ SCIP_DECL_CUTSELCOPY(cutselCopyXyz)
 
 
 /** destructor of cut selector to free user data (called when SCIP is exiting) */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_CUTSELFREE(cutselFreeXyz)
 {  /*lint --e{715}*/
@@ -97,7 +97,7 @@ SCIP_DECL_CUTSELFREE(cutselFreeXyz)
 
 
 /** initialization method of cut selector (called after problem was transformed) */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_CUTSELINIT(cutselInitXyz)
 {  /*lint --e{715}*/
@@ -112,7 +112,7 @@ SCIP_DECL_CUTSELINIT(cutselInitXyz)
 
 
 /** deinitialization method of cut selector (called before transformed problem is freed) */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_CUTSELEXIT(cutselExitXyz)
 {  /*lint --e{715}*/
@@ -127,7 +127,7 @@ SCIP_DECL_CUTSELEXIT(cutselExitXyz)
 
 
 /** solving process initialization method of cut selector (called when branch and bound process is about to begin) */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_CUTSELINITSOL(cutselInitsolXyz)
 {  /*lint --e{715}*/
@@ -142,7 +142,7 @@ SCIP_DECL_CUTSELINITSOL(cutselInitsolXyz)
 
 
 /** solving process deinitialization method of cut selector (called before branch and bound process data is freed) */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_CUTSELEXITSOL(cutselExitsolXyz)
 {  /*lint --e{715}*/
@@ -184,7 +184,7 @@ SCIP_RETCODE SCIPincludeCutselXyz(
    /* TODO: (optional) create cut selector specific data here */
 
    /* include cut selector */
-#ifdef SCIP_DISABLED_CODE
+#if 0
    /* use SCIPincludeCutsel() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
     * new callbacks are added in future SCIP versions
     */
