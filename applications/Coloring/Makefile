@@ -114,7 +114,7 @@ lint:		$(MAINSRC)
 			done'
 
 .PHONY: pclint
-pclint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(NLPILIBSRC) $(MAINSRC) $(SYMSRC)
+pclint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(NLPILIBSRC) $(MAINSRC) $(SYMSRC)
 		-rm -f pclint.out
 ifeq ($(FILES),)
 		@$(SHELL) -ec 'echo "-> running pclint on $^..."; \
