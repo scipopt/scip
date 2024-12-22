@@ -24,7 +24,7 @@
 
 /**@file   pub_iisfinder.h
  * @ingroup PUBLICCOREAPI
- * @brief  public methods for irreducible infeasible subsytems (IIS) finders
+ * @brief  public methods for irreducible infeasible subsystems (IIS) finders
  * @author Mark Turner
  */
 

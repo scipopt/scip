@@ -97,7 +97,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Longint          maxnnodesperiter,   /**< maximum number of nodes per individual solve call */
    int                   maxbatchsize,       /**< the maximum number of constraints to delete or add per iteration */
    SCIP_Real             maxrelbatchsize,    /**< the maximum number of constraints relative to the original problem to delete or add per iteration */
-   SCIP_RESULT*          result              /**< pointer to store the result os the IIS run */
+   SCIP_RESULT*          result              /**< pointer to store the result of the IIS run */
 );
 
 /** @} */

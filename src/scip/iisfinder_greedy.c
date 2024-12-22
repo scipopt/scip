@@ -145,7 +145,7 @@ SCIP_RETCODE revertConssDeletions(
    SCIP_CONS**           conss,              /**< the array of constraints where some have been deleted */
    int*                  idxs,               /**< the indices of the cons (in the conss array) that have been deleted */
    int                   ndelconss,          /**< the number of constraints that have been deleted */
-   SCIP_Bool             releaseonly         /**< Should the constraints just be released instead of addded back */
+   SCIP_Bool             releaseonly         /**< Should the constraints just be released instead of added back */
    )
 {
    int i;

@@ -102,7 +102,7 @@ SCIP_DECL_IISFINDEREXEC(iisfinderExecXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz IIS finder not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
-   
+
    return SCIP_OKAY;
 }
 
@@ -114,15 +114,15 @@ SCIP_DECL_IISFINDEREXEC(iisfinderExecXyz)
 /** creates the xyz IIS finder and includes it in SCIP */
 SCIP_RETCODE SCIPincludeIISfinderXyz(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_IISFINDERDATA* iisfinderdata = NULL;
    SCIP_IISFINDER* iisfinder = NULL;
-   
+
    /* create xyz IIS finder data */
-   
+
    /* TODO: (optional) create IIS specific data here */
-   
+
    /* include IIS */
 #if 0
    /* use SCIPincludeIISfinder() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
@@ -136,17 +136,17 @@ SCIP_RETCODE SCIPincludeIISfinderXyz(
     * compile independently of new callbacks being added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeIISfinderBasic(scip, &iisfinder, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY,
-                                        iisfinderExecXyz, iisfinderdata) );
-   
+         iisfinderExecXyz, iisfinderdata) );
+
    assert(iisfinder != NULL);
-   
+
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetIISfinderCopy(scip, iisfinder, iisfinderCopyXyz) );
    SCIP_CALL( SCIPsetIISfinderFree(scip, iisfinder, iisfinderFreeXyz) );
 #endif
-   
+
    /* add xyz IIS parameters */
    /* TODO: (optional) add IIS finder specific parameters with SCIPaddTypeParam() here */
-   
+
    return SCIP_OKAY;
 }
