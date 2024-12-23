@@ -850,10 +850,10 @@ SCIP_RETCODE updateMinMaxMeanGain(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata = SCIPbranchruleGetData(branchrule);
-   SCIP_Real logmeangain;
-   SCIP_Real oldlogstdevgain;
    /* initializing to avoid linter, value never used */
-   SCIP_Real oldlogmeangain = 0.0;
+   SCIP_Real logmeangain = -1.0;
+   SCIP_Real oldlogstdevgain = -1.0;
+   SCIP_Real oldlogmeangain = -1.0;
 
    assert(branchruledata != NULL);
 
