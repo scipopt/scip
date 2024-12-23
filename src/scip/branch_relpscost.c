@@ -851,8 +851,9 @@ SCIP_RETCODE updateMinMaxMeanGain(
 {
    SCIP_BRANCHRULEDATA* branchruledata = SCIPbranchruleGetData(branchrule);
    SCIP_Real logmeangain;
-   SCIP_Real oldlogmeangain;
    SCIP_Real oldlogstdevgain;
+   /* initializing to avoid linter, value never used */
+   SCIP_Real oldlogmeangain = 0.0;
 
    assert(branchruledata != NULL);
 
@@ -890,9 +891,9 @@ SCIP_RETCODE updateMinMaxMeanGain(
    int ngains = branchruledata->currndualgains;
 
    if (ngains == 1)
-      branchruledata->logstdevgain = pow((log(meangain) - logmeangain), 2 );
+      branchruledata->logstdevgain = pow((log(meangain) - logmeangain), 2.0 );
    else
-      branchruledata->logstdevgain = ( (ngains - 2)  * oldlogstdevgain  + (ngains - 1) * pow( oldlogmeangain - logmeangain, 2) +  pow((log(meangain) - logmeangain), 2 ) ) / (ngains - 1) ;
+      branchruledata->logstdevgain = ( (ngains - 2)  * oldlogstdevgain  + (ngains - 1) * pow( oldlogmeangain - logmeangain, 2.0) +  pow((log(meangain) - logmeangain), 2.0 ) ) / (ngains - 1) ;
 
    branchruledata->maxmeangain = MAX(branchruledata->maxmeangain, meangain);
    branchruledata->minmeangain = MIN(branchruledata->minmeangain, meangain);
@@ -1091,8 +1092,10 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    SCIP_Real currenttreesize;
    SCIP_Real absdualgap;
    SCIP_Real gaptoclose;
-   SCIP_Real logmeangain;
-   SCIP_Real logstdevgain;
+
+   /* default values never used */
+   SCIP_Real logmeangain = 0.0;
+   SCIP_Real logstdevgain = -1.0;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
 
@@ -1131,7 +1134,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
       assert(minmeangain > 0.0);
       assert(branchruledata->currndualgains > 0);
       SCIP_Real sum_for_lambda = branchruledata->sumlogmeangains - branchruledata->currndualgains * log(minmeangain);
-     if(SCIPisZero(scip, sum_for_lambda))
+      if(SCIPisZero(scip, sum_for_lambda))
          return TRUE;
       lambda = branchruledata->currndualgains / sum_for_lambda;
    }
@@ -1144,6 +1147,8 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
       assert(branchruledata->dynamiclookdistribution == LOGNORMALDISTRIBUTION);
       logmeangain = branchruledata->sumlogmeangains / branchruledata->currndualgains;
       logstdevgain = branchruledata->logstdevgain;
+      /* lambda value not used */
+      lambda = -1.0;
    }
 
    /* TodoSB too large depth can cause overflow. Set limit of 50 */
