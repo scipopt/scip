@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2319,7 +2319,7 @@ SCIP_RETCODE readQCMatrix(
    }
    else
    {
-      SCIPwarningMessage(scip, "QCMATRIX section has no entries.\n");
+      SCIPwarningMessage(scip, "QCMATRIX section for constraint <%s> has no entries.\n", SCIPconsGetName(lincons));
    }
 
  TERMINATE:
@@ -2961,16 +2961,16 @@ SCIP_RETCODE getLinearCoeffs(
    /* retransform given variables to active variables */
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, nactivevars, &activeconstant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, nactivevars, &activeconstant, &requiredsize) );
 
       if( requiredsize > nactivevars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &activevars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &activevals, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, requiredsize, &activeconstant, &requiredsize, TRUE) );
-         assert( requiredsize <= nactivevars );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, requiredsize, &activeconstant, &requiredsize) );
       }
+      assert( requiredsize == nactivevars );
    }
    else
    {

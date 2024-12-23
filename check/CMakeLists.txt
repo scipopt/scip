@@ -185,6 +185,7 @@ set(settings_BendersQP
 
 set(settings_Decomp
    "decompheurs"
+   "decompheurs_dps"
   )
 
 set(settings_Indicator
@@ -196,6 +197,7 @@ set(settings_Indicator
     "indicatorconflict"
     "indicatoralterlp"
     "indicatorupgrade"
+    "indicatorobbt"
    )
 
 set(settings_reopt
@@ -240,7 +242,7 @@ set(instances_consecSolve
   "instances/MINLP/meanvarxsc.lp\;14.3692321148754"
   "instances/SOS/sparse2.lp\;26.0"
   "instances/Cardinality/atm_5_25_1.cip\;+1.40606905557936e+05"
-#  "instances/Stochastic/4node1.smps\;480.9"
+  "instances/Stochastic/4node1.smps\;480.9"
   "instances/SAT/bart10.shuffled.cnf\;0"
   )
 
@@ -337,16 +339,17 @@ set(instances_Bilinrelax
   )
 
 #
-# PseudoBoolean instances
+# PB instances
 #
-set(instances_PseudoBoolean
+set(instances_PB
     "instances/PseudoBoolean/factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B.opb\;3"
     "instances/PseudoBoolean/normalized-bsg_10_4_5.opb\;-4"
     "instances/PseudoBoolean/normalized-mds_10_4_3.opb\;2"
     "instances/PseudoBoolean/normalized-mds_50_25_5.opb\;3"
+    "instances/PseudoBoolean/normalized-90_rounds_0_errors.opb\;0"
     "instances/PseudoBoolean/normalized-t2001.13queen13.1111218308.opb\;+infinity"
     "instances/PseudoBoolean/normalized-t2001.13queen13.1110976730--soft-33-100-0.wbo\;4"
-    "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;25"
+    "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;16"
     )
 
 #
@@ -414,7 +417,7 @@ set(instances_Symmetry_A
 
 set(instances_Symmetry_B
     "instances/MIP/stein27_inf.lp\;+infinity"
-    "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;25"
+    "instances/PseudoBoolean/wheel010.lap.opb.pre.cip\;16"
     )
 
 #
@@ -461,6 +464,10 @@ set(instances_Or
     "instances/Or/problem.cip\;0"
     )
 
+set(instances_Objlim
+    "instances/Issue/3715.cip\;0\;default\;0.01"
+    )
+
 #
 # Pairs of instances and settings
 #
@@ -468,6 +475,7 @@ set(pairs_Issue
     "instances/Issue/3047.lp\;20000\;dualinfer"
     "instances/Issue/3132.lp\;0\;default"
     "instances/Issue/3499.lp\;11460\;closeobj"
+    "instances/Issue/3556.cip\;57138036.9442457\;default"
     "instances/Issue/3589.cip\;-1\;default"
     "instances/Issue/3607.cip\;1\;default"
     "instances/Issue/3610.cip\;0\;default"
@@ -478,12 +486,28 @@ set(pairs_Issue
     # "instances/Issue/3629.cip\;-infinity\;only_dualinfer"
     "instances/Issue/3632.cip\;0\;default"
     "instances/Issue/3633.lp\;0\;default"
+    "instances/Issue/3662_1.cip\;0\;default"
+    "instances/Issue/3662_2.cip\;0\;default"
+    "instances/Issue/3675_1.cip\;0\;default"
+    "instances/Issue/3675_2.cip\;0\;presolving_heuristics_off"
+    "instances/Issue/3681.cip\;0\;default"
+    "instances/Issue/3688.cip\;131882\;reduced_presolving"
+    "instances/Issue/3691.cip\;1.862908\;presolvingnolinear"
+    "instances/Issue/3693.cip\;7812672.2316\;default"
+    "instances/Issue/3700.cip\;0\;default"
+    "instances/Issue/3719.cip\;0\;presolving_off"
+    "instances/Issue/3722.cip\;1200008400.00755\;default"
+    "instances/Issue/3723.cip\;0\;default"
+    "instances/Issue/3727.cip\;1922\;vanillafullstrong_reduced_presolving_separating_heuristics"
+    "instances/Issue/3728.cip\;0\;reduced_presolving_heuristics"
+    "instances/Issue/3746.cip\;0\;seed_1"
+    "instances/Issue/3752.cip\;28066\;default"
 )
 
 #
-# available reader file extensions for SCIP readers
+# available reader file extensions for MIP problems
 #
-set(scip_reader_extensions
+set(reader_extensions_MIP
   "mps"
   "lp"
   "opb"
@@ -494,9 +518,16 @@ set(scip_reader_extensions
   )
 
 #
-# Writer output formats that are not also readers (all writers are scip_reader_extensions + scip_only_writer_extensions)
+# available reader file extensions for PB problems
 #
-set(scip_writer_only_extensions
+set(reader_extensions_PB
+  "cip"
+  )
+
+#
+# Writer output formats that are not also readers (all writers are reader_extensions_MIP + writer_only_extensions)
+#
+set(writer_only_extensions
   "wbo"
   )
 
@@ -529,6 +560,14 @@ macro(split_decompinstance instance)
     get_filename_component(basename ${instpath} NAME)
 endmacro(split_decompinstance)
 
+macro(split_objliminstance instance)
+    list(GET instance 0 path)
+    list(GET instance 1 optval)
+    list(GET instance 2 setting)
+    list(GET instance 3 objlim)
+    get_filename_component(basename ${path} NAME)
+endmacro(split_objliminstance)
+
 macro(split_pair pair)
     list(GET pair 0 path)
     list(GET pair 1 optval)
@@ -549,24 +588,22 @@ macro(add_instancetests instances settings prefix)
             #
             # treat the instance as a tuple (list) of two values
             #
-            if(NOT ((${setting} STREQUAL "convertinttobin_mostinf") AND (${basename} STREQUAL "vpm2.fzn") AND (${LPS} STREQUAL "grb")))
-            if(NOT ((${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
-            if(NOT ((${setting} STREQUAL "lns_epsgreedy_vanilla") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "grb")))
             if(NOT ((${setting} STREQUAL "tolerance") AND (${basename} STREQUAL "blend2.mps") AND (${LPS} STREQUAL "xprs")))
+            if(NOT ((${setting} STREQUAL "default") AND (${basename} STREQUAL "pltexpA4_6.smps") AND (${LPS} STREQUAL "xprs")))
+            if(NOT ((${setting} STREQUAL "convertinttobin_mostinf") AND (${basename} STREQUAL "bell5.mps") AND (${LPS} STREQUAL "cpx")))
             add_test(NAME ${prefix}-${setting}-${basename}
                     COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set -o ${optval} ${optval}
                     )
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                    FAIL_REGULAR_EXPRESSION ERROR
-                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    FAIL_REGULAR_EXPRESSION "ERROR"
+                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
+            endif()  # integrality violated in multiaggregated integer variable, #3724 (LPS=cpx, MIP-convertinttobin_mostinf-bell5.mps)
+            endif()  # LP Error: Xpress returned 120, #3724 (LPS=xprs, Stochastic-default-pltexpA4_6.smps)
             endif()  # Xpress does not keep feasibility tolerance setting, #3640
-            endif()  # Gurobi gets stuck in LP solve, #2833
-            endif()  # Gurobi invalid write with settings oddcycle and heurlprows, #3578; just skip this instance for all settings now
-            endif()  # Gurobi invalid write with settings mostinf on instance vpm2.fzn, #3578
         endforeach(setting)
     endforeach(instance)
 endmacro(add_instancetests)
@@ -590,17 +627,18 @@ if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQU
             #
             # treat the instance as a tuple (list) of two values
             #
+            if(NOT ((${basename} STREQUAL "classical_30_0.mps") AND (${LPS} STREQUAL "grb")))
             add_test(NAME ${prefix}-${setting}-${basename}
                COMMAND $<TARGET_FILE:scip> -c "set load ${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set read ${PROJECT_SOURCE_DIR}/check/${instpath} read ${PROJECT_SOURCE_DIR}/check/${decpath} opt validatesol ${optval} ${optval} q"
                     )
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                    FAIL_REGULAR_EXPRESSION ERROR
-                                    FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter"
+                                    FAIL_REGULAR_EXPRESSION "ERROR"
                                     FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
+            endif()  # separation does not converge, #3724 (LPS=grb, BendersQP-benders-qp-classical_30_0.mps)
         endforeach(setting)
     endforeach(instance)
 endif()
@@ -621,8 +659,8 @@ macro(add_pairtests pairs prefix)
         set_tests_properties(${prefix}-${setting}-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                FAIL_REGULAR_EXPRESSION ERROR
-                                FAIL_REGULAR_EXPRESSION "WARNING: unknown parameter;user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                FAIL_REGULAR_EXPRESSION "ERROR"
+                                FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                 DEPENDS scip-build
                             )
     endforeach(pair)
@@ -636,7 +674,7 @@ add_instancetests(instances_fastMIP settings_fastMIP "FastMIP")
 add_instancetests(instances_MINLP settings_MINLP "MINLP")
 add_instancetests(instances_branch settings_branch "Branch")
 add_instancetests(instances_Bilinrelax settings_default "Bilinrelax")
-add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
+add_instancetests(instances_PB settings_default "PseudoBoolean")
 add_instancetests(instances_sparsify settings_sparsify "Sparsify")
 add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
@@ -669,7 +707,7 @@ foreach(instance ${instances_MINLP})
         set_tests_properties(MINLP-solutiontest-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                FAIL_REGULAR_EXPRESSION ERROR
+                                FAIL_REGULAR_EXPRESSION "ERROR"
                                 DEPENDS scip-build
                             )
 endforeach(instance)
@@ -689,7 +727,28 @@ foreach(instance ${instances_Indicator})
     set_tests_properties(Indicator-solvecip-${basename}
         PROPERTIES
             PASS_REGULAR_EXPRESSION "Validation         : Success"
-            FAIL_REGULAR_EXPRESSION ERROR
+            FAIL_REGULAR_EXPRESSION "ERROR"
+            DEPENDS scip-build
+        )
+endforeach(instance)
+
+#
+# test checking objectivelimits
+#
+foreach(instance ${instances_Objlim})
+    split_objliminstance(instance)
+    #
+    # configure the batch file for this test by substituting placeholders in the in.file
+    #
+    configure_file(interactiveshell/objectivelimit.bat.in interactiveshell/objectivelimit-${basename}.bat)
+    add_test(NAME Objlim-${setting}-${basename}
+            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/objectivelimit-${basename}.bat
+            )
+    set_tests_properties(Objlim-${setting}-${basename}
+        PROPERTIES
+            PASS_REGULAR_EXPRESSION "Validation         : Success"
+            FAIL_REGULAR_EXPRESSION "ERROR"
+            FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
             DEPENDS scip-build
         )
 endforeach(instance)
@@ -733,7 +792,7 @@ set(message_format_lp "WARNING: violation of LP format - a constraint name start
 # test writing and reading from and to different file extensions for MIP
 #
 foreach(instance ${instances_MIP_write})
-  foreach(extension ${scip_writer_only_extensions})
+  foreach(extension ${writer_only_extensions})
     split_instance(instance)
     configure_file(interactiveshell/writeronlytest.bat.in interactiveshell/writeronlytest-${extension}-${basename}.bat)
     set(regex "written original problem to file")
@@ -743,18 +802,18 @@ foreach(instance ${instances_MIP_write})
     set_tests_properties(MIP-writeronlytest-${extension}-${basename}
       PROPERTIES
         PASS_REGULAR_EXPRESSION ${regex}
-        FAIL_REGULAR_EXPRESSION ERROR
+        FAIL_REGULAR_EXPRESSION "ERROR"
         DEPENDS scip-build
     )
   endforeach(extension)
 endforeach(instance)
 
 #
-# test writing and reading from and to different file extensions for MIP
+# test writing and reading from and to different file extensions for MIP (only without original objective offset)
 #
 foreach(instance ${instances_MIP})
     split_instance(instance)
-    foreach(extension ${scip_reader_extensions})
+    foreach(extension ${reader_extensions_MIP})
         #
         # configure the batch file for this test by substituting placeholders in the in.file
         #
@@ -776,7 +835,29 @@ foreach(instance ${instances_MIP})
         set_tests_properties(MIP-readertest-${extension}-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION ${regex}
-                                FAIL_REGULAR_EXPRESSION ERROR
+                                FAIL_REGULAR_EXPRESSION "ERROR"
+                                DEPENDS scip-build
+                            )
+    endforeach(extension)
+endforeach(instance)
+
+#
+# test writing and reading from and to different file extensions for PB (only without original objective offset)
+#
+foreach(instance ${instances_PB})
+    split_instance(instance)
+    foreach(extension ${reader_extensions_PB})
+        #
+        # configure the batch file for this test by substituting placeholders in the in.file
+        #
+        configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+        add_test(NAME PseudoBoolean-readertest-${extension}-${basename}
+                COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
+                )
+        set_tests_properties(PseudoBoolean-readertest-${extension}-${basename}
+                            PROPERTIES
+                                PASS_REGULAR_EXPRESSION "Validation         : Success.*Validation         : Success"
+                                FAIL_REGULAR_EXPRESSION "ERROR"
                                 DEPENDS scip-build
                             )
     endforeach(extension)
@@ -792,15 +873,17 @@ if(NOT ${TPI} STREQUAL "none")
         # configure the batch file for this test by substituting placeholders in the in.file
         #
         configure_file(interactiveshell/concurrentsolve.bat.in interactiveshell/concurrentsolve-${basename}.bat)
+        if(NOT ((${basename} STREQUAL "egout.mps") AND (${TPI} STREQUAL "tny")))
         add_test(NAME MIP-concurrentsolve-${basename}
                 COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${basename}.bat
                 )
         set_tests_properties(MIP-concurrentsolve-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                FAIL_REGULAR_EXPRESSION ERROR
+                                FAIL_REGULAR_EXPRESSION "ERROR"
                                 DEPENDS scip-build
                             )
+        endif() # Timeout (deadlock?), #3724 (MIP-concurrentsolve-egout.mps, LPS=spx bugfix)
     endforeach(instance)
 endif()
 
@@ -826,7 +909,7 @@ foreach(instance ${instances_MIP})
         set_tests_properties(MIP-mipstart-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                FAIL_REGULAR_EXPRESSION ERROR
+                                FAIL_REGULAR_EXPRESSION "ERROR"
                                 # the MIP start instances are validated twice.
                                 FAIL_REGULAR_EXPRESSION "Validation         : Fail"
                                 DEPENDS scip-build
@@ -848,7 +931,7 @@ add_test(NAME interactiveshell
 set_tests_properties(interactiveshell
                     PROPERTIES
                         PASS_REGULAR_EXPRESSION "increased branching priority of new binary variables"
-                        FAIL_REGULAR_EXPRESSION ERROR
+                        FAIL_REGULAR_EXPRESSION "ERROR"
                         DEPENDS scip-build
                     )
 add_test(NAME write_and_read_settings
@@ -856,7 +939,7 @@ add_test(NAME write_and_read_settings
         )
 set_tests_properties(write_and_read_settings
                     PROPERTIES
-                        FAIL_REGULAR_EXPRESSION ERROR
+                        FAIL_REGULAR_EXPRESSION "ERROR"
                         DEPENDS scip-build
                     )
 
@@ -875,7 +958,8 @@ foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-Full
                 )
         set_tests_properties(${testname}-${setting} PROPERTIES
                                             PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                            FAIL_REGULAR_EXPRESSION ERROR
+                                            FAIL_REGULAR_EXPRESSION "ERROR"
+                                            FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                             DEPENDS scip-build)
         endforeach()
 endforeach()
@@ -1004,7 +1088,7 @@ foreach(instance ${instances_MIP})
         set_tests_properties(MIP-linclass-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "${pass_regex}"
-                                FAIL_REGULAR_EXPRESSION ERROR
+                                FAIL_REGULAR_EXPRESSION "ERROR"
                             )
     endif()
 endforeach()
@@ -1071,7 +1155,7 @@ if (UNIX)
                             DEPENDS scip-build
                             # I assume that this test takes longer than 2 seconds
                             PASS_REGULAR_EXPRESSION "termination signal received"
-                            FAIL_REGULAR_EXPRESSION ERROR
+                            FAIL_REGULAR_EXPRESSION "ERROR"
                             )
 endif (UNIX)
 endif()

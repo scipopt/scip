@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -448,7 +448,7 @@ SCIP_Bool getNextLine(
 
    fzninput->linenumber++;
 
-   if( fzninput->linebuf[fzninput->linebufsize - 2] != '\0' )
+   while( fzninput->linebuf[fzninput->linebufsize - 2] != '\0' )
    {
       int newsize;
 
@@ -1536,9 +1536,9 @@ SCIP_RETCODE parseOutputDimensioninfo(
    DIMENSIONS**          info                /**< pointer to store the output dimension information if one */
    )
 {
-   FZNNUMBERTYPE type;
-   SCIP_Real lb;
-   SCIP_Real ub;
+   FZNNUMBERTYPE type = FZN_INT;   /* init for scan-build */
+   SCIP_Real lb = SCIP_INVALID;  /* init for scan-build */
+   SCIP_Real ub = SCIP_INVALID;  /* init for scan-build */
    int nelements;
    int size;
 
@@ -3883,16 +3883,16 @@ SCIP_RETCODE getActiveVariables(
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize) );
 
       if( requiredsize > *nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
-         assert( requiredsize <= *nvars );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize) );
       }
+      assert( requiredsize == *nvars );
    }
    else
    {
@@ -4108,11 +4108,11 @@ SCIP_RETCODE printLinearCons(
    SCIP_Bool             mayhavefloats       /**< may there be continuous variables in the constraint? */
    )
 {
-   SCIP_VAR** activevars;                    /* active problem variables of a constraint */
-   SCIP_Real* activevals;                    /* coefficients in the active representation */
+   SCIP_VAR** activevars = NULL;              /* active problem variables of a constraint */
+   SCIP_Real* activevals = NULL;              /* coefficients in the active representation */
 
-   SCIP_Real activeconstant;                 /* offset (e.g., due to fixings) in the active representation */
-   int nactivevars;                          /* number of active problem variables */
+   SCIP_Real activeconstant = 0.0;            /* offset (e.g., due to fixings) in the active representation */
+   int nactivevars = 0;                      /* number of active problem variables */
    int v;                                    /* variable counter */
 
    char buffer[FZN_BUFFERLEN];
@@ -4127,35 +4127,30 @@ SCIP_RETCODE printLinearCons(
       return SCIP_OKAY;
 
    /* duplicate variable and value array */
-   nactivevars = nvars;
-   hasfloats = FALSE;
-   activevars = NULL;
-   activeconstant = 0.0;
-
-   if( vars != NULL )
+   if( nvars > 0 )
    {
+      nactivevars = nvars;
+
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
-   }
 
-   if( vals != NULL )
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
-   else
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
+      if( vals != NULL )
+      {
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
 
-      for( v = 0; v < nactivevars; ++v )
-         activevals[v] = 1.0;
-   }
+         for( v = 0; v < nactivevars; ++v )
+            activevals[v] = 1.0;
+      }
 
-   /* retransform given variables to active variables */
-   if( nactivevars > 0 )
-   {
-      assert( activevars != NULL );
-      assert( activevals != NULL );
+      /* retransform given variables to active variables */
       SCIP_CALL( getActiveVariables(scip, &activevars, &activevals, &nactivevars, &activeconstant, transformed) );
    }
 
    /* If there may be continuous variables or coefficients in the constraint, scan for them */
+   hasfloats = FALSE;
    if( mayhavefloats )
    {
       /* fractional sides trigger a constraint to be of float type */
@@ -4229,14 +4224,13 @@ SCIP_RETCODE printLinearCons(
    }
 
    /* free buffer arrays */
-   if( activevars != NULL )
-      SCIPfreeBufferArray(scip, &activevars);
-   SCIPfreeBufferArray(scip, &activevals);
+   SCIPfreeBufferArrayNull(scip, &activevars);
+   SCIPfreeBufferArrayNull(scip, &activevals);
 
    return SCIP_OKAY;
 }
 
-/* writes problem to a flatzinc conform file, including introduction of several auxiliary variables and constraints */
+/** writes problem to a flatzinc conforming file, including introduction of several auxiliary variables and constraints */
 static
 SCIP_RETCODE writeFzn(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4344,7 +4338,7 @@ SCIP_RETCODE writeFzn(
          }
          else
          {
-            /* Real valued bounds have to be made type conform */
+            /* real valued bounds have to be made type conforming */
             if( fixed )
             {
                flattenFloat(scip, lb, buffy);
@@ -4885,7 +4879,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
 
       legal = TRUE;
 
-      /* Scan whether all variable names are flatzinc conform */
+      /* scan whether all variable names are flatzinc conforming */
       for( i = 0; i < nvars; i++ )
       {
          const char* varname;
@@ -4896,7 +4890,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
          legal = isIdentifier(varname);
          if( !legal )
          {
-            SCIPwarningMessage(scip, "The name of variable <%d>: \"%s\" is not conform to the fzn standard.\n", i, varname);
+            SCIPwarningMessage(scip, "The name of variable <%d>: \"%s\" does not conform to the fzn standard.\n", i, varname);
             break;
          }
 
@@ -4909,7 +4903,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
          }
       }
 
-      /* If there is at least one name, which is not conform, use generic names */
+      /* if there is at least one name, which does not conform, use generic names */
       if( legal )
       {
          SCIP_CALL( writeFzn(scip, file, name, transformed, objsense, objscale, objoffset, vars,

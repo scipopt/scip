@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -36,6 +36,8 @@
  * at the beginning of the search in order to obtain better pseudo cost estimates and make branching decisions in a
  * sense more "reliable" at an early stage of the search,
  * at the price of a higher computational cost at the beginning of the search.
+ *
+ * When reliable, we consider discounted pseudocosts in the same manner as for the pseudo costs branching rule.
  *
  * For a more mathematical description and a comparison between the reliable pseudo costs rule and other branching rules
  * in SCIP, we refer to

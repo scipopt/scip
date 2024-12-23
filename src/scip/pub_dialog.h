@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -217,6 +217,18 @@ SCIP_EXPORT
 void SCIPdialogSetData(
    SCIP_DIALOG*          dialog,             /**< dialog */
    SCIP_DIALOGDATA*      dialogdata          /**< new dialog user data */
+   );
+
+/** is dialog hidden */
+SCIP_EXPORT
+SCIP_Bool SCIPdialogIsHidden(
+   SCIP_DIALOG*          dialog              /**< dialog */
+   );
+
+/** set dialog to be hidden */
+SCIP_EXPORT
+void SCIPdialogSetHidden(
+   SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** writes command history to specified filename */

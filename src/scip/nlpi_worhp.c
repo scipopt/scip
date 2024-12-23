@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -46,6 +46,7 @@
 #include "scip/scip_randnumgen.h"
 #include "scip/scip_solve.h"
 #include "scip/pub_misc.h"
+#include "scip/pub_message.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1351,7 +1352,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveWorhp)
    SCIP_CALL( handleNlpParam(scip, nlpi, par, param) );
 
 #ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPnlpiOraclePrintProblem(problem->oracle, nlpidata->messagehdlr, NULL) );
+   SCIP_CALL( SCIPnlpiOraclePrintProblem(scip, problem->oracle, NULL) );
 #endif
 
    /* set initial guess (if available) */

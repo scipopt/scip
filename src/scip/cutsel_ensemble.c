@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright 2002-2022 Zuse Institute Berlin                                */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -26,6 +26,9 @@
  * @ingroup DEFPLUGINS_CUTSEL
  * @brief  ensemble cut selector
  * @author Mark Turner
+ *
+ * @todo separator hard limit on density is inappropriate for MINLP. Need to relax hard limit in case of all cuts dense
+ * @todo penalising via parallelism is overly costly if many cuts. Hash cuts before and find appropriate groups?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -118,7 +121,7 @@ SCIP_RETCODE scoring(
    SCIP_Real*            scores,             /**< array to store the score of cuts or NULL */
    SCIP_Bool             root,               /**< whether we are at the root node or not */
    int                   ncuts               /**< number of cuts in cuts array */
-)
+   )
 {
    SCIP_Real* effs;
    SCIP_Real* dcds;
@@ -146,7 +149,6 @@ SCIP_RETCODE scoring(
    SCIP_CALL(SCIPallocBufferArray(scip, &cutlocks, ncuts));
    SCIP_CALL(SCIPallocBufferArray(scip, &pscosts, ncuts));
 
-
    /* Populate the number of cut locks, the pseudo-cost scores, and the cut densities */
    for (int i = 0; i < ncuts; ++i )
    {
@@ -164,7 +166,6 @@ SCIP_RETCODE scoring(
       cutdensities[i] = ncutcols / ncols;
       cutlocks[i] = 0;
       pscosts[i] = 0;
-
 
       for ( int j = 0; j < (int) ncutcols; ++j )
       {
@@ -209,7 +210,6 @@ SCIP_RETCODE scoring(
          cutlocks[i] = 1 - cutlocks[i];
       pscosts[i] = pscosts[i] / maxpscost; /*lint !e414*/
    }
-
 
    /* Get the arrays / maximums of directed cutoff distance, efficacy, and expected improvement values. */
    if ( sol != NULL && root )
@@ -319,7 +319,6 @@ SCIP_RETCODE scoring(
    SCIPfreeBufferArray(scip, &pscosts);
 
    return SCIP_OKAY;
-
 }
 
 
@@ -329,7 +328,7 @@ void selectBestCut(
    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
    SCIP_Real*            scores,             /**< array with scores of cuts to perform selection algorithm */
    int                   ncuts               /**< number of cuts in given array */
-)
+   )
 {
    int bestpos;
    SCIP_Real bestscore;
@@ -363,9 +362,8 @@ int filterWithParallelism(
    SCIP_Real*            scores,             /**< array with scores of cuts to perform selection algorithm */
    int                   ncuts,              /**< number of cuts in given array */
    SCIP_Real             maxparallel         /**< maximal parallelism for all cuts that are not good */
-)
+   )
 {
-
    assert( cut != NULL );
    assert( ncuts == 0 || cuts != NULL );
    assert( ncuts == 0 || scores != NULL );
@@ -397,9 +395,8 @@ int penaliseWithParallelism(
    int                   ncuts,              /**< number of cuts in given array */
    SCIP_Real             maxparallel,        /**< maximal parallelism for all cuts that are not good */
    SCIP_Real             paralpenalty        /**< penalty for weaker of two parallel cuts if penalising parallel cuts */
-)
+   )
 {
-
    assert( cut != NULL );
    assert( ncuts == 0 || cuts != NULL );
    assert( ncuts == 0 || scores != NULL );
@@ -434,7 +431,7 @@ int filterWithDensity(
    SCIP_ROW**            cuts,               /**< array with cuts to perform selection algorithm */
    SCIP_Real             maxdensity,         /**< maximum density s.t. a cut is not filtered */
    int                   ncuts               /**< number of cuts in given array */
-)
+   )
 {
    SCIP_Real ncols;
 
@@ -558,7 +555,7 @@ SCIP_DECL_CUTSELSELECT(cutselSelectEnsemble)
 /** creates the ensemble cut selector and includes it in SCIP */
 SCIP_RETCODE SCIPincludeCutselEnsemble(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_CUTSELDATA* cutseldata;
    SCIP_CUTSEL* cutsel;
@@ -580,128 +577,95 @@ SCIP_RETCODE SCIPincludeCutselEnsemble(
    SCIP_CALL( SCIPsetCutselExit(scip, cutsel, cutselExitEnsemble) );
 
    /* add ensemble cut selector parameters */
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/efficacyweight",
-      "weight of normed-efficacy in cut score calculation",
-      &cutseldata->efficacyweight, FALSE, DEFAULT_EFFICACYWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/efficacyweight", "weight of normed-efficacy in cut "
+         "score calculation", &cutseldata->efficacyweight, FALSE, DEFAULT_EFFICACYWEIGHT, 0.0, SCIP_INVALID/10.0, NULL,
+         NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/dircutoffdistweight",
-      "weight of normed-directed cutoff distance in cut score calculation",
-      &cutseldata->dircutoffdistweight, FALSE, DEFAULT_DIRCUTOFFDISTWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/dircutoffdistweight", "weight of normed-directed "
+         "cutoff distance in cut score calculation", &cutseldata->dircutoffdistweight, FALSE,
+         DEFAULT_DIRCUTOFFDISTWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/objparalweight",
-      "weight of objective parallelism in cut score calculation",
-      &cutseldata->objparalweight, FALSE, DEFAULT_OBJPARALWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/objparalweight", "weight of objective parallelism "
+         "in cut score calculation", &cutseldata->objparalweight, FALSE, DEFAULT_OBJPARALWEIGHT, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/intsupportweight",
-      "weight of integral support in cut score calculation",
-      &cutseldata->intsupportweight, FALSE, DEFAULT_INTSUPPORTWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/intsupportweight", "weight of integral support in "
+         "cut score calculation", &cutseldata->intsupportweight, FALSE, DEFAULT_INTSUPPORTWEIGHT, 0.0,
+         SCIP_INVALID/10.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/expimprovweight",
-      "weight of normed-expected obj improvement in cut score calculation",
-      &cutseldata->expimprovweight, FALSE, DEFAULT_EXPIMPROVWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/expimprovweight", "weight of normed-expected obj "
+         "improvement in cut score calculation", &cutseldata->expimprovweight, FALSE, DEFAULT_EXPIMPROVWEIGHT, 0.0,
+         SCIP_INVALID/10.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/minscore",
-      "minimum score s.t. a cut can be added",
-      &cutseldata->minscore, FALSE, DEFAULT_MINSCORE, -SCIP_INVALID/10.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/minscore", "minimum score s.t. a cut can be added",
+         &cutseldata->minscore, FALSE, DEFAULT_MINSCORE, -SCIP_INVALID/10.0, SCIP_INVALID/10.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/pscostweight",
-      "weight of normed-pseudo-costs in cut score calculation",
-      &cutseldata->pscostweight, FALSE, DEFAULT_PSCOSTWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/pscostweight", "weight of normed-pseudo-costs in "
+         "cut score calculation", &cutseldata->pscostweight, FALSE, DEFAULT_PSCOSTWEIGHT, 0.0, SCIP_INVALID/10.0, NULL,
+         NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/locksweight",
-      "weight of normed-num-locks in cut score calculation",
-      &cutseldata->locksweight, FALSE, DEFAULT_NLOCKSWEIGHT, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/locksweight", "weight of normed-num-locks in cut "
+         "score calculation", &cutseldata->locksweight, FALSE, DEFAULT_NLOCKSWEIGHT, 0.0, SCIP_INVALID/10.0, NULL,
+         NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/maxsparsitybonus",
-      "weight of maximum sparsity reward in cut score calculation",
-      &cutseldata->maxsparsitybonus, FALSE, DEFAULT_MAXSPARSITYBONUS, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/maxsparsitybonus", "weight of maximum sparsity "
+         "reward in cut score calculation", &cutseldata->maxsparsitybonus, FALSE, DEFAULT_MAXSPARSITYBONUS, 0.0,
+         SCIP_INVALID/10.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/goodnumericsbonus",
-      "weight of good numerics bonus (ratio of coefficients) in cut score calculation",
-      &cutseldata->goodnumericsbonus, FALSE, DEFAULT_GOODNUMERICBONUS, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/goodnumericsbonus", "weight of good numerics bonus "
+         "(ratio of coefficients) in cut score calculation", &cutseldata->goodnumericsbonus, FALSE,
+         DEFAULT_GOODNUMERICBONUS, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/endsparsitybonus",
-      "max sparsity value for which a bonus is applied in cut score calculation",
-      &cutseldata->endsparsitybonus, FALSE, DEFAULT_SPARSITYENDBONUS, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/endsparsitybonus", "max sparsity value for which a "
+         "bonus is applied in cut score calculation", &cutseldata->endsparsitybonus, FALSE, DEFAULT_SPARSITYENDBONUS,
+         0.0, SCIP_INVALID/10.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/maxparal",
-      "threshold for when two cuts are considered parallel to each other",
-      &cutseldata->maxparal, FALSE, DEFAULT_MAXPARAL, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/maxparal", "threshold for when two cuts are "
+         "considered parallel to each other", &cutseldata->maxparal, FALSE, DEFAULT_MAXPARAL, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/paralpenalty",
-      "penalty for weaker of two parallel cuts if penalising parallel cuts",
-      &cutseldata->paralpenalty, TRUE, DEFAULT_PARALPENALTY, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/paralpenalty", "penalty for weaker of two parallel "
+         "cuts if penalising parallel cuts", &cutseldata->paralpenalty, TRUE, DEFAULT_PARALPENALTY, 0.0,
+         SCIP_INVALID/10.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/maxcutdensity",
-      "max allowed cut density if filtering dense cuts",
-      &cutseldata->maxcutdensity, TRUE, DEFAULT_MAXCUTDENSITY, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/maxcutdensity", "max allowed cut density if "
+         "filtering dense cuts", &cutseldata->maxcutdensity, TRUE, DEFAULT_MAXCUTDENSITY, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/maxnonzerorootround",
-      "max non-zeros per round applied cuts (root). multiple num LP cols.",
-      &cutseldata->maxnonzerorootround, FALSE, DEFAULT_MAXNONZEROROOTROUND, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/maxnonzerorootround", "max non-zeros per round "
+         "applied cuts (root). multiple num LP cols.", &cutseldata->maxnonzerorootround, FALSE,
+         DEFAULT_MAXNONZEROROOTROUND, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip,
-                               "cutselection/" CUTSEL_NAME "/maxnonzerotreeround",
-      "max non-zeros per round applied cuts (tree). multiple num LP cols.",
-      &cutseldata->maxnonzerotreeround, FALSE, DEFAULT_MAXNONZEROTREEROUND, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "cutselection/" CUTSEL_NAME "/maxnonzerotreeround", "max non-zeros per round "
+         "applied cuts (tree). multiple num LP cols.", &cutseldata->maxnonzerotreeround, FALSE,
+         DEFAULT_MAXNONZEROTREEROUND, 0.0, SCIP_INVALID/10.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-                               "cutselection/" CUTSEL_NAME "/filterparalcuts",
-      "should cuts be filtered so no two parallel cuts are added",
-      &cutseldata->filterparalcuts, FALSE, DEFAULT_FILTERPARALCUTS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "cutselection/" CUTSEL_NAME "/filterparalcuts", "should cuts be filtered so no "
+         "two parallel cuts are added", &cutseldata->filterparalcuts, FALSE, DEFAULT_FILTERPARALCUTS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-                               "cutselection/" CUTSEL_NAME "/penaliseparalcuts",
-      "should two parallel cuts be penalised instead of outright filtered",
-      &cutseldata->penaliseparalcuts, TRUE, DEFAULT_PENALISEPARALCUTS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "cutselection/" CUTSEL_NAME "/penaliseparalcuts", "should two parallel cuts be "
+         "penalised instead of outright filtered", &cutseldata->penaliseparalcuts, TRUE, DEFAULT_PENALISEPARALCUTS,
+         NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-                               "cutselection/" CUTSEL_NAME "/filterdensecuts",
-      "should cuts over a given density threshold be filtered",
-      &cutseldata->filterdensecuts, TRUE, DEFAULT_FILTERDENSECUTS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "cutselection/" CUTSEL_NAME "/filterdensecuts", "should cuts over a given density "
+         "threshold be filtered", &cutseldata->filterdensecuts, TRUE, DEFAULT_FILTERDENSECUTS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-                               "cutselection/" CUTSEL_NAME "/penaliselocks",
-      "should the number of locks be penalised instead of rewarded",
-      &cutseldata->penaliselocks, TRUE, DEFAULT_PENALISELOCKS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "cutselection/" CUTSEL_NAME "/penaliselocks", "should the number of locks be "
+         "penalised instead of rewarded", &cutseldata->penaliselocks, TRUE, DEFAULT_PENALISELOCKS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-                               "cutselection/" CUTSEL_NAME "/penaliseobjparal",
-      "should objective parallelism be penalised instead of rewarded",
-      &cutseldata->penaliseobjparal, TRUE, DEFAULT_PENALISEOBJPARAL, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "cutselection/" CUTSEL_NAME "/penaliseobjparal", "should objective parallelism "
+         "be penalised instead of rewarded", &cutseldata->penaliseobjparal, TRUE, DEFAULT_PENALISEOBJPARAL, NULL, NULL)
+         );
 
-   SCIP_CALL( SCIPaddIntParam(scip,
-                               "cutselection/" CUTSEL_NAME "/maxcoefratiobonus",
-      "max coefficient ratio for which numeric bonus is applied.",
-      &cutseldata->maxcoefratiobonus, TRUE, DEFAULT_MAXCOEFRATIOBONUS, 1, 1000000, NULL, NULL) );
-   
-   SCIP_CALL( SCIPaddIntParam(scip,
-                              "cutselection/" CUTSEL_NAME "/maxcuts",
-      "max number of cuts such that cut selector is applied.",
-      &cutseldata->maxcuts, TRUE, DEFAULT_MAXCUTS, 1, 1000000, NULL, NULL) );
-   
-   SCIP_CALL( SCIPaddIntParam(scip,
-                              "cutselection/" CUTSEL_NAME "/maxnumvars",
-      "max number of variables such that cut selector is applied.",
-      &cutseldata->maxnumvars, TRUE, DEFAULT_MAXNUMVARS, 1, 1000000, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "cutselection/" CUTSEL_NAME "/maxcoefratiobonus", "max coefficient ratio for "
+         "which numeric bonus is applied.", &cutseldata->maxcoefratiobonus, TRUE, DEFAULT_MAXCOEFRATIOBONUS, 1, 1000000,
+         NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "cutselection/" CUTSEL_NAME "/maxcuts", "max number of cuts such that cut "
+         "selector is applied.", &cutseldata->maxcuts, TRUE, DEFAULT_MAXCUTS, 1, 1000000, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "cutselection/" CUTSEL_NAME "/maxnumvars", "max number of variables such that cut "
+         "selector is applied.", &cutseldata->maxnumvars, TRUE, DEFAULT_MAXNUMVARS, 1, 1000000, NULL, NULL) );
 
    return SCIP_OKAY;
-
 }
 
 /** perform a cut selection algorithm for the given array of cuts
@@ -724,7 +688,7 @@ SCIP_RETCODE SCIPselectCutsEnsemble(
    int                   nforcedcuts,        /**< number of forced cuts */
    int                   maxselectedcuts,    /**< maximal number of cuts from cuts array to select */
    int*                  nselectedcuts       /**< pointer to return number of selected cuts from cuts array */
-)
+   )
 {
    SCIP_Real* scores;
    SCIP_Real* origscoresptr;
@@ -743,6 +707,8 @@ SCIP_RETCODE SCIPselectCutsEnsemble(
    if( cutseldata->filterdensecuts )
    {
       ncuts = filterWithDensity(scip, cuts, cutseldata->maxcutdensity, ncuts);
+      if( ncuts == 0 )
+         return SCIP_OKAY;
    }
 
    /* Initialise the score array */
@@ -800,7 +766,6 @@ SCIP_RETCODE SCIPselectCutsEnsemble(
       /* Filter out all remaining cuts that would go over the non-zero budget threshold */
       if( nonzerobudget - budgettaken < 1 && ncuts > 0 )
          ncuts = filterWithDensity(scip, cuts, nonzerobudget - budgettaken, ncuts);
-
    }
 
    SCIPfreeBufferArray(scip, &origscoresptr);

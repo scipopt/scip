@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -532,7 +532,7 @@ SCIP_RETCODE constructBasicVars2TableauRowMap(
 }
 
 /** The restriction of the function representing the maximal S-free set to zlp + t * ray has the form
- * SQRT(A t^2 + B t + C) - (D t + E).
+ * sqrt(A t^2 + B t + C) - (D t + E).
  * This function computes the coefficients A, B, C, D, E for the given ray.
  */
 static
@@ -605,7 +605,7 @@ SCIP_RETCODE computeRestrictionToRay(
          if( usebounds )
          {
             norm1 += eigenvalues[i] * (1 - SQR( ad[posidx] )) * SQR( vzlp );
-            norm2 += SQRT( eigenvalues[i] ) * ad[posidx] * vzlp;
+            norm2 += sqrt( eigenvalues[i] ) * ad[posidx] * vzlp;
             ++posidx;
          }
       }
@@ -621,8 +621,8 @@ SCIP_RETCODE computeRestrictionToRay(
             coefs4b[0] -= eigenvalues[i] * (1 - SQR( ad[negidx] )) * SQR( vdotray );
             coefs4b[1] -= 2.0 * eigenvalues[i] * (1 - SQR( ad[negidx] )) * vzlp * vdotray;
             coefs4b[2] -= eigenvalues[i] * (1 - SQR( ad[negidx] )) * SQR( vzlp );
-            coefs4b[3] += SQRT( -eigenvalues[i] ) * ad[negidx] * vdotray;
-            coefs4b[4] += SQRT( -eigenvalues[i] ) * ad[negidx] * vzlp;
+            coefs4b[3] += sqrt( -eigenvalues[i] ) * ad[negidx] * vdotray;
+            coefs4b[4] += sqrt( -eigenvalues[i] ) * ad[negidx] * vzlp;
             ++negidx;
          }
       }
@@ -630,9 +630,9 @@ SCIP_RETCODE computeRestrictionToRay(
 
    assert(*e > 0);
 
-   if( SQRT( *c ) - SQRT( *e ) >= 0.0 )
+   if( sqrt( *c ) - sqrt( *e ) >= 0.0 )
    {
-      assert(SQRT( *c ) - SQRT( *e ) < 1e-6);
+      assert(sqrt( *c ) - sqrt( *e ) < 1e-6);
       *success = FALSE;
       return SCIP_OKAY;
    }
@@ -640,24 +640,24 @@ SCIP_RETCODE computeRestrictionToRay(
    /* finish computation of coefficients when using bounds */
    if( usebounds )
    {
-      coefscondition[0] = norm2 / SQRT( *e );
+      coefscondition[0] = norm2 / sqrt( *e );
       coefscondition[1] = coefs4b[3];
       coefscondition[2] = coefs4b[4];
 
       coefs4b[0] *= norm1 / *e;
       coefs4b[1] *= norm1 / *e;
       coefs4b[2] *= norm1 / *e;
-      coefs4b[3] *= norm2 / SQRT( *e );
-      coefs4b[4] *= norm2 / SQRT( *e );
+      coefs4b[3] *= norm2 / sqrt( *e );
+      coefs4b[4] *= norm2 / sqrt( *e );
 
-      coefs4b[3] += *d / SQRT( *e );
-      coefs4b[4] += SQRT( *e );
+      coefs4b[3] += *d / sqrt( *e );
+      coefs4b[4] += sqrt( *e );
 
-      assert( SQRT( coefs4b[2] ) - coefs4b[4] < 0.0 );
+      assert( sqrt( coefs4b[2] ) - coefs4b[4] < 0.0 );
    }
 
    /* finish computation of D and E */
-   *e = SQRT( *e );
+   *e = sqrt( *e );
    *d /= *e;
 
    /* maybe we want to avoid a large dynamism between A, B and C */
@@ -685,7 +685,7 @@ SCIP_RETCODE computeRestrictionToRay(
 
    /* some sanity checks */
    assert(*c >= 0); /* radicand at zero */
-   assert(SQRT( *c ) - *e < 0); /* the function at 0 must be negative */
+   assert(sqrt( *c ) - *e < 0); /* the function at 0 must be negative */
    assert(*a >= 0); /* the function inside the root is convex */
 
 #ifdef DEBUG_INTERSECTIONCUT
@@ -695,7 +695,7 @@ SCIP_RETCODE computeRestrictionToRay(
    return SCIP_OKAY;
 }
 
-/** returns phi(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E) */  /*lint -e{715}*/
+/** returns phi(zlp + t * ray) = sqrt(A t^2 + B t + C) - (D t + E) */  /*lint -e{715}*/
 static
 SCIP_Real evalPhiAtRay(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -748,7 +748,7 @@ SCIP_Real evalPhiAtRay(
 
    return  QUAD_TO_DBL(tmp);
 #else
-   return SQRT( a * t * t + b * t + c ) - ( d * t + e );
+   return sqrt( a * t * t + b * t + c ) - ( d * t + e );
 #endif
 }
 
@@ -793,7 +793,7 @@ void doBinarySearch(
 }
 
 /** checks if we are in case 4a, i.e., if
- * (num(xhat_{r+1}(zlp)) / E) * SQRT(A * tsol^2 + B * tsol + C) + w(ray) * tsol + num(yhat_{s+1}(zlp)) <= 0
+ * (num(xhat_{r+1}(zlp)) / E) * sqrt(A * tsol^2 + B * tsol + C) + w(ray) * tsol + num(yhat_{s+1}(zlp)) <= 0
  */
 static
 SCIP_Real isCase4a(
@@ -803,7 +803,7 @@ SCIP_Real isCase4a(
                                               *   num(xhat_{r+1}(zlp)) / E; w(ray); num(yhat_{s+1}(zlp)) */
    )
 {
-   return (coefscondition[0] * SQRT( coefs[0] * SQR( tsol ) + coefs[1] * tsol + coefs[2] ) + coefscondition[1] *
+   return (coefscondition[0] * sqrt( coefs[0] * SQR( tsol ) + coefs[1] * tsol + coefs[2] ) + coefscondition[1] *
       tsol + coefscondition[2]) <= 0.0;
 }
 
@@ -828,10 +828,10 @@ SCIP_Real computeRoot(
    SCIP_Real d = coefs[3];
    SCIP_Real e = coefs[4];
 
-   /* there is an intersection point if and only if SQRT(A) > D: here we are beliving in math, this might cause
+   /* there is an intersection point if and only if sqrt(A) > D: here we are beliving in math, this might cause
     * numerical issues
     */
-   if( SQRT( a ) <= d )
+   if( sqrt( a ) <= d )
    {
       sol = SCIPinfinity(scip);
 
@@ -881,16 +881,16 @@ SCIP_Real computeRoot(
  * That is, we find t >= 0 such that gamma(zlp + t * ray) = 0.
  *
  * In cases 1,2, and 3, gamma is of the form
- *    gamma(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E)
+ *    gamma(zlp + t * ray) = sqrt(A t^2 + B t + C) - (D t + E)
  *
  * In the case 4 gamma is of the form
- *    gamma(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E)          if some condition holds
- *                           SQRT(A' t^2 + B' t + C') - (D' t + E')     otherwise
+ *    gamma(zlp + t * ray) = sqrt(A t^2 + B t + C) - (D t + E)          if some condition holds
+ *                           sqrt(A' t^2 + B' t + C') - (D' t + E')     otherwise
  *
  * It can be shown (given the special properties of gamma) that the smallest positive root of each function of the form
- * SQRT(a t^2 + b t + c) - (d t + e)
+ * sqrt(a t^2 + b t + c) - (d t + e)
  * is the same as the smallest positive root of the quadratic equation:
- *       (SQRT(a t^2 + b t + c) - (d t + e)) * (SQRT(a t^2 + b t + c) + (d t + e)) = 0
+ *       (sqrt(a t^2 + b t + c) - (d t + e)) * (sqrt(a t^2 + b t + c) + (d t + e)) = 0
  *  <==> (a - d^2) t^2 + (b - 2 d*e) t + (c - e^2) = 0
  *
  * So, in cases 1, 2, and 3, this function just returns the solution of the above equation.

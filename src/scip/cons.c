@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1952,22 +1952,28 @@ SCIP_RETCODE conshdlrAddUpdateCons(
    return SCIP_OKAY;
 }
 
-/** compares two constraint handlers w. r. to their separation priority */
+/** compares two constraint handlers w.r.t. their separation priority */
 SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompSepa)
 {  /*lint --e{715}*/
    return ((SCIP_CONSHDLR*)elem2)->sepapriority - ((SCIP_CONSHDLR*)elem1)->sepapriority;
 }
 
-/** compares two constraint handlers w. r. to their enforcing priority */
+/** compares two constraint handlers w.r.t. their enforcing priority */
 SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompEnfo)
 {  /*lint --e{715}*/
    return ((SCIP_CONSHDLR*)elem2)->enfopriority - ((SCIP_CONSHDLR*)elem1)->enfopriority;
 }
 
-/** compares two constraint handlers w. r. to their feasibility check priority */
+/** compares two constraint handlers w.r.t. their feasibility check priority */
 SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompCheck)
 {  /*lint --e{715}*/
    return ((SCIP_CONSHDLR*)elem2)->checkpriority - ((SCIP_CONSHDLR*)elem1)->checkpriority;
+}
+
+/** compares two constraints w.r.t. their feasibility check priority */
+SCIP_DECL_SORTPTRCOMP(SCIPconsCompCheck)
+{  /*lint --e{715}*/
+   return ((SCIP_CONS*)elem2)->conshdlr->checkpriority - ((SCIP_CONS*)elem1)->conshdlr->checkpriority;
 }
 
 /** copies the given constraint handler to a new scip */
@@ -2045,6 +2051,10 @@ SCIP_RETCODE doConshdlrCreate(
    SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
    SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)), /**< constraint handler diving solution enforcement method */
+   SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)), /**< constraint permutation symmetry detection graph
+                                                           *   getter method */
+   SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH((*consgetsignedpermsymgraph)), /**< constraint signed permutation
+                                                                       *   symmetry detection graph getter method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -2118,6 +2128,8 @@ SCIP_RETCODE doConshdlrCreate(
    (*conshdlr)->consgetnvars = consgetnvars;
    (*conshdlr)->conshdlrdata = conshdlrdata;
    (*conshdlr)->consgetdivebdchgs = consgetdivebdchgs;
+   (*conshdlr)->consgetpermsymgraph = consgetpermsymgraph;
+   (*conshdlr)->consgetsignedpermsymgraph = consgetsignedpermsymgraph;
    (*conshdlr)->conss = NULL;
    (*conshdlr)->consssize = 0;
    (*conshdlr)->nconss = 0;
@@ -2323,6 +2335,10 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
    SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
    SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)), /**< constraint handler diving solution enforcement method */
+   SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)), /**< constraint permutation symmetry detection graph
+                                                           *   getter method */
+   SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH((*consgetsignedpermsymgraph)), /**< constraint signed permutation symmetry
+                                                                       *   detection graph getter method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -2339,7 +2355,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
       presoltiming, conshdlrcopy, consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
       consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenforelax, consenfops, conscheck,
       consprop, conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consdelvars,
-      consprint, conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, conshdlrdata),
+      consprint, conscopy, consparse, consgetvars, consgetnvars, consgetdivebdchgs, consgetpermsymgraph,
+      consgetsignedpermsymgraph, conshdlrdata),
       (void) SCIPconshdlrFree(conshdlr, set) );
 
    return SCIP_OKAY;
@@ -4543,6 +4560,30 @@ void SCIPconshdlrSetGetDiveBdChgs(
    conshdlr->consgetdivebdchgs = consgetdivebdchgs;
 }
 
+/** sets permutation symmetry detection graph getter method of constraint handler */
+void SCIPconshdlrSetGetPermsymGraph(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETPERMSYMGRAPH((*consgetpermsymgraph)) /**< constraint permutation symmetry detection graph
+                                                          *   getter method */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->consgetpermsymgraph = consgetpermsymgraph;
+}
+
+/** sets signed permutation symmetry detection graph getter method of constraint handler */
+void SCIPconshdlrSetGetSignedPermsymGraph(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH((*consgetsignedpermsymgraph)) /**< constraint permutation symmetry detection
+                                                                      *   graph getter method */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->consgetsignedpermsymgraph = consgetsignedpermsymgraph;
+}
+
 /** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
  *  constraints, the last SCIPconshdlrGetNConss() - SCIPconshdlrGetNActiveConss() constraints are deactivated
  *
@@ -5248,6 +5289,25 @@ void SCIPconshdlrSetPresolTiming(
    conshdlr->presoltiming = presoltiming;
 }
 
+/** returns whether conshdlr supports permutation symmetry detection */
+SCIP_Bool SCIPconshdlrSupportsPermsymDetection(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->consgetpermsymgraph != NULL;
+}
+
+/** returns whether conshdlr supports signed permutation symmetry detection */
+SCIP_Bool SCIPconshdlrSupportsSignedPermsymDetection(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->consgetsignedpermsymgraph != NULL;
+}
 
 /*
  * Constraint set change methods
@@ -6283,7 +6343,7 @@ SCIP_RETCODE SCIPconsPrint(
  *        set to FALSE.
  */
 SCIP_RETCODE SCIPconsGetVars(
-   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_CONS*            cons,               /**< constraint to get variables for */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR**            vars,               /**< array to store the involved variable of the constraint */
    int                   varssize,           /**< available slots in vars array which is needed to check if the array is large enough */
@@ -6319,7 +6379,7 @@ SCIP_RETCODE SCIPconsGetVars(
  *        set to FALSE
  */
 SCIP_RETCODE SCIPconsGetNVars(
-   SCIP_CONS*            cons,               /**< constraint to print */
+   SCIP_CONS*            cons,               /**< constraint to get number of variables for */
    SCIP_SET*             set,                /**< global SCIP settings */
    int*                  nvars,              /**< pointer to store the number of variables */
    SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the number of variables */
@@ -6343,6 +6403,72 @@ SCIP_RETCODE SCIPconsGetNVars(
       (*nvars) = 0;
       (*success) = FALSE;
    }
+
+   return SCIP_OKAY;
+}
+
+/** method to collect the permutation symmetry detection graph of a constraint
+ *
+ *  @note The success pointer indicates whether the constraint handler was able to return the graph.
+ *
+ *  @note If a constraint handler does not support this functionality, the success pointer is set to FALSE.
+ */
+SCIP_RETCODE SCIPconsGetPermsymGraph(
+   SCIP_CONS*            cons,               /**< constraint to get graph for */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the graph */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+   assert(cons->scip == set->scip);
+   assert(success != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   if( conshdlr->consgetpermsymgraph != NULL )
+   {
+      SCIP_CALL( conshdlr->consgetpermsymgraph(set->scip, conshdlr, cons, graph, success) );
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** method to collect the signed permutation symmetry detection graph of a constraint
+ *
+ *  @note The success pointer indicates whether the constraint handler was able to return the graph.
+ *
+ *  @note If a constraint handler does not support this functionality, the success pointer is set to FALSE.
+ */
+SCIP_RETCODE SCIPconsGetSignedPermsymGraph(
+   SCIP_CONS*            cons,               /**< constraint to get graph for */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether the constraint successfully returned the graph */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+   assert(cons->scip == set->scip);
+   assert(success != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   if( conshdlr->consgetsignedpermsymgraph != NULL )
+   {
+      SCIP_CALL( conshdlr->consgetsignedpermsymgraph(set->scip, conshdlr, cons, graph, success) );
+   }
+   else
+      *success = FALSE;
 
    return SCIP_OKAY;
 }

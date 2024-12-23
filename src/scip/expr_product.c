@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -46,6 +46,7 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_misc.h"
 #include "scip/nlhdlr_bilinear.h"
+#include "symmetry/struct_symmetry.h"
 
 #define EXPRHDLR_NAME         "prod"
 #define EXPRHDLR_DESC         "product expression"
@@ -547,7 +548,8 @@ SCIP_RETCODE mergeProductExprlist(
          if( !issignpower1 && !issignpower2 )
          {
             /* and both are normal power, then add to unsimplifiedchildren the resulting expr of simplify(base^(expo1 + expo2)) */
-#if 0  /* TODO we should not loose the implicit base >= 0 constraint, if there is one, but then we should look at bounds on base; simplify currently doesn't */
+#ifdef SCIP_DISABLED_CODE
+            /* TODO we should not loose the implicit base >= 0 constraint, if there is one, but then we should look at bounds on base; simplify currently doesn't */
             /*
              * unless expo1 or expo2 are fractional but expo1+expo2 is not fractional, then we better keep the original
              * the reason for that is that x^fractional implies a constraint x >= 0
@@ -1578,11 +1580,11 @@ SCIP_DECL_EXPRPRINT(printProduct)
          {
             if( exprdata->coefficient < 0.0 && EXPRHDLR_PRECEDENCE > parentprecedence )
             {
-               SCIPinfoMessage(scip, file, "(%g)", exprdata->coefficient);
+               SCIPinfoMessage(scip, file, "(%.15g)", exprdata->coefficient);
             }
             else
             {
-               SCIPinfoMessage(scip, file, "%g", exprdata->coefficient);
+               SCIPinfoMessage(scip, file, "%.15g", exprdata->coefficient);
             }
          }
          break;
@@ -2214,6 +2216,24 @@ SCIP_DECL_EXPRINTEGRALITY(integralityProduct)
    return SCIP_OKAY;
 }
 
+/** expression callback to get information for symmetry detection */
+static
+SCIP_DECL_EXPRGETSYMDATA(getSymDataProduct)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(symdata != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, symdata) );
+
+   (*symdata)->nconstants = 1;
+   (*symdata)->ncoefficients = 0;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symdata)->constants, 1) );
+   (*symdata)->constants[0] = SCIPgetCoefExprProduct(expr);
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for product expressions and includes it into SCIP */
 SCIP_RETCODE SCIPincludeExprhdlrProduct(
    SCIP*                 scip                /**< SCIP data structure */
@@ -2243,6 +2263,7 @@ SCIP_RETCODE SCIPincludeExprhdlrProduct(
    SCIPexprhdlrSetCurvature(exprhdlr, curvatureProduct);
    SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicityProduct);
    SCIPexprhdlrSetIntegrality(exprhdlr, integralityProduct);
+   SCIPexprhdlrSetGetSymdata(exprhdlr, getSymDataProduct);
 
    SCIP_CALL( SCIPaddBoolParam(scip, "expr/" EXPRHDLR_NAME "/expandalways",
       "whether to expand products of a sum and several factors in simplify",

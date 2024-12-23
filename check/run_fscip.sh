@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -89,8 +89,20 @@ OPTHOST=$(uname -n | sed 's/.zib.de//g' | sed 's/portal//g' | tr -cd '[:alpha:]'
 # check if the scripts runs a *.zib.de host
 if $(hostname -f | grep -q zib.de) && $([[ "${OPTHOST}" == "opt" ]] || [[ "${OPTHOST}" == "optc" ]]);
 then
+    # file on optimi to check for
+    case "$OPTHOST" in
+      opt | optc )
+        . /etc/os-release
+        case "$ID" in
+          debian ) OPTIMIFILE=/data/optimi/optimi/QUOTAS ;;
+          ubuntu ) OPTIMIFILE=/nfs/optimi/QUOTAS ;;
+        esac
+        ;;
+      htccmp     ) OPTIMIFILE=/data/optimi/optimi/QUOTAS ;;
+    esac
+
     # access /optimi once to force a mount
-    ls /nfs/optimi/QUOTAS >/dev/null 2>&1
+    ls $OPTIMIFILE >/dev/null 2>&1
 
     # check if /optimi is mounted
     MOUNTED=0
@@ -106,7 +118,7 @@ then
             exit 1
         fi
 
-        if [ -f /nfs/optimi/QUOTAS ]
+        if [ -f $OPTIMIFILE ]
         then
             MOUNTED=1
         else

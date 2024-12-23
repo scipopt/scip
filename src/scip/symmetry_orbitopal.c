@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -106,8 +106,8 @@
 #include "scip/struct_tree.h"
 #include "scip/symmetry.h"
 #include "scip/debug.h"
+#include "symmetry/type_symmetry.h"
 #include <string.h>
-#include <symmetry/type_symmetry.h>
 
 
 /* symmetry handler properties */
@@ -249,7 +249,7 @@ SCIP_Bool testColumnsAreSymmetricallyEquivalent(
    ORBITOPEDATA*         orbidata,           /**< orbitope information */
    int                   col1,               /**< first column to compare */
    int                   col2                /**< second column to compare */
-)
+   )
 {
    int i;
    SCIP_VAR* var1;
@@ -270,9 +270,9 @@ SCIP_Bool testColumnsAreSymmetricallyEquivalent(
 
       /* if variable bounds differ: columns c and origcolid are not the same */
       if (
-         (! EQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetLbLocal(var2)))
+         (! SCIPsymEQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetLbLocal(var2)))
          ||
-         (! EQ(scip, SCIPvarGetUbLocal(var1), SCIPvarGetUbLocal(var2)))
+         (! SCIPsymEQ(scip, SCIPvarGetUbLocal(var1), SCIPvarGetUbLocal(var2)))
       )
          return FALSE;
    }
@@ -288,7 +288,7 @@ SCIP_Bool testColumnsAreSymmetricallyEquivalent(
  *  at the focusnode at the moment of branching can be permuted.
  *  In this function, we select such a permutation, based on the column containing the branching variable(s).
  *  In all cases, we swap the column containing the branching variable with a symmetrically equivalent column,
- *  and the @param columnordering specifies if we prefer it to be the leftmost, rightmost, centermost symmetrically
+ *  and the columnordering specifies if we prefer it to be the leftmost, rightmost, centermost symmetrically
  *  equivalent column, or the median column among the symmetrically equivalent columns.
  *
  *  The column ordering is determined and stored at the moment of branching.
@@ -301,7 +301,7 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    int*                  colorderinv,        /**< inverse array of the column order, of size colorder */
    SCIP_VAR*             var,                /**< variable that we branch on */
    COLSWAP*              thiscolswap         /**< the colswap to populate */
-)
+   )
 {
    int origcolid;
    int swaporigcolid;
@@ -379,24 +379,24 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
           */
          switch (orbidata->columnordering)
          {
-            case SCIP_COLUMNORDERING_FIRST:
-               /* only swap with c if c is earlier in column order than swaporigcolid */
-               if ( colorderinv[c] >= colorderinv[swaporigcolid] )
-                  goto CONDITIONFAIL;
-               break;
-            case SCIP_COLUMNORDERING_LAST:
-               /* only swap with c if c is later in column order than swaporigcolid */
-               if ( colorderinv[c] <= colorderinv[swaporigcolid] )
-                  goto CONDITIONFAIL;
-               break;
-            case SCIP_COLUMNORDERING_CENTRE:
-               /* if the column is not more central than swaporigcolid, ignore */
-               if ( ABS(colorderinv[c] - middlecolumn) >=
-                     ABS(colorderinv[swaporigcolid] - middlecolumn) )
-                  goto CONDITIONFAIL;
-               break;
-            default:
-               return SCIP_ERROR;
+         case SCIP_COLUMNORDERING_FIRST:
+            /* only swap with c if c is earlier in column order than swaporigcolid */
+            if ( colorderinv[c] >= colorderinv[swaporigcolid] )
+               continue;
+            break;
+         case SCIP_COLUMNORDERING_LAST:
+            /* only swap with c if c is later in column order than swaporigcolid */
+            if ( colorderinv[c] <= colorderinv[swaporigcolid] )
+               continue;
+            break;
+         case SCIP_COLUMNORDERING_CENTRE:
+            /* if the column is not more central than swaporigcolid, ignore */
+            if ( ABS(colorderinv[c] - middlecolumn) >=
+               ABS(colorderinv[swaporigcolid] - middlecolumn) )
+               continue;
+            break;
+         default:
+            return SCIP_ERROR;
          }
 
          /* test: are c and origcolid the same columns w.r.t. the variable domain restrictions? */
@@ -405,9 +405,6 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
 
          /* the variable domain reductions in c and origcolid are the same */
          swaporigcolid = c;
-
-      CONDITIONFAIL:
-         ;  /* no-op for going to the next iteration */
       }
 
       /* end switch */
@@ -487,8 +484,8 @@ SCIP_RETCODE updateColumnOrderWhenBranchingOnColumn(
    {
       var1 = orbidata->vars[i * ncols + swaporigcolid];
       var2 = orbidata->vars[i * ncols + origcolid];
-      assert( EQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetLbLocal(var2)) );
-      assert( EQ(scip, SCIPvarGetUbLocal(var1), SCIPvarGetUbLocal(var2)) );
+      assert( SCIPsymEQ(scip, SCIPvarGetLbLocal(var1), SCIPvarGetLbLocal(var2)) );
+      assert( SCIPsymEQ(scip, SCIPvarGetUbLocal(var1), SCIPvarGetUbLocal(var2)) );
    }
 #endif
 
@@ -524,7 +521,7 @@ static
 int getArrayEntryOrIndex(
    int*                  arr,                /**< array */
    int                   idx                 /**< index */
-)
+   )
 {
    assert( idx >= 0 );
    if ( arr == NULL )
@@ -538,8 +535,8 @@ void freeRowOrder(
    SCIP*                 scip,               /**< SCIP data structure */
    ORBITOPEDATA*         orbidata,           /**< orbitope data */
    int**                 roworder            /**< roworder array that is initialized with the roworder in the dynamic
-                                               *  case, and NULL in the static case */
-)
+                                              *   case, and NULL in the static case */
+   )
 {
    assert( scip != NULL );
    assert( orbidata != NULL );
@@ -573,7 +570,7 @@ SCIP_RETCODE getRowOrder(
    SCIP_NODE*            node,               /**< node for which the row order should be detected */
    int**                 roworder,           /**< array to populate with row order */
    int*                  nselrows            /**< pointer to populate with the number of rows part of the row order */
-)
+   )
 {
    int i;
    int j;
@@ -650,7 +647,7 @@ SCIP_RETCODE populateRootedPathColumnOrder(
    SCIP_NODE**           rootedpath,         /**< array to populate with the rooted path, must be sufficiently long */
    int*                  colorder,           /**< array to populate with the column order, must be nvars long */
    int*                  colorderinv         /**< array to populate with the inverse column order, must be nvars long */
-)
+   )
 {
    int i;
    int j;
@@ -930,7 +927,7 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
             colorderinv, branchvars[i], &tmpcolswap) );
 
          /* skip trivial swaps of columns */
-         if ( tmpcolswap.from == tmpcolswap.to )
+         if ( tmpcolswap.from == tmpcolswap.to ) /*lint !e644*/
             continue;
 
          /* mark that this row index is the new one in the node */
@@ -946,8 +943,8 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
                newnodeinfo->ncolswaps + 1) );
          }
          thiscolswap = &(newnodeinfo->colswaps[newnodeinfo->ncolswaps++]);
-         thiscolswap->from = tmpcolswap.from;
-         thiscolswap->to = tmpcolswap.to;
+         thiscolswap->from = tmpcolswap.from; /*lint !e644*/
+         thiscolswap->to = tmpcolswap.to; /*lint !e644*/
       }
 
       SCIPfreeBufferArray(scip, &colorder);
@@ -994,7 +991,7 @@ SCIP_Bool rowIsBranchRow(
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
    ORBITOPEDATA*         orbidata,           /**< symmetry handling data for orbitopal structure */
    int                   rowid               /**< row id for which to check */
-)
+   )
 {
    SCIP_VAR* var;
 #ifndef NDEBUG
@@ -1265,9 +1262,9 @@ void freeColumnOrder(
    SCIP*                 scip,               /**< SCIP data structure */
    ORBITOPEDATA*         orbidata,           /**< orbitope data */
    int**                 colorder,           /**< colorder array that is initialized with the colorder in the dynamic
-                                               *  case, of size ncols, and NULL in the static case */
+                                              *   case, of size ncols, and NULL in the static case */
    int**                 colorderinv         /**< array with the inverse column order, of size ncols */
-)
+   )
 {
    assert( scip != NULL );
    assert( orbidata != NULL );
@@ -1297,11 +1294,9 @@ SCIP_RETCODE getColumnOrder(
    SCIP*                 scip,               /**< SCIP data structure */
    ORBITOPEDATA*         orbidata,           /**< orbitope data */
    SCIP_NODE*            eventnode,          /**< node where this should be determined at */
-   int*                  roworder,           /**< array with the row order, of size nselrows */
-   int                   nselrows,           /**< number of rows (required to be positive) */
    int**                 colorder,           /**< array to populate with column order, of size ncols */
    int**                 colorderinv         /**< array to populate with inverse column order, of size ncols */
-)
+   )
 {
    SCIP_NODE* node;
    SCIP_NODE** rootedpath;
@@ -1312,8 +1307,6 @@ SCIP_RETCODE getColumnOrder(
    assert( scip != NULL );
    assert( orbidata != NULL );
    assert( eventnode != NULL );
-   assert( roworder != NULL );
-   assert( nselrows > 0 );
    assert( colorder != NULL );
    assert( colorderinv != NULL );
 
@@ -1367,7 +1360,7 @@ void assertIsOrbitopeMatrix(
    int                   ncols,              /**< number of cols of matrix */
    int*                  infinitesimal,      /**< array specifying where the infinitesimals are at */
    SCIP_Bool             addinfinitesimals   /**< whether infinitesimals are added (TRUE) or subtracted (FALSE) */
-)
+   )
 {
    int rowid;
    int colid;
@@ -1397,8 +1390,8 @@ void assertIsOrbitopeMatrix(
          idx = rowid * ncols + colid;
          origidx = origrowid * ncols + origcolid;
          var = orbidata->vars[origidx];
-         assert( GE(scip, matrix[idx], SCIPvarGetLbLocal(var)) );
-         assert( LE(scip, matrix[idx], SCIPvarGetUbLocal(var)) );
+         assert( SCIPsymGE(scip, matrix[idx], SCIPvarGetLbLocal(var)) );
+         assert( SCIPsymLE(scip, matrix[idx], SCIPvarGetUbLocal(var)) );
       }
    }
 
@@ -1409,9 +1402,9 @@ void assertIsOrbitopeMatrix(
       for (rowid = 0; rowid < nrows; ++rowid)
       {
          /* entry is >= entry to the right */
-         assert( GE(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) );
+         assert( SCIPsymGE(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) );
 
-         if ( GT(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) )
+         if ( SCIPsymGT(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) )
          {
             /* critical row */
             break;
@@ -1424,7 +1417,7 @@ void assertIsOrbitopeMatrix(
              * due to the axioms x + epsilon > x + epsilon and x + epsilon > x.
              * Analogously, x > x - epsilon and x - epsilon > x - epsilon.
              */
-            assert( EQ(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) );
+            assert( SCIPsymEQ(scip, matrix[rowid * ncols + colid], matrix[rowid * ncols + colid + 1]) );
             if ( addinfinitesimals
                ? (infinitesimal[colid] == rowid) /* left has +epsilon term */
                : (infinitesimal[colid + 1] == rowid) /* right has -epsilon term */
@@ -1443,9 +1436,9 @@ void assertIsOrbitopeMatrix(
 /** to test if arrays are the same, generates some hash for an array of integers */
 static
 int debugGetArrayHash(
-   int*                  array,              /** array */
-   int                   len                 /** array length */
-)
+   int*                  array,              /**< array */
+   int                   len                 /**< array length */
+   )
 {
    int i;
    unsigned int hash = 0;
@@ -1467,10 +1460,10 @@ int debugGetArrayHash(
 /** prints nrows × ncols matrix of floats with 2 decimals */
 static
 void debugPrintMatrix(
-   SCIP_Real*            matrix,             /** matrix, encoded as array enumerating the elements row-wise */
-   int                   nrows,              /** number of rows */
-   int                   ncols               /** number of rows */
-)
+   SCIP_Real*            matrix,             /**< matrix, encoded as array enumerating the elements row-wise */
+   int                   nrows,              /**< number of rows */
+   int                   ncols               /**< number of rows */
+   )
 {
    int row;
    int col;
@@ -1502,7 +1495,7 @@ SCIP_RETCODE propagateStaticOrbitope(
    int*                  colorder,           /**< array with the column order (or NULL if identity function is used) */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the problem is infeasible */
    int*                  nfixedvars          /**< pointer to counter of number of variable domain reductions */
-)
+   )
 {
    /* @todo also make "nselcols" to allow for colorders smaller than orbidata->ncols */
    SCIP_Real* lexminface = NULL;
@@ -1629,8 +1622,8 @@ SCIP_RETCODE propagateStaticOrbitope(
             ub = SCIPvarGetUbLocal(var);
 
             /* compare to the value in the column right of it */
-            if ( LT(scip, ub, lexminface[i + 1]) ||
-               ( lexminepsrow[colid + 1] == rowid && EQ(scip, ub, lexminface[i + 1]) ) )
+            if ( SCIPsymLT(scip, ub, lexminface[i + 1]) ||
+               ( lexminepsrow[colid + 1] == rowid && SCIPsymEQ(scip, ub, lexminface[i + 1]) ) )
             {
                /* value of this column can only be strictly smaller than the value in the column to its right
                 * This may not be possible.
@@ -1639,7 +1632,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                if ( lastunfixed >= 0 )
                {
                   /* repair: return to the last row with "room", and increase the lexmin-value at that row. */
-                  assert( EQ(scip, lexminface[lastunfixed * ncols + colid],
+                  assert( SCIPsymEQ(scip, lexminface[lastunfixed * ncols + colid],
                      lexminface[lastunfixed * ncols + colid + 1]) );
                   othervar = orbidata->vars[getArrayEntryOrIndex(roworder, lastunfixed) * ncols + origcolid];
                   switch (SCIPvarGetType(othervar))
@@ -1652,11 +1645,11 @@ SCIP_RETCODE propagateStaticOrbitope(
                      assert( SCIPisIntegral(scip, lexminface[lastunfixed * ncols + colid]) );
                      lexminface[lastunfixed * ncols + colid] += 1.0;
                      assert( SCIPisIntegral(scip, lexminface[lastunfixed * ncols + colid]) );
-                     assert( LE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
+                     assert( SCIPsymLE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      break;
                   case SCIP_VARTYPE_CONTINUOUS:
                      /* continuous type, so add an infinitesimal value to the bound */
-                     assert( LE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
+                     assert( SCIPsymLE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      assert( lexminepsrow[colid] == -1 );
                      lexminepsrow[colid] = lastunfixed;
                      break;
@@ -1679,18 +1672,18 @@ SCIP_RETCODE propagateStaticOrbitope(
             }
             else
             {
-               assert( GE(scip, ub, lexminface[i + 1]) );
+               assert( SCIPsymGE(scip, ub, lexminface[i + 1]) );
                lb = SCIPvarGetLbLocal(var);
-               assert( LE(scip, lb, ub) );
+               assert( SCIPsymLE(scip, lb, ub) );
                lexminface[i] = MAX(lexminface[i + 1], lb);
-               assert( GE(scip, lexminface[i], lexminface[i + 1]) );
+               assert( SCIPsymGE(scip, lexminface[i], lexminface[i + 1]) );
 
                /* are we still equal? */
-               if ( GT(scip, lexminface[i], lexminface[i + 1]) )
+               if ( SCIPsymGT(scip, lexminface[i], lexminface[i + 1]) )
                   iseq = FALSE;
                else if ( lexminepsrow[colid + 1] == rowid )
                {
-                  assert( EQ(scip, lexminface[i], lexminface[i + 1]) );
+                  assert( SCIPsymEQ(scip, lexminface[i], lexminface[i + 1]) );
                   assert( SCIPvarGetType(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid])
                      == SCIP_VARTYPE_CONTINUOUS );
                   assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
@@ -1713,14 +1706,14 @@ SCIP_RETCODE propagateStaticOrbitope(
                   /* @todo @question Are variable bounds for SCIP_VARTYPE_IMPLINT always integral? */
                   /* @todo in principle, this can be made more tight using the hole-lists... */
                   assert( SCIPisIntegral(scip, lexminface[i]) );
-                  if ( LE(scip, lexminface[i] + 1.0, ub) )
+                  if ( SCIPsymLE(scip, lexminface[i] + 1.0, ub) )
                      lastunfixed = rowid;
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
                   /* continuous type: if we can add an infinitesimal value to the current lexminface[i] value,
                    * mark row as 'lastunfixed'
                    */
-                  if ( LT(scip, lexminface[i], ub) )
+                  if ( SCIPsymLT(scip, lexminface[i], ub) )
                      lastunfixed = rowid;
                   break;
                default:
@@ -1797,8 +1790,8 @@ SCIP_RETCODE propagateStaticOrbitope(
             lb = SCIPvarGetLbLocal(var);
 
             /* compare to the value in the column left of it */
-            if ( GT(scip, lb, lexmaxface[i - 1]) ||
-               ( lexmaxepsrow[colid - 1] == rowid && EQ(scip, lb, lexmaxface[i - 1]) ) )
+            if ( SCIPsymGT(scip, lb, lexmaxface[i - 1]) ||
+               ( lexmaxepsrow[colid - 1] == rowid && SCIPsymEQ(scip, lb, lexmaxface[i - 1]) ) )
             {
                /* value of this column can only be strictly larger than the value in the column to its left
                 * This may not be possible.
@@ -1807,7 +1800,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                if ( lastunfixed >= 0 )
                {
                   /* repair: return to the last row with "room", and decrease the lexmax-value at that row. */
-                  assert( EQ(scip, lexmaxface[lastunfixed * ncols + colid],
+                  assert( SCIPsymEQ(scip, lexmaxface[lastunfixed * ncols + colid],
                      lexmaxface[lastunfixed * ncols + colid - 1]) );
                   othervar = orbidata->vars[getArrayEntryOrIndex(roworder, lastunfixed) * ncols + origcolid];
                   switch (SCIPvarGetType(othervar))
@@ -1820,13 +1813,13 @@ SCIP_RETCODE propagateStaticOrbitope(
                      assert( SCIPisIntegral(scip, lexmaxface[lastunfixed * ncols + colid]) );
                      lexmaxface[lastunfixed * ncols + colid] -= 1.0;
                      assert( SCIPisIntegral(scip, lexmaxface[lastunfixed * ncols + colid]) );
-                     assert( GE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
-                     assert( LE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
+                     assert( SCIPsymGE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
+                     assert( SCIPsymLE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      break;
                   case SCIP_VARTYPE_CONTINUOUS:
                      /* continuous type, so subtract an infinitesimal value to the bound */
-                     assert( GE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
-                     assert( LE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
+                     assert( SCIPsymGE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
+                     assert( SCIPsymLE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      assert( lexmaxepsrow[colid] == -1 );
                      lexmaxepsrow[colid] = lastunfixed;
                      break;
@@ -1849,18 +1842,18 @@ SCIP_RETCODE propagateStaticOrbitope(
             }
             else
             {
-               assert( LE(scip, lb, lexmaxface[i - 1]) );
+               assert( SCIPsymLE(scip, lb, lexmaxface[i - 1]) );
                ub = SCIPvarGetUbLocal(var);
-               assert( LE(scip, lb, ub) );
+               assert( SCIPsymLE(scip, lb, ub) );
                lexmaxface[i] = MIN(lexmaxface[i - 1], ub);
-               assert( GE(scip, lexmaxface[i - 1], lexmaxface[i]) );
+               assert( SCIPsymGE(scip, lexmaxface[i - 1], lexmaxface[i]) );
 
                /* are we still equal? */
-               if ( GT(scip, lexmaxface[i - 1], lexmaxface[i]) )
+               if ( SCIPsymGT(scip, lexmaxface[i - 1], lexmaxface[i]) )
                   iseq = FALSE;
                else if ( lexmaxepsrow[colid - 1] == rowid )
                {
-                  assert( EQ(scip, lexmaxface[i - 1], lexmaxface[i]) );
+                  assert( SCIPsymEQ(scip, lexmaxface[i - 1], lexmaxface[i]) );
                   assert( SCIPvarGetType(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid])
                      == SCIP_VARTYPE_CONTINUOUS );
                   assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
@@ -1883,14 +1876,14 @@ SCIP_RETCODE propagateStaticOrbitope(
                   /* @todo @question Are variable bounds for SCIP_VARTYPE_IMPLINT always integral? */
                   /* @todo in principle, this can be made more tight using the hole-lists... */
                   assert( SCIPisIntegral(scip, lexmaxface[i]) );
-                  if ( GE(scip, lexmaxface[i] - 1.0, lb) )
+                  if ( SCIPsymGE(scip, lexmaxface[i] - 1.0, lb) )
                      lastunfixed = rowid;
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
                   /* continuous type: if we can subtract an infinitesimal value to the current lexmaxface[i] value,
                    * mark row as 'lastunfixed'
                    */
-                  if ( GT(scip, lexmaxface[i], lb) )
+                  if ( SCIPsymGT(scip, lexmaxface[i], lb) )
                      lastunfixed = rowid;
                   break;
                default:
@@ -1932,7 +1925,7 @@ SCIP_RETCODE propagateStaticOrbitope(
          origidx = origrowid * ncols + origcolid;
          var = orbidata->vars[origidx];
 
-         if ( EQ(scip, lexminface[i], lexmaxface[i]) )
+         if ( SCIPsymEQ(scip, lexminface[i], lexmaxface[i]) )
          {
             /* tighten LB and UB to same value (i.e. fixing) */
             SCIP_CALL( SCIPtightenVarLb(scip, var, lexminface[i], FALSE, infeasible, &success) );
@@ -2067,7 +2060,7 @@ SCIP_RETCODE propagateOrbitope(
       goto FREEROWS;
 
    /* get column order */
-   SCIP_CALL( getColumnOrder(scip, orbidata, focusnode, roworder, nselrows, &colorder, &colorderinv) );
+   SCIP_CALL( getColumnOrder(scip, orbidata, focusnode, &colorder, &colorderinv) );
 
 #ifndef NDEBUG
    /* DEBUG: if propagation is repeated in the same node, the same column order and row order is needed */
@@ -2128,7 +2121,7 @@ SCIP_RETCODE SCIPorbitopalReductionGetStatistics(
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< orbitopal reduction data structure */
    int*                  nred,               /**< total number of reductions applied */
    int*                  ncutoff             /**< total number of cutoffs applied */
-)
+   )
 {
    assert( scip != NULL );
    assert( orbireddata != NULL );
@@ -2145,7 +2138,7 @@ SCIP_RETCODE SCIPorbitopalReductionGetStatistics(
 SCIP_RETCODE SCIPorbitopalReductionPrintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA* orbireddata        /**< orbitopal reduction data structure */
-)
+   )
 {
    int i;
 

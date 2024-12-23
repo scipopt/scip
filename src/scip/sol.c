@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1663,6 +1663,172 @@ SCIP_RETCODE SCIPsolMarkPartial(
    return SCIP_OKAY;
 }
 
+/** checks solution for feasibility in original problem without adding it to the solution store
+ *
+ *  We first check the variable bounds. Then we loop over all constraint handlers and constraints, checking each in the
+ *  order of their check priority.
+ */
+SCIP_RETCODE SCIPsolCheckOrig(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             checkmodifiable,    /**< have modifiable constraint to be checked? */
+   SCIP_Bool*            feasible            /**< stores whether given solution is feasible */
+   )
+{
+   SCIP_RESULT result;
+#ifndef NDEBUG
+   int oldpriority;
+#endif
+   int v;
+   int c;
+   int h;
+
+   assert(sol != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(!prob->transformed);
+   assert(feasible != NULL);
+
+   *feasible = TRUE;
+
+   SCIPsolResetViolations(sol);
+
+   if( !printreason )
+      completely = FALSE;
+
+   /* check bounds */
+   if( checkbounds )
+   {
+      for( v = 0; v < prob->nvars; ++v )
+      {
+         SCIP_VAR* var;
+         SCIP_Real solval;
+         SCIP_Real lb;
+         SCIP_Real ub;
+
+         var = prob->vars[v];
+         solval = SCIPsolGetVal(sol, set, stat, var);
+
+         lb = SCIPvarGetLbOriginal(var);
+         ub = SCIPvarGetUbOriginal(var);
+
+         if( SCIPprimalUpdateViolations(primal) )
+         {
+            SCIPsolUpdateBoundViolation(sol, lb - solval, SCIPrelDiff(lb, solval));
+            SCIPsolUpdateBoundViolation(sol, solval - ub, SCIPrelDiff(solval, ub));
+         }
+
+         if( SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub) )
+         {
+            *feasible = FALSE;
+
+            if( printreason )
+            {
+               SCIPmessagePrintInfo(messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
+                  SCIPvarGetName(var), lb, ub, solval);
+            }
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* sort original constraint according to check priority */
+   SCIP_CALL( SCIPprobSortConssCheck(prob) );
+
+   /* check original constraints
+    *
+    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
+    * the original problem; however, if the solution comes from a heuristic during presolving, modifiable constraints
+    * have to be checked;
+    */
+#ifndef NDEBUG
+   oldpriority = INT_MAX;
+#endif
+   h = 0;
+   for( c = 0; c < prob->nconss; ++c )
+   {
+      SCIP_CONS* cons;
+      int priority;
+
+      cons = prob->origcheckconss[c];
+      assert( SCIPconsGetHdlr(cons) != NULL );
+      priority = SCIPconshdlrGetCheckPriority(SCIPconsGetHdlr(cons));
+
+#ifndef NDEBUG
+      assert( priority <= oldpriority );
+      oldpriority = priority;
+#endif
+
+      /* check constraints handlers without constraints that have a check priority at least as high as current
+       * constraint */
+      while( h < set->nconshdlrs && SCIPconshdlrGetCheckPriority(set->conshdlrs[h]) >= priority )
+      {
+         if( !SCIPconshdlrNeedsCons(set->conshdlrs[h]) )
+         {
+            SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
+                  checkintegrality, checklprows, printreason, completely, &result) );
+
+            if( result != SCIP_FEASIBLE )
+            {
+               *feasible = FALSE;
+
+               if( !completely )
+                  return SCIP_OKAY;
+            }
+         }
+         ++h;
+      }
+
+      /* now check constraint */
+      if( SCIPconsIsChecked(cons) && (checkmodifiable || !SCIPconsIsModifiable(cons)) )
+      {
+         /* check solution */
+         SCIP_CALL( SCIPconsCheck(cons, set, sol, checkintegrality, checklprows, printreason, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+   }
+
+   /* one final loop over the remaining constraints handlers without constraints */
+   while( h < set->nconshdlrs )
+   {
+      if( !SCIPconshdlrNeedsCons(set->conshdlrs[h]) )
+      {
+         SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol,
+               checkintegrality, checklprows, printreason, completely, &result) );
+
+         if( result != SCIP_FEASIBLE )
+         {
+            *feasible = FALSE;
+
+            if( !completely )
+               return SCIP_OKAY;
+         }
+      }
+      ++h;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks primal CIP solution for feasibility
  *
  *  @note The difference between SCIPsolCheck() and SCIPcheckSolOrig() is that modifiable constraints are handled
@@ -1960,7 +2126,7 @@ SCIP_RETCODE SCIPsolRetransform(
 
       /* get active representation of the original variable */
       SCIP_CALL( SCIPvarGetActiveRepresentatives(set, activevars, activevals, &nactivevars, ntransvars + 1, &constant,
-            &requiredsize, TRUE) );
+            &requiredsize) );
       assert(requiredsize <= ntransvars);
 
       /* compute solution value of the original variable */

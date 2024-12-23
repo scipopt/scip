@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -253,9 +253,6 @@ SCIP_RETCODE applyOptcumulative(
    SCIP_Real upperbound;
    SCIP_Real pseudoobj;
    SCIP_Bool infeasible;
-#if 0
-   int depth;
-#endif
 
    assert(heur != NULL);
    assert(heurdata != NULL);
@@ -264,9 +261,6 @@ SCIP_RETCODE applyOptcumulative(
    infeasible = FALSE;
 
    *result = SCIP_DIDNOTFIND;
-#if 0
-   depth = SCIPgetDepth(scip);
-#endif
 
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -545,29 +539,6 @@ SCIP_RETCODE applyOptcumulative(
          if( stored )
             *result = SCIP_FOUNDSOL;
       }
-#if 0
-      else
-      {
-         /* check that code */
-         int v;
-
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
-
-         for( v = 0; v < heurdata->machines[m]; ++v )
-         {
-            SCIP_CALL( SCIPaddConflictBinvar(scip, heurdata->binvars[m][v]) );
-            SCIP_CALL( SCIPaddConflictLb(scip, heurdata->vars[m][v], NULL) );
-            SCIP_CALL( SCIPaddConflictUb(scip, heurdata->vars[m][v], NULL) );
-         }
-
-         /* analyze the conflict */
-#if 0
-         SCIP_CALL( SCIPanalyzeConflict(scip, depth, NULL) );
-#endif
-         SCIP_CALL( SCIPanalyzeConflict(scip, 0, NULL) );
-         SCIP_CALL( SCIPfreeSol(scip, &sol) );
-      }
-#endif
    }
 
    /* exit probing mode */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -154,6 +154,11 @@ SCIP_RETCODE probEnsureConssMem(
 
       newsize = SCIPsetCalcMemGrowSize(set, num);
       SCIP_ALLOC( BMSreallocMemoryArray(&prob->conss, newsize) );
+      /* resize sorted original constraints if they exist */
+      if( prob->origcheckconss != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&prob->origcheckconss, newsize) );
+      }
       prob->consssize = newsize;
    }
    assert(num <= prob->consssize);
@@ -321,6 +326,7 @@ SCIP_RETCODE SCIPprobCreate(
    else
       (*prob)->consnames = NULL;
    (*prob)->conss = NULL;
+   (*prob)->origcheckconss = NULL;
    (*prob)->consssize = 0;
    (*prob)->nconss = 0;
    (*prob)->maxnconss = 0;
@@ -335,6 +341,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->transformed = transformed;
    (*prob)->nlpenabled = FALSE;
    (*prob)->permuted = FALSE;
+   (*prob)->consschecksorted = FALSE;
    (*prob)->conscompression = FALSE;
 
    return SCIP_OKAY;
@@ -449,6 +456,7 @@ SCIP_RETCODE SCIPprobFree(
    }
 
    /* free constraint array */
+   BMSfreeMemoryArrayNull(&(*prob)->origcheckconss);
    BMSfreeMemoryArrayNull(&(*prob)->conss);
 
    /* free user problem data */
@@ -703,6 +711,30 @@ void SCIPprobResortVars(
    }
 }
 
+/** possibly create and sort the constraints according to check priorties */
+SCIP_RETCODE SCIPprobSortConssCheck(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   if( prob->consschecksorted || prob->transformed )
+      return SCIP_OKAY;
+
+   if( prob->nconss > 0 )
+   {
+      /* possibly create and copy constraints */
+      if( prob->origcheckconss == NULL )
+      {
+         SCIP_ALLOC( BMSduplicateMemoryArray(&prob->origcheckconss, prob->conss, prob->consssize) );
+      }
+      assert( prob->origcheckconss != NULL );
+
+      /* sort original constraint according to check priority */
+      SCIPsortPtr((void**)prob->origcheckconss, SCIPconsCompCheck, prob->nconss);
+   }
+   prob->consschecksorted = TRUE;
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -1314,8 +1346,11 @@ SCIP_RETCODE SCIPprobAddCons(
    /* add the constraint to the problem's constraint array */
    SCIP_CALL( probEnsureConssMem(prob, set, prob->nconss+1) );
    prob->conss[prob->nconss] = cons;
+   if( prob->origcheckconss != NULL )
+      prob->origcheckconss[prob->nconss] = cons;
    prob->nconss++;
    prob->maxnconss = MAX(prob->maxnconss, prob->nconss);
+   prob->consschecksorted = FALSE;
    stat->nactiveconssadded++;
 
    /* undelete constraint, if it was globally deleted in the past */
@@ -1398,6 +1433,11 @@ SCIP_RETCODE SCIPprobDelCons(
    assert(prob->conss[arraypos]->addconssetchg == NULL);
    prob->conss[arraypos]->addarraypos = arraypos;
    prob->nconss--;
+   prob->consschecksorted = FALSE;
+
+   /* if we delete constraints then delete array origcheckconss to be sure */
+   if( prob->origcheckconss != NULL )
+      BMSfreeMemoryArray(&prob->origcheckconss);
 
    /* mark the constraint to be no longer in the problem */
    cons->addarraypos = -1;
@@ -2258,9 +2298,17 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNIntVars
 #undef SCIPprobGetNImplVars
 #undef SCIPprobGetNContVars
-#undef SCIPprobGetNConss
 #undef SCIPprobGetVars
+#undef SCIPprobGetNFixedVars
+#undef SCIPprobGetFixedVars
+#undef SCIPprobGetStartNVars
+#undef SCIPprobGetNConss
+#undef SCIPprobGetConss
+#undef SCIPprobGetMaxNConss
+#undef SCIPprobGetStartNConss
+#undef SCIPprobGetObjsense
 #undef SCIPprobGetObjoffset
+#undef SCIPprobGetObjscale
 #undef SCIPisConsCompressedEnabled
 #undef SCIPprobEnableConsCompression
 
@@ -2403,6 +2451,33 @@ SCIP_VAR** SCIPprobGetVars(
    return prob->vars;
 }
 
+/** gets number of fixed variables */
+int SCIPprobGetNFixedVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nfixedvars;
+}
+
+/** gets fixed variables */
+SCIP_VAR** SCIPprobGetFixedVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->fixedvars;
+}
+
+/** gets number of variables existing when problem solving started */
+int SCIPprobGetStartNVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->startnvars;
+}
+
 /** gets number of problem constraints */
 int SCIPprobGetNConss(
    SCIP_PROB*            prob                /**< problem data */
@@ -2410,6 +2485,42 @@ int SCIPprobGetNConss(
 {
    assert(prob != NULL);
    return prob->nconss;
+}
+
+/** gets problem constraints */
+SCIP_CONS** SCIPprobGetConss(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->conss;
+}
+
+/** gets maximum number of constraints existing at the same time */
+int SCIPprobGetMaxNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->maxnconss;
+}
+
+/** gets number of constraints existing when problem solving started */
+int SCIPprobGetStartNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->startnconss;
+}
+
+/** gets the objective sense*/
+SCIP_OBJSENSE SCIPprobGetObjsense(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->objsense;
 }
 
 /** gets the objective offset */

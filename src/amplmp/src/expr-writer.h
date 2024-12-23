@@ -23,6 +23,8 @@
 #ifndef MP_EXPR_WRITER_H_
 #define MP_EXPR_WRITER_H_
 
+#include <cmath>
+
 #include "mp/basic-expr-visitor.h"
 
 namespace mp {
@@ -396,7 +398,7 @@ void WriteExpr(fmt::Writer &w, const LinearExpr &linear,
 template <typename Problem>
 void Write(fmt::Writer &w, const Problem &p) {
   // Write variables.
-  double inf = std::numeric_limits<double>::infinity();
+  double inf = INFINITY;
   int num_vars = p.num_vars();
   for (int i = 0; i < num_vars; ++i) {
     w << "var x" << (i + 1);

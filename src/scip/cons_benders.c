@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -285,6 +285,19 @@ SCIP_RETCODE SCIPconsBendersEnforceSolution(
 
    for( i = 0; i < nactivebenders; i++ )
    {
+      /* if any subproblems are declared as infeasible, then the result must be returned as infeasible. It is not
+       * possible to generate cuts, since the LP is infeasible without performing any master variable fixing
+       */
+      if( SCIPbendersSubproblemsAreInfeasible(benders[i]) )
+      {
+         (*result) = SCIP_INFEASIBLE;
+
+         /* the Benders' decomposition subproblems do not need to be checked, since there is a subproblem that is
+          * infeasible.
+          */
+         break;
+      }
+
       switch( type )
       {
          case SCIP_BENDERSENFOTYPE_LP:
@@ -437,6 +450,27 @@ SCIP_DECL_CONSEXIT(consExitBenders)
 }
 
 
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
+static
+SCIP_DECL_CONSINITLP(consInitlpBenders)
+{  /*lint --e{715}*/
+   SCIP_BENDERS** benders;
+   int nactivebenders;
+   int i;
+
+   assert(scip != NULL);
+
+   benders = SCIPgetBenders(scip);
+   nactivebenders = SCIPgetNActiveBenders(scip);
+
+   (*infeasible) = FALSE;
+
+   /* checking all Benders' decomposition implementations to see if any subproblems have been declared as infeasible */
+   for( i = 0; i < nactivebenders && !(*infeasible); i++ )
+      (*infeasible) = SCIPbendersSubproblemsAreInfeasible(benders[i]);
+
+   return SCIP_OKAY;
+}
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
@@ -522,7 +556,6 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    int solindex;
    int i;
    SCIP_Bool performcheck;
-   SCIP_Bool infeasible;
    SCIP_Bool auxviol;
 
    assert(scip != NULL);
@@ -531,7 +564,6 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 
    (*result) = SCIP_FEASIBLE;
    performcheck = TRUE;
-   infeasible = FALSE;
    auxviol = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -561,8 +593,21 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
       {
          for( i = 0; i < nactivebenders; i++ )
          {
-            SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, &auxviol,
-                  SCIP_BENDERSENFOTYPE_CHECK, TRUE) );
+            /* if any subproblems are declared as infeasible, then the result must be returned as infeasible. It is not
+             * possible to generate cuts, since the LP is infeasible without performing any master variable fixing
+             */
+            if( SCIPbendersSubproblemsAreInfeasible(benders[i]) )
+            {
+               (*result) = SCIP_INFEASIBLE;
+            }
+            else
+            {
+               SCIP_Bool infeasible;
+               infeasible = FALSE;
+
+               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, &auxviol,
+                     SCIP_BENDERSENFOTYPE_CHECK, TRUE) );
+            }
 
             /* in the case of multiple Benders' decompositions, the subproblems are solved until a constriant is added or
              * infeasibility is proven. So if the result is not SCIP_FEASIBLE, then the loop is exited */
@@ -791,6 +836,7 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitBenders) );
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBenders, NULL) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBenders) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpBenders) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBenders) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBenders, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
 

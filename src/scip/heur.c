@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -138,13 +138,13 @@ SCIP_RETCODE SCIPdivesetReset(
    assert(diveset->randnumgen != NULL);
 
    /* reset diveset statistics for all contexts */
-   for( d = 0; d < 3; ++d )
+   for( d = 0; d < 4; ++d )
    {
       resetDivesetStats(diveset->divesetstats[d]);
    }
 
    /* reset the random number generator */
-   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed));
+   SCIPrandomSetSeed(diveset->randnumgen, SCIPsetInitializeRandomSeed(set, diveset->initialseed));
 
    return SCIP_OKAY;
 }
@@ -193,7 +193,8 @@ SCIP_DIVESETSTATS* divesetGetStats(
    assert(diveset != NULL);
    assert(divecontext == SCIP_DIVECONTEXT_ADAPTIVE ||
          divecontext == SCIP_DIVECONTEXT_SINGLE ||
-         divecontext == SCIP_DIVECONTEXT_TOTAL);
+         divecontext == SCIP_DIVECONTEXT_TOTAL ||
+         divecontext == SCIP_DIVECONTEXT_SCHEDULER );
 
    return diveset->divesetstats[(int)divecontext];
 }
@@ -216,7 +217,8 @@ void SCIPdivesetUpdateStats(
    SCIP_DIVECONTEXT updatecontexts[] = {SCIP_DIVECONTEXT_TOTAL, divecontext};
 
    assert(diveset != NULL);
-   assert(divecontext == SCIP_DIVECONTEXT_ADAPTIVE || divecontext == SCIP_DIVECONTEXT_SINGLE);
+   assert(divecontext == SCIP_DIVECONTEXT_ADAPTIVE || divecontext == SCIP_DIVECONTEXT_SINGLE
+         || divecontext == SCIP_DIVECONTEXT_SCHEDULER);
 
    /* update statistics for total context and given context */
    for( c = 0; c < 2; ++c )
@@ -327,7 +329,7 @@ SCIP_RETCODE SCIPdivesetCreate(
    diveset->ispublic = ispublic;
 
    /* allocate memory for diveset statistics */
-   for( c = 0; c < 3; ++c )
+   for( c = 0; c < 4; ++c )
    {
       SCIP_DIVESETSTATS** divesetstatsptr = &diveset->divesetstats[c];
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, divesetstatsptr) );
@@ -790,7 +792,8 @@ void SCIPdivesetUpdateLPStats(
    )
 {
    assert(diveset != NULL);
-   assert(divecontext == SCIP_DIVECONTEXT_ADAPTIVE || divecontext == SCIP_DIVECONTEXT_SINGLE);
+   assert(divecontext == SCIP_DIVECONTEXT_ADAPTIVE || divecontext == SCIP_DIVECONTEXT_SINGLE
+         || divecontext == SCIP_DIVECONTEXT_SCHEDULER);
 
    /* update statistics for total context and given context */
    updateDivesetstatsLP(divesetGetStats(diveset, divecontext), niterstoadd);
@@ -817,7 +820,7 @@ void divesetFree(
    SCIPrandomFree(&diveset->randnumgen, blkmem);
 
    /* free all diveset statistics */
-   for( c = 0; c < 3; ++c )
+   for( c = 0; c < 4; ++c )
    {
       SCIP_DIVESETSTATS** divesetstatsptr = &diveset->divesetstats[c];
       BMSfreeBlockMemory(blkmem, divesetstatsptr);
@@ -1733,11 +1736,13 @@ SCIP_RETCODE SCIPvariablegraphBreadthFirst(
    if( vargraph == NULL )
    {
       SCIP_CALL( SCIPvariableGraphCreate(scip, &vargraph, FALSE, 1.0, NULL) );
+      assert(vargraph != NULL);
       localvargraph = TRUE;
    }
    else
       localvargraph = FALSE;
 
+   /* coverity[var_deref_op] */
    SCIPhashtableRemoveAll(vargraph->visitedconss);
 
    /* initialize distances to -1 */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -31,6 +31,8 @@
 #include "scip/heuristics.h"
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
+#include "scip/stat.h"
+#include "scip/struct_scip.h"
 
 #include "scip/pub_heur.h"
 
@@ -223,6 +225,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_RESULT*          result,             /**< SCIP result pointer */
    SCIP_Bool             nodeinfeasible,     /**< is the current node known to be infeasible? */
    SCIP_Longint          iterlim,            /**< nonnegative iteration limit for the LP solves, or -1 for dynamic setting */
+   int                   nodelimit,          /**< nonnegative probing node limit or -1 if no limit should be used */
+   SCIP_Real             lpresolvedomchgquot, /**< percentage of immediate domain changes during probing to trigger LP resolve or -1
+                                               *   if diveset specific default should be used */
    SCIP_DIVECONTEXT      divecontext         /**< context for diving statistics */
    )
 {
@@ -284,17 +289,21 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
-   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
-   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
-      return SCIP_OKAY;
-
    /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
-   /* don't dive two times at the same node */
-   if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) && SCIPgetDepth(scip) > 0 )
-      return SCIP_OKAY;
+   /* when heuristic was called by scheduler, be less restrictive */
+   if( divecontext != SCIP_DIVECONTEXT_SCHEDULER )
+   {
+      /* don't dive two times at the same node */
+      if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) && SCIPgetDepth(scip) > 0 )
+         return SCIP_OKAY;
+
+      /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
+      if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
+         return SCIP_OKAY;
+   }
 
    *result = SCIP_DIDNOTRUN;
 
@@ -302,8 +311,11 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    depth = SCIPgetDepth(scip);
    maxdepth = SCIPgetMaxDepth(scip);
    maxdepth = MAX(maxdepth, 30);
-   if( depth < SCIPdivesetGetMinRelDepth(diveset) * maxdepth || depth > SCIPdivesetGetMaxRelDepth(diveset) * maxdepth )
+   if( divecontext != SCIP_DIVECONTEXT_SCHEDULER &&
+      (depth < SCIPdivesetGetMinRelDepth(diveset) * maxdepth || depth > SCIPdivesetGetMaxRelDepth(diveset) * maxdepth) )
+   {
       return SCIP_OKAY;
+   }
 
    /* calculate the maximal number of LP iterations */
    if( iterlim < 0 )
@@ -361,12 +373,17 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    if( SCIPisObjIntegral(scip) )
       searchbound = SCIPceil(scip, searchbound);
 
-   /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
+   /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth}*/
    maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    if ( sos1conshdlr != NULL )
       maxdivedepth += SCIPgetNSOS1Vars(sos1conshdlr);
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
+
+   /* if lpresolvedomchgquot is not explicitly given (so -1), then use the default for the current diveset */
+   if( lpresolvedomchgquot < 0 )
+      lpresolvedomchgquot = SCIPdivesetGetLPResolveDomChgQuot(diveset);
+   assert(lpresolvedomchgquot > 0.0 && lpresolvedomchgquot <= 1.0);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -423,6 +440,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
     * - if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
     */
    while( !lperror && !cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL && enfosuccess
+      && ( nodelimit == -1 || totalnprobingnodes < nodelimit )
       && (SCIPgetProbingDepth(scip) < 10
          || nlpcands <= startndivecands - SCIPgetProbingDepth(scip) / 2
          || (SCIPgetProbingDepth(scip) < maxdivedepth && SCIPdivesetGetNLPIterations(diveset, divecontext) < maxnlpiterations && SCIPgetLPObjval(scip) < searchbound))
@@ -484,6 +502,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             }
 
             success = FALSE;
+
             /* try to add solution to SCIP */
             SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, changed, &success) );
 
@@ -549,7 +568,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       {
          SCIP_VAR* bdchgvar;
          SCIP_Real bdchgvalue;
-         SCIP_Longint localdomreds;
+         SCIP_Longint localdomreds = 0;
          SCIP_BRANCHDIR bdchgdir;
          int nbdchanges;
 
@@ -580,6 +599,13 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
             {
                SCIPdebugMsg(scip, "depth limit reached, we stop diving immediately.\n");
+               goto TERMINATE;
+            }
+
+            /* return if we reached the node limit */
+            if( nodelimit != -1 && totalnprobingnodes >= nodelimit )
+            {
+               SCIPdebugMsg(scip, "node limit reached, we stop diving immediately.\n");
                goto TERMINATE;
             }
 
@@ -720,7 +746,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          while( backtrack );
 
          /* we add the domain reductions from the last evaluated node */
-         domreds += localdomreds; /*lint !e771 lint thinks localdomreds has not been initialized */
+         domreds += localdomreds;
 
          /* store candidate for pseudo cost update and choose next candidate only if no cutoff was detected */
          if( ! cutoff )
@@ -976,6 +1002,10 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
          SCIP_CALL( SCIPcopyCuts(sourcescip, subscip, varmap, NULL, TRUE, NULL) );
       }
    }
+
+   /* disable bound limits in subscip since objective might be changed */
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/primal", SCIP_INVALID) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/dual", SCIP_INVALID) );
 
    *success = TRUE;
 

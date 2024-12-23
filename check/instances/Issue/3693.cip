@@ -1,0 +1,129 @@
+STATISTICS
+  Problem name     : BELL5
+  Variables        : 98 (43 binary, 15 integer, 0 implicit integer, 40 continuous)
+  Constraints      : 0 initial, 22 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <d16>: obj=43000, original bounds=[0,0]
+  [binary] <c1>: obj=0, original bounds=[1,1]
+  [binary] <c2>: obj=0, original bounds=[1,1]
+  [binary] <c3>: obj=0, original bounds=[1,1]
+  [binary] <c4>: obj=0, original bounds=[1,1]
+  [binary] <c5>: obj=0, original bounds=[1,1]
+  [binary] <c6>: obj=0, original bounds=[0,1]
+  [binary] <c7>: obj=0, original bounds=[1,1]
+  [binary] <c8>: obj=0, original bounds=[1,1]
+  [binary] <c9>: obj=0, original bounds=[0,0]
+  [binary] <c10>: obj=0, original bounds=[0,0]
+  [binary] <c11>: obj=0, original bounds=[0,0]
+  [binary] <c12>: obj=0, original bounds=[0,0]
+  [binary] <c13>: obj=0, original bounds=[1,1]
+  [binary] <c14>: obj=0, original bounds=[0,0]
+  [binary] <c15>: obj=0, original bounds=[0,0]
+  [binary] <c16>: obj=0, original bounds=[0,0]
+  [binary] <d1>: obj=43000, original bounds=[0,0]
+  [binary] <d2>: obj=43000, original bounds=[0,0]
+  [binary] <d3>: obj=43000, original bounds=[0,0]
+  [binary] <d4>: obj=43000, original bounds=[0,0]
+  [binary] <d5>: obj=43000, original bounds=[0,0]
+  [binary] <d6>: obj=43000, original bounds=[0,1]
+  [binary] <d7>: obj=43000, original bounds=[0,0]
+  [binary] <d9>: obj=43000, original bounds=[0,0]
+  [binary] <d10>: obj=43000, original bounds=[0,0]
+  [binary] <d11>: obj=43000, original bounds=[0,0]
+  [binary] <d12>: obj=43000, original bounds=[0,0]
+  [binary] <d13>: obj=43000, original bounds=[0,0]
+  [binary] <d14>: obj=43000, original bounds=[0,0]
+  [binary] <g2>: obj=10000, original bounds=[0,0]
+  [binary] <g1>: obj=10000, original bounds=[0,0]
+  [binary] <h16>: obj=58000, original bounds=[0,0]
+  [binary] <h14>: obj=58000, original bounds=[0,0]
+  [binary] <h12>: obj=59000, original bounds=[0,0]
+  [binary] <h11>: obj=59000, original bounds=[0,0]
+  [binary] <h10>: obj=59000, original bounds=[0,0]
+  [binary] <h5>: obj=59000, original bounds=[1,1]
+  [binary] <h4>: obj=59000, original bounds=[1,1]
+  [binary] <h3>: obj=58000, original bounds=[0,0]
+  [binary] <h2>: obj=58000, original bounds=[0,0]
+  [binary] <h1>: obj=58000, original bounds=[0,0]
+  [binary] <g16>: obj=10000, original bounds=[0,0]
+  [integer] <g12>: obj=10000, original bounds=[41,41]
+  [integer] <g11>: obj=10000, original bounds=[17,17]
+  [integer] <h13>: obj=58000, original bounds=[0,1000]
+  [integer] <g10>: obj=10000, original bounds=[10,10]
+  [integer] <g9>: obj=10000, original bounds=[125,125]
+  [integer] <g7>: obj=10000, original bounds=[0,1000]
+  [integer] <h9>: obj=0, original bounds=[0,10000]
+  [integer] <h7>: obj=0, original bounds=[0,10000]
+  [integer] <h6>: obj=59000, original bounds=[0,10000]
+  [integer] <g6>: obj=10000, original bounds=[2,2]
+  [integer] <g5>: obj=0, original bounds=[0,1000]
+  [integer] <g4>: obj=10000, original bounds=[2,2]
+  [integer] <g3>: obj=10000, original bounds=[0,1000]
+  [integer] <g14>: obj=10000, original bounds=[0,100]
+  [integer] <g13>: obj=10000, original bounds=[0,100]
+  [continuous] <a1>: obj=25, original bounds=[0,+inf]
+  [continuous] <a2>: obj=20, original bounds=[0,+inf]
+  [continuous] <a3>: obj=0, original bounds=[0,+inf]
+  [continuous] <a4>: obj=0, original bounds=[0,+inf]
+  [continuous] <a5>: obj=58, original bounds=[0,0]
+  [continuous] <a6>: obj=37, original bounds=[0,0]
+  [continuous] <a7>: obj=39, original bounds=[0,+inf]
+  [continuous] <a8>: obj=48, original bounds=[4800,4800]
+  [continuous] <a9>: obj=29, original bounds=[0,0]
+  [continuous] <a10>: obj=36, original bounds=[18,18]
+  [continuous] <a11>: obj=19, original bounds=[8,8]
+  [continuous] <a12>: obj=30, original bounds=[16,16]
+  [continuous] <a13>: obj=0, original bounds=[0,+inf]
+  [continuous] <a14>: obj=26, original bounds=[0,+inf]
+  [continuous] <a15>: obj=21, original bounds=[700,700]
+  [continuous] <a16>: obj=2, original bounds=[24,24]
+  [continuous] <b1>: obj=2.45645, original bounds=[0,+inf]
+  [continuous] <b2>: obj=2, original bounds=[0,+inf]
+  [continuous] <b3>: obj=0, original bounds=[0,+inf]
+  [continuous] <b4>: obj=5, original bounds=[336,336]
+  [continuous] <b5>: obj=6, original bounds=[0,0]
+  [continuous] <b6>: obj=0, original bounds=[0,+inf]
+  [continuous] <b7>: obj=4, original bounds=[166,166]
+  [continuous] <b8>: obj=5, original bounds=[3000,3000]
+  [continuous] <b9>: obj=3, original bounds=[3000,3000]
+  [continuous] <b10>: obj=4, original bounds=[1632,1632]
+  [continuous] <b11>: obj=2, original bounds=[1392,1392]
+  [continuous] <b12>: obj=3, original bounds=[984,984]
+  [continuous] <b13>: obj=0, original bounds=[0,+inf]
+  [continuous] <b14>: obj=0, original bounds=[0,+inf]
+  [continuous] <b15>: obj=2, original bounds=[0,0]
+  [continuous] <b16>: obj=0, original bounds=[0,0]
+  [continuous] <f1>: obj=0, original bounds=[0,0]
+  [continuous] <f2>: obj=0, original bounds=[0,0]
+  [continuous] <f3>: obj=0, original bounds=[0,+inf]
+  [continuous] <f4>: obj=0, original bounds=[48,48]
+  [continuous] <f5>: obj=0, original bounds=[0,+inf]
+  [continuous] <f7>: obj=0, original bounds=[0,+inf]
+  [continuous] <f13>: obj=0, original bounds=[0,+inf]
+  [continuous] <f14>: obj=0, original bounds=[0,+inf]
+CONSTRAINTS
+  [linear] <A1>: 0 == 0;
+  [linear] <B6>:  -20<c6>[B] +<d6>[B] +<h6>[I] <= 0;
+  [linear] <C1>:  -<b1>[C] +<b2>[C] <= 0;
+  [linear] <C2>:  -<b2>[C] +<b3>[C] +<b13>[C] == 0;
+  [linear] <C5>: <b6>[C] +<f5>[C] <= 1178;
+  [linear] <C6>:  -672<d6>[B] -1344<h6>[I] -<b6>[C] <= -40;
+  [linear] <C13>:  -1344<h13>[I] -<b13>[C] +<b14>[C] +<f13>[C] <= 0;
+  [linear] <C14>:  -<b14>[C] +<f14>[C] == 0;
+  [linear] <D3>:  -24<g3>[I] +<f3>[C] == 0;
+  [linear] <D5>:  -24<g5>[I] +<f5>[C] == -1;
+  [linear] <D7>:  -24<g7>[I] +<f7>[C] <= 0;
+  [linear] <D13>:  -24<g13>[I] +<f13>[C] <= 0;
+  [linear] <D14>:  -24<g14>[I] +<f14>[C] <= 0;
+  [linear] <E1>:  -<a1>[C] +<a2>[C] == -824;
+  [linear] <E2>:  -<a2>[C] +<a3>[C] +<a13>[C] <= -3100;
+  [linear] <E3>:  -<a3>[C] +<a4>[C] -<f3>[C] == -50;
+  [linear] <E5>: <a7>[C] -<f5>[C] <= -900;
+  [linear] <E7>:  -<a7>[C] -<f7>[C] == -11950;
+  [linear] <E13>:  -<a13>[C] +<a14>[C] -<f13>[C] <= -4000;
+  [linear] <E14>:  -<a14>[C] -<f14>[C] == -790;
+  [linear] <F0>:  +0.000833<a1>[C] +8.3e-05<b1>[C] <= 7;
+  [linear] <F5>: <c6>[B] +8.3e-05<b6>[C] <= 1;
+END

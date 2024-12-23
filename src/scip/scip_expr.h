@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,6 +37,7 @@
 #include "scip/type_scip.h"
 #include "scip/type_expr.h"
 #include "scip/type_misc.h"
+#include "scip/type_message.h"
 
 #ifdef NDEBUG
 #include "scip/struct_scip.h"
@@ -276,12 +277,12 @@ SCIP_RETCODE SCIPcopyExpr(
  * a `Term` is a product of `Factors` and an `Expression` is a sum of `Terms`.
  *
  * The actual definition:
- * <pre>
- * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
+ * ```
+ * Expression -> ["+" | "-"] Term { [ ("+" | "-" | "number *") Term | ("number" <varname>) ] }
  * Term       -> Factor { ("*" | "/" ) Factor }
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
- * </pre>
+ * ```
  * where `[a|b]` means `a` or `b` or none, `(a|b)` means `a` or `b`, `{a}` means 0 or more `a`.
  *
  * Note that `Op` and `OpExpression` are undefined.
@@ -756,6 +757,14 @@ SCIP_RETCODE SCIPsimplifyExpr(
    void*                 ownercreatedata     /**< data to pass to ownercreate */
    );
 
+/** retrieves symmetry information from an expression */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetSymDataExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression from which information needs to be retrieved */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry data */
+   );
+
 /** replaces common sub-expressions in a given expression graph by using a hash key for each expression
  *
  *  The algorithm consists of two steps:
@@ -944,6 +953,13 @@ SCIP_DECL_EXPRSIMPLIFY(SCIPcallExprSimplify);
 SCIP_EXPORT
 SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop);
 
+/** calls the symmetry information callback for an expression
+ *
+ * Returns NULL pointer if not implemented.
+ */
+SCIP_EXPORT
+SCIP_DECL_EXPRGETSYMDATA(SCIPcallExprGetSymData);
+
 #ifdef NDEBUG
 #define SCIPappendExprChild(scip, expr, child)               SCIPexprAppendChild((scip)->set, (scip)->mem->probmem, expr, child)
 #define SCIPreplaceExprChild(scip, expr, childidx, newchild) SCIPexprReplaceChild((scip)->set, (scip)->stat, (scip)->mem->probmem, expr, childidx, newchild)
@@ -974,6 +990,7 @@ SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop);
 #define SCIPcallExprInitestimates(scip, expr, bounds, overestimate, coefs, constant, nreturned)  SCIPexprhdlrInitEstimatesExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, bounds, overestimate, coefs, constant, nreturned)
 #define SCIPcallExprSimplify(scip, expr, simplifiedexpr, ownercreate, ownercreatedata)  SCIPexprhdlrSimplifyExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, simplifiedexpr, ownercreate, ownercreatedata)
 #define SCIPcallExprReverseprop(scip, expr, bounds, childrenbounds, infeasible) SCIPexprhdlrReversePropExpr(SCIPexprGetHdlr(expr), (scip)->set, expr, bounds, childrenbounds, infeasible)
+#define SCIPcallExprGetSymData(scip, expr, symdata) SCIPexprhdlrGetSymdata(SCIPexprGetHdlr(expr), (scip)->set, expr, symdata)
 #endif
 
 /** @} */
@@ -1032,7 +1049,7 @@ void SCIPfreeExprQuadratic(
 
 /** evaluates quadratic term in a solution
  *
- * \note This requires that every expressiion used in the quadratic data is a variable expression.
+ * \note This requires that every expression used in the quadratic data is a variable expression.
  */
 SCIP_EXPORT
 SCIP_Real SCIPevalExprQuadratic(
@@ -1072,6 +1089,35 @@ SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(
 #define SCIPcheckExprQuadratic(scip, expr, isquadratic)  SCIPexprCheckQuadratic((scip)->set, (scip)->mem->probmem, expr, isquadratic)
 #define SCIPfreeExprQuadratic(scip, expr)                SCIPexprFreeQuadratic((scip)->mem->probmem, expr)
 #define SCIPcomputeExprQuadraticCurvature(scip, expr, curv, assumevarfixed, storeeigeninfo)  SCIPexprComputeQuadraticCurvature((scip)->set, (scip)->mem->probmem, (scip)->mem->buffer, (scip)->messagehdlr, expr, curv, assumevarfixed, storeeigeninfo)
+#endif
+
+/** @} */
+
+/**@name Monomial Expressions */
+/**@{ */
+
+/** returns a monomial representation of a product expression
+ *
+ * The array to store all factor expressions needs to be of size the number of
+ * children in the expression which is given by SCIPexprGetNChildren().
+ *
+ * Given a non-trivial monomial expression, the function finds its representation as \f$cx^\alpha\f$, where
+ * \f$c\f$ is a real coefficient, \f$x\f$ is a vector of auxiliary or original variables (where some entries can
+ * be NULL is the auxiliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
+ *
+ * A non-trivial monomial is a product of a least two expressions.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetExprMonomialData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            coef,               /**< coefficient \f$c\f$ */
+   SCIP_Real*            exponents,          /**< exponents \f$\alpha\f$ */
+   SCIP_EXPR**           factors             /**< factor expressions \f$x\f$ */
+   );
+
+#ifdef NDEBUG
+#define SCIPgetExprMonomialData(scip, expr, coef, exponents, factors)  SCIPexprGetMonomialData((scip)->set, (scip)->mem->probmem, expr, coef, exponents, factors)
 #endif
 
 /** @} */

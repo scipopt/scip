@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -129,7 +129,7 @@ SCIP_Real getDensityUb(int n)
    assert(n > 0);
    if( n == 1 )
       return M_PI / 4.0;
-   return (n * M_PI) / SQR(2.0 - SQRT(3.0) + SQRT(7.0 - M_PI + SQRT(3.0)*(2.0*n - 6.0 + M_PI)) );/*lint !e666*/
+   return (n * M_PI) / SQR(2.0 - sqrt(3.0) + sqrt(7.0 - M_PI + sqrt(3.0)*(2.0*n - 6.0 + M_PI)) );/*lint !e666*/
 }
 
 /** helper function to count how many circles of a given type are needed */
@@ -162,13 +162,13 @@ int getNCircles(
    /* special cases where too big circles have a minimum distance to each other (in x direction) */
    if( SCIPisGT(scip, rext, height / 4.0) )
    {
-      SCIP_Real c = SQRT(4.0 * rext * height - SQR(height));
+      SCIP_Real c = sqrt(4.0 * rext * height - SQR(height));
       ncircles = (int)MIN(ncircles, 1 + (int)SCIPfloor(scip, (width - 2.0*rext) / c)); /*lint !e666*/
    }
    if( SCIPisGT(scip, rext, height / 6.0) && SCIPisLE(scip, rext, height / 4.0) )
    {
-      SCIP_Real c = MIN(SQRT(3.0*rext*rext + rext * height - height * height / 4.0),
-         SQRT(8.0 * rext * height - height * height - 12.0 * rext * rext)); /*lint !e666*/
+      SCIP_Real c = MIN(sqrt(3.0*rext*rext + rext * height - height * height / 4.0),
+         sqrt(8.0 * rext * height - height * height - 12.0 * rext * rext)); /*lint !e666*/
       SCIP_Real k = SCIPfloor(scip, height / (2.0 * rext)) + 1;
       SCIP_Real l = (width - 2.0 * rext) / c;
       ncircles = (int)MIN(ncircles, k + l*(k-1) - 1);

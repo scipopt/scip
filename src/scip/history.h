@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -84,6 +84,17 @@ void SCIPhistoryUpdatePseudocost(
    SCIP_Real             weight              /**< weight of this update in pseudo cost sum (added to pscostcount) */
    );
 
+/** updates the ancestral pseudo costs for a change of "solvaldelta" in the variable's LP solution value and a change of
+ * "objdelta" in the LP's objective value
+ */
+void SCIPhistoryUpdateAncPseudocost(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   SCIP_Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   SCIP_Real             weight              /**< weight of this update in discounted pseudo cost sum (added to ancpscostcount) */
+   );
+
 
 /**@defgroup ValueHistory Value Based History
  * @ingroup INTERNALAPI
@@ -132,6 +143,12 @@ SCIP_Real SCIPhistoryGetPseudocost(
    SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
    );
 
+/** returns the expected ancestral dual gain for moving the corresponding variable by "solvaldelta" */
+SCIP_Real SCIPhistoryGetAncPseudocost(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
 /** returns the variance of pseudo costs about the mean. */
 SCIP_Real SCIPhistoryGetPseudocostVariance(
    SCIP_HISTORY*         history,            /**< branching and inference history */
@@ -146,8 +163,22 @@ SCIP_Real SCIPhistoryGetPseudocostCount(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** returns the (possible fractional) number of (partial) ancestral pseudo cost updates performed on this pseudo cost entry in
+ *  the given branching direction
+ */
+SCIP_Real SCIPhistoryGetAncPseudocostCount(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
 /** returns whether the pseudo cost entry is empty in the given branching direction (whether no value was added yet) */
 SCIP_Bool SCIPhistoryIsPseudocostEmpty(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns whether the ancestral pseudo cost entry is empty in the given branching direction (whether no value was added yet) */
+SCIP_Bool SCIPhistoryIsAncPseudocostEmpty(
    SCIP_HISTORY*         history,            /**< branching and inference history */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
@@ -227,17 +258,39 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
 /** returns true if the given history contains a valid ratio */
 SCIP_Bool SCIPhistoryIsRatioValid(
    SCIP_HISTORY*         history             /**< branching and inference history */
-);
+   );
 
 /** returns the most recent ratio computed given the variable history */
 SCIP_Real SCIPhistoryGetLastRatio(
    SCIP_HISTORY*         history             /**< branching and inference history */
-);
+   );
 
 /** returns the most recent value of r/l used to compute this variable's ratio */
 SCIP_Real SCIPhistoryGetLastBalance(
    SCIP_HISTORY*         history             /**< branching and inference history */
-);
+   );
+
+/** returns the average efficacy value for the GMI cut produced by this variable */
+SCIP_Real SCIPhistoryGetAvgGMIeff(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+   );
+
+/** increases the average efficacy value for the GMI cut produced by this variable */
+void SCIPhistoryIncGMIeffSum(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             gmieff              /**< normalized efficacy value of a cut which will increase gmieff */
+   );
+
+/** returns the most recent efficacy value for the GMI cut produced by this variable */
+SCIP_Real SCIPhistoryGetLastGMIeff(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+   );
+
+/** sets the new most recent efficacy value for the GMI cut produced by this variable */
+void SCIPhistorySetLastGMIeff(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             gmieff              /**< Efficacy of GMI cut produced from simplex tableau row of this var */
+   );
 
 /** sets the ratio history for a particular variable */
 void SCIPhistorySetRatioHistory(
@@ -245,7 +298,7 @@ void SCIPhistorySetRatioHistory(
    SCIP_Bool             valid,              /**< True iff the ratio computed is valid */
    SCIP_Real             ratio,              /**< Ratio of the characteristic polynomial with gains (1, rightgain/leftgain) */
    SCIP_Real             balance             /**< The value of rightgain/leftgain */
-);
+   );
 
 #ifdef NDEBUG
 
@@ -261,12 +314,19 @@ void SCIPhistorySetRatioHistory(
       ? (history)->pscostweightedmean[1] : 1.0)      \
       : -(solvaldelta) * ((history)->pscostcount[0] > 0.0               \
          ? (history)->pscostweightedmean[0] : 1.0) )
+#define SCIPhistoryGetAncPseudocost(history,solvaldelta)                   \
+   ( (solvaldelta) >= 0.0 ? (solvaldelta) * ((history)->ancpscostcount[1] > 0.0 \
+      ? (history)->ancpscostweightedmean[1] : 1.0)      \
+      : -(solvaldelta) * ((history)->ancpscostcount[0] > 0.0               \
+         ? (history)->ancpscostweightedmean[0] : 1.0) )
 #define SCIPhistoryGetPseudocostVariance(history, dir)                  \
    ( (history)->pscostcount[dir] >= 1.9 ? 1 / ((history)->pscostcount[dir] - 1)  \
          * ((history)->pscostvariance[dir]) \
          : 0.0)
 #define SCIPhistoryGetPseudocostCount(history,dir) ((history)->pscostcount[dir])
+#define SCIPhistoryGetAncPseudocostCount(history,dir) ((history)->ancpscostcount[dir])
 #define SCIPhistoryIsPseudocostEmpty(history,dir)  ((history)->pscostcount[dir] == 0.0)
+#define SCIPhistoryIsAncPseudocostEmpty(history,dir)  ((history)->ancpscostcount[dir] == 0.0)
 #define SCIPhistoryIncVSIDS(history,dir,weight) (history)->vsids[dir] += (weight)
 #define SCIPhistoryScaleVSIDS(history,scalar)  { (history)->vsids[0] *= (scalar); \
       (history)->vsids[1] *= (scalar);  }
@@ -289,6 +349,12 @@ void SCIPhistorySetRatioHistory(
 #define SCIPhistorySetRatioHistory(history,newvalid,newratio,newbalance) (history)->ratiovalid = newvalid, \
     (history)->ratio = newratio, (history)->balance = newbalance
 #define SCIPhistoryGetLastBalance(history) ((history)->balance)
+#define SCIPhistoryGetLastGMIeff(history) ((history)->gmieff)
+#define SCIPhistorySetLastGMIeff(history,newgmieff) (history)->gmieff = newgmieff
+#define SCIPhistoryGetAvgGMIeff(history) ((history)->ngmi > 0 \
+      ? (SCIP_Real)(history)->gmieffsum/(SCIP_Real)(history)->ngmi : 0.0)
+#define SCIPhistoryIncGMIeffSum(history, newgmieff) { (history)->gmieffsum += newgmieff; \
+      (history)->ngmi += 1; }
 
 #endif
 

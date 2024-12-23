@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -43,10 +43,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/
-#endif
 
 #include "blockmemshell/memory.h"
 #include "scip/cons.h"
@@ -89,150 +85,6 @@
 #include "scip/tree.h"
 #include "xml/xml.h"
 
-/** checks solution for feasibility in original problem without adding it to the solution store; to improve the
- *  performance we use the following order when checking for violations:
- *
- *  1. variable bounds
- *  2. constraint handlers with positive or zero priority that don't need constraints (e.g. integral constraint handler)
- *  3. original constraints
- *  4. constraint handlers with negative priority that don't need constraints (e.g. Benders' decomposition constraint handler)
- */
-static
-SCIP_RETCODE checkSolOrig(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
-   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
-   SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
-   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
-   SCIP_Bool             checkmodifiable     /**< have modifiable constraint to be checked? */
-   )
-{
-   SCIP_RESULT result;
-   int v;
-   int c;
-   int h;
-
-   assert(scip != NULL);
-   assert(sol != NULL);
-   assert(feasible != NULL);
-
-   SCIP_CALL( SCIPcheckStage(scip, "checkSolOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
-   *feasible = TRUE;
-
-   SCIPsolResetViolations(sol);
-
-   if( !printreason )
-      completely = FALSE;
-
-   /* check bounds */
-   if( checkbounds )
-   {
-      for( v = 0; v < scip->origprob->nvars; ++v )
-      {
-         SCIP_VAR* var;
-         SCIP_Real solval;
-         SCIP_Real lb;
-         SCIP_Real ub;
-
-         var = scip->origprob->vars[v];
-         solval = SCIPsolGetVal(sol, scip->set, scip->stat, var);
-
-         lb = SCIPvarGetLbOriginal(var);
-         ub = SCIPvarGetUbOriginal(var);
-
-         SCIPupdateSolBoundViolation(scip, sol, lb - solval, SCIPrelDiff(lb, solval));
-         SCIPupdateSolBoundViolation(scip, sol, solval - ub, SCIPrelDiff(solval, ub));
-
-         if( SCIPsetIsFeasLT(scip->set, solval, lb) || SCIPsetIsFeasGT(scip->set, solval, ub) )
-         {
-            *feasible = FALSE;
-
-            if( printreason )
-            {
-               SCIPmessagePrintInfo(scip->messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
-                  SCIPvarGetName(var), lb, ub, solval);
-            }
-
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
-
-   /* call constraint handlers with positive or zero check priority that don't need constraints */
-   for( h = 0; h < scip->set->nconshdlrs; ++h )
-   {
-      if( SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) >= 0 )
-      {
-         if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
-         {
-            SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-                  checkintegrality, checklprows, printreason, completely, &result) );
-
-            if( result != SCIP_FEASIBLE )
-            {
-               *feasible = FALSE;
-
-               if( !completely )
-                  return SCIP_OKAY;
-            }
-         }
-      }
-      /* constraint handlers are sorted by priority, so we can break when reaching the first one with negative priority */
-      else
-         break;
-   }
-
-   /* check original constraints
-    *
-    * in general modifiable constraints can not be checked, because the variables to fulfill them might be missing in
-    * the original problem; however, if the solution comes from a heuristic during presolving modifiable constraints
-    * have to be checked;
-    */
-   for( c = 0; c < scip->origprob->nconss; ++c )
-   {
-      if( SCIPconsIsChecked(scip->origprob->conss[c]) && (checkmodifiable || !SCIPconsIsModifiable(scip->origprob->conss[c])) )
-      {
-         /* check solution */
-         SCIP_CALL( SCIPconsCheck(scip->origprob->conss[c], scip->set, sol,
-               checkintegrality, checklprows, printreason, &result) );
-
-         if( result != SCIP_FEASIBLE )
-         {
-            *feasible = FALSE;
-
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
-
-   /* call constraint handlers with negative check priority that don't need constraints;
-    * continue with the first constraint handler with negative priority which caused us to break in the above loop */
-   for( ; h < scip->set->nconshdlrs; ++h )
-   {
-      assert(SCIPconshdlrGetCheckPriority(scip->set->conshdlrs[h]) < 0);
-      if( !SCIPconshdlrNeedsCons(scip->set->conshdlrs[h]) )
-      {
-         SCIP_CALL( SCIPconshdlrCheck(scip->set->conshdlrs[h], scip->mem->probmem, scip->set, scip->stat, sol,
-               checkintegrality, checklprows, printreason, completely, &result) );
-
-         if( result != SCIP_FEASIBLE )
-         {
-            *feasible = FALSE;
-
-            if( !completely )
-               return SCIP_OKAY;
-         }
-      }
-   }
-
-   return SCIP_OKAY;
-}
 
 /** update integrality violation of a solution */
 void SCIPupdateSolIntegralityViolation(
@@ -2610,12 +2462,12 @@ SCIP_RETCODE readSolFile(
          break;
       lineno++;
 
-      /* there are some lines which may preceed the solution information */
-      if( strncasecmp(buffer, "solution status:", 16) == 0 || strncasecmp(buffer, "objective value:", 16) == 0 ||
-         strncasecmp(buffer, "Log started", 11) == 0 || strncasecmp(buffer, "Variable Name", 13) == 0 ||
-         strncasecmp(buffer, "All other variables", 19) == 0 || strspn(buffer, " \n\r\t\f") == strlen(buffer) ||
-         strncasecmp(buffer, "NAME", 4) == 0 || strncasecmp(buffer, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
-         strncasecmp(buffer, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
+      /* there are some lines which may precede the solution information */
+      if( SCIPstrncasecmp(buffer, "solution status:", 16) == 0 || SCIPstrncasecmp(buffer, "objective value:", 16) == 0 ||
+         SCIPstrncasecmp(buffer, "Log started", 11) == 0 || SCIPstrncasecmp(buffer, "Variable Name", 13) == 0 ||
+         SCIPstrncasecmp(buffer, "All other variables", 19) == 0 || strspn(buffer, " \n\r\t\f") == strlen(buffer) ||
+         SCIPstrncasecmp(buffer, "NAME", 4) == 0 || SCIPstrncasecmp(buffer, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         SCIPstrncasecmp(buffer, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
          continue;
 
       /* parse the line */
@@ -2643,13 +2495,13 @@ SCIP_RETCODE readSolFile(
       }
 
       /* cast the value */
-      if( strncasecmp(valuestring, "inv", 3) == 0 )
+      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
          continue;
-      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
          value = SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
          value = -SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "unknown", 7) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "unknown", 7) == 0 )
       {
          value = SCIP_UNKNOWN;
          localpartial = TRUE;
@@ -2739,7 +2591,7 @@ SCIP_RETCODE readXmlSolFile(
    assert(error != NULL);
 
    /* read xml file */
-   start = xmlProcess(filename);
+   start = SCIPxmlProcess(filename);
 
    if( start == NULL )
    {
@@ -2752,11 +2604,11 @@ SCIP_RETCODE readXmlSolFile(
 
    /* find variable sections */
    tag = "variables";
-   varsnode = xmlFindNodeMaxdepth(start, tag, 0, 3);
+   varsnode = SCIPxmlFindNodeMaxdepth(start, tag, 0, 3);
    if( varsnode == NULL )
    {
       /* free xml data */
-      xmlFreeNode(start);
+      SCIPxmlFreeNode(start);
 
       SCIPerrorMessage("Variable section not found.\n");
       return SCIP_READERROR;
@@ -2764,7 +2616,7 @@ SCIP_RETCODE readXmlSolFile(
 
    /* loop through all variables */
    unknownvariablemessage = FALSE;
-   for( varnode = xmlFirstChild(varsnode); varnode != NULL; varnode = xmlNextSibl(varnode) )
+   for( varnode = SCIPxmlFirstChild(varsnode); varnode != NULL; varnode = SCIPxmlNextSibl(varnode) )
    {
       SCIP_VAR* var;
       const char* varname;
@@ -2773,7 +2625,7 @@ SCIP_RETCODE readXmlSolFile(
       int nread;
 
       /* find variable name */
-      varname = xmlGetAttrval(varnode, "name");
+      varname = SCIPxmlGetAttrval(varnode, "name");
       if( varname == NULL )
       {
          SCIPerrorMessage("Attribute \"name\" of variable not found.\n");
@@ -2796,7 +2648,7 @@ SCIP_RETCODE readXmlSolFile(
       }
 
       /* find value of variable */
-      valuestring = xmlGetAttrval(varnode, "value");
+      valuestring = SCIPxmlGetAttrval(varnode, "value");
       if( valuestring == NULL )
       {
          SCIPerrorMessage("Attribute \"value\" of variable not found.\n");
@@ -2805,13 +2657,13 @@ SCIP_RETCODE readXmlSolFile(
       }
 
       /* cast the value */
-      if( strncasecmp(valuestring, "inv", 3) == 0 )
+      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
          continue;
-      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
          value = SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
          value = -SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "unknown", 7) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "unknown", 7) == 0 )
       {
          value = SCIP_UNKNOWN;
          localpartial = TRUE;
@@ -2859,7 +2711,7 @@ SCIP_RETCODE readXmlSolFile(
    }
 
    /* free xml data */
-   xmlFreeNode(start);
+   SCIPxmlFreeNode(start);
 
    if( localpartial && !SCIPsolIsPartial(sol)  )
    {
@@ -3131,7 +2983,8 @@ SCIP_RETCODE SCIPtrySol(
 
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints */
-      SCIP_CALL( checkSolOrig(scip, sol, &feasible, printreason, completely, checkbounds, checkintegrality, checklprows, TRUE) );
+      SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+            printreason, completely, checkbounds, checkintegrality, checklprows, TRUE, &feasible) );
       if( feasible )
       {
          SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
@@ -3159,7 +3012,7 @@ SCIP_RETCODE SCIPtrySol(
          {
 #ifdef SCIP_DEBUG_ABORTATORIGINFEAS
             SCIP_Bool feasible;
-            SCIP_CALL( checkSolOrig(scip, sol, &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+            SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
             if( ! feasible )
             {
@@ -3227,7 +3080,8 @@ SCIP_RETCODE SCIPtrySolFree(
       /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
        * including modifiable constraints
        */
-      SCIP_CALL( checkSolOrig(scip, *sol, &feasible, printreason, completely, checkbounds, checkintegrality, checklprows, TRUE) );
+      SCIP_CALL( SCIPsolCheckOrig(*sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+            printreason, completely, checkbounds, checkintegrality, checklprows, TRUE, &feasible) );
 
       if( feasible )
       {
@@ -3259,7 +3113,8 @@ SCIP_RETCODE SCIPtrySolFree(
          {
 #ifdef SCIP_DEBUG_ABORTATORIGINFEAS
             SCIP_Bool feasible;
-            SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+            SCIP_CALL( SCIPsolCheckOrig(SCIPgetBestSol(scip), scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+                  TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
             if( ! feasible )
             {
@@ -3313,7 +3168,8 @@ SCIP_RETCODE SCIPtryCurrentSol(
       {
 #ifdef SCIP_DEBUG_ABORTATORIGINFEAS
          SCIP_Bool feasible;
-         SCIP_CALL( checkSolOrig(scip, SCIPgetBestSol(scip), &feasible, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+         SCIP_CALL( SCIPsolCheckOrig(SCIPgetBestSol(scip), scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+               TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
          if( ! feasible )
          {
@@ -3417,7 +3273,8 @@ SCIP_RETCODE SCIPcheckSol(
    if( SCIPsolIsOriginal(sol) )
    {
       /* SCIPsolCheck() can only be called on transformed solutions */
-      SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, completely, checkbounds, checkintegrality, checklprows, FALSE) );
+      SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+            printreason, completely, checkbounds, checkintegrality, checklprows, FALSE, feasible) );
    }
    else
    {
@@ -3470,7 +3327,8 @@ SCIP_RETCODE SCIPcheckSolOrig(
       completely = FALSE;
 
    /* check solution in original problem; that includes bounds, integrality, and non modifiable constraints */
-   SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, completely, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( SCIPsolCheckOrig(sol, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat, scip->origprob, scip->origprimal,
+         printreason, completely, TRUE, TRUE, TRUE, FALSE, feasible) );
 
    return SCIP_OKAY;
 }

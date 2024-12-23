@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -82,7 +82,7 @@ SCIP_RETCODE getActiveVariables(
    assert(nvars != NULL);
    assert(constant != NULL);
 
-   SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+   SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize) );
 
    if( requiredsize > *nvars )
    {
@@ -90,9 +90,9 @@ SCIP_RETCODE getActiveVariables(
       SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
 
       /* call function a second time with enough memory */
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
-      assert(requiredsize <= *nvars);
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize) );
    }
+   assert(requiredsize == *nvars);
 
    return SCIP_OKAY;
 }
@@ -467,11 +467,14 @@ SCIP_RETCODE SCIPmatrixCreate(
 {
    SCIP_MATRIX* matrix;
    SCIP_CONSHDLR** conshdlrs;
+   SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
    SCIP_Bool stopped;
    SCIP_VAR** vars;
    SCIP_VAR* var;
+   SCIP_CONS** conshdlrconss;
    SCIP_CONS* cons;
+   int nconshdlrconss;
    int nconshdlrs;
    int nconss;
    int nconssall;
@@ -509,8 +512,6 @@ SCIP_RETCODE SCIPmatrixCreate(
 
    for( i = 0; i < nconshdlrs; ++i )
    {
-      int nconshdlrconss;
-
       nconshdlrconss = SCIPconshdlrGetNCheckConss(conshdlrs[i]);
 
       if( nconshdlrconss > 0 )
@@ -586,9 +587,41 @@ SCIP_RETCODE SCIPmatrixCreate(
    if( *infeasible )
       return SCIP_OKAY;
 
+   /* delete empty redundant knapsack constraints */
+   conshdlr = SCIPfindConshdlr(scip, "knapsack");
+   if( conshdlr != NULL )
+   {
+      nconshdlrconss = SCIPconshdlrGetNCheckConss(conshdlr);
+      conshdlrconss = SCIPconshdlrGetCheckConss(conshdlr);
+      for( i = nconshdlrconss - 1; i >= 0; --i )
+      {
+         if( SCIPgetNVarsKnapsack(scip, conshdlrconss[i]) == 0 )
+         {
+            SCIP_CALL( SCIPdelCons(scip, conshdlrconss[i]) );
+            ++(*ndelconss);
+         }
+      }
+   }
+
    SCIP_CALL( SCIPcleanupConssLinear(scip, TRUE, infeasible) );
    if( *infeasible )
       return SCIP_OKAY;
+
+   /* delete empty redundant linear constraints */
+   conshdlr = SCIPfindConshdlr(scip, "linear");
+   if( conshdlr != NULL )
+   {
+      nconshdlrconss = SCIPconshdlrGetNCheckConss(conshdlr);
+      conshdlrconss = SCIPconshdlrGetCheckConss(conshdlr);
+      for( i = nconshdlrconss - 1; i >= 0; --i )
+      {
+         if( SCIPgetNVarsLinear(scip, conshdlrconss[i]) == 0 )
+         {
+            SCIP_CALL( SCIPdelCons(scip, conshdlrconss[i]) );
+            ++(*ndelconss);
+         }
+      }
+   }
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
@@ -661,8 +694,6 @@ SCIP_RETCODE SCIPmatrixCreate(
    /* loop a second time over constraints handlers and add supported constraints to the matrix */
    for( i = 0; i < nconshdlrs; ++i )
    {
-      SCIP_CONS** conshdlrconss;
-      int nconshdlrconss;
       SCIP_Bool rowadded;
 
       if( SCIPisStopped(scip) || (onlyifcomplete && !(*complete)) )

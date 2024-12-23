@@ -216,8 +216,8 @@ SECTION: General Questions about SCIP
         SCIP supports nonlinear constraints of the form lhs &le; f(x) &le; rhs, where the function f(x) is an algebraic
         expression that can be represented as expression tree. Such an expression tree has constants and variables as terminal
         nodes and operands as non-terminal nodes.
-        Expression operands supported by SCIP include addition, subtraction, multiplication, division, exponentiation and
-        logarithm. Trigonometric functions are not yet supported by SCIP.
+        Expression operands supported by SCIP include addition, subtraction, multiplication, division, exponentiation,
+        logarithm, sine and cosine.
     </p>
     <p>
         Nonlinear objective functions are not supported by SCIP and must be modeled as constraint function.
@@ -339,7 +339,7 @@ SECTION: General Questions about SCIP
     LABEL:scipblisscrash
     ANSWER:
     <p>
-        The bliss library can be compiled with or without GMP support. If bliss is compiled with GMP the macro defininiton
+        The bliss library can be compiled with or without GMP support. If bliss is compiled with GMP the macro definition
         <code>BLISS_USE_GMP</code> must be added, otherwise the headers do not match the library which produces the crash.
         If bliss is compiled as shared library, the CMake system should be able to detect this automatically.
         In case you do not need symmetry handling, the easiest way to resolve the problem is to just disable
@@ -382,7 +382,7 @@ SECTION: General Questions about SCIP
        Of course, it would also be possible to change the type of variable y to "integer" (<code>SCIP_VARTYPE_INTEGER</code>), but this would mean that SCIP may
        try to actively enforce integrality of y, e.g., by branching on y if it takes a fractional value in a relaxations solution.
        Thus, to express that a variable will eventually take an integral value but does not need to be branched on, variable type SCIP_VARTYPE_IMPLINT is used.
-       In fact, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b with all coefficents being integral and all variables integer,
+       In fact, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b with all coefficients being integral and all variables integer,
        SCIP may decide to change the type of variable y to implicit-integer.
     </p>
     <p>

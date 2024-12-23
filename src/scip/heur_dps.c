@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,6 +37,9 @@
  * is replaced by the sum of these additional variables weighted by penalty parameters lambda. If all blocks have an optimal solution
  * of zero, the algorithm terminates with a feasible solution for the main problem. Otherwise, the partition and the penalty parameters
  * are updated, and the sub-SCIPs are solved again.
+ *
+ * A detailed description can be found in
+ * K. Halbig, A. Göß and D. Weninger (2023). Exploiting user-supplied Decompositions inside Heuristics. https://optimization-online.org/?p=23386
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -63,7 +66,7 @@
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
+#define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_MAXIT         50    /**< maximum number of iterations */
@@ -84,10 +87,13 @@ struct SCIP_HeurData
    int                   nlinking;           /**< number of linking constraints */
    int                   nblocks;            /**< number of blocks */
    int                   maxit;              /**< maximal number of iterations */
+   int                   timing;             /**< should the heuristic run before or after the processing of the node?
+                                                  (0: before, 1: after, 2: both)*/
    SCIP_Real             maxlinkscore;       /**< maximal linking score of used decomposition (equivalent to percentage of linking constraints) */
    SCIP_Real             penalty;            /**< multiplier for absolute increase of penalty parameters */
    SCIP_Bool             reoptimize;         /**< should the problem get reoptimized with the original objective function? */
    SCIP_Bool             reuse;              /**< should solutions get reused in subproblems? */
+   SCIP_Bool             reoptlimits;        /**< should strict limits for reoptimization be set? */
 };
 
 /** data related to one block */
@@ -213,12 +219,18 @@ SCIP_RETCODE createSubscip(
    SCIP**                subscip             /**< pointer to store created sub-SCIP */
    )
 {
+   SCIP_Real infvalue;
+
    assert(scip != NULL);
    assert(subscip != NULL);
 
    /* create a new SCIP instance */
    SCIP_CALL( SCIPcreate(subscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(*subscip) );
+
+   /* copy value for infinity */
+   SCIP_CALL( SCIPgetRealParam(scip, "numerics/infinity", &infvalue) );
+   SCIP_CALL( SCIPsetRealParam(*subscip, "numerics/infinity", infvalue) );
 
    SCIP_CALL( SCIPcopyLimits(scip, *subscip) );
 
@@ -863,6 +875,7 @@ SCIP_RETCODE initCurrent(
    SCIP*                 scip,               /**< SCIP data structure of main scip */
    LINKING**             linkings,           /**< array of linking data structures */
    BLOCKPROBLEM**        blockproblem,       /**< array of blockproblem data structures */
+   SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
    int                   nlinking,           /**< number of linking constraints */
    SCIP_Bool*            success             /**< pointer to store whether initialization was successful */
    )
@@ -894,8 +907,100 @@ SCIP_RETCODE initCurrent(
       residualrhs = rhs;
       residuallhs = lhs;
 
+      /* LP value for each block plus part of remaining amount if sum is not equal to rhs/lhs */
+      if( (heurtiming & SCIP_HEURTIMING_AFTERNODE) && (linking->hasrhs || linking->haslhs) )
+      {
+         SCIP_Real sumrhs = 0.0;
+         SCIP_Real sumlhs = 0.0;
+         for( b = 0; b < linking->nblocks; b++ )
+         {
+            SCIP_VAR** consvars;
+            SCIP_Real* consvals;
+            SCIP_CONS* cons;
+            int nconsvars;
+            SCIP_Real lpvalue;
+            int i;
+
+            /* get variables of linking constraint of one block */
+            cons = linking->blockconss[b];
+            SCIP_CALL( SCIPgetConsNVars(blockproblem[linking->blocknumbers[b]]->blockscip, cons, &nconsvars, success) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
+            SCIP_CALL( SCIPgetConsVars(blockproblem[linking->blocknumbers[b]]->blockscip, cons, consvars, nconsvars, success) );
+            SCIP_CALL( SCIPgetConsVals(blockproblem[linking->blocknumbers[b]]->blockscip, cons, consvals, nconsvars, success) );
+            assert(success);
+
+            /* calculate value of partition variable in lp solution */
+            lpvalue = 0.0;
+            for( i = 0; i < nconsvars - linking->nslacksperblock; i++ )
+            {
+               SCIP_VAR* origvar;
+               SCIP_Real varlpvalue;
+
+               origvar = SCIPfindVar(scip, SCIPvarGetName(consvars[i]));
+               if( origvar == NULL ) /* e.g. variable is negated */
+               {
+                  *success = FALSE;
+                  return SCIP_OKAY;
+               }
+               varlpvalue = SCIPvarGetLPSol(origvar);
+               lpvalue += varlpvalue * consvals[i];
+            }
+            sumrhs += lpvalue;
+            sumlhs += lpvalue;
+
+            /* set currentrhs/lhs at lp value */
+            if( linking->hasrhs )
+               linking->currentrhs[b] = lpvalue;
+            if( linking->haslhs )
+               linking->currentlhs[b] = lpvalue;
+
+            SCIPfreeBufferArray(scip, &consvars);
+            SCIPfreeBufferArray(scip, &consvals);
+         }
+         assert(SCIPisLE(scip, sumrhs, rhs));
+         assert(SCIPisGE(scip, sumlhs, lhs));
+
+         /* distribute remaining amount */
+         if( !SCIPisEQ(scip, rhs, sumrhs) && linking->hasrhs )
+         {
+            SCIP_Real diff;
+            SCIP_Real part;
+            SCIP_Real residual;
+            diff = rhs - sumrhs;
+            residual = 0.0;
+
+            for( b = 0; b < linking->nblocks; b++ )
+            {
+               goalvalue = linking->currentrhs[b] + ( diff / linking->nblocks ) + residual;
+               part = MIN(goalvalue, linking->maxactivity[b]);
+               residual = goalvalue - part;
+               linking->currentrhs[b] = part;
+            }
+            if( !SCIPisZero(scip, residual) )
+               linking->currentrhs[0] += residual;
+         }
+         if( !SCIPisEQ(scip, lhs, sumlhs) && linking->haslhs )
+         {
+            SCIP_Real diff;
+            SCIP_Real part;
+            SCIP_Real residual;
+            diff = sumlhs - lhs; /* always positive*/
+            residual = 0.0;
+
+            for( b = 0; b < linking->nblocks; b++ )
+            {
+               goalvalue = linking->currentlhs[b] - ( diff / linking->nblocks ) + residual;
+               part = MAX(goalvalue, linking->minactivity[b]);
+               residual = goalvalue - part;
+               linking->currentlhs[b] = part;
+            }
+            if( !SCIPisZero(scip, residual) )
+               linking->currentlhs[0] += residual;
+         }
+      }
       /* equal parts for each block with respect to minimal/maximal activity */
-      if( linking->hasrhs || linking->haslhs )
+      else if( linking->hasrhs || linking->haslhs )
       {
          if( linking->hasrhs )
          {
@@ -954,33 +1059,23 @@ SCIP_RETCODE initCurrent(
    return SCIP_OKAY;
 }
 
-/** update partition */
+/** calculates shift */
 static
-SCIP_RETCODE updatePartition(
+SCIP_RETCODE calculateShift(
    SCIP*                 scip,               /**< SCIP data structure of main scip */
-   LINKING*              linking,            /**< one linking data structure */
    BLOCKPROBLEM**        blockproblem,       /**< array of blockproblem data structures */
+   LINKING*              linking,            /**< one linking data structure */
+   SCIP_Real**           shift,              /**< pointer to store direction vector */
    int*                  nviolatedblocksrhs, /**< pointer to store number of blocks which violate rhs */
    int*                  nviolatedblockslhs, /**< pointer to store number of blocks which violate lhs */
-   int                   iteration           /**< number of iteration */
+   SCIP_Bool*            update              /**< should we update the partition? */
    )
 {
-   SCIP_Real* shift; /* direction vector */
    int* nonviolatedblocksrhs;
    int* nonviolatedblockslhs;
    SCIP_Real sumviols = 0.0;
    int v;
 
-   assert(scip != NULL);
-   assert(linking != NULL);
-   assert(blockproblem != NULL);
-   assert(iteration >= 0);
-
-   *nviolatedblocksrhs = 0;
-   *nviolatedblockslhs = 0;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &shift, linking->nblocks) );
-   BMSclearMemoryArray(shift, linking->nblocks);
    if( linking->hasrhs )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &nonviolatedblocksrhs, linking->nblocks) );
@@ -1012,7 +1107,7 @@ SCIP_RETCODE updatePartition(
          {
             (*nviolatedblocksrhs)++;
 
-            shift[v] += slackval;
+            (*shift)[v] += slackval;
             sumviols += slackval;
          }
          else
@@ -1029,7 +1124,7 @@ SCIP_RETCODE updatePartition(
          {
             (*nviolatedblockslhs)++;
 
-            shift[v] -= slackval;
+            (*shift)[v] -= slackval;
             sumviols -= slackval;
          }
          else
@@ -1043,12 +1138,12 @@ SCIP_RETCODE updatePartition(
    if( *nviolatedblocksrhs + *nviolatedblockslhs == 0 ||
          linking->nblocks == *nviolatedblocksrhs || linking->nblocks == *nviolatedblockslhs )
    {
+      *update = FALSE;
       /* free memory */
       if( linking->haslhs )
          SCIPfreeBufferArray(scip, &nonviolatedblockslhs);
       if( linking->hasrhs )
          SCIPfreeBufferArray(scip, &nonviolatedblocksrhs);
-      SCIPfreeBufferArray(scip, &shift);
       return SCIP_OKAY;
    }
 
@@ -1068,16 +1163,20 @@ SCIP_RETCODE updatePartition(
        */
       for( v = 0; v < linking->nblocks - *nviolatedblocksrhs; v++ )
       {
+         /* coverity[uninit_use] */
          part = linking->currentrhs[nonviolatedblocksrhs[v]] - residual/(linking->nblocks - *nviolatedblocksrhs - v);
          part = MIN(MAX(part, linking->minactivity[nonviolatedblocksrhs[v]]), linking->maxactivity[nonviolatedblocksrhs[v]]);
          shift_tmp = part - linking->currentrhs[nonviolatedblocksrhs[v]];
          residual += shift_tmp;
-         shift[nonviolatedblocksrhs[v]] += shift_tmp;
+         (*shift)[nonviolatedblocksrhs[v]] += shift_tmp;
       }
       if( !SCIPisZero(scip, residual) )
       {
-         /* assign residual to first block */
-         shift[nonviolatedblocksrhs[0]] -= residual;
+         /* assign residual to ... */
+         if( linking->nblocks - *nviolatedblocksrhs == 1 )
+            (*shift)[nonviolatedblocksrhs[0] == 0 ? 1 : 0] -= residual; /* first violated block */
+         else
+            (*shift)[nonviolatedblocksrhs[0]] -= residual; /* first nonviolated block */
       }
    }
    if( SCIPisNegative(scip, sumviols) )
@@ -1095,60 +1194,117 @@ SCIP_RETCODE updatePartition(
        */
       for( v = 0; v < linking->nblocks - *nviolatedblockslhs; v++ )
       {
+         /* coverity[uninit_use] */
          part = linking->currentlhs[nonviolatedblockslhs[v]] - residual/(linking->nblocks - *nviolatedblockslhs - v);
          part = MIN(MAX(part, linking->minactivity[nonviolatedblockslhs[v]]), linking->maxactivity[nonviolatedblockslhs[v]]);
          shift_tmp = part - linking->currentlhs[nonviolatedblockslhs[v]];
          residual += shift_tmp;
-         shift[nonviolatedblockslhs[v]] += shift_tmp;
+         (*shift)[nonviolatedblockslhs[v]] += shift_tmp;
       }
       if( !SCIPisZero(scip, residual) )
       {
-         /* assign residual to first block */
-         shift[nonviolatedblockslhs[0]] -= residual;
+         /* assign residual to ... */
+         if( linking->nblocks - *nviolatedblockslhs == 1 )
+            (*shift)[nonviolatedblockslhs[0] == 0 ? 1 : 0] -= residual; /* first violated block */
+         else
+            (*shift)[nonviolatedblockslhs[0]] -= residual; /* first nonviolated block */
       }
    }
 
-#ifdef SCIP_DEBUG
-   SCIP_Real sum = 0.0;
-   /* check sum of shift; must be zero */
-   for( v = 0; v < linking->nblocks; v++ )
-      sum += shift[v];
-   assert(SCIPisZero(scip, sum));
-#endif
-
-   /* add shift to both sides */
-   for( v = 0; v < linking->nblocks; v++)
-   {
-      if( linking->hasrhs )
-         linking->currentrhs[v] += shift[v];
-
-      if( linking->haslhs )
-         linking->currentlhs[v] += shift[v];
-   }
-
-   SCIP_CALL( roundPartition(scip, linking, blockproblem, ((linking->hasrhs && (*nviolatedblocksrhs != 0)) || !linking->haslhs)) );
-
-   /* set sides in blockproblems to new partition */
-   for( v = 0; v < linking->nblocks; v++ )
-   {
-      SCIP* subscip;
-      subscip = blockproblem[linking->blocknumbers[v]]->blockscip;
-
-      if( linking->hasrhs )
-      {
-         SCIP_CALL( SCIPchgRhsLinear(subscip, linking->blockconss[v], linking->currentrhs[v]) );
-      }
-      if( linking->haslhs )
-      {
-         SCIP_CALL( SCIPchgLhsLinear(subscip, linking->blockconss[v], linking->currentlhs[v]) );
-      }
-   }
+   *update = TRUE;
 
    /* free memory */
    if( linking->haslhs )
       SCIPfreeBufferArray(scip, &nonviolatedblockslhs);
    if( linking->hasrhs )
       SCIPfreeBufferArray(scip, &nonviolatedblocksrhs);
+
+   return SCIP_OKAY;
+}
+
+/** update partition */
+static
+SCIP_RETCODE updatePartition(
+   SCIP*                 scip,               /**< SCIP data structure of main scip */
+   LINKING**             linkings,           /**< linking data structure */
+   BLOCKPROBLEM**        blockproblem,       /**< array of blockproblem data structures */
+   int**                 nviolatedblocksrhs, /**< pointer to store number of blocks which violate rhs */
+   int**                 nviolatedblockslhs, /**< pointer to store number of blocks which violate lhs */
+   int                   nlinking,           /**< number of linking constraints */
+   int                   nblocks,            /**< number of blocks */
+   int                   iteration,          /**< number of iteration */
+   SCIP_Bool*            oneupdate           /**< is at least partition of one constraint updated? */
+   )
+{
+   SCIP_Real* shift; /* direction vector */
+   int v;
+   int c;
+   SCIP_Bool update; /* is partition of current constraint updated? */
+
+   assert(scip != NULL);
+   assert(linkings != NULL);
+   assert(blockproblem != NULL);
+   assert(iteration >= 0);
+   assert(!*oneupdate);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &shift, nblocks) ); /* allocate memory only once */
+
+   for( c = 0; c < nlinking; c++ )
+   {
+      LINKING* linking; /* one linking data structure */
+
+      linking = linkings[c];
+      (*nviolatedblocksrhs)[c] = 0;
+      (*nviolatedblockslhs)[c] = 0;
+      update = TRUE;
+      BMSclearMemoryArray(shift, linking->nblocks);
+      assert(nblocks >= linking->nblocks);
+
+      SCIP_CALL( calculateShift(scip, blockproblem, linking, &shift, &(*nviolatedblocksrhs)[c], &(*nviolatedblockslhs)[c], &update) );
+
+      if( !update )
+         continue;
+
+      *oneupdate = TRUE;
+
+#ifdef SCIP_DEBUG
+      SCIP_Real sum = 0.0;
+      /* check sum of shift; must be zero */
+      for( v = 0; v < linking->nblocks; v++ )
+         sum += shift[v];
+      assert(SCIPisFeasZero(scip, sum));
+#endif
+
+      /* add shift to both sides */
+      for( v = 0; v < linking->nblocks; v++)
+      {
+         if( linking->hasrhs )
+            linking->currentrhs[v] += shift[v];
+
+         if( linking->haslhs )
+            linking->currentlhs[v] += shift[v];
+      }
+
+      SCIP_CALL( roundPartition(scip, linking, blockproblem, ((linking->hasrhs && ((*nviolatedblocksrhs)[c] != 0)) || !linking->haslhs)) );
+
+      /* set sides in blockproblems to new partition */
+      for( v = 0; v < linking->nblocks; v++ )
+      {
+         SCIP* subscip;
+         subscip = blockproblem[linking->blocknumbers[v]]->blockscip;
+
+         if( linking->hasrhs )
+         {
+            SCIP_CALL( SCIPchgRhsLinear(subscip, linking->blockconss[v], linking->currentrhs[v]) );
+         }
+         if( linking->haslhs )
+         {
+            SCIP_CALL( SCIPchgLhsLinear(subscip, linking->blockconss[v], linking->currentlhs[v]) );
+         }
+      }
+   }
+
+   /* free memory */
    SCIPfreeBufferArray(scip, &shift);
 
    return SCIP_OKAY;
@@ -1351,6 +1507,7 @@ SCIP_RETCODE reoptimize(
    SCIP_SOL*             sol,                /**< heuristic solution */
    BLOCKPROBLEM**        blockproblem,       /**< array of blockproblem data structures */
    int                   nblocks,            /**< number of blockproblems */
+   SCIP_Bool             limits,             /**< should strict limits be set? */
    SCIP_SOL**            newsol,             /**< pointer to store improved solution */
    SCIP_Bool*            success             /**< pointer to store whether reoptimization was successful */
    )
@@ -1369,6 +1526,9 @@ SCIP_RETCODE reoptimize(
    *success = FALSE;
    check = FALSE;
 
+   /* get used time */
+   timesubscip = SCIPgetTotalTime(blockproblem[0]->blockscip);
+
    /* for each blockproblem:
     * - change back to original objective function
     * - fix slack variables to zero
@@ -1378,12 +1538,14 @@ SCIP_RETCODE reoptimize(
    {
       SCIP* subscip;
       SCIP_VAR** blockvars;
+      SCIP_Real infvalue;
       int nvars;
+      int nsols;
 
       subscip = blockproblem[b]->blockscip;
-      timesubscip = SCIPgetTotalTime(subscip);
       blockvars = SCIPgetOrigVars(subscip);
       nvars = SCIPgetNOrigVars(subscip);
+      nsols = 0;
 
       /* in order to change objective function */
       SCIP_CALL( SCIPfreeTransform(subscip) );
@@ -1429,16 +1591,34 @@ SCIP_RETCODE reoptimize(
       /* speed up sub-SCIP by not checking dual LP feasibility */
       SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
-      /* set limits; do not use more time than the heuristic has already used for first solution */
+      /* copy value for infinity */
+      SCIP_CALL( SCIPgetRealParam(scip, "numerics/infinity", &infvalue) );
+      SCIP_CALL( SCIPsetRealParam(subscip, "numerics/infinity", infvalue) );
+
+      /* set limits; do not use more time in each subproblem than the heuristic has already used for first solution */
       SCIP_CALL( SCIPcopyLimits(scip, subscip) );
-      SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
-      SCIP_CALL( SCIPgetRealParam(subscip, "limits/time", &time) );
-      if( timesubscip <  time - 1.0 )
+      if( limits )
       {
-         SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timesubscip + 1.0) );
+         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
+         SCIP_CALL( SCIPgetRealParam(subscip, "limits/time", &time) );
+         if( timesubscip <  time - 1.0 )
+         {
+            SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timesubscip + 1.0) );
+         }
+         SCIP_CALL( SCIPtransformProb(subscip) );
+         nsols = SCIPgetNSols(subscip);
+         /* one improving solution */
+         SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", nsols + 1) );
       }
-      SCIP_CALL( SCIPtransformProb(subscip) );
-      SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", SCIPgetNSols(subscip) + 1) );
+      else
+      {
+         /* only 50% of remaining time */
+         SCIP_CALL( SCIPgetRealParam(subscip, "limits/time", &time) );
+         SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", time * 0.5) );
+         /* set big node limits */
+         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1000LL) );
+         SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", 100LL) );
+      }
 
       /* reoptimize problem */
       SCIP_CALL_ABORT( SCIPsolve(subscip) );
@@ -1448,7 +1628,9 @@ SCIP_RETCODE reoptimize(
          /* we found no solution */
          return SCIP_OKAY;
       }
-      else if( SCIPgetStatus(subscip) == SCIP_STATUS_BESTSOLLIMIT || SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
+      else if( SCIPgetStatus(subscip) == SCIP_STATUS_BESTSOLLIMIT ||
+               SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL ||
+               SCIPgetNSols(subscip) > nsols )
       {
          check = TRUE;
       }
@@ -1608,12 +1790,22 @@ SCIP_DECL_HEUREXEC(heurExecDps)
 
    *result = SCIP_DIDNOTRUN;
 
+   if( !((heurtiming & SCIP_HEURTIMING_BEFORENODE) && (heurdata->timing == 0 || heurdata->timing == 2))
+         && !((heurtiming & SCIP_HEURTIMING_AFTERNODE) && (heurdata->timing == 1 || heurdata->timing == 2)) )
+   {
+      return SCIP_OKAY;
+   }
+
+   /* call heuristic only once */
+   if( SCIPheurGetNCalls(heur) > 0 )
+      return SCIP_OKAY;
+
    /* -------------------------------------------------------------------- */
    SCIPdebugMsg(scip, "initialize dps heuristic\n");
 
    /* take the first transformed decomposition */
    SCIPgetDecomps(scip, &alldecomps, &ndecomps, FALSE);
-   if( ndecomps == 0)
+   if( ndecomps == 0 )
       return SCIP_OKAY;
 
    decomp = alldecomps[0];
@@ -1786,7 +1978,12 @@ SCIP_DECL_HEUREXEC(heurExecDps)
    }
 
    /* initialize partition */
-   SCIP_CALL( initCurrent(scip, linkings, blockproblem, heurdata->nlinking, &success) );
+   SCIP_CALL( initCurrent(scip, linkings, blockproblem, heurtiming, heurdata->nlinking, &success) );
+   if( !success )
+   {
+      SCIPdebugMsg(scip, "Initialization of partition failed\n");
+      goto TERMINATE;
+   }
 
    /* ------------------------------------------------------------------------ */
    SCIPdebugMsg(scip, "Start heuristik DPS\n");
@@ -1900,7 +2097,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
          if( heurdata->reoptimize )
          {
             SCIP_SOL* improvedsol = NULL;
-            SCIP_CALL( reoptimize(scip, heur, newsol, blockproblem, heurdata->nblocks, &improvedsol, &success) );
+            SCIP_CALL( reoptimize(scip, heur, newsol, blockproblem, heurdata->nblocks, heurdata->reoptlimits, &improvedsol, &success) );
             assert(improvedsol != NULL || success == FALSE);
 
             if( success )
@@ -1941,6 +2138,7 @@ SCIP_DECL_HEUREXEC(heurExecDps)
       {
          int* nviolatedblocksrhs; /* number of blocks which violate rhs for each linking constraint */
          int* nviolatedblockslhs; /* number of blocks which violate lhs for each linking constraint */
+         SCIP_Bool update = FALSE;
 
          SCIP_CALL( SCIPallocBufferArray(scip, &nviolatedblocksrhs, heurdata->nlinking) );
          SCIP_CALL( SCIPallocBufferArray(scip, &nviolatedblockslhs, heurdata->nlinking) );
@@ -1948,9 +2146,15 @@ SCIP_DECL_HEUREXEC(heurExecDps)
          BMSclearMemoryArray(nviolatedblockslhs, heurdata->nlinking);
 
          SCIPdebugMsg(scip, "update partition\n");
-         for( c = 0; c < heurdata->nlinking; c++ )
+         SCIP_CALL( updatePartition(scip, linkings, blockproblem, &nviolatedblocksrhs, &nviolatedblockslhs,
+                                    heurdata->nlinking, nblocks, k, &update) );
+
+         /* terminate if partition is not updated */
+         if( !update )
          {
-            SCIP_CALL( updatePartition(scip, linkings[c], blockproblem, &nviolatedblocksrhs[c], &nviolatedblockslhs[c], k) );
+            SCIPfreeBufferArray(scip, &nviolatedblockslhs);
+            SCIPfreeBufferArray(scip, &nviolatedblocksrhs);
+            goto TERMINATE;
          }
 
          /* in order to change objective function */
@@ -2081,6 +2285,13 @@ SCIP_RETCODE SCIPincludeHeurDps(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/reuse",
    "should solutions get reused in subproblems?", &heurdata->reuse, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/reoptlimits",
+   "should strict limits for reoptimization be set?", &heurdata->reoptlimits, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/timing",
+      "should the heuristic run before or after the processing of the node? (0: before, 1: after, 2: both)",
+      &heurdata->timing, FALSE, 0, 0, 2, NULL, NULL) );
 
    return SCIP_OKAY;
 }

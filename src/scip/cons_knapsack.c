@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -68,6 +68,11 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
+#include <ctype.h>
+#include <string.h>
+
 #ifdef WITH_CARDINALITY_UPGRADE
 #include "scip/cons_cardinality.h"
 #endif
@@ -991,9 +996,8 @@ SCIP_RETCODE checkCons(
 
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
-      SCIP_Real sum;
-      SCIP_Longint integralsum;
-      SCIP_Bool ishuge;
+      SCIP_Real normsum = 0.0;
+      SCIP_Real hugesum = 0.0;
       SCIP_Real absviol;
       SCIP_Real relviol;
       int v;
@@ -1006,38 +1010,31 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
-      sum = 0.0;
-      integralsum = 0;
-      /* we perform a more exact comparison if the capacity does not exceed the huge value */
-      if( SCIPisHugeValue(scip, (SCIP_Real) consdata->capacity) )
+      /* sum separately over normal and huge weight contributions in order to reduce numerical cancellation */
+      for( v = consdata->nvars - 1; v >= 0; --v )
       {
-         ishuge = TRUE;
+         assert(SCIPvarIsBinary(consdata->vars[v]));
 
-         /* sum over all weight times the corresponding solution value */
-         for( v = consdata->nvars - 1; v >= 0; --v )
-         {
-            assert(SCIPvarIsBinary(consdata->vars[v]));
-            sum += consdata->weights[v] * SCIPgetSolVal(scip, sol, consdata->vars[v]);
-         }
-      }
-      else
-      {
-         ishuge = FALSE;
-
-         /* sum over all weight for which the variable has a solution value of 1 in feastol */
-         for( v = consdata->nvars - 1; v >= 0; --v )
-         {
-            assert(SCIPvarIsBinary(consdata->vars[v]));
-
-            if( SCIPgetSolVal(scip, sol, consdata->vars[v]) > 0.5 )
-               integralsum += consdata->weights[v];
-         }
+         if( SCIPisHugeValue(scip, (SCIP_Real)consdata->weights[v]) )
+            hugesum += consdata->weights[v] * SCIPgetSolVal(scip, sol, consdata->vars[v]);
+         else
+            normsum += consdata->weights[v] * SCIPgetSolVal(scip, sol, consdata->vars[v]);
       }
 
       /* calculate constraint violation and update it in solution */
-      absviol = ishuge ? sum : (SCIP_Real)integralsum;
-      absviol -= consdata->capacity;
-      relviol = SCIPrelDiff(absviol + consdata->capacity, (SCIP_Real)consdata->capacity);
+      normsum += hugesum;
+
+      if( normsum > consdata->capacity )
+      {
+         absviol = normsum - consdata->capacity;
+         relviol = SCIPrelDiff(normsum, (SCIP_Real)consdata->capacity);
+      }
+      else
+      {
+         absviol = 0.0;
+         relviol = 0.0;
+      }
+
       if( sol != NULL )
          SCIPupdateSolLPConsViolation(scip, sol, absviol, relviol);
 
@@ -12013,6 +12010,58 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdKnapsack)
    return SCIP_OKAY;
 }
 
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   SCIP_Real rhs;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(graph != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = consdata->nvars;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      vars[i] = consdata->vars[i];
+      vals[i] = (SCIP_Real) consdata->weights[i];
+   }
+
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+   rhs = (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons) - constant;
+
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         cons, -SCIPinfinity(scip), rhs, success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of constraint handler
@@ -13224,7 +13273,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
       /* try to parse coefficient, and use 1 if not successful */
       weight = 1;
       nread = 0;
-      sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread);
+      (void) sscanf(str, "%" SCIP_LONGINT_FORMAT "%n", &weight, &nread);
       str += nread;
 
       /* parse variable name */
@@ -13333,6 +13382,24 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsKnapsack)
 
    (*nvars) = consdata->nvars;
    (*success) = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphKnapsack)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphKnapsack)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
 
    return SCIP_OKAY;
 }
@@ -13463,6 +13530,8 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransKnapsack) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphKnapsack) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphKnapsack) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {

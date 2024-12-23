@@ -205,8 +205,18 @@ class File {
   explicit File(int fd) : fd_(fd) {}
 
  public:
-  // Possible values for the oflag argument to the constructor.
+  /// Possible values for the oflag argument to the constructor.
+#ifndef _O_BINARY   // POSIX opens in binary mode always
+   #define _O_BINARY 0
+#endif
+#ifndef O_BINARY
+   #define O_BINARY 0
+#endif
+
   enum {
+    /// Windows opens in text mode by default
+    BINARY = FMT_POSIX(O_BINARY), // Open in binary mode.
+
     RDONLY = FMT_POSIX(O_RDONLY), // Open for reading only.
     WRONLY = FMT_POSIX(O_WRONLY), // Open for writing only.
     RDWR   = FMT_POSIX(O_RDWR)    // Open for reading and writing.

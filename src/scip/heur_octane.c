@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -313,7 +313,7 @@ SCIP_RETCODE generateAverageRay(
          if( SCIPisFeasZero(scip, rownorm[i]) )
             continue;
          else
-            rownorm[i] = SQRT(rownorm[i]);
+            rownorm[i] = sqrt(rownorm[i]);
 
          if( weighted )
          {
@@ -359,7 +359,7 @@ SCIP_RETCODE generateAverageRay(
             continue;
          }
          else
-            rownorm[r] = SQRT(rownorm[r]);
+            rownorm[r] = sqrt(rownorm[r]);
 
          if( weighted )
          {
@@ -491,7 +491,7 @@ SCIP_RETCODE generateAverageNBRay(
       else
       {
          assert(rownorm > 0);
-         rownorm = SQRT(rownorm);
+         rownorm = sqrt(rownorm);
       }
 
       for( j = nnonz - 1; j >= 0; --j )

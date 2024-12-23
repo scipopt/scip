@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -123,7 +123,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValShadowNode)
 SCIP_Real SCIPgetShadowTreeEventHandlerExecutionTime(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
-)
+   )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
@@ -141,7 +141,7 @@ SCIP_Real SCIPgetShadowTreeEventHandlerExecutionTime(
 SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNodeFromNodeNumber(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to the shadow tree */
    SCIP_Longint          nodeid              /**< index of the node, equivalent to the standard branch and bound tree */
-)
+   )
 {
    SCIP_SHADOWNODE tmpnode;
 
@@ -158,7 +158,7 @@ SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNodeFromNodeNumber(
 SCIP_SHADOWNODE* SCIPshadowTreeGetShadowNode(
    SCIP_SHADOWTREE*      shadowtree,         /**< pointer to the shadow tree */
    SCIP_NODE*            node                /**< node from the actual branch-and-bound tree */
-)
+   )
 {
    assert( shadowtree != NULL );
    assert( node != NULL );
@@ -212,7 +212,11 @@ SCIP_DECL_EVENTEXEC(eventExecNodeBranched)
    assert( shadowtree != NULL );
 
    eventshadownode = SCIPshadowTreeGetShadowNode(shadowtree, eventnode);
-   assert( eventshadownode != NULL );
+
+   /* only add children to the shadowtree if eventnode is in the shadowtree */
+   if ( eventshadownode == NULL )
+      return SCIP_OKAY;
+
    assert( eventshadownode->nchildren == 0 );
    assert( eventshadownode->children == NULL );
 
@@ -452,7 +456,7 @@ static
 SCIP_RETCODE freeShadowTree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SHADOWTREE*      shadowtree          /**< pointer to shadow tree*/
-)
+   )
 {
    int i;
    int nentries;
@@ -619,7 +623,7 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolShadowTree)
 /** gets the shadow tree */
 SCIP_SHADOWTREE* SCIPgetShadowTree(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
-)
+   )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    assert( eventhdlr != NULL );
@@ -635,7 +639,7 @@ SCIP_SHADOWTREE* SCIPgetShadowTree(
 SCIP_RETCODE SCIPactivateShadowTree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
-)
+   )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    assert( eventhdlr != NULL );
@@ -659,7 +663,7 @@ SCIP_RETCODE SCIPactivateShadowTree(
 SCIP_RETCODE SCIPincludeEventHdlrShadowTree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR**      eventhdlrptr        /**< pointer to store the event handler */
-)
+   )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_EVENTHDLR* eventhdlr;

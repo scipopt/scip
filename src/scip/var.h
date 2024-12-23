@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -403,12 +403,13 @@ SCIP_RETCODE SCIPvarFix(
 
 /** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant
  *
- * If the number of needed active variables is greater than the available slots in the variable array, nothing happens except
- * that the required size is stored in the corresponding variable; hence, if afterwards the required size is greater than the
- * available slots (varssize), nothing happens; otherwise, the active variable representation is stored in the arrays.
+ * If the number of needed active variables is greater than the available slots in the variable array, nothing happens
+ * except that an upper bound on the required size is stored in the variable requiredsize; otherwise, the active
+ * variable representation is stored in the arrays.
  *
- * The reason for this approach is that we cannot reallocate memory, since we do not know how the
- * memory has been allocated (e.g., by a C++ 'new' or SCIP functions).
+ * The reason for this approach is that we cannot reallocate memory, since we do not know how the memory has been
+ * allocated (e.g., by a C++ 'new' or SCIP functions). Note that requiredsize is an upper bound due to possible
+ * cancelations.
  */
 SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -417,8 +418,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
    int                   varssize,           /**< available slots in vars and scalars array */
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
-   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   int*                  requiredsize        /**< pointer to store an uppper bound on the required size for the active variables */
    );
 
 /** transforms given variable, scalar and constant to the corresponding active, fixed, or
@@ -1233,7 +1233,7 @@ void SCIPvarSetHistory(
    );
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
- *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the in the LP's objective value
+ *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the LP's objective value
  */
 SCIP_RETCODE SCIPvarUpdatePseudocost(
    SCIP_VAR*             var,                /**< problem variable */
@@ -1244,8 +1244,27 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    SCIP_Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
    );
 
+/** updates the ancestral pseudo costs of the given variable and the global ancestral pseudo costs after a change of
+ *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the LP's objective value
+ */
+SCIP_RETCODE SCIPvarUpdateAncPseudocost(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   SCIP_Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   SCIP_Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
+   );
+
 /** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value */
 SCIP_Real SCIPvarGetPseudocost(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   );
+
+/** gets the variable's ancestral pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value */
+SCIP_Real SCIPvarGetAncPseudocost(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
@@ -1274,6 +1293,13 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** gets the variable's (possible fractional) number of ancestor pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ */
+SCIP_Real SCIPvarGetAncPseudocostCountCurrentRun(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
 
 /** compares both possible directions for rounding the given solution value and returns the minimum pseudo-costs of the variable */
 SCIP_Real SCIPvarGetMinPseudocostScore(
@@ -1504,6 +1530,32 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns the variable's average GMI efficacy score value generated from simplex tableau rows of this variable */
+SCIP_Real SCIPvarGetAvgGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
+/** increase the variable's GMI efficacy scores generated from simplex tableau rows of this variable */
+SCIP_RETCODE SCIPvarIncGMIeffSum(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
+   );
+
+/** returns the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
+SCIP_Real SCIPvarGetLastGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
+/** sets the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
+SCIP_RETCODE SCIPvarSetLastGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
    );
 
 /** outputs variable information into file stream */

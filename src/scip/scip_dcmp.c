@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -50,6 +50,7 @@
 #include "scip/scip_var.h"
 #include "scip/scip_datastructures.h"
 #include "scip/scip_message.h"
+#include "scip/pub_message.h"
 
 
 #define LABEL_UNASSIGNED INT_MIN /* label constraints or variables as unassigned. Only for internal use */

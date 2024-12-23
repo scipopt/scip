@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -65,8 +65,7 @@ const char* SYMsymmetryGetAddDesc(void)
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
-   SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
-   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
@@ -75,8 +74,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    )
 {  /*lint --e{715}*/
    assert( scip != NULL );
-   assert( matrixdata != NULL );
-   assert( exprdata != NULL );
+   assert( graph != NULL );
    assert( nperms != NULL );
    assert( nmaxperms != NULL );
    assert( perms != NULL );
@@ -91,4 +89,15 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    *symcodetime = 0.0;
 
    return SCIP_OKAY;
+}
+
+/** returns whether two given graphs are identical */
+SCIP_Bool SYMcheckGraphsAreIdentical(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries to be checked */
+   SYM_GRAPH*            G1,                 /**< first graph */
+   SYM_GRAPH*            G2                  /**< second graph */
+   )
+{
+   return FALSE;
 }

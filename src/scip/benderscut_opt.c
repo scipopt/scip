@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -316,6 +316,7 @@ SCIP_RETCODE computeMIRForOptimalityCut(
    SCIP_CALL( SCIPaggrRowAddCustomCons(masterprob, aggrrow, rowinds, rowvals, nvars, -lhs, 1.0, 1, FALSE) );
 
    /* calculating a flow cover for the optimality cut */
+   cutefficacy = 0.0;
    SCIP_CALL( SCIPcalcFlowCover(masterprob, sol, TRUE, 0.9999, FALSE, aggrrow, cutcoefs, cutrhs, cutinds, cutnnz,
          &cutefficacy, NULL, &cutislocal, &cutsuccess) );
    (*success) = cutsuccess;

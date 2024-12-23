@@ -1,0 +1,123 @@
+STATISTICS
+  Problem name     : _MPS_
+  Variables        : 89 (19 binary, 70 integer, 0 implicit integer, 0 continuous)
+  Constraints      : 0 initial, 25 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <x19>: obj=0, original bounds=[0,1]
+  [binary] <x330>: obj=0, original bounds=[0,1]
+  [binary] <x313>: obj=0, original bounds=[0,1]
+  [binary] <x312>: obj=0, original bounds=[0,1]
+  [binary] <x311>: obj=0, original bounds=[0,1]
+  [binary] <x310>: obj=0, original bounds=[0,1]
+  [binary] <x309>: obj=0, original bounds=[0,1]
+  [binary] <x308>: obj=0, original bounds=[0,1]
+  [binary] <x307>: obj=0, original bounds=[0,1]
+  [binary] <x306>: obj=0, original bounds=[0,1]
+  [binary] <x305>: obj=0, original bounds=[0,1]
+  [binary] <x304>: obj=0, original bounds=[0,1]
+  [binary] <x292>: obj=0, original bounds=[0,1]
+  [binary] <x291>: obj=0, original bounds=[0,1]
+  [binary] <x287>: obj=0, original bounds=[0,1]
+  [binary] <x286>: obj=0, original bounds=[0,1]
+  [binary] <x166>: obj=1, original bounds=[0,1]
+  [binary] <x167>: obj=0, original bounds=[0,1]
+  [binary] <x47>: obj=0, original bounds=[0,0]
+  [integer] <x316>: obj=0, original bounds=[0,1023]
+  [integer] <x315>: obj=0, original bounds=[0,1023]
+  [integer] <x302>: obj=0, original bounds=[0,1023]
+  [integer] <x301>: obj=0, original bounds=[0,1023]
+  [integer] <x300>: obj=0, original bounds=[0,1023]
+  [integer] <x299>: obj=0, original bounds=[0,1023]
+  [integer] <x298>: obj=0, original bounds=[0,1023]
+  [integer] <x297>: obj=0, original bounds=[0,1023]
+  [integer] <x296>: obj=0, original bounds=[0,1023]
+  [integer] <x295>: obj=0, original bounds=[0,1023]
+  [integer] <x294>: obj=0, original bounds=[0,1023]
+  [integer] <x293>: obj=0, original bounds=[0,1023]
+  [integer] <x288>: obj=0, original bounds=[0,1023]
+  [integer] <x263>: obj=0, original bounds=[0,511]
+  [integer] <x261>: obj=0, original bounds=[0,512]
+  [integer] <x250>: obj=0, original bounds=[0,511]
+  [integer] <x236>: obj=0, original bounds=[0,511]
+  [integer] <x225>: obj=0, original bounds=[0,511]
+  [integer] <x210>: obj=0, original bounds=[0,1024]
+  [integer] <x208>: obj=0, original bounds=[0,1024]
+  [integer] <x202>: obj=0, original bounds=[0,1023]
+  [integer] <x188>: obj=0, original bounds=[0,1023]
+  [integer] <x174>: obj=0, original bounds=[0,1023]
+  [integer] <x169>: obj=0, original bounds=[0,1023]
+  [integer] <x163>: obj=0, original bounds=[0,1024]
+  [integer] <x161>: obj=0, original bounds=[0,1024]
+  [integer] <x160>: obj=0, original bounds=[0,2047]
+  [integer] <x159>: obj=0, original bounds=[-1,0]
+  [integer] <x155>: obj=0, original bounds=[0,1023]
+  [integer] <x141>: obj=0, original bounds=[0,1023]
+  [integer] <x134>: obj=0, original bounds=[0,1023]
+  [integer] <x127>: obj=0, original bounds=[0,1023]
+  [integer] <x122>: obj=0, original bounds=[0,1023]
+  [integer] <x114>: obj=0, original bounds=[0,1047552]
+  [integer] <x92>: obj=0, original bounds=[0,1048575]
+  [integer] <x91>: obj=0, original bounds=[0,1048575]
+  [integer] <x90>: obj=0, original bounds=[0,1048575]
+  [integer] <x89>: obj=0, original bounds=[0,1048575]
+  [integer] <x88>: obj=0, original bounds=[0,1048575]
+  [integer] <x87>: obj=0, original bounds=[0,1048575]
+  [integer] <x86>: obj=0, original bounds=[0,1048575]
+  [integer] <x85>: obj=0, original bounds=[0,1048575]
+  [integer] <x84>: obj=0, original bounds=[0,1048575]
+  [integer] <x83>: obj=0, original bounds=[0,1048575]
+  [integer] <x82>: obj=0, original bounds=[0,1048575]
+  [integer] <x81>: obj=0, original bounds=[0,1048575]
+  [integer] <x80>: obj=0, original bounds=[0,1048575]
+  [integer] <x79>: obj=0, original bounds=[0,1048575]
+  [integer] <x78>: obj=0, original bounds=[0,1048575]
+  [integer] <x77>: obj=0, original bounds=[0,1048575]
+  [integer] <x76>: obj=0, original bounds=[0,1048575]
+  [integer] <x75>: obj=0, original bounds=[0,1048575]
+  [integer] <x74>: obj=0, original bounds=[0,1048575]
+  [integer] <x73>: obj=0, original bounds=[0,1048575]
+  [integer] <x72>: obj=0, original bounds=[0,1048575]
+  [integer] <x71>: obj=0, original bounds=[0,1048575]
+  [integer] <x70>: obj=0, original bounds=[0,1048574]
+  [integer] <x66>: obj=0, original bounds=[0,1023]
+  [integer] <x65>: obj=0, original bounds=[0,1023]
+  [integer] <x60>: obj=0, original bounds=[0,1023]
+  [integer] <x326>: obj=0, original bounds=[0,1023]
+  [integer] <x46>: obj=0, original bounds=[0,1023]
+  [integer] <x45>: obj=0, original bounds=[0,1023]
+  [integer] <x44>: obj=0, original bounds=[0,1023]
+  [integer] <x43>: obj=0, original bounds=[0,1023]
+  [integer] <x41>: obj=0, original bounds=[0,1023]
+  [integer] <x40>: obj=0, original bounds=[0,1023]
+  [integer] <x39>: obj=0, original bounds=[0,1023]
+  [integer] <x27>: obj=0, original bounds=[0,1023]
+  [integer] <x333>: obj=0, original bounds=[0,1048575]
+CONSTRAINTS
+  [linear] <c1>:  -512<x313>[B] -256<x312>[B] -128<x311>[B] -64<x310>[B] -32<x309>[B] -16<x308>[B] -8<x307>[B] -4<x306>[B] -2<x305>[B] -<x304>[B] +<x315>[I] == 0;
+  [linear] <c2>:  -1023<x304>[B] +<x293>[I] <= 0;
+  [linear] <c5>:  -1023<x305>[B] +<x294>[I] <= 0;
+  [linear] <c8>:  -1023<x306>[B] +<x295>[I] <= 0;
+  [linear] <c11>:  -1023<x307>[B] +<x296>[I] <= 0;
+  [linear] <c14>:  -1023<x308>[B] +<x297>[I] <= 0;
+  [linear] <c17>:  -1023<x309>[B] +<x298>[I] <= 0;
+  [linear] <c20>:  -1023<x310>[B] +<x299>[I] <= 0;
+  [linear] <c23>:  -1023<x311>[B] +<x300>[I] <= 0;
+  [linear] <c26>:  -1023<x312>[B] +<x301>[I] <= 0;
+  [linear] <c31>:  -<x316>[I] +<x302>[I] == 0;
+  [linear] <c35>:  -1046530<x292>[B] +512<x302>[I] +256<x301>[I] +128<x300>[I] +64<x299>[I] +32<x298>[I] +16<x297>[I] +8<x296>[I] +4<x295>[I] +2<x294>[I] +<x293>[I] -1024<x326>[I] <= -1;
+  [linear] <c37>:  -1048576<x291>[B] -512<x302>[I] -256<x301>[I] -128<x300>[I] -64<x299>[I] -32<x298>[I] -16<x297>[I] -8<x296>[I] -4<x295>[I] -2<x294>[I] -<x293>[I] +1024<x326>[I] <= -1;
+  [linear] <c41>: <x292>[B] +<x291>[B] == 1;
+  [linear] <c46>:  +1024<x287>[B] -2<x315>[I] +<x288>[I] == 0;
+  [linear] <c47>:  -1024<x286>[B] +<x288>[I] <= 1020;
+  [linear] <c48>:  +1023<x286>[B] -<x288>[I] <= 2;
+  [linear] <c340>:  -<x330>[B] -<x166>[B] -<x167>[B] <= -1;
+  [linear] <c341>: <x330>[B] -<x166>[B] +<x167>[B] <= 1;
+  [linear] <c601>:  -<x316>[I] +<x46>[I] == 0;
+  [linear] <c606>:  -512<x46>[I] -256<x45>[I] -128<x44>[I] -64<x43>[I] -16<x41>[I] -8<x40>[I] -4<x39>[I] +<x333>[I] == 0;
+  [linear] <c624>:  -1024<x27>[I] +<x333>[I] == 0;
+  [linear] <c628>:  -<x326>[I] +<x27>[I] == 0;
+  [linear] <c644>:  -<x19>[B] -<x333>[I] <= -1;
+  [linear] <c646>: <x19>[B] -<x330>[B] == 0;
+END

@@ -1,0 +1,21 @@
+russcip:
+  stage: test
+  image:
+    name: rust:latest
+  needs:
+    - "cmake release gcc"
+  variables:
+    GIT_STRATEGY: none
+    RUSSCIP_REVISION: b44bc33
+  script:
+    - apt-get update && apt-get install -y clang gfortran
+
+    - cd /usr/
+    - $CI_PROJECT_DIR/SCIP-*-Linux.sh --skip-license
+    - mv /usr/lib64/libscip.so* /usr/lib/x86_64-linux-gnu/
+
+    - cd ${CI_PROJECT_DIR}
+    - git clone https://github.com/scipopt/russcip.git
+    - cd russcip
+    - git checkout $RUSSCIP_REVISION
+    - cargo test --release

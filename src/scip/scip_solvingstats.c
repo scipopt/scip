@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -164,8 +164,6 @@ int SCIPgetNReoptRuns(
 }
 
 /** add given number to the number of processed nodes in current run and in all runs, including the focus node
- *
- *  @return the number of processed nodes in current run, including the focus node
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -1431,10 +1429,7 @@ SCIP_Real SCIPgetDualboundRoot(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDualboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
-      return SCIPgetPrimalbound(scip);
-   else
-      return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, scip->stat->rootlowerbound);
+   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPgetLowerboundRoot(scip));
 }
 
 /** gets lower (dual) bound in transformed problem of the root node
@@ -1455,10 +1450,7 @@ SCIP_Real SCIPgetLowerboundRoot(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLowerboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
-      return SCIPgetUpperbound(scip);
-   else
-      return scip->stat->rootlowerbound;
+   return scip->stat->rootlowerbound;
 }
 
 /** gets dual bound for the original problem obtained by the first LP solve at the root node
@@ -1506,7 +1498,10 @@ SCIP_Real SCIPgetFirstLPLowerboundRoot(
       return SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->stat->firstlpdualbound);
 }
 
-/** the primal bound of the very first solution */
+/** gets the primal bound of the very first solution
+ *
+ * @return the primal bound of the very first solution
+ */
 SCIP_Real SCIPgetFirstPrimalBound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -1902,6 +1897,37 @@ SCIP_Real SCIPgetAvgPseudocostScore(
    return SCIPbranchGetScore(scip->set, NULL, pscostdown, pscostup);
 }
 
+/** gets the average discounted pseudo cost score value over all variables, assuming a fractionality of 0.5
+ *
+ *  This combines both pscost and ancpscost fields.
+ *
+ *  @return the average discounted pseudo cost score value over all variables, assuming a fractionality of 0.5,
+ *  combining both pscost and ancpscost fields
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetAvgDPseudocostScore(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_Real             discountfac          /**< discount factor for discounted pseudocost */
+   )
+{
+   SCIP_Real pscostdown;
+   SCIP_Real pscostup;
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetAvgDPseudocostScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   pscostdown = SCIPhistoryGetPseudocost(scip->stat->glbhistory, -0.5)
+               + discountfac * SCIPhistoryGetAncPseudocost(scip->stat->glbhistory, -0.5);
+   pscostup = SCIPhistoryGetPseudocost(scip->stat->glbhistory, +0.5)
+            + discountfac * SCIPhistoryGetAncPseudocost(scip->stat->glbhistory, +0.5);
+   pscostdown /= (1 + discountfac);
+   pscostup /= (1 + discountfac);
+
+   return SCIPbranchGetScore(scip->set, NULL, pscostdown, pscostup);
+}
+
 /** returns the variance of pseudo costs for all variables in the requested direction
  *
  *  @return the variance of pseudo costs for all variables in the requested direction
@@ -2242,6 +2268,39 @@ SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
    cutoffsup = SCIPhistoryGetAvgCutoffs(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_UPWARDS);
 
    return SCIPbranchGetScore(scip->set, NULL, cutoffsdown, cutoffsup);
+}
+
+/** increases the average normalized efficacy of a GMI cut over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+void SCIPincAvgGMIeff(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             gmieff              /**< average normalized GMI cut efficacy over all variables */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPincAvgGMIeff", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPhistoryIncGMIeffSum(scip->stat->glbhistory, gmieff);
+}
+
+/** returns the average normalized efficacy of a GMI cut over all variables
+ *
+ *  @return the average normalized efficacy of a GMI cut over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetAvgGMIeff(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetAvgGMIeff", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPhistoryGetAvgGMIeff(scip->stat->glbhistory);
 }
 
 /** computes a deterministic measure of time from statistics
@@ -3217,15 +3276,24 @@ void SCIPprintHeuristicStatistics(
    if ( ndivesets > 0 && scip->set->misc_showdivingstats )
    {
       int c;
-      SCIP_DIVECONTEXT divecontexts[] = {SCIP_DIVECONTEXT_SINGLE, SCIP_DIVECONTEXT_ADAPTIVE};
+      SCIP_DIVECONTEXT divecontexts[] = {SCIP_DIVECONTEXT_SINGLE, SCIP_DIVECONTEXT_ADAPTIVE, SCIP_DIVECONTEXT_SCHEDULER};
 
-      /* print statistics for both contexts individually */
-      for( c = 0; c < 2; ++c )
+      /* print statistics for all three contexts individually */
+      for( c = 0; c < 3; ++c )
       {
          SCIP_DIVECONTEXT divecontext = divecontexts[c];
-         SCIPmessageFPrintInfo(scip->messagehdlr, file,
-            "Diving %-12s:      Calls      Nodes   LP Iters Backtracks  Conflicts   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n",
-            divecontext == SCIP_DIVECONTEXT_SINGLE ? "(single)" : "(adaptive)");
+
+         if( divecontext == SCIP_DIVECONTEXT_SINGLE )
+         {
+            SCIPmessageFPrintInfo(scip->messagehdlr, file,
+               "Diving %-12s:      Calls      Nodes   LP Iters Backtracks  Conflicts   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n", "(single)");
+         }
+         else
+         {
+            SCIPmessageFPrintInfo(scip->messagehdlr, file,
+               "Diving %-12s:      Calls      Nodes   LP Iters Backtracks  Conflicts   MinDepth   MaxDepth   AvgDepth  RoundSols  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n",
+               divecontext == SCIP_DIVECONTEXT_ADAPTIVE ? "(adaptive)" : "(scheduler)");
+         }
 
          for( i = 0; i < scip->set->nheurs; ++i )
          {
@@ -4451,7 +4519,6 @@ int SCIPgetNImplications(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
  *  @deprecated because binary implications are now stored as cliques, please use SCIPwriteCliqueGraph() instead
- *
  */ /*lint -e715*/
 SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4473,13 +4540,19 @@ void SCIPstoreSolutionGap(
    if( scip->primal->nsols == 1 )
       scip->stat->firstsolgap = scip->stat->lastsolgap;
 
-   if( scip->set->stage == SCIP_STAGE_SOLVING && scip->set->misc_calcintegral )
+   if( scip->set->misc_calcintegral )
    {
-      SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
+      SCIP_Real upperbound = SCIPgetUpperbound(scip);
+
+      if( upperbound < scip->stat->lastupperbound )
+         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, upperbound, -SCIPinfinity(scip));
    }
 }
 
-/** recomputes and returns the primal dual gap stored in the stats */
+/** recomputes and returns the primal dual gap stored in the stats
+ *
+ * @return returns the primal dual gap stored in the stats
+ */
 SCIP_EXPORT
 SCIP_Real SCIPgetPrimalDualIntegral(
    SCIP*                 scip                /**< SCIP data structure */

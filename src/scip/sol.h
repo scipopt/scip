@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -330,6 +330,28 @@ SCIP_RETCODE SCIPsolMarkPartial(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_VAR**            vars,               /**< problem variables */
    int                   nvars               /**< number of problem variables */
+   );
+
+/** checks solution for feasibility in original problem without adding it to the solution store
+ *
+ *  We first check the variable bounds. Then we loop over all constraint handlers and constraints, checking each in the
+ *  order of their check priority.
+ */
+SCIP_RETCODE SCIPsolCheckOrig(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked if printreason is true? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             checkmodifiable,    /**< have modifiable constraint to be checked? */
+   SCIP_Bool*            feasible            /**< stores whether given solution is feasible */
    );
 
 /** checks primal CIP solution for feasibility

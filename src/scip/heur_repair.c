@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -938,7 +938,11 @@ SCIP_RETCODE applyRepair(
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   SCIP_CALL( SCIPsetObjlimit(subscip,1.0) );
+   SCIP_CALL( SCIPsetObjlimit(subscip, 1.0) );
+
+   /* disable bound limits */
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/primal", SCIP_INVALID) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/dual", SCIP_INVALID) );
 
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -1028,10 +1032,23 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-
 /*
  * Callback methods of primal heuristic
  */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyRepair)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurRepair(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
@@ -1303,6 +1320,7 @@ SCIP_RETCODE SCIPincludeHeurRepair(
    assert(heurdata != NULL);
 
    /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRepair) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRepair) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitRepair) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitRepair) );

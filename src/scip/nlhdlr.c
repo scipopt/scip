@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -32,6 +32,7 @@
  */
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/pub_nlhdlr.h"
 #include "scip/nlhdlr.h"
@@ -40,6 +41,7 @@
 #include "scip/scip_mem.h"
 #include "scip/scip_param.h"
 #include "scip/scip_message.h"
+#include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 
 /**@addtogroup PublicNlhdlrInterfaceMethods
@@ -152,7 +154,7 @@ void SCIPnlhdlrSetSepa(
 void SCIPnlhdlrSetSollinearize(
    SCIP_NLHDLR*          nlhdlr,             /**< nonlinear handler */
    SCIP_DECL_NLHDLRSOLLINEARIZE((*sollinearize)) /**< solution linearization callback */
-)
+   )
 {
    assert(nlhdlr != NULL);
    assert(sollinearize != NULL);
@@ -283,7 +285,7 @@ SCIP_Bool SCIPnlhdlrHasEstimate(
 /** returns whether nonlinear handler implements the solution linearization callback */
 SCIP_Bool SCIPnlhdlrHasSollinearize(
    SCIP_NLHDLR*          nlhdlr              /**< nonlinear handler */
-)
+   )
 {
    assert(nlhdlr != NULL);
 
@@ -642,7 +644,7 @@ SCIP_DECL_NLHDLRENFO(SCIPnlhdlrEnfo)
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
    SCIP_CALL( nlhdlr->enfo(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue,
-         overestimate, allowweakcuts, separated, addbranchscores, result) );
+         overestimate, allowweakcuts, separated, addbranchscores, branchcandonly, result) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
 
    /* update statistics */
@@ -650,6 +652,7 @@ SCIP_DECL_NLHDLRENFO(SCIPnlhdlrEnfo)
    switch( *result )
    {
       case SCIP_SEPARATED :
+         assert(!branchcandonly);
          ++nlhdlr->nseparated;
          break;
       case SCIP_BRANCHED:
@@ -659,6 +662,7 @@ SCIP_DECL_NLHDLRENFO(SCIPnlhdlrEnfo)
          ++nlhdlr->ncutoffs;
          break;
       case SCIP_REDUCEDDOM:
+         assert(!branchcandonly);
          ++nlhdlr->ndomreds;
          break;
       default: ;

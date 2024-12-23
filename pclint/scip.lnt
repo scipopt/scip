@@ -3,7 +3,7 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+//*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 //*                                                                           */
 //*  Licensed under the Apache License, Version 2.0 (the "License");          */
 //*  you may not use this file except in compliance with the License.         */
@@ -68,6 +68,7 @@
 -e1784  // symbol previously declared as "C" [only for information, but clutters output]]
 -e2666  // expression with side effects passed to unexpanded parameter: parameter is not referenced in the expansion
 -e2704  // potentially negating the most negative number [often if x = -y, and y is int, only relevant if y = INT_MAX]
+-e2751  // indeterminable mutex
 
 // for the time being turn off warning 666 (expression with side effects passed to repeated parameter of macro), since it currently produces too much noise
 -e666
@@ -120,6 +121,7 @@
 // is likely uninitialized
 -emacro(530,va_*)
 -ecall(530,vsnprintf)
+-emacro(530,SCIPalloc*)
 
 // ignoring return value of function
 -esym(534,printf,fprintf,fclose,fputs,fputc,fseek,fflush,strcat,strcpy,SCIPfclose,SCIPfseek,memset,memcpy,memmove)
@@ -142,6 +144,7 @@
 -emacro(644,QUAD)
 -emacro(647,QUAD_ARRAY_SIZE)
 -emacro(665,QUAD)
+-emacro(665,QUAD_MEMBER)
 -emacro(666,SCIPquadprecProdQD)
 -emacro(666,SCIPquadprecSumQD)
 
@@ -198,6 +201,7 @@
 -emacro(776,SCIPduplicateBufferArray)
 -emacro(776,SCIPallocClearBufferArray)
 -emacro(776,SCIPallocBlockMemoryArray)
+-emacro(776,SCIPallocClearBlockMemoryArray)
 -emacro(776,SCIPduplicateBlockMemoryArray)
 -emacro(776,BMSallocMemorySize)
 -emacro(776,BMSallocBufferMemoryArray)

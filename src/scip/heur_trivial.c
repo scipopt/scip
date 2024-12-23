@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -76,50 +76,43 @@ static
 SCIP_DECL_HEUREXEC(heurExecTrivial)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
+   SCIP_SOL* zerosol;                   /* solution where all variables are set next to zero within bounds */
    SCIP_SOL* lbsol;                     /* solution where all variables are set to their lower bounds */
    SCIP_SOL* ubsol;                     /* solution where all variables are set to their upper bounds */
-   SCIP_SOL* zerosol;                   /* solution where all variables are set to zero */
    SCIP_SOL* locksol;                   /* solution where all variables are set to the bound with the fewer locks */
-
    SCIP_Real large;
-
+   SCIP_Bool difflb;
+   SCIP_Bool diffub;
+   SCIP_Bool difflock;
+   SCIP_Bool success;
    int nvars;
-   int nbinvars;
    int i;
 
-   SCIP_Bool success;
-   SCIP_Bool zerovalid;
-
-   *result = SCIP_DIDNOTRUN;
-
-   if( SCIPgetNRuns(scip) > 1 )
-      return SCIP_OKAY;
-
    *result = SCIP_DIDNOTFIND;
-   success = FALSE;
 
    /* initialize data structure */
+   SCIP_CALL( SCIPcreateSol(scip, &zerosol, heur) );
    SCIP_CALL( SCIPcreateSol(scip, &lbsol, heur) );
    SCIP_CALL( SCIPcreateSol(scip, &ubsol, heur) );
-   SCIP_CALL( SCIPcreateSol(scip, &zerosol, heur) );
    SCIP_CALL( SCIPcreateSol(scip, &locksol, heur) );
 
    /* determine large value to set variables to */
-   large = SCIPinfinity(scip);
-   if( !SCIPisInfinity(scip, 0.1 / SCIPfeastol(scip)) )
-      large = 0.1 / SCIPfeastol(scip);
+   large = SCIPround(scip, MIN(1.0 / SCIPfeastol(scip), SCIPgetHugeValue(scip)) / 10.0); /*lint !e666 */
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
+   /* check zero solution once */
+   difflb = FALSE;
+   diffub = FALSE;
+   difflock = FALSE;
 
-   /* if the problem is binary, we do not have to check the zero solution, since it is equal to the lower bound
-    * solution */
-   zerovalid = (nvars != nbinvars);
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    assert(vars != NULL || nvars == 0);
 
-   for( i = 0; i < nvars; i++ )
+   for( i = 0; i < nvars; ++i )
    {
       SCIP_Real lb;
       SCIP_Real ub;
+      SCIP_Real zeroval;
+      SCIP_Real solval;
 
       assert(vars != NULL); /* this assert is needed for flexelint */
 
@@ -127,46 +120,25 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       ub = SCIPvarGetUbLocal(vars[i]);
 
       /* if problem is obviously infeasible due to empty domain, stop */
-      if( SCIPisGT(scip, lb, ub) )
+      if( SCIPisFeasGT(scip, lb, ub) )
          goto TERMINATE;
 
       /* set bounds to sufficient large value */
       if( SCIPisInfinity(scip, -lb) )
          lb = MIN(-large, ub);
       if( SCIPisInfinity(scip, ub) )
-      {
-         SCIP_Real tmp;
+         ub = MAX(large, lb);
 
-         tmp = SCIPvarGetLbLocal(vars[i]);
-         ub = MAX(tmp, large);
-      }
+      /* set value next to zero within bounds */
+      zeroval = MAX(MIN(0.0, ub), lb);
 
-      SCIP_CALL( SCIPsetSolVal(scip, lbsol, vars[i], lb) );
-      SCIP_CALL( SCIPsetSolVal(scip, ubsol, vars[i], ub) );
-
-      /* try the zero vector, if it is in the bounds region */
-      if( zerovalid )
-      {
-         if( SCIPisLE(scip, lb, 0.0) && SCIPisLE(scip, 0.0, ub) )
-         {
-            SCIP_CALL( SCIPsetSolVal(scip, zerosol, vars[i], 0.0) );
-         }
-         else
-            zerovalid = FALSE;
-      }
-
-      /* set variables to the bound with fewer locks, if tie choose an average value */
-      if( SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) > SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL) )
-      {
-         SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], ub) );
-      }
-      else if( SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) < SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL) )
-      {
-         SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], lb) );
-      }
+      /* set value to the bound with fewer locks, if tie choose an average value */
+      if( SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) < SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL) )
+         solval = lb;
+      else if( SCIPvarGetNLocksDownType(vars[i], SCIP_LOCKTYPE_MODEL) > SCIPvarGetNLocksUpType(vars[i], SCIP_LOCKTYPE_MODEL) )
+         solval = ub;
       else
       {
-         SCIP_Real solval;
          solval = (lb+ub)/2.0;
 
          /* if a tie occurs, roughly every third integer variable will be rounded up */
@@ -174,68 +146,87 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
             solval = i % 3 == 0 ? SCIPceil(scip,solval) : SCIPfloor(scip,solval);
 
          assert(SCIPisFeasLE(scip,SCIPvarGetLbLocal(vars[i]),solval) && SCIPisFeasLE(scip,solval,SCIPvarGetUbLocal(vars[i])));
-
-         SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], solval) );
       }
-   }
 
-   /* try lower bound solution */
-   SCIPdebugMsg(scip, "try lower bound solution\n");
-   SCIP_CALL( SCIPtrySol(scip, lbsol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
+      if( !SCIPisEQ(scip, lb, zeroval) )
+         difflb = TRUE;
 
-   if( success )
-   {
-      SCIPdebugMsg(scip, "found feasible lower bound solution:\n");
-      SCIPdebug( SCIP_CALL( SCIPprintSol(scip, lbsol, NULL, FALSE) ) );
+      if( !SCIPisEQ(scip, ub, zeroval) )
+         diffub = TRUE;
 
-      *result = SCIP_FOUNDSOL;
-   }
+      if( !SCIPisEQ(scip, solval, zeroval) )
+         difflock = TRUE;
 
-   /* try upper bound solution */
-   SCIPdebugMsg(scip, "try upper bound solution\n");
-   SCIP_CALL( SCIPtrySol(scip, ubsol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
-
-   if( success )
-   {
-      SCIPdebugMsg(scip, "found feasible upper bound solution:\n");
-      SCIPdebug( SCIP_CALL( SCIPprintSol(scip, ubsol, NULL, FALSE) ) );
-
-      *result = SCIP_FOUNDSOL;
+      /* set variable to values */
+      SCIP_CALL( SCIPsetSolVal(scip, zerosol, vars[i], zeroval) );
+      SCIP_CALL( SCIPsetSolVal(scip, lbsol, vars[i], lb) );
+      SCIP_CALL( SCIPsetSolVal(scip, ubsol, vars[i], ub) );
+      SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], solval) );
    }
 
    /* try zero solution */
-   if( zerovalid )
+   SCIPdebugMsg(scip, "try zero solution\n");
+   SCIP_CALL( SCIPtrySol(scip, zerosol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
+
+   if( success )
    {
-      SCIPdebugMsg(scip, "try zero solution\n");
-      SCIP_CALL( SCIPtrySol(scip, zerosol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
+      SCIPdebugMsg(scip, "found feasible zero solution:\n");
+      SCIPdebug( SCIP_CALL( SCIPprintSol(scip, zerosol, NULL, FALSE) ) );
+
+      *result = SCIP_FOUNDSOL;
+   }
+
+   /* try lower bound solution */
+   if( difflb )
+   {
+      SCIPdebugMsg(scip, "try lower bound solution\n");
+      SCIP_CALL( SCIPtrySol(scip, lbsol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 
       if( success )
       {
-         SCIPdebugMsg(scip, "found feasible zero solution:\n");
-         SCIPdebug( SCIP_CALL( SCIPprintSol(scip, zerosol, NULL, FALSE) ) );
+         SCIPdebugMsg(scip, "found feasible lower bound solution:\n");
+         SCIPdebug( SCIP_CALL( SCIPprintSol(scip, lbsol, NULL, FALSE) ) );
+
+         *result = SCIP_FOUNDSOL;
+      }
+   }
+
+   /* try upper bound solution */
+   if( diffub )
+   {
+      SCIPdebugMsg(scip, "try upper bound solution\n");
+      SCIP_CALL( SCIPtrySol(scip, ubsol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
+
+      if( success )
+      {
+         SCIPdebugMsg(scip, "found feasible upper bound solution:\n");
+         SCIPdebug( SCIP_CALL( SCIPprintSol(scip, ubsol, NULL, FALSE) ) );
 
          *result = SCIP_FOUNDSOL;
       }
    }
 
    /* try lock solution */
-   SCIPdebugMsg(scip, "try lock solution\n");
-   SCIP_CALL( SCIPtrySol(scip, locksol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
-
-   if( success )
+   if( difflock )
    {
-      SCIPdebugMsg(scip, "found feasible lock solution:\n");
-      SCIPdebug( SCIP_CALL( SCIPprintSol(scip, locksol, NULL, FALSE) ) );
+      SCIPdebugMsg(scip, "try lock solution\n");
+      SCIP_CALL( SCIPtrySol(scip, locksol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
 
-      *result = SCIP_FOUNDSOL;
+      if( success )
+      {
+         SCIPdebugMsg(scip, "found feasible lock solution:\n");
+         SCIPdebug( SCIP_CALL( SCIPprintSol(scip, locksol, NULL, FALSE) ) );
+
+         *result = SCIP_FOUNDSOL;
+      }
    }
 
 TERMINATE:
    /* free solutions */
-   SCIP_CALL( SCIPfreeSol(scip, &lbsol) );
-   SCIP_CALL( SCIPfreeSol(scip, &ubsol) );
-   SCIP_CALL( SCIPfreeSol(scip, &zerosol) );
    SCIP_CALL( SCIPfreeSol(scip, &locksol) );
+   SCIP_CALL( SCIPfreeSol(scip, &ubsol) );
+   SCIP_CALL( SCIPfreeSol(scip, &lbsol) );
+   SCIP_CALL( SCIPfreeSol(scip, &zerosol) );
 
    return SCIP_OKAY;
 }

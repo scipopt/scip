@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -66,6 +66,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_SQRT2 on Windows */  /*lint !750 */
+
 #include "scip/branch_distribution.h"
 #include "scip/pub_branch.h"
 #include "scip/pub_event.h"
@@ -85,6 +87,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_probing.h"
 #include <string.h>
+#include <math.h>
 
 
 #define BRANCHRULE_NAME            "distribution"
@@ -96,8 +99,6 @@
 #define SCOREPARAM_VALUES          "dhlvw"
 #define DEFAULT_SCOREPARAM         'v'
 #define DEFAULT_PRIORITY           2.0
-#define SQRTOFTWO                  1.4142136
-#define SQUARED(x) ((x) * (x))
 #define DEFAULT_ONLYACTIVEROWS     FALSE     /**< should only rows which are active at the current node be considered? */
 #define DEFAULT_USEWEIGHTEDSCORE   FALSE     /**< should the branching score weigh up- and down-scores of a variable */
 
@@ -286,9 +287,9 @@ void SCIPvarCalcDistributionParameters(
    {
       /* if the variable is continuous, we assume a continuous uniform distribution, otherwise a discrete one */
       if( vartype == SCIP_VARTYPE_CONTINUOUS )
-         *variance = SQUARED(varub - varlb);
+         *variance = SQR(varub - varlb);
       else
-         *variance = SQUARED(varub - varlb + 1) - 1;
+         *variance = SQR(varub - varlb + 1.0) - 1.0;
       *variance /= 12.0;
       *mean = (varub + varlb) * .5;
    }
@@ -330,7 +331,7 @@ SCIP_Real SCIPcalcCumulativeDistribution(
    assert( std != 0.0 ); /* for lint */
 
    /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for SCIPerf() function */
-   normvalue = (value - mean)/(std * SQRTOFTWO);
+   normvalue = (value - mean)/(std * M_SQRT2);
 
    SCIPdebugMsg(scip, " Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
 
@@ -533,7 +534,7 @@ void rowCalculateGauss(
       *mu += colval * varmean;
 
       /* the variance contribution of a variable is c^2 * (u - l)^2 / 12.0 for continuous and c^2 * ((u - l + 1)^2 - 1) / 12.0 for integer */
-      squarecoeff = SQUARED(colval);
+      squarecoeff = SQR(colval);
       *sigma2 += squarecoeff * varvariance;
 
       assert(!SCIPisFeasNegative(scip, *sigma2));
@@ -736,7 +737,7 @@ SCIP_RETCODE calcBranchScore(
             rowinfinitiesdown, rowinfinitiesup);
 
       /* get variable's current expected contribution to row activity */
-      squaredcoeff = SQUARED(rowval);
+      squaredcoeff = SQR(rowval);
 
       /* first, get the probability change for the row if the variable is branched on upwards. The probability
        * can only be affected if the variable upper bound is finite
@@ -990,7 +991,7 @@ SCIP_RETCODE varProcessBoundChanges(
                && SCIPisFeasGE(scip, branchruledata->rowvariances[rowpos], 0.0));
 
          coeff = colvals[r];
-         coeffsquared = SQUARED(coeff);
+         coeffsquared = SQR(coeff);
 
          /* update variable contribution to row activity distribution */
          branchruledata->rowmeans[rowpos] += coeff * (newmean - oldmean);

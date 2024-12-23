@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -59,7 +59,12 @@ installlibs:	libs
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP libraries into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(LIBDIR)/
-		@-install -m 644 -p $(LPILIBFILE) $(TPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
+		@-install -m 644 -p $(LPILIBFILE) $(TPILIBFILE) $(OBJSCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
+ifeq ($(SHARED),true)
+		@-install -m 644 -p $(SCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
+else
+		@-install -m 644 -p $(SCIPLIBBASEFILE) $(INSTALLDIR)/$(LIBDIR)/
+endif
 ifeq ($(SHARED)$(OSTYPE),truedarwin)
 		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(LPILIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(LPILIBFILE))
 		@install_name_tool -id $(realpath $(INSTALLDIR)/$(LIBDIR)/$(notdir $(TPILIBFILE))) $(INSTALLDIR)/$(LIBDIR)/$(notdir $(TPILIBFILE))
@@ -68,8 +73,13 @@ ifeq ($(SHARED)$(OSTYPE),truedarwin)
 endif
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(LPILIBLINK)) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $(LPILIBLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(LPILIBSHORTLINK)) && $(LN_s) $(notdir $(LPILIBLINK)) $(notdir $(LPILIBSHORTLINK)));
+ifeq ($(SHARED),true)
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBLINK)) && $(LN_s) $(notdir $(SCIPLIBFILE)) $(notdir $(SCIPLIBLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBSHORTLINK)) && $(LN_s) $(notdir $(SCIPLIBLINK)) $(notdir $(SCIPLIBSHORTLINK)));
+else
+		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBBASELINK)) && $(LN_s) $(notdir $(SCIPLIBBASEFILE)) $(notdir $(SCIPLIBBASELINK)));
+		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBBASESHORTLINK)) && $(LN_s) $(notdir $(SCIPLIBBASELINK)) $(notdir $(SCIPLIBBASESHORTLINK)));
+endif
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(OBJSCIPLIBLINK)) && $(LN_s) $(notdir $(OBJSCIPLIBFILE)) $(notdir $(OBJSCIPLIBLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(OBJSCIPLIBSHORTLINK)) && $(LN_s) $(notdir $(OBJSCIPLIBLINK)) $(notdir $(OBJSCIPLIBSHORTLINK)));
 endif
@@ -99,7 +109,12 @@ ifneq ($(INSTALLDIR),)
 		@echo "-> remove binary from INSTALLDIR <$(INSTALLDIR)>"
 		@-(cd $(INSTALLDIR) && rm -vf $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK));
 		@echo "-> remove libraries from INSTALLDIR <$(INSTALLDIR)>"
-		@-(cd $(INSTALLDIR) && rm -vf $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBFILE) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK));
+		-(cd $(INSTALLDIR)/$(LIBDIR) && rm -vf $(notdir $(LPILIBFILE)) $(notdir $(LPILIBLINK)) $(notdir $(LPILIBSHORTLINK)) $(notdir $(TPILIBFILE)) $(notdir $(OBJSCIPLIBFILE)) $(notdir $(OBJSCIPLIBLINK)) $(notdir $(OBJSCIPLIBSHORTLINK)));
+ifeq ($(SHARED),true)
+		@-(cd $(INSTALLDIR)/$(LIBDIR) && rm -vf $(notdir $(SCIPLIBFILE)) $(notdir $(SCIPLIBLINK)) $(notdir $(SCIPLIBSHORTLINK)));
+else
+		@-(cd $(INSTALLDIR)/$(LIBDIR) && rm -vf $(notdir $(SCIPLIBBASEFILE)) $(notdir $(SCIPLIBBASELINK)) $(notdir $(SCIPLIBBASESHORTLINK)));
+endif
 ifeq ($(DELHEADERS), true)
 		@echo "-> remove scip headers from INSTALLDIR <$(INSTALLDIR)>"
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/scip

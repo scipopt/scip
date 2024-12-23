@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -43,6 +43,7 @@
 #include "scip/presol_redvub.h"
 #include "scip/pub_matrix.h"
 #include "scip/pub_message.h"
+#include "scip/pub_presol.h"
 #include "scip/pub_var.h"
 #include "scip/scip_cons.h"
 #include "scip/scip_general.h"
@@ -552,11 +553,23 @@ SCIP_RETCODE findVarAggrRedVbcons(
    return SCIP_OKAY;
 }
 
-
 /*
  * Callback methods of presolver
  */
 
+/** copy method for presolver plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyRedvub)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolRedvub(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** execution method of presolver */
 static
@@ -699,6 +712,9 @@ SCIP_RETCODE SCIPincludePresolRedvub(
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
          PRESOL_TIMING, presolExecRedvub, NULL) );
+
+   /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyRedvub) );
 
    return SCIP_OKAY;
 }

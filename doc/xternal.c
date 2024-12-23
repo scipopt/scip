@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -104,7 +104,7 @@
  *
  * \verbinclude output.log
  *
- * @version  8.1.0
+ * @version  10.0.0
  *
  * \image html scippy.png
  */
@@ -252,7 +252,7 @@
  * Alex is now ready to write his very first example, he creates a new folder `MinEx` under `examples` and puts two files in there:
  * `CMakeLists.txt`:
  * ```
- * cmake_minimum_required(VERSION 3.3)
+ * cmake_minimum_required(VERSION 3.11)
  *
  * project(minex)
  * find_package(SCIP REQUIRED)
@@ -339,6 +339,7 @@
 /**@page PROGRAMMING Programming with SCIP
  *
  * - @subpage CODE    "Coding style guidelines"
+ * - @subpage SRCORGA "Organization of source code"
  * - @subpage OBJ     "Creating, capturing, releasing, and adding data objects"
  * - @subpage MEMORY  "Using the memory functions of SCIP"
  * - @subpage DEBUG   "Debugging"
@@ -405,22 +406,24 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
- * - \subpage RN80         "SCIP 8.0"
- * - \subpage RN70         "SCIP 7.0"
- * - \subpage RN60         "SCIP 6.0"
- * - \subpage RN50         "SCIP 5.0"
- * - \subpage RN40         "SCIP 4.0"
- * - \subpage RN32         "SCIP 3.2"
- * - \subpage RN31         "SCIP 3.1"
- * - \subpage RN30         "SCIP 3.0"
- * - \subpage RN21         "SCIP 2.1"
- * - \subpage RN20         "SCIP 2.0"
- * - \subpage RN12         "SCIP 1.2"
- * - \subpage RN11         "SCIP 1.1"
- * - \subpage RN10         "SCIP 1.0"
- * - \subpage RN09         "SCIP 0.9"
- * - \subpage RN08         "SCIP 0.8"
- * - \subpage RN07         "SCIP 0.7"
+ * - \subpage RN10         "SCIP 10"
+ * - \subpage RN9          "SCIP 9"
+ * - \subpage RN8          "SCIP 8"
+ * - \subpage RN7          "SCIP 7.0"
+ * - \subpage RN6          "SCIP 6.0"
+ * - \subpage RN5          "SCIP 5.0"
+ * - \subpage RN4          "SCIP 4.0"
+ * - \subpage RN3_2        "SCIP 3.2"
+ * - \subpage RN3_1        "SCIP 3.1"
+ * - \subpage RN3_0        "SCIP 3.0"
+ * - \subpage RN2_1        "SCIP 2.1"
+ * - \subpage RN2_0        "SCIP 2.0"
+ * - \subpage RN1_2        "SCIP 1.2"
+ * - \subpage RN1_1        "SCIP 1.1"
+ * - \subpage RN1_0        "SCIP 1.0"
+ * - \subpage RN0_9        "SCIP 0.9"
+ * - \subpage RN0_8        "SCIP 0.8"
+ * - \subpage RN0_7        "SCIP 0.7"
  *
  */
 
@@ -672,6 +675,10 @@
  *   the comment starts at column 46 (if column-count starts with 1).
  * - Maximal line length is 120 characters.
  * - Always only one declaration in a line.
+ * - Joint declaration and initialization is possible at the top-level of a function and in the header of loops.
+ *
+ *   @refsnippet{src/scip/cuts.c,SnippetCodeStyleInLoopDeclaration}
+ *
  * - Variable names should be all lower case.
  *
  *   @refsnippet{src/scip/branch_relpscost.c,SnippetCodeStyleDeclaration}
@@ -977,14 +984,6 @@
  *  </td>
  *  <td>
  *  A solver that computes irreducible infeasible subsystems using Benders decomposition
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  @subpage POLYSCIP_MAIN
- *  </td>
- *  <td>
- *  A solver for multi-objective optimization problems.
  *  </td>
  *  </tr>
  *  <tr>
@@ -2627,7 +2626,8 @@
  *
  * \par SEPA_DELAY: the default for whether the separation method should be delayed, if other separators or constraint handlers found cuts.
  * If the separator's separation method is marked to be delayed, it is only executed after no other separator
- * or constraint handler found a cut during the price-and-cut loop.
+ * or constraint handler found a cut during the price-and-cut loop, and in the last separation or stalling round,
+ * either in the end, or in an additional round if only the maximal subsequent round is exceeded.
  * If the separation method of the separator is very expensive, you may want to mark it to be delayed until all cheap
  * separation methods have been executed.
  *
@@ -3096,6 +3096,9 @@
  * domains of the variables.
  * \n
  * A complete list of all branching rules contained in this release can be found \ref BRANCHINGRULES "here".
+ * However, note that constraint handlers can implement their own branching when enforcing constraints.
+ * In particular the handler for nonlinear constraints currently does not use the branching plugins for spatial branching
+ * by default. Its behavior can be adjusted with the parameters in category constraints/nonlinear/branching.
  *
  * We now explain how users can add their own branching rules.  Take the most infeasible LP branching rule
  * (src/scip/branch_mostinf.c) as an example.  As all other default plugins, it is written in C. C++ users can easily
@@ -7847,6 +7850,46 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page SRCORGA Organization of Source Code
+ *
+ *  The SCIP source code has different types of files, distinguished by their naming style. The following list gives an overview of the most important file types and their purpose.
+ *
+ *  @section SRCORGA_CORE SCIP core components
+ *
+ *  - Each core component has an implementation with an internal API and a public API.
+ *  - The internal implementation should be in a file `<component>.c,h` and should not be included in the public API.
+ *  - Internal API functions usually do not take a `SCIP*` parameter, but a pointer to the component as first argument and pointers to internal structures like `SCIP_SET*` or `SCIP_STAT*`, where necessary.
+ *  - The name of internal API functions follows the style `SCIP<component><operation>...`, e.g., <code>SCIPvarCreateOriginal()</code> or <code>SCIPvarAddLocks()</code>.
+ *  - `pub_<component>.h` declares the functions of the public API that do not need a SCIP pointer.
+ *    Often, these are getter-functions.
+ *    For example, \ref pub_var.h contains public variable API functions.
+ *  - Functions in `pub_<component>.h` follow the same naming style as those in `<component>.h` and are used by the implementation of the internal API as well.
+ *  - `scip_<component>.h` declares the functions of the public API that need a SCIP instance (`SCIP*`), e.g., \ref scip_var.h for public variable manipulation functions.
+ *    Functions declared in `scip_<component>.h` are often thin wrappers that call the internal API functions from `<component>.h`.
+ *    These functions should follow the naming style `SCIP<operation><component>...`, e.g., <code>SCIPcreateVarOriginal()</code> or <code>SCIPaddVarLocks()</code>.
+ *  - To ensure functions of the public API being reachable in shared libraries, their declaration needs to contain the <code>SCIP_EXPORT</code> attribute.
+ *  - Public types (typedef's, enumerations) are defined in file `type_<component>.h`.
+ *    Type names follow the style `SCIP_<COMPONENT>...`. For every struct, we have a typedef that shortens the name
+ *    (so one could for instance use `SCIP_PARAM` instead of `struct SCIP_Param`).
+ *    The convention is to have the mixed-casing for the struct name, and then all-capital for the typedef's type. Similar for enums.
+ *  - Structs that need to be accessed by several source files are defined in `struct_<component>.h`.
+ *    `struct_<component>.h` is usually included only by `<component>.c` and maybe `scip_<component>.c`.
+ *    Exceptions are due to manual inlining of functions via macros when compiling for optimized mode.
+ *  - All types, structs, and functions are documented with Doxygen-style comments.
+ *    The documentation of the implementation of a function must repeat the documentation of the function declaration exactly (for doxygen to treat them as identical).
+ *
+ *  @section SRCORGA_PLUGINS Plugins
+ *  - Each plugin is defined in files `<type>_<name>.c,h`, e.g.,
+ *     \ref cons_knapsack.c implements the Knapsack constraint handler plugin and
+ *     \ref cons_knapsack.h declares its public API functions.
+ *  - Public types that belong to a plugin are declared in its header, `<type>_<name>.h`.
+ *  - API functions of plugins are named as `SCIP<operation>...<Name>`, e.g., <code>SCIPincludeConshdlrAnd()</code>, <code>SCIPcreateConsAnd()</code>, or <code>SCIPgetNVarsAnd()</code>.
+ *  - Plugins access only the public API.
+ *  - Plugins that need to be included by default should be registered in <code>src/scip/scipdefplugins.c</code>.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page TEST How to run automated tests with SCIP
  *
  *  SCIP comes along with a set of useful tools that allow to perform automated tests. The
@@ -8363,11 +8406,12 @@
  *
  * @section SYMDETECT Symmetry detection
  *
+ * SCIP can detect two types of symmetries: permutation symmetries and signed permutation symmetries.
  * In a purely integer linear setting
  * \f[
  *  \max \{ c^{\top} x : Ax \leq b,\; x \in \mathbb{Z}^n \},
  * \f]
- * a symmetry is a permutation \f$\gamma\f$ of \f$\{1,\dots,n\}\f$ that acts on vector \f$x\f$ by
+ * a permutation symmetry is a permutation \f$\gamma\f$ of \f$\{1,\dots,n\}\f$ that acts on vector \f$x\f$ by
  * permuting its coordinates via \f$\gamma(x) = (x_{\gamma^{-1}(1)}, \dots, x_{\gamma^{-1}(n)})\f$
  * such that
  *
@@ -8375,28 +8419,46 @@
  * -# \f$\gamma\f$ maps feasible solutions onto feasible solutions, i.e., \f$Ax \leq b\f$ if and only
  *    if \f$A\gamma(x) \leq b\f$.
  *
- * Since this definition depends on the feasible region of the integer program, which is unknown
+ * Signed permutation symmetries are defined similarly and allow to also handle symmetries arising from
+ * reflections of the feasible region along standard hyperplanes, e.g., mapping \f$x_i\f$ to \f$-x_i\f$
+ * and keeping the remaining entries of a solution vector \f$x\f$ invariant. Formally, a signed permutation \f$\gamma\f$
+ * is a permutation of the set \f$\{\pm 1, \dots, \pm n\}\f$ such that \f$\gamma(-i) = - \gamma(i)\f$
+ * for all \f$i \in \{1,\dots,n\}\f$. A signed permutation acts on a vector \f$x\f$ as
+ * \f$\gamma(x) = (\mathrm{sgn}(\gamma^{-1}(1))x_{|\gamma^{-1}(1)|},\dots,
+ * \mathrm{sgn}(\gamma^{-1}(n))x_{|\gamma^{-1}(n)|})\f$,
+ * where \f$\mathrm{sgn}(\cdot)\f$ is the sign function. The remaining properties of a symmetry are the same.
+ * It is possible to switch between these two types of symmetries via the
+ * parameter <code>propagating/symmetry/symtype</code>.
+ * Moreover, to detect more general signed permutations, one can shift variables with a
+ * bounded domain to be centered at the origin. This way, also variables with, e.g., domains \f$[1,2]\f$
+ * and \f$[0,1]\f$ can be symmetric. In SCIP, we implement this shift only within symmetry detection
+ * to find generalized signed permutations; the variable bounds of the problem itself remain unchanged.
+ *
+ * Since both definitions depend on the feasible region of the integer program, which is unknown
  * in general, SCIP only computes symmetries that leave the formulation of the optimization problem
  * invariant. To detect such formulation symmetries, SCIP builds an auxiliary colored graph whose
  * color-preserving automorphisms correspond to symmetries of the integer program. The symmetries of
  * the graph, and thus of the integer program, are then computed by an external graph automorphism
- * library that needs to be linked to SCIP. Currently, SCIP ships with two such libraries: The graph
- * automorphism library bliss is the basic workhorse to detect symmetries. Moreover, one can use
- * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss and is the
- * current default.
- *
- * @note To detect symmetries, SCIP needs to be built with sassy/bliss, which can be achieved
- * by using the options <code>SYM=sassy</code> and <code>-DSYM=sassy</code> in the Makefile and CMake
- * system, respectively.
+ * library that needs to be linked to SCIP. Currently, SCIP can use two such libraries: The graph
+ * automorphism libraries bliss or nauty/traces are the basic workhorses to detect symmetries. Moreover, one can use
+ * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss or nauty/traces.
+ * The current default is to use nauty in combination with sassy for symmetry detection.
+ * To use other symmetry packages, options <code>SYM</code> and <code>-DSYM</code> in the Makefile and CMake
+ * system, respectively, need to be set.
  *
  * Besides purely integer linear problems, SCIP also supports symmetry detection for general
  * constraint mixed-integer programs containing most of the constraint types that can be handled
  * by SCIP. In particular, symmetries of mixed-integer nonlinear problems can be detected.
+ * Moreover, symmetries can also be detected in code containing customized constraints.
+ * To this end, a suitable callback needs to be implemented, see \ref SYMDETECTCUSTOM.
+ *
+ * The (generators of the) symmetry group detected by SCIP can be printed to the terminal
+ * by querying <code>display symmetry</code> in SCIP's interactive shell.
  *
  * @subsection SYMPROCESS Processing symmetry information
  *
  * After symmetries have been computed, SCIP has access to a list \f$\gamma_1,\dots,\gamma_m\f$ of
- * permutations that generate a group \f$\Gamma\f$ of symmetries of the optimization problem. That
+ * (signed) permutations that generate a group \f$\Gamma\f$ of symmetries of the optimization problem. That
  * is, SCIP has not access to all permutations in \f$\Gamma\f$, but only a set of generators. Based
  * on these generators, SCIP analyzes the group \f$\Gamma\f$ and checks whether it can be split into
  * independent factors. That is, whether there exist subgroups \f$\Gamma_1,\dots,\Gamma_k\f$ of
@@ -8406,6 +8468,9 @@
  *
  * @section SYMMETHODS Symmetry handling methods
  *
+ * Most symmetry handling methods available in SCIP have only been implemented for ordinary permutation symmetries,
+ * and not for signed permutation symmetries. In the following, we silently assume that the described methods
+ * deal with ordinary permutation symmetries if not mentioned differently.
  * To handle symmetries, SCIP uses three different classes of methods, which we detail below.
  *
  * @subsection SYMCONSS Static symmetry handling constraints for binary variable domains
@@ -8464,16 +8529,18 @@
  *    Orbitopal reduction respects the parameter <code>propagating/symmetry/detectorbitopes</code>.
  * -# Lexicographic reduction is the dynamic counterpart of symresack and orbisack propagation.
  *    Lexicographic reduction respects the parameter <code>propagating/symmetry/addsymresacks</code>.
+ *    At the moment, the implementation of this method is the only one that allows to also handle signed permutation
+ *    symmetries.
  * -# Orbital reduction is a generalization of orbital fixing that also works for non-binary variable domains.
  *    Orbital reduction respects the 2-bit of the bitset <code>misc/usesymmetry</code>.
- *    See \ref SYMMETHODSELECT <method selection>. Since there is no static counterpart, this method ignores
+ *    See \ref SYMMETHODSELECT "method selection". Since there is no static counterpart, this method ignores
  *    <code>propagating/symmetry/usedynamicprop</code>.
  *
  * In all cases, the dynamic variable ordering is derived from the branching decisions.
  * In particular, at different branch-and-bound tree nodes, a different variable ordering can be active.
  * Since the symmetries are handled for independent factors of the symmetry group, a different variable ordering method
  * can be used for handling symmetries in different factors. In SCIP, the same method is used for orbital reduction and
- * for lexicographic reduction, which means that these two methods are compatible and can be used simultanuously in the
+ * for lexicographic reduction, which means that these two methods are compatible and can be used simultaneously in the
  * same factor. Orbitopal reduction uses a different method.
  *
  * As SCIP might restart the branch-and-bound process, which removes information regarding the branching decisions,
@@ -8536,8 +8603,8 @@
  *    is TRUE, some compatible SST cuts are added, too. Besides this, no further symmetry handling methods
  *    are applied for \f$\Gamma_i\f$.
  * -# Otherwise, orbital reduction is used. If <code>propagating/symmetry/usedynamicprop</code> and
- *    <code>propagating/symmetry/addsymresacks> are <code>TRUE</code>, then also the dynamic lexicographic reduction
- *    method is used.
+ *    <code>propagating/symmetry/addsymresacks</code> are <code>TRUE</code>, then also the dynamic lexicographic
+ *    reduction method is used.
  * -# Otherwise, if the majority of variables affected by \f$\Gamma_i\f$ are non-binary, SST cuts are applied
  *    to handle \f$\Gamma_i\f$. No further symmetry handling methods are applied for \f$\Gamma_i\f$.
  *
@@ -8553,14 +8620,152 @@
  * @subsection SYMTIMING Controlling the timing of symmetry computation
  *
  * Since presolving might both remove and introduce formulation symmetries, the timing of computing symmetries
- * can be changed via the parameters <code>propagating/symmetry/addconsstiming</code> and
- * <code>propagating/symmetry/ofsymcomptiming</code>.
- * The first specifies the moment at which symmetries handling methods must be determined.
- * The second specifies the moment at which the symmetries must be computed.
- * If the second is triggered at a later moment than the first, the symmetries are computed just before determining
- * the symmetry handling methods, so the first parameter is the dominant parameter.
- * Both parameters take values 0, 1, or 2, corresponding to computing symmetries before presolving,
- * during presolving, or when the symmetry handling methods are applied first, respectively.
+ * can be changed via the parameter <code>propagating/symmetry/symtiming</code>.
+ * The parameter takes value 0, 1, or 2, corresponding to computing symmetries before presolving,
+ * during presolving, or at the end of presolving, respectively.
+ * Based on the computed symmetries, SCIP enables some symmetry handling methods as explained above.
+ *
+ * @subsection SYMDETECTCUSTOM Symmetry detection for customized constraints
+ *
+ * To detect (signed) permutation symmetries, SCIP requests from each constraint present in the problem to be solved
+ * a node and edge colored graph whose symmetries correspond to the symmetries of the corresponding constraint.
+ * This information is provided by two callbacks, the SCIP_DECL_CONSGETPERMSYMGRAPH callback for permutation
+ * symmetries and the SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH callback for signed permutation symmetries. If a
+ * constraint handler does not implement one of these callbacks, SCIP will not detect symmetries of the corresponding
+ * type.
+ *
+ * In the following, we briefly describe how such a symmetry detection graph looks like for linear constraints.
+ * Afterwards, we mention the basic setup of the symmetry detection graphs and how the callbacks could be implemented
+ * for customized constraints.
+ *
+ * @subsubsection SYMDETECTLINEAR Symmetry detection graphs for linear constraints
+ *
+ * Simple permutation symmetries of a linear constraint \f$\sum_{i = 1}^n a_ix_i \leq \beta\f$ are given
+ * by permutations that exchange equivalent variables with the same coefficients. These symmetries can be encoded
+ * by a graph with the following structure. For every variable \f$x_i\f$, the graph contains a node \f$v_i\f$
+ * that receives a color that uniquely determines the type of the variable (lower/upper bound, objective coefficient,
+ * integrality). Moreover, the graph contains a node \f$w\f$ that receives a color corresponding to the right-hand side
+ * \f$\beta\f$. Node \f$w\f$ is then connected with all nodes corresponding to variables. Edge \f$\{w,v_i\}\f$ then
+ * receives a color corresponding to the coefficient \f$a_i\f$. Then, every automorphism of this graph corresponds to a
+ * permutation symmetry of the linear constraint.
+ *
+ * For signed permutation symmetries, almost the same construction can be used. The only difference is that also
+ * nodes \f$v_{-i}\f$ need to be introduced that correspond to the negation of variable \f$x_i\f$. These negated
+ * variable nodes are then also connected with node \f$\beta\f$ and the corresponding edge receives color \f$-a_i\f$.
+ * Finally, to make sure that the corresponding symmetry corresponds to a signed permutation \f$\gamma\f$, i.e.,
+ * \f$\gamma(-i) = - \gamma(i)\f$, one also needs to add the edges \f$\{v_i,v_{-i}\}\f$ that remain uncolored.
+ * Note that the color of node \f$v_{-i}\f$ also needs to uniquely determine the negated variable bounds and
+ * objective coefficient.
+ *
+ * @subsubsection SYMDETECTRULES Principles for building symmetry detection graphs
+ *
+ * A symmetry detection graph of a constraint needs to have the property that each of its automorphisms corresponds
+ * to a (signed) permutation of the constraint. Moreover, the corresponding constraint handler of the constraints
+ * needs to be encoded in the graph to make sure that only symmetries between equivalent constraints can be computed.
+ * Among others, this can be achieved by assigning the nodes and edges appropriate colors. To make sure that the
+ * colors are compatible between the different symmetry detection graphs, SCIP automatically determines the colors of
+ * nodes and edges based on information that is provided by the user (or the creator of the graph).
+ *
+ * A pointer to a globally maintained symmetry detection graph is provided to the callbacks. The nodes and edges of the
+ * graph of a constraint are added to this global graph.
+ * The nodes of the graph need to be added via the functions <code>SCIPaddSymgraphValnode()</code>
+ * and <code>SCIPaddSymgraphConsnode()</code>. The first function can be used to create nodes corresponding to
+ * a numerical value like \f$\beta\f$ in the above example, the latter function creates a node corresponding to
+ * a provided constraint. This ensures that only symmetry detection graphs from the same constraint handler
+ * can be isomorphic. The colors of the nodes are then computed automatically by SCIP based on the information
+ * that is provided the functions creating these nodes. This ensures that node colors are compatible.
+ *
+ * Edges are created via the function <code>SCIPaddSymgraphEdge()</code> which receives, among others, the
+ * indices of created nodes. Note that there is no function for creating variable nodes as SCIP automatically
+ * creates nodes for variables. Their indices can be accessed via <code>SCIPgetSymgraphVarnodeidx()</code> for
+ * original variables and <code>SCIPgetSymgraphNegatedVarnodeidx()</code> for negated variables used for
+ * signed permutations. The edges between variables \f$x_i\f$ and \f$-x_i\f$ are also automatically present
+ * in the symmetry detection graph for signed permutation symmetries. The function <code>SCIPaddSymgraphEdge()</code>
+ * also takes a numerical value as argument, which allows to assign an edge a weight (e.g., \f$a_i\f$
+ * as in the above example).
+ *
+ * Moreover, special nodes, so-called operator nodes, can be added via <code>SCIPaddSymgraphOpnode()</code>.
+ * Such nodes allow to model special structures of a constraint, which allow to have more degrees of freedom in
+ * creating symmetry detection graphs. Different operators are distinguished by an integral value.
+ * Their encoding is thus similar to the one of nodes created by <code>SCIPaddSymgraphValnode()</code>.
+ * In computing colors, operator nodes are treated differently though, which allows to distinguish
+ * operator 2 from the numerical value 2.
+ *
+ * @subsubsection SYMDETECTEXAMPLES Example for creating symmetry detection callbacks
+ *
+ * Let \f$G = (V,E)\f$ be an undirected graph with node weights \f$c_v\f$, \f$v \in C\f$. The maximum weight
+ * stable set problem can be modeled via the integer program
+ * \f\[ \max\Big\{ \sum_{v \in V} c_vx_v : x_u + x_v \leq 1 \text{ for all } \{u,v\} \in E,\; x \in \{0,1\}^V\Big\}.\f\]
+ * Suppose a user wants to implement a constraint handler <code>cons_stableset</code> that enforces a solution to define
+ * a stable set in \f$G\f$, e.g., by propagation methods and separating edge and clique inequalities.
+ * Then, the symmetries of the constraint are the weight-preserving automorphisms of the underlying graph \f$G\f$.
+ * The symmetry detection graph thus can be almost a copy of \f$G\f$.
+ *
+ * In our construction, we introduce for each node \f$v\f$ of the graph an operator node \f$v'\f$.
+ * Moreover, for each edge \f$\{u,v\}\in E\f$, we add the edges \f$\{u',v'\}\f$ to the symmetry detection graph.
+ * To identify the symmetry detection graph as derived from <code>cons_stableset</code>, we add a constraint node
+ * that is connected with all operator nodes, which preserves the automorphisms of \f$G\f$. Finally, each
+ * node \f$v'\f$ is connected with the corresponding variable node for \f$x_v\f$ by an edge.
+ *
+ * In the following, we present a code snippet showing how to implement the above mentioned symmetry detection graph.
+ * We assume that the constraint data <code>consdata</code> contains the following fields
+ *
+ * - <code>nnodes</code> number of nodes in graph;
+ * - <code>nedges</code> number of edges in graph;
+ * - <code>first</code> array containing the first nodes of each edge;
+ * - <code>second</code> array containing the second nodes of each edge;
+ * - <code>weights</code> array containing for each node its corresponding weight;
+ * - <code>vars</code> array containing a binary variable for each node modeling whether node is present in stable set.
+ *
+ * The code for creating the symmetry detection callback could then look like this.
+ *
+ * \code{.c}
+ * #define NODEOP 1
+ * static
+ * SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphStableSet)
+ * {
+ *    SCIP_CONSDATA* consdata;
+ *    int* idx;
+ *    int vidx;
+ *    int nnodes;
+ *    int v;
+ *
+ *    consdata = SCIPconsGetData(cons);
+ *    nnodes = consdata->nnodes;
+ *
+ *    SCIP_CALL( SCIPallocBufferArray(scip, &idx, nnodes + 1) );
+ *
+ *    // create operator nodes and constraint node
+ *    for( v = 0; v < nnodes; ++v )
+ *    {
+ *       SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, NODEOP, &idx[v]) );
+ *    }
+ *    SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &idx[nnodes]) );
+ *
+ *    // add edges of underlying graph
+ *    for( v = 0; v < consdata->nedges; ++v )
+ *    {
+ *       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, idx[consdata->first[v]], idx[consdata->second[v]], FALSE, 0.0) );
+ *    }
+ *
+ *    // connect nodes with constraint node
+ *    for( v = 0; v < nnodes; ++v )
+ *    {
+ *       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, idx[v], nodeidx[nnodes], FALSE, 0.0) );
+ *    }
+ *
+ *    // connect operator nodes with variable nodes, assign edges weight of node
+ *    for( v = 0; v < nnodes; ++v )
+ *    {
+ *       vidx = SCIPgetSymgraphVarnodeidx(scip, graph, consdata->vars[v]);
+ *       SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, idx[v], vidx, TRUE, consdata->weights[v]) );
+ *    }
+ *
+ *    SCIPfreeBufferArray(scip, &idx);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
  */
 
 /**@page LICENSE License
@@ -8636,10 +8841,12 @@
   * - There is a <a href="https://github.com/scipopt/MatlabSCIPInterface">Matlab interface</a>
   *   to use SCIP and SCIP-SDP from Matlab and Octave.
   * - <a href="https://github.com/scipopt/JSCIPOpt">JSCIPOpt</a> is an interface for Java.
+  * - <a href="https://github.com/scipopt/russcip">Russcip</a> is an interface for Rust.
+  * - <a href="https://github.com/scipopt/SCIPpp">SCIP++</a> is a modeling interface for C++.
   *
   * Contributions to these projects are very welcome.
   *
-  * There are also several third-party python interfaces to the \SCIP Optimization Suite:
+  * There are also many third-party python interfaces to the \SCIP Optimization Suite, for example:
   * - <a href="https://github.com/eomahony/Numberjack">NUMBERJACK</a> is a constraint programming platform implemented in python.
   *   It supports a variety of different solvers, one of them being the \SCIP Optimization Suite .
   * - <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
@@ -8888,6 +9095,18 @@
 /**@defgroup DecompMethods Decomposition data structure
  * @ingroup DataStructures
  * @brief methods for creating and accessing user decompositions
+ */
+
+/**@defgroup NetworkMatrix Network Matrix
+ * @ingroup DataStructures
+ * @brief methods for detecting network matrices and converting them to the underlying graphs
+ */
+
+/**@defgroup SymGraph Symmetry Detection Graph
+ * @ingroup DataStructures
+ * @brief methods for creating and manipulating symmetry detection graphs
+ *
+ * Below you find a list of functions to create and manipulate symmetry detection graphs.
  */
 
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
@@ -9296,7 +9515,7 @@
  */
 
 /**@defgroup PublicSymmetryMethods Symmetry
- * @ingroup INTERNALAPI
+ * @ingroup PUBLICCOREAPI
  * @brief methods for symmetry handling
  */
 

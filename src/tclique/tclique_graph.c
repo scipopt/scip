@@ -3,7 +3,7 @@
 /*                  This file is part of the program                         */
 /*              TCLIQUE --- Algorithm for Maximum Cliques                    */
 /*                                                                           */
-/*  Copyright (c) 1996-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 1996-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -635,6 +635,7 @@ TCLIQUE_Bool tcliqueLoadFile(
 
    /* set data structures for tclique,
     * if an error occured, close the file before returning */
+   /* coverity[tainted_data] */
    if( BMSallocMemoryArray(&(*tcliquegraph)->weights, (*tcliquegraph)->nnodes) == NULL )
    {
       infoMessage("Run out of memory while reading file %s.\n", filename);

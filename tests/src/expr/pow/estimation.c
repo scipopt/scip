@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -654,7 +654,7 @@ Test(estimation, hyperbolaMixed, .description = "test computation of estimators 
    SCIP_CALL( SCIPfree(&scip) );
 }
 
-/* test estimateRoot */
+/* test SCIPestimateRoot */
 Test(estimation, root, .description = "test computation of estimators for roots (<1)")
 {
    SCIP_Real constant;
@@ -667,7 +667,7 @@ Test(estimation, root, .description = "test computation of estimators for roots 
 
    /* x^0.25 on [0.0,infty] -> underestimator does not exist */
    success = TRUE;
-   estimateRoot(scip, 0.25, FALSE, 0.0, SCIPinfinity(scip), 0.5, &constant, &slope, &islocal, &success);
+   SCIPestimateRoot(scip, 0.25, FALSE, 0.0, SCIPinfinity(scip), 0.5, &constant, &slope, &islocal, &success);
    cr_assert(!success);
 
    /* x^0.25 on [0.0,16.0] -> underestimator is secant; overestimator is tangent */
@@ -675,7 +675,7 @@ Test(estimation, root, .description = "test computation of estimators for roots 
    success = FALSE;
    islocal = FALSE;
    constant = slope = -5.0;
-   estimateRoot(scip, 0.25, FALSE, 0.0, 16.0, xref, &constant, &slope, &islocal, &success);
+   SCIPestimateRoot(scip, 0.25, FALSE, 0.0, 16.0, xref, &constant, &slope, &islocal, &success);
    cr_assert(success);
    cr_assert(islocal);
    cr_assert(SCIPisEQ(scip, slope, 2.0/16.0));
@@ -683,7 +683,7 @@ Test(estimation, root, .description = "test computation of estimators for roots 
 
    success = FALSE;
    islocal = TRUE;
-   estimateRoot(scip, 0.25, TRUE, 0.0, 16.0, xref, &constant, &slope, &islocal, &success);
+   SCIPestimateRoot(scip, 0.25, TRUE, 0.0, 16.0, xref, &constant, &slope, &islocal, &success);
    cr_assert(success);
    cr_assert(!islocal);
    cr_assert(SCIPisEQ(scip, slope, 0.25 * pow(xref, -0.75)));
@@ -692,13 +692,13 @@ Test(estimation, root, .description = "test computation of estimators for roots 
    /* if reference point at 0.0, then tangent will still be computed, but it will not touch at 0.0 */
    success = FALSE;
    islocal = TRUE;
-   estimateRoot(scip, 0.25, TRUE, 0.0, 16.0, 0.0, &constant, &slope, &islocal, &success);
+   SCIPestimateRoot(scip, 0.25, TRUE, 0.0, 16.0, 0.0, &constant, &slope, &islocal, &success);
    cr_assert(success);
    cr_assert(!islocal);
    cr_assert(constant != 0.0);
 
    /* if reference point at 0.0 and bounds on x are very small, then no estimator is computed */
-   estimateRoot(scip, 0.25, TRUE, 0.0, SCIPepsilon(scip), 0.0, &constant, &slope, &islocal, &success);
+   SCIPestimateRoot(scip, 0.25, TRUE, 0.0, SCIPepsilon(scip), 0.0, &constant, &slope, &islocal, &success);
    cr_assert(!success);
 
    SCIP_CALL( SCIPfree(&scip) );

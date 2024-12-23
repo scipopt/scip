@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -75,7 +75,13 @@ OPTHOST=$(uname -n | sed 's/.zib.de//g' | sed 's/portal//g' | tr -cd '[:alpha:]'
 
 # file on optimi to check for
 case "$OPTHOST" in
-  opt | optc ) OPTIMIFILE=/nfs/optimi/QUOTAS ;;
+  opt | optc )
+    . /etc/os-release
+    case "$ID" in
+      debian ) OPTIMIFILE=/data/optimi/optimi/QUOTAS ;;
+      ubuntu ) OPTIMIFILE=/nfs/optimi/QUOTAS ;;
+    esac
+    ;;
   htccmp     ) OPTIMIFILE=/data/optimi/optimi/QUOTAS ;;
 esac
 

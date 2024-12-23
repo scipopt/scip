@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -87,6 +87,10 @@ void SCIPhistoryReset(
    history->pscostweightedmean[1] = 0.0;
    history->pscostvariance[0] = 0.0;
    history->pscostvariance[1] = 0.0;
+   history->ancpscostcount[0] = 0.0;
+   history->ancpscostcount[1] = 0.0;
+   history->ancpscostweightedmean[0] = 0.0;
+   history->ancpscostweightedmean[1] = 0.0;
    history->vsids[0] = 0.0;
    history->vsids[1] = 0.0;
    history->conflengthsum[0] = 0.0;
@@ -98,6 +102,9 @@ void SCIPhistoryReset(
    history->ratio = 0.0;
    history->ratiovalid = FALSE;
    history->balance = 0.0;
+   history->ngmi = 0;
+   history->gmieff = 0.0;
+   history->gmieffsum = 0.0;
    history->nactiveconflicts[0] = 0;
    history->nactiveconflicts[1] = 0;
    history->nbranchings[0] = 0;
@@ -125,6 +132,7 @@ void SCIPhistoryUnite(
       d = (switcheddirs ? 1 - i : i);
 
       history->pscostcount[i] += addhistory->pscostcount[d];
+      history->ancpscostcount[i] += addhistory->ancpscostcount[d];
 
       /* if both histories a count of zero, there is nothing to do */
       if( history->pscostcount[i] > 0.0 )
@@ -152,6 +160,18 @@ void SCIPhistoryUnite(
       {
          assert(history->pscostweightedmean[i] == 0.0);
          assert(history->pscostvariance[i] == 0.0);
+      }
+#endif
+      /* if both histories a discounted count of zero, there is nothing to do */
+      if( history->ancpscostcount[i] > 0.0 )
+      {
+         /* we update the mean as if the history was one observation with a large weight */
+         history->ancpscostweightedmean[i] += addhistory->ancpscostcount[d] * (addhistory->ancpscostweightedmean[d] - history->ancpscostweightedmean[i]) / history->ancpscostcount[i];
+      }
+#ifndef NDEBUG
+      else
+      {
+         assert(history->ancpscostweightedmean[i] == 0.0);
       }
 #endif
 
@@ -227,6 +247,69 @@ void SCIPhistoryUpdatePseudocost(
 
    SCIPsetDebugMsg(set, "updated pseudo costs of history %p: dir=%d, distance=%g, objdelta=%g, weight=%g  ->  %g/%g\n",
       (void*)history, dir, distance, objdelta, weight, history->pscostcount[dir], history->pscostweightedmean[dir]);
+}
+
+/** updates the ancestral pseudo costs for a change of "solvaldelta" in the variable's LP solution value and a change of "objdelta"
+ *  in the LP's objective value
+ */
+void SCIPhistoryUpdateAncPseudocost(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   SCIP_Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   SCIP_Real             weight              /**< weight of this update in discounted pseudo cost sum (added to pscostcount) */
+   )
+{
+   SCIP_Real distance;
+   SCIP_Real eps;
+   SCIP_Real sumcontribution;
+   SCIP_Real olddelta;
+   int dir;
+
+   assert(history != NULL);
+   assert(set != NULL);
+   assert(!SCIPsetIsInfinity(set, REALABS(solvaldelta)));
+   assert(!SCIPsetIsInfinity(set, objdelta));
+   assert(!SCIPsetIsNegative(set, objdelta));
+   assert(0.0 < weight && weight <= 1.0);
+
+   if( SCIPsetIsPositive(set, solvaldelta) )
+   {
+      /* variable's solution value moved upwards */
+      dir = 1;
+      distance = solvaldelta;
+   }
+   else if( SCIPsetIsNegative(set, solvaldelta) )
+   {
+      /* variable's solution value moved downwards */
+      dir = 0;
+      distance = -solvaldelta;
+   }
+   else
+   {
+      /* the variable's solution value didn't change, and the pseudo costs cannot be updated */
+      return;
+   }
+   assert(dir == 0 || dir == 1);
+   assert(SCIPsetIsPositive(set, distance));
+
+   /* apply a lower limit on the distance to avoid numerical instabilities due to very large summands */
+   eps = SCIPsetPseudocosteps(set);
+   distance = MAX(distance, eps);
+
+   /* slightly increase objective delta, s.t. discounted pseudo cost values are not zero, and fractionalities are
+    * always used at least a bit
+    */
+   objdelta += SCIPsetPseudocostdelta(set);
+
+   sumcontribution = objdelta/distance;
+   /* update the pseudo cost values */
+   olddelta = sumcontribution - history->ancpscostweightedmean[dir];
+   history->ancpscostcount[dir] += weight;
+   history->ancpscostweightedmean[dir] += weight * olddelta / history->ancpscostcount[dir];
+
+   SCIPsetDebugMsg(set, "updated ancestor pseudo costs of history %p: dir=%d, distance=%g, objdelta=%g, weight=%g  ->  %g/%g\n",
+      (void*)history, dir, distance, objdelta, weight, history->ancpscostcount[dir], history->ancpscostweightedmean[dir]);
 }
 
 /**@name Value based history
@@ -406,6 +489,9 @@ SCIP_Real* SCIPvaluehistoryGetValues(
 #undef SCIPhistoryGetPseudocost
 #undef SCIPhistoryGetPseudocostCount
 #undef SCIPhistoryIsPseudocostEmpty
+#undef SCIPhistoryGetAncPseudocost
+#undef SCIPhistoryGetAncPseudocostCount
+#undef SCIPhistoryIsAncPseudocostEmpty
 #undef SCIPhistoryIncVSIDS
 #undef SCIPhistoryScaleVSIDS
 #undef SCIPhistoryGetVSIDS
@@ -425,6 +511,10 @@ SCIP_Real* SCIPvaluehistoryGetValues(
 #undef SCIPhistoryGetLastRatio
 #undef SCIPhistorySetRatioHistory
 #undef SCIPhistoryGetLastBalance
+#undef SCIPhistorySetLastGMIeff
+#undef SCIPhistoryGetLastGMIeff
+#undef SCIPhistoryIncGMIeffSum
+#undef SCIPhistoryGetAvgGMIeff
 
 /** returns the opposite direction of the given branching direction */
 SCIP_BRANCHDIR SCIPbranchdirOpposite(
@@ -447,6 +537,20 @@ SCIP_Real SCIPhistoryGetPseudocost(
       return solvaldelta * (history->pscostcount[1] > 0.0 ? history->pscostweightedmean[1] : 1.0);
    else
       return -solvaldelta * (history->pscostcount[0] > 0.0 ? history->pscostweightedmean[0] : 1.0);
+}
+
+/** returns the expected ancestral dual gain for moving the corresponding variable by "solvaldelta" */
+SCIP_Real SCIPhistoryGetAncPseudocost(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   assert(history != NULL);
+
+   if( solvaldelta >= 0.0 )
+      return solvaldelta * (history->ancpscostcount[1] > 0.0 ? history->ancpscostweightedmean[1] : 1.0);
+   else
+      return -solvaldelta * (history->ancpscostcount[0] > 0.0 ? history->ancpscostweightedmean[0] : 1.0);
 }
 
 /** returns the variance of pseudo costs about the mean. */
@@ -486,6 +590,21 @@ SCIP_Real SCIPhistoryGetPseudocostCount(
    return history->pscostcount[dir];
 }
 
+/** returns the (possible fractional) number of (partial) ancestral pseudo cost updates performed on this pseudo cost entry in
+ *  the given branching direction
+ */
+SCIP_Real SCIPhistoryGetAncPseudocostCount(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   assert((int)dir == 0 || (int)dir == 1);
+
+   return history->ancpscostcount[dir];
+}
+
 /** returns whether the pseudo cost entry is empty in the given branching direction (whether no value was added yet) */
 SCIP_Bool SCIPhistoryIsPseudocostEmpty(
    SCIP_HISTORY*         history,            /**< branching and inference history */
@@ -497,6 +616,19 @@ SCIP_Bool SCIPhistoryIsPseudocostEmpty(
    assert((int)dir == 0 || (int)dir == 1);
 
    return (history->pscostcount[dir] == 0.0);
+}
+
+/** returns whether the ancestral pseudo cost entry is empty in the given branching direction (whether no value was added yet) */
+SCIP_Bool SCIPhistoryIsAncPseudocostEmpty(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   assert((int)dir == 0 || (int)dir == 1);
+
+   return (history->ancpscostcount[dir] == 0.0);
 }
 
 /** increases the conflict score of the history entry by the given weight */
@@ -736,6 +868,50 @@ SCIP_Real SCIPhistoryGetLastBalance(
    assert(history->ratiovalid);
 
    return history->balance;
+}
+
+/** returns the average efficacy value for the GMI cut produced by this variable */
+SCIP_Real SCIPhistoryGetAvgGMIeff(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+   )
+{
+   assert(history != NULL);
+
+   return history->ngmi > 0 ? history->gmieffsum / history->ngmi : 0.0;
+}
+
+/** increases the average efficacy value for the GMI cut produced by this variable */
+void SCIPhistoryIncGMIeffSum(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             gmieff              /**< normalized efficacy value of a cut which will increase gmieff */
+   )
+{
+   assert(history != NULL);
+   assert(gmieff >= 0.0);
+
+   history->gmieffsum += gmieff;
+   history->ngmi += 1;
+}
+
+/** returns the most recent efficacy value for the GMI cut produced by this variable */
+SCIP_Real SCIPhistoryGetLastGMIeff(
+   SCIP_HISTORY*         history             /**< branching and inference history */
+   )
+{
+   assert(history != NULL);
+
+   return history->gmieff;
+}
+
+/** sets the new most recent efficacy value for the GMI cut produced by this variable */
+void SCIPhistorySetLastGMIeff(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_Real             gmieff              /**< Efficacy of GMI cut produced from simplex tableau row of this var */
+   )
+{
+   assert(history != NULL);
+
+   history->gmieff = gmieff;
 }
 
 /** sets the ratio history for a particular variable */

@@ -8,7 +8,8 @@ GMP_FLAGS	=
 GMP_LDFLAGS 	=	-lgmp
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
-CFLAGS		=	-std=c99 -D_XOPEN_SOURCE=600
+CFLAGS		=	-ffp-contract=off -std=c99 -D_XOPEN_SOURCE=600
+CXXFLAGS	=	-ffp-contract=off
 FORTRANLIBS	=	-lgfortran
 FORTRAN_NAMING_CONVENTION = LCASE_DECOR
 ifeq ($(SHARED),true)

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -535,7 +535,7 @@ Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
 
    SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, ownerdata->enfos[1]->auxvalue,
-         FALSE, FALSE, FALSE, FALSE, &result) );
+         FALSE, FALSE, FALSE, FALSE, FALSE, &result) );
    cr_expect_eq(result, SCIP_SEPARATED, "Expected enfo result = %d, got %d", SCIP_SEPARATED, result);
    cr_assert(SCIPgetNCuts(scip) == 2);
 

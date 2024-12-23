@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -177,7 +177,7 @@ Test(normaldistribution, checkcdftable, .description = "compare cumulative densi
                probability = 0.5 + negative * probtable[i];
 
                /* multiply and shift value to sigma * val + mu to account for distribution parameters */
-               val = SQRT(sigma2) * val + mu;
+               val = sqrt(sigma2) * val + mu;
 
                /* compute cumulative density for the specified distribution between - infinity and value */
                cdf = SCIPnormalCDF(mu, sigma2, val);

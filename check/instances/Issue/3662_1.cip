@@ -1,0 +1,13 @@
+STATISTICS
+  Problem name     : Issue 3662
+  Variables        : 2 (1 binary, 0 integer, 0 implicit integer, 1 continuous)
+  Constraints      : 0 initial, 2 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <x465>: obj=0, original bounds=[0,1]
+  [continuous] <x5>: obj=1, original bounds=[0,+inf]
+CONSTRAINTS
+  [linear] <c_u_x1227_>:  +5<x465>[B] <= 5;
+  [linear] <c_u_x1229_>:  -10000048<x465>[B] <= -10;
+END

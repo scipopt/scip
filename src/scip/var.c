@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -61,6 +61,7 @@
 #include "scip/pub_prop.h"
 #include "scip/pub_var.h"
 #include "scip/relax.h"
+#include "scip/scip_prob.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/stat.h"
@@ -2219,28 +2220,36 @@ SCIP_RETCODE SCIPvarCopy(
    SCIP_CALL( SCIPhashmapInsert(varmap, sourcevar, *var) );
 
    /* in case there exists variable data and the variable data copy callback, try to copy variable data */
-   if( sourcevar->vardata != NULL && sourcevar->varcopy != NULL )
+   if( sourcevar->vardata != NULL )
    {
-      SCIP_CALL( sourcevar->varcopy(set->scip, sourcescip, sourcevar, sourcevar->vardata, 
-            varmap, consmap, (*var), &targetdata, &result) );
-
-      /* evaluate result */
-      if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
+      if( sourcevar->varcopy != NULL )
       {
-         SCIPerrorMessage("variable data copying method returned invalid result <%d>\n", result);
-         return SCIP_INVALIDRESULT;
+         SCIP_CALL( sourcevar->varcopy(set->scip, sourcescip, sourcevar, sourcevar->vardata,
+               varmap, consmap, (*var), &targetdata, &result) );
+
+         /* evaluate result */
+         if( result != SCIP_DIDNOTRUN && result != SCIP_SUCCESS )
+         {
+            SCIPerrorMessage("variable data copying method returned invalid result <%d>\n", result);
+            return SCIP_INVALIDRESULT;
+         }
+
+         assert(targetdata == NULL || result == SCIP_SUCCESS);
+
+         /* if copying was successful, add the created variable data to the variable as well as all callback methods */
+         if( result == SCIP_SUCCESS )
+         {
+            (*var)->varcopy = sourcevar->varcopy;
+            (*var)->vardelorig = sourcevar->vardelorig;
+            (*var)->vartrans = sourcevar->vartrans;
+            (*var)->vardeltrans = sourcevar->vardeltrans;
+            (*var)->vardata = targetdata;
+         }
       }
-
-      assert(targetdata == NULL || result == SCIP_SUCCESS);
-
-      /* if copying was successful, add the created variable data to the variable as well as all callback methods */
-      if( result == SCIP_SUCCESS )
+      else
       {
-         (*var)->varcopy = sourcevar->varcopy;
-         (*var)->vardelorig = sourcevar->vardelorig;
-         (*var)->vartrans = sourcevar->vartrans;
-         (*var)->vardeltrans = sourcevar->vardeltrans;
-         (*var)->vardata = targetdata;
+         /* if there is no copy callback, just copy data pointers */
+         (*var)->vardata = sourcevar->vardata;
       }
    }
 
@@ -2702,7 +2711,7 @@ SCIP_RETCODE varFreeParents(
          parentvar->data.aggregate.var = NULL;
          break;
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
       /* The following code is unclear: should the current variable be removed from its parents? */
       case SCIP_VARSTATUS_MULTAGGR:
          assert(parentvar->data.multaggr.vars != NULL);
@@ -3828,11 +3837,22 @@ SCIP_RETCODE SCIPvarFix(
       SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, fixedval) );
       SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, fixedval) );
 
-      /* explicitly set variable's bounds, even if the fixed value is in epsilon range of the old bound */
-      var->glbdom.lb = fixedval;
-      var->glbdom.ub = fixedval;
-      var->locdom.lb = fixedval;
-      var->locdom.ub = fixedval;
+      if( var->glbdom.lb != var->glbdom.ub )  /*lint !e777*/
+      {
+         /* explicitly set variable's bounds if the fixed value was in epsilon range of the old bound (so above call didn't set bound) */
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+         {
+            /* if not continuous variable, then make sure variable is fixed to integer value */
+            assert(SCIPsetIsIntegral(set, fixedval));
+            fixedval = SCIPsetRound(set, fixedval);
+         }
+         var->glbdom.lb = fixedval;
+         var->glbdom.ub = fixedval;
+      }
+
+      /* ensure local domain is fixed to same value as global domain */
+      var->locdom.lb = var->glbdom.lb;
+      var->locdom.ub = var->glbdom.ub;
 
       /* delete implications and variable bounds information */
       SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, TRUE) );
@@ -3908,12 +3928,13 @@ SCIP_RETCODE SCIPvarFix(
 
 /** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant
  *
- * If the number of needed active variables is greater than the available slots in the variable array, nothing happens except
- * that the required size is stored in the corresponding variable; hence, if afterwards the required size is greater than the
- * available slots (varssize), nothing happens; otherwise, the active variable representation is stored in the arrays.
+ * If the number of needed active variables is greater than the available slots in the variable array, nothing happens
+ * except that an upper bound on the required size is stored in the variable requiredsize; otherwise, the active
+ * variable representation is stored in the arrays.
  *
- * The reason for this approach is that we cannot reallocate memory, since we do not know how the
- * memory has been allocated (e.g., by a C++ 'new' or SCIP functions).
+ * The reason for this approach is that we cannot reallocate memory, since we do not know how the memory has been
+ * allocated (e.g., by a C++ 'new' or SCIP functions). Note that requiredsize is an upper bound due to possible
+ * cancelations.
  */
 SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3922,21 +3943,18 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    int*                  nvars,              /**< pointer to number of variables and values in vars and scalars array */
    int                   varssize,           /**< available slots in vars and scalars array */
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
-   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   int*                  requiredsize        /**< pointer to store an uppper bound on the required size for the active variables */
    )
 {
    SCIP_VAR** activevars;
-   SCIP_Real* activescalars;
-   int nactivevars;
    SCIP_Real activeconstant;
    SCIP_Bool activeconstantinf;
    int activevarssize;
+   int nactivevars;
 
    SCIP_VAR* var;
    SCIP_Real scalar;
    int v;
-   int k;
 
    SCIP_VAR** tmpvars;
    SCIP_VAR** multvars;
@@ -3949,20 +3967,11 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_VAR* multvar;
    SCIP_Real multscalar;
    SCIP_Real multconstant;
-   int pos;
-
-   int noldtmpvars;
-
-   SCIP_VAR** tmpvars2;
-   SCIP_Real* tmpscalars2;
-   int tmpvarssize2;
-   int ntmpvars2;
-
-   SCIP_Bool sortagain = FALSE;
+   SCIP_VARSTATUS varstatus;
+   int ntotalvars;
 
    assert(set != NULL);
    assert(nvars != NULL);
-   assert(scalars != NULL || *nvars == 0);
    assert(constant != NULL);
    assert(requiredsize != NULL);
    assert(*nvars <= varssize);
@@ -3973,6 +3982,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       return SCIP_OKAY;
 
    assert(vars != NULL);
+   assert(scalars != NULL);
 
    /* handle the "easy" case of just one variable and avoid memory allocation if the variable is already active */
    if( *nvars == 1 && (vars[0]->varstatus == ((int) SCIP_VARSTATUS_COLUMN) || vars[0]->varstatus == ((int) SCIP_VARSTATUS_LOOSE)) )
@@ -3982,290 +3992,98 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       return SCIP_OKAY;
    }
 
-   nactivevars = 0;
-   activeconstant = 0.0;
-   activeconstantinf = FALSE;
-   activevarssize = (*nvars) * 2;
-   ntmpvars = *nvars;
+   /* allocate temporary list of variables */
    tmpvarssize = *nvars;
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpvars, tmpvarssize) );
 
-   tmpvarssize2 = 1;
-
-   /* allocate temporary memory */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpvars2, tmpvarssize2) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpscalars2, tmpvarssize2) );
+   /* allocate memory for list of active variables */
+   activevarssize = MAX(10, 2 * (*nvars));  /* take the maximum to avoid small reallocations */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &activescalars, activevarssize) );
-   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &tmpvars, vars, ntmpvars) );
-   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &tmpscalars, scalars, ntmpvars) );
 
-   /* to avoid unnecessary expanding of variable arrays while disaggregating several variables multiple times combine same variables
-    * first, first get all corresponding variables with status loose, column, multaggr or fixed
-    */
-   for( v = ntmpvars - 1; v >= 0; --v )
+   /* allocate dense array for storing scalars (to avoid checking for duplicate variables) */
+   ntotalvars = SCIPgetNTotalVars(set->scip);
+   SCIP_CALL( SCIPsetAllocCleanBufferArray(set, &tmpscalars, ntotalvars) );
+
+   /* perform one round of replacing variables by their active, fixed or multi-aggregated counterparts */
+   activeconstant = 0.0;
+   nactivevars = 0;
+   ntmpvars = 0;
+   for( v = 0; v < *nvars; ++v )
    {
-      var = tmpvars[v];
-      scalar = tmpscalars[v];
-
+      var = vars[v];
       assert(var != NULL);
-      /* transforms given variable, scalar and constant to the corresponding active, fixed, or
-       * multi-aggregated variable, scalar and constant; if the variable resolves to a fixed
-       * variable, "scalar" will be 0.0 and the value of the sum will be stored in "constant".
-       */
+      scalar = scalars[v];
+
+      /* Transforms variable, scalar and constant to corresponding active, fixed, or multi-aggregated variable, scalar
+       * and constant; activeconstant collects the sum of all constants (even for variables with scalar == 0.0). */
       SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &activeconstant) );
       assert(var != NULL);
 
       assert(SCIPsetIsInfinity(set, activeconstant) == (activeconstant == SCIPsetInfinity(set))); /*lint !e777*/
       assert(SCIPsetIsInfinity(set, -activeconstant) == (activeconstant == -SCIPsetInfinity(set))); /*lint !e777*/
 
-      activeconstantinf = SCIPsetIsInfinity(set, activeconstant) || SCIPsetIsInfinity(set, -activeconstant);
+      varstatus = SCIPvarGetStatus(var);
+      assert( varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN
+         || varstatus == SCIP_VARSTATUS_MULTAGGR || varstatus == SCIP_VARSTATUS_FIXED);
 
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-
-      tmpvars[v] = var;
-      tmpscalars[v] = scalar;
-   }
-   noldtmpvars = ntmpvars;
-
-   /* sort all variables to combine equal variables easily */
-   SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, noldtmpvars);
-   ntmpvars = 0;
-   for( v = 1; v < noldtmpvars; ++v )
-   {
-      /* combine same variables */
-      if( SCIPvarCompare(tmpvars[v], tmpvars[ntmpvars]) == 0 )
+      /* enter nonzero scalars into dense array and list */
+      if( scalar != 0.0 )
       {
-         tmpscalars[ntmpvars] += tmpscalars[v];
-      }
-      else
-      {
-         ++ntmpvars;
-         if( v > ntmpvars )
+         assert(0 <= var->index && var->index < ntotalvars);
+         if( tmpscalars[var->index] == 0.0 )
          {
-            tmpscalars[ntmpvars] = tmpscalars[v];
-            tmpvars[ntmpvars] = tmpvars[v];
+            if( varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN )
+               activevars[nactivevars++] = var; /* store active variables */
+            else if( varstatus == SCIP_VARSTATUS_MULTAGGR )
+               tmpvars[ntmpvars++] = var; /* enter mutli-aggregated variables in list to be processed below */
          }
+         tmpscalars[var->index] += scalar;
       }
    }
-   ++ntmpvars;
+   assert(ntmpvars <= *nvars);
+   assert(nactivevars <= *nvars);
 
-#ifdef SCIP_MORE_DEBUG
-   for( v = 1; v < ntmpvars; ++v )
-      assert(SCIPvarCompare(tmpvars[v], tmpvars[v-1]) > 0);
-#endif
+   /* store whether the constant is infinite */
+   activeconstantinf = SCIPsetIsInfinity(set, activeconstant) || SCIPsetIsInfinity(set, -activeconstant);
 
    /* collect for each variable the representation in active variables */
    while( ntmpvars >= 1 )
    {
       --ntmpvars;
-      ntmpvars2 = 0;
+
       var = tmpvars[ntmpvars];
-      scalar = tmpscalars[ntmpvars];
-
       assert(var != NULL);
+      assert(0 <= var->index && var->index < ntotalvars);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
 
-      /* TODO: maybe we should test here on SCIPsetIsZero() instead of 0.0 */
+      scalar = tmpscalars[var->index];
+      /* the scalar can be 0 if the variable has been treated before and is zeroed below */
       if( scalar == 0.0 )
          continue;
 
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
+      /* x = a_1*y_1 + ... + a_n*y_n + c */
+      nmultvars = var->data.multaggr.nvars;
+      multvars = var->data.multaggr.vars;
+      multscalars = var->data.multaggr.scalars;
 
-      switch( SCIPvarGetStatus(var) )
+      /* mark variable as treated */
+      tmpscalars[var->index] = 0.0;
+
+      /* loop through variables of multi-aggregation */
+      for( v = 0; v < nmultvars; ++v )
       {
-      case SCIP_VARSTATUS_LOOSE:
-      case SCIP_VARSTATUS_COLUMN:
-         /* x = a*y + c */
-         if( nactivevars >= activevarssize )
-         {
-            activevarssize *= 2;
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &activescalars, activevarssize) );
-            assert(nactivevars < activevarssize);
-         }
-         activevars[nactivevars] = var;
-         activescalars[nactivevars] = scalar;
-         nactivevars++;
-         break;
+         multvar = multvars[v];
+         multscalar = multscalars[v];
+         multconstant = 0.0;
 
-      case SCIP_VARSTATUS_MULTAGGR:
-         /* x = a_1*y_1 + ... + a_n*y_n + c */
-         nmultvars = var->data.multaggr.nvars;
-         multvars = var->data.multaggr.vars;
-         multscalars = var->data.multaggr.scalars;
-         sortagain = TRUE;
+         assert(multvar != NULL);
+         SCIP_CALL( SCIPvarGetProbvarSum(&multvar, set, &multscalar, &multconstant) );
+         assert(multvar != NULL);
 
-         if( nmultvars + ntmpvars > tmpvarssize )
-         {
-            while( nmultvars + ntmpvars > tmpvarssize )
-               tmpvarssize *= 2;
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars, tmpvarssize) );
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpscalars, tmpvarssize) );
-            assert(nmultvars + ntmpvars <= tmpvarssize);
-         }
-
-         if( nmultvars > tmpvarssize2 )
-         {
-            while( nmultvars > tmpvarssize2 )
-               tmpvarssize2 *= 2;
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars2, tmpvarssize2) );
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpscalars2, tmpvarssize2) );
-            assert(nmultvars <= tmpvarssize2);
-         }
-
-         --nmultvars;
-
-         for( ; nmultvars >= 0; --nmultvars )
-         {
-            multvar = multvars[nmultvars];
-            multscalar = multscalars[nmultvars];
-            multconstant = 0;
-
-            assert(multvar != NULL);
-            SCIP_CALL( SCIPvarGetProbvarSum(&multvar, set, &multscalar, &multconstant) );
-            assert(multvar != NULL);
-
-            assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
-               || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-               || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
-               || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-
-            if( !activeconstantinf )
-            {
-               assert(!SCIPsetIsInfinity(set, scalar) && !SCIPsetIsInfinity(set, -scalar));
-
-               if( SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant) )
-               {
-                  assert(scalar != 0.0);
-                  if( scalar * multconstant > 0.0 )
-                  {
-                     activeconstant = SCIPsetInfinity(set);
-                     activeconstantinf = TRUE;
-                  }
-                  else
-                  {
-                     activeconstant = -SCIPsetInfinity(set);
-                     activeconstantinf = TRUE;
-                  }
-               }
-               else
-                  activeconstant += scalar * multconstant;
-            }
-#ifndef NDEBUG
-            else
-            {
-               assert(!SCIPsetIsInfinity(set, activeconstant) || !(scalar * multconstant < 0.0 &&
-                     (SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant))));
-               assert(!SCIPsetIsInfinity(set, -activeconstant) || !(scalar * multconstant > 0.0 &&
-                     (SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant))));
-            }
-#endif
-
-            if( SCIPsortedvecFindPtr((void**)tmpvars, SCIPvarComp, multvar, ntmpvars, &pos) )
-            {
-               assert(SCIPvarCompare(tmpvars[pos], multvar) == 0);
-               tmpscalars[pos] += scalar * multscalar;
-            }
-            else
-            {
-               tmpvars2[ntmpvars2] = multvar;
-               tmpscalars2[ntmpvars2] = scalar * multscalar;
-               ++(ntmpvars2);
-               assert(ntmpvars2 <= tmpvarssize2);
-            }
-         }
-
-         if( ntmpvars2 > 0 )
-         {
-            /* sort all variables to combine equal variables easily */
-            SCIPsortPtrReal((void**)tmpvars2, tmpscalars2, SCIPvarComp, ntmpvars2);
-            pos = 0;
-            for( v = 1; v < ntmpvars2; ++v )
-            {
-               /* combine same variables */
-               if( SCIPvarCompare(tmpvars2[v], tmpvars2[pos]) == 0 )
-               {
-                  tmpscalars2[pos] += tmpscalars2[v];
-               }
-               else
-               {
-                  ++pos;
-                  if( v > pos )
-                  {
-                     tmpscalars2[pos] = tmpscalars2[v];
-                     tmpvars2[pos] = tmpvars2[v];
-                  }
-               }
-            }
-            ntmpvars2 = pos + 1;
-#ifdef SCIP_MORE_DEBUG
-            for( v = 1; v < ntmpvars2; ++v )
-            {
-               assert(SCIPvarCompare(tmpvars2[v], tmpvars2[v-1]) > 0);
-            }
-            for( v = 1; v < ntmpvars; ++v )
-            {
-               assert(SCIPvarCompare(tmpvars[v], tmpvars[v-1]) > 0);
-            }
-#endif
-            v = ntmpvars - 1;
-            k = ntmpvars2 - 1;
-            pos = ntmpvars + ntmpvars2 - 1;
-            ntmpvars += ntmpvars2;
-
-            while( v >= 0 && k >= 0 )
-            {
-               assert(pos >= 0);
-               assert(SCIPvarCompare(tmpvars[v], tmpvars2[k]) != 0);
-               if( SCIPvarCompare(tmpvars[v], tmpvars2[k]) >= 0 )
-               {
-                  tmpvars[pos] = tmpvars[v];
-                  tmpscalars[pos] = tmpscalars[v];
-                  --v;
-               }
-               else
-               {
-                  tmpvars[pos] = tmpvars2[k];
-                  tmpscalars[pos] = tmpscalars2[k];
-                  --k;
-               }
-               --pos;
-               assert(pos >= 0);
-            }
-            while( v >= 0 )
-            {
-               assert(pos >= 0);
-               tmpvars[pos] = tmpvars[v];
-               tmpscalars[pos] = tmpscalars[v];
-               --v;
-               --pos;
-            }
-            while( k >= 0 )
-            {
-               assert(pos >= 0);
-               tmpvars[pos] = tmpvars2[k];
-               tmpscalars[pos] = tmpscalars2[k];
-               --k;
-               --pos;
-            }
-         }
-#ifdef SCIP_MORE_DEBUG
-         for( v = 1; v < ntmpvars; ++v )
-         {
-            assert(SCIPvarCompare(tmpvars[v], tmpvars[v-1]) > 0);
-         }
-#endif
-
+         /* handle constant */
          if( !activeconstantinf )
          {
             assert(!SCIPsetIsInfinity(set, scalar) && !SCIPsetIsInfinity(set, -scalar));
-
-            multconstant = SCIPvarGetMultaggrConstant(var);
 
             if( SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant) )
             {
@@ -4287,97 +4105,102 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 #ifndef NDEBUG
          else
          {
-            multconstant = SCIPvarGetMultaggrConstant(var);
             assert(!SCIPsetIsInfinity(set, activeconstant) || !(scalar * multconstant < 0.0 &&
                   (SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant))));
             assert(!SCIPsetIsInfinity(set, -activeconstant) || !(scalar * multconstant > 0.0 &&
                   (SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant))));
          }
 #endif
-         break;
 
-      case SCIP_VARSTATUS_FIXED:
-      case SCIP_VARSTATUS_ORIGINAL:
-      case SCIP_VARSTATUS_AGGREGATED:
-      case SCIP_VARSTATUS_NEGATED:
-      default:
-         /* case x = c, but actually we should not be here, since SCIPvarGetProbvarSum() returns a scalar of 0.0 for
-          * fixed variables and is handled already
-          */
-         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-         assert(SCIPsetIsZero(set, var->glbdom.lb) && SCIPsetIsEQ(set, var->glbdom.lb, var->glbdom.ub));
-      }
-   }
+         /* Note that the variable can have a nonzero constant but 0 scalar. */
+         if( multscalar == 0.0 )
+            continue;
 
-   if( mergemultiples )
-   {
-      if( sortagain )
-      {
-         /* sort variable and scalar array by variable index */
-         SCIPsortPtrReal((void**)activevars, activescalars, SCIPvarComp, nactivevars);
-
-         /* eliminate duplicates and count required size */
-         v = nactivevars - 1;
-         while( v > 0 )
+         /* enter variable into list if not already present */
+         assert(0 <= multvar->index && multvar->index < ntotalvars);
+         if( tmpscalars[multvar->index] == 0.0 )
          {
-            /* combine both variable since they are the same */
-            if( SCIPvarCompare(activevars[v - 1], activevars[v]) == 0 )
+            varstatus = SCIPvarGetStatus(multvar);
+            if( varstatus == SCIP_VARSTATUS_LOOSE || varstatus == SCIP_VARSTATUS_COLUMN )
             {
-               if( activescalars[v - 1] + activescalars[v] != 0.0 )
+               /* store active variables */
+               if( nactivevars >= activevarssize )
                {
-                  activescalars[v - 1] += activescalars[v];
-                  --nactivevars;
-                  activevars[v] = activevars[nactivevars];
-                  activescalars[v] = activescalars[nactivevars];
+                  activevarssize *= 2;
+                  SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
+                  assert(nactivevars < activevarssize);
                }
-               else
-               {
-                  --nactivevars;
-                  activevars[v] = activevars[nactivevars];
-                  activescalars[v] = activescalars[nactivevars];
-                  --nactivevars;
-                  --v;
-                  activevars[v] = activevars[nactivevars];
-                  activescalars[v] = activescalars[nactivevars];
-               }
+               activevars[nactivevars++] = multvar;
             }
-            --v;
+            else if( varstatus == SCIP_VARSTATUS_MULTAGGR )
+            {
+               /* ensure storage */
+               if( ntmpvars >= tmpvarssize )
+               {
+                  tmpvarssize *= 2;
+                  SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars, tmpvarssize) );
+                  assert(ntmpvars <= tmpvarssize);
+               }
+               tmpvars[ntmpvars++] = multvar;
+            }
          }
+
+         /* transfer new scalar to dense array in any case */
+         tmpscalars[multvar->index] += scalar * multscalar;
+         assert(scalar * multscalar != 0.0);
       }
-      /* the variables were added in reverse order, we revert the order now;
-       * this should not be necessary, but not doing this changes the behavior sometimes
-       */
+
+      /* handle constant of multi-aggregation */
+      if( !activeconstantinf )
+      {
+         assert(!SCIPsetIsInfinity(set, scalar) && !SCIPsetIsInfinity(set, -scalar));
+
+         multconstant = SCIPvarGetMultaggrConstant(var);
+
+         if( SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant) )
+         {
+            assert(scalar != 0.0);
+            if( scalar * multconstant > 0.0 )
+            {
+               activeconstant = SCIPsetInfinity(set);
+               activeconstantinf = TRUE;
+            }
+            else
+            {
+               activeconstant = -SCIPsetInfinity(set);
+               activeconstantinf = TRUE;
+            }
+         }
+         else
+            activeconstant += scalar * multconstant;
+      }
+#ifndef NDEBUG
       else
       {
-         SCIP_VAR* tmpvar;
-         SCIP_Real tmpscalar;
-
-         for( v = 0; v < nactivevars / 2; ++v )
-         {
-            tmpvar = activevars[v];
-            tmpscalar = activescalars[v];
-            activevars[v] = activevars[nactivevars - 1 - v];
-            activescalars[v] = activescalars[nactivevars - 1 - v];
-            activevars[nactivevars - 1 - v] = tmpvar;
-            activescalars[nactivevars - 1 - v] = tmpscalar;
-         }
+         multconstant = SCIPvarGetMultaggrConstant(var);
+         assert(!SCIPsetIsInfinity(set, activeconstant) || !(scalar * multconstant < 0.0 &&
+               (SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant))));
+         assert(!SCIPsetIsInfinity(set, -activeconstant) || !(scalar * multconstant > 0.0 &&
+               (SCIPsetIsInfinity(set, multconstant) || SCIPsetIsInfinity(set, -multconstant))));
       }
+#endif
    }
-   *requiredsize = nactivevars;
 
-   if( varssize >= *requiredsize )
+   /* Here, nactivevars is an upper bound on the required size, because of possible cancellation. We could compute the
+    * actual size, but this would need another loop through the active variables. We therefore take the upper bound. */
+
+   /* return results */
+   if( varssize >= nactivevars )
    {
       assert(vars != NULL);
 
-      *nvars = *requiredsize;
-
       if( !SCIPsetIsInfinity(set, *constant) && !SCIPsetIsInfinity(set, -(*constant)) )
       {
-         /* if the activeconstant is infinite, the constant pointer gets the same value, otherwise add the value */
+         /* if activeconstant is infinite, the constant pointer gets the same value, otherwise add the value */
          if( activeconstantinf )
-            (*constant) = activeconstant;
+            *constant = activeconstant;
          else
-            (*constant) += activeconstant;
+            *constant += activeconstant;
       }
 #ifndef NDEBUG
       else
@@ -4388,22 +4211,47 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 #endif
 
       /* copy active variable and scalar array to the given arrays */
-      for( v = 0; v < *nvars; ++v )
+      *nvars = 0;
+      for( v = 0; v < nactivevars; ++v )
       {
-         vars[v] = activevars[v];
-         scalars[v] = activescalars[v]; /*lint !e613*/
+         var = activevars[v];
+
+         assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+         assert(0 <= var->index && var->index < ntotalvars);
+
+         /* due to cancelation, the scalar could become 0 */
+         if( tmpscalars[var->index] != 0.0 )
+         {
+            vars[*nvars] = var;
+            scalars[*nvars] = tmpscalars[var->index];
+            assert(scalars[*nvars] != 0.0);
+            ++(*nvars);
+         }
+
+         /* clean buffer again */
+         tmpscalars[var->index] = 0.0;
       }
+      /* set requiredsize to space actually needed */
+      *requiredsize = *nvars;
+   }
+   else
+   {
+      /* clean buffer again */
+      for( v = 0; v < nactivevars; ++v )
+      {
+         var = activevars[v];
+         assert( 0 <= var->index && var->index < ntotalvars );
+         tmpscalars[var->index] = 0.0;
+      }
+      *requiredsize = nactivevars;
    }
 
    assert(SCIPsetIsInfinity(set, *constant) == ((*constant) == SCIPsetInfinity(set))); /*lint !e777*/
    assert(SCIPsetIsInfinity(set, -(*constant)) == ((*constant) == -SCIPsetInfinity(set))); /*lint !e777*/
 
-   SCIPsetFreeBufferArray(set, &tmpscalars);
-   SCIPsetFreeBufferArray(set, &tmpvars);
-   SCIPsetFreeBufferArray(set, &activescalars);
+   SCIPsetFreeCleanBufferArray(set, &tmpscalars);
    SCIPsetFreeBufferArray(set, &activevars);
-   SCIPsetFreeBufferArray(set, &tmpscalars2);
-   SCIPsetFreeBufferArray(set, &tmpvars2);
+   SCIPsetFreeBufferArray(set, &tmpvars);
 
    return SCIP_OKAY;
 }
@@ -4461,16 +4309,17 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    nmultvars = var->data.multaggr.nvars;
    multvarssize = var->data.multaggr.varssize;
 
-   SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, TRUE) );
+   SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
 
    if( multrequiredsize > multvarssize )
    {
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.vars), multvarssize, multrequiredsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.scalars), multvarssize, multrequiredsize) );
       multvarssize = multrequiredsize;
-      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, TRUE) );
+      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
       assert( multrequiredsize <= multvarssize );
    }
+
    /**@note After the flattening the multi aggregation might resolve to be in fact an aggregation (or even a fixing?).
     * This issue is not resolved right now, since var->data.multaggr.nvars < 2 should not cause troubles. However, one
     * may loose performance hereby, since aggregated variables are easier to handle.
@@ -5508,13 +5357,13 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &tmpscalars, scalars, ntmpvars) );
 
       /* get all active variables for multi-aggregation */
-      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, tmpvars, tmpscalars, &ntmpvars, tmpvarssize, &tmpconstant, &tmprequiredsize, FALSE) );
+      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, tmpvars, tmpscalars, &ntmpvars, tmpvarssize, &tmpconstant, &tmprequiredsize) );
       if( tmprequiredsize > tmpvarssize )
       {
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tmpvars, tmpvarssize, tmprequiredsize) );
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tmpscalars, tmpvarssize, tmprequiredsize) );
          tmpvarssize = tmprequiredsize;
-         SCIP_CALL( SCIPvarGetActiveRepresentatives(set, tmpvars, tmpscalars, &ntmpvars, tmpvarssize, &tmpconstant, &tmprequiredsize, FALSE) );
+         SCIP_CALL( SCIPvarGetActiveRepresentatives(set, tmpvars, tmpscalars, &ntmpvars, tmpvarssize, &tmpconstant, &tmprequiredsize) );
          assert( tmprequiredsize <= tmpvarssize );
       }
 
@@ -6919,7 +6768,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventGlbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
@@ -7094,7 +6943,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventGubChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
@@ -7688,7 +7537,7 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventLbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
@@ -7855,7 +7704,7 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    /* issue bound change event */
    assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
+   if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM && var->eventfilter != NULL )
    {
       SCIP_CALL( varEventUbChanged(var, blkmem, set, lp, branchcand, eventqueue, oldbound, newbound) );
    }
@@ -9028,13 +8877,12 @@ SCIP_RETCODE varProcessAddHoleLocal(
    assert(SCIPsetIsEQ(set, newlb, var->locdom.lb));
    assert(SCIPsetIsEQ(set, newub, var->locdom.ub));
 
-#if 0
-   /* issue bound change event */
-   assert(SCIPvarIsTransformed(var) == (var->eventfilter != NULL));
-   if( var->eventfilter != NULL )
-   {
-      SCIP_CALL( varEventLholeAdded(var, blkmem, set, lp, branchcand, eventqueue, left, right) );
-   }
+#ifdef SCIP_DISABLED_CODE
+   /* issue LHOLEADDED event */
+   SCIP_EVENT event;
+   assert(var->eventfilter != NULL);
+   SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_LHOLEADDED) );
+   SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, var->eventfilter) );
 #endif
 
    /* process parent variables */
@@ -10033,44 +9881,17 @@ SCIP_RETCODE SCIPvarAddVlb(
    case SCIP_VARSTATUS_FIXED:
       /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
       SCIP_CALL( SCIPvarGetProbvarSum(&vlbvar, set, &vlbcoef, &vlbconstant) );
-      SCIPsetDebugMsg(set, " -> transformed to variable lower bound <%s> >= %g<%s> + %g\n", SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
+      SCIPsetDebugMsg(set, " -> transformed to variable lower bound <%s> >= %g<%s> + %g\n",
+            SCIPvarGetName(var), vlbcoef, SCIPvarGetName(vlbvar), vlbconstant);
 
-      /* if the vlb coefficient is zero, just update the lower bound of the variable */
-      if( SCIPsetIsZero(set, vlbcoef) )
+      /* if the variables are the same, just update the corresponding bound */
+      if( var == vlbvar )
       {
-         if( SCIPsetIsFeasGT(set, vlbconstant, SCIPvarGetUbGlobal(var)) )
-            *infeasible = TRUE;
-         else if( SCIPsetIsFeasGT(set, vlbconstant, SCIPvarGetLbGlobal(var)) )
-         {
-            /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
-             * with the local bound, in this case we need to store the bound change as pending bound change
-             */
-            if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
-            {
-               assert(tree != NULL);
-               assert(transprob != NULL);
-               assert(SCIPprobIsTransformed(transprob));
-
-               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
-                     tree, reopt, lp, branchcand, eventqueue, cliquetable, var, vlbconstant, SCIP_BOUNDTYPE_LOWER, FALSE) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, vlbconstant) );
-            }
-
-            if( nbdchgs != NULL )
-               (*nbdchgs)++;
-         }
-      }
-      else if( var == vlbvar )
-      {
-         /* the variables cancels out, the variable bound constraint is either redundant or proves global infeasibility */
+         /* if the variables cancel out, the variable bound constraint is redundant or proves global infeasibility */
          if( SCIPsetIsEQ(set, vlbcoef, 1.0) )
          {
-            if( SCIPsetIsPositive(set, vlbconstant) )
+            if( SCIPsetIsFeasPositive(set, vlbconstant) )
                *infeasible = TRUE;
-            return SCIP_OKAY;
          }
          else
          {
@@ -10153,6 +9974,34 @@ SCIP_RETCODE SCIPvarAddVlb(
                      (*nbdchgs)++;
                }
             }
+         }
+      }
+      /* if the vlb coefficient is zero, just update the lower bound of the variable */
+      else if( SCIPsetIsZero(set, vlbcoef) )
+      {
+         if( SCIPsetIsFeasGT(set, vlbconstant, SCIPvarGetUbGlobal(var)) )
+            *infeasible = TRUE;
+         else if( SCIPsetIsFeasGT(set, vlbconstant, SCIPvarGetLbGlobal(var)) )
+         {
+            /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+             * with the local bound, in this case we need to store the bound change as pending bound change
+             */
+            if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+            {
+               assert(tree != NULL);
+               assert(transprob != NULL);
+               assert(SCIPprobIsTransformed(transprob));
+
+               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
+                     tree, reopt, lp, branchcand, eventqueue, cliquetable, var, vlbconstant, SCIP_BOUNDTYPE_LOWER, FALSE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarChgLbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, vlbconstant) );
+            }
+
+            if( nbdchgs != NULL )
+               (*nbdchgs)++;
          }
       }
       else if( SCIPvarIsActive(vlbvar) )
@@ -10296,7 +10145,7 @@ SCIP_RETCODE SCIPvarAddVlb(
          maxvlb = adjustedLb(set, SCIPvarGetType(var), maxvlb);
 
          /* check bounds for feasibility */
-         if( SCIPsetIsFeasGT(set, minvlb, xub) || (var == vlbvar && SCIPsetIsEQ(set, vlbcoef, 1.0) && SCIPsetIsFeasPositive(set, vlbconstant))  )
+         if( SCIPsetIsFeasGT(set, minvlb, xub) )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
@@ -10403,8 +10252,18 @@ SCIP_RETCODE SCIPvarAddVlb(
       /* x = a*y + c:  x >= b*z + d  <=>  a*y + c >= b*z + d  <=>  y >= b/a * z + (d-c)/a, if a > 0
        *                                                           y <= b/a * z + (d-c)/a, if a < 0
        */
+
+      /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
+      SCIP_CALL( SCIPvarGetProbvarSum(&vlbvar, set, &vlbcoef, &vlbconstant) );
+
+      /* if the variables cancel out, the variable bound constraint is redundant or proves global infeasibility */
       assert(var->data.aggregate.var != NULL);
-      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      if( var->data.aggregate.var == vlbvar && SCIPsetIsEQ(set, var->data.aggregate.scalar, vlbcoef) )
+      {
+         if( SCIPsetIsFeasLT(set, var->data.aggregate.constant, vlbconstant) )
+            *infeasible = TRUE;
+      }
+      else if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> add variable lower bound */
          SCIP_CALL( SCIPvarAddVlb(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
@@ -10498,44 +10357,16 @@ SCIP_RETCODE SCIPvarAddVub(
       /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
       SCIP_CALL( SCIPvarGetProbvarSum(&vubvar, set, &vubcoef, &vubconstant) );
       SCIPsetDebugMsg(set, " -> transformed to variable upper bound <%s> <= %g<%s> + %g\n",
-         SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);
+            SCIPvarGetName(var), vubcoef, SCIPvarGetName(vubvar), vubconstant);
 
-      /* if the vub coefficient is zero, just update the upper bound of the variable */
-      if( SCIPsetIsZero(set, vubcoef) )
+      /* if the variables are the same, just update the corresponding bound */
+      if( var == vubvar )
       {
-         if( SCIPsetIsFeasLT(set, vubconstant, SCIPvarGetLbGlobal(var)) )
-            *infeasible = TRUE;
-         else if( SCIPsetIsFeasLT(set, vubconstant, SCIPvarGetUbGlobal(var)) )
-         {
-            /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
-             * with the local bound, in this case we need to store the bound change as pending bound change
-             */
-            if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
-            {
-               assert(tree != NULL);
-               assert(transprob != NULL);
-               assert(SCIPprobIsTransformed(transprob));
-
-               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
-                     tree, reopt, lp, branchcand, eventqueue, cliquetable, var, vubconstant, SCIP_BOUNDTYPE_UPPER, FALSE) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, vubconstant) );
-            }
-
-            if( nbdchgs != NULL )
-               (*nbdchgs)++;
-         }
-      }
-      else if( var == vubvar )
-      {
-         /* the variables cancels out, the variable bound constraint is either redundant or proves global infeasibility */
+         /* if the variables cancel out, the variable bound constraint is redundant or proves global infeasibility */
          if( SCIPsetIsEQ(set, vubcoef, 1.0) )
          {
-            if( SCIPsetIsNegative(set, vubconstant) )
+            if( SCIPsetIsFeasNegative(set, vubconstant) )
                *infeasible = TRUE;
-            return SCIP_OKAY;
          }
          else
          {
@@ -10618,6 +10449,34 @@ SCIP_RETCODE SCIPvarAddVub(
                      (*nbdchgs)++;
                }
             }
+         }
+      }
+      /* if the vub coefficient is zero, just update the upper bound of the variable */
+      else if( SCIPsetIsZero(set, vubcoef) )
+      {
+         if( SCIPsetIsFeasLT(set, vubconstant, SCIPvarGetLbGlobal(var)) )
+            *infeasible = TRUE;
+         else if( SCIPsetIsFeasLT(set, vubconstant, SCIPvarGetUbGlobal(var)) )
+         {
+            /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
+             * with the local bound, in this case we need to store the bound change as pending bound change
+             */
+            if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
+            {
+               assert(tree != NULL);
+               assert(transprob != NULL);
+               assert(SCIPprobIsTransformed(transprob));
+
+               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
+                     tree, reopt, lp, branchcand, eventqueue, cliquetable, var, vubconstant, SCIP_BOUNDTYPE_UPPER, FALSE) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarChgUbGlobal(var, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable, vubconstant) );
+            }
+
+            if( nbdchgs != NULL )
+               (*nbdchgs)++;
          }
       }
       else if( SCIPvarIsActive(vubvar) )
@@ -10751,7 +10610,7 @@ SCIP_RETCODE SCIPvarAddVub(
          maxvub = adjustedUb(set, SCIPvarGetType(var), maxvub);
 
          /* check bounds for feasibility */
-         if( SCIPsetIsFeasLT(set, maxvub, xlb) || (var == vubvar && SCIPsetIsEQ(set, vubcoef, 1.0) && SCIPsetIsFeasNegative(set, vubconstant))  )
+         if( SCIPsetIsFeasLT(set, maxvub, xlb) )
          {
             *infeasible = TRUE;
             return SCIP_OKAY;
@@ -10848,8 +10707,18 @@ SCIP_RETCODE SCIPvarAddVub(
       /* x = a*y + c:  x <= b*z + d  <=>  a*y + c <= b*z + d  <=>  y <= b/a * z + (d-c)/a, if a > 0
        *                                                           y >= b/a * z + (d-c)/a, if a < 0
        */
+
+      /* transform b*z + d into the corresponding sum after transforming z to an active problem variable */
+      SCIP_CALL( SCIPvarGetProbvarSum(&vubvar, set, &vubcoef, &vubconstant) );
+
+      /* if the variables cancel out, the variable bound constraint is redundant or proves global infeasibility */
       assert(var->data.aggregate.var != NULL);
-      if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
+      if( var->data.aggregate.var == vubvar && SCIPsetIsEQ(set, var->data.aggregate.scalar, vubcoef) )
+      {
+         if( SCIPsetIsFeasGT(set, var->data.aggregate.constant, vubconstant) )
+            *infeasible = TRUE;
+      }
+      else if( SCIPsetIsPositive(set, var->data.aggregate.scalar) )
       {
          /* a > 0 -> add variable upper bound */
          SCIP_CALL( SCIPvarAddVub(var->data.aggregate.var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
@@ -13540,7 +13409,7 @@ SCIP_Real SCIPvarGetImplRedcost(
                int probindex = SCIPvarGetProbindex(clqvar) + 1;
                assert(0 < probindex && probindex < nentries);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
                /* check that the variable was not yet visited or does not appear with two contradicting implications, ->
                 * can appear since there is no guarantee that all these infeasible bounds were found
                 */
@@ -14363,7 +14232,7 @@ const char* historypath="."; /* allows for user-defined path; use '.' for callin
 #endif
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
- *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the in the LP's objective value
+ *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the LP's objective value
  */
 SCIP_RETCODE SCIPvarUpdatePseudocost(
    SCIP_VAR*             var,                /**< problem variable */
@@ -14462,6 +14331,71 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    }
 }
 
+/** updates the ancestral pseudo costs of the given variable and the global ancestral pseudo costs after a change of
+ *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the LP's objective value
+ */
+SCIP_RETCODE SCIPvarUpdateAncPseudocost(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   SCIP_Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   SCIP_Real             weight              /**< weight in (0,1] of this update in discounted pseudo cost sum */
+   )
+{
+   assert(var != NULL);
+   assert(set != NULL);
+   assert(var->scip == set->scip);
+   assert(stat != NULL);
+
+   /* check if history statistics should be collected for a variable */
+   if( !stat->collectvarhistory )
+      return SCIP_OKAY;
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+      {
+         SCIPerrorMessage("cannot update ancestral pseudo costs of original untransformed variable\n");
+         return SCIP_INVALIDDATA;
+      }
+      SCIP_CALL( SCIPvarUpdateAncPseudocost(var->data.original.transvar, set, stat, solvaldelta, objdelta, weight) );
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      /* update history */
+      SCIPhistoryUpdateAncPseudocost(var->history, set, solvaldelta, objdelta, weight);
+      SCIPhistoryUpdateAncPseudocost(var->historycrun, set, solvaldelta, objdelta, weight);
+      SCIPhistoryUpdateAncPseudocost(stat->glbhistory, set, solvaldelta, objdelta, weight);
+      SCIPhistoryUpdateAncPseudocost(stat->glbhistorycrun, set, solvaldelta, objdelta, weight);
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_FIXED:
+      SCIPerrorMessage("cannot update ancestral pseudo cost values of a fixed variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
+      SCIP_CALL( SCIPvarUpdateAncPseudocost(var->data.aggregate.var, set, stat,
+            solvaldelta/var->data.aggregate.scalar, objdelta, weight) );
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot update ancestral pseudo cost values of a multi-aggregated variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED:
+      SCIP_CALL( SCIPvarUpdateAncPseudocost(var->negatedvar, set, stat, -solvaldelta, objdelta, weight) );
+      return SCIP_OKAY;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+}
+
 /** gets the variable's pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value */
 SCIP_Real SCIPvarGetPseudocost(
    SCIP_VAR*             var,                /**< problem variable */
@@ -14501,6 +14435,53 @@ SCIP_Real SCIPvarGetPseudocost(
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetPseudocost(var->negatedvar, stat, -solvaldelta);
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return 0.0; /*lint !e527*/
+   }
+}
+
+/** gets the variable's ancestral pseudo cost value for the given step size "solvaldelta" in the variable's LP solution value */
+SCIP_Real SCIPvarGetAncPseudocost(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   SCIP_BRANCHDIR dir;
+
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return SCIPhistoryGetAncPseudocost(stat->glbhistory, solvaldelta);
+      else
+         return SCIPvarGetAncPseudocost(var->data.original.transvar, stat, solvaldelta);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      dir = (solvaldelta >= 0.0 ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
+
+      return SCIPhistoryGetAncPseudocostCount(var->history, dir) > 0.0
+         ? SCIPhistoryGetAncPseudocost(var->history, solvaldelta)
+         : SCIPhistoryGetAncPseudocost(stat->glbhistory, solvaldelta);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0.0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      return SCIPvarGetAncPseudocost(var->data.aggregate.var, stat, var->data.aggregate.scalar * solvaldelta);
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0.0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetAncPseudocost(var->negatedvar, stat, -solvaldelta);
 
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -14638,6 +14619,51 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
 
    case SCIP_VARSTATUS_NEGATED:
       return SCIPvarGetPseudocostCountCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return 0.0; /*lint !e527*/
+   }
+}
+
+/** gets the variable's (possible fractional) number of ancestor pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ */
+SCIP_Real SCIPvarGetAncPseudocostCountCurrentRun(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   assert(var != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return 0.0;
+      else
+         return SCIPvarGetAncPseudocostCountCurrentRun(var->data.original.transvar, dir);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPhistoryGetAncPseudocostCount(var->historycrun, dir);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0.0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetAncPseudocostCountCurrentRun(var->data.aggregate.var, dir);
+      else
+         return SCIPvarGetAncPseudocostCountCurrentRun(var->data.aggregate.var, SCIPbranchdirOpposite(dir));
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0.0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetAncPseudocostCountCurrentRun(var->negatedvar, SCIPbranchdirOpposite(dir));
 
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -16344,6 +16370,173 @@ SCIP_Real SCIPvarGetAvgCutoffsCurrentRun(
    }
 }
 
+/** returns the variable's average GMI efficacy score value generated from simplex tableau rows of this variable */
+SCIP_Real SCIPvarGetAvgGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.original.transvar == NULL )
+            return 0.0;
+         else
+            return SCIPvarGetAvgGMIScore(var->data.original.transvar, stat);
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         return SCIPhistoryGetAvgGMIeff(var->history);
+
+      case SCIP_VARSTATUS_FIXED:
+         return 0.0;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         return SCIPvarGetAvgGMIScore(var->data.aggregate.var, stat);
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         return 0.0;
+
+      case SCIP_VARSTATUS_NEGATED:
+         return SCIPvarGetAvgGMIScore(var->negatedvar, stat);
+
+      default:
+      SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return 0.0; /*lint !e527*/
+   }
+}
+
+/** increase the variable's GMI efficacy scores generated from simplex tableau rows of this variable */
+SCIP_RETCODE SCIPvarIncGMIeffSum(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
+   )
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+   assert(gmieff >= 0);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.original.transvar != NULL )
+            SCIP_CALL( SCIPvarIncGMIeffSum(var->data.original.transvar, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         SCIPhistoryIncGMIeffSum(var->history, gmieff);
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_FIXED:
+         return SCIP_INVALIDDATA;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         SCIP_CALL( SCIPvarIncGMIeffSum(var->data.aggregate.var, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_NEGATED:
+         SCIP_CALL( SCIPvarIncGMIeffSum(var->negatedvar, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         return SCIP_INVALIDDATA;
+
+      default:
+      SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
+   }
+}
+
+/** returns the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
+SCIP_Real SCIPvarGetLastGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.original.transvar != NULL )
+            return SCIPvarGetLastGMIScore(var->data.original.transvar, stat);
+         return 0.0;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         return SCIPhistoryGetLastGMIeff(var->history);
+
+      case SCIP_VARSTATUS_FIXED:
+         return 0.0;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         return SCIPvarGetLastGMIScore(var->data.aggregate.var, stat);
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         return 0.0;
+
+      case SCIP_VARSTATUS_NEGATED:
+         return SCIPvarGetLastGMIScore(var->negatedvar, stat);
+
+      default:
+      SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return 0.0; /*lint !e527*/
+   }
+}
+
+
+/** sets the variable's last GMI efficacy score value generated from a simplex tableau row of this variable */
+SCIP_RETCODE SCIPvarSetLastGMIScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             gmieff              /**< efficacy of last GMI cut produced when variable was frac and basic */
+   )
+{
+   assert(var != NULL);
+   assert(stat != NULL);
+   assert(gmieff >= 0);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+      case SCIP_VARSTATUS_ORIGINAL:
+         if( var->data.original.transvar != NULL )
+            SCIP_CALL( SCIPvarSetLastGMIScore(var->data.original.transvar, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         SCIPhistorySetLastGMIeff(var->history, gmieff);
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_FIXED:
+         return SCIP_INVALIDDATA;
+
+      case SCIP_VARSTATUS_AGGREGATED:
+         SCIP_CALL( SCIPvarSetLastGMIScore(var->data.aggregate.var, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_NEGATED:
+         SCIP_CALL( SCIPvarSetLastGMIScore(var->negatedvar, stat, gmieff) );
+         return SCIP_OKAY;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         return SCIP_INVALIDDATA;
+
+      default:
+      SCIPerrorMessage("unknown variable status\n");
+         SCIPABORT();
+         return SCIP_INVALIDDATA; /*lint !e527*/
+   }
+}
 
 
 
@@ -17018,6 +17211,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
  */
 
 #undef SCIPboundchgGetNewbound
+#undef SCIPboundchgGetLPSolVal
 #undef SCIPboundchgGetVar
 #undef SCIPboundchgGetBoundchgtype
 #undef SCIPboundchgGetBoundtype
@@ -17142,6 +17336,16 @@ SCIP_Real SCIPboundchgGetNewbound(
    assert(boundchg != NULL);
 
    return boundchg->newbound;
+}
+
+/** returns the lp solution value in the branching data of the bound change data */
+SCIP_Real SCIPboundchgGetLPSolVal(
+   SCIP_BOUNDCHG*        boundchg            /**< bound change data */
+   )
+{
+   assert(boundchg != NULL);
+
+   return boundchg->data.branchingdata.lpsolval;
 }
 
 /** returns the variable of the bound change in the bound change data */

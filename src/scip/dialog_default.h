@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -187,6 +187,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution);
 /** dialog execution method for the display statistics command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics);
+
+/** dialog execution method for the display symmetry command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySymmetry);
 
 /** dialog execution method for the display reoptstatistics command */
 SCIP_EXPORT

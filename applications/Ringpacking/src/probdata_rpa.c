@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1062,7 +1062,7 @@ void computePosRingCircle(
       if( !ispacked[i] )
          continue;
 
-      c = SQRT(xs[i]*xs[i] + ys[i]*ys[i]);
+      c = sqrt(xs[i]*xs[i] + ys[i]*ys[i]);
 
       /* inner ring is too far away from boundary or both rings can not fit */
       if( !SCIPisGE(scip, c + rexts[elements[i]] + 2.0*rexts[elements[pos]], rbound)
@@ -1087,12 +1087,12 @@ void computePosRingCircle(
 
          if( a*a >= alpha*alpha )
          {
-            h = SQRT(MAX(a*a - alpha*alpha, 0.0));
+            h = sqrt(MAX(a*a - alpha*alpha, 0.0));
             u = (c - alpha) * xs[i] / c;
             v = (c - alpha) * ys[i] / c;
 
-            n1 = SCIPisZero(scip, v) ? 0.0 : h * (v / SQRT(v*v + u*u));
-            n2 = SCIPisZero(scip, u) ? 0.0 : h * (-u / SQRT(v*v + u*u));
+            n1 = SCIPisZero(scip, v) ? 0.0 : h * (v / sqrt(v*v + u*u));
+            n2 = SCIPisZero(scip, u) ? 0.0 : h * (-u / sqrt(v*v + u*u));
 
             updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], rbound, -1.0, -1.0, rmax, SCIP_PATTERNTYPE_CIRCULAR,
                ispacked, elements, nelements, bestx, besty, u + n1, v + n2, ncalls);
@@ -1192,10 +1192,10 @@ void computePosRectangleCircle(
             continue;
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height, rmax,
-            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xfix[k], ys[i] + SQRT(alpha), ncalls);
+            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xfix[k], ys[i] + sqrt(alpha), ncalls);
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height, rmax,
-            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xfix[k], ys[i] - SQRT(alpha), ncalls);
+            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xfix[k], ys[i] - sqrt(alpha), ncalls);
       }
 
       /* fix y */
@@ -1207,10 +1207,10 @@ void computePosRectangleCircle(
             continue;
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height, rmax,
-            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xs[i] + SQRT(alpha), yfix[k], ncalls);
+            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xs[i] + sqrt(alpha), yfix[k], ncalls);
 
          updateBestCandidate(scip, xs, ys, rexts, rexts[elements[pos]], -1.0, width, height, rmax,
-            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xs[i] - SQRT(alpha), yfix[k], ncalls);
+            SCIP_PATTERNTYPE_RECTANGULAR, ispacked, elements, nelements, bestx, besty, xs[i] - sqrt(alpha), yfix[k], ncalls);
       }
    }
 }
@@ -1262,7 +1262,7 @@ void computePosCircleCircle(
             continue;
 
          Rj = rexts[elements[j]];
-         dist = SQRT(SQR(xs[i] - xs[j]) + SQR(ys[i] - ys[j]));
+         dist = sqrt(SQR(xs[i] - xs[j]) + SQR(ys[i] - ys[j]));
 
          /* circles are too far away */
          if( SCIPisGE(scip, dist, Ri + Rj + 2.0 * rext) )
@@ -1273,7 +1273,7 @@ void computePosCircleCircle(
          assert(dist != 0.0);
          alpha = (dist*dist - b*b + a*a) / (2.0*dist);
          assert(a*a >= alpha*alpha);
-         h = SQRT(MAX(a*a - alpha*alpha, 0.0));
+         h = sqrt(MAX(a*a - alpha*alpha, 0.0));
          u = xs[i] + (alpha / dist) * (xs[j] - xs[i]);
          v = ys[i] + (alpha / dist) * (ys[j] - ys[i]);
          n1 = h * ((ys[j] - ys[i]) / dist);
@@ -2196,13 +2196,13 @@ void SCIPcheckPattern(
          SCIP_Real yj = SCIPpatternGetElementPosY(pattern, j);
          int typej = SCIPpatternGetElementType(pattern, j);
 
-         assert(SCIPisFeasGE(scip, SQRT(SQR(xi - xj) + SQR(yi - yj)), rexts[typei] + rexts[typej]));
+         assert(SCIPisFeasGE(scip, sqrt(SQR(xi - xj) + SQR(yi - yj)), rexts[typei] + rexts[typej]));
       }
 
       /* check distance to boundary */
       if( SCIPpatternGetPatternType(pattern) == SCIP_PATTERNTYPE_CIRCULAR )
       {
-         SCIP_Real distance = SQRT(SQR(xi) + SQR(yi));
+         SCIP_Real distance = sqrt(SQR(xi) + SQR(yi));
          int patterntype = SCIPpatternGetCircleType(pattern);
 
          assert(patterntype >= 0);

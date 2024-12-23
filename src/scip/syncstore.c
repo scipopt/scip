@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -148,6 +148,8 @@ SCIP_RETCODE SCIPsyncstoreInit(
    syncstore = SCIPgetSyncstore(scip);
    assert(syncstore != NULL);
    syncstore->mainscip = scip;
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/gap", &syncstore->limit_gap) );
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/absgap", &syncstore->limit_absgap) );
    syncstore->lastsync = NULL;
    syncstore->nsolvers = SCIPgetNConcurrentSolvers(scip);
 
@@ -492,7 +494,9 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
 
    if( (*syncdata)->syncedcount == syncstore->nsolvers )
    {
-      if( (*syncdata)->status != SCIP_STATUS_UNKNOWN )
+      if( (*syncdata)->status != SCIP_STATUS_UNKNOWN ||
+         (SCIPgetConcurrentGap(syncstore->mainscip) <= syncstore->limit_gap) ||
+         (SCIPgetConcurrentPrimalbound(syncstore->mainscip) - SCIPgetConcurrentDualbound(syncstore->mainscip) <= syncstore->limit_absgap) )
          SCIPsyncstoreSetSolveIsStopped(syncstore, TRUE);
 
       syncstore->lastsync = *syncdata;

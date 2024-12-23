@@ -1,0 +1,3 @@
+variables:
+  # use "md5sum .gitlab/docker/Dockerfile" to get the hash of the Dockerfile
+  DOCKERFILE_HASH: 8088fd5d025fec30845a3b47b91c76b0

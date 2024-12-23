@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -42,6 +42,17 @@
 #include "scip/cons_setppc.h"
 #include "scip/type_cons.h"
 #include "scip/def.h"
+
+
+/** edge type */
+enum EdgeType
+{
+   INCLUSTER               = 0,              /**< edge inside a single cluster */
+   CONSECUTIVE_CLUSTER     = 1,              /**< edge connecting two consecutive cluster */
+   NON_CONSECUTIVE_CLUSTER = 2               /**< edge connecting two non-consecutive cluster */
+};
+typedef enum EdgeType EDGETYPE;
+
 
 /** free memory allocated for an nxn matrix */
 SCIP_RETCODE freeMatrix(
@@ -86,7 +97,7 @@ SCIP_VAR* getEdgevar(
    SCIP_VAR****          edgevars,           /**< edgevar data structure*/
    int                   state1,             /**< first state */
    int                   state2,             /**< second state */
-   int                   direction           /**< direction, 0 = incluster, 1 = forward */
+   EDGETYPE              edgetype            /**< position in clustering */
    );
 
 /** check for an array of states, if all possible edge-combinations exist */

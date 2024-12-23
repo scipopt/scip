@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -35,9 +35,8 @@
 #ifndef __SCIP_PROP_SYMMETRY_H_
 #define __SCIP_PROP_SYMMETRY_H_
 
-#include <scip/scip.h>
-
-#include <symmetry/type_symmetry.h>
+#include "scip/scip.h"
+#include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,6 +70,35 @@ SCIP_RETCODE SCIPgetSymmetry(
 SCIP_EXPORT
 int SCIPgetSymmetryNGenerators(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** displays generators of symmetry group, if available */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdisplaySymmetryGenerators(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop                /**< symmetry propagator or NULL */
+   );
+
+/** creates new operator node type (used for symmetry detection) and returns its representation
+ *
+ *  If the operator node already exists, the function terminates with SCIP_INVALIDDATA.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateSymOpNodeType(
+   SCIP*                 scip,               /**< SCIP pointer */
+   const char*           opnodename,         /**< name of new operator node type */
+   int*                  nodetype            /**< pointer to store the new node type */
+   );
+
+/** returns representation of an operator node type.
+ *
+ *  If the node type does not already exist, a new node type will be created.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPgetSymOpNodeType(
+   SCIP*                 scip,               /**< SCIP pointer */
+   const char*           opnodename,         /**< name of new operator node type */
+   int*                  nodetype            /**< pointer to store the node type */
    );
 
 #ifdef __cplusplus

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -57,6 +57,8 @@ struct SCIP_SyncStore
                                               *   by all threads */
 
    SCIP*                 mainscip;           /**< the SCIP instance that was used for initializing the syncstore */
+   SCIP_Real             limit_gap;          /**< relative gap limit in main SCIP */
+   SCIP_Real             limit_absgap;       /**< absolute gap limit in main SCIP */
    SCIP_Bool             stopped;            /**< flag to indicate if the solving is stopped */
    SCIP_LOCK*            lock;               /**< lock to protect the syncstore data structure from data races */
 

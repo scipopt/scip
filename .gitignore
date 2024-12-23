@@ -27,6 +27,7 @@ build*
 debug/
 release/
 cmake-build-debug/
+cmake-build-release/
 
 # check folder, files created by or for `make test`
 check/results/
@@ -38,15 +39,12 @@ check/LP
 check/instancedata
 check/solchecker/doc/doc/
 
-# ignore check/coverage but not check/coverage/settings
-check/coverage/
-!check/coverage/settings
-
 # vim swap files
 .*.swp
 
-# thumbnails and os system information
+# directories created by file managers (KDE Dolphin, macOS Finder)
 .directory
+.DS_Store
 
 # lint and pclint configurations files
 lint.out
@@ -85,7 +83,7 @@ localhooks/
 # created when packaging, don't version control this
 src/scip/githash.c
 
-# settings
+# settings, except for check/coverage/settings
 settings/
 !check/coverage/settings
 
@@ -145,4 +143,4 @@ examples/*/lint
 !.github/workflows/*
 
 # avoid ignoring files in ci folder
-!ci/* 
+!ci/*

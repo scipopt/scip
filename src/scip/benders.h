@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -391,6 +391,14 @@ void SCIPbendersSetSubproblemEnabled(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool             enabled             /**< flag to indicate whether the subproblem is enabled */
+   );
+
+/** sets the flag to indicate that at least one subproblem is always infeasible
+ *  NOTE: this is without any variable fixing being performed
+ */
+void SCIPbendersSetSubproblemsAreInfeasible(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** changes all of the master problem variables in the given subproblem to continuous */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -40,6 +40,7 @@
 #include "scip/clock.h"
 #include "scip/set.h"
 #include "scip/pub_var.h"
+#include "scip/pub_message.h"
 #include "scip/sol.h"
 #include "scip/tree.h"
 #include "scip/struct_set.h"
@@ -268,6 +269,7 @@ SCIP_RETCODE evalAndDiff(
 #undef SCIPexprhdlrSetSimplify
 #undef SCIPexprhdlrSetReverseProp
 #undef SCIPexprhdlrSetEstimate
+#undef SCIPexprhdlrSetGetSymdata
 #undef SCIPexprhdlrGetName
 #undef SCIPexprhdlrGetDescription
 #undef SCIPexprhdlrGetPrecedence
@@ -515,6 +517,17 @@ void SCIPexprhdlrSetReverseProp(
    exprhdlr->reverseprop = reverseprop;
 }
 
+/** set the symmetry information callback of an expression handler */
+void SCIPexprhdlrSetGetSymdata(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRGETSYMDATA((*getsymdata))   /**< symmetry information callback (can be NULL) */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->getsymdata = getsymdata;
+}
+
 /** set the estimation callbacks of an expression handler */
 void SCIPexprhdlrSetEstimate(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
@@ -666,6 +679,16 @@ SCIP_Bool SCIPexprhdlrHasReverseProp(
    assert(exprhdlr != NULL);
 
    return exprhdlr->reverseprop != NULL;
+}
+
+/** returns whether expression handler implements the symmetry information callback */
+SCIP_Bool SCIPexprhdlrHasGetSymData(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->getsymdata != NULL;
 }
 
 /** compares two expression handler w.r.t. their name */
@@ -2561,17 +2584,17 @@ SCIP_RETCODE SCIPexprDismantle(
                SCIP_VAR* var;
 
                var = SCIPgetVarExprVar(expr);
-               SCIPmessageFPrintInfo(messagehdlr, file, "%s in [%g, %g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+               SCIPmessageFPrintInfo(messagehdlr, file, "%s in [%.15g, %.15g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
                   SCIPvarGetUbLocal(var));
             }
             else if( SCIPexprIsSum(set, expr) )
-               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetConstantExprSum(expr));
+               SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", SCIPgetConstantExprSum(expr));
             else if( SCIPexprIsProduct(set, expr) )
-               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetCoefExprProduct(expr));
+               SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", SCIPgetCoefExprProduct(expr));
             else if( SCIPexprIsValue(set, expr) )
-               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetValueExprValue(expr));
+               SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", SCIPgetValueExprValue(expr));
             else if( SCIPexprIsPower(set, expr) || strcmp(expr->exprhdlr->name, "signpower") == 0)
-               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetExponentExprPow(expr));
+               SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", SCIPgetExponentExprPow(expr));
 
             SCIPmessageFPrintInfo(messagehdlr, file, "\n");
 
@@ -2591,7 +2614,7 @@ SCIP_RETCODE SCIPexprDismantle(
             if( SCIPexprIsSum(set, expr) )
             {
                SCIPmessageFPrintInfo(messagehdlr, file, "%*s   ", nspaces, "");
-               SCIPmessageFPrintInfo(messagehdlr, file, "[coef]: %g\n", SCIPgetCoefsExprSum(expr)[SCIPexpriterGetChildIdxDFS(it)]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "[coef]: %.15g\n", SCIPgetCoefsExprSum(expr)[SCIPexpriterGetChildIdxDFS(it)]);
             }
 
             break;
@@ -3253,6 +3276,35 @@ SCIP_RETCODE SCIPexprSimplify(
    return SCIP_OKAY;
 }
 
+/** method to retrieve symmetry information from an expression
+ *
+ *  @see SCIPgetSymDataExpr
+ */
+SCIP_RETCODE SCIPexprGetSymData(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EXPR*            expr,               /**< expression from which information is retrieved */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry information */
+   )
+{
+   SCIP_EXPRHDLR* exprhdlr;
+
+   assert(set != NULL);
+   assert(expr != NULL);
+   assert(symdata != NULL);
+
+   exprhdlr = SCIPexprGetHdlr(expr);
+   assert(exprhdlr != NULL);
+
+   if( exprhdlr->getsymdata != NULL )
+   {
+      SCIP_CALL( exprhdlr->getsymdata(set->scip, expr, symdata) );
+   }
+   else
+      *symdata = NULL;
+
+   return SCIP_OKAY;
+}
+
 /** checks whether an expression is quadratic
  *
  * An expression is quadratic if it is either a power expression with exponent 2.0, a product of two expressions,
@@ -3348,9 +3400,14 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
    for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
    {
       SCIP_EXPR* child;
+      SCIP_Real coef;
 
       child = SCIPexprGetChildren(expr)[c];
       assert(child != NULL);
+
+      coef = SCIPgetCoefsExprSum(expr)[c];
+      if( coef == 0.0 )
+         continue;
 
       if( SCIPexprIsPower(set, child) && SCIPgetExponentExprPow(child) == 2.0 ) /* quadratic term */
       {
@@ -3412,10 +3469,11 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
       SCIP_Real coef;
 
       child = SCIPexprGetChildren(expr)[c];
-      coef = SCIPgetCoefsExprSum(expr)[c];
-
       assert(child != NULL);
-      assert(coef != 0.0);
+
+      coef = SCIPgetCoefsExprSum(expr)[c];
+      if( coef == 0.0 )
+         continue;
 
       if( SCIPexprIsPower(set, child) && SCIPgetExponentExprPow(child) == 2.0 ) /* quadratic term */
       {
@@ -3550,7 +3608,8 @@ void SCIPexprFreeQuadratic(
    BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->lincoefs, expr->quaddata->nlinexprs);
    BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->bilinexprterms, expr->quaddata->nbilinexprterms);
    BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvalues, n);
-   BMSfreeBlockMemoryArrayNull(blkmem, &expr->quaddata->eigenvectors, n * n);  /*lint !e647*/
+   if( expr->quaddata->eigenvectors != NULL )  /* check for NULL here before calculating n*n to avoid (harmless) overflow in case of large n */
+      BMSfreeBlockMemoryArray(blkmem, &expr->quaddata->eigenvectors, n * n);  /*lint !e647*/
 
    for( i = 0; i < n; ++i )
    {
@@ -4186,6 +4245,61 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
    assert(expr->quaddata != NULL);
 
    return expr->quaddata->allexprsarevars;
+}
+
+/** returns a monomial representation of a product expression
+ *
+ * The array to store all factor expressions needs to be of size the number of
+ * children in the expression which is given by SCIPexprGetNChildren().
+ *
+ * Given a non-trivial monomial expression, the function finds its representation as \f$cx^\alpha\f$, where
+ * \f$c\f$ is a real coefficient, \f$x\f$ is a vector of auxiliary or original variables (where some entries can
+ * be NULL is the auxiliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
+ *
+ * A non-trivial monomial is a product of a least two expressions.
+ */
+SCIP_RETCODE SCIPexprGetMonomialData(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            coef,               /**< coefficient \f$c\f$ */
+   SCIP_Real*            exponents,          /**< exponents \f$\alpha\f$ */
+   SCIP_EXPR**           factors             /**< factor expressions \f$x\f$ */
+   )
+{
+   SCIP_EXPR* child;
+   int c;
+   int nexprs;
+
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(expr != NULL);
+   assert(coef != NULL);
+   assert(exponents != NULL);
+   assert(factors != NULL);
+
+   assert(SCIPexprIsProduct(set, expr));
+
+   *coef = SCIPgetCoefExprProduct(expr);
+   nexprs = SCIPexprGetNChildren(expr);
+
+   for( c = 0; c < nexprs; ++c )
+   {
+      child = SCIPexprGetChildren(expr)[c];
+
+      if( SCIPexprIsPower(set, child) )
+      {
+         exponents[c] = SCIPgetExponentExprPow(child);
+         factors[c] = SCIPexprGetChildren(child)[0];
+      }
+      else
+      {
+         exponents[c] = 1.0;
+         factors[c] = child;
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 /**@} */

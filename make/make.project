@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -93,11 +93,11 @@ EMPHBENCHMARK	=	true
 CLOCKTYPE	=	1
 
 # set SCIP version here for external projects
-SCIP_VERSION_MAJOR = 8
-SCIP_VERSION_MINOR = 1
+SCIP_VERSION_MAJOR = 10
+SCIP_VERSION_MINOR = 0
 SCIP_VERSION_PATCH = 0
-SCIP_VERSION_SUB = 5
-SCIP_VERSION_API = 111
+SCIP_VERSION_SUB = 0
+SCIP_VERSION_API = 129
 SCIP_VERSION = $(SCIP_VERSION_MAJOR).$(SCIP_VERSION_MINOR).$(SCIP_VERSION_PATCH).$(SCIP_VERSION_SUB)
 
 # compiling and linking parameters
@@ -105,8 +105,8 @@ VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
-TPI		=	none
-SYM		=	sbliss
+TPI		=	tny
+SYM		=	snauty
 PAPILO		=	false
 LAPACK		=	false
 STATICLIBEXT	=	a
@@ -117,7 +117,6 @@ SHARED		=	false
 NOBLKMEM	=	false
 NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
-BLISSEXTERNAL	=	false
 NAUTYEXTERNAL	=	false
 
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
@@ -519,7 +518,9 @@ TPILDFLAGS  	=	-openmp$(LINKLIBSUFFIX)
 endif
 else ifeq ($(TPI),tny)
 TPICFLAGS	=
+ifneq ($(COMP),msvc)
 TPILDFLAGS  	=	-lpthread
+endif
 endif
 
 TPILIB		=	$(TPILIBNAME).$(BASE)
@@ -530,54 +531,22 @@ TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 # Symmetry Interface
 #-----------------------------------------------------------------------------
 
+ifeq ($(SHARED),false)
 ifeq ($(SYM),bliss)
-ifeq ($(BLISSEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
-endif
 endif
 
 ifeq ($(SYM),sbliss)
-ifeq ($(BLISSEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
-endif
-CXXFLAGS	+=	$(CXX17FLAG)
 endif
 
-ifeq ($(SYM),nauty)
-ifeq ($(NAUTYEXTERNAL),true)
-LDFLAGS         +=      $(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS   +=      $(LIBOBJDIR)/nauty
-endif
-endif
-
-ifeq ($(SYM),sbliss)
-ifeq ($(BLISSEXTERNAL),true)
-LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
-endif
-CXXFLAGS	+=	$(CXX17FLAG)
-endif
-
-ifeq ($(SYM),nauty)
-ifeq ($(NAUTYEXTERNAL),true)
+ifeq ($(SYM)-$(NAUTYEXTERNAL),nauty-true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/nauty
-endif
 endif
 
-ifeq ($(SYM),snauty)
+ifeq ($(SYM)-$(NAUTYEXTERNAL),snauty-true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-CXXFLAGS	+=	$(CXX17FLAG)
+endif
 endif
 
 #-----------------------------------------------------------------------------
@@ -753,9 +722,9 @@ OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(OBJSCIPLIBNAME).$(LIBEX
 # link SCIP for C projects
 LINKCXXSCIPALL	=	$(LINKCXX_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIBBASE)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
-			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)
+			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)
 
 # link SCIP for C++ projects (including libobjscip)
 LINKCCSCIPALL	=	$(LINKCC_L)$(SCIPREALPATH)/lib/$(LIBTYPE) $(LINKCC_l)$(SCIPLIBBASE)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) \
-			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)
+			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(LPSLDFLAGS) $(TPILDFLAGS) $(LDFLAGS)

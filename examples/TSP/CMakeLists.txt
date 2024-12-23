@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.11)
 
 project(TSP)
 
@@ -20,8 +20,7 @@ add_executable(sciptsp
    src/HeurFarthestInsert.cpp
    src/HeurFrats.cpp
    src/ProbDataTSP.cpp
-   src/ReaderTSP.cpp
-   src/gzstream.cpp)
+   src/ReaderTSP.cpp)
 
 target_link_libraries(sciptsp ${SCIP_LIBRARIES})
 

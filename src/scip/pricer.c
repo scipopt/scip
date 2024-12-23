@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -413,7 +413,7 @@ SCIP_RETCODE SCIPpricerRedcost(
 
    SCIPsetDebugMsg(set, "executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
 
-   oldnvars = prob->nvars;
+   oldnvars = SCIPprobGetNVars(prob);
 
    /* start timing */
    SCIPclockStart(pricer->pricerclock, set);
@@ -426,7 +426,7 @@ SCIP_RETCODE SCIPpricerRedcost(
 
    /* evaluate result */
    pricer->ncalls++;
-   pricer->nvarsfound += prob->nvars - oldnvars;
+   pricer->nvarsfound += SCIPprobGetNVars(prob) - oldnvars;
 
    return SCIP_OKAY;
 }
@@ -452,7 +452,7 @@ SCIP_RETCODE SCIPpricerFarkas(
 
    SCIPsetDebugMsg(set, "executing Farkas pricing of variable pricer <%s>\n", pricer->name);
 
-   oldnvars = prob->nvars;
+   oldnvars = SCIPprobGetNVars(prob);
 
    /* start timing */
    SCIPclockStart(pricer->pricerclock, set);
@@ -465,7 +465,7 @@ SCIP_RETCODE SCIPpricerFarkas(
 
    /* evaluate result */
    pricer->ncalls++;
-   pricer->nvarsfound += prob->nvars - oldnvars;
+   pricer->nvarsfound += SCIPprobGetNVars(prob) - oldnvars;
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -47,6 +47,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/nlhdlr_bilinear.h"
@@ -104,6 +105,9 @@
                                               *   limit for obbt (<= 0: no limit ) */
 #define DEFAULT_MINITLIMIT             5000L /**< minimum LP iteration limit */
 #define DEFAULT_ONLYNONCONVEXVARS       TRUE /**< only apply obbt on non-convex variables */
+#define DEFAULT_INDICATORS             FALSE /**< apply obbt on variables of indicator constraints? (independent of convexity) */
+#define DEFAULT_INDICATORTHRESHOLD       1e6 /**< variables of indicator constraints with smaller upper bound are not considered
+                                              *   and upper bound is tightened only if new bound is smaller */
 #define DEFAULT_TIGHTINTBOUNDSPROBING   TRUE /**< should bounds of integral variables be tightened during
                                               *   the probing mode? */
 #define DEFAULT_TIGHTCONTBOUNDSPROBING FALSE /**< should bounds of continuous variables be tightened during
@@ -142,6 +146,7 @@ struct Bound
    unsigned int          found:1;            /**< stores whether a probably tighter value for this bound was found */
    unsigned int          done:1;             /**< has this bound been processed already? */
    unsigned int          nonconvex:1;        /**< is this bound affecting a nonconvex term? */
+   unsigned int          indicator:1;        /**< is this bound affecting an indicator constraint? */
    int                   index;              /**< unique index */
 };
 typedef struct Bound BOUND;
@@ -190,6 +195,7 @@ struct SCIP_PropData
                                               *   iterations in root node */
    SCIP_Real             itlimitfactorbilin; /**< multiple of OBBT LP limit used as total LP iteration limit for solving bilinear inequality LPs (< 0 for no limit) */
    SCIP_Real             minnonconvexity;    /**< lower bound on minimum absolute value of nonconvex eigenvalues for a bilinear term */
+   SCIP_Real             indicatorthreshold; /**< threshold whether upper bounds of vars of indicator conss are considered or tightened */
    SCIP_Bool             applyfilterrounds;  /**< apply filter rounds? */
    SCIP_Bool             applytrivialfilter; /**< should obbt try to use the LP solution to filter some bounds? */
    SCIP_Bool             genvbdsduringfilter;/**< should we try to generate genvbounds during trivial and aggressive
@@ -199,6 +205,7 @@ struct SCIP_PropData
    SCIP_Bool             normalize;          /**< should coefficients in filtering be normalized w.r.t. the domains
                                               *   sizes? */
    SCIP_Bool             onlynonconvexvars;  /**< only apply obbt on non-convex variables */
+   SCIP_Bool             indicators;         /**< apply obbt on variables of indicator constraints? (independent of convexity) */
    SCIP_Bool             tightintboundsprobing; /**< should bounds of integral variables be tightened during
                                               *   the probing mode? */
    SCIP_Bool             tightcontboundsprobing;/**< should bounds of continuous variables be tightened during
@@ -926,6 +933,32 @@ SCIP_Real bilinboundGetScore(
    return score;
 }
 
+/** determines whether a variable of an indicator constraint is (still) interesting
+ *
+ * A variable is interesting if it is not only part of indicator constraints or if the upper bound is greater than the given threshold.
+ */
+static
+SCIP_Bool indicatorVarIsInteresting(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to check */
+   int                   nlcount,            /**< number of nonlinear constraints containing the variable
+                                              *   or number of non-convex terms containing the variable
+                                              *  (depends on propdata->onlynonconvexvars)  */
+   int                   nindcount,          /**< number of indicator constraints containing the variable
+                                              *   or 0 (depends on propdata->indicators) */
+   SCIP_Real             threshold           /**< variables with smaller upper bound are not interesting */
+   )
+{
+   /* if variable is only part of indicator constraints, consider current upper bound */
+   if( nlcount == 0 && nindcount > 0 )
+   {
+      if( SCIPisLE(scip, SCIPvarGetUbLocal(var), threshold) )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
 /** trying to filter some bounds using the existing LP solution */
 static
 SCIP_RETCODE filterExistingLP(
@@ -1298,7 +1331,25 @@ SCIP_RETCODE filterBounds(
    nobjcoefs = 0;
 
    /*
-    * 1.) Try first to filter lower bounds of interesting variables, whose bounds are not already filtered
+    * 1.) Filter bounds of variables that are only part of indicator constraints if they are not interesting any more
+    */
+   for( i = 0; i < propdata->nbounds; i++ )
+   {
+      if( !propdata->bounds[i]->filtered && !propdata->bounds[i]->done && propdata->bounds[i]->indicator && !propdata->bounds[i]->nonconvex )
+      {
+         if( !indicatorVarIsInteresting(scip, vars[i], (int)propdata->bounds[i]->nonconvex, (int)propdata->bounds[i]->indicator, propdata->indicatorthreshold) )
+         {
+            /* mark bound as filtered */
+            propdata->bounds[i]->filtered = TRUE;
+
+            /* increase number of filtered variables */
+            ntotalfiltered++;
+         }
+      }
+   }
+
+   /*
+    * 2.) Try first to filter lower bounds of interesting variables, whose bounds are not already filtered
     */
 
    for( i = 0; i < nvars; i++ )
@@ -1340,7 +1391,7 @@ SCIP_RETCODE filterBounds(
    while( nfiltered >= propdata->nminfilter && ( nleftiterations == -1 ||  nleftiterations > 0 ) );
 
    /*
-    * 2.) Now try to filter the remaining upper bounds of interesting variables, whose bounds are not already filtered
+    * 3.) Now try to filter the remaining upper bounds of interesting variables, whose bounds are not already filtered
     */
 
    /* set all objective coefficients to zero */
@@ -1431,6 +1482,7 @@ SCIP_RETCODE applyBoundChgs(
       SCIP_Bool tightened;                   /* stores wether a tightening approach was successful */
 
       bound = propdata->bounds[i];
+      infeas = FALSE;
 
       if( bound->found )
       {
@@ -1444,7 +1496,13 @@ SCIP_RETCODE applyBoundChgs(
          }
          else
          {
-            SCIP_CALL( SCIPtightenVarUb(scip, bound->var, bound->newval, FALSE, &infeas, &tightened) );
+            /* tighten only if new bound is small enough due to numerical reasons */
+            if( SCIPisLE(scip, bound->newval, propdata->indicatorthreshold) )
+            {
+               SCIP_CALL( SCIPtightenVarUb(scip, bound->var, bound->newval, FALSE, &infeas, &tightened) );
+            }
+            else
+               tightened = FALSE;
          }
 
          /* handle information about the success */
@@ -1459,6 +1517,7 @@ SCIP_RETCODE applyBoundChgs(
          {
             SCIPdebug( SCIPdebugMsg(scip, "tightended: %s old: %e new: %e\n" , SCIPvarGetName(bound->var), oldbound,
                   bound->newval) );
+
             *result = SCIP_REDUCEDDOM;
             SCIPdebug( ntightened++ );
          }
@@ -1634,7 +1693,8 @@ int nextBound(
 
       assert(tmpbound != NULL);
 
-      if( !tmpbound->filtered && !tmpbound->done && (tmpbound->nonconvex == !convexphase) )
+      /* variables of indicator constraints are considered as nonconvex */
+      if( !tmpbound->filtered && !tmpbound->done && (tmpbound->nonconvex == !convexphase || tmpbound->indicator == !convexphase) )
       {
          SCIP_Real boundval;
 
@@ -2520,7 +2580,7 @@ SCIP_RETCODE applyObbtBilinear(
          /* add inequality to quadratic constraint handler if it separates (xt,yt) */
          if( !SCIPisHugeValue(scip, xcoef)  && !SCIPisFeasZero(scip, xcoef)
             && REALABS(ycoef) < 1e+3 && REALABS(ycoef) > 1e-3 /* TODO add a parameter for this */
-            && SCIPisFeasGT(scip, (xcoef*xt - ycoef*yt - constant) / SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)), 1e-2) )
+            && SCIPisFeasGT(scip, (xcoef*xt - ycoef*yt - constant) / sqrt(SQR(xcoef) + SQR(ycoef) + SQR(constant)), 1e-2) )
          {
             SCIP_Bool success;
 
@@ -2533,7 +2593,7 @@ SCIP_RETCODE applyObbtBilinear(
             {
                *result = SCIP_REDUCEDDOM;
                SCIPdebugMsg(scip, "   found %g x <= %g y + %g with violation %g\n", xcoef, ycoef, constant,
-                  (xcoef*xt - ycoef*yt - constant) / SQRT(SQR(xcoef) + SQR(ycoef) + SQR(constant)));
+                  (xcoef*xt - ycoef*yt - constant) / sqrt(SQR(xcoef) + SQR(ycoef) + SQR(constant)));
 
                /* create a linear constraint that is only used for propagation */
                if( propdata->createlincons && nnonzduals > 1 )
@@ -2585,18 +2645,34 @@ unsigned int getScore(
    SCIP*                 scip,               /**< SCIP data structure */
    BOUND*                bound,              /**< pointer of bound */
    int                   nlcount,            /**< number of nonlinear constraints containing the bounds variable */
-   int                   maxnlcount          /**< maximal number of nonlinear constraints a variable appears in */
+   int                   nindcount,          /**< number of indicator constraints containing the bounds variable */
+   int                   maxnlcount,         /**< maximal number of nonlinear and indicator constraints a variable appears in */
+   SCIP_Real             smallub             /**< variables with upper bound smaller than this value are counted in half iff part of indicator constraints */
    )
 {
+   SCIP_Real counter;
    unsigned int score;                       /* score to be computed */
 
    assert(scip != NULL);
    assert(bound != NULL);
    assert(nlcount >= 0);
-   assert(maxnlcount >= nlcount);
+   assert(nindcount >= 0);
+   assert(maxnlcount >= nlcount + nindcount);
+
+   counter = nlcount;
+   if( nindcount > 0 )
+   {
+      /* variables with small upper bound are counted in half
+       * since the probability is high that the corresponding indicator constraint is already reformulated as bigM constraint
+       */
+      if( SCIPvarGetUbLocal(bound->var) <= smallub )
+         counter += 0.5 * nindcount;
+      else
+         counter += nindcount;
+   }
 
    /* score = ( nlcount * ( BASE - 1 ) / maxnlcount ) * BASE^2 + vartype * BASE + boundtype */
-   score = (unsigned int) ( nlcount > 0 ? (OBBT_SCOREBASE * nlcount * ( OBBT_SCOREBASE - 1 )) / maxnlcount : 0 ); /*lint !e414*/
+   score = (unsigned int) ( counter > 0 ? (OBBT_SCOREBASE * counter * ( OBBT_SCOREBASE - 1 )) / maxnlcount : 0 ); /*lint !e414*/
    switch( SCIPvarGetType(bound->var) )
    {
    case SCIP_VARTYPE_INTEGER:
@@ -2680,20 +2756,81 @@ SCIP_RETCODE getNLPVarsNonConvexity(
    return SCIP_OKAY;
 }
 
+/** computes for each variable the number of indicator constraints in which the variable appears */
+static
+SCIP_RETCODE getNVarsIndicators(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  nindcount           /**< array that stores in how many indicator conss each variable appears */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** indconss;
+   int nvars;
+   int nindconss;
+
+   assert(scip != NULL);
+   assert(nindcount != NULL);
+
+   nvars = SCIPgetNVars(scip);
+
+   /* initialize nindcount to zero */
+   BMSclearMemoryArray(nindcount, nvars);
+
+   /* get indicator constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, "indicator");
+   if( conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0 )
+      return SCIP_OKAY;
+
+   nindconss = SCIPconshdlrGetNConss(conshdlr);
+   indconss = SCIPconshdlrGetConss(conshdlr);
+
+   for( int i = 0; i < nindconss; ++i )
+   {
+      SCIP_VAR** consvars;
+      SCIP_VAR* slackvar;
+      SCIP_CONS* lincons;
+      int nconsvars;
+
+      lincons = SCIPgetLinearConsIndicator(indconss[i]);
+      assert(lincons!=NULL);
+
+      nconsvars = SCIPgetNVarsLinear(scip, lincons);
+      consvars = SCIPgetVarsLinear(scip, lincons);
+      assert(consvars != NULL);
+      slackvar = SCIPgetSlackVarIndicator(indconss[i]);
+
+      for( int v = 0; v < nconsvars; ++v )
+      {
+         /* we should skip the slackvariable */
+         if( consvars[v] == slackvar )
+            continue;
+
+         /* consider only active variables */
+         if( SCIPvarGetStatus(consvars[v]) == SCIP_VARSTATUS_COLUMN )
+         {
+            nindcount[SCIPvarGetProbindex(consvars[v])] += 1;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** determines whether a variable is interesting */
 static
 SCIP_Bool varIsInteresting(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to check */
-   int                   nlcount             /**< number of nonlinear constraints containing the variable
+   int                   nlcount,            /**< number of nonlinear constraints containing the variable
                                               *   or number of non-convex terms containing the variable
                                               *  (depends on propdata->onlynonconvexvars)  */
+   int                   nindcount           /**< number of indicator constraints containing the variable
+                                              *   or 0 (depends on propdata->indicators) */
    )
 {
    assert(SCIPgetDepth(scip) == 0);
 
-   return !SCIPvarIsBinary(var) && SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && nlcount > 0
+   return !SCIPvarIsBinary(var) && SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && (nlcount > 0 || nindcount > 0)
       && !varIsFixedLocal(scip, var);
 }
 
@@ -2707,47 +2844,77 @@ SCIP_RETCODE initBounds(
    SCIP_CONSHDLR* conshdlr;
    SCIP_VAR** vars;                          /* array of the problems variables */
    int* nlcount;                             /* array that stores in how many nonlinearities each variable appears */
+   int* nindcount;                           /* array that stores in how many indicator constraints each variable appears */
    unsigned int* nccount;                    /* array that stores in how many nonconvexities each variable appears */
+   SCIP_Real maxcouplingvalue;
+   SCIP_Real sepacouplingvalue;
+   SCIP_Real smallub;
 
    int bdidx;                                /* bound index inside propdata->bounds */
-   int maxnlcount;                           /* maximal number of nonlinear constraints a variable appears in */
+   int maxnlcount;                           /* maximal number of nonlinear and indicator constraints a variable appears in */
    int nvars;                                /* number of the problems variables */
    int i;
 
    assert(scip != NULL);
    assert(propdata != NULL);
-   assert(SCIPisNLPConstructed(scip));
+   assert(SCIPisNLPConstructed(scip) || propdata->indicators);
 
    SCIPdebugMsg(scip, "initialize bounds\n");
 
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   /* count nonlinearities */
-   assert(SCIPgetNNLPVars(scip) == nvars);
-
    SCIP_CALL( SCIPallocBufferArray(scip, &nlcount, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nccount, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nindcount, nvars) );
 
-   SCIP_CALL( SCIPgetNLPVarsNonlinearity(scip, nlcount) );
-   SCIP_CALL( getNLPVarsNonConvexity(scip, nccount) );
+   /* count nonlinearities */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      assert(SCIPgetNNLPVars(scip) == nvars);
+      SCIP_CALL( SCIPgetNLPVarsNonlinearity(scip, nlcount) );
+      SCIP_CALL( getNLPVarsNonConvexity(scip, nccount) );
+   }
+   else
+   {
+      /* initialize to zero */
+      BMSclearMemoryArray(nlcount, nvars);
+      BMSclearMemoryArray(nccount, nvars);
+   }
+
+   /* count indicators */
+   if( propdata->indicators )
+   {
+      SCIP_CALL( getNVarsIndicators(scip, nindcount) );
+   }
+   else
+   {
+      /* initialize to zero */
+      BMSclearMemoryArray(nindcount, nvars);
+   }
 
    maxnlcount = 0;
    for( i = 0; i < nvars; i++ )
    {
-      if( maxnlcount < nlcount[i] )
-         maxnlcount = nlcount[i];
+      if( maxnlcount < (nlcount[i] + nindcount[i]) )
+         maxnlcount = nlcount[i] + nindcount[i];
    }
 
    /* allocate interesting bounds array */
    propdata->boundssize = 2 * nvars;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->bounds), 2 * nvars) );
 
+   SCIP_CALL( SCIPgetRealParam(scip, "constraints/indicator/maxcouplingvalue", &maxcouplingvalue) );
+   SCIP_CALL( SCIPgetRealParam(scip, "constraints/indicator/sepacouplingvalue", &sepacouplingvalue) );
+
+   smallub = MIN(maxcouplingvalue, sepacouplingvalue);
+
    /* get all interesting variables and their bounds */
    bdidx = 0;
    for( i = 0; i < nvars; i++ )
    {
-      if( varIsInteresting(scip, vars[i], (propdata->onlynonconvexvars ? (int)nccount[i] : nlcount[i])) )
+      if( varIsInteresting(scip, vars[i], (propdata->onlynonconvexvars ? (int)nccount[i] : nlcount[i]), (propdata->indicators ? nindcount[i] : 0))
+         && indicatorVarIsInteresting(scip, vars[i], (propdata->onlynonconvexvars ? (int)nccount[i] : nlcount[i]), (propdata->indicators ? nindcount[i] : 0), propdata->indicatorthreshold) )
       {
          BOUND** bdaddress;
 
@@ -2759,9 +2926,10 @@ SCIP_RETCODE initBounds(
          propdata->bounds[bdidx]->found = FALSE;
          propdata->bounds[bdidx]->filtered = FALSE;
          propdata->bounds[bdidx]->newval = 0.0;
-         propdata->bounds[bdidx]->score = getScore(scip, propdata->bounds[bdidx], nlcount[i], maxnlcount);
+         propdata->bounds[bdidx]->score = getScore(scip, propdata->bounds[bdidx], nlcount[i], nindcount[i], maxnlcount, smallub);
          propdata->bounds[bdidx]->done = FALSE;
          propdata->bounds[bdidx]->nonconvex = (nccount[i] > 0);
+         propdata->bounds[bdidx]->indicator = (nindcount[i] > 0);
          propdata->bounds[bdidx]->index = bdidx;
          bdidx++;
 
@@ -2773,9 +2941,10 @@ SCIP_RETCODE initBounds(
          propdata->bounds[bdidx]->found = FALSE;
          propdata->bounds[bdidx]->filtered = FALSE;
          propdata->bounds[bdidx]->newval = 0.0;
-         propdata->bounds[bdidx]->score = getScore(scip, propdata->bounds[bdidx], nlcount[i], maxnlcount);
+         propdata->bounds[bdidx]->score = getScore(scip, propdata->bounds[bdidx], nlcount[i], nindcount[i], maxnlcount, smallub);
          propdata->bounds[bdidx]->done = FALSE;
          propdata->bounds[bdidx]->nonconvex = (nccount[i] > 0);
+         propdata->bounds[bdidx]->indicator = (nindcount[i] > 0);
          propdata->bounds[bdidx]->index = bdidx;
          bdidx++;
       }
@@ -2824,7 +2993,7 @@ SCIP_RETCODE initBounds(
             assert(x != y);
 
             /* skip almost fixed variables */
-            if( !varIsInteresting(scip, x, 1) || !varIsInteresting(scip, y, 1) )
+            if( !varIsInteresting(scip, x, 1, 0) || !varIsInteresting(scip, y, 1, 0) )
                continue;
 
             /* create bilinear bound */
@@ -2856,6 +3025,8 @@ SCIP_RETCODE initBounds(
    /* free memory for buffering nonlinearities */
    assert(nlcount != NULL);
    assert(nccount != NULL);
+   assert(nindcount != NULL);
+   SCIPfreeBufferArray(scip, &nindcount);
    SCIPfreeBufferArray(scip, &nccount);
    SCIPfreeBufferArray(scip, &nlcount);
 
@@ -2955,10 +3126,17 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    if( SCIPgetSubscipDepth(scip) > 0 )
       return SCIP_OKAY;
 
-   /* only run for nonlinear problems, i.e., if NLP is constructed */
-   if( !SCIPisNLPConstructed(scip) )
+   /* get propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   /* only run for nonlinear problems, i.e., if NLP is constructed
+    * or if indicator constraints exists and should be considered
+    */
+   if( !SCIPisNLPConstructed(scip)
+      && (!propdata->indicators || SCIPfindConshdlr(scip, "indicator") == NULL || SCIPconshdlrGetNConss(SCIPfindConshdlr(scip, "indicator")) == 0) )
    {
-      SCIPdebugMsg(scip, "NLP not constructed, skipping obbt\n");
+      SCIPdebugMsg(scip, "NLP not constructed and no indicator constraints available, skipping obbt\n");
       return SCIP_OKAY;
    }
 
@@ -2970,10 +3148,6 @@ SCIP_DECL_PROPEXEC(propExecObbt)
       SCIPdebugMsg(scip, "not all columns in LP, skipping obbt\n");
       return SCIP_OKAY;
    }
-
-   /* get propagator data */
-   propdata = SCIPpropGetData(prop);
-   assert(propdata != NULL);
 
    /* ensure that bounds are initialized */
    if( propdata->nbounds == -1 )
@@ -3233,9 +3407,17 @@ SCIP_RETCODE SCIPincludePropObbt(
          "minimal relative improve for strengthening bounds",
          &propdata->boundstreps, FALSE, DEFAULT_BOUNDSTREPS, 0.0, 1.0, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/indicatorthreshold",
+         "threshold whether upper bounds of vars of indicator conss are considered or tightened",
+         &propdata->indicatorthreshold, TRUE, DEFAULT_INDICATORTHRESHOLD, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/onlynonconvexvars",
          "only apply obbt on non-convex variables",
          &propdata->onlynonconvexvars, TRUE, DEFAULT_ONLYNONCONVEXVARS, NULL, NULL) );
+
+  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/indicators",
+         "apply obbt on variables of indicator constraints? (independent of convexity)",
+         &propdata->indicators, TRUE, DEFAULT_INDICATORS, NULL, NULL) );
 
   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/tightintboundsprobing",
          "should integral bounds be tightened during the probing mode?",

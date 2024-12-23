@@ -1,5 +1,5 @@
 FLAGS		+=	-DNO_STRERROR_R -DSCIP_ROUNDING_FE
-OFLAGS		+=	-O0 -g
+OFLAGS		+=	-O0 -ffp-contract=off -g
 CFLAGS		+=	$(GCCWARN) -funit-at-a-time
 CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time
 ARFLAGS		=	crs

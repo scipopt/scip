@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -240,6 +240,8 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
 #include <string.h>
 
 /* #define SCIP_OUTPUT */
@@ -315,6 +317,7 @@
 #define DEFAULT_CONFLICTSUPGRADE    FALSE    /**< Try to upgrade bounddisjunction conflicts by replacing slack variables? */
 #define DEFAULT_FORCERESTART        FALSE    /**< Force restart if absolute gap is 1 or enough binary variables have been fixed? */
 #define DEFAULT_RESTARTFRAC           0.9    /**< fraction of binary variables that need to be fixed before restart occurs (in forcerestart) */
+#define DEFAULT_USESAMESLACKVAR     FALSE    /**< Use same slack variable for indicator constraints with common binary variable? */
 
 
 /* other values */
@@ -413,6 +416,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             trysolfromcover;    /**< Try to construct a feasible solution from a cover? */
    SCIP_Bool             upgradelinear;      /**< Try to upgrade linear constraints to indicator constraints? */
    char                  normtype;           /**< norm type for cut computation */
+   SCIP_Bool             usesameslackvar;    /**< Use same slack variable for indicator constraints with common binary variable? */
    /* parameters that should not be changed after problem stage: */
    SCIP_Bool             sepaalternativelp;  /**< Separate using the alternative LP? */
    SCIP_Bool             sepaalternativelp_; /**< used to store the sepaalternativelp parameter */
@@ -456,6 +460,160 @@ typedef enum SCIP_enfosepatype SCIP_ENFOSEPATYPE;
    }                                                                                            \
 }                                                                                               \
 while ( FALSE )
+
+
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONS* lincons;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_VAR** linvars;
+   SCIP_Real* linvals;
+   SCIP_Real constant;
+   SCIP_Real actweight;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   SCIP_Bool suc;
+   int slacknodeidx;
+   int consnodeidx;
+   int eqnodeidx;
+   int opnodeidx;
+   int nodeidx;
+   int nvarslincons;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   lincons = consdata->lincons;
+   assert(lincons != NULL);
+
+   SCIP_CALL( SCIPgetConsNVars(scip, lincons, &nvarslincons, &suc) );
+   assert(suc);
+
+   lhs = SCIPgetLhsLinear(scip, lincons);
+   rhs = SCIPgetRhsLinear(scip, lincons);
+
+   /* get information about linear constraint */
+   nvars = SCIPgetNVars(scip);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   linvars = SCIPgetVarsLinear(scip, lincons);
+   linvals = SCIPgetValsLinear(scip, lincons);
+   for( i = 0; i < nvarslincons; ++i )
+   {
+      vars[i] = linvars[i];
+      vals[i] = linvals[i];
+   }
+   nlocvars = nvarslincons;
+
+   constant = 0.0;
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   /* update lhs/rhs due to possible variable aggregation */
+   lhs -= constant;
+   rhs -= constant;
+
+   /* create nodes and edges */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, lhs, rhs, &consnodeidx) );
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, opnodeidx, FALSE, 0.0) );
+
+   /* add nodes/edes for variables in linear constraint */
+   SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, opnodeidx, vars, vals, nlocvars, 0.0) );
+
+   /* create nodes and edges for activation of constraint */
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_EQ, &eqnodeidx) ); /*lint !e641*/
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, eqnodeidx, FALSE, 0.0) );
+
+   /* create nodes and edges for (possibly aggregated) activation variable */
+   vars[0] = consdata->binvar;
+   vals[0] = 1.0;
+   constant = 0.0;
+   nlocvars = 1;
+
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   /* activation of a constraint is modeled as weight of the edge to the activation variable */
+   actweight = consdata->activeone ? 1.0 : -1.0;
+
+   if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
+   {
+      /* encode aggregation by a sum-expression and connect it to indicator node */
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, opnodeidx, TRUE, actweight) );
+
+      /* add nodes and edges for variables in aggregation */
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, opnodeidx, vars, vals, nlocvars, constant) );
+   }
+   else if( nlocvars == 1 )
+   {
+      if( symtype == SYM_SYMTYPE_SIGNPERM )
+      {
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, actweight) );
+
+         nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[0]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, -actweight) );
+      }
+      else
+      {
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, eqnodeidx, nodeidx, TRUE, actweight) );
+      }
+   }
+
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SLACK, &slacknodeidx) ); /*lint !e641*/
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, consnodeidx, slacknodeidx, FALSE, 0.0) );
+
+   /* create nodes and edges for (possibly aggregated) slack variable */
+   vars[0] = consdata->slackvar;
+   vals[0] = 1.0;
+   constant = 0.0;
+   nlocvars = 1;
+
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
+   {
+      /* encode aggregation by a sum-expression and connect it to root node */
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, slacknodeidx, opnodeidx, FALSE, 0.0) );
+
+      /* add nodes and edges for variables in aggregation */
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, opnodeidx, vars, vals, nlocvars, constant) );
+   }
+   else if( nlocvars == 1 )
+   {
+      nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, slacknodeidx, nodeidx, FALSE, 0.0) );
+   }
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
 
 
 /* ---------------- Callback methods of event handlers ---------------- */
@@ -3221,14 +3379,14 @@ SCIP_RETCODE consdataCreate(
    assert( slackvar != NULL );
    assert( eventhdlrrestart != NULL );
 
-   /* if active on 0, the binary variable is reversed */
-   if ( activeone )
+   /* if active on 0, a provided binary variable is reversed */
+   if ( activeone || binvar == NULL )
    {
       binvarinternal = binvar;
    }
    else
    {
-      SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+      SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
    /* create constraint data */
@@ -7444,6 +7602,24 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphIndicator)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphIndicator)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
 /* ---------------- Constraint specific interface methods ---------------- */
 
 /** creates the handler for indicator constraints and includes it in SCIP */
@@ -7527,6 +7703,8 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransIndicator) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxIndicator) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphIndicator) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphIndicator) );
 
    /* add upgrading method */
    if ( SCIPfindConshdlr(scip, "linear") != NULL )
@@ -7688,6 +7866,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "Try to upgrade linear constraints to indicator constraints?",
          &conshdlrdata->upgradelinear, TRUE, DEFAULT_UPGRADELINEAR, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/usesameslackvar",
+         "Use same slack variable for indicator constraints with common binary variable?",
+         &conshdlrdata->usesameslackvar, TRUE, DEFAULT_USESAMESLACKVAR, NULL, NULL) );
+
    /* parameters that should not be changed after problem stage: */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/sepaalternativelp",
@@ -7792,6 +7975,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    SCIP_CONSDATA* consdata = NULL;
    SCIP_CONS* lincons;
    SCIP_VAR* slackvar = NULL;
+   SCIP_VAR* binvarinternal;
    SCIP_Bool modifiable = FALSE;
    SCIP_Bool linconsactive = TRUE;
    SCIP_VARTYPE slackvartype;
@@ -7856,32 +8040,29 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       }
    }
 
-   /* Check whether binary variable has been used for a different constraint; then use the same slack variable. */
-   if ( binvar != NULL )
+   /* if active on 0, a provided binary variable is reversed */
+   if ( activeone || binvar == NULL )
+      binvarinternal = binvar;
+   else
    {
-      SCIP_VAR* binvarinternal;
+      SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+   }
 
-      /* if active on 0, the binary variable is reversed */
-      if ( activeone )
-         binvarinternal = binvar;
-      else
-      {
-         SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
-      }
-
-      /* make sure that the hashmap exists */
-      if ( conshdlrdata->binslackvarhash == NULL )
+   /* Check whether the same slack variable should be use for constraints with a common binary variable. This can
+    * reduce the size of the problem, because only one coupling constraint is needed. However, it is less tight. */
+   if ( binvarinternal != NULL )
+   {
+      /* make sure that the hashmap exists if we want to use the same slack variable */
+      if ( conshdlrdata->usesameslackvar && conshdlrdata->binslackvarhash == NULL )
       {
          SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binslackvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
       }
 
-      assert( conshdlrdata->binslackvarhash != NULL );
-      if ( SCIPhashmapExists(conshdlrdata->binslackvarhash, (void*) binvarinternal) )
+      if ( conshdlrdata->binslackvarhash != NULL && SCIPhashmapExists(conshdlrdata->binslackvarhash, (void*) binvarinternal) )
       {
          SCIP_Bool infeasible;
 
          slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
-         assert( slackvar != NULL );
 
          /* make sure that the type of the slackvariable is as general as possible */
          if ( SCIPvarGetType(slackvar) == SCIP_VARTYPE_IMPLINT && slackvartype != SCIP_VARTYPE_IMPLINT )
@@ -7904,7 +8085,10 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
          /* mark slack variable not to be multi-aggregated */
          SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
 
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binslackvarhash, (void*) binvarinternal, (void*) slackvar) );
+         if ( conshdlrdata->binslackvarhash != NULL )
+         {
+            SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binslackvarhash, (void*) binvarinternal, (void*) slackvar) );
+         }
       }
    }
    else
@@ -7919,6 +8103,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       /* mark slack variable not to be multi-aggregated */
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
    }
+   assert( slackvar != NULL );
 
    /* if the problem should be decomposed if only non-integer variables are present */
    if ( conshdlrdata->nolinconscont )
@@ -7988,15 +8173,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    if ( conshdlrdata->generatebilinear )
    {
       SCIP_Real val = 1.0;
-      SCIP_VAR* binvarinternal;
-
-      /* if active on 0, the binary variable is reversed */
-      if ( activeone )
-         binvarinternal = binvar;
-      else
-      {
-         SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
-      }
 
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
       SCIP_CALL( SCIPcreateConsQuadraticNonlinear(scip, cons, name, 0, NULL, NULL, 1, &binvarinternal, &slackvar, &val, 0.0, 0.0,
@@ -8026,19 +8202,9 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
          /* make sure that binary variable hash exists */
          if ( conshdlrdata->sepaalternativelp )
          {
-            SCIP_VAR* binvarinternal;
-
             if ( conshdlrdata->binvarhash == NULL )
             {
                SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
-            }
-
-            /* if active on 0, the binary variable is reversed */
-            if ( activeone )
-               binvarinternal = binvar;
-            else
-            {
-               SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
             }
 
             /* check whether binary variable is present: note that a binary variable might appear several times, but this seldomly happens. */
@@ -8432,21 +8598,20 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       binvarinternal = binvar;
    else
    {
-      SCIP_CALL ( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
+      SCIP_CALL( SCIPgetNegatedVar(scip, binvar, &binvarinternal) );
    }
 
-   /* Check awhether binary variable has been used for a different constraint; then use the same slack variable. */
-   if ( conshdlrdata->binslackvarhash == NULL )
+   /* Check whether the same slack variable should be use for constraints with a common binary variable. This can
+    * reduce the size of the problem, because only one coupling constraint is needed. However, it is less tight. */
+   if ( conshdlrdata->usesameslackvar && conshdlrdata->binslackvarhash == NULL )
    {
       SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binslackvarhash, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
    }
 
-   assert( conshdlrdata->binslackvarhash != NULL );
-   if ( SCIPhashmapExists(conshdlrdata->binslackvarhash, (void*) binvarinternal) )
+   if ( conshdlrdata->binslackvarhash != NULL && SCIPhashmapExists(conshdlrdata->binslackvarhash, (void*) binvarinternal) )
    {
       /* determine slack variable */
       slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
-      assert( slackvar != NULL );
 
       /* make sure that the type of the slackvariable is as general as possible */
       if ( SCIPvarGetType(slackvar) == SCIP_VARTYPE_IMPLINT && slackvartype != SCIP_VARTYPE_IMPLINT )
@@ -8470,7 +8635,10 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       /* mark slack variable not to be multi-aggregated */
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
 
-      SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binslackvarhash, (void*) binvarinternal, (void*) slackvar) );
+      if ( conshdlrdata->binslackvarhash != NULL )
+      {
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binslackvarhash, (void*) binvarinternal, (void*) slackvar) );
+      }
    }
    assert( slackvar != NULL );
 

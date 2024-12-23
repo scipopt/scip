@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -39,6 +39,7 @@ extern "C" {
 #endif
 
 #include "symmetry/struct_symmetry.h"
+#include "symmetry/type_symmetry.h"
 
 /** return whether symmetry can be computed */
 SCIP_EXPORT
@@ -65,13 +66,21 @@ SCIP_EXPORT
 SCIP_RETCODE SYMcomputeSymmetryGenerators(
    SCIP*                 scip,               /**< SCIP pointer */
    int                   maxgenerators,      /**< maximal number of generators constructed (= 0 if unlimited) */
-   SYM_MATRIXDATA*       matrixdata,         /**< data for MIP matrix */
-   SYM_EXPRDATA*         exprdata,           /**< data for nonlinear constraints */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
    int*                  nperms,             /**< pointer to store number of permutations */
    int*                  nmaxperms,          /**< pointer to store maximal number of permutations (needed for freeing storage) */
    int***                perms,              /**< pointer to store permutation generators as (nperms x npermvars) matrix */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
    SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
+   );
+
+/** returns whether two given graphs are identical */
+SCIP_EXPORT
+SCIP_Bool SYMcheckGraphsAreIdentical(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries to be checked */
+   SYM_GRAPH*            G1,                 /**< first graph */
+   SYM_GRAPH*            G2                  /**< second graph */
    );
 
 #ifdef __cplusplus

@@ -65,7 +65,7 @@ class NLStringRef {
   std::size_t size() const { return size_; }
 };
 
-// Flags for ReadNLFile and ReadNLString.
+/// Flags for ReadNLFile and ReadNLString.
 enum {
   /** Read variable bounds before anything else. */
   READ_BOUNDS_FIRST = 1
@@ -75,18 +75,9 @@ enum {
   \rst
   Reads an optimization problem in the NL format from the string *str*
   and sends notifications of the problem components to the *handler* object.
-  The handler class can be one of the following
-
-  * derived from `mp::NLHandler` or `mp::NullNLHandler`,
-  * `mp::Problem`,
-  * provide an interface compatible with one of the above.
-
+  See `mp::ReadNLFile` for description of *handler* and *flags*.
   Both *str* and *name* can be C strings or ``std::string`` objects.
   The *name* argument is used as the name of the input when reporting errors.
-  *flags* can be either 0, which is the default, to read all constructs in
-  the order they appear in the input, or `mp::READ_BOUNDS_FIRST` to read
-  variable bounds after the NL header and before other constructs such as
-  nonlinear expressions.
   \endrst
  */
 template <typename Handler>
@@ -127,6 +118,7 @@ void ReadNLString(NLStringRef str, Handler &handler,
  */
 template <typename Handler>
 void ReadNLFile(fmt::CStringRef filename, Handler &handler, int flags = 0);
-}  // namespace mp
+
+} // namespace mp
 
 #endif  // MP_NL_

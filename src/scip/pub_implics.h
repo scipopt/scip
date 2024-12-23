@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -123,7 +123,7 @@ SCIP_Bool SCIPcliqueIsEquation(
 #define SCIPcliqueGetVars(clique)                    ((clique)->vars)
 #define SCIPcliqueGetValues(clique)                  ((clique)->values)
 #define SCIPcliqueGetId(clique)                      ((clique)->id)
-#define SCIPcliqueGetIndex(clique)                      ((clique)->index)
+#define SCIPcliqueGetIndex(clique)                   ((clique)->index)
 #define SCIPcliqueIsCleanedUp(clique)                ((clique)->startcleanup == -1)
 #define SCIPcliqueIsEquation(clique)                 ((SCIP_Bool)(clique)->equation)
 

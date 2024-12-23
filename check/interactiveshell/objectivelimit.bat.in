@@ -1,0 +1,6 @@
+set load "${PROJECT_SOURCE_DIR}"/check/coverage/settings/"${setting}".set
+read "${PROJECT_SOURCE_DIR}"/check/"${path}"
+set limits objective "${objlim}"
+optimize
+validatesolve "${optval}" "${optval}"
+quit

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -78,6 +78,7 @@
 #include "scip/scip_sepa.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
+#include "scip/scip_var.h"
 #include "scip/sepa_gomory.h"
 #include <string.h>
 
@@ -407,16 +408,20 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_COL** cols;
    SCIP_ROW** rows;
    SCIP_AGGRROW* aggrrow;
+   SCIP_VAR* var;
    SCIP_Real* binvrow;
    SCIP_Real* cutcoefs;
    SCIP_Real* basisfrac;
+   SCIP_Real* cutefficacies;
    int* basisind;
    int* basisperm;
    int* inds;
    int* cutinds;
+   int* colindsproducedcut;
    SCIP_Real maxscale;
    SCIP_Real minfrac;
    SCIP_Real maxfrac;
+   SCIP_Real maxcutefficacy;
    SCIP_Longint maxdnom;
    SCIP_Bool cutoff;
    SCIP_Bool separatescg;
@@ -431,6 +436,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    int freq;
    int c;
    int i;
+   int j;
 
    assert(sepa != NULL);
    assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
@@ -528,6 +534,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_CALL( SCIPallocBufferArray(scip, &basisfrac, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutefficacies, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &colindsproducedcut, nrows) );
    SCIP_CALL( SCIPaggrRowCreate(scip, &aggrrow) );
 
    /* get basis indices */
@@ -538,13 +546,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       SCIP_Real frac = 0.0;
 
       c = basisind[i];
+      cutefficacies[i] = 0.0;
 
       basisperm[i] = i;
 
+      colindsproducedcut[i] = -1;
+
       if( c >= 0 )
       {
-         SCIP_VAR* var;
-
          assert(c < ncols);
          var = SCIPcolGetVar(cols[c]);
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
@@ -603,7 +612,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
       int ninds = -1;
       int cutnnz;
       int cutrank;
-      int j;
 
       if( basisfrac[i] == 0.0 )
          break;
@@ -632,6 +640,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             assert(allowlocal || !cutislocal); /*lint !e644*/
             SCIP_CALL( addCut(scip, sepadata, vars, c, maxdnom, maxscale, cutnnz, cutinds, cutcoefs, cutefficacy, cutrhs,
                   cutislocal, cutrank, TRUE, &cutoff, &naddedcuts) );
+            if( c >= 0 )
+            {
+               cutefficacies[i] = cutefficacy;
+               colindsproducedcut[i] = c;
+            }
             cutefficacy = 0.0;
             strongcgsuccess = FALSE;
             if( cutoff )
@@ -659,11 +672,40 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
             SCIP_CALL( addCut(scip, sepadata, vars, c, maxdnom, maxscale, cutnnz, cutinds, cutcoefs, cutefficacy, cutrhs,
                   cutislocal, cutrank, strongcgsuccess, &cutoff, &naddedcuts) );
+            if( c >= 0 )
+            {
+               cutefficacies[i] = cutefficacy;
+               colindsproducedcut[i] = c;
+            }
          }
       }
    }
 
+   /* Add normalized efficacy GMI statistics to history */
+   maxcutefficacy = 0.0;
+   for( i = 0; i < nrows; ++i )
+   {
+      if( cutefficacies[i] > maxcutefficacy && colindsproducedcut[i] >= 0 )
+      {
+         maxcutefficacy = cutefficacies[i];
+      }
+   }
+
+   for( i = 0; i < nrows; ++i )
+   {
+      if( colindsproducedcut[i] >= 0 && SCIPisEfficacious(scip, cutefficacies[i])  )
+      {
+         assert( maxcutefficacy > 0.0 );
+         var = SCIPcolGetVar(cols[colindsproducedcut[i]]);
+         SCIP_CALL( SCIPsetVarLastGMIScore(scip, var, cutefficacies[i] / maxcutefficacy) );
+         SCIP_CALL( SCIPincVarGMISumScore(scip, var, cutefficacies[i] / maxcutefficacy) );
+      }
+   }
+
    /* free temporary memory */
+   SCIPaggrRowFree(scip, &aggrrow);
+   SCIPfreeBufferArray(scip, &colindsproducedcut);
+   SCIPfreeBufferArray(scip, &cutefficacies);
    SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
    SCIPfreeBufferArray(scip, &basisfrac);
@@ -671,7 +713,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
-   SCIPaggrRowFree(scip, &aggrrow);
 
    SCIPdebugMsg(scip, "end searching gomory cuts: found %d cuts\n", naddedcuts);
 

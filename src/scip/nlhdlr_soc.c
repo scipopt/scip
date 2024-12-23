@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -90,12 +90,12 @@
  *
  *  The disaggregation only happens if we have more than 3 terms.
  *
- *  Example: The constraint SQRT(5 + (3x - 4y + 2)^2 + y^2 + 7z^2) <= 5x - y - 1
+ *  Example: The constraint sqrt(5 + (3x - 4y + 2)^2 + y^2 + 7z^2) <= 5x - y - 1
  *           results in the following nlhdlrexprdata:
  *
  *           vars = {x, y, z}
- *           offsets = {2, 0, 0, SQRT(5), -1}
- *           transcoefs = {3, -4, 1, SQRT(7), 5, -1}
+ *           offsets = {2, 0, 0, sqrt(5), -1}
+ *           transcoefs = {3, -4, 1, sqrt(7), 5, -1}
  *           transcoefsidx = {0, 1, 1, 2, 0, 1}
  *           termbegins = {0, 2, 3, 4, 4, 6}
  *           nvars = 3
@@ -538,7 +538,7 @@ SCIP_RETCODE generateCutSolSOC(
       if( nlhdlrexprdata->offsets[i] != 0.0 )
          offsetzero = FALSE;
    }
-   fvalue = SQRT( fvalue );
+   fvalue = sqrt(fvalue);
 
    /* don't generate cut if we are not violated @todo: remove this once core detects better when a nlhdlr's cons is
     * violated
@@ -597,7 +597,7 @@ SCIP_RETCODE generateCutSolSOC(
    SCIProwprepAddSide(*rowprep, cutrhs);
 
    /* set name */
-   (void) SCIPsnprintf(SCIProwprepGetName(*rowprep), SCIP_MAXSTRLEN, "soc%d_%p_%d", nterms, (void*) expr, SCIPgetNLPs(scip));
+   (void) SCIPsnprintf(SCIProwprepGetName(*rowprep), SCIP_MAXSTRLEN, "soc%d_%p_%" SCIP_LONGINT_FORMAT, nterms, (void*) expr, SCIPgetNLPs(scip));
 
    return SCIP_OKAY;
 }
@@ -673,7 +673,7 @@ SCIP_RETCODE generateCutSolDisagg(
 
    lhsval = evalSingleTerm(scip, nlhdlrexprdata, disaggidx);
 
-   denominator = SQRT(4.0 * SQR(lhsval) + SQR(rhsval - disvarval));
+   denominator = sqrt(4.0 * SQR(lhsval) + SQR(rhsval - disvarval));
 
    /* compute value of function to be separated (f(x*,y*)) */
    fvalue = denominator - rhsval - disvarval;
@@ -753,7 +753,7 @@ SCIP_RETCODE generateCutSolDisagg(
    }
 
    /* set name */
-   (void) SCIPsnprintf(SCIProwprepGetName(*rowprep), SCIP_MAXSTRLEN, "soc_%p_%d_%d", (void*) expr, disaggidx, SCIPgetNLPs(scip));
+   (void) SCIPsnprintf(SCIProwprepGetName(*rowprep), SCIP_MAXSTRLEN, "soc_%p_%d_%" SCIP_LONGINT_FORMAT, (void*) expr, disaggidx, SCIPgetNLPs(scip));
 
    return SCIP_OKAY;
 }
@@ -1127,7 +1127,7 @@ SCIP_RETCODE tryFillNlhdlrExprDataQuad(
       }
 
       assert(eigvals[i] > 0.0);
-      sqrteigval = SQRT(eigvals[i]);
+      sqrteigval = sqrt(eigvals[i]);
 
       termbegins[nextterm] = nexttranscoef;
       offsets[nextterm] = bp[i] / (2.0 * sqrteigval);
@@ -1160,7 +1160,7 @@ SCIP_RETCODE tryFillNlhdlrExprDataQuad(
    if( *lhsconstant > 0.0 )
    {
       termbegins[nextterm] = nexttranscoef;
-      offsets[nextterm] = SQRT( *lhsconstant );
+      offsets[nextterm] = sqrt(*lhsconstant);
       ++nextterm;
    }
 
@@ -1171,7 +1171,7 @@ SCIP_RETCODE tryFillNlhdlrExprDataQuad(
       SCIP_Real signfactor;
 
       assert(-eigvals[specialtermidx] > 0.0);
-      sqrteigval = SQRT(-eigvals[specialtermidx]);
+      sqrteigval = sqrt(-eigvals[specialtermidx]);
 
       termbegins[nextterm] = nexttranscoef;
       offsets[nextterm] = -bp[specialtermidx] / (2.0 * sqrteigval);
@@ -1290,7 +1290,7 @@ SCIP_RETCODE tryFillNlhdlrExprDataQuad(
    return SCIP_OKAY;
 }
 
-/** detects if expr &le; auxvar is of the form SQRT(sum_i coef_i (expr_i + shift_i)^2 + const) &le; auxvar
+/** detects if expr &le; auxvar is of the form sqrt(sum_i coef_i (expr_i + shift_i)^2 + const) &le; auxvar
  *
  * @note if a user inputs the above expression with `const` = -epsilon, then `const` is going to be set to 0.
  */
@@ -1335,7 +1335,7 @@ SCIP_RETCODE detectSocNorm(
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
-   /* check whether expression is a SQRT and has a sum as child with at least 2 children and a non-negative constant */
+   /* check whether expression is a sqrt and has a sum as child with at least 2 children and a non-negative constant */
    if( ! SCIPisExprPower(scip, expr)
       || SCIPgetExponentExprPow(expr) != 0.5
       || !SCIPisExprSum(scip, child)
@@ -1387,7 +1387,7 @@ SCIP_RETCODE detectSocNorm(
             issoc = FALSE;
             break;
          }
-         transcoefs[nterms] = SQRT(childcoefs[i]);
+         transcoefs[nterms] = sqrt(childcoefs[i]);
 
          SCIP_CALL( SCIPhashsetRemove(linexprs, (void*) squarearg) );
          ++nterms;
@@ -1405,7 +1405,7 @@ SCIP_RETCODE detectSocNorm(
             issoc = FALSE;
             break;
          }
-         transcoefs[nterms] = SQRT(childcoefs[i]);
+         transcoefs[nterms] = sqrt(childcoefs[i]);
 
          ++nterms;
       }
@@ -1487,7 +1487,7 @@ SCIP_RETCODE detectSocNorm(
    {
       /* constant term */
       termbegins[nterms - 2] = nterms - 2;
-      offsets[nterms - 2] = SQRT(constant);
+      offsets[nterms - 2] = sqrt(constant);
 
       /* rhs */
       termbegins[nterms - 1] = nterms - 2;
@@ -1832,12 +1832,12 @@ SCIP_RETCODE detectSocQuadraticSimple(
     * we have found an SOC-representable expression. Now build the nlhdlrexprdata
     *
     * in the non-hyperbolic case, c + sum_i coef_i expr_i^2 - coef_k expr_k^2 <= 0 is transformed to
-    * SQRT( c + sum_i coef_i expr_i^2 ) <= coef_k expr_k
+    * sqrt( c + sum_i coef_i expr_i^2 ) <= coef_k expr_k
     * so there are nchildren many vars, nchildren (+ 1 if c != 0) many terms, nchildren many coefficients in the vs
     * in SOC representation
     *
     * in the hyperbolic case, c + sum_i coef_i expr_i^2 - coef_k expr_k expr_l <= 0 is transformed to
-    * SQRT( 4(c + sum_i coef_i expr_i^2) + (expr_k - expr_l)^2 ) <= expr_k + expr_l
+    * sqrt( 4(c + sum_i coef_i expr_i^2) + (expr_k - expr_l)^2 ) <= expr_k + expr_l
     * so there are nchildren + 1many vars, nchildren + 1(+ 1 if c != 0) many terms, nchildren + 3 many coefficients in
     * the vs in SOC representation
     */
@@ -1894,12 +1894,12 @@ SCIP_RETCODE detectSocQuadraticSimple(
       {
          /* we eliminate the coefficient of the bilinear term to arrive at standard form */
          assert(4.0 * childcoefs[i] / -childcoefs[specialtermidx] > 0.0);
-         transcoefs[nnzinterms] = SQRT(4.0 * childcoefs[i] / -childcoefs[specialtermidx]);
+         transcoefs[nnzinterms] = sqrt(4.0 * childcoefs[i] / -childcoefs[specialtermidx]);
       }
       else
       {
          assert(childcoefs[i] > 0.0);
-         transcoefs[nnzinterms] = SQRT(childcoefs[i]);
+         transcoefs[nnzinterms] = sqrt(childcoefs[i]);
       }
 
       /* finish adding nonzeros */
@@ -1914,7 +1914,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
    if( lhsconstant > 0.0 )
    {
       termbegins[nextentry] = nnzinterms;
-      offsets[nextentry] = SQRT(lhsconstant);
+      offsets[nextentry] = sqrt(lhsconstant);
 
       /* finish processing term; this term has 0 nonzero thus we do not increase nnzinterms */
       ++nextentry;
@@ -1941,7 +1941,7 @@ SCIP_RETCODE detectSocQuadraticSimple(
 
       termbegins[nextentry] = nnzinterms;
       offsets[nextentry] = 0.0;
-      transcoefs[nnzinterms] = rhssign * SQRT(-childcoefs[specialtermidx]);
+      transcoefs[nnzinterms] = rhssign * sqrt(-childcoefs[specialtermidx]);
       transcoefsidx[nnzinterms] = nvars - 1;
 
       /* finish adding nonzeros */
@@ -2404,37 +2404,6 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataSoc)
    return SCIP_OKAY;
 }
 
-
-/** callback to be called in initialization */
-#if 0
-static
-SCIP_DECL_NLHDLRINIT(nlhdlrInitSoc)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrInitSoc NULL
-#endif
-
-
-/** callback to be called in deinitialization */
-#if 0
-static
-SCIP_DECL_NLHDLREXIT(nlhdlrExitSoc)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define nlhdlrExitSoc NULL
-#endif
-
-
 /** callback to detect structure in expression tree */
 static
 SCIP_DECL_NLHDLRDETECT(nlhdlrDetectSoc)
@@ -2513,8 +2482,8 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxSoc)
 
       assert(*auxvalue >= 0.0);
 
-      /* compute SQRT(sum_i coef_i expr_i^2) */
-      *auxvalue = SQRT(*auxvalue);
+      /* compute sqrt(sum_i coef_i expr_i^2) */
+      *auxvalue = sqrt(*auxvalue);
    }
    /* otherwise, evaluate the original quadratic expression w.r.t. the created auxvars of the children */
    else
@@ -3012,6 +2981,9 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoSoc)
 
    *result = SCIP_DIDNOTFIND;
 
+   if( branchcandonly )
+      return SCIP_OKAY;
+
    nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
    assert(nlhdlrdata != NULL);
 
@@ -3161,7 +3133,6 @@ SCIP_RETCODE SCIPincludeNlhdlrSoc(
    SCIPnlhdlrSetCopyHdlr(nlhdlr, nlhdlrCopyhdlrSoc);
    SCIPnlhdlrSetFreeHdlrData(nlhdlr, nlhdlrFreehdlrdataSoc);
    SCIPnlhdlrSetFreeExprData(nlhdlr, nlhdlrFreeExprDataSoc);
-   SCIPnlhdlrSetInitExit(nlhdlr, nlhdlrInitSoc, nlhdlrExitSoc);
    SCIPnlhdlrSetSepa(nlhdlr, nlhdlrInitSepaSoc, nlhdlrEnfoSoc, NULL, nlhdlrExitSepaSoc);
    SCIPnlhdlrSetSollinearize(nlhdlr, nlhdlrSollinearizeSoc);
 

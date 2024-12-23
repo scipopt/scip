@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -42,6 +42,7 @@
 #include "scip/branch_cloud.h"
 #include "scip/branch_distribution.h"
 #include "scip/branch_fullstrong.h"
+#include "scip/branch_gomory.h"
 #include "scip/branch_inference.h"
 #include "scip/branch_leastinf.h"
 #include "scip/branch_lookahead.h"
@@ -63,6 +64,7 @@
 #include "scip/cons_countsols.h"
 #include "scip/cons_cumulative.h"
 #include "scip/cons_disjunction.h"
+#include "scip/cons_fixedvar.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_integral.h"
 #include "scip/cons_knapsack.h"
@@ -142,6 +144,7 @@
 #include "scip/heur_rins.h"
 #include "scip/heur_rootsoldiving.h"
 #include "scip/heur_rounding.h"
+#include "scip/heur_scheduler.h"
 #include "scip/heur_shiftandpropagate.h"
 #include "scip/heur_shifting.h"
 #include "scip/heur_simplerounding.h"
@@ -162,6 +165,7 @@
 #include "scip/nlhdlr_perspective.h"
 #include "scip/nlhdlr_quadratic.h"
 #include "scip/nlhdlr_quotient.h"
+#include "scip/nlhdlr_signomial.h"
 #include "scip/nlhdlr_soc.h"
 #include "scip/nodesel_bfs.h"
 #include "scip/nodesel_breadthfirst.h"
@@ -178,6 +182,7 @@
 #include "scip/presol_dualinfer.h"
 #include "scip/presol_gateextraction.h"
 #include "scip/presol_implics.h"
+#include "scip/presol_implint.h"
 #include "scip/presol_inttobinary.h"
 #include "scip/presol_milp.h"
 #include "scip/presol_redvub.h"
@@ -235,9 +240,11 @@
 #include "scip/sepa_impliedbounds.h"
 #include "scip/sepa_interminor.h"
 #include "scip/sepa_intobj.h"
+#include "scip/sepa_lagromory.h"
 #include "scip/sepa_mcf.h"
 #include "scip/sepa_minor.h"
 #include "scip/sepa_mixing.h"
+#include "scip/sepa_multilinear.h"
 #include "scip/sepa_oddcycle.h"
 #include "scip/sepa_rapidlearning.h"
 #include "scip/sepa_rlt.h"
@@ -248,6 +255,7 @@
 #include "scip/concsolver_scip.h"
 #include "scip/benders_default.h"
 #include "scip/cutsel_hybrid.h"
+#include "scip/cutsel_dynamic.h"
 #include "scip/cutsel_ensemble.h"
 
 #include "scip/expr_varidx.h"
@@ -260,7 +268,7 @@
 extern "C" {
 #endif
 
-/** includes default SCIP plugins into SCIP */
+/** includes default plugins into SCIP with respect to priorities */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */

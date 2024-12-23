@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -70,7 +70,7 @@ struct SCIP_Diveset
    char*                 name;               /**< name of dive controller, in case that a heuristic has several */
    SCIP_SOL*             sol;                /**< working solution of this dive set */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
-   SCIP_DIVESETSTATS*    divesetstats[3];    /**< statistics for individual contexts */
+   SCIP_DIVESETSTATS*    divesetstats[4];    /**< statistics for individual contexts */
    SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
    SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */

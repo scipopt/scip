@@ -112,11 +112,14 @@ path mp::GetExecutablePath() {
   using namespace std;
   return path(getprogname());
 }
+
 # else
+
 path mp::GetExecutablePath() {
   throw "GetExecutablePath() is not implemented for this system";
   return path("");
 }
+
 # endif
 
 // POSIX implementation.

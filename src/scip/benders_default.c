@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -80,7 +80,7 @@ struct SCIP_BendersData
    SCIP_VAR***           subproblemvars;     /**< the subproblem variables corresponding to master problem variables */
    int                   nmastervars;        /**< the number of variables in the master problem */
    int                   nsubproblems;       /**< the number of subproblems */
-   SCIP_Bool             created;            /**< flag to indicate that the Benders' decomposition Data was created */
+   SCIP_Bool             subprobscreated;    /**< flag to indicate that the Benders' decomposition Data was created */
    SCIP_Bool             subprobscopied;     /**< were the subproblems copied during the SCIP copy */
    SCIP_Bool             mappingcreated;     /**< flag to indicate whether the variable mapping has been created */
 };
@@ -114,7 +114,7 @@ SCIP_RETCODE createBendersData(
    for( i = 0; i < nsubproblems; i++ )
       (*bendersdata)->subproblems[i] = subproblems[i];
 
-   (*bendersdata)->created = TRUE;
+   (*bendersdata)->subprobscreated = TRUE;
 
    return SCIP_OKAY;
 }
@@ -303,7 +303,6 @@ static
 SCIP_DECL_BENDERSFREE(bendersFreeDefault)
 {  /*lint --e{715}*/
    SCIP_BENDERSDATA* bendersdata;
-   int i;
 
    assert(scip != NULL);
    assert(benders != NULL);
@@ -316,19 +315,7 @@ SCIP_DECL_BENDERSFREE(bendersFreeDefault)
    assert(bendersdata->subproblemvars == NULL);
    assert(bendersdata->subvartomastervar == NULL);
    assert(bendersdata->mastervartosubindex == NULL);
-   if( bendersdata->created )
-   {
-      /* if the subproblems were copied, then the copy needs to be freed */
-      if( bendersdata->subprobscopied )
-      {
-         for( i = bendersdata->nsubproblems - 1; i >= 0; i-- )
-         {
-            SCIP_CALL( SCIPfree(&bendersdata->subproblems[i]) );
-         }
-      }
-
-      SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblems, bendersdata->nsubproblems);
-   }
+   assert(bendersdata->subproblems == NULL);
 
    SCIPfreeBlockMemory(scip, &bendersdata);
 
@@ -385,6 +372,23 @@ SCIP_DECL_BENDERSEXIT(bendersExitDefault)
       /* free hash map */
       SCIPhashmapFree(&bendersdata->subvartomastervar);
       SCIPhashmapFree(&bendersdata->mastervartosubindex);
+   }
+
+   assert(bendersdata->subproblemvars == NULL);
+   assert(bendersdata->subvartomastervar == NULL);
+   assert(bendersdata->mastervartosubindex == NULL);
+   if( bendersdata->subprobscreated )
+   {
+      /* if the subproblems were copied, then the copy needs to be freed */
+      if( bendersdata->subprobscopied )
+      {
+         for( i = bendersdata->nsubproblems - 1; i >= 0; i-- )
+         {
+            SCIP_CALL( SCIPfree(&bendersdata->subproblems[i]) );
+         }
+      }
+
+      SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblems, bendersdata->nsubproblems);
    }
 
    return SCIP_OKAY;

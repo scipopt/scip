@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -75,7 +75,10 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-
+#include "scip/symmetry_graph.h"
+#include "symmetry/struct_symmetry.h"
+#include <ctype.h>
+#include <string.h>
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "linking"
@@ -1548,7 +1551,9 @@ SCIP_Bool checkCons(
    return SCIPisFeasEQ(scip, linksum, linkvarval) && SCIPisFeasEQ(scip, setpartsum, 1.0);
 }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
+/* The following should work, but does not seem to be tested well. */
+
 /** transfer aggregated integer variables to the corresponding binary variables */
 static
 SCIP_RETCODE aggregateVariables(
@@ -2005,6 +2010,61 @@ SCIP_RETCODE enforceConstraint(
       *result = SCIP_SEPARATED;
    else
       *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant = 0.0;
+   int nlocvars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* get active variables of the constraint */
+   nvars = SCIPgetNVars(scip);
+   nlocvars = consdata->nbinvars + 1;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+   /* get binary variables */
+   for( i = 0; i < consdata->nbinvars; ++i )
+   {
+      vars[i] = consdata->binvars[i];
+      vals[i] = consdata->vals[i];
+   }
+
+   /* get linking variable */
+   vars[consdata->nbinvars] = consdata->linkvar;
+   vals[consdata->nbinvars] = -1.0;
+
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   SCIP_CALL( SCIPextendPermsymDetectionGraphLinear(scip, graph, vars, vals, nlocvars,
+         cons, -constant, -constant, success) );
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -2861,9 +2921,10 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
       }
    }
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
+   /* The following should work, but does not seem to be tested well. */
+
    /* transfer aggregated linking variables to the corresponding binary variables */
-   assert(conshdlrdata->varmap != NULL);
    SCIP_CALL( aggregateVariables(scip, conshdlrdata->varmap, conss, nconss, naggrvars, &cutoff) );
 #endif
 
@@ -3120,7 +3181,8 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLinking)
 static
 SCIP_DECL_CONSENABLE(consEnableLinking)
 {  /*lint --e{715}*/
-#if 0
+#ifdef SCIP_DISABLED_CODE
+   /** @todo The following might help, but it would need to be tested whether it speeds up the solution process. */
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
 
@@ -3370,6 +3432,24 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsLinking)
    return SCIP_OKAY;
 }
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphLinking)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphLinking)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of event handler
  */
@@ -3472,6 +3552,8 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinking) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLinking) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphLinking) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphLinking) );
 
    /* include the linear constraint to linking constraint upgrade in the linear constraint handler */
    /* SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdLinking, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) ); */

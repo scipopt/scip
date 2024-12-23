@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -169,11 +169,16 @@ ifeq ($(VERBOSE),false)
 .SILENT:	$(UNITTESTSBIN) $(UNITTESTSOBJ)
 endif
 
+# Disable ASLR (address space layout randomization) on Linux via setarch -R
+# as this is not compatible with Criterions parametrized tests (https://github.com/Snaipe/Criterion/issues/208)
+ifeq ($(OSTYPE),linux)
+DISABLE_ASLR := setarch `uname -m` -R
+endif
 
 .PHONY: all
 all:            Criterion $(OBJDIR) $(OBJDIRS) $(BINDIRS) $(UNITTESTSBIN)
 		make ctestrunner
-		setarch `uname -m` -R ctest --output-on-failure
+		$(DISABLE_ASLR) ctest --output-on-failure $(if $(FILTER), -R $(FILTER))
 
 .PHONY: lint
 lint:		$(UNITTESTSSRC)
@@ -195,12 +200,10 @@ $(BINDIRS):
 		@echo "-> Creating $@ directory"
 		@-mkdir -p $@
 
-# run the tests with address space layout randomization disabled, as this isn't
-# compatible with Criterions parametrized tests (https://github.com/Snaipe/Criterion/issues/208)
 .PHONY: test
 test:           $(UNITTESTSBIN)
 		make ctestrunner
-		setarch `uname -m` -R ctest --output-on-failure
+		$(DISABLE_ASLR) --output-on-failure $(if $(FILTER), -R $(FILTER))
 
 .PHONY: ctestrunner
 ctestrunner: 	$(UNITTESTSBIN)

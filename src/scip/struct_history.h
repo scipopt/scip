@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -47,12 +47,17 @@ struct SCIP_History
    SCIP_Real             pscostcount[2];     /**< nr of (partial) summands in down/upwards pseudo costs (may be fractional) */
    SCIP_Real             pscostweightedmean[2]; /**< weighted mean of (partial) pseudo cost values for down/upwards branching */
    SCIP_Real             pscostvariance[2];  /**< weighted variance of (partial) pseudo cost history for down/upwards branching */
+   SCIP_Real             ancpscostcount[2];  /**< nr of (partial) summands in down/upwards ancestral pseudo costs (may be fractional) */
+   SCIP_Real             ancpscostweightedmean[2]; /**< weighted mean of (partial) ancestral pseudo cost values for down/upwards branching */
    SCIP_Real             vsids[2];           /**< degree of how often the variable was reason for a conflict */
    SCIP_Real             conflengthsum[2];   /**< overall length of all active conflicts for which the variable gave reason */
    SCIP_Real             inferencesum[2];    /**< degree of how often branching on the variable lead to inference of another bound */
    SCIP_Real             cutoffsum[2];       /**< degree of how often branching on the variable lead to an infeasible sub problem */
    SCIP_Real             ratio;              /**< Most recently computed value of the unpowered ratio (phi^l) in the Treemodel rules */
-   SCIP_Real             balance;            /**< Most recently value of r/l used to compute a ratio in the Treemodel rules */
+   SCIP_Real             balance;            /**< Most recent value of r/l used to compute a ratio in the Treemodel rules */
+   SCIP_Real             gmieff;             /**< Most recent efficacy value of a GMI cut for the var row when basic / frac */
+   SCIP_Real             gmieffsum;          /**< Sum efficacy values of GMI cut for the var row when basic / frac */
+   SCIP_Real             ngmi;               /**< Number of GMI cuts generated from rows of this var when basic / frac */
    SCIP_Bool             ratiovalid;         /**< Whether the ratio value is valid for the Treemodel rules */
    SCIP_Longint          nactiveconflicts[2];/**< number of active conflicts for which the variable gave reason */
    SCIP_Longint          nbranchings[2];     /**< nr of times, the variable changed its bounds due to branching */

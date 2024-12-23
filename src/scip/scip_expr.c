@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -574,18 +574,27 @@ SCIP_RETCODE parseExpr(
          {
             SCIP_CALL( SCIPskipSpace((char**)newpos) );
 
-            if( **newpos != '*' )
+            if( **newpos == '<' )
             {
-               /* no '*', so fall back to parsing term after sign */
-               coef = (*expr == '+') ? 1.0 : -1.0;
-               ++expr;
+               /* found variable name ('*' is considered optional);
+                * keep coefficient in coef and continue parsing term after coefficient
+                */
+               expr = *newpos;
+
+               SCIP_CALL( SCIPskipSpace((char**)&expr) );
             }
-            else
+            else if( **newpos == '*' )
             {
                /* keep coefficient in coef and continue parsing term after coefficient */
                expr = (*newpos)+1;
 
                SCIP_CALL( SCIPskipSpace((char**)&expr) );
+            }
+            else
+            {
+               /* term consists of single value; let parseTerm() below parse it */
+               coef = (*expr == '+') ? 1.0 : -1.0;
+               ++expr;
             }
          }
          else
@@ -958,6 +967,7 @@ SCIP_EXPRHDLR* SCIPgetExprhdlrPower(
 #undef SCIPcallExprInitestimates
 #undef SCIPcallExprSimplify
 #undef SCIPcallExprReverseprop
+#undef SCIPcallExprGetSymData
 #endif
 
 /** creates and captures an expression with given expression data and children */
@@ -1356,12 +1366,12 @@ SCIP_RETCODE SCIPcopyExpr(
  * a `Term` is a product of `Factors` and an `Expression` is a sum of `Terms`.
  *
  * The actual definition:
- * <pre>
- * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
+ * ```
+ * Expression -> ["+" | "-"] Term { [ ("+" | "-" | "number *") Term | ("number" <varname>) ] }
  * Term       -> Factor { ("*" | "/" ) Factor }
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
- * </pre>
+ * ```
  * where `[a|b]` means `a` or `b` or none, `(a|b)` means `a` or `b`, `{a}` means 0 or more `a`.
  *
  * Note that `Op` and `OpExpression` are undefined.
@@ -1759,7 +1769,7 @@ SCIP_RETCODE SCIPhashExpr(
    return SCIP_OKAY;
 }
 
-/* simplifies an expression (duplication of long doxygen comment omitted here) */
+/** simplifies an expression (duplication of long doxygen comment omitted here) */
 SCIP_RETCODE SCIPsimplifyExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EXPR*            rootexpr,           /**< expression to be simplified */
@@ -1774,6 +1784,22 @@ SCIP_RETCODE SCIPsimplifyExpr(
    assert(scip->mem != NULL);
 
    SCIP_CALL( SCIPexprSimplify(scip->set, scip->stat, scip->mem->probmem, rootexpr, simplified, changed, infeasible, ownercreate, ownercreatedata) );
+
+   return SCIP_OKAY;
+}
+
+/** retrieves symmetry information from an expression */
+SCIP_RETCODE SCIPgetSymDataExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression from which information needs to be retrieved */
+   SYM_EXPRDATA**        symdata             /**< buffer to store symmetry data */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(symdata != NULL);
+
+   SCIP_CALL( SCIPexprGetSymData(scip->set, expr, symdata) );
 
    return SCIP_OKAY;
 }
@@ -2282,6 +2308,21 @@ SCIP_DECL_EXPRREVERSEPROP(SCIPcallExprReverseprop)
    return SCIP_OKAY;
 }
 
+/** calls the symmetry data callback for an expression
+ *
+ * Returns no information if not implemented.
+ */
+SCIP_DECL_EXPRGETSYMDATA(SCIPcallExprGetSymData)
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(symdata != NULL);
+
+   SCIP_CALL( SCIPexprGetSymData(scip->set, expr, symdata) );
+
+   return SCIP_OKAY;
+}
+
 /**@} */
 
 /**@name Expression Iterator Methods */
@@ -2555,6 +2596,42 @@ SCIP_RETCODE SCIPcomputeExprQuadraticCurvature(
 
    SCIP_CALL( SCIPexprComputeQuadraticCurvature(scip->set, scip->mem->probmem, scip->mem->buffer, scip->messagehdlr,
          expr, curv, assumevarfixed, storeeigeninfo) );
+
+   return SCIP_OKAY;
+}
+
+/**@} */
+
+/**@name Monomial expression functions */
+/**@{ */
+
+#ifdef NDEBUG
+#undef SCIPgetExprMonomialData
+#endif
+
+/** returns a monomial representation of a product expression
+ *
+ * The array to store all factor expressions needs to be of size the number of
+ * children in the expression which is given by SCIPexprGetNChildren().
+ *
+ * Given a non-trivial monomial expression, the function finds its representation as \f$cx^\alpha\f$, where
+ * \f$c\f$ is a real coefficient, \f$x\f$ is a vector of auxiliary or original variables (where some entries can
+ * be NULL is the auxiliary variable has not been created yet), and \f$\alpha\f$ is a real vector of exponents.
+ *
+ * A non-trivial monomial is a product of a least two expressions.
+ */
+SCIP_RETCODE SCIPgetExprMonomialData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            coef,               /**< coefficient \f$c\f$ */
+   SCIP_Real*            exponents,          /**< exponents \f$\alpha\f$ */
+   SCIP_EXPR**           factors             /**< factor expressions \f$x\f$ */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   SCIP_CALL( SCIPexprGetMonomialData(scip->set, scip->mem->probmem, expr, coef, exponents, factors) );
 
    return SCIP_OKAY;
 }

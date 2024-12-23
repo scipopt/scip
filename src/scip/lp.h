@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -49,6 +49,7 @@
 #include "scip/type_prob.h"
 #include "scip/type_sol.h"
 #include "scip/type_branch.h"
+#include "scip/type_message.h"
 #include "scip/pub_lp.h"
 
 #include "scip/struct_lp.h"
@@ -1649,7 +1650,7 @@ SCIP_Bool SCIPlpIsFeasNegative(
 #define SCIPlpGetNNewcols(lp)           ((lp)->ncols - (lp)->firstnewcol)
 #define SCIPlpGetNewrows(lp)            (&((lp)->rows[(lp)->firstnewrow]))
 #define SCIPlpGetNNewrows(lp)           ((lp)->nrows - (lp)->firstnewrow)
-#define SCIPlpGetObjNorm(lp)            (SQRT((lp)->objsqrnorm))
+#define SCIPlpGetObjNorm(lp)            (sqrt((lp)->objsqrnorm))
 #define SCIPlpGetRootObjval(lp)         (MIN((lp)->rootlpobjval + (lp)->rootlooseobjval, SCIP_INVALID))
 #define SCIPlpGetRootColumnObjval(lp)   ((lp)->rootlpobjval)
 #define SCIPlpGetRootLooseObjval(lp)    ((lp)->rootlooseobjval)

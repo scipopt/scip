@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -61,7 +61,7 @@ struct SCIP_RBTreeNode
  */
 #define SCIP_RBTREE_HOOKS SCIP_RBTREENODE _rbtreenode
 
-/* convenience macros that automtically cast the given arguments to SCIP_RBTREENODE */
+/* convenience macros that automatically cast the given arguments to SCIP_RBTREENODE */
 #define SCIPrbtreeFirst(root)  SCIPrbtreeFirst_call((SCIP_RBTREENODE*)(root))
 #define SCIPrbtreeLast(root)  SCIPrbtreeLast_call((SCIP_RBTREENODE*)(root))
 #define SCIPrbtreeSuccessor(x)  SCIPrbtreeSuccessor_call((SCIP_RBTREENODE*)(x))

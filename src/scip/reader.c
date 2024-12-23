@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -175,7 +175,7 @@ SCIP_Bool readerIsApplicable(
    assert(reader != NULL);
    assert(reader->extension != NULL);
 
-   return (extension != NULL && strcasecmp(reader->extension, extension) == 0)
+   return (extension != NULL && SCIPstrcasecmp(reader->extension, extension) == 0)
       || (extension == NULL && *(reader->extension) == '\0');
 }
 
@@ -303,13 +303,13 @@ SCIP_RETCODE SCIPreaderWrite(
       int nvars;
       int i;
 
-      vars = prob->vars;
-      nvars = prob->nvars;
-      fixedvars = prob->fixedvars;
-      nfixedvars = prob->nfixedvars;
+      vars = SCIPprobGetVars(prob);
+      nvars = SCIPprobGetNVars(prob);
+      fixedvars = SCIPprobGetFixedVars(prob);
+      nfixedvars = SCIPprobGetNFixedVars(prob);
 
       /* case of the transformed problem, we want to write currently valid problem */
-      if( prob->transformed )
+      if( SCIPprobIsTransformed(prob) )
       {
          SCIP_CONSHDLR** conshdlrs;
          int nconshdlrs;
@@ -365,8 +365,8 @@ SCIP_RETCODE SCIPreaderWrite(
       }
       else
       {
-         conss = prob->conss;
-         nconss = prob->nconss;
+         conss = SCIPprobGetConss(prob);
+         nconss = SCIPprobGetNConss(prob);
       }
 
       if( genericnames )
@@ -426,16 +426,16 @@ SCIP_RETCODE SCIPreaderWrite(
       }
 
       /* adapt objective scale for transformed problem (for the original no change is necessary) */
-      objscale = prob->objscale;
-      if( prob->transformed && prob->objsense == SCIP_OBJSENSE_MAXIMIZE )
+      objscale = SCIPprobGetObjscale(prob);
+      if( SCIPprobIsTransformed(prob) && SCIPprobGetObjsense(prob) == SCIP_OBJSENSE_MAXIMIZE )
          objscale *= -1.0;
 
       /* call reader to write problem */
-      retcode = reader->readerwrite(set->scip, reader, file, prob->name, prob->probdata, prob->transformed,
-         prob->objsense, objscale, prob->objoffset,
-         vars, nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars,
-         fixedvars, nfixedvars, prob->startnvars,
-         conss, nconss, prob->maxnconss, prob->startnconss, genericnames, result);
+      retcode = reader->readerwrite(set->scip, reader, file, SCIPprobGetName(prob), SCIPprobGetData(prob), SCIPprobIsTransformed(prob),
+         SCIPprobGetObjsense(prob), objscale, SCIPprobGetObjoffset(prob),
+         vars, nvars, SCIPprobGetNBinVars(prob), SCIPprobGetNIntVars(prob), SCIPprobGetNImplVars(prob), SCIPprobGetNContVars(prob),
+         fixedvars, nfixedvars, SCIPprobGetStartNVars(prob),
+         conss, nconss, SCIPprobGetMaxNConss(prob), SCIPprobGetStartNConss(prob), genericnames, result);
 
       /* reset variable and constraint names to original names */
       if( genericnames )
@@ -467,7 +467,7 @@ SCIP_RETCODE SCIPreaderWrite(
          SCIPsetFreeBufferArray(set, &varnames);
       }
 
-      if( prob->transformed )
+      if( SCIPprobIsTransformed(prob) )
       {
          /* free memory */
          SCIPsetFreeBufferArray(set, &conss);

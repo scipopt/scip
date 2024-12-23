@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -98,7 +98,7 @@ TestSuite(solve, .init = setup, .fini = teardown);
 /** solve problem */
 static
 SCIP_RETCODE solveTest(
-   SCIP_Bool             solveprimal,        /**< use primal simplex */
+   SCIP_LPALGO           lpalgo,             /**< LP algorithm to use */
    int                   ncols,              /**< number of columns */
    int                   nrows,              /**< number of rows */
    SCIPFEASSTATUS        exp_primalfeas,     /**< expected primal feasibility status */
@@ -131,13 +131,26 @@ SCIP_RETCODE solveTest(
    cr_assert( ncols == ntmpcols );
 
    /* solve problem */
-   if ( solveprimal )
+   switch ( lpalgo )
    {
+   case SCIP_LPALGO_PRIMALSIMPLEX:
       SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
-   }
-   else
-   {
+      break;
+
+   case SCIP_LPALGO_DUALSIMPLEX:
       SCIP_CALL( SCIPlpiSolveDual(lpi) );
+      break;
+
+   case SCIP_LPALGO_BARRIER:
+      SCIP_CALL( SCIPlpiSolveBarrier(lpi, FALSE) );
+      break;
+
+   case SCIP_LPALGO_BARRIERCROSSOVER:
+      SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
+      break;
+
+   default:
+      abort();
    }
 
    /* check status */
@@ -176,7 +189,7 @@ SCIP_RETCODE solveTest(
       /* cr_assert( SCIPlpiIsPrimalUnbounded(lpi) ); */
 
       /* primal ray should exist if the primal simplex ran */
-      cr_assert( ! solveprimal || SCIPlpiExistsPrimalRay(lpi) );
+      cr_assert( lpalgo != SCIP_LPALGO_PRIMALSIMPLEX || SCIPlpiExistsPrimalRay(lpi) );
       cr_assert( ! SCIPlpiIsPrimalInfeasible(lpi) );
       break;
 
@@ -215,7 +228,7 @@ SCIP_RETCODE solveTest(
       /* cr_assert( SCIPlpiIsDualUnbounded(lpi) ); */
 
       /* dual ray should exist if the dual simplex ran */
-      cr_assert( solveprimal || SCIPlpiExistsDualRay(lpi) );
+      cr_assert( lpalgo != SCIP_LPALGO_DUALSIMPLEX || SCIPlpiExistsDualRay(lpi) );
       cr_assert( ! SCIPlpiIsDualInfeasible(lpi) );
       break;
 
@@ -346,7 +359,7 @@ SCIP_RETCODE solveTest(
 /** perform basic test for the given problem */
 static
 SCIP_RETCODE performTest(
-   SCIP_Bool             solveprimal,        /**< use primal simplex */
+   SCIP_LPALGO           lpalgo,             /**< LP algorithm to use */
    SCIP_OBJSEN           objsen,             /**< objective sense */
    int                   ncols,              /**< number of columns */
    const SCIP_Real*      obj,                /**< objective function values of columns */
@@ -372,7 +385,7 @@ SCIP_RETCODE performTest(
    cr_assert( ! SCIPlpiWasSolved(lpi) );
 
    /* solve problem */
-   SCIP_CALL( solveTest(solveprimal, ncols, nrows, exp_primalfeas, exp_dualfeas, exp_primsol, exp_dualsol, exp_activity, exp_redcost) );
+   SCIP_CALL( solveTest(lpalgo, ncols, nrows, exp_primalfeas, exp_dualfeas, exp_primsol, exp_dualsol, exp_activity, exp_redcost) );
 
    return SCIP_OKAY;
 }
@@ -445,6 +458,13 @@ SCIP_RETCODE checkData(
       cr_assert_float_eq(lpiobj[j], obj[j], EPS, "Violation of objective coefficient %d: %g != %g\n", j, lpiobj[j], obj[j]);
 
       cr_assert( lpibeg[j] == beg[j] );
+
+      /* LP-solvers sometimes permute the nonzero entries per column (e.g., XPRESS with barrier) - we therefore sort them */
+      if ( j < ncols - 1 )
+         i = lpibeg[j+1] - lpibeg[j];
+      else
+         i = lpinnonz2 - lpibeg[j];
+      SCIPsortIntReal(&lpiind[lpibeg[j]], &lpival[lpibeg[j]], i);
    }
 
    /* compare matrix */
@@ -520,7 +540,7 @@ Test(solve, test1)
    lhs[1] = -SCIPlpiInfinity(lpi);
 
    /* solve problem with primal simplex */
-   SCIP_CALL( performTest(TRUE, SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
+   SCIP_CALL( performTest(SCIP_LPALGO_PRIMALSIMPLEX, SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
          SCIPfeas, SCIPfeas, exp_primsol, exp_dualsol, exp_activity, exp_redcost) );
 
    /* check that data stored in lpi is still the same */
@@ -530,13 +550,26 @@ Test(solve, test1)
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
    /* solve problem with dual simplex */
-   SCIP_CALL( solveTest(FALSE, 2, 2, SCIPfeas, SCIPfeas, exp_primsol, exp_dualsol, exp_activity, exp_redcost) );
+   SCIP_CALL( solveTest(SCIP_LPALGO_DUALSIMPLEX, 2, 2, SCIPfeas, SCIPfeas, exp_primsol, exp_dualsol, exp_activity, exp_redcost) );
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
 
    /* clear basis status */
    SCIP_CALL( SCIPlpiClearState(lpi) );
+
+   /* check barrier */
+   if( SCIPlpiHasBarrierSolve() )
+   {
+      /* solve problem with barrier and crossover */
+      SCIP_CALL( solveTest(SCIP_LPALGO_BARRIERCROSSOVER, 2, 2, SCIPfeas, SCIPfeas, exp_primsol, exp_dualsol, exp_activity, exp_redcost) );
+
+      /* check that data stored in lpi is still the same */
+      SCIP_CALL( checkData(SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+
+      /* clear basis status */
+      SCIP_CALL( SCIPlpiClearState(lpi) );
+   }
 
    /* change objective */
    obj[0] = 1.0;
@@ -552,7 +585,7 @@ Test(solve, test1)
    exp_redcost[1] = 0;
 
    /* check changed problem with primal simplex */
-   SCIP_CALL( performTest(TRUE, SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
+   SCIP_CALL( performTest(SCIP_LPALGO_PRIMALSIMPLEX, SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
          SCIPfeas, SCIPfeas, exp_primsol, exp_dualsol, exp_activity, exp_redcost) );
 
    /* check that data stored in lpi is still the same */
@@ -603,7 +636,7 @@ Test(solve, test2)
    lhs[1] = -SCIPlpiInfinity(lpi);
 
    /* solve problem with primal simplex */
-   SCIP_CALL( performTest(TRUE, SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
+   SCIP_CALL( performTest(SCIP_LPALGO_PRIMALSIMPLEX, SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
          SCIPunbounded, SCIPinfeas, exp_primray, NULL, NULL, NULL) );
 
    /* check that data stored in lpi is still the same */
@@ -613,7 +646,7 @@ Test(solve, test2)
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
    /* solve problem with dual simplex */
-   SCIP_CALL( solveTest(FALSE, 2, 2, SCIPunbounded, SCIPinfeas, exp_primray, NULL, NULL, NULL) );
+   SCIP_CALL( solveTest(SCIP_LPALGO_DUALSIMPLEX, 2, 2, SCIPunbounded, SCIPinfeas, exp_primray, NULL, NULL, NULL) );
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
@@ -621,12 +654,25 @@ Test(solve, test2)
    /* clear basis status */
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
+   /* check barrier */
+   if( SCIPlpiHasBarrierSolve() )
+   {
+      /* solve problem with barrier and crossover */
+      SCIP_CALL( solveTest(SCIP_LPALGO_BARRIERCROSSOVER, 2, 2, SCIPunbounded, SCIPinfeas, exp_primray, NULL, NULL, NULL) );
+
+      /* check that data stored in lpi is still the same */
+      SCIP_CALL( checkData(SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+
+      /* clear basis status */
+      SCIP_CALL( SCIPlpiClearState(lpi) );
+   }
+
    /* change objective */
    obj[0] = 1.0;
    SCIP_CALL( SCIPlpiChgObj(lpi, 1, ind, obj) );
 
    /* solve with primal simplex */
-   SCIP_CALL( solveTest(TRUE, 2, 2, SCIPfeas, SCIPfeas, exp_primsol, exp_dualsol, exp_activity, exp_redcost) );
+   SCIP_CALL( solveTest(SCIP_LPALGO_PRIMALSIMPLEX, 2, 2, SCIPfeas, SCIPfeas, exp_primsol, exp_dualsol, exp_activity, exp_redcost) );
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
@@ -672,7 +718,7 @@ Test(solve, test3)
    ub[1] = SCIPlpiInfinity(lpi);
 
    /* check problem with primal simplex */
-   SCIP_CALL( performTest(TRUE, SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
+   SCIP_CALL( performTest(SCIP_LPALGO_PRIMALSIMPLEX, SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
          SCIPinfeas, SCIPunbounded, NULL, exp_dualray, NULL, NULL) );
 
    /* check that data stored in lpi is still the same */
@@ -682,7 +728,7 @@ Test(solve, test3)
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
    /* check problem with dual simplex */
-   SCIP_CALL( solveTest(FALSE, 2, 2, SCIPinfeas, SCIPunbounded, NULL, exp_dualray, NULL, NULL) );
+   SCIP_CALL( solveTest(SCIP_LPALGO_DUALSIMPLEX, 2, 2, SCIPinfeas, SCIPunbounded, NULL, exp_dualray, NULL, NULL) );
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
@@ -690,11 +736,24 @@ Test(solve, test3)
    /* clear basis status */
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
+   /* check barrier */
+   if( SCIPlpiHasBarrierSolve() )
+   {
+      /* check problem with barrier and crossover */
+      SCIP_CALL( solveTest(SCIP_LPALGO_BARRIERCROSSOVER, 2, 2, SCIPinfeas, SCIPunbounded, NULL, exp_dualray, NULL, NULL) );
+
+      /* check that data stored in lpi is still the same */
+      SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+
+      /* clear basis status */
+      SCIP_CALL( SCIPlpiClearState(lpi) );
+   }
+
    /* change lhs/rhs */
    lhs[0] = 1.0;
    rhs[0] = 1.0;
    SCIP_CALL( SCIPlpiChgSides(lpi, 1, ind, lhs, rhs) );
-   SCIP_CALL( solveTest(TRUE, 2, 2, SCIPfeas, SCIPfeas, exp_primsol, exp_dualsol, exp_activity, exp_redcost) );
+   SCIP_CALL( solveTest(SCIP_LPALGO_PRIMALSIMPLEX, 2, 2, SCIPfeas, SCIPfeas, exp_primsol, exp_dualsol, exp_activity, exp_redcost) );
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
@@ -733,7 +792,7 @@ Test(solve, test4)
    lhs[1] = -SCIPlpiInfinity(lpi);
 
    /* check problem with primal simplex */
-   SCIP_CALL( performTest(TRUE, SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
+   SCIP_CALL( performTest(SCIP_LPALGO_PRIMALSIMPLEX, SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
          SCIPinfeas, SCIPinfeas, NULL, NULL, NULL, NULL) );
 
    /* check that data stored in lpi is still the same */
@@ -743,10 +802,23 @@ Test(solve, test4)
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
    /* check problem with dual simplex */
-   SCIP_CALL( solveTest(FALSE, 2,  2, SCIPinfeas, SCIPinfeas, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( solveTest(SCIP_LPALGO_DUALSIMPLEX, 2,  2, SCIPinfeas, SCIPinfeas, NULL, NULL, NULL, NULL) );
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+
+   /* check barrier */
+   if( SCIPlpiHasBarrierSolve() )
+   {
+      /* clear basis status */
+      SCIP_CALL( SCIPlpiClearState(lpi) );
+
+      /* check problem with barrier and crossover */
+      SCIP_CALL( solveTest(SCIP_LPALGO_BARRIERCROSSOVER, 2,  2, SCIPinfeas, SCIPinfeas, NULL, NULL, NULL, NULL) );
+
+      /* check that data stored in lpi is still the same */
+      SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+   }
 }
 
 
@@ -806,6 +878,27 @@ Test(solve, test5)
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+
+   /* check barrier */
+   if( SCIPlpiHasBarrierSolve() )
+   {
+      /* clear basis status */
+      SCIP_CALL( SCIPlpiClearState(lpi) );
+      SCIP_CALL( SCIPlpiSolveBarrier(lpi, TRUE) );
+
+      /* check status */
+      cr_assert( SCIPlpiWasSolved(lpi) );
+      cr_assert( SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsOptimal(lpi) );
+      cr_assert( ! SCIPlpiIsIterlimExc(lpi) );
+      cr_assert( ! SCIPlpiIsTimelimExc(lpi) );
+
+      /* the objective should be equal to the objective limit */
+      SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+      cr_assert_geq(objval, exp_objval, "Objective value not equal to objective limit: %g != %g\n", objval, exp_objval);
+
+      /* check that data stored in lpi is still the same */
+      SCIP_CALL( checkData(SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+   }
 }
 
 
@@ -991,7 +1084,7 @@ Test(solve, test7)
    ub[1] = SCIPlpiInfinity(lpi);
 
    /* check problem with primal simplex */
-   SCIP_CALL( performTest(TRUE, SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
+   SCIP_CALL( performTest(SCIP_LPALGO_PRIMALSIMPLEX, SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val,
          SCIPinfeas, SCIPunbounded, NULL, exp_dualray, NULL, NULL) );
 
    /* check that data stored in lpi is still the same */
@@ -1001,8 +1094,20 @@ Test(solve, test7)
    SCIP_CALL( SCIPlpiClearState(lpi) );
 
    /* check problem with dual simplex */
-   SCIP_CALL( solveTest(FALSE, 2, 2, SCIPinfeas, SCIPunbounded, NULL, exp_dualray, NULL, NULL) );
+   SCIP_CALL( solveTest(SCIP_LPALGO_DUALSIMPLEX, 2, 2, SCIPinfeas, SCIPunbounded, NULL, exp_dualray, NULL, NULL) );
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+
+   if( SCIPlpiHasBarrierSolve() )
+   {
+      /* clear basis status */
+      SCIP_CALL( SCIPlpiClearState(lpi) );
+
+      /* check problem with barrier with crossover */
+      SCIP_CALL( solveTest(SCIP_LPALGO_BARRIERCROSSOVER, 2, 2, SCIPinfeas, SCIPunbounded, NULL, exp_dualray, NULL, NULL) );
+
+      /* check that data stored in lpi is still the same */
+      SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+   }
 }

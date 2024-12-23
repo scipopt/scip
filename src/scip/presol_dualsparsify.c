@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1547,8 +1547,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualsparsify)
          nnonz = SCIPmatrixGetColNNonzs(matrix, c);
          vars[c] = SCIPmatrixGetVar(matrix, c);
 
-         /* if the locks do not match do not consider the column for sparsification */
-         if( SCIPmatrixDownlockConflict(matrix, c) || SCIPmatrixUplockConflict(matrix, c) )
+         /* if the locks do not match do not consider the column for sparsification
+          * also skip if the variable is not allowed to be multi-aggregated
+          */
+         if( SCIPmatrixDownlockConflict(matrix, c) || SCIPmatrixUplockConflict(matrix, c) || SCIPdoNotMultaggrVar(scip, vars[c]) )
          {
             isblockedvar[c] = TRUE;
             ishashingcols[c] = FALSE;

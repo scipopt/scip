@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1049,7 +1049,9 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
          break;
       }
 
+      /* coverity[dead_error_line] */
       case SCIPPARSEPOLYNOMIAL_STATE_END:
+      /* coverity[dead_error_line] */
       case SCIPPARSEPOLYNOMIAL_STATE_ERROR:
       default:
          SCIPerrorMessage("unexpected state\n");
@@ -1143,9 +1145,6 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
 
 /** frees memory allocated when parsing a signomial from a string
  *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -1171,15 +1170,16 @@ void SCIPfreeParseVarsPolynomialData(
    assert(monomialexps  != NULL);
    assert(monomialcoefs != NULL);
    assert(monomialnvars != NULL);
-   assert((*monomialvars  != NULL) == (nmonomials > 0));
-   assert((*monomialexps  != NULL) == (nmonomials > 0));
-   assert((*monomialcoefs != NULL) == (nmonomials > 0));
-   assert((*monomialnvars != NULL) == (nmonomials > 0));
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPfreeParseVarsPolynomialData", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( nmonomials == 0 )
       return;
+
+   assert(*monomialvars  != NULL);
+   assert(*monomialexps  != NULL);
+   assert(*monomialcoefs != NULL);
+   assert(*monomialnvars != NULL);
 
    for( i = nmonomials - 1; i >= 0; --i )
    {
@@ -1708,11 +1708,12 @@ SCIP_RETCODE SCIPflattenVarAggregationGraph(
  *  active variables, that is b_1*y_1 + ... + b_m*y_m + d.
  *
  *  If the number of needed active variables is greater than the available slots in the variable array, nothing happens
- *  except that the required size is stored in the corresponding variable (requiredsize). Otherwise, the active variable
- *  representation is stored in the variable array, scalar array and constant.
+ *  except that an upper bound on the required size is stored in the variable requiredsize; otherwise, the active
+ *  variable representation is stored in the arrays.
  *
  *  The reason for this approach is that we cannot reallocate memory, since we do not know how the memory has been
- *  allocated (e.g., by a C++ 'new' or SCIP functions).
+ *  allocated (e.g., by a C++ 'new' or SCIP functions). Note that requiredsize is an upper bound due to possible
+ *  cancelations.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -1751,9 +1752,8 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c which
                                               *   will chnage to constant d in the linear sum b_1*y_1 + ... + b_m*y_m +
                                               *   d w.r.t. the active variables */
-   int*                  requiredsize,       /**< pointer to store the required array size for the linear sum w.r.t. the
-                                              *   active variables */
-   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   int*                  requiredsize        /**< pointer to store an upper bound on the required size for the linear sum
+                                              *   w.r.t. the active variables */
    )
 {
    assert( scip != NULL );
@@ -1765,7 +1765,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    assert( *nvars <= varssize );
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetProbvarLinearSum", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
-   SCIP_CALL( SCIPvarGetActiveRepresentatives(scip->set, vars, scalars, nvars, varssize, constant, requiredsize, mergemultiples) );
+   SCIP_CALL( SCIPvarGetActiveRepresentatives(scip->set, vars, scalars, nvars, varssize, constant, requiredsize) );
 
    return SCIP_OKAY;
 }
@@ -2938,19 +2938,20 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    )
 {
    SCIP_COL* col;
+   SCIP_Real lpobjval;
    SCIP_Real localdown;
    SCIP_Real localup;
    SCIP_Bool localdownvalid;
    SCIP_Bool localupvalid;
 
-   assert(scip != NULL);
    assert(var != NULL);
    assert(lperror != NULL);
-   assert(!SCIPtreeProbing(scip->tree)); /* we should not be in strong branching with propagation mode */
+   assert(!SCIPinProbing(scip)); /* we should not be in strong branching with propagation mode */
    assert(var->scip == scip);
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPgetVarStrongbranchFrac", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   lpobjval = SCIPgetLPObjval(scip);
    if( downvalid != NULL )
       *downvalid = FALSE;
    if( upvalid != NULL )
@@ -2991,6 +2992,51 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    SCIP_CALL( SCIPcolGetStrongbranch(col, FALSE, scip->set, scip->stat, scip->transprob, scip->lp, itlim, !idempotent, !idempotent,
          &localdown, &localup, &localdownvalid, &localupvalid, lperror) );
 
+   /* update lower bound by the higher pseudo objective value */
+   if( !SCIPisZero(scip, SCIPvarGetObj(var)) )
+   {
+      SCIP_Real oldbound;
+      SCIP_Real newbound;
+      SCIP_Real pseudoobjval;
+      SCIP_BOUNDTYPE boundtype = SCIPvarGetBestBoundType(var);
+
+      if( boundtype == SCIP_BOUNDTYPE_UPPER )
+      {
+         oldbound = SCIPvarGetUbLocal(var);
+         newbound = SCIPfeasFloor(scip, SCIPvarGetLPSol(var));
+      }
+      else
+      {
+         oldbound = SCIPvarGetLbLocal(var);
+         newbound = SCIPfeasCeil(scip, SCIPvarGetLPSol(var));
+      }
+
+      if( scip->set->misc_exactsolve )
+         pseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(scip->lp, scip->set, var, oldbound, newbound, boundtype);
+      else
+         pseudoobjval = SCIPlpGetModifiedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
+
+      if( pseudoobjval > lpobjval )
+      {
+         if( boundtype == SCIP_BOUNDTYPE_UPPER )
+         {
+            if( !localdownvalid || localdown < pseudoobjval )
+            {
+               localdown = pseudoobjval;
+               localdownvalid = TRUE;
+            }
+         }
+         else
+         {
+            if( !localupvalid || localup < pseudoobjval )
+            {
+               localup = pseudoobjval;
+               localupvalid = TRUE;
+            }
+         }
+      }
+   }
+
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
     */
@@ -2998,15 +3044,13 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
    {
       if( !idempotent ) /*lint !e774*/
       {
-         SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+         SCIP_CALL( analyzeStrongbranch(scip, var, NULL, NULL, downconflict, upconflict) );
       }
-      else
-      {
-         if( downinf != NULL )
-            *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
-         if( upinf != NULL )
-            *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
-      }
+
+      if( downinf != NULL )
+         *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
+      if( upinf != NULL )
+         *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
    }
 
    if( down != NULL )
@@ -3394,7 +3438,6 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    int oldnconflicts;
    int nvars;
 
-   assert(scip != NULL);
    assert(var != NULL);
    assert(SCIPvarIsIntegral(var));
    assert(down != NULL);
@@ -3551,18 +3594,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
       if( downchild )
       {
-         SCIP_CALL( performStrongbranchWithPropagation(scip, var, downchild, firstchild, propagate, newub, itlim, maxproprounds,
+         SCIP_CALL( performStrongbranchWithPropagation(scip, var, downchild, firstchild || cutoff, propagate, newub, itlim, maxproprounds,
                down, &downvalidlocal, ndomredsdown, downconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
-
-         /* check whether a new solutions rendered the previous child infeasible */
-         if( foundsol && !firstchild && allcolsinlp )
-         {
-            if( SCIPisGE(scip, *up, SCIPgetCutoffbound(scip)) )
-            {
-               if( upinf != NULL )
-                  *upinf = TRUE;
-            }
-         }
 
          /* check for infeasibility */
          if( cutoff )
@@ -3570,33 +3603,25 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
             if( downinf != NULL )
                *downinf = TRUE;
 
-            if( downconflict != NULL &&
-               (SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
-            {
+            if( downconflict != NULL
+               && ( SCIPvarGetLbLocal(var) > newub + 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts ) )
                *downconflict = TRUE;
-            }
+         }
 
-            if( !scip->set->branch_forceall )
-            {
-               /* if this is the first call, we do not regard the up branch, its valid pointer is initially set to FALSE */
-               break;
-            }
+         /* check whether new solutions rendered the other child infeasible */
+         if( foundsol && allcolsinlp && SCIPisGE(scip, upvalidlocal ? *up : lpobjval, SCIPgetCutoffbound(scip)) )
+         {
+            if( upinf != NULL )
+               *upinf = TRUE;
+
+            upvalidlocal = TRUE;
+            cutoff = TRUE;
          }
       }
       else
       {
-         SCIP_CALL( performStrongbranchWithPropagation(scip, var, downchild, firstchild, propagate, newlb, itlim, maxproprounds,
+         SCIP_CALL( performStrongbranchWithPropagation(scip, var, downchild, firstchild || cutoff, propagate, newlb, itlim, maxproprounds,
                up, &upvalidlocal, ndomredsup, upconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
-
-         /* check whether a new solutions rendered the previous child infeasible */
-         if( foundsol && !firstchild && allcolsinlp )
-         {
-            if( SCIPisGE(scip, *down, SCIPgetCutoffbound(scip)) )
-            {
-               if( downinf != NULL )
-                  *downinf = TRUE;
-            }
-         }
 
          /* check for infeasibility */
          if( cutoff )
@@ -3604,26 +3629,78 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
             if( upinf != NULL )
                *upinf = TRUE;
 
-            assert(upinf == NULL || (*upinf) == TRUE);
-
-            if( upconflict != NULL &&
-               (SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts) )
-            {
+            if( upconflict != NULL
+               && ( SCIPvarGetUbLocal(var) < newlb - 0.5 || SCIPconflictGetNConflicts(scip->conflict) > oldnconflicts ) )
                *upconflict = TRUE;
-            }
+         }
 
-            if( !scip->set->branch_forceall )
-            {
-               /* if this is the first call, we do not regard the down branch, its valid pointer is initially set to FALSE */
-               break;
-            }
+         /* check whether new solutions rendered the other child infeasible */
+         if( foundsol && allcolsinlp && SCIPisGE(scip, downvalidlocal ? *down : lpobjval, SCIPgetCutoffbound(scip)) )
+         {
+            if( downinf != NULL )
+               *downinf = TRUE;
+
+            downvalidlocal = TRUE;
+            cutoff = TRUE;
          }
       }
 
       downchild = !downchild;
       firstchild = !firstchild;
    }
-   while( !firstchild );
+   /* if a child is cut off and forceall is FALSE, we do not regard the other child */
+   while( !firstchild && ( !cutoff || scip->set->branch_forceall ) );
+
+   /* update lower bound by the higher pseudo objective value */
+   if( ( downinf == NULL || !(*downinf) ) && ( upinf == NULL || !(*upinf) ) && !SCIPisZero(scip, SCIPvarGetObj(var)) )
+   {
+      SCIP_Real oldbound;
+      SCIP_Real newbound;
+      SCIP_Real pseudoobjval;
+      SCIP_BOUNDTYPE boundtype = SCIPvarGetBestBoundType(var);
+
+      if( boundtype == SCIP_BOUNDTYPE_UPPER )
+      {
+         oldbound = SCIPvarGetUbLocal(var);
+         newbound = newub;
+      }
+      else
+      {
+         oldbound = SCIPvarGetLbLocal(var);
+         newbound = newlb;
+      }
+
+      if( scip->set->misc_exactsolve )
+         pseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(scip->lp, scip->set, var, oldbound, newbound, boundtype);
+      else
+         pseudoobjval = SCIPlpGetModifiedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
+
+      if( pseudoobjval > lpobjval )
+      {
+         if( boundtype == SCIP_BOUNDTYPE_UPPER )
+         {
+            if( !downvalidlocal || *down < pseudoobjval )
+            {
+               *down = pseudoobjval;
+               downvalidlocal = TRUE;
+
+               if( downinf != NULL && allcolsinlp && SCIPisGE(scip, *down, SCIPgetCutoffbound(scip)) )
+                  *downinf = TRUE;
+            }
+         }
+         else
+         {
+            if( !upvalidlocal || *up < pseudoobjval )
+            {
+               *up = pseudoobjval;
+               upvalidlocal = TRUE;
+
+               if( upinf != NULL && allcolsinlp && SCIPisGE(scip, *up, SCIPgetCutoffbound(scip)) )
+                  *upinf = TRUE;
+            }
+         }
+      }
+   }
 
    /* set strong branching information in column */
    if( *lperror )
@@ -3681,16 +3758,19 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    )
 {
    SCIP_COL* col;
+   SCIP_Real lpobjval;
    SCIP_Real localdown;
    SCIP_Real localup;
    SCIP_Bool localdownvalid;
    SCIP_Bool localupvalid;
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetVarStrongbranchInt", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
+   assert(var != NULL);
    assert(lperror != NULL);
    assert(var->scip == scip);
 
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPgetVarStrongbranchInt", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   lpobjval = SCIPgetLPObjval(scip);
    if( downvalid != NULL )
       *downvalid = FALSE;
    if( upvalid != NULL )
@@ -3731,6 +3811,51 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    SCIP_CALL( SCIPcolGetStrongbranch(col, TRUE, scip->set, scip->stat, scip->transprob, scip->lp, itlim, !idempotent, !idempotent,
          &localdown, &localup, &localdownvalid, &localupvalid, lperror) );
 
+   /* update lower bound by the higher pseudo objective value */
+   if( !SCIPisZero(scip, SCIPvarGetObj(var)) )
+   {
+      SCIP_Real oldbound;
+      SCIP_Real newbound;
+      SCIP_Real pseudoobjval;
+      SCIP_BOUNDTYPE boundtype = SCIPvarGetBestBoundType(var);
+
+      if( boundtype == SCIP_BOUNDTYPE_UPPER )
+      {
+         oldbound = SCIPvarGetUbLocal(var);
+         newbound = SCIPfeasCeil(scip, SCIPvarGetLPSol(var)) - 1.0;
+      }
+      else
+      {
+         oldbound = SCIPvarGetLbLocal(var);
+         newbound = SCIPfeasFloor(scip, SCIPvarGetLPSol(var)) + 1.0;
+      }
+
+      if( scip->set->misc_exactsolve )
+         pseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(scip->lp, scip->set, var, oldbound, newbound, boundtype);
+      else
+         pseudoobjval = SCIPlpGetModifiedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
+
+      if( pseudoobjval > lpobjval )
+      {
+         if( boundtype == SCIP_BOUNDTYPE_UPPER )
+         {
+            if( !localdownvalid || localdown < pseudoobjval )
+            {
+               localdown = pseudoobjval;
+               localdownvalid = TRUE;
+            }
+         }
+         else
+         {
+            if( !localupvalid || localup < pseudoobjval )
+            {
+               localup = pseudoobjval;
+               localupvalid = TRUE;
+            }
+         }
+      }
+   }
+
    /* check, if the branchings are infeasible; in exact solving mode, we cannot trust the strong branching enough to
     * declare the sub nodes infeasible
     */
@@ -3738,15 +3863,13 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
    {
       if( !idempotent ) /*lint !e774*/
       {
-         SCIP_CALL( analyzeStrongbranch(scip, var, downinf, upinf, downconflict, upconflict) );
+         SCIP_CALL( analyzeStrongbranch(scip, var, NULL, NULL, downconflict, upconflict) );
       }
-      else
-      {
-         if( downinf != NULL )
-            *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
-         if( upinf != NULL )
-            *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
-      }
+
+      if( downinf != NULL )
+         *downinf = localdownvalid && SCIPsetIsGE(scip->set, localdown, scip->lp->cutoffbound);
+      if( upinf != NULL )
+         *upinf = localupvalid && SCIPsetIsGE(scip->set, localup, scip->lp->cutoffbound);
    }
 
    if( down != NULL )
@@ -7254,11 +7377,11 @@ SCIP_RETCODE calcCliquePartitionGreedy(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcalcCliquePartition(
-   SCIP*const            scip,               /**< SCIP data structure */
-   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int const             nvars,              /**< number of variables in the clique */
-   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
-   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int                   nvars,              /**< number of variables in the clique */
+   int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    )
 {
    SCIP_VAR** tmpvars;
@@ -7473,11 +7596,11 @@ SCIP_RETCODE SCIPcalcCliquePartition(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPcalcNegatedCliquePartition(
-   SCIP*const            scip,               /**< SCIP data structure */
-   SCIP_VAR**const       vars,               /**< binary variables in the clique from which at most one can be set to 1 */
-   int const             nvars,              /**< number of variables in the clique */
-   int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
-   int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
+   int                   nvars,              /**< number of variables in the clique */
+   int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    )
 {
    SCIP_VAR** negvars;
@@ -8798,6 +8921,38 @@ SCIP_RETCODE SCIPupdateVarPseudocost(
    return SCIP_OKAY;
 }
 
+/** updates the ancestor pseudo costs of the given variable and the global ancestor pseudo costs after a change of "solvaldelta" in the
+ *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value;
+ *  the update is ignored, if the objective value difference is infinite
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPupdateVarAncPseudocost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             solvaldelta,        /**< difference of variable's new LP value - old LP value */
+   SCIP_Real             objdelta,           /**< difference of new LP's objective value - old LP's objective value */
+   SCIP_Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPupdateVarAncPseudocost", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPsetIsInfinity(scip->set, 2*objdelta) ) /* differences  infinity - eps  should also be treated as infinity */
+   {
+      if( scip->set->branch_divingpscost || (!scip->lp->diving && !SCIPtreeProbing(scip->tree)) )
+      {
+         SCIP_CALL( SCIPvarUpdateAncPseudocost(var, scip->set, scip->stat, solvaldelta, objdelta, weight) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** gets the variable's pseudo cost value for the given change of the variable's LP value
  *
  *  @return the variable's pseudo cost value for the given change of the variable's LP value
@@ -8822,6 +8977,32 @@ SCIP_Real SCIPgetVarPseudocostVal(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarPseudocostVal", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPvarGetPseudocost(var, scip->stat, solvaldelta);
+}
+
+/** gets the variable's ancestral pseudo cost value for the given change of the variable's LP value
+ *
+ *  @return the variable's ancestral pseudo cost value for the given change of the variable's LP value
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetVarAncPseudocostVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             solvaldelta         /**< difference of variable's new LP value - old LP value */
+   )
+{
+   assert( var->scip == scip );
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarAncPseudocostVal", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPvarGetAncPseudocost(var, scip->stat, solvaldelta);
 }
 
 /** gets the variable's pseudo cost value for the given change of the variable's LP value,
@@ -8958,6 +9139,34 @@ SCIP_Real SCIPgetVarPseudocostCountCurrentRun(
    assert(var->scip == scip);
 
    return SCIPvarGetPseudocostCountCurrentRun(var, dir);
+}
+
+/** gets the variable's (possible fractional) number of ancestor pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ *
+ *  @return the variable's (possible fractional) number of ancestor pseudo cost updates for the given direction,
+ *  only using the pseudo cost information of the current run
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetVarAncPseudocostCountCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarAncPseudocostCountCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   assert(var->scip == scip);
+
+   return SCIPvarGetAncPseudocostCountCurrentRun(var, dir);
 }
 
 /** get pseudo cost variance of the variable, either for entire solve or only for current branch and bound run
@@ -9119,6 +9328,50 @@ SCIP_Real SCIPgetVarPseudocostScore(
    upsol = SCIPsetFeasFloor(scip->set, solval+1.0);
    pscostdown = SCIPvarGetPseudocost(var, scip->stat, downsol-solval);
    pscostup = SCIPvarGetPseudocost(var, scip->stat, upsol-solval);
+
+   return SCIPbranchGetScore(scip->set, var, pscostdown, pscostup);
+}
+
+/** gets the variable's discounted pseudo cost score value for the given LP solution value.
+ *
+ *  This combines both pscost and ancpscost fields.
+ *
+ *  @return the variable's discounted pseudo cost score value for the given LP solution value,
+ *  combining both pscost and ancpscost fields.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetVarDPseudocostScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             solval,             /**< variable's LP solution value */
+   SCIP_Real             discountfac         /**< discount factor for discounted pseudocost */
+   )
+{
+   SCIP_Real downsol;
+   SCIP_Real upsol;
+   SCIP_Real pscostdown;
+   SCIP_Real pscostup;
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarDPseudocostScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
+
+   downsol = SCIPsetFeasCeil(scip->set, solval-1.0);
+   upsol = SCIPsetFeasFloor(scip->set, solval+1.0);
+   pscostdown = SCIPvarGetPseudocost(var, scip->stat, downsol-solval)
+               + discountfac * SCIPvarGetAncPseudocost(var, scip->stat, downsol-solval);
+   pscostup = SCIPvarGetPseudocost(var, scip->stat, upsol-solval)
+            + discountfac * SCIPvarGetAncPseudocost(var, scip->stat, upsol-solval);
+   pscostdown /= (1 + discountfac);
+   pscostup /= (1 + discountfac);
 
    return SCIPbranchGetScore(scip->set, var, pscostdown, pscostup);
 }
@@ -9859,6 +10112,115 @@ SCIP_Real SCIPgetVarAvgInferenceCutoffScoreCurrentRun(
 
    return SCIPbranchGetScore(scip->set, var,
       inferdown + cutoffweight * avginfer * cutoffdown, inferup + cutoffweight * avginfer * cutoffup);
+}
+
+/** returns the variable's average GMI efficacy score value
+ *
+ *  @return the variable's average GMI efficacy score value
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetVarAvgGMIScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarAvgGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
+
+   return SCIPvarGetAvgGMIScore(var, scip->stat);
+}
+
+/** sets the variable's average GMI efficacy score value
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincVarGMISumScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             gmieff              /**< Efficacy of last GMI cut generated from when var was basic /frac */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPincVarGMISumScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
+
+   SCIP_CALL( SCIPvarIncGMIeffSum(var, scip->stat, gmieff) );
+
+   return SCIP_OKAY;
+}
+
+/** returns the variable's last GMI efficacy score value
+ *
+ *  @return the variable's last GMI efficacy score value
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetVarLastGMIScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetVarLastGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
+
+   return SCIPvarGetLastGMIScore(var, scip->stat);
+}
+
+/** sets the variable's last GMI efficacy score value
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPsetVarLastGMIScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             gmieff              /**< efficacy of GMI cut from tableau row when variable is basic / frac */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPsetVarLastGMIScore", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   assert( var->scip == scip );
+
+   SCIP_CALL( SCIPvarSetLastGMIScore(var, scip->stat, gmieff) );
+
+   return SCIP_OKAY;
 }
 
 /** outputs variable information to file stream via the message system

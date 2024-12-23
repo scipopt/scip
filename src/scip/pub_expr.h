@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -153,6 +153,13 @@ void SCIPexprhdlrSetEstimate(
    SCIP_DECL_EXPRESTIMATE((*estimate))       /**< estimator callback (can be NULL) */
 );
 
+/** set the symmetry information callback of an expression handler */
+SCIP_EXPORT
+void SCIPexprhdlrSetGetSymdata(
+   SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
+   SCIP_DECL_EXPRGETSYMDATA((*getsymdata))   /**< get symmetry data callback (can be NULL) */
+);
+
 /** gives the name of an expression handler */
 SCIP_EXPORT
 const char* SCIPexprhdlrGetName(
@@ -234,6 +241,12 @@ SCIP_Bool SCIPexprhdlrHasMonotonicity(
 /** returns whether expression handler implements the reverse propagation callback */
 SCIP_EXPORT
 SCIP_Bool SCIPexprhdlrHasReverseProp(
+   SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
+   );
+
+/** return whether expression handler implements the symmetry data callback */
+SCIP_EXPORT
+SCIP_Bool SCIPexprhdlrHasGetSymData(
    SCIP_EXPRHDLR*        exprhdlr            /**< expression handler */
    );
 
@@ -360,6 +373,7 @@ SCIP_Longint SCIPexprhdlrGetNSimplifications(
 #define SCIPexprhdlrSetSimplify(exprhdlr, simplify_)         (exprhdlr)->simplify = simplify_
 #define SCIPexprhdlrSetReverseProp(exprhdlr, reverseprop_)   (exprhdlr)->reverseprop = reverseprop_
 #define SCIPexprhdlrSetEstimate(exprhdlr, initestimates_, estimate_) do { (exprhdlr)->initestimates = initestimates_; (exprhdlr)->estimate = estimate_; } while (FALSE)
+#define SCIPexprhdlrSetGetSymdata(exprhdlr, getsymdata_)     (exprhdlr)->getsymdata = getsymdata_
 #define SCIPexprhdlrGetName(exprhdlr)              (exprhdlr)->name
 #define SCIPexprhdlrGetDescription(exprhdlr)       (exprhdlr)->desc
 #define SCIPexprhdlrGetPrecedence(exprhdlr)        (exprhdlr)->precedence

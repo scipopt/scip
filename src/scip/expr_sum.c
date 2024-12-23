@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -40,6 +40,7 @@
 #include "scip/expr_product.h"
 #include "scip/expr_exp.h"
 #include "scip/expr_pow.h"
+#include "symmetry/struct_symmetry.h"
 
 #define EXPRHDLR_NAME         "sum"
 #define EXPRHDLR_DESC         "summation with coefficients and a constant"
@@ -536,6 +537,38 @@ SCIP_DECL_EXPRSIMPLIFY(simplifySum)
    return SCIP_OKAY;
 }
 
+/** expression callback to get information for symmetry detection */
+static
+SCIP_DECL_EXPRGETSYMDATA(getSymDataSum)
+{  /*lint --e{715}*/
+   SCIP_EXPRDATA* exprdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   exprdata = SCIPexprGetData(expr);
+   assert(exprdata != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, symdata) );
+
+   (*symdata)->nconstants = 1;
+   (*symdata)->ncoefficients = exprdata->coefssize;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symdata)->constants, 1) );
+   (*symdata)->constants[0] = exprdata->constant;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symdata)->coefficients, exprdata->coefssize) );
+   for( i = 0; i < exprdata->coefssize; ++i )
+      (*symdata)->coefficients[i] = exprdata->coefficients[i];
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*symdata)->children, exprdata->coefssize) );
+   for( i = 0; i < exprdata->coefssize; ++i )
+      (*symdata)->children[i] = SCIPexprGetChildren(expr)[i];
+
+   return SCIP_OKAY;
+}
+
 /** compares two sum expressions
  *
  *  The order of two sum expressions is a lexicographical order on the terms.
@@ -687,7 +720,7 @@ SCIP_DECL_EXPRPRINT(printSum)
          /* print constant, if nonzero */
          if( exprdata->constant != 0.0 )
          {
-            SCIPinfoMessage(scip, file, "%g", exprdata->constant);
+            SCIPinfoMessage(scip, file, "%.15g", exprdata->constant);
          }
          break;
       }
@@ -715,7 +748,7 @@ SCIP_DECL_EXPRPRINT(printSum)
          else
          {
             /* force "+" sign on positive coefficient if not the first term */
-            SCIPinfoMessage(scip, file, (exprdata->constant != 0.0 || currentchild > 0) ? "%+g*" : "%g*", coef);
+            SCIPinfoMessage(scip, file, (exprdata->constant != 0.0 || currentchild > 0) ? "%+.15g*" : "%.15g*", coef);
          }
 
          break;
@@ -1072,6 +1105,7 @@ SCIP_RETCODE SCIPincludeExprhdlrSum(
    SCIPexprhdlrSetCurvature(exprhdlr, curvatureSum);
    SCIPexprhdlrSetMonotonicity(exprhdlr, monotonicitySum);
    SCIPexprhdlrSetIntegrality(exprhdlr, integralitySum);
+   SCIPexprhdlrSetGetSymdata(exprhdlr, getSymDataSum);
 
    return SCIP_OKAY;
 }

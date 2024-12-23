@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -38,6 +38,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /* #define DEBUG_INTERSECTIONCUT */
+/* #define DEBUG_MONOIDAL */
 /* #define INTERCUT_MOREDEBUG */
 /* #define INTERCUTS_VERBOSE */
 
@@ -50,8 +51,6 @@
 #else
 #define INTERLOG(x)
 #endif
-
-#include <string.h>
 
 #include "scip/cons_nonlinear.h"
 #include "scip/pub_nlhdlr.h"
@@ -78,6 +77,8 @@
 #define INTERCUTS_MINVIOL              1e-4
 #define DEFAULT_USEINTERCUTS           FALSE
 #define DEFAULT_USESTRENGTH            FALSE
+#define DEFAULT_USEMONOIDAL            TRUE
+#define DEFAULT_USEMINREP              TRUE
 #define DEFAULT_USEBOUNDS              FALSE
 #define BINSEARCH_MAXITERS             120
 #define DEFAULT_NCUTSROOT              20
@@ -125,6 +126,8 @@ struct SCIP_NlhdlrData
    /* parameter */
    SCIP_Bool             useintersectioncuts; /**< whether to use intersection cuts for quadratic constraints or not */
    SCIP_Bool             usestrengthening;   /**< whether the strengthening should be used */
+   SCIP_Bool             usemonoidal;        /**< whether monoidal strengthening should be used */
+   SCIP_Bool             useminrep;          /**< whether the minimal representation of the S-free set should be used (instead of the gauge) */
    SCIP_Bool             useboundsasrays;    /**< use bounds of variables in quadratic as rays for intersection cuts */
    int                   ncutslimit;         /**< limit for number of cuts generated consecutively */
    int                   ncutslimitroot;     /**< limit for number of cuts generated at root node */
@@ -134,9 +137,10 @@ struct SCIP_NlhdlrData
    int                   atwhichnodes;       /**< determines at which nodes cut is used (if it's -1, it's used only at the root node,
                                                   if it's n >= 0, it's used at every multiple of n) */
    int                   nstrengthlimit;     /**< limit for number of rays we do the strengthening for */
-   SCIP_Real             cutcoefsum;         /**< sum of average cutcoefs of a cut */
+   SCIP_Bool             sparsifycuts;       /**< should we try to sparisfy the intersection cuts? */
    SCIP_Bool             ignorebadrayrestriction; /**< should cut be generated even with bad numerics when restricting to ray? */
    SCIP_Bool             ignorehighre;       /**< should cut be added even when range / efficacy is large? */
+   SCIP_Bool             trackmore;          /**< for monoidal strengthening, should we track more statistics (more expensive) */
 
    /* statistics */
    int                   ncouldimprovedcoef; /**< number of times a coefficient could improve but didn't because of numerics */
@@ -146,8 +150,14 @@ struct SCIP_NlhdlrData
    int                   nphinonneg;         /**< number of times a cut was aborted because phi is nonnegative at 0 */
    int                   nstrengthenings;    /**< number of successful strengthenings */
    int                   nboundcuts;         /**< number of successful bound cuts */
+   int                   nmonoidal;          /**< number of successful monoidal strengthenings */
    SCIP_Real             ncalls;             /**< number of calls to separation */
    SCIP_Real             densitysum;         /**< sum of density of cuts */
+   SCIP_Real             cutcoefsum;         /**< sum of average cutcoefs of a cut */
+   SCIP_Real             monoidalimprovementsum; /**< sum of average improvement of a cut when using monoidal strengthening */
+   SCIP_Real             efficacysum;        /**< sum of efficacy of cuts */
+   SCIP_Real             currentavecutcoef;  /**< average cutcoef of current cut */
+   SCIP_Real             currentavemonoidalimprovement;/**< average improvement of current cut when using monoidal strengthening */
 };
 
 /* structure to store rays. note that for a given ray, the entries in raysidx are sorted. */
@@ -185,8 +195,8 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    assert(nlhdlrdata);
 
    /* print statistics */
-   SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s \n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
-         "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas", "NStrength", "AveCutcoef", "AveDensity", "AveBCutsFrac");
+   SCIPinfoMessage(scip, file, "Quadratic Nlhdlr   : %10s %10s %10s %10s %10s %10s %10s %10s %10s %10s %20s %10s %10s %10s \n", "GenCuts", "AddCuts", "CouldImpr", "NLargeRE",
+         "AbrtBadRay", "AbrtPosPhi", "AbrtNonBas", "NStrength", "NMonoidal", "AveCutcoef", "AveMonoidalImprov", "AveDensity", "AveEfficacy", "AveBCutsFrac");
    SCIPinfoMessage(scip, file, "  %-17s:", "Quadratic Nlhdlr");
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsgenerated);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->ncutsadded);
@@ -196,8 +206,11 @@ SCIP_DECL_TABLEOUTPUT(tableOutputQuadratic)
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nphinonneg);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nbadnonbasic);
    SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nstrengthenings);
-   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->nstrengthenings > 0 ? nlhdlrdata->cutcoefsum / nlhdlrdata->nstrengthenings : 0.0);
-   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->ncutsadded > 0 ? nlhdlrdata->densitysum / nlhdlrdata->ncutsadded : 0.0);
+   SCIPinfoMessage(scip, file, " %10d", nlhdlrdata->nmonoidal);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->ncutsgenerated > 0 ? nlhdlrdata->cutcoefsum / nlhdlrdata->ncutsgenerated : 0.0);
+   SCIPinfoMessage(scip, file, " %20g", (nlhdlrdata->nmonoidal > 0 && nlhdlrdata->trackmore) ? nlhdlrdata->monoidalimprovementsum / nlhdlrdata->nmonoidal : -1.0);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->ncutsgenerated > 0 ? nlhdlrdata->densitysum / nlhdlrdata->ncutsgenerated : 0.0);
+   SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->ncutsgenerated > 0 ? nlhdlrdata->efficacysum / nlhdlrdata->ncutsgenerated : 0.0);
    SCIPinfoMessage(scip, file, " %10g", nlhdlrdata->ncalls > 0 ? nlhdlrdata->nboundcuts / nlhdlrdata->ncalls : 0.0);
    SCIPinfoMessage(scip, file, "\n");
 
@@ -1105,6 +1118,7 @@ SCIP_RETCODE intercutsComputeCommonQuantities(
          SCIPexprGetQuadraticQuadTerm(qexpr, j, &expr, &lincoef, NULL, NULL, NULL, NULL);
 
          vdotb += (sidefactor * lincoef) * eigenvectors[offset + j];
+
 #ifdef INTERCUT_MOREDEBUG
          printf("vdotb: offset %d, eigenvector %d = %g, lincoef quad %g\n", offset, j,
                eigenvectors[offset + j], lincoef);
@@ -1132,6 +1146,9 @@ SCIP_RETCODE intercutsComputeCommonQuantities(
    /* finish kappa computation */
    *kappa *= -0.25;
    *kappa += constant;
+
+   if( SCIPisZero(scip, *kappa) )
+      *kappa = 0.0;
 
    /* finish w(zlp) computation: linear part (including auxvar, if applicable) */
    for( i = 0; i < nlinexprs; ++i )
@@ -1239,10 +1256,202 @@ SCIP_Real computeWRayLinear(
    return retval;
 }
 
+/** computes the dot product of v_i and the current ray as well as of v_i and the apex where v_i
+ * is the i-th eigenvalue
+ */
+static
+void computeVApexAndVRay(
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
+   SCIP_Real*            apex,               /**< array containing the apex of the S-free set in the original space */
+   SCIP_Real*            raycoefs,           /**< coefficients of ray */
+   int*                  rayidx,             /**< index of consvar the ray coef is associated to */
+   int                   raynnonz,           /**< length of raycoefs and rayidx */
+   SCIP_Real*            vapex,              /**< array to store \f$v_i^T apex\f$ */
+   SCIP_Real*            vray                /**< array to store \f$v_i^T ray\f$ */
+   )
+{
+   SCIP_EXPR* qexpr;
+   int nquadexprs;
+   SCIP_Real* eigenvectors;
+   SCIP_Real* eigenvalues;
+   int i;
+
+   qexpr = nlhdlrexprdata->qexpr;
+   SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
+
+   for( i = 0; i < nquadexprs; ++i )
+   {
+      SCIP_Real vdotapex;
+      SCIP_Real vdotray;
+      int offset;
+      int j;
+      int k;
+
+      offset = i * nquadexprs;
+
+      /* compute v_i^T apex and v_i^T ray */
+      vdotapex = 0.0;
+      vdotray = 0.0;
+      k = 0;
+      for( j = 0; j < nquadexprs; ++j )
+      {
+         SCIP_Real rayentry;
+
+         /* get entry of ray -> check if current var index corresponds to a non-zero entry in ray */
+         if( k < raynnonz && j == rayidx[k] )
+         {
+            rayentry = raycoefs[k];
+            ++k;
+         }
+         else
+            rayentry = 0.0;
+
+         vdotray += rayentry * eigenvectors[offset + j];
+         vdotapex += apex[j] * eigenvectors[offset + j];
+      }
+
+      vray[i] = vdotray;
+      vapex[i] = vdotapex;
+   }
+}
+
 /** calculate coefficients of restriction of the function to given ray.
  *
  * The restriction of the function representing the maximal S-free set to zlp + t * ray has the form
- * SQRT(A t^2 + B t + C) - (D t + E) for cases 1, 2, and 3.
+ * sqrt(A t^2 + B t + C) - (D t + E) for cases 1, 2, and 3.
+ * For case 4 it is a piecewise defined function and each piece is of the aforementioned form.
+ *
+ * This function computes the coefficients A, B, C, D, E for the given ray.
+ * In case 4, it computes the coefficients for both pieces, in addition to coefficients needed to evaluate the condition
+ * in the piecewise definition of the function.
+ *
+ * The parameter iscase4 tells the function if it is case 4 or not.
+ */
+static
+SCIP_RETCODE computeRestrictionToLine(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
+   SCIP_Real*            raycoefs,           /**< coefficients of ray */
+   int*                  rayidx,             /**< index of consvar the ray coef is associated to */
+   int                   raynnonz,           /**< length of raycoefs and rayidx */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real             kappa,              /**< value of kappa */
+   SCIP_Real*            apex,               /**< apex of C */
+   SCIP_Real*            coefs2,             /**< buffer to store A, B, C, D, and E of case 2 */
+   SCIP_Bool*            success             /**< did we successfully compute the coefficients? */
+   )
+{
+   SCIP_EXPR* qexpr;
+   int nquadexprs;
+   SCIP_Real* eigenvectors;
+   SCIP_Real* eigenvalues;
+   SCIP_Real* a;
+   SCIP_Real* b;
+   SCIP_Real* c;
+   SCIP_Real* d;
+   SCIP_Real* e;
+   SCIP_Real* vray;
+   SCIP_Real* vapex;
+   SCIP_Real norm;
+   int i;
+
+   *success = TRUE;
+
+   qexpr = nlhdlrexprdata->qexpr;
+   SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
+
+#ifdef  DEBUG_INTERSECTIONCUT
+   SCIPinfoMessage(scip, NULL, "\n############################################\n");
+   SCIPinfoMessage(scip, NULL, "Restricting to line:\n");
+#endif
+
+   assert(coefs2 != NULL);
+
+   /* set all coefficients to zero */
+   BMSclearMemoryArray(coefs2, 5);
+
+   /* compute v_i^T apex in vapex[i] and v_i^T ray in vray[i] */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vapex, nquadexprs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vray, nquadexprs) );
+   computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
+
+   a = coefs2;
+   b = coefs2 + 1;
+   c = coefs2 + 2;
+   d = coefs2 + 3;
+   e = coefs2 + 4;
+
+   norm = 0.0;
+   for( i = 0; i < nquadexprs; ++i )
+   {
+      SCIP_Real dot;
+      SCIP_Real eigval;
+
+      eigval = sidefactor * eigenvalues[i];
+
+      if( SCIPisZero(scip, eigval) )
+         continue;
+
+      dot = vzlp[i] + vb[i] / (2.0 * eigval);
+
+      if( eigval > 0.0 )
+      {
+         *d += eigval * dot * (vzlp[i] - vapex[i]);
+         *e += eigval * dot * (vray[i] + vapex[i] + vb[i] / (2.0 * eigval));
+         norm += eigval * SQR(dot);
+      }
+      else
+      {
+         *a -= eigval * SQR(vzlp[i] - vapex[i]);
+         *b -= eigval * (vzlp[i] - vapex[i]) * (vray[i] + vapex[i] + vb[i] / (2.0 * eigval));
+         *c -= eigval * SQR(vray[i] + vapex[i] + vb[i] / (2.0 * eigval));
+      }
+   }
+
+   norm = sqrt(norm / kappa + 1.0);
+   *a /= kappa;
+   *b /= kappa;
+   *c /= kappa;
+   *d /= (kappa * norm);
+   *e /= (kappa * norm);
+   *e += 1.0 / norm;
+
+   /* In theory, the function at 0 must be negative. Because of bad numerics this might not always hold, so we abort
+    * the generation of the cut in this case.
+    */
+   if( sqrt(*c) - *e >= 0 )
+   {
+      /* check if it's really a numerical problem */
+      assert(sqrt(*c) > 10e+15 || *e > 10e+15 || sqrt(*c) - *e < 10e+9);
+
+      INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
+      *success = FALSE;
+      goto TERMINATE;
+   }
+
+#ifdef  DEBUG_INTERSECTIONCUT
+   SCIPinfoMessage(scip, NULL, "Restriction yields case 2: a,b,c,d,e %g %g %g %g %g\n", coefs1234a[0], coefs1234a[1], coefs1234a[2],
+         coefs1234a[3], coefs1234a[4]);
+#endif
+
+   /* some sanity check applicable to all cases */
+   assert(*a >= 0); /* the function inside the root is convex */
+   assert(*c >= 0); /* radicand at zero */
+
+TERMINATE:
+   /* free memory */
+   SCIPfreeBufferArray(scip, &vray);
+   SCIPfreeBufferArray(scip, &vapex);
+
+   return SCIP_OKAY;
+}
+
+/** calculate coefficients of restriction of the function to given ray.
+ *
+ * The restriction of the function representing the maximal S-free set to zlp + t * ray has the form
+ * sqrt(A t^2 + B t + C) - (D t + E) for cases 1, 2, and 3.
  * For case 4 it is a piecewise defined function and each piece is of the aforementioned form.
  *
  * This function computes the coefficients A, B, C, D, E for the given ray.
@@ -1301,15 +1510,15 @@ SCIP_RETCODE computeRestrictionToRay(
    assert(coefs1234a != NULL);
 
    /* set all coefficients to zero */
-   memset(coefs1234a, 0, 5 * sizeof(SCIP_Real));
+   BMSclearMemoryArray(coefs1234a, 5);
    if( iscase4 )
    {
       assert(coefs4b != NULL);
       assert(coefscondition != NULL);
       assert(wcoefs != NULL);
 
-      memset(coefs4b, 0, 5 * sizeof(SCIP_Real));
-      memset(coefscondition, 0, 3 * sizeof(SCIP_Real));
+      BMSclearMemoryArray(coefs4b, 5);
+      BMSclearMemoryArray(coefscondition, 3);
    }
 
    a = coefs1234a;
@@ -1375,7 +1584,7 @@ SCIP_RETCODE computeRestrictionToRay(
 
       /* finish computation of D and E */
       assert(*e > 0);
-      *e = SQRT( *e );
+      *e = sqrt(*e);
       *d /= *e;
 
       /* some sanity checks only applicable to these cases (more at the end) */
@@ -1384,10 +1593,10 @@ SCIP_RETCODE computeRestrictionToRay(
       /* In theory, the function at 0 must be negative. Because of bad numerics this might not always hold, so we abort
        * the generation of the cut in this case.
        */
-      if( SQRT( *c ) - *e >= 0 )
+      if( sqrt(*c) - *e >= 0 )
       {
          /* check if it's really a numerical problem */
-         assert(SQRT( *c ) > 10e+15 || *e > 10e+15 || SQRT( *c ) - *e < 10e+9);
+         assert(sqrt(*c) > 10e+15 || *e > 10e+15 || sqrt(*c) - *e < 10e+9);
 
          INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
          *success = FALSE;
@@ -1400,7 +1609,7 @@ SCIP_RETCODE computeRestrictionToRay(
       SCIP_Real xextra;
       SCIP_Real yextra;
 
-      norm = SQRT( 1 + SQR( kappa ) );
+      norm = sqrt(1.0 + SQR( kappa ));
       xextra = wzlp + kappa + norm;
       yextra = wzlp + kappa - norm;
 
@@ -1427,8 +1636,8 @@ SCIP_RETCODE computeRestrictionToRay(
          coefs4b[2] = (*c);
 
          /* finish D and E */
-         coefs4b[3] = *d / SQRT( *e );
-         coefs4b[4] = SQRT( *e ) + (xextra / (2.0 * SQRT( *e )));
+         coefs4b[3] = *d / sqrt(*e);
+         coefs4b[4] = sqrt(*e) + (xextra / (2.0 * sqrt(*e)));
       }
 
       /*
@@ -1441,7 +1650,7 @@ SCIP_RETCODE computeRestrictionToRay(
 
       /* finish D and E */
       *e +=  SQR( xextra ) / (4.0 * norm);
-      *e = SQRT( *e );
+      *e = sqrt(*e);
 
       *d += xextra * (wray) / (4.0 * norm);
       *d /= *e;
@@ -1487,7 +1696,7 @@ SCIP_RETCODE computeRestrictionToRay(
    return SCIP_OKAY;
 }
 
-/** returns phi(zlp + t * ray) = SQRT(A t^2 + B t + C) - (D t + E) */
+/** returns phi(zlp + t * ray) = sqrt(A t^2 + B t + C) - (D t + E) */
 static
 SCIP_Real evalPhiAtRay(
    SCIP_Real             t,                  /**< argument of phi restricted to ray */
@@ -1539,7 +1748,7 @@ SCIP_Real evalPhiAtRay(
 
    return  QUAD_TO_DBL(tmp);
 #else
-   return SQRT( a * t * t + b * t + c ) - ( d * t + e );
+   return sqrt(a * t * t + b * t + c) - ( d * t + e );
 #endif
 }
 
@@ -1560,7 +1769,7 @@ SCIP_Real isCase4a(
                                               *   \f$num(\hat x_{r+1}(zlp)) / E\f$; \f$w(ray)\f$; \f$num(\hat y_{s+1}(zlp))\f$ */
    )
 {
-   return (coefscondition[0] * SQRT( coefs4a[0] * SQR( tsol ) + coefs4a[1] * tsol + coefs4a[2] ) + coefscondition[1] *
+   return (coefscondition[0] * sqrt(coefs4a[0] * SQR( tsol ) + coefs4a[1] * tsol + coefs4a[2]) + coefscondition[1] *
          tsol + coefscondition[2]) <= 0.0;
 }
 
@@ -1625,10 +1834,10 @@ SCIP_Real computeRoot(
    SCIP_Real d = coefs[3];
    SCIP_Real e = coefs[4];
 
-   /* there is an intersection point if and only if SQRT(A) > D: here we are beliving in math, this might cause
+   /* there is an intersection point if and only if sqrt(A) > D: here we are beliving in math, this might cause
     * numerical issues
     */
-   if( SQRT( a ) <= d )
+   if( sqrt(a) <= d )
    {
       sol = SCIPinfinity(scip);
       return sol;
@@ -1793,7 +2002,7 @@ SCIP_Bool areCoefsNumericsGood(
    /* check at phi at 0 is negative (note; this could be checked before restricting to the ray) also, if this
     * succeeds for one ray, it should suceed for every ray
     */
-   if( SQRT( coefs1234a[2] ) - coefs1234a[4] >= 0.0 )
+   if( sqrt(coefs1234a[2]) - coefs1234a[4] >= 0.0 )
    {
       INTERLOG(printf("Bad numerics: phi(0) >= 0\n"); )
       nlhdlrdata->nphinonneg++;
@@ -1827,6 +2036,7 @@ SCIP_Bool areCoefsNumericsGood(
       {
          max = 0.0;
          min = SCIPinfinity(scip);
+         assert(coefs4b != NULL);
          for( j = 0; j < 3; ++j )
          {
             SCIP_Real absval;
@@ -1848,6 +2058,394 @@ SCIP_Bool areCoefsNumericsGood(
    }
 
    return TRUE;
+}
+
+
+/** computes the coefficients a, b, c defining the quadratic function defining set S restricted to the line
+ *  theta * apex.
+ *
+ *  The solution to the monoidal strengthening problem is then given by the smallest root of the function
+ *  a * theta^2 + b * theta + c
+ */
+static
+SCIP_RETCODE computeMonoidalQuadCoefs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vapex,              /**< array containing \f$v_i^T apex\f$ */
+   SCIP_Real*            vray,               /**< array containing \f$v_i^T ray\f$ */
+   SCIP_Real             kappa,              /**< value of kappa */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
+   SCIP_Real*            a,                  /**< pointer to store quadratic coefficient */
+   SCIP_Real*            b,                  /**< pointer to store linear coefficient */
+   SCIP_Real*            c                   /**< pointer to store constant */
+   )
+{
+   SCIP_EXPR* qexpr;
+   int nquadexprs;
+   SCIP_Real* eigenvectors;
+   SCIP_Real* eigenvalues;
+   int i;
+
+   qexpr = nlhdlrexprdata->qexpr;
+   SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
+
+   *a = 0.0;
+   *b = 0.0;
+   *c = 0.0;
+   for( i = 0; i < nquadexprs; ++i )
+   {
+      SCIP_Real dot;
+
+      if( SCIPisZero(scip, sidefactor * eigenvalues[i]) )
+         continue;
+
+      dot = vray[i] + vapex[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i]);
+
+      *a += sidefactor * eigenvalues[i] * SQR(vzlp[i] - vapex[i]);
+      *b += sidefactor * eigenvalues[i] * (vzlp[i] - vapex[i]) * dot;
+      *c += sidefactor * eigenvalues[i] * SQR(dot);
+   }
+
+   *b *= 2.0;
+   *c += kappa;
+
+   return SCIP_OKAY;
+}
+
+/** check if ray was in strip by checking if the point in the monoid corresponding to the cutcoef we just found
+ * is "on the wrong side" of the hyperplane -(a - lambda^Ta lambda)^T x
+ */
+static
+SCIP_Bool isRayInStrip(
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vapex,              /**< array containing \f$v_i^T apex\f$ */
+   SCIP_Real*            vray,               /**< array containing \f$v_i^T ray\f$ */
+   SCIP_Real             kappa,              /**< value of kappa */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
+   SCIP_Real             cutcoef             /**< optimal solution of the monoidal quadratic */
+   )
+{
+   SCIP_EXPR* qexpr;
+   int nquadexprs;
+   SCIP_Real* eigenvectors;
+   SCIP_Real* eigenvalues;
+   SCIP_Real num;
+   SCIP_Real denom;
+   int i;
+
+   qexpr = nlhdlrexprdata->qexpr;
+   SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
+
+   num = 0.0;
+   denom = 0.0;
+   for( i = 0; i < nquadexprs; ++i )
+   {
+      SCIP_Real dot;
+
+      if( sidefactor * eigenvalues[i] <= 0.0 )
+         continue;
+
+      dot = vzlp[i] + vb[i] / (2.0 * sidefactor * eigenvalues[i]);
+
+      num += sidefactor * eigenvalues[i] * dot * (cutcoef * (vzlp[i] - vapex[i]) + vray[i] + vapex[i]);
+      denom += sidefactor * eigenvalues[i] * SQR(dot);
+   }
+
+   num /= kappa;
+   num += 1.0;
+   denom /= kappa;
+   denom += 1.0;
+
+   assert(denom > 0);
+
+   return num / denom < 1;
+}
+
+/** computes the smallest root of the quadratic function a*x^2 + b*x + c with a > 0
+ *  and b^2 - 4ac >= 0. We use binary search between -inf and minimum at -b/2a.
+ */
+static
+SCIP_Real findMonoidalQuadRoot(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             a,                  /**< quadratic coefficient */
+   SCIP_Real             b,                  /**< linear coefficient */
+   SCIP_Real             c                   /**< constant */
+   )
+{
+   SCIP_Real sol;
+   SCIP_INTERVAL bounds;
+   SCIP_INTERVAL result;
+
+   assert(SQR(b) - 4 * a * c >= 0.0);
+
+   if( SCIPisZero(scip, a) )
+   {
+      assert(b != 0.0);
+      sol = - c / b;
+   }
+   else
+   {
+      SCIPintervalSetBounds(&bounds, - b / (2.0 * a), SCIPinfinity(scip));
+
+      /* find all positive x such that a x^2 + b x >= -c and x in bounds.*/
+      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(SCIP_INTERVAL_INFINITY, &result, a, b, -c, bounds);
+      sol = SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, result) ? SCIPinfinity(scip) : SCIPintervalGetInf(result);
+
+      /* if we didn't find any positive solutions, negate quadratic and find negative solutions */
+      if( SCIPisInfinity(scip, sol) )
+      {
+         SCIPintervalSetBounds(&bounds, b / (2.0 * a), SCIPinfinity(scip));
+
+         /* find all positive x such that a x^2 - b x >= -c and x in bounds.*/
+         SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(SCIP_INTERVAL_INFINITY, &result, a, -b, -c, bounds);
+         sol = SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, result) ? SCIPinfinity(scip) : -SCIPintervalGetInf(result);
+      }
+   }
+
+   /* check if that solution is close enough or if we need to improve it more with binary search */
+   if( a * SQR(sol) + sol * b + c > 1e-10 )
+   {
+      SCIP_Real val;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real lastposval;
+      SCIP_Real lastpossol;
+      int niter;
+
+      lb = - b / (2.0 * a);
+      ub = sol;
+      lastposval = SCIPinfinity(scip);
+      lastpossol = SCIPinfinity(scip);
+      val = SCIPinfinity(scip);
+      niter = 0;
+      while( niter < BINSEARCH_MAXITERS && ABS(val) > 1e-10 )
+      {
+         sol = (ub + lb) / 2.0;
+         val = a * SQR(sol) + b * sol + c;
+
+         if( val < 0.0 )
+            lb = sol;
+         else
+            ub = sol;
+
+         /* if we are close enough, return with (feasible) solution */
+         if( val > 0.0 && val < 1e-6 )
+            break;
+
+         if( val > 0.0 && lastposval > val )
+         {
+            lastposval = val;
+            lastpossol = sol;
+         }
+
+         ++niter;
+      }
+      if( val < 0.0 && ! SCIPisZero(scip, val) )
+      {
+         sol = lastpossol;
+         val = lastposval;
+      }
+
+      assert( val > 0.0 || SCIPisZero(scip, val) );
+   }
+
+   return sol;
+}
+
+/** computes the apex of the S-free set (if it exists) */
+static
+void computeApex(
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real             kappa,              /**< value of kappa */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
+   SCIP_Real*            apex,               /**< array to store apex */
+   SCIP_Bool*            success             /**< TRUE if computation of apex was successful */
+   )
+{
+   SCIP_EXPR* qexpr;
+   int nquadexprs;
+   SCIP_Real* eigenvectors;
+   SCIP_Real* eigenvalues;
+   int i;
+
+   qexpr = nlhdlrexprdata->qexpr;
+   SCIPexprGetQuadraticData(qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, &eigenvalues, &eigenvectors);
+
+   *success = TRUE;
+
+   for( i = 0; i < nquadexprs; ++i )
+   {
+      SCIP_Real entry;
+      SCIP_Real denom;
+      SCIP_Real num;
+      int j;
+
+      entry = 0.0;
+      num = 0.0;
+      denom = 0.0;
+      for( j = 0; j < nquadexprs; ++j )
+      {
+         if( sidefactor * eigenvalues[j] == 0.0 )
+            continue;
+
+         entry -= eigenvectors[j * nquadexprs + i] * vb[j] / (2.0 * sidefactor * eigenvalues[j]);
+
+         if( sidefactor * eigenvalues[j] > 0.0 )
+         {
+            SCIP_Real dot;
+
+            dot = vzlp[j] + vb[j] / (2.0 * sidefactor * eigenvalues[j]);
+
+            num += eigenvectors[j * nquadexprs + i] * dot;
+            denom += sidefactor * eigenvalues[j] * SQR(dot);
+         }
+      }
+
+      /* if denom = 0, the S-free set is just the strip, so we don't have an apex -> monoidal not possible */
+      if( denom == 0.0 )
+      {
+         *success = FALSE;
+         return;
+      }
+      assert(denom > 0.0);
+
+      num *= -kappa;
+      entry += num / denom;
+
+      apex[i] = entry;
+   }
+}
+
+/** for a given ray, computes the cut coefficient using monoidal strengthening (if possible) */
+static
+SCIP_RETCODE computeMonoidalStrengthCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLREXPRDATA*  nlhdlrexprdata,     /**< nlhdlr expression data */
+   int                   lppos,              /**< lp pos of current ray */
+   SCIP_Real*            raycoefs,           /**< coefficients of ray */
+   int*                  rayidx,             /**< index of consvar the ray coef is associated to */
+   int                   raynnonz,           /**< length of raycoefs and rayidx */
+   SCIP_Real*            vb,                 /**< array containing \f$v_i^T b\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            vzlp,               /**< array containing \f$v_i^T zlp_q\f$ for \f$i \in I_+ \cup I_-\f$ */
+   SCIP_Real*            wcoefs,             /**< coefficients of w for the qud vars or NULL if w is 0 */
+   SCIP_Real             kappa,              /**< value of kappa */
+   SCIP_Real*            apex,               /**< array containing the apex of the S-free set in the original space */
+   SCIP_Real             sidefactor,         /**< 1.0 if the violated constraint is q &le; rhs, -1.0 otherwise */
+   SCIP_Real*            cutcoef,            /**< pointer to store cut coef */
+   SCIP_Bool*            success             /**< TRUE if monoidal strengthening could be applied */
+   )
+{
+   SCIP_COL** cols;
+   SCIP_ROW** rows;
+
+   *success = FALSE;
+
+   /* check if we are in the correct case (case 2) */
+   assert(wcoefs == NULL && kappa > 0.0);
+
+   cols = SCIPgetLPCols(scip);
+   rows = SCIPgetLPRows(scip);
+
+   /* if var corresponding to current ray is integer, we can do monoidal */
+   if( (lppos >= 0 && SCIPvarGetType(SCIPcolGetVar(cols[lppos])) != SCIP_VARTYPE_CONTINUOUS) ||
+       (lppos < 0 && SCIProwIsIntegral(rows[- lppos - 1])) )
+   {
+      SCIP_Real* vapex;
+      SCIP_Real* vray;
+      SCIP_Real a;
+      SCIP_Real b;
+      SCIP_Real c;
+      int nquadexprs;
+
+      SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
+
+      /* compute v_i^T apex in vapex[i] and v_i^T ray in vray[i] */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vapex, nquadexprs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vray, nquadexprs) );
+      computeVApexAndVRay(nlhdlrexprdata, apex, raycoefs, rayidx, raynnonz, vapex, vray);
+
+      /* compute coefficients of the quadratic monoidal problem function */
+      SCIP_CALL( computeMonoidalQuadCoefs(scip, nlhdlrexprdata, vb, vzlp, vapex, vray, kappa,
+         sidefactor, &a, &b, &c) );
+
+      /* check if ray is in strip */
+      if( SQR(b) - (4 * a * c) >= 0.0 )
+      {
+         /* find smallest root of quadratic function a * x^2 + b * x + c -> this is the cut coef */
+         *cutcoef = findMonoidalQuadRoot(scip, a, b, c);
+
+         /* if the cutcoef is negative, we have to set it to 0 */
+         *cutcoef = MAX(*cutcoef, 0.0);
+
+         /* check if ray is in strip. If not, monoidal is possible and cutcoef is the strengthened cut coef */
+         if( ! isRayInStrip(nlhdlrexprdata, vb, vzlp, vapex, vray, kappa, sidefactor, *cutcoef) )
+         {
+            *success = TRUE;
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &vray);
+      SCIPfreeBufferArray(scip, &vapex);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** sparsify intersection cut by replacing non-basic variables with their bounds if their coefficient allows it */
+static
+void sparsifyIntercut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep             /**< rowprep for the generated cut */
+   )
+{
+   int i;
+   int nvars;
+
+   /* get number of variables in rowprep */
+   nvars = SCIProwprepGetNVars(rowprep);
+
+   /* go though all the variables in rowprep */
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_VAR* var;
+      SCIP_Real coef;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real solval;
+
+      /* get variable and its coefficient */
+      var = SCIProwprepGetVars(rowprep)[i];
+      coef = SCIProwprepGetCoefs(rowprep)[i];
+
+      /* get bounds of variable */
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
+
+      /* get LP solution value of variable */
+      solval = SCIPgetSolVal(scip, NULL, var);
+
+      /* if the variable is at its lower or upper bound and the coefficient has the correct sign, we can
+       * set the cutcoef to 0
+       */
+      if( SCIPisZero(scip, ub - solval) && coef > 0.0 )
+      {
+         SCIProwprepAddSide(rowprep, -coef * ub);
+         SCIProwprepSetCoef(rowprep, i, 0.0);
+      }
+      else if( SCIPisZero(scip, solval - lb) && coef < 0.0 )
+      {
+         SCIProwprepAddSide(rowprep, -coef * lb);
+         SCIProwprepSetCoef(rowprep, i, 0.0);
+      }
+   }
+
+   return;
 }
 
 /** computes intersection cut cuts off sol (because solution sol violates the quadratic constraint cons)
@@ -1875,10 +2473,49 @@ SCIP_RETCODE computeIntercut(
 {
    SCIP_COL** cols;
    SCIP_ROW** rows;
+   SCIP_Real* apex;
+   SCIP_Real avecutcoefsum;
+   SCIP_Real avemonoidalimprovsum;
+   int monoidalcounter;
+   int counter;
    int i;
+   SCIP_Bool usemonoidal;
+   SCIP_Bool monoidalwasused;
+   SCIP_Bool case2;
 
    cols = SCIPgetLPCols(scip);
    rows = SCIPgetLPRows(scip);
+
+   case2 = wcoefs == NULL && kappa > 0.0;
+   monoidalwasused = FALSE;
+
+   counter = 0;
+   monoidalcounter = 0;
+   avecutcoefsum = 0.0;
+   avemonoidalimprovsum = 0.0;
+
+   /* if we use monoidal and we are in the right case for it, compute the apex of the S-free set */
+   if( case2 )
+   {
+      int nquadexprs;
+
+      SCIPexprGetQuadraticData(nlhdlrexprdata->qexpr, NULL, NULL, NULL, NULL, &nquadexprs, NULL, NULL, NULL);
+
+      /* allocate memory for apex */
+      SCIP_CALL( SCIPallocBufferArray(scip, &apex, nquadexprs) );
+
+      computeApex(nlhdlrexprdata, vb, vzlp, kappa, sidefactor, apex, success);
+
+      /* if computation of apex was not successful, don't apply monoidal strengthening */
+      if( ! *success )
+         case2 = FALSE;
+   }
+   else
+   {
+      apex = NULL;
+   }
+
+   usemonoidal = nlhdlrdata->usemonoidal && case2;
 
    /* for every ray: compute cut coefficient and add var associated to ray into cut */
    for( i = 0; i < rays->nrays; ++i )
@@ -1889,34 +2526,99 @@ SCIP_RETCODE computeIntercut(
       SCIP_Real coefs1234a[5];
       SCIP_Real coefs4b[5];
       SCIP_Real coefscondition[3];
+      SCIP_Bool monoidalsuccess;
 
-      /* restrict phi to ray */
-      SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4,
-               &rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
-               rays->raysbegin[i], vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition, success) );
+      monoidalsuccess = FALSE;
+      cutcoef = SCIPinfinity(scip);
 
-      if( ! *success )
-         return SCIP_OKAY;
+      /* if we (can) use monoidal strengthening, compute the cut coefficient with that */
+      if( usemonoidal )
+      {
+         SCIP_CALL( computeMonoidalStrengthCoef(scip, nlhdlrexprdata, rays->lpposray[i], &rays->rays[rays->raysbegin[i]],
+               &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] - rays->raysbegin[i], vb, vzlp, wcoefs, kappa,
+               apex, sidefactor, &cutcoef, &monoidalsuccess) );
+      }
 
-      /* if restriction to ray is numerically nasty -> abort cut separation */
-      *success = areCoefsNumericsGood(scip, nlhdlrdata, coefs1234a, coefs4b, iscase4);
+      /* track whether monoidal was successful at least once if it is used */
+      if( usemonoidal && ! monoidalwasused && monoidalsuccess )
+         monoidalwasused = TRUE;
 
-      if( ! *success )
-         return SCIP_OKAY;
+      /* if we don't use monoidal or if monoidal couldn't be applied, use gauge to compute coef  */
+      if( ! usemonoidal || ! monoidalsuccess || nlhdlrdata->trackmore )
+      {
+         /* restrict phi to ray */
+         SCIP_CALL( computeRestrictionToRay(scip, nlhdlrexprdata, sidefactor, iscase4,
+                  &rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
+                  rays->raysbegin[i], vb, vzlp, wcoefs, wzlp, kappa, coefs1234a, coefs4b, coefscondition, success) );
 
-      /* compute intersection point */
-      interpoint = computeIntersectionPoint(scip, nlhdlrdata, iscase4, coefs1234a, coefs4b, coefscondition);
+         if( ! *success )
+            goto TERMINATE;
+
+         /* if restriction to ray is numerically nasty -> abort cut separation */
+         *success = areCoefsNumericsGood(scip, nlhdlrdata, coefs1234a, coefs4b, iscase4);
+
+         if( ! *success )
+            goto TERMINATE;
+
+         /* compute intersection point */
+         interpoint = computeIntersectionPoint(scip, nlhdlrdata, iscase4, coefs1234a, coefs4b, coefscondition);
 
 #ifdef  DEBUG_INTERSECTIONCUT
-      SCIPinfoMessage(scip, NULL, "interpoint for ray %d is %g\n", i, interpoint);
+         SCIPinfoMessage(scip, NULL, "interpoint for ray %d is %g\n", i, interpoint);
 #endif
 
-      /* store intersection point */
-      if( interpoints != NULL )
-         interpoints[i] = interpoint;
+         /* store intersection point */
+         if( interpoints != NULL )
+            interpoints[i] = interpoint;
 
-      /* compute cut coef */
-      cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
+         /* if we are only computing the "normal" cut coefficient to track statistics (and we have been successful
+          * with monoidal strengthening), don't overwrite cutcoef variable, but just track statistics */
+         if( nlhdlrdata->trackmore && monoidalsuccess )
+         {
+            SCIP_Real normalcutcoef;
+
+            normalcutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
+
+            if( cutcoef >= 0 )
+               avemonoidalimprovsum += cutcoef / normalcutcoef;
+            ++monoidalcounter;
+         }
+         else
+         {
+            /* compute cut coef */
+            cutcoef = SCIPisInfinity(scip, interpoint) ? 0.0 : 1.0 / interpoint;
+         }
+
+         if( cutcoef == 0.0 && case2 && nlhdlrdata->useminrep )
+         {
+            /* restrict phi to the line defined by ray + apex + t*(f - apex) */
+            SCIP_CALL( computeRestrictionToLine(scip, nlhdlrexprdata, sidefactor,
+               &rays->rays[rays->raysbegin[i]], &rays->raysidx[rays->raysbegin[i]], rays->raysbegin[i + 1] -
+               rays->raysbegin[i], vb, vzlp, kappa, apex, coefs1234a, success) );
+
+            if( ! *success )
+               goto TERMINATE;
+
+            /* if restriction to ray is numerically nasty -> abort cut separation */
+            *success = areCoefsNumericsGood(scip, nlhdlrdata, coefs1234a, NULL, FALSE);
+
+            if( ! *success )
+               goto TERMINATE;
+
+            coefs1234a[1] *= -1.0;
+            coefs1234a[3] *= -1.0;
+
+            /* compute intersection point */
+            cutcoef = - computeRoot(scip, coefs1234a);
+
+            assert(cutcoef <= 0.0);
+         }
+      }
+
+      /* keep track of average cut coefficient */
+      ++counter;
+      avecutcoefsum += cutcoef;
+      assert( ! SCIPisInfinity(scip, cutcoef) );
 
       /* add var to cut: if variable is nonbasic at upper we have to flip sign of cutcoef */
       lppos = rays->lpposray[i];
@@ -1927,14 +2629,16 @@ SCIP_RETCODE computeIntercut(
          assert(SCIProwGetBasisStatus(rows[lppos]) == SCIP_BASESTAT_LOWER || SCIProwGetBasisStatus(rows[lppos]) ==
                SCIP_BASESTAT_UPPER);
 
-         SCIP_CALL( addRowToCut(scip, rowprep, SCIProwGetBasisStatus(rows[lppos]) == SCIP_BASESTAT_UPPER ? cutcoef :
-                  -cutcoef, rows[lppos], success) ); /* rows have flipper base status! */
+         /* flip cutcoef when necessary. Note: rows have flipped base status! */
+         cutcoef = SCIProwGetBasisStatus(rows[lppos]) == SCIP_BASESTAT_UPPER ? cutcoef : -cutcoef;
+
+         SCIP_CALL( addRowToCut(scip, rowprep, cutcoef, rows[lppos], success) );
 
          if( ! *success )
          {
             INTERLOG(printf("Bad numeric: now not nonbasic enough\n");)
             nlhdlrdata->nbadnonbasic++;
-            return SCIP_OKAY;
+            goto TERMINATE;
          }
       }
       else
@@ -1943,15 +2647,32 @@ SCIP_RETCODE computeIntercut(
          {
             assert(SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER || SCIPcolGetBasisStatus(cols[lppos]) ==
                   SCIP_BASESTAT_LOWER);
-            SCIP_CALL( addColToCut(scip, rowprep, sol, SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER ? -cutcoef :
-                  cutcoef, cols[lppos]) );
+
+            /* flip cutcoef when necessary */
+            cutcoef = SCIPcolGetBasisStatus(cols[lppos]) == SCIP_BASESTAT_UPPER ? -cutcoef : cutcoef;
+
+            SCIP_CALL( addColToCut(scip, rowprep, sol, cutcoef, cols[lppos]) );
          }
          else
          {
-            SCIP_CALL( addColToCut(scip, rowprep, sol, rays->rays[i] == -1 ? -cutcoef : cutcoef, cols[lppos]) );
+            /* flip cutcoef when necessary */
+            cutcoef = rays->rays[i] == -1 ? -cutcoef : cutcoef;
+
+            SCIP_CALL( addColToCut(scip, rowprep, sol, cutcoef, cols[lppos]) );
          }
       }
    }
+
+   /* track statistics */
+   if( counter > 0 )
+      nlhdlrdata->currentavecutcoef = avecutcoefsum / counter;
+   if( monoidalwasused )
+      nlhdlrdata->nmonoidal += 1;
+   if( monoidalcounter > 0 )
+      nlhdlrdata->currentavemonoidalimprovement = avemonoidalimprovsum / monoidalcounter;
+
+TERMINATE:
+   SCIPfreeBufferArrayNull(scip, &apex);
 
    return SCIP_OKAY;
 }
@@ -2690,7 +3411,8 @@ SCIP_RETCODE generateIntercut(
    SCIP_CALL( SCIPallocBufferArray(scip, &vzlp, nquadexprs) );
    SCIP_CALL( SCIPallocBufferArray(scip, &wcoefs, nquadexprs) );
 
-   SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, auxvar, sidefactor, soltoseparate, vb, vzlp, wcoefs, &wzlp, &kappa) );
+   SCIP_CALL( intercutsComputeCommonQuantities(scip, nlhdlrexprdata, auxvar, sidefactor, soltoseparate,
+         vb, vzlp, wcoefs, &wzlp, &kappa) );
 
    /* check if we are in case 4 */
    if( nlinexprs == 0 && auxvar == NULL )
@@ -3489,11 +4211,14 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
+   if( branchcandonly )
+      return SCIP_OKAY;
+
    /* estimate should take care of convex quadratics */
    if( ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE) ||
        (!overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) )
    {
-      INTERLOG(printf("Convex, no need of interesection cuts!\n");)
+      INTERLOG(printf("Convex or concave, no need of interesection cuts!\n");)
       return SCIP_OKAY;
    }
 
@@ -3566,8 +4291,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
    }
 
    /* we can't build an intersection cut when the expr is the root of some constraint and also a subexpression of
-    * another constraint because we initialize data differently TODO: how differently? */
-   /* TODO: I don't think this is needed */
+    * another constraint because we initialize data differently */
    if( nlhdlrexprdata->cons != NULL && cons != nlhdlrexprdata->cons )
    {
       INTERLOG(printf("WARNING!! expr is root of one constraint and subexpr of another!\n"); )
@@ -3619,6 +4343,10 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
       /* merge coefficients that belong to same variable */
       SCIPmergeRowprepTerms(scip, rowprep);
 
+      /* sparsify cut */
+      if( nlhdlrdata->sparsifycuts )
+         sparsifyIntercut(scip, rowprep);
+
       SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, nlhdlrdata->mincutviolation, &violation, &success) );
       INTERLOG(if( !success) printf("Clean up failed\n"); )
    }
@@ -3640,7 +4368,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
 
       SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, cons) );
 
-      /*printf("## New cut\n");
+      /* printf("## New cut\n");
       printf(" -> found maxquad-free cut <%s>: act=%f, lhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n\n",
             SCIProwGetName(row), SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row), SCIProwGetNorm(row),
             SCIPgetCutEfficacy(scip, NULL, row),
@@ -3669,8 +4397,11 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
          else
          {
             *result = SCIP_SEPARATED;
+            nlhdlrdata->cutcoefsum += nlhdlrdata->currentavecutcoef;
+            nlhdlrdata->monoidalimprovementsum += nlhdlrdata->currentavemonoidalimprovement;
             nlhdlrdata->ncutsadded += 1;
             nlhdlrdata->densitysum += (SCIP_Real) SCIProwprepGetNVars(rowprep) / (SCIP_Real) SCIPgetNVars(scip);
+            nlhdlrdata->efficacysum += SCIPgetCutEfficacy(scip, NULL, row);
          }
       }
       else
@@ -4344,6 +5075,14 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
          "whether the strengthening should be used",
          &nlhdlrdata->usestrengthening, FALSE, DEFAULT_USESTRENGTH, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/usemonoidal",
+         "whether monoidal strengthening should be used",
+         &nlhdlrdata->usemonoidal, FALSE, DEFAULT_USEMONOIDAL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/useminrep",
+         "whether the minimal representation of the S-free set should be used (instead of the gauge)",
+         &nlhdlrdata->useminrep, FALSE, DEFAULT_USEMINREP, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/useboundsasrays",
          "use bounds of variables in quadratic as rays for intersection cuts",
          &nlhdlrdata->useboundsasrays, FALSE, DEFAULT_USEBOUNDS, NULL, NULL) );
@@ -4366,7 +5105,7 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
 
    SCIP_CALL( SCIPaddRealParam(scip, "nlhdlr/" NLHDLR_NAME "/minviolation",
          "minimal violation the constraint must fulfill such that a cut is generated",
-         &nlhdlrdata->mincutviolation, FALSE, INTERCUTS_MINVIOL, 0.0, SCIPinfinity(scip), NULL, NULL) );
+         &nlhdlrdata->minviolation, FALSE, INTERCUTS_MINVIOL, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "nlhdlr/" NLHDLR_NAME "/atwhichnodes",
          "determines at which nodes cut is used (if it's -1, it's used only at the root node, if it's n >= 0, it's used at every multiple of n",
@@ -4376,6 +5115,10 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
          "limit for number of rays we do the strengthening for",
          &nlhdlrdata->nstrengthlimit, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/sparsifycuts",
+         "should we try to sparisfy the intersection cut?",
+         &nlhdlrdata->sparsifycuts, FALSE, FALSE, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/ignorebadrayrestriction",
          "should cut be generated even with bad numerics when restricting to ray?",
          &nlhdlrdata->ignorebadrayrestriction, FALSE, TRUE, NULL, NULL) );
@@ -4383,6 +5126,10 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/ignorenhighre",
          "should cut be added even when range / efficacy is large?",
          &nlhdlrdata->ignorehighre, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "nlhdlr/" NLHDLR_NAME "/trackmore",
+         "for monoidal strengthening, should we track more statistics (more expensive)?",
+         &nlhdlrdata->trackmore, FALSE, FALSE, NULL, NULL) );
 
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);

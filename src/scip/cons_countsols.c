@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1292,7 +1292,6 @@ SCIP_RETCODE checkSolution(
     *       variables in the branch and bound tree and check after every fixing if all constraints are disabled; at the
     *       point where all constraints are disabled the unfixed variables are "stars" (arbitrary);
     */
-   assert( SCIPgetNOrigVars(scip) != 0);
    assert( SCIPsolGetHeur(sol) == NULL);
 
    /* setting result to infeasible since we reject any solution; however, if the solution passes the sparse test or is
@@ -1590,7 +1589,7 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL );
 
-   if( conshdlrdata->active )
+   if( conshdlrdata->active && SCIPgetNVars(scip) >= 1 )
    {
       SCIP_VAR** vars;
       int v;
@@ -1798,8 +1797,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsCountsols)
 static
 SCIP_DECL_CONSCHECK(consCheckCountsols)
 {  /*lint --e{715}*/
-   /**@todo solutions which come from scip_check should be ignored since it is not clear who
-    *       generated these solution; later we should analyze this problem */
+   /**@todo non-trivial solutions which are only checked have to be ignored since it is unknown how they are generated;
+    * calculating heuristic solutions should be avoided */
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    SCIPdebugMsg(scip, "method SCIP_DECL_CONSCHECK(consCheckCountsols)\n");
@@ -1809,9 +1808,12 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
 
    if( conshdlrdata->active )
    {
-      if( !conshdlrdata->warning )
+      /* count empty solution */
+      if( SCIPgetNVars(scip) == 0 )
+         SCIP_CALL( checkSolution(scip, sol, conshdlrdata, result) );
+      else if( !conshdlrdata->warning )
       {
-         SCIPwarningMessage(scip, "a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored.\n");
+         SCIPwarningMessage(scip, "a non-trivial solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored.\n");
          conshdlrdata->warning = TRUE;
       }
 
@@ -1858,7 +1860,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
          SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
       }
 
-      if ( symcomptiming < SYM_COMPUTETIMING_AFTERPRESOL &&
+      if ( symcomptiming < SYM_TIMING_AFTERPRESOL &&
            (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE) )
       {
          SCIPerrorMessage("Symmetry handling and solution counting are not compatible. " \
@@ -1978,7 +1980,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/ofsymcomptiming", &symcomptiming) );
       }
 
-      if ( symcomptiming < SYM_COMPUTETIMING_AFTERPRESOL &&
+      if ( symcomptiming < SYM_TIMING_AFTERPRESOL &&
            (SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITPRESOLVE) )
       {
          SCIPerrorMessage("Symmetry handling and solution counting are not compatible. " \
@@ -2235,7 +2237,7 @@ SCIP_RETCODE writeExpandedSolutions(
             nvars = 1;
             constant = 0.0;
 
-            SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, &nvars, nallvars, &constant, &requiredsize, TRUE) );
+            SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, &nvars, nallvars, &constant, &requiredsize) );
             assert(requiredsize <= nallvars);
             assert(nvars <= nactivevars);
 

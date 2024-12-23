@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -281,4 +281,27 @@ Test(readernl, dualsol, .description = "check whether solving a LP without preso
    remove("nopresolve.set");
 
    free(args[1]);
+}
+
+/* check whether initial value of introduced nlobjvar is set */
+Test(readernl, nlobjvar, .description = "check whether initial value of introduced nlobjvar is set")
+{
+   char filename[SCIP_MAXSTRLEN];
+
+   /* skip test if nl reader not available (SCIP compiled with AMPL=false) */
+   if( SCIPfindReader(scip, "nlreader") == NULL )
+      return;
+
+   /* get file to read: suffix1.nl that lives in the same directory as this file */
+   TESTsetTestfilename(filename, __FILE__, "nlobj.nl");
+
+   /* read nl file */
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+
+   /* we should have an initial solution as well */
+   cr_expect(SCIPgetNSols(scip) == 1);
+
+   /* only if the solution is feasible, it will be available in the transformed problem, too */
+   SCIP_CALL( SCIPtransformProb(scip) );
+   cr_expect(SCIPgetNSols(scip) == 1);
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -62,6 +62,7 @@
 #include "scip/type_concsolver.h"
 #include "scip/type_benders.h"
 #include "scip/type_expr.h"
+#include "scip/type_message.h"
 #include "scip/debug.h"
 
 #ifdef __cplusplus
@@ -202,6 +203,7 @@ struct SCIP_Set
    char                  branch_lpgainnorm;  /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
    SCIP_Bool             branch_delaypscost; /**< whether to delay pseudo costs updates for continuous variables to after separation */
    SCIP_Bool             branch_divingpscost;/**< should pseudo costs be updated also in diving and probing mode? */
+   SCIP_Bool             branch_collectancpscost;  /**< should ancestral pseudo costs be updated? */
    SCIP_Bool             branch_forceall;    /**< should all strong branching children be regarded even if
                                               *   one is detected to be infeasible? (only with propagation) */
    SCIP_Bool             branch_checksbsol;  /**< should LP solutions during strong branching with propagation be checked for feasibility? */
@@ -308,7 +310,8 @@ struct SCIP_Set
    SCIP_Real             limit_gap;          /**< solving stops, if the given gap is reached */
    SCIP_Real             limit_absgap;       /**< solving stops, if the absolute difference between primal and dual bound
                                               *   reaches this value */
-   SCIP_Real             limit_objstop;      /**< solving stops, if solution is found that is at least as good as given value */
+   SCIP_Real             limit_primal;       /**< solving stops, if primal bound is at least as good as given value */
+   SCIP_Real             limit_dual;         /**< solving stops, if dual bound is at least as good as given value */
    SCIP_Longint          limit_nodes;        /**< maximal number of nodes to process (-1: no limit) */
    SCIP_Longint          limit_totalnodes;   /**< maximal number of total nodes (incl. restarts) to process (-1: no limit) */
    SCIP_Longint          limit_stallnodes;   /**< solving stops, if the given number of nodes was processed since the
@@ -319,8 +322,7 @@ struct SCIP_Set
    int                   limit_maxsol;       /**< maximal number of solutions to store in the solution storage */
    int                   limit_maxorigsol;   /**< maximal number of solutions candidates to store in the solution storage of the original problem */
    int                   limit_restarts;     /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
-   int                   limit_autorestartnodes;/**< nodes to trigger automatic restart */
-
+   int                   limit_autorestartnodes; /**< nodes to trigger automatic restart */
    SCIP_Bool             istimelimitfinite;  /**< is the time limit finite */
 
    /* LP settings */
@@ -513,7 +515,7 @@ struct SCIP_Set
    SCIP_Bool             reopt_commontimelimit;/**< time limit over all reoptimization rounds? */
    SCIP_Bool             reopt_enable;       /**< enable reoptimization */
    SCIP_Bool             reopt_reducetofrontier; /**< delete stored nodes which were not reoptimized */
-   SCIP_Bool             reopt_saveconsprop; /**< save constraint propagations */
+   SCIP_Bool             reopt_saveprop;     /**< save constraint and propagator propagations */
    SCIP_Bool             reopt_sbinit;       /**< try to fix variables before reoptimizing by probing like strong
                                               *   branching
                                               */

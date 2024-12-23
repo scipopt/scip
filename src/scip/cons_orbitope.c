@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -123,7 +123,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
 #include "scip/symmetry.h"
-#include <symmetry/type_symmetry.h>
+#include "symmetry/type_symmetry.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "orbitope"
@@ -861,7 +861,9 @@ SCIP_RETCODE separateSCIs(
          /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
          if ( SCIPisEfficacious(scip, bar - weights[i-1][j-1]) )
          {
-            SCIP_Real weight;
+#ifndef NDEBUG
+            SCIP_Real weight = 0.0;
+#endif
             SCIP_ROW* row;
 #ifdef SCIP_DEBUG
             char name[SCIP_MAXSTRLEN];
@@ -873,7 +875,6 @@ SCIP_RETCODE separateSCIs(
             nvars = 0;
             p1 = i-1;
             p2 = j-1;
-            weight = 0.0;
 
             /* first add bar */
             for (l = j; l <= lastcolumn; ++l)
@@ -900,7 +901,9 @@ SCIP_RETCODE separateSCIs(
                   tmpvars[nvars] = vars[p1][p2];
                   tmpvals[nvars] = -1.0;
                   nvars++;
+#ifndef NDEBUG
                   weight += vals[p1][p2];
+#endif
                   if ( cases[p1][p2] == 3 )
                      break;
                }
@@ -927,7 +930,6 @@ SCIP_RETCODE separateSCIs(
 #endif
 
             assert( SCIPisSumEQ(scip, weights[i-1][j-1], weight) );
-            SCIP_UNUSED(weight);
          }
       }
    }
@@ -2115,7 +2117,7 @@ SCIP_RETCODE resolvePropagation(
 
 #ifdef SCIP_DEBUG
             (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", p1, p2);
-            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN-1);
 #endif
 
             if ( cases[p1][p2] == 3 )
@@ -2187,7 +2189,7 @@ SCIP_RETCODE resolvePropagation(
 
 #ifdef SCIP_DEBUG
                   (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", p1, p2);
-                  (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+                  (void) strncat(str, tmpstr, SCIP_MAXSTRLEN-1);
 #endif
                }
 #ifndef NDEBUG
@@ -2214,7 +2216,7 @@ SCIP_RETCODE resolvePropagation(
             /* partitioning case */
 #ifdef SCIP_DEBUG
             (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, "  before bar: ");
-            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+            (void) strncat(str, tmpstr, SCIP_MAXSTRLEN-1);
 #endif
             /* add variables before the bar in the partitioning case */
             for (k = 0; k < j; ++k)
@@ -2224,7 +2226,7 @@ SCIP_RETCODE resolvePropagation(
                *result = SCIP_SUCCESS;
 #ifdef SCIP_DEBUG
                (void) SCIPsnprintf(tmpstr, SCIP_MAXSTRLEN, " (%d,%d)", i, k);
-               (void) strncat(str, tmpstr, SCIP_MAXSTRLEN);
+               (void) strncat(str, tmpstr, SCIP_MAXSTRLEN-1);
 #endif
             }
 

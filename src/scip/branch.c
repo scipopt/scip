@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -807,9 +807,9 @@ SCIP_RETCODE SCIPbranchcandGetPseudoCands(
 
       /* pseudo branching candidates are non-fixed binary, integer, and implicit integer variables */
       npcs = 0;
-      for( v = 0; v < prob->nbinvars + prob->nintvars + prob->nimplvars; ++v )
+      for( v = 0; v < SCIPprobGetNBinVars(prob) + SCIPprobGetNIntVars(prob) + SCIPprobGetNImplVars(prob); ++v )
       {
-         var = prob->vars[v];
+         var = SCIPprobGetVars(prob)[v];
          assert(var != NULL);
          assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
@@ -2352,16 +2352,26 @@ SCIP_Real SCIPbranchGetBranchingPoint(
 
       if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
       {
-         /* if it is a discrete variable, then round it down and up and accept this choice */
+         /* if it is a discrete variable, then try to round it down and up and accept this choice */
          if( SCIPsetIsEQ(set, branchpoint, ub) )
          {
-            /* in the right branch, variable is fixed to its current upper bound */
-            return SCIPsetFloor(set, branchpoint) - 0.5;
+            /* if branchpoint is at ub, then create branches [lb,ub-1] and [ub,ub], that is branch on ub-0.5
+             * however, if ub is too large, then ub-0.5 = ub (in double precision)
+             * in that case, fall back to the code below, which branches closer to the middle of [lb,ub]
+             */
+            branchpoint = SCIPsetFloor(set, branchpoint) - 0.5;
+            if( branchpoint < ub )
+               return branchpoint;
          }
          else
          {
-            /* in the  left branch, variable is fixed to its current lower bound */
-            return SCIPsetFloor(set, branchpoint) + 0.5;
+            /* create branches [lb,branchpoint] and [branchpoint+1,ub]
+             * however, if |branchpoint| is too large, then branchpoint+0.5 = branchpoint (in double precision)
+             * in that case, fall back to the code below, which branches closer to the middle of [lb,ub]
+             */
+            branchpoint = SCIPsetFloor(set, branchpoint) + 0.5;
+            if( branchpoint > lb )
+               return branchpoint;
          }
       }
       else if( (SCIPsetIsInfinity(set, -lb) || SCIPsetIsRelGT(set, branchpoint, lb)) &&
@@ -2370,7 +2380,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
          /* if it is continuous and inside the box, then accept it */
          return branchpoint;
       }
-      /* if it is continuous and suggestion is on of the bounds, continue below */
+      /* if it is continuous and suggestion is one of the bounds, continue below */
    }
    else
    {
@@ -2520,13 +2530,25 @@ SCIP_Real SCIPbranchGetBranchingPoint(
       /* discrete variables */
       if( branchpoint <= lb + 0.5 )
       {
-         /* if branchpoint is on lower bound, create one branch with x = lb and one with x >= lb+1 */
-         return lb + 0.5;
+         /* if branchpoint is on lower bound, create one branch with x = lb and one with x >= lb+1
+          * however, if |lb| is huge, then lb + 0.5 == lb
+          * in that case, branch at middle of [lb,ub]
+          */
+         branchpoint = lb + 0.5;
+         if( branchpoint == lb )  /*lint !e777*/
+            branchpoint = 0.5 * (lb+ub);
+         return branchpoint;
       }
       else if( branchpoint >= ub - 0.5 )
       {
-         /* if branchpoint is on upper bound, create one branch with x = ub and one with x <= ub-1 */
-         return ub - 0.5;
+         /* if branchpoint is on upper bound, create one branch with x = ub and one with x <= ub-1
+          * however, if |ub| is huge, then ub - 0.5 == ub
+          * in that case, branch at middle of [lb,ub]
+          */
+         branchpoint = ub - 0.5;
+         if( branchpoint == ub )  /*lint !e777*/
+            branchpoint = 0.5 * (lb+ub);
+         return branchpoint;
       }
       else if( SCIPsetIsIntegral(set, branchpoint) )
       {

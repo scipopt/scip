@@ -35,6 +35,7 @@ set(scipsources
     scip/branch_cloud.c
     scip/branch_distribution.c
     scip/branch_fullstrong.c
+    scip/branch_gomory.c
     scip/branch_inference.c
     scip/branch_leastinf.c
     scip/branch_lookahead.c
@@ -59,6 +60,7 @@ set(scipsources
     scip/cons_countsols.c
     scip/cons_cumulative.c
     scip/cons_disjunction.c
+    scip/cons_fixedvar.c
     scip/cons_indicator.c
     scip/cons_integral.c
     scip/cons_knapsack.c
@@ -81,6 +83,7 @@ set(scipsources
     scip/cons_xor.c
     scip/cutsel_ensemble.c
     scip/cutsel_hybrid.c
+    scip/cutsel_dynamic.c
     scip/dcmp.c
     scip/dialog_default.c
     scip/event_globalbnd.c
@@ -147,6 +150,7 @@ set(scipsources
     scip/heur_rins.c
     scip/heur_rootsoldiving.c
     scip/heur_rounding.c
+    scip/heur_scheduler.c
     scip/heur_shiftandpropagate.c
     scip/heur_shifting.c
     scip/heur_simplerounding.c
@@ -162,13 +166,16 @@ set(scipsources
     scip/heur_veclendiving.c
     scip/heur_zeroobj.c
     scip/heur_zirounding.c
+    scip/hypergraph.c
     scip/message_default.c
+    scip/network.c
     scip/nlhdlr_bilinear.c
     scip/nlhdlr_convex.c
     scip/nlhdlr_default.c
     scip/nlhdlr_perspective.c
     scip/nlhdlr_quadratic.c
     scip/nlhdlr_quotient.c
+    scip/nlhdlr_signomial.c
     scip/nlhdlr_soc.c
     scip/nlpi_all.c
     ${nlpi}
@@ -188,6 +195,7 @@ set(scipsources
     scip/presol_dualinfer.c
     scip/presol_gateextraction.c
     scip/presol_implics.c
+    scip/presol_implint.c
     scip/presol_inttobinary.c
     scip/presol_qpkktref.c
     scip/presol_redvub.c
@@ -245,9 +253,11 @@ set(scipsources
     scip/sepa_impliedbounds.c
     scip/sepa_interminor.c
     scip/sepa_intobj.c
+    scip/sepa_lagromory.c
     scip/sepa_mcf.c
     scip/sepa_minor.c
     scip/sepa_mixing.c
+    scip/sepa_multilinear.c
     scip/sepa_oddcycle.c
     scip/sepa_rapidlearning.c
     scip/sepa_rlt.c
@@ -371,6 +381,7 @@ set(scipsources
     scip/solve.c
     scip/stat.c
     scip/symmetry.c
+    scip/symmetry_graph.c
     scip/symmetry_orbitopal.c
     scip/symmetry_orbital.c
     scip/symmetry_lexred.c
@@ -482,6 +493,7 @@ set(scipheaders
     scip/branch_cloud.h
     scip/branch_distribution.h
     scip/branch_fullstrong.h
+    scip/branch_gomory.h
     scip/branch.h
     scip/branch_inference.h
     scip/branch_leastinf.h
@@ -516,6 +528,7 @@ set(scipheaders
     scip/cons_countsols.h
     scip/cons_cumulative.h
     scip/cons_disjunction.h
+    scip/cons_fixedvar.h
     scip/cons.h
     scip/cons_indicator.h
     scip/cons_integral.h
@@ -542,6 +555,7 @@ set(scipheaders
     scip/cutsel.h
     scip/cutsel_ensemble.h
     scip/cutsel_hybrid.h
+    scip/cutsel_dynamic.h
     scip/dbldblarith.h
     scip/debug.h
     scip/dcmp.h
@@ -617,6 +631,7 @@ set(scipheaders
     scip/heur_rins.h
     scip/heur_rootsoldiving.h
     scip/heur_rounding.h
+    scip/heur_scheduler.h
     scip/heur_shiftandpropagate.h
     scip/heur_shifting.h
     scip/heur_simplerounding.h
@@ -633,6 +648,7 @@ set(scipheaders
     scip/heur_zeroobj.h
     scip/heur_zirounding.h
     scip/history.h
+    scip/hypergraph.h
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
@@ -648,6 +664,7 @@ set(scipheaders
     scip/nlhdlr_perspective.h
     scip/nlhdlr_quadratic.h
     scip/nlhdlr_quotient.h
+    scip/nlhdlr_signomial.h
     scip/nlhdlr_soc.h
     scip/nlhdlr.h
     scip/nlp.h
@@ -676,6 +693,7 @@ set(scipheaders
     scip/presol_gateextraction.h
     scip/presol.h
     scip/presol_implics.h
+    scip/presol_implint.h
     scip/presol_inttobinary.h
     scip/presol_qpkktref.h
     scip/presol_redvub.h
@@ -731,6 +749,7 @@ set(scipheaders
     scip/pub_misc_rowprep.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
+    scip/pub_network.h
     scip/pub_nlhdlr.h
     scip/pub_nlp.h
     scip/pub_nlpi.h
@@ -842,9 +861,11 @@ set(scipheaders
     scip/sepa_impliedbounds.h
     scip/sepa_interminor.h
     scip/sepa_intobj.h
+    scip/sepa_lagromory.h
     scip/sepa_mcf.h
     scip/sepa_minor.h
     scip/sepa_mixing.h
+    scip/sepa_multilinear.h
     scip/sepa_oddcycle.h
     scip/sepa_rapidlearning.h
     scip/sepa_rlt.h
@@ -875,6 +896,7 @@ set(scipheaders
     scip/struct_expr.h
     scip/struct_heur.h
     scip/struct_history.h
+    scip/struct_hypergraph.h
     scip/struct_implics.h
     scip/struct_lp.h
     scip/struct_matrix.h
@@ -907,6 +929,7 @@ set(scipheaders
     scip/struct_var.h
     scip/struct_visual.h
     scip/symmetry.h
+    scip/symmetry_graph.h
     scip/symmetry_orbitopal.h
     scip/symmetry_orbital.h
     scip/symmetry_lexred.h
@@ -937,6 +960,7 @@ set(scipheaders
     scip/type_exprinterpret.h
     scip/type_heur.h
     scip/type_history.h
+    scip/type_hypergraph.h
     scip/type_implics.h
     scip/type_interrupt.h
     scip/type_lp.h
@@ -977,7 +1001,9 @@ set(scipheaders
 )
 
 set(symheaders
+  symmetry/build_sassy_graph.h
   symmetry/compute_symmetry.h
+  symmetry/struct_symmetry.h
   symmetry/type_symmetry.h
 )
 
@@ -1055,17 +1081,9 @@ if(SHARED)
 else()
     set(SOPLEX_NEEDED ${SOPLEX_FOUND})
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
-    if(DEFINED BLISS_TARGET)
-        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
-    else()
-        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
-    endif()
+    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
     add_executable(scip main.c)
-    if(DEFINED BLISS_TARGET)
-        target_link_libraries(scip libscip ${BLISS_TARGET})
-    else()
-        target_link_libraries(scip libscip)
-    endif()
+    target_link_libraries(scip PUBLIC libscip)
 endif()
 
 add_executable(SCIP::SCIP ALIAS scip)
@@ -1087,6 +1105,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 target_link_libraries(scip
+   PUBLIC
    ${SYM_LIBRARIES}
    $<$<BOOL:${SCIP_WITH_ZLIB}>:ZLIB::ZLIB>
    ${Readline_LIBRARY}
@@ -1140,7 +1159,7 @@ install(TARGETS scip libscip EXPORT scip-targets
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Add all targets to the build-tree export set
-export(TARGETS scip libscip ${BLISS_TARGET}
+export(TARGETS scip libscip
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
 # make soplex and zimpl dir absolute for the config file

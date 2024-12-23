@@ -1,5 +1,5 @@
 FLAGS		+=	-DNDEBUG -DSCIP_NO_SIGACTION -DNO_RAND_R -DSCIP_NO_STRTOK_R -DNO_REMOVE_HISTORY -DSCIP_LONGINT_FORMAT='"lld"' -DSCIP_ROUNDING_FE
-CFLAGS		=	-O6 -mtune=native
+OFLAGS		+=	-O6 -ffp-contract=off -mtune=native
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing
 ARFLAGS		=	crs

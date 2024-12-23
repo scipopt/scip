@@ -3,7 +3,7 @@ CXX		=	icpc
 LINKCC		=	icc
 LINKCXX		=	icpc
 FLAGS		+=	-DSCIP_ROUNDING_FE
-OFLAGS		+=	-O0 -g -fp-model precise -w1 -fp_port -fp-stack-check -wd279,383,444,810,981
+OFLAGS		+=	-O0 -fp-model=precise -g -w1 -fp_port -fp-stack-check -wd279,383,444,810,981
 CFLAGS		+=	-std=c99 -D_XOPEN_SOURCE=600
 ARFLAGS		=	crs
 LDFLAGS		+=	-lirc -lm -lstdc++ -shared-intel

@@ -1,5 +1,5 @@
 FLAGS		+=      #-DSCIP_ROUNDING_FE
-OFLAGS		+=	-O0 -g
+OFLAGS		+=	-O0 -ffp-contract=off -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs

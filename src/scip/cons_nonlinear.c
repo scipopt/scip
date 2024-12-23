@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -56,9 +56,12 @@
 #include "scip/cons_nonlinear.h"
 #include "scip/nlhdlr.h"
 #include "scip/expr_var.h"
+#include "scip/expr_varidx.h"
+#include "scip/expr_abs.h"
 #include "scip/expr_sum.h"
 #include "scip/expr_value.h"
 #include "scip/expr_pow.h"
+#include "scip/expr_trig.h"
 #include "scip/nlhdlr_convex.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
@@ -69,12 +72,17 @@
 #include "scip/lapack_calls.h"
 #include "scip/debug.h"
 #include "scip/dialog_default.h"
+#include "scip/scip_expr.h"
+#include "scip/symmetry_graph.h"
+#include "scip/prop_symmetry.h"
+#include "symmetry/struct_symmetry.h"
+#include "scip/pub_misc_sort.h"
 
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
 #define CONSHDLR_DESC          "handler for nonlinear constraints specified by algebraic expressions"
-#define CONSHDLR_ENFOPRIORITY       -60 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_ENFOPRIORITY        50 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -4000010 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
@@ -301,6 +309,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             branchhighviolfactor; /**< consider a constraint highly violated if its violation is >= this factor * maximal violation among all constraints */
    SCIP_Real             branchhighscorefactor; /**< consider a variable branching score high if its branching score >= this factor * maximal branching score among all variables */
    SCIP_Real             branchviolweight;   /**< weight by how much to consider the violation assigned to a variable for its branching score */
+   SCIP_Real             branchfracweight;   /**< weight by how much to consider fractionality of integer variables in branching score for spatial branching */
    SCIP_Real             branchdualweight;   /**< weight by how much to consider the dual values of rows that contain a variable for its branching score */
    SCIP_Real             branchpscostweight; /**< weight by how much to consider the pseudo cost of a variable for its branching score */
    SCIP_Real             branchdomainweight; /**< weight by how much to consider the domain width in branching score */
@@ -308,6 +317,7 @@ struct SCIP_ConshdlrData
    char                  branchscoreagg;     /**< how to aggregate several branching scores given for the same expression ('a'verage, 'm'aximum, or 's'um) */
    char                  branchviolsplit;    /**< method used to split violation in expression onto variables ('u'niform, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
    SCIP_Real             branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
+   SCIP_Real             branchmixfractional; /**< minimal average pseudo cost count for discrete variables at which to start considering spatial branching before branching on fractional integer variables */
    char                  linearizeheursol;   /**< whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution) */
    SCIP_Bool             assumeconvex;       /**< whether to assume that any constraint is convex */
 
@@ -345,12 +355,14 @@ struct SCIP_ConshdlrData
 /** branching candidate with various scores */
 typedef struct
 {
-   SCIP_EXPR*            expr;               /**< expression that holds branching candidate */
+   SCIP_EXPR*            expr;               /**< expression that holds branching candidate, NULL if candidate is due to fractionality of integer variable */
+   SCIP_VAR*             var;                /**< variable that is branching candidate */
    SCIP_Real             auxviol;            /**< aux-violation score of candidate */
    SCIP_Real             domain;             /**< domain score of candidate */
    SCIP_Real             dual;               /**< dual score of candidate */
    SCIP_Real             pscost;             /**< pseudo-cost score of candidate */
    SCIP_Real             vartype;            /**< variable type score of candidate */
+   SCIP_Real             fractionality;      /**< fractionality score of candidate */
    SCIP_Real             weighted;           /**< weighted sum of other scores, see scoreBranchingCandidates() */
 } BRANCHCAND;
 
@@ -795,12 +807,13 @@ SCIP_RETCODE freeVarExprs(
 
    assert(consdata != NULL);
 
-   /* skip if we have stored the variable expressions already*/
+   /* skip if we have stored the variable expressions already */
    if( consdata->varexprs == NULL )
       return SCIP_OKAY;
 
    assert(consdata->varexprs != NULL);
    assert(consdata->nvarexprs >= 0);
+   assert(!consdata->catchedevents);
 
    /* release variable expressions */
    for( i = 0; i < consdata->nvarexprs; ++i )
@@ -969,9 +982,10 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    SCIP_EVENTTYPE eventtype;
    SCIP_EXPR* expr;
    SCIP_EXPR_OWNERDATA* ownerdata;
+   SCIP_Bool boundtightened = FALSE;
 
    eventtype = SCIPeventGetType(event);
-   assert(eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED));
+   assert(eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED));
 
    assert(eventdata != NULL);
    expr = (SCIP_EXPR*) eventdata;
@@ -988,12 +1002,34 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    assert(ownerdata->nconss > 0);
    assert(ownerdata->conss != NULL);
 
+   if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
+      boundtightened = TRUE;
+
+   /* usually, if fixing a variable results in a boundchange, we should have seen a boundtightened-event as well
+    * however, if the boundchange is smaller than epsilon, such an event will be omitted
+    * but we still want to make sure the activity of the var-expr is reevaluated (mainly to avoid a failing assert) in this case
+    * since we cannot easily see whether a variable bound was actually changed in a varfixed event, we treat any varfixed event
+    * as a boundtightening (and usually it is, I would think)
+    */
+   if( eventtype & SCIP_EVENTTYPE_VARFIXED )
+      boundtightened = TRUE;
+
+   /* if a variable is changed to implicit-integer and has a fractional bound, then the behavior of intEvalVarBoundTightening is changing,
+    * because we will round the bounds and no longer consider relaxing them
+    * we will mark corresponding constraints as not-propagated in this case to get the tightened bounds on the var-expr
+    * (mainly to avoid a failing assert, see github issue #70)
+    * usually, a change to implicit-integer would result in a boundchange on the variable as well, but not if the bound was already almost integral
+    */
+   if( (eventtype & SCIP_EVENTTYPE_TYPECHANGED) && (SCIPeventGetNewtype(event) == SCIP_VARTYPE_IMPLINT) &&
+      (!EPSISINT(SCIPvarGetLbGlobal(SCIPeventGetVar(event)), 0.0) || !EPSISINT(SCIPvarGetUbGlobal(SCIPeventGetVar(event)), 0.0)) ) /*lint !e835*/
+      boundtightened = TRUE;
+
    /* notify constraints that use this variable expression (expr) to repropagate and possibly resimplify
     * - propagation can only find something new if a bound was tightened
     * - simplify can only find something new if a var is fixed (or maybe a bound is tightened)
     *   and we look at global changes (that is, we are not looking at boundchanges in probing)
     */
-   if( eventtype & (SCIP_EVENTTYPE_BOUNDTIGHTENED | SCIP_EVENTTYPE_VARFIXED) )
+   if( boundtightened )
    {
       SCIP_CONSDATA* consdata;
       int c;
@@ -1008,11 +1044,8 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
           *   that is, we don't need to repropagate x + ... <= rhs if only the upper bound of x has been tightened
           *   the locks don't help since they are not available separately for each constraint
           */
-         if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
-         {
-            consdata->ispropagated = FALSE;
-            SCIPdebugMsg(scip, "  marked <%s> for propagate\n", SCIPconsGetName(ownerdata->conss[c]));
-         }
+         consdata->ispropagated = FALSE;
+         SCIPdebugMsg(scip, "  marked <%s> for propagate\n", SCIPconsGetName(ownerdata->conss[c]));
 
          /* if still in presolve (but not probing), then mark constraints to be unsimplified */
          if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING && !SCIPinProbing(scip) )
@@ -1024,7 +1057,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    }
 
    /* update curboundstag, lastboundrelax, and expr activity */
-   if( eventtype & SCIP_EVENTTYPE_BOUNDCHANGED )
+   if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) || boundtightened )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       SCIP_INTERVAL activity;
@@ -1104,7 +1137,7 @@ SCIP_RETCODE catchVarEvent(
 
       assert(ownerdata->nconss == 1);
 
-      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED;
+      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED;
 
       SCIP_CALL( SCIPcatchVarEvent(scip, SCIPgetVarExprVar(expr), eventtype, eventhdlr, (SCIP_EVENTDATA*)expr, &ownerdata->filterpos) );
       assert(ownerdata->filterpos >= 0);
@@ -1236,7 +1269,7 @@ SCIP_RETCODE dropVarEvent(
 
       assert(ownerdata->filterpos >= 0);
 
-      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED;
+      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED;
 
       SCIP_CALL( SCIPdropVarEvent(scip, SCIPgetVarExprVar(expr), eventtype, eventhdlr, (SCIP_EVENTDATA*)expr, ownerdata->filterpos) );
       ownerdata->filterpos = -1;
@@ -2083,12 +2116,6 @@ SCIP_RETCODE tightenAuxVarBounds(
    assert(!SCIPintervalIsEmpty(SCIP_INTERVAL_INFINITY, bounds));
 
    *cutoff = FALSE;
-
-   /* do not tighten variable in problem stage (important for unittests)
-    * TODO put some kind of #ifdef UNITTEST around this
-    */
-   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) > SCIP_STAGE_SOLVING )
-      return SCIP_OKAY;
 
    var = SCIPgetExprAuxVarNonlinear(expr);
    if( var == NULL )
@@ -3345,7 +3372,7 @@ SCIP_RETCODE detectNlhdlr(
       nlhdlrparticipating = SCIP_NLHDLR_METHOD_NONE;
       conshdlrdata->registerusesactivitysepabelow = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
       conshdlrdata->registerusesactivitysepaabove = FALSE;  /* SCIPregisterExprUsageNonlinear() as called by detect may set this to TRUE */
-      /* coverity[forward_null] */
+      /* coverity[var_deref_model] */
       SCIP_CALL( SCIPnlhdlrDetect(scip, ownerdata->conshdlr, nlhdlr, expr, cons, &enforcemethodsnew, &nlhdlrparticipating, &nlhdlrexprdata) );
 
       /* nlhdlr might have claimed more than needed: clean up sepa flags */
@@ -3442,7 +3469,7 @@ SCIP_RETCODE detectNlhdlrs(
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= 0);
-   assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING);  /* should only be called in presolve or initsolve or consactive */
+   assert(SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING);  /* should only be called in presolve or initsolve or consactive */
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3883,6 +3910,30 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    SCIP_CALL( SCIPcreateVarBasic(scip, &auxvar, name, minact, maxact, 0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
+#ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
+   {
+      SCIP_Real debugsolval;  /* value of auxvar in debug solution */
+      SCIP_Real val;
+
+      /* compute value of new variable in debug solution */
+      /* first \sum_j c_{ij} x_j (coefs[j] * vars[j]) */
+      debugsolval = 0.0;
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[i], &val) );
+         debugsolval += coefs[i] * val;
+      }
+
+      /* now multiply by x_i (facvar) */
+      SCIP_CALL( SCIPdebugGetSolVal(scip, facvar, &val) );
+      debugsolval *= val;
+
+      /* store debug solution value of auxiliary variable */
+      SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugsolval) );
+   }
+#endif
+
    /* create and add z - maxact x <= 0 */
    if( !SCIPisZero(scip, maxact) )
    {
@@ -4171,6 +4222,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CALL( SCIPallocBufferArray(scip, &name, nchildren * (SCIP_MAXSTRLEN + 1) + 20) );
 
    /* prepare the names of the variable and the constraints */
+   /* coverity[secure_coding] */
    strcpy(name, "binreform");
    for( i = 0; i < nchildren; ++i )
    {
@@ -4185,6 +4237,25 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIPdebugMsg(scip, "  created auxiliary variable %s\n", name);
+
+#ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
+   {
+      SCIP_Real debugsolval;  /* value of auxvar in debug solution */
+      SCIP_Real val;
+
+      /* compute value of new variable in debug solution (\prod_i vars[i]) */
+      debugsolval = 1.0;
+      for( i = 0; i < nchildren; ++i )
+      {
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[i], &val) );
+         debugsolval *= val;
+      }
+
+      /* store debug solution value of auxiliary variable */
+      SCIP_CALL( SCIPdebugAddSolVal(scip, w, debugsolval) );
+   }
+#endif
 
    /* use variable bound constraints if it is a bilinear product and there is no empathy for an AND constraint */
    if( nchildren == 2 && !empathy4and )
@@ -6641,7 +6712,9 @@ SCIP_RETCODE collectBranchingCandidates(
 
                assert(*ncands + 1 < SCIPgetNVars(scip));
                cands[*ncands].expr = consdata->varexprs[i];
+               cands[*ncands].var = var;
                cands[*ncands].auxviol = SCIPgetExprViolScoreNonlinear(consdata->varexprs[i]);
+               cands[*ncands].fractionality = 0.0;
                ++(*ncands);
 
                /* invalidate violscore-tag, so that we do not register variables that appear in multiple constraints
@@ -6678,7 +6751,9 @@ SCIP_RETCODE collectBranchingCandidates(
 
                assert(*ncands + 1 < SCIPgetNVars(scip));
                cands[*ncands].expr = expr;
+               cands[*ncands].var = var;
                cands[*ncands].auxviol = SCIPgetExprViolScoreNonlinear(expr);
+               cands[*ncands].fractionality = 0.0;
                ++(*ncands);
             }
          }
@@ -6824,6 +6899,7 @@ void scoreBranchingCandidates(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BRANCHCAND*           cands,              /**< branching candidates */
    int                   ncands,             /**< number of candidates */
+   SCIP_Bool             considerfracnl,     /**< whether to consider fractionality for spatial branching candidates */
    SCIP_SOL*             sol                 /**< solution to enforce (NULL for the LP solution) */
    )
 {
@@ -6850,7 +6926,33 @@ void scoreBranchingCandidates(
          maxscore.auxviol = MAX(maxscore.auxviol, cands[c].auxviol);
       }
 
-      if( conshdlrdata->branchdomainweight > 0.0 )
+      if( conshdlrdata->branchfracweight > 0.0 && SCIPvarGetType(cands[c].var) <= SCIP_VARTYPE_INTEGER )
+      {
+         /* when collecting for branching on fractionality (cands[c].expr == NULL), only fractional integer variables
+          * should appear as candidates here and their fractionality should have been recorded in branchingIntegralOrNonlinear
+          */
+         assert(cands[c].expr != NULL || cands[c].fractionality > 0.0);
+
+         if( considerfracnl && cands[c].fractionality == 0.0 )
+         {
+            /* for an integer variable that is subject to spatial branching, we also record the fractionality (but separately from auxviol)
+             * if considerfracnl is TRUE; this way, we can give preference to fractional integer nonlinear variables
+             */
+            SCIP_Real solval;
+            SCIP_Real rounded;
+
+            solval = SCIPgetSolVal(scip, sol, cands[c].var);
+            rounded = SCIPround(scip, solval);
+
+            cands[c].fractionality = REALABS(solval - rounded);
+         }
+
+         maxscore.fractionality = MAX(cands[c].fractionality, maxscore.fractionality);
+      }
+      else
+         cands[c].fractionality = 0.0;
+
+      if( conshdlrdata->branchdomainweight > 0.0 && cands[c].expr != NULL )
       {
          SCIP_Real domainwidth;
          SCIP_VAR* var;
@@ -6875,7 +6977,7 @@ void scoreBranchingCandidates(
       else
          cands[c].domain = 0.0;
 
-      if( conshdlrdata->branchdualweight > 0.0 )
+      if( conshdlrdata->branchdualweight > 0.0 && cands[c].expr != NULL )
       {
          SCIP_VAR* var;
 
@@ -6885,94 +6987,131 @@ void scoreBranchingCandidates(
          cands[c].dual = getDualBranchscore(scip, conshdlr, var);
          maxscore.dual = MAX(cands[c].dual, maxscore.dual);
       }
+      else
+         cands[c].dual = 0.0;
 
       if( conshdlrdata->branchpscostweight > 0.0 && SCIPgetNObjVars(scip) > 0 )
       {
          SCIP_VAR* var;
 
-         var = SCIPgetExprAuxVarNonlinear(cands[c].expr);
+         var = cands[c].var;
          assert(var != NULL);
 
-         if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
-            cands[c].pscost = SCIP_INVALID;
+         if( cands[c].expr != NULL )
+         {
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+               cands[c].pscost = SCIP_INVALID;
+            else
+            {
+               SCIP_Real brpoint;
+               SCIP_Real pscostdown;
+               SCIP_Real pscostup;
+               char strategy;
+
+               /* decide how to compute pseudo-cost scores
+                * this should be consistent with the way how pseudo-costs are updated in the core, which is decided by
+                * branching/lpgainnormalize for continuous variables and move in LP-value for non-continuous variables
+                */
+               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+                  strategy = conshdlrdata->branchpscostupdatestrategy;
+               else
+                  strategy = 'l';
+
+               brpoint = SCIPgetBranchingPoint(scip, var, SCIP_INVALID);
+
+               /* branch_relpscost deems pscosts as reliable, if the pseudo-count is at least something between 1 and 4
+                * or it uses some statistical tests involving SCIPisVarPscostRelerrorReliable
+                * For here, I use a simple #counts >= branchpscostreliable.
+                * TODO use SCIPgetVarPseudocostCount() instead?
+                */
+               if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS) >= conshdlrdata->branchpscostreliable )
+               {
+                  switch( strategy )
+                  {
+                     case 's' :
+                        pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint)));
+                        break;
+                     case 'd' :
+                        pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var)));
+                        break;
+                     case 'l' :
+                        if( SCIPisInfinity(scip, SCIPgetSolVal(scip, sol, var)) )
+                           pscostdown = SCIP_INVALID;
+                        else if( SCIPgetSolVal(scip, sol, var) <= SCIPadjustedVarUb(scip, var, brpoint) )
+                           pscostdown = SCIPgetVarPseudocostVal(scip, var, 0.0);
+                        else
+                           pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPgetSolVal(scip, sol, var) - SCIPadjustedVarUb(scip, var, brpoint)));
+                        break;
+                     default :
+                        SCIPerrorMessage("pscost update strategy %c unknown\n", strategy);
+                        pscostdown = SCIP_INVALID;
+                  }
+               }
+               else
+                  pscostdown = SCIP_INVALID;
+
+               if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS) >= conshdlrdata->branchpscostreliable )
+               {
+                  switch( strategy )
+                  {
+                     case 's' :
+                        pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var));
+                        break;
+                     case 'd' :
+                        pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint));
+                        break;
+                     case 'l' :
+                        if( SCIPisInfinity(scip, -SCIPgetSolVal(scip, sol, var)) )
+                           pscostup = SCIP_INVALID;
+                        else if( SCIPgetSolVal(scip, sol, var) >= SCIPadjustedVarLb(scip, var, brpoint) )
+                           pscostup = SCIPgetVarPseudocostVal(scip, var, 0.0);
+                        else
+                           pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarLb(scip, var, brpoint) - SCIPgetSolVal(scip, sol, var) );
+                        break;
+                     default :
+                        SCIPerrorMessage("pscost update strategy %c unknown\n", strategy);
+                        pscostup = SCIP_INVALID;
+                  }
+               }
+               else
+                  pscostup = SCIP_INVALID;
+
+               /* TODO if both are valid, we get pscostdown*pscostup, but does this compare well with vars were only pscostdown or pscostup is used?
+                * maybe we should use (pscostdown+pscostup)/2 or sqrt(pscostdown*pscostup) ?
+                */
+               if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )
+                  cands[c].pscost = SCIP_INVALID;
+               else if( pscostdown == SCIP_INVALID )
+                  cands[c].pscost = pscostup;
+               else if( pscostup == SCIP_INVALID )
+                  cands[c].pscost = pscostdown;
+               else
+                  cands[c].pscost = SCIPgetBranchScore(scip, NULL, pscostdown, pscostup);  /* pass NULL for var to avoid multiplication with branch-factor */
+            }
+         }
          else
          {
-            SCIP_Real brpoint;
             SCIP_Real pscostdown;
             SCIP_Real pscostup;
-            char strategy;
+            SCIP_Real solval;
 
-            /* decide how to compute pseudo-cost scores
-             * this should be consistent with the way how pseudo-costs are updated in the core, which is decided by
-             * branching/lpgainnormalize for continuous variables and move in LP-value for non-continuous variables
-             */
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-               strategy = conshdlrdata->branchpscostupdatestrategy;
-            else
-               strategy = 'l';
+            solval = SCIPgetSolVal(scip, sol, cands[c].var);
 
-            brpoint = SCIPgetBranchingPoint(scip, var, SCIP_INVALID);
-
-            /* branch_relpscost deems pscosts as reliable, if the pseudo-count is at least something between 1 and 4
-             * or it uses some statistical tests involving SCIPisVarPscostRelerrorReliable
-             * For here, I use a simple #counts >= branchpscostreliable.
-             * TODO use SCIPgetVarPseudocostCount() instead?
+            /* the calculation for pscostdown/up follows SCIPgetVarPseudocostScore(),
+             * i.e., set solvaldelta to the (negated) difference between variable value and rounded down value for pscostdown
+             * and different between variable value and rounded up value for pscostup
              */
             if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS) >= conshdlrdata->branchpscostreliable )
-            {
-               switch( strategy )
-               {
-                  case 's' :
-                     pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint)));
-                     break;
-                  case 'd' :
-                     pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var)));
-                     break;
-                  case 'l' :
-                     if( SCIPisInfinity(scip, SCIPgetSolVal(scip, sol, var)) )
-                        pscostdown = SCIP_INVALID;
-                     else if( SCIPgetSolVal(scip, sol, var) <= SCIPadjustedVarUb(scip, var, brpoint) )
-                        pscostdown = SCIPgetVarPseudocostVal(scip, var, 0.0);
-                     else
-                        pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPgetSolVal(scip, NULL, var) - SCIPadjustedVarUb(scip, var, brpoint)));
-                     break;
-                  default :
-                     SCIPerrorMessage("pscost update strategy %c unknown\n", strategy);
-                     pscostdown = SCIP_INVALID;
-               }
-            }
+               pscostdown = SCIPgetVarPseudocostVal(scip, var, SCIPfeasCeil(scip, solval - 1.0) - solval);
             else
                pscostdown = SCIP_INVALID;
 
             if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS) >= conshdlrdata->branchpscostreliable )
-            {
-               switch( strategy )
-               {
-                  case 's' :
-                     pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var));
-                     break;
-                  case 'd' :
-                     pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint));
-                     break;
-                  case 'l' :
-                     if( SCIPisInfinity(scip, -SCIPgetSolVal(scip, sol, var)) )
-                        pscostup = SCIP_INVALID;
-                     else if( SCIPgetSolVal(scip, NULL, var) >= SCIPadjustedVarLb(scip, var, brpoint) )
-                        pscostup = SCIPgetVarPseudocostVal(scip, var, 0.0);
-                     else
-                        pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarLb(scip, var, brpoint) - SCIPgetSolVal(scip, NULL, var) );
-                     break;
-                  default :
-                     SCIPerrorMessage("pscost update strategy %c unknown\n", strategy);
-                     pscostup = SCIP_INVALID;
-               }
-            }
+               pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPfeasFloor(scip, solval + 1.0) - solval);
             else
                pscostup = SCIP_INVALID;
 
-            /* TODO if both are valid, we get pscostdown*pscostup, but does this compare well with vars were only pscostdown or pscostup is used?
-             * maybe we should use (pscostdown+pscostup)/2 or sqrt(pscostdown*pscostup) ?
-             */
+            /* TODO see above for nonlinear variable case */
             if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )
                cands[c].pscost = SCIP_INVALID;
             else if( pscostdown == SCIP_INVALID )
@@ -6986,15 +7125,12 @@ void scoreBranchingCandidates(
          if( cands[c].pscost != SCIP_INVALID )
             maxscore.pscost = MAX(cands[c].pscost, maxscore.pscost);
       }
+      else
+         cands[c].pscost = SCIP_INVALID;
 
       if( conshdlrdata->branchvartypeweight > 0.0 )
       {
-         SCIP_VAR* var;
-
-         var = SCIPgetExprAuxVarNonlinear(cands[c].expr);
-         assert(var != NULL);
-
-         switch( SCIPvarGetType(var) )
+         switch( SCIPvarGetType(cands[c].var) )
          {
             case SCIP_VARTYPE_BINARY :
                cands[c].vartype = 1.0;
@@ -7020,11 +7156,7 @@ void scoreBranchingCandidates(
    {
       SCIP_Real weightsum;
 
-      ENFOLOG(
-         SCIP_VAR* var;
-         var = SCIPgetExprAuxVarNonlinear(cands[c].expr);
-         SCIPinfoMessage(scip, enfologfile, " scoring <%8s>[%7.1g,%7.1g]:(", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-         )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " scoring <%8s>[%7.1g,%7.1g]:(", SCIPvarGetName(cands[c].var), SCIPvarGetLbLocal(cands[c].var), SCIPvarGetUbLocal(cands[c].var)); )
 
       cands[c].weighted = 0.0;
       weightsum = 0.0;
@@ -7035,6 +7167,14 @@ void scoreBranchingCandidates(
          weightsum += conshdlrdata->branchviolweight;
 
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(viol)", conshdlrdata->branchviolweight, cands[c].auxviol / maxscore.auxviol); )
+      }
+
+      if( maxscore.fractionality > 0.0 )
+      {
+         cands[c].weighted += conshdlrdata->branchfracweight * cands[c].fractionality / maxscore.fractionality;
+         weightsum += conshdlrdata->branchfracweight;
+
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%6.2g(frac)", conshdlrdata->branchfracweight, cands[c].fractionality / maxscore.fractionality); )
       }
 
       if( maxscore.domain > 0.0 )
@@ -7077,6 +7217,7 @@ void scoreBranchingCandidates(
 
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%6.2g(vartype)", conshdlrdata->branchvartypeweight, cands[c].vartype / maxscore.vartype); )
       }
+
       assert(weightsum > 0.0);  /* we should have got at least one valid score */
       cands[c].weighted /= weightsum;
 
@@ -7087,6 +7228,7 @@ void scoreBranchingCandidates(
 /** compare two branching candidates by their weighted score
  *
  * if weighted score is equal, use variable index of (aux)var
+ * if variables are the same, then use whether variable was added due to nonlinearity or fractionality
  */
 static
 SCIP_DECL_SORTINDCOMP(branchcandCompare)
@@ -7095,11 +7237,110 @@ SCIP_DECL_SORTINDCOMP(branchcandCompare)
 
    if( cands[ind1].weighted != cands[ind2].weighted )
       return cands[ind1].weighted < cands[ind2].weighted ? -1 : 1;
-   else
-      return SCIPvarGetIndex(SCIPgetExprAuxVarNonlinear(cands[ind1].expr)) - SCIPvarGetIndex(SCIPgetExprAuxVarNonlinear(cands[ind2].expr));
+
+   if( cands[ind1].var != cands[ind2].var )
+      return SCIPvarGetIndex(cands[ind1].var) - SCIPvarGetIndex(cands[ind2].var);
+
+   return cands[ind1].expr != NULL ? 1 : -1;
 }
 
-/** do branching or register branching candidates */
+/** picks a candidate from array of branching candidates */
+static
+SCIP_RETCODE selectBranchingCandidate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BRANCHCAND*           cands,              /**< branching candidates */
+   int                   ncands,             /**< number of candidates */
+   SCIP_Bool             considerfracnl,     /**< whether to consider fractionality for spatial branching candidates */
+   SCIP_SOL*             sol,                /**< relaxation solution, NULL for LP */
+   BRANCHCAND**          selected            /**< buffer to store selected branching candidates */
+)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int* perm;
+   int c;
+   int left;
+   int right;
+   SCIP_Real threshold;
+
+   assert(cands != NULL);
+   assert(ncands >= 1);
+   assert(selected != NULL);
+
+   if( ncands == 1 )
+   {
+      *selected = cands;
+      return SCIP_OKAY;
+   }
+
+   /* if there are more than one candidate, then compute scores and select */
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* compute additional scores on branching candidates and weighted score */
+   scoreBranchingCandidates(scip, conshdlr, cands, ncands, considerfracnl, sol);
+
+   /* sort candidates by weighted score */
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, ncands) );
+   SCIPsortDown(perm, branchcandCompare, (void*)cands, ncands);
+
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g)\n", ncands,
+      SCIPvarGetName(cands[perm[0]].var), cands[perm[0]].weighted,
+      SCIPvarGetName(cands[perm[ncands - 1]].var), cands[perm[ncands - 1]].weighted); )
+
+   /* binary search to find first low-scored (score below branchhighscorefactor * maximal-score)  candidate */
+   left = 0;
+   right = ncands - 1;
+   threshold = conshdlrdata->branchhighscorefactor * cands[perm[0]].weighted;
+   while( left < right )
+   {
+      int mid = (left + right) / 2;
+      if( cands[perm[mid]].weighted >= threshold )
+         left = mid + 1;
+      else
+         right = mid;
+   }
+   assert(left <= ncands);
+
+   if( left < ncands )
+   {
+      if( cands[perm[left]].weighted >= threshold )
+      {
+         assert(left + 1 == ncands || cands[perm[left + 1]].weighted < threshold);
+         ncands = left + 1;
+      }
+      else
+      {
+         assert(cands[perm[left]].weighted < threshold);
+         ncands = left;
+      }
+   }
+   assert(ncands > 0);
+
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g) after removing low scores\n", ncands,
+      SCIPvarGetName(cands[perm[0]].var), cands[perm[0]].weighted,
+      SCIPvarGetName(cands[perm[ncands - 1]].var), cands[perm[ncands - 1]].weighted); )
+
+   if( ncands > 1 )
+   {
+      /* choose at random from candidates 0..ncands-1 */
+      if( conshdlrdata->branchrandnumgen == NULL )
+      {
+         SCIP_CALL( SCIPcreateRandom(scip, &conshdlrdata->branchrandnumgen, BRANCH_RANDNUMINITSEED, TRUE) );
+      }
+      c = SCIPrandomGetInt(conshdlrdata->branchrandnumgen, 0, ncands - 1);
+      *selected = &cands[perm[c]];
+   }
+   else
+      *selected = &cands[perm[0]];
+
+   SCIPfreeBufferArray(scip, &perm);
+
+   return SCIP_OKAY;
+}
+
+/** do spatial branching or register branching candidates */
 static
 SCIP_RETCODE branching(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7115,7 +7356,7 @@ SCIP_RETCODE branching(
    SCIP_CONSHDLRDATA* conshdlrdata;
    BRANCHCAND* cands;
    int ncands;
-   SCIP_VAR* var;
+   BRANCHCAND* selected = NULL;
    SCIP_NODE* downchild;
    SCIP_NODE* eqchild;
    SCIP_NODE* upchild;
@@ -7150,85 +7391,18 @@ SCIP_RETCODE branching(
    if( ncands == 0 )
       goto TERMINATE;
 
-   if( ncands > 1 )
-   {
-      /* if there are more than one candidate, then compute scores and select */
-      int* perm;
-      int c;
-      int left;
-      int right;
-      SCIP_Real threshold;
+   /* here we include fractionality of integer variables into the branching score
+    * but if we know there will be no fractional integer variables, then we can shortcut and turn this off
+    */
+   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, sol == NULL && SCIPgetNLPBranchCands(scip) > 0, sol, &selected) );
+   assert(selected != NULL);
+   assert(selected->expr != NULL);
 
-      /* compute additional scores on branching candidates and weighted score */
-      scoreBranchingCandidates(scip, conshdlr, cands, ncands, sol);
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " branching on variable <%s>[%g,%g]\n", SCIPvarGetName(selected->var),
+      SCIPvarGetLbLocal(selected->var), SCIPvarGetUbLocal(selected->var)); )
 
-      /* sort candidates by weighted score */
-      SCIP_CALL( SCIPallocBufferArray(scip, &perm, ncands) );
-      SCIPsortDown(perm, branchcandCompare, (void*)cands, ncands);
-
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g)\n", ncands,
-         SCIPvarGetName(SCIPgetExprAuxVarNonlinear(cands[perm[0]].expr)), cands[perm[0]].weighted,
-         SCIPvarGetName(SCIPgetExprAuxVarNonlinear(cands[perm[ncands - 1]].expr)), cands[perm[ncands - 1]].weighted); )
-
-      /* binary search to find first low-scored (score below branchhighscorefactor * maximal-score)  candidate */
-      left = 0;
-      right = ncands - 1;
-      threshold = conshdlrdata->branchhighscorefactor * cands[perm[0]].weighted;
-      while( left < right )
-      {
-         int mid = (left + right) / 2;
-         if( cands[perm[mid]].weighted >= threshold )
-            left = mid + 1;
-         else
-            right = mid;
-      }
-      assert(left <= ncands);
-
-      if( left < ncands )
-      {
-         if( cands[perm[left]].weighted >= threshold )
-         {
-            assert(left + 1 == ncands || cands[perm[left + 1]].weighted < threshold);
-            ncands = left + 1;
-         }
-         else
-         {
-            assert(cands[perm[left]].weighted < threshold);
-            ncands = left;
-         }
-      }
-      assert(ncands > 0);
-
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g) after removing low scores\n", ncands,
-         SCIPvarGetName(SCIPgetExprAuxVarNonlinear(cands[perm[0]].expr)), cands[perm[0]].weighted,
-         SCIPvarGetName(SCIPgetExprAuxVarNonlinear(cands[perm[ncands - 1]].expr)), cands[perm[ncands - 1]].weighted); )
-
-      if( ncands > 1 )
-      {
-         /* choose at random from candidates 0..ncands-1 */
-         if( conshdlrdata->branchrandnumgen == NULL )
-         {
-            SCIP_CALL( SCIPcreateRandom(scip, &conshdlrdata->branchrandnumgen, BRANCH_RANDNUMINITSEED, TRUE) );
-         }
-         c = SCIPrandomGetInt(conshdlrdata->branchrandnumgen, 0, ncands - 1);
-         var = SCIPgetExprAuxVarNonlinear(cands[perm[c]].expr);
-      }
-      else
-         var = SCIPgetExprAuxVarNonlinear(cands[perm[0]].expr);
-
-      SCIPfreeBufferArray(scip, &perm);
-   }
-   else
-   {
-      var = SCIPgetExprAuxVarNonlinear(cands[0].expr);
-   }
-   assert(var != NULL);
-
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " branching on variable <%s>[%g,%g]\n", SCIPvarGetName(var),
-            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)); )
-
-   SCIP_CALL( SCIPbranchVarVal(scip, var, SCIPgetBranchingPoint(scip, var, SCIP_INVALID), &downchild, &eqchild,
-            &upchild) );
+   SCIP_CALL( SCIPbranchVarVal(scip, selected->var, SCIPgetBranchingPoint(scip, selected->var, SCIP_INVALID), &downchild, &eqchild,
+      &upchild) );
    if( downchild != NULL || eqchild != NULL || upchild != NULL )
       *result = SCIP_BRANCHED;
    else
@@ -7262,6 +7436,7 @@ SCIP_RETCODE enforceExprNlhdlr(
    SCIP_Bool             separated,          /**< whether another nonlinear handler already added a cut for this expression */
    SCIP_Bool             allowweakcuts,      /**< whether we allow for weak cuts */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement (and not just separation) */
+   SCIP_Bool             branchcandonly,     /**< only collect branching candidates, do not separate or propagate */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -7269,7 +7444,7 @@ SCIP_RETCODE enforceExprNlhdlr(
 
    /* call enforcement callback of the nlhdlr */
    SCIP_CALL( SCIPnlhdlrEnfo(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
-            allowweakcuts, separated, inenforcement, result) );
+            allowweakcuts, separated, inenforcement, branchcandonly, result) );
 
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
@@ -7323,14 +7498,25 @@ SCIP_RETCODE enforceExprNlhdlr(
          assert(rowprep != NULL);
          assert(SCIProwprepGetSidetype(rowprep) == (overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT));
 
-         /* complete estimator to cut */
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+         if( !branchcandonly )
+         {
+            /* complete estimator to cut */
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
-         /* add the cut and/or branching scores */
-         SCIP_CALL( SCIPprocessRowprepNonlinear(scip, nlhdlr, cons, expr, rowprep, overestimate, auxvar,
+            /* add the cut and/or branching scores
+             * (branching scores that could be added here are to deal with bad numerics of cuts; we skip these if branchcandonly)
+             */
+            SCIP_CALL( SCIPprocessRowprepNonlinear(scip, nlhdlr, cons, expr, rowprep, overestimate, auxvar,
                auxvalue, allowweakcuts, branchscoresuccess, inenforcement, sol, result) );
+         }
 
          SCIPfreeRowprep(scip, &rowprep);
+      }
+
+      if( branchcandonly && branchscoresuccess )
+      {
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s added branching candidates\n", SCIPnlhdlrGetName(nlhdlr)); )
+         *result = SCIP_BRANCHED;
       }
 
       SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
@@ -7353,6 +7539,7 @@ SCIP_RETCODE enforceExpr(
    SCIP_Longint          soltag,             /**< tag of solution */
    SCIP_Bool             allowweakcuts,      /**< whether we allow weak cuts */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement (and not just separation) */
+   SCIP_Bool             branchcandonly,     /**< only collect branching candidates, do not separate or propagate */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
@@ -7399,6 +7586,10 @@ SCIP_RETCODE enforceExpr(
 
       /* skip nlhdlr that do not want to participate in any separation */
       if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABOTH) == 0 )
+         continue;
+
+      /* if looking for branching candidates only, then skip nlhdlr that wouldn't created branching candidates */
+      if( branchcandonly && !ownerdata->enfos[e]->sepaaboveusesactivity && !ownerdata->enfos[e]->sepabelowusesactivity )
          continue;
 
       nlhdlr = ownerdata->enfos[e]->nlhdlr;
@@ -7454,12 +7645,12 @@ SCIP_RETCODE enforceExpr(
       /* if we want to overestimate and violation w.r.t. auxiliary variables is also present on this side and nlhdlr
        * wants to be called for separation on this side, then call separation of nlhdlr
        */
-      if( overestimate && auxoverestimate && (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0 )
+      if( overestimate && auxoverestimate && (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0 && (!branchcandonly || ownerdata->enfos[e]->sepaaboveusesactivity) )
       {
          /* call the separation or estimation callback of the nonlinear handler for overestimation */
          hdlrresult = SCIP_DIDNOTFIND;
          SCIP_CALL( enforceExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, sol,
-            ownerdata->enfos[e]->auxvalue, TRUE, *result == SCIP_SEPARATED, allowweakcuts, inenforcement, &hdlrresult) );
+            ownerdata->enfos[e]->auxvalue, TRUE, *result == SCIP_SEPARATED, allowweakcuts, inenforcement, branchcandonly, &hdlrresult) );
 
          if( hdlrresult == SCIP_CUTOFF )
          {
@@ -7502,12 +7693,12 @@ SCIP_RETCODE enforceExpr(
       /* if we want to underestimate and violation w.r.t. auxiliary variables is also present on this side and nlhdlr
        * wants to be called for separation on this side, then call separation of nlhdlr
        */
-      if( underestimate && auxunderestimate && (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW) != 0 )
+      if( underestimate && auxunderestimate && (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW) != 0 && (!branchcandonly || ownerdata->enfos[e]->sepabelowusesactivity) )
       {
          /* call the separation or estimation callback of the nonlinear handler for underestimation */
          hdlrresult = SCIP_DIDNOTFIND;
          SCIP_CALL( enforceExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, sol,
-            ownerdata->enfos[e]->auxvalue, FALSE, *result == SCIP_SEPARATED, allowweakcuts, inenforcement, &hdlrresult) );
+            ownerdata->enfos[e]->auxvalue, FALSE, *result == SCIP_SEPARATED, allowweakcuts, inenforcement, branchcandonly, &hdlrresult) );
 
          if( hdlrresult == SCIP_CUTOFF )
          {
@@ -7562,6 +7753,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_EXPRITER*        it,                 /**< expression iterator that we can just use here */
    SCIP_Bool             allowweakcuts,      /**< whether to allow weak cuts in this round */
    SCIP_Bool             inenforcement,      /**< whether to we are in enforcement, and not just separation */
+   SCIP_Bool             branchcandonly,     /**< only collect branching candidates, do not separate or propagate */
    SCIP_RESULT*          result,             /**< pointer to update with result of the enforcing call */
    SCIP_Bool*            success             /**< buffer to store whether some enforcement took place */
    )
@@ -7585,7 +7777,7 @@ SCIP_RETCODE enforceConstraint(
 
    *success = FALSE;
 
-   if( inenforcement && !consdata->ispropagated )
+   if( inenforcement && !branchcandonly && !consdata->ispropagated )
    {
       /* If there are boundchanges that haven't been propagated to activities yet, then do this now and update bounds of
        * auxiliary variables, since some nlhdlr/exprhdlr may look at auxvar bounds or activities
@@ -7633,7 +7825,7 @@ SCIP_RETCODE enforceConstraint(
          continue;
       }
 
-      SCIP_CALL( enforceExpr(scip, conshdlr, cons, expr, sol, soltag, allowweakcuts, inenforcement, &resultexpr) );
+      SCIP_CALL( enforceExpr(scip, conshdlr, cons, expr, sol, soltag, allowweakcuts, inenforcement, branchcandonly, &resultexpr) );
 
       /* if not enforced, then we must not have found a cutoff, cut, domain reduction, or branchscore */
       assert((ownerdata->lastenforced == conshdlrdata->enforound) == (resultexpr != SCIP_DIDNOTFIND));
@@ -7661,13 +7853,14 @@ SCIP_RETCODE enforceConstraint(
 
 /** try to separate violated constraints and, if in enforcement, register branching scores
  *
+ * If branchcandonly=TRUE, then do not separate or propagate, but register branching scores only.
+ *
  * Sets result to
  * - SCIP_DIDNOTFIND, if nothing of the below has been done
  * - SCIP_CUTOFF, if node can be cutoff,
  * - SCIP_SEPARATED, if a cut has been added,
- * - SCIP_REDUCEDDOM, if a domain reduction has been found,
- * - SCIP_BRANCHED, if branching has been done,
- * - SCIP_REDUCEDDOM, if a variable got fixed (in an attempt to branch on it),
+ * - SCIP_REDUCEDDOM, if a domain reduction has been found or a variable got fixed (in an attempt to branch on it),
+ * - SCIP_BRANCHED, if branching has been done (if branchcandonly=TRUE, then collected branching candidates only),
  * - SCIP_INFEASIBLE, if external branching candidates were registered
  */
 static
@@ -7679,6 +7872,7 @@ SCIP_RETCODE enforceConstraints(
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    SCIP_Longint          soltag,             /**< tag of solution */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement, and not just separation */
+   SCIP_Bool             branchcandonly,     /**< only collect branching candidates, do not separate or propagate */
    SCIP_Real             maxrelconsviol,     /**< largest scaled violation among all violated expr-constraints, only used if in enforcement */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
@@ -7741,12 +7935,12 @@ SCIP_RETCODE enforceConstraints(
          }
       })
 
-      SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, FALSE, inenforcement, result, &consenforced) );
+      SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, FALSE, inenforcement, branchcandonly, result, &consenforced) );
 
       if( *result == SCIP_CUTOFF )
          break;
 
-      if( !consenforced && inenforcement )
+      if( !consenforced && inenforcement && !branchcandonly )
       {
          SCIP_Real viol;
 
@@ -7756,7 +7950,7 @@ SCIP_RETCODE enforceConstraints(
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, try again with weak "\
                      "cuts allowed\n", SCIPconsGetName(conss[c])); )
 
-            SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, TRUE, inenforcement, result, &consenforced) );
+            SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, TRUE, inenforcement, branchcandonly, result, &consenforced) );
 
             if( consenforced )
                ++conshdlrdata->nweaksepa;  /* TODO maybe this should not be counted per constraint, but per enforcement round? */
@@ -7771,8 +7965,7 @@ SCIP_RETCODE enforceConstraints(
 
    ENFOLOG( if( enfologfile != NULL ) fflush( enfologfile); )
 
-   /* if having branching scores, then propagate them from expressions with children to variable expressions */
-   if( *result == SCIP_BRANCHED )
+   if( *result == SCIP_BRANCHED && !branchcandonly )
    {
       /* having result set to branched here means only that we have branching candidates, we still need to do the actual
        * branching
@@ -7790,6 +7983,198 @@ SCIP_RETCODE enforceConstraints(
    ENFOLOG( if( enfologfile != NULL ) fflush( enfologfile); )
 
    return SCIP_OKAY;
+}
+
+/** decide whether to branch on fractional integer or nonlinear variable
+ *
+ * The routine collects spatial branching candidates by a call to enforceConstraints(branchcandonly=TRUE)
+ * and collectBranchingCandidates(). Then it adds fractional integer variables to the candidate list.
+ * Variables that are candidate for both spatial branching and fractionality are considered as two separate candidates.
+ * selectBranchingCandidate() then selects a variable for branching from the joined candidate list.
+ * If the selected variable is a fractional integer one, then branchintegral=TRUE is returned, otherwise FALSE.
+ * Some shortcuts exist for cases where there are no candidates of the one kind or the other.
+ */
+static
+SCIP_RETCODE branchingIntegralOrNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Longint          soltag,             /**< tag of LP solution */
+   SCIP_Real             maxrelconsviol,     /**< maximal scaled constraint violation */
+   SCIP_Bool*            branchintegral,     /**< buffer to store whether to branch on fractional integer variables first */
+   SCIP_Bool*            cutoff              /**< buffer to store whether infeasibility has been detected */
+   )
+{
+   SCIP_RESULT result;
+   int nlpcands;
+   SCIP_VAR** lpcands;     /* fractional integer variables */
+   SCIP_Real* lpcandsfrac; /* fractionalities */
+   BRANCHCAND* cands;
+   BRANCHCAND* selected;
+   int ncands;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(nconss > 0);
+   assert(branchintegral != NULL);
+   assert(cutoff != NULL);
+
+   *branchintegral = FALSE;
+   *cutoff = FALSE;
+
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 || SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, NULL, (SCIP_Longint)0, TRUE, TRUE, maxrelconsviol, &result) );
+   switch( result )
+   {
+      case SCIP_DIDNOTFIND:
+         /* no branching candidates found could mean that the LP solution is in a convex region */
+         *branchintegral = TRUE;
+         return SCIP_OKAY;
+
+      case SCIP_CUTOFF:
+         /* probably cannot happen, but easy to handle */
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+
+      case SCIP_SEPARATED:
+      case SCIP_REDUCEDDOM:
+         /* we asked enforceConstraints() to collect branching candidates only, it shouldn't have separated or propagated */
+         SCIPerrorMessage("Unexpected separation or propagation from enforceConstraints(branchcandonly = TRUE)\n");
+         return SCIP_ERROR;
+
+      case SCIP_BRANCHED:
+         /* actually meaning that branching candidates were registered (the result for which we have gone through all this effort) */
+         break;
+
+      case SCIP_INFEASIBLE:
+         /* should not happen (enforceConstraints() returns this if external branching candidates were registered in branching(),
+          * but this was disabled by branchcandonly = TRUE)
+          */
+      default:
+         SCIPerrorMessage("Unexpected return from enforceConstraints(branchcandonly = TRUE)\n");
+         return SCIP_ERROR;
+   } /*lint !e788*/
+
+   /* collect spatial branching candidates and their auxviol-score */
+   SCIP_CALL( SCIPallocBufferArray(scip, &cands, SCIPgetNVars(scip) + SCIPgetNLPBranchCands(scip)) );
+   SCIP_CALL( collectBranchingCandidates(scip, conshdlr, conss, nconss, maxrelconsviol, NULL, soltag, cands, &ncands) );
+
+   /* add fractional integer variables to branching candidates */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, &nlpcands, NULL, NULL) );
+
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " adding %d fractional integer variables to branching candidates\n", nlpcands); )
+
+   for( c = 0; c < nlpcands; ++c )
+   {
+      assert(ncands < SCIPgetNVars(scip) + SCIPgetNLPBranchCands(scip));
+      assert(SCIPvarGetType(lpcands[c]) <= SCIP_VARTYPE_INTEGER);
+      cands[ncands].expr = NULL;
+      cands[ncands].var = lpcands[c];
+      cands[ncands].auxviol = 0.0;
+      cands[ncands].fractionality = lpcandsfrac[c];
+      ++ncands;
+   }
+
+   /* select a variable for branching
+    * to keep things separate, do not include fractionality of integer variables into scores of spatial branching candidates
+    * the same variables appear among the candidates for branching on integrality, where its fractionality is considered
+    */
+   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, FALSE, NULL, &selected) );
+   assert(selected != NULL);
+
+   if( selected->expr == NULL )
+   {
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " fractional variable <%s> selected for branching; fall back to cons_integral\n", SCIPvarGetName(selected->var)); )
+
+      *branchintegral = TRUE;
+   }
+
+   SCIPfreeBufferArray(scip, &cands);
+
+   return SCIP_OKAY;
+}
+
+/** decide whether to consider spatial branching before integrality has been enforced
+ *
+ * This decides whether we are still at a phase where we always want to branch on fractional integer variables if any (return TRUE),
+ * or whether branchingIntegralOrNonlinear() should be used (return FALSE).
+ *
+ * This essentially checks whether the average pseudo cost count exceeds the value of parameter branchmixfractional.
+ */
+static
+SCIP_Bool branchingIntegralFirst(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SOL*             sol                 /**< solution to be enforced */
+)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* if LP still unbounded, then work on nonlinear constraints first */
+   if( sol == NULL && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      return FALSE;
+
+   /* no branching in cons_integral if no integer variables */
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+      return FALSE;
+
+   /* no branching in cons_integral if LP solution not fractional */
+   if( sol == NULL && SCIPgetNLPBranchCands(scip) == 0 )
+      return FALSE;
+
+   /* no branching in cons_integral if relax solution not fractional */
+   if( sol != NULL )
+   {
+      SCIP_Bool isfractional = FALSE;
+      SCIP_VAR** vars;
+      int nbinvars;
+      int nintvars;
+      int i;
+
+      vars = SCIPgetVars(scip);
+      nbinvars = SCIPgetNBinVars(scip);
+      nintvars = SCIPgetNIntVars(scip);
+
+      for( i = 0; i < nbinvars + nintvars && !isfractional; ++i )
+      {
+         assert(vars[i] != NULL);
+         assert(SCIPvarIsIntegral(vars[i]));
+
+         if( !SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[i])) )
+            isfractional = TRUE;
+      }
+
+      if( !isfractional )
+         return FALSE;
+   }
+
+   /* branchmixfractional being infinity means that integral should always go first */
+   if( SCIPisInfinity(scip, conshdlrdata->branchmixfractional) )
+      return TRUE;
+
+   /* branchmixfractional being 0.0 means we do not wait for any pseudocosts to be available */
+   if( conshdlrdata->branchmixfractional == 0.0 )
+      return FALSE;
+
+   /* if not yet enough pseudocosts for down or up direction, then branch on fractionality
+    * @todo this gives the total pseudocost count divided by the number of discrete variables
+    * if we updated pseudocost after branching on continuous variables, wouldn't this be incorrect? (#3637)
+    */
+   if( SCIPgetAvgPseudocostCount(scip, SCIP_BRANCHDIR_DOWNWARDS) < conshdlrdata->branchmixfractional )
+      return TRUE;
+   if( SCIPgetAvgPseudocostCount(scip, SCIP_BRANCHDIR_UPWARDS) < conshdlrdata->branchmixfractional )
+      return TRUE;
+
+   /* we may have decent pseudocosts, so go for rule that chooses between fractional and spatial branching based on candidates */
+   return FALSE;
 }
 
 /** collect (and print (if debugging enfo)) information on violation in expressions
@@ -7989,8 +8374,16 @@ SCIP_RETCODE consEnfo(
    SCIP_Real maxauxviol;
    SCIP_Real maxvarboundviol;
    SCIP_Longint soltag;
+   SCIP_Bool branchintegral;
    int nnotify;
    int c;
+
+   if( branchingIntegralFirst(scip, conshdlr, sol) )
+   {
+      /* let cons_integral handle enforcement */
+      *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlr != NULL);
@@ -8022,6 +8415,25 @@ SCIP_RETCODE consEnfo(
             maxvarboundviol, SCIPgetLPFeastol(scip)); )
 
    assert(maxvarboundviol <= SCIPgetLPFeastol(scip));
+
+   /* look at fractional and nonlinear branching candidates and decide whether to branch on fractional vars, first */
+   if( sol == NULL )
+   {
+      SCIP_Bool cutoff;
+
+      SCIP_CALL( branchingIntegralOrNonlinear(scip, conshdlr, conss, nconss, soltag, maxrelconsviol, &branchintegral, &cutoff) );
+      if( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      if( branchintegral )
+      {
+         /* let cons_integral handle enforcement */
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
+   }
 
    /* try to propagate */
    if( conshdlrdata->propinenforce )
@@ -8070,7 +8482,7 @@ SCIP_RETCODE consEnfo(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, TRUE, maxrelconsviol, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, TRUE, FALSE, maxrelconsviol, result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_REDUCEDDOM || *result == SCIP_BRANCHED ||
          *result == SCIP_INFEASIBLE )
@@ -8080,6 +8492,13 @@ SCIP_RETCODE consEnfo(
 
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, " could not enforce violation %g in regular ways, LP feastol=%g, "\
             "becoming desperate now...\n", maxabsconsviol, SCIPgetLPFeastol(scip)); )
+
+   if( sol == NULL && SCIPgetNLPBranchCands(scip) > 0 )
+   {
+      /* if there are still fractional integer variables, then let cons_integral go first */
+      *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
 
    if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxvarboundviol) && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
    {
@@ -8208,7 +8627,7 @@ SCIP_RETCODE consSepa(
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: separation\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
 
    /* call separation */
-   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, FALSE, SCIP_INVALID, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, FALSE, FALSE, SCIP_INVALID, result) );
 
    return SCIP_OKAY;
 }
@@ -8334,6 +8753,7 @@ SCIP_RETCODE bilinTermAddAuxExpr(
    }
    else
    {
+      assert(term->aux.exprs != NULL);
       term->aux.exprs[pos]->underestimate |= auxexpr->underestimate;
       term->aux.exprs[pos]->overestimate  |= auxexpr->overestimate;
    }
@@ -9031,7 +9451,7 @@ CLEANUP:
    return SCIP_OKAY;
 }
 
-/** computes a facet of the convex or concave envelope of a univariant vertex polyhedral function
+/** computes a facet of the convex or concave envelope of a univariate vertex polyhedral function
  *
  * In other words, compute the line that passes through two given points.
  */
@@ -9318,6 +9738,1218 @@ SCIP_RETCODE computeVertexPolyhedralFacetBivariate(
          candxstarval = xstarval;
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** ensures that we can store information about open expressions (i.e., not fully encoded in the symmetry detection
+ *  graph yet) in an array
+ */
+static
+SCIP_RETCODE ensureOpenArraySizeSymdetect(
+   SCIP*                 scip,               /**< SCIP pointer */
+   int**                 openidx,            /**< address of openidx array */
+   int                   nelems,             /**< number of elements that need to be stored */
+   int*                  maxnelems           /**< pointer to store maximum number that can be stored */
+   )
+{
+   assert(scip != NULL);
+   assert(openidx != NULL);
+   assert(maxnelems != NULL);
+
+   if( nelems > *maxnelems )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, nelems);
+      assert(newsize >= nelems);
+
+      SCIP_CALL( SCIPreallocBufferArray(scip, openidx, newsize) );
+
+      *maxnelems = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** ensures that we can store information about local variables in an array */
+static
+SCIP_RETCODE ensureLocVarsArraySize(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR***           vars,               /**< address of variable array */
+   SCIP_Real**           vals,               /**< address of value array */
+   int                   nelems,             /**< number of elements that need to be stored */
+   int*                  maxnelems           /**< pointer to store maximum number that can be stored */
+   )
+{
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
+   assert(maxnelems != NULL);
+
+   if( nelems > *maxnelems )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, nelems);
+      assert(newsize > *maxnelems);
+
+      SCIP_CALL( SCIPreallocBufferArray(scip, vars, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, vals, newsize) );
+
+      *maxnelems = newsize;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** tries to add gadget for finding signed permutations of bilinear products
+ *
+ *  If a product has exactly two children being variables, negating both simultanteoulsy
+ *  is a signed permutation.
+ */
+static
+SCIP_RETCODE tryAddGadgetBilinearProductSignedPerm(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_EXPR*            expr,               /**< product expression for which gadget is tried to be added */
+   SCIP_CONS*            cons,               /**< constraint containing product expression */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph to be extended by gadget */
+   int                   parentidx,          /**< index of parent node in symmetry detection graph for gadget */
+   SCIP_Bool             hasparentcoef,      /**< whether the parent gives a coefficient to the expression */
+   SCIP_Real             parentcoef,         /**< the parent coefficient (if it exists) */
+   SCIP_VAR***           consvars,           /**< pointer to allocated array to store temporary variables */
+   SCIP_Real**           consvals,           /**< pointer to allocated arrat to store temporary values */
+   int*                  maxnconsvars,       /**< pointer to maximum number consvars/consvals can hold */
+   SCIP_HASHSET*         handledexprs,       /**< hashset to store handled expressions */
+   SCIP_Bool*            success             /**< pointer to store whether gadget could be added successfully */
+   )
+{
+   SYM_EXPRDATA* symdata;
+   SCIP_EXPR** children;
+   SCIP_VAR* var1 = NULL;
+   SCIP_VAR* var2 = NULL;
+   SCIP_Real val1 = 0.0;
+   SCIP_Real val2 = 0.0;
+   SCIP_Real coef;
+   SCIP_Real prodval;
+   SCIP_Real constant;
+   int nlocvars;
+   int optype;
+   int nchildren;
+   int prodidx;
+   int coefidx1;
+   int coefidx2;
+   int childidx;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPisExprProduct(scip, expr));
+   assert(graph != NULL);
+   assert(0 <= parentidx && parentidx < SCIPgetSymgraphNNodes(graph));
+   assert(consvars != NULL);
+   assert(consvals != NULL);
+   assert(maxnconsvars != NULL);
+   assert(*maxnconsvars > 0);
+   assert(handledexprs != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* we require exactly two children being variables */
+   nchildren = SCIPexprGetNChildren(expr);
+   if( nchildren != 2 )
+      return SCIP_OKAY;
+
+   children = SCIPexprGetChildren(expr);
+   if( !SCIPisExprVar(scip, children[0]) || !SCIPisExprVar(scip, children[1]) )
+      return SCIP_OKAY;
+
+   /* check whether each child is not multi-aggregated and is not shifted */
+   SCIP_CALL( ensureLocVarsArraySize(scip, consvars, consvals, SCIPexprGetNChildren(expr), maxnconsvars) );
+
+   for( childidx = 0; childidx < 2; ++childidx )
+   {
+      (*consvars)[0] = SCIPgetVarExprVar(children[childidx]);
+      (*consvals)[0] = 1.0;
+      nlocvars = 1;
+      constant = 0.0;
+
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars,
+            &constant, SCIPconsIsTransformed(cons)) );
+
+      if( nlocvars != 1 || !SCIPisZero(scip, constant) )
+         return SCIP_OKAY;
+
+      if( (SCIPisInfinity(scip, SCIPvarGetUbGlobal((*consvars)[0]))
+            != SCIPisInfinity(scip, -SCIPvarGetLbGlobal((*consvars)[0]))) )
+         return SCIP_OKAY;
+
+      /* store information about variables */
+      if( childidx == 0 )
+      {
+         var1 = (*consvars)[0];
+         val1 = (*consvals)[0];
+      }
+      else
+      {
+         var2 = (*consvars)[0];
+         val2 = (*consvals)[0];
+      }
+   }
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+
+   /* store the we handle the children */
+   SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) children[0]) );
+   SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) children[1]) );
+
+   SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
+   assert(symdata != NULL);
+   assert(SCIPgetSymExprdataNConstants(symdata) == 1);
+
+   coef = SCIPgetSymExprdataConstants(symdata)[0];
+
+   SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
+
+   /* add gadget modeling the product
+    *
+    * Since the constants are 0, each variable is centered at the origin, which leads to
+    * a product of the form \f$(\alpha x)\cdot(\gamma y)\f$. Manipulating the formula leads
+    * to \f$\alpha \gamma (x \cdot y)\f$, which is modeled in a gadget that allows to
+    * negate both variables simulataneously.
+    */
+   SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &prodidx) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, prodidx, hasparentcoef, parentcoef) );
+
+   prodval = coef * val1 * val2;
+
+   /* introduce nodes for the product value and its negation; since flipping both variables
+    * simultaneously is a signed symmetry, assign both nodes the same value
+    */
+   SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, prodval, &coefidx1) );
+   SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, prodval, &coefidx2) );
+
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, prodidx, coefidx1, FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, prodidx, coefidx2, FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1, coefidx2, FALSE, 0.0) );
+
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1,
+         SCIPgetSymgraphVarnodeidx(scip, graph, var1), FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx1,
+         SCIPgetSymgraphVarnodeidx(scip, graph, var2), FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx2,
+         SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var1), FALSE, 0.0) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefidx2,
+         SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var2), FALSE, 0.0) );
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** returns whether an operator is even and, if yes, stores data about operator */
+static
+SCIP_Bool isEvenOperator(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_EXPR*            expr,               /**< expression corresponding to operator */
+   SCIP_Bool*            hasvalue,           /**< pointer to store whether even operator has a value
+                                              *   needed for symmetry computation */
+   SCIP_Real*            value               /**< pointer to store value for symmetry computation */
+   )
+{
+   SYM_EXPRDATA* symdata;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(hasvalue != NULL);
+   assert(value != NULL);
+
+   /* check for different operators known to be even */
+   if( SCIPisExprSignpower(scip, expr) || SCIPisExprCos(scip, expr) )
+   {
+      /* get remaining information needed for symmetry detection */
+      if( SCIPisExprSignpower(scip, expr) )
+      {
+         SCIP_CALL_ABORT( SCIPgetSymDataExpr(scip, expr, &symdata) );
+         assert(symdata != NULL);
+         assert(SCIPgetSymExprdataNConstants(symdata) == 1);
+
+         *value = SCIPgetSymExprdataConstants(symdata)[0];
+         *hasvalue = !SCIPisEQ(scip, *value, 1.0);
+
+         SCIP_CALL_ABORT( SCIPfreeSymDataExpr(scip, &symdata) );
+      }
+      else
+      {
+         assert(SCIPisExprCos(scip, expr));
+         *hasvalue = FALSE;
+      }
+
+      return TRUE;
+   }
+   else if( SCIPisExprPower(scip, expr) )
+   {
+      SCIP_Real exponent;
+      int safeexponent;
+
+      /* only consider expressions corresponding to an even power */
+      SCIP_CALL_ABORT( SCIPgetSymDataExpr(scip, expr, &symdata) );
+      assert(symdata != NULL);
+      assert(SCIPgetSymExprdataNConstants(symdata) == 1);
+
+      exponent = SCIPgetSymExprdataConstants(symdata)[0];
+      SCIP_CALL_ABORT( SCIPfreeSymDataExpr(scip, &symdata) );
+
+      /* check whether the exponent is an even integer */
+      if( !SCIPisIntegral(scip, exponent) || SCIPisLE(scip, exponent, 0.0) )
+         return FALSE;
+
+      /* deal with numerics */
+      safeexponent = (int) (exponent + 0.5);
+      if( safeexponent % 2 != 0 )
+         return FALSE;
+
+      *hasvalue = TRUE;
+      *value = exponent;
+
+      return TRUE;
+   }
+   else if( SCIPisExprAbs(scip, expr) )
+   {
+      *hasvalue = FALSE;
+
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+/** returns whether a variable is centered at 0 */
+static
+SCIP_Bool varIsCenteredAt0(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR*             var                 /**< variable to be checked */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   if( (SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
+      return FALSE;
+
+   if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+      return TRUE;
+
+   if( SCIPisEQ(scip, SCIPvarGetUbGlobal(var), -SCIPvarGetLbGlobal(var)) )
+      return TRUE;
+
+   return FALSE;
+}
+
+/** tries to add gadget for finding signed permutation of even univariate operators with variable child */
+static
+SCIP_RETCODE tryAddGadgetEvenOperatorVariable(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_EXPR*            evenopexpr,         /**< even operator expression for which gadget is tried to be added */
+   SCIP_EXPR*            child,              /**< child expression of evenopexpr */
+   SCIP_CONS*            cons,               /**< constraint containing expression */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph to be extended by gadget */
+   int                   parentidx,          /**< index of parent node in symmetry detection graph for gadget */
+   SCIP_Bool             hasparentcoef,      /**< whether the parent gives a coefficient to the expression */
+   SCIP_Real             parentcoef,         /**< the parent coefficient (if it exists) */
+   SCIP_Bool             hassymval,          /**< whether evenopexpr has a value needed for symmetry detection */
+   SCIP_Real             symval,             /**< value needed for symmetry detection (if hassymval is TRUE) */
+   SCIP_VAR***           consvars,           /**< pointer to allocated array to store temporary variables */
+   SCIP_Real**           consvals,           /**< pointer to allocated arrat to store temporary values */
+   int*                  maxnconsvars,       /**< pointer to maximum number consvars/consvals can hold */
+   SCIP_Bool*            success             /**< pointer to store whether gadget could be added successfully */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real constant;
+   SCIP_Real edgeweight;
+   int nlocvars;
+   int nodeidx;
+   int optype;
+   int thisopidx;
+
+   assert(scip != NULL);
+   assert(evenopexpr != NULL);
+   assert(child != NULL);
+   assert(SCIPisExprVar(scip, child));
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(parentidx >= 0);
+   assert(consvars != NULL);
+   assert(consvals != NULL);
+   assert(maxnconsvars != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* check whether child variable is (multi-)aggregated */
+   var = SCIPgetVarExprVar(child);
+   (*consvars)[0] = var;
+   (*consvals)[0] = 1.0;
+   constant = 0.0;
+   nlocvars = 1;
+
+   SCIP_CALL( ensureLocVarsArraySize(scip, consvars, consvals, nlocvars, maxnconsvars) );
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars, &constant,
+         SCIPconsIsTransformed(cons)) );
+
+   /* skip multi-aggregated variables or variables with domain not centered at 0 */
+   if( nlocvars != 1 || !SCIPisZero(scip, constant) )
+      return SCIP_OKAY;
+
+   if( !varIsCenteredAt0(scip, var) )
+      return SCIP_OKAY;
+
+   /* store partial information for gadget */
+   var = (*consvars)[0];
+   edgeweight = (*consvals)[0];
+
+   /* add gadget to graph for even univariate expression */
+   *success = TRUE;
+
+   SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(evenopexpr)), &optype) );
+
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &thisopidx) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, thisopidx, hasparentcoef, parentcoef) );
+
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, thisopidx, SCIPgetSymgraphVarnodeidx(scip, graph, var),
+         TRUE, edgeweight) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, thisopidx, SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var),
+         TRUE, edgeweight) );
+
+   if( hassymval )
+   {
+      SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, symval, &nodeidx) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, thisopidx, nodeidx, FALSE, 0.0) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** tries to add gadget for finding signed permutation of even univariate operators with sum child */
+static
+SCIP_RETCODE tryAddGadgetEvenOperatorSum(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_EXPR*            evenopexpr,         /**< even operator expression for which gadget is tried to be added */
+   SCIP_EXPR*            child,              /**< child expression of evenopexpr */
+   SCIP_CONS*            cons,               /**< constraint containing expression */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph to be extended by gadget */
+   int                   parentidx,          /**< index of parent node in symmetry detection graph for gadget */
+   SCIP_Bool             hasparentcoef,      /**< whether the parent gives a coefficient to the expression */
+   SCIP_Real             parentcoef,         /**< the parent coefficient (if it exists) */
+   SCIP_Bool             hassymval,          /**< whether evenopexpr has a value needed for symmetry detection */
+   SCIP_Real             symval,             /**< value needed for symmetry detection (if hassymval is TRUE) */
+   SCIP_VAR***           consvars,           /**< pointer to allocated array to store temporary variables */
+   SCIP_Real**           consvals,           /**< pointer to allocated arrat to store temporary values */
+   int*                  maxnconsvars,       /**< pointer to maximum number consvars/consvals can hold */
+   SCIP_HASHSET*         handledexprs,       /**< hashset to store handled expressions */
+   SCIP_Bool*            success             /**< pointer to store whether gadget could be added successfully */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Real constant;
+   SCIP_Real weight;
+   int nlocvars;
+   int nodeidx;
+   int optype;
+   int thisopidx;
+   int i;
+
+   assert(scip != NULL);
+   assert(evenopexpr != NULL);
+   assert(child != NULL);
+   assert(SCIPisExprSum(scip, child));
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(parentidx >= 0);
+   assert(consvars != NULL);
+   assert(consvals != NULL);
+   assert(maxnconsvars != NULL);
+   assert(handledexprs != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* check whether child variable is (multi-)aggregated and whether all children are variables */
+   nlocvars = SCIPexprGetNChildren(child);
+
+   SCIP_CALL( ensureLocVarsArraySize(scip, consvars, consvals, nlocvars, maxnconsvars) );
+
+   for( i = 0; i < nlocvars; ++i)
+   {
+      if( SCIPisExprVar(scip, SCIPexprGetChildren(child)[i]) )
+      {
+         (*consvars)[i] = SCIPgetVarExprVar(SCIPexprGetChildren(child)[i]);
+         (*consvals)[i] = SCIPgetCoefsExprSum(child)[i];
+      }
+      else
+         return SCIP_OKAY;
+   }
+   constant = SCIPgetConstantExprSum(child);
+
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals, &nlocvars, &constant,
+         SCIPconsIsTransformed(cons)) );
+
+   /* we can only handle the case without constant and two variables with domain centered at origin */
+   if( nlocvars > 2 || !SCIPisZero(scip, constant) )
+      return SCIP_OKAY;
+   assert(nlocvars > 0);
+
+   var = (*consvars)[0];
+   if( !varIsCenteredAt0(scip, var) )
+      return SCIP_OKAY;
+
+   if( nlocvars == 2 )
+   {
+      var = (*consvars)[1];
+      if( !varIsCenteredAt0(scip, var) )
+         return SCIP_OKAY;
+   }
+
+   /* add gadget to graph for even univariate expression that have a sum of at most two variables as child */
+   *success = TRUE;
+   for( i = 0; i < SCIPexprGetNChildren(child); ++i )
+   {
+      SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) SCIPexprGetChildren(child)[i]) );
+   }
+
+   SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(evenopexpr)), &optype) );
+
+   SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &thisopidx) );
+   SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, thisopidx, hasparentcoef, parentcoef) );
+
+   if( hassymval )
+   {
+      SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, symval, &nodeidx) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, thisopidx, nodeidx, FALSE, 0.0) );
+   }
+
+   if( nlocvars == 1 )
+   {
+      var = (*consvars)[0];
+      weight = (*consvals)[0];
+
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, thisopidx, SCIPgetSymgraphVarnodeidx(scip, graph, var),
+            TRUE, weight) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, thisopidx, SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var),
+            TRUE, weight) );
+   }
+   else
+   {
+      int dummyidx1;
+      int dummyidx2;
+
+      /* add dummy nodes for gadget */
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &dummyidx1) );
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &dummyidx2) );
+
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, dummyidx1, thisopidx, FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, dummyidx2, thisopidx, FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, dummyidx1, dummyidx2, FALSE, 0.0) );
+
+      /* connect dummy nodes with variables */
+      for( i = 0; i < 2; ++i)
+      {
+         var = (*consvars)[i];
+         weight = ABS((*consvals)[i]);
+
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, dummyidx1, SCIPgetSymgraphVarnodeidx(scip, graph, var),
+               TRUE, weight) );
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, dummyidx2, SCIPgetSymgraphNegatedVarnodeidx(scip, graph, var),
+               TRUE, weight) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** tries to add gadget for finding signed permutations of even univariate operators
+ *
+ *  We handle two cases. First, if a univariate operator is even and has a variable
+ *  as child, negating the child is signed permutation. Second, the univariate operator
+ *  is even and has a weighted sum of two variables as child.
+ */
+static
+SCIP_RETCODE tryAddGadgetEvenOperator(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_EXPR*            expr,               /**< expression for which gadget is tried to be added */
+   SCIP_CONS*            cons,               /**< constraint containing expression */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph to be extended by gadget */
+   int                   parentidx,          /**< index of parent node in symmetry detection graph for gadget */
+   SCIP_Bool             hasparentcoef,      /**< whether the parent gives a coefficient to the expression */
+   SCIP_Real             parentcoef,         /**< the parent coefficient (if it exists) */
+   SCIP_VAR***           consvars,           /**< pointer to allocated array to store temporary variables */
+   SCIP_Real**           consvals,           /**< pointer to allocated arrat to store temporary values */
+   int*                  maxnconsvars,       /**< pointer to maximum number consvars/consvals can hold */
+   SCIP_HASHSET*         handledexprs,       /**< hashset to store handled expressions */
+   SCIP_Bool*            success             /**< pointer to store whether gadget could be added successfully */
+   )
+{
+   SCIP_EXPR* child;
+   SCIP_Real val = 0.0;
+   SCIP_Bool hasval = FALSE;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(graph != NULL);
+   assert(0 <= parentidx && parentidx < SCIPgetSymgraphNNodes(graph));
+   assert(consvars != NULL);
+   assert(consvals != NULL);
+   assert(maxnconsvars != NULL);
+   assert(*maxnconsvars > 0);
+   assert(handledexprs != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* ignore variable or value expressions */
+   if( SCIPisExprVar(scip, expr) || SCIPisExprValue(scip, expr) || SCIPisExprVaridx(scip, expr) )
+      return SCIP_OKAY;
+   assert(SCIPexprGetNChildren(expr) > 0);
+
+   /* ignore operators with too many children */
+   if( SCIPexprGetNChildren(expr) > 1 )
+      return SCIP_OKAY;
+
+   /* check whether operator is even */
+   if( !isEvenOperator(scip, expr, &hasval, &val) )
+      return SCIP_OKAY;
+
+   /* we can only treat the operator if its child is a variable or a sum */
+   child = SCIPexprGetChildren(expr)[0];
+   if( SCIPisExprVar(scip, child) )
+   {
+      SCIP_CALL( tryAddGadgetEvenOperatorVariable(scip, expr, child, cons, graph, parentidx, hasparentcoef, parentcoef,
+            hasval, val, consvars, consvals, maxnconsvars, success) );
+   }
+   else if( SCIPisExprSum(scip, child) )
+   {
+      SCIP_CALL( tryAddGadgetEvenOperatorSum(scip, expr, child, cons, graph, parentidx, hasparentcoef, parentcoef,
+            hasval, val, consvars, consvals, maxnconsvars, handledexprs, success) );
+   }
+
+   if( *success )
+   {
+      SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) child) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** compares two variable pointers */
+static
+SCIP_DECL_SORTINDCOMP(SCIPsortVarPtr)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+
+   vars = (SCIP_VAR**) dataptr;
+
+   var1 = vars[ind1];
+   var2 = vars[ind2];
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+
+   /* sort variables by their unique index */
+   if( SCIPvarGetIndex(var1) < SCIPvarGetIndex(var2) )
+      return -1;
+   if( SCIPvarGetIndex(var1) > SCIPvarGetIndex(var2) )
+      return 1;
+
+   return 0;
+}
+
+/** gets domain center of a variable which has not semi-infinite domain */
+static
+SCIP_Real getDomainCenter(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   SCIP_Real ub;
+   SCIP_Real lb;
+
+   ub = SCIPvarGetUbGlobal(var);
+   lb = SCIPvarGetLbGlobal(var);
+
+   assert( SCIPisInfinity(scip, ub) == SCIPisInfinity(scip, -lb) );
+
+   if ( SCIPisInfinity(scip, ub) )
+      return 0.0;
+
+   return (ub + lb) / 2;
+}
+
+/** tries to add gadget for finding signed permutations for squared differences in a sum expression */
+static
+SCIP_RETCODE tryAddGadgetSquaredDifference(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_EXPR*            sumexpr,            /**< sum expression */
+   SCIP_CONS*            cons,               /**< constraint containing the sum expression */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph to be extended by gadget */
+   int                   sumnodeidx,         /**< index of sum node in symmetry detection graph for gadget */
+   SCIP_VAR***           consvars,           /**< pointer to allocated array to store temporary variables */
+   SCIP_Real**           consvals,           /**< pointer to allocated arrat to store temporary values */
+   int*                  maxnconsvars,       /**< pointer to maximum number consvars/consvals can hold */
+   SCIP_HASHSET*         handledexprs        /**< hashset to store handled expressions */
+   )
+{
+   SYM_EXPRDATA* symdata;
+   SCIP_EXPR** children;
+   SCIP_EXPR** powexprs;
+   SCIP_EXPR** prodexprs;
+   SCIP_EXPR* child;
+   SCIP_VAR**  powvars;
+   SCIP_VAR** prodvars;
+   SCIP_VAR* actvar;
+   SCIP_VAR* actvar2;
+   SCIP_VAR* var;
+   SCIP_VAR* var2;
+   SCIP_Real* sumcoefs;
+   SCIP_Real constant;
+   SCIP_Real constant2;
+   SCIP_Real val;
+   SCIP_Real val2;
+   SCIP_Bool* powexprused = NULL;
+   int* powperm = NULL;
+   int* prodperm = NULL;
+   int nchildren;
+   int nlocvars;
+   int nodeidx;
+   int coefnodeidx1;
+   int coefnodeidx2;
+   int cnt;
+   int i;
+   int j;
+   int nterms;
+   int npowexprs = 0;
+   int nprodexprs = 0;
+   int powcoef = 0;
+
+   assert(scip != NULL);
+   assert(sumexpr != NULL);
+   assert(cons != NULL);
+   assert(SCIPisExprSum(scip, sumexpr));
+   assert(consvars != NULL);
+   assert(consvals != NULL);
+   assert(maxnconsvars != NULL);
+   assert(*maxnconsvars > 0);
+   assert(handledexprs != NULL);
+
+   /* iterate over sum expression and extract all power and product expressions */
+   sumcoefs = SCIPgetCoefsExprSum(sumexpr);
+   children = SCIPexprGetChildren(sumexpr);
+   nchildren = SCIPexprGetNChildren(sumexpr);
+   SCIP_CALL( SCIPallocBufferArray(scip, &powexprs, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prodexprs, 2 * nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &powvars, nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prodvars, 2 * nchildren) );
+
+   /* we scan for norm constraints, i.e., the number of powexpr needs to be twice the prodexpr */
+   /** @todo make this work in a more general case */
+   for( i = 0; i < nchildren; ++i )
+   {
+      if( SCIPisExprPower(scip, children[i]) )
+      {
+         SCIP_Real exponent;
+
+         /* we require a coefficient of +/- 1 from the sum and all power expressions have the same coefficient */
+         if( powcoef == 0 )
+         {
+            if( SCIPisEQ(scip, sumcoefs[i], 1.0) || SCIPisEQ(scip, sumcoefs[i], -1.0) )
+               powcoef = (int) SCIPround(scip, sumcoefs[i]);
+         }
+         else if( !SCIPisEQ(scip, (SCIP_Real) powcoef, sumcoefs[i]) )
+            continue;
+
+         /* we only store power expressions if their child is a variable */
+         assert(SCIPexprGetNChildren(children[i]) == 1);
+         child = SCIPexprGetChildren(children[i])[0];
+         if( !SCIPisExprVar(scip, child) )
+            continue;
+
+         /* the power is required to be a 2 */
+         SCIP_CALL( SCIPgetSymDataExpr(scip, children[i], &symdata) );
+         assert(symdata != NULL);
+         assert(SCIPgetSymExprdataNConstants(symdata) == 1);
+
+         exponent = SCIPgetSymExprdataConstants(symdata)[0];
+         SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
+
+         if( !SCIPisEQ(scip, exponent, 2.0) )
+            continue;
+
+         /* we only store power expressions if the child is not multi-aggregated */
+         var = SCIPgetVarExprVar(child);
+         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+         {
+            powexprs[npowexprs] = children[i];
+            powvars[npowexprs++] = var;
+         }
+      }
+      else if( SCIPisExprProduct(scip, children[i]) )
+      {
+         /* we require a coefficient of +/- 2 from the sum and all product expressions have the same coefficient */
+         if( powcoef == 0 )
+         {
+            if( SCIPisEQ(scip, sumcoefs[i], 2.0) || SCIPisEQ(scip, sumcoefs[i], -2.0) )
+               powcoef = (int) -SCIPround(scip, sumcoefs[i]);
+         }
+         else if( !SCIPisEQ(scip, (SCIP_Real) 2 * powcoef, -sumcoefs[i]) )
+            continue;
+
+         /* we only store power expressions if they have exactly two children being variables */
+         if( SCIPexprGetNChildren(children[i]) != 2 )
+            continue;
+         if( !SCIPisExprVar(scip, SCIPexprGetChildren(children[i])[0])
+            || !SCIPisExprVar(scip, SCIPexprGetChildren(children[i])[1]) )
+            continue;
+
+         var = SCIPgetVarExprVar(SCIPexprGetChildren(children[i])[0]);
+         var2 = SCIPgetVarExprVar(SCIPexprGetChildren(children[i])[1]);
+
+         /* we only store product expressions if the children are not multi-aggregated */
+         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR
+            && SCIPvarGetStatus(var2) != SCIP_VARSTATUS_MULTAGGR )
+         {
+            prodexprs[nprodexprs] = children[i];
+            prodvars[nprodexprs++] = var;
+            prodexprs[nprodexprs] = children[i];
+            prodvars[nprodexprs++] = var2;
+         }
+      }
+   }
+
+   if( npowexprs == 0 || nprodexprs != npowexprs )
+      goto FREEMEMORY;
+
+   /* check whether the power variables and product variables match */
+   SCIP_CALL( SCIPallocBufferArray(scip, &powperm, nprodexprs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &prodperm, nprodexprs) );
+
+   SCIPsort(powperm, SCIPsortVarPtr, (void*) powvars, npowexprs);
+   SCIPsort(prodperm, SCIPsortVarPtr, (void*) prodvars, npowexprs);
+
+   for( i = 0; i < npowexprs; ++i )
+   {
+      if( SCIPvarGetIndex(prodvars[prodperm[i]]) != SCIPvarGetIndex(powvars[powperm[i]]) )
+         goto FREEMEMORY;
+   }
+
+   /* if we reach this line, the variables match: we have found a potential norm constraint */
+   assert(npowexprs % 2 == 0);
+   nterms = npowexprs / 2;
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &powexprused, npowexprs) );
+
+   /* add gadget of each squared difference term */
+   cnt = 0;
+   for( i = 0; i < nterms; ++i )
+   {
+      SCIP_Bool var1found = FALSE;
+      SCIP_Bool var2found = FALSE;
+
+      (*consvals)[0] = 1.0;
+      (*consvars)[0] = prodvars[cnt++];
+      constant = 0.0;
+      nlocvars = 1;
+
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals,
+            &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
+
+      if( nlocvars != 1 )
+      {
+         ++cnt;
+         continue;
+      }
+      actvar = (*consvars)[0];
+      val = (*consvals)[0];
+
+      (*consvals)[0] = 1.0;
+      (*consvars)[0] = prodvars[cnt++];
+      constant2 = 0.0;
+      nlocvars = 1;
+
+      SCIP_CALL( SCIPgetSymActiveVariables(scip, SYM_SYMTYPE_SIGNPERM, consvars, consvals,
+            &nlocvars, &constant2, SCIPconsIsTransformed(cons)) );
+
+      if( nlocvars != 1 )
+         continue;
+      actvar2 = (*consvars)[0];
+      val2 = (*consvals)[0];
+
+      /* we cannot handle the pair of variables if their constant/scalar differs or one variable
+       * cannot be centered at the origin or they are not centered around the same point
+       */
+      if( !SCIPisEQ(scip, constant, constant2) || !SCIPisEQ(scip, val, val2)
+         || (SCIPisInfinity(scip, SCIPvarGetUbGlobal(actvar)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(actvar)))
+         || (SCIPisInfinity(scip, SCIPvarGetUbGlobal(actvar2)) != SCIPisInfinity(scip, -SCIPvarGetLbGlobal(actvar2)))
+         || (SCIPisInfinity(scip, SCIPvarGetUbGlobal(actvar)) != SCIPisInfinity(scip, SCIPvarGetLbGlobal(actvar2)))
+         || !SCIPisEQ(scip, getDomainCenter(scip, actvar), getDomainCenter(scip, actvar2)) )
+         continue;
+
+      /* add gadget */
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SQDIFF, &nodeidx) );
+      SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, val, &coefnodeidx1) );
+      SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, val2, &coefnodeidx2) );
+
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, sumnodeidx, nodeidx, TRUE, (SCIP_Real) powcoef) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, nodeidx, coefnodeidx1, TRUE, (SCIP_Real) powcoef) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, nodeidx, coefnodeidx2, TRUE, (SCIP_Real) powcoef) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefnodeidx1,
+            SCIPgetSymgraphVarnodeidx(scip, graph, actvar), FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefnodeidx1,
+            SCIPgetSymgraphVarnodeidx(scip, graph, actvar2), FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefnodeidx2,
+            SCIPgetSymgraphNegatedVarnodeidx(scip, graph, actvar), FALSE, 0.0) );
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, coefnodeidx2,
+            SCIPgetSymgraphNegatedVarnodeidx(scip, graph, actvar2), FALSE, 0.0) );
+
+      /* mark product expression as handled */
+      SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) prodexprs[2*i]) );
+
+      /* find corresponding unused power expressions and mark them as handled */
+      for( j = 0; j < npowexprs && !(var1found && var2found); ++j )
+      {
+         if( powexprused[j] )
+            continue;
+         assert(cnt >= 2);
+
+         if( !var1found && powvars[j] == prodvars[cnt - 2] )
+         {
+            SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) powexprs[j]) );
+            powexprused[j] = TRUE;
+            var1found = TRUE;
+         }
+         else if( !var2found && powvars[j] == prodvars[cnt - 1] )
+         {
+            SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) powexprs[j]) );
+            powexprused[j] = TRUE;
+            var2found = TRUE;
+         }
+      }
+   }
+
+ FREEMEMORY:
+   SCIPfreeBufferArrayNull(scip, &powexprused);
+   SCIPfreeBufferArrayNull(scip, &prodperm);
+   SCIPfreeBufferArrayNull(scip, &powperm);
+   SCIPfreeBufferArray(scip, &prodvars);
+   SCIPfreeBufferArray(scip, &powvars);
+   SCIPfreeBufferArray(scip, &prodexprs);
+   SCIPfreeBufferArray(scip, &powexprs);
+
+   return SCIP_OKAY;
+}
+
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{ /*lint --e{850}*/
+   SCIP_EXPRITER* it;
+   SCIP_HASHSET* handledexprs;
+   SCIP_EXPR* rootexpr;
+   SCIP_EXPR* expr;
+   SCIP_VAR** consvars;
+   SCIP_Real* consvals;
+   SCIP_Real constant;
+   SCIP_Real parentcoef = 0.0;
+   int* openidx;
+   int maxnopenidx;
+   int parentidx;
+   int nconsvars;
+   int maxnconsvars;
+   int nlocvars;
+   int nopenidx = 0;
+   int consnodeidx;
+   int nodeidx;
+   int i;
+   SCIP_Bool iscolored;
+   SCIP_Bool hasparentcoef;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   /* store lhs/rhs */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons,
+         SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), &consnodeidx) );
+
+   rootexpr = SCIPgetExprNonlinear(cons);
+   assert(rootexpr != NULL);
+
+   /* allocate arrays to store operators not completely handled yet (due to DFS) and variables in constraint */
+   expr = SCIPgetExprNonlinear(cons);
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
+
+   /* find potential number of nodes in graph */
+   maxnopenidx = 0;
+   for( ; !SCIPexpriterIsEnd(it); (void) SCIPexpriterGetNext(it) )
+   {
+      if( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_LEAVEEXPR )
+         continue;
+
+      ++maxnopenidx;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &openidx, maxnopenidx) );
+
+   maxnconsvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, maxnconsvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvals, maxnconsvars) );
+
+   /* for finding special subexpressions, use hashset to store which expressions have been handled completely */
+   SCIP_CALL( SCIPhashsetCreate(&handledexprs, SCIPblkmem(scip), maxnopenidx) );
+
+   /* iterate over expression tree and store nodes/edges */
+   expr = SCIPgetExprNonlinear(cons); /*lint !e838*/
+   SCIP_CALL( SCIPexpriterInit(it, expr, SCIP_EXPRITER_DFS, TRUE) );
+   SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ENTEREXPR | SCIP_EXPRITER_LEAVEEXPR);
+
+   for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+   {
+      /* if an expression has already been handled by an ancestor, increase iterator until we leave it */
+      if( !SCIPhashsetIsEmpty(handledexprs) && SCIPhashsetExists(handledexprs, expr) )
+      {
+         SCIP_EXPR* baseexpr;
+
+         baseexpr = expr;
+         while( SCIPexpriterGetStageDFS(it) != SCIP_EXPRITER_LEAVEEXPR || expr != baseexpr )
+            expr = SCIPexpriterGetNext(it);
+
+         SCIP_CALL( SCIPhashsetRemove(handledexprs, (void*) expr) );
+
+         /* leave the expression */
+         continue;
+      }
+
+      /* due to DFS and expression has not been handled by ancestor, remove expression from list of open expressions */
+      if( SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_LEAVEEXPR )
+      {
+         --nopenidx;
+         continue;
+      }
+      assert(SCIPexpriterGetStageDFS(it) == SCIP_EXPRITER_ENTEREXPR);
+
+      /* find parentidx */
+      if( expr == rootexpr )
+         parentidx = consnodeidx;
+      else
+      {
+         assert(nopenidx >= 1);
+         parentidx = openidx[nopenidx - 1];
+      }
+
+      /* possibly find a coefficient assigned to the expression by the parent */
+      hasparentcoef = FALSE;
+      if ( expr != rootexpr )
+      {
+         SCIP_CALL( SCIPgetCoefSymData(scip, expr, SCIPexpriterGetParentDFS(it), &parentcoef, &hasparentcoef) );
+      }
+
+      /* deal with different kinds of expressions and store them in the symmetry data structure */
+      if( SCIPisExprVar(scip, expr) )
+      {
+         /* needed to correctly reset value when leaving expression */
+         SCIP_CALL( ensureOpenArraySizeSymdetect(scip, &openidx, nopenidx + 1, &maxnopenidx) );
+
+         openidx[nopenidx++] = -1;
+
+         assert(maxnconsvars > 0);
+         assert(parentidx > 0);
+
+         /* if the parent assigns the variable a coefficient, introduce an intermediate node */
+         if( hasparentcoef )
+         {
+            SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_COEF, &nodeidx) ); /*lint !e641*/
+
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, nodeidx, TRUE, parentcoef) ); /*lint !e644*/
+            parentidx = nodeidx;
+         }
+
+         /* connect (aggregation of) variable expression with its parent */
+         nconsvars = 1;
+         consvars[0] = SCIPgetVarExprVar(expr);
+         consvals[0] = 1.0;
+         constant = 0.0;
+
+         SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &consvars, &consvals,
+               &nconsvars, &constant, SCIPconsIsTransformed(cons)) );
+
+         /* check whether variable is aggregated */
+         if( nconsvars > 1 || !SCIPisZero(scip, constant) || !SCIPisEQ(scip, consvals[0], 1.0) )
+         {
+            int thisidx;
+
+            SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &thisidx) ); /*lint !e641*/
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, thisidx, FALSE, 0.0) );
+
+            parentidx = thisidx;
+         }
+         SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, parentidx, consvars, consvals,
+               nconsvars, constant) );
+      }
+      else if( SCIPisExprValue(scip, expr) )
+      {
+         assert(parentidx > 0);
+
+         SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, SCIPgetValueExprValue(expr), &nodeidx) );
+
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, nodeidx, hasparentcoef, parentcoef) );
+
+         /* needed to correctly reset value when leaving expression */
+         SCIP_CALL( ensureOpenArraySizeSymdetect(scip, &openidx, nopenidx + 1, &maxnopenidx) );
+
+         openidx[nopenidx++] = -1;
+      }
+      else
+      {
+         SCIP_Bool usedefaultgadget = TRUE;
+
+         assert(expr == rootexpr || parentidx > 0);
+         assert(SCIPhashsetIsEmpty(handledexprs) || !SCIPhashsetExists(handledexprs, expr));
+
+         if( SCIPisExprSum(scip, expr) )
+         {
+            /* deal with sum expressions differently, because we can possibly aggregate linear sums */
+            SCIP_EXPR** children;
+            int sumidx;
+            int optype;
+            int childidx;
+
+            /* sums are handled by a special gadget */
+            usedefaultgadget = FALSE;
+
+            /* extract all children being variables and compute the sum of active variables expression */
+            nlocvars = 0;
+            children = SCIPexprGetChildren(expr);
+
+            SCIP_CALL( ensureLocVarsArraySize(scip, &consvars, &consvals, SCIPexprGetNChildren(expr), &maxnconsvars) );
+
+            for( childidx = 0; childidx < SCIPexprGetNChildren(expr); ++childidx )
+            {
+               if( !SCIPisExprVar(scip, children[childidx]) )
+                  continue;
+
+               consvars[nlocvars] = SCIPgetVarExprVar(children[childidx]);
+               consvals[nlocvars++] = SCIPgetCoefsExprSum(expr)[childidx];
+
+               /* store that we have already handled this expression */
+               SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) children[childidx]) );
+            }
+
+            constant = SCIPgetConstantExprSum(expr);
+
+            SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &consvars, &consvals,
+                  &nlocvars, &constant, SCIPconsIsTransformed(cons)) );
+
+            SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
+
+            SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &sumidx) );
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, sumidx, hasparentcoef, parentcoef) );
+
+            /* add the linear part of the sum */
+            SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, sumidx, consvars, consvals, nlocvars, constant) );
+
+            SCIP_CALL( ensureOpenArraySizeSymdetect(scip, &openidx, nopenidx + 1, &maxnopenidx) );
+
+            /* check whether the sum encodes expressions of type \f$(x - y)^2\f$ */
+            if( symtype == SYM_SYMTYPE_SIGNPERM )
+            {
+               SCIP_CALL( tryAddGadgetSquaredDifference(scip, expr, cons, graph, sumidx,
+                     &consvars, &consvals, &maxnconsvars, handledexprs) );
+            }
+
+            /* store sumidx for children that have not been treated */
+            openidx[nopenidx++] = sumidx;
+         }
+         else if( symtype == SYM_SYMTYPE_SIGNPERM && SCIPisExprProduct(scip, expr) )
+         {
+            SCIP_Bool succ;
+
+            SCIP_CALL( tryAddGadgetBilinearProductSignedPerm(scip, expr, cons, graph, parentidx, hasparentcoef,
+                  parentcoef, &consvars, &consvals, &maxnconsvars, handledexprs, &succ) );
+
+            if( succ )
+            {
+               usedefaultgadget = FALSE;
+               SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) expr) );
+            }
+         }
+         else if( symtype == SYM_SYMTYPE_SIGNPERM )
+         {
+            SCIP_Bool succ;
+
+            /* we can find more signed permutations for even univariate operators */
+            SCIP_CALL( tryAddGadgetEvenOperator(scip, expr, cons, graph, parentidx, hasparentcoef, parentcoef,
+                  &consvars, &consvals, &maxnconsvars, handledexprs, &succ) );
+
+            if( succ )
+            {
+               usedefaultgadget = FALSE;
+               SCIP_CALL( SCIPhashsetInsert(handledexprs, SCIPblkmem(scip), (void*) expr) );
+            }
+         }
+
+         if( usedefaultgadget )
+         {
+            int opidx;
+            int optype;
+
+            SCIP_CALL( SCIPgetSymOpNodeType(scip, SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)), &optype) );
+            SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, optype, &opidx) );
+            SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, parentidx, opidx, hasparentcoef, parentcoef) );
+
+            /* possibly add constants of expression */
+            if( SCIPexprhdlrHasGetSymData(SCIPexprGetHdlr(expr)) )
+            {
+               SYM_EXPRDATA* symdata;
+
+               SCIP_CALL( SCIPgetSymDataExpr(scip, expr, &symdata) );
+               assert(symdata != NULL);
+
+               /* if expression has multiple constants, assign colors to edges to distinguish them */
+               iscolored = SCIPgetSymExprdataNConstants(symdata) > 1 ? TRUE : FALSE;
+               for( i = 0; i < SCIPgetSymExprdataNConstants(symdata); ++i )
+               {
+                  SCIP_CALL( SCIPaddSymgraphValnode(scip, graph, SCIPgetSymExprdataConstants(symdata)[i], &nodeidx) );
+                  SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, opidx, nodeidx, iscolored, (SCIP_Real) i+1) );
+               }
+
+               SCIP_CALL( SCIPfreeSymDataExpr(scip, &symdata) );
+            }
+
+            SCIP_CALL( ensureOpenArraySizeSymdetect(scip, &openidx, nopenidx + 1, &maxnopenidx) );
+
+            openidx[nopenidx++] = opidx;
+         }
+      }
+   }
+
+   SCIPhashsetFree(&handledexprs, SCIPblkmem(scip));
+   SCIPfreeBufferArray(scip, &consvals);
+   SCIPfreeBufferArray(scip, &consvars);
+   SCIPfreeBufferArray(scip, &openidx);
+   SCIPfreeExpriter(&it);
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -10606,6 +12238,24 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsNonlinear)
 #define consGetDiveBdChgsNonlinear NULL
 #endif
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint (if possible) */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphNonlinear)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint (if possible) */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphNonlinear)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
@@ -10738,7 +12388,8 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          consActiveNonlinear, consDeactiveNonlinear,
          consEnableNonlinear, consDisableNonlinear, consDelvarsNonlinear,
          consPrintNonlinear, consCopyNonlinear, consParseNonlinear,
-         consGetVarsNonlinear, consGetNVarsNonlinear, consGetDiveBdChgsNonlinear, conshdlrdata) );
+         consGetVarsNonlinear, consGetNVarsNonlinear, consGetDiveBdChgsNonlinear, consGetPermsymGraphNonlinear,
+         consGetSignedPermsymGraphNonlinear, conshdlrdata) );
 
    /* add nonlinear constraint handler parameters */
    /* TODO organize into more subcategories */
@@ -10858,6 +12509,10 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          "weight by how much to consider the violation assigned to a variable for its branching score",
          &conshdlrdata->branchviolweight, FALSE, 1.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/fracweight",
+         "weight by how much to consider fractionality of integer variables in branching score for spatial branching",
+         &conshdlrdata->branchfracweight, FALSE, 1.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/dualweight",
          "weight by how much to consider the dual values of rows that contain a variable for its branching score",
          &conshdlrdata->branchdualweight, FALSE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
@@ -10885,6 +12540,10 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/pscostreliable",
          "minimum pseudo-cost update count required to consider pseudo-costs reliable",
          &conshdlrdata->branchpscostreliable, FALSE, 2.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/mixfractional",
+         "minimal average pseudo cost count for discrete variables at which to start considering spatial branching before branching on fractional integer variables",
+         &conshdlrdata->branchmixfractional, FALSE, SCIPinfinity(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/linearizeheursol",
          "whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution)",
@@ -11559,6 +13218,7 @@ SCIP_RETCODE SCIPprocessRowprepNonlinear(
          else if( !SCIPisEQ(scip, auxvalue, estimateval) )
          {
             char gap[40];
+            /* coverity[secure_coding] */
             (void) sprintf(gap, "_estimategap=%g", REALABS(auxvalue - estimateval));
             strcat(SCIProwprepGetName(rowprep), gap);
          }
@@ -12470,7 +14130,7 @@ SCIP_RETCODE SCIPaddExprNonlinear(
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
-      SCIPerrorMessage("SCIPaddLinearVarNonlinear can only be called in problem stage.\n");
+      SCIPerrorMessage("SCIPaddExprNonlinear can only be called in problem stage.\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -12488,12 +14148,13 @@ SCIP_RETCODE SCIPaddExprNonlinear(
    assert(consdata != NULL);
    assert(consdata->expr != NULL);
 
-   /* we should not have collected additional data for it
-    * if some of these asserts fail, we may have to remove it and add some code to keep information up to date
+   /* free quadratic representation, if any is stored */
+   SCIPfreeExprQuadratic(scip, consdata->expr);
+
+   /* free varexprs in consdata, in case they have been stored
+    * (e.g., by a call to consGet(N)VarsNonlinear)
     */
-   assert(consdata->nvarexprs == 0);
-   assert(consdata->varexprs == NULL);
-   assert(!consdata->catchedevents);
+   SCIP_CALL( freeVarExprs(scip, consdata) );
 
    /* copy expression, thereby map variables expressions to already existing variables expressions in var2expr map, or augment var2expr map */
    SCIP_CALL( SCIPduplicateExpr(scip, expr, &exprowned, mapexprvar, conshdlr, exprownerCreate, (void*)conshdlr) );
@@ -12520,6 +14181,32 @@ SCIP_RETCODE SCIPaddExprNonlinear(
    /* not sure we care about any of these flags for original constraints */
    consdata->issimplified = FALSE;
    consdata->ispropagated = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** computes value of constraint expression in a given solution
+ *
+ * Stores value of constraint expression in sol in activity.
+ * In case of a domain error (function cannot be evaluated in sol), activity is set to SCIP_INVALID.
+ */
+SCIP_RETCODE SCIPgetExprActivityNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Real*            activity            /**< buffer to store computed activity */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(cons != NULL);
+   assert(activity != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIP_CALL( SCIPevalExpr(scip, consdata->expr, sol, 0L) );
+   *activity = SCIPexprGetEvalValue(consdata->expr);
 
    return SCIP_OKAY;
 }

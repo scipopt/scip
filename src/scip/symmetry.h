@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -40,7 +40,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
-#include <symmetry/type_symmetry.h>
+#include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,7 +55,7 @@ extern "C" {
 
 /** compute non-trivial orbits of symmetry group
  *
- *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
  *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
  *  consecutively in the orbits array. The variables of the i-th orbit have indices
  *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
@@ -64,6 +64,7 @@ extern "C" {
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeOrbitsSym(
    SCIP*                 scip,               /**< SCIP instance */
+   SCIP_Bool             issigned,           /**< whether orbits for signed permutations shall be computed */
    SCIP_VAR**            permvars,           /**< variables considered in a permutation array */
    int                   npermvars,          /**< length of a permutation array */
    int**                 perms,              /**< matrix containing in each row a permutation of the symmetry group */
@@ -110,7 +111,7 @@ SCIP_RETCODE SCIPcomputeOrbitsFilterSym(
 
 /** compute non-trivial orbits of symmetry group
  *
- *  The non-tivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
+ *  The non-trivial orbits of the group action are stored in the array orbits of length npermvars. This array contains
  *  the indices of variables from the permvars array such that variables that are contained in the same orbit appear
  *  consecutively in the orbits array. The variables of the i-th orbit have indices
  *  orbits[orbitbegins[i]], ... , orbits[orbitbegins[i + 1] - 1].
@@ -186,6 +187,7 @@ SCIP_RETCODE SCIPdetermineNVarsAffectedSym(
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeComponentsSym(
    SCIP*                 scip,               /**< SCIP instance */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries in perms */
    int**                 perms,              /**< permutation generators as
                                               *   (either nperms x npermvars or npermvars x nperms) matrix */
    int                   nperms,             /**< number of permutations */
@@ -258,44 +260,67 @@ SCIP_RETCODE SCIPisPackingPartitioningOrbitope(
    SCIP_ORBITOPETYPE*    type                /**< pointer to store type of orbitope constraint after strengthening */
    );
 
+/** detects whether permutations define single or double lex matrices
+ *
+ *  A single lex matrix is a matrix whose columns can be partitioned into blocks such that the
+ *  columns within each block can be permuted arbitrarily. A double lex matrix is a single lex
+ *  matrix such that also blocks of rows have the aforementioned property.
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdetectSingleOrDoubleLexMatrices(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_Bool             detectsinglelex,    /**< whether single lex matrices shall be detected */
+   int**                 perms,              /**< array of permutations */
+   int                   nperms,             /**< number of permutations in perms */
+   int                   permlen,            /**< number of variables in a permutation */
+   SCIP_Bool*            success,            /**< pointer to store whether structure could be detected */
+   SCIP_Bool*            isorbitope,         /**< pointer to store whether detected matrix is orbitopal */
+   int***                lexmatrix,          /**< pointer to store single or double lex matrix */
+   int*                  nrows,              /**< pointer to store number of rows of lexmatrix */
+   int*                  ncols,              /**< pointer to store number of columns of lexmatrix */
+   int**                 lexrowsbegin,       /**< pointer to store array indicating begin of new row-lexmatrix */
+   int**                 lexcolsbegin,       /**< pointer to store array indicating begin of new col-lexmatrix */
+   int*                  nrowmatrices,       /**< pointer to store number of single lex row matrices in rows */
+   int*                  ncolmatrices        /**< pointer to store number of single lex column matrices in rows */
+   );
 
 /** helper function to test if val1 = val2 while permitting infinity-values */
-SCIP_Bool EQ(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_Real          val1,               /**< left-hand side value */
-   SCIP_Real          val2                /**< right-hand side value */
+SCIP_Bool SCIPsymEQ(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< left-hand side value */
+   SCIP_Real             val2                /**< right-hand side value */
    );
 
 
 /** helper function to test if val1 <= val2 while permitting infinity-values */
-SCIP_Bool LE(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_Real          val1,               /**< left-hand side value */
-   SCIP_Real          val2                /**< right-hand side value */
+SCIP_Bool SCIPsymLE(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< left-hand side value */
+   SCIP_Real             val2                /**< right-hand side value */
    );
 
 
 /** helper function to test if val1 >= val2 while permitting infinity-values */
-SCIP_Bool GE(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_Real          val1,               /**< left-hand side value */
-   SCIP_Real          val2                /**< right-hand side value */
+SCIP_Bool SCIPsymGE(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< left-hand side value */
+   SCIP_Real             val2                /**< right-hand side value */
    );
 
 
 /** helper function to test if val1 < val2 while permitting infinity-values */
-SCIP_Bool LT(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_Real          val1,               /**< left-hand side value */
-   SCIP_Real          val2                /**< right-hand side value */
+SCIP_Bool SCIPsymLT(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< left-hand side value */
+   SCIP_Real             val2                /**< right-hand side value */
    );
 
 
 /** helper function to test if val1 > val2 while permitting infinity-values */
-SCIP_Bool GT(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_Real          val1,               /**< left-hand side value */
-   SCIP_Real          val2                /**< right-hand side value */
+SCIP_Bool SCIPsymGT(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             val1,               /**< left-hand side value */
+   SCIP_Real             val2                /**< right-hand side value */
    );
 
 /** @} */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -996,6 +996,10 @@ public:
                }
                break;
 
+            case mp::suf::Kind::CON_BIT:
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown constraint bit suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
+               break;
+
             case mp::suf::Kind::VAR:
             {
                if( strncmp(name.data(), "initial", name.size()) == 0 )
@@ -1023,12 +1027,24 @@ public:
                }
                break;
 
+            case mp::suf::Kind::VAR_BIT:
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown variable bit suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
+               break;
+
             case mp::suf::Kind::OBJ:
                SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown objective suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
                break;
 
+            case mp::suf::Kind::OBJ_BIT:
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown objective bit suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
+               break;
+
             case mp::suf::Kind::PROBLEM:
                SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown problem suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
+               break;
+
+            case mp::suf::Kind::PROB_BIT:
+               SCIPverbMessage(amplph.scip, SCIP_VERBLEVEL_HIGH, NULL, "Unknown problem bit suffix <%.*s>. Ignoring.\n", (int)name.size(), name.data());
                break;
             }
          }
@@ -1557,6 +1573,20 @@ public:
          SCIP_CALL_THROW( SCIPaddLinearVarNonlinear(scip, objcons, objvar, -1.0) );
          SCIP_CALL_THROW( SCIPaddCons(scip, objcons) );
 
+         if( initsol != NULL )
+         {
+            /* compute value for objvar in initial solution from other variable values */
+            SCIP_CALL_THROW( SCIPevalExpr(scip, objexpr, initsol, 0) );
+            if( SCIPexprGetEvalValue(objexpr) != SCIP_INVALID )
+            {
+               SCIPsetSolVal(scip, initsol, objvar, SCIPexprGetEvalValue(objexpr));
+            }
+            else
+            {
+               SCIPwarningMessage(scip, "Objective function could not be evaluated in initial point. Domain error.");
+            }
+         }
+
          SCIP_CALL_THROW( SCIPreleaseCons(scip, &objcons) );
          SCIP_CALL_THROW( SCIPreleaseVar(scip, &objvar) );
       }
@@ -1801,7 +1831,7 @@ SCIP_RETCODE SCIPincludeReaderNl(
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyNl) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
 
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 4e2d45c4", "AMPL .nl file reader library (github.com/ampl/mp)") );
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 690e9e7", "AMPL .nl file reader library (github.com/ampl/mp)") );
 
    return SCIP_OKAY;
 }
@@ -1882,65 +1912,86 @@ SCIP_RETCODE SCIPwriteSolutionNl(
       for( int i = 0; i < probdata->nvars; ++i )
          SCIPinfoMessage(scip, solfile, "%.17g\n", SCIPgetSolVal(scip, SCIPgetBestSol(scip), probdata->vars[i]));
 
-   /* AMPL solve status codes are at http://www.ampl.com/NEW/statuses.html
-    *     number   string       interpretation
-    *    0 -  99   solved       optimal solution found
-    *  100 - 199   solved?      optimal solution indicated, but error likely
-    *  200 - 299   infeasible   constraints cannot be satisfied
-    *  300 - 399   unbounded    objective can be improved without limit
-    *  400 - 499   limit        stopped by a limit that you set (such as on iterations)
-    *  500 - 599   failure      stopped by an error condition in the solver routines
+   /* AMPL solve status codes are at https://mp.ampl.com/details.html#_CPPv4N2mp3sol6StatusE
+    * (mp::sol::Status enum in amplmp/include/mp/common.h)
     */
-   int solve_result_num;
+   int solve_result_num = mp::sol::FAILURE;
    switch( SCIPgetStatus(scip) )
    {
       case SCIP_STATUS_UNKNOWN:
-         solve_result_num = 500;
          break;
       case SCIP_STATUS_USERINTERRUPT:
-         solve_result_num = 450;
+      case SCIP_STATUS_TERMINATE:
+         if( haveprimal )
+            solve_result_num = mp::sol::LIMIT_FEAS_INTERRUPT;
+         else
+            solve_result_num = mp::sol::LIMIT_NO_FEAS_INTERRUPT;
          break;
       case SCIP_STATUS_NODELIMIT:
-         solve_result_num = 400;
-         break;
       case SCIP_STATUS_TOTALNODELIMIT:
-         solve_result_num = 401;
-         break;
       case SCIP_STATUS_STALLNODELIMIT:
-         solve_result_num = 402;
+         if( haveprimal )
+            solve_result_num = mp::sol::LIMIT_FEAS_NODES;
+         else
+            solve_result_num = mp::sol::LIMIT_NO_FEAS_NODES;
          break;
       case SCIP_STATUS_TIMELIMIT:
-         solve_result_num = 403;
+         if( haveprimal )
+            solve_result_num = mp::sol::LIMIT_FEAS_TIME;
+         else
+            solve_result_num = mp::sol::LIMIT_NO_FEAS_TIME;
          break;
       case SCIP_STATUS_MEMLIMIT:
-         solve_result_num = 404;
+         if( haveprimal )
+            solve_result_num = mp::sol::LIMIT_FEAS_SOFTMEM;
+         else
+            solve_result_num = mp::sol::LIMIT_NO_FEAS_SOFTMEM;
          break;
       case SCIP_STATUS_GAPLIMIT:
-         solve_result_num = 405;
+         /* there is no enum value for gaplimit, so use "work limit" */
+         if( haveprimal )
+            solve_result_num = mp::sol::LIMIT_FEAS_WORK;
+         else
+            solve_result_num = mp::sol::LIMIT_NO_FEAS_WORK;
+         break;
+      case SCIP_STATUS_PRIMALLIMIT:
+         solve_result_num = mp::sol::LIMIT_FEAS_BESTOBJ;
+         break;
+      case SCIP_STATUS_DUALLIMIT:
+         if( haveprimal )
+            solve_result_num = mp::sol::LIMIT_FEAS_BESTBND;
+         else
+            solve_result_num = mp::sol::LIMIT_NO_FEAS_BESTBND;
          break;
       case SCIP_STATUS_SOLLIMIT:
-         solve_result_num = 406;
+         if( haveprimal )
+            solve_result_num = mp::sol::LIMIT_FEAS_NUMSOLS;
+         else  /* reach solution limit without solution? */
+            solve_result_num = mp::sol::LIMIT_NO_FEAS;
          break;
       case SCIP_STATUS_BESTSOLLIMIT:
-         solve_result_num = 407;
+      case SCIP_STATUS_RESTARTLIMIT:
+         /* rare SCIP specific limits that don't map to an AMPL status */
+         if( haveprimal )
+            solve_result_num = mp::sol::LIMIT_FEAS;
+         else
+            solve_result_num = mp::sol::LIMIT_NO_FEAS;
          break;
       case SCIP_STATUS_OPTIMAL:
-         solve_result_num = 0;
+         solve_result_num = mp::sol::SOLVED;
          break;
       case SCIP_STATUS_INFEASIBLE:
-         solve_result_num = 200;
+         solve_result_num = mp::sol::INFEASIBLE;
          break;
       case SCIP_STATUS_UNBOUNDED:
-         solve_result_num = 300;
+         if( haveprimal )
+            solve_result_num = mp::sol::UNBOUNDED_FEAS;
+         else
+            solve_result_num = mp::sol::UNBOUNDED_NO_FEAS;
          break;
       case SCIP_STATUS_INFORUNBD:
-         solve_result_num = 299;
+         solve_result_num = mp::sol::LIMIT_INF_UNB;
          break;
-      default:
-         /* solve_result_num = 500; */
-         SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
-         (void) fclose(solfile);
-         return SCIP_INVALIDDATA;
    }
    SCIPinfoMessage(scip, solfile, "objno 0 %d\n", solve_result_num);
 

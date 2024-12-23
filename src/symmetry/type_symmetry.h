@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -25,6 +25,7 @@
 /**@file   type_symmetry.h
  * @brief  type definitions for symmetry computations
  * @author Marc Pfetsch
+ * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -46,39 +47,62 @@ extern "C" {
 typedef uint32_t SYM_SPEC;              /**< types of variables handled by symmetry */
 
 /** symmetry timings */
-#define SYM_COMPUTETIMING_BEFOREPRESOL    0  /**< compute symmetries before presolving */
-#define SYM_COMPUTETIMING_DURINGPRESOL    1  /**< compute symmetries during presolving */
-#define SYM_COMPUTETIMING_AFTERPRESOL     2  /**< compute symmetries after presolving */
+#define SYM_TIMING_BEFOREPRESOL    0         /**< compute and handle symmetries before presolving */
+#define SYM_TIMING_DURINGPRESOL    1         /**< compute and handle symmetries during presolving */
+#define SYM_TIMING_AFTERPRESOL     2         /**< compute and handle symmetries after presolving */
 
-/** define sense of rhs */
-enum SYM_Rhssense
+#define SYM_COMPUTETIMING_BEFOREPRESOL    SYM_TIMING_BEFOREPRESOL  /**< compute symmetries before presolving */
+#define SYM_COMPUTETIMING_DURINGPRESOL    SYM_TIMING_DURINGPRESOL  /**< compute symmetries during presolving */
+#define SYM_COMPUTETIMING_AFTERPRESOL     SYM_TIMING_AFTERPRESOL   /**< compute symmetries after presolving */
+
+/** define symmetry types detectable by SCIP */
+enum SYM_Symtype
 {
-   SYM_SENSE_UNKOWN     = 0,                 /**< unknown sense */
-   SYM_SENSE_INEQUALITY = 1,                 /**< linear inequality */
-   SYM_SENSE_EQUATION   = 2,                 /**< linear equation */
-   SYM_SENSE_XOR        = 3,                 /**< XOR constraint */
-   SYM_SENSE_AND        = 4,                 /**< AND constraint */
-   SYM_SENSE_OR         = 5,                 /**< OR constrant */
-   SYM_SENSE_BOUNDIS_TYPE_1 = 6,             /**< bounddisjunction type 1 */
-   SYM_SENSE_BOUNDIS_TYPE_2 = 7              /**< bounddisjunction type 2 */
+   SYM_SYMTYPE_PERM      = 0,                /**< permutation symmetries */
+   SYM_SYMTYPE_SIGNPERM  = 1                 /**< signed permutation symmetries */
 };
-typedef enum SYM_Rhssense SYM_RHSSENSE;
+typedef enum SYM_Symtype SYM_SYMTYPE;
+
+/** define type of nodes in symmetry detection expression trees */
+enum SYM_Nodetype
+{
+   SYM_NODETYPE_OPERATOR = 0,                /**< operator node */
+   SYM_NODETYPE_VAL      = 1,                /**< numerical value node */
+   SYM_NODETYPE_CONS     = 2,                /**< constraint node */
+   SYM_NODETYPE_VAR      = 3                 /**< variable node */
+};
+typedef enum SYM_Nodetype SYM_NODETYPE;
+
+/** define type of simple constraints/operators in symmetry detection */
+enum SYM_Consoptype
+{
+   SYM_CONSOPTYPE_UNKNOWN     = 0,           /**< unknown constraint type */
+   SYM_CONSOPTYPE_BDDISJ      = 1,           /**< constraint of type bounddisjunction */
+   SYM_CONSOPTYPE_EQ          = 2,           /**< encodes == in indicator constraints for activation variable */
+   SYM_CONSOPTYPE_SOS2_TUPLE  = 3,           /**< encodes pairs in SOS2 constraints */
+   SYM_CONSOPTYPE_SUM         = 4,           /**< indicates sums if sum-expr undefined */
+   SYM_CONSOPTYPE_SLACK       = 5,           /**< indicates slack vars in indicator constraints */
+   SYM_CONSOPTYPE_COEF        = 6,           /**< indicates coefficients from parent expressions */
+   SYM_CONSOPTYPE_SQDIFF      = 7,           /**< indicates a squared difference */
+   SYM_CONSOPTYPE_CARD_TUPLE  = 8,           /**< encodes pairs in cardinality constraints */
+   SYM_CONSOPTYPE_PB_AND      = 9,           /**< indicates AND conss in pseudoboolean conss */
+   SYM_CONSOPTYPE_PB_LINEAR   = 10,          /**< indicates linear conss in pseudoboolean conss */
+   SYM_CONSOPTYPE_PB_SOFT     = 11,          /**< indicates pseudoboolean cons is soft constraint */
+   SYM_CONSOPTYPE_PB_OBJ      = 12,          /**< indicates pseudoboolean cons is objective function */
+   SYM_CONSOPTYPE_LAST        = 13           /**< number of predefined enum types, needs to always
+                                              *   hold the biggest value */
+};
+typedef enum SYM_Consoptype SYM_CONSOPTYPE;
 
 /* type of symmetry handling codes */
 #define SYM_HANDLETYPE_NONE             UINT32_C(0x00000000)  /**< no symmetry handling */
-#define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities */
+#define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities (orbitopes/
+                                                               *   orbisacks/symresacks) and lexicographic reduction */
 #define SYM_HANDLETYPE_ORBITALREDUCTION UINT32_C(0x00000002)  /**< orbital reduction */
 #define SYM_HANDLETYPE_SST              UINT32_C(0x00000004)  /**< Schreier Sims cuts */
 #define SYM_HANDLETYPE_SYMCONS (SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_SST)
 
 typedef uint32_t SYM_HANDLETYPE;        /**< type of symmetry handling */
-
-typedef struct SYM_Vartype SYM_VARTYPE;      /**< data of variables that are considered to be equivalent */
-typedef struct SYM_Optype SYM_OPTYPE;        /**< data of operators that are considered to be equivalent */
-typedef struct SYM_Consttype SYM_CONSTTYPE;  /**< data of constants that are considered to be equivalent */
-typedef struct SYM_Rhstype SYM_RHSTYPE;      /**< data of constraint sides that are considered to be equivalent */
-typedef struct SYM_Matrixdata SYM_MATRIXDATA;/**< data for symmetry group computation on linear constraints */
-typedef struct SYM_Exprdata SYM_EXPRDATA;    /**< data for symmetry group computation on nonlinear constraints */
 
 /** selection rules for leaders in SST cuts */
 enum SCIP_LeaderRule

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1372,6 +1372,12 @@ SCIP_Real SCIPboundchgGetNewbound(
    SCIP_BOUNDCHG*        boundchg            /**< bound change data */
    );
 
+/** returns the lp solution value in the branching data of the bound change data */
+SCIP_EXPORT
+SCIP_Real SCIPboundchgGetLPSolVal(
+   SCIP_BOUNDCHG*        boundchg            /**< bound change data */
+   );
+
 /** returns the variable of the bound change in the bound change data */
 SCIP_EXPORT
 SCIP_VAR* SCIPboundchgGetVar(
@@ -1475,6 +1481,7 @@ SCIP_HOLELIST* SCIPholelistGetNext(
 #define SCIPbdchginfoIsTighter(bdchginfo1,bdchginfo2) ((bdchginfo1)->boundtype == SCIP_BOUNDTYPE_LOWER \
       ? (bdchginfo1)->newbound > bdchginfo2->newbound : (bdchginfo1)->newbound < bdchginfo2->newbound)
 #define SCIPboundchgGetNewbound(boundchg)      ((boundchg)->newbound)
+#define SCIPboundchgGetLPSolVal(boundchg) ((boundchg)->data.branchingdata.lpsolval)
 #define SCIPboundchgGetVar(boundchg)           ((boundchg)->var)
 #define SCIPboundchgGetBoundchgtype(boundchg)  ((SCIP_BOUNDCHGTYPE)((boundchg)->boundchgtype))
 #define SCIPboundchgGetBoundtype(boundchg)     ((SCIP_BOUNDTYPE)((boundchg)->boundtype))

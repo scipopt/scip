@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2023 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -55,11 +55,6 @@
 #include "scip/scip_solve.h"
 #include "scip/scip_var.h"
 #include <string.h>
-
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
-
 
 
 #define READER_NAME             "fixreader"
@@ -121,7 +116,7 @@ SCIP_RETCODE readSol(
       lineno++;
 
       /* the lines "solution status: ..." and "objective value: ..." may preceed the solution information */
-      if( strncasecmp(buffer, "solution status:", 16) == 0 || strncasecmp(buffer, "objective value:", 16) == 0 )
+      if( SCIPstrncasecmp(buffer, "solution status:", 16) == 0 || SCIPstrncasecmp(buffer, "objective value:", 16) == 0 )
          continue;
 
       /* parse the line */
@@ -148,11 +143,11 @@ SCIP_RETCODE readSol(
       }
 
       /* cast the value */
-      if( strncasecmp(valuestring, "inv", 3) == 0 )
+      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
          continue;
-      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
          value = SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
          value = -SCIPinfinity(scip);
       else
       {

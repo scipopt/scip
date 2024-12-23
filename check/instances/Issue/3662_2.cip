@@ -1,0 +1,26 @@
+STATISTICS
+  Problem name     : Issue 3662
+  Variables        : 9 (3 binary, 0 integer, 0 implicit integer, 6 continuous)
+  Constraints      : 0 initial, 8 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <x154>: obj=0, original bounds=[0,1]
+  [binary] <x350>: obj=0, original bounds=[0,1]
+  [binary] <x380>: obj=0, original bounds=[0,1]
+  [continuous] <x351>: obj=0, original bounds=[0,+inf]
+  [continuous] <x382>: obj=0, original bounds=[0,+inf]
+  [continuous] <x385>: obj=0, original bounds=[0,+inf]
+  [continuous] <x386>: obj=0, original bounds=[0,+inf]
+  [continuous] <x155>: obj=0, original bounds=[0,+inf]
+  [continuous] <x156>: obj=0, original bounds=[0,+inf]
+CONSTRAINTS
+  [linear] <c_e_x909_>:  -47.1233787589408<x154>[B] +<x155>[C] == 0;
+  [linear] <c_e_x911_>:  -<x155>[C] +<x156>[C] == 0;
+  [linear] <c_e_x1101_>:  -1.64216813092803e-08<x350>[B] +<x351>[C] == 0;
+  [linear] <c_e_x1137_>:  -1.71191717005204<x380>[B] +<x382>[C] == 0;
+  [linear] <c_u_x1142_>: <x385>[C] +<x386>[C] <= 20000000;
+  [linear] <c_e_x1143_>:  -<x385>[C] +<x386>[C] == -6.88914620404344;
+  [linear] <c_e_x1328_>:  -<x382>[C] +<x386>[C] -<x156>[C] == -48.2362670341181;
+  [linear] <c_e_x1480_>: <x351>[C] -<x385>[C] == -7.48817509891815;
+END

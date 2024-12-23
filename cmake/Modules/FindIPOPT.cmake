@@ -141,7 +141,7 @@ else()
 
 
   find_library(IPOPT_IPOPT_LIBRARY_RELEASE
-      NAMES libipopt ipopt ipopt-3 ipopt-0 libipopt-3 libipopt-0
+      NAMES libipopt ipopt ipopt.dll ipopt-3 ipopt-0 libipopt-3 libipopt-0
       HINTS ${IPOPT_DIR}/lib)
 
   select_library_configurations(IPOPT_IPOPT)
