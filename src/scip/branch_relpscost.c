@@ -1167,7 +1167,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    currenttreesize = strongBranchingTreeSize(currentdepth);
 
    /* Compute the expected size of the tree with one more strong branching */
-   nexttreesize =  expectedTreeSize(scip, gaptoclose, zeroprob, currentdepth, lambda, minmeangain, logmeangain, logstdevgain, branchruledata->dynamiclookdistribution);
+   nexttreesize =  expectedTreeSize(scip, gaptoclose, zeroprob, (double) currentdepth, lambda, minmeangain, logmeangain, logstdevgain, branchruledata->dynamiclookdistribution);
 
    if(SCIPisLE(scip, nexttreesize, currenttreesize - 1.0))
    {
