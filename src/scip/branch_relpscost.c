@@ -850,8 +850,8 @@ SCIP_RETCODE updateMinMaxMeanGain(
    )
 {
    SCIP_BRANCHRULEDATA* branchruledata = SCIPbranchruleGetData(branchrule);
+   SCIP_Real logmeangain;
    /* initializing to avoid linter, value never used */
-   SCIP_Real logmeangain = -1.0;
    SCIP_Real oldlogstdevgain = -1.0;
    SCIP_Real oldlogmeangain = -1.0;
 
@@ -919,7 +919,7 @@ long int strongBranchingDepth(
 /* Compute the size of the tree with the assumption that left and right dual gains are equal */
 static
 SCIP_Real strongBranchingTreeSize(
-   int                   depth_tree
+   SCIP_Real             depth_tree
    )
 {
    return pow(2.0, depth_tree + 1.0) - 1.0;
