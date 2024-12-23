@@ -75,7 +75,13 @@ OPTHOST=$(uname -n | sed 's/.zib.de//g' | sed 's/portal//g' | tr -cd '[:alpha:]'
 
 # file on optimi to check for
 case "$OPTHOST" in
-  opt | optc ) OPTIMIFILE=/nfs/optimi/QUOTAS ;;
+  opt | optc )
+    . /etc/os-release
+    case "$ID" in
+      debian ) OPTIMIFILE=/data/optimi/optimi/QUOTAS ;;
+      ubuntu ) OPTIMIFILE=/nfs/optimi/QUOTAS ;;
+    esac
+    ;;
   htccmp     ) OPTIMIFILE=/data/optimi/optimi/QUOTAS ;;
 esac
 

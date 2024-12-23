@@ -52,9 +52,9 @@ static SCIP_NLPI* nlpi = NULL;
 static SCIP_NLROW* nlrow1 = NULL;
 static SCIP_NLROW* nlrow2 = NULL;
 static SCIP_NLROW* nlrow3 = NULL;
-static SCIP_VAR* x;
-static SCIP_VAR* y;
-static SCIP_EXPRITER* exprit;
+static SCIP_VAR* x = NULL;
+static SCIP_VAR* y = NULL;
+static SCIP_EXPRITER* exprit = NULL;
 
 /* methods to test:
  * computeInteriorPoint: uses SCIP's NLP to build a convex NLP relaxation, solves it and store the solution in the sepadata.
@@ -207,10 +207,17 @@ void evaluation_setup(void)
 static
 void teardown(void)
 {
-   SCIPfreeExpriter(&exprit);
+   if( exprit != NULL )
+      SCIPfreeExpriter(&exprit);
 
-   SCIP_CALL( SCIPreleaseVar(scip, &x) );
-   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   if( x != NULL )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   }
+   if( y != NULL )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   }
    if( nlrow1 != NULL )
    {
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow1) );

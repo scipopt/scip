@@ -4211,8 +4211,12 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoQuadratic)
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
-   /* estimate should take care of convex and concave quadratics */
-   if( nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE || nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX )
+   if( branchcandonly )
+      return SCIP_OKAY;
+
+   /* estimate should take care of convex quadratics */
+   if( ( overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONCAVE) ||
+       (!overestimate && nlhdlrexprdata->curvature == SCIP_EXPRCURV_CONVEX) )
    {
       INTERLOG(printf("Convex or concave, no need of interesection cuts!\n");)
       return SCIP_OKAY;
@@ -5129,7 +5133,7 @@ SCIP_RETCODE SCIPincludeNlhdlrQuadratic(
 
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_QUADRATIC) == NULL);
-   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_QUADRATIC, TABLE_DESC_QUADRATIC, TRUE,
+   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_QUADRATIC, TABLE_DESC_QUADRATIC, FALSE,
          NULL, NULL, NULL, NULL, NULL, NULL, tableOutputQuadratic,
          NULL, TABLE_POSITION_QUADRATIC, TABLE_EARLIEST_STAGE_QUADRATIC) );
    return SCIP_OKAY;

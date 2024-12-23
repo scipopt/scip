@@ -1868,9 +1868,9 @@ SCIP_DECL_EXPRPRINT(printPow)
 
          /* print closing parenthesis */
          if( exponent >= 0.0 )
-            SCIPinfoMessage(scip, file, ")^%g", exponent);
+            SCIPinfoMessage(scip, file, ")^%.15g", exponent);
          else
-            SCIPinfoMessage(scip, file, ")^(%g)", exponent);
+            SCIPinfoMessage(scip, file, ")^(%.15g)", exponent);
 
          break;
       }
@@ -2684,7 +2684,7 @@ SCIP_DECL_EXPRPRINT(printSignpower)
 
       case SCIP_EXPRITER_LEAVEEXPR :
       {
-         SCIPinfoMessage(scip, file, ",%g)", SCIPgetExponentExprPow(expr));
+         SCIPinfoMessage(scip, file, ",%.15g)", SCIPgetExponentExprPow(expr));
          break;
       }
 

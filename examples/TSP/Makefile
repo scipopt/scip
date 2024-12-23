@@ -80,8 +80,7 @@ MAINOBJ		=	cppmain.o \
 			EventhdlrNewSol.o \
 			HeurFarthestInsert.o \
 			HeurFrats.o \
-			Heur2opt.o \
-			gzstream.o
+			Heur2opt.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)

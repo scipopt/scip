@@ -9,14 +9,13 @@
 #
 # a couple of programs are required on the path
 #
-find_program(PYTHON python)
-find_program(PHP php)
+find_program(PYTHON python3)
 find_program(BASH bash)
 find_program(DOXYGEN doxygen)
 
 
-if(NOT (PYTHON AND PHP AND BASH AND DOXYGEN))
-    message(WARNING "Could not find all of doxygen, python, php, and bash in system path, which are required for generation of documentation")
+if(NOT (PYTHON AND BASH AND DOXYGEN))
+    message(WARNING "Could not find all of doxygen, python3, and bash in system path, which are required for generation of documentation")
 else()
 
     # change this variable to 'php' the web page
@@ -46,7 +45,7 @@ else()
     # 2. create the FAQ
     #
     add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/inc/faq.inc
-        COMMAND ${PYTHON} parser.py --linkext ${DOC_HTML_FILE_EXTENSION}  && ${PHP} localfaq.php > faq.inc
+        COMMAND ${PYTHON} parser.py --linkext ${DOC_HTML_FILE_EXTENSION}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/inc/faq
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR/inc/faq/faqtext.txt}
         )

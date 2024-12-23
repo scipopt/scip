@@ -359,7 +359,11 @@ void SCIPrbtreeInsert_call(
    SCIP_RBTREENODE*      node                /**< node to insert into the tree */
    )
 {
-   SET_PARENT(node, parent);
+   /* we avoid SET_PARENT here, as this would read from uninitialized memory in an attempt to preserve the color of node */
+   node->parent = (uintptr_t)parent | RED;
+   node->child[LEFT] = NULL;
+   node->child[RIGHT] = NULL;
+
    if( parent == NULL )
       *root = node;
    else if( pos > 0 )
@@ -367,8 +371,5 @@ void SCIPrbtreeInsert_call(
    else
       parent->child[RIGHT] = node;
 
-   node->child[LEFT] = NULL;
-   node->child[RIGHT] = NULL;
-   MAKE_RED(node);
    rbInsertFixup(root, node);
 }

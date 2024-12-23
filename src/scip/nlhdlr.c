@@ -644,7 +644,7 @@ SCIP_DECL_NLHDLRENFO(SCIPnlhdlrEnfo)
 
    SCIP_CALL( SCIPstartClock(scip, nlhdlr->enfotime) );
    SCIP_CALL( nlhdlr->enfo(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue,
-         overestimate, allowweakcuts, separated, addbranchscores, result) );
+         overestimate, allowweakcuts, separated, addbranchscores, branchcandonly, result) );
    SCIP_CALL( SCIPstopClock(scip, nlhdlr->enfotime) );
 
    /* update statistics */
@@ -652,6 +652,7 @@ SCIP_DECL_NLHDLRENFO(SCIPnlhdlrEnfo)
    switch( *result )
    {
       case SCIP_SEPARATED :
+         assert(!branchcandonly);
          ++nlhdlr->nseparated;
          break;
       case SCIP_BRANCHED:
@@ -661,6 +662,7 @@ SCIP_DECL_NLHDLRENFO(SCIPnlhdlrEnfo)
          ++nlhdlr->ncutoffs;
          break;
       case SCIP_REDUCEDDOM:
+         assert(!branchcandonly);
          ++nlhdlr->ndomreds;
          break;
       default: ;

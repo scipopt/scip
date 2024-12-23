@@ -69,7 +69,6 @@
 #include "scip/nlpi.h"
 #include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
-#include "scip/struct_paramset.h" /* for objectivestop deprecation */
 
 /*
  * Default settings
@@ -344,10 +343,10 @@
 #define SCIP_DEFAULT_MISC_ALLOWSTRONGDUALREDS TRUE /**< should strong dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_ALLOWWEAKDUALREDS   TRUE /**< should weak dual reductions be allowed in propagation and presolving? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
-#define SCIP_DEFAULT_MISC_USESYMMETRY         7 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and/or symresacks)
-                                                 *   2: orbital fixing; 3: orbitopes and orbital fixing; 4: Schreier Sims cuts; 5: Schreier Sims cuts and
-                                                 *   orbitopes); 6: Schreier Sims cuts and orbital fixing; 7: Schreier Sims cuts, orbitopes, and orbital
-                                                 *   fixing, see type_symmetry.h */
+#define SCIP_DEFAULT_MISC_USESYMMETRY         7 /**< bitset describing used symmetry handling technique (0: off; 1: polyhedral (orbitopes and symresacks, lexicographic and orbitopal reduction if dynamic)
+                                                 *   2: orbital reduction; 3: polyhedral methods and orbital reduction; 4: Schreier Sims cuts; 5: Schreier Sims cuts and polyhedral
+                                                 *   methods); 6: Schreier Sims cuts and orbital reduction; 7: Schreier Sims cuts, polyhedral methods, and orbital
+                                                 *   reduction, see type_symmetry.h */
 #define SCIP_DEFAULT_MISC_SCALEOBJ         TRUE /**< should the objective function be scaled? */
 #define SCIP_DEFAULT_MISC_SHOWDIVINGSTATS FALSE /**< should detailed statistics for diving heuristics be shown? */
 
@@ -447,7 +446,7 @@
                                                  *   branching
                                                  */
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
-#define SCIP_DEFAULT_REOPT_SAVECONSPROP     FALSE/**< save constraint propagation */
+#define SCIP_DEFAULT_REOPT_SAVEPROP       FALSE /**< save constraint and propagator propagation */
 #define SCIP_DEFAULT_REOPT_USESPLITCONS    TRUE /**< use constraints to reconstruct the subtree pruned be dual reduction
                                                  *   when reactivating the node
                                                  */
@@ -933,26 +932,17 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    /* copy all dialog plugins */
    if( copydialogs && sourceset->dialogs != NULL )
    {
-      for( p = sourceset->ndialogs - 1; p >= 0; --p )
+      for( p = 0; p < sourceset->ndialogs; ++p )
       {
          /* @todo: the copying process of dialog handlers is currently not checked for consistency */
          SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
       }
    }
 
-   /* copy all reader plugins */
-   if( copyreaders && sourceset->readers != NULL )
-   {
-      for( p = sourceset->nreaders - 1; p >= 0; --p )
-      {
-         SCIP_CALL( SCIPreaderCopyInclude(sourceset->readers[p], targetset) );
-      }
-   }
-
    /* copy all variable pricer plugins */
    if( copypricers && sourceset->pricers != NULL )
    {
-      for( p = sourceset->npricers - 1; p >= 0; --p )
+      for( p = 0; p < sourceset->npricers; ++p )
       {
          valid = FALSE;
          SCIP_CALL( SCIPpricerCopyInclude(sourceset->pricers[p], targetset, &valid) );
@@ -990,10 +980,19 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
+   /* copy all reader plugins */
+   if( copyreaders && sourceset->readers != NULL )
+   {
+      for( p = 0; p < sourceset->nreaders; ++p )
+      {
+         SCIP_CALL( SCIPreaderCopyInclude(sourceset->readers[p], targetset) );
+      }
+   }
+
    /* copy all conflict handler plugins */
    if( copyconflicthdlrs && sourceset->conflicthdlrs != NULL )
    {
-      for( p = sourceset->nconflicthdlrs - 1; p >= 0; --p )
+      for( p = 0; p < sourceset->nconflicthdlrs; ++p )
       {
          SCIP_CALL( SCIPconflicthdlrCopyInclude(sourceset->conflicthdlrs[p], targetset) );
       }
@@ -1002,71 +1001,16 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    /* copy all presolver plugins */
    if( copypresolvers && sourceset->presols != NULL )
    {
-      for( p = sourceset->npresols - 1; p >= 0; --p )
+      for( p = 0; p < sourceset->npresols; ++p )
       {
          SCIP_CALL( SCIPpresolCopyInclude(sourceset->presols[p], targetset) );
-      }
-   }
-
-   /* copy all relaxator plugins */
-   if( copyrelaxators && sourceset->relaxs != NULL )
-   {
-      for( p = sourceset->nrelaxs - 1; p >= 0; --p )
-      {
-         SCIP_CALL( SCIPrelaxCopyInclude(sourceset->relaxs[p], targetset) );
-      }
-   }
-
-   /* copy all separator plugins */
-   if( copyseparators && sourceset->sepas != NULL )
-   {
-      for( p = sourceset->nsepas - 1; p >= 0; --p )
-      {
-         SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset) );
-      }
-   }
-
-   /* copy all cut selector plugins */
-   if( copycutselectors && sourceset->cutsels != NULL )
-   {
-      for( p = sourceset->ncutsels - 1; p >= 0; --p )
-      {
-         SCIP_CALL( SCIPcutselCopyInclude(sourceset->cutsels[p], targetset) );
-      }
-   }
-
-   /* copy all propagators plugins */
-   if( copypropagators && sourceset->props != NULL )
-   {
-      for( p = sourceset->nprops - 1; p >= 0; --p )
-      {
-         SCIP_CALL( SCIPpropCopyInclude(sourceset->props[p], targetset) );
-      }
-   }
-
-   /* copy all primal heuristics plugins */
-   if( copyheuristics && sourceset->heurs != NULL )
-   {
-      for( p = sourceset->nheurs - 1; p >= 0; --p )
-      {
-         SCIP_CALL( SCIPheurCopyInclude(sourceset->heurs[p], targetset) );
-      }
-   }
-
-   /* copy all event handler plugins */
-   if( copyeventhdlrs && sourceset->eventhdlrs != NULL )
-   {
-      for( p = sourceset->neventhdlrs - 1; p >= 0; --p )
-      {
-         /* @todo: the copying process of event handlers is currently not checked for consistency */
-         SCIP_CALL( SCIPeventhdlrCopyInclude(sourceset->eventhdlrs[p], targetset) );
       }
    }
 
    /* copy all node selector plugins */
    if( copynodeselectors && sourceset->nodesels != NULL )
    {
-      for( p = sourceset->nnodesels - 1; p >= 0; --p )
+      for( p = 0; p < sourceset->nnodesels; ++p )
       {
          SCIP_CALL( SCIPnodeselCopyInclude(sourceset->nodesels[p], targetset) );
       }
@@ -1075,34 +1019,71 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    /* copy all branchrule plugins */
    if( copybranchrules && sourceset->branchrules != NULL )
    {
-      for( p = sourceset->nbranchrules - 1; p >= 0; --p )
+      for( p = 0; p < sourceset->nbranchrules; ++p )
       {
          SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset) );
       }
    }
 
-   /* copy all display plugins */
-   if( copydisplays && sourceset->disps != NULL )
+   /* copy all event handler plugins */
+   if( copyeventhdlrs && sourceset->eventhdlrs != NULL )
    {
-      for( p = sourceset->ndisps - 1; p >= 0; --p )
+      for( p = 0; p < sourceset->neventhdlrs; ++p )
       {
-         SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset) );
+         /* @todo: the copying process of event handlers is currently not checked for consistency */
+         SCIP_CALL( SCIPeventhdlrCopyInclude(sourceset->eventhdlrs[p], targetset) );
       }
    }
 
-   /* copy all table plugins */
-   if( copytables && sourceset->tables != NULL )
+   /* copy all relaxator plugins */
+   if( copyrelaxators && sourceset->relaxs != NULL )
    {
-      for( p = sourceset->ntables - 1; p >= 0; --p )
+      for( p = 0; p < sourceset->nrelaxs; ++p )
       {
-         SCIP_CALL( SCIPtableCopyInclude(sourceset->tables[p], targetset) );
+         SCIP_CALL( SCIPrelaxCopyInclude(sourceset->relaxs[p], targetset) );
+      }
+   }
+
+   /* copy all primal heuristics plugins */
+   if( copyheuristics && sourceset->heurs != NULL )
+   {
+      for( p = 0; p < sourceset->nheurs; ++p )
+      {
+         SCIP_CALL( SCIPheurCopyInclude(sourceset->heurs[p], targetset) );
+      }
+   }
+
+   /* copy all propagators plugins */
+   if( copypropagators && sourceset->props != NULL )
+   {
+      for( p = 0; p < sourceset->nprops; ++p )
+      {
+         SCIP_CALL( SCIPpropCopyInclude(sourceset->props[p], targetset) );
+      }
+   }
+
+   /* copy all separator plugins */
+   if( copyseparators && sourceset->sepas != NULL )
+   {
+      for( p = 0; p < sourceset->nsepas; ++p )
+      {
+         SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset) );
+      }
+   }
+
+   /* copy all cut selector plugins */
+   if( copycutselectors && sourceset->cutsels != NULL )
+   {
+      for( p = 0; p < sourceset->ncutsels; ++p )
+      {
+         SCIP_CALL( SCIPcutselCopyInclude(sourceset->cutsels[p], targetset) );
       }
    }
 
    /* copy all expression handlers */
    if( copyexprhdlrs && sourceset->exprhdlrs != NULL )
    {
-      for( p = sourceset->nexprhdlrs - 1; p >= 0; --p )
+      for( p = 0; p < sourceset->nexprhdlrs; ++p )
       {
          SCIP_CALL( SCIPexprhdlrCopyInclude(sourceset->exprhdlrs[p], targetset) );
       }
@@ -1111,9 +1092,27 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    /* copy all NLP interfaces */
    if( copynlpis && sourceset->nlpis != NULL )
    {
-      for( p = sourceset->nnlpis - 1; p >= 0; --p )
+      for( p = 0; p < sourceset->nnlpis; ++p )
       {
          SCIP_CALL( SCIPnlpiCopyInclude(sourceset->nlpis[p], targetset) );
+      }
+   }
+
+   /* copy all display plugins */
+   if( copydisplays && sourceset->disps != NULL )
+   {
+      for( p = 0; p < sourceset->ndisps; ++p )
+      {
+         SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset) );
+      }
+   }
+
+   /* copy all table plugins */
+   if( copytables && sourceset->tables != NULL )
+   {
+      for( p = 0; p < sourceset->ntables; ++p )
+      {
+         SCIP_CALL( SCIPtableCopyInclude(sourceset->tables[p], targetset) );
       }
    }
 
@@ -1838,15 +1837,8 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->limit_absgap, FALSE, SCIP_DEFAULT_LIMIT_ABSGAP, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "limits/objectivestop",
-         "solving stops, if primal bound is at least as good as given value (deprecated primal)",
-         &(*set)->limit_primal, FALSE, SCIP_DEFAULT_LIMIT_PRIMAL, SCIP_REAL_MIN, SCIP_REAL_MAX,
-         SCIPparamChgdLimit, NULL) );
-   /* drop deprecated objectivestop */
-   --(*set)->paramset->nparams;
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/primal",
-         "solving stops, if primal bound is at least as good as given value (alias objectivestop)",
+         "solving stops, if primal bound is at least as good as given value",
          &(*set)->limit_primal, FALSE, SCIP_DEFAULT_LIMIT_PRIMAL, SCIP_REAL_MIN, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -2249,13 +2241,13 @@ SCIP_RETCODE SCIPsetCreate(
          "misc/usesymmetry",
          "bitset describing used symmetry handling technique: " \
          "(0: off; " \
-         "1: constraint-based (orbitopes and/or symresacks); " \
-         "2: orbital fixing; " \
-         "3: orbitopes and orbital fixing; " \
+         "1: constraint-based (orbitopes, symresacks); lexicographic and orbitopal reduction) if dynamic; " \
+         "2: orbital reduction; " \
+         "3: orbitopes and symresacks, and lexicographic/orbital reduction; " \
          "4: Schreier Sims cuts; " \
-         "5: Schreier Sims cuts and orbitopes; " \
-         "6: Schreier Sims cuts and orbital fixing; " \
-         "7: Schreier Sims cuts, orbitopes, and orbital fixing) " \
+         "5: Schreier Sims cuts, orbitopes, symresacks, and/or lexicographic reduction; " \
+         "6: Schreier Sims cuts, orbital reduction; " \
+         "7: Schreier Sims cuts, orbitopes, symresacks, and/or lexicographic/orbital reduction;) " \
          "See type_symmetry.h.",
          &(*set)->misc_usesymmetry, FALSE, SCIP_DEFAULT_MISC_USESYMMETRY, 0, 7,
          paramChgdUsesymmetry, NULL) );
@@ -2593,8 +2585,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/saveconsprop",
-         "save constraint propagations",
-         &(*set)->reopt_saveconsprop, TRUE, SCIP_DEFAULT_REOPT_SAVECONSPROP,
+         "save constraint and propagator propagations",
+         &(*set)->reopt_saveprop, TRUE, SCIP_DEFAULT_REOPT_SAVEPROP,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/usesplitcons", "use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node",

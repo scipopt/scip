@@ -106,8 +106,8 @@
 #include "scip/struct_tree.h"
 #include "scip/symmetry.h"
 #include "scip/debug.h"
+#include "symmetry/type_symmetry.h"
 #include <string.h>
-#include <symmetry/type_symmetry.h>
 
 
 /* symmetry handler properties */
@@ -288,7 +288,7 @@ SCIP_Bool testColumnsAreSymmetricallyEquivalent(
  *  at the focusnode at the moment of branching can be permuted.
  *  In this function, we select such a permutation, based on the column containing the branching variable(s).
  *  In all cases, we swap the column containing the branching variable with a symmetrically equivalent column,
- *  and the @param columnordering specifies if we prefer it to be the leftmost, rightmost, centermost symmetrically
+ *  and the columnordering specifies if we prefer it to be the leftmost, rightmost, centermost symmetrically
  *  equivalent column, or the median column among the symmetrically equivalent columns.
  *
  *  The column ordering is determined and stored at the moment of branching.
@@ -1436,8 +1436,8 @@ void assertIsOrbitopeMatrix(
 /** to test if arrays are the same, generates some hash for an array of integers */
 static
 int debugGetArrayHash(
-   int*                  array,              /** array */
-   int                   len                 /** array length */
+   int*                  array,              /**< array */
+   int                   len                 /**< array length */
    )
 {
    int i;
@@ -1460,9 +1460,9 @@ int debugGetArrayHash(
 /** prints nrows × ncols matrix of floats with 2 decimals */
 static
 void debugPrintMatrix(
-   SCIP_Real*            matrix,             /** matrix, encoded as array enumerating the elements row-wise */
-   int                   nrows,              /** number of rows */
-   int                   ncols               /** number of rows */
+   SCIP_Real*            matrix,             /**< matrix, encoded as array enumerating the elements row-wise */
+   int                   nrows,              /**< number of rows */
+   int                   ncols               /**< number of rows */
    )
 {
    int row;

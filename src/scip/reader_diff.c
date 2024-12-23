@@ -58,10 +58,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
-
 #define READER_NAME             "diffreader"
 #define READER_DESC             "file reader for changes in the LP file"
 #define READER_EXTENSION        "diff"
@@ -577,7 +573,7 @@ SCIP_Bool isValue(
    assert(lpinput != NULL);
    assert(value != NULL);
 
-   if( strcasecmp(lpinput->token, "INFINITY") == 0 || strcasecmp(lpinput->token, "INF") == 0 )
+   if( SCIPstrcasecmp(lpinput->token, "INFINITY") == 0 || SCIPstrcasecmp(lpinput->token, "INF") == 0 )
    {
       *value = SCIPinfinity(scip);
       return TRUE;

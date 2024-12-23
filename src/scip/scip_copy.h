@@ -483,9 +483,9 @@ void SCIPmergeNLPIStatistics(
 /** translates a solution from a subscip to the main scip
  *
  * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
- * are represented as NULL entry in the \p subvars array.
+ * are represented as NULL entry in the subvars array.
  *
- * @note This method allocates a new solution of the main \p scip that needs to be freed by the user.
+ * @note This method allocates a new solution of the main scip that needs to be freed by the user.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtranslateSubSol(
@@ -493,21 +493,21 @@ SCIP_RETCODE SCIPtranslateSubSol(
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
    SCIP_SOL*             subsol,             /**< solution of the subproblem */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
-   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main scip */
    SCIP_SOL**            newsol              /**< buffer to store pointer to created solution in main SCIP */
    );
 
 /** checks the solutions from the subscip and adds the first one that is found feasible to the master SCIP
  *
  * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
- * are represented as NULL entry in the \p subvars array.
+ * are represented as NULL entry in the subvars array.
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPtranslateSubSols(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
-   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main scip */
    SCIP_Bool*            success,            /**< pointer to store, whether new solution was found */
    int*                  solindex            /**< pointer to store solution index of stored solution, or NULL if not of interest */
    );
@@ -949,10 +949,10 @@ void SCIPsetSubscipDepth(
    );
 
 /** copies source SCIP to target SCIP; the copying process is done in the following order:
- *  1) copy the plugins
- *  2) copy the settings
+ *  1) copy those plugins that have copy callbacks
+ *  2) copy the settings for the present parameters
  *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
- *  4) copy all active variables except those are marked as relaxation-only
+ *  4) copy all active variables except those that are marked as relaxation-only
  *  5) copy all constraints
  *
  *  The source problem depends on the stage of the \p sourcescip - In SCIP_STAGE_PROBLEM, the original problem is copied,
@@ -1276,7 +1276,7 @@ SCIP_RETCODE SCIPcopyLimits(
 SCIP_EXPORT
 SCIP_RETCODE SCIPsetCommonSubscipParams(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 subscip,            /**< target SCIP data structure, often a copy of \p sourcescip */
+   SCIP*                 subscip,            /**< target SCIP data structure, often a copy of sourcescip */
    SCIP_Longint          nsubnodes,          /**< nodelimit for subscip, or -1 for no limit */
    SCIP_Longint          nstallnodes,        /**< stall node limit for subscip, or -1 for no limit */
    int                   bestsollimit        /**< the limit on the number of best solutions found, or -1 for no limit */

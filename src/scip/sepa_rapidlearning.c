@@ -728,6 +728,7 @@ SCIP_RETCODE checkExec(
 
       rootdualbound = SCIPgetLowerboundRoot(scip);
       locdualbound = SCIPgetLocalLowerbound(scip);
+      assert(!SCIPisInfinity(scip, locdualbound));
 
       if( SCIPisEQ(scip, rootdualbound, locdualbound) )
       {

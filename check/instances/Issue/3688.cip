@@ -1,0 +1,32 @@
+STATISTICS
+  Problem name     : t_trento1_rins
+  Variables        : 16 (13 binary, 0 integer, 0 implicit integer, 3 continuous)
+  Constraints      : 0 initial, 7 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <t_t_X113>: obj=0, original bounds=[0,1]
+  [binary] <t_t_X157>: obj=32303, original bounds=[0,1]
+  [binary] <t_t_X161>: obj=33060, original bounds=[0,1]
+  [binary] <t_t_X233>: obj=31882, original bounds=[0,1]
+  [binary] <t_t_X1428>: obj=33513, original bounds=[0,1]
+  [binary] <t_t_X15201>: obj=0, original bounds=[0,1]
+  [binary] <t_t_X15575>: obj=0, original bounds=[0,1]
+  [binary] <t_t_X15592>: obj=0, original bounds=[0,1]
+  [binary] <t_t_X27697>: obj=0, original bounds=[0,1]
+  [binary] <t_t_X27754>: obj=0, original bounds=[0,1]
+  [binary] <t_t_X27819>: obj=0, original bounds=[0,1]
+  [binary] <t_t_X37648>: obj=0, original bounds=[0,1]
+  [binary] <t_t_X45795>: obj=0, original bounds=[0,1]
+  [continuous] <t_t_S366>: obj=0, original bounds=[0,1]
+  [continuous] <t_t_S1274>: obj=0, original bounds=[0,1]
+  [continuous] <t_t_S22006>: obj=100000, original bounds=[0,1]
+CONSTRAINTS
+  [linear] <t_t_S366>: <t_t_X15201>[B] +<t_t_X27697>[B] -<t_t_S366>[C] == 1;
+  [linear] <t_t_S1274>: <t_t_X27697>[B] +<t_t_X27819>[B] -<t_t_S1274>[C] == 1;
+  [linear] <t_t_S1076>: <t_t_X15575>[B] +<t_t_X15592>[B] == 1;
+  [linear] <R22006>: <t_t_X113>[B] +<t_t_X157>[B] +<t_t_X161>[B] +<t_t_X233>[B] +<t_t_X1428>[B] +<t_t_X15201>[B] +<t_t_X15575>[B] +<t_t_X15592>[B] +<t_t_X27697>[B] +<t_t_X27754>[B] +<t_t_X27819>[B] +<t_t_X37648>[B] +<t_t_X45795>[B] -<t_t_S22006>[C] <= 6;
+  [linear] <R22032>:  +6<t_t_X113>[B] -9<t_t_X15201>[B] +12<t_t_X15575>[B] +16<t_t_X15592>[B] +11<t_t_X27697>[B] -26<t_t_X27754>[B] -6<t_t_X27819>[B] -19<t_t_X45795>[B] <= -16;
+  [linear] <R1186>: <t_t_X113>[B] +<t_t_X1428>[B] == 1;
+  [linear] <R22004>: <t_t_X157>[B] +<t_t_X161>[B] +<t_t_X233>[B] +<t_t_X37648>[B] == 2;
+END

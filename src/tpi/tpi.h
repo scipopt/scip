@@ -153,4 +153,22 @@ SCIP_RETCODE SCIPtpiExit(
    void
    );
 
+/** indicate whether a working TPI is available */
+SCIP_EXPORT
+SCIP_Bool SCIPtpiIsAvailable(void);
+
+/** get name of library that the TPI interfaces to */
+SCIP_EXPORT
+void SCIPtpiGetLibraryName(
+   char*                 name,               /**< buffer to store name */
+   int                   namesize            /**< length of name buffer */
+   );
+
+/** get description of library that the TPI interfaces to */
+SCIP_EXPORT
+void SCIPtpiGetLibraryDesc(
+   char*                 desc,               /**< buffer to store description */
+   int                   descsize            /**< length of description */
+   );
+
 #endif

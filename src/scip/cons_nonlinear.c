@@ -82,7 +82,7 @@
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
 #define CONSHDLR_DESC          "handler for nonlinear constraints specified by algebraic expressions"
-#define CONSHDLR_ENFOPRIORITY       -60 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_ENFOPRIORITY        50 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -4000010 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
@@ -309,6 +309,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             branchhighviolfactor; /**< consider a constraint highly violated if its violation is >= this factor * maximal violation among all constraints */
    SCIP_Real             branchhighscorefactor; /**< consider a variable branching score high if its branching score >= this factor * maximal branching score among all variables */
    SCIP_Real             branchviolweight;   /**< weight by how much to consider the violation assigned to a variable for its branching score */
+   SCIP_Real             branchfracweight;   /**< weight by how much to consider fractionality of integer variables in branching score for spatial branching */
    SCIP_Real             branchdualweight;   /**< weight by how much to consider the dual values of rows that contain a variable for its branching score */
    SCIP_Real             branchpscostweight; /**< weight by how much to consider the pseudo cost of a variable for its branching score */
    SCIP_Real             branchdomainweight; /**< weight by how much to consider the domain width in branching score */
@@ -316,6 +317,7 @@ struct SCIP_ConshdlrData
    char                  branchscoreagg;     /**< how to aggregate several branching scores given for the same expression ('a'verage, 'm'aximum, or 's'um) */
    char                  branchviolsplit;    /**< method used to split violation in expression onto variables ('u'niform, 'm'idness of solution, 'd'omain width, 'l'ogarithmic domain width) */
    SCIP_Real             branchpscostreliable; /**< minimum pseudo-cost update count required to consider pseudo-costs reliable */
+   SCIP_Real             branchmixfractional; /**< minimal average pseudo cost count for discrete variables at which to start considering spatial branching before branching on fractional integer variables */
    char                  linearizeheursol;   /**< whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution) */
    SCIP_Bool             assumeconvex;       /**< whether to assume that any constraint is convex */
 
@@ -353,12 +355,14 @@ struct SCIP_ConshdlrData
 /** branching candidate with various scores */
 typedef struct
 {
-   SCIP_EXPR*            expr;               /**< expression that holds branching candidate */
+   SCIP_EXPR*            expr;               /**< expression that holds branching candidate, NULL if candidate is due to fractionality of integer variable */
+   SCIP_VAR*             var;                /**< variable that is branching candidate */
    SCIP_Real             auxviol;            /**< aux-violation score of candidate */
    SCIP_Real             domain;             /**< domain score of candidate */
    SCIP_Real             dual;               /**< dual score of candidate */
    SCIP_Real             pscost;             /**< pseudo-cost score of candidate */
    SCIP_Real             vartype;            /**< variable type score of candidate */
+   SCIP_Real             fractionality;      /**< fractionality score of candidate */
    SCIP_Real             weighted;           /**< weighted sum of other scores, see scoreBranchingCandidates() */
 } BRANCHCAND;
 
@@ -803,12 +807,13 @@ SCIP_RETCODE freeVarExprs(
 
    assert(consdata != NULL);
 
-   /* skip if we have stored the variable expressions already*/
+   /* skip if we have stored the variable expressions already */
    if( consdata->varexprs == NULL )
       return SCIP_OKAY;
 
    assert(consdata->varexprs != NULL);
    assert(consdata->nvarexprs >= 0);
+   assert(!consdata->catchedevents);
 
    /* release variable expressions */
    for( i = 0; i < consdata->nvarexprs; ++i )
@@ -3464,7 +3469,7 @@ SCIP_RETCODE detectNlhdlrs(
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= 0);
-   assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING);  /* should only be called in presolve or initsolve or consactive */
+   assert(SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING);  /* should only be called in presolve or initsolve or consactive */
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3905,6 +3910,30 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    SCIP_CALL( SCIPcreateVarBasic(scip, &auxvar, name, minact, maxact, 0.0, integral ? SCIP_VARTYPE_IMPLINT : SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
+#ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
+   {
+      SCIP_Real debugsolval;  /* value of auxvar in debug solution */
+      SCIP_Real val;
+
+      /* compute value of new variable in debug solution */
+      /* first \sum_j c_{ij} x_j (coefs[j] * vars[j]) */
+      debugsolval = 0.0;
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[i], &val) );
+         debugsolval += coefs[i] * val;
+      }
+
+      /* now multiply by x_i (facvar) */
+      SCIP_CALL( SCIPdebugGetSolVal(scip, facvar, &val) );
+      debugsolval *= val;
+
+      /* store debug solution value of auxiliary variable */
+      SCIP_CALL( SCIPdebugAddSolVal(scip, auxvar, debugsolval) );
+   }
+#endif
+
    /* create and add z - maxact x <= 0 */
    if( !SCIPisZero(scip, maxact) )
    {
@@ -4208,6 +4237,25 @@ SCIP_RETCODE getBinaryProductExprDo(
    SCIP_CALL( SCIPcreateVarBasic(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIPdebugMsg(scip, "  created auxiliary variable %s\n", name);
+
+#ifdef WITH_DEBUG_SOLUTION
+   if( SCIPdebugIsMainscip(scip) )
+   {
+      SCIP_Real debugsolval;  /* value of auxvar in debug solution */
+      SCIP_Real val;
+
+      /* compute value of new variable in debug solution (\prod_i vars[i]) */
+      debugsolval = 1.0;
+      for( i = 0; i < nchildren; ++i )
+      {
+         SCIP_CALL( SCIPdebugGetSolVal(scip, vars[i], &val) );
+         debugsolval *= val;
+      }
+
+      /* store debug solution value of auxiliary variable */
+      SCIP_CALL( SCIPdebugAddSolVal(scip, w, debugsolval) );
+   }
+#endif
 
    /* use variable bound constraints if it is a bilinear product and there is no empathy for an AND constraint */
    if( nchildren == 2 && !empathy4and )
@@ -6664,7 +6712,9 @@ SCIP_RETCODE collectBranchingCandidates(
 
                assert(*ncands + 1 < SCIPgetNVars(scip));
                cands[*ncands].expr = consdata->varexprs[i];
+               cands[*ncands].var = var;
                cands[*ncands].auxviol = SCIPgetExprViolScoreNonlinear(consdata->varexprs[i]);
+               cands[*ncands].fractionality = 0.0;
                ++(*ncands);
 
                /* invalidate violscore-tag, so that we do not register variables that appear in multiple constraints
@@ -6701,7 +6751,9 @@ SCIP_RETCODE collectBranchingCandidates(
 
                assert(*ncands + 1 < SCIPgetNVars(scip));
                cands[*ncands].expr = expr;
+               cands[*ncands].var = var;
                cands[*ncands].auxviol = SCIPgetExprViolScoreNonlinear(expr);
+               cands[*ncands].fractionality = 0.0;
                ++(*ncands);
             }
          }
@@ -6847,6 +6899,7 @@ void scoreBranchingCandidates(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    BRANCHCAND*           cands,              /**< branching candidates */
    int                   ncands,             /**< number of candidates */
+   SCIP_Bool             considerfracnl,     /**< whether to consider fractionality for spatial branching candidates */
    SCIP_SOL*             sol                 /**< solution to enforce (NULL for the LP solution) */
    )
 {
@@ -6873,7 +6926,33 @@ void scoreBranchingCandidates(
          maxscore.auxviol = MAX(maxscore.auxviol, cands[c].auxviol);
       }
 
-      if( conshdlrdata->branchdomainweight > 0.0 )
+      if( conshdlrdata->branchfracweight > 0.0 && SCIPvarGetType(cands[c].var) <= SCIP_VARTYPE_INTEGER )
+      {
+         /* when collecting for branching on fractionality (cands[c].expr == NULL), only fractional integer variables
+          * should appear as candidates here and their fractionality should have been recorded in branchingIntegralOrNonlinear
+          */
+         assert(cands[c].expr != NULL || cands[c].fractionality > 0.0);
+
+         if( considerfracnl && cands[c].fractionality == 0.0 )
+         {
+            /* for an integer variable that is subject to spatial branching, we also record the fractionality (but separately from auxviol)
+             * if considerfracnl is TRUE; this way, we can give preference to fractional integer nonlinear variables
+             */
+            SCIP_Real solval;
+            SCIP_Real rounded;
+
+            solval = SCIPgetSolVal(scip, sol, cands[c].var);
+            rounded = SCIPround(scip, solval);
+
+            cands[c].fractionality = REALABS(solval - rounded);
+         }
+
+         maxscore.fractionality = MAX(cands[c].fractionality, maxscore.fractionality);
+      }
+      else
+         cands[c].fractionality = 0.0;
+
+      if( conshdlrdata->branchdomainweight > 0.0 && cands[c].expr != NULL )
       {
          SCIP_Real domainwidth;
          SCIP_VAR* var;
@@ -6898,7 +6977,7 @@ void scoreBranchingCandidates(
       else
          cands[c].domain = 0.0;
 
-      if( conshdlrdata->branchdualweight > 0.0 )
+      if( conshdlrdata->branchdualweight > 0.0 && cands[c].expr != NULL )
       {
          SCIP_VAR* var;
 
@@ -6908,94 +6987,131 @@ void scoreBranchingCandidates(
          cands[c].dual = getDualBranchscore(scip, conshdlr, var);
          maxscore.dual = MAX(cands[c].dual, maxscore.dual);
       }
+      else
+         cands[c].dual = 0.0;
 
       if( conshdlrdata->branchpscostweight > 0.0 && SCIPgetNObjVars(scip) > 0 )
       {
          SCIP_VAR* var;
 
-         var = SCIPgetExprAuxVarNonlinear(cands[c].expr);
+         var = cands[c].var;
          assert(var != NULL);
 
-         if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
-            cands[c].pscost = SCIP_INVALID;
+         if( cands[c].expr != NULL )
+         {
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+               cands[c].pscost = SCIP_INVALID;
+            else
+            {
+               SCIP_Real brpoint;
+               SCIP_Real pscostdown;
+               SCIP_Real pscostup;
+               char strategy;
+
+               /* decide how to compute pseudo-cost scores
+                * this should be consistent with the way how pseudo-costs are updated in the core, which is decided by
+                * branching/lpgainnormalize for continuous variables and move in LP-value for non-continuous variables
+                */
+               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+                  strategy = conshdlrdata->branchpscostupdatestrategy;
+               else
+                  strategy = 'l';
+
+               brpoint = SCIPgetBranchingPoint(scip, var, SCIP_INVALID);
+
+               /* branch_relpscost deems pscosts as reliable, if the pseudo-count is at least something between 1 and 4
+                * or it uses some statistical tests involving SCIPisVarPscostRelerrorReliable
+                * For here, I use a simple #counts >= branchpscostreliable.
+                * TODO use SCIPgetVarPseudocostCount() instead?
+                */
+               if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS) >= conshdlrdata->branchpscostreliable )
+               {
+                  switch( strategy )
+                  {
+                     case 's' :
+                        pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint)));
+                        break;
+                     case 'd' :
+                        pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var)));
+                        break;
+                     case 'l' :
+                        if( SCIPisInfinity(scip, SCIPgetSolVal(scip, sol, var)) )
+                           pscostdown = SCIP_INVALID;
+                        else if( SCIPgetSolVal(scip, sol, var) <= SCIPadjustedVarUb(scip, var, brpoint) )
+                           pscostdown = SCIPgetVarPseudocostVal(scip, var, 0.0);
+                        else
+                           pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPgetSolVal(scip, sol, var) - SCIPadjustedVarUb(scip, var, brpoint)));
+                        break;
+                     default :
+                        SCIPerrorMessage("pscost update strategy %c unknown\n", strategy);
+                        pscostdown = SCIP_INVALID;
+                  }
+               }
+               else
+                  pscostdown = SCIP_INVALID;
+
+               if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS) >= conshdlrdata->branchpscostreliable )
+               {
+                  switch( strategy )
+                  {
+                     case 's' :
+                        pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var));
+                        break;
+                     case 'd' :
+                        pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint));
+                        break;
+                     case 'l' :
+                        if( SCIPisInfinity(scip, -SCIPgetSolVal(scip, sol, var)) )
+                           pscostup = SCIP_INVALID;
+                        else if( SCIPgetSolVal(scip, sol, var) >= SCIPadjustedVarLb(scip, var, brpoint) )
+                           pscostup = SCIPgetVarPseudocostVal(scip, var, 0.0);
+                        else
+                           pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarLb(scip, var, brpoint) - SCIPgetSolVal(scip, sol, var) );
+                        break;
+                     default :
+                        SCIPerrorMessage("pscost update strategy %c unknown\n", strategy);
+                        pscostup = SCIP_INVALID;
+                  }
+               }
+               else
+                  pscostup = SCIP_INVALID;
+
+               /* TODO if both are valid, we get pscostdown*pscostup, but does this compare well with vars were only pscostdown or pscostup is used?
+                * maybe we should use (pscostdown+pscostup)/2 or sqrt(pscostdown*pscostup) ?
+                */
+               if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )
+                  cands[c].pscost = SCIP_INVALID;
+               else if( pscostdown == SCIP_INVALID )
+                  cands[c].pscost = pscostup;
+               else if( pscostup == SCIP_INVALID )
+                  cands[c].pscost = pscostdown;
+               else
+                  cands[c].pscost = SCIPgetBranchScore(scip, NULL, pscostdown, pscostup);  /* pass NULL for var to avoid multiplication with branch-factor */
+            }
+         }
          else
          {
-            SCIP_Real brpoint;
             SCIP_Real pscostdown;
             SCIP_Real pscostup;
-            char strategy;
+            SCIP_Real solval;
 
-            /* decide how to compute pseudo-cost scores
-             * this should be consistent with the way how pseudo-costs are updated in the core, which is decided by
-             * branching/lpgainnormalize for continuous variables and move in LP-value for non-continuous variables
-             */
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-               strategy = conshdlrdata->branchpscostupdatestrategy;
-            else
-               strategy = 'l';
+            solval = SCIPgetSolVal(scip, sol, cands[c].var);
 
-            brpoint = SCIPgetBranchingPoint(scip, var, SCIP_INVALID);
-
-            /* branch_relpscost deems pscosts as reliable, if the pseudo-count is at least something between 1 and 4
-             * or it uses some statistical tests involving SCIPisVarPscostRelerrorReliable
-             * For here, I use a simple #counts >= branchpscostreliable.
-             * TODO use SCIPgetVarPseudocostCount() instead?
+            /* the calculation for pscostdown/up follows SCIPgetVarPseudocostScore(),
+             * i.e., set solvaldelta to the (negated) difference between variable value and rounded down value for pscostdown
+             * and different between variable value and rounded up value for pscostup
              */
             if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS) >= conshdlrdata->branchpscostreliable )
-            {
-               switch( strategy )
-               {
-                  case 's' :
-                     pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint)));
-                     break;
-                  case 'd' :
-                     pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var)));
-                     break;
-                  case 'l' :
-                     if( SCIPisInfinity(scip, SCIPgetSolVal(scip, sol, var)) )
-                        pscostdown = SCIP_INVALID;
-                     else if( SCIPgetSolVal(scip, sol, var) <= SCIPadjustedVarUb(scip, var, brpoint) )
-                        pscostdown = SCIPgetVarPseudocostVal(scip, var, 0.0);
-                     else
-                        pscostdown = SCIPgetVarPseudocostVal(scip, var, -(SCIPgetSolVal(scip, NULL, var) - SCIPadjustedVarUb(scip, var, brpoint)));
-                     break;
-                  default :
-                     SCIPerrorMessage("pscost update strategy %c unknown\n", strategy);
-                     pscostdown = SCIP_INVALID;
-               }
-            }
+               pscostdown = SCIPgetVarPseudocostVal(scip, var, SCIPfeasCeil(scip, solval - 1.0) - solval);
             else
                pscostdown = SCIP_INVALID;
 
             if( SCIPgetVarPseudocostCountCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS) >= conshdlrdata->branchpscostreliable )
-            {
-               switch( strategy )
-               {
-                  case 's' :
-                     pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarUb(scip, var, brpoint) - SCIPvarGetLbLocal(var));
-                     break;
-                  case 'd' :
-                     pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPvarGetUbLocal(var) - SCIPadjustedVarLb(scip, var, brpoint));
-                     break;
-                  case 'l' :
-                     if( SCIPisInfinity(scip, -SCIPgetSolVal(scip, sol, var)) )
-                        pscostup = SCIP_INVALID;
-                     else if( SCIPgetSolVal(scip, NULL, var) >= SCIPadjustedVarLb(scip, var, brpoint) )
-                        pscostup = SCIPgetVarPseudocostVal(scip, var, 0.0);
-                     else
-                        pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPadjustedVarLb(scip, var, brpoint) - SCIPgetSolVal(scip, NULL, var) );
-                     break;
-                  default :
-                     SCIPerrorMessage("pscost update strategy %c unknown\n", strategy);
-                     pscostup = SCIP_INVALID;
-               }
-            }
+               pscostup = SCIPgetVarPseudocostVal(scip, var, SCIPfeasFloor(scip, solval + 1.0) - solval);
             else
                pscostup = SCIP_INVALID;
 
-            /* TODO if both are valid, we get pscostdown*pscostup, but does this compare well with vars were only pscostdown or pscostup is used?
-             * maybe we should use (pscostdown+pscostup)/2 or sqrt(pscostdown*pscostup) ?
-             */
+            /* TODO see above for nonlinear variable case */
             if( pscostdown == SCIP_INVALID && pscostup == SCIP_INVALID )
                cands[c].pscost = SCIP_INVALID;
             else if( pscostdown == SCIP_INVALID )
@@ -7009,15 +7125,12 @@ void scoreBranchingCandidates(
          if( cands[c].pscost != SCIP_INVALID )
             maxscore.pscost = MAX(cands[c].pscost, maxscore.pscost);
       }
+      else
+         cands[c].pscost = SCIP_INVALID;
 
       if( conshdlrdata->branchvartypeweight > 0.0 )
       {
-         SCIP_VAR* var;
-
-         var = SCIPgetExprAuxVarNonlinear(cands[c].expr);
-         assert(var != NULL);
-
-         switch( SCIPvarGetType(var) )
+         switch( SCIPvarGetType(cands[c].var) )
          {
             case SCIP_VARTYPE_BINARY :
                cands[c].vartype = 1.0;
@@ -7043,11 +7156,7 @@ void scoreBranchingCandidates(
    {
       SCIP_Real weightsum;
 
-      ENFOLOG(
-         SCIP_VAR* var;
-         var = SCIPgetExprAuxVarNonlinear(cands[c].expr);
-         SCIPinfoMessage(scip, enfologfile, " scoring <%8s>[%7.1g,%7.1g]:(", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-         )
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " scoring <%8s>[%7.1g,%7.1g]:(", SCIPvarGetName(cands[c].var), SCIPvarGetLbLocal(cands[c].var), SCIPvarGetUbLocal(cands[c].var)); )
 
       cands[c].weighted = 0.0;
       weightsum = 0.0;
@@ -7058,6 +7167,14 @@ void scoreBranchingCandidates(
          weightsum += conshdlrdata->branchviolweight;
 
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%7.2g(viol)", conshdlrdata->branchviolweight, cands[c].auxviol / maxscore.auxviol); )
+      }
+
+      if( maxscore.fractionality > 0.0 )
+      {
+         cands[c].weighted += conshdlrdata->branchfracweight * cands[c].fractionality / maxscore.fractionality;
+         weightsum += conshdlrdata->branchfracweight;
+
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%6.2g(frac)", conshdlrdata->branchfracweight, cands[c].fractionality / maxscore.fractionality); )
       }
 
       if( maxscore.domain > 0.0 )
@@ -7100,6 +7217,7 @@ void scoreBranchingCandidates(
 
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%6.2g(vartype)", conshdlrdata->branchvartypeweight, cands[c].vartype / maxscore.vartype); )
       }
+
       assert(weightsum > 0.0);  /* we should have got at least one valid score */
       cands[c].weighted /= weightsum;
 
@@ -7110,6 +7228,7 @@ void scoreBranchingCandidates(
 /** compare two branching candidates by their weighted score
  *
  * if weighted score is equal, use variable index of (aux)var
+ * if variables are the same, then use whether variable was added due to nonlinearity or fractionality
  */
 static
 SCIP_DECL_SORTINDCOMP(branchcandCompare)
@@ -7118,11 +7237,110 @@ SCIP_DECL_SORTINDCOMP(branchcandCompare)
 
    if( cands[ind1].weighted != cands[ind2].weighted )
       return cands[ind1].weighted < cands[ind2].weighted ? -1 : 1;
-   else
-      return SCIPvarGetIndex(SCIPgetExprAuxVarNonlinear(cands[ind1].expr)) - SCIPvarGetIndex(SCIPgetExprAuxVarNonlinear(cands[ind2].expr));
+
+   if( cands[ind1].var != cands[ind2].var )
+      return SCIPvarGetIndex(cands[ind1].var) - SCIPvarGetIndex(cands[ind2].var);
+
+   return cands[ind1].expr != NULL ? 1 : -1;
 }
 
-/** do branching or register branching candidates */
+/** picks a candidate from array of branching candidates */
+static
+SCIP_RETCODE selectBranchingCandidate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BRANCHCAND*           cands,              /**< branching candidates */
+   int                   ncands,             /**< number of candidates */
+   SCIP_Bool             considerfracnl,     /**< whether to consider fractionality for spatial branching candidates */
+   SCIP_SOL*             sol,                /**< relaxation solution, NULL for LP */
+   BRANCHCAND**          selected            /**< buffer to store selected branching candidates */
+)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int* perm;
+   int c;
+   int left;
+   int right;
+   SCIP_Real threshold;
+
+   assert(cands != NULL);
+   assert(ncands >= 1);
+   assert(selected != NULL);
+
+   if( ncands == 1 )
+   {
+      *selected = cands;
+      return SCIP_OKAY;
+   }
+
+   /* if there are more than one candidate, then compute scores and select */
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* compute additional scores on branching candidates and weighted score */
+   scoreBranchingCandidates(scip, conshdlr, cands, ncands, considerfracnl, sol);
+
+   /* sort candidates by weighted score */
+   SCIP_CALL( SCIPallocBufferArray(scip, &perm, ncands) );
+   SCIPsortDown(perm, branchcandCompare, (void*)cands, ncands);
+
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g)\n", ncands,
+      SCIPvarGetName(cands[perm[0]].var), cands[perm[0]].weighted,
+      SCIPvarGetName(cands[perm[ncands - 1]].var), cands[perm[ncands - 1]].weighted); )
+
+   /* binary search to find first low-scored (score below branchhighscorefactor * maximal-score)  candidate */
+   left = 0;
+   right = ncands - 1;
+   threshold = conshdlrdata->branchhighscorefactor * cands[perm[0]].weighted;
+   while( left < right )
+   {
+      int mid = (left + right) / 2;
+      if( cands[perm[mid]].weighted >= threshold )
+         left = mid + 1;
+      else
+         right = mid;
+   }
+   assert(left <= ncands);
+
+   if( left < ncands )
+   {
+      if( cands[perm[left]].weighted >= threshold )
+      {
+         assert(left + 1 == ncands || cands[perm[left + 1]].weighted < threshold);
+         ncands = left + 1;
+      }
+      else
+      {
+         assert(cands[perm[left]].weighted < threshold);
+         ncands = left;
+      }
+   }
+   assert(ncands > 0);
+
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g) after removing low scores\n", ncands,
+      SCIPvarGetName(cands[perm[0]].var), cands[perm[0]].weighted,
+      SCIPvarGetName(cands[perm[ncands - 1]].var), cands[perm[ncands - 1]].weighted); )
+
+   if( ncands > 1 )
+   {
+      /* choose at random from candidates 0..ncands-1 */
+      if( conshdlrdata->branchrandnumgen == NULL )
+      {
+         SCIP_CALL( SCIPcreateRandom(scip, &conshdlrdata->branchrandnumgen, BRANCH_RANDNUMINITSEED, TRUE) );
+      }
+      c = SCIPrandomGetInt(conshdlrdata->branchrandnumgen, 0, ncands - 1);
+      *selected = &cands[perm[c]];
+   }
+   else
+      *selected = &cands[perm[0]];
+
+   SCIPfreeBufferArray(scip, &perm);
+
+   return SCIP_OKAY;
+}
+
+/** do spatial branching or register branching candidates */
 static
 SCIP_RETCODE branching(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7138,7 +7356,7 @@ SCIP_RETCODE branching(
    SCIP_CONSHDLRDATA* conshdlrdata;
    BRANCHCAND* cands;
    int ncands;
-   SCIP_VAR* var;
+   BRANCHCAND* selected = NULL;
    SCIP_NODE* downchild;
    SCIP_NODE* eqchild;
    SCIP_NODE* upchild;
@@ -7173,85 +7391,18 @@ SCIP_RETCODE branching(
    if( ncands == 0 )
       goto TERMINATE;
 
-   if( ncands > 1 )
-   {
-      /* if there are more than one candidate, then compute scores and select */
-      int* perm;
-      int c;
-      int left;
-      int right;
-      SCIP_Real threshold;
+   /* here we include fractionality of integer variables into the branching score
+    * but if we know there will be no fractional integer variables, then we can shortcut and turn this off
+    */
+   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, sol == NULL && SCIPgetNLPBranchCands(scip) > 0, sol, &selected) );
+   assert(selected != NULL);
+   assert(selected->expr != NULL);
 
-      /* compute additional scores on branching candidates and weighted score */
-      scoreBranchingCandidates(scip, conshdlr, cands, ncands, sol);
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " branching on variable <%s>[%g,%g]\n", SCIPvarGetName(selected->var),
+      SCIPvarGetLbLocal(selected->var), SCIPvarGetUbLocal(selected->var)); )
 
-      /* sort candidates by weighted score */
-      SCIP_CALL( SCIPallocBufferArray(scip, &perm, ncands) );
-      SCIPsortDown(perm, branchcandCompare, (void*)cands, ncands);
-
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g)\n", ncands,
-         SCIPvarGetName(SCIPgetExprAuxVarNonlinear(cands[perm[0]].expr)), cands[perm[0]].weighted,
-         SCIPvarGetName(SCIPgetExprAuxVarNonlinear(cands[perm[ncands - 1]].expr)), cands[perm[ncands - 1]].weighted); )
-
-      /* binary search to find first low-scored (score below branchhighscorefactor * maximal-score)  candidate */
-      left = 0;
-      right = ncands - 1;
-      threshold = conshdlrdata->branchhighscorefactor * cands[perm[0]].weighted;
-      while( left < right )
-      {
-         int mid = (left + right) / 2;
-         if( cands[perm[mid]].weighted >= threshold )
-            left = mid + 1;
-         else
-            right = mid;
-      }
-      assert(left <= ncands);
-
-      if( left < ncands )
-      {
-         if( cands[perm[left]].weighted >= threshold )
-         {
-            assert(left + 1 == ncands || cands[perm[left + 1]].weighted < threshold);
-            ncands = left + 1;
-         }
-         else
-         {
-            assert(cands[perm[left]].weighted < threshold);
-            ncands = left;
-         }
-      }
-      assert(ncands > 0);
-
-      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %d branching candidates <%s>(%g)...<%s>(%g) after removing low scores\n", ncands,
-         SCIPvarGetName(SCIPgetExprAuxVarNonlinear(cands[perm[0]].expr)), cands[perm[0]].weighted,
-         SCIPvarGetName(SCIPgetExprAuxVarNonlinear(cands[perm[ncands - 1]].expr)), cands[perm[ncands - 1]].weighted); )
-
-      if( ncands > 1 )
-      {
-         /* choose at random from candidates 0..ncands-1 */
-         if( conshdlrdata->branchrandnumgen == NULL )
-         {
-            SCIP_CALL( SCIPcreateRandom(scip, &conshdlrdata->branchrandnumgen, BRANCH_RANDNUMINITSEED, TRUE) );
-         }
-         c = SCIPrandomGetInt(conshdlrdata->branchrandnumgen, 0, ncands - 1);
-         var = SCIPgetExprAuxVarNonlinear(cands[perm[c]].expr);
-      }
-      else
-         var = SCIPgetExprAuxVarNonlinear(cands[perm[0]].expr);
-
-      SCIPfreeBufferArray(scip, &perm);
-   }
-   else
-   {
-      var = SCIPgetExprAuxVarNonlinear(cands[0].expr);
-   }
-   assert(var != NULL);
-
-   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " branching on variable <%s>[%g,%g]\n", SCIPvarGetName(var),
-            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)); )
-
-   SCIP_CALL( SCIPbranchVarVal(scip, var, SCIPgetBranchingPoint(scip, var, SCIP_INVALID), &downchild, &eqchild,
-            &upchild) );
+   SCIP_CALL( SCIPbranchVarVal(scip, selected->var, SCIPgetBranchingPoint(scip, selected->var, SCIP_INVALID), &downchild, &eqchild,
+      &upchild) );
    if( downchild != NULL || eqchild != NULL || upchild != NULL )
       *result = SCIP_BRANCHED;
    else
@@ -7285,6 +7436,7 @@ SCIP_RETCODE enforceExprNlhdlr(
    SCIP_Bool             separated,          /**< whether another nonlinear handler already added a cut for this expression */
    SCIP_Bool             allowweakcuts,      /**< whether we allow for weak cuts */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement (and not just separation) */
+   SCIP_Bool             branchcandonly,     /**< only collect branching candidates, do not separate or propagate */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -7292,7 +7444,7 @@ SCIP_RETCODE enforceExprNlhdlr(
 
    /* call enforcement callback of the nlhdlr */
    SCIP_CALL( SCIPnlhdlrEnfo(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, auxvalue, overestimate,
-            allowweakcuts, separated, inenforcement, result) );
+            allowweakcuts, separated, inenforcement, branchcandonly, result) );
 
    /* if it was not running (e.g., because it was not available) or did not find anything, then try with estimator callback */
    if( *result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND )
@@ -7346,14 +7498,25 @@ SCIP_RETCODE enforceExprNlhdlr(
          assert(rowprep != NULL);
          assert(SCIProwprepGetSidetype(rowprep) == (overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT));
 
-         /* complete estimator to cut */
-         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
+         if( !branchcandonly )
+         {
+            /* complete estimator to cut */
+            SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, auxvar, -1.0) );
 
-         /* add the cut and/or branching scores */
-         SCIP_CALL( SCIPprocessRowprepNonlinear(scip, nlhdlr, cons, expr, rowprep, overestimate, auxvar,
+            /* add the cut and/or branching scores
+             * (branching scores that could be added here are to deal with bad numerics of cuts; we skip these if branchcandonly)
+             */
+            SCIP_CALL( SCIPprocessRowprepNonlinear(scip, nlhdlr, cons, expr, rowprep, overestimate, auxvar,
                auxvalue, allowweakcuts, branchscoresuccess, inenforcement, sol, result) );
+         }
 
          SCIPfreeRowprep(scip, &rowprep);
+      }
+
+      if( branchcandonly && branchscoresuccess )
+      {
+         ENFOLOG( SCIPinfoMessage(scip, enfologfile, "    estimate of nlhdlr %s added branching candidates\n", SCIPnlhdlrGetName(nlhdlr)); )
+         *result = SCIP_BRANCHED;
       }
 
       SCIP_CALL( SCIPfreePtrarray(scip, &rowpreps) );
@@ -7376,6 +7539,7 @@ SCIP_RETCODE enforceExpr(
    SCIP_Longint          soltag,             /**< tag of solution */
    SCIP_Bool             allowweakcuts,      /**< whether we allow weak cuts */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement (and not just separation) */
+   SCIP_Bool             branchcandonly,     /**< only collect branching candidates, do not separate or propagate */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
@@ -7422,6 +7586,10 @@ SCIP_RETCODE enforceExpr(
 
       /* skip nlhdlr that do not want to participate in any separation */
       if( (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABOTH) == 0 )
+         continue;
+
+      /* if looking for branching candidates only, then skip nlhdlr that wouldn't created branching candidates */
+      if( branchcandonly && !ownerdata->enfos[e]->sepaaboveusesactivity && !ownerdata->enfos[e]->sepabelowusesactivity )
          continue;
 
       nlhdlr = ownerdata->enfos[e]->nlhdlr;
@@ -7477,12 +7645,12 @@ SCIP_RETCODE enforceExpr(
       /* if we want to overestimate and violation w.r.t. auxiliary variables is also present on this side and nlhdlr
        * wants to be called for separation on this side, then call separation of nlhdlr
        */
-      if( overestimate && auxoverestimate && (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0 )
+      if( overestimate && auxoverestimate && (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPAABOVE) != 0 && (!branchcandonly || ownerdata->enfos[e]->sepaaboveusesactivity) )
       {
          /* call the separation or estimation callback of the nonlinear handler for overestimation */
          hdlrresult = SCIP_DIDNOTFIND;
          SCIP_CALL( enforceExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, sol,
-            ownerdata->enfos[e]->auxvalue, TRUE, *result == SCIP_SEPARATED, allowweakcuts, inenforcement, &hdlrresult) );
+            ownerdata->enfos[e]->auxvalue, TRUE, *result == SCIP_SEPARATED, allowweakcuts, inenforcement, branchcandonly, &hdlrresult) );
 
          if( hdlrresult == SCIP_CUTOFF )
          {
@@ -7525,12 +7693,12 @@ SCIP_RETCODE enforceExpr(
       /* if we want to underestimate and violation w.r.t. auxiliary variables is also present on this side and nlhdlr
        * wants to be called for separation on this side, then call separation of nlhdlr
        */
-      if( underestimate && auxunderestimate && (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW) != 0 )
+      if( underestimate && auxunderestimate && (ownerdata->enfos[e]->nlhdlrparticipation & SCIP_NLHDLR_METHOD_SEPABELOW) != 0 && (!branchcandonly || ownerdata->enfos[e]->sepabelowusesactivity) )
       {
          /* call the separation or estimation callback of the nonlinear handler for underestimation */
          hdlrresult = SCIP_DIDNOTFIND;
          SCIP_CALL( enforceExprNlhdlr(scip, conshdlr, cons, nlhdlr, expr, ownerdata->enfos[e]->nlhdlrexprdata, sol,
-            ownerdata->enfos[e]->auxvalue, FALSE, *result == SCIP_SEPARATED, allowweakcuts, inenforcement, &hdlrresult) );
+            ownerdata->enfos[e]->auxvalue, FALSE, *result == SCIP_SEPARATED, allowweakcuts, inenforcement, branchcandonly, &hdlrresult) );
 
          if( hdlrresult == SCIP_CUTOFF )
          {
@@ -7585,6 +7753,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_EXPRITER*        it,                 /**< expression iterator that we can just use here */
    SCIP_Bool             allowweakcuts,      /**< whether to allow weak cuts in this round */
    SCIP_Bool             inenforcement,      /**< whether to we are in enforcement, and not just separation */
+   SCIP_Bool             branchcandonly,     /**< only collect branching candidates, do not separate or propagate */
    SCIP_RESULT*          result,             /**< pointer to update with result of the enforcing call */
    SCIP_Bool*            success             /**< buffer to store whether some enforcement took place */
    )
@@ -7608,7 +7777,7 @@ SCIP_RETCODE enforceConstraint(
 
    *success = FALSE;
 
-   if( inenforcement && !consdata->ispropagated )
+   if( inenforcement && !branchcandonly && !consdata->ispropagated )
    {
       /* If there are boundchanges that haven't been propagated to activities yet, then do this now and update bounds of
        * auxiliary variables, since some nlhdlr/exprhdlr may look at auxvar bounds or activities
@@ -7656,7 +7825,7 @@ SCIP_RETCODE enforceConstraint(
          continue;
       }
 
-      SCIP_CALL( enforceExpr(scip, conshdlr, cons, expr, sol, soltag, allowweakcuts, inenforcement, &resultexpr) );
+      SCIP_CALL( enforceExpr(scip, conshdlr, cons, expr, sol, soltag, allowweakcuts, inenforcement, branchcandonly, &resultexpr) );
 
       /* if not enforced, then we must not have found a cutoff, cut, domain reduction, or branchscore */
       assert((ownerdata->lastenforced == conshdlrdata->enforound) == (resultexpr != SCIP_DIDNOTFIND));
@@ -7684,13 +7853,14 @@ SCIP_RETCODE enforceConstraint(
 
 /** try to separate violated constraints and, if in enforcement, register branching scores
  *
+ * If branchcandonly=TRUE, then do not separate or propagate, but register branching scores only.
+ *
  * Sets result to
  * - SCIP_DIDNOTFIND, if nothing of the below has been done
  * - SCIP_CUTOFF, if node can be cutoff,
  * - SCIP_SEPARATED, if a cut has been added,
- * - SCIP_REDUCEDDOM, if a domain reduction has been found,
- * - SCIP_BRANCHED, if branching has been done,
- * - SCIP_REDUCEDDOM, if a variable got fixed (in an attempt to branch on it),
+ * - SCIP_REDUCEDDOM, if a domain reduction has been found or a variable got fixed (in an attempt to branch on it),
+ * - SCIP_BRANCHED, if branching has been done (if branchcandonly=TRUE, then collected branching candidates only),
  * - SCIP_INFEASIBLE, if external branching candidates were registered
  */
 static
@@ -7702,6 +7872,7 @@ SCIP_RETCODE enforceConstraints(
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    SCIP_Longint          soltag,             /**< tag of solution */
    SCIP_Bool             inenforcement,      /**< whether we are in enforcement, and not just separation */
+   SCIP_Bool             branchcandonly,     /**< only collect branching candidates, do not separate or propagate */
    SCIP_Real             maxrelconsviol,     /**< largest scaled violation among all violated expr-constraints, only used if in enforcement */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
@@ -7764,12 +7935,12 @@ SCIP_RETCODE enforceConstraints(
          }
       })
 
-      SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, FALSE, inenforcement, result, &consenforced) );
+      SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, FALSE, inenforcement, branchcandonly, result, &consenforced) );
 
       if( *result == SCIP_CUTOFF )
          break;
 
-      if( !consenforced && inenforcement )
+      if( !consenforced && inenforcement && !branchcandonly )
       {
          SCIP_Real viol;
 
@@ -7779,7 +7950,7 @@ SCIP_RETCODE enforceConstraints(
             ENFOLOG( SCIPinfoMessage(scip, enfologfile, " constraint <%s> could not be enforced, try again with weak "\
                      "cuts allowed\n", SCIPconsGetName(conss[c])); )
 
-            SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, TRUE, inenforcement, result, &consenforced) );
+            SCIP_CALL( enforceConstraint(scip, conshdlr, conss[c], sol, soltag, it, TRUE, inenforcement, branchcandonly, result, &consenforced) );
 
             if( consenforced )
                ++conshdlrdata->nweaksepa;  /* TODO maybe this should not be counted per constraint, but per enforcement round? */
@@ -7794,8 +7965,7 @@ SCIP_RETCODE enforceConstraints(
 
    ENFOLOG( if( enfologfile != NULL ) fflush( enfologfile); )
 
-   /* if having branching scores, then propagate them from expressions with children to variable expressions */
-   if( *result == SCIP_BRANCHED )
+   if( *result == SCIP_BRANCHED && !branchcandonly )
    {
       /* having result set to branched here means only that we have branching candidates, we still need to do the actual
        * branching
@@ -7813,6 +7983,198 @@ SCIP_RETCODE enforceConstraints(
    ENFOLOG( if( enfologfile != NULL ) fflush( enfologfile); )
 
    return SCIP_OKAY;
+}
+
+/** decide whether to branch on fractional integer or nonlinear variable
+ *
+ * The routine collects spatial branching candidates by a call to enforceConstraints(branchcandonly=TRUE)
+ * and collectBranchingCandidates(). Then it adds fractional integer variables to the candidate list.
+ * Variables that are candidate for both spatial branching and fractionality are considered as two separate candidates.
+ * selectBranchingCandidate() then selects a variable for branching from the joined candidate list.
+ * If the selected variable is a fractional integer one, then branchintegral=TRUE is returned, otherwise FALSE.
+ * Some shortcuts exist for cases where there are no candidates of the one kind or the other.
+ */
+static
+SCIP_RETCODE branchingIntegralOrNonlinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_Longint          soltag,             /**< tag of LP solution */
+   SCIP_Real             maxrelconsviol,     /**< maximal scaled constraint violation */
+   SCIP_Bool*            branchintegral,     /**< buffer to store whether to branch on fractional integer variables first */
+   SCIP_Bool*            cutoff              /**< buffer to store whether infeasibility has been detected */
+   )
+{
+   SCIP_RESULT result;
+   int nlpcands;
+   SCIP_VAR** lpcands;     /* fractional integer variables */
+   SCIP_Real* lpcandsfrac; /* fractionalities */
+   BRANCHCAND* cands;
+   BRANCHCAND* selected;
+   int ncands;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(nconss > 0);
+   assert(branchintegral != NULL);
+   assert(cutoff != NULL);
+
+   *branchintegral = FALSE;
+   *cutoff = FALSE;
+
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 || SCIPgetNLPBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, NULL, (SCIP_Longint)0, TRUE, TRUE, maxrelconsviol, &result) );
+   switch( result )
+   {
+      case SCIP_DIDNOTFIND:
+         /* no branching candidates found could mean that the LP solution is in a convex region */
+         *branchintegral = TRUE;
+         return SCIP_OKAY;
+
+      case SCIP_CUTOFF:
+         /* probably cannot happen, but easy to handle */
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+
+      case SCIP_SEPARATED:
+      case SCIP_REDUCEDDOM:
+         /* we asked enforceConstraints() to collect branching candidates only, it shouldn't have separated or propagated */
+         SCIPerrorMessage("Unexpected separation or propagation from enforceConstraints(branchcandonly = TRUE)\n");
+         return SCIP_ERROR;
+
+      case SCIP_BRANCHED:
+         /* actually meaning that branching candidates were registered (the result for which we have gone through all this effort) */
+         break;
+
+      case SCIP_INFEASIBLE:
+         /* should not happen (enforceConstraints() returns this if external branching candidates were registered in branching(),
+          * but this was disabled by branchcandonly = TRUE)
+          */
+      default:
+         SCIPerrorMessage("Unexpected return from enforceConstraints(branchcandonly = TRUE)\n");
+         return SCIP_ERROR;
+   } /*lint !e788*/
+
+   /* collect spatial branching candidates and their auxviol-score */
+   SCIP_CALL( SCIPallocBufferArray(scip, &cands, SCIPgetNVars(scip) + SCIPgetNLPBranchCands(scip)) );
+   SCIP_CALL( collectBranchingCandidates(scip, conshdlr, conss, nconss, maxrelconsviol, NULL, soltag, cands, &ncands) );
+
+   /* add fractional integer variables to branching candidates */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, &nlpcands, NULL, NULL) );
+
+   ENFOLOG( SCIPinfoMessage(scip, enfologfile, " adding %d fractional integer variables to branching candidates\n", nlpcands); )
+
+   for( c = 0; c < nlpcands; ++c )
+   {
+      assert(ncands < SCIPgetNVars(scip) + SCIPgetNLPBranchCands(scip));
+      assert(SCIPvarGetType(lpcands[c]) <= SCIP_VARTYPE_INTEGER);
+      cands[ncands].expr = NULL;
+      cands[ncands].var = lpcands[c];
+      cands[ncands].auxviol = 0.0;
+      cands[ncands].fractionality = lpcandsfrac[c];
+      ++ncands;
+   }
+
+   /* select a variable for branching
+    * to keep things separate, do not include fractionality of integer variables into scores of spatial branching candidates
+    * the same variables appear among the candidates for branching on integrality, where its fractionality is considered
+    */
+   SCIP_CALL( selectBranchingCandidate(scip, conshdlr, cands, ncands, FALSE, NULL, &selected) );
+   assert(selected != NULL);
+
+   if( selected->expr == NULL )
+   {
+      ENFOLOG( SCIPinfoMessage(scip, enfologfile, " fractional variable <%s> selected for branching; fall back to cons_integral\n", SCIPvarGetName(selected->var)); )
+
+      *branchintegral = TRUE;
+   }
+
+   SCIPfreeBufferArray(scip, &cands);
+
+   return SCIP_OKAY;
+}
+
+/** decide whether to consider spatial branching before integrality has been enforced
+ *
+ * This decides whether we are still at a phase where we always want to branch on fractional integer variables if any (return TRUE),
+ * or whether branchingIntegralOrNonlinear() should be used (return FALSE).
+ *
+ * This essentially checks whether the average pseudo cost count exceeds the value of parameter branchmixfractional.
+ */
+static
+SCIP_Bool branchingIntegralFirst(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SOL*             sol                 /**< solution to be enforced */
+)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* if LP still unbounded, then work on nonlinear constraints first */
+   if( sol == NULL && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+      return FALSE;
+
+   /* no branching in cons_integral if no integer variables */
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+      return FALSE;
+
+   /* no branching in cons_integral if LP solution not fractional */
+   if( sol == NULL && SCIPgetNLPBranchCands(scip) == 0 )
+      return FALSE;
+
+   /* no branching in cons_integral if relax solution not fractional */
+   if( sol != NULL )
+   {
+      SCIP_Bool isfractional = FALSE;
+      SCIP_VAR** vars;
+      int nbinvars;
+      int nintvars;
+      int i;
+
+      vars = SCIPgetVars(scip);
+      nbinvars = SCIPgetNBinVars(scip);
+      nintvars = SCIPgetNIntVars(scip);
+
+      for( i = 0; i < nbinvars + nintvars && !isfractional; ++i )
+      {
+         assert(vars[i] != NULL);
+         assert(SCIPvarIsIntegral(vars[i]));
+
+         if( !SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[i])) )
+            isfractional = TRUE;
+      }
+
+      if( !isfractional )
+         return FALSE;
+   }
+
+   /* branchmixfractional being infinity means that integral should always go first */
+   if( SCIPisInfinity(scip, conshdlrdata->branchmixfractional) )
+      return TRUE;
+
+   /* branchmixfractional being 0.0 means we do not wait for any pseudocosts to be available */
+   if( conshdlrdata->branchmixfractional == 0.0 )
+      return FALSE;
+
+   /* if not yet enough pseudocosts for down or up direction, then branch on fractionality
+    * @todo this gives the total pseudocost count divided by the number of discrete variables
+    * if we updated pseudocost after branching on continuous variables, wouldn't this be incorrect? (#3637)
+    */
+   if( SCIPgetAvgPseudocostCount(scip, SCIP_BRANCHDIR_DOWNWARDS) < conshdlrdata->branchmixfractional )
+      return TRUE;
+   if( SCIPgetAvgPseudocostCount(scip, SCIP_BRANCHDIR_UPWARDS) < conshdlrdata->branchmixfractional )
+      return TRUE;
+
+   /* we may have decent pseudocosts, so go for rule that chooses between fractional and spatial branching based on candidates */
+   return FALSE;
 }
 
 /** collect (and print (if debugging enfo)) information on violation in expressions
@@ -8012,8 +8374,16 @@ SCIP_RETCODE consEnfo(
    SCIP_Real maxauxviol;
    SCIP_Real maxvarboundviol;
    SCIP_Longint soltag;
+   SCIP_Bool branchintegral;
    int nnotify;
    int c;
+
+   if( branchingIntegralFirst(scip, conshdlr, sol) )
+   {
+      /* let cons_integral handle enforcement */
+      *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlr != NULL);
@@ -8045,6 +8415,25 @@ SCIP_RETCODE consEnfo(
             maxvarboundviol, SCIPgetLPFeastol(scip)); )
 
    assert(maxvarboundviol <= SCIPgetLPFeastol(scip));
+
+   /* look at fractional and nonlinear branching candidates and decide whether to branch on fractional vars, first */
+   if( sol == NULL )
+   {
+      SCIP_Bool cutoff;
+
+      SCIP_CALL( branchingIntegralOrNonlinear(scip, conshdlr, conss, nconss, soltag, maxrelconsviol, &branchintegral, &cutoff) );
+      if( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      if( branchintegral )
+      {
+         /* let cons_integral handle enforcement */
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
+   }
 
    /* try to propagate */
    if( conshdlrdata->propinenforce )
@@ -8093,7 +8482,7 @@ SCIP_RETCODE consEnfo(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, TRUE, maxrelconsviol, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, TRUE, FALSE, maxrelconsviol, result) );
 
    if( *result == SCIP_CUTOFF || *result == SCIP_SEPARATED || *result == SCIP_REDUCEDDOM || *result == SCIP_BRANCHED ||
          *result == SCIP_INFEASIBLE )
@@ -8103,6 +8492,13 @@ SCIP_RETCODE consEnfo(
 
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, " could not enforce violation %g in regular ways, LP feastol=%g, "\
             "becoming desperate now...\n", maxabsconsviol, SCIPgetLPFeastol(scip)); )
+
+   if( sol == NULL && SCIPgetNLPBranchCands(scip) > 0 )
+   {
+      /* if there are still fractional integer variables, then let cons_integral go first */
+      *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
 
    if( conshdlrdata->tightenlpfeastol && SCIPisPositive(scip, maxvarboundviol) && SCIPisPositive(scip, SCIPgetLPFeastol(scip)) && sol == NULL )
    {
@@ -8231,7 +8627,7 @@ SCIP_RETCODE consSepa(
    ENFOLOG( SCIPinfoMessage(scip, enfologfile, "node %lld: separation\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip))); )
 
    /* call separation */
-   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, FALSE, SCIP_INVALID, result) );
+   SCIP_CALL( enforceConstraints(scip, conshdlr, conss, nconss, sol, soltag, FALSE, FALSE, SCIP_INVALID, result) );
 
    return SCIP_OKAY;
 }
@@ -8357,6 +8753,7 @@ SCIP_RETCODE bilinTermAddAuxExpr(
    }
    else
    {
+      assert(term->aux.exprs != NULL);
       term->aux.exprs[pos]->underestimate |= auxexpr->underestimate;
       term->aux.exprs[pos]->overestimate  |= auxexpr->overestimate;
    }
@@ -10552,6 +10949,8 @@ SCIP_RETCODE addSymmetryInformation(
    SCIPfreeBufferArray(scip, &openidx);
    SCIPfreeExpriter(&it);
 
+   *success = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -12110,6 +12509,10 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
          "weight by how much to consider the violation assigned to a variable for its branching score",
          &conshdlrdata->branchviolweight, FALSE, 1.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/fracweight",
+         "weight by how much to consider fractionality of integer variables in branching score for spatial branching",
+         &conshdlrdata->branchfracweight, FALSE, 1.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/dualweight",
          "weight by how much to consider the dual values of rows that contain a variable for its branching score",
          &conshdlrdata->branchdualweight, FALSE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
@@ -12137,6 +12540,10 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/pscostreliable",
          "minimum pseudo-cost update count required to consider pseudo-costs reliable",
          &conshdlrdata->branchpscostreliable, FALSE, 2.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/branching/mixfractional",
+         "minimal average pseudo cost count for discrete variables at which to start considering spatial branching before branching on fractional integer variables",
+         &conshdlrdata->branchmixfractional, FALSE, SCIPinfinity(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/linearizeheursol",
          "whether tight linearizations of nonlinear constraints should be added to cutpool when some heuristics finds a new solution ('o'ff, on new 'i'ncumbents, on 'e'very solution)",
@@ -13723,7 +14130,7 @@ SCIP_RETCODE SCIPaddExprNonlinear(
 
    if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
    {
-      SCIPerrorMessage("SCIPaddLinearVarNonlinear can only be called in problem stage.\n");
+      SCIPerrorMessage("SCIPaddExprNonlinear can only be called in problem stage.\n");
       return SCIP_INVALIDCALL;
    }
 
@@ -13741,12 +14148,13 @@ SCIP_RETCODE SCIPaddExprNonlinear(
    assert(consdata != NULL);
    assert(consdata->expr != NULL);
 
-   /* we should not have collected additional data for it
-    * if some of these asserts fail, we may have to remove it and add some code to keep information up to date
+   /* free quadratic representation, if any is stored */
+   SCIPfreeExprQuadratic(scip, consdata->expr);
+
+   /* free varexprs in consdata, in case they have been stored
+    * (e.g., by a call to consGet(N)VarsNonlinear)
     */
-   assert(consdata->nvarexprs == 0);
-   assert(consdata->varexprs == NULL);
-   assert(!consdata->catchedevents);
+   SCIP_CALL( freeVarExprs(scip, consdata) );
 
    /* copy expression, thereby map variables expressions to already existing variables expressions in var2expr map, or augment var2expr map */
    SCIP_CALL( SCIPduplicateExpr(scip, expr, &exprowned, mapexprvar, conshdlr, exprownerCreate, (void*)conshdlr) );

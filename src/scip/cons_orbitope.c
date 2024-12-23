@@ -123,7 +123,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
 #include "scip/symmetry.h"
-#include <symmetry/type_symmetry.h>
+#include "symmetry/type_symmetry.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "orbitope"

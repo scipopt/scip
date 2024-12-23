@@ -861,6 +861,7 @@ SCIP_RETCODE SCIPdialogCreate(
    (*dialog)->subdialogssize = 0;
    (*dialog)->nuses = 0;
    (*dialog)->dialogdata = dialogdata;
+   (*dialog)->hidden = FALSE;
 
    /* capture dialog */
    SCIPdialogCapture(*dialog);
@@ -933,6 +934,24 @@ SCIP_RETCODE SCIPdialogRelease(
    }
 
    return SCIP_OKAY;
+}
+
+/** is dialog hidden */
+SCIP_Bool SCIPdialogIsHidden(
+   SCIP_DIALOG*          dialog              /**< dialog */
+   )
+{
+   assert(dialog != NULL);
+   return dialog->hidden;
+}
+
+/** set dialog to be hidden */
+void SCIPdialogSetHidden(
+   SCIP_DIALOG*          dialog              /**< dialog */
+   )
+{
+   assert(dialog != NULL);
+   dialog->hidden = TRUE;
 }
 
 /** executes dialog */
@@ -1090,7 +1109,7 @@ SCIP_RETCODE SCIPdialogDisplayMenu(
    /* display the dialog's menu options */
    for( i = 0; i < dialog->nsubdialogs; ++i )
    {
-      if( !SCIPdialogIsSubmenu(dialog->subdialogs[i]) )
+      if( !SCIPdialogIsSubmenu(dialog->subdialogs[i]) && ! SCIPdialogIsHidden(dialog->subdialogs[i]) )
       {
          SCIP_CALL( SCIPdialogDisplayMenuEntry(dialog->subdialogs[i], scip) );
       }

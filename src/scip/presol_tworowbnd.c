@@ -592,8 +592,8 @@ SCIP_RETCODE transformAndSolve(
 
    SCIP_Real newbnd;
 
-   assert(!swaprow1 || (swaprow1 && !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, row1idx))));
-   assert(!swaprow2 || (swaprow2 && !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, row2idx))));
+   assert(!swaprow1 || !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, row1idx)));
+   assert(!swaprow2 || !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, row2idx)));
 
    row1len = SCIPmatrixGetRowNNonzs(matrix, row1idx);
    row2len = SCIPmatrixGetRowNNonzs(matrix, row2idx);

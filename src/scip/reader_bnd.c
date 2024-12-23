@@ -58,11 +58,6 @@
 #include "scip/scip_var.h"
 #include <string.h>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
-
-
 #define READER_NAME             "bndreader"
 #define READER_DESC             "file reader for variable bounds"
 #define READER_EXTENSION        "bnd"
@@ -172,11 +167,11 @@ SCIP_RETCODE readBounds(
       }
 
       /* cast the lower bound value */
-      if( strncasecmp(lbstring, "inv", 3) == 0 )
+      if( SCIPstrncasecmp(lbstring, "inv", 3) == 0 )
          continue;
-      else if( strncasecmp(lbstring, "+inf", 4) == 0 || strncasecmp(lbstring, "inf", 3) == 0 )
+      else if( SCIPstrncasecmp(lbstring, "+inf", 4) == 0 || SCIPstrncasecmp(lbstring, "inf", 3) == 0 )
          lb = SCIPinfinity(scip);
-      else if( strncasecmp(lbstring, "-inf", 4) == 0 )
+      else if( SCIPstrncasecmp(lbstring, "-inf", 4) == 0 )
          lb = -SCIPinfinity(scip);
       else
       {
@@ -191,11 +186,11 @@ SCIP_RETCODE readBounds(
       }
 
       /* cast the upper bound value */
-      if( strncasecmp(ubstring, "inv", 3) == 0 )
+      if( SCIPstrncasecmp(ubstring, "inv", 3) == 0 )
          continue;
-      else if( strncasecmp(ubstring, "+inf", 4) == 0 || strncasecmp(ubstring, "inf", 3) == 0 )
+      else if( SCIPstrncasecmp(ubstring, "+inf", 4) == 0 || SCIPstrncasecmp(ubstring, "inf", 3) == 0 )
          ub = SCIPinfinity(scip);
-      else if( strncasecmp(ubstring, "-inf", 4) == 0 )
+      else if( SCIPstrncasecmp(ubstring, "-inf", 4) == 0 )
          ub = -SCIPinfinity(scip);
       else
       {

@@ -40,7 +40,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
-#include <symmetry/type_symmetry.h>
+#include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
 extern "C" {

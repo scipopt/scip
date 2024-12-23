@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objrelax.cpp
- * @brief  C++ wrapper for relaxators
+ * @brief  C++ wrapper for relaxation handlers
  * @author Tobias Achterberg
  */
 

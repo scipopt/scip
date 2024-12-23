@@ -548,7 +548,8 @@ SCIP_RETCODE mergeProductExprlist(
          if( !issignpower1 && !issignpower2 )
          {
             /* and both are normal power, then add to unsimplifiedchildren the resulting expr of simplify(base^(expo1 + expo2)) */
-#if 0  /* TODO we should not loose the implicit base >= 0 constraint, if there is one, but then we should look at bounds on base; simplify currently doesn't */
+#ifdef SCIP_DISABLED_CODE
+            /* TODO we should not loose the implicit base >= 0 constraint, if there is one, but then we should look at bounds on base; simplify currently doesn't */
             /*
              * unless expo1 or expo2 are fractional but expo1+expo2 is not fractional, then we better keep the original
              * the reason for that is that x^fractional implies a constraint x >= 0
@@ -1579,11 +1580,11 @@ SCIP_DECL_EXPRPRINT(printProduct)
          {
             if( exprdata->coefficient < 0.0 && EXPRHDLR_PRECEDENCE > parentprecedence )
             {
-               SCIPinfoMessage(scip, file, "(%g)", exprdata->coefficient);
+               SCIPinfoMessage(scip, file, "(%.15g)", exprdata->coefficient);
             }
             else
             {
-               SCIPinfoMessage(scip, file, "%g", exprdata->coefficient);
+               SCIPinfoMessage(scip, file, "%.15g", exprdata->coefficient);
             }
          }
          break;

@@ -60,18 +60,18 @@ Test(primal, primallimit_min, .description = "tests primal limit for minimizatio
    SCIP_Real primallimit;
 
    cr_assert_not_null(scip);
-   SCIPsetRealParam(scip, "limits/primal", target);
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/primal", target) );
    /* turn on aggressive heuristics to get more limit candidates */
-   SCIPsetHeuristics(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE);
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
    /* turn off separators to oppose optimality before the limit */
-   SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE);
-   SCIPreadProb(scip, "../check/instances/MIP/rgn.mps", NULL);
-   SCIPsolve(scip);
+   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPreadProb(scip, "../check/instances/MIP/rgn.mps", NULL) );
+   SCIP_CALL( SCIPsolve(scip) );
 
    cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_PRIMALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_PRIMALLIMIT);
    primallimit = SCIPgetPrimalbound(scip);
    cr_assert_leq(primallimit, target, "Primal bound is %f but should be at most %f", primallimit, target);
-   SCIPgetRealParam(scip, "limits/primal", &primallimit);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/primal", &primallimit) );
    cr_assert_eq(primallimit, target, "Primal limit is %f but should be %f", primallimit, target);
 }
 
@@ -81,17 +81,17 @@ Test(primal, primallimit_max, .description = "tests primal limit for maximizatio
    SCIP_Real primallimit;
 
    cr_assert_not_null(scip);
-   SCIPsetRealParam(scip, "limits/primal", target);
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/primal", target) );
    /* turn on aggressive heuristics to get more limit candidates */
-   SCIPsetHeuristics(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE);
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
    /* turn off separators to oppose optimality before the limit */
-   SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE);
-   SCIPreadProb(scip, "../check/instances/Symmetry/packorb_1-FullIns_3.cip", NULL);
-   SCIPsolve(scip);
+   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPreadProb(scip, "../check/instances/Symmetry/packorb_1-FullIns_3.cip", NULL) );
+   SCIP_CALL( SCIPsolve(scip) );
 
    cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_PRIMALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_PRIMALLIMIT);
    primallimit = SCIPgetPrimalbound(scip);
    cr_assert_geq(primallimit, target, "Primal bound is %f but should be at least %f", primallimit, target);
-   SCIPgetRealParam(scip, "limits/primal", &primallimit);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/primal", &primallimit) );
    cr_assert_eq(primallimit, target, "Primal limit is %f but should be %f", primallimit, target);
 }

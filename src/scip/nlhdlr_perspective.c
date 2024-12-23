@@ -1241,15 +1241,6 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataPerspective)
    return SCIP_OKAY;
 }
 
-/** callback to be called in initialization */
-#if 0
-static
-SCIP_DECL_NLHDLRINIT(nlhdlrInitPerspective)
-{  /*lint --e{715}*/
-   return SCIP_OKAY;
-}
-#endif
-
 /** callback to be called in deinitialization */
 static
 SCIP_DECL_NLHDLREXIT(nlhdlrExitPerspective)
@@ -1495,19 +1486,6 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaPerspective)
    return SCIP_OKAY;
 }
 
-
-#if 0
-/** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
-static
-SCIP_DECL_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of perspective nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#endif
-
 /** nonlinear handler enforcement callback
  *
  * "Perspectivies" cuts produced by other nonlinear handlers.
@@ -1564,6 +1542,13 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
    if( nlhdlrexprdata->nindicators == 0 )
    {
       /* we might have removed all indicators in initsepa */
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   if( branchcandonly )
+   {
+      /* let the regular calls to the nlhdlrs after perspective register branching candidates */
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
@@ -1705,7 +1690,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoPerspective)
       if( doprobingind )
       {
          SCIP_Bool propagate;
-         SCIP_Bool cutoff_probing;
+         SCIP_Bool cutoff_probing = FALSE;
          SCIP_Bool cutoff;
          SCIP_Bool fixed;
 

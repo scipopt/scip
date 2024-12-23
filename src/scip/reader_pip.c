@@ -64,9 +64,6 @@
 #include <string.h>
 #include <ctype.h>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
 
 #define READER_NAME             "pipreader"
 #define READER_DESC             "file reader for polynomial mixed-integer programs in PIP format"
@@ -471,9 +468,9 @@ SCIP_Bool isNewSection(
    if( iscolon )
       return FALSE;
 
-   if( strcasecmp(pipinput->token, "MINIMIZE") == 0
-      || strcasecmp(pipinput->token, "MINIMUM") == 0
-      || strcasecmp(pipinput->token, "MIN") == 0 )
+   if( SCIPstrcasecmp(pipinput->token, "MINIMIZE") == 0
+      || SCIPstrcasecmp(pipinput->token, "MINIMUM") == 0
+      || SCIPstrcasecmp(pipinput->token, "MIN") == 0 )
    {
       SCIPdebugMsg(scip, "(line %d) new section: OBJECTIVE\n", pipinput->linenumber);
       pipinput->section = PIP_OBJECTIVE;
@@ -481,9 +478,9 @@ SCIP_Bool isNewSection(
       return TRUE;
    }
 
-   if( strcasecmp(pipinput->token, "MAXIMIZE") == 0
-      || strcasecmp(pipinput->token, "MAXIMUM") == 0
-      || strcasecmp(pipinput->token, "MAX") == 0 )
+   if( SCIPstrcasecmp(pipinput->token, "MAXIMIZE") == 0
+      || SCIPstrcasecmp(pipinput->token, "MAXIMUM") == 0
+      || SCIPstrcasecmp(pipinput->token, "MAX") == 0 )
    {
       SCIPdebugMsg(scip, "(line %d) new section: OBJECTIVE\n", pipinput->linenumber);
       pipinput->section = PIP_OBJECTIVE;
@@ -491,13 +488,13 @@ SCIP_Bool isNewSection(
       return TRUE;
    }
 
-   if( strcasecmp(pipinput->token, "SUBJECT") == 0 )
+   if( SCIPstrcasecmp(pipinput->token, "SUBJECT") == 0 )
    {
       /* check if the next token is 'TO' */
       swapTokenBuffer(pipinput);
       if( getNextToken(scip, pipinput) )
       {
-         if( strcasecmp(pipinput->token, "TO") == 0 )
+         if( SCIPstrcasecmp(pipinput->token, "TO") == 0 )
          {
             SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS\n", pipinput->linenumber);
             pipinput->section = PIP_CONSTRAINTS;
@@ -509,13 +506,13 @@ SCIP_Bool isNewSection(
       swapTokenBuffer(pipinput);
    }
 
-   if( strcasecmp(pipinput->token, "SUCH") == 0 )
+   if( SCIPstrcasecmp(pipinput->token, "SUCH") == 0 )
    {
       /* check if the next token is 'THAT' */
       swapTokenBuffer(pipinput);
       if( getNextToken(scip, pipinput) )
       {
-         if( strcasecmp(pipinput->token, "THAT") == 0 )
+         if( SCIPstrcasecmp(pipinput->token, "THAT") == 0 )
          {
             SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS\n", pipinput->linenumber);
             pipinput->section = PIP_CONSTRAINTS;
@@ -527,45 +524,45 @@ SCIP_Bool isNewSection(
       swapTokenBuffer(pipinput);
    }
 
-   if( strcasecmp(pipinput->token, "st") == 0
-      || strcasecmp(pipinput->token, "S.T.") == 0
-      || strcasecmp(pipinput->token, "ST.") == 0 )
+   if( SCIPstrcasecmp(pipinput->token, "st") == 0
+      || SCIPstrcasecmp(pipinput->token, "S.T.") == 0
+      || SCIPstrcasecmp(pipinput->token, "ST.") == 0 )
    {
       SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS\n", pipinput->linenumber);
       pipinput->section = PIP_CONSTRAINTS;
       return TRUE;
    }
 
-   if( strcasecmp(pipinput->token, "BOUNDS") == 0
-      || strcasecmp(pipinput->token, "BOUND") == 0 )
+   if( SCIPstrcasecmp(pipinput->token, "BOUNDS") == 0
+      || SCIPstrcasecmp(pipinput->token, "BOUND") == 0 )
    {
       SCIPdebugMsg(scip, "(line %d) new section: BOUNDS\n", pipinput->linenumber);
       pipinput->section = PIP_BOUNDS;
       return TRUE;
    }
 
-   if( strcasecmp(pipinput->token, "GENERAL") == 0
-      || strcasecmp(pipinput->token, "GENERALS") == 0
-      || strcasecmp(pipinput->token, "GEN") == 0
-      || strcasecmp(pipinput->token, "INTEGER") == 0
-      || strcasecmp(pipinput->token, "INTEGERS") == 0
-      || strcasecmp(pipinput->token, "INT") == 0 )
+   if( SCIPstrcasecmp(pipinput->token, "GENERAL") == 0
+      || SCIPstrcasecmp(pipinput->token, "GENERALS") == 0
+      || SCIPstrcasecmp(pipinput->token, "GEN") == 0
+      || SCIPstrcasecmp(pipinput->token, "INTEGER") == 0
+      || SCIPstrcasecmp(pipinput->token, "INTEGERS") == 0
+      || SCIPstrcasecmp(pipinput->token, "INT") == 0 )
    {
       SCIPdebugMsg(scip, "(line %d) new section: GENERALS\n", pipinput->linenumber);
       pipinput->section = PIP_GENERALS;
       return TRUE;
    }
 
-   if( strcasecmp(pipinput->token, "BINARY") == 0
-      || strcasecmp(pipinput->token, "BINARIES") == 0
-      || strcasecmp(pipinput->token, "BIN") == 0 )
+   if( SCIPstrcasecmp(pipinput->token, "BINARY") == 0
+      || SCIPstrcasecmp(pipinput->token, "BINARIES") == 0
+      || SCIPstrcasecmp(pipinput->token, "BIN") == 0 )
    {
       SCIPdebugMsg(scip, "(line %d) new section: BINARIES\n", pipinput->linenumber);
       pipinput->section = PIP_BINARIES;
       return TRUE;
    }
 
-   if( strcasecmp(pipinput->token, "END") == 0 )
+   if( SCIPstrcasecmp(pipinput->token, "END") == 0 )
    {
       SCIPdebugMsg(scip, "(line %d) new section: END\n", pipinput->linenumber);
       pipinput->section = PIP_END;
@@ -611,7 +608,7 @@ SCIP_Bool isValue(
    assert(pipinput != NULL);
    assert(value != NULL);
 
-   if( strcasecmp(pipinput->token, "INFINITY") == 0 || strcasecmp(pipinput->token, "INF") == 0 )
+   if( SCIPstrcasecmp(pipinput->token, "INFINITY") == 0 || SCIPstrcasecmp(pipinput->token, "INF") == 0 )
    {
       *value = SCIPinfinity(scip);
       return TRUE;
@@ -1534,7 +1531,7 @@ SCIP_RETCODE readBounds(
                return SCIP_OKAY;
             }
          }
-         else if( strcasecmp(pipinput->token, "FREE") == 0 )
+         else if( SCIPstrcasecmp(pipinput->token, "FREE") == 0 )
          {
             if( leftsense != PIP_SENSE_NOTHING )
             {
@@ -1761,16 +1758,16 @@ SCIP_RETCODE getActiveVariables(
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize) );
 
       if( requiredsize > *nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
-         assert( requiredsize <= *nvars );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize) );
       }
+      assert( requiredsize == *nvars );
    }
    else
    {
@@ -2959,29 +2956,28 @@ SCIP_RETCODE SCIPwritePip(
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
             SCIPinfoMessage(scip, file, ";\n");
-
-            SCIP_CALL( SCIPreleaseExpr(scip, &simplifiedexpr) );
-            return SCIP_OKAY;
-         }
-
-         /* check whether constraint is even quadratic
-          * (we could also skip this and print as polynomial, but the code exists already)
-          */
-         SCIP_CALL( SCIPcheckExprQuadratic(scip, simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons), &isquadratic) );
-         if( isquadratic )
-            isquadratic = SCIPexprAreQuadraticExprsVariables(simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons));
-
-         if( isquadratic )
-         {
-            SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons),
-               SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed) );
          }
          else
          {
-            SCIP_CALL( printNonlinearCons(scip, file, consname, simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons), SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons)) );
-         }
+            /* check whether constraint is even quadratic
+             * (we could also skip this and print as polynomial, but the code exists already)
+             */
+            SCIP_CALL( SCIPcheckExprQuadratic(scip, simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons), &isquadratic) );
+            if( isquadratic )
+               isquadratic = SCIPexprAreQuadraticExprsVariables(simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons));
 
-         consNonlinear[nConsNonlinear++] = cons;
+            if( isquadratic )
+            {
+               SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons),
+                  SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed) );
+            }
+            else
+            {
+               SCIP_CALL( printNonlinearCons(scip, file, consname, simplifiedexpr != NULL ? simplifiedexpr : SCIPgetExprNonlinear(cons), SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons)) );
+            }
+
+            consNonlinear[nConsNonlinear++] = cons;
+         }
 
          if( simplifiedexpr != NULL )
          {

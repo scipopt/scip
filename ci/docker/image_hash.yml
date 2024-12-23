@@ -1,3 +1,0 @@
-variables:
-  # use "md5sum ci/docker/Dockerfile" to get the hash of the Dockerfile
-  IMAGE_HASH: 1c85ceab9afc81ad147202548b0a781b

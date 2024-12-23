@@ -35,6 +35,7 @@
 #include "tpi/tpi.h"
 #include "blockmemshell/memory.h"
 #include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 #include <omp.h>
 
 /* macros for direct access */
@@ -701,4 +702,32 @@ void SCIPtpiDestroyCondition(
    omp_destroy_lock(&(*condition)->_lock);
 
    BMSfreeMemory(condition);
+}
+
+/** indicate whether a working TPI is available */
+SCIP_Bool SCIPtpiIsAvailable(void)
+{
+   return TRUE;
+}
+
+/** get name of library that the TPI interfaces to */
+void SCIPtpiGetLibraryName(
+   char*                 name,               /**< buffer to store name */
+   int                   namesize            /**< length of name buffer */
+   )
+{
+   assert(name != NULL);
+
+   (void) SCIPsnprintf(name, namesize, "OpenMP %d", _OPENMP);  /*lint !e40*/
+}
+
+/** get description of library that the TPI interfaces to */
+void SCIPtpiGetLibraryDesc(
+   char*                 desc,               /**< buffer to store description */
+   int                   descsize            /**< length of description */
+   )
+{
+   assert(desc != NULL);
+
+   (void) SCIPsnprintf(desc, descsize, "shared-memory multiprocessing library (openmp.org)");
 }

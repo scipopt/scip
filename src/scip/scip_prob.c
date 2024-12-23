@@ -2847,7 +2847,7 @@ SCIP_RETCODE SCIPdelCons(
 {
    assert(cons != NULL);
 
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -2859,6 +2859,7 @@ SCIP_RETCODE SCIPdelCons(
       /* only added constraints can be removed in (de-)initialization process of presolving, otherwise the reduction
        * might be wrong
        */
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_EXITPRESOLVE:
       assert(SCIPconsIsAdded(cons));
@@ -3735,8 +3736,10 @@ SCIP_RETCODE SCIPupdateLocalLowerbound(
    return SCIP_OKAY;
 }
 
-/** if given value is tighter (larger for minimization, smaller for maximization) than the node's dual bound,
- *  sets the node's dual bound to the new value
+/** if given value is tighter (higher for minimization, lower for maximization) than the node's dual bound, sets the
+ *  node's dual bound to the new value.
+ *
+ *  @note must not be used on a leaf because the node priority queue remains untouched
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -3757,8 +3760,10 @@ SCIP_RETCODE SCIPupdateNodeDualbound(
    return SCIP_OKAY;
 }
 
-/** if given value is larger than the node's lower bound (in transformed problem), sets the node's lower bound
- *  to the new value
+/** if given value is higher than the node's lower bound (in transformed problem), sets the node's lower bound to the
+ *  new value.
+ *
+ *  @note must not be used on a leaf because the node priority queue remains untouched
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -3774,19 +3779,17 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPupdateNodeLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->tree, scip->transprob, scip->origprob, newbound);
-
-   /* if lowerbound exceeds the cutoffbound the node will be marked to be cutoff
+   /* if lowerbound exceeds the cutoffbound, the node will be marked to be cutoff instead
     *
-    * If the node is an inner node (,not a child node,) we need to cutoff the node manually if we exceed the
-    * cutoffbound. This is only relevant if a user updates the lower bound; in the main solving process of SCIP the
-    * lowerbound is only changed before branching and the given node is always a child node. Therefore, we only check
-    * for a cutoff here in the user function instead of in SCIPnodeUpdateLowerbound().
+    * If the node is an inner node (not a child node) we need to cutoff the node manually if we exceed the cutoffbound.
+    * This is only relevant if a user updates the lower bound. Therefore, we only check for a cutoff here in the user
+    * function instead of in SCIPnodeUpdateLowerbound().
     */
-   if( SCIPisGE(scip, newbound, scip->primal->cutoffbound) )
+   if( SCIPisLT(scip, newbound, scip->primal->cutoffbound) )
+      SCIPnodeUpdateLowerbound(node, scip->stat, scip->set, scip->tree, scip->transprob, scip->origprob, newbound);
+   else
    {
-      SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree, scip->transprob, scip->origprob, scip->reopt,
-            scip->lp, scip->mem->probmem) );
+      SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree, scip->transprob, scip->origprob, scip->reopt, scip->lp, scip->mem->probmem) );
    }
 
    return SCIP_OKAY;

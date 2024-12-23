@@ -68,6 +68,7 @@
 -e1784  // symbol previously declared as "C" [only for information, but clutters output]]
 -e2666  // expression with side effects passed to unexpanded parameter: parameter is not referenced in the expansion
 -e2704  // potentially negating the most negative number [often if x = -y, and y is int, only relevant if y = INT_MAX]
+-e2751  // indeterminable mutex
 
 // for the time being turn off warning 666 (expression with side effects passed to repeated parameter of macro), since it currently produces too much noise
 -e666

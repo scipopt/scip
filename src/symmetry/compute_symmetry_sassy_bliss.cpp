@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   compute_symmetry_sassy_bliss.c
+/**@file   compute_symmetry_sassy_bliss.cpp
  * @brief  interface for symmetry computations to sassy as a preprocessor to bliss
  * @author Marc Pfetsch
  */

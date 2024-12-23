@@ -48,7 +48,7 @@
 #endif
 
 /* do defines for windows directly her to make the lpi more independent*/
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER) && _MSC_VER < 1900
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
 #endif

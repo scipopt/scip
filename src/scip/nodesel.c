@@ -651,64 +651,84 @@ SCIP_RETCODE SCIPnodepqBound(
 {
    SCIP_NODE* node;
    int pos;
-   SCIP_Bool parentfelldown;
 
    assert(nodepq != NULL);
 
    SCIPsetDebugMsg(set, "bounding node queue of length %d with cutoffbound=%g\n", nodepq->len, cutoffbound);
-   pos = nodepq->len-1;
+
+   pos = nodepq->len - 1;
+
    while( pos >= 0 )
    {
       assert(pos < nodepq->len);
       node = nodepq->slots[pos];
       assert(node != NULL);
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
+
+      /* cut off node */
       if( SCIPsetIsInfinity(set, SCIPnodeGetLowerbound(node)) || SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
       {
-         SCIPsetDebugMsg(set, "free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
-            pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
-
-         /* cut off node; because we looped from back to front, the existing children of the node must have a smaller
-          * lower bound than the cut off value
+         /* because we loop from back to front, the existing children of the node must have a smaller lower bound
+          * than the cut off value
           */
+         assert(!node->active);
+         assert(node->depth != 0 || tree->focusnode == NULL);
          assert(PQ_LEFTCHILD(pos) >= nodepq->len
             || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]), cutoffbound));
          assert(PQ_RIGHTCHILD(pos) >= nodepq->len
             || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]), cutoffbound));
 
-         /* free the slot in the node PQ */
-         parentfelldown = nodepqDelPos(nodepq, set, pos);
+         SCIPsetDebugMsg(set, "cutting off leaf node in slot %d (queuelen=%d) at depth %d with lowerbound=%g\n",
+            pos, SCIPnodepqLen(nodepq), SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
 
-         /* - if the slot was occupied by the parent, we have to check this slot (the parent) again; unfortunately,
+         /* check if the node should be stored for reoptimization */
+         if( set->reopt_enable )
+         {
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
+               SCIPlpGetSolstat(lp), tree->root == node, FALSE, node->lowerbound, tree->effectiverootdepth) );
+         }
+
+         /* remove node from the queue
+          * - if the slot was occupied by the parent, we have to check this slot (the parent) again; unfortunately,
           *   we will check the node which occupied the parent's slot again, even though it cannot be cut off;
           * - otherwise, the slot was the last slot or it was occupied by a node with a position greater than
           *   the current position; this node was already checked and we can decrease the position
           */
-         if( !parentfelldown )
-            pos--;
+         if( !nodepqDelPos(nodepq, set, pos) )
+            --pos;
 
-         SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
+         node->cutoff = TRUE;
+         node->lowerbound = SCIPsetInfinity(set);
+         node->estimate = SCIPsetInfinity(set);
 
-         if( set->reopt_enable )
+         if( node->depth == 0 )
+            stat->rootlowerbound = SCIPsetInfinity(set);
+
+         /* update primal-dual integrals */
+         if( set->misc_calcintegral )
          {
-            assert(reopt != NULL);
-            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
-                  SCIPlpGetSolstat(lp), SCIPnodeGetDepth(node) == 0, SCIPtreeGetFocusNode(tree) == node,
-                  SCIPnodeGetLowerbound(node), SCIPtreeGetEffectiveRootDepth(tree)));
+            SCIP_Real lowerbound = SCIPtreeGetLowerbound(tree, set);
+
+            assert(lowerbound <= SCIPsetInfinity(set));
+
+            /* updating the primal integral is only necessary if lower bound has increased since last evaluation */
+            if( lowerbound > stat->lastlowerbound )
+               SCIPstatUpdatePrimalDualIntegrals(stat, set, set->scip->transprob, set->scip->origprob, SCIPsetInfinity(set), lowerbound);
          }
 
-         /* free memory of the node */
+         SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
+
+         /* free node memory */
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventfilter, eventqueue, tree, lp) );
       }
       else
-         pos--;
+         --pos;
    }
+
    SCIPsetDebugMsg(set, " -> bounded node queue has length %d\n", nodepq->len);
 
    return SCIP_OKAY;
 }
-
-
 
 
 /*

@@ -568,7 +568,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       {
          SCIP_VAR* bdchgvar;
          SCIP_Real bdchgvalue;
-         SCIP_Longint localdomreds;
+         SCIP_Longint localdomreds = 0;
          SCIP_BRANCHDIR bdchgdir;
          int nbdchanges;
 
@@ -746,7 +746,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          while( backtrack );
 
          /* we add the domain reductions from the last evaluated node */
-         domreds += localdomreds; /*lint !e771 lint thinks localdomreds has not been initialized */
+         domreds += localdomreds;
 
          /* store candidate for pseudo cost update and choose next candidate only if no cutoff was detected */
          if( ! cutoff )
@@ -988,10 +988,6 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
       /* copy parameter settings */
       SCIP_CALL( SCIPcopyParamSettings(sourcescip, subscip) );
 
-      /* disable bound limits in subscip since objective might be changed */
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/primal", SCIP_INVALID) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/dual", SCIP_INVALID) );
-
       /* create linear constraints from LP rows of the source problem */
       SCIP_CALL( createRows(sourcescip, subscip, varmap) );
    }
@@ -1006,6 +1002,10 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
          SCIP_CALL( SCIPcopyCuts(sourcescip, subscip, varmap, NULL, TRUE, NULL) );
       }
    }
+
+   /* disable bound limits in subscip since objective might be changed */
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/primal", SCIP_INVALID) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/dual", SCIP_INVALID) );
 
    *success = TRUE;
 

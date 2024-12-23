@@ -630,7 +630,7 @@ void exampleBounddisjunction(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 2 );
+      cr_assert( nperms == 2 || nperms == 3 );
       cr_assert( ncomponents == 1 );
       cr_assert( vartocomponent[0] == vartocomponent[1] );
       cr_assert( vartocomponent[1] == vartocomponent[4] );
@@ -638,7 +638,7 @@ void exampleBounddisjunction(
       cr_assert( vartocomponent[2] == -1 );
       cr_assert( vartocomponent[3] == -1 );
       cr_assert( componentbegins[0] == 0 );
-      cr_assert( componentbegins[1] == 2 );
+      cr_assert( componentbegins[1] == nperms );
    }
    else
    {
@@ -1122,7 +1122,7 @@ void exampleSOS1(
 
    if( detectsignedperms )
    {
-      cr_assert( nperms == 2 );
+      cr_assert( nperms == 2 || nperms == 3 );
    }
    else
    {
@@ -1334,6 +1334,138 @@ void exampleSOS2(
    SCIP_CALL( SCIPreleaseVar(scip, &var4) );
    SCIP_CALL( SCIPreleaseVar(scip, &var5) );
    SCIP_CALL( SCIPreleaseVar(scip, &var6) );
+}
+
+/** simple example with 3 variables and a pseudoboolean constraint */
+static
+void examplePB(
+   SCIP_Bool             detectsignedperms   /**< whether signed permutations shall be detected */
+   )
+{
+   SCIP_VAR** terms[3];
+   SCIP_VAR* term1[2];
+   SCIP_VAR* term2[2];
+   SCIP_VAR* term3[2];
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   SCIP_VAR* var3;
+   SCIP_Real vals[3];
+   SCIP_CONS* cons;
+   SCIP_VAR** permvars;
+   int** perms;
+   int nterms[3];
+   int* components;
+   int* componentbegins;
+   int* vartocomponent;
+   int* orbits;
+   int* orbitbegins;
+   int norbits;
+   int permlen;
+   int ncomponents;
+   int npermvars;
+   int nperms;
+
+   /* skip test if no symmetry can be computed */
+   if ( ! SYMcanComputeSymmetry() )
+      return;
+
+   /* setup problem:
+    * min x1 + x2 + x3
+    *     -2.0 <= x1 x2 + x1 x3 - x2 x3 <= 2.0
+    */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "PB"));
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var1, "x1", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, var1) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var2, "x2", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, var2) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &var3, "x3", 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY) );
+   SCIP_CALL( SCIPaddVar(scip, var3) );
+
+   term1[0] = var1;
+   term1[1] = var2;
+   term2[0] = var1;
+   term2[1] = var3;
+   term3[0] = var2;
+   term3[1] = var3;
+   terms[0] = term1;
+   terms[1] = term2;
+   terms[2] = term3;
+   nterms[0] = 2;
+   nterms[1] = 2;
+   nterms[2] = 2;
+   vals[0] = 1.0;
+   vals[1] = 1.0;
+   vals[2] = -1.0;
+
+   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &cons, "c1", NULL, 0, NULL, terms, 3, nterms, vals, NULL, 0.0, FALSE,
+         -2.0, 2.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   /* turn off presolving in order to avoid having trivial problem afterwards */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+
+   /* turn on checking of symmetries */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/checksymmetries", TRUE) );
+
+   /* turn off subgroup detection */
+   SCIP_CALL( SCIPsetBoolParam(scip, "propagating/symmetry/detectsubgroups", FALSE) );
+
+   /* general symmetry detection */
+   SCIP_CALL( SCIPsetIntParam(scip, "misc/usesymmetry", 7) );
+
+   /* note that indicator constraints introduce a slack variable, i.e., we have 8 variables */
+   if ( detectsignedperms )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 1) );
+      permlen = 12;             /* 3 binary variables + 3 artificial variables for AND-resultants + reflection */
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "propagating/symmetry/symtype", 0) );
+      permlen = 6;              /* 3 binary variables + 3 artificial variables for AND-resultants */
+   }
+
+   /* presolve problem (symmetry will be available afterwards) */
+   SCIP_CALL( SCIPpresolve(scip) );
+
+   /* get symmetry */
+   SCIP_CALL( SCIPgetSymmetry(scip,
+         &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
+         &components, &componentbegins, &vartocomponent, &ncomponents) );
+
+   cr_assert( nperms == 1 );
+   cr_assert( ncomponents == 1 );
+   SCIPsortInt(vartocomponent, 6);
+   cr_assert( vartocomponent[0] == -1 );
+   cr_assert( vartocomponent[2] == 0 );
+
+   /* compute orbits */
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbits, permlen) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
+   SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
+         perms, nperms, orbits, orbitbegins, &norbits) );
+   if ( detectsignedperms )
+   {
+      cr_assert( norbits == 4 );
+      cr_assert( orbitbegins[1] - orbitbegins[0] == 2 );
+      cr_assert( orbitbegins[2] - orbitbegins[1] == 2 );
+      cr_assert( orbitbegins[3] - orbitbegins[2] == 2 );
+      cr_assert( orbitbegins[4] - orbitbegins[3] == 2 );
+   }
+   else
+   {
+      cr_assert( norbits == 2 );
+      cr_assert( orbitbegins[1] - orbitbegins[0] == 2 );
+      cr_assert( orbitbegins[2] - orbitbegins[1] == 2 );
+   }
+   SCIPfreeBufferArray(scip, &orbitbegins);
+   SCIPfreeBufferArray(scip, &orbits);
+
+   SCIP_CALL( SCIPreleaseVar(scip, &var1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var2) );
+   SCIP_CALL( SCIPreleaseVar(scip, &var3) );
 }
 
 /** simple example with 3 variables and nonlinear constraints */
@@ -1786,7 +1918,7 @@ void exampleExpr3(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 2 );
+      cr_assert( nperms == 2 || nperms == 3 );
    }
    else
    {
@@ -2298,7 +2430,7 @@ void exampleExpr6(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 4 );
+      cr_assert( nperms == 4 || nperms == 5 );
    }
    else
    {
@@ -2453,78 +2585,90 @@ Test(test_compute_symmetry, special10, .description = "compute signed permutatio
 }
 
 /* TEST 17 */
+Test(test_compute_symmetry, special11, .description = "compute signed permutation symmetries for an example containing PB constraints")
+{
+   examplePB(FALSE);
+}
+
+/* TEST 18 */
+Test(test_compute_symmetry, special12, .description = "compute signed permutation symmetries for an example containing PB constraints")
+{
+   examplePB(TRUE);
+}
+
+/* TEST 19 */
 Test(test_compute_symmetry, expr1, .description = "compute permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr1(FALSE);
 }
 
-/* TEST 18 */
+/* TEST 20 */
 Test(test_compute_symmetry, expr2, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr1(TRUE);
 }
 
-/* TEST 19 */
+/* TEST 21 */
 Test(test_compute_symmetry, expr3, .description = "compute permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr2(FALSE);
 }
 
-/* TEST 20 */
+/* TEST 22 */
 Test(test_compute_symmetry, expr4, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr2(TRUE);
 }
 
-/* TEST 21 */
+/* TEST 23 */
 Test(test_compute_symmetry, expr5, .description = "compute permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr3(FALSE);
 }
 
-/* TEST 22 */
+/* TEST 24 */
 Test(test_compute_symmetry, expr6, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr3(TRUE);
 }
 
-/* TEST 23 */
+/* TEST 25 */
 Test(test_compute_symmetry, expr7, .description = "compute permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr4(FALSE);
 }
 
-/* TEST 24 */
+/* TEST 26 */
 Test(test_compute_symmetry, expr8, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr4(TRUE);
 }
 
-/* TEST 25 */
+/* TEST 27 */
 Test(test_compute_symmetry, expr9, .description = "compute permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr5(FALSE);
 }
 
-/* TEST 26 */
+/* TEST 28 */
 Test(test_compute_symmetry, expr10, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr5(TRUE);
 }
 
-/* TEST 27 */
+/* TEST 29 */
 Test(test_compute_symmetry, expr11, .description = "compute permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr6(FALSE);
 }
 
-/* TEST 28 */
+/* TEST 30 */
 Test(test_compute_symmetry, expr12, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr6(TRUE);
 }
 
-/* TEST 29 (subgroups) */
+/* TEST 31 (subgroups) */
 Test(test_compute_symmetry, subgroups1, .description = "detect symmetric subgroups for artificial propdata")
 {
    SCIP_PROPDATA propdata;
@@ -2657,7 +2801,7 @@ Test(test_compute_symmetry, subgroups1, .description = "detect symmetric subgrou
    SCIP_CALL( SCIPreleaseVar(scip, &dummyvar) );
 }
 
-/* TEST 30 (subgroups) */
+/* TEST 32 (subgroups) */
 Test(test_compute_symmetry, subgroups2, .description = "detect symmetric subgroups for artificial propdata and different order")
 {
    SCIP_PROPDATA propdata;
@@ -2752,7 +2896,7 @@ Test(test_compute_symmetry, subgroups2, .description = "detect symmetric subgrou
    SCIP_CALL( SCIPreleaseVar(scip, &dummyvar) );
 }
 
-/* TEST 31 (doublelex matrices) */
+/* TEST 33 (doublelex matrices) */
 Test(test_compute_symmetry, doublelex, .description = "detect action corresponding to double lex matrices")
 {
    int perm1[20] = {1,0,2,3,5,4,6,7,9,8,10,11,13,12,14,15,17,16,18,19};

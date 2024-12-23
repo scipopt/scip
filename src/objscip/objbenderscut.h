@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objbenderscut.h
- * @brief  C++ wrapper for Benders' decomposition cuts
+ * @brief  C++ wrapper for the Benders' decomposition cut plugins
  * @author Stephen J. Maher
  */
 
@@ -44,7 +44,7 @@
 namespace scip
 {
 
-/** @brief C++ wrapper for Benders' decomposition cut
+/** @brief C++ wrapper for Benders' decomposition cut plugin
  *
  *  This class defines the interface for the Benders' decomposition cuts implemented in C++. Note that there is
  *  a pure virtual function (this must be implemented). This function is: benderscut_exec().

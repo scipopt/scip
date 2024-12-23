@@ -73,6 +73,7 @@
 #include "scip/struct_stat.h"
 #include "scip/syncstore.h"
 #include "scip/lapack_calls.h"
+#include "tpi/tpi.h"
 
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
@@ -94,9 +95,9 @@
 #undef SCIPhasPerformedPresolve
 #undef SCIPisStopped
 
-/** returns complete SCIP version number in the format "major . minor tech"
+/** returns SCIP version number as major + minor / 100
  *
- *  @return complete SCIP version
+ *  @return SCIP major and minor version number
  */
 SCIP_Real SCIPversion(
    void
@@ -287,6 +288,15 @@ SCIP_RETCODE doScipCreate(
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "General Linear Algebra PACKage (http://www.netlib.org/lapack/)") );
    }
 #endif
+
+   if( SCIPtpiIsAvailable() )
+   {
+      char name[20];
+      char desc[80];
+      SCIPtpiGetLibraryName(name, (int)sizeof(name));
+      SCIPtpiGetLibraryDesc(desc, (int)sizeof(desc));
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, desc) );
+   }
 
    return SCIP_OKAY;
 }

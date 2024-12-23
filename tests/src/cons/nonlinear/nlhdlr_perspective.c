@@ -535,7 +535,7 @@ Test(nlhdlrperspective, sepa, .init = setup, .fini = teardown)
    SCIP_CALL( SCIPcreatePtrarray(scip, &rowpreps) );
 
    SCIP_CALL( nlhdlrEnfoPerspective(scip, conshdlr, cons, nlhdlr, expr, nlhdlrexprdata, sol, ownerdata->enfos[1]->auxvalue,
-         FALSE, FALSE, FALSE, FALSE, &result) );
+         FALSE, FALSE, FALSE, FALSE, FALSE, &result) );
    cr_expect_eq(result, SCIP_SEPARATED, "Expected enfo result = %d, got %d", SCIP_SEPARATED, result);
    cr_assert(SCIPgetNCuts(scip) == 2);
 

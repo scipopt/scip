@@ -68,10 +68,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
-
 
 #define READER_NAME             "lpreader"
 #define READER_DESC             "file reader for MIPs in IBM CPLEX's LP file format"
@@ -569,7 +565,7 @@ SCIP_Bool isNewSection(
          swapTokenBuffer(lpinput);
          if( getNextToken(scip, lpinput) )
          {
-            if( strcasecmp(lpinput->token, "TO") == 0 )
+            if( SCIPstrcasecmp(lpinput->token, "TO") == 0 )
             {
                SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
                lpinput->section = LP_CONSTRAINTS;
@@ -589,7 +585,7 @@ SCIP_Bool isNewSection(
          swapTokenBuffer(lpinput);
          if( getNextToken(scip, lpinput) )
          {
-            if( strcasecmp(lpinput->token, "THAT") == 0 )
+            if( SCIPstrcasecmp(lpinput->token, "THAT") == 0 )
             {
                SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
                lpinput->section = LP_CONSTRAINTS;
@@ -620,7 +616,7 @@ SCIP_Bool isNewSection(
          swapTokenBuffer(lpinput);
          if( getNextToken(scip, lpinput) )
          {
-            if( strcasecmp(lpinput->token, "CONSTRAINTS") == 0 )
+            if( SCIPstrcasecmp(lpinput->token, "CONSTRAINTS") == 0 )
             {
                SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS (lazy)\n", lpinput->linenumber);
                lpinput->section = LP_CONSTRAINTS;
@@ -640,7 +636,7 @@ SCIP_Bool isNewSection(
          swapTokenBuffer(lpinput);
          if( getNextToken(scip, lpinput) )
          {
-            if( strcasecmp(lpinput->token, "CUTS") == 0 )
+            if( SCIPstrcasecmp(lpinput->token, "CUTS") == 0 )
             {
                SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS (user cuts)\n", lpinput->linenumber);
                lpinput->section = LP_CONSTRAINTS;
@@ -743,7 +739,7 @@ SCIP_Bool isValue(
    assert(lpinput != NULL);
    assert(value != NULL);
 
-   if( strcasecmp(lpinput->token, "INFINITY") == 0 || strcasecmp(lpinput->token, "INF") == 0 )
+   if( SCIPstrcasecmp(lpinput->token, "INFINITY") == 0 || SCIPstrcasecmp(lpinput->token, "INF") == 0 )
    {
       *value = SCIPinfinity(scip);
       return TRUE;
@@ -1978,7 +1974,7 @@ SCIP_RETCODE readBounds(
                return SCIP_OKAY;
             }
          }
-         else if( strcasecmp(lpinput->token, "FREE") == 0 )
+         else if( SCIPstrcasecmp(lpinput->token, "FREE") == 0 )
          {
             if( leftsense != LP_SENSE_NOTHING )
             {
@@ -2127,7 +2123,7 @@ SCIP_RETCODE readSemicontinuous(
    assert(lpinput != NULL);
 
    /* if section is titles "semi-continuous", then the parser breaks this into parts */
-   if( strcasecmp(lpinput->token, "SEMI") == 0 )
+   if( SCIPstrcasecmp(lpinput->token, "SEMI") == 0 )
    {
       if( !getNextToken(scip, lpinput) )
       {
@@ -2135,9 +2131,9 @@ SCIP_RETCODE readSemicontinuous(
          return SCIP_OKAY;
       }
 
-      if( strcasecmp(lpinput->token, "-") == 0 )
+      if( SCIPstrcasecmp(lpinput->token, "-") == 0 )
       {
-         if( !getNextToken(scip, lpinput) || strcasecmp(lpinput->token, "CONTINUOUS") != 0 )
+         if( !getNextToken(scip, lpinput) || SCIPstrcasecmp(lpinput->token, "CONTINUOUS") != 0 )
          {
             syntaxError(scip, lpinput, "expected 'CONTINUOUS' after 'SEMI-'.");
             return SCIP_OKAY;
@@ -2541,16 +2537,16 @@ SCIP_RETCODE getActiveVariables(
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize) );
 
       if( requiredsize > *nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
-         assert( requiredsize <= *nvars );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize) );
       }
+      assert( requiredsize == *nvars );
    }
    else
    {
@@ -3903,14 +3899,14 @@ SCIP_RETCODE SCIPwriteLp(
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
             SCIPinfoMessage(scip, file, ";\n");
-
-            return SCIP_OKAY;
          }
+         else
+         {
+            SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprNonlinear(cons),
+               SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed) );
 
-         SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprNonlinear(cons),
-            SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed) );
-
-         consExpr[nConsExpr++] = cons;
+            consExpr[nConsExpr++] = cons;
+         }
       }
       else if( strcmp(conshdlrname, "and") == 0 )
       {

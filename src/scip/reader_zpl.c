@@ -39,6 +39,11 @@
 #include <stdbool.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+#include <direct.h>
+#define getcwd _getcwd
+#endif
+
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_sos1.h"
@@ -90,6 +95,13 @@ extern "C" {
 
 #ifdef __cplusplus
 }
+#endif
+
+/* disable warning that our callbacks, like xlp_addvar, may return NULL if there was an error earlier,
+ * even though they were declared __attribute__((__nonnull__))
+ */
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wnonnull"
 #endif
 
 #define READER_NAME             "zplreader"

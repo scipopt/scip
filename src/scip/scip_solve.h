@@ -161,6 +161,7 @@ SCIP_RETCODE SCIPsolve(
  *
  *  @deprecated Please use SCIPsolveConcurrent() instead.
  */
+SCIP_DEPRECATED
 SCIP_EXPORT
 SCIP_RETCODE SCIPsolveParallel(
    SCIP*                 scip                /**< SCIP data structure */

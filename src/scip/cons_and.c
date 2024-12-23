@@ -1120,11 +1120,11 @@ SCIP_RETCODE checkCons(
    /* check feasibility of constraint if necessary */
    if( mustcheck )
    {
+      SCIP_Real minsolval = 1.0;
+      SCIP_Real sumsolval = 0.0;
       SCIP_Real solval;
-      SCIP_Real minsolval;
-      SCIP_Real sumsolval;
       SCIP_Real viol;
-      int minsolind;
+      int minsolind = 0;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -1135,16 +1135,12 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
-      minsolind = 0;
-      minsolval = 1.0;
-      sumsolval = 0.0;
-
       /* evaluate operator variables */
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
 
-         if( solval < minsolval )
+         if( minsolval > solval )
          {
             minsolind = i;
             minsolval = solval;
@@ -1188,6 +1184,7 @@ SCIP_RETCODE checkCons(
          }
       }
 
+      /* update constraint violation in solution */
       if( sol != NULL )
          SCIPupdateSolConsViolation(scip, sol, viol, viol);
    }
@@ -4361,8 +4358,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsAnd)
    return SCIP_OKAY;
 }
 
-
-/** feasibility check method of constraint handler for integral solutions */
+/** feasibility check method of constraint handler and */
 static
 SCIP_DECL_CONSCHECK(consCheckAnd)
 {  /*lint --e{715}*/
@@ -4371,8 +4367,7 @@ SCIP_DECL_CONSCHECK(consCheckAnd)
 
    *result = SCIP_FEASIBLE;
 
-   /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss && (*result == SCIP_FEASIBLE || completely); i++ )
+   for( i = 0; i < nconss && ( *result == SCIP_FEASIBLE || completely ); ++i )
    {
       SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
       if( violated )
@@ -4381,7 +4376,6 @@ SCIP_DECL_CONSCHECK(consCheckAnd)
 
    return SCIP_OKAY;
 }
-
 
 /** domain propagation method of constraint handler */
 static

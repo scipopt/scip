@@ -60,38 +60,38 @@ Test(dual, duallimit_min, .description = "tests dual limit for minimization")
    SCIP_Real duallimit;
 
    cr_assert_not_null(scip);
-   SCIPsetRealParam(scip, "limits/dual", target);
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/dual", target) );
    /* turn on aggressive separators to get more limit candidates */
-   SCIPsetSeparating(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE);
+   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
    /* turn off heuristics to oppose optimality before the limit */
-   SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE);
-   SCIPreadProb(scip, "../check/instances/MIP/rgn.mps", NULL);
-   SCIPsolve(scip);
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPreadProb(scip, "../check/instances/MIP/rgn.mps", NULL) );
+   SCIP_CALL( SCIPsolve(scip) );
 
    cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT);
    duallimit = SCIPgetDualbound(scip);
    cr_assert_geq(duallimit, target, "Dual bound is %f but should be at least %f", duallimit, target);
-   SCIPgetRealParam(scip, "limits/dual", &duallimit);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/dual", &duallimit) );
    cr_assert_eq(duallimit, target, "Dual limit is %f but should be %f", duallimit, target);
 }
 
 Test(dual, duallimit_max, .description = "tests dual limit for maximization")
 {
-   const SCIP_Real target = 29;
+   const SCIP_Real target = 30;
    SCIP_Real duallimit;
 
    cr_assert_not_null(scip);
-   SCIPsetRealParam(scip, "limits/dual", target);
+   SCIP_CALL( SCIPsetRealParam(scip, "limits/dual", target) );
    /* turn on aggressive separators to get more limit candidates */
-   SCIPsetSeparating(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE);
+   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
    /* turn off heuristics to oppose optimality before the limit */
-   SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE);
-   SCIPreadProb(scip, "../check/instances/Symmetry/packorb_1-FullIns_3.cip", NULL);
-   SCIPsolve(scip);
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_OFF, TRUE) );
+   SCIP_CALL( SCIPreadProb(scip, "../check/instances/Symmetry/packorb_1-FullIns_3.cip", NULL) );
+   SCIP_CALL( SCIPsolve(scip) );
 
    cr_assert_eq(SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT, "SCIP terminated with status %d but should have terminated with status %d", SCIPgetStatus(scip), SCIP_STATUS_DUALLIMIT);
    duallimit = SCIPgetDualbound(scip);
    cr_assert_leq(duallimit, target, "Dual bound is %f but should be at most %f", duallimit, target);
-   SCIPgetRealParam(scip, "limits/dual", &duallimit);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/dual", &duallimit) );
    cr_assert_eq(duallimit, target, "Dual limit is %f but should be %f", duallimit, target);
 }

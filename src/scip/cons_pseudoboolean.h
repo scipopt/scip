@@ -89,10 +89,7 @@ enum SCIP_LinearConsType
 };
 typedef enum SCIP_LinearConsType SCIP_LINEARCONSTYPE;
 
-/** creates and captures a pseudoboolean constraint, with given linear and and-constraints
- *
- *  @note intvar must currently be NULL
- */
+/** creates and captures a pseudoboolean constraint, with given linear and and-constraints */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -106,9 +103,6 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR*             intvar,             /**< an artificial variable which was added only for the objective function,
-                                              *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -147,8 +141,6 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
  *        respectively
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
- *
- *  @note intvar must currently be NULL
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsPseudoboolean(
@@ -165,9 +157,6 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR*             intvar,             /**< an artificial variable which was added only for the objective function,
-                                              *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -202,8 +191,6 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
  *  @see SCIPcreateConsPseudoboolean() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
- *
- *  @note intvar must currently be NULL
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
@@ -220,19 +207,16 @@ SCIP_RETCODE SCIPcreateConsBasicPseudoboolean(
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
-                                              *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
 
-/** adds linear term pseudo boolean constraint (if it is not zero)
+/** adds a variable to the pseudo boolean constraint (if it is not zero)
  *
- * @note you can only add a coefficient if the special type of linear constraint won't changed
+ *  @note you can only add a coefficient if the special type of linear constraint won't changed
  *
- * @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
- *       create a new linear constraint
+ *  @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
+ *        create a new linear constraint
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddCoefPseudoboolean(
@@ -244,10 +228,10 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
 
 /** adds nonlinear term to pseudo boolean constraint (if it is not zero)
  *
- * @note you can only add a coefficient if the special type of linear constraint won't changed
+ *  @note you can only add a coefficient if the special type of linear constraint won't changed
  *
- * @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
- *       create a new linear constraint
+ *  @todo if adding a coefficient would change the type of the special linear constraint, we need to erase it and
+ *        create a new linear constraint
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPaddTermPseudoboolean(
@@ -317,10 +301,10 @@ int SCIPgetNAndsPseudoboolean(
 
 /** changes left hand side of pseudoboolean constraint
  *
- * @note you can only change the left hand side if the special type of linear constraint won't changed
+ *  @note you can only change the left hand side if the special type of linear constraint won't changed
  *
- * @todo if changing the left hand side would change the type of the special linear constraint, we need to erase it
- *       and create a new linear constraint
+ *  @todo if changing the left hand side would change the type of the special linear constraint, we need to erase it
+ *        and create a new linear constraint
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPchgLhsPseudoboolean(
@@ -331,10 +315,10 @@ SCIP_RETCODE SCIPchgLhsPseudoboolean(
 
 /** changes right hand side of pseudoboolean constraint
  *
- * @note you can only change the right hand side if the special type of linear constraint won't changed
+ *  @note you can only change the right hand side if the special type of linear constraint won't changed
  *
- * @todo if changing the right hand side would change the type of the special linear constraint, we need to erase it
- *       and create a new linear constraint
+ *  @todo if changing the right hand side would change the type of the special linear constraint, we need to erase it
+ *        and create a new linear constraint
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPchgRhsPseudoboolean(

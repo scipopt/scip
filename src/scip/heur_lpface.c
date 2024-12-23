@@ -1116,6 +1116,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
    assert(SCIPgetCurrentNode(scip) != NULL);
    focusnodelb = SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
+   assert(!SCIPisInfinity(scip, focusnodelb));
 
    /* from the checked conditions, the LP objective should be a valid lower bound for the current node */
    assert(SCIPisGE(scip, focusnodelb, SCIPgetLPObjval(scip)));

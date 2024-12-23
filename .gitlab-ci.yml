@@ -5,20 +5,20 @@
 # Jobs should not be defined in this file but in their own file in the ci folder.
 # Similar jobs should be grouped in the same file and use inheritance to avoid code duplication.
 # The image custom image used in this pipeline is quite complex and large as it contains all the dependencies of SCIP.
-# It is defined in ci/docker/Dockerfile.
+# It is defined in .gitlab/docker/Dockerfile.
 # The image is built in the first stage of the pipeline and then used in all the other stages.
 # Jobs that do not require the dependecies inside the image should run on a smaller image like debian-slim.
 variables:
   IMAGE_NAME: ${CI_REGISTRY}/integer/scip/ci
   # combine IMAGE_NAME and current branch
-  IMAGE: ${IMAGE_NAME}:${IMAGE_HASH}
-  IMAGE_PATH: ${CI_PROJECT_DIR}/ci/docker/Dockerfile
-  DEPENDENCIES_PATH: ${CI_PROJECT_DIR}/ci/docker/dependencies.yml
+  IMAGE: ${IMAGE_NAME}:${DOCKERFILE_HASH}
+  IMAGE_PATH: ${CI_PROJECT_DIR}/.gitlab/docker/Dockerfile
 
 workflow:
   rules:
     # only run the pipeline on merge requests and when the title does not contain Draft
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_MERGE_REQUEST_TITLE !~ /Draft/
+    #- if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_MERGE_REQUEST_TITLE !~ /Draft/
+    - when: never
 
 stages:
   - image
@@ -27,9 +27,9 @@ stages:
   - release
 
 include:
-  - local: 'ci/docker/image_hash.yml'
-  - local: 'ci/docker/prepare_image.yml'
-  - local: 'ci/cmake_and_ctest.yml'
-  - local: 'ci/linktest.yml'
-  - local: 'ci/russcip.yml'
-  - local: 'ci/valgrind.yml'
+  - local: '.gitlab/docker/dockerfile_hash.yml'
+  - local: '.gitlab/jobs/prepare_image.yml'
+  - local: '.gitlab/jobs/cmake_and_ctest.yml'
+  - local: '.gitlab/jobs/linktest.yml'
+  - local: '.gitlab/jobs/russcip.yml'
+  - local: '.gitlab/jobs/valgrind.yml'

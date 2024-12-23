@@ -551,7 +551,7 @@ struct SCIP_Set
    SCIP_Bool             reopt_commontimelimit;/**< time limit over all reoptimization rounds? */
    SCIP_Bool             reopt_enable;       /**< enable reoptimization */
    SCIP_Bool             reopt_reducetofrontier; /**< delete stored nodes which were not reoptimized */
-   SCIP_Bool             reopt_saveconsprop; /**< save constraint propagations */
+   SCIP_Bool             reopt_saveprop;     /**< save constraint and propagator propagations */
    SCIP_Bool             reopt_sbinit;       /**< try to fix variables before reoptimizing by probing like strong
                                               *   branching
                                               */

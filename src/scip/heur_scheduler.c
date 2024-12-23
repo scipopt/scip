@@ -72,9 +72,6 @@
 #include "scip/scip_var.h"
 #include <string.h>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
 
 #define HEUR_NAME             "scheduler"
 #define HEUR_DESC             "Adaptive heuristic to schedule LNS and diving heuristics"

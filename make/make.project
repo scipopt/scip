@@ -97,7 +97,7 @@ SCIP_VERSION_MAJOR = 10
 SCIP_VERSION_MINOR = 0
 SCIP_VERSION_PATCH = 0
 SCIP_VERSION_SUB = 0
-SCIP_VERSION_API = 116
+SCIP_VERSION_API = 129
 SCIP_VERSION = $(SCIP_VERSION_MAJOR).$(SCIP_VERSION_MINOR).$(SCIP_VERSION_PATCH).$(SCIP_VERSION_SUB)
 
 # compiling and linking parameters
@@ -105,8 +105,8 @@ VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
-TPI		=	none
-SYM		=	sbliss
+TPI		=	tny
+SYM		=	snauty
 PAPILO		=	false
 LAPACK		=	false
 STATICLIBEXT	=	a
@@ -117,7 +117,6 @@ SHARED		=	false
 NOBLKMEM	=	false
 NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
-BLISSEXTERNAL	=	false
 NAUTYEXTERNAL	=	false
 
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
@@ -519,7 +518,9 @@ TPILDFLAGS  	=	-openmp$(LINKLIBSUFFIX)
 endif
 else ifeq ($(TPI),tny)
 TPICFLAGS	=
+ifneq ($(COMP),msvc)
 TPILDFLAGS  	=	-lpthread
+endif
 endif
 
 TPILIB		=	$(TPILIBNAME).$(BASE)
@@ -530,40 +531,22 @@ TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 # Symmetry Interface
 #-----------------------------------------------------------------------------
 
+ifeq ($(SHARED),false)
 ifeq ($(SYM),bliss)
-ifeq ($(BLISSEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
-endif
 endif
 
 ifeq ($(SYM),sbliss)
-ifeq ($(BLISSEXTERNAL),true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)bliss.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss/src
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/bliss
-endif
-CXXFLAGS	+=	$(CXX17FLAG)
 endif
 
-ifeq ($(SYM),nauty)
-ifeq ($(NAUTYEXTERNAL),true)
+ifeq ($(SYM)-$(NAUTYEXTERNAL),nauty-true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/nauty
-endif
 endif
 
-ifeq ($(SYM),snauty)
-ifeq ($(NAUTYEXTERNAL),true)
+ifeq ($(SYM)-$(NAUTYEXTERNAL),snauty-true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-else
-LIBOBJSUBDIRS	+=      $(LIBOBJDIR)/nauty
 endif
-CXXFLAGS	+=	$(CXX17FLAG)
 endif
 
 #-----------------------------------------------------------------------------

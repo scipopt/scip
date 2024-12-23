@@ -2584,17 +2584,17 @@ SCIP_RETCODE SCIPexprDismantle(
                SCIP_VAR* var;
 
                var = SCIPgetVarExprVar(expr);
-               SCIPmessageFPrintInfo(messagehdlr, file, "%s in [%g, %g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+               SCIPmessageFPrintInfo(messagehdlr, file, "%s in [%.15g, %.15g]", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
                   SCIPvarGetUbLocal(var));
             }
             else if( SCIPexprIsSum(set, expr) )
-               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetConstantExprSum(expr));
+               SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", SCIPgetConstantExprSum(expr));
             else if( SCIPexprIsProduct(set, expr) )
-               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetCoefExprProduct(expr));
+               SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", SCIPgetCoefExprProduct(expr));
             else if( SCIPexprIsValue(set, expr) )
-               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetValueExprValue(expr));
+               SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", SCIPgetValueExprValue(expr));
             else if( SCIPexprIsPower(set, expr) || strcmp(expr->exprhdlr->name, "signpower") == 0)
-               SCIPmessageFPrintInfo(messagehdlr, file, "%g", SCIPgetExponentExprPow(expr));
+               SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", SCIPgetExponentExprPow(expr));
 
             SCIPmessageFPrintInfo(messagehdlr, file, "\n");
 
@@ -2614,7 +2614,7 @@ SCIP_RETCODE SCIPexprDismantle(
             if( SCIPexprIsSum(set, expr) )
             {
                SCIPmessageFPrintInfo(messagehdlr, file, "%*s   ", nspaces, "");
-               SCIPmessageFPrintInfo(messagehdlr, file, "[coef]: %g\n", SCIPgetCoefsExprSum(expr)[SCIPexpriterGetChildIdxDFS(it)]);
+               SCIPmessageFPrintInfo(messagehdlr, file, "[coef]: %.15g\n", SCIPgetCoefsExprSum(expr)[SCIPexpriterGetChildIdxDFS(it)]);
             }
 
             break;
@@ -3400,9 +3400,14 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
    for( c = 0; c < SCIPexprGetNChildren(expr); ++c )
    {
       SCIP_EXPR* child;
+      SCIP_Real coef;
 
       child = SCIPexprGetChildren(expr)[c];
       assert(child != NULL);
+
+      coef = SCIPgetCoefsExprSum(expr)[c];
+      if( coef == 0.0 )
+         continue;
 
       if( SCIPexprIsPower(set, child) && SCIPgetExponentExprPow(child) == 2.0 ) /* quadratic term */
       {
@@ -3464,10 +3469,11 @@ SCIP_RETCODE SCIPexprCheckQuadratic(
       SCIP_Real coef;
 
       child = SCIPexprGetChildren(expr)[c];
-      coef = SCIPgetCoefsExprSum(expr)[c];
-
       assert(child != NULL);
-      assert(coef != 0.0);
+
+      coef = SCIPgetCoefsExprSum(expr)[c];
+      if( coef == 0.0 )
+         continue;
 
       if( SCIPexprIsPower(set, child) && SCIPgetExponentExprPow(child) == 2.0 ) /* quadratic term */
       {

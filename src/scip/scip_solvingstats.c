@@ -165,8 +165,6 @@ int SCIPgetNReoptRuns(
 
 /** add given number to the number of processed nodes in current run and in all runs, including the focus node
  *
- *  @return the number of processed nodes in current run, including the focus node
- *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -1455,10 +1453,7 @@ SCIP_Real SCIPgetDualboundRoot(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetDualboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
-      return SCIPgetPrimalbound(scip);
-   else
-      return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, scip->stat->rootlowerbound);
+   return SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPgetLowerboundRoot(scip));
 }
 
 /** gets lower (dual) bound in transformed problem of the root node
@@ -1479,10 +1474,7 @@ SCIP_Real SCIPgetLowerboundRoot(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetLowerboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
-      return SCIPgetUpperbound(scip);
-   else
-      return scip->stat->rootlowerbound;
+   return scip->stat->rootlowerbound;
 }
 
 /** gets dual bound for the original problem obtained by the first LP solve at the root node
@@ -1530,7 +1522,10 @@ SCIP_Real SCIPgetFirstLPLowerboundRoot(
       return SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->stat->firstlpdualbound);
 }
 
-/** the primal bound of the very first solution */
+/** gets the primal bound of the very first solution
+ *
+ * @return the primal bound of the very first solution
+ */
 SCIP_Real SCIPgetFirstPrimalBound(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2299,9 +2294,7 @@ SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, NULL, cutoffsdown, cutoffsup);
 }
 
-/** returns the average normalized efficacy of a GMI cut over all variables
- *
- *  @return increases the average normalized efficacy of a GMI cut over all variables
+/** increases the average normalized efficacy of a GMI cut over all variables
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
@@ -2317,7 +2310,7 @@ void SCIPincAvgGMIeff(
    SCIPhistoryIncGMIeffSum(scip->stat->glbhistory, gmieff);
 }
 
-/** Increases the cumulative normalized efficacy of average (over all variables) GMI cuts
+/** returns the average normalized efficacy of a GMI cut over all variables
  *
  *  @return the average normalized efficacy of a GMI cut over all variables
  *
@@ -4744,7 +4737,6 @@ int SCIPgetNImplications(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
  *  @deprecated because binary implications are now stored as cliques, please use SCIPwriteCliqueGraph() instead
- *
  */ /*lint -e715*/
 SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4766,13 +4758,19 @@ void SCIPstoreSolutionGap(
    if( scip->primal->nsols == 1 )
       scip->stat->firstsolgap = scip->stat->lastsolgap;
 
-   if( scip->set->stage == SCIP_STAGE_SOLVING && scip->set->misc_calcintegral )
+   if( scip->set->misc_calcintegral )
    {
-      SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
+      SCIP_Real upperbound = SCIPgetUpperbound(scip);
+
+      if( upperbound < scip->stat->lastupperbound )
+         SCIPstatUpdatePrimalDualIntegrals(scip->stat, scip->set, scip->transprob, scip->origprob, upperbound, -SCIPinfinity(scip));
    }
 }
 
-/** recomputes and returns the primal dual gap stored in the stats */
+/** recomputes and returns the primal dual gap stored in the stats
+ *
+ * @return returns the primal dual gap stored in the stats
+ */
 SCIP_EXPORT
 SCIP_Real SCIPgetPrimalDualIntegral(
    SCIP*                 scip                /**< SCIP data structure */
