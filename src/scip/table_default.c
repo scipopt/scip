@@ -439,18 +439,6 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSol)
    return SCIP_OKAY;
 }
 
-/** Hacky output method of statistics */
-static
-SCIP_DECL_TABLEOUTPUT(tableOutputStats)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(table != NULL);
-
-   SCIPprintSummaryStatistics(scip, file);
-
-   return SCIP_OKAY;
-}
-
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputConc)
@@ -668,8 +656,5 @@ SCIP_RETCODE SCIPincludeTableDefault(
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConc,
          NULL, TABLE_POSITION_CONC, TABLE_EARLIEST_STAGE_CONC) );
    assert(SCIPfindTable(scip, TABLE_NAME_STATS) == NULL);
-   SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_STATS, TABLE_DESC_STATS, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputStats,
-         NULL, TABLE_POSITION_STATS, TABLE_EARLIEST_STAGE_STATS) );
-   return SCIP_OKAY;
+  return SCIP_OKAY;
 }

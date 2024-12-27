@@ -3263,20 +3263,12 @@ SCIP_RETCODE SCIPaddConflict(
    if( ( node == NULL || SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE ) )
    {
       if( conftype != SCIP_CONFTYPE_RESOLUTION )
-      {
-         if(conftype == SCIP_CONFTYPE_PROPAGATION)
-            cons->propconflict = TRUE;
          /* add the conflict to the conflict store */
          SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
                scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
-      }
-      /* conftype == SCIP_CONFTYPE_RESOLUTION */
       else
-      {
-         cons->resconflict = TRUE;
-         SCIP_CALL( SCIPconflictstoreAddResConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
+          SCIP_CALL( SCIPconflictstoreAddResConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
                scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
-      }
    }
 
    /* mark constraint to be a conflict */

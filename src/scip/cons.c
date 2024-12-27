@@ -5954,11 +5954,8 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->deleteconsdata = deleteconsdata;
    (*cons)->active = FALSE;
    (*cons)->conflict = FALSE;
-   (*cons)->resconflict = FALSE;
-   (*cons)->propconflict = FALSE;
-   (*cons)->enabled = FALSE;
+  (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
-   (*cons)->useful = FALSE;
    (*cons)->markpropagate = TRUE;
    (*cons)->deleted = FALSE;
    (*cons)->update = FALSE;
@@ -8440,16 +8437,6 @@ SCIP_Bool SCIPconsIsPropagated(
    assert(cons != NULL);
 
    return cons->propagate;
-}
-
-/** returns TRUE iff constraint is useful */
-SCIP_Bool SCIPconsIsUseful(
-   SCIP_CONS*            cons                /**< constraint */
-   )
-{
-   assert(cons != NULL);
-
-   return cons->useful;
 }
 
 /** returns TRUE iff constraint is globally valid */

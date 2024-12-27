@@ -915,12 +915,6 @@ SCIP_Longint SCIPgetNResConflictConssApplied(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-SCIP_EXPORT
-void SCIPprintSummaryStatistics(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**< output file */
-   );
-
 /** get total number of dual proof constraints added to the problem
  *
  *  @return the total number of dual proof constraints added to the problem

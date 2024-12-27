@@ -1839,7 +1839,6 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
 {
    SCIP_VAR** vars;
    SCIP_VAR* var;
-   SCIP_ROW* initialrow;
    SCIP_Real* curvarlbs;
    SCIP_Real* curvarubs;
    int* lbchginfoposs;
@@ -1909,13 +1908,6 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
     */
    pseudolhs = -(lp->cutoffbound - (SCIPprobIsObjIntegral(transprob) ? SCIPsetCutoffbounddelta(set) : 0.0));
 
-   initialrow = NULL;
-   if( set->conf_usegeneralres && set->conf_applyrespseudoobj )
-   {
-      SCIP_CALL( SCIProwCreate(&initialrow, blkmem, set, stat, "pseudoobj", 0, NULL, NULL, pseudolhs, SCIPsetInfinity(set), \
-            SCIP_ROWORIGINTYPE_UNSPEC, NULL, FALSE, FALSE, TRUE) );
-   }
-
    /* store the objective values as infeasibility proof coefficients, and recalculate the pseudo activity */
    pseudoact = 0.0;
    for( v = 0; v < nvars; ++v )
@@ -1931,11 +1923,6 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       {
          pseudocoefs[v] = 0.0;
          continue;
-      }
-
-      if( set->conf_usegeneralres && set->conf_applyrespseudoobj )
-      {
-         SCIP_CALL( SCIPvarAddToRow(var, blkmem, set, stat, eventqueue, transprob, lp, initialrow, pseudocoefs[v]) );
       }
 
       if( pseudocoefs[v] > 0.0 )
@@ -1973,11 +1960,6 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
 
       conflict->bdchgonlyconfqueue = FALSE;
 
-      if( set->conf_usegeneralres && set->conf_applyrespseudoobj )
-      {
-         SCIP_CALL( SCIPconflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-               branchcand, eventqueue, cliquetable, initialrow, 0, FALSE, TRUE, success) );
-      }
    }
 
    /* free temporary memory */
@@ -1986,12 +1968,6 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIPsetFreeBufferArray(set, &lbchginfoposs);
    SCIPsetFreeBufferArray(set, &curvarubs);
    SCIPsetFreeBufferArray(set, &curvarlbs);
-
-   if( set->conf_usegeneralres && set->conf_applyrespseudoobj )
-   {
-      SCIP_CALL( SCIProwRelease(&initialrow, blkmem, set, lp) );
-      assert(!initialrow);
-   }
 
    /* flush conflict set storage */
    SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable) );
@@ -2315,12 +2291,10 @@ SCIP_RETCODE conflictAnalyzeLP(
       && (((set->conf_useinflp == 'b' || set->conf_useinflp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP)
       || ((set->conf_useboundlp == 'b' || set->conf_useboundlp == 'c') && conflict->conflictset->conflicttype == SCIP_CONFTYPE_BNDEXCEEDING)) )
    {
-      SCIP_ROW* initialrow;
       SCIP_Real* farkascoefs;
       SCIP_Real farkaslhs;
       int* inds;
       int nnz;
-      SCIP_Bool success;
 
 #ifdef SCIP_DEBUG
       {
@@ -2351,21 +2325,6 @@ SCIP_RETCODE conflictAnalyzeLP(
          farkascoefs[i] = -SCIPaggrRowGetProbvarValue(farkasrow, i);
       }
 
-      initialrow = NULL;
-      if( set->conf_usegeneralres && set->conf_applyresdualproof )
-      {
-         SCIP_CALL( SCIProwCreate(&initialrow, blkmem, set, stat, "farkasproof", 0, NULL, NULL, farkaslhs, SCIPsetInfinity(set), \
-               SCIP_ROWORIGINTYPE_UNSPEC, NULL, (SCIPnodeGetDepth(tree->path[validdepth]) > 0 ), FALSE, TRUE) );
-
-         for( int i = 0; i < farkasrow->nnz; ++i )
-         {
-            SCIP_Real QUAD(val);
-            QUAD_ARRAY_LOAD(val, farkasrow->vals, farkasrow->inds[i]);
-            assert(SCIPvarGetProbindex(vars[farkasrow->inds[i]]) == farkasrow->inds[i]);
-            SCIP_CALL( SCIPvarAddToRow(vars[farkasrow->inds[i]], blkmem, set, stat, eventqueue, transprob, lp, initialrow, -QUAD_TO_DBL(val)) );
-         }
-      }
-
       conflict->bdchgonlyconfqueue = TRUE;
 
       SCIP_CALL( SCIPrunBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, blkmem, farkascoefs,
@@ -2377,13 +2336,7 @@ SCIP_RETCODE conflictAnalyzeLP(
       SCIPsetFreeBufferArray(set, &farkascoefs);
 
       if( !valid )
-      {
-         if( set->conf_usegeneralres && set->conf_applyresdualproof )
-         {
-            SCIP_CALL( SCIProwRelease(&initialrow, blkmem, set, lp) );
-         }
          goto FLUSHPROOFSETS;
-      }
 
       conflict->bdchgonlyconfqueue = TRUE;
 
@@ -2397,14 +2350,6 @@ SCIP_RETCODE conflictAnalyzeLP(
 
       conflict->bdchgonlyconfqueue = FALSE;
 
-      if( set->conf_usegeneralres && set->conf_applyresdualproof )
-      {
-         SCIP_CALL( SCIPconflictAnalyzeResolution(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-               branchcand, eventqueue, cliquetable, initialrow, validdepth, TRUE, FALSE, &success) );
-
-         SCIP_CALL( SCIProwRelease(&initialrow, blkmem, set, lp) );
-         assert(!initialrow);
-      }
    }
 
   FLUSHPROOFSETS:

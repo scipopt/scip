@@ -690,7 +690,7 @@ SCIP_RETCODE SCIPanalyzeConflict(
    {
          SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
                   scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL,
-                  validdepth, FALSE, FALSE, &conflictlearned) );
+                  validdepth, &conflictlearned) );
    }
    if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
    {
@@ -741,7 +741,7 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 
          SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
                      scip->origprob, scip->tree, scip->reopt, scip->lp,  scip->branchcand, scip->eventqueue, scip->cliquetable,
-                     conflictrow, 0, FALSE, FALSE, &conflictlearned) );
+                     conflictrow, 0, &conflictlearned) );
       }
       if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
       {
@@ -770,7 +770,7 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
 
          SCIP_CALL( SCIPconflictAnalyzeResolution(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
                      scip->origprob, scip->tree, scip->reopt, scip->lp,  scip->branchcand, scip->eventqueue, scip->cliquetable,
-                     conflictrow, SCIPconsGetValidDepth(cons), FALSE, FALSE, &conflictlearned) );
+                     conflictrow, SCIPconsGetValidDepth(cons), &conflictlearned) );
       }
       /* @todo generalized resolution for the local case */
       if( !(scip->set->conf_favorresolution) || !(conflictlearned) )
