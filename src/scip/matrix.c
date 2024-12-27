@@ -517,9 +517,9 @@ SCIP_RETCODE SCIPmatrixCreate(
       {
          conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
 
-         if( (strcmp(conshdlrname, "linear") == 0) || (strcmp(conshdlrname, "setppc") == 0)
-            || (strcmp(conshdlrname, "logicor") == 0) || (strcmp(conshdlrname, "knapsack") == 0)
-            || (strcmp(conshdlrname, "varbound") == 0) )
+         if( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "knapsack") == 0
+            || strcmp(conshdlrname, "setppc") == 0 || strcmp(conshdlrname, "logicor") == 0
+            || strcmp(conshdlrname, "varbound") == 0 )
          {
             /* increment number of supported constraints */
             nconss += nconshdlrconss;
@@ -703,6 +703,61 @@ SCIP_RETCODE SCIPmatrixCreate(
             }
          }
       }
+      else if( strcmp(conshdlrname, "knapsack") == 0 )
+      {
+         if( nconshdlrconss > 0 )
+         {
+            SCIP_Real* consvals;
+            int valssize;
+
+            valssize = 100;
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, valssize) );
+
+            for( c = 0; c < nconshdlrconss && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
+            {
+               SCIP_Longint* weights;
+
+               cons = conshdlrconss[c];
+               assert(SCIPconsIsTransformed(cons));
+
+               /* do not include constraints that can be altered due to column generation */
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *complete = FALSE;
+
+                  if( onlyifcomplete )
+                     break;
+
+                  continue;
+               }
+
+               weights = SCIPgetWeightsKnapsack(scip, cons);
+               nvars = SCIPgetNVarsKnapsack(scip, cons);
+
+               if( nvars > valssize )
+               {
+                  valssize = (int) (1.5 * nvars);
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, valssize) );
+               }
+
+               for( v = 0; v < nvars; v++ )
+                  consvals[v] = (SCIP_Real)weights[v];
+
+               SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsKnapsack(scip, cons), consvals,
+                     SCIPgetNVarsKnapsack(scip, cons), -SCIPinfinity(scip),
+                     (SCIP_Real)SCIPgetCapacityKnapsack(scip, cons), nnonzstmp, &rowadded) );
+
+               if(rowadded)
+               {
+                  assert(cnt < nconss);
+                  matrix->cons[cnt] = cons;
+                  cnt++;
+               }
+            }
+
+            SCIPfreeBufferArray(scip, &consvals);
+         }
+      }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
          for( c = 0; c < nconshdlrconss && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
@@ -780,61 +835,6 @@ SCIP_RETCODE SCIPmatrixCreate(
                matrix->cons[cnt] = cons;
                cnt++;
             }
-         }
-      }
-      else if( strcmp(conshdlrname, "knapsack") == 0 )
-      {
-         if( nconshdlrconss > 0 )
-         {
-            SCIP_Real* consvals;
-            int valssize;
-
-            valssize = 100;
-            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, valssize) );
-
-            for( c = 0; c < nconshdlrconss && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
-            {
-               SCIP_Longint* weights;
-
-               cons = conshdlrconss[c];
-               assert(SCIPconsIsTransformed(cons));
-
-               /* do not include constraints that can be altered due to column generation */
-               if( SCIPconsIsModifiable(cons) )
-               {
-                  *complete = FALSE;
-
-                  if( onlyifcomplete )
-                     break;
-
-                  continue;
-               }
-
-               weights = SCIPgetWeightsKnapsack(scip, cons);
-               nvars = SCIPgetNVarsKnapsack(scip, cons);
-
-               if( nvars > valssize )
-               {
-                  valssize = (int) (1.5 * nvars);
-                  SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, valssize) );
-               }
-
-               for( v = 0; v < nvars; v++ )
-                  consvals[v] = (SCIP_Real)weights[v];
-
-               SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsKnapsack(scip, cons), consvals,
-                     SCIPgetNVarsKnapsack(scip, cons), -SCIPinfinity(scip),
-                     (SCIP_Real)SCIPgetCapacityKnapsack(scip, cons), nnonzstmp, &rowadded) );
-
-               if(rowadded)
-               {
-                  assert(cnt < nconss);
-                  matrix->cons[cnt] = cons;
-                  cnt++;
-               }
-            }
-
-            SCIPfreeBufferArray(scip, &consvals);
          }
       }
       else if( strcmp(conshdlrname, "varbound") == 0 )
