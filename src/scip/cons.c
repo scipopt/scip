@@ -5954,7 +5954,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->deleteconsdata = deleteconsdata;
    (*cons)->active = FALSE;
    (*cons)->conflict = FALSE;
-  (*cons)->enabled = FALSE;
+   (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
    (*cons)->markpropagate = TRUE;
    (*cons)->deleted = FALSE;

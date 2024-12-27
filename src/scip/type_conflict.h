@@ -55,15 +55,6 @@ typedef struct SCIP_ConflictRow SCIP_CONFLICTROW; /**< conflict/reason row of ty
 typedef struct SCIP_LPBdChgs SCIP_LPBDCHGS;       /**< set of LP bound changes */
 typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data structure */
 
-/** types for side that is propagated */
-enum SCIP_PropSide
-{
-   SCIP_PROPSIDE_UNKNOWN  = 0,                /**< unknown type */
-   SCIP_PROPSIDE_LHS      = 1,                /**< lhs was propagated */
-   SCIP_PROPSIDE_RHS      = 2,                /**< rhs was propagated */
-};
-typedef enum SCIP_PropSide SCIP_PROPSIDE;
-
 /** types of conflicts */
 enum SCIP_ConflictType
 {
