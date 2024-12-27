@@ -19012,7 +19012,6 @@ SCIP_RETCODE SCIPcleanupConssLinear(
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** conss;
-   SCIP_CONSDATA* consdata;
    int nconss;
    int i;
 
@@ -19026,18 +19025,19 @@ SCIP_RETCODE SCIPcleanupConssLinear(
    nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
    conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
 
-   for( i = 0; i < nconss; ++i )
+   /* loop backwards since then deleted constraints do not interfere with the loop */
+   for( i = nconss - 1; i >= 0; --i )
    {
       SCIP_CALL( applyFixings(scip, conss[i], infeasible) );
 
       if( *infeasible )
          break;
-      consdata = SCIPconsGetData(conss[i]);
-      if( consdata->nvars == 0 )
-      {
-         SCIP_CALL(SCIPdelCons(scip, conss[i]));
-         (*ndelconss)++;
-      }
+
+      if( SCIPconsGetData(conss[i])->nvars >= 1 )
+         continue;
+
+      SCIP_CALL( SCIPdelCons(scip, conss[i]) );
+      ++(*ndelconss);
    }
 
    return SCIP_OKAY;

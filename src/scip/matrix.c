@@ -607,22 +607,6 @@ SCIP_RETCODE SCIPmatrixCreate(
    if( *infeasible )
       return SCIP_OKAY;
 
-   /* delete empty redundant linear constraints */
-   conshdlr = SCIPfindConshdlr(scip, "linear");
-   if( conshdlr != NULL )
-   {
-      nconshdlrconss = SCIPconshdlrGetNCheckConss(conshdlr);
-      conshdlrconss = SCIPconshdlrGetCheckConss(conshdlr);
-      for( i = nconshdlrconss - 1; i >= 0; --i )
-      {
-         if( SCIPgetNVarsLinear(scip, conshdlrconss[i]) == 0 )
-         {
-            SCIP_CALL( SCIPdelCons(scip, conshdlrconss[i]) );
-            ++(*ndelconss);
-         }
-      }
-   }
-
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
 
