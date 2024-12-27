@@ -4250,7 +4250,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
-   SCIP_Bool             conflictmode,         /**< is the procedure called in conflict analysis mode? */
    int                   maxtestdelta,       /**< maximum number of deltas to test */
    int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
                                               *   -1 for global lb/ub, -2 for local lb/ub, or -3 for using closest bound;
@@ -4375,44 +4374,19 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    {
       SCIP_VAR* var = vars[mksetinds[i]];
       SCIP_Real primsol = SCIPgetSolVal(scip, sol, var);
+      SCIP_Real lb = SCIPvarGetLbLocal(var);
+      SCIP_Real ub = SCIPvarGetUbLocal(var);
       SCIP_Real QUAD(coef);
 
       QUAD_ARRAY_LOAD(coef, mksetcoefs, mksetinds[i]);
 
-      if(conflictmode)
-      {
-         SCIP_Real lb = SCIPvarGetLbGlobal(var);
-         SCIP_Real ub = SCIPvarGetLbGlobal(var);
-         assert(!SCIPisZero(scip, QUAD_TO_DBL(coef)));
+      if( SCIPisEQ(scip, primsol, lb) || SCIPisEQ(scip, primsol, ub) )
+         continue;
 
-         if( SCIPisGT(scip, QUAD_TO_DBL(coef), 0.0) && SCIPisGT(scip, primsol, lb) )
-         {
-            bounddist[nbounddist] =  QUAD_TO_DBL(coef) * (primsol - lb);
-            bounddistpos[nbounddist] = i;
-            deltacands[nbounddist] = QUAD_TO_DBL(coef);
-            ++nbounddist;
-         }
-         else if( SCIPisLT(scip, QUAD_TO_DBL(coef), 0.0) && SCIPisLT(scip, primsol, ub) )
-         {
-            bounddist[nbounddist] =  QUAD_TO_DBL(coef) * (ub - primsol);
-            bounddistpos[nbounddist] = i;
-            deltacands[nbounddist] = QUAD_TO_DBL(coef);
-            ++nbounddist;
-         }
-      }
-      else
-      {
-         SCIP_Real lb = SCIPvarGetLbLocal(var);
-         SCIP_Real ub = SCIPvarGetUbLocal(var);
-
-         if( SCIPisEQ(scip, primsol, lb) || SCIPisEQ(scip, primsol, ub) )
-            continue;
-
-         bounddist[nbounddist] = MIN(ub - primsol, primsol - lb);
-         bounddistpos[nbounddist] = i;
-         deltacands[nbounddist] = QUAD_TO_DBL(coef);
-         ++nbounddist;
-      }
+      bounddist[nbounddist] = MIN(ub - primsol, primsol - lb);
+      bounddistpos[nbounddist] = i;
+      deltacands[nbounddist] = QUAD_TO_DBL(coef);
+      ++nbounddist;
    }
 
    /* no fractional variable; so abort here */

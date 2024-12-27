@@ -1340,21 +1340,14 @@ SCIP_RETCODE separateAlternativeProofs(
    for( i = 0; i < nnz; i++ )
    {
       SCIP_Real val = SCIPaggrRowGetProbvarValue(proofrow, inds[i]);
-      SCIP_Real meanbound = (SCIPvarGetUbGlobal(vars[inds[i]]) + SCIPvarGetLbGlobal(vars[inds[i]])) / 2.0;
+
       if( val > 0.0 )
       {
-         if( SCIPsetIsGE(set, curvarlbs[inds[i]], meanbound) )
-            SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], SCIPvarGetUbGlobal(vars[inds[i]])) );
-         else
-            SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], SCIPvarGetLbGlobal(vars[inds[i]])) );
+         SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], curvarubs[inds[i]]) );
       }
       else
       {
-         if( SCIPsetIsGE(set, curvarubs[inds[i]], meanbound) )
-            SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], SCIPvarGetUbGlobal(vars[inds[i]])) );
-         else
-            SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], SCIPvarGetLbGlobal(vars[inds[i]])) );
-
+         SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], curvarlbs[inds[i]]) );
       }
    }
 
@@ -1364,37 +1357,16 @@ SCIP_RETCODE separateAlternativeProofs(
    cutnnz = 0;
    cutefficacy = -SCIPsetInfinity(set);
 
-   /* start timing */
-   SCIPclockStart(conflict->inflpflowcovertime, set);
-
    /* apply flow cover */
    SCIP_CALL( SCIPcalcFlowCover(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, ALLOWLOCAL, proofrow, \
          cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, &islocal, &cutsuccess) );
-
-   SCIPclockStop( conflict->inflpflowcovertime, set);
-
    success = cutsuccess;
-   conflict->ninflpflowcovercalls += 1;
-
-   if( cutsuccess )
-      conflict->ninflpflowcover += 1;
-
-
-   /* start timing */
-   SCIPclockStart( conflict->inflpmirtime, set);
 
    /* apply MIR */
-   SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, TRUE, INT_MAX, \
+   SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, INT_MAX, \
          NULL, NULL, MINFRAC, MAXFRAC, proofrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, \
          &islocal, &cutsuccess) );
-
-   SCIPclockStop( conflict->inflpmirtime, set);
-
    success = (success || cutsuccess);
-   conflict->ninflpmircalls += 1;
-
-   if( cutsuccess )
-      conflict->ninflpmir += 1;
 
    /* replace the current proof */
    if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy * nnz > proofefficacy * cutnnz )
