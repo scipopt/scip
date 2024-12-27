@@ -467,7 +467,6 @@ SCIP_RETCODE SCIPmatrixCreate(
 {
    SCIP_MATRIX* matrix;
    SCIP_CONSHDLR** conshdlrs;
-   SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
    SCIP_Bool stopped;
    SCIP_VAR** vars;
@@ -583,25 +582,9 @@ SCIP_RETCODE SCIPmatrixCreate(
     * can come up due to downgrading and the remaining cleanup methods cannot fix any more variables
     */
 
-   SCIP_CALL( SCIPcleanupConssKnapsack(scip, TRUE, infeasible) );
+   SCIP_CALL( SCIPcleanupConssKnapsack(scip, TRUE, infeasible, ndelconss) );
    if( *infeasible )
       return SCIP_OKAY;
-
-   /* delete empty redundant knapsack constraints */
-   conshdlr = SCIPfindConshdlr(scip, "knapsack");
-   if( conshdlr != NULL )
-   {
-      nconshdlrconss = SCIPconshdlrGetNCheckConss(conshdlr);
-      conshdlrconss = SCIPconshdlrGetCheckConss(conshdlr);
-      for( i = nconshdlrconss - 1; i >= 0; --i )
-      {
-         if( SCIPgetNVarsKnapsack(scip, conshdlrconss[i]) == 0 )
-         {
-            SCIP_CALL( SCIPdelCons(scip, conshdlrconss[i]) );
-            ++(*ndelconss);
-         }
-      }
-   }
 
    SCIP_CALL( SCIPcleanupConssLinear(scip, TRUE, infeasible, ndelconss) );
    if( *infeasible )
