@@ -162,11 +162,6 @@
 #define TABLE_POSITION_CONC              21000                  /**< the position of the statistics table */
 #define TABLE_EARLIEST_STAGE_CONC        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
-#define TABLE_NAME_STATS                 "summary stats"
-#define TABLE_DESC_STATS                 "summary stats"
-#define TABLE_POSITION_STATS             22000                  /**< the position of the statistics table */
-#define TABLE_EARLIEST_STAGE_STATS       SCIP_STAGE_SOLVING     /**< output of the statistics table is only printed from this stage onwards */
-
 /*
  * Callback methods of statistics table
  */
@@ -655,6 +650,5 @@ SCIP_RETCODE SCIPincludeTableDefault(
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONC, TABLE_DESC_CONC, TRUE,
          tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConc,
          NULL, TABLE_POSITION_CONC, TABLE_EARLIEST_STAGE_CONC) );
-   assert(SCIPfindTable(scip, TABLE_NAME_STATS) == NULL);
-  return SCIP_OKAY;
+   return SCIP_OKAY;
 }

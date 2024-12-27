@@ -65,6 +65,7 @@
 #include "scip/struct_conflict.h"
 #include "scip/struct_lp.h"
 #include "scip/struct_set.h"
+#include "scip/struct_prob.h"
 #include "scip/struct_stat.h"
 #include "scip/tree.h"
 #include "scip/var.h"
@@ -3491,10 +3492,8 @@ SCIP_RETCODE conflictRowFromLpRow(
    rowlhs = SCIProwGetLhs(row) - SCIProwGetConstant(row);
    rowrhs = SCIProwGetRhs(row) - SCIProwGetConstant(row);
 
-
    var = SCIPbdchginfoGetVar(bdchginfo);
    varidx = SCIPvarGetProbindex(var);
-
 
    vals = SCIProwGetVals(row);
    cols = SCIProwGetCols(row);

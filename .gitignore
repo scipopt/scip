@@ -8,9 +8,6 @@ backup/
 cplex.log
 
 settings/
-settings_old/
-settings_oldv2/
-check/
 
 # compiled object files
 *.[oa]
