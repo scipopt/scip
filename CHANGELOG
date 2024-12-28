@@ -5,8 +5,9 @@
 
 Features
 --------
-- Added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
-- Copy variable data pointer if no copy routine was supplied.
+
+- added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
+- copy variable data pointer if no copy routine was supplied.
 - added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
 - implemented symmetry detection callbacks for cons_disjunction and cons_superindicator
 - detailed information about applied symmetry handling techniques can be printed to the terminal
@@ -18,7 +19,7 @@ Features
 Performance improvements
 ------------------------
 
-- Reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
+- reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
 
 Examples and applications
 -------------------------
