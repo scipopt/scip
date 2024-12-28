@@ -125,8 +125,6 @@ struct SCIP_Stat
    SCIP_Longint          externmemestim;     /**< estimation of external memory usage, e.g., by LP solver */
    SCIP_Longint          exprlastvisitedtag; /**< last used visited tag; used by expression iterators to identify expression that have been visited already */
    SCIP_Longint          exprlastsoltag;     /**< last solution tag; used by expression evaluation to identify whether expression has been evaluated for given sol already */
-   SCIP_Longint          nusefulresconflicts;/**< number of useful resolution conflicts */
-   SCIP_Longint          nusefulpropconflicts;/**< number of useful propagation conflicts */
    SCIP_Longint          exprlastdifftag;    /**< last differentiation tag; used by expression differentiation to identify whether expression has been differentiated for given sol already */
    SCIP_Real             avgnnz;             /**< average number of nonzeros per constraint in presolved problem */
    SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */

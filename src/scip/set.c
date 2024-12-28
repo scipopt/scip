@@ -105,7 +105,6 @@
 
 #define SCIP_DEFAULT_CONF_ENABLE           TRUE /**< conflict analysis be enabled? */
 #define SCIP_DEFAULT_CONF_MAXVARSFAC       0.15 /**< maximal fraction of variables involved in a conflict constraint */
-#define SCIP_DEFAULT_CONF_LINEARHDLRONLY  FALSE /**< should only the linear conflict handler be used for conflict analysis? */
 #define SCIP_DEFAULT_CONF_MINMAXVARS          0 /**< minimal absolute maximum of variables involved in a conflict constraint */
 #define SCIP_DEFAULT_CONF_MAXLPLOOPS          2 /**< maximal number of LP resolving loops during conflict analysis
                                                  *   (-1: no limit) */
@@ -126,9 +125,7 @@
 #define SCIP_DEFAULT_CONF_USEPSEUDO        TRUE /**< should pseudo solution conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_PREFINFPROOF     TRUE /**< prefer infeasibility proof to boundexceeding proof */
 #define SCIP_DEFAULT_CONF_SEPARATE         TRUE /**< should the conflict constraints be separated? */
-#define SCIP_DEFAULT_CONF_SEPARESOLUTION   TRUE /**< should the generalized resolution conflict constraints be separated? */
 #define SCIP_DEFAULT_CONF_DYNAMIC          TRUE /**< should the conflict constraints be subject to aging? */
-#define SCIP_DEFAULT_CONF_UPGRADECONS      TRUE /**< should we try upgrading the conflict constraints? */
 #define SCIP_DEFAULT_CONF_REPROPAGATE      TRUE /**< should earlier nodes be repropagated in order to replace branching
                                                  *   decisions by deductions? */
 #define SCIP_DEFAULT_CONF_KEEPREPROP       TRUE /**< should constraints be kept for repropagation even if they are too long? */
@@ -1389,18 +1386,18 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "conflict/useinflp",
-         "should infeasible LP conflict analysis be used? ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray",
+         "should infeasible LP conflict analysis be used? ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)",
          &(*set)->conf_useinflp, FALSE, SCIP_DEFAULT_CONF_USEINFLP, "ocdb",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "conflict/useboundlp",
-         "should bound exceeding LP conflict analysis be used? ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray",
+         "should bound exceeding LP conflict analysis be used? ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)",
          &(*set)->conf_useboundlp, FALSE, SCIP_DEFAULT_CONF_USEBOUNDLP, "ocdb",
          NULL, NULL) );
       SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "conflict/reductiontechnique",
-         "which tightening reduction should be used? ('o'ff, 'm'ir, 'd'ivision, 'c'oefficient tightening, complemented mi'r', complemented divi's'ion)",
-         &(*set)->conf_reductiontechnique, FALSE, SCIP_DEFAULT_CONF_REDUCTION, "omdcrs",
+         "which tightening reduction should be used? ('o'ff, 'm'ir)",
+         &(*set)->conf_reductiontechnique, FALSE, SCIP_DEFAULT_CONF_REDUCTION, "om",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/mbreduction",
@@ -1528,19 +1525,9 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->conf_separate, TRUE, SCIP_DEFAULT_CONF_SEPARATE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/separesolution",
-         "should the resolution conflict constraints be separated?",
-         &(*set)->conf_separesolution, TRUE, SCIP_DEFAULT_CONF_SEPARESOLUTION,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/dynamic",
          "should the conflict constraints be subject to aging?",
          &(*set)->conf_dynamic, TRUE, SCIP_DEFAULT_CONF_DYNAMIC,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/upgrade",
-         "should we try upgrading the conflict constraints?",
-         &(*set)->conf_upgrade, TRUE, SCIP_DEFAULT_CONF_UPGRADECONS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/removable",

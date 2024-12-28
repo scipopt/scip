@@ -261,9 +261,7 @@ struct SCIP_Set
                                               *   decisions by deductions? */
    SCIP_Bool             conf_keepreprop;    /**< should constraints be kept for repropagation even if they are too long? */
    SCIP_Bool             conf_separate;      /**< should the conflict constraints be separated? */
-   SCIP_Bool             conf_separesolution;/**< should the resolution conflict constraints be separated? */
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
-   SCIP_Bool             conf_upgrade;       /**< should we try upgrading the conflict constraints? */
    SCIP_Bool             conf_removable;     /**< should the conflict's relaxations be subject to LP aging and cleanup? */
    SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic */
    SCIP_Real             conf_proofscorefac; /**< score factor for contribution to infeasibility proof in bound relaxation heuristic */

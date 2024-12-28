@@ -307,8 +307,6 @@ void SCIPstatReset(
    stat->externmemestim = 0;
    stat->exprlastvisitedtag = 0;
    stat->exprlastsoltag = 0;
-   stat->nusefulresconflicts = 0;
-   stat->nusefulpropconflicts = 0;
    stat->exprlastdifftag = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL;

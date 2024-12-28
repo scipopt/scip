@@ -2175,7 +2175,7 @@ SCIP_RETCODE checkConflictDebugSol(
    /* create a constraint out of the conflict set */
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "confres_%" SCIP_LONGINT_FORMAT, conflict->nresconfconss);
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, consname, conflictrow->nnz, consvars, vals,
-              lhs, SCIPsetInfinity(set), FALSE, set->conf_separesolution, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
+              lhs, SCIPsetInfinity(set), FALSE, set->conf_separate, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
               FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
 
    /* check if the constraint is valid for the debug solution before upgrade */
@@ -2334,7 +2334,7 @@ SCIP_RETCODE createAndAddConflictCon(
    /* create a constraint out of the conflict set */
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "confres_%" SCIP_LONGINT_FORMAT, conflict->nresconfconss);
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, consname, conflictrow->nnz, consvars, vals,
-              lhs, SCIPsetInfinity(set), FALSE, set->conf_separesolution, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
+              lhs, SCIPsetInfinity(set), FALSE, set->conf_separate, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
               FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
 
    /* check if the constraint is valid for the debug solution */
@@ -2412,7 +2412,7 @@ SCIP_RETCODE postprocessConflictCon(
    /* create a constraint out of the conflict set */
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "confres_%" SCIP_LONGINT_FORMAT, conflict->nresconfconss);
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, consname, conflictrow->nnz, consvars, vals,
-              lhs, SCIPsetInfinity(set), FALSE, set->conf_separesolution, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
+              lhs, SCIPsetInfinity(set), FALSE, set->conf_separate, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
               FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
 
    int nchgcoefs;
