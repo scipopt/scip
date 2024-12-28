@@ -178,11 +178,11 @@ void Rational::fromString(const char* num)
    assert(num != NULL);
    assert(strlen(num) <  32);
 
-   // Skip initial whitespace
+   // skip initial whitespaces
    while(isspace(*num))
       num++;
 
-   // Skip initial +/-
+   // skip initial sign
    if (*num == '+')
       num++;
    else if (*num == '-')
