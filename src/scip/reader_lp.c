@@ -3888,24 +3888,48 @@ SCIP_RETCODE SCIPwriteLp(
       else if( strcmp(conshdlrname, "nonlinear") == 0 )
       {
          SCIP_Bool isquadratic;
+         SCIP_EXPR* expr;
 
          /* check whether there is a quadratic representation of the nonlinear constraint */
          SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
+         if( !isquadratic )
+         {
+            /* simplify expr and check again whether there is a quadratic representation */
+            SCIP_Bool changed;
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPsimplifyExpr(scip, SCIPgetExprNonlinear(cons), &expr, &changed, &infeasible, NULL, NULL) );
+            if( changed )
+            {
+               SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
+               isquadratic &= SCIPexprAreQuadraticExprsVariables(expr);
+               assert(!infeasible || !isquadratic);
+            }
+         }
+         else
+         {
+            expr = SCIPgetExprNonlinear(cons);
+         }
 
          /* we cannot handle nonlinear constraint that are not quadratically representable */
          if( !isquadratic )
          {
-            SCIPwarningMessage(scip, "constraint handler <%s> cannot print constraint\n", SCIPconshdlrGetName(SCIPconsGetHdlr(cons)));
+            SCIPwarningMessage(scip, "nonlinear constraint <%s> not recognized as quadratic: cannot print as LP\n", SCIPconsGetName(cons));
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
             SCIPinfoMessage(scip, file, ";\n");
          }
          else
          {
-            SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprNonlinear(cons),
+            SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, expr,
                SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed) );
 
             consExpr[nConsExpr++] = cons;
+         }
+
+         if( expr != SCIPgetExprNonlinear(cons) )
+         {
+            SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
          }
       }
       else if( strcmp(conshdlrname, "and") == 0 )
