@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
+
 char Rational::buffer[] = {'\0'};
 
 Rational::Rational(int num, int den)
