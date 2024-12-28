@@ -3895,10 +3895,13 @@ SCIP_RETCODE SCIPwriteLp(
          if( !isquadratic )
          {
             /* simplify expr and check again whether there is a quadratic representation */
+            SCIP_EXPR* exprcopy;
             SCIP_Bool changed;
             SCIP_Bool infeasible;
 
-            SCIP_CALL( SCIPsimplifyExpr(scip, SCIPgetExprNonlinear(cons), &expr, &changed, &infeasible, NULL, NULL) );
+            SCIP_CALL( SCIPduplicateExpr(scip, SCIPgetExprNonlinear(cons), &exprcopy, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPsimplifyExpr(scip, exprcopy, &expr, &changed, &infeasible, NULL, NULL) );
+            SCIP_CALL( SCIPreleaseExpr(scip, &exprcopy) );
             if( changed )
             {
                SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );

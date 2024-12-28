@@ -4299,9 +4299,13 @@ SCIP_RETCODE SCIPwriteMps(
          SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
          if( !isquadratic || !SCIPexprAreQuadraticExprsVariables(expr) )
          {
+            SCIP_EXPR* exprcopy;
             SCIP_Bool changed;
             SCIP_Bool infeasible;
-            SCIP_CALL( SCIPsimplifyExpr(scip, expr, &expr, &changed, &infeasible, NULL, NULL) );
+
+            SCIP_CALL( SCIPduplicateExpr(scip, expr, &exprcopy, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPsimplifyExpr(scip, exprcopy, &expr, &changed, &infeasible, NULL, NULL) );
+            SCIP_CALL( SCIPreleaseExpr(scip, &exprcopy) );
             /* the corresponding releaseExpr is in the writing of the QCMATRIX sections at the end */
             if( changed )
             {
