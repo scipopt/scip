@@ -415,6 +415,7 @@ bool Model::readSol(const char* filename)
       if( varname == NULL )
          continue;
 
+      // detect infeasible declaration
       if( strcmp(varname, "=infeas=") == 0 )
       {
          isSolFeas = false;
@@ -424,7 +425,28 @@ bool Model::readSol(const char* filename)
       const char* valuep = strtok_r(NULL, " ", &nexttok);
       assert( valuep != NULL );
 
+      if( strcmp(varname, "no") == 0 && strcmp(valuep, "solution") == 0 )
+      {
+         isSolFeas = false;
+         break;
+      }
+
+      // skip solution status
+      if( strcmp(varname, "solution") == 0 && strcmp(valuep, "status:") == 0 )
+         continue;
+
+      // recognize objective value
+      bool isObjVal = false;
+
       if( strcmp(varname, "=obj=") == 0 )
+         isObjVal = true;
+      else if( strcmp(varname, "objective") == 0 && strcmp(valuep, "value:") == 0 )
+      {
+         isObjVal = true;
+         valuep = strtok_r(NULL, " ", &nexttok);
+      }
+
+      if( isObjVal )
       {
          // read objective value
          hasObjectiveValue = true;
