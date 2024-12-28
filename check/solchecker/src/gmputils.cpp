@@ -171,39 +171,39 @@ bool Rational::isZero() const
 void Rational::fromString(const char* num)
 {
    char* tmp = &buffer[0];
-   int   k = 0;
-   int   exponent = 0;
-   int   fraction = 0;
+   int exponent = 0;
+   int fraction = 0;
+   int k = 0;
 
    assert(num != NULL);
    assert(strlen(num) <  32);
 
    // skip initial whitespaces
-   while(isspace(*num))
+   while( isspace(*num) )
       num++;
 
    // skip initial sign
-   if (*num == '+')
+   if( *num == '+' )
       num++;
-   else if (*num == '-')
+   else if( *num == '-' )
       tmp[k++] = *num++;
 
-   for(int i = 0; num[i] != '\0'; i++)
+   for( int i = 0; num[i] != '\0'; ++i )
    {
-      if (isdigit(num[i]))
+      if( isdigit(num[i]) )
       {
          tmp[k++]  = num[i];
          exponent -= fraction;
       }
-      else if (num[i] == '.')
+      else if( num[i] == '.' )
          fraction = 1;
-      else if (tolower(num[i]) == 'e')
+      else if( tolower(num[i]) == 'e' )
       {
          exponent += atoi(&num[i + 1]);
          break;
       }
    }
-   while(exponent > 0)
+   while( exponent > 0 )
    {
       tmp[k++] = '0';
       exponent--;
@@ -211,7 +211,7 @@ void Rational::fromString(const char* num)
    tmp[k++] = '/';
    tmp[k++] = '1';
 
-   while(exponent < 0)
+   while( exponent < 0 )
    {
       tmp[k++] = '0';
       exponent++;
