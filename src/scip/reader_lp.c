@@ -3902,11 +3902,10 @@ SCIP_RETCODE SCIPwriteLp(
             SCIP_CALL( SCIPduplicateExpr(scip, SCIPgetExprNonlinear(cons), &exprcopy, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPsimplifyExpr(scip, exprcopy, &expr, &changed, &infeasible, NULL, NULL) );
             SCIP_CALL( SCIPreleaseExpr(scip, &exprcopy) );
-            if( changed )
+            if( changed && !infeasible )
             {
                SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
                isquadratic &= SCIPexprAreQuadraticExprsVariables(expr);
-               assert(!infeasible || !isquadratic);
             }
          }
          else

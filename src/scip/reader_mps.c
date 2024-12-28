@@ -4307,11 +4307,10 @@ SCIP_RETCODE SCIPwriteMps(
             SCIP_CALL( SCIPsimplifyExpr(scip, exprcopy, &expr, &changed, &infeasible, NULL, NULL) );
             SCIP_CALL( SCIPreleaseExpr(scip, &exprcopy) );
             /* the corresponding releaseExpr is in the writing of the QCMATRIX sections at the end */
-            if( changed )
+            if( changed && !infeasible )
             {
                SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
                isquadratic &= SCIPexprAreQuadraticExprsVariables(expr);
-               assert(!infeasible || !isquadratic);
             }
          }
 
