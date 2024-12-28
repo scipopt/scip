@@ -124,6 +124,8 @@ Known bugs
 Features
 --------
 
+- simplify expressions of nonlinear constraints in MPS and LP writing to increase chance that they are recognized as quadratic
+
 Performance improvements
 ------------------------
 
