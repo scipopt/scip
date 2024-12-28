@@ -393,7 +393,6 @@ bool Model::readSol(const char* filename)
    }
 
    hasObjectiveValue = false;
-   bool hasVarValue = false;
    bool isSolFeas = true;
 
    while(true)
@@ -461,10 +460,8 @@ bool Model::readSol(const char* filename)
          Rational value;
          value.fromString(valuep);
          var->value = value;
-         hasVarValue = true;
       }
    }
-   isSolFeas = isSolFeas && hasVarValue;
 
    fclose(fp);
    fp = NULL;
