@@ -115,15 +115,10 @@ SCIP_RETCODE printSolution(
    char* solutiontext;
    SCIP_Bool quiet;
    SCIP_Bool comment;
+   int printlength = SCIP_MAXSTRLEN / 8;
    int strlength;
-   int charperline;
-   int k;
-   int v;
-   int printlength;
    int n;
-
-   n = 0;
-   printlength = SCIP_MAXSTRLEN/8;
+   int v;
 
    messagehdlr = SCIPgetMessagehdlr(scip);
    assert(messagehdlr != NULL);
@@ -173,50 +168,48 @@ SCIP_RETCODE printSolution(
                SCIPinfoMessage(scip, NULL, "s OPTIMUM FOUND\n");
 	    }
 
-            charperline = printlength;
-            k = 1;
-
-            strlength = SCIP_MAXSTRLEN;
+            v = 0;
+            n = 0;
+            strlength = 2 * SCIP_MAXSTRLEN;
             SCIP_CALL( SCIPallocBufferArray(scip, &solutiontext, strlength) );
-            n = sprintf(solutiontext, "v ");
 
-            for( v = nvars - 1; v >= 0; --v )
+            while( v < nvars )
             {
+               int printed = 0;
 
                assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_ORIGINAL);
 
                if( strstr(SCIPvarGetName(vars[v]), "andresultant") == NULL && strstr(SCIPvarGetName(vars[v]),
                      "indslack_") == NULL && strstr(SCIPvarGetName(vars[v]), "indicatorvar") == NULL )
                {
-                  /* check if enough memory is left */
-                  if( n * 1.2 > strlength )
-                  {
-                     strlength *= 2;
-                     SCIP_CALL( SCIPreallocBufferArray(scip, &solutiontext, strlength) );
-                  }
-
-                  if( n > charperline )
-                  {
-                     n += sprintf(&solutiontext[n], "\nv ");
-                     ++k;
-                     charperline = k * printlength;
-                  }
-
-                  if( SCIPgetSolVal(scip, bestsol , vars[v]) > 0.5 )
-                     n += sprintf(&solutiontext[n], "%s ", SCIPvarGetName(vars[v]));
-                  else
-                     n += sprintf(&solutiontext[n], "-%s ", SCIPvarGetName(vars[v]));
+                  printed = SCIPsnprintf(solutiontext + n, strlength,
+                        SCIPgetSolVal(scip, bestsol, vars[v]) > 0.5 ? " %s" : " -%s", SCIPvarGetName(vars[v]));
+                  n += printed;
+                  strlength -= printed;
                }
+
+               if( n >= printlength || ( n >= 1 && v + 1 >= nvars ) )
+               {
+                  if( strlength >= 1 )
+                  {
+                     strlength += n;
+                     n = 0;
+                     SCIPinfoMessage(scip, NULL, "v%s\n", solutiontext);
+                  }
+                  else
+                  {
+                     strlength += printed + SCIP_MAXSTRLEN;
+                     n -= printed;
+                     SCIP_CALL( SCIPreallocBufferArray(scip, &solutiontext, n + strlength) );
+
+                     continue;
+                  }
+               }
+               assert(strlength >= 1);
+
+               ++v;
             }
 
-            /* if more than only "v " is in the output string, print it */
-            if( n > 2 )
-            {
-               SCIPinfoMessage(scip, NULL, "%s", solutiontext);
-
-               /* flush message buffer */
-               SCIPinfoMessage(scip, NULL, "\n");
-            }
             SCIPfreeBufferArray(scip, &solutiontext);
          }
       }
