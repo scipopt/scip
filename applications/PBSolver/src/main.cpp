@@ -419,9 +419,9 @@ SCIP_RETCODE fromCommandLine(
             nheuristics = SCIPgetNHeurs(scip);
             heuristics = SCIPgetHeurs(scip);
 
-            for( h = nheuristics - 1; h >= 0; --h )
+            for( h = 0; h < nheuristics; ++h )
             {
-               sprintf(parametername, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
+               (void)SCIPsnprintf(parametername, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
 
                if( SCIPheurGetFreq(heuristics[h]) != -1 )
                {
