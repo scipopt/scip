@@ -1672,7 +1672,7 @@ SCIP_RETCODE readOPBFile(
     * pseudo-constraint. */
    SCIP_CALL( getCommentLineData(scip, opbinput, &objscale, &objoffset, &intsize) );
 
-   if( intsize > OPB_MAX_INTSIZE)
+   if( intsize > OPB_MAX_INTSIZE )
    {
       return SCIP_BIGINT;
    }
@@ -4002,12 +4002,13 @@ SCIP_RETCODE SCIPreadOpb(
    SCIPfreeBlockMemoryArray(scip, &opbinput.token, OPB_MAX_LINELEN);
    SCIPfreeBlockMemoryArray(scip, &opbinput.linebuf, opbinput.linebufsize);
 
-   if(retcode == SCIP_BIGINT)
+   if( retcode == SCIP_BIGINT )
    {
       *result = SCIP_SUSPENDED;
       return SCIP_OKAY;
    }
-   else if( retcode == SCIP_PLUGINNOTFOUND )
+
+   if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;
 
    SCIP_CALL( retcode );
