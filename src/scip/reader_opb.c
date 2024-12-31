@@ -4234,7 +4234,6 @@ SCIP_DECL_READERFREE(readerFreeOpb)
 
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    readerdata = SCIPreaderGetData(reader);
-   assert(readerdata != NULL);
    SCIPfreeBlockMemory(scip, &readerdata);
 
    return SCIP_OKAY;
