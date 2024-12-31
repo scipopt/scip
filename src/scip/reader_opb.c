@@ -1541,6 +1541,7 @@ SCIP_RETCODE getCommentLineData(
       if( commentstart == NULL )
          break;
 
+#ifdef SCIP_DISABLED_CODE
       /* search for "#product= xyz" in comment line, where xyz represents the number of and constraints */
       str = strstr(opbinput->linebuf, "#product= ");
       if( str != NULL )
@@ -1568,6 +1569,7 @@ SCIP_RETCODE getCommentLineData(
             }
          }
       }
+#endif
 
       /* search for "intsize= xyz" in comment line, where xyz represents the number of bits required to represent
        * the largest coefficient in the given instance */
