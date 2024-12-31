@@ -1571,8 +1571,7 @@ SCIP_RETCODE getCommentLineData(
       }
 #endif
 
-      /* search for "intsize= xyz" in comment line, where xyz represents the number of bits required to represent
-       * the largest coefficient in the given instance */
+      /* search for "intsize= xyz" in comment line */
       str = strstr(opbinput->linebuf, "intsize= ");
       if( str != NULL )
       {
