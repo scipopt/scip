@@ -1676,7 +1676,10 @@ SCIP_RETCODE readOPBFile(
    SCIP_CALL( getCommentLineData(scip, opbinput, &objscale, &objoffset, &intsize) );
 
    if( readerdata->maxintsize >= 0 && intsize > readerdata->maxintsize )
+   {
+      SCIPinfoMessage(scip, NULL, "Intsize %d exceeds %d maximum.\n", intsize, readerdata->maxintsize);
       return SCIP_BIGINT;
+   }
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
