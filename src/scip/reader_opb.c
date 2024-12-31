@@ -134,17 +134,17 @@
 #define OPB_MAX_LINELEN        65536  /**< size of the line buffer for reading or writing */
 #define OPB_MAX_PUSHEDTOKENS   2
 #define OPB_INIT_COEFSSIZE     8192
-#define OPB_MAX_INTSIZE        47     /**< maximum allowed "intsize" (i.e. the number of bits required to represent the
+#define OPB_MAX_INTSIZE        -1     /**< maximum allowed "intsize" (i.e. the number of bits required to represent the
                                        *   sum of absolute values of all integers that appear in a constraint or objective
-                                       *   function) */
-#define MAX_BITSIZE            53     /**< maximum bit size of an integer that is safely allowed in SCIP */
+                                       *   function) or -1 for unlimited */
 
 /** OPB reader data */
 struct SCIP_ReaderData
 {
    int                   maxintsize;                  /**< maximum allowed "intsize" (i.e., the number of bits required
                                                        *   to represent the sum of absolute values of all integers that
-                                                       *   appear in a constraint or objective function) */
+                                                       *   appear in a constraint or objective function) or -1 for
+                                                       *   unlimited */
 };
 
 /** Section in OPB File */
@@ -1640,10 +1640,12 @@ SCIP_RETCODE getCommentLineData(
 static
 SCIP_RETCODE readOPBFile(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READER*          reader,             /**< the file reader itself */
    OPBINPUT*             opbinput,           /**< OPB reading data */
    const char*           filename            /**< name of the input file */
    )
 {
+   SCIP_READERDATA* readerdata = SCIPreaderGetData(reader);
    SCIP_Real objscale;
    SCIP_Real objoffset;
    int intsize = -1;
@@ -1651,6 +1653,7 @@ SCIP_RETCODE readOPBFile(
    int i;
 
    assert(scip != NULL);
+   assert(readerdata != NULL);
    assert(opbinput != NULL);
 
    /* open file */
@@ -1672,10 +1675,8 @@ SCIP_RETCODE readOPBFile(
     * pseudo-constraint. */
    SCIP_CALL( getCommentLineData(scip, opbinput, &objscale, &objoffset, &intsize) );
 
-   if( intsize > OPB_MAX_INTSIZE )
-   {
+   if( readerdata->maxintsize >= 0 && intsize > readerdata->maxintsize )
       return SCIP_BIGINT;
-   }
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -3991,7 +3992,7 @@ SCIP_RETCODE SCIPreadOpb(
 #endif
 
    /* read the file */
-   retcode = readOPBFile(scip, &opbinput, filename);
+   retcode = readOPBFile(scip, reader, &opbinput, filename);
 
    /* free dynamically allocated memory */
    for( i = OPB_MAX_PUSHEDTOKENS - 1; i >= 0; --i )
@@ -4295,7 +4296,8 @@ SCIP_RETCODE SCIPincludeReaderOpb(
          NULL, TRUE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "reading/" READER_NAME "/maxintsize", "maximum allowed 'intsize' (i.e. the number of "
          "bits required to represent the sum of absolute values of all integers that appear in a constraint or "
-         "objective function)", &readerdata->maxintsize, TRUE, OPB_MAX_INTSIZE, 0, MAX_BITSIZE, NULL, NULL) );
+         "objective function) or -1 for unlimited",
+         &readerdata->maxintsize, TRUE, OPB_MAX_INTSIZE, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
