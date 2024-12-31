@@ -134,7 +134,7 @@
 #define OPB_MAX_LINELEN        65536  /**< size of the line buffer for reading or writing */
 #define OPB_MAX_PUSHEDTOKENS   2
 #define OPB_INIT_COEFSSIZE     8192
-#define OPB_MAX_INTSIZE        47     /**< maximum allowed "intsize" (i.e., the number of bits required to represent the
+#define OPB_MAX_INTSIZE        47     /**< maximum allowed "intsize" (i.e. the number of bits required to represent the
                                        *   sum of absolute values of all integers that appear in a constraint or objective
                                        *   function) */
 #define MAX_BITSIZE            53     /**< maximum bit size of an integer that is safely allowed in SCIP */
@@ -4293,7 +4293,7 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/" READER_NAME "/multisymbol", "use '*' between coefficients and variables by writing to problem?",
          NULL, TRUE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "reading/" READER_NAME "/maxintsize", "maximum allowed 'intsize' (i.e., the number of "
+   SCIP_CALL( SCIPaddIntParam(scip, "reading/" READER_NAME "/maxintsize", "maximum allowed 'intsize' (i.e. the number of "
          "bits required to represent the sum of absolute values of all integers that appear in a constraint or "
          "objective function)", &readerdata->maxintsize, TRUE, OPB_MAX_INTSIZE, 0, MAX_BITSIZE, NULL, NULL) );
 
