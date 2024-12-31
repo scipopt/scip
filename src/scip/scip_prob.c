@@ -384,7 +384,7 @@ SCIP_RETCODE SCIPreadProb(
             extension != NULL ? extension : fileextension, &result);
 
       /* check for reader errors */
-      if( retcode == SCIP_NOFILE || retcode == SCIP_READERROR || result == SCIP_SUSPENDED )
+      if( retcode == SCIP_NOFILE || retcode == SCIP_READERROR )
          goto TERMINATE;
       SCIP_CALL( retcode );
    }
@@ -478,6 +478,9 @@ SCIP_RETCODE SCIPreadProb(
       }
       retcode = SCIP_OKAY;
       break;
+   case SCIP_SUSPENDED:
+      retcode = SCIP_BIGINT;
+      break;
    default:
       assert(i < scip->set->nreaders);
       SCIPerrorMessage("invalid result code <%d> from reader <%s> reading file <%s>\n",
@@ -488,9 +491,6 @@ SCIP_RETCODE SCIPreadProb(
  TERMINATE:
    /* free buffer array */
    SCIPfreeBufferArray(scip, &tmpfilename);
-
-   if (result == SCIP_SUSPENDED)
-      return SCIP_BIGINT;
 
    return retcode;
 }
