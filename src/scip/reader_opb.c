@@ -1504,17 +1504,11 @@ SCIP_RETCODE getCommentLineData(
    int*                  intsize             /**< pointer to store intsize value */
    )
 {
-   char* commentstart;
-   char* nproducts;
-   char* str;
-
    assert(scip != NULL);
    assert(opbinput != NULL);
    assert(objoffset != NULL);
    assert(intsize != NULL);
 
-   commentstart = NULL;
-   nproducts = NULL;
    *objscale = 1.0;
    *objoffset = 0.0;
    *intsize = -1;
@@ -1522,6 +1516,9 @@ SCIP_RETCODE getCommentLineData(
 
    while( SCIPfgets(opbinput->linebuf, opbinput->linebufsize, opbinput->file) != NULL )
    {
+      char* commentstart;
+      char* str;
+
       /* if line is too long for our buffer reallocate buffer */
       while( opbinput->linebuf[opbinput->linebufsize - 2] != '\0' )
       {
@@ -1545,15 +1542,15 @@ SCIP_RETCODE getCommentLineData(
          break;
 
       /* search for "#product= xyz" in comment line, where xyz represents the number of and constraints */
-      nproducts = strstr(opbinput->linebuf, "#product= ");
-      if( nproducts != NULL )
+      str = strstr(opbinput->linebuf, "#product= ");
+      if( str != NULL )
       {
          const char delimchars[] = " \t";
          char* pos;
 
-         nproducts += strlen("#product= ");
+         str += strlen("#product= ");
 
-         pos = strtok(nproducts, delimchars);
+         pos = strtok(str, delimchars);
 
          if( pos != NULL )
          {
