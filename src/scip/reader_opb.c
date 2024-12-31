@@ -1504,7 +1504,6 @@ SCIP_RETCODE getCommentLineData(
    int*                  intsize             /**< pointer to store intsize value */
    )
 {
-   SCIP_Bool stop;
    char* commentstart;
    char* nproducts;
    char* str;
@@ -1514,7 +1513,6 @@ SCIP_RETCODE getCommentLineData(
    assert(objoffset != NULL);
    assert(intsize != NULL);
 
-   stop = FALSE;
    commentstart = NULL;
    nproducts = NULL;
    *objscale = 1.0;
@@ -1522,14 +1520,8 @@ SCIP_RETCODE getCommentLineData(
    *intsize = -1;
    opbinput->linebuf[opbinput->linebufsize - 2] = '\0';
 
-   do
+   while( SCIPfgets(opbinput->linebuf, opbinput->linebufsize, opbinput->file) != NULL )
    {
-      if( SCIPfgets(opbinput->linebuf, opbinput->linebufsize, opbinput->file) == NULL )
-      {
-         assert( SCIPfeof(opbinput->file) );
-         break;
-      }
-
       /* if line is too long for our buffer reallocate buffer */
       while( opbinput->linebuf[opbinput->linebufsize - 2] != '\0' )
       {
@@ -1578,8 +1570,6 @@ SCIP_RETCODE getCommentLineData(
                SCIPdebugMsg(scip, "sizeproducts = %d\n", atoi(pos));
             }
          }
-
-         stop = TRUE;
       }
 
       /* search for "intsize= xyz" in comment line, where xyz represents the number of bits required to represent
@@ -1599,8 +1589,6 @@ SCIP_RETCODE getCommentLineData(
             *intsize = atoi(pos);
             SCIPdebugMsg(scip, "number of bits required to represent sum of the absolute values of all integers appearing in a constraint or objective function = %d.\n", *intsize);
          }
-
-         stop = TRUE;
       }
 
       /* search for "Obj. scale       : <number>" in comment line */
@@ -1622,7 +1610,6 @@ SCIP_RETCODE getCommentLineData(
       /* make sure that comment vanishes */
       *commentstart = '\0';
    }
-   while( !stop );
 
    return SCIP_OKAY;
 }
