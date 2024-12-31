@@ -1492,10 +1492,9 @@ SCIP_RETCODE readConstraints(
    return SCIP_OKAY;
 }
 
-/** read the first comment line which usually contains information about (1) the max size of "and" products and (2)
- *  "intsize" which represents the number of bits required to represent, for any constraint, the sum of the absolute
- *  value of all integers that appear in the constraint. This also considers the objective function by re-writing it as a
- *  pseudo-constraint. */
+/** read the first comment line which usually contains information about (1) the max size of "and" products and (2) the
+ *  "intsize" which represents the number of bits required to represent the sum of the absolute values of all integers
+ *  that appear in any constraint or the objective. */
 static
 SCIP_RETCODE getCommentLineData(
    SCIP*                 scip,               /**< SCIP data structure */
