@@ -32,11 +32,6 @@
 #include "scip/scipshell.h"
 #include "message_pbscip.h"
 #include "event_bestsol.h"
-#include "heur_indcoefdiving.h"
-#include "heur_indrounding.h"
-#include "heur_indoneopt.h"
-#include "heur_indtwoopt.h"
-#include "heur_smallcard.h"
 
 #define SETOBJ FALSE
 #define HEURISTICS_OFF FALSE
@@ -714,13 +709,6 @@ SCIP_RETCODE runShell(
 
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-
-   /* add heuristics for indicators */
-   SCIP_CALL( SCIPincludeHeurIndcoefdiving(scip) );
-   SCIP_CALL( SCIPincludeHeurIndrounding(scip) );
-   SCIP_CALL( SCIPincludeHeurIndoneopt(scip) );
-   SCIP_CALL( SCIPincludeHeurIndtwoopt(scip) );
-   SCIP_CALL( SCIPincludeHeurSmallcard(scip) );
 
    defaultmessagehdlr = SCIPgetMessagehdlr(scip);
    /* capture default message handler */

@@ -12,11 +12,6 @@ endif()
 include_directories(${SCIP_INCLUDE_DIRS})
 
 add_executable(pbscip
-    src/heur_smallcard.c
-    src/heur_indtwoopt.c
-    src/heur_indrounding.c
-    src/heur_indcoefdiving.c
-    src/heur_indoneopt.c
     src/main.cpp
     src/message_pbscip.c
     src/event_bestsol.c
