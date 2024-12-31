@@ -59,7 +59,7 @@ enum SCIP_Retcode
    SCIP_MAXDEPTHLEVEL      = -16,       /**< maximal branching depth level exceeded */
    SCIP_BRANCHERROR        = -17,       /**< no branching could be created */
    SCIP_NOTIMPLEMENTED     = -18,       /**< function not implemented */
-   SCIP_BIGINT             = -19        /**< too large integer size */
+   SCIP_BIGINT             = -19        /**< big integers rejected */
 };
 typedef enum SCIP_Retcode SCIP_RETCODE;           /**< return code for SCIP method */
 
