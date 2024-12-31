@@ -1508,7 +1508,6 @@ SCIP_RETCODE getCommentLineData(
    char* commentstart;
    char* nproducts;
    char* str;
-   int i;
 
    assert(scip != NULL);
    assert(opbinput != NULL);
@@ -1546,91 +1545,84 @@ SCIP_RETCODE getCommentLineData(
       }
       opbinput->linebuf[opbinput->linebufsize - 1] = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
 
-      /* read characters after comment symbol */
-      for( i = 0; commentchars[i] != '\0'; ++i )
+      /* locate comment character */
+      commentstart = strpbrk(opbinput->linebuf, commentchars);
+
+      /* no comment line */
+      if( commentstart == NULL )
+         break;
+
+      /* search for "#product= xyz" in comment line, where xyz represents the number of and constraints */
+      nproducts = strstr(opbinput->linebuf, "#product= ");
+      if( nproducts != NULL )
       {
-         commentstart = strchr(opbinput->linebuf, commentchars[i]);
+         const char delimchars[] = " \t";
+         char* pos;
 
-         /* found a comment line */
-         if( commentstart != NULL )
+         nproducts += strlen("#product= ");
+
+         pos = strtok(nproducts, delimchars);
+
+         if( pos != NULL )
          {
-            /* search for "#product= xyz" in comment line, where xyz represents the number of and constraints */
-            nproducts = strstr(opbinput->linebuf, "#product= ");
-            if( nproducts != NULL )
-            {
-               const char delimchars[] = " \t";
-               char* pos;
-
-               nproducts += strlen("#product= ");
-
-               pos = strtok(nproducts, delimchars);
-
-               if( pos != NULL )
-               {
-                  SCIPdebugMsg(scip, "%d products supposed to be in file.\n", atoi(pos));
-               }
-
-               pos = strtok (NULL, delimchars);
-
-               if( pos != NULL && strcmp(pos, "sizeproduct=") == 0 )
-               {
-                  pos = strtok (NULL, delimchars);
-                  if( pos != NULL )
-                  {
-                     SCIPdebugMsg(scip, "sizeproducts = %d\n", atoi(pos));
-                  }
-               }
-
-               stop = TRUE;
-            }
-
-            /* search for "intsize= xyz" in comment line, where xyz represents the number of bits required to represent
-             * the largest coefficient in the given instance */
-            str = strstr(opbinput->linebuf, "intsize= ");
-            if( str != NULL )
-            {
-               const char delimchars[] = " \t";
-               char* pos;
-
-               str += strlen("intsize= ");
-
-               pos = strtok(str, delimchars);
-
-               if( pos != NULL )
-               {
-                  *intsize = atoi(pos);
-                  SCIPdebugMsg(scip, "number of bits required to represent sum of the absolute values of all integers appearing in a constraint or objective function = %d.\n", *intsize);
-               }
-
-               stop = TRUE;
-            }
-
-            /* search for "Obj. scale       : <number>" in comment line */
-            str = strstr(opbinput->linebuf, "Obj. scale       : ");
-            if( str != NULL )
-            {
-               str += strlen("Obj. scale       : ");
-               *objscale = atof(str);
-               break;
-            }
-
-            /* search for "Obj. offset      : <number>" in comment line */
-            str = strstr(opbinput->linebuf, "Obj. offset      : ");
-            if( str != NULL )
-            {
-               str += strlen("Obj. offset      : ");
-               *objoffset = atof(str);
-               break;
-            }
-
-            /* make sure that comment vanishes */
-            *commentstart = '\0';
-
-            break;
+            SCIPdebugMsg(scip, "%d products supposed to be in file.\n", atoi(pos));
          }
+
+         pos = strtok (NULL, delimchars);
+
+         if( pos != NULL && strcmp(pos, "sizeproduct=") == 0 )
+         {
+            pos = strtok (NULL, delimchars);
+            if( pos != NULL )
+            {
+               SCIPdebugMsg(scip, "sizeproducts = %d\n", atoi(pos));
+            }
+         }
+
+         stop = TRUE;
       }
+
+      /* search for "intsize= xyz" in comment line, where xyz represents the number of bits required to represent
+       * the largest coefficient in the given instance */
+      str = strstr(opbinput->linebuf, "intsize= ");
+      if( str != NULL )
+      {
+         const char delimchars[] = " \t";
+         char* pos;
+
+         str += strlen("intsize= ");
+
+         pos = strtok(str, delimchars);
+
+         if( pos != NULL )
+         {
+            *intsize = atoi(pos);
+            SCIPdebugMsg(scip, "number of bits required to represent sum of the absolute values of all integers appearing in a constraint or objective function = %d.\n", *intsize);
+         }
+
+         stop = TRUE;
+      }
+
+      /* search for "Obj. scale       : <number>" in comment line */
+      str = strstr(opbinput->linebuf, "Obj. scale       : ");
+      if( str != NULL )
+      {
+         str += strlen("Obj. scale       : ");
+         *objscale = atof(str);
+      }
+
+      /* search for "Obj. offset      : <number>" in comment line */
+      str = strstr(opbinput->linebuf, "Obj. offset      : ");
+      if( str != NULL )
+      {
+         str += strlen("Obj. offset      : ");
+         *objoffset = atof(str);
+      }
+
+      /* make sure that comment vanishes */
+      *commentstart = '\0';
    }
-   while(commentstart != NULL && !stop);
+   while( !stop );
 
    return SCIP_OKAY;
 }
