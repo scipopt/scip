@@ -139,7 +139,7 @@
                                        *   function) */
 #define MAX_BITSIZE            53     /**< maximum bit size of an integer that is safely allowed in SCIP */
 
-/** MPS reading data */
+/** OPB reader data */
 struct SCIP_ReaderData
 {
    int                   maxintsize;                  /**< maximum allowed "intsize" (i.e., the number of bits required
