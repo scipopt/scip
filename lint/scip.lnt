@@ -61,6 +61,10 @@
 // "# define UINT64_MAX (__UINT64_C(18446744073709551615))" in stdint.h
 ++dUINT64_MAX=18446744073709551615UL
 
+// tinycthread will think that _Thread_local is available, because
+// __STDC_VERSION__ >= 201102L, but it isn't
+++d_Thread_local=
+
 // ---------------------------------------------------------
 // treat particular messages:
 -emacro(506,debugMessage)         // Constant value Boolean
