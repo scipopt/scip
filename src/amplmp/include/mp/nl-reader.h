@@ -2511,8 +2511,10 @@ public:
                fmt::CStringRef gen_name,
                std::size_t num_items);
 
-  /// Construct without reading (generic names can be provided)
-  NameProvider(fmt::CStringRef gen_name);
+  /// Construct without reading (generic names can be provided).
+  /// @param n2: second generic name,
+  ///   used from the 2nd index of name().
+  NameProvider(fmt::CStringRef gen_name, fmt::CStringRef n2="");
 
   /// Read names
   void ReadNames(fmt::CStringRef filename,
@@ -2522,15 +2524,19 @@ public:
   size_t number_read() const;
 
   /// Returns the name of the item at specified index.
-  fmt::StringRef name(std::size_t index);
+  /// @param i2: if >=0,
+  ///   from this index, generic name 2 is used
+  fmt::StringRef name(std::size_t index, std::size_t i2=-1);
 
   /// Return vector of names, length n.
   /// If number_read() < n, generic names are filled.
-  std::vector<std::string> get_names(size_t n);
+  /// @param i2: if >=0,
+  ///   from this index, generic name 2 is used
+  std::vector<std::string> get_names(size_t n, size_t i2=-1);
 
 private:
   std::vector<const char *> names_;
-  std::string gen_name_;
+  std::string gen_name_, gen_name_2_;
   internal::NameReader reader_;
   fmt::MemoryWriter writer_;
 };

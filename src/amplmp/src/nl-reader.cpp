@@ -336,8 +336,9 @@ mp::NameProvider::NameProvider(
   ReadNames(filename, num_items);
 }
 
-mp::NameProvider::NameProvider(fmt::CStringRef gen_name)
-  : gen_name_(gen_name.c_str()) { }
+mp::NameProvider::NameProvider(
+    fmt::CStringRef gen_name, fmt::CStringRef n2)
+  : gen_name_(gen_name.c_str()), gen_name_2_(n2.c_str()) { }
 
 void mp::NameProvider::ReadNames(
     fmt::CStringRef filename, std::size_t num_items) {
@@ -352,7 +353,8 @@ void mp::NameProvider::ReadNames(
   names_.push_back(last_name.data() + last_name.size() + 1);
 }
 
-fmt::StringRef mp::NameProvider::name(std::size_t index) {
+fmt::StringRef mp::NameProvider::name(
+    std::size_t index, std::size_t i2) {
   if (index + 1 < names_.size()) {
     const char *name = names_[index];
     const auto* pos1past = names_[index + 1] - 1;
@@ -362,7 +364,10 @@ fmt::StringRef mp::NameProvider::name(std::size_t index) {
     return fmt::StringRef(name, pos1past - name);
   }
   writer_.clear();
-  writer_ << gen_name_ << '[' << (index + 1) << ']';
+  if (i2>=0 && index>=i2)
+    writer_ << gen_name_2_ << '[' << (index - i2 + 1) << ']';
+  else
+    writer_ << gen_name_ << '[' << (index + 1) << ']';
   return fmt::StringRef(writer_.c_str(), writer_.size());
 }
 
@@ -370,11 +375,12 @@ size_t mp::NameProvider::number_read() const {
   return (names_.size() ? names_.size()-1 : 0);
 }
 
-std::vector<std::string> mp::NameProvider::get_names(size_t n) {
+std::vector<std::string> mp::NameProvider::get_names(
+    size_t n, size_t i2) {
   std::vector<std::string> result;
   result.reserve(n);
   for (size_t i=0; i<n; ++i)
-    result.push_back(name(i));
+    result.push_back(name(i, i2));
   return result;
 }
 
