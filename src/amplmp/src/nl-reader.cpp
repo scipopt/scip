@@ -364,7 +364,7 @@ fmt::StringRef mp::NameProvider::name(
     return fmt::StringRef(name, pos1past - name);
   }
   writer_.clear();
-  if (i2>=0 && index>=i2)
+  if (/*SV always true: i2>=0 &&*/ index>=i2)
     writer_ << gen_name_2_ << '[' << (index - i2 + 1) << ']';
   else
     writer_ << gen_name_ << '[' << (index + 1) << ']';
