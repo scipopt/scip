@@ -3405,7 +3405,6 @@ SCIP_RETCODE resolvePropagation(
    PROPRULE              proprule,           /**< propagation rule that deduced the value */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
-
    )
 {
    assert(result != NULL);

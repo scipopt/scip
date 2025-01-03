@@ -1361,10 +1361,7 @@ SCIP_RETCODE doSolveSubMIP(
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/maxresstoresize") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxresstoresize", 100) );
-   }
+
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_Real upperbound;

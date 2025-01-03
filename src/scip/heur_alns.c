@@ -2244,10 +2244,7 @@ SCIP_RETCODE setupSubScip(
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/maxresstoresize") )
-   {
-      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxresstoresize", 100) );
-   }
+
    /* speed up sub-SCIP by not checking dual LP feasibility */
    SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 

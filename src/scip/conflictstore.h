@@ -137,24 +137,6 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_Real             primalbound         /**< primal bound the conflict depend on (or -SCIPinfinity) */
    );
 
-/** adds a conflict to the resolution conflict store
- *
- *  @note this method captures the constraint
- */
-SCIP_RETCODE SCIPconflictstoreAddResConflict(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   SCIP_TREE*            tree,               /**< branch and bound tree (or NULL for an original constraint) */
-   SCIP_PROB*            transprob,          /**< transformed problem (or NULL for an original constraint) */
-   SCIP_REOPT*           reopt,              /**< reoptimization data */
-   SCIP_CONS*            cons,               /**< constraint representing the conflict */
-   SCIP_CONFTYPE         conftype,           /**< type of the conflict */
-   SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound involved in this conflict */
-   SCIP_Real             primalbound         /**< primal bound the conflict depend on (or -SCIPinfinity) */
-   );
-
 /** deletes all conflicts depending on a cutoff bound larger than the given bound */
 SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
@@ -190,22 +172,6 @@ SCIP_RETCODE SCIPconflictstoreGetConflicts(
    SCIP_CONS**           conflicts,          /**< array to store conflicts */
    int                   conflictsize,       /**< size of the conflict array */
    int*                  nconflicts          /**< pointer to store the number of conflicts */
-   );
-
-/** returns the number of stored resolution conflicts on the conflict pool
- *
- *  @note the number of active conflicts can be less
- */
-int SCIPconflictstoreGetNResConflictsInStore(
-   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
-   );
-
-/** returns all active conflicts stored in the conflict store */
-SCIP_RETCODE SCIPconflictstoreGetResConflicts(
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
-   SCIP_CONS**           conflicts,          /**< array to store conflicts */
-   int                   conflictsize,       /**< size of the conflict array */
-   int*                  nresconflicts       /**< pointer to store the number of resolution conflicts */
    );
 
 /** transforms all original conflicts into transformed conflicts */
