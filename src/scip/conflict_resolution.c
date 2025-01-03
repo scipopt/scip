@@ -1716,7 +1716,6 @@ SCIP_RETCODE MirReduction(
    SCIP_VAR**            vars,               /**< array of variables */
    int                   nvars,              /**< number of variables */
    SCIP_CONFLICTROW*     reasonrow,          /**< reason row */
-   int*                  fixinds,             /**< dense array of indices of fixed variables */
    SCIP_BDCHGINFO*       currbdchginfo,      /**< current bound change to resolve */
    int                   varidx,             /**< index of the variable to resolve */
    SCIP_Real             divisor             /**< the divisor of the row */
@@ -1765,7 +1764,7 @@ SCIP_RETCODE MirReduction(
 
    /* todo change this: set all variables to some dummy value */
    for( int i = 0; i < nvars; ++i )
-      SCIPsetSolVal(set->scip, refsol, vars[i], 0.0);
+   SCIP_CALL( SCIPsetSolVal(set->scip, refsol, vars[i], 0.0) );
 
    /* create a sparse row of the form ax <= b from the reason */
    rowrhs = -reasonrow->lhs;
@@ -1784,26 +1783,29 @@ SCIP_RETCODE MirReduction(
       if( idx == varidx )
       {
          SCIP_Real fracval;
-         computeSlack(set, vars, reasonrow, currbdchginfo, NULL, NULL);
+         SCIP_Real bnd;
+         SCIP_CALL( computeSlack(set, vars, reasonrow, currbdchginfo, NULL, NULL) );
          if(coef > 0.0)
          {
             fracval = SCIPvarGetUbAtIndex(vars[idx], currbdchgidx, FALSE) - reasonrow->slack / coef;
-            fracval = MIN(fracval, SCIPvarGetUbGlobal(vars[idx]));
+            bnd = SCIPvarGetUbGlobal(vars[idx]);
+            fracval = MIN(fracval, bnd);
          }
          else
          {
             assert(coef < 0.0);
             fracval = SCIPvarGetLbAtIndex(vars[idx], currbdchgidx, FALSE) - reasonrow->slack / coef;
-            fracval = MAX(fracval, SCIPvarGetLbGlobal(vars[idx]));
+            bnd = SCIPvarGetLbGlobal(vars[idx]);
+            fracval = MAX(fracval, bnd);
          }
-            SCIPsetSolVal(set->scip, refsol, vars[idx], fracval);
+         SCIP_CALL( SCIPsetSolVal(set->scip, refsol, vars[idx], fracval) );
       }
       else
       {
          if( coef > 0.0 )
-            SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetUbAtIndex(vars[idx], currbdchgidx, FALSE));
+            SCIP_CALL( SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetUbAtIndex(vars[idx], currbdchgidx, FALSE)) );
          else
-            SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetLbAtIndex(vars[idx], currbdchgidx, FALSE));
+            SCIP_CALL( SCIPsetSolVal(set->scip, refsol, vars[idx], SCIPvarGetLbAtIndex(vars[idx], currbdchgidx, FALSE)) );
       }
    }
 
@@ -1837,7 +1839,7 @@ SCIP_RETCODE MirReduction(
    conflictRowRemoveZeroVars(reasonrow, set);
 
    SCIPaggrRowFree(set->scip, &aggrrow);
-   SCIPfreeSol(set->scip, &refsol);
+   SCIP_CALL( SCIPfreeSol(set->scip, &refsol) );
    SCIPsetFreeBufferArray(set, &cutinds);
    SCIPsetFreeBufferArray(set, &cutcoefs);
    SCIPsetFreeBufferArray(set, &rowinds);
@@ -2134,61 +2136,6 @@ SCIP_RETCODE slackReducingContinuousBdchgQueue(
    }
    return SCIP_OKAY;
 }
-
-/* check the conflict with debugging solution */
-static
-SCIP_RETCODE checkConflictDebugSol(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_VAR**            vars,               /**< array of variables */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_CONFLICTROW*     conflictrow         /**< conflict row to add to the tree */
-   )
-{
-
-   SCIP_VAR** consvars;
-   SCIP_CONS* cons;
-   char consname[SCIP_MAXSTRLEN];
-
-   SCIP_Real* vals;
-   SCIP_Real lhs;
-   int i;
-
-   assert(vars != NULL);
-
-   SCIP_CALL( SCIPallocBufferArray(set->scip, &consvars, conflictrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(set->scip, &vals, conflictrow->nnz) );
-
-   lhs = conflictrow->lhs;
-
-   for( i = 0; i < conflictrow->nnz; ++i )
-   {
-      int idx;
-      idx = conflictrow->inds[i];
-      assert(conflictrow->vals[idx]);
-      consvars[i] = vars[idx];
-      vals[i] = conflictrow->vals[idx];
-   }
-
-   /* create a constraint out of the conflict set */
-   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "confres_%" SCIP_LONGINT_FORMAT, conflict->nresconfconss);
-   SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, consname, conflictrow->nnz, consvars, vals,
-              lhs, SCIPsetInfinity(set), FALSE, set->conf_separate, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
-              FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
-
-   /* check if the constraint is valid for the debug solution before upgrade */
-   SCIP_CALL( SCIPdebugCheckAnyConss(set->scip, &cons, 1) );
-
-   SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
-
-   /* free temporary memory */
-   SCIPfreeBufferArray(set->scip, &consvars);
-   SCIPfreeBufferArray(set->scip, &vals);
-
-   return SCIP_OKAY;
-}/*lint !e715*/
 
 /** increases the conflict score of the variable in the given direction */
 static
@@ -3358,7 +3305,7 @@ SCIP_RETCODE reduceReason(
       {
          /* todo: check that if the slack is always zero if general integers and continuous variables are not at local bounds */
          /* in this case there is no guarrantee that after MIR we get a reason with zero slack */
-         SCIP_CALL( MirReduction(set, blkmem, vars, nvars, rowtoreduce, fixinds, currbdchginfo, residx, coefinrow) );
+         SCIP_CALL( MirReduction(set, blkmem, vars, nvars, rowtoreduce, currbdchginfo, residx, coefinrow) );
          SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixinds) );
       }
 
@@ -4126,8 +4073,6 @@ SCIP_RETCODE addConflictRows(
 
          SCIP_Bool success;
          SCIP_Bool mirsuccess;
-         if(SCIPdebugSolIsEnabled(set->scip))
-            checkConflictDebugSol(conflict, blkmem, set, transprob->vars, stat, tree, conflict->conflictrow);
 
          mirsuccess = FALSE;
          SCIP_CALL( SCIPconflictAddConflictCon(conflict, blkmem, set, stat, transprob, origprob, tree, reopt,
@@ -4266,7 +4211,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    bdchgdepth = SCIPbdchginfoGetDepth(bdchginfo);
 
    vartoresolve = SCIPbdchginfoGetVar(bdchginfo);
-   residx = SCIPvarGetProbindex(vartoresolve);
 
    /* check if the variable we are resolving is active */
    assert(SCIPvarIsActive(vartoresolve));
@@ -4343,8 +4287,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
          printAllBoundChanges(conflict, set, FALSE);
       }
 #endif
-      if(SCIPdebugSolIsEnabled(set->scip))
-         checkConflictDebugSol(conflict, blkmem, set, vars, stat, tree, conflictrow);
 
       if( !bdchginfoIsResolvable(bdchginfo) )
       {
