@@ -935,7 +935,7 @@ endif
 
 ifeq ($(AMPL),true)
 SCIPPLUGINLIBCPPOBJ += scip/reader_nl.o
-SCIPPLUGINLIBCPPOBJ += amplmp/src/format.o amplmp/src/expr-info.o amplmp/src/nl-reader.o amplmp/src/os.o amplmp/src/posix.o
+SCIPPLUGINLIBCPPOBJ += amplmp/src/dtoa.o amplmp/src/format.o amplmp/src/expr-info.o amplmp/src/nl-reader.o amplmp/src/nl-utils.o amplmp/src/nl-writer2.o amplmp/src/os.o amplmp/src/posix.o
 endif
 
 SCIPLIBOBJ	=	scip/boundstore.o \
