@@ -39,6 +39,10 @@
 
 #include "scip/reader_nl.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_varbound.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
@@ -65,6 +69,7 @@
 #endif
 
 #include "mp/nl-reader.h"
+#include "mp/nl-writer2.hpp"
 
 #define READER_NAME             "nlreader"
 #define READER_DESC             "AMPL .nl file reader"
@@ -1702,6 +1707,648 @@ public:
    }
 };
 
+class SCIPNLFeeder : public mp::NLFeeder<SCIPNLFeeder, SCIP_EXPR*>
+{
+private:
+   SCIP*                 scip;               ///< SCIP data structure (problem to write)
+   bool                  nlcomments;         ///< whether to write nl files with comments
+   const char*           probname;           ///< problem name
+   SCIP_Bool             transformed;        ///< is transformed problem written
+   SCIP_OBJSENSE         objsense;           ///< objective sense
+   SCIP_Real             objscale;           ///< objective scale
+   SCIP_Real             objoffset;          ///< objective offset
+   SCIP_VAR**            activevars;         ///< active variables
+   int                   nactivevars;        ///< number of active variables
+   SCIP_VAR**            fixedvars;          ///< fixed variables
+   int                   nfixedvars;         ///< number of fixed variables
+   SCIP_CONS**           allconss;           ///< all constraints given to writer
+   int                   nallconss;          ///< number of all constraints
+   SCIP_Bool             genericnames;       ///< are generic names used
+
+   SCIP_CONSHDLR*        conshdlr_nonlinear; ///< nonlinear constraints handler
+   SCIP_CONSHDLR*        conshdlr_linear;    ///< linear constraints handler
+   SCIP_CONSHDLR*        conshdlr_setppc;    ///< setppc constraints handler
+   SCIP_CONSHDLR*        conshdlr_logicor;   ///< logicor constraints handler
+   SCIP_CONSHDLR*        conshdlr_knapsack;  ///< knapsack constraints handler
+   SCIP_CONSHDLR*        conshdlr_varbound;  ///< varbound constraints handlers
+
+   mp::NLHeader          nlheader;           ///< NL header with various counts
+   SCIP_VAR**            vars;               ///< variables in AMPL order
+   int                   nvars;              ///< number of variables (= nactivevars)
+   SCIP_HASHMAP*         var2idx;            ///< map variable to AMPL index
+   SCIP_CONS**           algconss;           ///< algebraic constraints that will be written, permuted in AMPL order
+   SCIP_Real*            algconsslhs;        ///< left hand side of algebraic constraints
+   SCIP_Real*            algconssrhs;        ///< right hand side of algebraic constraints
+   int                   nalgconss;          ///< number of algebraic constraint we will actually write
+
+   /** variable types by which variables need to be ordered for .nl
+    * (names are taken from pyomo nl writer, with those for nonlinear objective removed)
+    */
+   typedef enum
+   {
+      ConNonlinearVars = 0,     /* only in cons */
+      ConNonlinearVarsInt = 1,  /* only in cons */
+      LinearVars = 2,
+      LinearVarsBool = 3,
+      LinearVarsInt = 4
+   } NlVarType;
+
+   /** checks variable types and other properties for nlheader;
+    * sets up variables permutation
+    */
+   void analyseVariables()
+   {
+      NlVarType* vartype = NULL;
+      SCIP_HASHMAP* var2expr = NULL;
+
+      int nlvars_cons = 0;
+      int binvars_lin = 0;
+      int intvars_lin = 0;
+      int discrvars_nlcons = 0;
+
+      nlheader.max_var_name_len = 0;
+
+      /* number of nonzeros in objective gradient */
+      nlheader.num_obj_nonzeros = 0;
+
+      if( conshdlr_nonlinear != NULL )
+         var2expr = SCIPgetVarExprHashmapNonlinear(conshdlr_nonlinear);
+
+      SCIP_CALL_THROW( SCIPallocBufferArray(scip, &vartype, nactivevars) );
+
+      /* collect statistics on variables; determine variable types */
+      for( int i = 0; i < nactivevars; ++i )
+      {
+         SCIP_VAR* var = activevars[i];
+         SCIP_Bool isdiscrete;
+         SCIP_Bool isnonlinear;
+
+         if( SCIPvarGetObj(var) != 0.0 )
+            ++nlheader.num_obj_nonzeros;
+
+         isdiscrete = SCIPvarGetType(var) <= SCIP_VARTYPE_INTEGER;
+
+         /* we think of a variable as nonlinear if cons_nonlinear has a SCIP_EXPR* for this variable
+          * this is usually an overestimation, since also variables that appear only linearly in nonlinear constraints
+          * are regarded as nonlinear this way
+          */
+         isnonlinear = var2expr != NULL && SCIPhashmapExists(var2expr, (void*)var);
+
+         /* this is how Pyomo counts vars (nlvars_* = nlvb,c,o) when writing NL
+          * https://github.com/Pyomo/pyomo/blob/main/pyomo/repn/plugins/ampl/ampl_.py#L1202
+          * this, together with the ominous line below, seems to correspond to what AMPL writes
+          */
+         if( isnonlinear )
+         {
+            /* nonlinear (in constraints only, as this is SCIP) */
+            ++nlvars_cons;
+            if( isdiscrete )
+            {
+               ++discrvars_nlcons;
+               vartype[i] = ConNonlinearVarsInt;
+            }
+            else
+               vartype[i] = ConNonlinearVars;
+         }
+         else
+         {
+            /* linear */
+            if( isdiscrete )
+            {
+               /* for compatibility with AMPL generated nl files, count integer with 0/1 bounds as binary, too */
+               if( !SCIPisNegative(scip, SCIPvarGetLbGlobal(var)) && SCIPisLE(scip, SCIPvarGetUbGlobal(var), 1.0) )
+               {
+                  ++binvars_lin;
+                  vartype[i] = LinearVarsBool;
+               }
+               else
+               {
+                  ++intvars_lin;
+                  vartype[i] = LinearVarsInt;
+               }
+            }
+            else
+               vartype[i] = LinearVars;
+         }
+
+         if( !genericnames )
+         {
+            int namelen = (int)strlen(SCIPvarGetName(var));
+            if( namelen > nlheader.max_var_name_len )
+               nlheader.max_var_name_len = namelen;
+         }
+      }
+
+      /* setup var permutation */
+      assert(vars == NULL);
+      SCIP_CALL_THROW( SCIPallocBlockMemoryArray(scip, &vars, nactivevars) );
+      SCIP_CALL_THROW( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), nactivevars) );
+      nvars = 0;
+      for( int vtype = ConNonlinearVars; vtype <= LinearVarsInt; ++vtype )
+         for( int i = 0; i < nactivevars; ++i )
+            if( vartype[i] == (NlVarType)vtype )
+            {
+               vars[nvars] = activevars[i];
+               SCIP_CALL_THROW( SCIPhashmapInsertInt(var2idx, (void*)activevars[i], nvars) );
+               ++nvars;
+            }
+      assert(nvars == nactivevars);
+
+      SCIPfreeBufferArray(scip, &vartype);
+
+      nlheader.num_vars = nvars;
+
+      /* number of nonlinear variables
+       * setting num_nl_vars_in_objs = nlvars_cons looks odd, but makes the generated nl files
+       * consistent with what AMPL or Pyomo writes
+       */
+      nlheader.num_nl_vars_in_cons = nlvars_cons;
+      nlheader.num_nl_vars_in_objs = nlvars_cons;
+      nlheader.num_nl_vars_in_both = 0;
+
+      /* number of linear network variables */
+      nlheader.num_linear_net_vars = 0;
+
+      /* number of linear binary and integer variables */
+      nlheader.num_linear_binary_vars = binvars_lin;
+      nlheader.num_linear_integer_vars = intvars_lin;
+
+      /* number of integer nonlinear variables */
+      nlheader.num_nl_integer_vars_in_both = 0;
+      nlheader.num_nl_integer_vars_in_cons = discrvars_nlcons;
+      nlheader.num_nl_integer_vars_in_objs = 0;
+   }
+
+   /** checks constraint types and other properties for nlheader;
+    * sets up constraints permutation
+    */
+   void analyzeConstraints()
+   {
+      /* collect algebraic constraints and their side: for AMPL, nonlinear comes before linear */
+      SCIP_CALL_THROW( SCIPallocBlockMemoryArray(scip, &algconss, nallconss) );
+      SCIP_CALL_THROW( SCIPallocBlockMemoryArray(scip, &algconsslhs, nallconss) );
+      SCIP_CALL_THROW( SCIPallocBlockMemoryArray(scip, &algconssrhs, nallconss) );
+
+      nalgconss = 0;
+      if( nlheader.num_nl_vars_in_cons > 0 )
+      {
+         for( int i = 0; i < nallconss; ++i )
+         {
+            SCIP_CONS* cons = allconss[i];
+            if( SCIPconsGetHdlr(cons) == conshdlr_nonlinear )
+            {
+               algconss[nalgconss] = cons;
+               algconsslhs[nalgconss] = SCIPgetLhsNonlinear(cons);
+               algconssrhs[nalgconss] = SCIPgetRhsNonlinear(cons);
+               ++nalgconss;
+            }
+         }
+      }
+      /* total number of nonlinear constraints */
+      nlheader.num_nl_cons = nalgconss;
+
+      /* pick constraints we recognize as linear
+       * count ranged and equality constraints
+       * check constraint name lengths (if not skipped due to being generic)
+       * count number of variables in constraints
+       */
+      nlheader.num_ranges = 0; /* number of ranged constraints */
+      nlheader.num_eqns = 0;   /* number of equality constraints */
+      nlheader.max_con_name_len = 0;  /* maximal length of constraints' names */
+      nlheader.num_con_nonzeros = 0;  /* number of nonzeros in constraints' Jacobian */
+      for( int i = 0; i < nallconss; ++i )
+      {
+         SCIP_CONS* cons = allconss[i];
+         SCIP_CONSHDLR* conshdlr = SCIPconsGetHdlr(cons);
+         SCIP_Real lhs;
+         SCIP_Real rhs;
+
+         if( conshdlr == conshdlr_nonlinear )
+         {
+            lhs = SCIPgetLhsNonlinear(cons);
+            rhs = SCIPgetRhsNonlinear(cons);
+         }
+         else
+         {
+            if( conshdlr == conshdlr_linear )
+            {
+               lhs = SCIPgetLhsLinear(scip, cons);
+               rhs = SCIPgetRhsLinear(scip, cons);
+            }
+            else if( conshdlr == conshdlr_setppc )
+            {
+               switch( SCIPgetTypeSetppc(scip, cons) )
+               {
+                  case SCIP_SETPPCTYPE_PARTITIONING:
+                     lhs = 1.0;
+                     rhs = 1.0;
+                     break;
+                  case SCIP_SETPPCTYPE_COVERING:
+                     lhs = 1.0;
+                     rhs = SCIPinfinity(scip);
+                     break;
+                  case SCIP_SETPPCTYPE_PACKING:
+                     lhs = -SCIPinfinity(scip);
+                     rhs = 1.0;
+                     break;
+               }
+            }
+            else if( conshdlr == conshdlr_logicor )
+            {
+               lhs = 1.0;
+               rhs = SCIPinfinity(scip);
+            }
+            else if( conshdlr == conshdlr_knapsack )
+            {
+               lhs = -SCIPinfinity(scip);
+               rhs = (SCIP_Real)SCIPgetCapacityKnapsack(scip, cons);
+            }
+            else if( conshdlr == conshdlr_varbound )
+            {
+               lhs = SCIPgetLhsVarbound(scip, cons);
+               rhs = SCIPgetRhsVarbound(scip, cons);
+            }
+            else
+            {
+               SCIPwarningMessage(scip, "constraint <%s> of type <%s> cannot be printed in requested format\n", SCIPconsGetName(cons), SCIPconshdlrGetName(conshdlr));
+               continue;
+            }
+            algconss[nalgconss] = cons;
+            algconsslhs[nalgconss] = lhs;
+            algconssrhs[nalgconss] = rhs;
+            ++nalgconss;
+         }
+
+         if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) )
+         {
+            if( SCIPisEQ(scip, lhs, rhs) )
+               ++nlheader.num_eqns;
+            else
+               ++nlheader.num_ranges;
+         }
+
+         if( !genericnames )
+         {
+            int namelen = (int)strlen(SCIPconsGetName(allconss[i]));
+            if( namelen > nlheader.max_con_name_len )
+               nlheader.max_con_name_len = namelen;
+         }
+
+         SCIP_Bool success;
+         int nvarsincons;
+         SCIP_CALL_THROW( SCIPgetConsNVars(scip, cons, &nvarsincons, &success) );
+         if( !success )
+         {
+            /* this should never happen */
+            SCIPwarningMessage(scip, "could not get number of variable from constraint handler <%s>; nonzero count in nl file will be wrong\n", SCIPconshdlrGetName(conshdlr));
+         }
+         else
+         {
+            nlheader.num_con_nonzeros += nvarsincons;
+         }
+      }
+      assert(nalgconss <= nallconss);
+
+      nlheader.num_algebraic_cons = nalgconss;
+      nlheader.num_logical_cons = 0;
+
+      /* no complementarity conditions */
+      nlheader.num_compl_conds = 0;
+      nlheader.num_nl_compl_conds = 0;
+      nlheader.num_compl_dbl_ineqs = 0;
+      nlheader.num_compl_vars_with_nz_lb = 0;
+
+      /** no network constraints */
+      nlheader.num_nl_net_cons = 0;
+      nlheader.num_linear_net_cons = 0;
+   }
+
+   /* gets AMPL index of variable (using var2idx) */
+   int getVarAMPLIndex(
+      SCIP_VAR*          var
+      )
+   {
+      int varidx = SCIPhashmapGetImageInt(var2idx, (void*)var);
+      assert(varidx >= 0);
+      assert(varidx < nvars || varidx == INT_MAX);
+      if( varidx != INT_MAX )
+         return varidx;
+      else
+         return 0;  /* TODO fixed variable handling */
+   }
+
+public:
+   /// Constructor
+   SCIPNLFeeder(
+      SCIP*              scip_,              ///< SCIP data structure
+      SCIP_Bool          nlbinary_,          ///< whether to write binary or text nl
+      SCIP_Bool          nlcomments_,        ///< whether to include comments into nl
+      const char*        probname_,          ///< problem name
+      SCIP_Bool          transformed_,       ///< is transformed problem written
+      SCIP_OBJSENSE      objsense_,          ///< objective sense
+      SCIP_Real          objscale_,          ///< objective scale
+      SCIP_Real          objoffset_,         ///< objective offset
+      SCIP_VAR**         vars_,              ///< active variables
+      int                nvars_,             ///< number of active variables
+      SCIP_VAR**         fixedvars_,         ///< fixed variables
+      int                nfixedvars_,        ///< number of fixed variables
+      SCIP_CONS**        conss_,             ///< constraints
+      int                nconss_,            ///< number of constraints
+      SCIP_Bool          genericnames_       ///< are generic names used
+   )
+   : scip(scip_),
+     nlcomments(nlcomments_),
+     probname(probname_),
+     transformed(transformed_),
+     objsense(objsense_),
+     objscale(objscale_),
+     objoffset(objoffset_),
+     activevars(vars_),
+     nactivevars(nvars_),
+     fixedvars(fixedvars_),
+     nfixedvars(nfixedvars_),
+     allconss(conss_),
+     nallconss(nconss_),
+     genericnames(genericnames_),
+     vars(NULL),
+     nvars(0),
+     var2idx(NULL),
+     algconss(NULL),
+     algconsslhs(NULL),
+     algconssrhs(NULL),
+     nalgconss(0)
+   {
+      nlheader.format = nlbinary_ ? mp::NLHeader::BINARY : mp::NLHeader::TEXT;
+
+      conshdlr_nonlinear = SCIPfindConshdlr(scip, "nonlinear");
+      conshdlr_linear = SCIPfindConshdlr(scip, "linear");
+      conshdlr_setppc = SCIPfindConshdlr(scip, "setppc");
+      conshdlr_logicor = SCIPfindConshdlr(scip, "logicor");
+      conshdlr_knapsack = SCIPfindConshdlr(scip, "knapsack");
+      conshdlr_varbound = SCIPfindConshdlr(scip, "varbound");
+   }
+
+   ~SCIPNLFeeder()
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &algconssrhs, nallconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &algconsslhs, nallconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &algconss, nallconss);
+      SCIPfreeBlockMemoryArrayNull(scip, &vars, nactivevars);
+      SCIPhashmapFree(&var2idx);
+   }
+
+   /** Provide NLHeader.
+    *
+    *  This method is called first.
+    *
+    *  NLHeader summarizes the model and provides some technical parameters,
+    *  such as text/binary NL format.
+    */
+   mp::NLHeader Header()
+   {
+      analyseVariables();
+      analyzeConstraints();
+
+      nlheader.prob_name = probname;
+
+      /* number of objectives
+       * if objective is all zero in SCIP, then just don't write any objective to nl
+       */
+      if( nlheader.num_obj_nonzeros == 0 && objoffset == 0.0 )
+         nlheader.num_objs = 0;
+      else
+         nlheader.num_objs = 1;
+      nlheader.num_nl_objs = 0;
+
+      /* number of functions */
+      nlheader.num_funcs = 0;
+
+      /* we will write fixed variables as common expressions to the nl file */
+      /* TODO currently we pretend all fixed variables appear in several constraints */
+      /* number of common expressions that appear both in constraints and objectives */
+      nlheader.num_common_exprs_in_both = 0;
+      /* number of common expressions that appear in multiple constraints and don't appear in objectives */
+      nlheader.num_common_exprs_in_cons = nfixedvars;
+      /* number of common expressions that appear in multiple objectives and don't appear in constraints */
+      nlheader.num_common_exprs_in_objs = 0;
+
+      /* number of common expressions that only appear in a single constraint and don't appear in objectives */
+      nlheader.num_common_exprs_in_single_cons = 0;
+      /* number of common expressions that only appear in a single objective and don't appear in constraints */
+      nlheader.num_common_exprs_in_single_objs = 0;
+
+      return nlheader;
+   }
+
+   /// NL comments?
+   bool WantNLComments() const
+   {
+      return nlcomments;
+   }
+
+   /// currently we do not want to write size of each column in Jacobian
+   /// (i.e., number of constraints each variable appears in)
+   int WantColumnSizes() const
+   {
+      return 0;
+   }
+
+   int ObjType(
+      int
+   )
+   {
+      return SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ? 1 : 0;
+   }
+
+   template <class ObjGradWriter>
+   void FeedObjGradient(
+      int                i,
+      ObjGradWriter&     gw
+   )
+   {
+      assert(i == 0);
+      auto gvw = gw.MakeVectorWriter(nlheader.num_obj_nonzeros);
+      for( int v = 0; v < nvars; ++v )
+      {
+         SCIP_Real coef = SCIPvarGetObj(vars[v]);
+         if( coef != 0.0 )
+            gvw.Write(v, objscale * coef);
+      }
+   }
+
+   template <class ObjExprWriter>
+   void FeedObjExpression(
+      int                i,
+      ObjExprWriter&     ew
+   )
+   {
+      assert(i == 0);
+      ew.NPut(objscale * objoffset);
+   }
+
+
+#if 0
+   template <class DefVarWriterFactory>
+   void FeedDefinedVariables(
+      int                  i,
+      DefVarWriterFactory& dvw
+   )
+   {
+      for (int dvar0: Model().DefVarsInItem(i)) {
+         int lin_nnz = CountNNZ(Model().dvar_linpart[dvar0]);
+         auto dv = dvw.StartDefVar(
+            dvar0 + Model().n_var,  // index after direct vars
+            lin_nnz, Model().dvar_name[dvar0]);
+         /////////// Write the linear part:
+         auto linw = dv.GetLinExprWriter();
+         WriteDense2Sparse_Pure(linw,
+            Model().dvar_linpart[dvar0]);
+         /////////// Write the expression tree:
+         auto ew = dv.GetExprWriter();
+         Model().WriteDVarExpr(dvar0, ew);
+      }
+   }
+#endif
+
+   template <class VarBoundsWriter>
+   void FeedVarBounds(
+      VarBoundsWriter&   vbw
+   )
+   {
+      for( int v = 0; v < nvars; ++v )
+      {
+         SCIP_Real lb = SCIPvarGetLbGlobal(vars[v]);
+         SCIP_Real ub = SCIPvarGetUbGlobal(vars[v]);
+
+         if( SCIPisInfinity(scip, -lb) )
+            lb = -INFINITY;
+
+         if( SCIPisInfinity(scip, ub) )
+            ub = INFINITY;
+
+         vbw.WriteLbUb(lb, ub);
+      }
+   }
+
+   template <class ConBoundsWriter>
+   void FeedConBounds(
+      ConBoundsWriter& cbw
+   )
+   {
+      for( int c = 0; c < nalgconss; ++c )
+      {
+         AlgConRange bnd;
+         bnd.L = SCIPisInfinity(scip, -algconsslhs[c]) ? -INFINITY : algconsslhs[c];
+         bnd.U = SCIPisInfinity(scip,  algconssrhs[c]) ?  INFINITY : algconssrhs[c];
+         cbw.WriteAlgConRange(bnd);
+      }
+   }
+
+   /* this is for the comments in .nl files if comments enabled */
+   const char* ConDescription(
+      int i
+   )
+   {
+      return SCIPconsGetName(algconss[i]);
+   }
+
+   template <class ConLinearExprWriter>
+   void FeedLinearConExpr(
+      int                  i,
+      ConLinearExprWriter& clw
+   )
+   {
+      if( i < nlheader.num_nl_cons )
+         return;
+
+      SCIP_CONS* cons = algconss[i];
+      SCIP_CONSHDLR* conshdlr = SCIPconsGetHdlr(cons);
+
+      if( conshdlr == conshdlr_linear )
+      {
+         SCIP_Real* conscoefs = SCIPgetValsLinear(scip, cons);
+         SCIP_VAR** consvars = SCIPgetVarsLinear(scip, cons);
+         int nconsvars = SCIPgetNVarsLinear(scip, cons);
+
+         auto vw = clw.MakeVectorWriter(nconsvars);
+         for( int v = 0; v < nconsvars; ++v )
+            vw.Write(getVarAMPLIndex(consvars[v]), conscoefs[v]);
+      }
+      else if( conshdlr == conshdlr_setppc )
+      {
+         SCIP_VAR** consvars = SCIPgetVarsSetppc(scip, cons);
+         int nconsvars = SCIPgetNVarsSetppc(scip, cons);
+
+         auto vw = clw.MakeVectorWriter(nconsvars);
+         for( int v = 0; v < nvars; ++v )
+            vw.Write(getVarAMPLIndex(consvars[v]), 1.0);
+      }
+      else if( conshdlr == conshdlr_logicor )
+      {
+         SCIP_VAR** consvars = SCIPgetVarsLogicor(scip, cons);
+         int nconsvars = SCIPgetNVarsLogicor(scip, cons);
+
+         auto vw = clw.MakeVectorWriter(nconsvars);
+         for( int v = 0; v < nvars; ++v )
+            vw.Write(getVarAMPLIndex(consvars[v]), 1.0);
+      }
+      else if( conshdlr == conshdlr_knapsack )
+      {
+         SCIP_Longint* weights = SCIPgetWeightsKnapsack(scip, cons);
+         SCIP_VAR** consvars = SCIPgetVarsKnapsack(scip, cons);
+         int nconsvars = SCIPgetNVarsKnapsack(scip, cons);
+
+         auto vw = clw.MakeVectorWriter(nconsvars);
+         for( int v = 0; v < nvars; ++v )
+            vw.Write(getVarAMPLIndex(consvars[v]), (SCIP_Real)weights[v]);
+      }
+      else
+      {
+         assert(conshdlr == conshdlr_varbound);
+
+         auto vw = clw.MakeVectorWriter(2);
+         vw.Write(getVarAMPLIndex(SCIPgetVarVarbound(scip, cons)), 1.0);
+         vw.Write(getVarAMPLIndex(SCIPgetVbdvarVarbound(scip, cons)), SCIPgetVbdcoefVarbound(scip, cons));
+      }
+   }
+
+#if 0
+   template <class ConExprWriter>
+   void FeedConExpression(
+      int                i,
+      ConExprWriter&     ew
+   )
+   {
+      //TODO Model().WriteConExpr(i, ew);
+   }
+#endif
+
+   template <class RowObjNameWriter>
+   void FeedRowAndObjNames(
+      RowObjNameWriter&  wrt
+   )
+   {
+      if( !wrt || genericnames )
+         return;
+
+      for( int c = 0; c < nalgconss; ++c )
+         wrt << SCIPconsGetName(algconss[c]);
+
+      wrt << "obj";
+   }
+
+   template <class ColNameWriter>
+   void FeedColNames(
+      ColNameWriter&     wrt
+   )
+   {
+      if( !wrt || genericnames )
+         return;
+
+      for( int v = 0; v < nvars; ++v )
+         wrt << SCIPvarGetName(vars[v]);
+   }
+};
 
 /*
  * Callback methods of probdata
@@ -1815,6 +2462,42 @@ SCIP_DECL_READERREAD(readerReadNl)
    return SCIP_OKAY;
 }
 
+/** problem writing method of reader */
+static
+SCIP_DECL_READERWRITE(readerWriteNl)
+{  /*lint --e{715}*/
+   mp::WriteNLResult writerresult;
+
+   SCIPNLFeeder nlf(scip, FALSE, TRUE,
+      name, transformed, objsense, objscale, objoffset,
+      vars, nvars, fixedvars, nfixedvars,
+      conss, nconss, genericnames);
+
+   // TODO how to pass in FILE* file instead of filename?
+   mp::NLUtils nlutils;
+   writerresult = mp::WriteNLFile("scipprob", nlf, nlutils);
+
+   switch( writerresult.first )
+   {
+      case NLW2_WriteNL_OK:
+         break;
+      case NLW2_WriteNL_CantOpen:
+         SCIPerrorMessage("%s\n", writerresult.second.c_str());
+         return SCIP_FILECREATEERROR;
+      case NLW2_WriteNL_Failed:
+         SCIPerrorMessage("%s\n", writerresult.second.c_str());
+         return SCIP_WRITEERROR;
+      case NLW2_WriteNL_Unset:
+      default:
+         SCIPerrorMessage("%s\n", writerresult.second.c_str());
+         return SCIP_ERROR;
+   }
+
+   *result = SCIP_SUCCESS;
+
+   return SCIP_OKAY;
+}
+
 /*
  * reader specific interface methods
  */
@@ -1833,6 +2516,7 @@ SCIP_RETCODE SCIPincludeReaderNl(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyNl) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
+   SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteNl) );
 
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 4.0.0", "AMPL .nl file reader library (github.com/ampl/mp)") );
 
