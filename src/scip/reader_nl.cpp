@@ -2468,14 +2468,46 @@ SCIP_DECL_READERWRITE(readerWriteNl)
 {  /*lint --e{715}*/
    mp::WriteNLResult writerresult;
 
+   *result = SCIP_DIDNOTRUN;
+
    SCIPNLFeeder nlf(scip, FALSE, TRUE,
       name, transformed, objsense, objscale, objoffset,
       vars, nvars, fixedvars, nfixedvars,
       conss, nconss, genericnames);
 
-   // TODO how to pass in FILE* file instead of filename?
-   mp::NLUtils nlutils;
-   writerresult = mp::WriteNLFile("scipprob", nlf, nlutils);
+   try
+   {
+      // TODO how to pass in FILE* file instead of filename?
+      mp::NLUtils nlutils;
+      writerresult = mp::WriteNLFile("scipprob", nlf, nlutils);
+   }
+   catch( const mp::UnsupportedError& e )
+   {
+      SCIPerrorMessage("constraint not writable as AMPL .nl: %s\n", e.what());
+      return SCIP_WRITEERROR;
+   }
+   catch( const mp::Error& e )
+   {
+      // some other error from ampl/mp
+      SCIPerrorMessage("%s\n", e.what());
+      return SCIP_WRITEERROR;
+   }
+   catch( const fmt::SystemError& e )
+   {
+      // probably a file open error
+      SCIPerrorMessage("%s\n", e.what());
+      return SCIP_FILECREATEERROR;
+   }
+   catch( const std::bad_alloc& e )
+   {
+      SCIPerrorMessage("Out of memory: %s\n", e.what());
+      return SCIP_NOMEMORY;
+   }
+   catch( const std::exception& e )
+   {
+      SCIPerrorMessage("%s\n", e.what());
+      return SCIP_ERROR;
+   }
 
    switch( writerresult.first )
    {
