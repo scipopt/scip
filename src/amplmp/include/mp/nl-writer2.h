@@ -298,7 +298,7 @@ protected:
         : nlw_(eaw.nlw_), nargs_(eaw.nargs_) { eaw.nargs_=0; }
     /// Do move-assign
     ExprArgWriter& operator=(ExprArgWriter&& eaw)
-    { assert(&nlw_==&eaw.nlw_); std::swap(nargs_, eaw.nargs_); }
+    { assert(&nlw_==&eaw.nlw_); std::swap(nargs_, eaw.nargs_); return *this; }
 
     /// Write the next arg as Feeder's native expression.
     /// This recursively calls Feeder::FeedExpr().
