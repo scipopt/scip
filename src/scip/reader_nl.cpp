@@ -2647,9 +2647,54 @@ SCIP_DECL_READERWRITE(readerWriteNl)
 
    try
    {
-      // TODO how to pass in FILE* file instead of filename?
+      /* we need to give the NLWriter a filename, but got only a FILE* from SCIP
+       * so we let the NLWriter write to a temporary file and then copy its content to file
+       * TODO this way, the files with row and col names are lost
+       */
+      char tempname[L_tmpnam+4];
+      FILE* tempfile;
+
+      if( std::tmpnam(tempname) == NULL )
+      {
+         SCIPerrorMessage("Cannot generate name for temporary file: error %d\n", errno);
+         return SCIP_FILECREATEERROR;
+      }
+
       mp::NLUtils nlutils;
-      writerresult = mp::WriteNLFile("scipprob", nlf, nlutils);
+      writerresult = mp::WriteNLFile(tempname, nlf, nlutils);
+
+      switch( writerresult.first )
+      {
+         case NLW2_WriteNL_OK:
+            break;
+         case NLW2_WriteNL_CantOpen:
+            SCIPerrorMessage("%s\n", writerresult.second.c_str());
+            return SCIP_FILECREATEERROR;
+         case NLW2_WriteNL_Failed:
+            SCIPerrorMessage("%s\n", writerresult.second.c_str());
+            return SCIP_WRITEERROR;
+         case NLW2_WriteNL_Unset:
+         default:
+            SCIPerrorMessage("%s\n", writerresult.second.c_str());
+            return SCIP_ERROR;
+      }
+
+      /* copy temporary file into file */
+      strcat(tempname, ".nl");
+      tempfile = fopen(tempname, "rb");
+      if( tempfile == NULL )
+      {
+         SCIPerrorMessage("Cannot open temporary file <%s> for reading: error %d\n", tempname, errno);
+         return SCIP_FILECREATEERROR;
+      }
+
+      char buf[1024];
+      int n;
+      while( (n=fread(buf, 1, sizeof(buf), tempfile)) != 0 )
+         fwrite(buf, 1, n, file);
+
+      fclose(tempfile);
+      remove(tempname);
    }
    catch( const mp::UnsupportedError& e )
    {
@@ -2677,22 +2722,6 @@ SCIP_DECL_READERWRITE(readerWriteNl)
    {
       SCIPerrorMessage("%s\n", e.what());
       return SCIP_ERROR;
-   }
-
-   switch( writerresult.first )
-   {
-      case NLW2_WriteNL_OK:
-         break;
-      case NLW2_WriteNL_CantOpen:
-         SCIPerrorMessage("%s\n", writerresult.second.c_str());
-         return SCIP_FILECREATEERROR;
-      case NLW2_WriteNL_Failed:
-         SCIPerrorMessage("%s\n", writerresult.second.c_str());
-         return SCIP_WRITEERROR;
-      case NLW2_WriteNL_Unset:
-      default:
-         SCIPerrorMessage("%s\n", writerresult.second.c_str());
-         return SCIP_ERROR;
    }
 
    *result = SCIP_SUCCESS;
