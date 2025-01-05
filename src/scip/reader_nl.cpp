@@ -70,6 +70,7 @@
 
 #include "mp/nl-reader.h"
 #include "mp/nl-writer2.hpp"
+#include "mp/nl-opcodes.h"
 
 #define READER_NAME             "nlreader"
 #define READER_DESC             "AMPL .nl file reader"
@@ -2475,16 +2476,196 @@ public:
       }
    }
 
-#if 0
    template <class ConExprWriter>
    void FeedConExpression(
       int                i,
       ConExprWriter&     ew
    )
    {
-      //TODO Model().WriteConExpr(i, ew);
+      if( i >= nlheader.num_nl_cons )
+      {
+         ew.NPut(0.0);
+         return;
+      }
+
+      SCIP_EXPR* rootexpr = SCIPgetExprNonlinear(algconss[i]);
+
+      SCIP_EXPRITER* it;
+      SCIP_CALL_THROW( SCIPcreateExpriter(scip, &it) );
+
+      SCIP_CALL_THROW( SCIPexpriterInit(it, rootexpr, SCIP_EXPRITER_DFS, TRUE) );
+      SCIPexpriterSetStagesDFS(it, SCIP_EXPRITER_ALLSTAGES);
+
+      for( SCIP_EXPR* expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
+      {
+         switch( SCIPexpriterGetStageDFS(it) )
+         {
+            case SCIP_EXPRITER_ENTEREXPR:
+            {
+               // retrieve the ConExprWriter of parent expr
+               ConExprWriter* parentew;
+               if( expr == rootexpr )
+                  parentew = &ew;
+               else
+                  parentew = (ConExprWriter*)SCIPexpriterGetExprUserData(it, SCIPexpriterGetParentDFS(it)).ptrval;
+               assert(parentew != NULL);
+
+               ConExprWriter* newew = NULL;
+
+               if( SCIPisExprVar(scip, expr) )
+               {
+                  // TODO handle negated
+                  SCIP_VAR* var = SCIPgetVarExprVar(expr);
+                  parentew->VPut(getVarAMPLIndex(var), SCIPvarGetName(var));
+               }
+               else if( SCIPisExprValue(scip, expr) )
+               {
+                  parentew->NPut(SCIPgetValueExprValue(expr));
+               }
+               else if( SCIPisExprSum(scip, expr) )
+               {
+                  int nargs = SCIPexprGetNChildren(expr);
+
+                  if( SCIPgetConstantExprSum(expr) != 0.0 )
+                  {
+                     if( nargs == 0 )
+                     {
+                        parentew->NPut(SCIPgetConstantExprSum(expr));
+                        SCIP_EXPRITER_USERDATA userdata;
+                        userdata.ptrval = NULL;
+                        SCIPexpriterSetCurrentUserData(it, userdata);
+                        break;
+                     }
+
+                     ++nargs;
+                  }
+
+                  // we will need to store two ConExprWriter's for sum or add
+                  // one for the sum, and one for multiplication (coef*expr) of the currently considered child
+                  // the one for the sum will go second, so in the child, we don't need to check for case of sum
+                  // there is no default constructor for ConExprWriter, so we only alloc mem and then use replacement-new
+                  SCIP_CALL_THROW( SCIPallocClearBufferArray(scip, &newew, 2) );
+
+                  // this code is already complex enough for me that I skip some optimization for nargs==1 here
+                  if( nargs == 2 )
+                  {
+                     new (newew+1) ConExprWriter(parentew->OPut2(mp::nl::ADD));
+                  }
+                  else
+                  {
+                     new (newew+1) ConExprWriter(parentew->OPutN(mp::nl::SUM, nargs));
+                  }
+
+                  if( SCIPgetConstantExprSum(expr) != 0.0 )
+                     newew[1].NPut(SCIPgetConstantExprSum(expr));
+               }
+               else if( SCIPisExprProduct(scip, expr) )
+               {
+                  int nargs = SCIPexprGetNChildren(expr);
+
+                  if( nargs == 2 )
+                  {
+                     newew = new ConExprWriter(parentew->OPut2(mp::nl::MUL));
+                  }
+                  else
+                  {
+                     //TODO
+                     throw mp::UnsupportedError("can only do products of 2 factors at the moment");
+                  }
+               }
+               else if( SCIPisExprPower(scip, expr) )
+               {
+                  if( SCIPgetExponentExprPow(expr) == 2.0 )
+                     newew = new ConExprWriter(parentew->OPut1(mp::nl::POW2));
+                  else
+                     newew = new ConExprWriter(parentew->OPut2(mp::nl::POW_CONST_EXP));
+               }
+               else
+               {
+                  //TODO stop gracefully before throwing exception
+                  throw mp::UnsupportedError("unsupported expr handler");
+               }
+
+               SCIP_EXPRITER_USERDATA userdata;
+               userdata.ptrval = newew;
+               SCIPexpriterSetCurrentUserData(it, userdata);
+
+               break;
+            }
+
+            case SCIP_EXPRITER_VISITINGCHILD:
+            {
+               if( SCIPisExprSum(scip, expr) )
+               {
+                  int childidx = SCIPexpriterGetChildIdxDFS(it);
+                  SCIP_Real coef = SCIPgetCoefsExprSum(expr)[childidx];
+
+                  ConExprWriter* ews = (ConExprWriter*)SCIPexpriterGetCurrentUserData(it).ptrval;
+
+                  if( coef != 1.0 )
+                  {
+                     // if coef, then create MUL and store ExprWriter in ews[0]
+                     new (ews) ConExprWriter(ews[1].OPut2(mp::nl::MUL));
+                     ews[0].NPut(coef);
+                  }
+                  else
+                  {
+                     // if trivial coef, then only move ews[1] (ExprWriter for SUM/ADD) to ews[0] (implementation forbids copy)
+                     // cannot use move-assignment, because it asserts that destination and source have same nlw_, but my destination is not initialized
+                     //ews[0] = std::move(ews[1]);
+                     memcpy((void*)ews, (void*)(ews+1), sizeof(ConExprWriter));
+                  }
+               }
+               break;
+            }
+
+            case SCIP_EXPRITER_VISITEDCHILD:
+            {
+               if( SCIPisExprSum(scip, expr) )
+               {
+                  int childidx = SCIPexpriterGetChildIdxDFS(it);
+
+                  ConExprWriter* ews = (ConExprWriter*)SCIPexpriterGetCurrentUserData(it).ptrval;
+
+                  if( SCIPgetCoefsExprSum(expr)[childidx] != 1.0 )
+                  {
+                     // destructor for ExprWriter that was stored for MUL
+                     ews->~ConExprWriter();
+                  }
+                  else
+                  {
+                     // move ExprWrite for SUM back into 2nd position
+                     //ews[1] = std::move(ews[0]);
+                     memcpy((void*)(ews+1), (void*)ews, sizeof(ConExprWriter));
+                  }
+               }
+               break;
+            }
+
+            case SCIP_EXPRITER_LEAVEEXPR:
+            {
+               ConExprWriter* ews = (ConExprWriter*)SCIPexpriterGetCurrentUserData(it).ptrval;
+               if( SCIPisExprSum(scip, expr) )
+               {
+                  // destructor for ExprWriter for SUM/ADD
+                  ews[1].~ConExprWriter();
+                  SCIPfreeBufferArray(scip, &ews);
+               }
+               else
+               {
+                  // write exponent of power (if not 2)
+                  if( SCIPisExprPower(scip, expr) && SCIPgetExponentExprPow(expr) != 2.0 )
+                     ews->NPut(SCIPgetExponentExprPow(expr));
+
+                  delete ews;
+               }
+               break;
+            }
+         }
+      }
+
+      SCIPfreeExpriter(&it);
    }
-#endif
 
    template <class RowObjNameWriter>
    void FeedRowAndObjNames(
