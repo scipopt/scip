@@ -2643,7 +2643,7 @@ SCIP_RETCODE lpCheckRealpar(
 #endif
 
 /** should the objective limit of the LP solver be disabled */
-#define lpCutoffDisabled(set,prob) (set->lp_disablecutoff == 1 || ((set->nactivepricers > 0 || !SCIPprobAllColsInLP(prob, set, lp)) && set->lp_disablecutoff == 2))
+#define lpCutoffDisabled(set, prob, lp) (set->lp_disablecutoff == 1 || (set->lp_disablecutoff == 2 && !SCIPprobAllColsInLP(prob, set, lp)) || set->misc_exactsolve)
 
 /** sets the objective limit of the LP solver
  *
@@ -2664,13 +2664,10 @@ SCIP_RETCODE lpSetObjlim(
 
    *success = FALSE;
 
-   /* We disabled the objective limit in the LP solver or we want so solve exactly and thus cannot rely on the LP
-    * solver's objective limit handling, so we make sure that the objective limit is inactive (infinity). */
-   if( lpCutoffDisabled(set, prob) || set->misc_exactsolve )
-      objlim = SCIPlpiInfinity(lp->lpi);
-
-   /* convert SCIP infinity value to lp-solver infinity value if necessary */
-   if( SCIPsetIsInfinity(set, objlim) )
+   /* if the objective limit is disabled or SCIP infinity, make sure that the LP objective limit is deactivated by
+    * setting it to the LP-solver infinity
+    */
+   if( lpCutoffDisabled(set, prob, lp) || SCIPsetIsInfinity(set, objlim) )
       objlim = SCIPlpiInfinity(lp->lpi);
 
    SCIP_CALL( lpCheckRealpar(lp, SCIP_LPPAR_OBJLIM, lp->lpiobjlim) );
@@ -8702,8 +8699,9 @@ SCIP_RETCODE SCIPlpFlush(
    }
 
    /* if the cutoff bound was changed in between and it is not disabled (e.g. for column generation),
-    * we want to re-optimize the LP even if nothing else has changed */
-   if( lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 && ! lpCutoffDisabled(set, prob) ) /*lint !e777*/
+    * we want to re-optimize the LP even if nothing else has changed
+    */
+   if( !lpCutoffDisabled(set, prob, lp) && lp->cutoffbound != lp->lpiobjlim && lp->ncols > 0 ) /*lint !e777*/
    {
       lp->solved = FALSE;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -10229,7 +10227,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
    /* if the cutoff bound is decreased below the current optimal value, the LP now exceeds the objective limit;
     * if the objective limit in the LP solver was disabled, the solution status of the LP is not changed
     */
-   else if( !lpCutoffDisabled(set, prob) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
+   else if( !lpCutoffDisabled(set, prob, lp) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
       && SCIPlpGetObjval(lp, set, prob) >= cutoffbound )
    {
       assert(lp->flushed);
@@ -12114,12 +12112,13 @@ SCIP_RETCODE lpSolve(
       /* if we did not disable the cutoff bound in the LP solver, the LP solution status should be objective limit
        * reached if the LP objective value is greater than the cutoff bound
        */
-      assert(lpCutoffDisabled(set, prob) || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || SCIPsetIsInfinity(set, lp->cutoffbound)
+      assert(lpCutoffDisabled(set, prob, lp) || lp->lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT
+         || SCIPsetIsInfinity(set, lp->cutoffbound)
          || SCIPsetIsLE(set, lp->lpobjval + getFiniteLooseObjval(lp, set, prob), lp->cutoffbound));
    }
    else if( SCIPlpiIsObjlimExc(lp->lpi) )
    {
-      assert(!lpCutoffDisabled(set, prob));
+      assert(!lpCutoffDisabled(set, prob, lp));
 
 #ifndef NDEBUG
       /* the LP solution objective should exceed the limit in this case; if this assert is triggered, it typically means
@@ -12776,14 +12775,15 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
-         assert(!lpCutoffDisabled(set, prob));
+         assert(!lpCutoffDisabled(set, prob, lp));
          /* Some LP solvers, e.g. CPLEX With FASTMIP setting, do not apply the final pivot to reach the dual solution
           * exceeding the objective limit. In some cases like branch-and-price, however, we must make sure that a dual
           * feasible solution exists that exceeds the objective limit. Therefore, we have to continue solving it without
           * objective limit for at least one iteration. We first try to continue with FASTMIP for one additional simplex
           * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable
-          * FASTMIP and solve again. */
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
+          * FASTMIP and solve again.
+          */
+         if( !SCIPprobAllColsInLP(prob, set, lp) )
          {
             SCIP_LPI* lpi;
             SCIP_Real objval;
@@ -12942,7 +12942,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                {
                   SCIPsetDebugMsg(set, " -> LP infeasible\n");
 
-                  if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->misc_exactsolve )
+                  if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas )
                   {
                      if( SCIPlpiHasDualRay(lp->lpi) )
                      {
