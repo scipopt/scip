@@ -34,6 +34,7 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string>
+#include <sstream>
 #include <vector>
 #include <map>
 
@@ -2488,6 +2489,9 @@ public:
          return;
       }
 
+      // will store an error message if some expr couldn't be handled
+      std::stringstream unhandledexprmsg;
+
       SCIP_EXPR* rootexpr = SCIPgetExprNonlinear(algconss[i]);
 
       SCIP_EXPRITER* it;
@@ -2525,6 +2529,7 @@ public:
                else if( SCIPisExprSum(scip, expr) )
                {
                   int nargs = SCIPexprGetNChildren(expr);
+                  assert(nargs > 0);
 
                   if( SCIPgetConstantExprSum(expr) != 0.0 )
                   {
@@ -2546,8 +2551,14 @@ public:
                   // there is no default constructor for ConExprWriter, so we only alloc mem and then use replacement-new
                   SCIP_CALL_THROW( SCIPallocClearBufferArray(scip, &newew, 2) );
 
-                  // this code is already complex enough for me that I skip some optimization for nargs==1 here
-                  if( nargs == 2 )
+                  if( nargs == 1 )
+                  {
+                     assert(SCIPgetConstantExprSum(expr) == 0.0); // handled above
+                     // skip the SUM and attach only a MUL, which will be done in VISITINGCHILD
+                     // so we put the parentew to which the MUL should be attached into newew[1]
+                     memcpy((void*)(newew+1), (void*)parentew, sizeof(ConExprWriter));
+                  }
+                  else if( nargs == 2 )
                   {
                      new (newew+1) ConExprWriter(parentew->OPut2(mp::nl::ADD));
                   }
@@ -2562,28 +2573,57 @@ public:
                else if( SCIPisExprProduct(scip, expr) )
                {
                   int nargs = SCIPexprGetNChildren(expr);
+                  assert(nargs > 0);
 
-                  if( nargs == 2 )
-                  {
-                     newew = new ConExprWriter(parentew->OPut2(mp::nl::MUL));
-                  }
-                  else
-                  {
-                     //TODO
-                     throw mp::UnsupportedError("can only do products of 2 factors at the moment");
-                  }
+                  // in VISITEDCHILD we will take care of turning a product of more than 2 factors
+                  // into a recursion of multiplications
+                  newew = new ConExprWriter(parentew->OPut2(mp::nl::MUL));
+
+                  // nargs should be >= 2, but theoretically could be 1
+                  // we will then write this as 1*arg for simplicity
+                  if( nargs == 1 )
+                     newew->NPut(1.0);
                }
                else if( SCIPisExprPower(scip, expr) )
                {
                   if( SCIPgetExponentExprPow(expr) == 2.0 )
                      newew = new ConExprWriter(parentew->OPut1(mp::nl::POW2));
+                  else if( SCIPgetExponentExprPow(expr) == 0.5 )
+                     newew = new ConExprWriter(parentew->OPut1(mp::nl::SQRT));
                   else
                      newew = new ConExprWriter(parentew->OPut2(mp::nl::POW_CONST_EXP));
                }
+               else if( SCIPisExprLog(scip, expr) )
+               {
+                  newew = new ConExprWriter(parentew->OPut1(mp::nl::LOG));
+               }
+               else if( SCIPisExprExp(scip, expr) )
+               {
+                  newew = new ConExprWriter(parentew->OPut1(mp::nl::EXP));
+               }
+               else if( SCIPisExprAbs(scip, expr) )
+               {
+                  newew = new ConExprWriter(parentew->OPut1(mp::nl::ABS));
+               }
+               else if( SCIPisExprSin(scip, expr) )
+               {
+                  newew = new ConExprWriter(parentew->OPut1(mp::nl::SIN));
+               }
+               else if( SCIPisExprCos(scip, expr) )
+               {
+                  newew = new ConExprWriter(parentew->OPut1(mp::nl::COS));
+               }
                else
                {
-                  //TODO stop gracefully before throwing exception
-                  throw mp::UnsupportedError("unsupported expr handler");
+                  // entropy, signpower, or unrecognized handler
+                  unhandledexprmsg << "Cannot represent <" << SCIPexprhdlrGetName(SCIPexprGetHdlr(expr)) << "> expression in constraint <" << SCIPconsGetName(algconss[i]) << "> in .nl" << std::endl;
+
+                  // this is to make the assert in the destructor of parentew pass, which asserts that all arguments were written
+                  parentew->NPut(0.0);
+
+                  // skip children and move on to LEAVEEXPR directly, thus skipping this subexpression
+                  // (we still set userdata.ptrval = NULL next, so LEAVEEXPR will do delete NULL (which is well defined))
+                  SCIPexpriterSkipDFS(it);
                }
 
                SCIP_EXPRITER_USERDATA userdata;
@@ -2639,6 +2679,25 @@ public:
                      memcpy((void*)(ews+1), (void*)ews, sizeof(ConExprWriter));
                   }
                }
+               else if( SCIPisExprProduct(scip, expr) )
+               {
+                  ConExprWriter* ew = (ConExprWriter*)SCIPexpriterGetCurrentUserData(it).ptrval;
+
+                  int childidx = SCIPexpriterGetChildIdxDFS(it);
+                  int nchildren = SCIPexprGetNChildren(expr);
+                  if( childidx < nchildren-2 )
+                  {
+                     // if there is more than one more factor coming (so we are in product with > 2 factors)
+                     // then add another MUL to the current ew and make the new ConExprWriter the current ew
+                     ConExprWriter* newew = new ConExprWriter(ew->OPut2(mp::nl::MUL));
+                     delete ew;
+
+                     SCIP_EXPRITER_USERDATA userdata;
+                     userdata.ptrval = newew;
+                     SCIPexpriterSetCurrentUserData(it, userdata);
+                  }
+               }
+
                break;
             }
 
@@ -2647,14 +2706,29 @@ public:
                ConExprWriter* ews = (ConExprWriter*)SCIPexpriterGetCurrentUserData(it).ptrval;
                if( SCIPisExprSum(scip, expr) )
                {
-                  // destructor for ExprWriter for SUM/ADD
-                  ews[1].~ConExprWriter();
+                  if( SCIPgetConstantExprSum(expr) == 0.0 && SCIPexprGetNChildren(expr) == 1 )
+                  {
+                     // continuation of nargs==1 in ENTEREXPR: copy the modified newew[1] into parentew
+                     ConExprWriter* parentew;
+                     if( expr == rootexpr )
+                        parentew = &ew;
+                     else
+                        parentew = (ConExprWriter*)SCIPexpriterGetExprUserData(it, SCIPexpriterGetParentDFS(it)).ptrval;
+                     assert(parentew != NULL);
+
+                     memcpy((void*)parentew, (void*)(ews+1), sizeof(ConExprWriter));
+                  }
+                  else
+                  {
+                     // destructor for ExprWriter for SUM/ADD
+                     ews[1].~ConExprWriter();
+                  }
                   SCIPfreeBufferArray(scip, &ews);
                }
                else
                {
-                  // write exponent of power (if not 2)
-                  if( SCIPisExprPower(scip, expr) && SCIPgetExponentExprPow(expr) != 2.0 )
+                  // write exponent of power (if not 0.5 or 2)
+                  if( SCIPisExprPower(scip, expr) && SCIPgetExponentExprPow(expr) != 0.5 && SCIPgetExponentExprPow(expr) != 2.0 )
                      ews->NPut(SCIPgetExponentExprPow(expr));
 
                   delete ews;
@@ -2665,6 +2739,9 @@ public:
       }
 
       SCIPfreeExpriter(&it);
+
+      if( unhandledexprmsg.tellp() > 0 )
+         throw mp::UnsupportedError(unhandledexprmsg.str());
    }
 
    template <class RowObjNameWriter>
