@@ -127,7 +127,7 @@ SCIP_RETCODE SCIPincludeObjIISfinder(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjIISfinder*   objiisfinder,       /**< iis finder object */
    SCIP_Bool             deleteobject        /**< should the iis finder object be deleted when iis finder is freed? */
-)
+   )
 {
    SCIP_IISFINDERDATA* iisfinderdata;
 
@@ -154,7 +154,7 @@ SCIP_RETCODE SCIPincludeObjIISfinder(
 scip::ObjIISfinder* SCIPfindObjIISfinder(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of iis finder */
-)
+   )
 {
    SCIP_IISFINDER * iisfinder;
    SCIP_IISFINDERDATA* iisfinderdata;
@@ -173,7 +173,7 @@ scip::ObjIISfinder* SCIPfindObjIISfinder(
 scip::ObjIISfinder* SCIPgetObjIISfinder(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_IISFINDER*       iisfinder           /**< iis finder */
-)
+   )
 {
    SCIP_IISFINDERDATA* iisfinderdata;
 

@@ -4070,18 +4070,18 @@
  * We now explain how users can add their own iis finders.
  * Take the greedy iis finder (src/scip/iisfinder_greedy.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjIISfinder wrapper
- * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_IISFINDER... callback methods.
+ * base class and implement the `scip_...()` virtual methods instead of the `SCIP_DECL_IISFINDER...` callback methods.
  *
  * Additional documentation for the callback methods of an iis finder can be found in the file type_iisfinder.h.
  *
  * Here is what you have to do to implement an iis finder:
- * -# Copy the template files src/scip/iisfinder_xyz.c and src/scip/iisfinder_xyz.h into files named "iisfinder_myiisfinder.c"
- *    and "iisfinder_myiisfinder.h".
+ * -# Copy the template files `src/scip/iisfinder_xyz.c` and `src/scip/iisfinder_xyz.h` into files named `iisfinder_myiisfinder.c`
+ *    and `iisfinder_myiisfinder.h`.
  *    \n
  *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
- *    If you are adding a new default plugin, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
- * -# Use SCIPincludeIIsfinderMyiisfinder() in order to include the iis finder into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example). \n
+ *    If you are adding a new default plugin for SCIP, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeIIsfinderMyiisfinder()` in order to include the iis finder into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., `src/cmain.c` in the Binpacking example). \n
  *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myiisfinder".
  * -# Adjust the properties of the iis finder (see \ref IISFINDER_PROPERTIES).
@@ -4093,7 +4093,7 @@
  *
  * @section IISFINDER_PROPERTIES Properties of an IIS finder
  *
- * At the top of the new file "iisfinder_myiisfinder.c" you can find the iis finder properties.
+ * At the top of the new file `iisfinder_myiisfinder.c` you can find the iis finder properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the iis finder properties by calling the constructor
  * of the abstract base class scip::ObjIISfinder from within your constructor.
@@ -4120,7 +4120,7 @@
  *
  * @section IISFINDER_DATA IIS Finder Data
  *
- * Below the header "Data structures" you can find a struct which is called "struct SCIP_IISfinderData".
+ * Below the header "Data structures" you can find a struct which is called `struct SCIP_IISfinderData`.
  * In this data structure, you can store the data of your iis finder. For example, you should store the adjustable
  * parameters of the iis finder in this data structure.
  * If you are using C++, you can add iis finder data as usual as object variables to your class.
@@ -4130,9 +4130,9 @@
  *
  * @section IISFINDER_INTERFACE Interface Methods
  *
- * At the bottom of "iisfinder_myiisfinder.c", you can find the interface method SCIPincludeIISfinderMyiisfinder(),
- * which also appears in "iisfinder_myiisfinder.h"
- * SCIPincludeIISfinderMyiisfinder() is called by the user, if they want to include the iis finder, i.e., if they want
+ * At the bottom of `iisfinder_myiisfinder.c`, you can find the interface method `SCIPincludeIISfinderMyiisfinder()`,
+ * which also appears in `iisfinder_myiisfinder.h`
+ * `SCIPincludeIISfinderMyiisfinder()` is called by the users, if they want to include the iis finder, i.e., if they want
  * to use the iis finder in their application.
  *
  * This method only has to be adjusted slightly.
@@ -4170,7 +4170,7 @@
  *
  * @subsection IISFINDEREXEC
  *
- * The IISFINDEREXEC callback should generate an (I)IS from an infeasible instance
+ * The IISFINDEREXEC callback should generate an (I)IS from an infeasible instance.
  * The callback receives the IIS object, which contains the infeasible subscip that should be reduced in size,
  * as well as multiple parameters that limit how the IIS finder procedure should be performed.
  * The contained subscip should be transformed such that it remains infeasible and decreases in size,

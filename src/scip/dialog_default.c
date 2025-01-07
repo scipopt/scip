@@ -4988,7 +4988,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
             NULL,
             SCIPdialogExecWriteIIS, NULL, NULL,
             "iis",
-            "write (I)IS (irreducible infeasible subsystem) of infeasible problem to file (format is given by file extension (e.g., {.cip, .lp, .mps})",
+            "write (I)IS (irreducible infeasible subsystem) of infeasible problem to file (format is given by file extension (e.g., {.cip, .lp, .mps}))",
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );

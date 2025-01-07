@@ -72,7 +72,7 @@ namespace scip
          const char*        name,               /**< name of iis finder */
          const char*        desc,               /**< description of iis finder */
          int                priority            /**< priority of the iis finder */
-      )
+         )
          : scip_(scip),
            scip_name_(0),
            scip_desc_(0),
@@ -151,20 +151,20 @@ SCIP_RETCODE SCIPincludeObjIISfinder(
    SCIP*                 scip,               /**< SCIP data structure */
    scip::ObjIISfinder*   objiisfinder,       /**< iis finder object */
    SCIP_Bool             deleteobject        /**< should the iis finder object be deleted when iis finder is freed? */
-);
+   );
 
 /** returns the iis finder object of the given name, or 0 if not existing */
 SCIP_EXPORT
 scip::ObjIISfinder* SCIPfindObjIISfinder(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name                /**< name of iis finder */
-);
+   );
 
 /** returns the iis finder object for the given iis finder */
 SCIP_EXPORT
 scip::ObjIISfinder* SCIPgetObjIISfinder(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_IISFINDER*       iisfinder           /**< iisfinder */
-);
+   SCIP_IISFINDER*       iisfinder           /**< iis finder */
+   );
 
 #endif
