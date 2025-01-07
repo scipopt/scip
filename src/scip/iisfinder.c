@@ -116,7 +116,6 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_CALL( SCIPsetIntParam(iis->subscip, "display/verblevel", 0) );
    SCIP_CALL( SCIPsetBoolParam(iis->subscip, "timing/statistictiming", FALSE) );
 #endif
-   SCIP_CALL( SCIPsetSubscipsOff(iis->subscip, TRUE) );
    SCIP_CALL( SCIPsetIntParam(iis->subscip, "limits/bestsol", 1) );
    SCIP_CALL( SCIPsetRealParam(iis->subscip, "limits/time", timelim - SCIPclockGetTime(iis->iistime)) );
    SCIP_CALL( SCIPsetLongintParam(iis->subscip, "limits/nodes", nodelim) );
@@ -143,7 +142,7 @@ SCIP_RETCODE checkTrivialInfeas(
    vars = SCIPgetOrigVars(scip);
    for( i = 0; i < nvars; i++ )
    {
-      if( SCIPvarGetLbOriginal(vars[i]) > SCIPvarGetUbOriginal(vars[i]) )
+      if( SCIPisGT(scip, SCIPvarGetLbOriginal(vars[i]), SCIPvarGetUbOriginal(vars[i])) )
       {
          *trivial = TRUE;
          break;
@@ -154,7 +153,6 @@ SCIP_RETCODE checkTrivialInfeas(
    {
       nconss = SCIPgetNOrigConss(scip);
       origconss = SCIPgetOrigConss(scip);
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conss, nconss) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, origconss, nconss) );
       for( i = 0; i < nconss; i++ )
       {

@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objiisfinder.cpp
- * @brief  C++ wrapper for iis finders
+ * @brief  C++ wrapper for IIS finders
  * @author Mark Turner
  */
 

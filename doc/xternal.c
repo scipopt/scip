@@ -4061,7 +4061,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page IISFINDER How to add iis finders
+/**@page IISFINDER How to add IIS finders
  *
  * IIS finders are used to generate an (I)IS ((irreducible) infeasible subsystem) for an infeasible instance.
  * \n
@@ -8014,7 +8014,7 @@
  *    These functions should follow the naming style `SCIP<operation><component>...`, e.g., <code>SCIPcreateVar()</code> or <code>SCIPaddVarLocks</code>.
  *  - To ensure functions of the public API being reachable in shared libraries, their declaration needs to contain the <code>SCIP_EXPORT</code> attribute.
  *  - Public types (typedef's, enumerations) are defined in file <code>type_<component>.h</code>.
- *    Type names follow the style <code>SCIP_<COMPONENT>...</code>. For every struct, we have a typedef that shortens the name 
+ *    Type names follow the style <code>SCIP_<COMPONENT>...</code>. For every struct, we have a typedef that shortens the name
  *    (so one could for instance use <code>SCIP_PARAM</code> instead of <code>struct SCIP_Param</code>).
  *    The convention is to have the mixed-casing for the struct name, and then all-capital for the typedef's type. Similar for enums.
  *  - Structs that need to be accessed by several source files are defined in <code>struct_<component>.h</code>.
