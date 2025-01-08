@@ -137,6 +137,7 @@ SCIP_RETCODE checkTrivialInfeas(
    int nvars;
    int i;
 
+   assert( trivial != NULL );
    *trivial = FALSE;
    nvars = SCIPgetNOrigVars(scip);
    vars = SCIPgetOrigVars(scip);
