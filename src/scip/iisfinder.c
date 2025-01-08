@@ -680,7 +680,6 @@ SCIP_RETCODE SCIPiisFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-
    assert(iis != NULL);
    if( *iis == NULL )
       return SCIP_OKAY;
