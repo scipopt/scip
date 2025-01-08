@@ -4248,8 +4248,6 @@ SCIP_RETCODE propAndSolve(
          {
             SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") could not prove infeasibility of LP %" SCIP_LONGINT_FORMAT " (exactsolve=%u, pricingaborted=%u), all variables are fixed, %d continuous vars\n",
                stat->nnodes, stat->nlps, set->exact_enabled, *pricingaborted, transprob->ncontvars);
-            SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ")  -> have to call PerPlex() (feature not yet implemented)\n", stat->nnodes);
-            /**@todo call PerPlex */
             return SCIP_LPERROR;
          }
          else
@@ -4962,6 +4960,7 @@ SCIP_RETCODE solveNode(
    {
       SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
+      /* AG@LE why are these ifs temporary? */
       /** @todo exip: these ifs are temporary */
       if( !(lp->solved && lp->flushed) )
       {
@@ -5481,7 +5480,7 @@ SCIP_RETCODE SCIPsolveCIP(
                {
                   if( transprob->ncontvars > 0 )
                   {
-                     SCIPerrorMessage("cannot branch on all-fixed LP -- have to call PerPlex instead\n");
+                     SCIPerrorMessage("cannot branch on all-fixed LP\n");
                   }
                }
                else
