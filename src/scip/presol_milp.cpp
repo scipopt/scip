@@ -1778,6 +1778,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeMILP) );
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitMILP) );
 
+   /* mark as exact */
+   SCIPpresolSetExact(presol);
+
    /* add MILP presolver parameters */
 #ifdef PAPILO_TBB
    SCIP_CALL( SCIPaddIntParam(scip,
@@ -1903,8 +1906,6 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/verbosity",
          "verbosity level of PaPILO (0: quiet, 1: errors, 2: warnings, 3: normal, 4: detailed)",
          &presoldata->verbosity, FALSE, DEFAULT_VERBOSITY, 0, 4, NULL, NULL));
-
-   SCIPpresolSetExact(presol);
 
    return SCIP_OKAY;
 }

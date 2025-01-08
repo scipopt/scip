@@ -2531,6 +2531,9 @@ SCIP_RETCODE SCIPpresolve(
       SCIP_CALL( displayRelevantStats(scip) );
    }
 
+   /* AG@LE if certificate printing is enabled and presolving changed something, then print warning message that
+    * certificate is printed for presolved problem */
+
    return SCIP_OKAY;
 }
 
