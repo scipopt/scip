@@ -139,6 +139,7 @@ SCIP_RETCODE revertBndChgs(
    return SCIP_OKAY;
 }
 
+/* Revert deleted constraint changes made in the subproblem */
 static
 SCIP_RETCODE revertConssDeletions(
    SCIP*                 scip,               /**< SCIP instance to analyze */
@@ -185,7 +186,7 @@ SCIP_RETCODE deletionSubproblem(
    )
 {
    SCIP* scip;
-   SCIP_Real* bounds;
+   SCIP_Real* bounds = NULL;
    SCIP_RETCODE retcode;
    SCIP_STATUS status;
    SCIP_Bool chgmade = FALSE;
@@ -194,7 +195,6 @@ SCIP_RETCODE deletionSubproblem(
    *deleted = FALSE;
    *stop = FALSE;
    scip = SCIPiisGetSubscip(iis);
-   bounds = NULL;
 
    /* remove bounds or constraints*/
    if( delbounds )
@@ -442,7 +442,6 @@ SCIP_RETCODE deletionFilterBatch(
    int nconss;
    int nvars;
    int i;
-   int j;
    int k;
 
    scip = SCIPiisGetSubscip(iis);
@@ -471,15 +470,15 @@ SCIP_RETCODE deletionFilterBatch(
    while( i < nconss )
    {
       k = 0;
-      for( j = i; j < nconss && k < batchsize; j++ )
+      while( i < nconss && k < batchsize )
       {
-         if( SCIPconsGetNUses(conss[order[j]]) == 1 )
+         if( SCIPconsGetNUses(conss[order[i]]) == 1 )
          {
-            idxs[k] = order[j];
+            idxs[k] = order[i];
             k++;
          }
+         i++;
       }
-      i = j;
 
       /* treat subproblem */
       SCIP_CALL( deletionSubproblem(iis, conss, NULL, idxs, k, timelim, timelimperiter, nodelim, nodelimperiter,
@@ -516,19 +515,14 @@ SCIP_RETCODE deletionFilterBatch(
       {
          k = 0;
          /* Do not delete bounds of binary variables or bother with calculations of free variables */
-         for( j = i; j < nvars; j++ )
+         while( i < nvars && k < batchsize )
          {
-            if( k >= batchsize )
-               break;
-            if( SCIPvarGetType(vars[order[j]]) == SCIP_VARTYPE_BINARY )
-               continue;
-            else if( SCIPisInfinity(scip, -SCIPvarGetLbOriginal(vars[order[j]])) && SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[order[j]])) )
-               continue;
-            else
+            if( (SCIPvarGetType(vars[order[i]]) != SCIP_VARTYPE_BINARY) && (!SCIPisInfinity(scip, -SCIPvarGetLbOriginal(vars[order[i]])) || !SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[order[i]]))) )
             {
-               idxs[k] = order[j];
+               idxs[k] = order[i];
                k++;
             }
+            i++;
          }
          if( k == 0 )
             break;
@@ -638,21 +632,19 @@ SCIP_RETCODE additionFilterBatch(
    {
       /* Add the next batch of constraints */
       k = 0;
-      for( j = i; j < nconss; ++j )
+      while( i < nconss && k < batchsize )
       {
-         if( k >= batchsize )
-            break;
-         if( !inIS[order[j]] )
+         if( !inIS[order[i]] )
          {
-            SCIP_CALL( SCIPaddCons(scip, conss[order[j]]) );
-            SCIP_CALL( SCIPreleaseCons(scip, &conss[order[j]]) );
-            inIS[order[j]] = TRUE;
+            SCIP_CALL( SCIPaddCons(scip, conss[order[i]]) );
+            SCIP_CALL( SCIPreleaseCons(scip, &conss[order[i]]) );
+            inIS[order[i]] = TRUE;
             ++k;
          }
+         i++;
       }
       if( k == 0 )
          break;
-      i = i + k;
 
       /* Solve the reduced problem */
       retcode = additionSubproblem(iis, timelim, timelimperiter, nodelim, nodelimperiter, &feasible, &stopiter);
@@ -776,7 +768,7 @@ SCIP_DECL_IISFINDEREXEC(iisfinderExecGreedy)
    assert(iisfinder != NULL);
    assert(result != NULL);
 
-   *result = SCIP_SUCCESS;
+   *result = SCIP_DIDNOTFIND;
 
    iisfinderdata = SCIPiisfinderGetData(iisfinder);
    assert(iisfinderdata != NULL);
@@ -885,7 +877,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Longint          nodelimperiter,     /**< maximum number of nodes per individual solve call */
    int                   maxbatchsize,       /**< the maximum number of constraints to delete or add per iteration */
    SCIP_Real             maxrelbatchsize,    /**< the maximum number of constraints relative to the original problem to delete or add per iteration */
-   SCIP_RESULT*          result              /**< pointer to store the result of the IIS finder run */
+   SCIP_RESULT*          result              /**< pointer to store the result of the IIS finder run. SCIP_DIDNOTFIND if the algorithm failed, otherwise SCIP_SUCCESS. */
    )
 {
    int nconss;
@@ -895,6 +887,10 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Bool alldeletionssolved = TRUE;
 
    assert( scip != NULL );
+   assert( randnumgen != NULL);
+   assert( result != NULL );
+
+   *result = SCIP_DIDNOTFIND;
 
    nconss = SCIPgetNOrigConss(scip);
    nvars = SCIPgetNOrigVars(scip);

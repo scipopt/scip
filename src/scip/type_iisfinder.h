@@ -30,7 +30,7 @@
 
 /** @defgroup DEFPLUGINS_IISFINDER Default irreducible infeasible subsystems
  *  @ingroup DEFPLUGINS
- *  @brief implementation files (.c files) of the default IISs (irreducible infeasible subsystems) of SCIP
+ *  @brief type definitions for IIS finder methods
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

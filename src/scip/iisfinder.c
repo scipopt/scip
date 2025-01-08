@@ -364,32 +364,38 @@ SCIP_RETCODE SCIPiisGenerate(
    /* Try all IIS generators */
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/stopafterone", &stopafterone) );
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/removebounds", &removebounds) );
-   for( i = 0; i < set->niisfinders && !trivial; ++i )
+   if( !trivial )
    {
-      SCIP_IISFINDER* iisfinder;
-      iisfinder = set->iisfinders[i];
-      assert(iis != NULL);
+      for( i = 0; i < set->niisfinders; ++i )
+      {
+         SCIP_IISFINDER* iisfinder;
+         iisfinder = set->iisfinders[i];
+         assert(iis != NULL);
 
-      /* Recreate the subscip if one of the IIS finder algorithms has produced an invalid IS */
-      if( ! iis->valid )
-         SCIP_CALL( createSubscipIIS(set, iis, timelim - SCIPclockGetTime(iis->iistime), nodelim) );
+         /* Recreate the subscip if one of the IIS finder algorithms has produced an invalid IS */
+         if( ! iis->valid )
+            SCIP_CALL( createSubscipIIS(set, iis, timelim - SCIPclockGetTime(iis->iistime), nodelim) );
 
-      /* start timing */
-      SCIPclockStart(iisfinder->iisfindertime, set);
+         /* start timing */
+         SCIPclockStart(iisfinder->iisfindertime, set);
 
-      SCIPdebugMsg(set->scip, "----- STARTING IIS FINDER %s -----\n", iisfinder->name);
-      SCIP_CALL( iisfinder->iisfinderexec(iis, iisfinder, timelim, nodelim, removebounds, silent, &result) );
+         SCIPdebugMsg(set->scip, "----- STARTING IIS FINDER %s -----\n", iisfinder->name);
+         SCIP_CALL( iisfinder->iisfinderexec(iis, iisfinder, timelim, nodelim, removebounds, silent, &result) );
 
-      /* stop timing */
-      SCIPclockStop(iisfinder->iisfindertime, set);
+         /* stop timing */
+         SCIPclockStop(iisfinder->iisfindertime, set);
 
-      assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
+         assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
 
-      if( timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim) )
-         SCIPdebugMsg(set->scip, "Time or node limit hit. Stopping Search.\n");
+         if( timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim) )
+         {
+            SCIPdebugMsg(set->scip, "Time or node limit hit. Stopping Search.\n");
+            break;
+         }
 
-      if( (stopafterone && (result == SCIP_SUCCESS)) || (iis->irreducible == TRUE) )
-         break;
+         if( (stopafterone && (result == SCIP_SUCCESS)) || (iis->irreducible == TRUE) )
+            break;
+      }
    }
 
    /* Ensure the problem is irreducible if requested */
