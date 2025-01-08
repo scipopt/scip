@@ -105,7 +105,7 @@ SCIP_RETCODE createSubscipIIS(
       SCIP_CALL( SCIPchgVarObj(iis->subscip, vars[i], 0.0 ) );
 
    /* copy parameter settings */
-   /** @todo: Do we really want to copy the parameter settings?
+   /** @todo: Do we really want to copy the parameter settings? */
    SCIP_CALL( SCIPcopyParamSettings(set->scip, iis->subscip) );
 #ifdef SCIP_DEBUG
    /* for debugging, enable full output */
@@ -450,7 +450,6 @@ SCIP_RETCODE SCIPiisGenerate(
 
       nvars = SCIPgetNOrigVars(iis->subscip);
       vars = SCIPgetOrigVars(iis->subscip);
-      // TODO: Ask someone if this is safe. It is passing basic tests.
       for( i = nvars - 1; i >= 0; i-- )
       {
          if( SCIPvarGetNUses(vars[i]) <= 1 && SCIPvarGetLbOriginal(vars[i]) <= SCIPvarGetUbOriginal(vars[i]) )
@@ -792,7 +791,7 @@ void SCIPiisSetValid(
    SCIP_Bool             valid               /**< The new validity status of the IIS */
    )
 {
-   assert( iis != NULL ); 
+   assert( iis != NULL );
    iis->valid = valid;
 }
 
