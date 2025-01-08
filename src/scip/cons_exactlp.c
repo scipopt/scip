@@ -87,7 +87,7 @@
 #endif
 
 
-#define CONSHDLR_NAME          "linear-exact" /* TODO change the name? - is ugly */
+#define CONSHDLR_NAME          "linear-exact" /* TODO change the name? - is ugly and inconsistent with file name */
 #define CONSHDLR_DESC          "exact linear constraints of the form  lhs <= a^T x <= rhs"
 #define CONSHDLR_SEPAPRIORITY   +100000 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY  -1000000 /**< priority of the constraint handler for constraint enforcing */
@@ -16607,6 +16607,7 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
    int nchgbds;
    int i;
 
+   /* AG@LE I would remove this timer, it should be identical to the core timer for this conshdlr's proptime */
    SCIPclockStart(scip->stat->exactproptime, scip->set);
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -16615,8 +16616,6 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-
-   /*debugMsg(scip, "Prop method of linear constraints\n");*/
 
    /* check, if we want to tighten variable's bounds (in probing, we always want to tighten the bounds) */
    if( SCIPinProbing(scip) )

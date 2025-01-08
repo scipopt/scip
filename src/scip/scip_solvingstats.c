@@ -3709,6 +3709,7 @@ void SCIPprintLPStatistics(
    if( scip->set->exact_enabled )
    {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Exact LP           :       Time      Calls Iterations  Iter/call   Iter/sec     Nfails   AvgError   NObjlim  NObjlimF \n");
+      /* AG@LE why is proptime printed here? Is this the total time over all exact propagations or a duplicate of the exact linear conshdlr's time? */
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact propagat.  : %10.2f \n",
          SCIPclockGetTime(scip->stat->exactproptime));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp feas    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
