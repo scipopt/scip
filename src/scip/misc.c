@@ -3255,7 +3255,7 @@ SCIP_RETCODE SCIPhashmapInsertLong(
    hashval = hashvalue((size_t)origin);
 
    /* append origin->image pair to hash map */
-   img.long_val = image;
+   img.longint = image;
    SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, FALSE) );
 
    return SCIP_OKAY;
@@ -3352,7 +3352,7 @@ long SCIPhashmapGetImageLong(
    assert(hashmap->hashmaptype == SCIP_HASHMAPTYPE_UNKNOWN || hashmap->hashmaptype == SCIP_HASHMAPTYPE_LONG);
 
    if( hashmapLookup(hashmap, origin, &pos) )
-      return hashmap->slots[pos].image.long_val;
+      return hashmap->slots[pos].image.longint;
 
    return LONG_MAX;
 }
