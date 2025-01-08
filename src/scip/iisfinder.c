@@ -416,8 +416,8 @@ SCIP_RETCODE SCIPiisGenerate(
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
    }
 
-   /* Remove redundant constraints that potentially are left over from indicator constraints.
-    * That is constraints containing a variables with no bounds and that only features in a single constraint */
+   /* Remove redundant constraints that potentially are left over from indicator constraints,
+    * that is constraints containing a variables with no bounds and that only features in a single constraint */
    nconss = SCIPgetNOrigConss(iis->subscip);
    origconss = SCIPgetOrigConss(iis->subscip);
    SCIP_CALL( SCIPduplicateBlockMemoryArray(iis->subscip, &conss, origconss, nconss) );
