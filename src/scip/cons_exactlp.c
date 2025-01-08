@@ -81,16 +81,13 @@
 #include "scip/struct_certificate.h"
 #include <ctype.h>
 #include <string.h>
-#ifdef SCIP_WITH_MPFR
-#include <mpfr.h>
-#endif
 #if defined(_WIN32) || defined(_WIN64)
 #else
 #include <strings.h> /*lint --e{766}*/
 #endif
 
 
-#define CONSHDLR_NAME          "linear-exact"
+#define CONSHDLR_NAME          "linear-exact" /* TODO change the name? - is ugly */
 #define CONSHDLR_DESC          "exact linear constraints of the form  lhs <= a^T x <= rhs"
 #define CONSHDLR_SEPAPRIORITY   +100000 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY  -1000000 /**< priority of the constraint handler for constraint enforcing */
@@ -18041,15 +18038,6 @@ SCIP_RETCODE SCIPincludeConshdlrExactLinear(
          "constraints/" CONSHDLR_NAME "/maxdenom",
          "maximal denominator on continuous variables after propagation (if limitdenom = TRUE)?",
          &conshdlrdata->maxdenom, TRUE, 256L, 1L, SCIP_LONGINT_MAX, NULL, NULL) );
-#ifdef SCIP_WITH_MPFR
-   {
-      char version[20];
-      /* add info about using MPFR to external codes information */
-      (void) SCIPsnprintf(version, sizeof(version), "MPFR %s", MPFR_VERSION_STRING);
-      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, version,
-            "GNU Multiple Precision Floating-Point Reliable Library (mpfr.org)") );
-   }
-#endif /*lint --e{529}*/
 
    return SCIP_OKAY;
 }

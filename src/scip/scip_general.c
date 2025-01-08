@@ -82,6 +82,10 @@
 #include <strings.h> /*lint --e{766}*/
 #endif
 
+#ifdef SCIP_WITH_MPFR
+#include <mpfr.h>
+#endif
+
 #ifdef SCIP_WITH_ZLIB
 #include <zlib.h>
 #endif
@@ -298,11 +302,20 @@ SCIP_RETCODE doScipCreate(
 #ifndef SCIP_WITH_BOOST
    SCIPerrorMessage("SCIP was compiled with exact solve support, but without Boost. Please recompile SCIP with Boost.\n");
    return SCIP_ERROR;
+#else
+   /* TODO add boost as external code */
 #endif
 #ifndef SCIP_WITH_MPFR
    SCIPerrorMessage("SCIP was compiled with exact solve support, but without MPFR. Please recompile SCIP with MPFR.\n");
    return SCIP_ERROR;
-#endif
+#else
+   {
+      char name[SCIP_MAXSTRLEN];
+
+      (void) SCIPsnprintf(version, sizeof(name), "MPFR %s", MPFR_VERSION_STRING);
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "GNU Multiple Precision Floating-Point Reliable Library (mpfr.org)") );
+   }
+#endif /*lint --e{529}*/
 #endif
    if( SCIPtpiIsAvailable() )
    {
