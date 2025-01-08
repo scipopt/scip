@@ -2507,8 +2507,9 @@ SCIP_RETCODE priceAndCutLoop(
    SCIP_Bool root;
    SCIP_Bool allowlocal;
    int maxseparounds;
+   int maxsepapartialrounds;
    int nsepastallrounds;
-   int maxnsepastallrounds;
+   int maxsepastallrounds;
    int stallnfracs;
    int actdepth;
    int npricedcolvars;
@@ -2542,17 +2543,22 @@ SCIP_RETCODE priceAndCutLoop(
    allowlocal = SCIPsetIsLE(set, bounddist, set->sepa_maxlocalbounddist);
    separate = (set->sepa_maxruns == -1 || stat->nruns < set->sepa_maxruns);
 
-   /* get maximal number of separation rounds */
+   /* determine maximal number of separation rounds */
    maxseparounds = (root ? set->sepa_maxroundsroot : set->sepa_maxrounds);
    if( maxseparounds == -1 )
       maxseparounds = INT_MAX;
    if( stat->nruns > 1 && root && set->sepa_maxroundsrootsubrun >= 0 )
       maxseparounds = MIN(maxseparounds, set->sepa_maxroundsrootsubrun);
+
+   /* determine maximal number of partial rounds excluding delayed round */
+   maxsepapartialrounds = INT_MAX;
    if( !fullseparation && set->sepa_maxaddrounds >= 0 )
-      maxseparounds = MIN(maxseparounds, stat->nseparounds + set->sepa_maxaddrounds);
-   maxnsepastallrounds = root ? set->sepa_maxstallroundsroot : set->sepa_maxstallrounds;
-   if( maxnsepastallrounds == -1 )
-      maxnsepastallrounds = INT_MAX;
+      maxsepapartialrounds = stat->nseparounds + set->sepa_maxaddrounds;
+
+   /* determine maximal number of stalling rounds */
+   maxsepastallrounds = root ? set->sepa_maxstallroundsroot : set->sepa_maxstallrounds;
+   if( maxsepastallrounds == -1 )
+      maxsepastallrounds = INT_MAX;
 
    /* solve initial LP of price-and-cut loop */
    SCIPsetDebugMsg(set, "node: solve LP with price and cut\n");
@@ -2576,7 +2582,7 @@ SCIP_RETCODE priceAndCutLoop(
    stalllpobjval = SCIP_REAL_MIN;
    stallnfracs = INT_MAX;
    lp->installing = FALSE;
-   while( !(*cutoff) && !(*unbounded) && !(*lperror) && (mustprice || mustsepa || delayedsepa) )
+   while( !(*cutoff) && !(*unbounded) && !(*lperror) && ( mustprice || mustsepa ) )
    {
       SCIPsetDebugMsg(set, "-------- node solving loop --------\n");
       assert(lp->flushed);
@@ -2714,33 +2720,17 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->flushed || *cutoff || *unbounded);
       assert(lp->solved || *lperror || *cutoff || *unbounded);
 
-      /* check, if we exceeded the separation round limit */
-      mustsepa = mustsepa
+      /* if we are infeasible, unbounded, exceeded a separation round, the objective, or a global performance limit,
+       * we don't need to separate cuts
+       * (the global limits are only checked at the root node in order to not query system time too often)
+       */
+      mustsepa = mustsepa && separate && !(*cutoff) && !(*unbounded)
          && stat->nseparounds < maxseparounds
-         && nsepastallrounds < maxnsepastallrounds
-         && !(*cutoff);
-
-      /* if separators were delayed, we want to apply a final separation round with the delayed separators */
-      delayedsepa = delayedsepa && !mustsepa && !(*cutoff); /* if regular separation applies, we ignore delayed separators */
-      mustsepa = mustsepa || delayedsepa;
-
-      if( mustsepa )
-      {
-         /* if the LP is infeasible, unbounded, exceeded the objective limit or a global performance limit was reached,
-          * we don't need to separate cuts
-          * (the global limits are only checked at the root node in order to not query system time too often)
-          */
-         if( !separate || (*cutoff) || (*unbounded)
-             || (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-             || SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)
-             || (root && SCIPsolveIsStopped(set, stat, FALSE)) )
-         {
-            mustsepa = FALSE;
-            delayedsepa = FALSE;
-         }
-         else
-            assert(!(*lperror));
-      }
+         && ( delayedsepa || stat->nseparounds < maxsepapartialrounds )
+         && nsepastallrounds < maxsepastallrounds
+         && ( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+         && SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)
+         && ( !root || !SCIPsolveIsStopped(set, stat, FALSE) );
 
       /* separation (needs not to be done completely, because we just want to increase the lower bound) */
       if( mustsepa )
@@ -2759,6 +2749,7 @@ SCIP_RETCODE priceAndCutLoop(
          oldninitconssadded = stat->ninitconssadded;
 
          mustsepa = FALSE;
+         delayedsepa = delayedsepa && stat->nseparounds >= maxsepapartialrounds;
          enoughcuts = SCIPsetIsZero(set, SCIPsetGetSepaMaxcutsGenFactor(set, root) * SCIPsetGetSepaMaxcuts(set, root));
 
          /* global cut pool separation */
@@ -2789,10 +2780,10 @@ SCIP_RETCODE priceAndCutLoop(
                   &delayedsepa, &enoughcuts, cutoff, lperror, &mustsepa, &mustprice) );
             assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
-            /* if we are close to the stall round limit, also call the delayed separators */
-            if( !(*cutoff) && !(*lperror) && !enoughcuts && lp->solved
-               && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-               && nsepastallrounds >= maxnsepastallrounds-1 && delayedsepa )
+            /* if we are in the last separation or stall round, also call the delayed separators */
+            if( !(*cutoff) && !(*lperror) && lp->solved && !enoughcuts && delayedsepa
+               && ( stat->nseparounds + 1 >= maxseparounds || nsepastallrounds + 1 >= maxsepastallrounds )
+               && ( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY ) )
             {
                SCIP_CALL( separationRoundLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, transprob, primal,
                      tree, lp, sepastore, actdepth, bounddist, allowlocal, delayedsepa,
@@ -2980,32 +2971,33 @@ SCIP_RETCODE priceAndCutLoop(
                      }
                      else
                      {
-                        nsepastallrounds++;
+                        ++nsepastallrounds;
                      }
                      stalllpsolstat = SCIPlpGetSolstat(lp);
 
-                     /* tell LP that we are (close to) stalling */
-                     if( nsepastallrounds >= maxnsepastallrounds-2 )
+                     /* tell LP that we are stalling */
+                     if( nsepastallrounds + 1 >= maxsepastallrounds )
                         lp->installing = TRUE;
-                     SCIPsetDebugMsg(set, " -> nsepastallrounds=%d/%d\n", nsepastallrounds, maxnsepastallrounds);
+
+                     SCIPsetDebugMsg(set, " -> nsepastallrounds=%d/%d\n", nsepastallrounds, maxsepastallrounds);
                   }
                }
             }
          }
          assert(*cutoff || *lperror || (lp->flushed && lp->solved)); /* cutoff: LP may be unsolved due to bound changes */
 
-         SCIPsetDebugMsg(set, "separation round %d/%d finished (%d/%d stall rounds): mustprice=%u, mustsepa=%u, delayedsepa=%u, propagateagain=%u\n",
-            stat->nseparounds, maxseparounds, nsepastallrounds, maxnsepastallrounds, mustprice, mustsepa, delayedsepa, *propagateagain);
-
          /* increase separation round counter */
-         stat->nseparounds++;
+         ++stat->nseparounds;
+
+         SCIPsetDebugMsg(set, "separation round %d/%d finished (%d/%d stall rounds): mustprice=%u, mustsepa=%u, delayedsepa=%u, propagateagain=%u\n",
+            stat->nseparounds, maxseparounds, nsepastallrounds, maxsepastallrounds, mustprice, mustsepa, delayedsepa, *propagateagain);
       }
    }
 
-   if( root && nsepastallrounds >= maxnsepastallrounds )
+   if( root && nsepastallrounds >= maxsepastallrounds )
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "Truncate separation round because of stalling (%d stall rounds).\n", maxnsepastallrounds);
+         "Truncate separation round because of stalling (%d stall rounds).\n", maxsepastallrounds);
    }
 
    if( !*lperror )

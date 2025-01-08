@@ -724,6 +724,20 @@ SCIP_RETCODE findImpliedIntegers(
  * Callback methods of presolver
  */
 
+/** copy method for presolver plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyImplint)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolImplint(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRESOLFREE(presolFreeImplint)
@@ -855,6 +869,7 @@ SCIP_RETCODE SCIPincludePresolImplint(
    assert(presol != NULL);
 
    /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyImplint) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeImplint) );
 
    SCIP_CALL( SCIPaddRealParam(scip,

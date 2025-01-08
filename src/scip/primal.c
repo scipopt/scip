@@ -665,7 +665,7 @@ SCIP_RETCODE primalAddSol(
    /* make sure that the primal bound is at least the lower bound */
    if( ! SCIPsetIsInfinity(set, obj) && ! SCIPsetIsInfinity(set, -SCIPgetLowerbound(set->scip)) && SCIPsetIsFeasGT(set, SCIPgetLowerbound(set->scip), obj) )
    {
-      if( origprob->objsense == SCIP_OBJSENSE_MINIMIZE )
+      if( SCIPprobGetObjsense(origprob) == SCIP_OBJSENSE_MINIMIZE )
       {
          SCIPmessagePrintWarning(messagehdlr, "Dual bound %g is larger than the objective of the primal solution %g. The solution might not be optimal.\n",
             SCIPprobExternObjval(transprob, origprob, set, SCIPgetLowerbound(set->scip)), SCIPprobExternObjval(transprob, origprob, set, obj));
@@ -1834,10 +1834,10 @@ SCIP_RETCODE SCIPprimalTransformSol(
    assert(solvalssize == 0 || solvals != NULL);
    assert(solvalssize == 0 || solvalset != NULL);
 
-   origvars = origprob->vars;
-   norigvars = origprob->nvars;
-   transvars = transprob->vars;
-   ntransvars = transprob->nvars;
+   origvars = SCIPprobGetVars(origprob);
+   norigvars = SCIPprobGetNVars(origprob);
+   transvars = SCIPprobGetVars(transprob);
+   ntransvars = SCIPprobGetNVars(transprob);
    assert(solvalssize == 0 || solvalssize >= ntransvars);
 
    SCIPsetDebugMsg(set, "try to transfer original solution %p with objective %g into the transformed problem space\n",

@@ -955,7 +955,7 @@ SCIP_RETCODE printExpr(
             if( stage == SCIP_EXPRITER_ENTEREXPR )
                SCIPinfoMessage(scip, file, "power(");
             else if( stage == SCIP_EXPRITER_LEAVEEXPR )
-               SCIPinfoMessage(scip, file, ",%g)", exponent);
+               SCIPinfoMessage(scip, file, ",%.15g)", exponent);
             /* if power but not square, then we are no longer quadratic */
             *nqcons = FALSE;
          }

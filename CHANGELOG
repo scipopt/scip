@@ -5,8 +5,9 @@
 
 Features
 --------
-- Added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
-- Copy variable data pointer if no copy routine was supplied.
+
+- added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
+- copy variable data pointer if no copy routine was supplied.
 - added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
 - implemented symmetry detection callbacks for cons_disjunction and cons_superindicator
 - detailed information about applied symmetry handling techniques can be printed to the terminal
@@ -19,7 +20,7 @@ Features
 Performance improvements
 ------------------------
 
-- Reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
+- reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
 
 Examples and applications
 -------------------------
@@ -37,6 +38,7 @@ Interface changes
 - SCIPcreateRow*(), SCIPaddVarToRow(), SCIPaddVarsToRow(), SCIPaddVarsToRowSameCoef() can now only be called in the solving stage,
   because otherwise the LP is not yet available and the row data is invalid.
 - intvar removed from arguments for SCIPcreateConsPseudobooleanWithConss(), SCIPcreateConsPseudoboolean(), and SCIPcreateConsBasicPseudoboolean() due to dysfunctionality of non-linear objective reformulation with pseudoboolean constraint
+- ndelconss added to arguments for SCIPcleanupConssLinear() and SCIPcleanupConssKnapsack() to directly delete empty redundant constraints before creating problem matrix
 - Added copyiisfinders to SCIPcopyPlugins() (16th position)
 
 ### New API functions
@@ -136,6 +138,8 @@ Known bugs
 Features
 --------
 
+- simplify expressions of nonlinear constraints in MPS and LP writing to increase chance that they are recognized as quadratic
+
 Performance improvements
 ------------------------
 
@@ -163,6 +167,11 @@ Interface changes
 Fixed bugs
 ----------
 
+Miscellaneous
+-------------
+
+- updated description of paramater misc/usesymmetry
+
 @section RN921 SCIP 9.2.1
 *************************
 
@@ -175,6 +184,7 @@ Fixed bugs
 - fixed bug in calculation of "fractionality score" for spatial branching candidates in cons_nonlinear
 - fixed bug with installing symmetry dialog in sub-SCIPs
 - add copy callbacks for default plugins presolver dualagg, presolver redvub, branchrule lookahead, branchrule cloud, heuristic dualval, heuristic repair, propagator nlobbt, separator gauge, and separator convexproj missing in SCIPsetCopyPlugins()
+- respect maximal round setting of separation by running remaining delayed separators in last round
 
 Unit tests
 ----------
@@ -194,6 +204,8 @@ Build system
 
 Miscellaneous
 -------------
+
+- The output precision for writing CIP/POB files has been increased at several places for nonlinear constraints.
 
 Known bugs
 ----------
