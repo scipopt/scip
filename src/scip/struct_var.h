@@ -100,6 +100,7 @@ struct SCIP_BoundChg
       SCIP_BRANCHINGDATA branchingdata;      /**< data for branching decisions */
       SCIP_INFERENCEDATA inferencedata;      /**< data for inferred bound changes */
    } data;
+  /* AG@LE inconsistent with long in union of sciphashmapinsertlong */
    SCIP_Longint          certificateindex;   /**< line in certificate for this bound change (-1 if not used) */
    SCIP_VAR*             var;                /**< active variable to change the bounds for */
    unsigned int          boundchgtype:2;     /**< bound change type: branching decision or inferred bound change */

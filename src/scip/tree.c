@@ -1901,7 +1901,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    {
       SCIP_Rational* newboundex;
 
-      SCIP_CALL(RatCreateBuffer(SCIPbuffer(set->scip), &newboundex));
+      SCIP_CALL( RatCreateBuffer(SCIPbuffer(set->scip), &newboundex) );
 
       RatSetReal(newboundex, newbound);
       SCIP_CALL( SCIPcertificatePrintGlobalBound(set->scip, SCIPgetCertificate(set->scip), var, boundtype,
