@@ -49,78 +49,78 @@ namespace scip
  *  - \ref IISFINDERS "List of available iis finders"
  *  - \ref type_iisfinder.h "Corresponding C interface"
  */
-   class ObjIISfinder : public ObjCloneable
+class ObjIISfinder : public ObjCloneable
+{
+public:
+   /*lint --e{1540}*/
+
+   /** SCIP data structure */
+   SCIP* scip_;
+
+   /** name of the iis finder */
+   char* scip_name_;
+
+   /** description of the iis finder */
+   char* scip_desc_;
+
+   /** priority of the iis finder */
+   const int scip_priority_;
+
+   /** default constructor */
+   ObjIISfinder(
+      SCIP*              scip,               /**< SCIP data structure */
+      const char*        name,               /**< name of iis finder */
+      const char*        desc,               /**< description of iis finder */
+      int                priority            /**< priority of the iis finder */
+      )
+      : scip_(scip),
+        scip_name_(0),
+        scip_desc_(0),
+        scip_priority_(priority)
    {
-   public:
-      /*lint --e{1540}*/
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
+   }
 
-      /** SCIP data structure */
-      SCIP* scip_;
+   /** copy constructor */
+   ObjIISfinder(const ObjIISfinder& o) : ObjIISfinder(o.scip_, o.scip_name_, o.scip_desc_, o.scip_priority_) {}
 
-      /** name of the iis finder */
-      char* scip_name_;
+   /** move constructor */
+   ObjIISfinder(ObjIISfinder&& o) : scip_(o.scip_), scip_name_(0), scip_desc_(0), scip_priority_(o.scip_priority_)
+   {
+      std::swap(scip_name_, o.scip_name_);
+      std::swap(scip_desc_, o.scip_desc_);
+   }
 
-      /** description of the iis finder */
-      char* scip_desc_;
+   /** destructor */
+   virtual ~ObjIISfinder()
+   {
+      /*lint --e{64}*/
+      SCIPfreeMemoryArray(scip_, &scip_name_);
+      SCIPfreeMemoryArray(scip_, &scip_desc_);
+   }
 
-      /** priority of the iis finder */
-      const int scip_priority_;
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjIISfinder& operator=(const ObjIISfinder& o) = delete;
 
-      /** default constructor */
-      ObjIISfinder(
-         SCIP*              scip,               /**< SCIP data structure */
-         const char*        name,               /**< name of iis finder */
-         const char*        desc,               /**< description of iis finder */
-         int                priority            /**< priority of the iis finder */
-         )
-         : scip_(scip),
-           scip_name_(0),
-           scip_desc_(0),
-           scip_priority_(priority)
-      {
-         SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
-         SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_desc_, desc, std::strlen(desc)+1) );
-      }
+   /** assignment of polymorphic classes causes slicing and is therefore disabled. */
+   ObjIISfinder& operator=(ObjIISfinder&& o) = delete;
 
-      /** copy constructor */
-      ObjIISfinder(const ObjIISfinder& o) : ObjIISfinder(o.scip_, o.scip_name_, o.scip_desc_, o.scip_priority_) {}
+   /** destructor of iis finder to free user data (called when SCIP is exiting)
+    *
+    *  @see SCIP_DECL_IISFINDERFREE(x) in @ref type_iisfinder.h
+    */
+   virtual SCIP_DECL_IISFINDERFREE(scip_free)
+   {  /*lint --e{715}*/
+      return SCIP_OKAY;
+   }
 
-      /** move constructor */
-      ObjIISfinder(ObjIISfinder&& o) : scip_(o.scip_), scip_name_(0), scip_desc_(0), scip_priority_(o.scip_priority_)
-      {
-         std::swap(scip_name_, o.scip_name_);
-         std::swap(scip_desc_, o.scip_desc_);
-      }
-
-      /** destructor */
-      virtual ~ObjIISfinder()
-      {
-         /*lint --e{64}*/
-         SCIPfreeMemoryArray(scip_, &scip_name_);
-         SCIPfreeMemoryArray(scip_, &scip_desc_);
-      }
-
-      /** assignment of polymorphic classes causes slicing and is therefore disabled. */
-      ObjIISfinder& operator=(const ObjIISfinder& o) = delete;
-
-      /** assignment of polymorphic classes causes slicing and is therefore disabled. */
-      ObjIISfinder& operator=(ObjIISfinder&& o) = delete;
-
-      /** destructor of iis finder to free user data (called when SCIP is exiting)
-       *
-       *  @see SCIP_DECL_IISFINDERFREE(x) in @ref type_iisfinder.h
-       */
-      virtual SCIP_DECL_IISFINDERFREE(scip_free)
-      {  /*lint --e{715}*/
-         return SCIP_OKAY;
-      }
-
-      /** iis finder execution method of iis finder
-       *
-       *  @see SCIP_DECL_IISFINDEREXEC(x) in @ref type_iisfinder.h
-       */
-      virtual SCIP_DECL_IISFINDEREXEC(scip_exec) = 0;
-   };
+   /** iis finder execution method of iis finder
+    *
+    *  @see SCIP_DECL_IISFINDEREXEC(x) in @ref type_iisfinder.h
+    */
+   virtual SCIP_DECL_IISFINDEREXEC(scip_exec) = 0;
+};
 
 } /* namespace scip */
 
