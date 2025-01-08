@@ -105,7 +105,7 @@ SCIP_RETCODE createSubscipIIS(
       SCIP_CALL( SCIPchgVarObj(iis->subscip, vars[i], 0.0 ) );
 
    /* copy parameter settings */
-   // TODO: Do we really want to copy the parameter settings?
+   /** @todo: Do we really want to copy the parameter settings?
    SCIP_CALL( SCIPcopyParamSettings(set->scip, iis->subscip) );
 #ifdef SCIP_DEBUG
    /* for debugging, enable full output */
