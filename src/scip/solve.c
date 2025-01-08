@@ -1652,10 +1652,10 @@ SCIP_RETCODE solveNodeInitialLP(
       /* update lower bound of current node w.r.t. initial lp */
       assert(!(*cutoff));
       if( (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY
-	      || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT)
-	      && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
+            || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT)
+         && SCIPprobAllColsInLP(transprob, set, lp) && SCIPlpIsRelax(lp) )
       {
-	      SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
+         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, tree, transprob, origprob, lp) );
 
          /* if this is the first LP solved at the root, store its iteration count and solution value */
          if( stat->nnodelps == 0 && focusnode->depth == 0 )
@@ -3143,9 +3143,10 @@ SCIP_RETCODE applyBounding(
       {
          SCIP_CALL( SCIPcertificatePrintDualboundPseudo(stat->certificate, lp->lpexact, focusnode, set, transprob, FALSE, -1, -1L, pseudoobjval) );
       }
+
       /* check for infeasible node by bounding */
       if( (!set->exact_enabled && SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound))
-            || (set->exact_enabled && RatIsGE(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact)) )
+         || (set->exact_enabled && RatIsGE(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact)) )
       {
          *cutoff = TRUE;
 
