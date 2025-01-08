@@ -1062,25 +1062,25 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayIIS)
 {  /*lint --e{715}*/
    SCIP_IIS* iis;
    SCIP* subscip;
-   
+
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
-   
+
    SCIPdialogMessage(scip, NULL, "\n");
-   
+
    iis = SCIPgetIIS(scip);
    subscip = SCIPiisGetSubscip(iis);
-   
+
    if( subscip != NULL && SCIPgetStage(subscip) >= SCIP_STAGE_PROBLEM )
    {
       SCIP_CALL( SCIPprintOrigProblem(subscip, NULL, "cip", FALSE) );
    }
    else
       SCIPdialogMessage(scip, NULL, "no IIS available\n");
-   
+
    SCIPdialogMessage(scip, NULL, "\n");
-   
+
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-   
+
    return SCIP_OKAY;
 }
 
@@ -2361,11 +2361,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS)
    case SCIP_STAGE_INIT:
       SCIPdialogMessage(scip, NULL, "No problem exists.\n");
       break;
-      
+
    case SCIP_STAGE_PROBLEM:
       SCIP_CALL( SCIPgenerateIIS(scip) );
       break;
-      
+
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
@@ -2375,9 +2375,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS)
    case SCIP_STAGE_EXITPRESOLVE:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_EXITSOLVE:
-      SCIPdialogMessage(scip, NULL, "problem is in some intermediate stage\n");
+      SCIPdialogMessage(scip, NULL, "SCIP is in some intermediate solving stage, i.e., not PROBLEM or SOLVED. An IIS therefore cannot be computed.\n");
       break;
-      
+
    case SCIP_STAGE_SOLVED:
    {
       if ( SCIPgetStatus(scip) != SCIP_STATUS_INFEASIBLE )
@@ -4067,21 +4067,21 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteIIS)
 {  /*lint --e{715}*/
    SCIP* subscip;
    SCIP_IIS* iis;
-   
+
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
-   
+
    iis = SCIPgetIIS(scip);
    subscip = SCIPiisGetSubscip(iis);
-   
+
    if( subscip != NULL )
    {
       SCIP_CALL( writeProblem(subscip, dialog, dialoghdlr, nextdialog, FALSE, FALSE) );
    }
    else
       SCIPdialogMessage(scip, NULL, "no IIS available.\n");
-   
+
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-   
+
    return SCIP_OKAY;
 }
 
@@ -4385,7 +4385,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
-   
+
    /* display IIS */
    if( !SCIPdialogHasEntry(submenu, "iis") )
    {
@@ -4980,7 +4980,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
-   
+
    /* write IIS of problem */
    if( !SCIPdialogHasEntry(submenu, "iis") )
    {
