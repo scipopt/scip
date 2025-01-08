@@ -124,6 +124,7 @@ struct SCIP_LpSolVals
    SCIP_Bool             dualchecked;        /**< was current LP solution checked for primal feasibility? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             lpissolved;         /**< is current LP solved? */
+   /* MP@LE Should the variable name hasprovedbound contain an indication of the exact mode (without making the name too long)? */
    SCIP_Bool             hasprovedbound;     /**< is the current LP provably dual feasible (in exact mode) */
 };
 

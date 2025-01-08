@@ -11,6 +11,7 @@
 #ifdef SCIP_WITH_GMP
    #include <boost/multiprecision/gmp.hpp>
    using namespace boost::multiprecision;
+/* MP@LE Please fix indentation of #include, using .. and add empty lines between logical blocks. For example, why is the next line not indented, while the previous is? */
 namespace scip_rational
 {
    using Rational = boost::multiprecision::number<gmp_rational, et_off>;

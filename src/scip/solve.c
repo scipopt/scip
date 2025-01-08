@@ -2587,7 +2587,7 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->solved);
 
       /* solve the LP with pricing in new variables */
-      while( mustprice && !(*lperror) ) // @todo exactip-note: do we disable smth here?
+      while( mustprice && !(*lperror) ) /* @todo exactip-note: do we disable smth here? */ /* MP@LE Check and possibly remove. */
       {
          SCIP_CALL( SCIPpriceLoop(blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp,
                pricestore, sepastore, cutpool, branchcand, eventqueue, eventfilter, cliquetable, root, root, -1, &npricedcolvars,
@@ -3009,6 +3009,7 @@ SCIP_RETCODE priceAndCutLoop(
       }
 
       /* in exact solving mode, solve the LP once more, now allowing an exact solve if desired */
+      /* MP@LE Please explain why the LP should be solved at this place. */
       if( set->exact_enabled && !mustsepa )
       {
          lp->solved = FALSE;
@@ -3078,6 +3079,7 @@ SCIP_RETCODE priceAndCutLoop(
    {
       SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
+      /* MP@LE Please add an if arround the following such that it is only executed if certificates are computed. */
       if( !(lp->solved && lp->flushed) )
          SCIP_CALL( SCIPcertificatePrintInheritedBound(set, stat->certificate, focusnode) );
       else if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE && tree->focusnodehaslp )
@@ -3147,6 +3149,7 @@ SCIP_RETCODE applyBounding(
       {
          *cutoff = TRUE;
 
+         /* MP@LE The second condition is always false (see above). Why are exact checks mixed with double checks? */
          if( set->exact_enabled && RatIsLT(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact) && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
          {
             /* if the pseudoobjval is cutting of the node with tolerances, but not exactly, we use the exact pseudo objval */
@@ -3290,8 +3293,11 @@ SCIP_RETCODE solveNodeLP(
          }
          else
          {
+            /* MP@LE Is it correct that we arrive here if lp->lpexact->solved is false, but exact_enabled is true? */
+
             SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
 
+            /* MP@LE Why is this test not needed in the exact code in the first part of the if-block. */
             if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
                checklprows = FALSE;
             else
@@ -4241,6 +4247,8 @@ SCIP_RETCODE propAndSolve(
       /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
        * we have to forget about the LP and use the pseudo solution instead
        */
+      /* MP@LE Can you please make the above comment more specific? It is not easy to understand. For instance, you need
+         to know that SCIPnodeGetLowerbound(focusnode) should be infinity for infeasible LPs. */
       if( !(*cutoff) && !(*lperror) && (set->exact_enabled || *pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
          && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
       {
@@ -4311,6 +4319,7 @@ SCIP_Bool restartAllowed(
    return set->nactivepricers == 0 && !set->reopt_enable
       && ( set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts )
       && !(set->exact_enabled);
+   /* MP@LE Should we add a todo to think about enabling restarts for exact solves? Test whether restarts would work without certificates? */
 }
 #else
 #define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && !set->reopt_enable \
@@ -5075,6 +5084,7 @@ SCIP_RETCODE addCurrentSolution(
       }
       else
       {
+         /* MP@LE Is it correct that are in this block if lp->lpexact->solved is false and we solve exactly? */
          SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
          SCIPsetDebugMsg(set, "found lp solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
