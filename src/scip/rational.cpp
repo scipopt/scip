@@ -630,6 +630,8 @@ void RatSetString(
 {
    assert(res != NULL);
 
+   /* MP@LE I recommend to add specific functions for setting a rational to +/- infinity. */
+
    if( 0 == strcmp(desc, "inf") )
    {
       res->val =  1;

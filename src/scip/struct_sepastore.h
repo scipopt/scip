@@ -61,6 +61,7 @@ struct SCIP_SepaStore
    SCIP_Bool             forcecuts;          /**< should the cuts be used despite the number of cuts parameter limit? */
 };
 
+/* MP@LE Please comment the variables. */
 struct SCIP_SepaStoreExact
 {
    SCIP_ROWEXACT**       cuts;

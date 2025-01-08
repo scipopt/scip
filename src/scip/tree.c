@@ -945,6 +945,7 @@ SCIP_RETCODE nodeReleaseParent(
       }
       /* update the effective root depth if not in reoptimization and active parent has children */
       else if( !set->reopt_enable && freeParent == !parent->active && !set->exact_enabled )
+         /* MP@LE Why is the following code disabled in exact mode. Does this effect certificate computation? If so, why does the if not test against it? */
       {
          SCIP_Bool singleChild = FALSE;
          int focusdepth = SCIPtreeGetFocusDepth(tree);

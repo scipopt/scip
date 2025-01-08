@@ -240,6 +240,7 @@ struct SCIP_Stat
    SCIP_Longint          nfailboundshift;    /**< number of failed boundshift calls for feasible lp */
    SCIP_Longint          nboundshiftinf;     /**< number of boundshift calls for infeasible lp */
    SCIP_Longint          nfailboundshiftinf; /**< number of failed boundshift calls for feasible lp */
+   /* MP@LE Please document variables. */
    SCIP_Longint          nboundshiftobjlim;
    SCIP_Longint          nboundshiftobjlimfail;
    SCIP_Longint          nprojshift;         /**< number of project and shift calls for feasible lp */

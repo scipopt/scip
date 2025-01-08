@@ -616,6 +616,7 @@ struct SCIP_Set
    SCIP_Bool             visual_objextern;   /**< should be output the external value of the objective? */
 
    /* exact SCIP settings */
+   /* MP@LE Can we use shorter names for the parameters, e.g., exact_ileavestrat? */
    SCIP_Bool             exact_enabled;      /**< should the problem be solved exactly (without numerical tolerances)? */
    int                   exact_interleavestrategy; /**< strategy to interleave safe dual bounding with exact LP
                                               *   solve (0: never, 1: only close to cutoff bound, 2: only at depth lvl 4,8,16,...,
