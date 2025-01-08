@@ -2532,6 +2532,7 @@ void SCIPsolSetOrigin(
    SCIP_SOLORIGIN        origin              /**< new origin type of the solution */
    )
 {
+   assert( sol != NULL );
    sol->solorigin = origin;
 }
 

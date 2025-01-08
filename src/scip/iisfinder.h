@@ -115,7 +115,7 @@ SCIP_RETCODE SCIPiisFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
-/** reset an IIS (in case one exists from a previous solve */
+/** reset an IIS (in case one exists from a previous solve) */
 SCIP_RETCODE SCIPiisReset(
    SCIP_IIS**           iis                  /**< pointer to the IIS */
    );

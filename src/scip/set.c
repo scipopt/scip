@@ -5013,7 +5013,7 @@ void SCIPsetSortBranchrulesName(
 SCIP_RETCODE SCIPsetIncludeIISfinder(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_IISFINDER*       iisfinder           /**< IIS finder */
-)
+   )
 {
    assert(set != NULL);
    assert(iisfinder != NULL);
@@ -5036,7 +5036,7 @@ SCIP_RETCODE SCIPsetIncludeIISfinder(
 SCIP_IISFINDER* SCIPsetFindIISfinder(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name                /**< name of IIS finder */
-)
+   )
 {
    int i;
 
@@ -5055,7 +5055,7 @@ SCIP_IISFINDER* SCIPsetFindIISfinder(
 /** sorts IIS finders by priorities */
 void SCIPsetSortIISfinders(
    SCIP_SET*             set                 /**< global SCIP settings */
-)
+   )
 {
    assert(set != NULL);
 

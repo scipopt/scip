@@ -64,7 +64,7 @@ extern "C" {
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeIISfinderGreedy(
    SCIP*                 scip                /**< SCIP data structure */
-);
+   );
 
 /**@addtogroup IISFINDERS
  *
@@ -98,7 +98,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    int                   maxbatchsize,       /**< the maximum number of constraints to delete or add per iteration */
    SCIP_Real             maxrelbatchsize,    /**< the maximum number of constraints relative to the original problem to delete or add per iteration */
    SCIP_RESULT*          result              /**< pointer to store the result of the IIS run */
-);
+   );
 
 /** @} */
 

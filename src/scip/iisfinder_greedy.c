@@ -708,7 +708,6 @@ SCIP_RETCODE additionFilterBatch(
    {
       if( !inIS[order[i]] )
          SCIP_CALL( SCIPreleaseCons(scip, &conss[order[i]]) );
-
    }
 
    SCIPfreeBlockMemoryArray(scip, &order, nconss);
@@ -749,7 +748,7 @@ SCIP_DECL_IISFINDERFREE(iisfinderFreeGreedy)
    SCIP_IISFINDERDATA* iisfinderdata;
 
    iisfinderdata = SCIPiisfinderGetData(iisfinder);
-   SCIPfreeRandom(scip, &(iisfinderdata->randnumgen));
+   SCIPfreeRandom(scip, &iisfinderdata->randnumgen);
 
    SCIPfreeBlockMemory(scip, &iisfinderdata);
 

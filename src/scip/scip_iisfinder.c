@@ -98,7 +98,7 @@ SCIP_RETCODE SCIPincludeIISfinderBasic(
     /* check whether the IIS is already present */
     if( SCIPfindIISfinder(scip, name) != NULL )
     {
-        SCIPerrorMessage("IIS <%s> already included.\n", name);
+        SCIPerrorMessage("IIS finder <%s> already included.\n", name);
         return SCIP_INVALIDDATA;
     }
 
@@ -201,6 +201,7 @@ SCIP_RETCODE SCIPsetIISfinderPriority(
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
+   assert( iisfinder != NULL );
 
    SCIPiisfinderSetPriority(iisfinder, scip->set, priority);
 

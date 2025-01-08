@@ -792,6 +792,7 @@ void SCIPiisSetValid(
    SCIP_Bool             valid               /**< The new validity status of the IIS */
    )
 {
+   assert( iis != NULL ); 
    iis->valid = valid;
 }
 
@@ -799,8 +800,9 @@ void SCIPiisSetValid(
 void SCIPiisSetIrreducible(
    SCIP_IIS*             iis,                /**< IIS data structure */
    SCIP_Bool             irreducible         /**< The new irreducible status of the IIS */
-)
+   )
 {
+   assert( iis != NULL );
    iis->irreducible = irreducible;
 }
 
@@ -810,6 +812,7 @@ void SCIPiisAddNNodes(
    SCIP_Longint          nnodes              /**< The number of nodes to add to the IIS */
    )
 {
+   assert( iis != NULL );
    iis->nnodes += nnodes;
 }
 
@@ -818,6 +821,7 @@ SCIP* SCIPiisGetSubscip(
    SCIP_IIS*            iis                  /**< pointer to the IIS */
    )
 {
+   assert( iis != NULL );
    return iis->subscip;
 }
 
