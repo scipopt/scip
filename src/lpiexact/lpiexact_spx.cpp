@@ -794,7 +794,7 @@ const char* SCIPlpiExactGetSolverDesc(
    void
    )
 {
-   snprintf(spxdesc, 200, "%s [GitHash: %s]", "exact Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)", getGitHash());
+   snprintf(spxdesc, 200, "%s [GitHash: %s]", "Exact Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)", getGitHash());
 
    return spxdesc;
 }

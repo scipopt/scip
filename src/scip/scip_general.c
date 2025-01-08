@@ -275,7 +275,7 @@ SCIP_RETCODE doScipCreate(
    {
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
    }
-   if( strcmp(SCIPlpiExactGetSolverName(), "NONE") != 0 )
+   if( strcmp(SCIPlpiExactGetSolverName(), "NONE") != 0 && strcmp(SCIPlpiExactGetSolverName(), SCIPlpiGetSolverName()) != 0 )
    {
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiExactGetSolverName(), SCIPlpiExactGetSolverDesc()) );
    }
