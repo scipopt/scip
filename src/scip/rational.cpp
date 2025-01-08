@@ -84,7 +84,7 @@ static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are cons
 /** allocate and create a rational from nominator and denominator */
 SCIP_RETCODE RatCreate(
    SCIP_Rational**       rational            /**< pointer to the rational to create */
-)
+   )
 {
    SCIP_ALLOC( BMSallocMemory(rational) );
 
@@ -130,7 +130,7 @@ SCIP_RETCODE RatCreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
    const char*           desc                /**< the String describing the rational */
-)
+   )
 {
    SCIP_CALL( RatCreateBlock(mem, rational) );
 
