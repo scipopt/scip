@@ -130,7 +130,6 @@ SCIP_RETCODE checkTrivialInfeas(
    SCIP_Bool*            trivial             /**< pointer to store whether the problem is trivially infeasible */
    )
 {
-   SCIP_CONS** origconss;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
    int nconss;
@@ -153,13 +152,11 @@ SCIP_RETCODE checkTrivialInfeas(
    if( *trivial )
    {
       nconss = SCIPgetNOrigConss(scip);
-      origconss = SCIPgetOrigConss(scip);
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, origconss, nconss) );
-      for( i = 0; i < nconss; i++ )
+      conss = SCIPgetOrigConss(scip);
+      for( i = nconss - 1; i >= 0; i-- )
       {
          SCIP_CALL( SCIPdelCons(scip, conss[i]) );
       }
-      SCIPfreeBlockMemoryArray(scip, &conss, nconss);
    }
    return SCIP_OKAY;
 }
@@ -253,7 +250,6 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   SCIP_CONS** origconss;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
    SCIP_IIS* iis;
@@ -261,6 +257,7 @@ SCIP_RETCODE SCIPiisGenerate(
    int j;
    int nconss;
    int nvars;
+   int nbounds;
    SCIP_RESULT result = SCIP_DIDNOTFIND;
    SCIP_Bool silent;
    SCIP_Bool removebounds;
@@ -419,9 +416,8 @@ SCIP_RETCODE SCIPiisGenerate(
    /* Remove redundant constraints that potentially are left over from indicator constraints,
     * that is constraints containing a variables with no bounds and that only features in a single constraint */
    nconss = SCIPgetNOrigConss(iis->subscip);
-   origconss = SCIPgetOrigConss(iis->subscip);
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(iis->subscip, &conss, origconss, nconss) );
-   for( i = 0; i < nconss; ++i )
+   conss = SCIPgetOrigConss(iis->subscip);
+   for( i = nconss -1; i >= 0; --i )
    {
       islinear = strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i])), "linear") == 0;
       if( islinear && SCIPconsGetNUses(conss[i]) <= 1)
@@ -438,10 +434,6 @@ SCIP_RETCODE SCIPiisGenerate(
          }
       }
    }
-   SCIPfreeBlockMemoryArray(iis->subscip, &conss, nconss);
-
-   if( !silent )
-      SCIPiisfinderInfoMessage(iis, FALSE);
 
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/removeunusedvars", &removeunusedvars) );
    if( removeunusedvars )
@@ -460,8 +452,39 @@ SCIP_RETCODE SCIPiisGenerate(
       }
    }
 
+   if( !silent )
+      SCIPiisfinderInfoMessage(iis, FALSE);
+
    /* stop timing */
    SCIPclockStop(iis->iistime, set);
+
+   if( !silent )
+   {
+      nbounds = 0;
+      if( iis->valid )
+         SCIPinfoMessage(set->scip, NULL, "IIS Status            : success\n");
+      else
+         SCIPinfoMessage(set->scip, NULL, "IIS Status            : fail\n");
+      if( iis->irreducible )
+         SCIPinfoMessage(set->scip, NULL, "IIS irreducible       : yes\n");
+      else
+         SCIPinfoMessage(set->scip, NULL, "IIS irreducible       : no\n");
+      assert( iis->subscip != NULL );
+      SCIPinfoMessage(set->scip, NULL, "Generation Time (sec) : %.2f\n", SCIPiisGetTime(iis));
+      SCIPinfoMessage(set->scip, NULL, "Generation Nodes      : %lld\n", SCIPiisGetNNodes(iis));
+      SCIPinfoMessage(set->scip, NULL, "Num. Cons. in IIS     : %d\n", SCIPgetNOrigConss(iis->subscip));
+      nvars = SCIPgetNOrigVars(iis->subscip);
+      vars = SCIPgetOrigVars(iis->subscip);
+      for( i = 0; i < nvars; i++ )
+      {
+         if( !SCIPisInfinity(iis->subscip, -SCIPvarGetLbOriginal(vars[i])) )
+            ++nbounds;
+         if( !SCIPisInfinity(iis->subscip, SCIPvarGetUbOriginal(vars[i])) )
+            ++nbounds;
+      }
+      SCIPinfoMessage(set->scip, NULL, "Num. Vars. in IIS     : %d\n", nvars);
+      SCIPinfoMessage(set->scip, NULL, "Num. Bounds in IIS    : %d\n", nbounds);
+   }
 
    return SCIP_OKAY;
 }
@@ -624,18 +647,16 @@ void SCIPiisfinderInfoMessage(
    int nvars;
    int nbounds = 0;
    const char* valid = iis->valid ? "yes" : "no";
-   const char* irreducible = iis->irreducible ? "yes" : "no";
 
    scip = SCIPiisGetSubscip(iis);
    assert(scip != NULL);
 
-   if( printheaders )
+   if( printheaders || (iis->niismessagecalls % 15 == 0) )
    {
-      SCIPinfoMessage(scip, NULL, "  conss | bounds |  valid | irreducible |  nodes | time  \n");
-      return;
+      SCIPinfoMessage(scip, NULL, "time(s) | node   | cons   | vars   | bounds | infeasible \n");
+      if( printheaders )
+         return;
    }
-   if( iis->niismessagecalls % 15 == 0 )
-      SCIPinfoMessage(scip, NULL, "  conss | bounds |  valid | irreducible |  nodes | time  \n");
    iis->niismessagecalls += 1;
 
    nvars = SCIPgetNOrigVars(scip);
@@ -647,7 +668,7 @@ void SCIPiisfinderInfoMessage(
       if( !SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
          ++nbounds;
    }
-   SCIPinfoMessage(scip, NULL, "%7d |%7d |%7s | %11s |%7lld | %7f\n", SCIPgetNOrigConss(scip), nbounds, valid, irreducible, SCIPiisGetNNodes(iis), SCIPiisGetTime(iis));
+   SCIPinfoMessage(scip, NULL, "%-7.1f |%7lld |%7d |%7d |%7d | %11s \n", SCIPiisGetTime(iis), SCIPiisGetNNodes(iis), SCIPgetNOrigConss(scip), nvars, nbounds, valid);
 }
 
 /** creates and captures a new IIS */
