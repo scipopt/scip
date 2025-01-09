@@ -34,6 +34,8 @@ Miscellaneous
 -------------
 
 - the output precision for writing CIP/POB files has been increased at several places for nonlinear constraints
+- solchecker build also considers usual library location on mac
+- solchecker tool also supports SCIP solution format
 
 Known bugs
 ----------
