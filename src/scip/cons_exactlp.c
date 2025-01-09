@@ -77,6 +77,7 @@
 #include "scip/scip_var.h"
 #include "scip/var.h"
 #include "scip/sepastoreexact.h"
+/* AG@LE we should not include struct files */
 #include "scip/struct_scip.h"
 #include "scip/struct_certificate.h"
 #include <ctype.h>
