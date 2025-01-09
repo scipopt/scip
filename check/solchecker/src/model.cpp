@@ -455,8 +455,14 @@ bool Model::readSol(const char* filename)
       {
          // read variable value
          Var* var = getVar(varname);
-         if( var == NULL ) std::cerr << "unexpected variable<" << varname << "> in solution file" << std::endl;
-         assert( var != NULL );
+
+         if( var == NULL )
+         {
+            std::cerr << "unexpected variable<" << varname << "> in solution file" << std::endl;
+            isSolFeas = false;
+            break;
+         }
+
          Rational value;
          value.fromString(valuep);
          var->value = value;
