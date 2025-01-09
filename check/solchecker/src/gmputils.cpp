@@ -176,7 +176,6 @@ void Rational::fromString(const char* num)
    int k = 0;
 
    assert(num != NULL);
-   assert(strlen(num) <  32);
 
    // skip initial whitespaces
    while( isspace(*num) )
