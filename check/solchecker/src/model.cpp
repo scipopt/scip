@@ -458,7 +458,7 @@ bool Model::readSol(const char* filename)
 
          if( var == NULL )
          {
-            std::cerr << "unexpected variable<" << varname << "> in solution file" << std::endl;
+            std::cerr << "unexpected variable <" << varname << "> in solution file" << std::endl;
             isSolFeas = false;
             break;
          }
