@@ -1831,7 +1831,7 @@ SCIP_RETCODE SCIPincludeReaderNl(
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyNl) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
 
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 690e9e7", "AMPL .nl file reader library (github.com/ampl/mp)") );
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 4.0.0", "AMPL .nl file reader library (github.com/ampl/mp)") );
 
    return SCIP_OKAY;
 }

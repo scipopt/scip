@@ -114,6 +114,7 @@ Miscellaneous
 -------------
 
 - add objective offset instead of objective offset variable in cip reader
+- updated ampl/mp to v4.0.0
 
 Known bugs
 ----------
