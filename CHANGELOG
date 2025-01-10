@@ -70,10 +70,13 @@ Build system
 
 ### Makefile
 
+- the check/solchecker build now finds a GMP installation by Homebrew on macOS/arm64
+
 Miscellaneous
 -------------
 
-- The output precision for writing CIP/POB files has been increased at several places for nonlinear constraints.
+- the output precision for writing CIP/OPB files has been increased at several places for nonlinear constraints
+- the solchecker tool now also supports SCIP solution format
 
 Known bugs
 ----------

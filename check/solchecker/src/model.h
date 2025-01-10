@@ -14,6 +14,7 @@
 #include <iosfwd>
 #include <map>
 
+
 /**
  * @brief Class representing a problem variable.
  * Holds global variable information (such as bounds and objective coefficent)
