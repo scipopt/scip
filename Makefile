@@ -366,6 +366,7 @@ ifeq ($(SYM),none)
 SYMOBJ		=	symmetry/compute_symmetry_none.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ALLSRC		+=	$(SYMSRC)
 endif
 
@@ -374,6 +375,7 @@ ifeq ($(SYM),bliss)
 SYMOBJ		=	symmetry/compute_symmetry_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC		=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 FLAGS		+=	-I$(LIBDIR)/include/
 ALLSRC		+=	$(SYMSRC)
 SOFTLINKS	+=	$(LIBDIR)/include/bliss
@@ -393,6 +395,7 @@ SYMOBJ		=	symmetry/build_sassy_graph.o
 SYMOBJ		+=	symmetry/compute_symmetry_sassy_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC		=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 FLAGS		+=	-I$(LIBDIR)/include/
 ALLSRC		+=	$(SYMSRC)
 CXXFLAGS	+=	$(CXX17FLAG)
@@ -412,6 +415,7 @@ ifeq ($(SYM),nauty)
 SYMOBJ		=	symmetry/compute_symmetry_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
+LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
 ifeq ($(NAUTYEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
 LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/nauty
@@ -442,6 +446,7 @@ SYMOBJ		=	symmetry/build_sassy_graph.o
 SYMOBJ		+=	symmetry/compute_symmetry_sassy_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(NAUTYEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
 LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/nauty
@@ -1142,7 +1147,7 @@ preprocess:     checkdefines
 		@$(MAKE) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE)
 
 .PHONY: lint
-lint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE) githash
+lint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(LINTSYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE) githash
 		-rm -f lint.out
 
 		@$(SHELL) -ec 'if test -e lint/co-gcc.mak ; \
@@ -1169,7 +1174,7 @@ else
 endif
 
 .PHONY: pclint
-pclint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
+pclint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(LINTSYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
 		-rm -f pclint.out
 
 		@$(SHELL) -ec 'if ! test -e pclint/co-gcc.h ; \
@@ -1192,7 +1197,7 @@ else
 endif
 
 .PHONY: splint
-splint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
+splint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(LINTSYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
 		-rm -f splint.out
 ifeq ($(FILES),)
 		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$^) >> splint.out;'

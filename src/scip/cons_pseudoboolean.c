@@ -5102,9 +5102,8 @@ SCIP_RETCODE correctConshdlrdata(
                activescalars[0] = 1.0;
                activeconstant = 0.0;
                nactivevars = 1;
-               SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activescalars, &nactivevars, nvars,
-                     &activeconstant, &requiredsize, TRUE) );
-               assert(requiredsize <= nvars);
+               SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activescalars, &nactivevars, nvars, &activeconstant, &requiredsize) );
+               assert(requiredsize == nactivevars);
 
                for( i = 0; i < nactivevars && del; ++i )
                {
@@ -5618,7 +5617,8 @@ SCIP_RETCODE tryUpgradingXor(
    constant = 0;
 
    /* get linear active representation */
-   SCIP_CALL( SCIPgetProbvarLinearSum(scip, linvars, lincoefs, &nlinvars, MAXNVARS, &constant, &requiredsize, TRUE) );
+   SCIP_CALL( SCIPgetProbvarLinearSum(scip, linvars, lincoefs, &nlinvars, MAXNVARS, &constant, &requiredsize) );
+   assert(requiredsize == nlinvars);
    SCIP_CALL( SCIPduplicateBufferArray(scip, &activelinvars, linvars, nlinvars) );
 
    if( requiredsize > MAXNVARS )

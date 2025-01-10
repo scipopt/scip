@@ -96,7 +96,8 @@ typedef enum SYM_Consoptype SYM_CONSOPTYPE;
 
 /* type of symmetry handling codes */
 #define SYM_HANDLETYPE_NONE             UINT32_C(0x00000000)  /**< no symmetry handling */
-#define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities */
+#define SYM_HANDLETYPE_SYMBREAK         UINT32_C(0x00000001)  /**< symmetry breaking inequalities (orbitopes/
+                                                               *   orbisacks/symresacks) and lexicographic reduction */
 #define SYM_HANDLETYPE_ORBITALREDUCTION UINT32_C(0x00000002)  /**< orbital reduction */
 #define SYM_HANDLETYPE_SST              UINT32_C(0x00000004)  /**< Schreier Sims cuts */
 #define SYM_HANDLETYPE_SYMCONS (SYM_HANDLETYPE_SYMBREAK | SYM_HANDLETYPE_SST)

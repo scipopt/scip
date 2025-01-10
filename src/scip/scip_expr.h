@@ -277,12 +277,12 @@ SCIP_RETCODE SCIPcopyExpr(
  * a `Term` is a product of `Factors` and an `Expression` is a sum of `Terms`.
  *
  * The actual definition:
- * <pre>
+ * ```
  * Expression -> ["+" | "-"] Term { [ ("+" | "-" | "number *") Term | ("number" <varname>) ] }
  * Term       -> Factor { ("*" | "/" ) Factor }
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
- * </pre>
+ * ```
  * where `[a|b]` means `a` or `b` or none, `(a|b)` means `a` or `b`, `{a}` means 0 or more `a`.
  *
  * Note that `Op` and `OpExpression` are undefined.

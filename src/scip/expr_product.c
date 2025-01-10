@@ -1580,11 +1580,11 @@ SCIP_DECL_EXPRPRINT(printProduct)
          {
             if( exprdata->coefficient < 0.0 && EXPRHDLR_PRECEDENCE > parentprecedence )
             {
-               SCIPinfoMessage(scip, file, "(%g)", exprdata->coefficient);
+               SCIPinfoMessage(scip, file, "(%.15g)", exprdata->coefficient);
             }
             else
             {
-               SCIPinfoMessage(scip, file, "%g", exprdata->coefficient);
+               SCIPinfoMessage(scip, file, "%.15g", exprdata->coefficient);
             }
          }
          break;

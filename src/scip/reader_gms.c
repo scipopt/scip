@@ -107,7 +107,7 @@ SCIP_RETCODE getActiveVariables(
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *varssize, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *varssize, constant, &requiredsize) );
 
       if( requiredsize > *varssize )
       {
@@ -115,9 +115,10 @@ SCIP_RETCODE getActiveVariables(
          SCIP_CALL( SCIPreallocBufferArray(scip, vars, *varssize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, scalars, *varssize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *varssize, constant, &requiredsize, TRUE) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *varssize, constant, &requiredsize) );
          assert(requiredsize <= *varssize);
       }
+      assert(requiredsize == *nvars);
    }
    else
    {
@@ -954,7 +955,7 @@ SCIP_RETCODE printExpr(
             if( stage == SCIP_EXPRITER_ENTEREXPR )
                SCIPinfoMessage(scip, file, "power(");
             else if( stage == SCIP_EXPRITER_LEAVEEXPR )
-               SCIPinfoMessage(scip, file, ",%g)", exponent);
+               SCIPinfoMessage(scip, file, ",%.15g)", exponent);
             /* if power but not square, then we are no longer quadratic */
             *nqcons = FALSE;
          }

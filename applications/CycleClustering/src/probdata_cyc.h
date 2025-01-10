@@ -43,6 +43,17 @@
 #include "scip/type_cons.h"
 #include "scip/def.h"
 
+
+/** edge type */
+enum EdgeType
+{
+   INCLUSTER               = 0,              /**< edge inside a single cluster */
+   CONSECUTIVE_CLUSTER     = 1,              /**< edge connecting two consecutive cluster */
+   NON_CONSECUTIVE_CLUSTER = 2               /**< edge connecting two non-consecutive cluster */
+};
+typedef enum EdgeType EDGETYPE;
+
+
 /** free memory allocated for an nxn matrix */
 SCIP_RETCODE freeMatrix(
    SCIP_Real**           matrix,             /**< the matrix to be freed */
@@ -86,7 +97,7 @@ SCIP_VAR* getEdgevar(
    SCIP_VAR****          edgevars,           /**< edgevar data structure*/
    int                   state1,             /**< first state */
    int                   state2,             /**< second state */
-   int                   direction           /**< direction, 0 = incluster, 1 = forward */
+   EDGETYPE              edgetype            /**< position in clustering */
    );
 
 /** check for an array of states, if all possible edge-combinations exist */

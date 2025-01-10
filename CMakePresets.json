@@ -1,0 +1,36 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "autobuild",
+      "description": "Autobuild configuration, tries to enable as many features as possible",
+      "cacheVariables": {
+        "AUTOBUILD": "On"
+      }
+    },
+    {
+      "name": "mip",
+      "description": "Default configuration for compiling SCIP as a MIP solver (requires LP solver selected with LPS)",
+      "cacheVariables": {
+        "AUTOBUILD": "Off",
+        "IPOPT": "Off",
+        "PAPILO": "On",
+        "SYM": "snauty"
+      }
+    },
+    {
+      "name": "minimal",
+      "description": "Minimal built-in configuration",
+      "cacheVariables": {
+        "AUTOBUILD": "Off",
+        "IPOPT": "Off",
+        "PAPILO": "Off",
+        "ZIMPL": "Off",
+        "READLINE": "Off",
+        "ZLIB": "Off",
+        "GMP": "Off",
+        "LPS": "none"
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 /**
  * @file gmputils.cpp
- * @brief Basic classes to for rational arithmetic
+ * @brief Basic classes for rational arithmetic
  *
  * @author Domenico Salvagnin
  * @author Thorsten Koch
@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <time.h>
 #include <algorithm>
+
 
 char Rational::buffer[] = {'\0'};
 
@@ -42,7 +43,7 @@ Rational::~Rational()
 
 Rational& Rational::operator=(const Rational& rhs)
 {
-   if (this != &rhs)
+   if( this != &rhs )
       mpq_set(number, rhs.number);
    return *this;
 }
@@ -118,7 +119,7 @@ void Rational::integralityViolation(Rational& violation) const
    }
    // otherwise, we must check w.r.t. the given tolerance
    // first calculate the fractional part
-   violation = (*this);
+   violation = *this;
    violation.abs();
    mpz_t r;
    mpz_init(r);
@@ -138,7 +139,8 @@ void Rational::toZero()
 bool Rational::isInteger(const Rational& tolerance) const
 {
    // if denominator is 1, then it is an integer for sure
-   if (mpz_cmp_ui(mpq_denref(number), 1) == 0) return true;
+   if( mpz_cmp_ui(mpq_denref(number), 1) == 0 )
+      return true;
    // otherwise, we must check w.r.t. the given tolerance
    // first calculate the fractional part
    Rational viol(*this);
@@ -184,15 +186,15 @@ std::string::const_iterator findSubStringIC(const std::string & substr, const st
 void Rational::fromString(const char* num)
 {
    char* tmp = &buffer[0];
-   int   k = 0;
-   int   exponent = 0;
-   int   fraction = 0;
+   int exponent = 0;
+   int fraction = 0;
+   int k = 0;
    std::string s = std::string(num);
 
    assert(num != NULL);
 
-   // Skip initial whitespace
-   while(isspace(*num))
+   // skip initial whitespaces
+   while( isspace(*num) )
       num++;
 
    /* case 1: string is given in nom/den format */
@@ -203,28 +205,28 @@ void Rational::fromString(const char* num)
       return;
    }
 
-   // Skip initial +/-
-   if (*num == '+')
+   // skip initial sign
+   if( *num == '+' )
       num++;
-   else if (*num == '-')
+   else if( *num == '-' )
       tmp[k++] = *num++;
 
-   for(int i = 0; num[i] != '\0'; i++)
+   for( int i = 0; num[i] != '\0'; ++i )
    {
-      if (isdigit(num[i]))
+      if( isdigit(num[i]) )
       {
          tmp[k++]  = num[i];
          exponent -= fraction;
       }
-      else if (num[i] == '.')
+      else if( num[i] == '.' )
          fraction = 1;
-      else if (tolower(num[i]) == 'e')
+      else if( tolower(num[i]) == 'e' )
       {
          exponent += atoi(&num[i + 1]);
          break;
       }
    }
-   while(exponent > 0)
+   while( exponent > 0 )
    {
       tmp[k++] = '0';
       exponent--;
@@ -232,7 +234,7 @@ void Rational::fromString(const char* num)
    tmp[k++] = '/';
    tmp[k++] = '1';
 
-   while(exponent < 0)
+   while( exponent < 0 )
    {
       tmp[k++] = '0';
       exponent++;
