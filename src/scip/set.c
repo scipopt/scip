@@ -201,7 +201,6 @@
 /* IIS */
 #define SCIP_DEFAULT_IISFINDER_MINIMAL       TRUE  /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
 #define SCIP_DEFAULT_IISFINDER_REMOVEBOUNDS  FALSE /**< should bounds of the problem be considered for removal */
-#define SCIP_DEFAULT_IISFINDER_CHECKINITFEAS TRUE  /**< should the initial problem be checked for infeasibility */
 #define SCIP_DEFAULT_IISFINDER_SILENT        FALSE /**< should the IIS finders be run silently and output suppressed */
 #define SCIP_DEFAULT_IISFINDER_STOPAFTERONE  TRUE  /**< should the IIS search stop after a single IIS finder is run (excluding post processing) */
 #define SCIP_DEFAULT_IISFINDER_REMOVEUNUSEDVARS TRUE /**< should vars that do not feature in any constraints be removed at the end of the IIS process */
@@ -1661,11 +1660,6 @@ SCIP_RETCODE SCIPsetCreate(
          "iis/removebounds",
          "should bounds of the problem be considered for removal",
          &(*set)->iisfinder_removebounds, FALSE, SCIP_DEFAULT_IISFINDER_REMOVEBOUNDS,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "iis/checkinitfeas",
-         "should the initial problem be checked for infeasibility",
-         &(*set)->iisfinder_checkinitfeas, FALSE, SCIP_DEFAULT_IISFINDER_CHECKINITFEAS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "iis/silent",

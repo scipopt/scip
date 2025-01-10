@@ -444,6 +444,7 @@ SCIP_RETCODE deletionFilterBatch(
 
    scip = SCIPiisGetSubscip(iis);
    assert( scip != NULL );
+   assert( SCIPiisGetValid(iis) );
    randnumgen = SCIPiisGetRandnumgen(iis);
    assert( randnumgen != NULL );
 
@@ -589,8 +590,8 @@ SCIP_RETCODE additionFilterBatch(
    int k;
 
    scip = SCIPiisGetSubscip(iis);
-   assert( SCIPiisGetValid(iis) );
    assert( scip != NULL );
+   assert( SCIPiisGetValid(iis) );
    randnumgen = SCIPiisGetRandnumgen(iis);
    assert( randnumgen != NULL );
 

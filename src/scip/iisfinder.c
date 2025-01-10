@@ -288,7 +288,7 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIPclockStart(iis->iistime, set);
 
    /* If the model is not yet shown to be infeasible then check for infeasibility */
-   if( SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM && set->iisfinder_checkinitfeas )
+   if( SCIPgetStage(set->scip) == SCIP_STAGE_PROBLEM )
    {
       SCIP_CALL( SCIPsolve(iis->subscip) );
       if( SCIPgetStage(iis->subscip) == SCIP_STAGE_SOLVED )
@@ -356,6 +356,11 @@ SCIP_RETCODE SCIPiisGenerate(
          return SCIP_OKAY;
       }
       iis->valid = TRUE;
+   }
+   else
+   {
+      SCIPinfoMessage(iis->subscip, NULL, "Initial problem is neither in problem stage or infeasible.\n");
+      return SCIP_OKAY;
    }
 
    /* Check for trivial infeasibility reasons */

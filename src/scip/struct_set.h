@@ -308,17 +308,16 @@ struct SCIP_Set
    SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
    SCIP_Bool             history_allowmerge; /**< should variable histories be merged from sub-SCIPs whenever possible? */
    SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
-   
+
    /* IIS settings */
    SCIP_Bool             iisfinder_minimal;       /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
    SCIP_Bool             iisfinder_removebounds;  /**< should bounds of the problem be considered for removal */
-   SCIP_Bool             iisfinder_checkinitfeas; /**< should the initial problem be checked for infeasibility */
    SCIP_Bool             iisfinder_silent;        /**< should the IIS finders be run silently */
    SCIP_Bool             iisfinder_stopafterone;  /**< should the IIS search stop after a single IIS finder is run (excluding post processing) */
    SCIP_Bool             iisfinder_removeunusedvars; /**< should vars that do not feature in any constraints be removed at the end of the IIS process */
    SCIP_Real             iisfinder_time;          /**< maximal time in seconds for all IIS finders to run */
    SCIP_Longint          iisfinder_nodes;         /**< maximal number of nodes to process for all IIS finders (-1: no limit) */
-   
+
 
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
