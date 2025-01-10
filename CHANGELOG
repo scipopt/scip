@@ -35,7 +35,7 @@ Build system
 Miscellaneous
 -------------
 
-- the output precision for writing CIP/POB files has been increased at several places for nonlinear constraints
+- the output precision for writing CIP/OPB files has been increased at several places for nonlinear constraints
 - the solchecker tool now also supports SCIP solution format
 
 Known bugs
