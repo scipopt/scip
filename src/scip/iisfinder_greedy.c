@@ -38,7 +38,6 @@
 #define IISFINDER_NAME           "greedy"
 #define IISFINDER_DESC           "greedy deletion or addition constraint deletion"
 #define IISFINDER_PRIORITY        8000
-#define RANDSEED                  0x5EED
 
 #define DEFAULT_MAXBATCHSIZE     20    /**< the maximum number of constraints (or bounds) that are added / removed in one subproblem call */
 #define DEFAULT_MAXRELBATCHSIZE  0.035 /**< the maximum number of constraints (or bounds) relative to the original problem that are added / removed in one subproblem call */
@@ -56,7 +55,6 @@
 /** IIS finder data */
 struct SCIP_IISfinderData
 {
-   SCIP_RANDNUMGEN*      randnumgen;         /**< random generator for sorting constraints */
    SCIP_Real             timelimperiter;     /**< time limit per individual solve call */
    SCIP_Real             maxrelbatchsize;    /**< the maximum number of constraints relative to the original problem to delete or add per iteration */
    SCIP_Bool             additive;           /**< whether an additive approach instead of deletion based approach should be used */
@@ -421,7 +419,6 @@ SCIP_RETCODE deletionFilterBatch(
    SCIP_Real             timelim,            /**< The global time limit on the IIS finder call */
    SCIP_Longint          nodelim,            /**< The global node limit on the IIS finder call */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
    SCIP_Longint          nodelimperiter,     /**< maximum number of nodes per individual solve call */
    SCIP_Bool             removebounds,       /**< Whether the algorithm should remove bounds as well as constraints */
@@ -435,6 +432,7 @@ SCIP_RETCODE deletionFilterBatch(
    SCIP_CONS** conss;
    SCIP_VAR** origvars;
    SCIP_VAR** vars;
+   SCIP_RANDNUMGEN* randnumgen;
    int* order;
    int* idxs;
    SCIP_Bool stopiter;
@@ -446,6 +444,8 @@ SCIP_RETCODE deletionFilterBatch(
 
    scip = SCIPiisGetSubscip(iis);
    assert( scip != NULL );
+   randnumgen = SCIPiisGetRandnumgen(iis);
+   assert( randnumgen != NULL );
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &idxs, batchsize) );
 
@@ -565,7 +565,6 @@ SCIP_RETCODE additionFilterBatch(
    SCIP_Real             timelim,            /**< The global time limit on the IIS finder call */
    SCIP_Longint          nodelim,            /**< The global node limit on the IIS finder call */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
    SCIP_Longint          nodelimperiter,     /**< maximum number of nodes per individual solve call */
    SCIP_Bool             dynamicreordering,  /**< should satisfied constraints outside the batch of an intermediate solve be added during the additive method */
@@ -575,6 +574,7 @@ SCIP_RETCODE additionFilterBatch(
    SCIP* scip;
    SCIP_CONS** origconss;
    SCIP_CONS** conss;
+   SCIP_RANDNUMGEN* randnumgen;
    SCIP_SOL* sol;
    SCIP_SOL* copysol;
    SCIP_Bool* inIS;
@@ -591,6 +591,8 @@ SCIP_RETCODE additionFilterBatch(
    scip = SCIPiisGetSubscip(iis);
    assert( SCIPiisGetValid(iis) );
    assert( scip != NULL );
+   randnumgen = SCIPiisGetRandnumgen(iis);
+   assert( randnumgen != NULL );
 
    /* Get constraint information */
    nconss = SCIPgetNOrigConss(scip);
@@ -748,7 +750,6 @@ SCIP_DECL_IISFINDERFREE(iisfinderFreeGreedy)
    SCIP_IISFINDERDATA* iisfinderdata;
 
    iisfinderdata = SCIPiisfinderGetData(iisfinder);
-   SCIPfreeRandom(scip, &iisfinderdata->randnumgen);
 
    SCIPfreeBlockMemory(scip, &iisfinderdata);
 
@@ -772,7 +773,7 @@ SCIP_DECL_IISFINDEREXEC(iisfinderExecGreedy)
    iisfinderdata = SCIPiisfinderGetData(iisfinder);
    assert(iisfinderdata != NULL);
 
-   SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, iisfinderdata->randnumgen,
+   SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent,
             iisfinderdata->timelimperiter, iisfinderdata->additive, iisfinderdata->conservative,
             iisfinderdata->dynamicreordering, iisfinderdata->delafteradd,
             iisfinderdata->nodelimperiter, iisfinderdata->maxbatchsize,
@@ -797,7 +798,6 @@ SCIP_RETCODE SCIPincludeIISfinderGreedy(
    /* create greedy IIS finder data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &iisfinderdata) );
    BMSclearMemory(iisfinderdata);
-   SCIP_CALL( SCIPcreateRandom(scip, &(iisfinderdata)->randnumgen, RANDSEED, TRUE) );
 
    SCIP_CALL( SCIPincludeIISfinderBasic(scip, &iisfinder, IISFINDER_NAME, IISFINDER_DESC, IISFINDER_PRIORITY,
          iisfinderExecGreedy, iisfinderdata) );
@@ -867,7 +867,6 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Longint          nodelim,            /**< The global node limit on the IIS finder call */
    SCIP_Bool             removebounds,       /**< Whether the algorithm should remove bounds as well as constraints */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
    SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
    SCIP_Bool             conservative,       /**< should a hit limit (e.g. node / time) solve be counted as feasible when deleting constraints */
@@ -886,7 +885,6 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Bool alldeletionssolved = TRUE;
 
    assert( scip != NULL );
-   assert( randnumgen != NULL);
    assert( result != NULL );
 
    *result = SCIP_DIDNOTFIND;
@@ -904,7 +902,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
       {
          SCIPdebugMsg(scip, "----- STARTING GREEDY ADDITION ALGORITHM -----\n");
       }
-      SCIP_CALL( additionFilterBatch(iis, timelim, nodelim, silent, randnumgen, timelimperiter, nodelimperiter, dynamicreordering, batchsize) );
+      SCIP_CALL( additionFilterBatch(iis, timelim, nodelim, silent, timelimperiter, nodelimperiter, dynamicreordering, batchsize) );
       SCIPiisSetIrreducible(iis, FALSE);
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
       {
@@ -918,7 +916,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
       {
          SCIPdebugMsg(scip, "----- STARTING GREEDY DELETION ALGORITHM -----\n");
       }
-      SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, randnumgen, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
+      SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
       {
          *result = SCIP_SUCCESS;
@@ -934,7 +932,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
       {
          SCIPdebugMsg(scip, "----- STARTING GREEDY DELETION ALGORITHM FOLLOWING COMPLETED ADDITION ALGORITHM -----\n");
       }
-      SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, randnumgen, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
+      SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
       if( alldeletionssolved && batchsize == 1 )
          SCIPiisSetIrreducible(iis, TRUE);
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )

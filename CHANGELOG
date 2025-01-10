@@ -61,7 +61,7 @@ Interface changes
 
 IIS:
 - added SCIPincludeIISfinder(), SCIPincludeIISfinderBasic(), SCIPsetIISfinderCopy(), SCIPsetIISfinderFree(), SCIPgenerateIIS(), SCIPfindIISfinder(), SCIPgetIISfinders(), SCIPgetNIISfinders(), SCIPsetIISfinderPriority(), SCIPgetIIS()
-- added SCIPiisfinderGetName(), SCIPiisfinderGetData(), SCIPiisfinderGetDesc(), SCIPiisfinderGetPriority(), SCIPiisfinderSetData(), SCIPiisfinderGetTime(), SCIPiisfinderInfoMessage(), SCIPiisGetTime(), SCIPiisGetValid(), SCIPiisGetIrreducible(), SCIPiisGetNNodes(), SCIPiisSetValid(), SCIPiisSetIrreducible(), SCIPiisAddNNodes(), SCIPiisGetSubscip(),
+- added SCIPiisfinderGetName(), SCIPiisfinderGetData(), SCIPiisfinderGetDesc(), SCIPiisfinderGetPriority(), SCIPiisfinderSetData(), SCIPiisfinderGetTime(), SCIPiisfinderInfoMessage(), SCIPiisGetTime(), SCIPiisGetValid(), SCIPiisGetIrreducible(), SCIPiisGetNNodes(), SCIPiisSetValid(), SCIPiisSetIrreducible(), SCIPiisAddNNodes(), SCIPiisGetRandnumgen(), SCIPiisGetSubscip()
 
 ### Changes in preprocessor macros
 

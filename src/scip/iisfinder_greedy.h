@@ -88,7 +88,6 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
    SCIP_Longint          nodelim,            /**< The global node limit on the IIS call */
    SCIP_Bool             removebounds,       /**< Whether the algorithm should remove bounds as well as constraints */
    SCIP_Bool             silent,             /**< should the run be performed silently without printing progress information */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    SCIP_Real             timelimperiter,     /**< time limit per individual solve call */
    SCIP_Bool             additive,           /**< whether an additive approach instead of deletion based approach should be used */
    SCIP_Bool             conservative,       /**< should a hit limit (e.g. node / time) solve be counted as feasible when deleting constraints */

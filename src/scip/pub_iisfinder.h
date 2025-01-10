@@ -136,6 +136,11 @@ void SCIPiisAddNNodes(
    SCIP_Longint          nnodes              /**< The number of nodes to add to the IIS */
    );
 
+/** get the randnumgen of the IIS */
+SCIP_RANDNUMGEN* SCIPiisGetRandnumgen(
+   SCIP_IIS*            iis                  /**< pointer to the IIS */
+   );
+
 /** get the subscip of an IIS */
 SCIP_EXPORT
 SCIP* SCIPiisGetSubscip(

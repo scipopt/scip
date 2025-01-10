@@ -60,6 +60,7 @@ struct SCIP_IIS
    SCIP*                 subscip;            /**< The subscip that stores the IIS */
    SCIP_HASHMAP*         varsmap;            /**< The variable hashmap from the original SCIP to IIS subscip */
    SCIP_HASHMAP*         conssmap;           /**< The constraints hashmap from the original SCIP to IIS subscip */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_CLOCK*           iistime;            /**< IIS total execution time */
    int                   niismessagecalls;   /**< The number of times an iis info message has been displayed */
    SCIP_Longint          nnodes;             /**< The number of nodes used over all IIS solves */

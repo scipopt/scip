@@ -106,6 +106,7 @@ void SCIPiisfinderSetPriority(
 /** creates and captures a new IIS */
 SCIP_RETCODE SCIPiisCreate(
    SCIP_IIS**            iis,                /**< pointer to return the created IIS */
+   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 

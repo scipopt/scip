@@ -34,6 +34,7 @@
 
 #include "scip/set.h"
 #include "scip/clock.h"
+#include "scip/misc.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
 #include "scip/cons_linear.h"
@@ -281,6 +282,7 @@ SCIP_RETCODE SCIPiisGenerate(
    iis = SCIPgetIIS(set->scip);
 
    /* Create the subscip used for storing the IIS */
+   SCIP_CALL( SCIPiisReset(&iis) );
    SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
 
    SCIPclockStart(iis->iistime, set);
@@ -400,16 +402,13 @@ SCIP_RETCODE SCIPiisGenerate(
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/minimal", &minimal) );
    if( !iis->irreducible && minimal && !(timelim - SCIPclockGetTime(iis->iistime) <= 0 || (nodelim != -1 && iis->nnodes > nodelim)) && !trivial )
    {
-      SCIP_RANDNUMGEN* randnumgen;
 
       SCIPdebugMsg(set->scip, "----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
 
       if( !(iis->valid) )
          SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
 
-      SCIP_CALL( SCIPcreateRandom(set->scip, &randnumgen, 0x5EED, TRUE) );
-      SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, randnumgen, 1e+20, FALSE, TRUE, TRUE, TRUE, -1L, 1, 1.0, &result) );
-      SCIPfreeRandom(set->scip, &randnumgen);
+      SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, 1e+20, FALSE, TRUE, TRUE, TRUE, -1L, 1, 1.0, &result) );
       assert( result == SCIP_SUCCESS || result == SCIP_DIDNOTFIND || result == SCIP_DIDNOTRUN );
    }
 
@@ -674,6 +673,7 @@ void SCIPiisfinderInfoMessage(
 /** creates and captures a new IIS */
 SCIP_RETCODE SCIPiisCreate(
    SCIP_IIS**            iis,                /**< pointer to return the created IIS */
+   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
@@ -685,6 +685,7 @@ SCIP_RETCODE SCIPiisCreate(
    (*iis)->subscip = NULL;
    (*iis)->varsmap = NULL;
    (*iis)->conssmap = NULL;
+   SCIP_CALL( SCIPrandomCreate(&((*iis)->randnumgen), blkmem, SCIPsetInitializeRandomSeed(set, 0x5EED)) );
    SCIP_CALL( SCIPclockCreate(&(*iis)->iistime, SCIP_CLOCKTYPE_DEFAULT) );
    (*iis)->niismessagecalls = 0;
    (*iis)->nnodes = 0;
@@ -720,6 +721,12 @@ SCIP_RETCODE SCIPiisFree(
    {
       SCIPhashmapFree(&((*iis)->conssmap));
       (*iis)->conssmap = NULL;
+   }
+
+   if( (*iis)->randnumgen != NULL )
+   {
+      SCIPrandomFree(&((*iis)->randnumgen), blkmem);
+      (*iis)->randnumgen = NULL;
    }
 
    SCIPclockFree(&(*iis)->iistime);
@@ -834,6 +841,15 @@ void SCIPiisAddNNodes(
 {
    assert( iis != NULL );
    iis->nnodes += nnodes;
+}
+
+/** get the randnumgen of the IIS */
+SCIP_RANDNUMGEN* SCIPiisGetRandnumgen(
+   SCIP_IIS*            iis                  /**< pointer to the IIS */
+   )
+{
+   assert( iis != NULL );
+   return iis->randnumgen;
 }
 
 /** get the subscip of an IIS */
