@@ -1,6 +1,6 @@
 /**
  * @file gmputils.cpp
- * @brief Basic classes to for rational arithmetic
+ * @brief Basic classes for rational arithmetic
  *
  * @author Domenico Salvagnin
  * @author Thorsten Koch
@@ -41,7 +41,7 @@ Rational::~Rational()
 
 Rational& Rational::operator=(const Rational& rhs)
 {
-   if (this != &rhs)
+   if( this != &rhs )
       mpq_set(number, rhs.number);
    return *this;
 }
@@ -117,7 +117,7 @@ void Rational::integralityViolation(Rational& violation) const
    }
    // otherwise, we must check w.r.t. the given tolerance
    // first calculate the fractional part
-   violation = (*this);
+   violation = *this;
    violation.abs();
    mpz_t r;
    mpz_init(r);
@@ -137,7 +137,8 @@ void Rational::toZero()
 bool Rational::isInteger(const Rational& tolerance) const
 {
    // if denominator is 1, then it is an integer for sure
-   if (mpz_cmp_ui(mpq_denref(number), 1) == 0) return true;
+   if( mpz_cmp_ui(mpq_denref(number), 1) == 0 )
+      return true;
    // otherwise, we must check w.r.t. the given tolerance
    // first calculate the fractional part
    Rational viol(*this);

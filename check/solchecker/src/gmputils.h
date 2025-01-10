@@ -1,6 +1,6 @@
 /**
  * @file gmputils.h
- * @brief Basic classes to for rational arithmetic
+ * @brief Basic classes for rational arithmetic
  *
  * @author Domenico Salvagnin
  */
@@ -10,6 +10,7 @@
 
 #include <gmp.h>
 #include <string>
+
 
 /**
  * @brief Simple wrapper class around GMP mpq_t.
