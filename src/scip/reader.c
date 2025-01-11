@@ -281,6 +281,7 @@ SCIP_RETCODE SCIPreaderWrite(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     msghdlr,            /**< message handler */
    FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           filename,           /**< name of output file, or NULL if not available */
    const char*           extension,          /**< file format */
    SCIP_Bool             genericnames,       /**< using generic variable and constraint names? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
@@ -541,7 +542,7 @@ SCIP_RETCODE SCIPreaderWrite(
       }
 
       /* call reader to write problem */
-      retcode = reader->readerwrite(set->scip, reader, file, SCIPprobGetName(prob), SCIPprobGetData(prob),
+      retcode = reader->readerwrite(set->scip, reader, file, filename, SCIPprobGetName(prob), SCIPprobGetData(prob),
             SCIPprobIsTransformed(prob), SCIPprobGetObjsense(prob), objoffset, objscale, objoffsetexact, objscaleexact,
             vars, nvars, SCIPprobGetNBinVars(prob), SCIPprobGetNIntVars(prob), SCIPprobGetNImplVars(prob),
             SCIPprobGetNContVars(prob), fixedvars, nfixedvars, SCIPprobGetStartNVars(prob), conss, nconss,

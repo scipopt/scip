@@ -2551,6 +2551,7 @@ SCIP_RETCODE printProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROB*            prob,               /**< problem data */
    FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           filename,           /**< name of output file, or NULL if not available */
    const char*           extension,          /**< file format (or NULL for default CIP format) */
    SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
@@ -2567,9 +2568,9 @@ SCIP_RETCODE printProblem(
       SCIP_RETCODE retcode;
 
       if( extension != NULL )
-         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, scip->messagehdlr, file, extension, genericnames, &result);
+         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, scip->messagehdlr, file, filename, extension, genericnames, &result);
       else
-         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, scip->messagehdlr, file, "cip", genericnames, &result);
+         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, scip->messagehdlr, file, filename, "cip", genericnames, &result);
 
       /* check for reader errors */
       if( retcode == SCIP_WRITEERROR )
@@ -2627,7 +2628,7 @@ SCIP_RETCODE SCIPprintOrigProblem(
    assert(scip != NULL);
    assert( scip->origprob != NULL );
 
-   retcode = printProblem(scip, scip->origprob, file, extension, genericnames);
+   retcode = printProblem(scip, scip->origprob, file, NULL, extension, genericnames);
 
    /* check for write errors */
    if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
@@ -2671,7 +2672,7 @@ SCIP_RETCODE SCIPprintTransProblem(
    assert(scip != NULL);
    assert(scip->transprob != NULL );
 
-   retcode = printProblem(scip, scip->transprob, file, extension, genericnames);
+   retcode = printProblem(scip, scip->transprob, file, NULL, extension, genericnames);
 
    /* check for write errors */
    if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )

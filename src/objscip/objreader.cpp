@@ -137,7 +137,7 @@ SCIP_DECL_READERWRITE(readerWriteObj)
    assert(readerdata->objreader != NULL);
 
    /* call virtual method of reader object */
-   SCIP_CALL( readerdata->objreader->scip_write(scip, reader, file, name, probdata, transformed,
+   SCIP_CALL( readerdata->objreader->scip_write(scip, reader, file, filename, name, probdata, transformed,
          objsense, objoffset, objscale, objoffsetexact, objscaleexact,
          vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, startnvars,
          conss, nconss, maxnconss, startnconss, genericnames, result) );
