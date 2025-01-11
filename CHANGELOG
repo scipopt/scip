@@ -72,6 +72,8 @@ Interface changes
 
 ### Changed parameters
 
+- heuristics/scheduler/heurtimelimit removed to avoid indeterministic behavior of scheduler heuristic, uses main time limit instead
+
 ### New parameters
 
 - branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
