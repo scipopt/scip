@@ -2905,12 +2905,15 @@ SCIP_DECL_READERWRITE(readerWriteNl)
 
    try
    {
-      /* we need to give the NLWriter a filename, but got only a FILE* from SCIP
+      /* we need to give the NLWriter a filename, but can only rely on the FILE* from SCIP
        * so we let the NLWriter write to a temporary file and then copy its content to file
-       * TODO this way, the files with row and col names are lost
+       * if we also have a filename, then we do the same for the row/col files
        */
-      char tempname[L_tmpnam+4];
+      char tempname[L_tmpnam];
+      char tempname2[L_tmpnam+5];
       FILE* tempfile;
+      char buf[1024];
+      int n;
 
       if( std::tmpnam(tempname) == NULL )
       {
@@ -2938,21 +2941,87 @@ SCIP_DECL_READERWRITE(readerWriteNl)
       }
 
       /* copy temporary file into file */
-      strcat(tempname, ".nl");
-      tempfile = fopen(tempname, "rb");
+      SCIPsnprintf(tempname2, sizeof(tempname2), "%s.nl", tempname);
+      tempfile = fopen(tempname2, "rb");
       if( tempfile == NULL )
       {
-         SCIPerrorMessage("Cannot open temporary file <%s> for reading: error %d\n", tempname, errno);
-         return SCIP_FILECREATEERROR;
+         SCIPerrorMessage("Cannot open temporary file <%s> for reading: error %d\n", tempname2, errno);
+         return SCIP_NOFILE;
       }
 
-      char buf[1024];
-      int n;
       while( (n=fread(buf, 1, sizeof(buf), tempfile)) != 0 )
          fwrite(buf, 1, n, file);
 
       fclose(tempfile);
-      remove(tempname);
+      remove(tempname2);
+
+      /* move col/row files */
+      if( !genericnames && filename != NULL )
+      {
+         char* filename2;
+         FILE* file2;
+         int filenamelen;
+
+         /* make filename2 same as filename, but with .nl removed, if present */
+         filenamelen = strlen(filename);
+         SCIP_CALL( SCIPallocBufferArray(scip, &filename2, filenamelen + 5) );
+         memcpy(filename2, filename, filenamelen+1);
+         if( SCIPstrcasecmp(filename + (filenamelen-3), ".nl") == 0 )
+         {
+            filename2[filenamelen-3] = '\0';
+            filenamelen -= 3;
+         }
+
+         /* copy row file from temporary to current location */
+         SCIPsnprintf(tempname2, sizeof(tempname2), "%s.row", tempname);
+         strcpy(filename2 + filenamelen, ".row");
+
+         tempfile = fopen(tempname2, "rb");
+         if( tempfile == NULL )
+         {
+            SCIPerrorMessage("Cannot open temporary file <%s> for reading: error %d\n", tempname2, errno);
+            return SCIP_NOFILE;
+         }
+         file2 = fopen(filename2, "wb");
+         if( file2 == NULL )
+         {
+            SCIPerrorMessage("Cannot open file <%s> for writing: error %d\n", filename2, errno);
+            return SCIP_FILECREATEERROR;
+         }
+
+         while( (n=fread(buf, 1, sizeof(buf), tempfile)) != 0 )
+            fwrite(buf, 1, n, file2);
+
+         fclose(file2);
+         fclose(tempfile);
+         remove(tempname2);
+
+         /* copy col file from temporary to current location */
+         SCIPsnprintf(tempname2, sizeof(tempname2), "%s.col", tempname);
+         strcpy(filename2 + filenamelen, ".col");
+
+         tempfile = fopen(tempname2, "rb");
+         if( tempfile == NULL )
+         {
+            SCIPerrorMessage("Cannot open temporary file <%s> for reading: error %d\n", tempname2, errno);
+            return SCIP_NOFILE;
+         }
+         file2 = fopen(filename2, "wb");
+         if( file2 == NULL )
+         {
+            SCIPerrorMessage("Cannot open file <%s> for writing: error %d\n", filename2, errno);
+            return SCIP_FILECREATEERROR;
+         }
+
+         while( (n=fread(buf, 1, sizeof(buf), tempfile)) != 0 )
+            fwrite(buf, 1, n, file2);
+
+         fclose(file2);
+         fclose(tempfile);
+         remove(tempname2);
+
+         SCIPfreeBufferArray(scip, &filename2);
+      }
    }
    catch( const mp::UnsupportedError& e )
    {
