@@ -986,7 +986,6 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
       DSVectorRational emptyVector(0);
       int i;
 
-
       spx->clearLPRational();
 
       /* set objective sense */
@@ -1804,6 +1803,7 @@ SCIP_RETCODE SCIPlpiExactGetColNames(
 
    SCIPdebugMessage("getting column names %d to %d\n", firstcol, lastcol);
 
+   /* MP@LE Either add this call or return an error message */
 //    lpi->spx->getColNames(firstcol, lastcol, colnames, namestorage, namestoragesize, storageleft);
 
    return SCIP_OKAY;
@@ -1830,6 +1830,7 @@ SCIP_RETCODE SCIPlpiExactGetRowNames(
 
    SCIPdebugMessage("getting row names %d to %d\n", firstrow, lastrow);
 
+   /* MP@LE Either add this call or return an error message */
 //    lpi->spx->getRowNames(firstrow, lastrow, rownames, namestorage, namestoragesize, storageleft);
 
    return SCIP_OKAY;
@@ -2657,7 +2658,8 @@ SCIP_RETCODE SCIPlpiExactGetBase(
    {
       for( i = 0; i < lpi->spx->numColsRational(); ++i )
       {
-//         SCIP_Real val = 0.0;
+         /* MP@LE Remove the following line? */
+         //         SCIP_Real val = 0.0;
          switch( lpi->spx->basisColStatus(i) )
          {
          case SPxSolver::BASIC:
@@ -2955,6 +2957,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(lpistate != NULL);
+   /* MP@LE Remove the following line? */
    /* assert(blkmem != NULL); */
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
