@@ -822,6 +822,7 @@ void colExactSwapCoefs(
    if( pos1 == pos2 )
       return;
 
+   /* MP@LE I think that the function should rather return SCIP_RETCODE and one uses SCIP_CALL here. */
    (void) RatCreateBuffer(buffer, &tmpval);
 
    /* swap coefficients */
@@ -928,7 +929,9 @@ void rowExactSwapCoefs(
    if( pos1 == pos2 )
       return;
 
+   /* MP@LE I think that the function should rather return SCIP_RETCODE and one uses SCIP_CALL here. */
    (void) RatCreateBuffer(buffer, &tmpval);
+
    /* swap coefficients */
    tmpcol = row->cols[pos2];
    tmpindex = row->cols_index[pos2];
@@ -1505,6 +1508,7 @@ SCIP_RETCODE colExactLink(
    return SCIP_OKAY;
 }
 
+/* MP@LE Please think about removing the code or add a comment why it is disabled */
 #ifdef SCIP_DISABLED_CODE
 /** removes column coefficients from corresponding rows */
 static
@@ -1866,6 +1870,7 @@ SCIP_RETCODE lpExactFlushAddCols(
       return SCIP_OKAY;
 
    /* add the additional columns */
+   /* MP@LE Why is the following assert not enabled? Remove it? */
    //assert(!lp->fplp->diving);
    assert(lp->ncols > lp->nlpicols);
    SCIP_CALL( ensureLpiExactcolsSize(lp, set, lp->ncols) );
@@ -2730,6 +2735,7 @@ SCIP_RETCODE SCIPlpExactDelRowset(
             SCIP_CALL( SCIProwExactRelease(&lp->lpirows[r], blkmem, set, lp) );
             lp->nlpirows--;
          }
+         /* MP@LE Remove the following line? */
          //SCIProwExactUnlock(lp->rows[r]);
          SCIP_CALL( SCIProwExactRelease(&lp->rows[r], blkmem, set, lp) );
          assert(lp->rows[r] == NULL);
@@ -5185,6 +5191,7 @@ void SCIPcolExactCalcFarkasRedcostCoef(
    else
       RatSet(result, col->obj);
 
+   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL here? */
    (void) RatCreateBuffer(set->buffer, &tmp);
 
    for( i = 0; i < col->nlprows; ++i )
@@ -5507,6 +5514,7 @@ void SCIProwExactGetSolFeasibility(
    SCIP_Rational* temp1;
    SCIP_Rational* temp2;
 
+   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL here? */
    (void) RatCreateBuffer(set->buffer, &temp1);
    (void) RatCreateBuffer(set->buffer, &temp2);
 
@@ -5593,6 +5601,7 @@ void SCIProwExactGetSolActivity(
 
    assert(rowexact != NULL);
 
+   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL here? */
    (void) RatCreateBuffer(set->buffer, &solval);
    RatSet(result, rowexact->constant);
    for( i = 0; i < rowexact->len; ++i )
@@ -5715,6 +5724,7 @@ void SCIProwExactGetLPFeasibility(
    SCIP_Rational* actrhs;
    SCIP_Rational* actlhs;
 
+   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL here? */
    (void) RatCreateBuffer(set->buffer, &actrhs);
    (void) RatCreateBuffer(set->buffer, &actlhs);
    assert(row != NULL);
@@ -5743,6 +5753,7 @@ void SCIProwExactGetPseudoFeasibility(
 
    assert(row != NULL);
 
+   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL here? */
    (void) RatCreateBuffer(set->buffer, &actrhs);
    (void) RatCreateBuffer(set->buffer, &actlhs);
 
@@ -6163,6 +6174,7 @@ void getObjvalDeltaObjExact(
    assert(!RatIsEqual(oldobj, newobj));
 
    RatSetReal(deltaval, 0.0);
+   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL here? */
    (void) RatCreateBuffer(set->buffer, &tmp);
    (*deltainf) = 0;
 
@@ -6922,6 +6934,7 @@ SCIP_RETCODE SCIPlpExactGetSol(
    int r;
 
    assert(lp != NULL);
+   /* MP@LE Check! and possibly remove */
    //assert(lp->flushed); /* TODO: does that work? The exact LP shouldn't need to be flushed when we're storing for diving */
    assert(lp->solved);
    assert(set != NULL);
@@ -7176,6 +7189,7 @@ SCIP_RETCODE SCIPlpExactGetUnboundedSol(
    SCIPerrorMessage("Unbounded solution not implemented in exact solving mode.\n");
    return SCIP_ERROR;
 } /*lint !e715*/
+/* MP@LE What about the following code? Should this be removed? */
 #if 0
 {
    SCIP_COLEXACT** lpicols;
@@ -8300,6 +8314,7 @@ SCIP_RETCODE lpExactRestoreSolVals(
       lpexact->dualfeasible = FALSE;
       lpexact->dualchecked = FALSE;
       lpexact->solisbasic = FALSE;
+      /* MP@LE What about the following two lines that are commented out? */
       //lpexact->validfarkaslp = -1;
    }
 
@@ -8320,6 +8335,7 @@ void SCIProwExactLock(
    /* check, if row is modifiable */
    if( !row->modifiable )
    {
+      /* MP@LE Remove? */
       //SCIPdebugMessage("lock row <%s> with nuses=%d and nlocks=%u\n", row->name, row->nuses, row->nlocks);
       row->nlocks++;
    }
@@ -8335,6 +8351,7 @@ void SCIProwExactUnlock(
    /* check, if row is modifiable */
    if( !row->modifiable )
    {
+      /* MP@LE Remove? */
       //SCIPdebugMessage("unlock row <%s> with nuses=%d and nlocks=%u\n", row->name, row->nuses, row->nlocks);
       assert(row->nlocks > 0);
       row->nlocks--;
@@ -8602,16 +8619,19 @@ SCIP_RETCODE SCIPlpExactStartDive(
       {
       case SCIP_LPSOLSTAT_OPTIMAL:
          SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, NULL, NULL, FALSE) );
+         /* MP@LE Remove? */
          //assert(lp->validsollp == stat->lpcount);
          break;
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
          SCIP_CALL( SCIPlpExactGetUnboundedSol(lpexact, set, stat, NULL, NULL) );
+         /* MP@LE Remove? */
          //assert(lp->validsollp == stat->lpcount);
          break;
       case SCIP_LPSOLSTAT_OBJLIMIT:
       case SCIP_LPSOLSTAT_ITERLIMIT:
       case SCIP_LPSOLSTAT_TIMELIMIT:
          SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, NULL, NULL, FALSE) );
+         /* MP@LE Remove? */
          //assert(lp->validsollp == stat->lpcount);
          break;
       case SCIP_LPSOLSTAT_INFEASIBLE:
@@ -8687,6 +8707,7 @@ SCIP_RETCODE SCIPlpExactEndDive(
 
    /* remove rows which were added in diving mode */
    /* note: not needed right now, since we only change bounds in exact diving mode */
+   /* MP@LE Check and possibly remove */
    //SCIP_CALL( SCIPlpExactShrinkRows(lpexact, blkmem, set, lpexact->ndivingrows) );
 
    /* undo changes to left hand sides and right hand sides */
