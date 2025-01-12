@@ -406,8 +406,9 @@ void RatClearGMPArray(
 #endif
 #endif
 
-/* transforms rational into canonical form */
-/** @todo exip: this does not work with cpp_rational currently */
+/** transforms rational into canonical form
+ * @todo exip: this does not work with cpp_rational currently
+*/
 void RatCanonicalize(
    SCIP_Rational*        rational            /**< rational to put in canonical form */
    )
@@ -417,7 +418,8 @@ void RatCanonicalize(
 #endif
 }
 
-/* checks if the underlying rational has a value >= infinity;
+/** checks if the underlying rational has a value >= infinity;
+ *
  * needed after underlying value was directly set, e.g. by exact lp solver
  */
 void RatCheckInfByValue(
@@ -1609,7 +1611,7 @@ void RatPrint(
       std::cout << rational->val << std::flush;
 }
 
-/* print SCIP_Rational to output stream */
+/** print SCIP_Rational to output stream */
 std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r) {
    if( r.isinf )
       os << r.val.sign() << "inf";
@@ -1620,7 +1622,7 @@ std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r) {
 }
 
 #ifdef SCIP_DISABLED_CODE
-/* convert va_arg format string into std:string */
+/** convert va_arg format string into std:string */
 static
 std::string RatString(const char *format, va_list arguments)
 {
@@ -1684,7 +1686,7 @@ std::string RatString(const char *format, va_list arguments)
 }
 #endif
 
-/* printf extension for rationals (not supporting all format options) */
+/** printf extension for rationals (not supporting all format options) */
 void RatPrintf(const char *format, ...)
 {
    SCIP_Rational* rat;
@@ -1846,8 +1848,10 @@ int RatGetSign(
    return rational->val.sign();
 }
 
-/** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
-/** @todo exip: we might have to worry about incorrect results when huge coefficients occur */
+/** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr
+ *
+ * @todo exip: we might have to worry about incorrect results when huge coefficients occur
+ */
 SCIP_Real RatRoundReal(
    SCIP_Rational*        rational,           /**< the rational */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
@@ -1969,9 +1973,9 @@ void RatGetFrac(
 #endif
 }
 
-/** round rational to next integer in direction of roundmode, return FALSEc
+/** round rational to next integer in direction of roundmode
  *
- * if rational outside of long-range
+ * return FALSE if rational outside of long-range
  */
 SCIP_Bool RatRoundInteger(
    SCIP_Longint*         res,                /**< the resulting rounded long int */
@@ -2015,7 +2019,10 @@ SCIP_Bool RatRoundInteger(
    return success;
 }
 
-/** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
+/** returns approximation of rational as SCIP_Real
+ *
+ *  Unfortunately you cannot control the roundmode without using mpfr.
+ */
 SCIP_Real RatApproxReal(
    SCIP_Rational*        rational            /**< the rational */
    )
@@ -2037,7 +2044,7 @@ SCIP_Real RatApproxReal(
 }
 
 #ifdef SCIP_WITH_BOOST
-/* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
+/** choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
 static
 void chooseSemiconv(
    scip_rational::Integer& resnum,           /**< the resulting numerator */
@@ -2065,7 +2072,7 @@ void chooseSemiconv(
 }
 #endif
 
-/* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
+/** choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
 static
 void chooseSemiconvLong(
    SCIP_Longint&         resnum,             /**< the resulting numerator */
