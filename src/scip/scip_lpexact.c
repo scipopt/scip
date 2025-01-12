@@ -320,7 +320,7 @@ SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
    SCIP_Bool             hasfprelaxation     /**< the the fprow a relaxation or only an approximation of the exact row? */
    )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateEmptyRowExactSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIProwExactCreate(rowexact, fprow, NULL, scip->mem->probmem, scip->set, scip->stat,
          scip->lpexact, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, hasfprelaxation, (void*) sepa) );
@@ -337,7 +337,6 @@ SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_EXPORT
 SCIP_RETCODE SCIPcreateRowExactFromRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROW*             fprow               /**< corresponding fp approximation/relaxation */

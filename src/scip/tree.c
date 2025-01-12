@@ -2247,7 +2247,6 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
    SCIP_CALL( SCIPvarGetProbvarBoundExact(&var, newbound, &boundtype) );
    newboundreal = boundtype == SCIP_BOUNDTYPE_UPPER ? RatRoundReal(newbound, SCIP_R_ROUND_UPWARDS) : RatRoundReal(newbound, SCIP_R_ROUND_DOWNWARDS);
 
-
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
       SCIPerrorMessage("cannot change bounds of multi-aggregated variable <%s>\n", SCIPvarGetName(var));
@@ -8625,8 +8624,8 @@ void SCIPnodeGetPropsAfterDual(
    SCIP_Real*            varbounds,          /**< array where to store changed bounds */
    SCIP_BOUNDTYPE*       varboundtypes,      /**< array where to store type of changed bound*/
    int*                  nvars,              /**< buffer to store number of bound changes;
-                                               *   if this is larger than varssize, arrays should be reallocated and method
-                                               *   should be called again */
+                                              *   if this is larger than varssize, arrays should be reallocated and method
+                                              *   should be called again */
    int                   varssize            /**< available slots in provided arrays */
    )
 {  /*lint --e{641}*/

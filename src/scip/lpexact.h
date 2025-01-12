@@ -761,7 +761,7 @@ void SCIPlpExactAllowExactSolve(
 
 /** gets solution status of current exact LP */
 SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
-   SCIP_LPEXACT*         lpexact              /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    );
 
 /** sets the upper objective limit of the exact LP solver */
@@ -815,22 +815,22 @@ SCIP_RETCODE SCIPlpExactFreeState(
 
 /** starts exact LP diving and saves bounds and objective values of columns to the current nodes's values */
 SCIP_RETCODE SCIPlpExactStartDive(
-    SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
-    BMS_BLKMEM*           blkmem,             /**< block memory */
-    SCIP_SET*             set,                /**< global SCIP settings */
-    SCIP_STAT*            stat                /**< problem statistics */
-    );
+   SCIP_LPEXACT*         lpexact,            /**< current exact LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
 
 /** quits exact LP diving and resets bounds and objective values of columns to the current node's values */
 SCIP_RETCODE SCIPlpExactEndDive(
-    SCIP_LPEXACT*         lpexact,            /**< current LP data */
-    BMS_BLKMEM*           blkmem,             /**< block memory */
-    SCIP_SET*             set,                /**< global SCIP settings */
-    SCIP_STAT*            stat,               /**< problem statistics */
-    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-    SCIP_VAR**            vars,               /**< array with all active variables */
-    int                   nvars               /**< number of active variables */
-    );
+   SCIP_LPEXACT*         lpexact,            /**< current LP data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_VAR**            vars,               /**< array with all active variables */
+   int                   nvars               /**< number of active variables */
+   );
 
 /** returns whether the exact LP is in diving mode */
 SCIP_EXPORT

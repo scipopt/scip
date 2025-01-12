@@ -359,7 +359,7 @@ SCIP_RETCODE SCIPcertificateFreeMirInfo(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate structure */
    SCIP_LP*              lp,                 /**< SCIP lp data structure */
-   SCIP_MIRINFO*         mirinfo,           /**< SCIP mir info */
+   SCIP_MIRINFO*         mirinfo,            /**< SCIP mir info */
    SCIP_ROW*             row                 /**< row that should be freed, or NULL if not needed */
    );
 
