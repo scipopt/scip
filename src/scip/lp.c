@@ -13645,6 +13645,7 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
       return pseudoobjval;
 }
 
+/* MP@LE Is the following only used for exact solving. If so, maybe change the name and add an assert? */
 /** gets pseudo objective value, if a bound of the given variable would be modified in the given way;
  *  perform calculations with interval arithmetic to get an exact lower bound
  */
