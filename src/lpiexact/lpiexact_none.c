@@ -22,6 +22,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* MP@LE Adapt the following header - this seems to be all wrong */
+
 /**@file   lpiexact_spx.cpp
  * @ingroup LPIS
  * @brief  exact LP interface for SoPlex version 2.0 and higher
@@ -68,6 +70,7 @@ void errorMessageAbort(
    void
    )
 {  /*lint --e{2707}*/
+   /* MP@LE Should this be that there is no exact LP solver is available? */
    SCIPerrorMessage("No LP solver available (LPS=none).\n");
    SCIPerrorMessage("Ensure <lp/solvefreq = -1>; note that continuous variables might require an LP-solver.\n");
    SCIPABORT();
@@ -79,6 +82,7 @@ void errorMessage(
    void
    )
 {
+   /* MP@LE Should this be that there is no exact LP solver is available? */
    SCIPerrorMessage("No LP solver available (LPS=none).\n");
    SCIPerrorMessage("Ensure <lp/solvefreq = -1>; note that continuous variables might require an LP-solver.\n");
 }
@@ -139,8 +143,9 @@ SCIP_RETCODE SCIPlpiExactCreate(
 {  /*lint --e{715}*/
    assert(lpi != NULL);
    assert(name != NULL);
-   SCIPdebugMessage("SCIPlpiCreate()\n");
+   SCIPdebugMessage("SCIPlpiExactCreate()\n");
    SCIPdebugMessage("Note that there is no LP solver linked to the binary\n");
+   /* MP@LE Should this be that there is no exact LP solver is available? */
 
    /* create empty LPI */
    SCIP_ALLOC( BMSallocMemory(lpi) );
@@ -156,7 +161,7 @@ SCIP_RETCODE SCIPlpiExactFree(
    )
 {  /*lint --e{715}*/
    assert( lpi != NULL );
-   SCIPdebugMessage("SCIPlpiFree()\n");
+   SCIPdebugMessage("SCIPlpiExactFree()\n");
 
    BMSfreeMemory(lpi);
 
