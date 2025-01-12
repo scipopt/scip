@@ -812,16 +812,15 @@ void recomputeSafeLooseObjectiveValue(
       if( SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_LOOSE )
       {
          SCIPintervalSetRational(&obj, SCIPvarGetObjExact(vars[v]));
+
          /* we are only interested in variables with a finite impact, because the infinity counters should be correct */
-         if( obj.sup > 0 &&
-            !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
+         if( obj.sup > 0 && !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
          {
             SCIPintervalSet(&bnd, SCIPvarGetLbLocal(vars[v]));
             SCIPintervalMul(SCIPsetInfinity(set), &prod, obj, bnd);
             SCIPintervalAdd(SCIPsetInfinity(set), &res, res, prod);
          }
-         else if( obj.inf < 0 &&
-            !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
+         else if( obj.inf < 0 && !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
          {
             SCIPintervalSet(&bnd, SCIPvarGetUbLocal(vars[v]));
             SCIPintervalMul(SCIPsetInfinity(set), &prod, obj, bnd);
@@ -918,16 +917,15 @@ void recomputeSafePseudoObjectiveValue(
    for( v = 0; v < nvars; ++v )
    {
       SCIPintervalSetRational(&obj, SCIPvarGetObjExact(vars[v]));
+
       /* we are only interested in variables with a finite impact, because the infinity counters should be correct */
-      if( obj.sup > 0 &&
-         !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
+      if( obj.sup > 0 && !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
       {
          SCIPintervalSet(&bnd, SCIPvarGetLbLocal(vars[v]));
          SCIPintervalMul(SCIPsetInfinity(set), &prod, obj, bnd);
          SCIPintervalAdd(SCIPsetInfinity(set), &res, res, prod);
       }
-      else if( obj.inf < 0 &&
-         !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
+      else if( obj.inf < 0 && !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
       {
          SCIPintervalSet(&bnd, SCIPvarGetUbLocal(vars[v]));
          SCIPintervalMul(SCIPsetInfinity(set), &prod, obj, bnd);
@@ -972,13 +970,11 @@ void recomputePseudoObjectiveValue(
    for( v = 0; v < nvars; ++v )
    {
       /* we are only interested in variables with a finite impact, because the infinity counters should be correct */
-      if( SCIPsetIsPositive(set, SCIPvarGetObj(vars[v])) &&
-         !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
+      if( SCIPsetIsPositive(set, SCIPvarGetObj(vars[v])) && !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
       {
          lp->pseudoobjval += SCIPvarGetObj(vars[v]) * SCIPvarGetLbLocal(vars[v]);
       }
-      else if( SCIPsetIsNegative(set, SCIPvarGetObj(vars[v])) &&
-         !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
+      else if( SCIPsetIsNegative(set, SCIPvarGetObj(vars[v])) && !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
       {
          lp->pseudoobjval += SCIPvarGetObj(vars[v]) * SCIPvarGetUbLocal(vars[v]);
       }
@@ -1014,13 +1010,11 @@ void recomputeGlbPseudoObjectiveValue(
    for( v = 0; v < nvars; ++v )
    {
       /* we are only interested in variables with a finite impact, because the infinity counters should be correct */
-      if( SCIPsetIsPositive(set, SCIPvarGetObj(vars[v])) &&
-         !SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(vars[v])) )
+      if( SCIPsetIsPositive(set, SCIPvarGetObj(vars[v])) && !SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(vars[v])) )
       {
          lp->glbpseudoobjval += SCIPvarGetObj(vars[v]) * SCIPvarGetLbGlobal(vars[v]);
       }
-      else if( SCIPsetIsNegative(set, SCIPvarGetObj(vars[v])) &&
-         !SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(vars[v])) )
+      else if( SCIPsetIsNegative(set, SCIPvarGetObj(vars[v])) && !SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(vars[v])) )
       {
          lp->glbpseudoobjval += SCIPvarGetObj(vars[v]) * SCIPvarGetUbGlobal(vars[v]);
       }
@@ -12685,8 +12679,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
    /* check whether we need a proof of unboundedness or infeasibility by a primal or dual ray */
    needprimalray = TRUE;
-   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->exact_enabled
-      || (set->conf_enable && set->conf_useinflp != 'o'));
+   needdualray = (!SCIPprobAllColsInLP(prob, set, lp) || set->exact_enabled || (set->conf_enable && set->conf_useinflp != 'o'));
 
    /* compute the limit for the number of LP resolving iterations, if needed (i.e. if limitresolveiters == TRUE) */
    harditlim = (int) MIN(itlim, INT_MAX);
@@ -12829,7 +12822,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             SCIP_CALL( SCIPlpGetSol(lp, set, stat, primalfeaspointer, dualfeaspointer) );
          }
 
-
          /* in debug mode, check that lazy bounds (if present) are not violated */
          checkLazyBounds(lp, set);
 
@@ -12904,7 +12896,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          SCIPsetDebugMsg(set, " -> LP infeasible\n");
          if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->exact_enabled || set->lp_alwaysgetduals )
          {
-            if( (set->exact_enabled && SCIPlpiExactHasDualRay(lp->lpexact->lpiexact)) )
+            if( set->exact_enabled && SCIPlpiExactHasDualRay(lp->lpexact->lpiexact) )
                farkasvalid = TRUE;
             else if( SCIPlpiHasDualRay(lp->lpi) )
             {
@@ -16563,7 +16555,7 @@ SCIP_RETCODE SCIPlpEndDive(
       }
 
       /* increment lp counter to ensure that we do not use solution values from the last solved diving lp but when we
-       * are in exact diving mode, we don't want to increase it since we want to use the exact diving solution added
+       * are in exact diving mode, we do not want to increase it since we want to use the exact diving solution added
        * by ConsExactSol */
       if( !SCIPlpExactDiving(lp->lpexact) )
          SCIPstatIncrement(stat, set, lpcount);
