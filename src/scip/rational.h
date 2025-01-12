@@ -701,9 +701,10 @@ void RatComputeApproximation(
    int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    );
 
+/** round a rational to the nearest integer and save it as a rational */
 SCIP_EXPORT
 void RatRound(
-   SCIP_Rational*        retval,             /**< the resulting rounded integer */
+   SCIP_Rational*        res,                /**< the resulting rounded integer */
    SCIP_Rational*        src,                /**< the rational to round */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    );
