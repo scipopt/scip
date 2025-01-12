@@ -197,7 +197,6 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
    SCIP_Rational**       val                 /**< values of constraint matrix entries */
    )
 {  /*lint --e{715}*/
-
 #ifndef NDEBUG
    {
       int j;
@@ -207,14 +206,14 @@ SCIP_RETCODE SCIPlpiExactLoadColLP(
 #endif
 
    assert( lpi != NULL );
-   assert(lhs != NULL);
-   assert(rhs != NULL);
-   assert(obj != NULL);
-   assert(lb != NULL);
-   assert(ub != NULL);
-   assert(beg != NULL);
-   assert(ind != NULL);
-   assert(val != NULL);
+   assert( lhs != NULL );
+   assert( rhs != NULL );
+   assert( obj != NULL );
+   assert( lb != NULL );
+   assert( ub != NULL );
+   assert( beg != NULL );
+   assert( ind != NULL );
+   assert( val != NULL );
 
    lpi->nrows = nrows;
    lpi->ncols = ncols;
@@ -240,14 +239,14 @@ SCIP_RETCODE SCIPlpiExactAddCols(
 {  /*lint --e{715}*/
    assert( lpi != NULL );
    assert( lpi->ncols >= 0 );
-   assert(obj != NULL);
-   assert(lb != NULL);
-   assert(ub != NULL);
-   assert(nnonz == 0 || beg != NULL);
-   assert(nnonz == 0 || ind != NULL);
-   assert(nnonz == 0 || val != NULL);
-   assert(nnonz >= 0);
-   assert(ncols >= 0);
+   assert( obj != NULL );
+   assert( lb != NULL );
+   assert( ub != NULL) ;
+   assert( nnonz == 0 || beg != NULL );
+   assert( nnonz == 0 || ind != NULL );
+   assert( nnonz == 0 || val != NULL );
+   assert( nnonz >= 0 );
+   assert( ncols >= 0 );
 
    lpi->ncols += ncols;
 
@@ -283,14 +282,13 @@ SCIP_RETCODE SCIPlpiExactAddRows(
    SCIP_Rational**       val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
 {  /*lint --e{715}*/
-
    assert( lpi != NULL );
    assert( lpi->nrows >= 0 );
-   assert(lhs != NULL);
-   assert(rhs != NULL);
-   assert(nnonz == 0 || beg != NULL);
-   assert(nnonz == 0 || ind != NULL);
-   assert(nnonz == 0 || val != NULL);
+   assert( lhs != NULL );
+   assert( rhs != NULL );
+   assert( nnonz == 0 || beg != NULL );
+   assert( nnonz == 0 || ind != NULL );
+   assert( nnonz == 0 || val != NULL );
 
    lpi->nrows += nrows;
 
@@ -368,7 +366,7 @@ SCIP_RETCODE SCIPlpiExactChgBounds(
    SCIP_Rational**       ub                  /**< values for the new upper bounds or NULL if ncols is zero */
    )
 {  /*lint --e{715}*/
-   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
+   assert( ncols == 0 || (ind != NULL && lb != NULL && ub != NULL) );
    return SCIP_OKAY;
 }
 
@@ -381,10 +379,11 @@ SCIP_RETCODE SCIPlpiExactChgSides(
    SCIP_Rational**       rhs                 /**< new values for right hand sides */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(ind != NULL);
-   assert(lhs != NULL);
-   assert(rhs != NULL);
+   assert( lpi != NULL );
+   assert( ind != NULL );
+   assert( lhs != NULL );
+   assert( rhs != NULL );
+
    return SCIP_OKAY;
 }
 
@@ -396,7 +395,7 @@ SCIP_RETCODE SCIPlpiExactChgCoef(
    SCIP_Rational*        newval              /**< new value of coefficient */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    return SCIP_OKAY;
 }
 
@@ -406,7 +405,7 @@ SCIP_RETCODE SCIPlpiExactChgObjsen(
    SCIP_OBJSEN           objsen              /**< new objective sense */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    return SCIP_OKAY;
 }
 
@@ -418,7 +417,7 @@ SCIP_RETCODE SCIPlpiExactChgObj(
    SCIP_Rational**       obj                 /**< new objective values for columns */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    return SCIP_OKAY;
 }
 
@@ -466,8 +465,8 @@ SCIP_RETCODE SCIPlpiExactGetNNonz(
    int*                  nnonz               /**< pointer to store the number of nonzeros */
    )
 {  /*lint --e{715}*/
-   assert(nnonz != NULL);
-   assert(lpi != NULL);
+   assert( nnonz != NULL );
+   assert( lpi != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -523,11 +522,11 @@ SCIP_RETCODE SCIPlpiExactGetColNames(
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(colnames != NULL || namestoragesize == 0);
-   assert(namestorage != NULL || namestoragesize == 0);
-   assert(namestoragesize >= 0);
-   assert(storageleft != NULL);
+   assert( lpi != NULL );
+   assert( colnames != NULL || namestoragesize == 0 );
+   assert( namestorage != NULL || namestoragesize == 0 );
+   assert( namestoragesize >= 0 );
+   assert( storageleft != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -543,11 +542,11 @@ SCIP_RETCODE SCIPlpiExactGetRowNames(
    int*                  storageleft         /**< amount of storage left (if < 0 the namestorage was not big enough) or NULL if namestoragesize is zero */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(rownames != NULL || namestoragesize == 0);
-   assert(namestorage != NULL || namestoragesize == 0);
-   assert(namestoragesize >= 0);
-   assert(storageleft != NULL);
+   assert( lpi != NULL);
+   assert( rownames != NULL || namestoragesize == 0 );
+   assert( namestorage != NULL || namestoragesize == 0 );
+   assert( namestoragesize >= 0 );
+   assert( storageleft != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -570,9 +569,9 @@ SCIP_RETCODE SCIPlpiExactGetObj(
    SCIP_Rational**       vals                /**< array to store objective coefficients */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(firstcol <= lastcol);
-   assert(vals != NULL);
+   assert( lpi != NULL );
+   assert( firstcol <= lastcol );
+   assert( vals != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -586,8 +585,8 @@ SCIP_RETCODE SCIPlpiExactGetBounds(
    SCIP_Rational**       ubs                 /**< array to store upper bound values, or NULL */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(firstcol <= lastcol);
+   assert( lpi != NULL );
+   assert( firstcol <= lastcol );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -601,8 +600,8 @@ SCIP_RETCODE SCIPlpiExactGetSides(
    SCIP_Rational**       rhss                /**< array to store right hand side values, or NULL */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(firstrow <= lastrow);
+   assert( lpi != NULL );
+   assert( firstrow <= lastrow );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -615,8 +614,8 @@ SCIP_RETCODE SCIPlpiExactGetCoef(
    SCIP_Rational*        val                 /**< pointer to store the value of the coefficient */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(val != NULL);
+   assert( lpi != NULL );
+   assert( val != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -635,7 +634,7 @@ SCIP_RETCODE SCIPlpiExactSolvePrimal(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -645,7 +644,7 @@ SCIP_RETCODE SCIPlpiExactSolveDual(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -656,7 +655,7 @@ SCIP_RETCODE SCIPlpiExactSolveBarrier(
    SCIP_Bool             crossover           /**< perform crossover */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -667,7 +666,7 @@ SCIP_RETCODE SCIPlpiExactStartStrongbranch(
    )
 {
    /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -678,7 +677,7 @@ SCIP_RETCODE SCIPlpiExactEndStrongbranch(
    )
 {
    /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -696,7 +695,7 @@ SCIP_Bool SCIPlpiExactWasSolved(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -717,9 +716,9 @@ SCIP_RETCODE SCIPlpiExactGetSolFeasibility(
    SCIP_Bool*            dualfeasible        /**< pointer to store dual feasibility status */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(primalfeasible != NULL);
-   assert(dualfeasible != NULL);
+   assert( lpi != NULL );
+   assert( primalfeasible != NULL );
+   assert( dualfeasible != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -731,7 +730,7 @@ SCIP_Bool SCIPlpiExactExistsPrimalRay(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -743,7 +742,7 @@ SCIP_Bool SCIPlpiExactHasPrimalRay(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -753,7 +752,7 @@ SCIP_Bool SCIPlpiExactIsPrimalUnbounded(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -763,7 +762,7 @@ SCIP_Bool SCIPlpiExactIsPrimalInfeasible(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -773,7 +772,7 @@ SCIP_Bool SCIPlpiExactIsPrimalFeasible(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -785,7 +784,7 @@ SCIP_Bool SCIPlpiExactExistsDualRay(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -797,7 +796,7 @@ SCIP_Bool SCIPlpiExactHasDualRay(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -807,7 +806,7 @@ SCIP_Bool SCIPlpiExactIsDualUnbounded(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -817,7 +816,7 @@ SCIP_Bool SCIPlpiExactIsDualInfeasible(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -827,7 +826,7 @@ SCIP_Bool SCIPlpiExactIsDualFeasible(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -837,7 +836,7 @@ SCIP_Bool SCIPlpiExactIsOptimal(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -847,7 +846,7 @@ SCIP_Bool SCIPlpiExactIsObjlimExc(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -857,7 +856,7 @@ SCIP_Bool SCIPlpiExactIsIterlimExc(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -867,7 +866,7 @@ SCIP_Bool SCIPlpiExactIsTimelimExc(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -877,7 +876,7 @@ int SCIPlpiExactGetInternalStatus(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -888,8 +887,8 @@ SCIP_RETCODE SCIPlpiExactIgnoreInstability(
    SCIP_Bool*            success             /**< pointer to store, whether the instability could be ignored */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(success != NULL);
+   assert( lpi != NULL );
+   assert( success != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -900,8 +899,8 @@ SCIP_RETCODE SCIPlpiExactGetObjval(
    SCIP_Rational*        objval              /**< stores the objective value */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(objval != NULL);
+   assert( lpi != NULL );
+   assert( objval != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -921,7 +920,7 @@ SCIP_RETCODE SCIPlpiExactGetSol(
    SCIP_Rational**       redcost             /**< reduced cost vector, may be NULL if not needed */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -933,7 +932,7 @@ SCIP_RETCODE SCIPlpiExactGetPrimalRay(
    SCIP_Rational**       ray                 /**< primal ray */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -944,7 +943,7 @@ SCIP_RETCODE SCIPlpiExactGetDualfarkas(
    SCIP_Rational**       dualfarkas          /**< dual farkas row multipliers */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -955,7 +954,7 @@ SCIP_RETCODE SCIPlpiExactGetIterations(
    int*                  iterations          /**< pointer to store the number of iterations of the last solve call */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -978,7 +977,7 @@ SCIP_RETCODE SCIPlpiExactGetBase(
    int*                  rstat               /**< array to store row basis status, or NULL */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -990,9 +989,9 @@ SCIP_RETCODE SCIPlpiExactSetBase(
    int*                  rstat               /**< array with row basis status */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+   assert( lpi != NULL );
+   assert( cstat != NULL );
+   assert( rstat != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1003,8 +1002,8 @@ SCIP_RETCODE SCIPlpiExactGetBasisInd(
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(bind != NULL);
+   assert( lpi != NULL );
+   assert( bind != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1024,8 +1023,8 @@ SCIP_RETCODE SCIPlpiExactGetBInvRow(
                                               *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(coef != NULL);
+   assert( lpi != NULL );
+   assert( coef != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1049,8 +1048,8 @@ SCIP_RETCODE SCIPlpiExactGetBInvCol(
                                               *   (-1: if we do not store sparsity information) */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(coef != NULL);
+   assert( lpi != NULL );
+   assert( coef != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1072,10 +1071,10 @@ SCIP_RETCODE SCIPlpiExactGetState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(blkmem != NULL);
-   assert(lpistate != NULL);
-   assert(blkmem != NULL);
+   assert( lpi != NULL );
+   assert( blkmem != NULL );
+   assert( lpistate != NULL );
+   assert( blkmem != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1089,9 +1088,9 @@ SCIP_RETCODE SCIPlpiExactSetState(
    SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information), or NULL */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(blkmem != NULL);
-   assert(lpistate != NULL);
+   assert( lpi != NULL );
+   assert( blkmem != NULL );
+   assert( lpistate != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1101,7 +1100,7 @@ SCIP_RETCODE SCIPlpiExactClearState(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    return SCIP_OKAY;
 }
 
@@ -1112,9 +1111,9 @@ SCIP_RETCODE SCIPlpiExactFreeState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(lpistate != NULL);
-   assert(blkmem != NULL);
+   assert( lpi != NULL );
+   assert( lpistate != NULL );
+   assert( blkmem != NULL );
    return SCIP_OKAY;
 }
 
@@ -1124,7 +1123,7 @@ SCIP_Bool SCIPlpiExactHasStateBasis(
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information), or NULL */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessageAbort();
    return FALSE;
 }
@@ -1135,8 +1134,8 @@ SCIP_RETCODE SCIPlpiExactReadState(
    const char*           fname               /**< file name */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(fname != NULL);
+   assert( lpi != NULL );
+   assert( fname != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1147,8 +1146,8 @@ SCIP_RETCODE SCIPlpiExactWriteState(
    const char*           fname               /**< file name */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(fname != NULL);
+   assert( lpi != NULL );
+   assert( fname != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1169,8 +1168,8 @@ SCIP_RETCODE SCIPlpiExactGetIntpar(
    int*                  ival                /**< buffer to store the parameter value */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(ival != NULL);
+   assert( lpi != NULL );
+   assert( ival != NULL );
    return SCIP_PARAMETERUNKNOWN;
 }
 
@@ -1181,7 +1180,7 @@ SCIP_RETCODE SCIPlpiExactSetIntpar(
    int                   ival                /**< parameter value */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    return SCIP_PARAMETERUNKNOWN;
 }
 
@@ -1192,8 +1191,8 @@ SCIP_RETCODE SCIPlpiExactGetRealpar(
    SCIP_Real*            dval                /**< buffer to store the parameter value */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(dval != NULL);
+   assert( lpi != NULL );
+   assert( dval != NULL );
    return SCIP_PARAMETERUNKNOWN;
 }
 
@@ -1204,7 +1203,7 @@ SCIP_RETCODE SCIPlpiExactSetRealpar(
    SCIP_Real             dval                /**< parameter value */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    return SCIP_PARAMETERUNKNOWN;
 }
 
@@ -1225,7 +1224,7 @@ SCIP_Real SCIPlpiExactInfinity(
    SCIP_LPIEXACT*        lpi                 /**< LP interface structure */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    return LPIINFINITY;
 }
 
@@ -1235,7 +1234,7 @@ SCIP_Bool SCIPlpiExactIsInfinity(
    SCIP_Real             val                 /**< the value */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    if( val >= LPIINFINITY )
       return TRUE;
    return FALSE;
@@ -1257,8 +1256,8 @@ SCIP_RETCODE SCIPlpiExactReadLP(
    const char*           fname               /**< file name */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
-   assert(fname != NULL);
+   assert( lpi != NULL );
+   assert( fname != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
@@ -1269,7 +1268,7 @@ SCIP_RETCODE SCIPlpiExactWriteLP(
    const char*           fname               /**< file name */
    )
 {  /*lint --e{715}*/
-   assert(lpi != NULL);
+   assert( lpi != NULL );
    errorMessage();
    return SCIP_PLUGINNOTFOUND;
 }
