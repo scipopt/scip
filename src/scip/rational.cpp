@@ -29,6 +29,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 #include "blockmemshell/memory.h"
 #include "scip/rational.h"
 #include "scip/struct_rational.h"
@@ -150,6 +151,7 @@ SCIP_RETCODE RatCreateString(
       (*rational)->isinf = FALSE;
    }
    (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+
    return SCIP_OKAY;
 }
 
@@ -214,11 +216,9 @@ SCIP_RETCODE RatCopyBlockArray(
    int                   len                 /**< size of src array */
    )
 {
-   int i;
-
    BMSduplicateBlockMemoryArray(mem, result, src, len);
 
-   for( i = 0; i < len; ++i )
+   for( int i = 0; i < len; ++i )
    {
       SCIP_CALL( RatCopy(mem, &(*result)[i], src[i]) );
    }
@@ -234,11 +234,9 @@ SCIP_RETCODE RatCopyBufferArray(
    int                   len                 /**< size of src array */
    )
 {
-   int i;
-
    BMSduplicateBufferMemoryArray(mem, result, src, len);
 
-   for( i = 0; i < len; ++i )
+   for( int i = 0; i < len; ++i )
    {
       SCIP_CALL( RatCopyBuffer(mem, &(*result)[i], src[i]) );
    }
@@ -254,13 +252,11 @@ SCIP_RETCODE RatReallocBufferArray(
    int                   newlen              /**< size of src array */
    )
 {
-   int i;
-
    assert(newlen >= oldlen);
 
    BMSreallocBufferMemoryArray(mem, result, newlen);
 
-   for( i = oldlen; i < newlen; ++i )
+   for( int i = oldlen; i < newlen; ++i )
    {
       SCIP_CALL( RatCreateBuffer(mem, &(*result)[i]) );
    }
@@ -276,11 +272,9 @@ SCIP_RETCODE RatReallocBlockArray(
    int                   newlen              /**< size of src array */
    )
 {
-   int i;
-
    if( newlen < oldlen )
    {
-      for( i = newlen; i < oldlen; ++i )
+      for( int i = newlen; i < oldlen; ++i )
       {
          RatFreeBlock(mem, &((*result)[i]));
       }
@@ -289,7 +283,7 @@ SCIP_RETCODE RatReallocBlockArray(
    {
       BMSreallocBlockMemoryArray(mem, result, oldlen, newlen);
 
-      for( i = oldlen; i < newlen; ++i )
+      for( int i = oldlen; i < newlen; ++i )
       {
          SCIP_CALL( RatCreateBlock(mem, &((*result)[i])) );
       }
@@ -297,8 +291,6 @@ SCIP_RETCODE RatReallocBlockArray(
 
    return SCIP_OKAY;
 }
-
-
 
 /** creates a copy of a rational */
 SCIP_RETCODE RatCopy(
@@ -1097,7 +1089,6 @@ void RatNegate(
    res->isfprepresentable = op->isfprepresentable;
 }
 
-
 /** set res to Abs(op) */
 void RatAbs(
    SCIP_Rational*        res,                /**< the result */
@@ -1110,7 +1101,6 @@ void RatAbs(
    res->isinf = op->isinf;
    res->isfprepresentable = op->isfprepresentable;
 }
-
 
 /** set res to 1/op */
 void RatInvert(
@@ -1418,8 +1408,6 @@ SCIP_Bool RatIsLEReal(
       return rat->val <= real;
    }
 }
-
-
 
 /** check if the rational is zero */
 SCIP_Bool RatIsZero(
@@ -1823,6 +1811,7 @@ SCIP_Bool RatDenominatorIsLE(
 }
 
 #else
+
 /** returns the numerator of a rational as a long */
 SCIP_Longint RatNumerator(
    SCIP_Rational*        rational            /**< the rational */
@@ -2059,9 +2048,9 @@ void chooseSemiconv(
    long                  maxdenom            /**< the maximal denominator */
    )
 {
-   scip_rational::Integer j, resnumerator, resdenominator;
+   scip_rational::Integer resnumerator, resdenominator;
 
-   j = (scip_rational::Integer(maxdenom) - q[0]) / q[1];
+   scip_rational::Integer j = (scip_rational::Integer(maxdenom) - q[0]) / q[1];
 
    if( j >= ai / 2 )
    {
@@ -2308,7 +2297,6 @@ void RatComputeApproximation(
    }
    else if( src->val.sign() == -1 && RatApproxReal(src) > (-1.0 / maxdenom) )
    {
-
       if( forcegreater == -1 )
          RatSetInt(res, -1, maxdenom);
       else
