@@ -4851,7 +4851,7 @@ SCIP_RETCODE SCIPwriteLp(
             SCIPinfoMessage(scip, file, ";\n");
          }
       }
-      else if(strcmp(conshdlrname, "linear-exact") == 0 )
+      else if(strcmp(conshdlrname, "exactlinear") == 0 )
       {
          if( RatIsEqual(SCIPgetRhsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) )
          {

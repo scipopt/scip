@@ -484,7 +484,7 @@ SCIP_RETCODE SCIPcertificateInit(
       cons = conss[j];
       conshdlr = SCIPconsGetHdlr(cons);
 
-      if( strcmp(SCIPconshdlrGetName(conshdlr), "linear-exact") == 0 )
+      if( strcmp(SCIPconshdlrGetName(conshdlr), "exactlinear") == 0 )
       {
          lb = SCIPgetLhsExactLinear(scip, cons);
          ub = SCIPgetRhsExactLinear(scip, cons);
@@ -645,7 +645,7 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
 
       SCIPdebug(SCIPprintCons(scip, conss[j], NULL));
 
-      if( strcmp(SCIPconshdlrGetName(conshdlr), "linear-exact") == 0 )
+      if( strcmp(SCIPconshdlrGetName(conshdlr), "exactlinear") == 0 )
       {
          lb = SCIPgetLhsExactLinear(scip, cons);
          ub = SCIPgetRhsExactLinear(scip, cons);
