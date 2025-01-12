@@ -3709,9 +3709,6 @@ void SCIPprintLPStatistics(
    if( scip->set->exact_enabled )
    {
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Exact LP           :       Time      Calls Iterations  Iter/call   Iter/sec     Nfails   AvgError   NObjlim  NObjlimF \n");
-      /* AG@LE why is proptime printed here? Is this the total time over all exact propagations or a duplicate of the exact linear conshdlr's time? */
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact propagat.  : %10.2f \n",
-         SCIPclockGetTime(scip->stat->exactproptime));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  exact lp feas    : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10.2f",
          SCIPclockGetTime(scip->stat->provedfeaslptime),
          scip->stat->nexlp,
@@ -3767,31 +3764,6 @@ void SCIPprintLPStatistics(
          SCIPclockGetTime(scip->stat->provedinfeaspstime),
          scip->stat->nprojshiftinf,
          scip->stat->nfailprojshiftinf);
-      /* AG@LE I would remove the following statistics, they were mainly used for research */
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "ExactLP reasons    :   Interleavedepth %10" SCIP_LONGINT_FORMAT " FP-LP Integer Feasible %10" SCIP_LONGINT_FORMAT "  Close to cutoff %10" SCIP_LONGINT_FORMAT "  \n",
-         scip->stat->nexlpinter, scip->stat->nexlpintfeas, scip->stat->nexlpboundexc);
-
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Meta heuristic     :   Time Success (%.2f) TimeFail (%.2f) Calls (%lld) Found (%lld) \n",
-         scip->stat->timesuccessexactsol, scip->stat->timefailexactsol, scip->stat->ncallsexactsol, scip->stat->nfoundexactsol);
-      {
-         SCIP_Longint ncalls;
-         SCIP_Longint nsuccess;
-         SCIP_Longint naborts;
-
-         SCIPgetRunningErrorStatsExactLinear(scip, &ncalls, &nsuccess, &naborts);
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "Running error ana  :   Ncalls %10" SCIP_LONGINT_FORMAT " Nsuccess %10" SCIP_LONGINT_FORMAT "  Naborts %10" SCIP_LONGINT_FORMAT "  \n",
-            ncalls, nsuccess, naborts);
-      }
-      {
-         SCIP_Longint npropagationsinitial;
-         SCIP_Longint npropagationsconflict;
-         SCIP_Real avgnonzerospropinitial;
-         SCIP_Real avgnonzerospropconflict;
-
-         SCIPgetPropStatsExactLinear(scip, &npropagationsinitial, &npropagationsconflict, &avgnonzerospropinitial, &avgnonzerospropconflict);
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "Prop exact linear  :   Nprop init (%lld) Nprop conf (%lld) Avg Nonzeros init (%.2f) Avg Nonzeros conf (%.2f) \n",
-            npropagationsinitial, npropagationsconflict, avgnonzerospropinitial, avgnonzerospropconflict);
-      }
    }
 }
 

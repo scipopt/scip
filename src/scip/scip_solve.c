@@ -2366,6 +2366,32 @@ SCIP_RETCODE prepareReoptimization(
    return SCIP_OKAY;
 }
 
+/** checks whether presolving changed the problem at all */
+static
+SCIP_Bool hasPresolveModifiedProblem(SCIP* scip)
+{
+   SCIP_Bool changed;
+
+   changed = false;
+
+   if(scip->stat->npresolfixedvars + scip->stat->npresolaggrvars > 0)
+      changed = true;
+   else if(scip->stat->npresoldelconss > 0)
+      changed = true;
+   else if(scip->stat->npresoladdconss > 0)
+      changed = true;
+   else if(scip->stat->npresolchgbds > 0)
+      changed = true;
+   else if(scip->stat->npresoladdholes > 0)
+      changed = true;
+   else if(scip->stat->npresolchgsides > 0)
+      changed = true;
+   else if(scip->stat->npresolchgcoefs > 0)
+      changed = true;
+
+   return changed;
+}
+
 /** transforms and presolves problem
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -2533,6 +2559,12 @@ SCIP_RETCODE SCIPpresolve(
 
    /* AG@LE if certificate printing is enabled and presolving changed something, then print warning message that
     * certificate is printed for presolved problem */
+   /* LE@AG like this? Possibly refer to papilo-certificate for presolving? */
+   if(SCIPisCertificateActive(scip) && hasPresolveModifiedProblem(scip))
+   {
+      SCIPwarningMessage(scip, "Certificate is printed for presolved problem. \
+         Disable presolving for rigorous certificate of the original problem. \n");
+   }
 
    return SCIP_OKAY;
 }

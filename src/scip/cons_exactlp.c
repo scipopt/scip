@@ -78,6 +78,7 @@
 #include "scip/var.h"
 #include "scip/sepastoreexact.h"
 /* AG@LE we should not include struct files */
+/* LE@AG true, I will need to add some clean helper methods to avoid it*/
 #include "scip/struct_scip.h"
 #include "scip/struct_certificate.h"
 #include <ctype.h>
@@ -16608,8 +16609,6 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
    int nchgbds;
    int i;
 
-   /* AG@LE I would remove this timer, it should be identical to the core timer for this conshdlr's proptime */
-   SCIPclockStart(scip->stat->exactproptime, scip->set);
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -16653,7 +16652,6 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
    else
       *result = SCIP_DIDNOTFIND;
 
-   SCIPclockStop(scip->stat->exactproptime, scip->set);
    return SCIP_OKAY;
 
 }

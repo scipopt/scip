@@ -4966,6 +4966,7 @@ SCIP_RETCODE solveNode(
       SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
       /* AG@LE why are these ifs temporary? */
+      /* LE@AG I guess they were less temporary than I thought 6 years ago. I think we just remove the comment*/
       /** @todo exip: these ifs are temporary */
       if( !(lp->solved && lp->flushed) )
       {
