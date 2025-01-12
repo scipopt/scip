@@ -45,18 +45,18 @@ typedef struct SCIP_RationalArray SCIP_RATIONALARRAY;
 /** information if a rational is exactly representable as a floating point number */
 enum SCIP_IsFpRepresentable
 {
-   SCIP_ISFPREPRESENTABLE_UNKNOWN = 0,
-   SCIP_ISFPREPRESENTABLE_TRUE = 1,
-   SCIP_ISFPREPRESENTABLE_FALSE = 2
+   SCIP_ISFPREPRESENTABLE_UNKNOWN = 0,       /**< representability is unknown */
+   SCIP_ISFPREPRESENTABLE_TRUE    = 1,       /**< is representable */
+   SCIP_ISFPREPRESENTABLE_FALSE   = 2        /**< is not representable */
 };
 typedef enum SCIP_IsFpRepresentable SCIP_ISFPREPRESENTABLE;
 
 /** defines the possible rounding direction for a rational number, when converting to a double */
 enum SCIP_RoundModeRational
 {
-   SCIP_R_ROUND_DOWNWARDS = 0,     /**< always round to nearest smaller double*/
-   SCIP_R_ROUND_UPWARDS = 1,       /**< always round to nearest larger double*/
-   SCIP_R_ROUND_NEAREST = 2        /**< always round to nearest double*/
+   SCIP_R_ROUND_DOWNWARDS = 0,               /**< always round to nearest smaller double */
+   SCIP_R_ROUND_UPWARDS   = 1,               /**< always round to nearest larger double */
+   SCIP_R_ROUND_NEAREST   = 2                /**< always round to nearest double */
 };
 typedef enum SCIP_RoundModeRational SCIP_ROUNDMODE_RAT;
 
