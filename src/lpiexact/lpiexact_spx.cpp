@@ -124,6 +124,7 @@
 /*----------------------------- C++ --------------------------------*/
 /********************************************************************/
 
+/* MP@LE I suggest to remove the following and replace 0/NULL by nullptr */
 /* in C++ we have to use "0" instead of "(void*)0" */
 #undef NULL
 #define NULL 0
