@@ -3756,7 +3756,7 @@ void SCIPprintLPStatistics(
          SCIPclockGetTime(scip->stat->provedfeaspstime),
          scip->stat->nprojshift,
          scip->stat->nfailprojshift,
-         scip->stat->boundingerrorps/scip->stat->nprojshift,
+         scip->stat->nprojshift > 0 ? scip->stat->boundingerrorps/scip->stat->nprojshift : 0,
          scip->stat->nprojshiftobjlim,
          scip->stat->nprojshiftobjlimfail);
 

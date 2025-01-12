@@ -312,7 +312,7 @@ SCIP_RETCODE doScipCreate(
    {
       char name[SCIP_MAXSTRLEN];
 
-      (void) SCIPsnprintf(name, sizeof(name), "MPFR %s", MPFR_VERSION_STRING);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "MPFR %s", MPFR_VERSION_STRING);
       SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "GNU Multiple Precision Floating-Point Reliable Library (mpfr.org)") );
    }
 #endif /*lint --e{529}*/

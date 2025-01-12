@@ -363,6 +363,14 @@ endif
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
+# prepare for chosing between exact and non-exact SoPlex
+USEEXSPX	=	false
+ifeq ($(EXACTSOLVE),true)
+ifeq ($(LPSEX),spx)
+USEEXSPX	=	true
+endif
+endif
+
 # redefine old LP-solver "spx" by "spx2"
 ifeq ($(LPS),spx)
 override LPS	=	spx2
@@ -445,6 +453,7 @@ endif
 #-------------------------------------------------------
 # define flags for SoPlex - new interface spx2
 ifeq ($(LPS),spx2)
+ifeq ($(USEEXSPX),false)
 LPSLDFLAGS	=	$(LINKCXX_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 
@@ -452,6 +461,7 @@ LPSLIBFILES	=	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.$(OSTYPE).$(ARCH
 ifeq ($(LPSCHECK),true)
 LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
 LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+endif
 endif
 endif
 
@@ -627,7 +637,7 @@ ifeq ($(MPFR_LDFLAGS),)
 $(error MPFR_LDFLAGS is empty. Do not know how to link MPFR, but MPFR=true)
 endif
 FLAGS		+=	$(MPFR_FLAGS)
-LDFLAGS	+=	$(MPFR_LDFLAGS)
+LDFLAGS		+=	$(MPFR_LDFLAGS)
 endif
 
 ifeq ($(READLINE_LDFLAGS),)

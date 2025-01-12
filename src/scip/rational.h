@@ -33,6 +33,14 @@
 #ifndef __SCIP_RATIONAL_H__
 #define __SCIP_RATIONAL_H__
 
+/* MP@LE Please reduce the dependencies on other files as much as possible. In particular, please think about getting
+ * rid of the dependency on "set.h". For instance, this can be done by depending on "scip" and by outsourcing the
+ * function to a file "scip_rational.h".
+ *
+ * We do not need "intervalarith" in this file. Moreover, instead of "mem.h", I
+ * suggest to include "blockmemory/memory.h". I think that we also do not need "type_misc.h" here.
+ */
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include "scip/def.h"
@@ -661,6 +669,7 @@ void RatPrint(
 SCIP_EXPORT
 void RatPrintf(const char *format, ...);
 
+/* MP@LE Maybe think about a version that also prints the subscipdepth like sCIPdebugMsg()? */
 /** rational extension for the SCIPdebugMsg */
 /*lint -emacro(681,RatDebugMessage) */
 /*lint -emacro(506,RatDebugMessage) */
@@ -701,9 +710,10 @@ void RatComputeApproximation(
    int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    );
 
+/** round a rational to the nearest integer and save it as a rational */
 SCIP_EXPORT
 void RatRound(
-   SCIP_Rational*        retval,             /**< the resulting rounded integer */
+   SCIP_Rational*        res,                /**< the resulting rounded integer */
    SCIP_Rational*        src,                /**< the rational to round */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    );

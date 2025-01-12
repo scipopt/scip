@@ -29,6 +29,7 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 #include "blockmemshell/memory.h"
 #include "scip/rational.h"
 #include "scip/struct_rational.h"
@@ -150,6 +151,7 @@ SCIP_RETCODE RatCreateString(
       (*rational)->isinf = FALSE;
    }
    (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+
    return SCIP_OKAY;
 }
 
@@ -214,11 +216,9 @@ SCIP_RETCODE RatCopyBlockArray(
    int                   len                 /**< size of src array */
    )
 {
-   int i;
-
    BMSduplicateBlockMemoryArray(mem, result, src, len);
 
-   for( i = 0; i < len; ++i )
+   for( int i = 0; i < len; ++i )
    {
       SCIP_CALL( RatCopy(mem, &(*result)[i], src[i]) );
    }
@@ -234,11 +234,9 @@ SCIP_RETCODE RatCopyBufferArray(
    int                   len                 /**< size of src array */
    )
 {
-   int i;
-
    BMSduplicateBufferMemoryArray(mem, result, src, len);
 
-   for( i = 0; i < len; ++i )
+   for( int i = 0; i < len; ++i )
    {
       SCIP_CALL( RatCopyBuffer(mem, &(*result)[i], src[i]) );
    }
@@ -254,13 +252,11 @@ SCIP_RETCODE RatReallocBufferArray(
    int                   newlen              /**< size of src array */
    )
 {
-   int i;
-
    assert(newlen >= oldlen);
 
    BMSreallocBufferMemoryArray(mem, result, newlen);
 
-   for( i = oldlen; i < newlen; ++i )
+   for( int i = oldlen; i < newlen; ++i )
    {
       SCIP_CALL( RatCreateBuffer(mem, &(*result)[i]) );
    }
@@ -276,11 +272,9 @@ SCIP_RETCODE RatReallocBlockArray(
    int                   newlen              /**< size of src array */
    )
 {
-   int i;
-
    if( newlen < oldlen )
    {
-      for( i = newlen; i < oldlen; ++i )
+      for( int i = newlen; i < oldlen; ++i )
       {
          RatFreeBlock(mem, &((*result)[i]));
       }
@@ -289,7 +283,7 @@ SCIP_RETCODE RatReallocBlockArray(
    {
       BMSreallocBlockMemoryArray(mem, result, oldlen, newlen);
 
-      for( i = oldlen; i < newlen; ++i )
+      for( int i = oldlen; i < newlen; ++i )
       {
          SCIP_CALL( RatCreateBlock(mem, &((*result)[i])) );
       }
@@ -297,8 +291,6 @@ SCIP_RETCODE RatReallocBlockArray(
 
    return SCIP_OKAY;
 }
-
-
 
 /** creates a copy of a rational */
 SCIP_RETCODE RatCopy(
@@ -350,7 +342,7 @@ mpq_t* RatGetGMP(
    SCIP_Rational*        rational            /**< the rational */
    )
 {
-   assert(rational != NULL);
+   assert(rational != nullptr);
 
    if( rational->isinf )
    {
@@ -414,8 +406,9 @@ void RatClearGMPArray(
 #endif
 #endif
 
-/* transforms rational into canonical form */
-/** @todo exip: this does not work with cpp_rational currently */
+/** transforms rational into canonical form
+ * @todo exip: this does not work with cpp_rational currently
+*/
 void RatCanonicalize(
    SCIP_Rational*        rational            /**< rational to put in canonical form */
    )
@@ -425,7 +418,8 @@ void RatCanonicalize(
 #endif
 }
 
-/* checks if the underlying rational has a value >= infinity;
+/** checks if the underlying rational has a value >= infinity;
+ *
  * needed after underlying value was directly set, e.g. by exact lp solver
  */
 void RatCheckInfByValue(
@@ -449,7 +443,7 @@ void RatFreeArray(
    int                   size                /**< size of the array */
    )
 {
-   assert(ratarray != NULL);
+   assert(ratarray != nullptr);
 
    for( int i = 0; i < size; ++i )
    {
@@ -466,7 +460,7 @@ void RatFreeBlockArray(
    int                   size                /**< size of the array */
    )
 {
-   assert(ratblockarray != NULL);
+   assert(ratblockarray != nullptr);
 
    for( int i = 0; i < size; ++i )
    {
@@ -483,7 +477,7 @@ void RatFreeBufferArray(
    int                   size                /**< size of the array */
    )
 {
-   assert(ratbufarray != NULL);
+   assert(ratbufarray != nullptr);
 
    for( int i = size - 1; i >= 0; --i )
    {
@@ -498,7 +492,7 @@ void RatFree(
    SCIP_Rational**       rational            /**< adress of the rational */
    )
 {
-   assert(*rational != NULL);
+   assert(*rational != nullptr);
 
    (*rational)->val.scip_rational::Rational::~Rational();
    BMSfreeMemory(rational);
@@ -510,7 +504,7 @@ void RatFreeBlock(
    SCIP_Rational**       rational            /**< adress of the rational */
    )
 {
-   assert(*rational != NULL);
+   assert(*rational != nullptr);
 
    (*rational)->val.scip_rational::Rational::~Rational();
    BMSfreeBlockMemory(mem, rational);
@@ -522,7 +516,7 @@ void RatFreeBuffer(
    SCIP_Rational**       rational            /**< adress of the rational */
    )
 {
-   assert(*rational != NULL);
+   assert(*rational != nullptr);
 
    (*rational)->val.scip_rational::Rational::~Rational();
    BMSfreeBufferMemory(mem, rational);
@@ -534,7 +528,7 @@ void RatSet(
    SCIP_Rational*        src                 /**< the src */
    )
 {
-   assert(res != NULL);
+   assert(res != nullptr);
 
    res->val = src->val;
    res->isinf = src->isinf;
@@ -548,7 +542,7 @@ void RatSetInt(
    SCIP_Longint          denom               /**< the denominator */
    )
 {
-   assert(res != NULL);
+   assert(res != nullptr);
    assert(denom != 0);
 
    if( denom < 0 )
@@ -569,9 +563,9 @@ bool SCIPisRationalString(
    )
 {
    if( 0 == strcmp(desc, "inf") )
-      return TRUE;
+      return true;
    else if ( 0 == strcmp(desc, "-inf") )
-      return TRUE;
+      return true;
    else
    {
       std::string s(desc);
@@ -589,13 +583,13 @@ SCIP_Bool SCIPstrToRationalValue(
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
-   SCIP_Bool hassign = false;
+   SCIP_Bool hassign = FALSE;
    std::string s;
    size_t endpos;
 
-   assert(str != NULL);
-   assert(value != NULL);
-   assert(endptr != NULL);
+   assert(str != nullptr);
+   assert(value != nullptr);
+   assert(endptr != nullptr);
 
    if( str[0] == '-' || str[0] == '+')
    {
@@ -628,7 +622,7 @@ void RatSetString(
    const char*           desc                /**< the String describing the rational */
    )
 {
-   assert(res != NULL);
+   assert(res != nullptr);
 
    /* MP@LE I recommend to add specific functions for setting a rational to +/- infinity. */
 
@@ -668,7 +662,7 @@ void RatSetString(
          }
          SCIPdebug(std::cout << s << std::endl);
          if( s[0] == '.' )
-            s.insert(0, "0");
+            (void) s.insert(0, "0");
 
          // transform decimal into fraction
          size_t decimalpos = s.find('.');
@@ -678,17 +672,17 @@ void RatSetString(
          if( decimalpos != std::string::npos )
          {
             for( size_t i = 0; i < exponentpos; ++i )
-               denominator.append("0");
+               (void) denominator.append("0");
 
-            s.erase(decimalpos, 1);
+            (void) s.erase(decimalpos, 1);
          }
          assert(std::all_of(s.begin()+1, s.end(), ::isdigit));
 
          if( s[0] == '+' )
             s = s.substr(1);
 
-         s.append("/");
-         s.append(denominator);
+         (void) s.append("/");
+         (void) s.append(denominator);
 
          res->val = scip_rational::Rational(s);
          res->val *= pow(10, exponent);
@@ -706,7 +700,7 @@ void RatSetReal(
    SCIP_Real             real                /**< real to set from */
    )
 {
-   assert(res != NULL);
+   assert(res != nullptr);
 
    if( REALABS(real) >= infinity )
    {
@@ -728,7 +722,7 @@ void RatResetFloatingPointRepresentable(
    SCIP_Rational*        rat                 /**< the number to set flag for */
    )
 {
-   assert(rat != NULL);
+   assert(rat != nullptr);
 
    rat->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
@@ -744,7 +738,7 @@ void RatAdd(
    SCIP_Rational*        op2                 /**< second operand */
    )
 {
-   assert(res != NULL && op1 != NULL && op2 != NULL);
+   assert(res != nullptr && op1 != nullptr && op2 != nullptr);
 
    if( op1->isinf || op2->isinf )
    {
@@ -770,7 +764,7 @@ void RatAddReal(
    SCIP_Real             real                /**< real number */
    )
 {
-   assert(res != NULL && rat != NULL);
+   assert(res != nullptr && rat != nullptr);
    if( rat->isinf )
       RatSet(res, rat);
    else if( REALABS(real) >= infinity )
@@ -792,7 +786,7 @@ void RatDiff(
    SCIP_Rational*        op2                 /**< second operand */
    )
 {
-   assert(res != NULL && op1 != NULL && op2 != NULL);
+   assert(res != nullptr && op1 != nullptr && op2 != nullptr);
 
    if( op1->isinf || op2->isinf )
    {
@@ -818,7 +812,7 @@ void RatDiffReal(
    SCIP_Real             real                /**< real number */
    )
 {
-   assert(res != NULL && rat != NULL);
+   assert(res != nullptr && rat != nullptr);
 
    RatAddReal(res, rat, -real);
 }
@@ -834,7 +828,7 @@ void RatRelDiff(
    scip_rational::Rational absval2;
    scip_rational::Rational quot;
 
-   assert(res != NULL && val1 != NULL && val2 != NULL);
+   assert(res != nullptr && val1 != nullptr && val2 != nullptr);
    assert(!val1->isinf && !val2->isinf);
 
    absval1 = abs(val1->val);
@@ -854,7 +848,7 @@ void RatMult(
    SCIP_Rational*        op2                 /**< second operand */
    )
 {
-   assert(res != NULL && op1 != NULL && op2 != NULL);
+   assert(res != nullptr && op1 != nullptr && op2 != nullptr);
 
    if( op1->isinf || op2->isinf )
    {
@@ -886,43 +880,45 @@ void RatMultReal(
    SCIP_Real             op2                 /**< second operand */
    )
 {
-    assert(res != NULL && op1 != NULL);
+   assert(res != nullptr && op1 != nullptr);
 
-    if( op1->isinf )
-    {
-       SCIPdebugMessage("multiplying with infinity might produce undesired behavior \n");
-       if( op2 == 0.0 )
-       {
-          res->isinf = FALSE;
-          res->val = 0;
-       }
-       else
-       {
-          op2 > 0 ? RatSet(res, op1) : RatNegate(res, op1);
-       }
-    }
-    else if( REALABS(op2) >= infinity )
-    {
-       RatSetReal(res, op2 * op1->val.sign());
-    }
-    else
-    {
-       res->val = op1->val * op2;
-       res->isinf = FALSE;
-    }
-    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+   if( op1->isinf )
+   {
+      SCIPdebugMessage("multiplying with infinity might produce undesired behavior \n");
+      if( op2 == 0.0 )
+      {
+         res->isinf = FALSE;
+         res->val = 0;
+      }
+      else
+      {
+         op2 > 0 ? RatSet(res, op1) : RatNegate(res, op1);
+      }
+   }
+   else if( REALABS(op2) >= infinity )
+   {
+      RatSetReal(res, op2 * op1->val.sign());
+   }
+   else
+   {
+      res->val = op1->val * op2;
+      res->isinf = FALSE;
+   }
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 
-/** divides two rationals and saves the result in res */
-/** @todo exip: should we allow infinity here? */
+/** divides two rationals and saves the result in res
+ *
+ * @todo exip: should we allow infinity here?
+ */
 void RatDiv(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
    SCIP_Rational*        op2                 /**< second operand */
    )
 {
-   assert(res != NULL && op1 != NULL && op2 != NULL);
+   assert(res != nullptr && op1 != nullptr && op2 != nullptr);
    assert(!RatIsZero(op2));
    assert(!op1->isinf && !op2->isinf);
 
@@ -937,7 +933,7 @@ void RatDivReal(
    SCIP_Real             op2                 /**< second operand */
    )
 {
-   assert(res != NULL && op1 != NULL);
+   assert(res != nullptr && op1 != nullptr);
    assert(op2 != 0.0);
 
    if( op1->isinf )
@@ -963,7 +959,7 @@ void RatAddProd(
    SCIP_Rational*        op2                 /**< second operand */
    )
 {
-   assert(res != NULL && op1 != NULL && op2 != NULL);
+   assert(res != nullptr && op1 != nullptr && op2 != nullptr);
 
    if( res->isinf && !op1->isinf && !op2->isinf )
       return;
@@ -1001,7 +997,7 @@ void RatAddProdReal(
    SCIP_Real             op2                 /**< second operand */
    )
 {
-   assert(res != NULL && op1 != NULL);
+   assert(res != nullptr && op1 != nullptr);
    assert(!res->isinf);
 
    if( op1->isinf )
@@ -1031,7 +1027,7 @@ void RatDiffProd(
    SCIP_Rational*        op2                 /**< second operand */
    )
 {
-   assert(res != NULL && op1 != NULL && op2 != NULL);
+   assert(res != nullptr && op1 != nullptr && op2 != nullptr);
    assert(!res->isinf);
 
    if( op1->isinf || op2->isinf )
@@ -1061,7 +1057,7 @@ void RatDiffProdReal(
    SCIP_Real             op2                 /**< second operand */
    )
 {
-   assert(res != NULL && op1 != NULL);
+   assert(res != nullptr && op1 != nullptr);
    assert(!res->isinf);
 
    if( op1->isinf )
@@ -1090,13 +1086,12 @@ void RatNegate(
    SCIP_Rational*        op                  /**< operand */
    )
 {
-   assert(res != NULL && op != NULL);
+   assert(res != nullptr && op != nullptr);
 
    res->val = -op->val;
    res->isinf = op->isinf;
    res->isfprepresentable = op->isfprepresentable;
 }
-
 
 /** set res to Abs(op) */
 void RatAbs(
@@ -1104,13 +1099,12 @@ void RatAbs(
    SCIP_Rational*        op                  /**< operand */
    )
 {
-   assert(res != NULL && op != NULL);
+   assert(res != nullptr && op != nullptr);
 
    res->val = abs(op->val);
    res->isinf = op->isinf;
    res->isfprepresentable = op->isfprepresentable;
 }
-
 
 /** set res to 1/op */
 void RatInvert(
@@ -1118,7 +1112,7 @@ void RatInvert(
    SCIP_Rational*        op                  /**< operand */
    )
 {
-   assert(res != NULL && op != NULL);
+   assert(res != nullptr && op != nullptr);
    assert(!op->isinf);
    assert(!op->val.is_zero());
 
@@ -1138,7 +1132,7 @@ void RatMIN(
    SCIP_Rational*        op2                 /**< the second rational */
    )
 {
-   assert(op1 != NULL && op2 != NULL);
+   assert(op1 != nullptr && op2 != nullptr);
 
    if( op1->isinf )
    {
@@ -1169,7 +1163,7 @@ void RatMAX(
    SCIP_Rational*        op2                 /**< the second rational */
    )
 {
-   assert(op1 != NULL && op2 != NULL);
+   assert(op1 != nullptr && op2 != nullptr);
 
    if( op1->isinf )
    {
@@ -1199,7 +1193,7 @@ SCIP_Bool RatIsEqual(
    SCIP_Rational*        rat2                /**< the second rational */
    )
 {
-   assert(rat1 != NULL && rat2 != NULL);
+   assert(rat1 != nullptr && rat2 != nullptr);
 
    if( rat1->val == rat2->val )
       return (rat1->isinf == rat2->isinf);
@@ -1216,7 +1210,7 @@ SCIP_Bool RatIsAbsEqual(
    SCIP_Rational*        rat2                /**< the second rational */
    )
 {
-   assert(rat1 != NULL && rat2 != NULL);
+   assert(rat1 != nullptr && rat2 != nullptr);
 
    if( abs(rat1->val) == abs(rat2->val) )
       return rat1->isinf == rat2->isinf;
@@ -1232,7 +1226,7 @@ SCIP_Bool RatIsEqualReal(
    SCIP_Real             real                /**< the real */
    )
 {
-   assert(rat != NULL);
+   assert(rat != nullptr);
 
    if( REALABS(real) >= infinity && rat->isinf )
       return (real > 0 && RatIsPositive(rat)) || (real < 0 && RatIsNegative(rat));
@@ -1248,7 +1242,7 @@ SCIP_Bool RatIsApproxEqualReal(
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding mode to use */
    )
 {
-   assert(rat != NULL);
+   assert(rat != nullptr);
 
    if( rat->isinf )
    {
@@ -1269,7 +1263,7 @@ SCIP_Bool RatIsGT(
    SCIP_Rational*        rat2                /**< The second rational */
    )
 {
-   assert(rat1 != NULL && rat2 != NULL);
+   assert(rat1 != nullptr && rat2 != nullptr);
 
    if( rat1->isinf )
    {
@@ -1299,7 +1293,7 @@ SCIP_Bool RatIsAbsGT(
    SCIP_Rational*        rat2                /**< The second rational */
    )
 {
-   assert(rat1 != NULL && rat2 != NULL);
+   assert(rat1 != nullptr && rat2 != nullptr);
 
    if( rat1->isinf && !rat2->isinf )
       return TRUE;
@@ -1315,19 +1309,18 @@ SCIP_Bool RatIsLT(
    SCIP_Rational*        rat2                /**< The second rational */
    )
 {
-   assert(rat1 != NULL && rat2 != NULL);
+   assert(rat1 != nullptr && rat2 != nullptr);
 
    return RatIsGT(rat2, rat1);
 }
 
 /** check if the first rational is greater or equal than the second*/
-SCIP_EXPORT
 SCIP_Bool RatIsGE(
    SCIP_Rational*        rat1,               /**< The first rational */
    SCIP_Rational*        rat2                /**< The second rational */
    )
 {
-   assert(rat1 != NULL && rat2 != NULL);
+   assert(rat1 != nullptr && rat2 != nullptr);
 
    if( RatIsEqual(rat1, rat2) )
       return TRUE;
@@ -1336,13 +1329,12 @@ SCIP_Bool RatIsGE(
 }
 
 /** check if the first rational is less or equal than the second*/
-SCIP_EXPORT
 SCIP_Bool RatIsLE(
    SCIP_Rational*        rat1,               /**< The first rational */
    SCIP_Rational*        rat2                /**< The second rational */
    )
 {
-   assert(rat1 != NULL && rat2 != NULL);
+   assert(rat1 != nullptr && rat2 != nullptr);
 
    return RatIsGE(rat2, rat1);
 }
@@ -1353,7 +1345,7 @@ SCIP_Bool RatIsGTReal(
    SCIP_Real             real                /**< The real */
    )
 {
-   assert(rat != NULL);
+   assert(rat != nullptr);
 
    if( rat->isinf )
    {
@@ -1371,7 +1363,7 @@ SCIP_Bool RatIsGEReal(
    SCIP_Real             real                /**< The real */
    )
 {
-   assert(rat != NULL);
+   assert(rat != nullptr);
 
    if( rat->isinf )
    {
@@ -1389,7 +1381,7 @@ SCIP_Bool RatIsLTReal(
    SCIP_Real             real                /**< The real */
    )
 {
-   assert(rat != NULL);
+   assert(rat != nullptr);
 
    if( rat->isinf )
    {
@@ -1407,7 +1399,7 @@ SCIP_Bool RatIsLEReal(
    SCIP_Real             real                /**< The real */
    )
 {
-   assert(rat != NULL);
+   assert(rat != nullptr);
 
    if( rat->isinf )
    {
@@ -1419,14 +1411,12 @@ SCIP_Bool RatIsLEReal(
    }
 }
 
-
-
 /** check if the rational is zero */
 SCIP_Bool RatIsZero(
    SCIP_Rational*        rational            /**< the rational to check */
    )
 {
-   assert(rational != NULL);
+   assert(rational != nullptr);
 
    if( rational->val.is_zero() )
    {
@@ -1442,7 +1432,7 @@ SCIP_Bool RatIsPositive(
    SCIP_Rational*        rational            /**< the rational to check */
    )
 {
-   assert(rational != NULL);
+   assert(rational != nullptr);
 
    return rational->val.sign() > 0;
 }
@@ -1452,7 +1442,7 @@ SCIP_Bool RatIsNegative(
    SCIP_Rational*        rational            /**< the rational to check */
    )
 {
-   assert(rational != NULL);
+   assert(rational != nullptr);
 
    return rational->val.sign() < 0;
 }
@@ -1462,7 +1452,7 @@ SCIP_Bool RatIsInfinity(
    SCIP_Rational*        rational            /**< the rational to check */
    )
 {
-   assert(rational != NULL);
+   assert(rational != nullptr);
 
    return rational->isinf && rational->val.sign() > 0;
 }
@@ -1472,7 +1462,7 @@ SCIP_Bool RatIsNegInfinity(
    SCIP_Rational*        rational            /**< the rational to check */
    )
 {
-   assert(rational != NULL);
+   assert(rational != nullptr);
 
    return rational->isinf && rational->val.sign() < 0;
 }
@@ -1482,7 +1472,7 @@ SCIP_Bool RatIsAbsInfinity(
    SCIP_Rational*        rational            /**< the rational to check */
    )
 {
-   assert(rational != NULL);
+   assert(rational != nullptr);
    assert(!rational->val.is_zero() || !rational->isinf);
 
    return rational->isinf;
@@ -1493,7 +1483,7 @@ SCIP_Bool RatIsIntegral(
    SCIP_Rational*        rational            /**< the rational to check */
    )
 {
-   assert(rational != NULL);
+   assert(rational != nullptr);
    if( rational->isinf )
       return TRUE;
    else if( denominator(rational->val) == 1 )
@@ -1512,7 +1502,7 @@ SCIP_Bool RatIsFpRepresentable(
    SCIP_Rational*        rational            /**< the rational to check */
    )
 {
-   assert(rational != NULL);
+   assert(rational != nullptr);
    if( rational->isfprepresentable == SCIP_ISFPREPRESENTABLE_TRUE )
    {
       assert(RatRoundReal(rational, SCIP_R_ROUND_DOWNWARDS) == RatRoundReal(rational, SCIP_R_ROUND_UPWARDS));
@@ -1546,7 +1536,7 @@ int RatToString(
    )
 {
    int ret = 0;
-   assert(rational != NULL);
+   assert(rational != nullptr);
 
    if( rational->isinf )
    {
@@ -1573,7 +1563,7 @@ SCIP_Longint RatStrlen(
    SCIP_Rational*        rational            /** rational to consider */
    )
 {
-   assert(rational != NULL);
+   assert(rational != nullptr);
    if( rational->isinf )
    {
       if( rational->val > 0 )
@@ -1592,7 +1582,7 @@ void RatMessage(
    SCIP_Rational*        rational            /**< the rational to print */
    )
 {
-   assert(rational != NULL);
+   assert(rational != nullptr);
 
    if( rational->isinf )
    {
@@ -1613,15 +1603,15 @@ void RatPrint(
    SCIP_Rational*        rational            /**< the rational to print */
    )
 {
-   if( rational == NULL)
-      std::cout << "NULL" << std::flush;
+   if( rational == nullptr)
+      std::cout << "nullptr" << std::flush;
    else if( rational->isinf )
       std::cout << rational->val.sign() << "inf" << std::flush;
    else
       std::cout << rational->val << std::flush;
 }
 
-/* print SCIP_Rational to output stream */
+/** print SCIP_Rational to output stream */
 std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r) {
    if( r.isinf )
       os << r.val.sign() << "inf";
@@ -1632,7 +1622,7 @@ std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r) {
 }
 
 #ifdef SCIP_DISABLED_CODE
-/* convert va_arg format string into std:string */
+/** convert va_arg format string into std:string */
 static
 std::string RatString(const char *format, va_list arguments)
 {
@@ -1696,7 +1686,7 @@ std::string RatString(const char *format, va_list arguments)
 }
 #endif
 
-/* printf extension for rationals (not supporting all format options) */
+/** printf extension for rationals (not supporting all format options) */
 void RatPrintf(const char *format, ...)
 {
    SCIP_Rational* rat;
@@ -1720,7 +1710,7 @@ void RatPrintf(const char *format, ...)
             break;
          case 's':
             for (sval = va_arg(arguments, char *); *sval; sval++)
-               putchar(*sval);
+               (void) putchar(*sval);
             break;
          case 'f':
             dval = va_arg(arguments, SCIP_Real);
@@ -1745,20 +1735,20 @@ void RatPrintf(const char *format, ...)
             break;
          case 'u':
             ival = va_arg(arguments, int);
-            printf("%u", ival);
+            printf("%d", ival);
             break;
          case 'c':
             cval = (char) va_arg(arguments, int);
             printf("%c", cval);
             break;
          default:
-            putchar(*format);
+            (void) putchar(*format);
             break;
          }
       }
       else
       {
-         putchar(*format);
+         (void) putchar(*format);
       }
       ++format;
    }
@@ -1823,6 +1813,7 @@ SCIP_Bool RatDenominatorIsLE(
 }
 
 #else
+
 /** returns the numerator of a rational as a long */
 SCIP_Longint RatNumerator(
    SCIP_Rational*        rational            /**< the rational */
@@ -1857,14 +1848,16 @@ int RatGetSign(
    return rational->val.sign();
 }
 
-/** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
-/** @todo exip: we might have to worry about incorrect results when huge coefficients occur */
+/** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr
+ *
+ * @todo exip: we might have to worry about incorrect results when huge coefficients occur
+ */
 SCIP_Real RatRoundReal(
    SCIP_Rational*        rational,           /**< the rational */
    SCIP_ROUNDMODE_RAT    roundmode           /**< the rounding direction */
    )
 {
-   assert(rational != NULL);
+   assert(rational != nullptr);
 
    if( rational->isinf )
       return (rational->val.sign() * infinity);
@@ -1918,8 +1911,8 @@ void RatRound(
 #ifdef SCIP_WITH_BOOST
    scip_rational::Integer roundint, rest;
 
-   assert(src != NULL);
-   assert(res != NULL);
+   assert(src != nullptr);
+   assert(res != nullptr);
 
    if( src->isinf )
       RatSet(res, src);
@@ -1961,8 +1954,8 @@ void RatGetFrac(
 #ifdef SCIP_WITH_BOOST
    scip_rational::Integer roundint, rest;
 
-   assert(src != NULL);
-   assert(res != NULL);
+   assert(src != nullptr);
+   assert(res != nullptr);
 
    if( src->isinf )
       RatSetReal(res, 0.0);
@@ -1980,9 +1973,9 @@ void RatGetFrac(
 #endif
 }
 
-/** round rational to next integer in direction of roundmode, return FALSEc
+/** round rational to next integer in direction of roundmode
  *
- * if rational outside of long-range
+ * return FALSE if rational outside of long-range
  */
 SCIP_Bool RatRoundInteger(
    SCIP_Longint*         res,                /**< the resulting rounded long int */
@@ -1994,8 +1987,8 @@ SCIP_Bool RatRoundInteger(
 #ifdef SCIP_WITH_BOOST
    scip_rational::Integer roundint, rest;
 
-   assert(src != NULL);
-   assert(res != NULL);
+   assert(src != nullptr);
+   assert(res != nullptr);
    assert(!src->isinf);
 
    divide_qr(numerator(src->val), denominator(src->val), roundint, rest);
@@ -2026,14 +2019,17 @@ SCIP_Bool RatRoundInteger(
    return success;
 }
 
-/** get the relaxation of a rational as a real, unfortunately you can't control the roundmode without using mpfr */
+/** returns approximation of rational as SCIP_Real
+ *
+ *  Unfortunately you cannot control the roundmode without using mpfr.
+ */
 SCIP_Real RatApproxReal(
    SCIP_Rational*        rational            /**< the rational */
    )
 {
    SCIP_Real retval = 0.0;
 #ifdef SCIP_WITH_BOOST
-   assert(rational != NULL);
+   assert(rational != nullptr);
 
    if( rational->isinf )
       return (rational->val.sign() * infinity);
@@ -2048,7 +2044,7 @@ SCIP_Real RatApproxReal(
 }
 
 #ifdef SCIP_WITH_BOOST
-/* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
+/** choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
 static
 void chooseSemiconv(
    scip_rational::Integer& resnum,           /**< the resulting numerator */
@@ -2059,9 +2055,9 @@ void chooseSemiconv(
    long                  maxdenom            /**< the maximal denominator */
    )
 {
-   scip_rational::Integer j, resnumerator, resdenominator;
+   scip_rational::Integer resnumerator, resdenominator;
 
-   j = (scip_rational::Integer(maxdenom) - q[0]) / q[1];
+   scip_rational::Integer j = (scip_rational::Integer(maxdenom) - q[0]) / q[1];
 
    if( j >= ai / 2 )
    {
@@ -2076,7 +2072,7 @@ void chooseSemiconv(
 }
 #endif
 
-/* choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
+/** choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
 static
 void chooseSemiconvLong(
    SCIP_Longint&         resnum,             /**< the resulting numerator */
@@ -2103,6 +2099,8 @@ void chooseSemiconvLong(
    }
 }
 
+/* MP@LE please document */
+static
 void RatComputeApproximationLong(
    SCIP_Rational*        res,
    SCIP_Rational*        src,
@@ -2261,6 +2259,7 @@ void RatComputeApproximationLong(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
+/* MP@LE Please document */
 /** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
 void RatComputeApproximation(
    SCIP_Rational*        res,
@@ -2308,7 +2307,6 @@ void RatComputeApproximation(
    }
    else if( src->val.sign() == -1 && RatApproxReal(src) > (-1.0 / maxdenom) )
    {
-
       if( forcegreater == -1 )
          RatSetInt(res, -1, maxdenom);
       else
@@ -2460,10 +2458,12 @@ void RatComputeApproximation(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
-/*
+/* MP@LE This function does not seem to be use and is not external. */
+/**
  * Vector arithmetic (to shorten code and provide benefits due to
  * usage of expression Templates)
  */
+static
 void RatScalarProduct(
    SCIP_Rational*        result,             /**< the resulting rational */
    SCIP_Rational**       array1,             /**< the first array */
@@ -2477,8 +2477,8 @@ void RatScalarProduct(
    scip_rational::Rational& rat = result->val;
    for( i = 0; i < len; ++i )
    {
-      assert(array1[i] != NULL);
-      assert(array2[i] != NULL);
+      assert(array1[i] != nullptr);
+      assert(array2[i] != nullptr);
       assert(!(array1[i]->isinf && array2[i]->isinf));
       rat += array1[i]->val * array2[i]->val;
    }
@@ -2494,8 +2494,8 @@ SCIP_RETCODE SCIPrationalarrayCreate(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   assert(rationalarray != NULL);
-   assert(blkmem != NULL);
+   assert(rationalarray != nullptr);
+   assert(blkmem != nullptr);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, rationalarray) );
    new (&(*rationalarray)->vals) scip_rational::sparsevec();
@@ -2510,7 +2510,7 @@ SCIP_RETCODE SCIPrationalarrayResize(
    int                   newsize             /**< new size */
    )
 {
-   assert(rationalarray != NULL);
+   assert(rationalarray != nullptr);
 
    rationalarray->vals.resize(newsize);
 
@@ -2524,8 +2524,8 @@ SCIP_RETCODE SCIPrationalarrayCopy(
    SCIP_RATIONALARRAY*   sourcerationalarray /**< dynamic rational array to copy */
    )
 {
-   assert(rationalarray != NULL);
-   assert(sourcerationalarray != NULL);
+   assert(rationalarray != nullptr);
+   assert(sourcerationalarray != nullptr);
 
    SCIP_CALL( SCIPrationalarrayCreate(rationalarray, blkmem) );
    (*rationalarray)->vals = sourcerationalarray->vals;
@@ -2540,8 +2540,8 @@ SCIP_RETCODE SCIPrationalarrayFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   assert(rationalarray != NULL);
-   assert(*rationalarray != NULL);
+   assert(rationalarray != nullptr);
+   assert(*rationalarray != nullptr);
 
    (*rationalarray)->vals.scip_rational::sparsevec::~sparsevec();
    BMSfreeBlockMemory(blkmem, rationalarray);
@@ -2556,7 +2556,7 @@ void SCIPrationalarrayGetVal(
    SCIP_Rational*        result              /**< store the result */
    )
 {
-   assert(rationalarray != NULL);
+   assert(rationalarray != nullptr);
    assert(idx >= 0);
    if( rationalarray->firstidx == -1 || idx < rationalarray->firstidx
       || (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
@@ -2572,7 +2572,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    SCIP_Rational*        val                 /**< value to set array index to */
    )
 {
-   assert(rationalarray != NULL);
+   assert(rationalarray != nullptr);
    assert(idx >= 0);
 
    if( rationalarray-> firstidx == -1 )
@@ -2592,7 +2592,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    {
       int ninserts = idx - rationalarray->vals.size() - rationalarray->firstidx + 1;
       SCIP_Rational r = {};
-      rationalarray->vals.insert(rationalarray->vals.end(), ninserts, r);
+      (void) rationalarray->vals.insert(rationalarray->vals.end(), ninserts, r);
       rationalarray->vals[rationalarray->vals.size() - 1] = *val;
    }
    else
@@ -2610,7 +2610,7 @@ SCIP_RETCODE SCIPrationalarrayIncVal(
    SCIP_Rational*        incval              /**< value to increase array index */
    )
 {
-   assert(incval != NULL);
+   assert(incval != nullptr);
    assert(!incval->isinf);
 
    if( RatIsZero(incval) )
@@ -2646,7 +2646,7 @@ int SCIPrationalarrayGetMinIdx(
    SCIP_RATIONALARRAY*   rationalarray       /**< dynamic rational array */
    )
 {
-   assert(rationalarray != NULL);
+   assert(rationalarray != nullptr);
 
    return rationalarray->firstidx;
 }
@@ -2656,11 +2656,12 @@ int SCIPrationalarrayGetMaxIdx(
    SCIP_RATIONALARRAY*   rationalarray       /**< dynamic rational array */
    )
 {
-   assert(rationalarray != NULL);
+   assert(rationalarray != nullptr);
 
    return rationalarray->firstidx + rationalarray->vals.size() - 1;
 }
 
+/* MP@LE The following line seems to end the "extern "C"" part. What about the following two functions? */
 }
 
 /** set the infinity threshold to new value */

@@ -26,7 +26,7 @@
  * @brief  LP management methods and data structures for exact mirror of LP
  * @author Leon Eifler
  *
- *  In LP management, we have to differ between the current LP and the SCIP_LP
+ *  In LP management, we have to distinguish between the current LP and the SCIP_LP
  *  stored in the LP solver. All LP methods affect the current LP only.
  *  Before solving the current LP with the LP solver or setting an LP state,
  *  the LP solvers data has to be updated to the current LP with a call to
@@ -177,7 +177,6 @@ SCIP_Bool colExactInSync(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-
    SCIP_COL* fpcol;
 
    assert(colexact != NULL);
@@ -264,7 +263,7 @@ SCIP_Bool lpExactInSync(
    return TRUE;
 }
 
-/** ensures, that rows array can store at least num entries */
+/** ensures that rows array can store at least num entries */
 static
 SCIP_RETCODE ensureRowexsSize(
    SCIP_LPEXACT*         lpexact,            /**< current LP data */
@@ -327,6 +326,7 @@ void colExactSortNonLP(
    )
 {
    int i;
+
    assert(col != NULL);
 
    /* check, if column is already sorted in the non-LP part */
@@ -369,7 +369,7 @@ void rowExactSortLP(
 
    /* sort coefficients */
    SCIPsortIntIntPtrPtrInterval(row->cols_index, row->linkpos, (void**)row->cols,
-                        (void**)row->vals, row->valsinterval, row->nlpcols);
+      (void**)row->vals, row->valsinterval, row->nlpcols);
 
    /* update links */
    for( i = 0; i < row->nlpcols; ++i )
@@ -394,6 +394,7 @@ void rowExactSortNonLP(
    )
 {
    int i;
+
    assert(row != NULL);
 
    /* check, if row is already sorted in the non-LP part, or if the sorting should be delayed */
@@ -402,8 +403,8 @@ void rowExactSortNonLP(
 
    /* sort coefficients */
    SCIPsortIntIntPtrPtrInterval(&(row->cols_index[row->nlpcols]), &(row->linkpos[row->nlpcols]),
-                        (void**)(&(row->cols[row->nlpcols])), (void**)&(row->vals[row->nlpcols]), &(row->valsinterval[row->nlpcols]),
-                        row->len - row->nlpcols);
+      (void**)(&(row->cols[row->nlpcols])), (void**)&(row->vals[row->nlpcols]), &(row->valsinterval[row->nlpcols]),
+      row->len - row->nlpcols);
 
    /* update links */
    for( i = row->nlpcols; i < row->len; ++i )
@@ -822,6 +823,7 @@ void colExactSwapCoefs(
    if( pos1 == pos2 )
       return;
 
+   /* MP@LE I think that the function should rather return SCIP_RETCODE and one uses SCIP_CALL here. */
    (void) RatCreateBuffer(buffer, &tmpval);
 
    /* swap coefficients */
@@ -847,6 +849,7 @@ void colExactSwapCoefs(
 
       col->rows[pos1]->linkpos[col->linkpos[pos1]] = pos1;
    }
+
    if( col->linkpos[pos2] >= 0 )
    {
       assert(col->rows[pos2]->cols[col->linkpos[pos2]] == col);
@@ -928,7 +931,9 @@ void rowExactSwapCoefs(
    if( pos1 == pos2 )
       return;
 
+   /* MP@LE I think that the function should rather return SCIP_RETCODE and one uses SCIP_CALL here. */
    (void) RatCreateBuffer(buffer, &tmpval);
+
    /* swap coefficients */
    tmpcol = row->cols[pos2];
    tmpindex = row->cols_index[pos2];
@@ -977,7 +982,7 @@ void rowExactSwapCoefs(
       row->nonlpcolssorted = FALSE;
 }
 
-/* forward declaration for colAddCoef() */
+/** forward declaration for rowExactAddCoef() */
 static
 SCIP_RETCODE rowExactAddCoef(
    SCIP_ROWEXACT*        row,                /**< LP row */
@@ -1223,7 +1228,7 @@ SCIP_RETCODE colExactChgCoefPos(
 }
 
 
-/* forward declaration for colAddCoef() */
+/** forward declaration for rowEactAddCoef() */
 static
 SCIP_RETCODE rowExactAddCoef(
    SCIP_ROWEXACT*        row,                /**< LP row */
@@ -1505,6 +1510,7 @@ SCIP_RETCODE colExactLink(
    return SCIP_OKAY;
 }
 
+/* MP@LE Please think about removing the code or add a comment why it is disabled */
 #ifdef SCIP_DISABLED_CODE
 /** removes column coefficients from corresponding rows */
 static
@@ -1766,7 +1772,9 @@ void rowExactUpdateDelLP(
    }
 }
 
-/** flushing methods */
+/*
+ * flushing methods
+ */
 
 /** resets column data to represent a column not in the LP solver */
 static
@@ -1864,6 +1872,7 @@ SCIP_RETCODE lpExactFlushAddCols(
       return SCIP_OKAY;
 
    /* add the additional columns */
+   /* MP@LE Why is the following assert not enabled? Remove it? */
    //assert(!lp->fplp->diving);
    assert(lp->ncols > lp->nlpicols);
    SCIP_CALL( ensureLpiExactcolsSize(lp, set, lp->ncols) );
@@ -1899,7 +1908,7 @@ SCIP_RETCODE lpExactFlushAddCols(
       SCIPsetDebugMsg(set, "flushing added column <%s>: ", SCIPvarGetName(col->var));
 
       /* Because the column becomes a member of the LP solver, it now can take values
-       * different from zero. That means,f 3 we have to include the column in the corresponding
+       * different from zero. That means, we have to include the column in the corresponding
        * row vectors.
        */
       SCIP_CALL( colExactLink(col, blkmem, set, eventqueue, lp) );
@@ -2660,7 +2669,7 @@ void markRowExactDeleted(
    row->validactivitylp = -1;
 }
 
-/* deletes the marked rows from the LP and the LP interface */
+/** deletes the marked rows from the LP and the LP interface */
 SCIP_RETCODE SCIPlpExactDelRowset(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -2691,6 +2700,7 @@ SCIP_RETCODE SCIPlpExactDelRowset(
    {
       c--;
    }
+
    c = rowdstat[c] + 1;
    for( r = lp->nlpirows; r < nrows; r++ )
    {
@@ -2728,6 +2738,7 @@ SCIP_RETCODE SCIPlpExactDelRowset(
             SCIP_CALL( SCIProwExactRelease(&lp->lpirows[r], blkmem, set, lp) );
             lp->nlpirows--;
          }
+         /* MP@LE Remove the following line? */
          //SCIProwExactUnlock(lp->rows[r]);
          SCIP_CALL( SCIProwExactRelease(&lp->rows[r], blkmem, set, lp) );
          assert(lp->rows[r] == NULL);
@@ -3368,6 +3379,7 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    {
       SCIP_CALL( SCIProwDelCoef(rowexact->fprow, blkmem, set, eventqueue, lpexact->fplp, rowexact->fprow->cols[i]) );
    }
+
    for( i = 0; i < rowexact->len; i++ )
    {
       SCIP_CALL( SCIProwAddCoef(rowexact->fprow, blkmem, set, eventqueue, lpexact->fplp, rowexact->cols[i]->fpcol,
@@ -3386,7 +3398,6 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
 
    return SCIP_OKAY;
 }
-
 
 /** creates and captures an exact LP row from a fp row */
 SCIP_RETCODE SCIProwExactCreateFromRow(
@@ -3420,20 +3431,20 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
 
    switch(SCIProwGetOrigintype(fprow))
    {
-      case SCIP_ROWORIGINTYPE_SEPA:
-         origin = SCIProwGetOriginSepa(fprow);
-         break;
-      case SCIP_ROWORIGINTYPE_CONS:
-         origin = SCIProwGetOriginCons(fprow);
-         break;
-      case SCIP_ROWORIGINTYPE_CONSHDLR:
-         origin = SCIProwGetOriginConshdlr(fprow);
-         break;
-      case SCIP_ROWORIGINTYPE_REOPT:
-      case SCIP_ROWORIGINTYPE_UNSPEC:
-      default:
-         origin = NULL;
-         break;
+   case SCIP_ROWORIGINTYPE_SEPA:
+      origin = SCIProwGetOriginSepa(fprow);
+      break;
+   case SCIP_ROWORIGINTYPE_CONS:
+      origin = SCIProwGetOriginCons(fprow);
+      break;
+   case SCIP_ROWORIGINTYPE_CONSHDLR:
+      origin = SCIProwGetOriginConshdlr(fprow);
+      break;
+   case SCIP_ROWORIGINTYPE_REOPT:
+   case SCIP_ROWORIGINTYPE_UNSPEC:
+   default:
+      origin = NULL;
+      break;
    }
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
@@ -3683,7 +3694,6 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
 
    return SCIP_OKAY;
 }
-
 
 /** applies all cached changes to the LP solver */
 SCIP_RETCODE SCIPlpExactFlush(
@@ -4421,17 +4431,17 @@ SCIP_RETCODE lpExactFlushAndSolve(
 
    do {
       solveagain = FALSE;
+
       /* solve the lp exactly */
-      switch(algo)
+      if( algo != 's' )
       {
-         case 's':
-            SCIPsetDebugMsg(set, "Calling SCIPlpiExactSolveDual()\n");
-            retcode = SCIPlpiExactSolveDual(lpexact->lpiexact);
-            break;
-         default:
-            SCIPerrorMessage("Lp-algorithm-type %d is not supported in exact solving mode \n", algo);
-            SCIPABORT();
+         SCIPerrorMessage("Lp-algorithm-type %d is not supported in exact solving mode \n", algo);
+         SCIPABORT();
       }
+
+      SCIPsetDebugMsg(set, "Calling SCIPlpiExactSolveDual()\n");
+      retcode = SCIPlpiExactSolveDual(lpexact->lpiexact);
+
       if( retcode == SCIP_LPERROR )
       {
          *lperror = TRUE;
@@ -4439,6 +4449,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
          lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          SCIPdebugMessage("Error solving lp exactly. \n");
       }
+
       if( retcode != SCIP_LPERROR )
       {
          SCIP_CALL( SCIPlpiExactGetSolFeasibility(lpexact->lpiexact, &(lpexact->primalfeasible), &(lpexact->dualfeasible)) );
@@ -4701,18 +4712,18 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
    case SCIP_LPSOLSTAT_OBJLIMIT:
       assert(!lpCutoffDisabled(set));
       /* Some LP solvers, e.g. CPLEX With FASTMIP setting, do not apply the final pivot to reach the dual solution
-         * exceeding the objective limit. In some cases like branch-and-price, however, we must make sure that a dual
-         * feasible solution exists that exceeds the objective limit. Therefore, we have to continue solving it without
-         * objective limit for at least one iteration. We first try to continue with FASTMIP for one additional simplex
-         * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable
-         * FASTMIP and solve again. */
+       * exceeding the objective limit. In some cases like branch-and-price, however, we must make sure that a dual
+       * feasible solution exists that exceeds the objective limit. Therefore, we have to continue solving it without
+       * objective limit for at least one iteration. We first try to continue with FASTMIP for one additional simplex
+       * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable
+       * FASTMIP and solve again. */
       {
          SCIP_Rational* objval;
 
          SCIP_CALL( RatCreateBuffer(set->buffer, &objval) );
          /* actually, SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) should hold, but we are a bit less strict in
-            * the assert by using !SCIPsetIsFeasNegative()
-            */
+          * the assert by using !SCIPsetIsFeasNegative()
+          */
 
          SCIP_CALL( SCIPlpiExactGetObjval(lpexact->lpiexact, objval) );
 
@@ -4803,9 +4814,9 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
                SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, primalfeaspointer, dualfeaspointer, TRUE) );
 
                /* if objective value is larger than the cutoff bound, set solution status to objective
-                  * limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
-                  * this was already done in the lpSolve() method
-                  */
+                * limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
+                * this was already done in the lpSolve() method
+                */
                if( RatIsGEReal(objval, lp->cutoffbound - RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_R_ROUND_DOWNWARDS)) )
                {
                   lpexact->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
@@ -4815,8 +4826,8 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
                }
 
                /* LP solution is not feasible or objective limit was reached without the LP value really exceeding
-                  * the cutoffbound; mark the LP to be unsolved
-                  */
+                * the cutoffbound; mark the LP to be unsolved
+                */
                if( !primalfeasible || !dualfeasible
                   || (solstat == SCIP_LPSOLSTAT_OBJLIMIT &&
                      !RatIsGEReal(objval, lp->cutoffbound -  RatRoundReal(getFiniteLooseObjvalExact(lpexact, set, prob), SCIP_R_ROUND_DOWNWARDS))) )
@@ -4838,8 +4849,8 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
                   SCIP_CALL( SCIPlpExactGetDualfarkas(lpexact, set, stat, &farkasvalid, TRUE) );
                }
                /* it might happen that we have no infeasibility proof for the current LP (e.g. if the LP was always solved
-               * with the primal simplex due to numerical problems) - treat this case like an LP error
-               */
+                * with the primal simplex due to numerical problems) - treat this case like an LP error
+                */
                else
                {
                   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -4853,8 +4864,8 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
                if( !farkasvalid )
                {
                   /* the Farkas proof does not prove infeasibility (this can happen due to numerical problems) and nothing
-                     * helped forget about the LP at this node and mark it to be unsolved
-                     */
+                   * helped forget about the LP at this node and mark it to be unsolved
+                   */
                   SCIPmessagePrintInfo(messagehdlr, "(node %" SCIP_LONGINT_FORMAT ") numerical troubles exact in LP %" SCIP_LONGINT_FORMAT " \n ", stat->nnodes, stat->nlps);
                   lp->solved = FALSE;
                   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
@@ -4890,12 +4901,13 @@ SCIP_RETCODE SCIPlpExactSolveAndEval(
                if( !primalfeasible || !rayfeasible )
                {
                   /* unbounded solution is infeasible (this can happen due to numerical problems):
-                     * forget about the LP at this node and mark it to be unsolved
-                     *
-                     * @todo: like in the default LP solving evaluation, solve without fastmip,
-                     * with tighter feasibility tolerance and from scratch
-                     */
-                  SCIPmessagePrintInfo(messagehdlr, "(node %" SCIP_LONGINT_FORMAT ") numerical troubles exact in LP %" SCIP_LONGINT_FORMAT " \n ", stat->nnodes, stat->nlps);
+                   * forget about the LP at this node and mark it to be unsolved
+                   *
+                   * @todo: like in the default LP solving evaluation, solve without fastmip,
+                   * with tighter feasibility tolerance and from scratch
+                   */
+                  SCIPmessagePrintInfo(messagehdlr, "(node %" SCIP_LONGINT_FORMAT ") numerical troubles exact in LP %" SCIP_LONGINT_FORMAT " \n ",
+                     stat->nnodes, stat->nlps);
                   lp->solved = FALSE;
                   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                   lp->hasprovedbound = FALSE;
@@ -5138,14 +5150,13 @@ SCIP_ROW* SCIProwExactGetRowRhs(
 
 /** true if row can be relaxed (possibly as two fp rows) */
 SCIP_Bool SCIProwExactHasFpRelax(
-   SCIP_ROWEXACT*             row            /**< SCIP row */
+   SCIP_ROWEXACT*        row                 /**< SCIP row */
    )
 {
    assert(row != NULL);
 
    return row->fprelaxable;
 }
-
 
 /** returns exact col corresponding to fpcol, if it exists. Otherwise returns NULL */
 SCIP_COLEXACT* SCIPcolGetColExact(
@@ -5182,6 +5193,7 @@ void SCIPcolExactCalcFarkasRedcostCoef(
    else
       RatSet(result, col->obj);
 
+   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL here? */
    (void) RatCreateBuffer(set->buffer, &tmp);
 
    for( i = 0; i < col->nlprows; ++i )
@@ -5504,6 +5516,7 @@ void SCIProwExactGetSolFeasibility(
    SCIP_Rational* temp1;
    SCIP_Rational* temp2;
 
+   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL here? */
    (void) RatCreateBuffer(set->buffer, &temp1);
    (void) RatCreateBuffer(set->buffer, &temp2);
 
@@ -5590,6 +5603,7 @@ void SCIProwExactGetSolActivity(
 
    assert(rowexact != NULL);
 
+   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL here? */
    (void) RatCreateBuffer(set->buffer, &solval);
    RatSet(result, rowexact->constant);
    for( i = 0; i < rowexact->len; ++i )
@@ -5600,6 +5614,7 @@ void SCIProwExactGetSolActivity(
 
       assert((i < rowexact->nlpcols) == (rowexact->linkpos[i] >= 0
          && colexact->lppos >= 0));
+
       if( useexact )
          SCIPsolGetValExact(solval, sol, set, stat, colexact->var);
       else
@@ -5624,7 +5639,6 @@ void SCIProwExactGetSolActivity(
 
    RatFreeBuffer(set->buffer, &solval);
 }
-
 
 /** decreases usage counter of LP row, and frees memory if necessary */
 SCIP_RETCODE SCIProwExactRelease(
@@ -5712,6 +5726,7 @@ void SCIProwExactGetLPFeasibility(
    SCIP_Rational* actrhs;
    SCIP_Rational* actlhs;
 
+   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL here? */
    (void) RatCreateBuffer(set->buffer, &actrhs);
    (void) RatCreateBuffer(set->buffer, &actlhs);
    assert(row != NULL);
@@ -5740,6 +5755,7 @@ void SCIProwExactGetPseudoFeasibility(
 
    assert(row != NULL);
 
+   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL here? */
    (void) RatCreateBuffer(set->buffer, &actrhs);
    (void) RatCreateBuffer(set->buffer, &actlhs);
 
@@ -5810,8 +5826,7 @@ void SCIProwExactSort(
 }
 
 /** sorts row, and merges equal column entries (resulting from lazy sorting and adding) into a single entry; removes
- *  zero entries from row
- *  the row must not be linked to the columns; otherwise, we would need to update the columns as
+ *  zero entries from row the row must not be linked to the columns; otherwise, we would need to update the columns as
  *  well, which is too expensive
  */
 static
@@ -6001,7 +6016,7 @@ void SCIProwExactRecalcLPActivity(
    row->validactivitylp = stat->lpcount;
 }
 
- /** calculates the current pseudo activity of a row */
+/** calculates the current pseudo activity of a row */
 void SCIProwExactRecalcPseudoActivity(
    SCIP_ROWEXACT*        rowexact,           /**< row data */
    SCIP_STAT*            stat                /**< problem statistics */
@@ -6026,8 +6041,7 @@ void SCIProwExactRecalcPseudoActivity(
 
       assert(colexact->fpcol != NULL);
       assert(colexact != NULL);
-      assert((i < row->nlpcols) == (row->linkpos[i] >= 0
-         && colexact->fpcol->lppos >= 0));
+      assert((i < row->nlpcols) == (row->linkpos[i] >= 0 && colexact->fpcol->lppos >= 0));
       assert(colexact->fpcol->var != NULL);
       assert(SCIPvarGetStatus(colexact->fpcol->var) == SCIP_VARSTATUS_COLUMN);
 
@@ -6161,6 +6175,7 @@ void getObjvalDeltaObjExact(
    assert(!RatIsEqual(oldobj, newobj));
 
    RatSetReal(deltaval, 0.0);
+   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL here? */
    (void) RatCreateBuffer(set->buffer, &tmp);
    (*deltainf) = 0;
 
@@ -6528,6 +6543,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLbGlobal(
       int deltainf;
 
       SCIP_CALL( RatCreateBuffer(set->buffer, &deltaval) );
+
       /* compute the pseudo objective delta due the new lower bound */
       getObjvalDeltaLbExact(SCIPvarGetObjExact(var), oldlb, newlb, deltaval, &deltainf);
 
@@ -6562,6 +6578,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLb(
       assert(SCIPvarGetProbindex(var) >= 0);
 
       SCIP_CALL( RatCreateBuffer(set->buffer, &deltaval) );
+
       /* compute the pseudo objective delta due the new lower bound */
       getObjvalDeltaLbExact(SCIPvarGetObjExact(var), oldlb, newlb, deltaval, &deltainf);
 
@@ -6886,6 +6903,7 @@ SCIP_RETCODE lpexactComputeDualValidity(
 
    RatFreeBuffer(set->buffer, &objval);
    RatFreeBufferArray(set->buffer, &obj, lp->ncols);
+
    return SCIP_OKAY;
 }
 #endif
@@ -6920,6 +6938,7 @@ SCIP_RETCODE SCIPlpExactGetSol(
    int r;
 
    assert(lp != NULL);
+   /* MP@LE Check! and possibly remove */
    //assert(lp->flushed); /* TODO: does that work? The exact LP shouldn't need to be flushed when we're storing for diving */
    assert(lp->solved);
    assert(set != NULL);
@@ -7015,9 +7034,9 @@ SCIP_RETCODE SCIPlpExactGetSol(
       }
 
       /* complementary slackness means that if a variable is not at its lower or upper bound, its reduced costs
-         * must be non-positive or non-negative, respectively; in particular, if a variable is strictly within its
-         * bounds, its reduced cost must be zero
-         */
+       * must be non-positive or non-negative, respectively; in particular, if a variable is strictly within its
+       * bounds, its reduced cost must be zero
+       */
       if( stilldualfeasible && (RatIsNegInfinity(lpicols[c]->lb) || RatIsGT(lpicols[c]->primsol, lpicols[c]->lb)) )
          stilldualfeasible = !RatIsPositive(lpicols[c]->redcost);
       if( stilldualfeasible && (RatIsInfinity(lpicols[c]->ub) || RatIsLT(lpicols[c]->primsol, lpicols[c]->ub)) )
@@ -7079,9 +7098,9 @@ SCIP_RETCODE SCIPlpExactGetSol(
             && (RatIsInfinity(lpirows[r]->rhs) || RatIsLE(lpirows[r]->activity, lpirows[r]->rhs));
       }
       /* complementary slackness means that if the activity of a row is not at its left-hand or right-hand side,
-         * its dual multiplier must be non-positive or non-negative, respectively; in particular, if the activity is
-         * strictly within left-hand and right-hand side, its dual multiplier must be zero
-         */
+       * its dual multiplier must be non-positive or non-negative, respectively; in particular, if the activity is
+       * strictly within left-hand and right-hand side, its dual multiplier must be zero
+       */
       if( stilldualfeasible &&
             (RatIsNegInfinity(lpirows[r]->lhs) || RatIsGT(lpirows[r]->activity, lpirows[r]->lhs)) )
          stilldualfeasible = !RatIsPositive(lpirows[r]->dualsol);
@@ -7174,6 +7193,7 @@ SCIP_RETCODE SCIPlpExactGetUnboundedSol(
    SCIPerrorMessage("Unbounded solution not implemented in exact solving mode.\n");
    return SCIP_ERROR;
 } /*lint !e715*/
+/* MP@LE What about the following code? Should this be removed? */
 #if 0
 {
    SCIP_COLEXACT** lpicols;
@@ -7627,7 +7647,7 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       lpicols[c]->validredcostlp = -1L;
       lpicols[c]->validfarkaslp = -1L;
       if( farkascoefs != NULL )
-	      RatSet(lpicols[c]->farkascoef, farkascoefs[c]);
+         RatSet(lpicols[c]->farkascoef, farkascoefs[c]);
 
       if( overwritefplp )
       {
@@ -7939,8 +7959,8 @@ SCIP_RETCODE SCIPlpExactcheckIntegralityExact(
       assert(SCIPvarGetCol(var) == col);
 
       /* LP branching candidates are fractional binary and integer variables; implicit variables are kept at the end
-         * of the candidates array for some rounding heuristics
-         */
+       * of the candidates array for some rounding heuristics
+       */
       vartype = SCIPvarGetType(var);
       if( vartype == SCIP_VARTYPE_CONTINUOUS )
          continue;
@@ -8298,6 +8318,7 @@ SCIP_RETCODE lpExactRestoreSolVals(
       lpexact->dualfeasible = FALSE;
       lpexact->dualchecked = FALSE;
       lpexact->solisbasic = FALSE;
+      /* MP@LE What about the following two lines that are commented out? */
       //lpexact->validfarkaslp = -1;
    }
 
@@ -8318,6 +8339,7 @@ void SCIProwExactLock(
    /* check, if row is modifiable */
    if( !row->modifiable )
    {
+      /* MP@LE Remove? */
       //SCIPdebugMessage("lock row <%s> with nuses=%d and nlocks=%u\n", row->name, row->nuses, row->nlocks);
       row->nlocks++;
    }
@@ -8333,6 +8355,7 @@ void SCIProwExactUnlock(
    /* check, if row is modifiable */
    if( !row->modifiable )
    {
+      /* MP@LE Remove? */
       //SCIPdebugMessage("unlock row <%s> with nuses=%d and nlocks=%u\n", row->name, row->nuses, row->nlocks);
       assert(row->nlocks > 0);
       row->nlocks--;
@@ -8453,7 +8476,7 @@ SCIP_RETCODE SCIProwExactChgRhs(
 
 /** gets solution status of current exact LP */
 SCIP_LPSOLSTAT SCIPlpExactGetSolstat(
-   SCIP_LPEXACT*         lpexact              /**< current LP data */
+   SCIP_LPEXACT*         lpexact             /**< current LP data */
    )
 {
    assert(lpexact != NULL);
@@ -8600,16 +8623,19 @@ SCIP_RETCODE SCIPlpExactStartDive(
       {
       case SCIP_LPSOLSTAT_OPTIMAL:
          SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, NULL, NULL, FALSE) );
+         /* MP@LE Remove? */
          //assert(lp->validsollp == stat->lpcount);
          break;
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
          SCIP_CALL( SCIPlpExactGetUnboundedSol(lpexact, set, stat, NULL, NULL) );
+         /* MP@LE Remove? */
          //assert(lp->validsollp == stat->lpcount);
          break;
       case SCIP_LPSOLSTAT_OBJLIMIT:
       case SCIP_LPSOLSTAT_ITERLIMIT:
       case SCIP_LPSOLSTAT_TIMELIMIT:
          SCIP_CALL( SCIPlpExactGetSol(lpexact, set, stat, NULL, NULL, FALSE) );
+         /* MP@LE Remove? */
          //assert(lp->validsollp == stat->lpcount);
          break;
       case SCIP_LPSOLSTAT_INFEASIBLE:
@@ -8627,6 +8653,7 @@ SCIP_RETCODE SCIPlpExactStartDive(
          {
             SCIP_CALL( colExactStoreSolVals(lpexact->cols[c], blkmem) );
          }
+
          for( r = 0; r < lpexact->nrows; ++r )
          {
             SCIP_CALL( rowExactStoreSolVals(lpexact->rows[r], blkmem, lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE) );
@@ -8685,6 +8712,7 @@ SCIP_RETCODE SCIPlpExactEndDive(
 
    /* remove rows which were added in diving mode */
    /* note: not needed right now, since we only change bounds in exact diving mode */
+   /* MP@LE Check and possibly remove */
    //SCIP_CALL( SCIPlpExactShrinkRows(lpexact, blkmem, set, lpexact->ndivingrows) );
 
    /* undo changes to left hand sides and right hand sides */
@@ -8758,6 +8786,7 @@ SCIP_RETCODE SCIPlpExactEndDive(
          {
             SCIP_CALL( colExactRestoreSolVals(lpexact->cols[c], blkmem, stat->lpcount, set->lp_freesolvalbuffers) );
          }
+
          for( r = 0; r < lpexact->nrows; ++r )
          {
             SCIP_CALL( rowExactRestoreSolVals(lpexact->rows[r], blkmem, stat->lpcount, set->lp_freesolvalbuffers,
