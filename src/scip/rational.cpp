@@ -1315,7 +1315,6 @@ SCIP_Bool RatIsLT(
 }
 
 /** check if the first rational is greater or equal than the second*/
-SCIP_EXPORT
 SCIP_Bool RatIsGE(
    SCIP_Rational*        rat1,               /**< The first rational */
    SCIP_Rational*        rat2                /**< The second rational */
@@ -1330,7 +1329,6 @@ SCIP_Bool RatIsGE(
 }
 
 /** check if the first rational is less or equal than the second*/
-SCIP_EXPORT
 SCIP_Bool RatIsLE(
    SCIP_Rational*        rat1,               /**< The first rational */
    SCIP_Rational*        rat2                /**< The second rational */
@@ -2461,6 +2459,7 @@ void RatComputeApproximation(
  * Vector arithmetic (to shorten code and provide benefits due to
  * usage of expression Templates)
  */
+static
 void RatScalarProduct(
    SCIP_Rational*        result,             /**< the resulting rational */
    SCIP_Rational**       array1,             /**< the first array */
