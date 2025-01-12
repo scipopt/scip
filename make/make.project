@@ -627,7 +627,7 @@ ifeq ($(MPFR_LDFLAGS),)
 $(error MPFR_LDFLAGS is empty. Do not know how to link MPFR, but MPFR=true)
 endif
 FLAGS		+=	$(MPFR_FLAGS)
-LDFLAGS	+=	$(MPFR_LDFLAGS)
+LDFLAGS		+=	$(MPFR_LDFLAGS)
 endif
 
 ifeq ($(READLINE_LDFLAGS),)
