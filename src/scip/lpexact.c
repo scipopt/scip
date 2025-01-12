@@ -4431,17 +4431,16 @@ SCIP_RETCODE lpExactFlushAndSolve(
 
    do {
       solveagain = FALSE;
+
       /* solve the lp exactly */
-      switch(algo)
+      if( algo != 's' )
       {
-      case 's':
-         SCIPsetDebugMsg(set, "Calling SCIPlpiExactSolveDual()\n");
-         retcode = SCIPlpiExactSolveDual(lpexact->lpiexact);
-         break;
-      default:
          SCIPerrorMessage("Lp-algorithm-type %d is not supported in exact solving mode \n", algo);
          SCIPABORT();
       }
+
+      SCIPsetDebugMsg(set, "Calling SCIPlpiExactSolveDual()\n");
+      retcode = SCIPlpiExactSolveDual(lpexact->lpiexact);
 
       if( retcode == SCIP_LPERROR )
       {
