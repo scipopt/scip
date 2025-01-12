@@ -202,7 +202,7 @@ using namespace soplex;
 static void RsetSpxR(
    SCIP_LPIEXACT*        lpi,                /**< exact lpi*/
    SCIP_Rational*        r,                  /**< scip rational */
-   const soplex::Rational&       spxr                /**< soplex rational */
+   const soplex::Rational& spxr              /**< soplex rational */
    )
 {
    if( SCIPlpiExactIsInfinity(lpi, double(spxr)) )
@@ -246,7 +246,7 @@ static void SpxRSetRat(
    SCIP_LPIEXACT*        lpi,                /**< exact LPI */
    soplex::Rational&     spxr,               /**< SoPlex Rational*/
    SCIP_Rational*        src                 /**< SCIP_Rational */
-)
+   )
 {
    if( RatIsAbsInfinity(src) )
    {
@@ -273,9 +273,9 @@ class SPxexSCIP : public SoPlex
    bool                  _lpinfo;
    bool                  _fromscratch;
    char*                 _probname;
-   DataArray<SPxSolver::VarStatus> _colStat;  /**< column basis status used for strong branching */
-   DataArray<SPxSolver::VarStatus> _rowStat;  /**< row basis status used for strong branching */
-   SCIP_MESSAGEHDLR*     _messagehdlr;      /**< messagehdlr handler for printing messages, or NULL */
+   DataArray<SPxSolver::VarStatus> _colStat; /**< column basis status used for strong branching */
+   DataArray<SPxSolver::VarStatus> _rowStat; /**< row basis status used for strong branching */
+   SCIP_MESSAGEHDLR*     _messagehdlr;       /**< messagehdlr handler for printing messages, or NULL */
 
 public:
    SPxexSCIP(
@@ -295,7 +295,6 @@ public:
 #if SOPLEX_APIVERSION >= 2
       setBoolParam(SoPlex::ENSURERAY, true);
 #endif
-
    }
 
    virtual ~SPxexSCIP()
@@ -304,7 +303,6 @@ public:
          spx_free(_probname); /*lint !e1551*/
 
       freePreStrongbranchingBasis(); /*lint !e1551*/
-
    }/*lint -e1579*/
 
    /** get objective limit according to objective sense */
