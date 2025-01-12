@@ -777,8 +777,10 @@ void checkRowObjprod(
  * Local methods for pseudo and loose objective values
  */
 
-/* recompute the pseudo solution value from scratch, if it was marked to be unreliable before
-   safe version for use in exact SCIP */
+/** recompute the pseudo solution value from scratch, if it was marked to be unreliable before
+ *
+ *  Safe version for use in exact SCIP.
+ */
 static
 void recomputeSafeLooseObjectiveValue(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -834,7 +836,7 @@ void recomputeSafeLooseObjectiveValue(
    lp->looseobjvalid = TRUE;
 }
 
-/* recompute the loose objective value from scratch, if it was marked to be unreliable before */
+/** recompute the loose objective value from scratch, if it was marked to be unreliable before */
 static
 void recomputeLooseObjectiveValue(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -882,8 +884,10 @@ void recomputeLooseObjectiveValue(
    lp->looseobjvalid = TRUE;
 }
 
-/* recompute the pseudo solution value from scratch, if it was marked to be unreliable before
-   safe version for use in exact SCIP */
+/** recompute the pseudo solution value from scratch, if it was marked to be unreliable before
+ *
+ *  Safe version for use in exact SCIP.
+ */
 static
 void recomputeSafePseudoObjectiveValue(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -937,7 +941,7 @@ void recomputeSafePseudoObjectiveValue(
    lp->pseudoobjvalid = TRUE;
 }
 
-/* recompute the pseudo solution value from scratch, if it was marked to be unreliable before */
+/** recompute the pseudo solution value from scratch, if it was marked to be unreliable before */
 static
 void recomputePseudoObjectiveValue(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -985,7 +989,7 @@ void recomputePseudoObjectiveValue(
    lp->pseudoobjvalid = TRUE;
 }
 
-/* recompute the global pseudo solution value from scratch, if it was marked to be unreliable before */
+/** recompute the global pseudo solution value from scratch, if it was marked to be unreliable before */
 static
 void recomputeGlbPseudoObjectiveValue(
    SCIP_LP*              lp,                 /**< current LP data */
