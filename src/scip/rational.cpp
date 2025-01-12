@@ -563,9 +563,9 @@ bool SCIPisRationalString(
    )
 {
    if( 0 == strcmp(desc, "inf") )
-      return TRUE;
+      return true;
    else if ( 0 == strcmp(desc, "-inf") )
-      return TRUE;
+      return true;
    else
    {
       std::string s(desc);
@@ -583,7 +583,7 @@ SCIP_Bool SCIPstrToRationalValue(
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
-   SCIP_Bool hassign = false;
+   SCIP_Bool hassign = FALSE;
    std::string s;
    size_t endpos;
 
@@ -662,7 +662,7 @@ void RatSetString(
          }
          SCIPdebug(std::cout << s << std::endl);
          if( s[0] == '.' )
-            s.insert(0, "0");
+            (void) s.insert(0, "0");
 
          // transform decimal into fraction
          size_t decimalpos = s.find('.');
@@ -672,17 +672,17 @@ void RatSetString(
          if( decimalpos != std::string::npos )
          {
             for( size_t i = 0; i < exponentpos; ++i )
-               denominator.append("0");
+               (void) denominator.append("0");
 
-            s.erase(decimalpos, 1);
+            (void) s.erase(decimalpos, 1);
          }
          assert(std::all_of(s.begin()+1, s.end(), ::isdigit));
 
          if( s[0] == '+' )
             s = s.substr(1);
 
-         s.append("/");
-         s.append(denominator);
+         (void) s.append("/");
+         (void) s.append(denominator);
 
          res->val = scip_rational::Rational(s);
          res->val *= pow(10, exponent);
@@ -1710,7 +1710,7 @@ void RatPrintf(const char *format, ...)
             break;
          case 's':
             for (sval = va_arg(arguments, char *); *sval; sval++)
-               putchar(*sval);
+               (void) putchar(*sval);
             break;
          case 'f':
             dval = va_arg(arguments, SCIP_Real);
@@ -1735,20 +1735,20 @@ void RatPrintf(const char *format, ...)
             break;
          case 'u':
             ival = va_arg(arguments, int);
-            printf("%u", ival);
+            printf("%d", ival);
             break;
          case 'c':
             cval = (char) va_arg(arguments, int);
             printf("%c", cval);
             break;
          default:
-            putchar(*format);
+            (void) putchar(*format);
             break;
          }
       }
       else
       {
-         putchar(*format);
+         (void) putchar(*format);
       }
       ++format;
    }
@@ -2592,7 +2592,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
    {
       int ninserts = idx - rationalarray->vals.size() - rationalarray->firstidx + 1;
       SCIP_Rational r = {};
-      rationalarray->vals.insert(rationalarray->vals.end(), ninserts, r);
+      (void) rationalarray->vals.insert(rationalarray->vals.end(), ninserts, r);
       rationalarray->vals[rationalarray->vals.size() - 1] = *val;
    }
    else
