@@ -369,7 +369,7 @@ SCIP_RETCODE doMilpPresolveRational(
    Presolve<papilo::Rational> presolve;
 
    /* only allow communication of constraint modifications by deleting all constraints when they have not been upgraded yet */
-   SCIP_CONSHDLR* linconshdlr = SCIPfindConshdlr(scip, "linear-exact");
+   SCIP_CONSHDLR* linconshdlr = SCIPfindConshdlr(scip, "exactlinear");
    assert(linconshdlr != NULL);
    bool allowconsmodification = (SCIPconshdlrGetNCheckConss(linconshdlr) == SCIPmatrixGetNRows(matrix));
 
