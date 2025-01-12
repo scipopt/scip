@@ -2099,6 +2099,8 @@ void chooseSemiconvLong(
    }
 }
 
+/* MP@LE please document */
+static
 void RatComputeApproximationLong(
    SCIP_Rational*        res,
    SCIP_Rational*        src,
@@ -2257,6 +2259,7 @@ void RatComputeApproximationLong(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
+/* MP@LE Please document */
 /** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
 void RatComputeApproximation(
    SCIP_Rational*        res,
@@ -2455,7 +2458,8 @@ void RatComputeApproximation(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
-/*
+/* MP@LE This function does not seem to be use and is not external. */
+/**
  * Vector arithmetic (to shorten code and provide benefits due to
  * usage of expression Templates)
  */
@@ -2657,6 +2661,7 @@ int SCIPrationalarrayGetMaxIdx(
    return rationalarray->firstidx + rationalarray->vals.size() - 1;
 }
 
+/* MP@LE The following line seems to end the "extern "C"" part. What about the following two functions? */
 }
 
 /** set the infinity threshold to new value */
