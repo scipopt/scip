@@ -669,6 +669,7 @@ void RatPrint(
 SCIP_EXPORT
 void RatPrintf(const char *format, ...);
 
+/* MP@LE Maybe think about a version that also prints the subscipdepth like sCIPdebugMsg()? */
 /** rational extension for the SCIPdebugMsg */
 /*lint -emacro(681,RatDebugMessage) */
 /*lint -emacro(506,RatDebugMessage) */
