@@ -5248,6 +5248,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
  *
  * The reason for this approach is that we cannot reallocate memory, since we do not know how the
  * memory has been allocated (e.g., by a C++ 'new' or SCIP functions).
+ *
+ * @todo Reimplement this method as was done with SCIPvarGetActiveRepresentatives() using a clean buffer array for rationals.
  */
 SCIP_RETCODE SCIPvarGetActiveRepresentativesExact(
    SCIP_SET*             set,                /**< global SCIP settings */
