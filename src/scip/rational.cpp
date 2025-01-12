@@ -880,36 +880,38 @@ void RatMultReal(
    SCIP_Real             op2                 /**< second operand */
    )
 {
-    assert(res != NULL && op1 != NULL);
+   assert(res != NULL && op1 != NULL);
 
-    if( op1->isinf )
-    {
-       SCIPdebugMessage("multiplying with infinity might produce undesired behavior \n");
-       if( op2 == 0.0 )
-       {
-          res->isinf = FALSE;
-          res->val = 0;
-       }
-       else
-       {
-          op2 > 0 ? RatSet(res, op1) : RatNegate(res, op1);
-       }
-    }
-    else if( REALABS(op2) >= infinity )
-    {
-       RatSetReal(res, op2 * op1->val.sign());
-    }
-    else
-    {
-       res->val = op1->val * op2;
-       res->isinf = FALSE;
-    }
-    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+   if( op1->isinf )
+   {
+      SCIPdebugMessage("multiplying with infinity might produce undesired behavior \n");
+      if( op2 == 0.0 )
+      {
+         res->isinf = FALSE;
+         res->val = 0;
+      }
+      else
+      {
+         op2 > 0 ? RatSet(res, op1) : RatNegate(res, op1);
+      }
+   }
+   else if( REALABS(op2) >= infinity )
+   {
+      RatSetReal(res, op2 * op1->val.sign());
+   }
+   else
+   {
+      res->val = op1->val * op2;
+      res->isinf = FALSE;
+   }
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
 
-/** divides two rationals and saves the result in res */
-/** @todo exip: should we allow infinity here? */
+/** divides two rationals and saves the result in res
+ *
+ * @todo exip: should we allow infinity here?
+ */
 void RatDiv(
    SCIP_Rational*        res,                /**< the result */
    SCIP_Rational*        op1,                /**< first operand */
