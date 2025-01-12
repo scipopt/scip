@@ -2864,7 +2864,10 @@ SCIP_RETCODE lpAdjustObjlimForExactSolve(
 
    SCIP_CALL( lpCheckRealpar(lp, SCIP_LPPAR_OBJLIM, lp->lpiobjlim) );
 
-   avgboundingerror = (stat->boundingerrorbs + stat->boundingerrorps + stat->boundingerrorexlp) / (stat->nboundshift + stat->nprojshift + stat->nexlp);
+   if( stat->nboundshift + stat->nprojshift + stat->nexlp == 0 )
+      avgboundingerror = 1.0;
+   else
+      avgboundingerror = (stat->boundingerrorbs + stat->boundingerrorps + stat->boundingerrorexlp) / (stat->nboundshift + stat->nprojshift + stat->nexlp);
    adjustedobjlim = lp->lpiobjlim + MAX(avgboundingerror, 1e-6);
 
    SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_OBJLIM, adjustedobjlim, success) );
