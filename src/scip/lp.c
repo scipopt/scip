@@ -2855,7 +2855,7 @@ SCIP_RETCODE lpAdjustObjlimForExactSolve(
    *success = FALSE;
 
    /* We disabled the objective limit in the LP solver or we are not in exact solving mode */
-   if( lpCutoffDisabled(set, prob) || !set->exact_enabled )
+   if( !set->exact_enabled || lpCutoffDisabled(set, prob) )
       return SCIP_OKAY;
 
    /* no need to adjust in infinity case */
@@ -12894,7 +12894,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
       case SCIP_LPSOLSTAT_INFEASIBLE:
          SCIPsetDebugMsg(set, " -> LP infeasible\n");
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->exact_enabled || set->lp_alwaysgetduals )
+         if( set->lp_checkfarkas || set->exact_enabled || set->lp_alwaysgetduals || !SCIPprobAllColsInLP(prob, set, lp) )
          {
             if( set->exact_enabled && SCIPlpiExactHasDualRay(lp->lpexact->lpiexact) )
                farkasvalid = TRUE;
@@ -13059,7 +13059,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
           * objective limit for at least one iteration. We first try to continue with FASTMIP for one additional simplex
           * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable
           * FASTMIP and solve again. */
-         if( !SCIPprobAllColsInLP(prob, set, lp) && !set->exact_enabled )
+         if( !set->exact_enabled && !SCIPprobAllColsInLP(prob, set, lp) )
          {
             SCIP_LPI* lpi;
             SCIP_Real objval;
@@ -13218,7 +13218,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                {
                   SCIPsetDebugMsg(set, " -> LP infeasible\n");
 
-                  if( !SCIPprobAllColsInLP(prob, set, lp) || set->lp_checkfarkas || set->exact_enabled )
+                  if( set->lp_checkfarkas || set->exact_enabled || !SCIPprobAllColsInLP(prob, set, lp) )
                   {
                      if( SCIPlpiHasDualRay(lp->lpi) )
                      {
