@@ -87,7 +87,7 @@ SCIP_RETCODE SCIPcreateEmptyRowConsExact(
    SCIP_ROW*             fprowrhs,           /**< rhs-part of fp-relaxation of this row if necessary, NULL otherwise */
    SCIP_Rational*        lhs,                /**< left hand side of row */
    SCIP_Rational*        rhs,                /**< right hand side of row */
-   SCIP_Bool             isfprelaxable      /**< is it possible to make fp-relaxation of this row */
+   SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
    );
 
 /** creates and captures an exact LP row without any coefficients from a separator
