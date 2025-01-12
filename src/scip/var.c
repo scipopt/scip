@@ -726,7 +726,6 @@ SCIP_RETCODE boundchgApplyExact(
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the lbchginfos array of the variable! */
          }
-
       }
       else
       {
@@ -801,7 +800,6 @@ SCIP_RETCODE boundchgApplyExact(
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the ubchginfos array of the variable! */
          }
-
       }
       else
       {
@@ -944,7 +942,6 @@ SCIP_RETCODE SCIPboundchgApply(
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the lbchginfos array of the variable! */
          }
-
       }
       else
       {
@@ -1020,7 +1017,6 @@ SCIP_RETCODE SCIPboundchgApply(
             *cutoff = TRUE;
             boundchg->redundant = TRUE; /* bound change has not entered the ubchginfos array of the variable! */
          }
-
       }
       else
       {
@@ -1126,7 +1122,6 @@ SCIP_RETCODE SCIPboundchgUndo(
 
       /* in case all bound changes are removed the local bound should match the global bound */
       assert(var->nlbchginfos > 0 || SCIPsetIsFeasEQ(set, var->locdom.lb, var->glbdom.lb));
-
 
       break;
 
@@ -2688,7 +2683,6 @@ SCIP_RETCODE SCIPvarCopyExactData(
       targetvar->exactdata->multaggr.constant = NULL;
       targetvar->exactdata->multaggr.scalars = NULL;
    }
-
 
    SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
    if( negateobj )
@@ -5823,7 +5817,6 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
       var->data.multaggr.varssize = multvarssize;
       overwriteMultAggrWithExactData(set, var);
 
-
       if( multrequiredsize > multvarssize )
       {
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.vars), multvarssize, multrequiredsize) );
@@ -6119,10 +6112,10 @@ SCIP_RETCODE varUpdateAggregationBoundsExact(
    assert(infeasible != NULL);
    assert(fixed != NULL);
 
-   SCIP_CALL(RatCreateBuffer(set->buffer, &varlb) );
-   SCIP_CALL(RatCreateBuffer(set->buffer, &varub) );
-   SCIP_CALL(RatCreateBuffer(set->buffer, &aggvarlb) );
-   SCIP_CALL(RatCreateBuffer(set->buffer, &aggvarub) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &varlb) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &varub) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &aggvarlb) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &aggvarub) );
 
    *infeasible = FALSE;
    *fixed = FALSE;
@@ -10250,7 +10243,6 @@ SCIP_RETCODE varProcessChgLbGlobal(
 
             if( parentvar->data.aggregate.scalar > 0 )
             {
-
                /* a > 0 -> change lower bound of y */
                assert(SCIPsetIsInfinity(set, -parentvar->glbdom.lb) || SCIPsetIsInfinity(set, -oldbound)
                   || SCIPsetIsFeasEQ(set, parentvar->glbdom.lb, oldbound * parentvar->data.aggregate.scalar + parentvar->data.aggregate.constant)
@@ -10264,7 +10256,6 @@ SCIP_RETCODE varProcessChgLbGlobal(
             }
             else
             {
-
                /* a < 0 -> change upper bound of y */
                assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
                assert(SCIPsetIsInfinity(set, parentvar->glbdom.ub) || SCIPsetIsInfinity(set, -oldbound)
@@ -10279,6 +10270,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
             }
             break;
          }
+
       case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
@@ -10431,7 +10423,6 @@ SCIP_RETCODE varProcessChgUbGlobal(
 
             if( parentvar->data.aggregate.scalar > 0 )
             {
-
                /* a > 0 -> change upper bound of y */
                assert(SCIPsetIsInfinity(set, parentvar->glbdom.ub) || SCIPsetIsInfinity(set, oldbound)
                   || SCIPsetIsFeasEQ(set, parentvar->glbdom.ub,
@@ -10444,7 +10435,6 @@ SCIP_RETCODE varProcessChgUbGlobal(
             }
             else
             {
-
                /* a < 0 -> change lower bound of y */
                assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
                assert(SCIPsetIsInfinity(set, -parentvar->glbdom.lb) || SCIPsetIsInfinity(set, oldbound)
@@ -10458,6 +10448,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
             }
             break;
          }
+
       case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
@@ -10884,7 +10875,6 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
 
          if( var->data.aggregate.scalar > 0 )
          {
-
             /* a > 0 -> change lower bound of y */
             assert((SCIPsetIsInfinity(set, -var->glbdom.lb) && SCIPsetIsInfinity(set, -var->data.aggregate.var->glbdom.lb))
                || SCIPsetIsFeasEQ(set, var->glbdom.lb,
@@ -10898,7 +10888,6 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
          }
          else
          {
-
             /* a < 0 -> change upper bound of y */
             assert((SCIPsetIsInfinity(set, -var->glbdom.lb) && SCIPsetIsInfinity(set, var->data.aggregate.var->glbdom.ub))
                || SCIPsetIsFeasEQ(set, var->glbdom.lb,
@@ -10912,6 +10901,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
          }
          break;
       }
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
@@ -11174,7 +11164,6 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
 
       if( var->data.aggregate.scalar > 0 )
       {
-
          /* a > 0 -> change lower bound of y */
          assert((SCIPsetIsInfinity(set, var->glbdom.ub) && SCIPsetIsInfinity(set, var->data.aggregate.var->glbdom.ub))
             || SCIPsetIsFeasEQ(set, var->glbdom.ub,
@@ -11188,7 +11177,6 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
       }
       else
       {
-
          /* a < 0 -> change upper bound of y */
          assert((SCIPsetIsInfinity(set, var->glbdom.ub) && SCIPsetIsInfinity(set, -var->data.aggregate.var->glbdom.lb))
             || SCIPsetIsFeasEQ(set, var->glbdom.ub,
@@ -11202,6 +11190,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
       }
       break;
    }
+
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPerrorMessage("cannot change the bounds of a multi-aggregated variable.\n");
       return SCIP_INVALIDDATA;
@@ -11792,7 +11781,6 @@ SCIP_RETCODE varProcessChgLbLocal(
             }
             else
             {
-
                /* a < 0 -> change upper bound of y */
                assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
                assert(SCIPsetIsInfinity(set, parentvar->locdom.ub) || SCIPsetIsInfinity(set, -oldbound)
@@ -11894,7 +11882,6 @@ SCIP_RETCODE varProcessChgUbLocal(
       RatMIN(var->exactdata->locdom.ub, var->exactdata->locdom.ub, var->exactdata->glbdom.ub);
    }
 
-
    /* update statistic; during the update steps of the parent variable we pass a NULL pointer to ensure that we only
     * once update the statistic
     */
@@ -11957,7 +11944,6 @@ SCIP_RETCODE varProcessChgUbLocal(
             }
             if( parentvar->data.aggregate.scalar > 0 )
             {
-
                /* a > 0 -> change upper bound of x */
                assert(SCIPsetIsInfinity(set, parentvar->locdom.ub) || SCIPsetIsInfinity(set, oldbound)
                   || SCIPsetIsFeasEQ(set, parentvar->locdom.ub,
@@ -11981,7 +11967,6 @@ SCIP_RETCODE varProcessChgUbLocal(
             }
             else
             {
-
                /* a < 0 -> change lower bound of x */
                assert(SCIPsetIsNegative(set, parentvar->data.aggregate.scalar));
                assert(SCIPsetIsInfinity(set, -parentvar->locdom.lb) || SCIPsetIsInfinity(set, oldbound)
@@ -12681,7 +12666,6 @@ SCIP_RETCODE SCIPvarChgUbLocal(
       }
       else if( SCIPsetIsNegative(set, var->data.aggregate.scalar) )
       {
-
          /* a < 0 -> change lower bound of y */
          assert((SCIPsetIsInfinity(set, var->locdom.ub) && SCIPsetIsInfinity(set, -var->data.aggregate.var->locdom.lb))
             || SCIPsetIsFeasEQ(set, var->locdom.ub,
@@ -12762,7 +12746,6 @@ SCIP_RETCODE SCIPvarChgUbLocalExact(
 
    if( SCIPcertificateShouldTrackBounds(set->scip) )
       SCIPvarSetUbCertificateIndexLocal(var, SCIPcertificateGetLastBoundIndex(set->scip, SCIPgetCertificate(set->scip)));
-
 
    /* change bounds of attached variables */
    switch( SCIPvarGetStatusExact(var) )
@@ -24867,7 +24850,7 @@ int SCIPvarGetCertificateIndex(
 /** sets index of variable in vipr-certificate */
 void SCIPvarSetCertificateIndex(
    SCIP_VAR*             var,                /**< variable to set index for */
-   int                   certidx               /**< the index */
+   int                   certidx             /**< the index */
    )
 {
    assert(var != NULL);
@@ -24880,7 +24863,7 @@ void SCIPvarSetCertificateIndex(
 /** sets index of variable in vipr-certificate */
 void SCIPvarSetUbCertificateIndexGlobal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   int                   certidx               /**< the index */
+   int                   certidx             /**< the index */
    )
 {
    assert(var != NULL);
@@ -24894,7 +24877,7 @@ void SCIPvarSetUbCertificateIndexGlobal(
 /** sets index of variable in vipr-certificate */
 void SCIPvarSetUbCertificateIndexLocal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   SCIP_Longint          certidx               /**< the index */
+   SCIP_Longint          certidx             /**< the index */
    )
 {
    assert(var != NULL);
@@ -24907,7 +24890,7 @@ void SCIPvarSetUbCertificateIndexLocal(
 /** sets index of variable in vipr-certificate */
 void SCIPvarSetLbCertificateIndexLocal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   SCIP_Longint          certidx               /**< the index */
+   SCIP_Longint          certidx             /**< the index */
    )
 {
    assert(var != NULL);
@@ -24920,7 +24903,7 @@ void SCIPvarSetLbCertificateIndexLocal(
 /** sets index of variable in vipr-certificate */
 void SCIPvarSetLbCertificateIndexGlobal(
    SCIP_VAR*             var,                /**< variable to set index for */
-   int                   certidx               /**< the index */
+   int                   certidx             /**< the index */
    )
 {
    assert(var != NULL);
@@ -24931,7 +24914,7 @@ void SCIPvarSetLbCertificateIndexGlobal(
    var->exactdata->locdom.lbcertificateidx = certidx;
 }
 
-/**< returns index of variable bound in vipr certificate */
+/** returns index of variable bound in vipr certificate */
 SCIP_Longint SCIPvarGetLbCertificateIndexLocal(
    SCIP_VAR*             var                 /**< variable to get index for */
    )
@@ -24943,7 +24926,7 @@ SCIP_Longint SCIPvarGetLbCertificateIndexLocal(
    return var->exactdata->locdom.lbcertificateidx;
 }
 
-/**< returns index of variable bound in vipr certificate */
+/** returns index of variable bound in vipr certificate */
 SCIP_Longint SCIPvarGetUbCertificateIndexLocal(
    SCIP_VAR*             var                 /**< variable to get index for */
    )
@@ -24955,7 +24938,7 @@ SCIP_Longint SCIPvarGetUbCertificateIndexLocal(
    return var->exactdata->locdom.ubcertificateidx;
 }
 
-/**< returns index of variable bound in vipr certificate */
+/** returns index of variable bound in vipr certificate */
 SCIP_Longint SCIPvarGetLbCertificateIndexGlobal(
    SCIP_VAR*             var                 /**< variable to get index for */
    )
@@ -24967,7 +24950,7 @@ SCIP_Longint SCIPvarGetLbCertificateIndexGlobal(
    return var->exactdata->glbdom.lbcertificateidx;
 }
 
-/**< returns index of variable bound in vipr certificate */
+/** returns index of variable bound in vipr certificate */
 SCIP_Longint SCIPvarGetUbCertificateIndexGlobal(
    SCIP_VAR*             var                 /**< variable to get index for */
    )

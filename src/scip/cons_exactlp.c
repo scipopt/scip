@@ -614,7 +614,7 @@ static
 SCIP_RETCODE conshdlrdataIncludeUpgrade(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
-   SCIP_EXLINCONSUPGRADE*  linconsupgrade    /**< linear constraint upgrade method */
+   SCIP_EXLINCONSUPGRADE* linconsupgrade     /**< linear constraint upgrade method */
    )
 {
    int i;
@@ -1359,7 +1359,6 @@ void consdataComputePseudoActivity(
       RatSetString(pseudoactivity, "-inf");
    else if( pseudoactivityposinf > 0 )
       RatSetString(pseudoactivity, "inf");
-
 }
 
 /** recompute the minactivity of a constraint */
@@ -2917,13 +2916,11 @@ void consdataGetReliableResidualActivity(
          {
             assert(!RatIsNegInfinity(lb));
             RatAddProd(resactivity, val, lb);
-
          }
          else
          {
             assert(!RatIsInfinity(ub));
             RatAddProd(resactivity, val, ub);
-
          }
       }
       else
@@ -2932,13 +2929,11 @@ void consdataGetReliableResidualActivity(
          {
             assert(!RatIsInfinity(ub));
             RatAddProd(resactivity, val, ub);
-
          }
          else
          {
             assert(!RatIsNegInfinity(lb));
             RatAddProd(resactivity, val, lb);
-
          }
       }
    }
@@ -3706,7 +3701,6 @@ SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
          assert(false);
          SCIPABORT();
          return 0;
-
    }
 
    /* check if certificate output should be created */
@@ -3937,7 +3931,6 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
    /* both variables are binary */
    else if( SCIPvarIsBinary(var1) )
    {
-
       if( RatIsAbsEqual(consdata->vals[ind1], consdata->vals[ind2]) ) {
          return (SCIPvarGetProbindex(var1) - SCIPvarGetProbindex(var2));
       }
@@ -4464,7 +4457,6 @@ SCIP_RETCODE addCoef(
 
       /* update minimum and maximum activities */
       consdataUpdateAddCoef(scip, consdata, var, consdata->vals[consdata->nvars - 1], consdata->valsreal[consdata->nvars - 1]);
-
    }
 
    /* install rounding locks for new variable */
@@ -7225,7 +7217,7 @@ SCIP_RETCODE certificatePrintActivityConflict(
 
    if (!SCIPisCertificateActive(scip))
       return SCIP_OKAY;
-   SCIP_CALL(RatCreateBuffer(SCIPbuffer(scip), &diff));
+   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &diff) );
    certificate = SCIPgetCertificate(scip);
 
    if ( rhs )
@@ -7825,7 +7817,6 @@ SCIP_RETCODE tightenBounds(
 
          SCIP_CALL( tightenVarBounds(scip, cons, v, cutoff, nchgbds, force) );
 
-
          /* if there was no progress, skip the rest of the binary variables */
          if (*cutoff)
          {
@@ -7996,14 +7987,14 @@ SCIP_RETCODE createRows(
    assert(consdata != NULL);
    assert(consdata->rowexact == NULL);
 
-   /** create empty fp-rows */
+   /* create empty fp-rows */
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &(consdata->rowrhs), cons, SCIPconsGetName(cons), -SCIPinfinity(scip), SCIPinfinity(scip),
       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &(consdata->rowlhs), cons, SCIPconsGetName(cons), -SCIPinfinity(scip), SCIPinfinity(scip),
       SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
 
-   /** create exact row */
+   /* create exact row */
    SCIP_CALL( SCIPcreateEmptyRowConsExact(scip, &consdata->rowexact, consdata->rowlhs, consdata->rowrhs,
       consdata->lhs, consdata->rhs, consdata->hasfprelax) );
 
@@ -16653,7 +16644,6 @@ SCIP_DECL_CONSPROP(consPropExactLinear)
       *result = SCIP_DIDNOTFIND;
 
    return SCIP_OKAY;
-
 }
 
 
@@ -17600,7 +17590,6 @@ SCIP_DECL_EVENTEXEC(eventExecExactLinear)
    assert(eventdata != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
-
 
    cons = eventdata->cons;
    assert(cons != NULL);
@@ -18553,7 +18542,6 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       /* update left and right hand sides */
       SCIP_CALL( chgLhs(scip, cons, lhs));
       SCIP_CALL( chgRhs(scip, cons, rhs));
-
 
       RatFreeBuffer(SCIPbuffer(scip), &constant);
       SCIPfreeBufferArray(scip, &consvals);

@@ -1865,7 +1865,7 @@ char chooseInitialBoundingMethod(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_PROB*            prob                /**< problem data */
-)
+   )
 {
    char dualboundmethod;
    SCIP_Bool interleavedepth;
@@ -2229,7 +2229,6 @@ SCIP_RETCODE boundShift(
 
    SCIPintervalAddVectors(SCIPsetInfinity(set), productcoldualval, lp->ncols, productcoldualval, obj);
    SCIPintervalScalprod(SCIPsetInfinity(set), &safeboundinterval, lp->ncols, productcoldualval, ublbcol);
-
 
    /* add dualsol * rhs/lhs (or farkas * rhs/lhs) */
    SCIPintervalAdd(SCIPsetInfinity(set), &safeboundinterval, safeboundinterval, productsidedualval);
