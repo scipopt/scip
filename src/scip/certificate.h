@@ -131,7 +131,7 @@ void SCIPcertificatePrintProofMessage(
    );
 
 /** prints a rational number to the problem section of the certificate file */
-void SCIPcertificatePrintProblemRational(
+SCIP_RETCODE SCIPcertificatePrintProblemRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    SCIP_Rational*        val,                /**< Rational to print to the problem*/
@@ -139,7 +139,7 @@ void SCIPcertificatePrintProblemRational(
    );
 
 /** prints a rational number to the proof section of the certificate file */
-void SCIPcertificatePrintProofRational(
+SCIP_RETCODE SCIPcertificatePrintProofRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Rational*        val,                /**< Rational to print to the problem*/
    int                   base                /**< The base representation*/
@@ -195,7 +195,7 @@ void SCIPcertificatePrintDerHeader(
    );
 
 /** prints constraint */
-void SCIPcertificatePrintCons(
+SCIP_RETCODE SCIPcertificatePrintCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    const char*           consname,           /**< name of the constraint */
@@ -376,14 +376,14 @@ SCIP_RETCODE SCIPcertificateNewAggrInfo(
    );
 
 /** prints unsplitting information to proof section */
-void SCIPcertificatePrintUnsplitting(
+SCIP_RETCODE SCIPcertificatePrintUnsplitting(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP_NODE*            node                /**< node data */
    );
 
 /** prints RTP section with lowerbound and upperbound range */
-void SCIPcertificatePrintRtpRange(
+SCIP_RETCODE SCIPcertificatePrintRtpRange(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective */

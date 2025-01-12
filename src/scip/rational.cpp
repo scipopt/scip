@@ -2099,12 +2099,14 @@ void chooseSemiconvLong(
    }
 }
 
-/* MP@LE please document */
+/** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions;
+ *  this version only uses long and is faster
+ */
 static
 void RatComputeApproximationLong(
-   SCIP_Rational*        res,
-   SCIP_Rational*        src,
-   SCIP_Longint          maxdenom,
+   SCIP_Rational*        res,                /**< the resulting rational */
+   SCIP_Rational*        src,                /**< the source rational */
+   SCIP_Longint          maxdenom,           /**< the maximal denominator */
    int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    )
 {
@@ -2259,12 +2261,11 @@ void RatComputeApproximationLong(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
-/* MP@LE Please document */
 /** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
 void RatComputeApproximation(
-   SCIP_Rational*        res,
-   SCIP_Rational*        src,
-   SCIP_Longint          maxdenom,
+   SCIP_Rational*        res,                /**< the resulting rational */
+   SCIP_Rational*        src,                /**< the rational to approximate */
+   SCIP_Longint          maxdenom,           /**< maximal denominator */
    int                   forcegreater        /**< 1 if res >= src should be enforced, -1 if res <= src should be enforced, 0 else */
    )
 {
@@ -2458,32 +2459,6 @@ void RatComputeApproximation(
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
 
-/* MP@LE This function does not seem to be use and is not external. */
-/**
- * Vector arithmetic (to shorten code and provide benefits due to
- * usage of expression Templates)
- */
-static
-void RatScalarProduct(
-   SCIP_Rational*        result,             /**< the resulting rational */
-   SCIP_Rational**       array1,             /**< the first array */
-   SCIP_Rational**       array2,             /**< the second array */
-   int                   len                 /**< length of the arrays */
-   )
-{
-   int i;
-   result->isinf = FALSE;
-   result->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-   scip_rational::Rational& rat = result->val;
-   for( i = 0; i < len; ++i )
-   {
-      assert(array1[i] != nullptr);
-      assert(array2[i] != nullptr);
-      assert(!(array1[i]->isinf && array2[i]->isinf));
-      rat += array1[i]->val * array2[i]->val;
-   }
-}
-
 /*
  * Dynamic Arrays
  */
@@ -2661,9 +2636,6 @@ int SCIPrationalarrayGetMaxIdx(
    return rationalarray->firstidx + rationalarray->vals.size() - 1;
 }
 
-/* MP@LE The following line seems to end the "extern "C"" part. What about the following two functions? */
-}
-
 /** set the infinity threshold to new value */
 void RatSetInfinity(
    SCIP_Real             inf                 /**< new infinity value */
@@ -2679,4 +2651,6 @@ SCIP_Real RatGetInfinity(
    )
 {
    return infinity;
+}
+
 }

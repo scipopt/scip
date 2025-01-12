@@ -3595,19 +3595,19 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
    {
       assert(!RatIsAbsInfinity(consdata->lhs));
       RatDiff(correctedside, SCIProwExactGetLhs(row), SCIProwExactGetConstant(row));
-      SCIPcertificatePrintCons(certificate, FALSE, NULL, 'E', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
+      SCIP_CALL( SCIPcertificatePrintCons(certificate, FALSE, NULL, 'E', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row)) );
    }
    else
    {
       if( !RatIsNegInfinity(consdata->lhs) )
       {
          RatDiff(correctedside, SCIProwExactGetLhs(row), SCIProwExactGetConstant(row));
-         SCIPcertificatePrintCons(certificate, FALSE, NULL, 'G', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
+         SCIP_CALL( SCIPcertificatePrintCons(certificate, FALSE, NULL, 'G', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row)) );
       }
       if( !RatIsInfinity(consdata->rhs) )
       {
          RatDiff(correctedside, SCIProwExactGetRhs(row), SCIProwExactGetConstant(row));
-         SCIPcertificatePrintCons(certificate, FALSE, NULL, 'L', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row));
+         SCIP_CALL( SCIPcertificatePrintCons(certificate, FALSE, NULL, 'L', correctedside, SCIProwExactGetNNonz(row), varsindex, SCIProwExactGetVals(row)) );
       }
    }
 
@@ -3746,7 +3746,7 @@ SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
    // new bound = -newbound * val for now, we print a second line where we scale with 1/val
    RatMult(newbound, newbound, val);
    RatNegate(newbound, newbound);
-   SCIPcertificatePrintProofRational(certificate, newbound, 10); // update
+   SCIP_CALL( SCIPcertificatePrintProofRational(certificate, newbound, 10) ); // update
 
    // print coeffictent of variable -> val
    RatNegate(newbound, newbound);
@@ -3755,7 +3755,7 @@ SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
 
    // negate val, print it and reset it again
    RatNegate(val, val);
-   SCIPcertificatePrintProofRational(certificate, val, 10);
+   SCIP_CALL( SCIPcertificatePrintProofRational(certificate, val, 10) );
    RatNegate(val, val);
 
    SCIPcertificatePrintProofMessage(certificate, " { lin %d %d -1", consdata->nvars, certificateGetConsIndex(scip, certificate, constraint, !ismaxactivity));
@@ -3779,18 +3779,18 @@ SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
 
       certificateindex = is_upper_bound ? SCIPvarGetUbCertificateIndexLocal(ivar) :  SCIPvarGetLbCertificateIndexLocal(ivar);
       SCIPcertificatePrintProofMessage(certificate, " %d ", certificateindex);
-      SCIPcertificatePrintProofRational(certificate, consdata->vals[i], 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, consdata->vals[i], 10) );
    }
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
 
    // now scale with 1/val
    certificate->indexcounter++;
    SCIPcertificatePrintProofMessage(certificate, "ACT_L%d %c ", certificate->indexcounter - 1, getInequalitySense(boundtype == SCIP_BOUNDTYPE_LOWER));
-   SCIPcertificatePrintProofRational(certificate, newbound, 10);
+   SCIP_CALL( SCIPcertificatePrintProofRational(certificate, newbound, 10) );
    SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 { lin 1 %d ", SCIPvarGetCertificateIndex(variable), certificate->indexcounter - 2);
    RatInvert(val, val);
    RatNegate(val, val);
-   SCIPcertificatePrintProofRational(certificate, val, 10);
+   SCIP_CALL( SCIPcertificatePrintProofRational(certificate, val, 10) );
 
    // Return val to its original state:
    RatNegate(val, val);
@@ -3805,7 +3805,7 @@ SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
       SCIPcertificatePrintProofMessage(certificate, "ACT_R%d %c ", certificate->indexcounter - 1, getInequalitySense(boundtype == SCIP_BOUNDTYPE_LOWER));
       RatRound(newbound, newbound, boundtype == SCIP_BOUNDTYPE_UPPER ? SCIP_R_ROUND_DOWNWARDS : SCIP_R_ROUND_UPWARDS);
 
-      SCIPcertificatePrintProofRational(certificate, newbound, 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, newbound, 10) );
 
       SCIPcertificatePrintProofMessage(certificate, " 1 %d 1", SCIPvarGetCertificateIndex(variable));
       SCIPcertificatePrintProofMessage(certificate, " { rnd 1 %d 1 } -1\n", certificate->indexcounter - 2);
@@ -3881,17 +3881,17 @@ SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
       if( RatIsEqual(consdata->lhs, consdata->rhs) )
       {
          assert(!RatIsAbsInfinity(consdata->lhs));
-         SCIPcertificatePrintCons(certificate, TRUE, NULL, 'E', consdata->lhs, consdata->nvars, varsindex, consdata->vals);
+         SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'E', consdata->lhs, consdata->nvars, varsindex, consdata->vals) );
       }
       else
       {
          if( !RatIsNegInfinity(consdata->lhs) )
          {
-            SCIPcertificatePrintCons(certificate, TRUE, NULL, 'G', consdata->lhs, consdata->nvars, varsindex, consdata->vals);
+            SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'G', consdata->lhs, consdata->nvars, varsindex, consdata->vals) );
          }
          if( !RatIsInfinity(consdata->rhs) )
          {
-            SCIPcertificatePrintCons(certificate, TRUE, NULL, 'L', consdata->rhs, consdata->nvars, varsindex, consdata->vals);
+            SCIP_CALL( SCIPcertificatePrintCons(certificate, TRUE, NULL, 'L', consdata->rhs, consdata->nvars, varsindex, consdata->vals) );
          }
       }
 
@@ -7262,7 +7262,7 @@ SCIP_RETCODE certificatePrintActivityConflict(
    SCIPcertificatePrintProofMessage(certificate, "ActivityConflict%d ", certificate->indexcounter);
    SCIPcertificatePrintProofMessage(certificate, rhs ? "G " : "L ");
 
-   SCIPcertificatePrintProofRational(certificate, diff, 10);
+   SCIP_CALL( SCIPcertificatePrintProofRational(certificate, diff, 10) );
    SCIPcertificatePrintProofMessage(certificate, " 0 { lin %d %d -1", nvals + 1, conscertificateindex);
    for( int i = 0; i < nvals; i++ )
    {
@@ -7273,7 +7273,7 @@ SCIP_RETCODE certificatePrintActivityConflict(
       is_upper_bound = rhs != RatIsPositive(vals[i]);
       certificateindex = is_upper_bound ? SCIPvarGetUbCertificateIndexLocal(var) :  SCIPvarGetLbCertificateIndexLocal(var);
       SCIPcertificatePrintProofMessage(certificate, " %d ", certificateindex);
-      SCIPcertificatePrintProofRational(certificate, vals[i], 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, vals[i], 10) );
    }
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
 
@@ -7391,7 +7391,7 @@ SCIP_RETCODE tightenVarBounds(
          if( !SCIPisInfinity(scip, newub) &&
             ((force && SCIPisLT(scip, newub, ub)) || (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub)) || SCIPisUbBetter(scip, newub, lb, ub)) )
          {
-            // activity never is unreliable in exact solving 
+            // activity never is unreliable in exact solving
 
             /* tighten upper bound */
             SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
@@ -7928,7 +7928,7 @@ SCIP_RETCODE checkCons(
       else if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
          consdataComputePseudoActivity(scip, consdata, activity);
       else
-         SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, useexactsol, activity);
+         SCIP_CALL( SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, useexactsol, activity) );
    }
    else
       consdataGetActivity(scip, consdata, sol, useexactsol, activity);
@@ -18845,7 +18845,7 @@ SCIP_Rational** SCIPgetValsExactLinear(
  *  @note if the solution contains values at infinity, this method will return SCIP_INVALID in case the activity
  *        comprises positive and negative infinity contributions
  */
-void SCIPgetActivityExactLinear(
+SCIP_RETCODE SCIPgetActivityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
@@ -18867,13 +18867,15 @@ void SCIPgetActivityExactLinear(
    assert(consdata != NULL);
 
    if( consdata->rowexact != NULL )
-      SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, FALSE, ret);
+      SCIP_CALL( SCIPgetRowSolActivityExact(scip, consdata->rowexact, sol, FALSE, ret) );
    else
       consdataGetActivity(scip, consdata, sol, TRUE, ret);
+
+   return SCIP_OKAY;
 }
 
 /** gets the feasibility of the linear constraint in the given solution */
-void SCIPgetFeasibilityExactLinear(
+SCIP_RETCODE SCIPgetFeasibilityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
@@ -18894,9 +18896,11 @@ void SCIPgetFeasibilityExactLinear(
    assert(consdata != NULL);
 
    if( consdata->rowexact != NULL )
-      SCIPgetRowSolFeasibilityExact(scip, consdata->rowexact, sol, ret);
+      SCIP_CALL( SCIPgetRowSolFeasibilityExact(scip, consdata->rowexact, sol, ret) );
    else
       consdataGetFeasibility(scip, consdata, sol, ret);
+
+   return SCIP_OKAY;
 }
 
 /** @todo: exip -> these might be needed currently wip only return fp duals */

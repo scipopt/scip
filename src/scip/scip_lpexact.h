@@ -265,7 +265,7 @@ void SCIPgetRowFeasibilityExact(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
-void SCIPgetRowSolActivityExact(
+SCIP_RETCODE SCIPgetRowSolActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -281,7 +281,7 @@ void SCIPgetRowSolActivityExact(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_EXPORT
-void SCIPgetRowSolFeasibilityExact(
+SCIP_RETCODE SCIPgetRowSolFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */

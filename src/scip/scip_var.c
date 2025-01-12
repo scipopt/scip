@@ -3694,10 +3694,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchFrac(
          newbound = SCIPfeasCeil(scip, SCIPvarGetLPSol(var));
       }
 
-      if( scip->set->exact_enabled )
-         pseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
-      else
-         pseudoobjval = SCIPlpGetModifiedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
+      pseudoobjval = SCIPlpGetModifiedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
 
       if( pseudoobjval > lpobjval )
       {
@@ -4353,10 +4350,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
          newbound = newlb;
       }
 
-      if( scip->set->exact_enabled )
-         pseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
-      else
-         pseudoobjval = SCIPlpGetModifiedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
+      pseudoobjval = SCIPlpGetModifiedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
 
       if( pseudoobjval > lpobjval )
       {
@@ -4513,10 +4507,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchInt(
          newbound = SCIPfeasFloor(scip, SCIPvarGetLPSol(var)) + 1.0;
       }
 
-      if( scip->set->exact_enabled )
-         pseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
-      else
-         pseudoobjval = SCIPlpGetModifiedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
+      pseudoobjval = SCIPlpGetModifiedPseudoObjval(scip->lp, scip->set, scip->transprob, var, oldbound, newbound, boundtype);
 
       if( pseudoobjval > lpobjval )
       {

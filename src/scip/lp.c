@@ -13607,52 +13607,11 @@ SCIP_Real SCIPlpGetPseudoObjval(
    }
 }
 
-/** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
-SCIP_Real SCIPlpGetModifiedPseudoObjval(
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Real             oldbound,           /**< old value for bound */
-   SCIP_Real             newbound,           /**< new value for bound */
-   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
-   )
-{
-   SCIP_Real pseudoobjval;
-   int pseudoobjvalinf;
-   SCIP_Real obj;
-
-   if( set->exact_enabled )
-      return SCIPlpGetModifiedProvedPseudoObjval(lp, set, prob, var, oldbound, newbound, boundtype);
-
-   pseudoobjval = getFinitePseudoObjval(lp, set, prob);
-   pseudoobjvalinf = lp->pseudoobjvalinf;
-   obj = SCIPvarGetObj(var);
-   if( !SCIPsetIsZero(set, obj) && boundtype == SCIPvarGetBestBoundType(var) )
-   {
-      if( SCIPsetIsInfinity(set, REALABS(oldbound)) )
-         pseudoobjvalinf--;
-      else
-         pseudoobjval -= oldbound * obj;
-      assert(pseudoobjvalinf >= 0);
-      if( SCIPsetIsInfinity(set, REALABS(newbound)) )
-         pseudoobjvalinf++;
-      else
-         pseudoobjval += newbound * obj;
-   }
-   assert(pseudoobjvalinf >= 0);
-
-   if( pseudoobjvalinf > 0 || set->nactivepricers > 0 )
-      return -SCIPsetInfinity(set);
-   else
-      return pseudoobjval;
-}
-
-/* MP@LE Is the following only used for exact solving. If so, maybe change the name and add an assert? */
-/** gets pseudo objective value, if a bound of the given variable would be modified in the given way;
+/** gets safe pseudo objective value, if a bound of the given variable would be modified in the given way;
  *  perform calculations with interval arithmetic to get an exact lower bound
  */
-SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
+static
+SCIP_Real lpGetModifiedPseudoObjvalExact(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< problem data */
@@ -13701,6 +13660,47 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
       }
 
       pseudoobjval = SCIPintervalGetInf(psval);
+   }
+   assert(pseudoobjvalinf >= 0);
+
+   if( pseudoobjvalinf > 0 || set->nactivepricers > 0 )
+      return -SCIPsetInfinity(set);
+   else
+      return pseudoobjval;
+}
+
+/** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
+SCIP_Real SCIPlpGetModifiedPseudoObjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             oldbound,           /**< old value for bound */
+   SCIP_Real             newbound,           /**< new value for bound */
+   SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
+   )
+{
+   SCIP_Real pseudoobjval;
+   int pseudoobjvalinf;
+   SCIP_Real obj;
+
+   if( set->exact_enabled )
+      return lpGetModifiedPseudoObjvalExact(lp, set, prob, var, oldbound, newbound, boundtype);
+
+   pseudoobjval = getFinitePseudoObjval(lp, set, prob);
+   pseudoobjvalinf = lp->pseudoobjvalinf;
+   obj = SCIPvarGetObj(var);
+   if( !SCIPsetIsZero(set, obj) && boundtype == SCIPvarGetBestBoundType(var) )
+   {
+      if( SCIPsetIsInfinity(set, REALABS(oldbound)) )
+         pseudoobjvalinf--;
+      else
+         pseudoobjval -= oldbound * obj;
+      assert(pseudoobjvalinf >= 0);
+      if( SCIPsetIsInfinity(set, REALABS(newbound)) )
+         pseudoobjvalinf++;
+      else
+         pseudoobjval += newbound * obj;
    }
    assert(pseudoobjvalinf >= 0);
 

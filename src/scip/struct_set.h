@@ -617,6 +617,8 @@ struct SCIP_Set
 
    /* exact SCIP settings */
    /* MP@LE Can we use shorter names for the parameters, e.g., exact_ileavestrat? */
+   /* LE@MP I agree is is a bit ugly, but I don't like abbreviated names when it is not clear what they mean, makes the code much harder to read for
+      other people*/
    SCIP_Bool             exact_enabled;      /**< should the problem be solved exactly (without numerical tolerances)? */
    int                   exact_interleavestrategy; /**< strategy to interleave safe dual bounding with exact LP
                                               *   solve (0: never, 1: only close to cutoff bound, 2: only at depth lvl 4,8,16,...,

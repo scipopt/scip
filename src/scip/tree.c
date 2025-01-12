@@ -946,6 +946,7 @@ SCIP_RETCODE nodeReleaseParent(
       /* update the effective root depth if not in reoptimization and active parent has children */
       else if( !set->reopt_enable && freeParent == !parent->active && !set->exact_enabled )
          /* MP@LE Why is the following code disabled in exact mode. Does this effect certificate computation? If so, why does the if not test against it? */
+         /* LE@MP I think so, but I have to admit that I am not sure myself */
       {
          SCIP_Bool singleChild = FALSE;
          int focusdepth = SCIPtreeGetFocusDepth(tree);
@@ -1134,7 +1135,7 @@ SCIP_RETCODE SCIPnodeFree(
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
    /* if certificate is active, unsplit current node and free the memory in hashmap of certificate */
-   SCIPcertificatePrintUnsplitting(set, SCIPgetCertificate(set->scip), *node);
+   SCIP_CALL( SCIPcertificatePrintUnsplitting(set, SCIPgetCertificate(set->scip), *node) );
 
    /* check lower bound w.r.t. debugging solution */
    SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );

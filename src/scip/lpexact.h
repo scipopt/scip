@@ -214,7 +214,7 @@ SCIP_COLEXACT* SCIPcolGetColExact(
    );
 
 /** calculates the Farkas coefficient or reduced cost of a column i using the given dual Farkas vector y */
-void SCIPcolExactCalcFarkasRedcostCoef(
+SCIP_RETCODE SCIPcolExactCalcFarkasRedcostCoef(
    SCIP_COLEXACT*        col,                /**< LP column */
    SCIP_SET*             set,                /**< SCIP settings pointer */
    SCIP_Rational*        result,             /**< rational to store the result */
@@ -337,7 +337,7 @@ SCIP_RETCODE SCIPlpExactAddRow(
    );
 
 /** returns the feasibility of a row for the given solution */
-void SCIProwExactGetSolFeasibility(
+SCIP_RETCODE SCIProwExactGetSolFeasibility(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -356,7 +356,7 @@ SCIP_Bool SCIProwExactGetSolActivityWithErrorbound(
    );
 
 /** returns the activity of a row for a given solution */
-void SCIProwExactGetSolActivity(
+SCIP_RETCODE SCIProwExactGetSolActivity(
    SCIP_ROWEXACT*        rowexact,           /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -448,7 +448,7 @@ SCIP_RETCODE SCIProwExactChgConstant(
    );
 
 /** returns the feasibility of a row in the current LP solution: negative value means infeasibility */
-void SCIProwExactGetLPFeasibility(
+SCIP_RETCODE SCIProwExactGetLPFeasibility(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -457,7 +457,7 @@ void SCIProwExactGetLPFeasibility(
    );
 
 /** returns the pseudo feasibility of a row in the current pseudo solution: negative value means infeasibility */
-void SCIProwExactGetPseudoFeasibility(
+SCIP_RETCODE SCIProwExactGetPseudoFeasibility(
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */

@@ -2585,7 +2585,7 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->solved);
 
       /* solve the LP with pricing in new variables */
-      while( mustprice && !(*lperror) ) /* @todo exactip-note: do we disable smth here? */ /* MP@LE Check and possibly remove. */
+      while( mustprice && !(*lperror) )
       {
          SCIP_CALL( SCIPpriceLoop(blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp,
                pricestore, sepastore, cutpool, branchcand, eventqueue, eventfilter, cliquetable, root, root, -1, &npricedcolvars,
@@ -3003,8 +3003,8 @@ SCIP_RETCODE priceAndCutLoop(
          stat->nseparounds++;
       }
 
-      /* in exact solving mode, solve the LP once more, now allowing an exact solve if desired */
-      /* MP@LE Please explain why the LP should be solved at this place. */
+      /* in exact solving mode, solve the LP once more, now allowing an exact solve if desired; we prohibited this before, since
+         solving the lp exactly after each separation round is prohibitively slow */
       if( set->exact_enabled && !mustsepa )
       {
          lp->solved = FALSE;
@@ -3074,13 +3074,15 @@ SCIP_RETCODE priceAndCutLoop(
    {
       SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
-      /* MP@LE Please add an if arround the following such that it is only executed if certificates are computed. */
-      if( !(lp->solved && lp->flushed) )
-         SCIP_CALL( SCIPcertificatePrintInheritedBound(set, stat->certificate, focusnode) );
-      else if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE && tree->focusnodehaslp )
-         SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, TRUE) );
-      else if( tree->focusnodehaslp )
-         SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, FALSE) );
+      if( SCIPsetCertificateEnabled(set) )
+      {
+         if( !(lp->solved && lp->flushed) )
+            SCIP_CALL( SCIPcertificatePrintInheritedBound(set, stat->certificate, focusnode) );
+         else if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE && tree->focusnodehaslp )
+            SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, TRUE) );
+         else if( tree->focusnodehaslp )
+            SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, FALSE) );
+      }
    }
 
    SCIPsetDebugMsg(set, " -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
@@ -3144,29 +3146,6 @@ SCIP_RETCODE applyBounding(
          || (set->exact_enabled && RatIsGE(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact)) )
       {
          *cutoff = TRUE;
-
-         /* MP@LE The second condition is always false (see above). Why are exact checks mixed with double checks? */
-         if( set->exact_enabled && RatIsLT(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact) && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
-         {
-            /* if the pseudoobjval is cutting of the node with tolerances, but not exactly, we use the exact pseudo objval */
-            if( SCIPsetIsEQ(set, SCIPnodeGetLowerbound(focusnode), pseudoobjval) )
-            {
-               SCIP_Rational* pseudoobjvalrational;
-               SCIP_CALL( RatCreateBuffer(set->buffer, &pseudoobjvalrational) );
-
-               SCIP_CALL( SCIPsepastoreExactSyncLPs(set->scip->sepastoreexact, blkmem, set, lp->lpexact, eventqueue) );
-               SCIPlpExactGetPseudoObjval(lp->lpexact, set, pseudoobjvalrational);
-
-               SCIPnodeUpdateExactLowerbound(focusnode, stat, set, tree, transprob, origprob, pseudoobjvalrational);
-
-               RatFreeBuffer(set->buffer, &pseudoobjvalrational);
-
-               if( RatIsLT(SCIPnodeGetLowerboundExact(focusnode), primal->cutoffboundexact) )
-                  return SCIP_OKAY;
-            }
-            else
-               return SCIP_OKAY;
-         }
 
          /* call pseudo conflict analysis, if the node is cut off due to the pseudo objective value */
          if( !SCIPsetIsInfinity(set, -pseudoobjval) && !SCIPsetIsInfinity(set, primal->cutoffbound) && SCIPsetIsGE(set, pseudoobjval, primal->cutoffbound) )
@@ -3290,10 +3269,11 @@ SCIP_RETCODE solveNodeLP(
          else
          {
             /* MP@LE Is it correct that we arrive here if lp->lpexact->solved is false, but exact_enabled is true? */
-
+            /* LE@MP yes */
             SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
 
             /* MP@LE Why is this test not needed in the exact code in the first part of the if-block. */
+            /* LE@MP the unbounded case is not really properly supported for exact, so I think it should also be added at the top */
             if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
                checklprows = FALSE;
             else
@@ -4316,6 +4296,7 @@ SCIP_Bool restartAllowed(
       && ( set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts )
       && !(set->exact_enabled);
    /* MP@LE Should we add a todo to think about enabling restarts for exact solves? Test whether restarts would work without certificates? */
+   /* LE@MP we could add a todo. without certificates, we would still need some additional coding work done, I think to make sure all data is correctly transported */
 }
 #else
 #define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && !set->reopt_enable \
@@ -5082,6 +5063,7 @@ SCIP_RETCODE addCurrentSolution(
       else
       {
          /* MP@LE Is it correct that are in this block if lp->lpexact->solved is false and we solve exactly? */
+         /* LE@MP yes */
          SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
          SCIPsetDebugMsg(set, "found lp solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 

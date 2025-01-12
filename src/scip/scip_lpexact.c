@@ -387,7 +387,7 @@ SCIP_RETCODE SCIPgenerateFpRowsFromRowExact(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-void SCIPgetRowSolFeasibilityExact(
+SCIP_RETCODE SCIPgetRowSolFeasibilityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -399,9 +399,11 @@ void SCIPgetRowSolFeasibilityExact(
    if( sol != NULL )
       SCIProwExactGetSolFeasibility(row, scip->set, scip->stat, sol, result);
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
-      SCIProwExactGetLPFeasibility(row, scip->set, scip->stat, scip->lpexact, result);
+      SCIP_CALL( SCIProwExactGetLPFeasibility(row, scip->set, scip->stat, scip->lpexact, result) );
    else
-      SCIProwExactGetPseudoFeasibility(row, scip->set, scip->stat, result);
+      SCIP_CALL( SCIProwExactGetPseudoFeasibility(row, scip->set, scip->stat, result) );
+
+   return SCIP_OKAY;
 }
 
 /** returns the activity of a row for the given primal solution
@@ -411,7 +413,7 @@ void SCIPgetRowSolFeasibilityExact(
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
  */
-void SCIPgetRowSolActivityExact(
+SCIP_RETCODE SCIPgetRowSolActivityExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWEXACT*        row,                /**< LP row */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -422,11 +424,13 @@ void SCIPgetRowSolActivityExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolActivityExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
-      SCIProwExactGetSolActivity(row, scip->set, scip->stat, sol, useexact, result);
+      SCIP_CALL( SCIProwExactGetSolActivity(row, scip->set, scip->stat, sol, useexact, result) );
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       RatSet(result, SCIProwExactGetLPActivity(row, scip->stat, scip->lpexact));
    else
       RatSet(result, SCIProwExactGetPseudoActivity(row, scip->stat));
+
+   return SCIP_OKAY;
 }
 
 

@@ -1803,10 +1803,9 @@ SCIP_RETCODE SCIPlpiExactGetColNames(
 
    SCIPdebugMessage("getting column names %d to %d\n", firstcol, lastcol);
 
-   /* MP@LE Either add this call or return an error message */
-//    lpi->spx->getColNames(firstcol, lastcol, colnames, namestorage, namestoragesize, storageleft);
+   SCIPerrorMessage("SCIPlpiExactGetColNames() not implemented\n");
 
-   return SCIP_OKAY;
+   return SCIP_NOTIMPLEMENTED;
 }
 
 /** gets row names */
@@ -1830,10 +1829,9 @@ SCIP_RETCODE SCIPlpiExactGetRowNames(
 
    SCIPdebugMessage("getting row names %d to %d\n", firstrow, lastrow);
 
-   /* MP@LE Either add this call or return an error message */
-//    lpi->spx->getRowNames(firstrow, lastrow, rownames, namestorage, namestoragesize, storageleft);
+   SCIPerrorMessage("SCIPlpiExactGetRowNames() not implemented\n");
 
-   return SCIP_OKAY;
+   return SCIP_NOTIMPLEMENTED;
 }
 
 /** gets objective sense of the LP */
@@ -2658,8 +2656,6 @@ SCIP_RETCODE SCIPlpiExactGetBase(
    {
       for( i = 0; i < lpi->spx->numColsRational(); ++i )
       {
-         /* MP@LE Remove the following line? */
-         //         SCIP_Real val = 0.0;
          switch( lpi->spx->basisColStatus(i) )
          {
          case SPxSolver::BASIC:
@@ -2957,8 +2953,6 @@ SCIP_RETCODE SCIPlpiExactSetState(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
    assert(lpistate != NULL);
-   /* MP@LE Remove the following line? */
-   /* assert(blkmem != NULL); */
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 

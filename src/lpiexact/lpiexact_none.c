@@ -22,17 +22,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* MP@LE Adapt the following header - this seems to be all wrong */
-
-/**@file   lpiexact_spx.cpp
+/**@file   lpiexact_none.c
  * @ingroup LPIS
- * @brief  exact LP interface for SoPlex version 2.0 and higher
+ * @brief  dummy interface for the case no LP solver is needed
  * @author Leon Eifler
- *
- * This is an implementation of SCIP's LP interface for SoPlex using the extended and improved interface of SoPlex 2.0
- *
- * For debugging purposes, the SoPlex results can be double checked with CPLEX if WITH_LPSCHECK is defined. This may
- * yield false positives, since the LP is dumped to a file for transfering it to CPLEX, hence, precision may be lost.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -70,9 +63,7 @@ void errorMessageAbort(
    void
    )
 {  /*lint --e{2707}*/
-   /* MP@LE Should this be that there is no exact LP solver is available? */
-   SCIPerrorMessage("No LP solver available (LPS=none).\n");
-   SCIPerrorMessage("Ensure <lp/solvefreq = -1>; note that continuous variables might require an LP-solver.\n");
+   SCIPerrorMessage("No exact LP solver available (LPSEXACT=none).\n");
    SCIPABORT();
 }
 
@@ -82,9 +73,7 @@ void errorMessage(
    void
    )
 {
-   /* MP@LE Should this be that there is no exact LP solver is available? */
-   SCIPerrorMessage("No LP solver available (LPS=none).\n");
-   SCIPerrorMessage("Ensure <lp/solvefreq = -1>; note that continuous variables might require an LP-solver.\n");
+   SCIPerrorMessage("No exact LP solver available (LPSEXACT=none).\n");
 }
 
 /*
@@ -144,8 +133,7 @@ SCIP_RETCODE SCIPlpiExactCreate(
    assert(lpi != NULL);
    assert(name != NULL);
    SCIPdebugMessage("SCIPlpiExactCreate()\n");
-   SCIPdebugMessage("Note that there is no LP solver linked to the binary\n");
-   /* MP@LE Should this be that there is no exact LP solver is available? */
+   SCIPdebugMessage("Note that there is no exact LP solver linked to the binary\n");
 
    /* create empty LPI */
    SCIP_ALLOC( BMSallocMemory(lpi) );

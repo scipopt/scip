@@ -321,7 +321,7 @@ SCIP_Rational** SCIPgetValsExactLinear(
  *        comprises positive and negative infinity contributions
  */
 SCIP_EXPORT
-void SCIPgetActivityExactLinear(
+SCIP_RETCODE SCIPgetActivityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
@@ -330,7 +330,7 @@ void SCIPgetActivityExactLinear(
 
 /** gets the feasibility of the linear constraint in the given solution */
 SCIP_EXPORT
-void SCIPgetFeasibilityExactLinear(
+SCIP_RETCODE SCIPgetFeasibilityExactLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
    SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */

@@ -1734,7 +1734,7 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
 
    /* possibly close CERTIFICATE output file */
-   SCIPcertificateExit(scip);
+   SCIP_CALL( SCIPcertificateExit(scip) );
 
    /* possibly close visualization output file */
    SCIPvisualExit(scip->stat->visual, scip->set, scip->messagehdlr);
@@ -3344,7 +3344,7 @@ SCIP_RETCODE SCIPfreeSolve(
       /* switch stage to TRANSFORMED */
       scip->set->stage = SCIP_STAGE_TRANSFORMED;
       /* possibly close CERTIFICATE output file */
-      SCIPcertificateExit(scip);
+      SCIP_CALL( SCIPcertificateExit(scip) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_SOLVING:

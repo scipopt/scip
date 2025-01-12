@@ -123,7 +123,7 @@ SCIP_Longint printBoundAssumption(
    /** @todo: it could be better to seperate the printing from insertion of variable bound */
    SCIPcertificatePrintProofMessage(certificate, "A%lld %c ", certificate->indexcounter, (boundtype == SCIP_BOUNDTYPE_LOWER) ? 'G' : 'L');
 
-   SCIPcertificatePrintProofRational(certificate, boundval, 10);
+   SCIP_CALL( SCIPcertificatePrintProofRational(certificate, boundval, 10) );
    SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 { asm } -1\n", SCIPvarGetCertificateIndex(var));
    certificate->indexcounter++;
 
@@ -213,7 +213,7 @@ SCIP_RETCODE SCIPcertificatePrintSol(
       {
          /* print the solution into certificate */
          SCIPcertificatePrintProblemMessage(certificate, isorigfile, " %d ", SCIPvarGetCertificateIndex(vars[i]));
-         SCIPcertificatePrintProblemRational(certificate, isorigfile, vals[i], 10);
+         SCIP_CALL( SCIPcertificatePrintProblemRational(certificate, isorigfile, vals[i], 10) );
       }
    }
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "\n");
@@ -711,7 +711,7 @@ void concatCert(
 }
 
 /** closes the certificate output files */
-void SCIPcertificateExit(
+SCIP_RETCODE SCIPcertificateExit(
    SCIP*                 scip                /**< scip data structure */
    )
 {
@@ -764,19 +764,19 @@ void SCIPcertificateExit(
       }
       if( certificate->aggrinfohash )
       {
-         /* MP@LE This function should return SCIP_RETCODE and the following should use SCIP_CALL(). */
-         SCIPcertificateClearAggrinfo(scip);
+         SCIP_CALL( SCIPcertificateClearAggrinfo(scip) );
       }
       if( certificate->mirinfohash )
       {
-         /* MP@LE Use SCIP_CALL() */
-         SCIPcertificateClearMirinfo(scip);
+         SCIP_CALL( SCIPcertificateClearMirinfo(scip) );
       }
 
       RatFreeBlock(certificate->blkmem, &certificate->rootbound);
       RatFreeBlock(certificate->blkmem, &certificate->finalbound);
       RatFreeBlockArray(certificate->blkmem, &certificate->vals, certificate->valssize);
    }
+
+   return SCIP_OKAY;
 }
 
 /** returns whether the certificate output is activated? */
@@ -890,7 +890,7 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
       if( !RatIsZero(coefs[i]) )
       {
          SCIPcertificatePrintProblemMessage(certificate, isorigfile, "%s%d ", (i > 0 ? " " : ""), i );
-         SCIPcertificatePrintProblemRational(certificate, isorigfile, coefs[i], 10);
+         SCIP_CALL( SCIPcertificatePrintProblemRational(certificate, isorigfile, coefs[i], 10) );
       }
    }
 
@@ -951,10 +951,10 @@ SCIP_RETCODE SCIPcertificatePrintResult(
       {
          RatSetString(dualbound, "-inf");
          /* print RTP range (same when optimal solution found) */
-         SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound);
+         SCIP_CALL( SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound) );
       }
       else
-         SCIPcertificatePrintRtpRange(certificate, isorigfile, primalbound, primalbound);
+         SCIP_CALL( SCIPcertificatePrintRtpRange(certificate, isorigfile, primalbound, primalbound) );
 
       /* print optimal solution into certificate */
       SCIP_CALL( SCIPcertificatePrintSol(scip, isorigfile, certificate, bestsol) );
@@ -991,7 +991,7 @@ SCIP_RETCODE SCIPcertificatePrintResult(
       else
          RatSet(dualbound, certificate->finalbound);
 
-      SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound);
+      SCIP_CALL( SCIPcertificatePrintRtpRange(certificate, isorigfile, dualbound, primalbound) );
       SCIP_CALL( SCIPcertificatePrintSol(scip, isorigfile, certificate, bestsol) );
    }
 
@@ -1070,7 +1070,7 @@ void SCIPcertificatePrintProofMessage(
 
 
 /** prints a rational number to the problem section of the certificate file */
-void SCIPcertificatePrintProblemRational(
+SCIP_RETCODE SCIPcertificatePrintProblemRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
    SCIP_Rational*        val,                /**< Rational to print to the problem*/
@@ -1084,10 +1084,9 @@ void SCIPcertificatePrintProblemRational(
 
    /* check if certificate output should be created */
    if( certificate->derivationfile == NULL )
-     return;
+     return SCIP_OKAY;
 
-   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL(). */
-   BMSallocMemoryArray(&formatstr, len);
+   SCIP_ALLOC( BMSallocMemoryArray(&formatstr, len) );
    (void) RatToString(val, formatstr, len);
    if( isorigfile )
       (void) SCIPfputs(formatstr, certificate->origfile);
@@ -1095,11 +1094,13 @@ void SCIPcertificatePrintProblemRational(
       (void) SCIPfputs(formatstr, certificate->transfile);
 
    BMSfreeMemoryArray(&formatstr);
+
+   return SCIP_OKAY;
 }
 
 
 /** prints a rational number to the proof section of the certificate file */
-void SCIPcertificatePrintProofRational(
+SCIP_RETCODE SCIPcertificatePrintProofRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Rational*        val,                /**< Rational to print to the problem*/
    int                   base                /**< The base representation*/
@@ -1112,13 +1113,14 @@ void SCIPcertificatePrintProofRational(
 
    /* check if certificate output should be created */
    if( certificate->derivationfile == NULL )
-     return;
+     return SCIP_OKAY;
 
-   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL(). */
-   BMSallocMemoryArray(&formatstr, len);
+   SCIP_ALLOC( BMSallocMemoryArray(&formatstr, len) );
    (void) RatToString(val, formatstr, len);
    (void) SCIPfputs(formatstr, certificate->derivationfile);
    BMSfreeMemoryArray(&formatstr);
+
+   return SCIP_OKAY;
 }
 
 /** prints a comment to the problem section of the certificate file */
@@ -1263,7 +1265,7 @@ void SCIPcertificatePrintDerHeader(
 }
 
 /** prints constraint */
-void SCIPcertificatePrintCons(
+SCIP_RETCODE SCIPcertificatePrintCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
    const char*           consname,           /**< name of the constraint */
@@ -1279,7 +1281,7 @@ void SCIPcertificatePrintCons(
 
    /* check if certificate output should be created */
    if( certificate->transfile == NULL )
-      return;
+      return SCIP_OKAY;
 
    index = isorigfile ? certificate->indexcounter_ori : certificate->indexcounter;
 
@@ -1288,7 +1290,7 @@ void SCIPcertificatePrintCons(
    else
       SCIPcertificatePrintProblemMessage(certificate, isorigfile, "%s %c ", consname, sense);
 
-   SCIPcertificatePrintProblemRational(certificate, isorigfile, side, 10);
+   SCIP_CALL( SCIPcertificatePrintProblemRational(certificate, isorigfile, side, 10) );
 
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, " %d", len);
 
@@ -1296,7 +1298,7 @@ void SCIPcertificatePrintCons(
    {
       /** @todo exip: perform line breaking before exceeding maximum line length */
       SCIPcertificatePrintProblemMessage(certificate, isorigfile, " %d ", ind[i]);
-      SCIPcertificatePrintProblemRational(certificate, isorigfile, val[i], 10);
+      SCIP_CALL( SCIPcertificatePrintProblemRational(certificate, isorigfile, val[i], 10) );
    }
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "\n");
 
@@ -1312,6 +1314,8 @@ void SCIPcertificatePrintCons(
    {
       certificate->conscounter++;
    }
+
+   return SCIP_OKAY;
 }
 
 /** print a line for an exact row to the certificate (without derivation), @param alternativerhs is used instead
@@ -1340,13 +1344,13 @@ SCIP_RETCODE SCIPcertificatePrintRow(
    if( SCIPsetIsInfinity(set, alternativerhs) )
    {
       rhs = SCIProwExactGetRhs(rowexact);
-      SCIPcertificatePrintProofRational(certificate, rhs, 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, rhs, 10) );
    }
    else
    {
       SCIP_CALL( RatCreateBuffer(set->buffer, &rhs) );
       RatSetReal(rhs, alternativerhs);
-      SCIPcertificatePrintProofRational(certificate, rhs, 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, rhs, 10) );
       RatFreeBuffer(set->buffer, &rhs);
    }
 
@@ -1363,7 +1367,7 @@ SCIP_RETCODE SCIPcertificatePrintRow(
       val = SCIProwExactGetVals(rowexact)[i];
 
       SCIPcertificatePrintProofMessage(certificate, " %d ", varindex);
-      SCIPcertificatePrintProofRational(certificate, val, 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, val, 10) );
    }
    certificate->indexcounter++;
    certificate->lastinfo->isbound = FALSE;
@@ -1447,7 +1451,7 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    /* add rhs change from integer slacks and print rhs */
    RatAddReal(val, mirinfo->rhs, slackrhs);
-   SCIPcertificatePrintProofRational(certificate, val, 10);
+   SCIP_CALL( SCIPcertificatePrintProofRational(certificate, val, 10) );
 
    SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
@@ -1460,7 +1464,7 @@ SCIP_RETCODE certificatePrintMirSplit(
       assert(RatIsIntegral(val));
 
       SCIPcertificatePrintProofMessage(certificate, " %d ", varindex);
-      SCIPcertificatePrintProofRational(certificate, val, 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, val, 10) );
    }
 
    SCIPcertificatePrintProofMessage(certificate, " { asm } -1 \n");
@@ -1471,7 +1475,7 @@ SCIP_RETCODE certificatePrintMirSplit(
    SCIPcertificatePrintProofMessage(certificate, "A%d_split %c ", certificate->indexcounter, 'G');
 
    RatAddReal(val, mirinfo->rhs, slackrhs + 1.0);
-   SCIPcertificatePrintProofRational(certificate, val, 10);
+   SCIP_CALL( SCIPcertificatePrintProofRational(certificate, val, 10) );
 
    SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
@@ -1484,7 +1488,7 @@ SCIP_RETCODE certificatePrintMirSplit(
       assert(RatIsIntegral(val));
 
       SCIPcertificatePrintProofMessage(certificate, " %d ", varindex);
-      SCIPcertificatePrintProofRational(certificate, val, 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, val, 10) );
    }
 
    SCIPcertificatePrintProofMessage(certificate, " { asm } -1 \n");
@@ -1607,7 +1611,7 @@ SCIP_RETCODE certificatePrintWeakDerStart(
          index = SCIPvarGetLbCertificateIndexLocal(var);
          boundval = SCIPvarGetLbLocalExact(var);
          SCIPcertificatePrintProofMessage(certificate, " L %d %d ", SCIPvarGetCertificateIndex(var), index);
-         SCIPcertificatePrintProofRational(certificate, boundval, 10);
+         SCIP_CALL( SCIPcertificatePrintProofRational(certificate, boundval, 10) );
       }
       if( !RatIsEqual(var->exactdata->glbdom.ub, var->exactdata->locdom.ub) )
       {
@@ -1617,7 +1621,7 @@ SCIP_RETCODE certificatePrintWeakDerStart(
          index = SCIPvarGetUbCertificateIndexLocal(var);
          boundval = SCIPvarGetUbLocalExact(var);
          SCIPcertificatePrintProofMessage(certificate, " U %d %d ", SCIPvarGetCertificateIndex(var), index);
-         SCIPcertificatePrintProofRational(certificate, boundval, 10);
+         SCIP_CALL( SCIPcertificatePrintProofRational(certificate, boundval, 10) );
       }
    }
 
@@ -1730,7 +1734,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       SCIPcertificatePrintProofMessage(certificate, "%d %d ", 1 + aggrinfo->nnegslackrows + mirinfo->nslacks, leftdisjunctionindex);
       /* multiply with scaling parameter that was used during cut computation */
       RatSetReal(tmpval, mirinfo->scale);
-      SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, tmpval, 10) );
 
       SCIPdebugMessage("Verifying left part of split disjunction, multipliers 1 and 1/%g \n", RatApproxReal(oneminusf0));
 
@@ -1751,7 +1755,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
          SCIPcertificatePrintProofMessage(certificate, " %d ", key);
          RatMultReal(tmpval, tmpval, mirinfo->scale);
-         SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+         SCIP_CALL( SCIPcertificatePrintProofRational(certificate, tmpval, 10) );
       }
 
       SCIPdebugMessage("Correcting for integer slacks  ( needed for v >= 0 part ) \n");
@@ -1787,7 +1791,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
          SCIPcertificatePrintProofMessage(certificate, " %d ", key);
          RatMultReal(tmpval, tmpval, mirinfo->scale);
-         SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+         SCIP_CALL( SCIPcertificatePrintProofRational(certificate, tmpval, 10) );
       }
 
       SCIPcertificatePrintProofMessage(certificate, " } -1 \n");
@@ -1807,7 +1811,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       RatDiv(tmpval, tmpval, oneminusf0); /* -f/(1-f) */
       /* multiply with scaling factor that was used in cut derivation */
       RatMultReal(tmpval, tmpval, mirinfo->scale);
-      SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, tmpval, 10) );
 
       RatDivReal(tmpval, tmpval, mirinfo->scale);
 
@@ -1833,7 +1837,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
          SCIPcertificatePrintProofMessage(certificate, " %d ", key);
          RatMultReal(value, value, mirinfo->scale);
-         SCIPcertificatePrintProofRational(certificate, value, 10);
+         SCIP_CALL( SCIPcertificatePrintProofRational(certificate, value, 10) );
       }
 
       SCIPdebugMessage("Correcting for %d integer slacks \n", mirinfo->nrounddownslacks);
@@ -1880,7 +1884,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
          SCIPcertificatePrintProofMessage(certificate, " %d ", key);
          RatMultReal(value, value, mirinfo->scale);
-         SCIPcertificatePrintProofRational(certificate, value, 10);
+         SCIP_CALL( SCIPcertificatePrintProofRational(certificate, value, 10) );
       }
 
       SCIPdebugMessage("Adding %d aggregation rows \n", aggrinfo->naggrrows);
@@ -1904,7 +1908,7 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
 
          SCIPcertificatePrintProofMessage(certificate, " %d ", key);
          RatMultReal(value, value, mirinfo->scale);
-         SCIPcertificatePrintProofRational(certificate, value, 10);
+         SCIP_CALL( SCIPcertificatePrintProofRational(certificate, value, 10) );
       }
 
       SCIPcertificatePrintProofMessage(certificate, " } -1\n");
@@ -1995,7 +1999,7 @@ SCIP_RETCODE SCIPcertificatePrintBoundCons(
          SCIPcertificatePrintProblemMessage(certificate, isorigfile, "%s %c ", boundname, (isupper ? 'L' : 'G'));
    }
 
-   SCIPcertificatePrintProblemRational(certificate, isorigfile, boundval, 10);
+   SCIP_CALL( SCIPcertificatePrintProblemRational(certificate, isorigfile, boundval, 10) );
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, " 1 %d 1\n", SCIPvarGetCertificateIndex(var));
 
    return SCIP_OKAY;
@@ -2418,7 +2422,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    else
    {
       SCIPcertificatePrintProofMessage(certificate, "G ");
-      SCIPcertificatePrintProofRational(certificate, lowerbound, 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, lowerbound, 10) );
       SCIPcertificatePrintProofMessage(certificate, " ");
       SCIPcertificatePrintProofMessage(certificate, "OBJ");
    }
@@ -2438,7 +2442,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
          /** @todo exip: perform line breaking before exceeding maximum line length */
          assert(!RatIsAbsInfinity(val[i]));
          SCIPcertificatePrintProofMessage(certificate, " %d ", ind[i]);
-         SCIPcertificatePrintProofRational(certificate, val[i], 10);
+         SCIP_CALL( SCIPcertificatePrintProofRational(certificate, val[i], 10) );
       }
       SCIPcertificatePrintProofMessage(certificate, " } -1\n");
    }
@@ -2453,7 +2457,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
       updateFilesize(certificate, 4.0 + ceil(log10(certificate->indexcounter - 1 + 1)));
       RatRound(lowerbound, lowerbound, SCIP_R_ROUND_UPWARDS);
 
-      SCIPcertificatePrintProofRational(certificate, lowerbound, 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, lowerbound, 10) );
 
       SCIPcertificatePrintProofMessage(certificate, " ");
       SCIPcertificatePrintProofMessage(certificate, "OBJ");
@@ -2612,7 +2616,7 @@ SCIP_RETCODE SCIPcertificatePrintCutoffBound(
       RatSet(newbound, bound);
 
    SCIPcertificatePrintProofMessage(certificate, "O%d L ", certificate->indexcounter);
-   SCIPcertificatePrintProofRational(certificate, newbound, 10);
+   SCIP_CALL( SCIPcertificatePrintProofRational(certificate, newbound, 10) );
    SCIPcertificatePrintProofMessage(certificate, " OBJ { sol } -1\n");
 
    certificate->indexcounter++;
@@ -2653,7 +2657,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
 
    RatSetReal(tmpval, SCIPaggrRowGetRhs(aggrrow));
 
-   SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+   SCIP_CALL( SCIPcertificatePrintProofRational(certificate, tmpval, 10) );
 
    SCIPcertificatePrintProofMessage(certificate, " %d", SCIPaggrRowGetNNz(aggrrow));
 
@@ -2666,7 +2670,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
       RatSetReal(tmpval, SCIPaggrRowGetValueSafely(aggrrow, i));
 
       SCIPcertificatePrintProofMessage(certificate, " %d ", varindex);
-      SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, tmpval, 10) );
    }
 
    SCIP_CALL( certificatePrintWeakDerStart(certificate, prob, local) );
@@ -2686,7 +2690,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
       key = SCIPcertificateGetRowIndex(certificate, rowexact, RatIsPositive(tmpval));
 
       SCIPcertificatePrintProofMessage(certificate, " %d ", key);
-      SCIPcertificatePrintProofRational(certificate, tmpval, 10);
+      SCIP_CALL( SCIPcertificatePrintProofRational(certificate, tmpval, 10) );
    }
 
    SCIPcertificatePrintProofMessage(certificate, " } -1\n");
@@ -3178,7 +3182,7 @@ SCIP_RETCODE SCIPfreeCertificateActiveAggregationInfo(
 }
 
 /** prints unsplitting information to proof section */
-void SCIPcertificatePrintUnsplitting(
+SCIP_RETCODE SCIPcertificatePrintUnsplitting(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP_NODE*            node                /**< node data */
@@ -3192,7 +3196,7 @@ void SCIPcertificatePrintUnsplitting(
 
    /* check whether certificate output should be created */
    if( certificate->transfile == NULL || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
-      return;
+      return SCIP_OKAY;
 
    /* get the current node data */
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
@@ -3231,7 +3235,7 @@ void SCIPcertificatePrintUnsplitting(
       else
       {
          SCIPcertificatePrintProofMessage(certificate, "G ");
-         SCIPcertificatePrintProofRational(certificate, lowerbound, 10);
+         SCIP_CALL( SCIPcertificatePrintProofRational(certificate, lowerbound, 10) );
          SCIPcertificatePrintProofMessage(certificate, " ");
          SCIPcertificatePrintProofMessage(certificate, "OBJ");
       }
@@ -3244,8 +3248,7 @@ void SCIPcertificatePrintUnsplitting(
       SCIPcertificatePrintProofMessage(certificate, " { uns %d %d  %d %d  } -1\n", nodedata->derindex_left, nodedata->assumptionindex_left,
          nodedata->derindex_right, nodedata->assumptionindex_right);
 
-      /* MP@LE Return SCIP_RETCODE and use SCIP_CALL */
-      SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound);
+      SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound) );
    }
    else
    {
@@ -3265,21 +3268,21 @@ void SCIPcertificatePrintUnsplitting(
          RatSetInt(val, 1, 1);
 
          (void) SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, 1, ind, &val);
-         /* MP@LE Return SCIP_RETCODE and use SCIP_CALL */
-         SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound);
+         SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound) );
 
          RatFreeBuffer(set->buffer, &val);
       }
    }
 
-   /* MP@LE Return SCIP_RETCODE and use SCIP_CALL */
-   certificateFreeNodeData(certificate, node);
+   SCIP_CALL( certificateFreeNodeData(certificate, node) );
 
    RatFreeBuffer(set->buffer, &lowerbound);
+
+   return SCIP_OKAY;
 }
 
 /** prints RTP section with lowerbound and upperbound range */
-void SCIPcertificatePrintRtpRange(
+SCIP_RETCODE SCIPcertificatePrintRtpRange(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP_Bool             isorigfile,         /**< should the original solution be printed or in transformed space */
    SCIP_Rational*        lowerbound,         /**< pointer to lower bound on the objective */
@@ -3288,7 +3291,7 @@ void SCIPcertificatePrintRtpRange(
 {
    /* check if certificate output should be created */
    if( certificate->transfile == NULL )
-      return;
+      return SCIP_OKAY;
 
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "RTP range ");
    if( RatIsNegInfinity(lowerbound) )
@@ -3297,7 +3300,7 @@ void SCIPcertificatePrintRtpRange(
    }
    else
    {
-      SCIPcertificatePrintProblemRational(certificate, isorigfile, lowerbound, 10);
+      SCIP_CALL( SCIPcertificatePrintProblemRational(certificate, isorigfile, lowerbound, 10) );
    }
 
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, " ");
@@ -3307,9 +3310,11 @@ void SCIPcertificatePrintRtpRange(
    }
    else
    {
-      SCIPcertificatePrintProblemRational(certificate, isorigfile, upperbound, 10);
+      SCIP_CALL( SCIPcertificatePrintProblemRational(certificate, isorigfile, upperbound, 10) );
    }
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "\n");
+
+   return SCIP_OKAY;
  }
 
 /** prints RTP section for infeasibility */
@@ -3441,7 +3446,7 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
    SCIPcertificatePrintProofMessage(certificate, "BoundConflict%d ", certificate->indexcounter);
    SCIPcertificatePrintProofMessage(certificate, "G ");
    RatDiff(lowerbound, lb, ub);
-   SCIPcertificatePrintProofRational(certificate, lowerbound, 10);
+   SCIP_CALL( SCIPcertificatePrintProofRational(certificate, lowerbound, 10) );
    SCIPcertificatePrintProofMessage(certificate, " 0 { lin 2 %d 1 %d -1 } -1\n", lbindex, ubindex);
 
    RatFreeBuffer(SCIPbuffer(scip), &lowerbound);
@@ -3513,7 +3518,7 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
 
    SCIPcertificatePrintProofMessage(certificate, "GlobalBound_%d %c ", certificate->indexcounter,
       boundtype == SCIP_BOUNDTYPE_UPPER ? 'L' : 'G');
-   SCIPcertificatePrintProofRational(certificate, value, 10);
+   SCIP_CALL( SCIPcertificatePrintProofRational(certificate, value, 10) );
    SCIPcertificatePrintProofMessage(certificate, " 1 %d 1 ", SCIPvarGetCertificateIndex(var));
    SCIPcertificatePrintProofMessage(certificate, "{ lin 1 %d 1 } -1 global\n", certificateindex);
 
