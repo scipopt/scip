@@ -34,6 +34,7 @@
 /* #define VERIFY_OUT */ /** uncomment to get info of QSopt_ex about verifying dual feasibility of the basis */
 
 /* #define USEOBJLIM */  /** uncomment to pass objlimit to exact lp solver; same as in cons_exactlp.c;  warning: QSopt_ex allows objlimits but the support is buggy; if the limit is reached, QSopt_ex does not stop but increasess the precision */
+
 #include "scip/def.h"
 
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EGLIB)
@@ -96,7 +97,7 @@ struct SCIP_LPiExact
 #define __QS_PRINTLOC__ fprintf(stderr,", in (%s:%d)\n", __FILE__, __LINE__);
 
 /** This macro is to print error messages and jump to the given point in the code, it also print the
- * file and line where this happend */
+ *  file and line where this happend */
 #define QS_TESTG(A,B,...) do{{\
 	 if (A){				\
 	    fprintf(stderr,__VA_ARGS__);	\
@@ -111,7 +112,7 @@ struct SCIP_LPiExact
 	    return SCIP_LPERROR;}}}while(0)
 
 /** return value macro, if the value is non-zero, write to standard error the returning code and
- * where this happened, and return SCIP_ERROR, otherwise return normal SCIP_OKAY termination code. */
+ *  where this happened, and return SCIP_ERROR, otherwise return normal SCIP_OKAY termination code. */
 #define QS_RETURN(A) do{\
       const int __RVAL__ = (A);						\
       if (__RVAL__){							\
@@ -121,7 +122,7 @@ struct SCIP_LPiExact
       return SCIP_OKAY;}while(0)
 
 /** return value macro, if the value is non-zero, write to standard error the returning code and
- * where this happened, and return SCIP_ERROR, otherwise do nothing. */
+ *  where this happened, and return SCIP_ERROR, otherwise do nothing. */
 #define QS_CONDRET(A) do{\
       const int __RVAL__ = (A);						\
       if (__RVAL__){							\
@@ -152,8 +153,7 @@ void printGMP(
    )
 {
    char* buffer;
-   buffer = (char*) malloc(mpz_sizeinbase(mpq_numref(val),
-                                          10) + mpz_sizeinbase(mpq_denref(val), 10) + 3);
+   buffer = (char*) malloc(mpz_sizeinbase(mpq_numref(val), 10) + mpz_sizeinbase(mpq_denref(val), 10) + 3);
    (void)mpq_get_str(buffer, 10, val);
    printf("%s \n", buffer);
    free(buffer);
@@ -261,10 +261,10 @@ SCIP_RETCODE ensureTabMem(
    register int i;
    if( lpi->tbsz < sz )
    {
-      SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->itab), sz*2) ); 
+      SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->itab), sz*2) );
       SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->ibas), sz*2) );
       for( i = lpi->tbsz ; i < sz * 2 ; i++ )
-	      mpq_init(lpi->itab[i]);
+         mpq_init(lpi->itab[i]);
       lpi->tbsz = sz*2;
    }
    return SCIP_OKAY;
@@ -303,8 +303,8 @@ SCIP_RETCODE ensureRowMem(
       SCIP_ALLOC( BMSreallocMemoryArray(&(lpi->irbeg), nrows * 2) );
       for (i = lpi->rowspace ; i < nrows * 2; i++)
       {
-	      mpq_init(lpi->irhs[i]);
-	      mpq_init(lpi->irng[i]);
+         mpq_init(lpi->irhs[i]);
+         mpq_init(lpi->irng[i]);
       }
       lpi->rowspace = nrows * 2;
    }
@@ -341,7 +341,7 @@ SCIP_RETCODE convertSides(
       state2 = 0;
       state = 0;
 #endif
-      //state = (((mpq_cmp(*lhsg, mpq_ILL_MINDOUBLE) <= 0) ? 1U : 0U) | ((mpq_cmp(*rhsg, mpq_ILL_MAXDOUBLE) >= 0) ? 2U : 0U));
+      /* state = (((mpq_cmp(*lhsg, mpq_ILL_MINDOUBLE) <= 0) ? 1U : 0U) | ((mpq_cmp(*rhsg, mpq_ILL_MAXDOUBLE) >= 0) ? 2U : 0U)); */
       lpi->ircnt[i] = 0;
       lpi->irbeg[i] = 0;
       switch( state )
@@ -764,9 +764,9 @@ SCIP_RETCODE SCIPlpiExactDelColset(
    for( i = 0, ccnt = 0; i < ncols; i++ )
    {
       if( dstat[i] )
-	      dstat[i] = -1;
+         dstat[i] = -1;
       else
-	      dstat[i] = ccnt++;
+         dstat[i] = ccnt++;
    }
    return SCIP_OKAY;
 }
@@ -816,7 +816,8 @@ SCIP_RETCODE SCIPlpiExactAddRows(
    SCIP_ALLOC( BMSallocMemoryArray(&valgmp, nnonz) );
    RatSetGMPArray(valgmp, val, nnonz);
 
-   rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, (const mpq_t*) valgmp, (const mpq_t*) lpi->irhs, lpi->isen, (const mpq_t*) lpi->irng, (const char**) rownames);
+   rval = mpq_QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, (const mpq_t*) valgmp, (const mpq_t*) lpi->irhs,
+      lpi->isen, (const mpq_t*) lpi->irng, (const char**) rownames);
    QS_CONDRET(rval);
 
    RatClearGMPArray(valgmp, nnonz);
@@ -874,7 +875,7 @@ SCIP_RETCODE SCIPlpiExactDelRowset(
    for( i = 0; i < nrows; ++i )
    {
       if( dstat[i] == 1 )
-	      ndel++;
+         ndel++;
    }
 
    SCIPdebugMessage("deleting a row set from QSopt_ex (%d)\n",ndel);
@@ -885,9 +886,9 @@ SCIP_RETCODE SCIPlpiExactDelRowset(
    for( i = 0, ccnt = 0; i < nrows; ++i )
    {
       if( dstat[i] )
-	      dstat[i] = -1;
+         dstat[i] = -1;
       else
-	      dstat[i] = ccnt++;
+         dstat[i] = ccnt++;
    }
    return SCIP_OKAY;
 }
@@ -912,7 +913,7 @@ SCIP_RETCODE SCIPlpiExactClear(
    {
       SCIP_CALL( ensureColMem(lpi,ncols) );
       for (i = 0; i < ncols; ++i)
-	      lpi->iccnt[i] = i;
+         lpi->iccnt[i] = i;
       rval = mpq_QSdelete_cols(lpi->prob, ncols, lpi->iccnt);
       QS_CONDRET(rval);
    }
@@ -921,7 +922,7 @@ SCIP_RETCODE SCIPlpiExactClear(
    {
       SCIP_CALL( ensureRowMem(lpi, nrows) );
       for (i = 0; i < nrows; ++i)
-	      lpi->ircnt[i] = i;
+         lpi->ircnt[i] = i;
       rval = mpq_QSdelete_rows(lpi->prob, nrows, lpi->ircnt);
       QS_CONDRET(rval);
    }
@@ -1024,8 +1025,8 @@ SCIP_RETCODE SCIPlpiExactChgSides(
 
       if (lpi->isen[i] == 'R')
       {
-	      rval = mpq_QSchange_range(lpi->prob, ind[i], lpi->irng[i]);
-	      QS_CONDRET(rval);
+         rval = mpq_QSchange_range(lpi->prob, ind[i], lpi->irng[i]);
+         QS_CONDRET(rval);
       }
    }
 
@@ -1409,10 +1410,10 @@ SCIP_RETCODE SCIPlpiExactGetCols(
 
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for( i = 0 ; i < len ; i++ )
-	      beg[i] = lbeg[i];  /*lint !e613*/
+         beg[i] = lbeg[i];  /*lint !e613*/
       for( i = 0; i < *nnonz; ++i )
       {
-	      ind[i] = lind[i];  /*lint !e613*/
+         ind[i] = lind[i];  /*lint !e613*/
          RatSetGMP(val[i], lval[i]);
       }
    }
@@ -1494,11 +1495,11 @@ SCIP_RETCODE SCIPlpiExactGetRows(
 
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for( i = 0; i < len; i++ )
-	      beg[i] = lbeg[i];  /*lint !e613*/
+         beg[i] = lbeg[i];  /*lint !e613*/
       for( i = 0; i < *nnonz; ++i )
       {
-	      ind[i] = lind[i];  /*lint !e613*/
-	      RatSetGMP(val[i], lval[i]);  /*lint !e613*/
+         ind[i] = lind[i];  /*lint !e613*/
+         RatSetGMP(val[i], lval[i]);  /*lint !e613*/
       }
    }
    if( rhs )
@@ -1634,7 +1635,8 @@ SCIP_RETCODE SCIPlpiExactGetSides(
 {
    const int len = lastrow - firstrow + 1;
    register int i;
-   mpq_t* lrhs=0, *lrng=0;
+   mpq_t* lrhs = 0;
+   mpq_t* lrng = 0;
    int rval = 0;
    char* lsense=0;
 
@@ -2408,20 +2410,20 @@ SCIP_RETCODE SCIPlpiExactSetBase(
       switch(cstat[i])
       {
       case SCIP_BASESTAT_LOWER:
-	      icstat[i] = QS_COL_BSTAT_LOWER; /*lint !e641*/
-	      break;
+         icstat[i] = QS_COL_BSTAT_LOWER; /*lint !e641*/
+         break;
       case SCIP_BASESTAT_BASIC:
-	      icstat[i] = QS_COL_BSTAT_BASIC; /*lint !e641*/
-	      break;
+         icstat[i] = QS_COL_BSTAT_BASIC; /*lint !e641*/
+         break;
       case SCIP_BASESTAT_UPPER:
-	      icstat[i] = QS_COL_BSTAT_UPPER; /*lint !e641*/
-	      break;
+         icstat[i] = QS_COL_BSTAT_UPPER; /*lint !e641*/
+         break;
       case SCIP_BASESTAT_ZERO:
-	      icstat[i] = QS_COL_BSTAT_FREE; /*lint !e641*/
-	      break;
+         icstat[i] = QS_COL_BSTAT_FREE; /*lint !e641*/
+         break;
       default:
-	      SCIPerrorMessage("Unknown column basic status %d", cstat[i]);
-	      SCIPABORT();
+         SCIPerrorMessage("Unknown column basic status %d", cstat[i]);
+         SCIPABORT();
       }
    }
 
@@ -2453,7 +2455,7 @@ SCIP_RETCODE SCIPlpiExactGetBasisInd(
    for( i = 0; i < nrows; ++i )
    {
       if( bind[i] >= ncols )
-	      bind[i] = -(bind[i] - ncols - 1);
+         bind[i] = -(bind[i] - ncols - 1);
    }
 
    return SCIP_OKAY;
@@ -2475,7 +2477,8 @@ SCIP_RETCODE SCIPlpiExactGetState(
    SCIP_LPISTATE**       lpistate            /**< pointer to LPi state information (like basis information) */
    )
 {
-   int ncols, nrows;
+   int ncols;
+   int nrows;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2515,8 +2518,11 @@ SCIP_RETCODE SCIPlpiExactSetState(
    )
 {  /*lint --e{715} */
    register int i;
-   int rval = 0, ncols, nrows;
-   char* icstat=0, *irstat=0;
+   int rval = 0;
+   int ncols;
+   int nrows;
+   char* icstat = 0;
+   char* irstat = 0;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
@@ -2568,10 +2574,10 @@ SCIP_RETCODE SCIPlpiExactSetState(
       {
       case SCIP_BASESTAT_LOWER:
          irstat[i] = QS_ROW_BSTAT_LOWER;
-	      break;
+         break;
       case SCIP_BASESTAT_BASIC:
          irstat[i] = QS_ROW_BSTAT_BASIC;
-	      break;
+         break;
       case SCIP_BASESTAT_UPPER:
          /* sense of inexact LP row is R (ranged row) since this is the only case where the basis status of the
           * slack variable is allowed to be UPPER
@@ -2585,7 +2591,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
              * is an FP relaxation of the exact LP
              */
             irstat[i] = QS_ROW_BSTAT_LOWER;
-	      break;
+         break;
       default:
          SCIPerrorMessage("Unknown row basic status %d", lpi->ircnt[i]);
          SCIPABORT();
@@ -2598,7 +2604,7 @@ SCIP_RETCODE SCIPlpiExactSetState(
       {
       case SCIP_BASESTAT_LOWER:
          icstat[i] = QS_COL_BSTAT_LOWER;
-	      break;
+         break;
       case SCIP_BASESTAT_BASIC:
          icstat[i] = QS_COL_BSTAT_BASIC;
          break;
@@ -2771,9 +2777,9 @@ SCIP_RETCODE SCIPlpiExactGetIntpar(
    case SCIP_LPPAR_SCALING:
       rval = mpq_QSget_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, ival);
       if( *ival )
-	      *ival = TRUE;
+         *ival = TRUE;
       else
-	      *ival = FALSE;
+         *ival = FALSE;
       break;
    case SCIP_LPPAR_PRICING:
       *ival = lpi->pricing;
@@ -2781,9 +2787,9 @@ SCIP_RETCODE SCIPlpiExactGetIntpar(
    case SCIP_LPPAR_LPINFO:
       rval = mpq_QSget_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, ival);
       if( *ival )
-	      *ival = TRUE;
+         *ival = TRUE;
       else
-	      *ival = FALSE;
+         *ival = FALSE;
       break;
    case SCIP_LPPAR_LPITLIM:
       rval = mpq_QSget_param(lpi->prob, QS_PARAM_SIMPLEX_MAX_ITERATIONS, ival);
@@ -2843,9 +2849,9 @@ SCIP_RETCODE SCIPlpiExactSetIntpar(
       break;
    case SCIP_LPPAR_LPINFO:
       if( ival == TRUE )
-	      rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 1);
+         rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 1);
       else
-	      rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 0);
+         rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_DISPLAY, 0);
       break;
    case SCIP_LPPAR_LPITLIM:
       rval = mpq_QSset_param(lpi->prob, QS_PARAM_SIMPLEX_MAX_ITERATIONS, ival);
@@ -2920,7 +2926,7 @@ SCIP_RETCODE SCIPlpiExactSetRealpar(
       break;
    case SCIP_LPPAR_OBJLIM:
       rval = mpq_QSset_param_EGlpNum(lpi->prob, QS_PARAM_OBJLLIM, tmpval);
-	 break;
+      break;
    case SCIP_LPPAR_FEASTOL:
    case SCIP_LPPAR_DUALFEASTOL:
    case SCIP_LPPAR_BARRIERCONVTOL:
