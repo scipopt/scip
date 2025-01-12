@@ -177,7 +177,6 @@ SCIP_Bool colExactInSync(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-
    SCIP_COL* fpcol;
 
    assert(colexact != NULL);
@@ -327,6 +326,7 @@ void colExactSortNonLP(
    )
 {
    int i;
+
    assert(col != NULL);
 
    /* check, if column is already sorted in the non-LP part */
@@ -369,7 +369,7 @@ void rowExactSortLP(
 
    /* sort coefficients */
    SCIPsortIntIntPtrPtrInterval(row->cols_index, row->linkpos, (void**)row->cols,
-                        (void**)row->vals, row->valsinterval, row->nlpcols);
+      (void**)row->vals, row->valsinterval, row->nlpcols);
 
    /* update links */
    for( i = 0; i < row->nlpcols; ++i )
@@ -394,6 +394,7 @@ void rowExactSortNonLP(
    )
 {
    int i;
+
    assert(row != NULL);
 
    /* check, if row is already sorted in the non-LP part, or if the sorting should be delayed */
@@ -402,8 +403,8 @@ void rowExactSortNonLP(
 
    /* sort coefficients */
    SCIPsortIntIntPtrPtrInterval(&(row->cols_index[row->nlpcols]), &(row->linkpos[row->nlpcols]),
-                        (void**)(&(row->cols[row->nlpcols])), (void**)&(row->vals[row->nlpcols]), &(row->valsinterval[row->nlpcols]),
-                        row->len - row->nlpcols);
+      (void**)(&(row->cols[row->nlpcols])), (void**)&(row->vals[row->nlpcols]), &(row->valsinterval[row->nlpcols]),
+      row->len - row->nlpcols);
 
    /* update links */
    for( i = row->nlpcols; i < row->len; ++i )
@@ -848,6 +849,7 @@ void colExactSwapCoefs(
 
       col->rows[pos1]->linkpos[col->linkpos[pos1]] = pos1;
    }
+
    if( col->linkpos[pos2] >= 0 )
    {
       assert(col->rows[pos2]->cols[col->linkpos[pos2]] == col);
@@ -2698,6 +2700,7 @@ SCIP_RETCODE SCIPlpExactDelRowset(
    {
       c--;
    }
+
    c = rowdstat[c] + 1;
    for( r = lp->nlpirows; r < nrows; r++ )
    {
@@ -3376,6 +3379,7 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
    {
       SCIP_CALL( SCIProwDelCoef(rowexact->fprow, blkmem, set, eventqueue, lpexact->fplp, rowexact->fprow->cols[i]) );
    }
+
    for( i = 0; i < rowexact->len; i++ )
    {
       SCIP_CALL( SCIProwAddCoef(rowexact->fprow, blkmem, set, eventqueue, lpexact->fplp, rowexact->cols[i]->fpcol,
@@ -3394,7 +3398,6 @@ SCIP_RETCODE rowExactCreateFromRowLimitEncodingLength(
 
    return SCIP_OKAY;
 }
-
 
 /** creates and captures an exact LP row from a fp row */
 SCIP_RETCODE SCIProwExactCreateFromRow(
@@ -3428,20 +3431,20 @@ SCIP_RETCODE SCIProwExactCreateFromRow(
 
    switch(SCIProwGetOrigintype(fprow))
    {
-      case SCIP_ROWORIGINTYPE_SEPA:
-         origin = SCIProwGetOriginSepa(fprow);
-         break;
-      case SCIP_ROWORIGINTYPE_CONS:
-         origin = SCIProwGetOriginCons(fprow);
-         break;
-      case SCIP_ROWORIGINTYPE_CONSHDLR:
-         origin = SCIProwGetOriginConshdlr(fprow);
-         break;
-      case SCIP_ROWORIGINTYPE_REOPT:
-      case SCIP_ROWORIGINTYPE_UNSPEC:
-      default:
-         origin = NULL;
-         break;
+   case SCIP_ROWORIGINTYPE_SEPA:
+      origin = SCIProwGetOriginSepa(fprow);
+      break;
+   case SCIP_ROWORIGINTYPE_CONS:
+      origin = SCIProwGetOriginCons(fprow);
+      break;
+   case SCIP_ROWORIGINTYPE_CONSHDLR:
+      origin = SCIProwGetOriginConshdlr(fprow);
+      break;
+   case SCIP_ROWORIGINTYPE_REOPT:
+   case SCIP_ROWORIGINTYPE_UNSPEC:
+   default:
+      origin = NULL;
+      break;
    }
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
@@ -3691,7 +3694,6 @@ SCIP_RETCODE SCIProwExactGenerateFpRows(
 
    return SCIP_OKAY;
 }
-
 
 /** applies all cached changes to the LP solver */
 SCIP_RETCODE SCIPlpExactFlush(
@@ -4432,14 +4434,15 @@ SCIP_RETCODE lpExactFlushAndSolve(
       /* solve the lp exactly */
       switch(algo)
       {
-         case 's':
-            SCIPsetDebugMsg(set, "Calling SCIPlpiExactSolveDual()\n");
-            retcode = SCIPlpiExactSolveDual(lpexact->lpiexact);
-            break;
-         default:
-            SCIPerrorMessage("Lp-algorithm-type %d is not supported in exact solving mode \n", algo);
-            SCIPABORT();
+      case 's':
+         SCIPsetDebugMsg(set, "Calling SCIPlpiExactSolveDual()\n");
+         retcode = SCIPlpiExactSolveDual(lpexact->lpiexact);
+         break;
+      default:
+         SCIPerrorMessage("Lp-algorithm-type %d is not supported in exact solving mode \n", algo);
+         SCIPABORT();
       }
+
       if( retcode == SCIP_LPERROR )
       {
          *lperror = TRUE;
@@ -4447,6 +4450,7 @@ SCIP_RETCODE lpExactFlushAndSolve(
          lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
          SCIPdebugMessage("Error solving lp exactly. \n");
       }
+
       if( retcode != SCIP_LPERROR )
       {
          SCIP_CALL( SCIPlpiExactGetSolFeasibility(lpexact->lpiexact, &(lpexact->primalfeasible), &(lpexact->dualfeasible)) );
@@ -5155,7 +5159,6 @@ SCIP_Bool SCIProwExactHasFpRelax(
    return row->fprelaxable;
 }
 
-
 /** returns exact col corresponding to fpcol, if it exists. Otherwise returns NULL */
 SCIP_COLEXACT* SCIPcolGetColExact(
    SCIP_COL*             col                 /**< SCIP col */
@@ -5612,6 +5615,7 @@ void SCIProwExactGetSolActivity(
 
       assert((i < rowexact->nlpcols) == (rowexact->linkpos[i] >= 0
          && colexact->lppos >= 0));
+
       if( useexact )
          SCIPsolGetValExact(solval, sol, set, stat, colexact->var);
       else
@@ -5636,7 +5640,6 @@ void SCIProwExactGetSolActivity(
 
    RatFreeBuffer(set->buffer, &solval);
 }
-
 
 /** decreases usage counter of LP row, and frees memory if necessary */
 SCIP_RETCODE SCIProwExactRelease(
@@ -6039,8 +6042,7 @@ void SCIProwExactRecalcPseudoActivity(
 
       assert(colexact->fpcol != NULL);
       assert(colexact != NULL);
-      assert((i < row->nlpcols) == (row->linkpos[i] >= 0
-         && colexact->fpcol->lppos >= 0));
+      assert((i < row->nlpcols) == (row->linkpos[i] >= 0 && colexact->fpcol->lppos >= 0));
       assert(colexact->fpcol->var != NULL);
       assert(SCIPvarGetStatus(colexact->fpcol->var) == SCIP_VARSTATUS_COLUMN);
 
@@ -6542,6 +6544,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLbGlobal(
       int deltainf;
 
       SCIP_CALL( RatCreateBuffer(set->buffer, &deltaval) );
+
       /* compute the pseudo objective delta due the new lower bound */
       getObjvalDeltaLbExact(SCIPvarGetObjExact(var), oldlb, newlb, deltaval, &deltainf);
 
@@ -6576,6 +6579,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarLb(
       assert(SCIPvarGetProbindex(var) >= 0);
 
       SCIP_CALL( RatCreateBuffer(set->buffer, &deltaval) );
+
       /* compute the pseudo objective delta due the new lower bound */
       getObjvalDeltaLbExact(SCIPvarGetObjExact(var), oldlb, newlb, deltaval, &deltainf);
 
@@ -6900,6 +6904,7 @@ SCIP_RETCODE lpexactComputeDualValidity(
 
    RatFreeBuffer(set->buffer, &objval);
    RatFreeBufferArray(set->buffer, &obj, lp->ncols);
+
    return SCIP_OKAY;
 }
 #endif
@@ -7643,7 +7648,7 @@ SCIP_RETCODE SCIPlpExactGetDualfarkas(
       lpicols[c]->validredcostlp = -1L;
       lpicols[c]->validfarkaslp = -1L;
       if( farkascoefs != NULL )
-	      RatSet(lpicols[c]->farkascoef, farkascoefs[c]);
+         RatSet(lpicols[c]->farkascoef, farkascoefs[c]);
 
       if( overwritefplp )
       {
@@ -8649,6 +8654,7 @@ SCIP_RETCODE SCIPlpExactStartDive(
          {
             SCIP_CALL( colExactStoreSolVals(lpexact->cols[c], blkmem) );
          }
+
          for( r = 0; r < lpexact->nrows; ++r )
          {
             SCIP_CALL( rowExactStoreSolVals(lpexact->rows[r], blkmem, lpexact->storedsolvals->lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE) );
@@ -8781,6 +8787,7 @@ SCIP_RETCODE SCIPlpExactEndDive(
          {
             SCIP_CALL( colExactRestoreSolVals(lpexact->cols[c], blkmem, stat->lpcount, set->lp_freesolvalbuffers) );
          }
+
          for( r = 0; r < lpexact->nrows; ++r )
          {
             SCIP_CALL( rowExactRestoreSolVals(lpexact->rows[r], blkmem, stat->lpcount, set->lp_freesolvalbuffers,
