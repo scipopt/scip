@@ -4391,9 +4391,9 @@ SCIP_RETCODE focusnodeCleanupVars(
    }
 
    /* mark variables as deleted */
-   for( i = 0; i < transprob->nvars; i++ )
+   for( i = 0; i < SCIPprobGetNVars(transprob); i++ )
    {
-      var = transprob->vars[i];
+      var = SCIPprobGetVars(transprob)[i];
       assert(var != NULL);
 
       /* check whether variable is deletable */
@@ -7681,8 +7681,8 @@ SCIP_RETCODE SCIPtreeStoreRelaxSol(
    assert(transprob != NULL);
    assert(SCIPrelaxationIsSolValid(relaxation));
 
-   nvars = transprob->nvars;
-   vars = transprob->vars;
+   nvars = SCIPprobGetNVars(transprob);
+   vars = SCIPprobGetVars(transprob);
 
    /* check if memory still needs to be allocated or resized */
    if( tree->probdiverelaxsol == NULL )
@@ -7724,8 +7724,8 @@ SCIP_RETCODE SCIPtreeRestoreRelaxSol(
    assert(tree->probdiverelaxstored);
    assert(tree->probdiverelaxsol != NULL);
 
-   nvars = transprob->nvars;
-   vars = transprob->vars;
+   nvars = SCIPprobGetNVars(transprob);
+   vars = SCIPprobGetVars(transprob);
    assert( nvars <= tree->nprobdiverelaxsol );
 
    /* iterate over all variables to restore the relaxation solution */

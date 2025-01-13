@@ -188,6 +188,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution);
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics);
 
+/** dialog execution method for the display symmetry command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySymmetry);
+
 /** dialog execution method for the display reoptstatistics command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReoptStatistics);

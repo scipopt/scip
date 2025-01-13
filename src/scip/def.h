@@ -104,11 +104,11 @@
  */
 #ifndef SCIP_EXPORT
 #if defined(_WIN32)
-#define SCIP_EXPORT __declspec(dllexport)
+#define SCIP_EXPORT __declspec(dllexport)                         /**< mark symbol to be exported in DLL */
 #elif defined(__GNUC__) && __GNUC__ >= 4
-#define SCIP_EXPORT __attribute__((__visibility__("default")))
+#define SCIP_EXPORT __attribute__((__visibility__("default")))    /**< mark symbol to be visible in shared library */
 #else
-#define SCIP_EXPORT
+#define SCIP_EXPORT                                               /**< no symbol export attribute known for current compiler */
 #endif
 #endif
 

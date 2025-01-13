@@ -5831,6 +5831,9 @@ SCIP_DECL_BRANCHCOPY(branchCopyLookahead)
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
 
+   /* call inclusion method of branchrule */
+   SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
+
    return SCIP_OKAY;
 }
 

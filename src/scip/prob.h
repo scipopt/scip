@@ -51,8 +51,11 @@
 #include "scip/type_cons.h"
 #include "scip/type_conflictstore.h"
 #include "scip/type_message.h"
+#include "scip/type_misc.h"
 
+#ifdef NDEBUG
 #include "scip/struct_prob.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -629,8 +632,43 @@ SCIP_VAR** SCIPprobGetVars(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** gets number of fixed variables */
+int SCIPprobGetNFixedVars(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets fixed variables */
+SCIP_VAR** SCIPprobGetFixedVars(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets number of variables existing when problem solving started */
+int SCIPprobGetStartNVars(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 /** gets number of problem constraints */
 int SCIPprobGetNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets problem constraints */
+SCIP_CONS** SCIPprobGetConss(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets maximum number of constraints existing at the same time */
+int SCIPprobGetMaxNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets number of constraints existing when problem solving started */
+int SCIPprobGetStartNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** gets the objective sense */
+SCIP_OBJSENSE SCIPprobGetObjsense(
    SCIP_PROB*            prob                /**< problem data */
    );
 
@@ -676,7 +714,14 @@ void SCIPprobEnableConsCompression(
 #define SCIPprobGetNImplVars(prob)      ((prob)->nimplvars)
 #define SCIPprobGetNContVars(prob)      ((prob)->ncontvars)
 #define SCIPprobGetVars(prob)           ((prob)->vars)
+#define SCIPprobGetNFixedVars(prob)     ((prob)->nfixedvars)
+#define SCIPprobGetFixedVars(prob)      ((prob)->fixedvars)
+#define SCIPprobGetStartNVars(prob)     ((prob)->startnvars)
 #define SCIPprobGetNConss(prob)         ((prob)->nconss)
+#define SCIPprobGetConss(prob)          ((prob)->conss)
+#define SCIPprobGetMaxNConss(prob)      ((prob)->maxnconss)
+#define SCIPprobGetStartNConss(prob)    ((prob)->startnconss)
+#define SCIPprobGetObjsense(prob)       ((prob)->objsense)
 #define SCIPprobGetObjoffset(prob)      ((prob)->objoffset)
 #define SCIPprobGetObjscale(prob)       ((prob)->objscale)
 #define SCIPprobIsConsCompressionEnabled(prob)  ((prob)->conscompression)

@@ -3469,7 +3469,7 @@ SCIP_RETCODE detectNlhdlrs(
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= 0);
-   assert(SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetStage(scip) == SCIP_STAGE_INITSOLVE || SCIPgetStage(scip) == SCIP_STAGE_SOLVING);  /* should only be called in presolve or initsolve or consactive */
+   assert(SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING && SCIPgetStage(scip) <= SCIP_STAGE_SOLVING);  /* should only be called in presolve or initsolve or consactive */
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -6714,6 +6714,7 @@ SCIP_RETCODE collectBranchingCandidates(
                cands[*ncands].expr = consdata->varexprs[i];
                cands[*ncands].var = var;
                cands[*ncands].auxviol = SCIPgetExprViolScoreNonlinear(consdata->varexprs[i]);
+               cands[*ncands].fractionality = 0.0;
                ++(*ncands);
 
                /* invalidate violscore-tag, so that we do not register variables that appear in multiple constraints
@@ -6752,6 +6753,7 @@ SCIP_RETCODE collectBranchingCandidates(
                cands[*ncands].expr = expr;
                cands[*ncands].var = var;
                cands[*ncands].auxviol = SCIPgetExprViolScoreNonlinear(expr);
+               cands[*ncands].fractionality = 0.0;
                ++(*ncands);
             }
          }
@@ -7169,7 +7171,7 @@ void scoreBranchingCandidates(
 
       if( maxscore.fractionality > 0.0 )
       {
-         cands[c].fractionality += conshdlrdata->branchfracweight * cands[c].fractionality / maxscore.fractionality;
+         cands[c].weighted += conshdlrdata->branchfracweight * cands[c].fractionality / maxscore.fractionality;
          weightsum += conshdlrdata->branchfracweight;
 
          ENFOLOG( SCIPinfoMessage(scip, enfologfile, " %+g*%6.2g(frac)", conshdlrdata->branchfracweight, cands[c].fractionality / maxscore.fractionality); )

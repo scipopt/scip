@@ -3245,7 +3245,7 @@ SCIP_RETCODE readQCMatrix(
    }
    else
    {
-      SCIPwarningMessage(scip, "QCMATRIX section has no entries.\n");
+      SCIPwarningMessage(scip, "QCMATRIX section for constraint <%s> has no entries.\n", SCIPconsGetName(lincons));
    }
 
  TERMINATE:
@@ -4020,16 +4020,16 @@ SCIP_RETCODE getLinearCoeffs(
    /* retransform given variables to active variables */
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, nactivevars, &activeconstant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, nactivevars, &activeconstant, &requiredsize) );
 
       if( requiredsize > nactivevars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &activevars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &activevals, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, requiredsize, &activeconstant, &requiredsize, TRUE) );
-         assert( requiredsize <= nactivevars );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, requiredsize, &activeconstant, &requiredsize) );
       }
+      assert( requiredsize == nactivevars );
    }
    else
    {
@@ -4962,6 +4962,7 @@ SCIP_RETCODE SCIPwriteMps(
    SCIP_CONS** consSOS1;
    SCIP_CONS** consSOS2;
    SCIP_CONS** consQuadratic;
+   SCIP_EXPR** exprQuadratic;  /* expressions to quadratic constraints */
    int nConsIndicator;
    int nConsSOS1;
    int nConsSOS2;
@@ -5028,6 +5029,7 @@ SCIP_RETCODE SCIPwriteMps(
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS1, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS2, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consQuadratic, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprQuadratic, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consIndicator, nconss) );
 
    /* nfixedvars counts all variables with status SCIP_VARSTATUS_FIXED, SCIP_VARSTATUS_AGGREGATED, SCIP_VARSTATUS_MULTAGGR, but not SCIP_VARSTATUS_NEGATED */
@@ -5355,20 +5357,42 @@ SCIP_RETCODE SCIPwriteMps(
          int j;
 
          /* check if it is a quadratic constraint */
-         SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
+         expr = SCIPgetExprNonlinear(cons);
+         SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
+         if( !isquadratic || !SCIPexprAreQuadraticExprsVariables(expr) )
+         {
+            SCIP_EXPR* exprcopy;
+            SCIP_Bool changed;
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPduplicateExpr(scip, expr, &exprcopy, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPsimplifyExpr(scip, exprcopy, &expr, &changed, &infeasible, NULL, NULL) );
+            SCIP_CALL( SCIPreleaseExpr(scip, &exprcopy) );
+            /* the corresponding releaseExpr is in the writing of the QCMATRIX sections at the end */
+            if( changed && !infeasible )
+            {
+               SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
+               isquadratic &= SCIPexprAreQuadraticExprsVariables(expr);
+            }
+         }
+
          if( !isquadratic )
          {
             /* unknown constraint type; mark this with SCIPinfinity(scip) */
             rhss[c] = SCIPinfinity(scip);
 
-            SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
+            SCIPwarningMessage(scip, "nonlinear constraint <%s> not recognized as quadratic: cannot print as MPS\n", SCIPconsGetName(cons));
+            if( expr != SCIPgetExprNonlinear(cons) )
+            {
+               SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+            }
             continue;
          }
 
-         /* store constraint */
-         consQuadratic[nConsQuadratic++] = cons;
-
-         expr = SCIPgetExprNonlinear(cons);
+         /* store constraint and corresponding expression (may be the simplified one) */
+         consQuadratic[nConsQuadratic] = cons;
+         exprQuadratic[nConsQuadratic] = expr;
+         ++nConsQuadratic;
 
          /* collect linear coefficients of quadratic part */
          SCIPexprGetQuadraticData(expr, &constant, &nlinexprs, &linexprs, &lincoefs, &nquadexprs, NULL, NULL,
@@ -5814,7 +5838,7 @@ SCIP_RETCODE SCIPwriteMps(
          SCIP_EXPR* expr;
 
          cons = consQuadratic[c];
-         expr = SCIPgetExprNonlinear(cons);
+         expr = exprQuadratic[c];
 
          SCIPexprGetQuadraticData(expr, NULL, NULL, NULL, NULL, &nconsvars, &nbilin, NULL, NULL);
 
@@ -5889,6 +5913,11 @@ SCIP_RETCODE SCIPwriteMps(
             printStart(scip, file, "", varname2, (int) maxnamelen);
             printRecord(scip, file, varname, valuestr, maxnamelen);
             SCIPinfoMessage(scip, file, "\n");
+         }
+
+         if( expr != SCIPgetExprNonlinear(cons) )
+         {
+            SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
          }
       }
 
@@ -5968,6 +5997,7 @@ SCIP_RETCODE SCIPwriteMps(
 
    /* free buffer arrays for SOS1, SOS2, and quadratic */
    SCIPfreeBufferArray(scip, &consIndicator);
+   SCIPfreeBufferArray(scip, &exprQuadratic);
    SCIPfreeBufferArray(scip, &consQuadratic);
    SCIPfreeBufferArray(scip, &consSOS2);
    SCIPfreeBufferArray(scip, &consSOS1);
