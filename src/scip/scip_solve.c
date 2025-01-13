@@ -2558,9 +2558,6 @@ SCIP_RETCODE SCIPpresolve(
       SCIP_CALL( displayRelevantStats(scip) );
    }
 
-   /* AG@LE if certificate printing is enabled and presolving changed something, then print warning message that
-    * certificate is printed for presolved problem */
-   /* LE@AG like this? Possibly refer to papilo-certificate for presolving? */
    if( SCIPisCertificateActive(scip) && hasPresolveModifiedProblem(scip) )
    {
       SCIPwarningMessage(scip, "Certificate is printed for presolved problem. "
