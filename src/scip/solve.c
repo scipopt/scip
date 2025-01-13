@@ -4284,11 +4284,11 @@ SCIP_Bool restartAllowed(
    assert(set != NULL);
    assert(stat != NULL);
 
+   /**@todo implement restarts during exact solving mode by transferring rational data correctly */
+   /**@todo enable certification for restarts */
    return set->nactivepricers == 0 && !set->reopt_enable
       && ( set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts )
       && !(set->exact_enabled);
-   /* MP@LE Should we add a todo to think about enabling restarts for exact solves? Test whether restarts would work without certificates? */
-   /* LE@MP we could add a todo. without certificates, we would still need some additional coding work done, I think to make sure all data is correctly transported */
 }
 #else
 #define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && !set->reopt_enable \
@@ -4938,17 +4938,18 @@ SCIP_RETCODE solveNode(
    {
       SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
-      /* AG@LE why are these ifs temporary? */
-      /* LE@AG I guess they were less temporary than I thought 6 years ago. I think we just remove the comment*/
-      /** @todo exip: these ifs are temporary */
       if( !(lp->solved && lp->flushed) )
       {
          SCIP_CALL( SCIPcertificatePrintInheritedBound(set, stat->certificate, focusnode) );
       }
       else if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE && focusnodehaslp )
+      {
          SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, TRUE) );
+      }
       else if( focusnodehaslp )
+      {
          SCIP_CALL( SCIPcertificatePrintDualboundExactLP(stat->certificate, lp->lpexact, set, SCIPtreeGetFocusNode(tree), transprob, FALSE) );
+      }
 
       /* the LP might have been unbounded but not enforced, because the node is cut off anyway */
       *unbounded = FALSE;
