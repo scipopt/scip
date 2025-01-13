@@ -657,7 +657,7 @@ void SCIPiisfinderInfoMessage(
 
    if( printheaders || (iis->niismessagecalls % 15 == 0) )
    {
-      SCIPinfoMessage(scip, NULL, "time(s) | node   | cons   | vars   | bounds | infeasible \n");
+      SCIPinfoMessage(scip, NULL, "time(s)| node  | cons  | vars  | bounds| infeasible\n");
       if( printheaders )
          return;
    }
@@ -672,7 +672,7 @@ void SCIPiisfinderInfoMessage(
       if( !SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
          ++nbounds;
    }
-   SCIPinfoMessage(scip, NULL, "%-7.1f |%7lld |%7d |%7d |%7d | %11s \n", SCIPiisGetTime(iis), SCIPiisGetNNodes(iis), SCIPgetNOrigConss(scip), nvars, nbounds, valid);
+   SCIPinfoMessage(scip, NULL, "%7.1f|%7lld|%7d|%7d|%7d| %10s\n", SCIPiisGetTime(iis), SCIPiisGetNNodes(iis), SCIPgetNOrigConss(scip), nvars, nbounds, valid);
 }
 
 /** creates and captures a new IIS */
