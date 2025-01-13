@@ -117,6 +117,7 @@ SCIP_RETCODE createSubscipIIS(
    SCIP_CALL( SCIPsetIntParam(iis->subscip, "display/verblevel", 0) );
    SCIP_CALL( SCIPsetBoolParam(iis->subscip, "timing/statistictiming", FALSE) );
 #endif
+   SCIP_CALL( SCIPsetSubscipsOff(iis->subscip, TRUE) );
    SCIP_CALL( SCIPsetIntParam(iis->subscip, "limits/bestsol", 1) );
    SCIP_CALL( SCIPsetRealParam(iis->subscip, "limits/time", timelim - SCIPclockGetTime(iis->iistime)) );
    SCIP_CALL( SCIPsetLongintParam(iis->subscip, "limits/nodes", nodelim) );
