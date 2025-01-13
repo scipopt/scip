@@ -1735,8 +1735,6 @@ SCIP_RETCODE probScaleObjExact(
       SCIP_CALL( SCIPcalcIntegralScalarExact(set->buffer, objvals, nints, OBJSCALE_MAXFINALSCALE,
          intscalar, &success) );
 
-      /* AG@LE why is RatDebugMessage printed in optimized mode? */
-      /* LE@AG it should not be */
       RatDebugMessage("integral objective scalar: success=%u, intscalar=%q\n", success, intscalar);
 
       /* apply scaling */
