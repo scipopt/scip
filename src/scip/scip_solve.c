@@ -2368,28 +2368,29 @@ SCIP_RETCODE prepareReoptimization(
 
 /** checks whether presolving changed the problem at all */
 static
-SCIP_Bool hasPresolveModifiedProblem(SCIP* scip)
+SCIP_Bool hasPresolveModifiedProblem(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
 {
-   SCIP_Bool changed;
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
 
-   changed = false;
+   if( scip->stat->npresolfixedvars + scip->stat->npresolaggrvars > 0 )
+      return TRUE;
+   else if( scip->stat->npresoldelconss > 0 )
+      return TRUE;
+   else if( scip->stat->npresoladdconss > 0 )
+      return TRUE;
+   else if( scip->stat->npresolchgbds > 0 )
+      return TRUE;
+   else if( scip->stat->npresoladdholes > 0 )
+      return TRUE;
+   else if( scip->stat->npresolchgsides > 0 )
+      return TRUE;
+   else if( scip->stat->npresolchgcoefs > 0 )
+      return TRUE;
 
-   if(scip->stat->npresolfixedvars + scip->stat->npresolaggrvars > 0)
-      changed = true;
-   else if(scip->stat->npresoldelconss > 0)
-      changed = true;
-   else if(scip->stat->npresoladdconss > 0)
-      changed = true;
-   else if(scip->stat->npresolchgbds > 0)
-      changed = true;
-   else if(scip->stat->npresoladdholes > 0)
-      changed = true;
-   else if(scip->stat->npresolchgsides > 0)
-      changed = true;
-   else if(scip->stat->npresolchgcoefs > 0)
-      changed = true;
-
-   return changed;
+   return FALSE;
 }
 
 /** transforms and presolves problem
@@ -2560,10 +2561,10 @@ SCIP_RETCODE SCIPpresolve(
    /* AG@LE if certificate printing is enabled and presolving changed something, then print warning message that
     * certificate is printed for presolved problem */
    /* LE@AG like this? Possibly refer to papilo-certificate for presolving? */
-   if(SCIPisCertificateActive(scip) && hasPresolveModifiedProblem(scip))
+   if( SCIPisCertificateActive(scip) && hasPresolveModifiedProblem(scip) )
    {
-      SCIPwarningMessage(scip, "Certificate is printed for presolved problem. \
-         Disable presolving for rigorous certificate of the original problem. \n");
+      SCIPwarningMessage(scip, "Certificate is printed for presolved problem. "
+         "Disable presolving for rigorous certificate of the original problem.\n");
    }
 
    return SCIP_OKAY;
