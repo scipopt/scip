@@ -986,7 +986,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    SCIP_Bool boundtightened = FALSE;
 
    eventtype = SCIPeventGetType(event);
-   assert(eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED));
+   assert(eventtype & (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED));
 
    assert(eventdata != NULL);
    expr = (SCIP_EXPR*) eventdata;
@@ -1138,7 +1138,7 @@ SCIP_RETCODE catchVarEvent(
 
       assert(ownerdata->nconss == 1);
 
-      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED;
+      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED;
 
       SCIP_CALL( SCIPcatchVarEvent(scip, SCIPgetVarExprVar(expr), eventtype, eventhdlr, (SCIP_EVENTDATA*)expr, &ownerdata->filterpos) );
       assert(ownerdata->filterpos >= 0);

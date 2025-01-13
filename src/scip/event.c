@@ -1125,6 +1125,10 @@ SCIP_VAR* SCIPeventGetVar(
       assert(event->data.eventtypechg.var != NULL);
       return event->data.eventtypechg.var;
 
+   case SCIP_EVENTTYPE_IMPLTYPECHANGED:
+      assert(event->data.eventimpltypechg.var != NULL);
+      return event->data.eventimpltypechg.var;
+
    default:
       SCIPerrorMessage("event does not belong to a variable\n");
       SCIPABORT();
@@ -1193,6 +1197,11 @@ SCIP_RETCODE SCIPeventChgVar(
    case SCIP_EVENTTYPE_TYPECHANGED:
       assert(event->data.eventtypechg.var != NULL);
       event->data.eventtypechg.var = var;
+      break;
+
+   case SCIP_EVENTTYPE_IMPLTYPECHANGED:
+      assert(event->data.eventimpltypechg.var != NULL);
+      event->data.eventimpltypechg.var = var;
       break;
 
    default:
