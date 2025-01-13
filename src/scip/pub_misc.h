@@ -867,7 +867,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPhashmapInsertLong(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
-   long                  image               /**< new image for origin */
+   SCIP_Longint          image               /**< new image for origin */
    );
 
 /** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
@@ -900,7 +900,7 @@ int SCIPhashmapGetImageInt(
    void*                 origin              /**< origin to retrieve image for */
    );
 
-/** retrieves image of given origin from the hash map, or LONG_MAX if no image exists */
+/** retrieves image of given origin from the hash map, or SCIP_LONGINT_MAX if no image exists */
 SCIP_EXPORT
 long SCIPhashmapGetImageLong(
    SCIP_HASHMAP*         hashmap,            /**< hash map */

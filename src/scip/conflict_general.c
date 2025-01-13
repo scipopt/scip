@@ -1432,12 +1432,12 @@ SCIP_RETCODE SCIPgetFarkasProof(
             if( SCIPsetCertificateEnabled(set) )
             {
                certificateIndex = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, row->rowexact);
-               if( certificateIndex  == LONG_MAX && SCIProwGetOrigintype(row) == SCIP_ROWORIGINTYPE_SEPA )
+               if( certificateIndex  == SCIP_LONGINT_MAX && SCIProwGetOrigintype(row) == SCIP_ROWORIGINTYPE_SEPA )
                {
                   SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, SCIPgetCertificate(set->scip), prob, row, 'L') );
                   certificateIndex = SCIPcertificateGetRowIndex(SCIPgetCertificate(set->scip), row->rowexact, dualfarkas[r] > 0);
                }
-               assert(certificateIndex != LONG_MAX);
+               assert(certificateIndex != SCIP_LONGINT_MAX);
             }
 
          }
@@ -1897,13 +1897,13 @@ SCIP_RETCODE SCIPgetDualProof(
          {
             SCIP_Longint certificateIndex;
             certificateIndex = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, usedrows[i]->rowexact);
-            if(certificateIndex  == LONG_MAX && SCIProwGetOrigintype(usedrows[i]) == SCIP_ROWORIGINTYPE_SEPA )
+            if(certificateIndex  == SCIP_LONGINT_MAX && SCIProwGetOrigintype(usedrows[i]) == SCIP_ROWORIGINTYPE_SEPA )
             {
                SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, SCIPgetCertificate(set->scip), transprob, usedrows[i], 'L') );
             }
             else
             {
-               assert(certificateIndex != LONG_MAX);
+               assert(certificateIndex != SCIP_LONGINT_MAX);
             }
          }
       }

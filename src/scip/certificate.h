@@ -247,7 +247,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_Real*            weights,            /**< array of weights */
    int                   naggrrows,          /**< length of the arrays */
    SCIP_Bool             local,              /**< true if local bound information can be used */
-   unsigned long*        certificateline     /**< pointer to store the certificate line index or NULL */
+   SCIP_Longint*         certificateline     /**< pointer to store the certificate line index or NULL */
    );
 
 /** prints a variable bound to the problem section of the certificate file and returns line index */

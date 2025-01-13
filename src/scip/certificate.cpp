@@ -2182,18 +2182,18 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
          RatSet(vals[len], val);
          key = SCIPhashmapGetImageLong(certificate->rowdatahash, (void*) row);
 
-         if( key == LONG_MAX && SCIProwGetOrigintype(SCIProwExactGetRow(row)) == SCIP_ROWORIGINTYPE_SEPA )
+         if( key == SCIP_LONGINT_MAX && SCIProwGetOrigintype(SCIProwExactGetRow(row)) == SCIP_ROWORIGINTYPE_SEPA )
          {
             SCIP_CALL( SCIPcertificatePrintMirCut(set, lpexact->fplp, certificate, prob, SCIProwExactGetRow(row), 'L') );
             key = SCIPhashmapGetImageLong(certificate->rowdatahash, (void*) row);
          }
-         else if( key == LONG_MAX && SCIProwExactGetNNonz(row) == 1 )
+         else if( key == SCIP_LONGINT_MAX && SCIProwExactGetNNonz(row) == 1 )
          {
             SCIP_VAR* var = SCIPcolExactGetVar(SCIProwExactGetCols(row)[0]);
             key = ind[len] = RatIsNegative(val) ? SCIPvarGetUbCertificateIndexLocal(var) : SCIPvarGetLbCertificateIndexLocal(var);
          }
 
-         assert(key != LONG_MAX);
+         assert(key != SCIP_LONGINT_MAX);
 
          ind[len] = key;
          /* if we have a ranged row, and the dual corresponds to the upper bound,
@@ -2475,7 +2475,7 @@ SCIP_Longint SCIPcertificateGetRowIndex(
    )
 {
    SCIP_Longint ret = SCIPhashmapGetImageLong(certificate->rowdatahash, row);
-   assert( ret != LONG_MAX );
+   assert( ret != SCIP_LONGINT_MAX );
    /* for ranged rows, the key always corresponds to the >= part of the row;
          therefore we need to increase it by one to get the correct key */
    if( !RatIsAbsInfinity(row->rhs) && !RatIsAbsInfinity(row->lhs) && !RatIsEqual(row->lhs, row->rhs) && rhs)
@@ -2637,7 +2637,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_Real*            weights,            /**< array of weights */
    int                   naggrrows,          /**< length of the arrays */
    SCIP_Bool             local,              /**< true if local bound information can be used */
-   unsigned long*        certificateline     /**< pointer to store the certificate line index or NULL */
+   SCIP_Longint*         certificateline     /**< pointer to store the certificate line index or NULL */
    )
 {
    int i;

@@ -3564,7 +3564,7 @@ SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
 
    image = SCIPhashmapGetImageLong(certificate->rowdatahash, row);
    /* add row to hashmap */
-   if( image != LONG_MAX )
+   if( image != SCIP_LONGINT_MAX )
    {
       SCIPmessageFPrintWarning(scip->messagehdlr, "%lu \n", (size_t) SCIPhashmapGetImage(certificate->rowdatahash, row));
       SCIPerrorMessage("Duplicate row in certificate row hashmap\n");
@@ -3638,7 +3638,7 @@ SCIP_Longint certificateGetConsIndex(
 
    ret = SCIPhashmapGetImageLong(certificate->rowdatahash, cons);
 
-   assert( ret != LONG_MAX );
+   assert( ret != SCIP_LONGINT_MAX );
    if( !RatIsAbsInfinity(consdata->rhs) && !RatIsAbsInfinity(consdata->lhs) && !RatIsEqual(consdata->lhs, consdata->rhs) && rhs)
       ret += 1;
 
@@ -7249,7 +7249,7 @@ SCIP_RETCODE certificatePrintActivityConflict(
    RatSetReal(diff, activity);
    RatDiffReal(diff, diff, side);
    conscertificateindex = certificateGetConsIndex(scip, certificate, cons, rhs);
-   assert(conscertificateindex != LONG_MAX);
+   assert(conscertificateindex != SCIP_LONGINT_MAX);
 
    SCIPcertificatePrintProofMessage(certificate, "ActivityConflict%d ", certificate->indexcounter);
    SCIPcertificatePrintProofMessage(certificate, rhs ? "G " : "L ");
