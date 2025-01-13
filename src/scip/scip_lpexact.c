@@ -338,11 +338,17 @@ SCIP_RETCODE SCIPgetRowSolFeasibilityExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolFeasibilityExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
+   {
       SCIProwExactGetSolFeasibility(row, scip->set, scip->stat, sol, result);
+   }
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
+   {
       SCIP_CALL( SCIProwExactGetLPFeasibility(row, scip->set, scip->stat, scip->lpexact, result) );
+   }
    else
+   {
       SCIP_CALL( SCIProwExactGetPseudoFeasibility(row, scip->set, scip->stat, result) );
+   }
 
    return SCIP_OKAY;
 }
@@ -365,7 +371,9 @@ SCIP_RETCODE SCIPgetRowSolActivityExact(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolActivityExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    if( sol != NULL )
+   {
       SCIP_CALL( SCIProwExactGetSolActivity(row, scip->set, scip->stat, sol, useexact, result) );
+   }
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
       RatSet(result, SCIProwExactGetLPActivity(row, scip->stat, scip->lpexact));
    else
