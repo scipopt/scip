@@ -16558,9 +16558,10 @@ SCIP_RETCODE SCIPlpEndDive(
          SCIP_CALL( SCIPlpFlush(lp, blkmem, set, prob, eventqueue) );
       }
 
-      /* increment lp counter to ensure that we do not use solution values from the last solved diving lp but when we
+      /* increment lp counter to ensure that we do not use solution values from the last solved diving lp; only when we
        * are in exact diving mode, we do not want to increase it since we want to use the exact diving solution added
-       * by ConsExactSol */
+       * by the exactsol constraint handler
+       */
       if( !SCIPlpExactDiving(lp->lpexact) )
          SCIPstatIncrement(stat, set, lpcount);
 
