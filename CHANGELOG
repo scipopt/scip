@@ -36,7 +36,7 @@ Miscellaneous
 -------------
 
 - the output precision for writing CIP/OPB files has been increased at several places for nonlinear constraints
-- the solchecker tool now also supports SCIP solution format
+- the solchecker tool now also supports SCIP solutions without unknown or infinite values
 
 Known bugs
 ----------
