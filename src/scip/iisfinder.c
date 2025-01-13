@@ -440,7 +440,7 @@ SCIP_RETCODE SCIPiisGenerate(
    }
 
    SCIP_CALL( SCIPgetBoolParam(set->scip, "iis/removeunusedvars", &removeunusedvars) );
-   if( removeunusedvars )
+   if( removeunusedvars && !trivial )
    {
       SCIP_Bool deleted;
 
