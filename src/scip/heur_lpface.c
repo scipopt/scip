@@ -774,6 +774,13 @@ SCIP_RETCODE setupSubscipLpface(
       SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, fixvars, fixvals, nfixvars, TRUE) );
 
       /* copy parameter settings */
+      /* AG@LE I have seen this trigger the error message in set.c:paramChgdExactSolve; although this does not lead to a
+       * crash it should be avoided.  In SCIPcopyConsCompression, this is probably surpressed by
+       * SCIPsetMessagehdlrQuiet(targetscip, TRUE);
+       *
+       * Also need to check all other occurrences of this method carefully again; had this been called before
+       * SCIPcopyVars(), then I guess the subscip would have been solved exactly, which we absolutely do not want.
+       */
       SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
    }
    else
