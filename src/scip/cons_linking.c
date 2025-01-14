@@ -3622,9 +3622,14 @@ SCIP_RETCODE SCIPcreateConsLinking(
 
    SCIPdebugMsg(scip, "create linking constraint for variable <%s> with %d binary variables (SCIP stage %d)\n",
       SCIPvarGetName(linkvar), nbinvars, SCIPgetStage(scip));
-   for( k = 0; k < nbinvars; k++ )
+   for( k = 0; k < nbinvars; ++k )
    {
       SCIPdebugMsg(scip, "Var %d : <%s>\n", k, SCIPvarGetName(binvars[k]));
+      if( !SCIPisFinite(vals[k]) || SCIPisInfinity(scip, REALABS(vals[k])) )
+      {
+         SCIPerrorMessage("linking value %lf of <%s> not finite\n", vals[k], SCIPvarGetName(binvars[k]));
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* get constraint handler data */
