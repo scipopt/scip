@@ -309,7 +309,7 @@ Presolve<SCIP_Real> setupPresolve(
    DualFix<SCIP_Real> *dualfix = new DualFix<SCIP_Real>();
    dualfix->set_fix_to_infinity_allowed(false);
    presolve.addPresolveMethod( uptr( dualfix ) );
-   presolve.addPresolveMethod( uptr( new CliqueMerging<SCIP_REAL>() ) );
+   presolve.addPresolveMethod( uptr( new CliqueMerging<SCIP_Real>() ) );
 #else
    presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
 #endif
