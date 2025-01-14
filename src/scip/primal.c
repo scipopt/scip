@@ -1307,8 +1307,10 @@ SCIP_Bool primalExistsSol(
       /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
        * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
        */
+      /* AG@LE Antonia weakened the following assert by adding the last condition, "|| ! set->misc_improvingsols". I
+       * don't think that is correct. */
       /* TODO: we shouldn't need to be better if we are not interested in improving solutions. Does that makes sense? */
-      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)) || ! set->misc_improvingsols);
+      assert(SCIPsetIsLE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasLE(set, solobj, obj)));
 
       if( SCIPsetIsLT(set, solobj, obj) )
          break;
@@ -1334,8 +1336,10 @@ SCIP_Bool primalExistsSol(
       /* due to transferring the objective value of transformed solutions to the original space, small numerical errors might occur
        * which can lead to SCIPsetIsLE() failing in case of high absolute numbers
        */
+      /* AG@LE Antonia weakened the following assert by adding the last condition, "|| ! set->misc_improvingsols". I
+       * don't think that is correct. */
       /* TODO: we shouldn't need to be better if we are not interested in improving solutions. Does that makes sense? */
-      assert( SCIPsetIsGE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasGE(set, solobj, obj)) || ! set->misc_improvingsols);
+      assert(SCIPsetIsGE(set, solobj, obj) || (REALABS(obj) > 1e+13 * SCIPsetEpsilon(set) && SCIPsetIsFeasGE(set, solobj, obj)));
 
       if( SCIPsetIsGT(set, solobj, obj) )
          break;
@@ -1439,6 +1443,7 @@ SCIP_Bool solOfInterest(
    /* check if we are willing to check worse solutions; a solution is better if the objective is smaller than the
     * current cutoff bound; solutions with infinite objective value are never accepted
     */
+   /* AG@LE all ctest setting files currently set misc_improvingsols = TRUE; should this be the default behavior for exact/enabled = TRUE? */
    if( (!set->misc_improvingsols || obj < primal->cutoffbound || solisbetterexact) && !SCIPsetIsInfinity(set, obj) )
    {
       /* find insert position for the solution */
