@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - master
+      - v90-bugfix
 
 jobs:
   build:
@@ -30,4 +31,8 @@ jobs:
         mkdir build && cd build
         cmake .. -DSOPLEX_DIR=soplex/build -DPAPILO=Off -DIPOPT=Off -DZIMPL=Off
         make -j
-        ctest --output-on-failure
+    - name: Upload build results
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-results
+        path: build/
