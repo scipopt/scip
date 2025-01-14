@@ -2171,6 +2171,7 @@ SCIP_RETCODE displayRelevantStats(
       {
          SCIP_Rational* objval;
          SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &objval) );
+         /* AG@LE discuss output here: 1. rename to Exact Primal Bound? 2. why not print the exact dual bound and exagt gap? */
          SCIPmessagePrintInfo(scip->messagehdlr, "Best exact objval  : ");
          SCIPgetPrimalboundExact(scip, objval);
          RatMessage(scip->messagehdlr, NULL, objval);
