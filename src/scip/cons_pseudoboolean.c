@@ -967,7 +967,7 @@ void checkConsConsistency(
 
    /* get variables and coefficients */
    SCIP_CALL_ABORT( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (coefs != NULL));
+   assert(nvars == 0 || coefs != NULL);
 
    /* calculate all not artificial linear variables and all artificial and-resultants */
    SCIP_CALL_ABORT( getLinVarsAndAndRess(scip, cons, vars, coefs, nvars, linvars, lincoefs, &nlinvars,
@@ -1836,7 +1836,7 @@ SCIP_RETCODE consdataPrint(
 
    /* get variables and coefficient of linear constraint */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (coefs != NULL));
+   assert(nvars == 0 || coefs != NULL);
 
    /* get and-data hashmap */
    conshdlr = SCIPconsGetHdlr(cons);
@@ -1994,7 +1994,7 @@ SCIP_RETCODE createAndAddAndCons(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(vars != NULL);
-   assert(nvars > 0);
+   assert(nvars >= 1);
    assert(andcons != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -2205,9 +2205,10 @@ SCIP_RETCODE addCoefTerm(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(nvars == 0 || vars != NULL);
+   assert(vars != NULL);
+   assert(nvars >= 1);
 
-   if( nvars == 0 || SCIPisZero(scip, val) )
+   if( SCIPisZero(scip, val) )
       return SCIP_OKAY;
 
    consdata = SCIPconsGetData(cons);
@@ -2410,7 +2411,7 @@ SCIP_RETCODE chgLhs(
 
    /* get variables and coefficient of linear constraint */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (coefs != NULL));
+   assert(nvars == 0 || coefs != NULL);
 
    /* calculate all not artificial linear variables and all artificial and-resultants */
    SCIP_CALL( getLinVarsAndAndRess(scip, cons, vars, coefs, nvars, linvars, lincoefs, &nlinvars, andress, andcoefs, andnegs, &nandress) );
@@ -2581,7 +2582,7 @@ SCIP_RETCODE chgRhs(
 
    /* get variables and coefficient of linear constraint */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (coefs != NULL));
+   assert(nvars == 0 || coefs != NULL);
 
    /* calculate all not artificial linear variables and all artificial and-resultants */
    SCIP_CALL( getLinVarsAndAndRess(scip, cons, vars, coefs, nvars, linvars, lincoefs, &nlinvars, andress, andcoefs, andnegs, &nandress) );
@@ -2741,13 +2742,10 @@ SCIP_RETCODE createAndAddAnds(
 
    (*nandconss) = 0;
 
-   if( nterms == 0 )
-      return SCIP_OKAY;
-
    /* loop over all terms and create/get all and constraints */
    for( t = 0; t < nterms; ++t )
    {
-      if( !SCIPisZero(scip, termcoefs[t]) && ntermvars[t] > 0 )
+      if( !SCIPisZero(scip, termcoefs[t]) )
       {
          SCIP_CALL( createAndAddAndCons(scip, conshdlr, terms[t], ntermvars[t],
                initial, enforce, check, local, modifiable, dynamic, stickingatnode,
@@ -3450,7 +3448,7 @@ SCIP_RETCODE checkOrigPbCons(
 
    /* get variables and coefficient of linear constraint */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (coefs != NULL));
+   assert(nvars == 0 || coefs != NULL);
 
    /* every variable in the linear constraint is either a linear variable or a term variable
     * but there can be additional fixed or negation-paired and-resultants with relevant and-constraints
@@ -6290,7 +6288,7 @@ SCIP_RETCODE tryUpgradingLogicor(
 
          /* get variables and coefficients */
          SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-         assert(nvars == 0 || (coefs != NULL));
+         assert(nvars == 0 || coefs != NULL);
 
 #ifndef NDEBUG
          /* all coefficients have to be 1 */
@@ -7854,7 +7852,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
       /* get variables and coefficient of linear constraint */
       SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-      assert(nvars == 0 || (coefs != NULL));
+      assert(nvars == 0 || coefs != NULL);
 
       /* hard constraint */
       if( !consdata->issoftcons )
@@ -8402,7 +8400,7 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
 
       /* get variables and coefficient of linear constraint */
       SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-      assert(nvars == 0 || (coefs != NULL));
+      assert(nvars == 0 || coefs != NULL);
 
       /* calculate all not artificial linear variables and all artificial and-resultants */
       SCIP_CALL( getLinVarsAndAndRess(scip, cons, vars, coefs, nvars, linvars, lincoefs, &nlinvars,
@@ -9499,6 +9497,28 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   if( !SCIPisFinite(lhs) || !SCIPisFinite(rhs) )
+   {
+      SCIPerrorMessage("%s hand side of pseudo boolean constraint <%s> is nan\n",
+            SCIPisFinite(lhs) ? "right" : "left", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   if( issoftcons )
+   {
+      if( modifiable )
+      {
+         SCIPerrorMessage("soft pseudo boolean constraint <%s> must not be modifiable\n", name);
+         return SCIP_INVALIDDATA;
+      }
+
+      if( isnan(weight) )
+      {
+         SCIPerrorMessage("weight of pseudo boolean constraint <%s> is nan\n", name);
+         return SCIP_INVALIDDATA;
+      }
+   }
+
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -9777,10 +9797,46 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   if( modifiable && issoftcons )
+   if( !SCIPisFinite(lhs) || !SCIPisFinite(rhs) )
    {
-      SCIPerrorMessage("soft constraints must not be modifiable\n");
+      SCIPerrorMessage("%s hand side of pseudo boolean constraint <%s> is nan\n",
+            SCIPisFinite(lhs) ? "right" : "left", name);
       return SCIP_INVALIDDATA;
+   }
+
+   if( issoftcons )
+   {
+      if( modifiable )
+      {
+         SCIPerrorMessage("soft pseudo boolean constraint <%s> must not be modifiable\n", name);
+         return SCIP_INVALIDDATA;
+      }
+
+      if( isnan(weight) )
+      {
+         SCIPerrorMessage("weight of pseudo boolean constraint <%s> is nan\n", name);
+         return SCIP_INVALIDDATA;
+      }
+   }
+
+   for( c = 0; c < nlinvars; ++c )
+   {
+      if( !SCIPisFinite(linvals[c]) || SCIPisInfinity(scip, REALABS(linvals[c])) )
+      {
+         SCIPerrorMessage("pseudo boolean linear coefficient %lf is %s\n",
+               linvals[c], SCIPisFinite(linvals[c]) ? "infinite" : "nan");
+         return SCIP_INVALIDDATA;
+      }
+   }
+
+   for( c = 0; c < nterms; ++c )
+   {
+      if( !SCIPisFinite(termvals[c]) || SCIPisInfinity(scip, REALABS(termvals[c])) )
+      {
+         SCIPerrorMessage("pseudo boolean term coefficient %lf is %s\n",
+               termvals[c], SCIPisFinite(termvals[c]) ? "infinite" : "nan");
+         return SCIP_INVALIDDATA;
+      }
    }
 
    /* get constraint handler data */
@@ -9912,6 +9968,13 @@ SCIP_RETCODE SCIPaddCoefPseudoboolean(
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
+   if( !SCIPisFinite(val) || SCIPisInfinity(scip, REALABS(val)) )
+   {
+      SCIPerrorMessage("pseudo boolean linear coefficient %lf is %s\n",
+            val, SCIPisFinite(val) ? "infinite" : "nan");
+      return SCIP_INVALIDDATA;
+   }
+
    if( SCIPisZero(scip, val) )
       return SCIP_OKAY;
 
@@ -9979,13 +10042,26 @@ SCIP_RETCODE SCIPaddTermPseudoboolean(
 {
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(nvars == 0 || vars != NULL);
+   assert(vars != NULL || nvars == 0);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not pseudo boolean\n");
       SCIPABORT();
       return SCIP_INVALIDDATA; /*lint !e527*/
+   }
+
+   if( nvars == 0 && !SCIPisZero(scip, val) )
+   {
+      SCIPerrorMessage("pseudo boolean term with coefficient %lf without variables\n", val);
+      return SCIP_INVALIDDATA;
+   }
+
+   if( !SCIPisFinite(val) || SCIPisInfinity(scip, REALABS(val)) )
+   {
+      SCIPerrorMessage("pseudo boolean term coefficient %lf is %s\n",
+            val, SCIPisFinite(val) ? "infinite" : "nan");
+      return SCIP_INVALIDDATA;
    }
 
    SCIP_CALL( addCoefTerm(scip, cons, vars, nvars, val) );
