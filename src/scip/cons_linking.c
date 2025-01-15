@@ -3626,7 +3626,8 @@ SCIP_RETCODE SCIPcreateConsLinking(
       || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(linkvar))
       || SCIPisInfinity(scip, SCIPvarGetUbGlobal(linkvar)) ) )
    {
-      SCIPerrorMessage("linking variable <%s> not finite\n", SCIPvarGetName(linkvar));
+      SCIPerrorMessage("linking variable <%s> is %s\n",
+            SCIPvarGetName(linkvar), SCIPvarIsIntegral(linkvar) ? "unbounded" : "continuous");
       return SCIP_INVALIDDATA;
    }
 
@@ -3635,7 +3636,8 @@ SCIP_RETCODE SCIPcreateConsLinking(
       SCIPdebugMsg(scip, "Var %d : <%s>\n", k, SCIPvarGetName(binvars[k]));
       if( !SCIPisFinite(vals[k]) || SCIPisInfinity(scip, REALABS(vals[k])) )
       {
-         SCIPerrorMessage("linking value %lf of <%s> not finite\n", vals[k], SCIPvarGetName(binvars[k]));
+         SCIPerrorMessage("linking value %lf of <%s> is %s\n",
+               vals[k], SCIPvarGetName(binvars[k]), SCIPisFinite(vals[k]) ? "infinite" : "nan");
          return SCIP_INVALIDDATA;
       }
    }
