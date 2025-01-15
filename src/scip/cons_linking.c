@@ -3609,6 +3609,8 @@ SCIP_RETCODE SCIPcreateConsLinking(
    int k;
 
    assert(scip != NULL);
+   assert(binvars != NULL || nbinvars == 0);
+   assert(vals != NULL || nbinvars == 0);
    assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(linkvar)));
    assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(linkvar)));
 
