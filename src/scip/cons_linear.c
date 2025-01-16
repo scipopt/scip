@@ -18940,7 +18940,6 @@ SCIP_RETCODE SCIPupgradeConsLinear(
             nposimpl++;
          else
             nnegimpl++;
-         break;
       }
       else
       {
