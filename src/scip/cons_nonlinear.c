@@ -1267,7 +1267,6 @@ SCIP_RETCODE dropVarEvent(
    if( ownerdata->nconss == 0 )
    {
       SCIP_EVENTTYPE eventtype;
-
       assert(ownerdata->filterpos >= 0);
 
       eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED;
