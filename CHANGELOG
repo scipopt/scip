@@ -176,6 +176,7 @@ Fixed bugs
 - fixed bug with installing symmetry dialog in sub-SCIPs
 - add copy callbacks for default plugins presolver dualagg, presolver redvub, branchrule lookahead, branchrule cloud, heuristic dualval, heuristic repair, propagator nlobbt, separator gauge, and separator convexproj missing in SCIPsetCopyPlugins()
 - respect maximal round setting of separation by running remaining delayed separators in last round
+- replace terms consistently in applyFixings() of cons_linear.c to handle infinite aggregations
 
 Unit tests
 ----------
