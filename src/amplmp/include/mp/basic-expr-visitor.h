@@ -75,11 +75,11 @@ class BasicExprVisitor {
   }
 
   Result VisitNumeric(NumericExpr e) {
-    return VisitUnsupported(e);
+    return MPD( VisitUnsupported(e) );
   }
 
   Result VisitLogical(LogicalExpr e) {
-    return VisitUnsupported(e);
+    return MPD( VisitUnsupported(e) );
   }
 
   Result VisitNumericConstant(NumericConstant c) {
@@ -394,11 +394,11 @@ class BasicExprVisitor {
   }
 
   Result VisitStringLiteral(StringLiteral e) {
-    return VisitUnsupported(e);
+    return MPD( VisitUnsupported(e) );
   }
 
   Result VisitSymbolicIf(SymbolicIfExpr e) {
-    return VisitUnsupported(e);
+    return MPD( VisitUnsupported(e) );
   }
 };
 

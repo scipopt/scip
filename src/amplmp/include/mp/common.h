@@ -26,6 +26,7 @@
 #include <cmath>
 #include <cstddef>     // for std::size_t
 
+#include "mp/arrayref.h"
 #include "mp/error.h"  // for MP_ASSERT
 #include "mp/nl-header.h"
 
@@ -113,8 +114,8 @@ enum Kind {
   PROB_BIT= 0x400
 };
 
-// SV disabled following line as not compilable with ancient MSVC 10.0
-// constexpr int KIND_MASK = Kind::VAR | Kind::CON | Kind::OBJ | Kind ::PROBLEM;
+constexpr int KIND_MASK = Kind::VAR | Kind::CON | Kind::OBJ | Kind ::PROBLEM;
+
 // Suffix flags.
 enum {
   FLOAT   =    4,  /**< Suffix values are floating-point numbers. */
@@ -150,7 +151,7 @@ namespace sol {
  *  passing ranges (e.g., for stopping with a feasible solution
  *  on a limit, use 400-449), otherwise SPECIFIC+ codes.
  */
-enum Status {
+enum Status {  
   /** If not touched. Don't register this code. */
   NOT_SET = -200,
 
@@ -181,38 +182,41 @@ enum Status {
 
   /** Problem is infeasible. Codes 200-299. */
   INFEASIBLE  = 200,
-  /** End of the 'infeasible' range. */
-  INFEASIBLE_LAST = 299,
   /** Problem is infeasible, IIS computation not attempted. */
   INFEASIBLE_NO_IIS  = INFEASIBLE + 1,
   /** Problem is infeasible, IIS returned. */
   INFEASIBLE_IIS  = INFEASIBLE + 2,
   /** Problem is infeasible, IIS finder failed. */
   INFEASIBLE_IIS_FAILED  = INFEASIBLE + 3,
+  /** End of the 'infeasible' range. */
+  INFEASIBLE_LAST = 299,
 
+  /** Unbounded, both feasible or not. */
+  UNBOUNDED           = 300,
   /** Problem is unbounded, feasible solution returned.
       Codes 300-349. */
-  UNBOUNDED_FEAS      = 300,
+  UNBOUNDED_FEAS      = UNBOUNDED,
   /** End of the 'unbounded-feas' range. */
   UNBOUNDED_FEAS_LAST = 349,
-  /** Deprecated. */
-  UNBOUNDED           = UNBOUNDED_FEAS,
-
   /** Problem is unbounded, no feasible solution returned.
       Codes 350-399.
       For undecidedly inf/unb, use LIMIT_INF_UNB. */
   UNBOUNDED_NO_FEAS      = 350,
   /** End of the 'unbounded-no-feas' range. */
   UNBOUNDED_NO_FEAS_LAST = 399,
+  /** Last 'unbounded'. */
+  UNBOUNDED_LAST = UNBOUNDED_NO_FEAS_LAST,
 
+  /** Stopped by limit. */
+  LIMIT = 400,
   /** Limit.
    *  Feasible solution, stopped by a limit, e.g., on iterations or Ctrl-C.
-   *  Codes 400-449.  */
-  LIMIT_FEAS       = 400,
-  /** End of the 'limit_feas' range.  */
-  LIMIT_FEAS_LAST  = 449,
-  /** Deprecated. */
-  LIMIT = LIMIT_FEAS,
+   *  Codes 400-449.
+   *  For new custom codes, use LIMIT_FEAS_NEW, LIMIT_NO_FEAS_NEW.
+   */
+  LIMIT_FEAS       = LIMIT,
+  /** Start of custom LIMIT_FEAS codes. */
+  LIMIT_FEAS_NEW   = LIMIT_FEAS + 30,
   /** User interrupt, feasible solution. */
   LIMIT_FEAS_INTERRUPT = LIMIT_FEAS + 1,
   /** Time limit, feasible solution. */
@@ -223,6 +227,8 @@ enum Status {
   LIMIT_FEAS_NODES = LIMIT_FEAS + 4,
   /** Best obj/bound reached, feasible solution. */
   LIMIT_FEAS_BESTOBJ_BESTBND = LIMIT_FEAS + 5,
+  /** Gap reached, feasible solution. */
+  LIMIT_FEAS_GAP = LIMIT_FEAS_BESTOBJ_BESTBND,
   /** Best obj reached, feasible solution. */
   LIMIT_FEAS_BESTOBJ = LIMIT_FEAS + 6,
   /** Best bound reached, feasible solution. */
@@ -235,6 +241,8 @@ enum Status {
   LIMIT_FEAS_SOFTMEM = LIMIT_FEAS + 10,
   /** Unrecoverable failure, feasible solution found. */
   LIMIT_FEAS_FAILURE = LIMIT_FEAS + 20,
+  /** End of the 'limit_feas' range.  */
+  LIMIT_FEAS_LAST  = 449,
 
   /** Limit.
       Problem is infeasible or unbounded.
@@ -249,8 +257,8 @@ enum Status {
       No feasible solution returned.
       Codes 470-499.  */
   LIMIT_NO_FEAS  = LIMIT_FEAS + 70,
-  /** End of the 'limit-no-feas' range.  */
-  LIMIT_NO_FEAS_LAST  = LIMIT_FEAS + 99,
+  /** Start of custom LIMIT_FEAS codes. */
+  LIMIT_NO_FEAS_NEW = LIMIT_NO_FEAS + 20,
   /** User interrupt, no feasible solution. */
   LIMIT_NO_FEAS_INTERRUPT = LIMIT_NO_FEAS + 1,
   /** Time limit, no feasible solution. */
@@ -267,6 +275,10 @@ enum Status {
   LIMIT_NO_FEAS_WORK = LIMIT_NO_FEAS + 9,
   /** Soft memory limit reached, no feasible solution. */
   LIMIT_NO_FEAS_SOFTMEM = LIMIT_NO_FEAS + 10,
+  /** End of the 'limit-no-feas' range.  */
+  LIMIT_NO_FEAS_LAST  = LIMIT_FEAS + 99,
+  /** End of the 'limit' range.  */
+  LIMIT_LAST  = LIMIT + 99,
 
   /** Failure, without a feasible solution.
       Codes 500-999.
@@ -280,7 +292,7 @@ enum Status {
   NUMERIC     = FAILURE + 50,
 
   /** Specific.
-   *  Use for specific codes not fitting in above categories. */
+   *  Use SPECIFIC++ for specific fail codes. */
   SPECIFIC = 600,
   /** Deprecated.
    *  Use LIMIT_FEAS_INTERRUPT, LIMIT_NOFEAS_INTERRUPT instead.
@@ -288,7 +300,81 @@ enum Status {
   INTERRUPTED = SPECIFIC
 };
 
+/// Status string ("solved", ...).
+/// Major status only.
+const char* GetStatusName(sol::Status stt);
+
+/** Following the taxonomy of the enum sol::Status, returns true if
+      we have an optimal solution or a feasible solution for a
+      satisfaction problem */
+inline bool IsProblemSolved(sol::Status status) {
+  return sol::SOLVED<=status
+         && status<=sol::SOLVED_LAST;
 }
+
+/// Maybe solved
+inline bool IsProblemMaybeSolved(sol::Status status) {
+  return sol::UNCERTAIN<=status
+         && status<=sol::UNCERTAIN_LAST;
+}
+
+/// Solved or feasible
+inline bool IsProblemSolvedOrFeasible(sol::Status status) {
+  return
+      IsProblemSolved(status)
+      ||
+      (sol::LIMIT_FEAS<=status &&
+       sol::LIMIT_FEAS_LAST>=status)
+      ||
+      (sol::UNBOUNDED_FEAS<=status &&
+       sol::UNBOUNDED_FEAS_LAST>=status);
+}
+
+/// Infeasible?
+inline bool IsProblemInfeasible(sol::Status status) {
+  return sol::INFEASIBLE<=status
+         && status<=sol::INFEASIBLE_LAST;
+}
+
+/// Unbounded?
+inline bool IsProblemUnbounded(sol::Status status) {
+  return sol::UNBOUNDED<=status
+         && sol::UNBOUNDED_LAST>=status;
+}
+
+/// Undecidedly infeas or unbnd
+inline bool IsProblemIndiffInfOrUnb(sol::Status status) {
+  return sol::LIMIT_INF_UNB<=status
+         && status<=sol::LIMIT_INF_UNB_LAST;
+}
+
+/// Infeasible or unbounded (known which one or not)
+inline bool IsProblemInfOrUnb(sol::Status status) {
+  return
+      IsProblemInfeasible(status)
+      || IsProblemUnbounded(status)
+      || IsProblemIndiffInfOrUnb(status);
+}
+
+inline bool IsSolStatusSet(sol::Status status) {
+  return sol::NOT_SET!=status;
+}
+
+}  // namespace sol
+
+
+/// Solution (usually postsolved / unpresolved)
+struct Solution {
+  /// primal
+  std::vector<double> primal;
+  /// dual
+  std::vector<double> dual;
+  /// objective values
+  std::vector<double> objvals;
+  /// Sparsity of primal initial guess, if solver wants it
+  ArrayRef<int> spars_primal;
+};
+
 
 /** Expression information. */
 namespace expr {
@@ -498,7 +584,7 @@ enum Kind {
     \endrst
    */
   ATANH,
-
+  
   /** The last unary numeric expression kind. */
   LAST_UNARY = ATANH,
 
@@ -1076,15 +1162,14 @@ inline const char *expr::str(expr::Kind kind) {
 }
 
 
-/* SV disabled enum classes as not compilable with ancient MSVC 10.0
 /// .iis suffix values
 enum class IISStatus {
   non = 0,
   low = 1,
-  fix = 2,
+  fix = 2,    // both bounds in IIS
   upp = 3,
   mem = 4,
-  pmem = 5,
+  pmem = 5,   // 'possibly member'
   plow = 6,
   pupp = 7,
   bug = 8
@@ -1100,7 +1185,7 @@ enum class BasicStatus {
   equ = 5,
   btw = 6
 };
-*/
+
 }  // namespace mp
 
 #endif  // MP_COMMON_H_
