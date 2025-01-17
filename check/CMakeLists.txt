@@ -315,7 +315,18 @@ list(APPEND
     "instances/Indicator/indicatortest.zpl\;-2"
     "instances/Indicator/mcf64-4-1.zpl\;10"
     )
+#
+# this instance was part of the original coverage tests. However, it causes
+# a significant overhead without providing relevant benefit.
+#
+#list(APPEND
+#    instances_MIP
+#    "instances/MIP/rocII_2_11.zpl\;+4.61527698552400e+00"
+#    )
+endif()
+
 # exact ip instances
+if(EXACTSOLVE)
 set(instances_MIPEX
     "instances/MIPEX/egout.zpl\;568.1007"
     "instances/MIPEX/enigma.zpl\;0"
@@ -326,15 +337,6 @@ set(instances_MIPEX
     "instances/MIPEX/stein27.zpl\;18"
     "instances/MIPEX/stein45.zpl\;30"
     )
-#
-# this instance was part of the original coverage tests. However, it causes
-# a significant overhead without providing relevant benefit.
-#
-#list(APPEND
-#    instances_MIP
-#    "instances/MIP/rocII_2_11.zpl\;+4.61527698552400e+00"
-#    )
-
 endif()
 
 #
@@ -1179,7 +1181,7 @@ endif (UNIX)
 endif()
 
 # @todo exip: this assumes you have vipr on your path, needs to be fixed eventually
-if(TEST_MIPEX)
+if(EXACTSOLVE)
     foreach(instance ${instances_MIPEX})
         split_instance(instance)
         #
