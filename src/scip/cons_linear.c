@@ -8936,10 +8936,7 @@ SCIP_RETCODE tightenSides(
    {
       integral = TRUE;
       for( i = 0; i < consdata->nvars && integral; ++i )
-      {
-         integral = SCIPisIntegral(scip, consdata->vals[i])
-            && (SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINUOUS);
-      }
+         integral = SCIPisIntegral(scip, consdata->vals[i]) && SCIPvarIsIntegral(consdata->vars[i]);
       if( integral )
       {
          if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisIntegral(scip, consdata->lhs) )
