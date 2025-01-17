@@ -7570,15 +7570,21 @@
  * 
  * Currently the exact solving mode is only supported if SCIP is built using cmake. In order to properly utilize exact solving mode, the following additional dependencies are required:
  * - GMP: The GNU Multiple Precision Arithmetic Library is required to perform exact arithmetic.
+ *   Set GMP_DIR to its installation directory if it is not found automatically.
  * - MPFR: The GNU Multiple Precision Floating-Point Reliable Library is required to correctly round rational numbers to floating-point numbers
- * - Boost: The Boost Multiprecision Library acts as a wrapper for GMP
- * - SoPlex: We recommend using SoPlex as the exact LP solver. For this, SoPlex needs to be built with GMP and preferably also with MPFR support
+ *   Set MPFR_DIR to its installation directory if it is not found automatically.
+ * - Boost: The Boost Multiprecision Library acts as a wrapper for GMP.
+ *   Set BOOST_DIR to its installation directory if it is not found automatically.
  * 
- * When configuring with cmake, ensure that the following flags are set:
- * - EXACTSOLVE=on to enable exact solving mode
- * - GMP_DIR to the directory where GMP is installed (only necessary when no global GMP install is available)
- * - MPFR_DIR to the directory where MPFR is installed (only necessary when no global MPFR install is available)
- * - BOOST_DIR to the directory where Boost is installed (only necessary when no global Boost install is available)
+ * When configuring with cmake, exact solving mode is enabled automatically if all dependencies are found.
+ * To explictly disable it, EXACTSOLVE=off can be set, while EXACTSOLVE=on aborts in case a dependency is missing.
+ * A particular exact LP solver can be selected by setting LPSEXACT to one of the the following values, which the
+ * default tries to enable in that order:
+ * - LPSEXACT=spx uses SoPlex as the exact LP solver.
+     For this, SoPlex needs to be built with GMP and preferably also with MPFR support.
+ *   Set SOPLEX_DIR to its installation directory if it is not found automatically.
+ * - LPSEXACT=qsoex uses the QSopt_ex LP solver, which in turn requires EGlib.
+ *   Set QSOEX_DIR and EGLIB_DIR to their respective installation directories if either is not found automatically.
  * - SOPLEX_DIR to the directory where SoPlex is installed (only necessary when no global SoPlex install is available)
  * 
  * We further strongly recommend building SCIP with PaPILO, as it is the only presolver available in exact solving mode.
