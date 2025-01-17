@@ -1269,7 +1269,7 @@ SCIP_RETCODE dropVarEvent(
       SCIP_EVENTTYPE eventtype;
       assert(ownerdata->filterpos >= 0);
 
-      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED;
+      eventtype = SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED;
 
       SCIP_CALL( SCIPdropVarEvent(scip, SCIPgetVarExprVar(expr), eventtype, eventhdlr, (SCIP_EVENTDATA*)expr, ownerdata->filterpos) );
       ownerdata->filterpos = -1;
