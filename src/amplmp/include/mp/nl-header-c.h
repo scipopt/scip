@@ -1,4 +1,4 @@
-/**
+/*
  * Base C structs for NL header.
  *
  * Used both in C and C++.

@@ -232,16 +232,8 @@ fi
 
 if test -e "${SOLFILE}"
 then
-    # translate SCIP solution format into format for solution checker. The
-    # SOLFILE format is a very simple format where in each line we have a
-    # <variable, value> pair, separated by spaces.  A variable name of
-    # =obj= is used to store the objective value of the solution, as
-    # computed by the solver. A variable name of =infeas= can be used to
-    # indicate that an instance is infeasible.
-    sed ' /solution status:/d;
-    s/objective value:/=obj=/g;
-    s/infinity/1e+20/g;
-    s/no solution available//g' "${SOLFILE}" > "${TMPFILE}"
+    # workaround infinite values for solution checker
+    sed 's/infinity/1e+20/g' "${SOLFILE}" > "${TMPFILE}"
     mv "${TMPFILE}" "${SOLFILE}"
 
     # check if the link to the solution checker exists

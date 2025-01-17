@@ -42,11 +42,9 @@
 
 #if FMT_USE_WINDOWS_H
 # if defined(NOMINMAX) || defined(FMT_WIN_MINMAX)
-struct IUnknown; // Workaround for "combaseapi.h(229): error C2187: syntax error: 'identifier' was unexpected here" when using /permissive-
 #  include <windows.h>
 # else
 #  define NOMINMAX
-struct IUnknown; // Workaround for "combaseapi.h(229): error C2187: syntax error: 'identifier' was unexpected here" when using /permissive-
 #  include <windows.h>
 #  undef NOMINMAX
 # endif

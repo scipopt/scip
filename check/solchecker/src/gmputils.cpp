@@ -225,6 +225,8 @@ void Rational::fromString(const char* num)
          exponent += atoi(&num[i + 1]);
          break;
       }
+      else
+         return false;
    }
    while( exponent > 0 )
    {
@@ -243,6 +245,8 @@ void Rational::fromString(const char* num)
 
    mpq_set_str(number, tmp, 10);
    mpq_canonicalize(number);
+
+   return true;
 }
 
 std::string Rational::toString() const

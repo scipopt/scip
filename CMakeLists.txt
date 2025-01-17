@@ -55,9 +55,8 @@ endif()
 # path to e.g. findGMP module
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
-option(SHARED "Build shared libraries" ON)
+option(SHARED "build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
-message(STATUS "Build shared libraries: " ${SHARED})
 
 # make 'Release' the default build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -71,7 +70,6 @@ set(AUTOBUILD_MSG "\nIf you have troubles configuring, you can consider setting 
 option(ZLIB "should zlib be linked" ON)
 option(READLINE "should readline be linked" ON)
 option(GMP "should gmp be linked" ON)
-option(MPFR "should mpfr be linked" ON)
 option(STATIC_GMP "prefer static gmp library" OFF)
 option(PAPILO "should papilo library be linked" ON)
 option(ZIMPL "should zimpl be linked" ON)
@@ -96,7 +94,43 @@ option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
-option(EXACTSOLVE "compile with support for exact rational solve (requires Boost and GMP to work)" ON)
+
+set(MPFR AUTO CACHE STRING "should MPFR be linked")
+set_property(CACHE MPFR PROPERTY STRINGS AUTO ON OFF)
+string(TOUPPER ${MPFR} MPFR)
+
+set(EXACTSOLVE AUTO CACHE STRING "compile with support for exact rational solve (requires GMP, MPFR and Boost)")
+set_property(CACHE EXACTSOLVE PROPERTY STRINGS AUTO ON OFF)
+string(TOUPPER ${EXACTSOLVE} EXACTSOLVE_UPPER) # Also allow "auto"
+
+# Initialize SCIP_WITH_EXACTSOLVE.
+if(EXACTSOLVE)
+    set(SCIP_WITH_EXACTSOLVE ON) # We disable it later if dependencies are missing.
+else()
+    set(SCIP_WITH_EXACTSOLVE OFF)
+endif()
+
+# Initialize SCIP_WITH_MPFR.
+if(MPFR)
+    set(SCIP_WITH_MPFR ON) # We disable it later if exact solving mode is disabled.
+else()
+    set(SCIP_WITH_MPFR OFF)
+    if(SCIP_WITH_EXACTSOLVE)
+        message(WARNING "MPFR disabled, which is required for EXACTSOLVE.")
+        set(SCIP_WITH_EXACTSOLVE OFF)
+    endif()
+endif()
+
+# Initialize SCIP_WITH_GMP.
+if(GMP)
+    set(SCIP_WITH_GMP ON)
+else()
+    set(SCIP_WITH_GMP OFF)
+    if(SCIP_WITH_EXACTSOLVE)
+        message(WARNING "GMP disabled, which is required for EXACTSOLVE. ${AUTOBUILD_MSG}")
+        set(SCIP_WITH_EXACTSOLVE OFF)
+    endif()
+endif()
 
 set(TPI tny CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
@@ -106,8 +140,9 @@ set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso highs none)  #define list of values GUI will offer for the variable
-set(LPSEXACT none CACHE STRING "options for exact LP solver")  #create the variable
-set_property(CACHE LPSEXACT PROPERTY STRINGS none spx qsoex)  #define list of values GUI will offer for the variable
+set(LPSEXACT AUTO CACHE STRING "options for exact LP solver") # Create the variable
+set_property(CACHE LPSEXACT PROPERTY STRINGS spx qsoex none AUTO) # Define list of values GUI will offer for the variable.
+string(TOUPPER ${LPSEXACT} LPSEXACT_UPPER) # To also allow "auto".
 
 set(SYM snauty CACHE STRING "options for symmetry computation")  #create the variable
 set_property(CACHE SYM PROPERTY STRINGS bliss sbliss nauty snauty none )  #define list of values GUI will offer for the variable
@@ -116,13 +151,17 @@ if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug"
     message(FATAL_ERROR "You have not selected a valid CMAKE_BUILD_TYPE. Please select 'Release' or 'Debug'.")
 endif()
 
+if (NOT (LPSEXACT_UPPER STREQUAL "AUTO") AND NOT (LPSEXACT_UPPER STREQUAL "NONE") AND NOT (LPSEXACT_UPPER STREQUAL "SPX") AND NOT (LPSEXACT_UPPER STREQUAL "QSOEX"))
+    message(FATAL_ERROR "Invalid value \"${LPSEXACT}\" for LPSEXACT. Please select 'auto', 'none', 'spx' or 'qsoex'.")
+endif()
+
 if(AUTOBUILD)
     message(WARNING "You are using the automatic build option AUTOBUILD=ON to find and use dependencies automatically.")
 else()
     message(WARNING "You are not using the automatic build option. ${AUTOBUILD_MSG}")
 endif() # AUTOBUILD
 
-# use C++14 standard
+# Use C++14 standard; may be increased further down.
 set(CMAKE_CXX_STANDARD 14)
 
 #search the selected symmetry computation program
@@ -135,6 +174,7 @@ if(SYM STREQUAL "bliss" OR SYM STREQUAL "sbliss")
     else()
         message(STATUS "Support SYM: sassy+bliss")
         set(sym symmetry/compute_symmetry_sassy_bliss.cpp symmetry/build_sassy_graph.cpp)
+        # sassy needs C++-17
         set(CMAKE_CXX_STANDARD 17)
     endif()
 
@@ -319,9 +359,6 @@ add_custom_target(scip_update_githash
 
 set(WITH_SCIPDEF on)
 
-# use C++14 standard
-set(CMAKE_CXX_STANDARD 14)
-
 # ZLIB
 if(ZLIB OR AUTOBUILD)
     message(STATUS "Finding ZLIB")
@@ -359,39 +396,49 @@ else()
 endif()
 
 # GMP
-if(GMP OR AUTOBUILD)
+if(SCIP_WITH_GMP OR AUTOBUILD)
     message(STATUS "Finding GMP")
     find_package(GMP)
-    if((NOT GMP_FOUND) AND (NOT AUTOBUILD))
-        message(FATAL_ERROR "GMP not found, try specifying GMP_DIR. ${AUTOBUILD_MSG}")
+    if(NOT GMP_FOUND)
+        set(SCIP_WITH_EXACTSOLVE OFF)
+        set(SCIP_WITH_GMP OFF)
+        if(NOT AUTOBUILD) # GMP was explicitly requested.
+            message(FATAL_ERROR "GMP not found, try specifying GMP_DIR. ${AUTOBUILD_MSG}")
+        elseif(EXACTSOLVE AND NOT (EXACTSOLVE_UPPER STREQUAL "AUTO")) # EXACTSOLVE was explicitly requested.
+          message(FATAL_ERROR "GMP not found, which is required for EXACTSOLVE; try specifying GMP_DIR. ${AUTOBUILD_MSG}")
+        elseif(EXACTSOLVE) # Both are automatic.
+          message(WARNING "GMP not found, which is required for EXACTSOLVE; try specifying GMP_DIR. ${AUTOBUILD_MSG}")
+        else() # EXACTSOLVE disabled. TODO: check if there is any reason for linking to it at all.
+          message(STATUS "GMP not found; try specifying GMP_DIR. ${AUTOBUILD_MSG}")
+        endif()
     endif()
-endif()
-if(GMP_FOUND)
-    message(STATUS "Finding GMP - found")
-    include_directories(${GMP_INCLUDE_DIRS})
-    set(SCIP_WITH_GMP ON)
 else()
-    message(STATUS "Support GMP: OFF")
+    message(STATUS "Skipping GMP.")
+endif()
+if(SCIP_WITH_GMP)
+    # TODO: Avoid global usage.
+    include_directories(${GMP_INCLUDE_DIRS})
+else()
     set(GMP_LIBRARIES "")
-    set(SCIP_WITH_GMP OFF)
 endif()
 
 # MPFR
-if((EXACTSOLVE AND MPFR) OR AUTOBUILD)
+if(SCIP_WITH_EXACTSOLVE AND SCIP_WITH_MPFR)
     message(STATUS "Finding MPFR")
     find_package(MPFR)
-    if((NOT MPFR_FOUND) AND (NOT AUTOBUILD))
-        message(FATAL_ERROR "MPFR not found, try specifying MPFR_DIR. ${AUTOBUILD_MSG}")
+    if(NOT MPFR_FOUND)
+        set(SCIP_WITH_MPFR OFF)
+        set(SCIP_WITH_EXACTSOLVE OFF)
+        if(MPFR AND NOT (MPFR STREQUAL "AUTO")) # MPFR was explicitly requested.
+            message(FATAL_ERROR "MPFR not found; try specifying MPFR_DIR.")
+        elseif(EXACTSOLVE AND NOT (EXACTSOLVE_UPPER STREQUAL "AUTO")) # EXACTSOLVE was explicitly requested.
+            message(FATAL_ERROR "MPFR not found, which is required for EXACTSOLVE; try specifying MPFR_DIR.")
+        else() # Both are automatic.
+            message(WARNING "MPFR not found, which is required for EXACTSOLVE; try specifying MPFR_DIR.")
+        endif()
     endif()
-endif()
-if(MPFR_FOUND)
-    message(STATUS "Finding MPFR - found")
-    set(SCIP_WITH_MPFR ON)
-    include_directories(${MPFR_INCLUDE_DIRS})
 else()
-    message(STATUS "Support MPFR: OFF")
-    set(SCIP_WITH_MPFR OFF)
-    set(MPFR_LIBRARIES "")
+   message(STATUS "Skipping MPFR.")
 endif()
 
 # look for presolvelib
@@ -455,8 +502,10 @@ elseif(LPS STREQUAL "qso")
     if(NOT QSO_FOUND)
         message(FATAL_ERROR "Requested LP solver Qsopt not found.")
     endif()
-    set(BUILD_SHARED_LIBS off)
-    message(STATUS "Turning off shared libraries.")
+    if(BUILD_SHARED_LIBS)
+        set(BUILD_SHARED_LIBS off)
+        message(STATUS "LP solver QSopt turns off shared libraries.")
+    endif()
 elseif(LPS STREQUAL "clp")
     find_package(CLP REQUIRED)
     if(NOT CLP_FOUND)
@@ -494,11 +543,6 @@ if(SOPLEX_FOUND)
     # SoPlex headers can be directly included
     include_directories(${SOPLEX_INCLUDE_DIRS})
     set(LPS_LIBRARIES ${SOPLEX_LIBRARIES})
-    if(SHARED)
-        set(LPS_PIC_LIBRARIES ${SOPLEX_PIC_LIBRARIES})
-    else()
-        set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
-    endif()
     if(LEGACY)
         set(lpi lpi/lpi_spx1.cpp)
     else()
@@ -591,66 +635,159 @@ else()
     message(STATUS "Support QSO: OFF")
 endif()
 
-#multiprecision
-if(EXACTSOLVE OR AUTOBUILD)
-    message(STATUS "Building SCIP with support for exact solving mode.")
-
-    # boost is required
-    find_package(Boost 1.68.0)
-    if((NOT Boost_FOUND) AND (NOT AUTOBUILD))
-        message(FATAL_ERROR "Boost Version 1.65 or higher is needed to compile with exact solving support.")
-    endif()
-
-    set(SCIP_WITH_EXACTSOLVE ON)
-
-    find_program(VIPR "viprcomp")
-    if(${VIPR} STREQUAL VIPR-NOTFOUND)
-      message(WARNING "VIPR checker was not found, so verification is not enabled for exact ctest. Make sure to install vipr (https://github.com/ambros-gleixner/VIPR) to enable certificate checking.")
-    endif()
-
-    if(Boost_FOUND)
-        include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
-        set(SCIP_WITH_BOOST on)
-        if(LPSEXACT STREQUAL "qsoex")
-            find_package(QSOPTEX REQUIRED)
-            find_package(EGLIB REQUIRED)
-            if(EGLIB_FOUND)
-                set(SCIP_WITH_EGLIB on)
-            endif()
-            set(BUILD_SHARED_LIBS off)
-            set(SHARED off)
-            message(STATUS "Turning off shared libraries.")
-        elseif(LPSEXACT STREQUAL "spx")
-            find_package(SOPLEX CONFIG)
-        endif()
-
-        if(QSOPTEX_FOUND)
-            set(TEST_MIPEX on)
-            include_directories(${QSOPTEX_INCLUDE_DIRS})
-            include_directories(${EGLIB_INCLUDE_DIRS})
-            set(lpiexact lpiexact/lpiexact_qsoex.c)
-            set(LPS_LIBRARIES ${LPS_LIBRARIES} ${QSOPTEX_LIBRARIES} ${EGLIB_LIBRARIES})
-            set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} ${QSOPTEX_LIBRARIES} ${EGLIB_LIBRARIES})
-            set(SCIP_WITH_QSOPTEX on)
-        elseif(SOPLEX_FOUND)
-            set(TEST_MIPEX on)
-            include_directories(${SOPLEX_INCLUDE_DIRS})
-            set(lpiexact lpiexact/lpiexact_spx.cpp)
-        else()
-            set(lpiexact lpiexact/lpiexact_none.c)
-            message(WARNING "An exact LP solver is required to compile with exact solving support.\
-                Continuing without support for exact solving.")
-            set(SCIP_WITH_EXACTSOLVE off)
-        endif()
+# Boost
+if(SCIP_WITH_EXACTSOLVE)
+    set(BOOST_REQUIRED_VERSION 1.68.0)
+    if(Boost_FOUND AND (Boost_VERSION VERSION_GREATER_EQUAL ${BOOST_REQUIRED_VERSION}))
+        message(STATUS "Already found Boost version \"${Boost_VERSION_STRING}\", minimum required is \"${BOOST_REQUIRED_VERSION}\".")
     else()
-        message(WARNING "Boost Version 1.68 or high is needed to compile with exact solving support.\
-        No Boost was found. Continuing without support for exact solving.")
-        set(SCIP_WITH_EXACTSOLVE off)
+        find_package(Boost ${BOOST_REQUIRED_VERSION})
+    endif()
+    if(Boost_FOUND AND (Boost_VERSION VERSION_GREATER_EQUAL ${BOOST_REQUIRED_VERSION}))
+        set(SCIP_WITH_BOOST TRUE)
+    else()
+        set(SCIP_WITH_EXACTSOLVE OFF)
+        if(EXACTSOLVE AND NOT (EXACTSOLVE_UPPER STREQUAL "AUTO")) # EXACTSOLVE was explicitly requested.
+            message(FATAL_ERROR "Boost version ${BOOST_REQUIRED_VERSION} or higher not found, which is required for EXACTSOLVE; try specifying Boost_DIR.")
+        else() # EXACTSOLVE is automatic.
+            message(WARNING "Boost version ${BOOST_REQUIRED_VERSION} or higher not found, which is required for EXACTSOLVE; try specifying Boost_DIR.")
+        endif()
+    endif()
+endif()
+
+# Find exact LP solvers.
+set(TEST_EXAXTSOLVE OFF)
+set(SCIP_WITH_LPSEXACT OFF) # Human-readable name of exact LP solver
+if(SCIP_WITH_EXACTSOLVE)
+    # SoPlex
+    if((LPSEXACT_UPPER STREQUAL "SPX") OR ((LPSEXACT_UPPER STREQUAL "AUTO" AND NOT SCIP_WITH_LPSEXACT)))
+        set(BAD_SOPLEX_REASON 0)
+        if(SOPLEX_FOUND)
+            message(STATUS "Already found LP solver SoPlex.")
+            if(NOT SOPLEX_WITH_MPFR)
+                set(BAD_SOPLEX_REASON "does not support MPFR")
+            endif()
+        else()
+            message(STATUS "Finding exact LP solver SoPlex.")
+            find_package(SOPLEX CONFIG HINTS ${SOPLEX_DIR})
+        endif()
+        if(NOT SOPLEX_FOUND)
+            set(BAD_SOPLEX_REASON "not found")
+        elseif(NOT SOPLEX_WITH_MPFR)
+            set(BAD_SOPLEX_REASON "does not support MPFR")
+        endif()
+        if(SOPLEX_FOUND AND SOPLEX_WITH_MPFR)
+            set(SCIP_WITH_LPSEXACT "SoPlex")
+            set(TEST_EXAXTSOLVE ON)
+        elseif(LPSEXACT_UPPER STREQUAL "SPX" AND NOT (EXACTSOLVE_UPPER STREQUAL "AUTO")) # SoPlex and EXACTSOLVE were explicitly requested.
+            message(FATAL_ERROR "LP solver SoPlex ${BAD_SOPLEX_REASON}, which is required for EXACTSOLVE; try specifying SOPLEX_DIR.")
+        elseif(LPSEXACT_UPPER STREQUAL "SPX") # SoPlex was explicitly requested, but EXACTSOLVE is AUTO.
+            message(WARNING "LP solver SoPlex ${BAD_SOPLEX_REASON}, which is required for EXACTSOLVE; try specifying SOPLEX_DIR.")
+            set(SCIP_WITH_EXACTSOLVE OFF)
+        else()
+            message(STATUS "LP solver SoPlex ${BAD_SOPLEX_REASON}.")
+        endif()
+    endif()
+    # QSopt_ex
+    if((LPSEXACT_UPPER STREQUAL "QSOEX") OR ((LPSEXACT_UPPER STREQUAL "AUTO" AND NOT SCIP_WITH_LPSEXACT)))
+        message(STATUS "Finding exact LP solver QSopt_ex.")
+        find_package(QSOEX)
+        if(QSOEX_FOUND)
+            message(STATUS "Finding QSopt_ex dependency EGLIB.")
+            find_package(EGLIB)
+        endif()
+        if(QSOEX_FOUND AND EGLIB_FOUND)
+            set(SCIP_WITH_LPSEXACT "QSopt_ex")
+            set(SCIP_WITH_EGLIB ON)
+            set(TEST_EXAXTSOLVE ON)
+        elseif(LPSEXACT_UPPER STREQUAL "QSOEX" AND NOT (EXACTSOLVE_UPPER STREQUAL "AUTO")) # QSopt_ex and EXACTSOLVE were explicitly requested.
+            message(FATAL_ERROR "Exact LP solver QSopt_ex not found, which is required for EXACTSOLVE; try specifying QSOEX_DIR.")
+        elseif(LPSEXACT_UPPER STREQUAL "QSOEX") # QSopt_ex was explicitly requested, but EXACTSOLVE is AUTO.
+            message(WARNING "Exact LP solver QSopt_ex not found, which is required for EXACTSOLVE; try specifying QSOEX_DIR.")
+            set(SCIP_WITH_EXACTSOLVE OFF)
+        endif()
+    endif()
+    # No exact LP solver found.
+    if(NOT SCIP_WITH_LPSEXACT AND (EXACTSOLVE_UPPER STREQUAL "AUTO"))
+        message(STATUS "No exact LP solver found, which is required for EXACTSOLVE.")
+        set(SCIP_WITH_EXACTSOLVE OFF)
+        set(SCIP_WITH_BOOST FALSE)
+    elseif(NOT SCIP_WITH_LPSEXACT AND EXACTSOLVE)
+        message(FATAL_ERROR "No exact LP solver found, which is required for EXACTSOLVE.")
+    else()
+        set(SCIP_WITH_BOOST TRUE)
     endif()
 else()
-    set(lpiexact lpiexact/lpiexact_none.c)
+    set(SCIP_WITH_LPSEXACT "none")
+    set(SCIP_WITH_BOOST FALSE)
+endif()
+
+# If EXACTSOLVE was disabled, we also do not need MPFR.
+if(NOT SCIP_WITH_EXACTSOLVE)
+    set(SCIP_WITH_MPFR OFF)
+endif()
+
+# Now we are sure whether we link to MPFR.
+if(SCIP_WITH_MPFR)
+    # TODO: Avoid global usage.
+    include_directories(${MPFR_INCLUDE_DIRS})
+else()
+    set(MPFR_LIBRARIES "")
+endif()
+
+# Now we are sure about EXACTSOLVE.
+if(SCIP_WITH_EXACTSOLVE)
+    message(STATUS "Building SCIP with support for exact solving mode using exact LP solver ${SCIP_WITH_LPSEXACT}.")
+
+    message(STATUS "Finding VIPR checker")
+    find_program(VIPR "viprcomp" HINTS ${VIPR_DIR} $ENV{VIPR_DIR})
+    if(VIPR)
+        message(STATUS "Finding VIPR checker - found")
+    else()
+        message(STATUS "Finding VIPR checker - not found: verification is not enabled for exact ctest. Make sure to install VIPR (https://github.com/scipopt/vipr) to enable certificate checking.")
+    endif()
+
+    # TODO: Avoid global usage.
+    include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+
+    if(SCIP_WITH_LPSEXACT STREQUAL "QSopt_ex")
+        if(BUILD_SHARED_LIBS)
+            set(BUILD_SHARED_LIBS off)
+            message(STATUS "Exact LP solver QSopt_ex turns off shared libraries.")
+        endif()
+        include_directories(${QSOEX_INCLUDE_DIRS})
+        include_directories(${EGLIB_INCLUDE_DIRS})
+        set(LPS_LIBRARIES ${LPS_LIBRARIES} ${QSOEX_LIBRARIES} ${EGLIB_LIBRARIES})
+        set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} ${QSOEX_LIBRARIES} ${EGLIB_LIBRARIES})
+        set(SCIP_WITH_QSOEX ON)
+        set(lpiexact lpiexact/lpiexact_qsoex.c)
+    endif()
+
+    if(SCIP_WITH_LPSEXACT STREQUAL "SoPlex")
+        include_directories(${SOPLEX_INCLUDE_DIRS})
+        set(lpiexact lpiexact/lpiexact_spx.cpp)
+    endif()
+
+    if(SCIP_WITH_LPSEXACT STREQUAL "none")
+        set(lpiexact lpiexact/lpiexact_none.c)
+    endif()
+else()
     message(STATUS "Building SCIP without support for exact solving mode.")
-    set(SCIP_WITH_EXACTSOLVE OFF)
+    set(lpiexact lpiexact/lpiexact_none.c)
+endif()
+
+# Now we now whether we actually build shared libraries.
+set(SHARED ${BUILD_SHARED_LIBS})
+if(SHARED)
+  message(STATUS "Building shared libraries.")
+else()
+  message(STATUS "Building static libraries.")
+endif()
+
+if(SOPLEX_FOUND AND SHARED)
+    set(LPS_PIC_LIBRARIES ${SOPLEX_PIC_LIBRARIES})
+else()
+    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
 
 #
@@ -845,6 +982,18 @@ endif()
 # --------------------------------------------------------------
 # write log file of non-default parameter settings
 file(WRITE ${CMAKE_BINARY_DIR}/cmake.log "")
+
+macro(log_option option)
+    string(TOUPPER ${${option}} UPPER)
+    if(NOT (${UPPER} STREQUAL "AUTO"))
+        file(APPEND ${CMAKE_BINARY_DIR}/cmake.log " -D${option}=${${option}}")
+    endif()
+endmacro()
+
+log_option(EXACTSOLVE)
+log_option(LPSEXACT)
+log_option(MPFR)
+
 if(AUTOBUILD)
   file(APPEND ${CMAKE_BINARY_DIR}/cmake.log "-DAUTOBUILD=on")
 endif()

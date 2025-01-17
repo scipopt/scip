@@ -461,7 +461,13 @@ bool Model::readSol(const char* filename)
       {
          // read objective value
          hasObjectiveValue = true;
-         objectiveValue.fromString(valuep);
+
+         if( !objectiveValue.fromString(valuep) )
+         {
+            std::cerr << "unexpected objective <" << valuep << "> in solution file" << std::endl;
+            isSolFeas = false;
+            break;
+         }
       }
       else
       {
@@ -476,7 +482,14 @@ bool Model::readSol(const char* filename)
          }
 
          Rational value;
-         value.fromString(valuep);
+
+         if( !value.fromString(valuep) )
+         {
+            std::cerr << "unexpected value <" << valuep << "> in solution file" << std::endl;
+            isSolFeas = false;
+            break;
+         }
+
          var->value = value;
       }
    }

@@ -32,7 +32,7 @@ namespace mp {
 class path {
  private:
   std::string str_;
-
+  
   inline std::size_t FindLastSep() const {
 #ifdef _WIN32
     const char *sep = "/\\";
@@ -54,7 +54,7 @@ class path {
   path(const char *begin, const char *end) : str_(begin, end) {}
 
   const std::string &string() const { return str_; }
-
+  
   path filename() const {
     size_t last_sep = FindLastSep();
     return last_sep == std::string::npos ?
