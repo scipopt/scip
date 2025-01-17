@@ -466,6 +466,7 @@ SCIP_RETCODE SCIPiisGenerate(
    if( !silent )
    {
       nbounds = 0;
+      SCIPinfoMessage(set->scip, NULL, "\n");
       if( iis->valid )
          SCIPinfoMessage(set->scip, NULL, "IIS Status            : success\n");
       else
