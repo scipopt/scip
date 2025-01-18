@@ -98,7 +98,7 @@ then
     OPTIMIFILE=/data/optimi/optimi/kombadon/IP/miplib2003/10teams.mps.gz
     ls $OPTIMIFILE >/dev/null 2>&1
 
-    # check if /optimi is mounted
+    # check if optimi is mounted
     MOUNTED=0
 
     # count number of fails and abort after 10 min to avoid an endless loop
@@ -106,7 +106,7 @@ then
 
     while [ "${MOUNTED}" -ne 1 ]
     do
-        # stop if the system does not mount /optimi for ~10 minutes
+        # stop if the system does not mount optimi for ~10 minutes
         if [ "${FAILED}" -eq 600 ]
         then
             exit 1
