@@ -649,6 +649,7 @@ macro(add_pairtests pairs prefix)
 #
     foreach(pair ${${pairs}})
         split_pair(pair)
+        if(NOT ((${basename} STREQUAL "3727.cip") AND (${LPS} STREQUAL "xprs")))
         #
         # add the test
         #
@@ -661,6 +662,7 @@ macro(add_pairtests pairs prefix)
                                 FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                 DEPENDS scip-build
                             )
+        endif() # LP error 11 from Xpress (but SCIP recovers), #3724
     endforeach(pair)
 endmacro(add_pairtests)
 
