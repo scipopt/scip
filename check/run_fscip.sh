@@ -83,8 +83,8 @@ function cleanup {
 # ensure TMPFILE is deleted and results are copied when exiting (normally or due to abort/interrupt)
 trap cleanup EXIT
 
-# check if the scripts runs a *.zib.de host
-if $(hostname -f | grep -q zib.de)
+# check if the scripts runs a *.zib.de Linux host
+if $(hostname -f | grep -q zib.de) && [ $(uname) == Linux ]
 then
     # access optimi once to force a mount
     OPTIMIFILE=/data/optimi/optimi/kombadon/IP/miplib2003/10teams.mps.gz
