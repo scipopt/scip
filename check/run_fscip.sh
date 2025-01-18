@@ -48,8 +48,16 @@ SETFILE="${TMPDIR}/${BASENAME}.prm"
 SCIPSETFILE="${TMPDIR}/${BASENAME}.set"
 TMPFILE="${TMPDIR}/${BASENAME}.tmp"
 
-SETTINGS="${SOLVERPATH}/../../ug/settings/${SETNAME}.prm"
-SCIPSETTINGS="${SOLVERPATH}/../../ug/settings/${SETNAME}.set"
+SETTINGS="${SOLVERPATH}/../settings/${SETNAME}.prm"
+if test ! -e "${SETTINGS}"
+then
+    SETTINGS="${SOLVERPATH}/../../ug/settings/${SETNAME}.prm"
+fi
+SCIPSETTINGS="${SOLVERPATH}/../settings/${SETNAME}.set"
+if test ! -e "${SCIPSETTINGS}"
+then
+    SCIPSETTINGS="${SOLVERPATH}/../../ug/settings/${SETNAME}.set"
+fi
 
 uname -a                            > "${OUTFILE}"
 uname -a                            > "${ERRFILE}"
