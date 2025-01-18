@@ -4025,7 +4025,7 @@ SCIP_RETCODE propAndSolve(
 
    /* @todo exip: check if this is really necessary and explain why */
    /* in exact solving mode, we need the LP already during propagation for ... */
-   if( SCIPisExactSolve(set->scip) )
+   if( !SCIPisLPConstructed(set->scip) && SCIPisExactSolve(set->scip) )
    {
       SCIP_CALL( SCIPconstructCurrentLP(blkmem, set, stat, transprob, origprob, tree, reopt, lp, pricestore, sepastore, cutpool,
             branchcand, eventqueue, eventfilter, cliquetable, newinitconss, cutoff) );
