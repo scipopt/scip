@@ -48,8 +48,16 @@ SETFILE="${TMPDIR}/${BASENAME}.prm"
 SCIPSETFILE="${TMPDIR}/${BASENAME}.set"
 TMPFILE="${TMPDIR}/${BASENAME}.tmp"
 
-SETTINGS="${SOLVERPATH}/../../ug/settings/${SETNAME}.prm"
-SCIPSETTINGS="${SOLVERPATH}/../../ug/settings/${SETNAME}.set"
+SETTINGS="${SOLVERPATH}/../settings/${SETNAME}.prm"
+if test ! -e "${SETTINGS}"
+then
+    SETTINGS="${SOLVERPATH}/../../ug/settings/${SETNAME}.prm"
+fi
+SCIPSETTINGS="${SOLVERPATH}/../settings/${SETNAME}.set"
+if test ! -e "${SCIPSETTINGS}"
+then
+    SCIPSETTINGS="${SOLVERPATH}/../../ug/settings/${SETNAME}.set"
+fi
 
 uname -a                            > "${OUTFILE}"
 uname -a                            > "${ERRFILE}"
@@ -83,14 +91,14 @@ function cleanup {
 # ensure TMPFILE is deleted and results are copied when exiting (normally or due to abort/interrupt)
 trap cleanup EXIT
 
-# check if the scripts runs a *.zib.de host
-if $(hostname -f | grep -q zib.de)
+# check if the scripts runs a *.zib.de Linux host
+if $(hostname -f | grep -q zib.de) && [ $(uname) == Linux ]
 then
     # access optimi once to force a mount
     OPTIMIFILE=/data/optimi/optimi/kombadon/IP/miplib2003/10teams.mps.gz
     ls $OPTIMIFILE >/dev/null 2>&1
 
-    # check if /optimi is mounted
+    # check if optimi is mounted
     MOUNTED=0
 
     # count number of fails and abort after 10 min to avoid an endless loop
@@ -98,7 +106,7 @@ then
 
     while [ "${MOUNTED}" -ne 1 ]
     do
-        # stop if the system does not mount /optimi for ~10 minutes
+        # stop if the system does not mount optimi for ~10 minutes
         if [ "${FAILED}" -eq 600 ]
         then
             exit 1
