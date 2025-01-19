@@ -509,6 +509,7 @@
 
 /* exact SCIP parameters */
 #define SCIP_DEFAULT_EXACT_ENABLED        FALSE /**< should the problem be solved exactly (without numerical tolerances)? */
+#define SCIP_DEFAULT_EXACT_IMPROVINGSOLS   TRUE /**< should only exact solutions be checked which improve the primal bound? */
 #define SCIP_DEFAULT_EXACT_SAFEDBMETHOD     'a' /**< method for computing safe dual bounds
                                                  *   ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic) */
 #define SCIP_DEFAULT_EXACT_INTERLEAVESTRATEGY 1 /**< frequency at which safe dual bounding method is interleaved with exact LP
@@ -2741,6 +2742,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should the problem be solved exactly (without numerical tolerances)?",
          &(*set)->exact_enabled, FALSE, SCIP_DEFAULT_EXACT_ENABLED,
          paramChgdExactSolve, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "exact/improvingsols",
+         "should only exact solutions be checked which improve the primal bound?",
+         &(*set)->exact_improvingsols, TRUE, SCIP_DEFAULT_EXACT_IMPROVINGSOLS,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "exact/safedbmethod",
          "method for computing safe dual bounds ('n'eumaier-shcherbina, 'p'roject-and-shift, 'e'xact LP, 'a'utomatic)",

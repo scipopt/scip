@@ -1430,7 +1430,10 @@ SCIP_Bool solOfInterest(
    obj = SCIPsolGetObj(sol, set, transprob, origprob);
    solisbetterexact = FALSE;
 
-   if( set->exact_enabled && SCIPsolIsExact(sol) )
+   /* in exact solving mode, we need to compare the exact objective value with the exact cutoff bound in order to
+    * determine whether a solution is improving
+    */
+   if( set->exact_enabled && set->exact_improvingsols && SCIPsolIsExact(sol) )
    {
       SCIP_Rational* tmpobj;
 
@@ -1443,8 +1446,8 @@ SCIP_Bool solOfInterest(
    /* check if we are willing to check worse solutions; a solution is better if the objective is smaller than the
     * current cutoff bound; solutions with infinite objective value are never accepted
     */
-   /* AG@LE all ctest setting files currently set misc_improvingsols = TRUE; should this be the default behavior for exact/enabled = TRUE? */
-   if( (!set->misc_improvingsols || obj < primal->cutoffbound || solisbetterexact) && !SCIPsetIsInfinity(set, obj) )
+   if( !SCIPsetIsInfinity(set, obj) && (!set->exact_enabled || !set->exact_improvingsols || obj < primal->cutoffbound || solisbetterexact)
+      && (set->exact_enabled || !set->misc_improvingsols || obj < primal->cutoffbound) )
    {
       /* find insert position for the solution */
       (*insertpos) = primalSearchSolPos(primal, set, transprob, origprob, sol);
