@@ -45,9 +45,7 @@
 #include <stdlib.h>
 #include <numeric>
 #include <string.h>
-#include <ostream>
 #include <algorithm>
-#include <cctype>
 
 #ifdef SCIP_WITH_BOOST
 #include <boost/format.hpp>
@@ -60,18 +58,6 @@
 using namespace scip_rational;
 #endif
 
-
-/* find substring, ignore case */
-static
-std::string::const_iterator findSubStringIC(const std::string & substr, const std::string & str)
-{
-   auto it = std::search(
-      str.begin(), str.end(),
-      substr.begin(),   substr.end(),
-      [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
-   );
-   return it;
-}
 
 extern "C" {
 
@@ -129,27 +115,48 @@ SCIP_RETCODE RatCreateBuffer(
 SCIP_RETCODE RatCreateString(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
-   const char*           desc                /**< the String describing the rational */
-)
+   const char*           desc                /**< the string describing the rational */
+   )
 {
+   bool negative;
+
+   assert(desc != NULL);
+
+   if( SCIPstrncasecmp(desc, "unk", 3) == 0 )
+   {
+      *rational = NULL;
+      return SCIP_OKAY;
+   }
+
    SCIP_CALL( RatCreateBlock(mem, rational) );
 
-   if( 0 == strcmp(desc, "inf") )
+   switch( *desc )
    {
-      (*rational)->val = 1;
-      (*rational)->isinf = TRUE;
+   case '-':
+      ++desc;
+      negative = true;
+      break;
+   case '+':
+      ++desc;
+      /*lint -fallthrough*/
+   default:
+      negative = false;
+      break;
    }
-   else if ( 0 == strcmp(desc, "-inf") )
+
+   if( SCIPstrncasecmp(desc, "inf", 3) == 0 )
    {
-      (*rational)->val = -1;
+      (*rational)->val = negative ? -1 : 1;
       (*rational)->isinf = TRUE;
+      (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
    }
    else
    {
-      (*rational)->val = scip_rational::Rational(desc);
+      (*rational)->val = negative ? -scip_rational::Rational(desc) : scip_rational::Rational(desc);
       (*rational)->isinf = FALSE;
+      (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
    }
-   (*rational)->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+
    return SCIP_OKAY;
 }
 
@@ -564,19 +571,37 @@ void RatSetInt(
 }
 
 /** checks if a string describes a rational number */
-bool SCIPisRationalString(
+SCIP_Bool SCIPisRationalString(
    const char*           desc                /**< string to check */
    )
 {
-   if( 0 == strcmp(desc, "inf") )
+   assert(desc != NULL);
+
+   if( *desc == '-' || *desc == '+' )
+      ++desc;
+
+   if( *desc == '\0' || *desc == '/' )
+      return FALSE;
+
+   if( SCIPstrncasecmp(desc, "inf", 3) == 0 )
       return TRUE;
-   else if ( 0 == strcmp(desc, "-inf") )
+
+   desc += strspn(desc, "0123456789");
+
+   if( *desc == '\0' )
       return TRUE;
-   else
-   {
-      std::string s(desc);
-      return s.find_first_not_of("0123456789/") == std::string::npos;
-   }
+
+   if( *desc != '/' )
+      return FALSE;
+
+   ++desc;
+
+   if( *desc == '\0' )
+      return FALSE;
+
+   desc += strspn(desc, "0123456789");
+
+   return *desc == '\0';
 }
 
 /** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
@@ -589,86 +614,96 @@ SCIP_Bool SCIPstrToRationalValue(
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
-   SCIP_Bool hassign = false;
-   std::string s;
    size_t endpos;
 
    assert(str != NULL);
    assert(value != NULL);
    assert(endptr != NULL);
 
-   if( str[0] == '-' || str[0] == '+')
-   {
-      hassign = true;
-      s = str + 1;
-   }
-   else
-      s = str;
+   *endptr = str;
 
-   endpos = s.find_first_not_of("0123456789/");
+   if( *str == '-' || *str == '+' )
+      ++str;
+
+   endpos = strspn(str, "0123456789");
 
    if( endpos == 0 )
-   {
-      *endptr = str;
       return FALSE;
+
+   str += endpos;
+
+   if( *str == '/' )
+   {
+      ++str;
+      endpos = strspn(str, "0123456789");
+
+      if( endpos == 0 )
+         return FALSE;
+
+      str += endpos;
    }
 
-   RatSetString(value, s.substr(0, endpos).c_str());
-   if( str[0] == '-' )
-      RatNegate(value, value);
-   *endptr = str + endpos;
-   if( hassign )
-      *endptr += 1;
+   std::string s(*endptr, str);
+
+   *endptr = str;
+   RatSetString(value, s.c_str());
+
    return TRUE;
 }
 
 /** set a rational to the value described by a string */
 void RatSetString(
    SCIP_Rational*        res,                /**< the result */
-   const char*           desc                /**< the String describing the rational */
+   const char*           desc                /**< the string describing the rational */
    )
 {
-   assert(res != NULL);
+   bool negative;
 
-   if( 0 == strcmp(desc, "inf") )
+   assert(res != NULL);
+   assert(desc != NULL);
+
+   switch( *desc )
    {
-      res->val =  1;
-      res->isinf = TRUE;
+   case '-':
+      ++desc;
+      negative = true;
+      break;
+   case '+':
+      ++desc;
+      /*lint -fallthrough*/
+   default:
+      negative = false;
+      break;
    }
-   else if ( 0 == strcmp(desc, "-inf") )
+
+   if( SCIPstrncasecmp(desc, "inf", 3) == 0 )
    {
-      res->val = -1;
+      res->val = negative ? -1 : 1;
       res->isinf = TRUE;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_TRUE;
    }
    else
    {
       std::string s(desc);
-      s = s.substr(s.find_first_not_of(" "),s.length());
-      s = s.substr(0, s.find(" "));
-      /* case 1: string is given in nom/den format */
-      if( s.find('.') == std::string::npos && findSubStringIC("e",s) == s.end() )
-      {
-         res->val = scip_rational::Rational(s.c_str());
-         res->isinf = FALSE;
-      }
-      /* case 2: string is given as base-10 decimal number */
-      else
-      {
-         std::string::const_iterator it = findSubStringIC("e", s);
-         int exponent = 0;
+      size_t exponentidx = s.find_first_of("eE");
+      int exponent = 0;
 
-         // split s in decimal part and exponent
-         if( it != s.end() )
-         {
-            int exponentidx = it - s.begin();
-            exponent = std::stoi(s.substr(exponentidx + 1, s.length()));
-            s = s.substr(0, exponentidx);
-         }
+      /* split into decimal and power */
+      if( exponentidx != std::string::npos )
+      {
+         exponent = std::stoi(s.substr(exponentidx + 1, s.length()));
+         s = s.substr(0, exponentidx);
+      }
+
+      /* convert decimal into fraction */
+      if( s.find('.') != std::string::npos )
+      {
          SCIPdebug(std::cout << s << std::endl);
+
          if( s[0] == '.' )
             s.insert(0, "0");
 
-         // transform decimal into fraction
+         /* transform decimal into fraction */
          size_t decimalpos = s.find('.');
          size_t exponentpos = s.length() - 1 - decimalpos;
          std::string denominator("1");
@@ -687,15 +722,13 @@ void RatSetString(
 
          s.append("/");
          s.append(denominator);
-
-         res->val = scip_rational::Rational(s);
-         res->val *= pow(10, exponent);
-
-         res->isinf = FALSE;
       }
-   }
 
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+      res->val = negative ? -scip_rational::Rational(s) : scip_rational::Rational(s);
+      res->val *= pow(10, exponent);
+      res->isinf = FALSE;
+      res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+   }
 }
 
 /** set a rational to the value of another a real */
@@ -1544,14 +1577,15 @@ int RatToString(
    )
 {
    int ret = 0;
-   assert(rational != NULL);
 
-   if( rational->isinf )
+   if( rational == NULL )
+      ret = SCIPstrncpy(str, "unknown", strlen);
+   else if( rational->isinf )
    {
       if( rational->val.sign() > 0 )
-         ret = SCIPstrncpy(str, "inf", strlen);
+         ret = SCIPstrncpy(str, "+infinity", strlen);
       else
-         ret = SCIPstrncpy(str, "-inf", strlen);
+         ret = SCIPstrncpy(str, "-infinity", strlen);
    }
    else
    {
@@ -1567,20 +1601,19 @@ int RatToString(
 }
 
 /** returns the strlen of a rational number */
-SCIP_Longint RatStrlen(
+int RatStrlen(
    SCIP_Rational*        rational            /** rational to consider */
    )
 {
-   assert(rational != NULL);
-   if( rational->isinf )
-   {
-      if( rational->val > 0 )
-         return 3;
-      else
-         return 4;
-   }
+   /* unknown */
+   if( rational == NULL )
+      return 7;
+   /* +-infinity */
+   else if( rational->isinf )
+      return 9;
+   /* quotient */
    else
-      return (SCIP_Longint) rational->val.str().length();
+      return rational->val.str().length();
 }
 
 /** prints rational to file using message handler */
@@ -1590,14 +1623,14 @@ void RatMessage(
    SCIP_Rational*        rational            /**< the rational to print */
    )
 {
-   assert(rational != NULL);
-
-   if( rational->isinf )
+   if( rational == NULL )
+      SCIPmessageFPrintInfo(msg, file, "unknown");
+   else if( rational->isinf )
    {
       if( rational->val.sign() > 0 )
-         SCIPmessageFPrintInfo(msg, file, "inf");
+         SCIPmessageFPrintInfo(msg, file, "+infinity");
       else
-         SCIPmessageFPrintInfo(msg, file, "-inf");
+         SCIPmessageFPrintInfo(msg, file, "-infinity");
    }
    else
    {
@@ -1611,18 +1644,19 @@ void RatPrint(
    SCIP_Rational*        rational            /**< the rational to print */
    )
 {
-   if( rational == NULL)
-      std::cout << "NULL" << std::flush;
+   if( rational == NULL )
+      std::cout << "unknown" << std::flush;
    else if( rational->isinf )
-      std::cout << rational->val.sign() << "inf" << std::flush;
+      std::cout << (rational->val.sign() > 0 ? "+" : "-") << "infinity" << std::flush;
    else
       std::cout << rational->val << std::flush;
 }
 
-/* print SCIP_Rational to output stream */
-std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r) {
+/** print SCIP_Rational to output stream */
+std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r)
+{
    if( r.isinf )
-      os << r.val.sign() << "inf";
+      os << (r.val.sign() > 0 ? "+" : "-") << "infinity";
    else
       os << r.val;
 
@@ -1630,7 +1664,7 @@ std::ostream& operator<<(std::ostream& os, SCIP_Rational const & r) {
 }
 
 #ifdef SCIP_DISABLED_CODE
-/* convert va_arg format string into std:string */
+/** convert va_arg format string into std:string */
 static
 std::string RatString(const char *format, va_list arguments)
 {
@@ -1694,7 +1728,7 @@ std::string RatString(const char *format, va_list arguments)
 }
 #endif
 
-/* printf extension for rationals (not supporting all format options) */
+/** printf extension for rationals (not supporting all format options) */
 void RatPrintf(const char *format, ...)
 {
    SCIP_Rational* rat;
