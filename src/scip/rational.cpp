@@ -161,6 +161,47 @@ SCIP_RETCODE RatCreateString(
    return SCIP_OKAY;
 }
 
+/** creates a copy of a rational using ordinary memory */
+SCIP_RETCODE RatCopy(
+   SCIP_Rational**       result,             /**< pointer to the rational to create */
+   SCIP_Rational*        src                 /**< rational to copy */
+   )
+{
+   SCIP_CALL( RatCreate(mem, result) );
+
+   RatSet(*result, src);
+
+   return SCIP_OKAY;
+}
+
+/** creates a copy of a rational using block memory */
+SCIP_RETCODE RatCopyBlock(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational**       result,             /**< pointer to the rational to create */
+   SCIP_Rational*        src                 /**< rational to copy */
+   )
+{
+   SCIP_CALL( RatCreateBlock(mem, result) );
+
+   RatSet(*result, src);
+
+   return SCIP_OKAY;
+}
+
+/** creates a copy of a rational using buffer memory */
+SCIP_RETCODE RatCopyBuffer(
+   BMS_BUFMEM*           mem,                /**< buffer memory */
+   SCIP_Rational**       result,             /**< pointer to the rational to create */
+   SCIP_Rational*        src                 /**< rational to copy */
+   )
+{
+   SCIP_CALL( RatCreateBuffer(mem, result) );
+
+   RatSet(*result, src);
+
+   return SCIP_OKAY;
+}
+
 /** create an array of rationals */
 SCIP_RETCODE RatCreateArray(
    SCIP_Rational***      rational,           /**< pointer to the array to create */
@@ -294,34 +335,6 @@ SCIP_RETCODE RatReallocBlockArray(
          SCIP_CALL( RatCreateBlock(mem, &((*result)[i])) );
       }
    }
-
-   return SCIP_OKAY;
-}
-
-/** creates a copy of a rational */
-SCIP_RETCODE RatCopy(
-   BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational**       result,             /**< pointer to the rational to create */
-   SCIP_Rational*        src                 /**< rational to copy */
-   )
-{
-   SCIP_CALL( RatCreateBlock(mem, result) );
-
-   RatSet(*result, src);
-
-   return SCIP_OKAY;
-}
-
-/** creates a copy of a rational */
-SCIP_RETCODE RatCopyBuffer(
-   BMS_BUFMEM*           mem,                /**< block memory */
-   SCIP_Rational**       result,             /**< pointer to the rational to create */
-   SCIP_Rational*        src                 /**< rational to copy */
-   )
-{
-   SCIP_CALL( RatCreateBuffer(mem, result) );
-
-   RatSet(*result, src);
 
    return SCIP_OKAY;
 }

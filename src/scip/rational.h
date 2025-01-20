@@ -92,7 +92,30 @@ SCIP_RETCODE RatCreateString(
    const char*           desc                /**< the string describing the rational */
    );
 
-/** creates an array of rationals */
+/** creates a copy of a rational using ordinary memory */
+SCIP_EXPORT
+SCIP_RETCODE RatCopy(
+   SCIP_Rational**       result,             /**< pointer to the rational to create */
+   SCIP_Rational*        src                 /**< rational to copy */
+   );
+
+/** creates a copy of a rational using block memory */
+SCIP_EXPORT
+SCIP_RETCODE RatCopyBlock(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational**       result,             /**< pointer to the rational to create */
+   SCIP_Rational*        src                 /**< rational to copy */
+   );
+
+/** creates a copy of a rational */
+SCIP_EXPORT
+SCIP_RETCODE RatCopyBuffer(
+   BMS_BUFMEM*           mem,                /**< buffer memory */
+   SCIP_Rational**       rational,           /**< pointer to the rational to create */
+   SCIP_Rational*        src                 /**< rational to copy */
+   );
+
+/** creates an array of rationals using ordinary memory */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateArray(
    SCIP_Rational***      rational,           /**< pointer to the array to create */
@@ -149,22 +172,6 @@ SCIP_RETCODE RatReallocBlockArray(
    SCIP_Rational***      result,             /**< address to copy to */
    int                   oldlen,             /**< size of src array */
    int                   newlen              /**< size of src array */
-   );
-
-/** creates a copy of a rational */
-SCIP_EXPORT
-SCIP_RETCODE RatCopy(
-   BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational**       rational,           /**< pointer to the rational to create */
-   SCIP_Rational*        src                 /**< rational to copy */
-   );
-
-/** creates a copy of a rational */
-SCIP_EXPORT
-SCIP_RETCODE RatCopyBuffer(
-   BMS_BUFMEM*           mem,                /**< block memory */
-   SCIP_Rational**       rational,           /**< pointer to the rational to create */
-   SCIP_Rational*        src                 /**< rational to copy */
    );
 
 #ifdef SCIP_WITH_GMP
