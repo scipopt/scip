@@ -221,6 +221,7 @@ void RatSetGMPArray(
    );
 
 /** sets a rational array to the values of an mpq_t array */
+SCIP_EXPORT
 void RatSetArrayGMP(
    SCIP_Rational**       res,                /**< the rational array */
    mpq_t*                src,                /**< the mpq-t array */
