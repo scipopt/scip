@@ -522,7 +522,7 @@ SCIP_RETCODE SCIPsolCreateExact(
 
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(*sol)->valsexact ) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(*sol)->valsexact) );
    SCIP_CALL( SCIPrationalarrayCreate(&(*sol)->valsexact->vals, blkmem) );
    SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valsexact->valid, blkmem) );
    SCIP_CALL( RatCreateBlock(blkmem, &(*sol)->valsexact->obj) );

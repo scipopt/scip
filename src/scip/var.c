@@ -18230,13 +18230,12 @@ void SCIPvarGetLPSolExact_rec(
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
-   {
       assert(var->data.aggregate.var != NULL);
       SCIPvarGetLPSolExact(var->data.aggregate.var, res);
       RatMult(res, res, var->exactdata->aggregate.scalar);
       RatAdd(res, res, var->exactdata->aggregate.constant);
       break;
-   }
+
    case SCIP_VARSTATUS_MULTAGGR:
    {
       SCIP_Rational* tmp;
@@ -18259,6 +18258,7 @@ void SCIPvarGetLPSolExact_rec(
       RatFree(&tmp);
       break;
    }
+
    case SCIP_VARSTATUS_NEGATED: /* x' = offset - x  ->  x = offset - x' */
       assert(var->negatedvar != NULL);
       assert(SCIPvarGetStatus(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
@@ -24354,8 +24354,7 @@ SCIP_Rational* SCIPvarGetPseudoSolExact(
 {
    assert(var != NULL);
 
-   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE
-         || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
+   if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_COLUMN )
       return SCIPvarGetBestBoundLocalExact(var);
    else
       return SCIPvarGetPseudoSolExact_rec(var);
