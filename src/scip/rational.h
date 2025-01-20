@@ -122,7 +122,7 @@ SCIP_RETCODE RatCreateArray(
    int                   size                /**< the size of the array */
    );
 
-/** creates an array of rationals */
+/** creates an array of rationals using block memory */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -130,15 +130,23 @@ SCIP_RETCODE RatCreateBlockArray(
    int                   size                /**< the size of the array */
    );
 
-/** creates an array of rationals */
+/** creates an array of rationals using buffer memory */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateBufferArray(
-   BMS_BUFMEM*           mem,                /**< block memory */
+   BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      rational,           /**< pointer to the array to create */
-   int                   size                /** the size of the array */
+   int                   size                /**< the size of the array */
    );
 
-/** copies an array of rationals */
+/** copies an array of rationals using ordinary memory */
+SCIP_EXPORT
+SCIP_RETCODE RatCopyArray(
+   SCIP_Rational***      target,             /**< address to copy to */
+   SCIP_Rational**       src,                /**< src array */
+   int                   len                 /**< size of src array */
+   );
+
+/** copies an array of rationals using block memory */
 SCIP_EXPORT
 SCIP_RETCODE RatCopyBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -147,7 +155,7 @@ SCIP_RETCODE RatCopyBlockArray(
    int                   len                 /**< size of src array */
    );
 
-/** copy an array of rationals */
+/** copy an array of rationals using buffer memory */
 SCIP_EXPORT
 SCIP_RETCODE RatCopyBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */

@@ -202,10 +202,10 @@ SCIP_RETCODE RatCopyBuffer(
    return SCIP_OKAY;
 }
 
-/** create an array of rationals */
+/** create an array of rationals using ordinary memory */
 SCIP_RETCODE RatCreateArray(
    SCIP_Rational***      rational,           /**< pointer to the array to create */
-   int                   size                /** the size of the array */
+   int                   size                /**< the size of the array */
    )
 {
    BMSallocMemoryArray(rational, size);
@@ -219,11 +219,11 @@ SCIP_RETCODE RatCreateArray(
    return SCIP_OKAY;
 }
 
-/** create an array of rationals */
+/** create an array of rationals using block memory */
 SCIP_RETCODE RatCreateBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      rational,           /**< pointer to the array to create */
-   int                   size                /** the size of the array */
+   int                   size                /**< the size of the array */
    )
 {
    BMSallocBlockMemoryArray(mem, rational, size);
@@ -237,11 +237,11 @@ SCIP_RETCODE RatCreateBlockArray(
    return SCIP_OKAY;
 }
 
-/** create an array of rationals */
+/** create an array of rationals using buffer memory */
 SCIP_RETCODE RatCreateBufferArray(
    BMS_BUFMEM*           mem,                /**< block memory */
    SCIP_Rational***      rational,           /**< pointer to the arrat to create */
-   int                   size                /** the size of the array */
+   int                   size                /**< the size of the array */
    )
 {
    BMSallocBufferMemoryArray(mem, rational, size);
@@ -255,7 +255,24 @@ SCIP_RETCODE RatCreateBufferArray(
    return SCIP_OKAY;
 }
 
-/** copy an array of rationals */
+/** copy an array of rationals using ordinary memory */
+SCIP_RETCODE RatCopyArray(
+   SCIP_Rational***      result,             /**< address to copy to */
+   SCIP_Rational**       src,                /**< src array */
+   int                   len                 /**< size of src array */
+   )
+{
+   BMSduplicateMemoryArray(result, src, len);
+
+   for( int i = 0; i < len; ++i )
+   {
+      SCIP_CALL( RatCopy(&(*result)[i], src[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** copy an array of rationals using block memory */
 SCIP_RETCODE RatCopyBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational***      result,             /**< address to copy to */
@@ -267,13 +284,13 @@ SCIP_RETCODE RatCopyBlockArray(
 
    for( int i = 0; i < len; ++i )
    {
-      SCIP_CALL( RatCopy(mem, &(*result)[i], src[i]) );
+      SCIP_CALL( RatCopyBlock(mem, &(*result)[i], src[i]) );
    }
 
    return SCIP_OKAY;
 }
 
-/** copy an array of rationals */
+/** copy an array of rationals using buffer memory */
 SCIP_RETCODE RatCopyBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      result,             /**< address to copy to */
