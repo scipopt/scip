@@ -973,8 +973,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->rowlhs = NULL;
    (*consdata)->rowrhs = NULL;
    (*consdata)->rowexact = NULL;
-   SCIP_CALL( RatCopy(SCIPblkmem(scip), &(*consdata)->lhs, lhs) );
-   SCIP_CALL( RatCopy(SCIPblkmem(scip), &(*consdata)->rhs, rhs) );
+   SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &(*consdata)->lhs, lhs) );
+   SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &(*consdata)->rhs, rhs) );
    (*consdata)->lhsreal = lhsrel;
    (*consdata)->rhsreal = rhsrel;
    SCIP_CALL( RatCreateString(SCIPblkmem(scip), &(*consdata)->maxabsvalEx, "inf") );
@@ -18445,7 +18445,7 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nconsvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
       consvars[0] = var;
-      SCIP_CALL( RatCopy(SCIPblkmem(scip), &consvals[0], val) );
+      SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &consvals[0], val) );
       SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &constant) );
 
       /* get active variables for new constraint */
@@ -18464,8 +18464,8 @@ SCIP_RETCODE SCIPaddCoefExactLinear(
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      SCIP_CALL( RatCopy(SCIPblkmem(scip), &lhs, consdata->lhs) );
-      SCIP_CALL( RatCopy(SCIPblkmem(scip), &rhs, consdata->rhs) );
+      SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &lhs, consdata->lhs) );
+      SCIP_CALL( RatCopyBlock(SCIPblkmem(scip), &rhs, consdata->rhs) );
 
       /* adjust sides and check that we do not subtract infinity values */
       /* constant is infinite */

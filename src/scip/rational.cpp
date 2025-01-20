@@ -167,7 +167,7 @@ SCIP_RETCODE RatCopy(
    SCIP_Rational*        src                 /**< rational to copy */
    )
 {
-   SCIP_CALL( RatCreate(mem, result) );
+   SCIP_CALL( RatCreate(result) );
 
    RatSet(*result, src);
 

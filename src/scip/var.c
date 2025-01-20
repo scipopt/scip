@@ -1819,7 +1819,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    if( newboundexact != NULL )
    {
       if( boundchg->newboundexact == NULL )
-         SCIP_CALL( RatCopy(blkmem, &boundchg->newboundexact, newboundexact) );
+         SCIP_CALL( RatCopyBlock(blkmem, &boundchg->newboundexact, newboundexact) );
       else
          RatSet(boundchg->newboundexact, newboundexact);
    }
@@ -2575,9 +2575,9 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    if( lb != NULL )
    {
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->glbdom.lb, lb) );
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->locdom.lb, lb) );
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.lb, lb) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->glbdom.lb, lb) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->locdom.lb, lb) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->origdom.lb, lb) );
    }
    else
    {
@@ -2592,9 +2592,9 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    if( ub != NULL )
    {
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->glbdom.ub, ub) );
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->locdom.ub, ub) );
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->origdom.ub, ub) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->glbdom.ub, ub) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->locdom.ub, ub) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->origdom.ub, ub) );
    }
    else
    {
@@ -2609,7 +2609,7 @@ SCIP_RETCODE SCIPvarAddExactData(
 
    if( obj != NULL )
    {
-      SCIP_CALL( RatCopy(blkmem, &var->exactdata->obj, obj) );
+      SCIP_CALL( RatCopyBlock(blkmem, &var->exactdata->obj, obj) );
       SCIPintervalSetRational(&var->exactdata->objinterval, obj);
    }
    else
@@ -2656,17 +2656,17 @@ SCIP_RETCODE SCIPvarCopyExactData(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &(targetvar->exactdata)) );
    targetvar->exactdata->glbdom = sourcevar->exactdata->glbdom;
    targetvar->exactdata->locdom = sourcevar->exactdata->locdom;
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->glbdom.lb, sourcevar->exactdata->glbdom.lb) );
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->glbdom.ub, sourcevar->exactdata->glbdom.ub) );
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->locdom.lb, sourcevar->exactdata->locdom.lb) );
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->locdom.ub, sourcevar->exactdata->locdom.ub) );
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->origdom.lb, sourcevar->exactdata->origdom.lb) );
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->origdom.ub, sourcevar->exactdata->origdom.ub) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->glbdom.lb, sourcevar->exactdata->glbdom.lb) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->glbdom.ub, sourcevar->exactdata->glbdom.ub) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->locdom.lb, sourcevar->exactdata->locdom.lb) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->locdom.ub, sourcevar->exactdata->locdom.ub) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->origdom.lb, sourcevar->exactdata->origdom.lb) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->origdom.ub, sourcevar->exactdata->origdom.ub) );
 
    if( sourcevar->exactdata->aggregate.scalar != NULL )
    {
-      SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->aggregate.scalar, sourcevar->exactdata->aggregate.scalar) );
-      SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->aggregate.constant) );
+      SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->aggregate.scalar, sourcevar->exactdata->aggregate.scalar) );
+      SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->aggregate.constant) );
    }
    else
    {
@@ -2676,7 +2676,7 @@ SCIP_RETCODE SCIPvarCopyExactData(
 
    if( sourcevar->exactdata->multaggr.scalars != NULL )
    {
-      SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->multaggr.constant) );
+      SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->aggregate.constant, sourcevar->exactdata->multaggr.constant) );
       SCIP_CALL( RatCopyBlockArray(blkmem, &targetvar->exactdata->multaggr.scalars, sourcevar->exactdata->multaggr.scalars, sourcevar->data.multaggr.nvars) );
    }
    else
@@ -2685,7 +2685,7 @@ SCIP_RETCODE SCIPvarCopyExactData(
       targetvar->exactdata->multaggr.scalars = NULL;
    }
 
-   SCIP_CALL( RatCopy(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
+   SCIP_CALL( RatCopyBlock(blkmem, &targetvar->exactdata->obj, sourcevar->exactdata->obj) );
    if( negateobj )
    {
       RatNegate(targetvar->exactdata->obj, targetvar->exactdata->obj);
@@ -8156,7 +8156,7 @@ SCIP_RETCODE SCIPvarMultiaggregateExact(
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &var->data.multaggr.scalars, ntmpvars) );
       for( i = 0; i < ntmpvars; ++i )
          var->data.multaggr.scalars[i] = RatApproxReal(tmpscalars[i]);
-      SCIP_CALL( RatCopy(blkmem, &(var->exactdata->multaggr.constant), tmpconstant) );
+      SCIP_CALL( RatCopyBlock(blkmem, &(var->exactdata->multaggr.constant), tmpconstant) );
       var->data.multaggr.constant = RatApproxReal(tmpconstant);
       var->data.multaggr.nvars = ntmpvars;
       var->data.multaggr.varssize = ntmpvars;

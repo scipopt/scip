@@ -544,7 +544,7 @@ SCIP_RETCODE SCIPvalsExactCopy(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, valsexact) );
    SCIP_CALL( SCIPrationalarrayCopy(&(*valsexact)->vals, blkmem, sourcevals->vals) );
    SCIP_CALL( SCIPboolarrayCopy(&(*valsexact)->valid, blkmem, sourcevals->valid) );
-   SCIP_CALL( RatCopy(blkmem, &(*valsexact)->obj, sourcevals->obj) );
+   SCIP_CALL( RatCopyBlock(blkmem, &(*valsexact)->obj, sourcevals->obj) );
 
    return SCIP_OKAY;
 }

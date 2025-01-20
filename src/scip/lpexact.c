@@ -1070,7 +1070,7 @@ SCIP_RETCODE colExactAddCoef(
    if( col->vals[pos] != NULL )
       RatSet(col->vals[pos], val);
    else
-      SCIP_CALL( RatCopy(blkmem, &col->vals[pos], val) );
+      SCIP_CALL( RatCopyBlock(blkmem, &col->vals[pos], val) );
 
    col->linkpos[pos] = linkpos;
    if( linkpos == -1 )
@@ -1283,7 +1283,7 @@ SCIP_RETCODE rowExactAddCoef(
    row->cols[pos] = col;
    row->cols_index[pos] = col->index;
    if( row->vals[pos] == NULL )
-      SCIP_CALL( RatCopy(blkmem, &row->vals[pos], val) );
+      SCIP_CALL( RatCopyBlock(blkmem, &row->vals[pos], val) );
    else
       RatSet(row->vals[pos], val);
 
@@ -2452,9 +2452,9 @@ SCIP_RETCODE SCIPcolExactCreate(
    }
 
    (*col)->var = var;
-   SCIP_CALL( RatCopy(blkmem, &(*col)->obj, SCIPvarGetObjExact(var)) );
-   SCIP_CALL( RatCopy(blkmem, &(*col)->lb, SCIPvarGetLbLocalExact(var)) );
-   SCIP_CALL( RatCopy(blkmem, &(*col)->ub, SCIPvarGetUbLocalExact(var)) );
+   SCIP_CALL( RatCopyBlock(blkmem, &(*col)->obj, SCIPvarGetObjExact(var)) );
+   SCIP_CALL( RatCopyBlock(blkmem, &(*col)->lb, SCIPvarGetLbLocalExact(var)) );
+   SCIP_CALL( RatCopyBlock(blkmem, &(*col)->ub, SCIPvarGetUbLocalExact(var)) );
    (*col)->index = (*col)->fpcol->index;
    SCIP_CALL( RatCreateBlock(blkmem, &(*col)->flushedobj) );
    SCIP_CALL( RatCreateBlock(blkmem, &(*col)->flushedlb) );
@@ -3215,8 +3215,8 @@ SCIP_RETCODE SCIProwExactCreate(
       (*row)->cols_index = NULL;
    }
 
-   SCIP_CALL( RatCopy(blkmem, &(*row)->lhs, lhs) );
-   SCIP_CALL( RatCopy(blkmem, &(*row)->rhs, rhs) );
+   SCIP_CALL( RatCopyBlock(blkmem, &(*row)->lhs, lhs) );
+   SCIP_CALL( RatCopyBlock(blkmem, &(*row)->rhs, rhs) );
    SCIP_CALL( RatCreateString(blkmem, &(*row)->flushedlhs, "-inf") );
    SCIP_CALL( RatCreateString(blkmem, &(*row)->flushedrhs, "inf") );
    SCIP_CALL( RatCreateString(blkmem, &(*row)->objprod, "0") );
@@ -7768,8 +7768,8 @@ SCIP_RETCODE colExactStoreSolVals(
       storedsolvals = colexact->storedsolvals;
 
       /* store values */
-      SCIP_CALL( RatCopy(blkmem, &(storedsolvals->primsol), colexact->primsol) );
-      SCIP_CALL( RatCopy(blkmem, &(storedsolvals->redcost), colexact->redcost) );
+      SCIP_CALL( RatCopyBlock(blkmem, &(storedsolvals->primsol), colexact->primsol) );
+      SCIP_CALL( RatCopyBlock(blkmem, &(storedsolvals->redcost), colexact->redcost) );
       storedsolvals->basisstatus = colexact->basisstatus; /*lint !e641 !e732*/
    }
    else
@@ -7855,15 +7855,15 @@ SCIP_RETCODE rowExactStoreSolVals(
       /* store values */
       if( infeasible )
       {
-         SCIP_CALL( RatCopy(blkmem, &(storedsolvals->dualsol), rowexact->dualfarkas) );
+         SCIP_CALL( RatCopyBlock(blkmem, &(storedsolvals->dualsol), rowexact->dualfarkas) );
          SCIP_CALL( RatCreateBlock(blkmem, &(storedsolvals->activity)) );
          RatSetString(storedsolvals->activity, "inf");
          storedsolvals->basisstatus = SCIP_BASESTAT_BASIC;  /*lint !e641*/
       }
       else
       {
-         SCIP_CALL( RatCopy(blkmem, &(storedsolvals->dualsol), rowexact->dualsol) );
-         SCIP_CALL( RatCopy(blkmem, &(storedsolvals->activity), rowexact->activity) );
+         SCIP_CALL( RatCopyBlock(blkmem, &(storedsolvals->dualsol), rowexact->dualsol) );
+         SCIP_CALL( RatCopyBlock(blkmem, &(storedsolvals->activity), rowexact->activity) );
          storedsolvals->basisstatus = rowexact->basisstatus; /*lint !e641 !e732*/
       }
    }
@@ -7960,7 +7960,7 @@ SCIP_RETCODE lpExactStoreSolVals(
       storedsolvals = lpexact->storedsolvals;
 
       /* store values */
-      SCIP_CALL( RatCopy(blkmem, &(storedsolvals->lpobjval), lpexact->lpobjval));
+      SCIP_CALL( RatCopyBlock(blkmem, &(storedsolvals->lpobjval), lpexact->lpobjval));
       storedsolvals->lpsolstat = lpexact->lpsolstat;
       storedsolvals->primalfeasible = lpexact->primalfeasible;
       storedsolvals->primalchecked = lpexact->primalchecked;
