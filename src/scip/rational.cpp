@@ -378,7 +378,7 @@ SCIP_RETCODE RatReallocBlockArray(
 #ifdef SCIP_WITH_BOOST
 /** creates a rational from an mpq_t */
 #ifdef SCIP_WITH_GMP
-SCIP_RETCODE RatCreateGMP(
+SCIP_RETCODE RatCreateBlockGMP(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
    mpq_t                 numb                /**< the gmp rational */
