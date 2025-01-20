@@ -68,7 +68,7 @@ static SCIP_Real infinity = SCIP_DEFAULT_INFINITY; /* values above this are cons
  * Creation methods
  */
 
-/** allocate and create a rational from nominator and denominator */
+/** allocate and create a rational from nominator and denominator using ordinary memory */
 SCIP_RETCODE RatCreate(
    SCIP_Rational**       rational            /**< pointer to the rational to create */
    )
@@ -82,7 +82,7 @@ SCIP_RETCODE RatCreate(
    return SCIP_OKAY;
 }
 
-/** allocate and create a rational from nominator and denominator */
+/** allocate and create a rational from nominator and denominator using block memory */
 SCIP_RETCODE RatCreateBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational            /**< pointer to the rational to create */
@@ -97,9 +97,9 @@ SCIP_RETCODE RatCreateBlock(
    return SCIP_OKAY;
 }
 
-/** allocate and create a rational from nominator and denominator */
+/** allocate and create a rational from nominator and denominator using buffer memory */
 SCIP_RETCODE RatCreateBuffer(
-   BMS_BUFMEM*           mem,                /**< block memory */
+   BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational**       rational            /**< pointer to the rational to create */
    )
 {

@@ -64,6 +64,26 @@ extern "C" {
  * Creation methods
  */
 
+/** creates a rational using standard memory allocation */
+SCIP_EXPORT
+SCIP_RETCODE RatCreate(
+   SCIP_Rational**       rational            /**< pointer to the rational to create */
+   );
+
+/** creates a rational using buffer memory */
+SCIP_EXPORT
+SCIP_RETCODE RatCreateBuffer(
+   BMS_BUFMEM*           buf,                /**< buffer memory */
+   SCIP_Rational**       rational            /**< pointer to the rational to create */
+   );
+
+/** creates a rational using block memory */
+SCIP_EXPORT
+SCIP_RETCODE RatCreateBlock(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_Rational**       rational            /**< pointer to the rational to create */
+   );
+
 /** allocates and creates a rational from a string in the format, e.g. "12/35" */
 SCIP_EXPORT
 SCIP_RETCODE RatCreateString(
@@ -145,26 +165,6 @@ SCIP_RETCODE RatCopyBuffer(
    BMS_BUFMEM*           mem,                /**< block memory */
    SCIP_Rational**       rational,           /**< pointer to the rational to create */
    SCIP_Rational*        src                 /**< rational to copy */
-   );
-
-/** creates a rational using buffer memory */
-SCIP_EXPORT
-SCIP_RETCODE RatCreateBuffer(
-   BMS_BUFMEM*           buf,                /**< buffer memory */
-   SCIP_Rational**       rational            /**< pointer to the rational to create */
-   );
-
-/** creates a rational using standard memory allocation */
-SCIP_EXPORT
-SCIP_RETCODE RatCreate(
-   SCIP_Rational**       rational            /**< pointer to the rational to create */
-   );
-
-/** creates a rational using block memory */
-SCIP_EXPORT
-SCIP_RETCODE RatCreateBlock(
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_Rational**       rational            /**< pointer to the rational to create */
    );
 
 #ifdef SCIP_WITH_GMP
