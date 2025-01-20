@@ -2584,6 +2584,7 @@ SCIP_RETCODE SCIPrationalarrayCopy(
    assert(sourcerationalarray != nullptr);
 
    SCIP_CALL( SCIPrationalarrayCreate(rationalarray, blkmem) );
+   /* MP@LE This does not look like a copy, it just copies the pointer. Is this correct? */
    (*rationalarray)->vals = sourcerationalarray->vals;
    (*rationalarray)->firstidx = sourcerationalarray->firstidx;
 
