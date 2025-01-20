@@ -164,6 +164,14 @@ SCIP_RETCODE RatCopyBufferArray(
    int                   len                 /**< size of src array */
    );
 
+/** realloc a rational ordinary array */
+SCIP_EXPORT
+SCIP_RETCODE RatReallocArray(
+   SCIP_Rational***      result,             /**< address to copy to */
+   int                   oldlen,             /**< size of src array */
+   int                   newlen              /**< size of src array */
+   );
+
 /** realloc a rational buffer arrray */
 SCIP_EXPORT
 SCIP_RETCODE RatReallocBufferArray(

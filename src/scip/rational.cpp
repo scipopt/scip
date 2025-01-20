@@ -308,6 +308,25 @@ SCIP_RETCODE RatCopyBufferArray(
    return SCIP_OKAY;
 }
 
+/** realloc a rational ordinary arrray */
+SCIP_RETCODE RatReallocArray(
+   SCIP_Rational***      result,             /**< address to copy to */
+   int                   oldlen,             /**< size of src array */
+   int                   newlen              /**< size of src array */
+   )
+{
+   assert(newlen >= oldlen);
+
+   BMSreallocMemoryArray(result, newlen);
+
+   for( int i = oldlen; i < newlen; ++i )
+   {
+      SCIP_CALL( RatCreate(&(*result)[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** realloc a rational buffer arrray */
 SCIP_RETCODE RatReallocBufferArray(
    BMS_BUFMEM*           mem,                /**< buffer memory */
