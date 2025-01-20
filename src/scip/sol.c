@@ -178,6 +178,7 @@ SCIP_RETCODE solIncArrayVal(
    return SCIP_OKAY;
 }
 
+/* MP@LE Why is the following code disabled? Remove it? */
 #ifdef SCIP_DISABLED_CODE
 /** increases value of variable in the exact solution's array */
 static
@@ -417,6 +418,11 @@ SCIP_RETCODE solUnlinkVarExact(
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_LPSOL:
+      /* MP@LE Can the follwing be done more elegantly as follows?
+         SCIP_Rational solval;
+         SCIPvarGetLPSolExact(var, &solval);
+         return SCIP_OKAY;
+      */
       SCIP_CALL( RatCreateBuffer(set->buffer, &solval) );
       SCIPvarGetLPSolExact(var, solval);
       SCIP_CALL( solSetArrayValExact(sol, set, var, solval) );
