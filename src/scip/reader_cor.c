@@ -206,6 +206,16 @@ SCIP_RETCODE SCIPreadCor(
    SCIP_READER* reader;
    SCIP_READERDATA* readerdata;
 
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of cor format in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
+
    reader = SCIPfindReader(scip, READER_NAME);
    assert(reader != NULL);
 

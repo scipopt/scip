@@ -367,6 +367,12 @@ SCIP_DECL_READERREAD(readerReadDec)
       return SCIP_READERROR;
    }
 
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of decomposition file in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
+
    SCIP_CALL( readDecomposition(scip, filename) );
 
    *result = SCIP_SUCCESS;

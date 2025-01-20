@@ -254,6 +254,15 @@ SCIP_DECL_READERREAD(readerReadSmps)
 
    assert(scip != NULL);
    assert(filename != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of smps format in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
 
    /* copy filename */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );

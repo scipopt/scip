@@ -1758,6 +1758,14 @@ SCIP_DECL_READERREAD(readerReadNl)
    assert(filename != NULL);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of AMPL .nl file in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
+
    try
    {
       // try to read the .nl file and setup SCIP problem

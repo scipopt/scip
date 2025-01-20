@@ -828,6 +828,15 @@ SCIP_DECL_READERREAD(readerReadTim)
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of tim format in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
 
    correader = SCIPfindReader(scip, "correader");
 

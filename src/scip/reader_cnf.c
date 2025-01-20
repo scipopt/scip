@@ -403,6 +403,14 @@ SCIP_DECL_READERREAD(readerReadCnf)
    assert(filename != NULL);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of cnf format in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
+
    /* open file */
    f = SCIPfopen(filename, "r");
    if( f == NULL )

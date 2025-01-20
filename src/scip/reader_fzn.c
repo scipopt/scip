@@ -4773,6 +4773,18 @@ SCIP_DECL_READERREAD(readerReadFzn)
    FZNINPUT fzninput;
    int i;
 
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of flatzinc format in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
+
    /* initialize FZN input data */
    fzninput.file = NULL;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &fzninput.linebuf, FZN_INIT_LINELEN) );

@@ -1021,6 +1021,15 @@ SCIP_RETCODE SCIPreadDiff(
 
    assert(scip != NULL);
    assert(reader != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of diff format in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
 
    /* initialize LP input data */
    lpinput.file = NULL;

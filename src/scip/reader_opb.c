@@ -4008,6 +4008,15 @@ SCIP_RETCODE SCIPreadOpb(
 
    assert(scip != NULL);  /* for lint */
    assert(reader != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of opb/wbo format in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
 
    /* initialize OPB input data (use block memory because order can change during execution) */
    opbinput.file = NULL;
