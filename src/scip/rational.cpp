@@ -2615,6 +2615,7 @@ void SCIPrationalarrayGetVal(
 {
    assert(rationalarray != nullptr);
    assert(idx >= 0);
+
    if( rationalarray->firstidx == -1 || idx < rationalarray->firstidx
       || (size_t) idx >= rationalarray->vals.size() + rationalarray->firstidx )
       RatSetInt(result, 0, 1);
@@ -2637,6 +2638,7 @@ SCIP_RETCODE SCIPrationalarraySetVal(
       rationalarray->vals.push_back(*val);
       rationalarray->firstidx = idx;
    }
+
    if( idx < rationalarray->firstidx )
    {
       int ninserts = rationalarray->firstidx - idx;
