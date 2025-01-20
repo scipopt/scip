@@ -461,6 +461,91 @@ void RatClearGMPArray(
 #endif
 #endif
 
+/** delete a rational and free the allocated ordinary memory */
+void RatFree(
+   SCIP_Rational**       rational            /**< adress of the rational */
+   )
+{
+   assert(*rational != nullptr);
+
+   (*rational)->val.scip_rational::Rational::~Rational();
+   BMSfreeMemory(rational);
+}
+
+/** delete a rational and free the allocated block memory */
+void RatFreeBlock(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational**       rational            /**< adress of the rational */
+   )
+{
+   assert(*rational != nullptr);
+
+   (*rational)->val.scip_rational::Rational::~Rational();
+   BMSfreeBlockMemory(mem, rational);
+}
+
+/** delete a rational and free the allocated buffer memory */
+void RatFreeBuffer(
+   BMS_BUFMEM*           mem,                /**< buffer memory */
+   SCIP_Rational**       rational            /**< adress of the rational */
+   )
+{
+   assert(*rational != nullptr);
+
+   (*rational)->val.scip_rational::Rational::~Rational();
+   BMSfreeBufferMemory(mem, rational);
+}
+
+/** deletes an array of rationals and frees the allocated ordinary memory */
+void RatFreeArray(
+   SCIP_Rational***      ratarray,           /**< pointer to the array */
+   int                   size                /**< size of the array */
+   )
+{
+   assert(ratarray != nullptr);
+
+   for( int i = 0; i < size; ++i )
+   {
+      RatFree(&((*ratarray)[i]));
+   }
+
+   BMSfreeMemoryArrayNull(ratarray);
+}
+
+/** deletes an array of rationals and frees the allocated block memory */
+void RatFreeBlockArray(
+   BMS_BLKMEM*           mem,                /**< block memory */
+   SCIP_Rational***      ratblockarray,      /**< pointer to the array */
+   int                   size                /**< size of the array */
+   )
+{
+   assert(ratblockarray != nullptr);
+
+   for( int i = 0; i < size; ++i )
+   {
+      RatFreeBlock(mem, &((*ratblockarray)[i]));
+   }
+
+   BMSfreeBlockMemoryArrayNull(mem, ratblockarray, size);
+}
+
+/** deletes an array of rationals and frees the allocated buffer memory */
+void RatFreeBufferArray(
+   BMS_BUFMEM*           mem,                /**< buffer memory */
+   SCIP_Rational***      ratbufarray,        /**< pointer to the array */
+   int                   size                /**< size of the array */
+   )
+{
+   assert(ratbufarray != nullptr);
+
+   for( int i = size - 1; i >= 0; --i )
+   {
+      RatFreeBuffer(mem, &((*ratbufarray)[i]));
+   }
+
+   BMSfreeBufferMemoryArrayNull(mem, ratbufarray);
+}
+
 /** transforms rational into canonical form
  * @todo exip: this does not work with cpp_rational currently
 */
@@ -490,91 +575,6 @@ void RatCheckInfByValue(
    {
       rational->isinf = FALSE;
    }
-}
-
-/** free an array of rationals */
-void RatFreeArray(
-   SCIP_Rational***      ratarray,           /**< pointer to the array */
-   int                   size                /**< size of the array */
-   )
-{
-   assert(ratarray != nullptr);
-
-   for( int i = 0; i < size; ++i )
-   {
-      RatFree(&((*ratarray)[i]));
-   }
-
-   BMSfreeMemoryArrayNull(ratarray);
-}
-
-/** free an array of rationals */
-void RatFreeBlockArray(
-   BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational***      ratblockarray,      /**< pointer to the array */
-   int                   size                /**< size of the array */
-   )
-{
-   assert(ratblockarray != nullptr);
-
-   for( int i = 0; i < size; ++i )
-   {
-      RatFreeBlock(mem, &((*ratblockarray)[i]));
-   }
-
-   BMSfreeBlockMemoryArrayNull(mem, ratblockarray, size);
-}
-
-/** free an array of rationals */
-void RatFreeBufferArray(
-   BMS_BUFMEM*           mem,                /**< block memory */
-   SCIP_Rational***      ratbufarray,        /**< pointer to the array */
-   int                   size                /**< size of the array */
-   )
-{
-   assert(ratbufarray != nullptr);
-
-   for( int i = size - 1; i >= 0; --i )
-   {
-      RatFreeBuffer(mem, &((*ratbufarray)[i]));
-   }
-
-   BMSfreeBufferMemoryArrayNull(mem, ratbufarray);
-}
-
-/** delete a rational and free the allocated memory */
-void RatFree(
-   SCIP_Rational**       rational            /**< adress of the rational */
-   )
-{
-   assert(*rational != nullptr);
-
-   (*rational)->val.scip_rational::Rational::~Rational();
-   BMSfreeMemory(rational);
-}
-
-/** delete a rational and free the allocated memory */
-void RatFreeBlock(
-   BMS_BLKMEM*           mem,                /**< block memory */
-   SCIP_Rational**       rational            /**< adress of the rational */
-   )
-{
-   assert(*rational != nullptr);
-
-   (*rational)->val.scip_rational::Rational::~Rational();
-   BMSfreeBlockMemory(mem, rational);
-}
-
-/** delete a rational and free the allocated memory */
-void RatFreeBuffer(
-   BMS_BUFMEM*           mem,                /**< block memory */
-   SCIP_Rational**       rational            /**< adress of the rational */
-   )
-{
-   assert(*rational != nullptr);
-
-   (*rational)->val.scip_rational::Rational::~Rational();
-   BMSfreeBufferMemory(mem, rational);
 }
 
 /** set a rational to the value of another rational */

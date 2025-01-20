@@ -236,34 +236,34 @@ void RatClearGMPArray(
    );
 #endif
 
-/** deletess a rational and frees the allocated memory */
+/** deletes a rational and frees the allocated ordinary memory */
 SCIP_EXPORT
 void RatFree(
    SCIP_Rational**       r                   /**< adress of the rational */
    );
 
-/** deletes a rational and frees the allocated memory */
+/** deletes a rational and frees the allocated block memory */
 SCIP_EXPORT
 void RatFreeBlock(
    BMS_BLKMEM*           mem,                /**< block memory */
    SCIP_Rational**       r                   /**< adress of the rational */
    );
 
-/** deletes a rational and frees the allocated memory */
+/** deletes a rational and frees the allocated buffer memory */
 SCIP_EXPORT
 void RatFreeBuffer(
    BMS_BUFMEM*           buf,                /**< buffer memory */
    SCIP_Rational**       r                   /**< adress of the rational */
    );
 
-/** deletes an array of rationals and frees the allocated memory */
+/** deletes an array of rationals and frees the allocated ordinary memory */
 SCIP_EXPORT
 void RatFreeArray(
    SCIP_Rational***      array,              /**< address of rational array */
    int                   size                /**< size of the array */
    );
 
-/** deletes an array of rationals and frees the allocated memory */
+/** deletes an array of rationals and frees the allocated block memory */
 SCIP_EXPORT
 void RatFreeBlockArray(
    BMS_BLKMEM*           mem,                /**< block memory */
@@ -271,10 +271,10 @@ void RatFreeBlockArray(
    int                   size                /**< size of the array */
    );
 
-/** frees an array of rationals */
+/** deletes an array of rationals and frees the allocated buffer memory */
 SCIP_EXPORT
 void RatFreeBufferArray(
-   BMS_BUFMEM*           mem,                /**< block memory */
+   BMS_BUFMEM*           mem,                /**< buffer memory */
    SCIP_Rational***      array,              /**< pointer to the array */
    int                   size                /**< size of the array */
    );
@@ -299,7 +299,6 @@ SCIP_EXPORT
 SCIP_Bool SCIPisRationalString(
    const char*           desc                /**< string to check */
    );
-
 
 /** extract the next token as a rational value if it is one; in case no value is parsed the endptr is set to @p str
  *
