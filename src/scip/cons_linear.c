@@ -17439,23 +17439,21 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    {
       assert(SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED);
 
-      /* for presolving it only matters if a variable type changed from continuous to some kind of integer */
-      consdata->presolved = (consdata->presolved && (SCIPeventGetOldtype(event) == SCIP_VARTYPE_INTEGER ||
-         SCIPeventGetOldtype(event) == SCIP_VARTYPE_BINARY) );
+      /* for presolving it only matters if a variable becomes integral */
+      consdata->presolved = (consdata->presolved && (SCIPeventGetOldtype(event) != SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(var)));
 
-      /* the ordering is preserved if the type changes from something different to binary to binary but SCIPvarIsBinary() is true */
-      consdata->indexsorted = (consdata->indexsorted && SCIPeventGetNewtype(event) == SCIP_VARTYPE_BINARY && SCIPvarIsBinary(var));
+      /* the ordering is preserved if the variable remains binary */
+      consdata->indexsorted = (consdata->indexsorted && SCIPvarIsBinary(var) && (SCIPeventGetOldtype(event) != SCIP_VARTYPE_CONTINUOUS || SCIPvarIsImpliedIntegral(var)));
    }
    else if( (eventtype & SCIP_EVENTTYPE_IMPLTYPECHANGED ) != SCIP_EVENTTYPE_DISABLED )
    {
       assert(SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED);
 
-      /* for presolving it only matters if a variable type changed from continuous to some kind of integer */
-      consdata->presolved = (consdata->presolved && !(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && SCIPeventGetNewImpltype(event) != SCIP_VARIMPLTYPE_NONE) );
+      /* for presolving it only matters if a variable becomes integral */
+      consdata->presolved = (consdata->presolved && (SCIPeventGetOldImpltype(event) != SCIP_VARIMPLTYPE_NONE || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS));
 
-      /* the ordering is preserved if the type changes from something different to binary to binary but SCIPvarIsBinary() is true */
-      consdata->indexsorted = (consdata->indexsorted && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY &&
-         SCIPeventGetNewImpltype(event) == SCIP_VARIMPLTYPE_NONE);
+      /* the ordering is preserved if the variable remains binary */
+      consdata->indexsorted = (consdata->indexsorted && SCIPvarIsBinary(var) && (SCIPeventGetOldImpltype(event) != SCIP_VARIMPLTYPE_NONE || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS));
    }
    else
    {
