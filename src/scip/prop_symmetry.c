@@ -5279,6 +5279,7 @@ SCIP_RETCODE addSSTConss(
 
    if ( ISSSTCONTACTIVE(leadervartype) && nmovedcontpermvars > nvarsselectedtype )
    {
+      selectedimplint = FALSE;
       selectedtype = SCIP_VARTYPE_CONTINUOUS;
       nvarsselectedtype = nmovedcontpermvars;
    }
