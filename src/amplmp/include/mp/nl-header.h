@@ -1,4 +1,4 @@
-/**
+/*
  Common definitions for NL reader and NL writer.
 
  Copyright (C) 2014 - 2023 AMPL Optimization Inc.
