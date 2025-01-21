@@ -4201,7 +4201,7 @@
  * @subsection IISFINDERCOPY
  *
  * The IISFINDERCOPY callback is executed when a SCIP instance is copied, e.g., to solve a sub-SCIP. By defining this
- * callback as <code>NULL</code> the user disables the execution of the specified iis finder for all copied SCIP
+ * callback as `NULL` the user disables the execution of the specified iis finder for all copied SCIP
  * instances
  */
 
