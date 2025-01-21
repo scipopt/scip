@@ -70,7 +70,7 @@ Interface changes
 
 - help <command> now allows to display information on specific command.
 - allow to hide certain commands in the help list
-- add the (hidden) command "exit¨ to exit SCIP.
+- add the (hidden) command "exit" to exit SCIP.
 - Add iis option to create an infeasible subsystem
 - Add write/iis option to write out the infeasible subsystem to file
 - Add display/iis option to write out the infeasible subsystem to console
