@@ -467,10 +467,12 @@ SCIP_RETCODE SCIPiisGenerate(
    {
       nbounds = 0;
       SCIPinfoMessage(set->scip, NULL, "\n");
-      if( iis->valid )
-         SCIPinfoMessage(set->scip, NULL, "IIS Status            : success\n");
+      if( iis->valid && iis->irreducible )
+         SCIPinfoMessage(set->scip, NULL, "IIS Status            : irreducible infeasible subsystem (IIS) found\n");
+      else if( iis->valid )
+         SCIPinfoMessage(set->scip, NULL, "IIS Status            : infeasible subsystem (IS) found\n");
       else
-         SCIPinfoMessage(set->scip, NULL, "IIS Status            : fail\n");
+         SCIPinfoMessage(set->scip, NULL, "IIS Status            : failed to find an infeasible subsystem (IS)\n");
       if( iis->irreducible )
          SCIPinfoMessage(set->scip, NULL, "IIS irreducible       : yes\n");
       else
