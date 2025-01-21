@@ -39,7 +39,7 @@ Interface changes
   because otherwise the LP is not yet available and the row data is invalid.
 - intvar removed from arguments for SCIPcreateConsPseudobooleanWithConss(), SCIPcreateConsPseudoboolean(), and SCIPcreateConsBasicPseudoboolean() due to dysfunctionality of non-linear objective reformulation with pseudoboolean constraint
 - ndelconss added to arguments for SCIPcleanupConssLinear() and SCIPcleanupConssKnapsack() to directly delete empty redundant constraints before creating problem matrix
-- Added copyiisfinders to SCIPcopyPlugins() (16th position)
+- copyiisfinders added to arguments for SCIPcopyPlugins() (16th position)
 
 ### New API functions
 
@@ -58,8 +58,6 @@ Interface changes
 - SCIPfreeReaderdataCor(), SCIPfreeReaderdataTim() and SCIPfreeReaderdataSto() for freeing the data for the COR, TIM and
   STO readers respectively. These readers are all used when reading an SMPS instance.
 - SCIPdialogIsHidden(), SCIPdialogSetHidden() to determine whether a dialog should be hidden in help list
-
-IIS:
 - added SCIPincludeIISfinder(), SCIPincludeIISfinderBasic(), SCIPsetIISfinderCopy(), SCIPsetIISfinderFree(), SCIPgenerateIIS(), SCIPfindIISfinder(), SCIPgetIISfinders(), SCIPgetNIISfinders(), SCIPsetIISfinderPriority(), SCIPgetIIS()
 - added SCIPiisfinderGetName(), SCIPiisfinderGetData(), SCIPiisfinderGetDesc(), SCIPiisfinderGetPriority(), SCIPiisfinderSetData(), SCIPiisfinderGetTime(), SCIPiisfinderInfoMessage(), SCIPiisGetTime(), SCIPiisGetValid(), SCIPiisGetIrreducible(), SCIPiisGetNNodes(), SCIPiisSetValid(), SCIPiisSetIrreducible(), SCIPiisAddNNodes(), SCIPiisGetRandnumgen(), SCIPiisGetSubscip()
 
