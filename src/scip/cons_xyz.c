@@ -740,6 +740,7 @@ SCIP_RETCODE SCIPcreateConsXyz(
    /* create constraint data */
    consdata = NULL;
    /* TODO: create and store constraint specific data here */
+   /* TODO: if applicable, check that there are no infinite or nan coefficients (use SCIPifFinite() and SCIPisInfinity()) */
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
