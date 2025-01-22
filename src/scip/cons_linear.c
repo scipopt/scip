@@ -18922,16 +18922,16 @@ SCIP_RETCODE SCIPupgradeConsLinear(
       ub = SCIPvarGetUbLocal(var);
       assert(!SCIPisZero(scip, val));
 
-      if( SCIPvarIsImpliedIntegral(var))
+      if( SCIPvarIsImpliedIntegral(var) )
       {
-         if( SCIPvarIsBinary(var))
+         if( SCIPvarIsBinary(var) )
          {
             if( val >= 0.0 )
                nposimplbin++;
             else
                nnegimplbin++;
          }
-         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub))
+         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
             integral = integral && SCIPisIntegral(scip, val);
          if( val >= 0.0 )
             nposimpl++;
@@ -18940,10 +18940,10 @@ SCIP_RETCODE SCIPupgradeConsLinear(
       }
       else
       {
-         switch( SCIPvarGetType(var))
+         switch( SCIPvarGetType(var) )
          {
             case SCIP_VARTYPE_BINARY:
-               if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub))
+               if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
                   integral = integral && SCIPisIntegral(scip, val);
                if( val >= 0.0 )
                   nposbin++;
@@ -18951,7 +18951,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
                   nnegbin++;
                break;
             case SCIP_VARTYPE_INTEGER:
-               if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub))
+               if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
                   integral = integral && SCIPisIntegral(scip, val);
                if( val >= 0.0 )
                   nposint++;
@@ -18970,25 +18970,26 @@ SCIP_RETCODE SCIPupgradeConsLinear(
                return SCIP_INVALIDDATA;
          }
       }
-      if( SCIPisEQ(scip, val, 1.0))
+
+      if( SCIPisEQ(scip, val, 1.0) )
          ncoeffspone++;
-      else if( SCIPisEQ(scip, val, -1.0))
+      else if( SCIPisEQ(scip, val, -1.0) )
          ncoeffsnone++;
-      else if( SCIPisIntegral(scip, val))
+      else if( SCIPisIntegral(scip, val) )
       {
-         if( SCIPisPositive(scip, val))
+         if( SCIPisPositive(scip, val) )
             ncoeffspint++;
          else
             ncoeffsnint++;
       }
       else
       {
-         if( SCIPisPositive(scip, val))
+         if( SCIPisPositive(scip, val) )
             ncoeffspfrac++;
          else
             ncoeffsnfrac++;
       }
-      if( SCIPisPositive(scip, val))
+      if( SCIPisPositive(scip, val) )
          poscoeffsum += val;
       else
          negcoeffsum += val;
