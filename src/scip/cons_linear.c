@@ -15474,8 +15474,8 @@ SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
 
          /* precedence constraints have the same coefficient, but with opposite sign for the same variable type */
          if( SCIPisEQ(scip, consdata->vals[0], -consdata->vals[1])
-               && ( (SCIPvarIsImpliedIntegral(consdata->vars[0]) && SCIPvarIsImpliedIntegral(consdata->vars[1])) ||
-               SCIPvarGetType(consdata->vars[0]) == SCIPvarGetType(consdata->vars[1])))
+               && ( (SCIPvarIsImpliedIntegral(consdata->vars[0]) && SCIPvarIsImpliedIntegral(consdata->vars[1]))
+                 || (!SCIPvarIsImpliedIntegral(consdata->vars[0]) && !SCIPvarIsImpliedIntegral(consdata->vars[1]) && SCIPvarGetType(consdata->vars[0]) == SCIPvarGetType(consdata->vars[1])) ) )
          {
             constype = SCIP_LINCONSTYPE_PRECEDENCE;
             SCIPdebugMsg(scip, "classified as PRECEDENCE: ");

@@ -5273,14 +5273,15 @@ SCIP_RETCODE addSSTConss(
 
    if ( ISSSTIMPLINTACTIVE(leadervartype) && nmovedimplintpermvars > nvarsselectedtype )
    {
+      selectedtype = SCIP_VARTYPE_CONTINUOUS;
       selectedimplint = TRUE;
       nvarsselectedtype = nmovedimplintpermvars;
    }
 
    if ( ISSSTCONTACTIVE(leadervartype) && nmovedcontpermvars > nvarsselectedtype )
    {
-      selectedimplint = FALSE;
       selectedtype = SCIP_VARTYPE_CONTINUOUS;
+      selectedimplint = FALSE;
       nvarsselectedtype = nmovedcontpermvars;
    }
 
@@ -5375,8 +5376,8 @@ SCIP_RETCODE addSSTConss(
          for (p = 0; p < norbits; ++p)
          {
             /* stop if the first element of an orbits has the wrong vartype */
-            if ( (selectedimplint && !SCIPvarIsImpliedIntegral(permvars[orbits[orbitbegins[p]]])) ||
-               (SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype) )
+            if ( SCIPvarIsImpliedIntegral(permvars[orbits[orbitbegins[p]]]) != selectedimplint
+               || ( !selectedimplint && SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype ) )
             {
                success = FALSE;
                break;

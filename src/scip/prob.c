@@ -829,15 +829,14 @@ int computeInsertPos(
       prob->nbinimplvars++;
       return insertpos;
    }
+
    if( insertpos > binimplstart )
    {
       prob->vars[insertpos] = prob->vars[binimplstart];
       SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
       insertpos = binimplstart;
    }
-
    assert(insertpos == binimplstart);
-
 
    if( vartype == SCIP_VARTYPE_INTEGER )
    {
@@ -854,8 +853,8 @@ int computeInsertPos(
       SCIPvarSetProbindex(prob->vars[insertpos], insertpos);
       insertpos = intstart;
    }
-
    assert(insertpos == intstart);
+
    prob->nbinvars++;
 
    return insertpos;
