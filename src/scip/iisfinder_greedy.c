@@ -444,7 +444,7 @@ SCIP_RETCODE deletionFilterBatch(
 
    scip = SCIPiisGetSubscip(iis);
    assert( scip != NULL );
-   assert(SCIPiisIsSubscipInfeasible(iis) );
+   assert( SCIPiisIsSubscipInfeasible(iis) );
    randnumgen = SCIPiisGetRandnumgen(iis);
    assert( randnumgen != NULL );
 
@@ -591,7 +591,7 @@ SCIP_RETCODE additionFilterBatch(
 
    scip = SCIPiisGetSubscip(iis);
    assert( scip != NULL );
-   assert(SCIPiisIsSubscipInfeasible(iis) );
+   assert( SCIPiisIsSubscipInfeasible(iis) );
    randnumgen = SCIPiisGetRandnumgen(iis);
    assert( randnumgen != NULL );
 

@@ -379,7 +379,7 @@ SCIP_RETCODE SCIPiisGenerate(
          assert(iis != NULL);
 
          /* Recreate the subscip if one of the IIS finder algorithms has produced an invalid infeasible subsystem */
-         if( ! iis->infeasible )
+         if( !iis->infeasible )
             SCIP_CALL( createSubscipIIS(set, iis, timelim - SCIPclockGetTime(iis->iistime), nodelim) );
 
          /* start timing */
@@ -411,7 +411,7 @@ SCIP_RETCODE SCIPiisGenerate(
 
       SCIPdebugMsg(set->scip, "----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
 
-      if( !(iis->infeasible) )
+      if( !iis->infeasible )
          SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
 
       SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, 1e+20, FALSE, TRUE, TRUE, TRUE, -1L, 1, 1.0, &result) );
