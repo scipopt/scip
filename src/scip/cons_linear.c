@@ -9624,8 +9624,6 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Real* vals;
    SCIP_VARTYPE bestslacktype;
    SCIP_VARTYPE slacktype;
-   SCIP_VARIMPLTYPE slackimpltype;
-   SCIP_VARIMPLTYPE bestslackimpltype;
    SCIP_Real lhs;
    SCIP_Real rhs;
    SCIP_Real bestslackdomrng;
@@ -9714,7 +9712,6 @@ SCIP_RETCODE convertLongEquality(
    vals = consdata->vals;
    bestslackpos = -1;
    bestslacktype = SCIP_VARTYPE_BINARY;
-   bestslackimpltype = SCIP_VARIMPLTYPE_NONE;
    bestnlocks = INT_MAX;
    bestremovescons = FALSE;
    bestslackdomrng = 0.0;
@@ -9762,20 +9759,19 @@ SCIP_RETCODE convertLongEquality(
       if( maxabsval / minabsval > conshdlrdata->maxmultaggrquot )
          return SCIP_OKAY;
 
-      slacktype = SCIPvarGetType(var);
-      slackimpltype = SCIPvarGetImplType(var);
+      slacktype = SCIPvarIsImpliedIntegral(var) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var);
       coefszeroone = coefszeroone && SCIPisEQ(scip, absval, 1.0);
       coefsintegral = coefsintegral && SCIPisIntegral(scip, val);
       varsintegral = varsintegral && (slacktype != SCIP_VARTYPE_CONTINUOUS);
-      iscont = (slacktype == SCIP_VARTYPE_CONTINUOUS || slackimpltype != SCIP_VARIMPLTYPE_NONE);
+      iscont = (slacktype == SCIP_VARTYPE_CONTINUOUS || slacktype == SCIP_VARTYPE_IMPLINT);
 
       /* update candidates for continuous -> implint and integer -> implint conversion */
-      if( slacktype == SCIP_VARTYPE_CONTINUOUS && slackimpltype == SCIP_VARIMPLTYPE_NONE )
+      if( slacktype == SCIP_VARTYPE_CONTINUOUS )
       {
          ncontvars++;
          contvarpos = v;
       }
-      else if( slackimpltype != SCIP_VARIMPLTYPE_NONE )
+      else if( slacktype == SCIP_VARTYPE_IMPLINT )
       {
          ++nimplvars;
       }
@@ -9814,25 +9810,8 @@ SCIP_RETCODE convertLongEquality(
             assert(!SCIPisInfinity(scip, slackdomrng));
          }
          equal = FALSE;
-         //continuous -> implied continuous -> implied integer -> implied binary -> integer -> binary
-         SCIP_Bool slackimplied = slackimpltype != SCIP_VARIMPLTYPE_NONE;
-         SCIP_Bool bestslackimplied = bestslackimpltype != SCIP_VARIMPLTYPE_NONE;
-         SCIP_Bool typeBetter = FALSE;
-         if( slackimplied == bestslackimplied )
-         {
-            typeBetter = slacktype > bestslacktype;
-         }
-         else if ( slackimplied )
-         {
-            typeBetter = bestslacktype == SCIP_VARTYPE_INTEGER || bestslacktype == SCIP_VARTYPE_BINARY;
-         }
-         else
-         {
-            assert(!slackimplied && bestslackimplied);
-            typeBetter = slacktype == SCIP_VARTYPE_CONTINUOUS;
-         }
-
-         better = typeBetter || (bestslackpos == -1);
+         //continuous -> implied  -> integer -> binary
+         better = (slacktype > bestslacktype) || (bestslackpos == -1);
          if( !better && slacktype == bestslacktype )
          {
             better = (nlocks < bestnlocks);
@@ -9900,7 +9879,6 @@ SCIP_RETCODE convertLongEquality(
             {
                bestslackpos = v;
                bestslacktype = slacktype;
-               bestslackimpltype = slackimpltype;
                bestnlocks = nlocks;
                bestslackdomrng = slackdomrng;
                bestremovescons = removescons;
@@ -9974,7 +9952,7 @@ SCIP_RETCODE convertLongEquality(
     * loose the integrality condition for this variable.
     */
    if( bestslackpos >= 0
-      && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslackimpltype != SCIP_VARIMPLTYPE_NONE
+      && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_VARTYPE_IMPLINT
          || (coefsintegral && varsintegral && nimplvars == 0)) )
    {
       SCIP_VAR* slackvar;
