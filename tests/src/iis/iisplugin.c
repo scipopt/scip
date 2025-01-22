@@ -73,8 +73,8 @@ Test(iisplugin, valid)
    /** ensure that the original problem is infeasible */
    cr_expect_eq(SCIPgetStatus(scip), SCIP_STATUS_INFEASIBLE, "got status %d, expected %d", SCIPgetStatus(scip), SCIP_STATUS_INFEASIBLE);
    /** ensure that the iis does not yet exist and is therefore invalid */
-   cr_expect_eq( SCIPiisGetValid(iis), FALSE, "iis is valid before doing any computations");
+   cr_expect_eq(SCIPiisIsSubscipInfeasible(iis), FALSE, "iis is valid before doing any computations");
    SCIP_CALL( SCIPgenerateIIS(scip) );
    /** ensure that the iis exists and is therefore valid */
-   cr_expect_eq( SCIPiisGetValid(iis), TRUE, "iis is not valid");
+   cr_expect_eq(SCIPiisIsSubscipInfeasible(iis), TRUE, "iis is not valid");
 }

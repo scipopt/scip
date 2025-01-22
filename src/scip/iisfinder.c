@@ -346,7 +346,7 @@ SCIP_RETCODE SCIPiisGenerate(
       }
       iis->nnodes += SCIPgetNTotalNodes(iis->subscip);
       SCIP_CALL( SCIPfreeTransform(iis->subscip) );
-      iis->valid = TRUE;
+      iis->infeasible = TRUE;
    }
    else if( SCIPgetStage(set->scip) == SCIP_STAGE_SOLVED )
    {
@@ -356,7 +356,7 @@ SCIP_RETCODE SCIPiisGenerate(
          SCIPclockStop(iis->iistime, set);
          return SCIP_OKAY;
       }
-      iis->valid = TRUE;
+      iis->infeasible = TRUE;
    }
    else
    {
@@ -378,8 +378,8 @@ SCIP_RETCODE SCIPiisGenerate(
          iisfinder = set->iisfinders[i];
          assert(iis != NULL);
 
-         /* Recreate the subscip if one of the IIS finder algorithms has produced an invalid IS */
-         if( ! iis->valid )
+         /* Recreate the subscip if one of the IIS finder algorithms has produced an invalid infeasible subsystem */
+         if( ! iis->infeasible )
             SCIP_CALL( createSubscipIIS(set, iis, timelim - SCIPclockGetTime(iis->iistime), nodelim) );
 
          /* start timing */
@@ -411,7 +411,7 @@ SCIP_RETCODE SCIPiisGenerate(
 
       SCIPdebugMsg(set->scip, "----- STARTING GREEDY DELETION ALGORITHM WITH BATCHSIZE=1. ATTEMPT TO ENSURE IRREDUCIBILITY -----\n");
 
-      if( !(iis->valid) )
+      if( !(iis->infeasible) )
          SCIP_CALL( createSubscipIIS(set, iis, timelim, nodelim) );
 
       SCIP_CALL( SCIPexecIISfinderGreedy(iis, timelim, nodelim, removebounds, silent, 1e+20, FALSE, TRUE, TRUE, TRUE, -1L, 1, 1.0, &result) );
@@ -467,9 +467,9 @@ SCIP_RETCODE SCIPiisGenerate(
    {
       nbounds = 0;
       SCIPinfoMessage(set->scip, NULL, "\n");
-      if( iis->valid && iis->irreducible )
+      if( iis->infeasible && iis->irreducible )
          SCIPinfoMessage(set->scip, NULL, "IIS Status            : irreducible infeasible subsystem (IIS) found\n");
-      else if( iis->valid )
+      else if( iis->infeasible )
          SCIPinfoMessage(set->scip, NULL, "IIS Status            : infeasible subsystem (IS) found\n");
       else
          SCIPinfoMessage(set->scip, NULL, "IIS Status            : failed to find an infeasible subsystem (IS)\n");
@@ -654,7 +654,7 @@ void SCIPiisfinderInfoMessage(
    int i;
    int nvars;
    int nbounds = 0;
-   const char* valid = iis->valid ? "yes" : "no";
+   const char* infeasible = iis->infeasible ? "yes" : "no";
 
    scip = SCIPiisGetSubscip(iis);
    assert(scip != NULL);
@@ -676,7 +676,7 @@ void SCIPiisfinderInfoMessage(
       if( !SCIPisInfinity(scip, SCIPvarGetUbOriginal(vars[i])) )
          ++nbounds;
    }
-   SCIPinfoMessage(scip, NULL, "%7.1f|%7lld|%7d|%7d|%7d| %10s\n", SCIPiisGetTime(iis), SCIPiisGetNNodes(iis), SCIPgetNOrigConss(scip), nvars, nbounds, valid);
+   SCIPinfoMessage(scip, NULL, "%7.1f|%7lld|%7d|%7d|%7d| %10s\n", SCIPiisGetTime(iis), SCIPiisGetNNodes(iis), SCIPgetNOrigConss(scip), nvars, nbounds, infeasible);
 }
 
 /** creates and captures a new IIS */
@@ -698,7 +698,7 @@ SCIP_RETCODE SCIPiisCreate(
    SCIP_CALL( SCIPclockCreate(&(*iis)->iistime, SCIP_CLOCKTYPE_DEFAULT) );
    (*iis)->niismessagecalls = 0;
    (*iis)->nnodes = 0;
-   (*iis)->valid = FALSE;
+   (*iis)->infeasible = FALSE;
    (*iis)->irreducible = FALSE;
 
    return SCIP_OKAY;
@@ -776,7 +776,7 @@ SCIP_RETCODE SCIPiisReset(
    SCIPclockReset((*iis)->iistime);
    (*iis)->niismessagecalls = 0;
    (*iis)->nnodes = 0;
-   (*iis)->valid = FALSE;
+   (*iis)->infeasible = FALSE;
    (*iis)->irreducible = FALSE;
 
    return SCIP_OKAY;
@@ -792,18 +792,18 @@ SCIP_Real SCIPiisGetTime(
    return SCIPclockGetTime(iis->iistime);
 }
 
-/** Gets whether the IIS subscip is valid. */
-SCIP_Bool SCIPiisGetValid(
+/** Gets whether the IIS subscip is currently infeasible. */
+SCIP_Bool SCIPiisIsSubscipInfeasible(
    SCIP_IIS*             iis                 /**< IIS data structure */
    )
 {
    assert( iis != NULL );
 
-   return iis->valid;
+   return iis->infeasible;
 }
 
 /** Gets whether the IIS subscip is irreducible. */
-SCIP_Bool SCIPiisGetIrreducible(
+SCIP_Bool SCIPiisIsSubscipIrreducible(
    SCIP_IIS*             iis                 /**< IIS data structure */
    )
 {
@@ -822,18 +822,18 @@ SCIP_Longint SCIPiisGetNNodes(
    return iis->nnodes;
 }
 
-/** Sets the flag that states whether the IIS subscip is valid. */
-void SCIPiisSetValid(
+/** Sets the flag that states whether the IIS subscip is currently infeasible. */
+void SCIPiisSetSubscipInfeasible(
    SCIP_IIS*             iis,                /**< IIS data structure */
-   SCIP_Bool             valid               /**< The new validity status of the IIS */
+   SCIP_Bool             infeasible          /**< The new infeasibility status of the IIS subscip */
    )
 {
    assert( iis != NULL );
-   iis->valid = valid;
+   iis->infeasible = infeasible;
 }
 
 /** Sets the flag that states whether the IIS subscip is irreducible. */
-void SCIPiisSetIrreducible(
+void SCIPiisSetSubscipIrreducible(
    SCIP_IIS*             iis,                /**< IIS data structure */
    SCIP_Bool             irreducible         /**< The new irreducible status of the IIS */
    )

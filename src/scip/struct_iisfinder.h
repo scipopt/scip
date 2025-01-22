@@ -64,8 +64,8 @@ struct SCIP_IIS
    SCIP_CLOCK*           iistime;            /**< IIS total execution time */
    int                   niismessagecalls;   /**< The number of times an iis info message has been displayed */
    SCIP_Longint          nnodes;             /**< The number of nodes used over all IIS solves */
-   SCIP_Bool             valid;              /**< Whether the returned subscip is a valid (I)IS */
-   SCIP_Bool             irreducible;        /**< Whether the returned subscip is an irreducible infeasible subsystem */
+   SCIP_Bool             infeasible;         /**< Whether the subscip is currently infeasible, i.e., a valid (I)IS */
+   SCIP_Bool             irreducible;        /**< Whether the subscip is an irreducible infeasible subsystem, i.e., an IIS */
 };
 
 #ifdef __cplusplus

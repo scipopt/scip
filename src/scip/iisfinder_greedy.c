@@ -289,7 +289,7 @@ SCIP_RETCODE deletionSubproblem(
          SCIPdebugMsg(scip, "Some limit reached. Keeping bounds / constraints removed if non-conservative. \n");
          if( !conservative )
          {
-            SCIPiisSetValid(iis, FALSE);
+            SCIPiisSetSubscipInfeasible(iis, FALSE);
             *deleted = TRUE;
          }
          if( conservative && delbounds )
@@ -300,7 +300,7 @@ SCIP_RETCODE deletionSubproblem(
 
       case SCIP_STATUS_INFEASIBLE:       /* if the problem is infeasible */
          SCIPdebugMsg(scip, "Subproblem with bounds / constraints removed infeasible. Keep them removed.\n");
-         SCIPiisSetValid(iis, TRUE);
+         SCIPiisSetSubscipInfeasible(iis, TRUE);
          if( !delbounds )
             SCIP_CALL( revertConssDeletions(scip, conss, idxs, ndels, TRUE) );
          *deleted = TRUE;
@@ -444,7 +444,7 @@ SCIP_RETCODE deletionFilterBatch(
 
    scip = SCIPiisGetSubscip(iis);
    assert( scip != NULL );
-   assert( SCIPiisGetValid(iis) );
+   assert(SCIPiisIsSubscipInfeasible(iis) );
    randnumgen = SCIPiisGetRandnumgen(iis);
    assert( randnumgen != NULL );
 
@@ -591,7 +591,7 @@ SCIP_RETCODE additionFilterBatch(
 
    scip = SCIPiisGetSubscip(iis);
    assert( scip != NULL );
-   assert( SCIPiisGetValid(iis) );
+   assert(SCIPiisIsSubscipInfeasible(iis) );
    randnumgen = SCIPiisGetRandnumgen(iis);
    assert( randnumgen != NULL );
 
@@ -619,7 +619,7 @@ SCIP_RETCODE additionFilterBatch(
          inIS[i] = FALSE;
       }
    }
-   SCIPiisSetValid(iis, FALSE);
+   SCIPiisSetSubscipInfeasible(iis, FALSE);
 
    /* Prepare random order in which the constraints will be added back */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &order, nconss) );
@@ -717,9 +717,9 @@ SCIP_RETCODE additionFilterBatch(
    SCIPfreeBlockMemoryArray(scip, &inIS, nconss);
    SCIPfreeBlockMemoryArray(scip, &conss, nconss);
    if( feasible )
-      SCIPiisSetValid(iis, FALSE);
+      SCIPiisSetSubscipInfeasible(iis, FALSE);
    else
-      SCIPiisSetValid(iis, TRUE);
+      SCIPiisSetSubscipInfeasible(iis, TRUE);
 
    return SCIP_OKAY;
 }
@@ -904,7 +904,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
          SCIPdebugMsg(scip, "----- STARTING GREEDY ADDITION ALGORITHM -----\n");
       }
       SCIP_CALL( additionFilterBatch(iis, timelim, nodelim, silent, timelimperiter, nodelimperiter, dynamicreordering, batchsize) );
-      SCIPiisSetIrreducible(iis, FALSE);
+      SCIPiisSetSubscipIrreducible(iis, FALSE);
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
       {
          *result = SCIP_SUCCESS;
@@ -924,7 +924,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
          return SCIP_OKAY;
       }
       if( alldeletionssolved && batchsize == 1 )
-         SCIPiisSetIrreducible(iis, TRUE);
+         SCIPiisSetSubscipIrreducible(iis, TRUE);
    }
 
    if( delafteradd && additive )
@@ -935,7 +935,7 @@ SCIP_RETCODE SCIPexecIISfinderGreedy(
       }
       SCIP_CALL( deletionFilterBatch(iis, timelim, nodelim, silent, timelimperiter, nodelimperiter, removebounds, conservative, batchsize, &alldeletionssolved) );
       if( alldeletionssolved && batchsize == 1 )
-         SCIPiisSetIrreducible(iis, TRUE);
+         SCIPiisSetSubscipIrreducible(iis, TRUE);
       if( timelim - SCIPiisGetTime(iis) <= 0 || ( nodelim != -1 && SCIPiisGetNNodes(iis) >= nodelim ) )
       {
          *result = SCIP_SUCCESS;

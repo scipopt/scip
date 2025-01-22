@@ -97,15 +97,15 @@ SCIP_Real SCIPiisGetTime(
    SCIP_IIS*             iis                 /**< IIS */
    );
 
-/** Gets whether the IIS subscip is valid. */
+/** Gets whether the IIS subscip is currently infeasible. */
 SCIP_EXPORT
-SCIP_Bool SCIPiisGetValid(
+SCIP_Bool SCIPiisIsSubscipInfeasible(
    SCIP_IIS*             iis                 /**< IIS data structure */
    );
 
 /** Gets whether the IIS subscip is irreducible. */
 SCIP_EXPORT
-SCIP_Bool SCIPiisGetIrreducible(
+SCIP_Bool SCIPiisIsSubscipIrreducible(
    SCIP_IIS*             iis                 /**< IIS data structure */
    );
 
@@ -115,16 +115,16 @@ SCIP_Longint SCIPiisGetNNodes(
    SCIP_IIS*             iis                 /**< IIS data structure */
    );
 
-/** Sets the flag that states whether the IIS subscip is valid. */
+/** Sets the flag that states whether the IIS subscip is currently infeasible. */
 SCIP_EXPORT
-void SCIPiisSetValid(
+void SCIPiisSetSubscipInfeasible(
    SCIP_IIS*             iis,                /**< IIS data structure */
-   SCIP_Bool             valid               /**< The new validity status of the IIS */
+   SCIP_Bool             infeasible          /**< The new infeasibility status of the IIS */
    );
 
 /** Sets the flag that states whether the IIS subscip is irreducible. */
 SCIP_EXPORT
-void SCIPiisSetIrreducible(
+void SCIPiisSetSubscipIrreducible(
    SCIP_IIS*             iis,                /**< IIS data structure */
    SCIP_Bool             irreducible         /**< The new irreducible status of the IIS */
    );
