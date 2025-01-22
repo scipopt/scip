@@ -981,7 +981,7 @@ void branchcandInsertPseudoCand(
          insertpos = branchcand->npriopseudocands;
       }
       branchcand->npriopseudocands++;
-      if( !SCIPvarIsImpliedIntegral(var) && (vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER ) )
+      if( !SCIPvarIsImpliedIntegral(var) && vartype != SCIP_VARTYPE_CONTINUOUS )
       {
          if( insertpos != branchcand->npriopseudobins + branchcand->npriopseudoints )
          {
