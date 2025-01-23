@@ -5863,7 +5863,7 @@ SCIP_RETCODE SCIPvarNegate(
       (*negvar)->donotmultaggr = var->donotmultaggr;
 
       /* copy implied integer status */
-      (*negvar)->varimpltype = var->varimpltype;
+      (*negvar)->varimpltype = var->varimpltype; /*lint !e732*/
 
       /* copy lazy bounds (they have to be flipped) */
       (*negvar)->lazylb = (*negvar)->data.negate.constant - var->lazyub;
