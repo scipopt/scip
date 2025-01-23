@@ -309,13 +309,15 @@ Presolve<SCIP_Real> setupPresolve(
    DualFix<SCIP_Real> *dualfix = new DualFix<SCIP_Real>();
    dualfix->set_fix_to_infinity_allowed(false);
    presolve.addPresolveMethod( uptr( dualfix ) );
-   presolve.addPresolveMethod( uptr( new CliqueMerging<SCIP_Real>() ) );
 #else
    presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
 #endif
    presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
+#if PAPILO_API_VERSION >= 3.0
+   presolve.addPresolveMethod( uptr( new CliqueMerging<SCIP_Real>() ) );
+#endif
 
    /* exhaustive presolvers*/
    presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
@@ -364,10 +366,16 @@ Presolve<SCIP_Real> setupPresolve(
    presolve.setVerbosityLevel((VerbosityLevel) data->verbosity);
 #endif
 
-#if PAPILO_APIVERSION >= 2
+#if PAPILO_APIVERSION >= 2.0
    presolve.getPresolveOptions().abortfac = data->abortfacexhaustive;
    presolve.getPresolveOptions().abortfacmedium = data->abortfacmedium;
    presolve.getPresolveOptions().abortfacfast = data->abortfacfast;
+#endif
+#if PAPILO_API_VERSION >= 3.0
+   presolve.getPresolveOptions().maxedgescliquemergingparallel = data->maxedgescliquemergingparallel;
+   presolve.getPresolveOptions().maxedgescliquemergingsequential = data->maxedgescliquemergingsequential;
+   presolve.getPresolveOptions().maxcliquesize = data->maxcliquesize;
+   presolve.getPresolveOptions().maxgreedycliquecalls = data->maxgreedycliquecalls;
 #endif
 
    /* communicate the time limit */
