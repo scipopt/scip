@@ -40,6 +40,7 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_sol.h"
 #include "scip/reader_sol.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_param.h"

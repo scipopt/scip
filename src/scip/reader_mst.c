@@ -37,6 +37,7 @@
 #include "scip/pub_misc.h"
 #include "scip/pub_reader.h"
 #include "scip/reader_mst.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_param.h"

@@ -81,6 +81,7 @@
 #include "scip/pub_var.h"
 #include "scip/reader_dec.h"
 #include "scip/scip_dcmp.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"

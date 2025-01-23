@@ -38,6 +38,7 @@
 #include "scip/reader_cor.h"
 #include "scip/reader_tim.h"
 #include "scip/reader_sto.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"

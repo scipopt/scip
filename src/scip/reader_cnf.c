@@ -44,6 +44,7 @@
 #include "scip/pub_reader.h"
 #include "scip/reader_cnf.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"

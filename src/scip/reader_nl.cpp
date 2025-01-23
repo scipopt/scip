@@ -54,6 +54,7 @@
 #include "scip/expr_exp.h"
 #include "scip/expr_trig.h"
 #include "scip/expr_abs.h"
+#include "scip/scip_exact.h"
 
 // disable -Wshadow warnings for upcoming includes of AMPL/MP
 // disable -Wimplicit-fallthrough as I don't want to maintain extra comments in AMPL/MP code to suppress these

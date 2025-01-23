@@ -46,6 +46,7 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_debug.h"
 #include "scip/scipdefplugins.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"

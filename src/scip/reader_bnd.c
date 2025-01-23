@@ -49,6 +49,7 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_bnd.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
