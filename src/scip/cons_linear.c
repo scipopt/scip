@@ -17446,7 +17446,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       /* the ordering is preserved if the type changes from something different to binary to binary but SCIPvarIsBinary() is true */
       consdata->indexsorted = (consdata->indexsorted && SCIPeventGetNewtype(event) == SCIP_VARTYPE_BINARY && SCIPvarIsBinary(var));
    }
-   else if( (eventtype & SCIP_EVENTTYPE_IMPLTYPECHANGED) != 0 )
+   else if( eventtype & SCIP_EVENTTYPE_IMPLTYPECHANGED )
    {
       assert(SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED);
 
