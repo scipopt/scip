@@ -3559,7 +3559,7 @@ SCIP_RETCODE SCIPvarTransform(
       (*transvar)->donotmultaggr = origvar->donotmultaggr;
 
       /* copy implied integer status */
-      (*transvar)->varimpltype = origvar->varimpltype;
+      (*transvar)->varimpltype = origvar->varimpltype; /*lint !e732*/
 
       /* copy lazy bounds */
       (*transvar)->lazylb = origvar->lazylb;
@@ -5222,7 +5222,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    {
       SCIP_VAR* var;
       SCIP_Real scalar;
-      unsigned int type;
+      SCIP_VARTYPE type;
 
       /* switch the variables, such that varx is the variable of more general type (cont > implint > int > bin) */
       var = vary;
@@ -5245,9 +5245,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    /* figure out, which variable should be aggregated */
    easyaggr = FALSE;
 
-   unsigned int conttype = (unsigned int) SCIP_VARTYPE_CONTINUOUS;
    /* check if it is an easy aggregation */
-   if( xtype == conttype && ytype < conttype )
+   if( xtype == SCIP_VARTYPE_CONTINUOUS && ytype < SCIP_VARTYPE_CONTINUOUS )
    {
       easyaggr = TRUE;
    }
@@ -5270,10 +5269,10 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       scalarx = scalar;
       easyaggr = TRUE;
    }
-   else if( xtype == conttype )
+   else if( xtype == SCIP_VARTYPE_CONTINUOUS )
    {
       /* the aggregation is still easy if both variables are continuous */
-      assert(ytype == conttype); /* otherwise we are in the first case */
+      assert(ytype == SCIP_VARTYPE_CONTINUOUS); /* otherwise we are in the first case */
       easyaggr = TRUE;
    }
 
@@ -5293,8 +5292,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
          return SCIP_OKAY;
 
       /* check aggregation for integer feasibility */
-      if( xtype != conttype
-         && ytype != conttype
+      if( (xtype != SCIP_VARTYPE_CONTINUOUS)
+         && (ytype != SCIP_VARTYPE_CONTINUOUS)
          && SCIPsetIsFeasIntegral(set, scalar) && !SCIPsetIsFeasIntegral(set, constant) )
       {
          *infeasible = TRUE;
@@ -5311,8 +5310,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
             branchcand, eventfilter, eventqueue, vary, scalar, constant, infeasible, aggregated) );
       assert(*aggregated || *infeasible || SCIPvarDoNotAggr(varx));
    }
-   else if( (xtype == (unsigned int) (SCIP_VARTYPE_INTEGER) || SCIPvarIsImpliedIntegral(varx) )
-      && (ytype == (unsigned int) (SCIP_VARTYPE_INTEGER) || SCIPvarIsImpliedIntegral(vary)) )
+   else if( (xtype == (SCIP_VARTYPE_INTEGER) || SCIPvarIsImpliedIntegral(varx) )
+      && (ytype == (SCIP_VARTYPE_INTEGER) || SCIPvarIsImpliedIntegral(vary)) )
    {
       /* the variables are both integral: we have to try to find an integer aggregation */
       SCIP_CALL( tryAggregateIntVars(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
