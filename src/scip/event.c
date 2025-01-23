@@ -1125,7 +1125,7 @@ SCIP_VAR* SCIPeventGetVar(
       assert(event->data.eventtypechg.var != NULL);
       return event->data.eventtypechg.var;
 
-   case SCIP_EVENTTYPE_IMPLTYPECHANGED: /* lint !e30 */
+   case SCIP_EVENTTYPE_IMPLTYPECHANGED: /*lint !e30*/
       assert(event->data.eventimpltypechg.var != NULL);
       return event->data.eventimpltypechg.var;
 
@@ -1199,7 +1199,7 @@ SCIP_RETCODE SCIPeventChgVar(
       event->data.eventtypechg.var = var;
       break;
 
-   case SCIP_EVENTTYPE_IMPLTYPECHANGED: /* lint !e30 */
+   case SCIP_EVENTTYPE_IMPLTYPECHANGED: /*lint !e30*/
       assert(event->data.eventimpltypechg.var != NULL);
       event->data.eventimpltypechg.var = var;
       break;
