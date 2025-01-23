@@ -61,6 +61,7 @@
 #include "scip/pub_prop.h"
 #include "scip/pub_var.h"
 #include "scip/relax.h"
+#include "scip/scip_message.h"
 #include "scip/scip_prob.h"
 #include "scip/set.h"
 #include "scip/sol.h"
@@ -6082,9 +6083,12 @@ SCIP_RETCODE SCIPvarChgType(
 
    if( vartype == SCIP_VARTYPE_IMPLINT )
    {
-      SCIPerrorMessage("SCIP_VARTYPE_IMPLINT is deprecated, please use `SCIPchgVarImplType` to mark variables"
-                       " as implied integer instead.\n");
-      return SCIP_INVALIDDATA;
+      SCIPerrorMessage("Using SCIP_VARTYPE_IMPLINT is deprecated, converting implied integer type of variable to weak instead.\n");
+      if( SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_WEAK )
+      {
+         SCIP_CALL(SCIPvarChgImplType(var,blkmem,set,primal,lp,eventqueue,SCIP_VARIMPLTYPE_WEAK));
+      }
+      return SCIP_OKAY;
    }
 
    oldtype = (SCIP_VARTYPE)var->vartype;
