@@ -3068,6 +3068,7 @@ SCIP_RETCODE SCIPvarPrint(
          case SCIP_VARTYPE_CONTINUOUS:
             SCIPmessageFPrintInfo(messagehdlr, file, "  [continuous]");
             break;
+         case SCIP_VARTYPE_IMPLINT:
          default:
             SCIPerrorMessage("unknown variable type\n");
             SCIPABORT();

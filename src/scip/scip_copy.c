@@ -1033,6 +1033,7 @@ SCIP_RETCODE copyVars(
                case SCIP_VARTYPE_CONTINUOUS:
                   nrelaxonlycontvars++;
                   break;
+               case SCIP_VARTYPE_IMPLINT:
                default:
                   SCIPerrorMessage("unknown variable type\n");
                   return SCIP_INVALIDDATA;
@@ -1117,6 +1118,7 @@ SCIP_RETCODE copyVars(
                case SCIP_VARTYPE_CONTINUOUS:
                   nfixedcontvars++;
                   break;
+               case SCIP_VARTYPE_IMPLINT:
                default:
                   SCIPerrorMessage("unknown variable type\n");
                   return SCIP_INVALIDDATA;

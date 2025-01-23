@@ -3889,8 +3889,9 @@ SCIP_RETCODE addSplitcons(
                   ++ncontvars;
 #endif
                   break;
+               case SCIP_VARTYPE_IMPLINT:
                default:
-                  SCIPerrorMessage("Variable <%s> has to be either binary, (implied) integer, or continuous.\n",
+                  SCIPerrorMessage("Variable <%s> has to be either binary, integer, or continuous.\n",
                                    SCIPvarGetName(reoptconsdata->vars[v]));
                   return SCIP_INVALIDDATA;
             }
@@ -7060,6 +7061,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
                   ++ncontvars;
 #endif
                   break;
+               case SCIP_VARTYPE_IMPLINT:
                default:
                   SCIPerrorMessage("Cannot handle vartype %d\n", SCIPvarGetType(reoptnodes[0]->dualredscur->vars[v]));
                   return SCIP_INVALIDDATA;

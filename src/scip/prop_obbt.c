@@ -2689,6 +2689,7 @@ unsigned int getScore(
          case SCIP_VARTYPE_BINARY:
             score += 4;
             break;
+         case SCIP_VARTYPE_IMPLINT:
          default:
             break;
       }

@@ -11109,6 +11109,7 @@ int getVarWeight(
       return INTWEIGHT;
    case SCIP_VARTYPE_CONTINUOUS:
       return CONTWEIGHT;
+   case SCIP_VARTYPE_IMPLINT:
    default:
       SCIPerrorMessage("invalid variable type\n");
       SCIPABORT();
@@ -18943,6 +18944,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
                else
                   nnegcont++;
                break;
+            case SCIP_VARTYPE_IMPLINT:
             default:
                SCIPerrorMessage("unknown variable type\n");
                return SCIP_INVALIDDATA;

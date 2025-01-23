@@ -967,6 +967,7 @@ SCIP_RETCODE extractFlowRows(
                case SCIP_VARTYPE_CONTINUOUS:
                   ncontvars++;
                   break;
+               case SCIP_VARTYPE_IMPLINT:
                default:
                   SCIPerrorMessage("unknown variable type\n");
                   SCIPABORT();

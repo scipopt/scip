@@ -1283,6 +1283,7 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
          case SCIP_VARTYPE_CONTINUOUS:
             key1 = 4;
             break;
+         case SCIP_VARTYPE_IMPLINT:
          default:
             key1 = -1;
             SCIPerrorMessage("unknown variable type\n");
@@ -1308,6 +1309,7 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
          case SCIP_VARTYPE_CONTINUOUS:
             key2 = 4;
             break;
+         case SCIP_VARTYPE_IMPLINT:
          default:
             key2 = -1;
             SCIPerrorMessage("unknown variable type\n");

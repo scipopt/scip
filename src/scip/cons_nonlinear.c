@@ -7152,6 +7152,7 @@ void scoreBranchingCandidates(
                   cands[c].vartype = 0.1;
                   break;
                case SCIP_VARTYPE_CONTINUOUS :
+               case SCIP_VARTYPE_IMPLINT :
                default:
                   cands[c].vartype = 0.0;
             }
