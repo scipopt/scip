@@ -355,7 +355,7 @@ SCIP_RETCODE SCIPsolveSlack(
           * to the one of the first constraint of the group
           * NOTE: adding the constraint at that point already does not creat any problem if we set it the objective value 0 */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_bin", SCIPconsGetName(copiedconsgroups[c][0]) );
-         SCIP_CALL( SCIPcreateVar(scip, &binvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
+         SCIP_CALL( SCIPcreateVar(scip, &binvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
                TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPchgVarBranchPriority(scip, binvar, 1) );
          SCIP_CALL( SCIPaddVar(scip, binvar) );
@@ -445,7 +445,7 @@ SCIP_RETCODE SCIPsolveSlack(
           * to the one of the first constraint of the group
           * NOTE: adding the bin var constraint at that point already does not creat any problem if we set its objective value to 0 */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_bound_bin", SCIPvarGetName(copiedvargroups[c][0]) );
-         SCIP_CALL( SCIPcreateVar(scip, &binvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
+         SCIP_CALL( SCIPcreateVar(scip, &binvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
                TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPchgVarBranchPriority(scip, binvar, 1) );
 

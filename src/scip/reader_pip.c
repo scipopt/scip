@@ -681,7 +681,7 @@ SCIP_RETCODE getVariable(
       /* create new variable of the given name */
       SCIPdebugMsg(scip, "creating new variable: <%s>\n", name);
       SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
-                 SCIP_VARIMPLTYPE_NONE, !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+                 !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, newvar) );
       *var = newvar;
 
@@ -1181,7 +1181,7 @@ SCIP_RETCODE readObjective(
          SCIP_Real rhs;
 
          SCIP_CALL( SCIPcreateVar(scip, &nonlinobjvar, "nonlinobjvar", -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
-            SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, nonlinobjvar) );
 
          if ( pipinput->objsense == SCIP_OBJSENSE_MINIMIZE )

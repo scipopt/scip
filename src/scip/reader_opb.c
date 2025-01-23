@@ -672,7 +672,7 @@ SCIP_RETCODE createVariable(
    /* create new variable of the given name */
    SCIPdebugMsg(scip, "creating new variable: <%s>\n", name);
 
-   SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
+   SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
          initial, removable, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
    *var = newvar;
@@ -1179,7 +1179,7 @@ SCIP_RETCODE setObjective(
             /* create auxiliary variable */
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, ARTIFICIALVARNAMEPREFIX"obj_%d", t);
             SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, termcoefs[t], SCIP_VARTYPE_BINARY,
-                  SCIP_VARIMPLTYPE_NONE, TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+                   TRUE, TRUE, NULL, NULL, NULL, NULL, NULL) );
 
             /* @todo: check if it is better to change the branching priority for the artificial variables */
 #if 1

@@ -138,7 +138,7 @@ SCIP_RETCODE createObjRow(
       /* create and add objective value variable */
       if( sepadata->objvar == NULL )
       {
-         SCIP_CALL( SCIPcreateVar(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+         SCIP_CALL( SCIPcreateVarImpl(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
                SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_WEAK, FALSE, TRUE, NULL, NULL, NULL, NULL, NULL) );
          SCIPvarMarkRelaxationOnly(sepadata->objvar);
          SCIP_CALL( SCIPaddVar(scip, sepadata->objvar) );

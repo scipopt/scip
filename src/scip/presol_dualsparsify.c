@@ -644,7 +644,7 @@ SCIP_RETCODE aggregation(
    lhs = SCIPvarGetLbGlobal(vars[colidx2]);
    rhs = SCIPvarGetUbGlobal(vars[colidx2]);
 
-   SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype, newvarimpltype,
+   SCIP_CALL( SCIPcreateVarImpl(scip, &newvar, newvarname, newlb, newub, 0.0, newvartype, newvarimpltype,
          SCIPvarIsInitial(aggregatedvar), SCIPvarIsRemovable(aggregatedvar), NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
 

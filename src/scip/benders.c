@@ -781,7 +781,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
             impltype = SCIP_VARIMPLTYPE_NONE;
 
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
-         SCIP_CALL( SCIPcreateVar(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip),
+         SCIP_CALL( SCIPcreateVarImpl(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip),
                1.0, SCIP_VARTYPE_CONTINUOUS, impltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          SCIPvarSetData(auxiliaryvar, vardata);
@@ -5825,7 +5825,7 @@ SCIP_RETCODE addConstraintToBendersSubproblem(
          SCIP_VAR* var;
 
          /* creating a variable as a copy of the original variable. */
-         SCIP_CALL( SCIPcreateVar(subproblem, &var, SCIPvarGetName(consvars[i]), SCIPvarGetLbGlobal(consvars[i]),
+         SCIP_CALL( SCIPcreateVarImpl(subproblem, &var, SCIPvarGetName(consvars[i]), SCIPvarGetLbGlobal(consvars[i]),
                SCIPvarGetUbGlobal(consvars[i]), SCIPvarGetObj(consvars[i]), SCIPvarGetType(consvars[i]),
                SCIPvarGetImplType(consvars[i]), SCIPvarIsInitial(consvars[i]), SCIPvarIsRemovable(consvars[i]),
                NULL, NULL, NULL, NULL, NULL) );

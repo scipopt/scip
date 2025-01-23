@@ -10070,7 +10070,7 @@ SCIP_RETCODE convertLongEquality(
 
             /* create new implicit variable for aggregation */
             /* TODO: weak or strong? weak for now to be safe */
-            SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+            SCIP_CALL( SCIPcreateVarImpl(scip, &newvar, newvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
                   SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_WEAK,
                   SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
 

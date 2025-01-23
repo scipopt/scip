@@ -1953,6 +1953,11 @@ SCIP_RETCODE varCreate(
    assert(blkmem != NULL);
    assert(stat != NULL);
 
+   if( vartype == SCIP_VARTYPE_IMPLINT )
+   {
+      SCIPerrorMessage("Implied integer variables are deprecated. Please set the implied integer flag using `SCIPchgVarImplType` instead\n");
+      return SCIP_INVALIDDATA;
+   }
    SCIP_Bool integral = vartype != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_VARIMPLTYPE_NONE;
    /* adjust bounds of variable */
    lb = adjustedLb(set, integral, lb);

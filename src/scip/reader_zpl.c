@@ -900,7 +900,7 @@ SCIP_RETCODE addVar(
    removable = readerdata->dynamiccols;
 
    /* create variable */
-   SCIP_CALL( SCIPcreateVar(scip, &var, name, lb, ub, 0.0, vartype, varimpltype,
+   SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, lb, ub, 0.0, vartype, varimpltype,
                             initial, removable, NULL, NULL, NULL, NULL, NULL) );
 
    /* add variable to the problem; we are releasing the variable later */

@@ -1972,7 +1972,7 @@ SCIP_RETCODE createVariable(
    }
 
    /* create variable */
-   SCIP_CALL( SCIPcreateVar(scip, &varcopy, name, lb, ub, 0.0, vartype, SCIP_VARIMPLTYPE_NONE,
+   SCIP_CALL( SCIPcreateVar(scip, &varcopy, name, lb, ub, 0.0, vartype,
                             !(fzninput->dynamiccols), fzninput->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, varcopy) );
 

@@ -8079,7 +8079,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       {
          /* create slack variable */
          (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
-         SCIP_CALL( SCIPcreateVar(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
+         SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
                                   slackvarimpltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          SCIP_CALL( SCIPaddVar(scip, slackvar) );
@@ -8097,7 +8097,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    {
       /* create slack variable */
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
-      SCIP_CALL( SCIPcreateVar(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, slackvarimpltype,
+      SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, slackvarimpltype,
                                TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, slackvar) );
@@ -8638,8 +8638,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    {
       /* create slack variable */
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
-      SCIP_CALL( SCIPcreateVar(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, slackvarimpltype,
-                               TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
+                                   slackvarimpltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, slackvar) );
 

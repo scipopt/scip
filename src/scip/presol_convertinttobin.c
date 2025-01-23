@@ -238,7 +238,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
 
          /* create binary variable */
          (void) SCIPsnprintf(newbinvarname, SCIP_MAXSTRLEN, "%s_bin_%d", SCIPvarGetName(vars[v]), v2);
-         SCIP_CALL( SCIPcreateVar(scip, &newbinvars[v2], newbinvarname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
+         SCIP_CALL( SCIPcreateVar(scip, &newbinvars[v2], newbinvarname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
                SCIPvarIsInitial(vars[v]), SCIPvarIsRemovable(vars[v]), NULL, NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, newbinvars[v2]) );
 

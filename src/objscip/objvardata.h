@@ -190,6 +190,26 @@ SCIP_RETCODE SCIPcreateObjVar(
    SCIP_Bool             deleteobject        /**< should the user variable data object be deleted when variable is freed? */
    );
 
+/** create and capture problem variable and associates the given variable data with the variable;
+ *  if variable is of integral type, fractional bounds are automatically rounded
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcreateObjVarImpl(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to variable object */
+   const char*           name,               /**< name of variable, or NULL for automatic name creation */
+   SCIP_Real             lb,                 /**< lower bound of variable */
+   SCIP_Real             ub,                 /**< upper bound of variable */
+   SCIP_Real             obj,                /**< objective function value */
+   SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< Implied integer type of the variabl (none, weak or strong) */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
+   scip::ObjVardata*     objvardata,         /**< user variable data object */
+   SCIP_Bool             deleteobject        /**< should the user variable data object be deleted when variable is freed? */
+);
+
+
 /** gets user variable data object for given problem variable
  *  Warning! This method should only be called after a variable was created with SCIPcreateObjVar().
  *  Otherwise, a segmentation fault may arise, or an undefined pointer is returned.

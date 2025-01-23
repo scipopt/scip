@@ -3909,7 +3909,7 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(facvar));
 
    SCIP_VARIMPLTYPE impltype = integral ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE;
-   SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, minact, maxact, 0.0, SCIP_VARTYPE_CONTINUOUS, impltype,
+   SCIP_CALL( SCIPcreateVarImpl(scip, &auxvar, name, minact, maxact, 0.0, SCIP_VARTYPE_CONTINUOUS, impltype,
                             TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
@@ -4237,7 +4237,7 @@ SCIP_RETCODE getBinaryProductExprDo(
    }
 
    /* create and add variable */
-   SCIP_CALL( SCIPcreateVar(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_WEAK,
+   SCIP_CALL( SCIPcreateVarImpl(scip, &w, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_WEAK,
                             TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIPdebugMsg(scip, "  created auxiliary variable %s\n", name);
@@ -5982,13 +5982,13 @@ SCIP_RETCODE createAuxVar(
     */
    if( SCIPgetDepth(scip) == 0 )
    {
-      SCIP_CALL( SCIPcreateVar(scip, &ownerdata->auxvar, name, MAX(-SCIPinfinity(scip), activity.inf),
+      SCIP_CALL( SCIPcreateVarImpl(scip, &ownerdata->auxvar, name, MAX(-SCIPinfinity(scip), activity.inf),
                                MIN(SCIPinfinity(scip), activity.sup), 0.0, SCIP_VARTYPE_CONTINUOUS, impltype,
                                TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    }
    else
    {
-      SCIP_CALL( SCIPcreateVar(scip, &ownerdata->auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateVarImpl(scip, &ownerdata->auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
                                     SCIP_VARTYPE_CONTINUOUS, impltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    }
 

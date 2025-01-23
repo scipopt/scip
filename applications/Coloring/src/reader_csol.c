@@ -280,7 +280,7 @@ SCIP_DECL_READERREAD(readerReadCsol)
       SCIP_CALL( COLORprobAddNewStableSet(scip, sets[i], setlengths[i], &setindex) );
       assert(setindex == i);
 
-      SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE,
+      SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
                                TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setindex) ); /*lint !e571*/
 
       SCIP_CALL( COLORprobAddVarForStableSet(scip, setindex, var) );

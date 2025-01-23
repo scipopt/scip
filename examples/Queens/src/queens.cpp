@@ -55,7 +55,7 @@ scipexamples::QueensSolver::QueensSolver(size_t n)
 
          // create the SCIP_VAR object
          SCIP_CALL_EXC( SCIPcreateVar(_scip, & var, namebuf.str().c_str(), 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
-                                      SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+                                       TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          // add the SCIP_VAR object to the scip problem
          SCIP_CALL_EXC( SCIPaddVar(_scip, var) );

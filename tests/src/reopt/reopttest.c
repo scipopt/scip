@@ -183,13 +183,13 @@ Test(reopt, objectivesmall)
    SCIP_CALL( SCIPcreateProb(reoptscip, "reoptsmall", NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* original */
-   SCIP_CALL( SCIPcreateVar(scip, &var1, "x1", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(scip, &var1, "x1", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, var1) );
 
-   SCIP_CALL( SCIPcreateVar(scip, &var2, "x2", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(scip, &var2, "x2", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, var2) );
 
-   SCIP_CALL( SCIPcreateVar(scip, &var3, "x3", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(scip, &var3, "x3", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, var3) );
 
    consvars[0] = var1;
@@ -217,13 +217,13 @@ Test(reopt, objectivesmall)
    SCIP_CALL( SCIPreleaseVar(scip, &var3) );
 
    /* reopt */
-   SCIP_CALL( SCIPcreateVar(reoptscip, &var1, "x1", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(reoptscip, &var1, "x1", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(reoptscip, var1) );
 
-   SCIP_CALL( SCIPcreateVar(reoptscip, &var2, "x2", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(reoptscip, &var2, "x2", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(reoptscip, var2) );
 
-   SCIP_CALL( SCIPcreateVar(reoptscip, &var3, "x3", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY, SCIP_VARIMPLTYPE_NONE, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(reoptscip, &var3, "x3", 0.0, 1.0, -1.0, SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(reoptscip, var3) );
 
    consvars[0] = var1;
