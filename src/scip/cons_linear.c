@@ -17290,7 +17290,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    eventtype = SCIPeventGetType(event);
    var = SCIPeventGetVar(event);
 
-   if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != 0 )
+   if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != SCIP_EVENTTYPE_DISABLED )
    {
       SCIP_Real oldbound;
       SCIP_Real newbound;
@@ -17326,7 +17326,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       consdata->rangedrowpropagated = 0;
 
       /* bound change can turn the constraint infeasible or redundant only if it was a tightening */
-      if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
+      if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != SCIP_EVENTTYPE_DISABLED )
       {
          SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
@@ -17379,7 +17379,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          }
       }
    }
-   else if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != 0 )
+   else if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != SCIP_EVENTTYPE_DISABLED )
    {
       /* we want to remove the fixed variable */
       consdata->presolved = FALSE;
@@ -17393,14 +17393,14 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          consdata->maxactdeltavar = NULL;
       }
    }
-   else if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != 0 )
+   else if( (eventtype & SCIP_EVENTTYPE_VARUNLOCKED) != SCIP_EVENTTYPE_DISABLED )
    {
       /* there is only one lock left: we may multi-aggregate the variable as slack of an equation */
       assert(SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) <= 1);
       assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) <= 1);
       consdata->presolved = FALSE;
    }
-   else if( (eventtype & SCIP_EVENTTYPE_GBDCHANGED) != 0 )
+   else if( (eventtype & SCIP_EVENTTYPE_GBDCHANGED) != SCIP_EVENTTYPE_DISABLED )
    {
       SCIP_Real oldbound;
       SCIP_Real newbound;
@@ -17418,11 +17418,11 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       consdata->rangedrowpropagated = 0;
 
       /* update the activity values */
-      if( (eventtype & SCIP_EVENTTYPE_GLBCHANGED) != 0 )
+      if( (eventtype & SCIP_EVENTTYPE_GLBCHANGED) != SCIP_EVENTTYPE_DISABLED )
          consdataUpdateActivitiesGlbLb(scip, consdata, oldbound, newbound, val, TRUE);
       else
       {
-         assert((eventtype & SCIP_EVENTTYPE_GUBCHANGED) != 0);
+         assert((eventtype & SCIP_EVENTTYPE_GUBCHANGED) != SCIP_EVENTTYPE_DISABLED);
          consdataUpdateActivitiesGlbUb(scip, consdata, oldbound, newbound, val, TRUE);
       }
 
@@ -17435,7 +17435,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
             consdata->coefsorted = FALSE;
       }
    }
-   else if( (eventtype & SCIP_EVENTTYPE_TYPECHANGED) != 0 )
+   else if( (eventtype & SCIP_EVENTTYPE_TYPECHANGED) != SCIP_EVENTTYPE_DISABLED )
    {
       assert(SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED);
 
@@ -17446,7 +17446,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       /* the ordering is preserved if the type changes from something different to binary to binary but SCIPvarIsBinary() is true */
       consdata->indexsorted = (consdata->indexsorted && SCIPeventGetNewtype(event) == SCIP_VARTYPE_BINARY && SCIPvarIsBinary(var));
    }
-   else if( eventtype & SCIP_EVENTTYPE_IMPLTYPECHANGED )
+   else if( (eventtype & SCIP_EVENTTYPE_IMPLTYPECHANGED ) != SCIP_EVENTTYPE_DISABLED )
    {
       assert(SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED);
 
@@ -17459,7 +17459,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    }
    else
    {
-      assert((eventtype & SCIP_EVENTTYPE_VARDELETED) != 0);
+      assert((eventtype & SCIP_EVENTTYPE_VARDELETED) != SCIP_EVENTTYPE_DISABLED);
       consdata->varsdeleted = TRUE;
    }
 
