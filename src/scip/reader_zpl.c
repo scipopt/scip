@@ -154,7 +154,7 @@ SCIP_RETCODE RcreateNumb(
 
    SCIPdebug(gmp_printf("the rational is: %Qd\n",temp));
 
-   SCIP_CALL( RatCreateGMP(mem, rational, temp) );
+   SCIP_CALL( RatCreateBlockGMP(mem, rational, temp) );
    mpq_clear(temp);
 
    return SCIP_OKAY;
