@@ -3185,8 +3185,8 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
    }
    else
    {
-      unsigned int vartype1 = SCIPvarIsImpliedIntegral(var1) ? 2 : (unsigned int) SCIPvarGetType(var1);
-      unsigned int vartype2 = SCIPvarIsImpliedIntegral(var2) ? 2 : (unsigned int) SCIPvarGetType(var2);
+      SCIP_VARTYPE vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var1);
+      SCIP_VARTYPE vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var2);
 
       if( vartype1 < vartype2 )
          return -1;
@@ -3233,8 +3233,8 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
    else
    {
       /* Weird check but this was the easiest way to keep the old logic when refactoring implied integers */
-      unsigned int vartype1 = SCIPvarIsImpliedIntegral(var1) ? 2 : (unsigned int) SCIPvarGetType(var1);
-      unsigned int vartype2 = SCIPvarIsImpliedIntegral(var2) ? 2 : (unsigned int) SCIPvarGetType(var2);
+      SCIP_VARTYPE vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var1);
+      SCIP_VARTYPE vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var2);
 
       if( vartype1 < vartype2 )
       {

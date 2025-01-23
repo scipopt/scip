@@ -401,8 +401,8 @@ SCIP_RETCODE updateBestCandidate(
       /* both are equally good */
    }
 
-   unsigned int besttype = SCIPvarIsImpliedIntegral(*bestvar) ? 2 : (unsigned int) SCIPvarGetType(*bestvar);
-   unsigned int candtype = SCIPvarIsImpliedIntegral(cand) ? 2 : (unsigned int) SCIPvarGetType(cand);
+   SCIP_VARTYPE besttype = SCIPvarIsImpliedIntegral(*bestvar) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(*bestvar);
+   SCIP_VARTYPE candtype = SCIPvarIsImpliedIntegral(cand) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(cand);
    if( besttype == candtype )
    {
       /* if both have the same type, take the one with larger relative diameter */

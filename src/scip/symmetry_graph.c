@@ -836,8 +836,8 @@ int compareVars(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   unsigned int type1 = SCIPvarIsImpliedIntegral(var1) ? 2 : (unsigned int) SCIPvarGetType(var1);
-   unsigned int type2 = SCIPvarIsImpliedIntegral(var2) ? 2 : (unsigned int) SCIPvarGetType(var2);
+   SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var1);
+   SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var2);
    if( type1 < type2 )
       return -1;
    if( type1 > type2 )
@@ -974,8 +974,8 @@ int compareVarsSignedPerm(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   unsigned int type1 = SCIPvarIsImpliedIntegral(var1) ? 2 : (unsigned int) SCIPvarGetType(var1);
-   unsigned int type2 = SCIPvarIsImpliedIntegral(var2) ? 2 : (unsigned int) SCIPvarGetType(var2);
+   SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var1);
+   SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var2);
    if( type1 < type2 )
       return -1;
    if( type1 > type2 )

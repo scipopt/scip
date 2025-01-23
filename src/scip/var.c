@@ -5211,8 +5211,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       return SCIP_OKAY;
 
    /* A bit strange, but this was introduced to stay compatible with legacy code */
-   unsigned int xtype = SCIPvarIsImpliedIntegral(varx) ? 2 : (unsigned int) SCIPvarGetType(varx);
-   unsigned int ytype = SCIPvarIsImpliedIntegral(vary) ? 2 : (unsigned int) SCIPvarGetType(vary);
+   SCIP_VARTYPE xtype = SCIPvarIsImpliedIntegral(varx) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(varx);
+   SCIP_VARTYPE ytype = SCIPvarIsImpliedIntegral(vary) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(vary);
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
    if( ytype > xtype ||
