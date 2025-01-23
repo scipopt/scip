@@ -1981,6 +1981,7 @@ SCIP_RETCODE varCreate(
 
    assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0));
    assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0));
+   assert(vartype != SCIP_VARTYPE_IMPLINT);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, var) );
 
@@ -6076,6 +6077,13 @@ SCIP_RETCODE SCIPvarChgType(
    if( var->probindex >= 0 )
    {
       SCIPerrorMessage("cannot change type of variable already in the problem\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( vartype == SCIP_VARTYPE_IMPLINT )
+   {
+      SCIPerrorMessage("SCIP_VARTYPE_IMPLINT is deprecated, please use `SCIPchgVarImplType` to mark variables"
+                       " as implied integer instead.\n");
       return SCIP_INVALIDDATA;
    }
 
