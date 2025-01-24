@@ -6320,6 +6320,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
                   ub = SCIPvarGetUbGlobal(consdata->slackvar);
                   if ( (SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb)) && (SCIPisInfinity(scip, ub) || SCIPisIntegral(scip, ub)) )
                   {
+                     assert(SCIPvarGetType(consdata->slackvar) == SCIP_VARTYPE_CONTINUOUS);
                      SCIP_CALL( SCIPchgVarImplType(scip, consdata->slackvar, SCIP_VARIMPLTYPE_WEAK, &infeasible) );
                      /* don't assert feasibility here because the presolver should detect infeasibility */
                   }
