@@ -666,7 +666,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
                {
                   /* create variable for the stable set and add it to SCIP */
                   SCIP_CALL( SCIPcreateVar(pricerdata->scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
-                         TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) ); /*lint !e571*/
+                        TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) ); /*lint !e571*/
 
                   SCIP_CALL( COLORprobAddVarForStableSet(pricerdata->scip, setnumber, var) );
                   SCIPvarMarkDeletable(var);

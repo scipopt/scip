@@ -902,8 +902,8 @@ SCIP_RETCODE createMipCpFormulation(
          /* construct variable name */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_starts_%d", idx, i);
 
-         SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, 0.0, (SCIP_Real)lst, 0.0, SCIP_VARTYPE_CONTINUOUS,
-                                  SCIP_VARIMPLTYPE_WEAK, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, 0.0, (SCIP_Real)lst, 0.0, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_WEAK,
+               TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          SCIP_CALL( SCIPaddVar(scip, var) );
          vars[i][idx] = var;
@@ -929,7 +929,7 @@ SCIP_RETCODE createMipCpFormulation(
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_machine_%d_time_%d", j, i, t);
 
             SCIP_CALL( SCIPcreateVar(scip, &var, name, 0.0, 1.0, (SCIP_Real)costs[i][j], SCIP_VARTYPE_BINARY,
-                                     TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+                  TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
             SCIP_CALL( SCIPaddVar(scip, var) );
 

@@ -668,7 +668,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
 
          /* create variable for the stable set and add it to SCIP */
          SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
-                                  TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) ); /*lint !e571*/
+               TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) ); /*lint !e571*/
 
          SCIP_CALL( COLORprobAddVarForStableSet(scip, setnumber, var) );
          SCIP_CALL( SCIPaddVar(scip, var) );

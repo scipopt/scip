@@ -858,8 +858,7 @@ SCIP_RETCODE solveMinIISC(
       SCIP_VAR* var;
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "y%d", v);
-      SCIP_CALL( SCIPcreateVar(masterscip, &var, name, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
-                               TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVar(masterscip, &var, name, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(masterscip, var) );
       SCIP_CALL( SCIPreleaseVar(masterscip, &var) );
    }
