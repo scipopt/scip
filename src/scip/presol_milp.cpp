@@ -139,7 +139,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
 /** debug options for PaPILO */
 #define DEFAULT_FILENAME_PROBLEM   "-"       /**< default filename to store the instance before presolving */
-#define DEFAULT_VERBOSITY          0
+#define DEFAULT_VERBOSITY          4
 
 /*
  * Data structures
