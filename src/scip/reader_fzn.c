@@ -83,6 +83,8 @@
 #define FZN_INIT_LINELEN      65536      /**< initial size of the line buffer for reading */
 #define FZN_MAX_PUSHEDTOKENS  1
 
+#define DEFAULT_CONTIMPLINTASINT FALSE   /**< should continuous implied integers be converted into integers? */
+
 /*
  * Data structures
  */
@@ -151,6 +153,8 @@ struct SCIP_ReaderData
    VARARRAY**            vararrays;          /**< variable arrays to output */
    int                   nvararrays;         /**< number of variables */
    int                   vararrayssize;      /**< size of variable array */
+   SCIP_Bool             contimplintasint;   /**< Flag that indicates whether or not continuous variables that are
+                                                * implied integer should be written as integers. */
 };
 
 /** tries to creates and adds a constraint; sets parameter created to TRUE if method was successful
@@ -4250,6 +4254,7 @@ SCIP_RETCODE writeFzn(
    int                   ncontvars,          /**< number of continuous variables */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
+   SCIP_Bool             contimplintasint,   /**< should continuous implied integers be converted into integers? */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
@@ -4276,7 +4281,20 @@ SCIP_RETCODE writeFzn(
    int nintobjvars;                       /* number of discrete variables which have an integral objective coefficient */
    int c;                                 /* counter for the constraints */
    int v;                                 /* counter for the variables */
-   const int ndiscretevars = nbinvars+nintvars;  /* number of discrete variables */
+   int ndiscretevars = nbinvars+nintvars;  /* number of discrete variables */
+   if(contimplintasint)
+   {
+      ndiscretevars = nimplvars;
+   }
+   else
+   {
+      while( ndiscretevars < nbinvars + nintvars + nimplvars &&
+             SCIPvarGetType(vars[ndiscretevars]) != SCIP_VARTYPE_CONTINUOUS )
+      {
+         ++ndiscretevars;
+      }
+   }
+
 
    char varname[SCIP_MAXSTRLEN];          /* buffer for storing variable names */
    char buffer[FZN_BUFFERLEN];            /* buffer for storing auxiliary variables and constraints */
@@ -4357,7 +4375,7 @@ SCIP_RETCODE writeFzn(
       }
       else
       {
-         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var));
+         assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
          assert( v >= nbinvars );
 
          /* declare the variable without any bound */
@@ -4614,7 +4632,7 @@ SCIP_RETCODE writeFzn(
    {
       var = vars[boundedvars[v]];
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(var) )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
       {
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
             SCIPinfoMessage(scip, file,"constraint int_ge(%s, %.f);\n",SCIPvarGetName(var),
@@ -4628,7 +4646,7 @@ SCIP_RETCODE writeFzn(
       }
       else
       {
-         assert(SCIPvarIsImpliedIntegral(var) || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
          if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
          {
@@ -4868,10 +4886,12 @@ SCIP_DECL_READERREAD(readerReadFzn)
 static
 SCIP_DECL_READERWRITE(readerWriteFzn)
 {  /*lint --e{715}*/
+   SCIP_READERDATA * readerdata = SCIPreaderGetData(reader);
+
    if( genericnames )
    {
       SCIP_CALL( writeFzn(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-            nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
+            nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, readerdata->contimplintasint, result ) );
    }
    else
    {
@@ -4950,6 +4970,10 @@ SCIP_RETCODE SCIPincludeReaderFzn(
    SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeFzn) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadFzn) );
    SCIP_CALL( SCIPsetReaderWrite(scip, reader, readerWriteFzn) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+                               "reading/fznreader/contimplintasint", "should continuous implied integers be converted into integers?",
+                               &readerdata->contimplintasint, FALSE, DEFAULT_CONTIMPLINTASINT, NULL, NULL) );
 
    return SCIP_OKAY;
 }
