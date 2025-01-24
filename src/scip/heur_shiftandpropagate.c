@@ -1254,8 +1254,6 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
    SCIP_VAR* var2;
    SCIP_VARTYPE vartype1;
    SCIP_VARTYPE vartype2;
-   int key1;
-   int key2;
 
    col1 = (SCIP_COL*)elem1;
    col2 = (SCIP_COL*)elem2;
