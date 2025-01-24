@@ -366,7 +366,7 @@ Presolve<SCIP_Real> setupPresolve(
    presolve.setVerbosityLevel((VerbosityLevel) data->verbosity);
 #endif
 
-#if PAPILO_APIVERSION >= 2.0
+#if PAPILO_APIVERSION >= 2
    presolve.getPresolveOptions().abortfac = data->abortfacexhaustive;
    presolve.getPresolveOptions().abortfacmedium = data->abortfacmedium;
    presolve.getPresolveOptions().abortfacfast = data->abortfacfast;
