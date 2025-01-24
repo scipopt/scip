@@ -150,6 +150,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleVanillafullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
+   SCIP_CALL( SCIPincludeIISfinderGreedy(scip) );
    SCIP_CALL( SCIPincludeEventHdlrEstim(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );

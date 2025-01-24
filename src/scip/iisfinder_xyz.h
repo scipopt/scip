@@ -22,37 +22,49 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   objscip.h
- * @brief  C++ wrapper classes for SCIP
- * @author Tobias Achterberg
+/**@file   iisfinder_xyz.h
+ * @ingroup IISFINDERS
+ * @brief  xyz iisfinder
+ * @author Mark Turner
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_OBJSCIP_H__
-#define __SCIP_OBJSCIP_H__
+#ifndef __SCIP_IISFINDER_XYZ_H__
+#define __SCIP_IISFINDER_XYZ_H__
 
 
-#include "objscip/objbenders.h"
-#include "objscip/objbenderscut.h"
-#include "objscip/objbranchrule.h"
-#include "objscip/objconshdlr.h"
-#include "objscip/objcutsel.h"
-#include "objscip/objdialog.h"
-#include "objscip/objdisp.h"
-#include "objscip/objeventhdlr.h"
-#include "objscip/objheur.h"
-#include "objscip/objiisfinder.h"
-#include "objscip/objmessagehdlr.h"
-#include "objscip/objnodesel.h"
-#include "objscip/objpresol.h"
-#include "objscip/objpricer.h"
-#include "objscip/objprobdata.h"
-#include "objscip/objprop.h"
-#include "objscip/objreader.h"
-#include "objscip/objrelax.h"
-#include "objscip/objsepa.h"
-#include "objscip/objvardata.h"
-#include "objscip/objcloneable.h"
+#include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** creates the xyz IIS finder and includes it in SCIP
+ *
+ * @ingroup IISfinderIncludes
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPincludeIISfinderXyz(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup IISFINDERS
+ *
+ * @{
+ */
+
+/** perform an IIS find for the given infeasible SCIP instance
+ */
+SCIP_EXPORT
+SCIP_RETCODE SCIPexecIISfinderXyz(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** @} */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

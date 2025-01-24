@@ -536,6 +536,7 @@ SCIP_RETCODE SCIPcreateSolCopyOrig(
       case SCIP_STAGE_INITSOLVE:
       case SCIP_STAGE_SOLVING:
          SCIP_CALL( SCIPsolCopy(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, sourcesol) );
+         SCIPsolSetOrigin(*sol, SCIP_SOLORIGIN_ORIGINAL);
          break;
       default:
          assert(FALSE); /*lint !e506*/

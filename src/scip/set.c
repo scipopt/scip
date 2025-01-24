@@ -67,6 +67,7 @@
 #include "scip/benders.h"
 #include "scip/expr.h"
 #include "scip/nlpi.h"
+#include "scip/iisfinder.h"
 #include "scip/pub_nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
 
@@ -196,6 +197,15 @@
 #define SCIP_DEFAULT_HISTORY_VALUEBASED   FALSE /**< should statistics be collected for variable domain value pairs */
 #define SCIP_DEFAULT_HISTORY_ALLOWMERGE   FALSE /**< should variable histories be merged from sub-SCIPs whenever possible? */
 #define SCIP_DEFAULT_HISTORY_ALLOWTRANSFER FALSE /**< should variable histories be transferred to initialize SCIP copies? */
+
+/* IIS */
+#define SCIP_DEFAULT_IISFINDER_MINIMAL       TRUE  /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
+#define SCIP_DEFAULT_IISFINDER_REMOVEBOUNDS  FALSE /**< should bounds of the problem be considered for removal */
+#define SCIP_DEFAULT_IISFINDER_SILENT        FALSE /**< should the IIS finders be run silently and output suppressed */
+#define SCIP_DEFAULT_IISFINDER_STOPAFTERONE  TRUE  /**< should the IIS search stop after a single IIS finder is run (excluding post processing) */
+#define SCIP_DEFAULT_IISFINDER_REMOVEUNUSEDVARS TRUE /**< should vars that do not feature in any constraints be removed at the end of the IIS process */
+#define SCIP_DEFAULT_IISFINDER_TIMELIM       1e+20 /**< maximal time in seconds for all IIS finders to run */
+#define SCIP_DEFAULT_IISFINDER_NODELIM       -1L   /**< maximal number of nodes to process for all IIS finders (-1: no limit) */
 
 /* Limits */
 
@@ -843,6 +853,9 @@ void SCIPsetEnableOrDisablePluginClocks(
 
    for( i = set->nbranchrules - 1; i >= 0; --i )
       SCIPbranchruleEnableOrDisableClocks(set->branchrules[i], enabled);
+
+   for ( i = set->niisfinders - 1; i >= 0; --i )
+      SCIPiisfinderEnableOrDisableClocks(set->iisfinders[i], enabled);
 }
 
 /* method to be invoked when the parameter timing/statistictiming is changed */
@@ -874,6 +887,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
@@ -985,6 +999,15 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = 0; p < sourceset->nbranchrules; ++p )
       {
          SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset) );
+      }
+   }
+
+   /* copy all iis finder plugins */
+   if( copyiisfinders && sourceset->iisfinders != NULL )
+   {
+      for( p = 0; p < sourceset->niisfinders; ++p )
+      {
+         SCIP_CALL( SCIPiisfinderCopyInclude(sourceset->iisfinders[p], targetset) );
       }
    }
 
@@ -1205,6 +1228,10 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->branchrulessize = 0;
    (*set)->branchrulessorted = FALSE;
    (*set)->branchrulesnamesorted = FALSE;
+   (*set)->iisfinders = NULL;
+   (*set)->niisfinders = 0;
+   (*set)->iisfinderssize = 0;
+   (*set)->iisfinderssorted = FALSE;
    (*set)->banditvtables = NULL;
    (*set)->banditvtablessize = 0;
    (*set)->nbanditvtables = 0;
@@ -1622,6 +1649,43 @@ SCIP_RETCODE SCIPsetCreate(
          "should variable histories be transferred to initialize SCIP copies?",
          &(*set)->history_allowtransfer, FALSE, SCIP_DEFAULT_HISTORY_ALLOWTRANSFER,
          NULL, NULL) );
+
+   /* IIS parameter */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/minimal",
+         "should the resultant infeasible set be irreducible, i.e., an IIS not an IS",
+         &(*set)->iisfinder_minimal, FALSE, SCIP_DEFAULT_IISFINDER_MINIMAL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/removebounds",
+         "should bounds of the problem be considered for removal",
+         &(*set)->iisfinder_removebounds, FALSE, SCIP_DEFAULT_IISFINDER_REMOVEBOUNDS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/silent",
+         "should the IIS finders be run silently and output suppressed",
+         &(*set)->iisfinder_silent, FALSE, SCIP_DEFAULT_IISFINDER_SILENT,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/stopafterone",
+         "should the IIS search stop after a single IIS finder is run (excluding post processing)",
+         &(*set)->iisfinder_stopafterone, TRUE, SCIP_DEFAULT_IISFINDER_STOPAFTERONE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "iis/removeunusedvars",
+         "should vars that do not feature in any constraints be removed at the end of the IIS process",
+         &(*set)->iisfinder_removeunusedvars, TRUE, SCIP_DEFAULT_IISFINDER_REMOVEUNUSEDVARS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "iis/time",
+         "maximal time in seconds for all IIS finders to run",
+         &(*set)->iisfinder_time, FALSE, SCIP_DEFAULT_IISFINDER_TIMELIM, 0.0, SCIP_DEFAULT_IISFINDER_TIMELIM,
+         SCIPparamChgdLimit, NULL) );
+   SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
+         "iis/nodes",
+         "maximal number of nodes to process for all IIS finders (-1: no limit)",
+         &(*set)->iisfinder_nodes, FALSE, SCIP_DEFAULT_IISFINDER_NODELIM, -1LL, SCIP_LONGINT_MAX,
+         SCIPparamChgdLimit, NULL) );
 
    /* limit parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -2878,6 +2942,13 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPbranchruleFree(&(*set)->branchrules[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->branchrules);
+
+   /* free IIS */
+   for( i = 0; i < (*set)->niisfinders; ++i)
+   {
+      SCIP_CALL( SCIPiisfinderFree(&(*set)->iisfinders[i], *set, blkmem) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->iisfinders);
 
    /* free statistics tables */
    for( i = 0; i < (*set)->ntables; ++i )
@@ -4929,6 +5000,63 @@ void SCIPsetSortBranchrulesName(
       SCIPsortPtr((void**)set->branchrules, SCIPbranchruleCompName, set->nbranchrules);
       set->branchrulessorted = FALSE;
       set->branchrulesnamesorted = TRUE;
+   }
+}
+
+/** inserts IIS finders in IIS finders list */
+SCIP_RETCODE SCIPsetIncludeIISfinder(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
+   )
+{
+   assert(set != NULL);
+   assert(iisfinder != NULL);
+
+   if( set->niisfinders >= set->iisfinderssize )
+   {
+      set->iisfinderssize = SCIPsetCalcMemGrowSize(set, set->niisfinders + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->iisfinders, set->iisfinderssize) );
+   }
+   assert(set->niisfinders < set->iisfinderssize);
+
+   set->iisfinders[set->niisfinders] = iisfinder;
+   set->niisfinders++;
+   set->iisfinderssorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the IIS finders of the given name, or NULL if not existing */
+SCIP_IISFINDER* SCIPsetFindIISfinder(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of IIS finder */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->niisfinders; ++i )
+   {
+      if( strcmp(SCIPiisfinderGetName(set->iisfinders[i]), name) == 0 )
+         return set->iisfinders[i];
+   }
+
+   return NULL;
+}
+
+/** sorts IIS finders by priorities */
+void SCIPsetSortIISfinders(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->iisfinderssorted )
+   {
+      SCIPsortPtr((void**)set->iisfinders, SCIPiisfinderComp, set->niisfinders);
+      set->iisfinderssorted = TRUE;
    }
 }
 

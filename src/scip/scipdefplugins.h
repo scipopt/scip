@@ -159,6 +159,7 @@
 #include "scip/heur_veclendiving.h"
 #include "scip/heur_zeroobj.h"
 #include "scip/heur_zirounding.h"
+#include "scip/iisfinder_greedy.h"
 #include "scip/nlhdlr_bilinear.h"
 #include "scip/nlhdlr_convex.h"
 #include "scip/nlhdlr_default.h"

@@ -7170,7 +7170,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
 
       /* if copying scip after transforming the original instance before presolving, we need to correct the linear
        * constraint pointer */
-      if ( SCIPisTransformed(sourcescip) && ! SCIPconsIsTransformed(sourcelincons) )
+      if ( SCIPconsIsTransformed(sourcecons) && ! SCIPconsIsTransformed(sourcelincons) )
       {
          SCIP_CONS* translincons;
 

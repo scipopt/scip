@@ -113,6 +113,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */

@@ -450,6 +450,11 @@ SCIP_RETCODE SCIPsolPrintRay(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
+/** set new origin type for a solution */
+void SCIPsolSetOrigin(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SOLORIGIN        origin              /**< new origin type of the solution */
+   );
 
 /** reset violations of a solution */
 void SCIPsolResetViolations(

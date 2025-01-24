@@ -116,6 +116,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayCutselectors);
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics);
 
+/** dialog execution method for the display IIS command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayIIS);
+
 /** dialog execution method for the display memory command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory);
@@ -242,6 +246,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecConcurrentOpt);
 /** dialog execution method for the presolve command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecPresolve);
+
+/** dialog execution method for the iis command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS);
 
 /** dialog execution method for the quit command */
 SCIP_EXPORT

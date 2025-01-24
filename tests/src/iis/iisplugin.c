@@ -22,37 +22,59 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   objscip.h
- * @brief  C++ wrapper classes for SCIP
- * @author Tobias Achterberg
+/**@file   iisplugin.c
+ * @brief  unit test for checking iis functionality of scip.c
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_OBJSCIP_H__
-#define __SCIP_OBJSCIP_H__
+#include "scip/scip.h"
+#include "scip/scip_iisfinder.h"
+#include "scip/scipdefplugins.h"
+
+#include "include/scip_test.h"
+
+/** GLOBAL VARIABLES **/
+static SCIP* scip;
+
+/** TEST SUITES **/
+static
+void setup(void)
+{
+   scip = NULL;
+   char filename[SCIP_MAXSTRLEN];
+
+   /* initialize SCIP */
+   SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+   TESTsetTestfilename(filename, __FILE__, "test_infeasible.lp");
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+}
+
+static
+void teardown(void)
+{
+   SCIP_CALL( SCIPfree(&scip) );
+
+   cr_assert_null(scip);
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+}
+
+TestSuite(iisplugin, .init = setup, .fini = teardown);
 
 
-#include "objscip/objbenders.h"
-#include "objscip/objbenderscut.h"
-#include "objscip/objbranchrule.h"
-#include "objscip/objconshdlr.h"
-#include "objscip/objcutsel.h"
-#include "objscip/objdialog.h"
-#include "objscip/objdisp.h"
-#include "objscip/objeventhdlr.h"
-#include "objscip/objheur.h"
-#include "objscip/objiisfinder.h"
-#include "objscip/objmessagehdlr.h"
-#include "objscip/objnodesel.h"
-#include "objscip/objpresol.h"
-#include "objscip/objpricer.h"
-#include "objscip/objprobdata.h"
-#include "objscip/objprop.h"
-#include "objscip/objreader.h"
-#include "objscip/objrelax.h"
-#include "objscip/objsepa.h"
-#include "objscip/objvardata.h"
-#include "objscip/objcloneable.h"
+/* test that the IIS functionality works */
+Test(iisplugin, valid)
+{
+   SCIP_IIS* iis;
 
-#endif
+   SCIP_CALL( SCIPsolve(scip) );
+   iis = SCIPgetIIS(scip);
+   /** ensure that the original problem is infeasible */
+   cr_expect_eq(SCIPgetStatus(scip), SCIP_STATUS_INFEASIBLE, "got status %d, expected %d", SCIPgetStatus(scip), SCIP_STATUS_INFEASIBLE);
+   /** ensure that the iis does not yet exist and is therefore invalid */
+   cr_expect_eq(SCIPiisIsSubscipInfeasible(iis), FALSE, "iis is valid before doing any computations");
+   SCIP_CALL( SCIPgenerateIIS(scip) );
+   /** ensure that the iis exists and is therefore valid */
+   cr_expect_eq(SCIPiisIsSubscipInfeasible(iis), TRUE, "iis is not valid");
+}

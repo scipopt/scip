@@ -288,6 +288,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
@@ -315,7 +316,7 @@ SCIP_RETCODE SCIPcopyPlugins(
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set,
          copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copycutselectors, copypropagators,
-         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copytables, copyexprhdlrs, copynlpis, valid) );
+         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copyiisfinders, copydisplays, copydialogs, copytables, copyexprhdlrs, copynlpis, valid) );
 
    return SCIP_OKAY;
 }
@@ -2702,7 +2703,7 @@ SCIP_RETCODE doCopy(
 
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
 
    /* in case there are active pricers and pricing is disabled, targetscip will not be a valid copy of sourcescip */
    if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )

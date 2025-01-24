@@ -40,6 +40,7 @@
 #include "scip/type_clock.h"
 #include "scip/type_dcmp.h"
 #include "scip/type_event.h"
+#include "scip/type_iisfinder.h"
 #include "scip/type_interrupt.h"
 #include "scip/type_mem.h"
 #include "scip/type_message.h"
@@ -109,6 +110,9 @@ struct Scip
    /* PARALLEL */
    SCIP_SYNCSTORE*       syncstore;          /**< the data structure for storing synchronization information */
    SCIP_CONCURRENT*      concurrent;         /**< data required for concurrent solve */
+   
+   /* IIS */
+   SCIP_IIS*             iis;                /**< the data structure for storing IIS information */
 };
 
 #ifdef __cplusplus

@@ -15,6 +15,7 @@ Features
 - added functionality to deal with hypergraphs by means of efficient access to vertices, edges and intersections edges.
 - added support for (transposed) network matrix detection in pub_network.h
 - added a new presolver presol_implint which detects implied integers by detecting (transposed) network submatrices in the problem. For now, this plugin is disabled by default.
+- added new plugin type for finding irreducible infeasible subsystems (IIS). Users can now include their own IIS algorithms. Basic addition and deletion based algorithm implemented in iisfinder_greedy.
 
 Performance improvements
 ------------------------
@@ -38,6 +39,7 @@ Interface changes
   because otherwise the LP is not yet available and the row data is invalid.
 - intvar removed from arguments for SCIPcreateConsPseudobooleanWithConss(), SCIPcreateConsPseudoboolean(), and SCIPcreateConsBasicPseudoboolean() due to dysfunctionality of non-linear objective reformulation with pseudoboolean constraint
 - ndelconss added to arguments for SCIPcleanupConssLinear() and SCIPcleanupConssKnapsack() to directly delete empty redundant constraints before creating problem matrix
+- copyiisfinders added to arguments for SCIPcopyPlugins() (16th position)
 
 ### New API functions
 
@@ -56,6 +58,8 @@ Interface changes
 - SCIPfreeReaderdataCor(), SCIPfreeReaderdataTim() and SCIPfreeReaderdataSto() for freeing the data for the COR, TIM and
   STO readers respectively. These readers are all used when reading an SMPS instance.
 - SCIPdialogIsHidden(), SCIPdialogSetHidden() to determine whether a dialog should be hidden in help list
+- added SCIPincludeIISfinder(), SCIPincludeIISfinderBasic(), SCIPsetIISfinderCopy(), SCIPsetIISfinderFree(), SCIPgenerateIIS(), SCIPfindIISfinder(), SCIPgetIISfinders(), SCIPgetNIISfinders(), SCIPsetIISfinderPriority(), SCIPgetIIS()
+- added SCIPiisfinderGetName(), SCIPiisfinderGetData(), SCIPiisfinderGetDesc(), SCIPiisfinderGetPriority(), SCIPiisfinderSetData(), SCIPiisfinderGetTime(), SCIPiisfinderInfoMessage(), SCIPiisGetTime(), SCIPiisIsSubscipInfeasible(), SCIPiisIsSubscipIrreducible(), SCIPiisGetNNodes(), SCIPiisSetSubscipInfeasible(), SCIPiisSetSubscipIrreducible(), SCIPiisAddNNodes(), SCIPiisGetRandnumgen(), SCIPiisGetSubscip()
 
 ### Changes in preprocessor macros
 
@@ -66,7 +70,10 @@ Interface changes
 
 - help <command> now allows to display information on specific command.
 - allow to hide certain commands in the help list
-- add the (hidden) command "exit¨ to exit SCIP.
+- add the (hidden) command "exit" to exit SCIP.
+- Add iis option to create an infeasible subsystem
+- Add write/iis option to write out the infeasible subsystem to file
+- Add display/iis option to write out the infeasible subsystem to console
 
 ### Interfaces to external software
 
@@ -83,8 +90,11 @@ Interface changes
 - new parameter "propagating/symmetry/dispsyminfo" to control whether information about which symmetry handling methods are applied are printed
 - new parameter "presolving/implint/columnrowratio" indicates the ratio of rows/columns where the row-wise network matrix detection algorithm is used instead of the column-wise network matrix detection algorithm
 - new parameter "presolving/implint/numericslimit" determines the limit for absolute integral coefficients beyond which the corresponding rows and variables are excluded from implied integer detection
+- iis/minimal, iis/nodes, iis/removedbounds, iis/removeunusedvars, iis/silent, iis/stopafterone, iis/time, iis/greedy/additive, iis/greedy/conservative, iis/greedy/delafteradd, iis/greedy/dynamicreordering, iis/greedy/maxbatchsize, iis/greedy/maxrelbatchsize, iis/greedy/nodelimperiter, iis/greedy/priority, iis/greedy/timelimperiter
 
 ### Data structures
+
+- added structs SCIP_IISFINDER, SCIP_IISFINDERDATA, SCIP_IIS
 
 Deleted files
 -------------

@@ -5693,7 +5693,7 @@ SCIP_RETCODE SCIPbendersApplyDecomposition(
 
       /* copying the plugins from the original SCIP instance to the subproblem SCIP */
       SCIP_CALL( SCIPcopyPlugins(set->scip, subproblems[i], TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+            TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
 
       (void) SCIPsnprintf(subprobname, SCIP_MAXSTRLEN, "sub_%s_%d", SCIPgetProbName(set->scip), i);
       SCIP_CALL( SCIPcreateProbBasic(subproblems[i], subprobname) );
