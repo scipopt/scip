@@ -8452,6 +8452,24 @@ SCIP_RETCODE SCIPchgVarType(
    return SCIP_OKAY;
 }
 
+/** changes implied integer type of variable in the problem;
+ *
+ *  @warning This type change might change the variable array returned from SCIPgetVars() and SCIPgetVarsData();
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *
+ *  @note If SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed, the implied integer type of the
+ *        corresponding transformed variable is changed; the type of the original variable does not change
+ *
+ *  @note If the implied integer type is adjusted to weak or strong for a continuous variable  the bounds of the variable get
+ *        adjusted w.r.t. to integrality information
+ */
 SCIP_RETCODE SCIPchgVarImplType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the type for */
@@ -8460,7 +8478,7 @@ SCIP_RETCODE SCIPchgVarImplType(
                                               *   integrality condition of the new variable type) */
 )
 {
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarType", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarImplType", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(var != NULL);
    assert(var->scip == scip);
