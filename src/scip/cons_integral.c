@@ -134,7 +134,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
 
-   for( i = 0; i < nbinvars + nintvars; ++i )
+   int ninteger = nbinvars + nintvars + SCIPgetNBinImplVars(scip) + SCIPgetNIntImplVars(scip);
+
+   for( i = 0; i < ninteger; ++i )
    {
       assert(vars[i] != NULL);
       assert(SCIPvarIsIntegral(vars[i]));
@@ -199,7 +201,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    if( !checkintegrality )
       return SCIP_OKAY;
 
-   ninteger = nbin + nint;
+   ninteger = nbin + nint + SCIPgetNBinImplVars(scip) + SCIPgetNIntImplVars(scip);
 
    for( v = 0; v < ninteger; ++v )
    {
