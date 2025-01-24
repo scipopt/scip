@@ -1263,61 +1263,16 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
    var2 = SCIPcolGetVar(col2);
    assert(var1 != NULL && var2 != NULL);
 
-   vartype1 = SCIPvarGetType(var1);
-   vartype2 = SCIPvarGetType(var2);
+   vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var1);
+   vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var2);
 
-   if( SCIPvarIsImpliedIntegral(var1) )
-   {
-      key1 = 3;
-   }
-   else
-   {
-      switch (vartype1)
-      {
-         case SCIP_VARTYPE_BINARY:
-            key1 = 1;
-            break;
-         case SCIP_VARTYPE_INTEGER:
-            key1 = 2;
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
-            key1 = 4;
-            break;
-         case SCIP_VARTYPE_IMPLINT:
-         default:
-            key1 = -1;
-            SCIPerrorMessage("unknown variable type\n");
-            SCIPABORT();
-            break;
-      }
-   }
+   if(vartype1 > vartype2)
+      return +1;
+   if(vartype1 == vartype2)
+      return 0;
 
-   if( SCIPvarIsImpliedIntegral(var2) )
-   {
-      key2 = 3;
-   }
-   else
-   {
-      switch( vartype2 )
-      {
-         case SCIP_VARTYPE_BINARY:
-            key2 = 1;
-            break;
-         case SCIP_VARTYPE_INTEGER:
-            key2 = 2;
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
-            key2 = 4;
-            break;
-         case SCIP_VARTYPE_IMPLINT:
-         default:
-            key2 = -1;
-            SCIPerrorMessage("unknown variable type\n");
-            SCIPABORT();
-            break;
-      }
-   }
-   return key1 - key2;
+   assert(vartype1 < vartype2);
+   return -1;
 }
 
 /*
