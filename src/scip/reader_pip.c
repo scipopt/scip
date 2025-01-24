@@ -3115,7 +3115,7 @@ SCIP_RETCODE SCIPwritePip(
          var = vars[v];
          assert( var != NULL );
 
-         if ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var) )
+         if ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
          {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s", varname);
@@ -3136,7 +3136,7 @@ SCIP_RETCODE SCIPwritePip(
          var = vars[v];
          assert( var != NULL );
 
-         if ( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(var) )
+         if ( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
          {
             (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
             (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s", varname);

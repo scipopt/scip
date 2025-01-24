@@ -3279,7 +3279,7 @@ void printColumnSection(
          continue;
       }
 
-      if( !SCIPvarIsIntegral(var) && intSection )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && intSection )
       {
          /* end integer section in MPS format */
          printStart(scip, file, "", "INTEND", (int) maxnamelen);
@@ -3288,7 +3288,7 @@ void printColumnSection(
          SCIPinfoMessage(scip, file, "\n");
          intSection = FALSE;
       }
-      else if( SCIPvarIsIntegral(var) && !intSection )
+      else if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !intSection )
       {
          /* start integer section in MPS format */
          printStart(scip, file, "", "INTSTART", (int) maxnamelen);
@@ -3511,7 +3511,7 @@ void printBoundSection(
       }
 
       /* take care of binary variables */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var))
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
          if( !sectionName )
          {
@@ -3658,7 +3658,7 @@ void printBoundSection(
       assert(strncmp(varname, SCIPvarGetName(var), maxnamelen) == 0);
 
       /* take care of binary variables */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var))
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
          printStart(scip, file, "BV", "Bound", (int) maxnamelen);
          printRecord(scip, file, varname, "", maxnamelen);
@@ -4068,7 +4068,7 @@ SCIP_RETCODE SCIPwriteMps(
        * might happen that they only exist in non-linear constraints, which leads to no other line in the column section
        * and therefore do not mark the variable as an integer
        */
-      if( !SCIPisZero(scip, value) || ( SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var) )
+      if( !SCIPisZero(scip, value) || ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
          || ((SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0)
             && (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0)) )
       {
