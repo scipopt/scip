@@ -132,10 +132,12 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_MARKOWITZTOLERANCE 0.01      /**< the markowitz tolerance used for substitutions */
 #define DEFAULT_MAXFILLINPERSUBST  3         /**< maximal possible fillin for substitutions to be considered */
 #define DEFAULT_MAXSHIFTPERROW     10        /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
-#define DEFAULT_MAXEDGESCLIQUEMERGINGPARALLEL 1000000 /**< maximal amount of edges in the parallel clique merging graph */
-#define DEFAULT_MAXEDGESCLIQUEMERGINGSEQUENTIAL 100000 /**< maximal amount of edges in the sequential clique merging graph */
-#define DEFAULT_MAXCLIQUESIZE 100 /**< maximal size of clique considered for clique merging */
-#define DEFAULT_MAXGREEDYCLIQUECALLS 10000 /**< maximal number of greedy max clique calls in a single thread */
+#define DEFAULT_MAXEDGESCLIQUEMERGINGPARALLEL 1000000 
+                                             /**< maximal amount of edges in the parallel clique merging graph */
+#define DEFAULT_MAXEDGESCLIQUEMERGINGSEQUENTIAL 100000 
+                                             /**< maximal amount of edges in the sequential clique merging graph */
+#define DEFAULT_MAXCLIQUESIZE 100            /**< maximal size of clique considered for clique merging */
+#define DEFAULT_MAXGREEDYCLIQUECALLS 10000   /**< maximal number of greedy max clique calls in a single thread */
 
 /** debug options for PaPILO */
 #define DEFAULT_FILENAME_PROBLEM   "-"       /**< default filename to store the instance before presolving */
