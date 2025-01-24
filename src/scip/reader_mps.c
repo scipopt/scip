@@ -1034,7 +1034,7 @@ SCIP_RETCODE readCols(
          {
             /* for continuous variables, default bounds are 0 <= x, and default cost is 0 */
             SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
-                                     !mpsi->dynamiccols, mpsi->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+                  !mpsi->dynamiccols, mpsi->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
          }
       }
       assert(var != NULL);
@@ -1499,8 +1499,8 @@ SCIP_RETCODE readBounds(
          {
             SCIP_VAR* varcpy;
 
-            SCIP_CALL( SCIPcreateVar(scip, &var, mpsinputField3(mpsi), 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
-                                     !mpsi->dynamiccols, mpsi->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPcreateVar(scip, &var, mpsinputField3(mpsi), 0.0, SCIPinfinity(scip), 0.0, 
+                  SCIP_VARTYPE_CONTINUOUS, !mpsi->dynamiccols, mpsi->dynamiccols, NULL, NULL, NULL, NULL, NULL) );
 
             SCIP_CALL( SCIPaddVar(scip, var) );
             varcpy = var;

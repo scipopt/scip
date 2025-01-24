@@ -563,7 +563,7 @@ SCIP_RETCODE createCoveringProblem(
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_covering", SCIPvarGetName(vars[i]));
       SCIP_CALL( SCIPcreateVar(coveringscip, &coveringvars[i], name, 0.0, ub, 1.0, SCIP_VARTYPE_BINARY,
-             TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+                               TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       assert(coveringvars[i] != NULL);
       SCIP_CALL( SCIPaddVar(coveringscip, coveringvars[i]) );
    }
