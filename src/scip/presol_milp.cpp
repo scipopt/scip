@@ -315,7 +315,7 @@ Presolve<SCIP_Real> setupPresolve(
    presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
-#if PAPILO_API_VERSION >= 5
+#if PAPILO_API_VERSION >= 6
    presolve.addPresolveMethod( uptr( new CliqueMerging<SCIP_Real>() ) );
 #endif
 
@@ -371,7 +371,7 @@ Presolve<SCIP_Real> setupPresolve(
    presolve.getPresolveOptions().abortfacmedium = data->abortfacmedium;
    presolve.getPresolveOptions().abortfacfast = data->abortfacfast;
 #endif
-#if PAPILO_API_VERSION >= 5
+#if PAPILO_API_VERSION >= 6
    presolve.getPresolveOptions().maxedgescliquemergingparallel = data->maxedgescliquemergingparallel;
    presolve.getPresolveOptions().maxedgescliquemergingsequential = data->maxedgescliquemergingsequential;
    presolve.getPresolveOptions().maxcliquesize = data->maxcliquesize;
