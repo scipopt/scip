@@ -2405,24 +2405,40 @@ SCIP_RETCODE varParse(
    assert(*endptr != str);
    SCIPsetDebugMsg(set, "parsed variable type <%s>\n", token);
 
+   int startind = 0;
    (*impltype) = SCIP_VARIMPLTYPE_NONE;
-   /* get variable type */
-   if( strncmp(token, "binary", 3) == 0 )
-      (*vartype) = SCIP_VARTYPE_BINARY;
-   else if( strncmp(token, "integer", 3) == 0 )
-      (*vartype) = SCIP_VARTYPE_INTEGER;
-   else if( strncmp(token, "implicit", 3) == 0 )
+   if( strncmp(token,"impl",4) == 0 )
    {
-      (*vartype) = SCIP_VARTYPE_CONTINUOUS;
-      (*impltype) = SCIP_VARIMPLTYPE_WEAK;
+      if( token[4] == 'w' || token[4] == 's' )
+      {
+         (*impltype) = token[4] == 'w' ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_STRONG;
+         startind = 5;
+      }
+      else
+      {
+         /* This is for backwards compatibility; previously, implied integers were written in .cip files as [implicit]
+          * This is necessary to read old .cip files. */
+         SCIPsetDebugMsg(set, "Interpreting variable type <%s> as weakly implied integer continuous variable\n", token);
+         (*vartype) = SCIP_VARTYPE_CONTINUOUS;
+         (*impltype) = SCIP_VARIMPLTYPE_WEAK;
+         startind = -1;
+      }
    }
-   else if( strncmp(token, "continuous", 3) == 0 )
-      (*vartype) = SCIP_VARTYPE_CONTINUOUS;
-   else
+   if(startind != -1)
    {
-      SCIPmessagePrintWarning(messagehdlr, "unknown variable type\n");
-      (*success) = FALSE;
-      return SCIP_OKAY;
+      /* get variable type */
+      if( strncmp(&token[startind], "binary", 3) == 0 )
+         ( *vartype ) = SCIP_VARTYPE_BINARY;
+      else if( strncmp(&token[startind], "integer", 3) == 0 )
+         ( *vartype ) = SCIP_VARTYPE_INTEGER;
+      else if( strncmp(&token[startind], "continuous", 3) == 0 )
+         ( *vartype ) = SCIP_VARTYPE_CONTINUOUS;
+      else
+      {
+         SCIPmessagePrintWarning(messagehdlr, "unknown variable type\n");
+         ( *success ) = FALSE;
+         return SCIP_OKAY;
+      }
    }
 
    /* move string pointer behind variable type */
@@ -3051,30 +3067,29 @@ SCIP_RETCODE SCIPvarPrint(
    assert(var != NULL);
    assert(var->scip == set->scip);
 
+   SCIPmessageFPrintInfo(messagehdlr, file, "  [");
    if( SCIPvarIsImpliedIntegral(var) )
    {
-      SCIPmessageFPrintInfo(messagehdlr, file, "  [implicit]");
+      assert( SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_WEAK || SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_STRONG);
+      SCIPmessageFPrintInfo(messagehdlr, file, "impl%c",SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_WEAK ? 'w' : 's');
    }
-   else
+   /* type of variable */
+   switch( SCIPvarGetType(var) )
    {
-      /* type of variable */
-      switch( SCIPvarGetType(var) )
-      {
-         case SCIP_VARTYPE_BINARY:
-            SCIPmessageFPrintInfo(messagehdlr, file, "  [binary]");
-            break;
-         case SCIP_VARTYPE_INTEGER:
-            SCIPmessageFPrintInfo(messagehdlr, file, "  [integer]");
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
-            SCIPmessageFPrintInfo(messagehdlr, file, "  [continuous]");
-            break;
-         case SCIP_VARTYPE_IMPLINT:
-         default:
-            SCIPerrorMessage("unknown variable type\n");
-            SCIPABORT();
-            return SCIP_ERROR; /*lint !e527*/
-      }
+      case SCIP_VARTYPE_BINARY:
+         SCIPmessageFPrintInfo(messagehdlr, file, "binary]");
+         break;
+      case SCIP_VARTYPE_INTEGER:
+         SCIPmessageFPrintInfo(messagehdlr, file, "integer]");
+         break;
+      case SCIP_VARTYPE_CONTINUOUS:
+         SCIPmessageFPrintInfo(messagehdlr, file, "continuous]");
+         break;
+      case SCIP_VARTYPE_IMPLINT:
+      default:
+         SCIPerrorMessage("unknown variable type\n");
+         SCIPABORT();
+         return SCIP_ERROR; /*lint !e527*/
    }
 
    /* name */
