@@ -1211,7 +1211,7 @@ if(EXACTSOLVE)
                                     DEPENDS scip-build
                                 )
 
-            if((NOT ${VIPRCOMP} STREQUAL VIPRCOMP-NOTFOUND) AND (NOT ${VIPRCHK} STREQUAL VIPRCHK-NOTFOUND))
+            if(VIPRCOMP AND VIPRCHK)
                add_test(NAME MIPEX-${setting}-${basename}-viprcomp
                      COMMAND ${VIPRCOMP} ${basename}.${setting}.vipr)
                set_tests_properties(MIPEX-${setting}-${basename}-viprcomp
