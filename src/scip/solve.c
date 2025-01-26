@@ -5275,6 +5275,11 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt,
                lp, branchcand, conflict, conflictstore, eventfilter, eventqueue, cliquetable, &cutoff, FALSE, FALSE) );
 
+         if( SCIPisExactSolve(set->scip) && SCIPisCertificateActive(set->scip) )
+         {
+            SCIP_CALL( SCIPcertificateInitTransFile(set->scip) );
+         }
+
          if( cutoff )
             stat->ndelayedcutoffs++;
 
