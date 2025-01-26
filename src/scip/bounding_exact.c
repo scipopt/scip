@@ -1911,10 +1911,10 @@ char chooseInitialBoundingMethod(
       else
       {
          /* check if Neumaier-Shcherbina is possible */
-         if( SCIPlpExactBSpossible(lpexact) )
+         if( SCIPlpExactBoundShiftPossible(lpexact) )
             dualboundmethod = 'n';
          /* check if project and shift is possible */
-         else if( SCIPlpExactPSpossible(lpexact) )
+         else if( SCIPlpExactProjectShiftPossible(lpexact) )
             dualboundmethod = 'p';
          /* otherwise solve exactly */
          else
@@ -1944,7 +1944,7 @@ char chooseFallbackBoundingMethod(
    {
    case 'n':
       /* bound-shift -> try project shift next if possible, otherwise exactlp */
-      dualboundmethod = SCIPlpExactPSpossible(lpexact) ? 'p' : 'e';
+      dualboundmethod = SCIPlpExactProjectShiftPossible(lpexact) ? 'p' : 'e';
       break;
    case 'p':
       /* project-shift -> try exactlp next */
@@ -1954,10 +1954,10 @@ char chooseFallbackBoundingMethod(
       /* exactlp -> try bound shift next, if possible, otherwise project-shift, if possible,
        * otherwise try exactlp again
        */
-      if( SCIPlpExactBSpossible(lpexact) )
+      if( SCIPlpExactBoundShiftPossible(lpexact) )
          dualboundmethod = 'n';
       else
-         dualboundmethod = SCIPlpExactPSpossible(lpexact) ? 'p' : 't';
+         dualboundmethod = SCIPlpExactProjectShiftPossible(lpexact) ? 'p' : 't';
       break;
    default:
       /* else -> return unknown */
@@ -2037,7 +2037,7 @@ SCIP_RETCODE boundShift(
    lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    lpexact->solved = 0;
 
-   if( !SCIPlpExactBSpossible(lpexact) )
+   if( !SCIPlpExactBoundShiftPossible(lpexact) )
       return SCIP_OKAY;
 
    /* start timing */
@@ -2346,8 +2346,6 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
    )
 {  /*lint --e{715}*/
-
-   //TODO: what happens in general in the exact case if SCIP_WITH_BOOST is false
 #ifdef SCIP_WITH_BOOST
    char dualboundmethod;
    char lastboundmethod;

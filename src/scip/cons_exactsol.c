@@ -328,7 +328,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactSol)
    return SCIP_OKAY;
 }
 
-/** TODO is this todo still active?*/
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckExactSol)

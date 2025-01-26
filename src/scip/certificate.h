@@ -423,7 +423,7 @@ void SCIPcertificatePrintSolExact(
    );
 
 /** set the node to have its own bound proof */
-SCIP_RETCODE SCIPcertificateSetInheritanceData(
+SCIP_RETCODE SCIPcertificateUpdateInheritanceData(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_NODE*            node,               /**< node data structure */
    SCIP_Longint          fileindex,          /**< index of new bound */

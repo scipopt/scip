@@ -1729,7 +1729,7 @@ void SCIPdomchgAddCurrentCertificateIndex(
 {
    SCIP_BOUNDCHG* change;
 
-   if( !SCIPcertificateIsEnabled(stat->certificate) )
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
 
    change = &(domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1]);

@@ -281,7 +281,6 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
    return SCIP_OKAY;
 }
 
-//TODO the first like is confusing?
 /** branches on a variable x; unlike the fp-version this will also branch x <= floor(x'), x >= ceil(x')
  * if x' is very close to being integral at one of its bounds;
  * in the fp version this case would be branched in the middle of the domain;
