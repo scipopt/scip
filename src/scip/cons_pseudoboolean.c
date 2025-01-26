@@ -9509,7 +9509,7 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    {
       if( modifiable )
       {
-         SCIPerrorMessage("soft pseudo boolean constraint <%s> must not be modifiable\n", name);
+         SCIPerrorMessage("soft pseudo boolean constraint <%s> must not be modifiable because the implemented formulation requires finite activity bounds\n", name);
          return SCIP_INVALIDDATA;
       }
 
@@ -9809,7 +9809,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    {
       if( modifiable )
       {
-         SCIPerrorMessage("soft pseudo boolean constraint <%s> must not be modifiable\n", name);
+         SCIPerrorMessage("soft pseudo boolean constraint <%s> must not be modifiable because the implemented formulation requires finite activity bounds\n", name);
          return SCIP_INVALIDDATA;
       }
 
