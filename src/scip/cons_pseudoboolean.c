@@ -9498,10 +9498,10 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   if( !SCIPisFinite(lhs) || !SCIPisFinite(rhs) )
+   if( isnan(lhs) || isnan(rhs) )
    {
       SCIPerrorMessage("%s hand side of pseudo boolean constraint <%s> is nan\n",
-            SCIPisFinite(lhs) ? "right" : "left", name);
+            isnan(lhs) ? "left" : "right", name);
       return SCIP_INVALIDDATA;
    }
 
@@ -9798,10 +9798,10 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   if( !SCIPisFinite(lhs) || !SCIPisFinite(rhs) )
+   if( isnan(lhs) || isnan(rhs) )
    {
       SCIPerrorMessage("%s hand side of pseudo boolean constraint <%s> is nan\n",
-            SCIPisFinite(lhs) ? "right" : "left", name);
+            isnan(lhs) ? "left" : "right", name);
       return SCIP_INVALIDDATA;
    }
 
