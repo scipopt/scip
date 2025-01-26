@@ -178,50 +178,6 @@ SCIP_RETCODE solIncArrayVal(
    return SCIP_OKAY;
 }
 
-/* MP@LE Why is the following code disabled? Remove it? */
-#ifdef SCIP_DISABLED_CODE
-/** increases value of variable in the exact solution's array */
-static
-SCIP_RETCODE solIncArrayValExact(
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_VAR*             var,                /**< problem variable */
-   SCIP_Rational*        incval              /**< increase of variable's solution value */
-   )
-{
-   int idx;
-
-   assert(sol != NULL);
-   assert(SCIPsolIsExact(sol));
-
-   idx = SCIPvarGetIndex(var);
-
-   /* from now on, variable must not be deleted */
-   SCIPvarMarkNotDeletable(var);
-
-   /* if the variable was not valid, mark it to be valid and set the value to the incval (it is 0.0 if not valid) */
-   if( !SCIPboolarrayGetVal(sol->valsexact->valid, idx) )
-   {
-      /* mark the variable valid */
-      SCIP_CALL( SCIPboolarraySetVal(sol->valsexact->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
-
-      /* set the value in the solution array */
-      SCIP_CALL( SCIPrationalarraySetVal(sol->valsexact->vals, idx, incval) );
-   }
-   else
-   {
-      /* increase the value in the solution array */
-      SCIP_CALL( SCIPrationalarrayIncVal(sol->valsexact->vals, idx, incval) );
-   }
-
-   /* store whether the solution has infinite values assigned to variables */
-   if( RatIsAbsInfinity(incval) )
-      sol->hasinfval = TRUE;
-
-   return SCIP_OKAY;
-}
-#endif
-
 /** returns the value of the variable in the given solution */
 static
 SCIP_Real solGetArrayVal(
@@ -419,6 +375,7 @@ SCIP_RETCODE solUnlinkVarExact(
 
    case SCIP_SOLORIGIN_LPSOL:
       /* MP@LE Can the follwing be done more elegantly as follows?
+         LE@MP Unfortunately not, I guess I really should add some buffer for rationals
          SCIP_Rational solval;
          SCIPvarGetLPSolExact(var, &solval);
          return SCIP_OKAY;
@@ -2116,8 +2073,10 @@ void SCIPsolGetValExact(
       RatSetReal(constant, 0.0);
       retcode = SCIPvarGetOrigvarSumExact(&origvar, scalar, constant);
       if ( retcode != SCIP_OKAY )
-         /* MP@LE Should we at least do an SCIPABORT() here? Or maybe return SCIP_RETCODE? */
+      {
+         SCIPABORT();
          return;
+      }
       if( origvar == NULL )
       {
          /* the variable has no original counterpart: in the original solution, it has a value of zero */

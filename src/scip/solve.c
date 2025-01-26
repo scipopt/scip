@@ -3260,8 +3260,6 @@ SCIP_RETCODE solveNodeLP(
          }
          else
          {
-            /* MP@LE Is it correct that we arrive here if lp->lpexact->solved is false, but exact_enabled is true? */
-            /* LE@MP yes */
             SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
 
             /* MP@LE Why is this test not needed in the exact code in the first part of the if-block. */
@@ -4212,11 +4210,10 @@ SCIP_RETCODE propAndSolve(
             "(node %" SCIP_LONGINT_FORMAT ") LP relaxation is unbounded (LP %" SCIP_LONGINT_FORMAT ")\n", stat->nnodes, stat->nlps);
       }
 
-      /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
-       * we have to forget about the LP and use the pseudo solution instead
+      /* if we solve exactly, and the LP claims to be infeasible but the infeasibility could not be proved,
+       * we have to forget about the LP and use the pseudo solution instead.
+       * this "not proved" condition is monitored by the last check. normally if the LP is infeasible, the lowerbound would be infinity
        */
-      /* MP@LE Can you please make the above comment more specific? It is not easy to understand. For instance, you need
-         to know that SCIPnodeGetLowerbound(focusnode) should be infinity for infeasible LPs. */
       if( !(*cutoff) && !(*lperror) && (set->exact_enabled || *pricingaborted) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
          && SCIPnodeGetLowerbound(focusnode) < primal->cutoffbound )
       {
@@ -5055,8 +5052,6 @@ SCIP_RETCODE addCurrentSolution(
       }
       else
       {
-         /* MP@LE Is it correct that are in this block if lp->lpexact->solved is false and we solve exactly? */
-         /* LE@MP yes */
          SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
          SCIPsetDebugMsg(set, "found lp solution with objective %f\n", SCIPsolGetObj(sol, set, transprob, origprob));
 
