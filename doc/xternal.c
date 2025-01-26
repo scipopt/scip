@@ -7352,15 +7352,15 @@
 
 /**@page MINUCIIS How to deduce reasons for infeasibility in SCIP
  *
- * It is a common problem for integer programming practitioners to encounter infeasible instances.
+ * It is a common problem for integer programming practitioners to (unexpectedly) encounter infeasible instances.
  * Often it desirable to better understand exactly why the instance is infeasible. Was it an error in the
  * input data, was the underlying formulation incorrect, or is my model simply infeasible by construction?
  * There are two main ways to analyse infeasible instances using SCIP:
  *
- * Firstly, there is IIS (irreducible infeasible subsystem / set) functionality in SCIP.
+ * Firstly, there is IIS (irreducible infeasible subsystem) functionality in SCIP.
  * This produces an infeasible problem, which contains a subset of constraints and variable bounds from
  * the original problem. The infeasible problem is also irreducible, in that removing any additional
- * constraints result in the problem becoming feasible. This is a fantastic method for debugging
+ * constraints results in the problem becoming feasible. This is a fantastic method for debugging
  * problems, and for determining what needs to be changed in the formulation. To use this functionality
  * in the SCIP shell do the following
  * \code
@@ -7368,7 +7368,7 @@
  * SCIP> iis
  * \endcode
  * This will read in your instance and then compute an IIS of your infeasible instance.
- * To display or print the subscip that contains the modified instance that is irreducible still
+ * To display or print the subscip that contains the modified instance that is still
  * infeasible, and hopefully substantially smaller, do the following
  * \code
  * SCIP> display/iis
@@ -7383,7 +7383,7 @@
  * SCIP> change/minuc
  * SCIP> optimize
  * \endcode
- * The second command changes the loaded problem to now optimize the number of
+ * The second command changes the loaded problem to now minimize the number of
  * unsatisfied constraints. The primal bound during solving corresponds to current best solution,
  * i.e., a set of constraints which when removed or relaxed will induce feasibility.
  * One can view the constraints that art part of the MinUC by seeing which of the variables
