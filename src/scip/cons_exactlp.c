@@ -4839,8 +4839,6 @@ SCIP_RETCODE tightenVarBounds(
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, newub);
 
                /* analyze conflict */
-               /** @todo exip this needs to be enabled if graph analysis is implemented */
-               // SCIP_CALL( analyzeConflict(scip, cons, TRUE) );
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, TRUE) );
                *cutoff = TRUE;
@@ -4913,8 +4911,6 @@ SCIP_RETCODE tightenVarBounds(
                SCIPdebugMsg(scip, "linear constraint <%s>: cutoff  <%s>, new bds=[%.15g,%.15g]\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), newlb, ub);
 
-               /* analyze conflict */
-               // SCIP_CALL( analyzeConflict(scip, cons, FALSE) );
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, FALSE) );
 
@@ -5068,8 +5064,6 @@ SCIP_RETCODE tightenVarBounds(
 
                if( SCIPcertificateShouldTrackBounds(scip) )
                   SCIP_CALL( certificatePrintActivityConflict(scip, cons, consdata, FALSE) );
-               /* analyze conflict */
-               //SCIP_CALL( analyzeConflict(scip, cons, FALSE) );
 
                *cutoff = TRUE;
                goto RETURN_SCIP_OKAY;

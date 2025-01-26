@@ -4954,7 +4954,6 @@ SCIP_RETCODE solveNode(
    {
       SCIP_CALL( SCIPnodeCutoff(focusnode, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
-      /** @todo exip: these ifs are temporary */
       if( !(lp->solved && lp->flushed) )
       {
          SCIP_CALL( SCIPcertificatePrintInheritedBound(set, stat->certificate, focusnode) );
