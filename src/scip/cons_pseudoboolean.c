@@ -2205,11 +2205,12 @@ SCIP_RETCODE addCoefTerm(
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(vars != NULL);
-   assert(nvars >= 1);
 
    if( SCIPisZero(scip, val) )
       return SCIP_OKAY;
+
+   assert(vars != NULL);
+   assert(nvars >= 1);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
