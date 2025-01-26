@@ -9832,6 +9832,12 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
 
    for( c = 0; c < nterms; ++c )
    {
+      if( ntermvars[c] == 0 && !SCIPisZero(scip, termvals[c]) )
+      {
+         SCIPerrorMessage("pseudo boolean term with coefficient %lf without variables\n", termvals[c]);
+         return SCIP_INVALIDDATA;
+      }
+
       if( !SCIPisFinite(termvals[c]) || SCIPisInfinity(scip, REALABS(termvals[c])) )
       {
          SCIPerrorMessage("pseudo boolean term coefficient %lf is %s\n",
