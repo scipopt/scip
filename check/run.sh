@@ -136,7 +136,9 @@ echo "-----------------------------"        >> "${OUTFILE}"
 date +"@03 %s"                              >> "${OUTFILE}"
 echo "@05 ${TIMELIMIT}"                     >> "${OUTFILE}"
 
-ulimit -S -s unlimited
+# zimpl may ran into a stack limit when model equations have too many terms, so we remove that limit
+case "${FILENAME}" in *.zpl ) ulimit -S -s unlimited ;; esac
+
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
 EXECNAME="${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}"
@@ -161,70 +163,66 @@ echo -----------------------------  >> $OUTFILE
 
 # build/check/compress vipr file if it exists
 VIPRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr
-VIPRCOMPFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME\_complete.vipr
+VIPRCOMPFILE=$CLIENTTMPDIR/${USER}-tmpdir/${BASENAME}_complete.vipr
 VIPRORIFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.vipr_ori
 VIPRRAWFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.viprraw
 if test -e $VIPRFILE
 then
-echo Building vipr file ... >> $OUTFILE
-cp $VIPRFILE $VIPRRAWFILE
+    echo Building vipr file ... >> $OUTFILE
+    cp $VIPRFILE $VIPRRAWFILE
 
-echo -----------------------------  >> $OUTFILE
-date                                >> $OUTFILE
-date                                >> $ERRFILE
-echo -----------------------------  >> $OUTFILE
+    # run vipr tightening
+    echo "viprfile raw:       " `ls -lisa $VIPRRAWFILE` >> $OUTFILE
+    echo Completing vipr file ... >> $OUTFILE
+    echo "Completed filename $VIPRCOMPFILE " >> $OUTFILE
+    bash -c "$VIPRCOMPNAME $VIPRFILE 2>>$ERRFILE"  | tee -a $OUTFILE
+    echo "viprfile raw + completed:       " `ls -lisa $VIPRCOMPFILE` >> $OUTFILE
+    echo Compressing vipr file ... >> $OUTFILE
+    bash -c "$VIPRCOMPRESSNAME $VIPRCOMPFILE 2>>$ERRFILE"  | tee -a $OUTFILE
+    echo "viprfile tightened (and completed):       " `ls -lisa $VIPRCOMPFILE.opt` >> $OUTFILE
+    mv $VIPRCOMPFILE.opt $VIPRFILE
 
-# run vipr tightening
-echo "viprfile raw:       " `ls -lisa $VIPRRAWFILE` >> $OUTFILE
-echo Completing vipr file ... >> $OUTFILE
-echo "Completed filename $VIPRCOMPFILE " >> $OUTFILE
-bash -c "$VIPRCOMPNAME $VIPRFILE 2>>$ERRFILE"  | tee -a $OUTFILE
-echo "viprfile raw + completed:       " `ls -lisa $VIPRCOMPFILE` >> $OUTFILE
-echo Compressing vipr file ... >> $OUTFILE
-bash -c "$VIPRCOMPRESSNAME $VIPRCOMPFILE 2>>$ERRFILE"  | tee -a $OUTFILE
-echo "viprfile tightened (and completed):       " `ls -lisa $VIPRCOMPFILE.opt` >> $OUTFILE
-mv $VIPRCOMPFILE.opt $VIPRFILE
+    echo -----------------------------  >> $OUTFILE
+    date                                >> $OUTFILE
+    date                                >> $ERRFILE
+    echo -----------------------------  >> $OUTFILE
 
-echo -----------------------------  >> $OUTFILE
-date                                >> $OUTFILE
-date                                >> $ERRFILE
-echo -----------------------------  >> $OUTFILE
+    # run vipr check @todo exip adapt vipr to handle timelimit
+    echo Checking vipr file ... >> $OUTFILE
+    bash -c "$VIPRCHECKNAME $VIPRFILE 2>>$ERRFILE"  | tee -a $OUTFILE
+    retcode=${PIPESTATUS[0]}
+    if test $retcode != 0
+    then
+        echo "vipr returned with error code $retcode." >> $ERRFILE
+    fi
 
-# run vipr check @todo exip adapt vipr to handle timelimit
-echo Checking vipr file ... >> $OUTFILE
-bash -c "$VIPRCHECKNAME $VIPRFILE 2>>$ERRFILE"  | tee -a $OUTFILE
-retcode=${PIPESTATUS[0]}
-if test $retcode != 0
-then
-  echo "vipr returned with error code $retcode." >>$ERRFILE
-fi
-# run vipr also on original file to check solution
-echo Checking vipr_ori file ... >> $OUTFILE
-bash -c "$VIPRCHECKNAME $VIPRORIFILE 2>>$ERRFILE"  | tee -a $OUTFILE
-retcode=${PIPESTATUS[0]}
-if test $retcode != 0
-then
-  echo "vipr on original problem returned with error code $retcode." >>$ERRFILE
-fi
+    # run vipr also on original file to check solution
+    echo Checking vipr_ori file ... >> $OUTFILE
+    bash -c "$VIPRCHECKNAME $VIPRORIFILE 2>>$ERRFILE"  | tee -a $OUTFILE
+    retcode=${PIPESTATUS[0]}
+    if test $retcode != 0
+    then
+        echo "vipr on original problem returned with error code $retcode." >>$ERRFILE
+    fi
 
-# compress vipr file
-echo Gzipping vipr file ... >> $OUTFILE
-bash -c "gzip $VIPRFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
-echo "viprfile gzipped:   " `ls -lisa $VIPRFILE.gz` >> $OUTFILE
+    # compress vipr file
+    echo Gzipping vipr file ... >> $OUTFILE
+    bash -c "gzip $VIPRFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
+    echo "viprfile gzipped:   " `ls -lisa $VIPRFILE.gz` >> $OUTFILE
 
-# compress vipr_ori file
-echo Gzipping vipr_ori file ... >> $OUTFILE
-bash -c "gzip $VIPRORIFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
-echo "vipr_ori file gzipped:   " `ls -lisa $VIPRORIFILE.gz` >> $OUTFILE
+    # compress vipr_ori file
+    echo Gzipping vipr_ori file ... >> $OUTFILE
+    bash -c "gzip $VIPRORIFILE 2>>$ERRFIL@E"  | tee -a $OUTFILE
+    echo "vipr_ori file gzipped:   " `ls -lisa $VIPRORIFILE.gz` >> $OUTFILE
 
-# compress untightened vipr file
-echo Gzipping untightened vipr file ... >> $OUTFILE
-bash -c "gzip $VIPRRAWFILE 2>>$ERRFILE"  | tee -a $OUTFILE
-echo "raw viprfile gzipped:   " `ls -lisa $VIPRRAWFILE.gz` >> $OUTFILE
+    # compress untightened vipr file
+    echo Gzipping untightened vipr file ... >> $OUTFILE
+    bash -c "gzip $VIPRRAWFILE 2>>$ERRFILE"  | tee -a $OUTFILE
+    echo "raw viprfile gzipped:   " `ls -lisa $VIPRRAWFILE.gz` >> $OUTFILE
 
-mv $VIPRFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr.gz
-mv $VIPRRAWFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.viprraw.gz
-mv $VIPRORIFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr_ori.gz
+    mv $VIPRFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr.gz
+    mv $VIPRRAWFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.viprraw.gz
+    mv $VIPRORIFILE.gz $SOLVERPATH/$OUTPUTDIR/$BASENAME.vipr_ori.gz
 fi
 #ensure no garbage is left over
 if test -e $VIPRFILE
@@ -234,16 +232,8 @@ fi
 
 if test -e "${SOLFILE}"
 then
-    # translate SCIP solution format into format for solution checker. The
-    # SOLFILE format is a very simple format where in each line we have a
-    # <variable, value> pair, separated by spaces.  A variable name of
-    # =obj= is used to store the objective value of the solution, as
-    # computed by the solver. A variable name of =infeas= can be used to
-    # indicate that an instance is infeasible.
-    sed ' /solution status:/d;
-    s/objective value:/=obj=/g;
-    s/infinity/1e+20/g;
-    s/no solution available//g' "${SOLFILE}" > "${TMPFILE}"
+    # workaround infinite values for solution checker
+    sed 's/infinity/1e+20/g' "${SOLFILE}" > "${TMPFILE}"
     mv "${TMPFILE}" "${SOLFILE}"
 
     # check if the link to the solution checker exists

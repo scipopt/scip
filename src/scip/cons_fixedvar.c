@@ -81,7 +81,7 @@ struct SCIP_ConshdlrData
  * above the feasibility tolerance by aggregation factors. Usually, the violation should still be
  * rather "small". For this test, we quantify "small" as 0.5.
  */
-#define assertSmallViolation(lb, val, ub) (assert((val) >= (lb) - 0.5 && (val) <= (ub) + 0.5));
+#define assertSmallViolation(lb, val, ub) (assert((val) >= (lb) - 0.5 && (val) <= (ub) + 0.5))
 
 /** add cut to enforce global bounds on variable aggregation
  *

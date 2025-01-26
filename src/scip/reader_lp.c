@@ -70,10 +70,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
-
 
 #define READER_NAME             "lpreader"
 #define READER_DESC             "file reader for MIPs in IBM CPLEX's LP file format"
@@ -581,7 +577,7 @@ SCIP_Bool isNewSection(
          swapTokenBuffer(lpinput);
          if( getNextToken(scip, lpinput) )
          {
-            if( strcasecmp(lpinput->token, "TO") == 0 )
+            if( SCIPstrcasecmp(lpinput->token, "TO") == 0 )
             {
                SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
                lpinput->section = LP_CONSTRAINTS;
@@ -601,7 +597,7 @@ SCIP_Bool isNewSection(
          swapTokenBuffer(lpinput);
          if( getNextToken(scip, lpinput) )
          {
-            if( strcasecmp(lpinput->token, "THAT") == 0 )
+            if( SCIPstrcasecmp(lpinput->token, "THAT") == 0 )
             {
                SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS\n", lpinput->linenumber);
                lpinput->section = LP_CONSTRAINTS;
@@ -632,7 +628,7 @@ SCIP_Bool isNewSection(
          swapTokenBuffer(lpinput);
          if( getNextToken(scip, lpinput) )
          {
-            if( strcasecmp(lpinput->token, "CONSTRAINTS") == 0 )
+            if( SCIPstrcasecmp(lpinput->token, "CONSTRAINTS") == 0 )
             {
                SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS (lazy)\n", lpinput->linenumber);
                lpinput->section = LP_CONSTRAINTS;
@@ -652,7 +648,7 @@ SCIP_Bool isNewSection(
          swapTokenBuffer(lpinput);
          if( getNextToken(scip, lpinput) )
          {
-            if( strcasecmp(lpinput->token, "CUTS") == 0 )
+            if( SCIPstrcasecmp(lpinput->token, "CUTS") == 0 )
             {
                SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS (user cuts)\n", lpinput->linenumber);
                lpinput->section = LP_CONSTRAINTS;
@@ -755,7 +751,7 @@ SCIP_Bool isValue(
    assert(lpinput != NULL);
    assert(value != NULL);
 
-   if( strcasecmp(lpinput->token, "INFINITY") == 0 || strcasecmp(lpinput->token, "INF") == 0 )
+   if( SCIPstrcasecmp(lpinput->token, "INFINITY") == 0 || SCIPstrcasecmp(lpinput->token, "INF") == 0 )
    {
       *value = SCIPinfinity(scip);
       return TRUE;
@@ -787,7 +783,7 @@ SCIP_Bool isValueRational(
    assert(lpinput != NULL);
    assert(value != NULL);
 
-   if( strcasecmp(lpinput->token, "INFINITY") == 0 || strcasecmp(lpinput->token, "INF") == 0 )
+   if( SCIPstrcasecmp(lpinput->token, "INFINITY") == 0 || SCIPstrcasecmp(lpinput->token, "INF") == 0 )
    {
       RatSetString(value, "inf");
       return TRUE;
@@ -2604,7 +2600,7 @@ SCIP_RETCODE readBoundsRational(
                goto TERMINATE;
             }
          }
-         else if( strcasecmp(lpinput->token, "FREE") == 0 )
+         else if( SCIPstrcasecmp(lpinput->token, "FREE") == 0 )
          {
             if( leftsense != LP_SENSE_NOTHING )
             {
@@ -2787,7 +2783,7 @@ SCIP_RETCODE readBounds(
                return SCIP_OKAY;
             }
          }
-         else if( strcasecmp(lpinput->token, "FREE") == 0 )
+         else if( SCIPstrcasecmp(lpinput->token, "FREE") == 0 )
          {
             if( leftsense != LP_SENSE_NOTHING )
             {
@@ -2952,7 +2948,7 @@ SCIP_RETCODE readSemicontinuous(
    assert(lpinput != NULL);
 
    /* if section is titles "semi-continuous", then the parser breaks this into parts */
-   if( strcasecmp(lpinput->token, "SEMI") == 0 )
+   if( SCIPstrcasecmp(lpinput->token, "SEMI") == 0 )
    {
       if( !getNextToken(scip, lpinput) )
       {
@@ -2960,9 +2956,9 @@ SCIP_RETCODE readSemicontinuous(
          return SCIP_OKAY;
       }
 
-      if( strcasecmp(lpinput->token, "-") == 0 )
+      if( SCIPstrcasecmp(lpinput->token, "-") == 0 )
       {
-         if( !getNextToken(scip, lpinput) || strcasecmp(lpinput->token, "CONTINUOUS") != 0 )
+         if( !getNextToken(scip, lpinput) || SCIPstrcasecmp(lpinput->token, "CONTINUOUS") != 0 )
          {
             syntaxError(scip, lpinput, "expected 'CONTINUOUS' after 'SEMI-'.");
             return SCIP_OKAY;
@@ -3366,16 +3362,16 @@ SCIP_RETCODE getActiveVariables(
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, *nvars, constant, &requiredsize) );
 
       if( requiredsize > *nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, scalars, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
-         assert( requiredsize <= *nvars );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, *vars, *scalars, nvars, requiredsize, constant, &requiredsize) );
       }
+      assert( requiredsize == *nvars );
    }
    else
    {
@@ -3482,8 +3478,7 @@ SCIP_RETCODE printRowExact(
    SCIP_VAR**            linvars,            /**< array of linear variables */
    SCIP_Rational**       linvals,            /**< array of linear coefficient values */
    int                   nlinvars,           /**< number of linear variables */
-   SCIP_Rational*        rhs,                /**< right hand side */
-   SCIP_Bool             transformed         /**< transformed constraint? */
+   SCIP_Rational*        rhs                 /**< right hand side */
    )
 {
    int v;
@@ -3527,7 +3522,7 @@ SCIP_RETCODE printRowExact(
          appendLine(scip, file, linebuffer, &linecnt, " ");
 
       (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      RatToString(linvals[v], ratbuffer, LP_MAX_PRINTLEN);
+      (void) RatToString(linvals[v], ratbuffer, LP_MAX_PRINTLEN);
       if( !RatIsNegative(linvals[v]) )
          (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "+%s %s", ratbuffer, varname);
       else
@@ -3536,7 +3531,7 @@ SCIP_RETCODE printRowExact(
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
 
-   RatToString(rhs, ratbuffer, LP_MAX_PRINTLEN);
+   (void) RatToString(rhs, ratbuffer, LP_MAX_PRINTLEN);
    (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %s", type, ratbuffer);
 
    /* we start a new line; therefore we tab this line */
@@ -4795,24 +4790,50 @@ SCIP_RETCODE SCIPwriteLp(
       else if( strcmp(conshdlrname, "nonlinear") == 0 )
       {
          SCIP_Bool isquadratic;
+         SCIP_EXPR* expr;
 
          /* check whether there is a quadratic representation of the nonlinear constraint */
          SCIP_CALL( SCIPcheckQuadraticNonlinear(scip, cons, &isquadratic) );
+         if( !isquadratic )
+         {
+            /* simplify expr and check again whether there is a quadratic representation */
+            SCIP_EXPR* exprcopy;
+            SCIP_Bool changed;
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPduplicateExpr(scip, SCIPgetExprNonlinear(cons), &exprcopy, NULL, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPsimplifyExpr(scip, exprcopy, &expr, &changed, &infeasible, NULL, NULL) );
+            SCIP_CALL( SCIPreleaseExpr(scip, &exprcopy) );
+            if( changed && !infeasible )
+            {
+               SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
+               isquadratic &= SCIPexprAreQuadraticExprsVariables(expr);
+            }
+         }
+         else
+         {
+            expr = SCIPgetExprNonlinear(cons);
+         }
 
          /* we cannot handle nonlinear constraint that are not quadratically representable */
          if( !isquadratic )
          {
-            SCIPwarningMessage(scip, "constraint handler <%s> cannot print constraint\n", SCIPconshdlrGetName(SCIPconsGetHdlr(cons)));
+            SCIPwarningMessage(scip, "nonlinear constraint <%s> not recognized as quadratic: cannot print as LP\n", SCIPconsGetName(cons));
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
             SCIPinfoMessage(scip, file, ";\n");
          }
          else
          {
-            SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, SCIPgetExprNonlinear(cons),
+            SCIP_CALL( printQuadraticCons(scip, file, consname, NULL, NULL, 0, expr,
                SCIPgetLhsNonlinear(cons), SCIPgetRhsNonlinear(cons), transformed) );
 
             consExpr[nConsExpr++] = cons;
+         }
+
+         if( expr != SCIPgetExprNonlinear(cons) )
+         {
+            SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
          }
       }
       else if( strcmp(conshdlrname, "and") == 0 )
@@ -4835,7 +4856,7 @@ SCIP_RETCODE SCIPwriteLp(
          {
             SCIP_CALL( printRowExact(scip, file, consname, "_", "=",
                SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
-               SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons), transformed) );
+               SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) );
          }
          else
          {
@@ -4843,13 +4864,13 @@ SCIP_RETCODE SCIPwriteLp(
             {
                SCIP_CALL( printRowExact(scip, file, consname, "_lhs", ">=",
                   SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
-                  SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons), transformed) );
+                  SCIPgetNVarsExactLinear(scip, cons), SCIPgetLhsExactLinear(scip, cons)) );
             }
             if( !RatIsInfinity(SCIPgetRhsExactLinear(scip, cons)) )
             {
                SCIP_CALL( printRowExact(scip, file, consname,  "_rhs", "<=",
                   SCIPgetVarsExactLinear(scip, cons), SCIPgetValsExactLinear(scip, cons),
-                  SCIPgetNVarsExactLinear(scip, cons), SCIPgetRhsExactLinear(scip, cons), transformed) );
+                  SCIPgetNVarsExactLinear(scip, cons), SCIPgetRhsExactLinear(scip, cons)) );
             }
          }
       }

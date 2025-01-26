@@ -22,46 +22,52 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   varboundnumerics.c
- * @brief  unit test for problem with difficult numerics
- * @author Gioni Mexi
+/**@file   rectlu_num.c
+ * @brief  rectlu memory functions
+ * @author Leon Eifler
  */
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/scipdefplugins.h"
-#include "include/scip_test.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+/*
+ * include build configuration flags
+ */
+#ifndef NO_CONFIG_HEADER
+#include "scip/config.h"
+#endif
 
-/** GLOBAL VARIABLES **/
-static SCIP* scip = NULL;
+#include "rectlu_factor.h"
+#include "rectlu.h"
 
-/* TEST SUITE */
+#pragma GCC diagnostic ignored "-Wpedantic"
 
-/** create SCIP instance */
-static
-void setup(void)
+#ifdef SCIP_WITH_GMP
+
+/* allocates array with size elements of QSnum_type */
+QSnum_type* QSnum_AllocArray(int size)
 {
-   SCIP_CALL( SCIPcreate(&scip) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-   SCIP_CALL( SCIPcreateProbBasic(scip, "varboundnumerics") );
+   int i;
+   QSnum_type* res = (QSnum_type *) malloc(size*sizeof(QSnum_type));
+   if (res)
+   {
+      for (i = 0; i < size; i++)
+         mpq_init(res[i]);
+   }
+   return res;
 }
 
-/** free SCIP instance */
-static
-void teardown(void)
+/* frees array ea with size elements of QSnum_type */
+void QSnum_FreeArray(QSnum_type* ea, int size)
 {
-   SCIPfree(&scip);
+   int i;
+   if (ea)
+   {
+      for (i = 0; i < size; i++)
+         mpq_clear(ea[i]);
+   }
+   free(ea);
 }
 
-TestSuite(problem, .init = setup, .fini = teardown);
-
-/* TESTS  */
-Test(problem, tolerance, .description = "test whether propagating a var bound constraint does not falsely remove it")
-{
-   SCIP_CALL( SCIPreadProb(scip, "src/bugs/varboundnumerics.cip", NULL) );
-   SCIP_CALL( SCIPsolve(scip) );
-   int nvars = SCIPgetNOrigVars(scip);
-   int nconss = SCIPgetNOrigConss(scip);
-   cr_assert_eq(nvars, 19);
-   cr_assert_eq(nconss, 7);
-   SCIP_SOL* sol = SCIPgetSols(scip)[0];
-   cr_assert_float_eq(SCIPgetSolOrigObj(scip, sol), 57138036.3824479, 1e-5);
-}
+#endif

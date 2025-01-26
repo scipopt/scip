@@ -206,11 +206,11 @@ SCIP_RETCODE readSolfile(
       }
 
       /* there are some lines which may preceed the solution information */
-      if( strncasecmp(buf, "solution status:", 16) == 0 || strncasecmp(buf, "objective value:", 16) == 0 ||
-         strncasecmp(buf, "Log started", 11) == 0 || strncasecmp(buf, "Variable Name", 13) == 0 ||
-         strncasecmp(buf, "All other variables", 19) == 0 || strspn(buf, " \n\r\t\f") == strlen(buf) ||
-         strncasecmp(buf, "NAME", 4) == 0 || strncasecmp(buf, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
-         strncasecmp(buf, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
+      if( SCIPstrncasecmp(buf, "solution status:", 16) == 0 || SCIPstrncasecmp(buf, "objective value:", 16) == 0 ||
+         SCIPstrncasecmp(buf, "Log started", 11) == 0 || SCIPstrncasecmp(buf, "Variable Name", 13) == 0 ||
+         SCIPstrncasecmp(buf, "All other variables", 19) == 0 || strspn(buf, " \n\r\t\f") == strlen(buf) ||
+         SCIPstrncasecmp(buf, "NAME", 4) == 0 || SCIPstrncasecmp(buf, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         SCIPstrncasecmp(buf, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
       {
          ++nonvalues;
          continue;
@@ -240,11 +240,11 @@ SCIP_RETCODE readSolfile(
       }
 
       /* cast the value, check first for inv(alid) or inf(inite) ones that need special treatment */
-      if( strncasecmp(valuestring, "inv", 3) == 0 )
+      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
          continue;
-      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
          val = SCIPsetInfinity(set);
-      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
          val = -SCIPsetInfinity(set);
       else
       {

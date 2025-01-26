@@ -25,6 +25,7 @@
 /**@file   presol_milp.cpp
  * @brief  MILP presolver
  * @author Leona Gottwald
+ * @author Alexander Hoen
  *
  * Calls the presolve library and communicates (multi-)aggregations, fixings, and bound
  * changes to SCIP by utilizing the postsolve information. Constraint changes can currently
@@ -92,33 +93,57 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #include "papilo/core/ProblemBuilder.hpp"
 #include "papilo/Config.hpp"
 
+/* API since PaPILO 2.3.0 */
+#if !defined(PAPILO_API_VERSION)
+#define PAPILO_APIVERSION 0
+#elif !(PAPILO_API_VERSION + 0)
+#define PAPILO_APIVERSION 1
+#else
+#define PAPILO_APIVERSION PAPILO_API_VERSION
+#endif
+
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && !defined(PAPILO_HAVE_GMP)
+#warning SCIP with GMP and exact solving but Papilo without GMP disables exact presolving.
+#endif
+
 #define PRESOL_NAME                "milp"
 #define PRESOL_DESC                "MILP specific presolving methods"
 #define PRESOL_PRIORITY            9999999   /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
-#define PRESOL_MAXROUNDS           -1        /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS           (-1)      /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING              SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
-/* default parameter values */
+/** general settings for PaPILO */
 #define DEFAULT_THREADS            1         /**< maximum number of threads presolving may use (0: automatic) */
-#define DEFAULT_MAXFILLINPERSUBST  3         /**< maximal possible fillin for substitutions to be considered */
-#define DEFAULT_MAXSHIFTPERROW     10        /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
+#define DEFAULT_ABORTFAC_EXHAUSTIVE 0.0008   /**< the abort factor for exhaustive presolving in PAPILO */
+#define DEFAULT_ABORTFAC_MEDIUM    0.0008    /**< the abort factor for medium presolving in PAPILO */
+#define DEFAULT_ABORTFAC_FAST      0.0008    /**< the abort factor for fast presolving in PAPILO */
 #define DEFAULT_DETECTLINDEP       0         /**< should linear dependent equations and free columns be removed? (0: never, 1: for LPs, 2: always) */
-#define DEFAULT_MAXBADGESIZE_SEQ   15000     /**< the max badge size in Probing if PaPILO is executed in sequential mode */
-#define DEFAULT_MAXBADGESIZE_PAR   -1        /**< the max badge size in Probing if PaPILO is executed in parallel mode */
-#define DEFAULT_INTERNAL_MAXROUNDS -1        /**< internal max rounds in PaPILO (-1: no limit, 0: model cleanup) */
-#define DEFAULT_RANDOMSEED         0         /**< the random seed used for randomization of tie breaking */
+#define DEFAULT_INTERNAL_MAXROUNDS (-1)      /**< internal max rounds in PaPILO (-1: no limit, 0: model cleanup) */
 #define DEFAULT_MODIFYCONSFAC      0.8       /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
-#define DEFAULT_MARKOWITZTOLERANCE 0.01      /**< the markowitz tolerance used for substitutions */
-#define DEFAULT_VERBOSITY          0
+#define DEFAULT_RANDOMSEED         0         /**< the random seed used for randomization of tie breaking */
+
+/** numerics in PaPILO */
 #define DEFAULT_HUGEBOUND          1e8       /**< absolute bound value that is considered too huge for activitity based calculations */
-#define DEFAULT_ENABLEPARALLELROWS TRUE      /**< should the parallel rows presolver be enabled within the presolve library? */
+
+/** presolvers in PaPILO */
 #define DEFAULT_ENABLEDOMCOL       TRUE      /**< should the dominated column presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLEDUALINFER    TRUE      /**< should the dualinfer presolver be enabled within the presolve library? */
-#define DEFAULT_ENABLEMULTIAGGR    TRUE      /**< should the multi-aggregation presolver be enabled within the presolve library? */
+#define DEFAULT_ENABLEMULTIAGGR    TRUE      /**< should the multi-aggregation/substitution presolver be enabled within the presolve library? */
+#define DEFAULT_ENABLEPARALLELROWS TRUE      /**< should the parallel rows presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLEPROBING      TRUE      /**< should the probing presolver be enabled within the presolve library? */
 #define DEFAULT_ENABLESPARSIFY     FALSE     /**< should the sparsify presolver be enabled within the presolve library? */
+
+/** parameters tied to a certain presolve technique in PaPILO */
+#define DEFAULT_MAXBADGESIZE_SEQ   15000     /**< the max badge size in Probing if PaPILO is executed in sequential mode */
+#define DEFAULT_MAXBADGESIZE_PAR   (-1)      /**< the max badge size in Probing if PaPILO is executed in parallel mode */
+#define DEFAULT_MARKOWITZTOLERANCE 0.01      /**< the markowitz tolerance used for substitutions */
+#define DEFAULT_MAXFILLINPERSUBST  3         /**< maximal possible fillin for substitutions to be considered */
+#define DEFAULT_MAXSHIFTPERROW     10        /**< maximal amount of nonzeros allowed to be shifted to make space for substitutions */
+
+/** debug options for PaPILO */
 #define DEFAULT_FILENAME_PROBLEM   "-"       /**< default filename to store the instance before presolving */
+#define DEFAULT_VERBOSITY          0
 
 /*
  * Data structures
@@ -149,6 +174,9 @@ struct SCIP_PresolData
                                               *   factor times the number of nonzeros or rows before presolving */
    SCIP_Real markowitztolerance;             /**< the markowitz tolerance used for substitutions */
    SCIP_Real hugebound;                      /**< absolute bound value that is considered too huge for activitity based calculations */
+   SCIP_Real abortfacexhaustive;             /**< abort factor for exhaustive presolving in PAPILO */
+   SCIP_Real abortfacmedium;                 /**< abort factor for medium presolving in PAPILO */
+   SCIP_Real abortfacfast;                   /**< abort factor for fast presolving in PAPILO */
 
    char* filename = NULL;                    /**< filename to store the instance before presolving */
 };
@@ -224,7 +252,7 @@ Problem<SCIP_Real> buildProblem(
    return builder.build();
 }
 
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
 /** builds the presolvelib problem datastructure from the matrix */
 static
 Problem<papilo::Rational> buildProblemRational(
@@ -976,15 +1004,8 @@ Presolve<SCIP_Real> setupPresolve(
    /* communicate the random seed */
    presolve.getPresolveOptions().randomseed = SCIPinitializeRandomSeed(scip, (unsigned int)data->randomseed);
 
-#ifdef PAPILO_TBB
    /* set number of threads to be used for presolve */
    presolve.getPresolveOptions().threads = data->threads;
-#else
-   if (data->threads != DEFAULT_THREADS)
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                      "PaPILO can utilize only multiple threads if it is build with TBB.\n");
-   presolve.getPresolveOptions().threads = 1;
-#endif
 
 #if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
    presolve.getPresolveOptions().maxrounds = data->internalmaxrounds;
@@ -1041,7 +1062,6 @@ Presolve<SCIP_Real> setupPresolve(
          probing->set_max_badge_size( data->maxbadgesizepar );
       }
       presolve.addPresolveMethod( uptr( probing ) );
-
 #else
       presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
       if( data->maxbadgesizeseq != DEFAULT_MAXBADGESIZE_SEQ )
@@ -1051,7 +1071,6 @@ Presolve<SCIP_Real> setupPresolve(
       if( data->maxbadgesizepar != DEFAULT_MAXBADGESIZE_PAR )
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   The parameter 'presolving/milp/maxbadgesizepar' can only be used with PaPILO 2.1.0 or later versions.\n");
-
 #endif
    }
    if( data->enabledomcol )
@@ -1064,10 +1083,19 @@ Presolve<SCIP_Real> setupPresolve(
    /* set tolerances */
    presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
    presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
+#if PAPILO_APIVERSION >= 3
+   presolve.getPresolveOptions().useabsfeas = false;
+#endif
 
 #ifndef SCIP_PRESOLLIB_ENABLE_OUTPUT
    /* adjust output settings of presolve library */
    presolve.setVerbosityLevel((VerbosityLevel) data->verbosity);
+#endif
+
+#if PAPILO_APIVERSION >= 2
+   presolve.getPresolveOptions().abortfac = data->abortfacexhaustive;
+   presolve.getPresolveOptions().abortfacmedium = data->abortfacmedium;
+   presolve.getPresolveOptions().abortfacfast = data->abortfacfast;
 #endif
 
    /* communicate the time limit */
@@ -1171,7 +1199,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       SCIP_CALL(SCIPwriteTransProblem(scip, data->filename, NULL, FALSE));
    }
 
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE)
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
    if( SCIPisExactSolve(scip) )
    {
       SCIP_Retcode retcode;
@@ -1371,7 +1399,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
     * where we can be sure with a simple check that the bounds on the aggregated variable are implied.
     */
    bool checkmultaggr =
-#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
+#if PAPILO_APIVERSION >= 1
          presolve.getStatistics().single_matrix_coefficient_changes > 0
 #else
          presolve.getStatistics().ncoefchgs > 0
@@ -1471,6 +1499,18 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
             SCIP_CALL( SCIPgetProbvarSum(scip, &vary, &scalary, &constant) );
             assert(SCIPvarGetStatus(vary) != SCIP_VARSTATUS_MULTAGGR);
 
+            /* If PaPILO tries to aggregate fixed variables then it missed some obvious fixings.
+             * This might happen if another aggregation leads to fixings which are not applied immediately by PaPILO.
+             * With the latest version of PaPILO, this should not occur.
+             */
+            if( SCIPvarGetStatus(varx) == SCIP_VARSTATUS_FIXED && SCIPvarGetStatus(vary) == SCIP_VARSTATUS_FIXED )
+            {
+               SCIPdebugMsg(scip, "Aggregation of <%s> and <%s> rejected because they are already fixed.\n",
+                     SCIPvarGetName(varx), SCIPvarGetName(vary));
+
+               break;
+            }
+
             updatedSide = side - constant;
 
             SCIP_CALL( SCIPaggregateVars(scip, varx, vary, scalarx, scalary, updatedSide, &infeas, &redundant, &aggregated) );
@@ -1504,6 +1544,18 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
             SCIP_CALL( SCIPgetProbvarSum(scip, &aggrvar, &colCoef, &constant) );
             assert(SCIPvarGetStatus(aggrvar) != SCIP_VARSTATUS_MULTAGGR);
+
+            /* If PaPILO tries to multi-aggregate a fixed variable, then it missed some obvious fixings.
+             * This might happen if another aggregation leads to fixings which are not applied immediately by PaPILO.
+             * With the latest version of PaPILO, this should not occur.
+             */
+            if( SCIPvarGetStatus(aggrvar) == SCIP_VARSTATUS_FIXED )
+            {
+               SCIPdebugMsg(scip, "Multi-aggregation of <%s> rejected because it is already fixed.\n",
+                     SCIPvarGetName(aggrvar));
+
+               break;
+            }
 
             updatedSide = side - constant;
 
@@ -1613,8 +1665,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
       }
       case ReductionType::kParallelCol:
          return SCIP_INVALIDRESULT;
-#if (PAPILO_VERSION_MAJOR <= 1 && PAPILO_VERSION_MINOR==0)
-#else
+#if PAPILO_VERSION_MAJOR > 1 || (PAPILO_VERSION_MAJOR == 1 && PAPILO_VERSION_MINOR >= 1)
       case ReductionType::kFixedInfCol: {
          /* todo: currently SCIP can not handle this kind of reduction (see issue #3391) */
          assert(false);
@@ -1681,7 +1732,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
  * presolver specific interface methods
  */
 
-/** creates the xyz presolver and includes it in SCIP */
+/** creates the MILP presolver and includes it in SCIP */
 SCIP_RETCODE SCIPincludePresolMILP(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -1728,10 +1779,14 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPsetPresolInit(scip, presol, presolInitMILP) );
 
    /* add MILP presolver parameters */
+#ifdef PAPILO_TBB
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/" PRESOL_NAME "/threads",
          "maximum number of threads presolving may use (0: automatic)",
          &presoldata->threads, FALSE, DEFAULT_THREADS, 0, INT_MAX, NULL, NULL) );
+#else
+   presoldata->threads = DEFAULT_THREADS;
+#endif
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/" PRESOL_NAME "/maxfillinpersubstitution",
@@ -1756,7 +1811,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
             &presoldata->detectlineardependency, TRUE, DEFAULT_DETECTLINDEP, 0, 2, NULL, NULL) );
    }
    else
-      presoldata->detectlineardependency = 0;
+      presoldata->detectlineardependency = DEFAULT_DETECTLINDEP;
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/" PRESOL_NAME "/modifyconsfac",
@@ -1771,8 +1826,24 @@ SCIP_RETCODE SCIPincludePresolMILP(
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "presolving/" PRESOL_NAME "/hugebound",
-         "absolute bound value that is considered too huge for activitity based calculations",
+         "absolute bound value that is considered too huge for activity based calculations",
          &presoldata->hugebound, FALSE, DEFAULT_HUGEBOUND, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+#if PAPILO_APIVERSION >= 2
+   SCIP_CALL( SCIPaddRealParam(scip, "presolving/" PRESOL_NAME "/abortfacexhaustive",
+         "abort threshold for exhaustive presolving in PAPILO",
+         &presoldata->abortfacexhaustive, TRUE, DEFAULT_ABORTFAC_EXHAUSTIVE, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "presolving/" PRESOL_NAME "/abortfacmedium",
+         "abort threshold for medium presolving in PAPILO",
+         &presoldata->abortfacmedium, TRUE, DEFAULT_ABORTFAC_MEDIUM, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "presolving/" PRESOL_NAME "/abortfacfast",
+         "abort threshold for fast presolving in PAPILO",
+         &presoldata->abortfacfast, TRUE, DEFAULT_ABORTFAC_FAST, 0.0, 1.0, NULL, NULL) );
+#else
+   presoldata->abortfacexhaustive = DEFAULT_ABORTFAC_EXHAUSTIVE;
+   presoldata->abortfacmedium = DEFAULT_ABORTFAC_MEDIUM;
+   presoldata->abortfacfast = DEFAULT_ABORTFAC_FAST;
+#endif
 
 #if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
    SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/maxbadgesizeseq",

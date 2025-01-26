@@ -4045,6 +4045,8 @@ SCIP_RETCODE tightenCoefs(
    {
       consdata->varboundsadded = FALSE;
       consdata->changed = TRUE;
+
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }
 
    return SCIP_OKAY;

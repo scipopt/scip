@@ -8163,6 +8163,9 @@ SCIP_RETCODE SCIPreoptSaveGlobalBounds(
    /* store the global bounds */
    for( int i = 0; i < nvars; ++i )
    {
+      if( SCIPvarIsRelaxationOnly(vars[i]) )
+         continue;
+
       assert(!SCIPhashmapExists(reopt->glblb, (void*)vars[i]));
       assert(!SCIPhashmapExists(reopt->glbub, (void*)vars[i]));
 
@@ -8194,8 +8197,8 @@ SCIP_RETCODE SCIPreoptSaveActiveConss(
    assert(reopt->nactiveconss == 0);
    assert(reopt->nmaxactiveconss == 0);
 
-   conss = transprob->conss;
-   nconss = transprob->nconss;
+   conss = SCIPprobGetConss(transprob);
+   nconss = SCIPprobGetNConss(transprob);
 
    SCIPsetDebugMsg(set, "save %d active conss\n", nconss);
 
@@ -8245,6 +8248,9 @@ SCIP_RETCODE SCIPreoptInstallBounds(
    {
       SCIP_Real lb;
       SCIP_Real ub;
+
+      if( SCIPvarIsRelaxationOnly(vars[i]) )
+         continue;
 
       assert(SCIPhashmapExists(reopt->glblb, (void*)vars[i]));
       assert(SCIPhashmapExists(reopt->glbub, (void*)vars[i]));

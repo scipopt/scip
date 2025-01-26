@@ -7,7 +7,7 @@
          Call ran_init_time(extra) with long long extra seed.
          In this case the real time clock is used in addition to
          the extra seed you provide.
-
+     
      2.  Use NEXTRAN to get the next number (0..2^64-1).
          All 64-bit unsigned values are possible.
          Alternatively, use KRAN(k) to get a random number 0..k-1.

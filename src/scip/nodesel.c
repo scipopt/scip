@@ -702,6 +702,8 @@ SCIP_RETCODE SCIPnodepqBound(
             --pos;
 
          node->cutoff = TRUE;
+         node->lowerbound = SCIPsetInfinity(set);
+         node->estimate = SCIPsetInfinity(set);
 
          if( node->depth == 0 )
             stat->rootlowerbound = SCIPsetInfinity(set);

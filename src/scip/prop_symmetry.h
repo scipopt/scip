@@ -72,6 +72,13 @@ int SCIPgetSymmetryNGenerators(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** displays generators of symmetry group, if available */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdisplaySymmetryGenerators(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop                /**< symmetry propagator or NULL */
+   );
+
 /** creates new operator node type (used for symmetry detection) and returns its representation
  *
  *  If the operator node already exists, the function terminates with SCIP_INVALIDDATA.

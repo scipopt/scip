@@ -65,7 +65,7 @@ struct SCIP_NlhdlrExprData
  */
 
 /** nonlinear handler copy callback */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrXyz)
 { /*lint --e{715}*/
@@ -79,7 +79,7 @@ SCIP_DECL_NLHDLRCOPYHDLR(nlhdlrCopyhdlrXyz)
 #endif
 
 /** callback to free data of handler */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataXyz)
 { /*lint --e{715}*/
@@ -94,7 +94,7 @@ SCIP_DECL_NLHDLRFREEHDLRDATA(nlhdlrFreehdlrdataXyz)
 
 
 /** callback to free expression specific data */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataXyz)
 {  /*lint --e{715}*/
@@ -109,7 +109,7 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataXyz)
 
 
 /** callback to be called in initialization */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_NLHDLRINIT(nlhdlrInitXyz)
 {  /*lint --e{715}*/
@@ -124,7 +124,7 @@ SCIP_DECL_NLHDLRINIT(nlhdlrInitXyz)
 
 
 /** callback to be called in deinitialization */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_NLHDLREXIT(nlhdlrExitXyz)
 {  /*lint --e{715}*/
@@ -158,7 +158,7 @@ SCIP_DECL_NLHDLREVALAUX(nlhdlrEvalauxXyz)
 
 
 /** separation initialization method of a nonlinear handler (called during CONSINITLP) */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaXyz)
 { /*lint --e{715}*/
@@ -173,7 +173,7 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaXyz)
 
 
 /** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_NLHDLREXITSEPA(nlhdlrExitSepaXyz)
 { /*lint --e{715}*/
@@ -188,7 +188,7 @@ SCIP_DECL_NLHDLREXITSEPA(nlhdlrExitSepaXyz)
 
 
 /** nonlinear handler enforcement callback */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_NLHDLRENFO(nlhdlrEnfoXyz)
 { /*lint --e{715}*/
@@ -203,7 +203,7 @@ SCIP_DECL_NLHDLRENFO(nlhdlrEnfoXyz)
 
 
 /** nonlinear handler under/overestimation callback */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateXyz)
 { /*lint --e{715}*/
@@ -233,7 +233,7 @@ SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeXyz)
 
 
 /** nonlinear handler interval evaluation callback */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalXyz)
 { /*lint --e{715}*/
@@ -248,7 +248,7 @@ SCIP_DECL_NLHDLRINTEVAL(nlhdlrIntevalXyz)
 
 
 /** nonlinear handler callback for reverse propagation */
-#ifdef SCIP_DISABLED_CODE
+#if 0
 static
 SCIP_DECL_NLHDLRREVERSEPROP(nlhdlrReversepropXyz)
 { /*lint --e{715}*/

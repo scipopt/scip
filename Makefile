@@ -123,7 +123,7 @@ LPILIBSHORTNAME	=	lpi$(LPS)
 LPILIBNAME	=	$(LPILIBSHORTNAME)-$(VERSION)
 LPILIBOBJ	=
 LPSOPTIONS	=
-LPSEXOPTIONS =
+LPSEXOPTIONS	=
 LPIINSTMSG	=
 
 LPSOPTIONS	+=	cpx
@@ -287,11 +287,11 @@ endif
 LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIB).$(LIBEXT)
 LPILIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(LPILIBOBJ))
-LPIEXLIBOBJFILES = $(addprefix $(LIBOBJDIR)/,$(LPIEXLIBOBJ))
+LPIEXLIBOBJFILES	= $(addprefix $(LIBOBJDIR)/,$(LPIEXLIBOBJ))
 LPILIBLINK	=	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
 LPILIBSHORTLINK = 	$(LIBDIR)/$(LIBTYPE)/lib$(LPILIBSHORTNAME).$(LIBEXT)
 ALLSRC		+=	$(LPILIBSRC)
-ALLSRC 		+= $(LPIEXLIBSRC)
+ALLSRC		+= $(LPIEXLIBSRC)
 
 ifeq ($(SHARED),true)
 LPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LPSLDFLAGS)
@@ -366,6 +366,7 @@ ifeq ($(SYM),none)
 SYMOBJ		=	symmetry/compute_symmetry_none.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ALLSRC		+=	$(SYMSRC)
 endif
 
@@ -374,6 +375,7 @@ ifeq ($(SYM),bliss)
 SYMOBJ		=	symmetry/compute_symmetry_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC		=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 FLAGS		+=	-I$(LIBDIR)/include/
 ALLSRC		+=	$(SYMSRC)
 SOFTLINKS	+=	$(LIBDIR)/include/bliss
@@ -393,6 +395,7 @@ SYMOBJ		=	symmetry/build_sassy_graph.o
 SYMOBJ		+=	symmetry/compute_symmetry_sassy_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC		=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 FLAGS		+=	-I$(LIBDIR)/include/
 ALLSRC		+=	$(SYMSRC)
 CXXFLAGS	+=	$(CXX17FLAG)
@@ -412,6 +415,7 @@ ifeq ($(SYM),nauty)
 SYMOBJ		=	symmetry/compute_symmetry_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
+LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.c))
 ifeq ($(NAUTYEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
 LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/nauty
@@ -442,6 +446,7 @@ SYMOBJ		=	symmetry/build_sassy_graph.o
 SYMOBJ		+=	symmetry/compute_symmetry_sassy_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+LINTSYMSRC	=       $(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
 ifeq ($(NAUTYEXTERNAL),false)
 FLAGS		+=	-I$(SRCDIR)/nauty/src -I$(SRCDIR)/nauty/include
 LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/nauty
@@ -488,14 +493,14 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(EXACTSOLVE),true)
-ifeq ($(MPFR),false)
-$(error exact solving mode requires the MPFR library to be linked. Use either EXACTSOLVE=false or MPFR=true.)
-endif
 ifeq ($(GMP),false)
 $(error exact solving mode requires the GMP library to be linked. Use either EXACTSOLVE=false or GMP=true.)
 endif
-SOFTLINKS    +=    $(LIBDIR)/include/boost
-LPIINSTMSG    +=    "\n  -> \"boost\" is the path to the boost include folder\n"
+ifneq ($(PAPILO),true)   # add boost softlink only once
+SOFTLINKS	+=    $(LIBDIR)/include/boost
+LPIINSTMSG	+=    "\n  -> \"boost\" is the path to the boost include folder\n"
+endif
+LIBOBJSUBDIRS	+=	$(LIBOBJDIR)/rectlu
 endif
 
 #-----------------------------------------------------------------------------
@@ -768,6 +773,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/presol_dualinfer.o\
 			scip/presol_gateextraction.o \
 			scip/presol_implics.o \
+			scip/presol_implint.o \
 			scip/presol_inttobinary.o \
 			scip/presol_qpkktref.o \
 			scip/presol_redvub.o \
@@ -916,6 +922,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/misc.o \
 			scip/misc_linear.o \
 			scip/misc_rowprep.o \
+			scip/network.o \
 			scip/nlhdlr.o \
 			scip/nlp.o \
 			scip/nlpi.o \
@@ -1008,6 +1015,10 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			tclique/tclique_graph.o \
 			dijkstra/dijkstra.o \
 			xml/xmlparse.o
+
+ifeq ($(EXACTSOLVE),true)
+SCIPLIBOBJ	+=	rectlu/rectlu_factor.o rectlu/rectlu_num.o
+endif
 
 SCIPLIBBASE	=	$(SCIPLIBBASENAME).$(BASE)
 SCIPLIBBASEFILE	=	$(LIBDIR)/$(LIBTYPE)/lib$(SCIPLIBBASE).$(LIBEXT)
@@ -1136,7 +1147,7 @@ preprocess:     checkdefines
 		@$(MAKE) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE)
 
 .PHONY: lint
-lint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE) githash
+lint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(LINTSYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE) githash
 		-rm -f lint.out
 
 		@$(SHELL) -ec 'if test -e lint/co-gcc.mak ; \
@@ -1163,7 +1174,7 @@ else
 endif
 
 .PHONY: pclint
-pclint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
+pclint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(LINTSYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
 		-rm -f pclint.out
 
 		@$(SHELL) -ec 'if ! test -e pclint/co-gcc.h ; \
@@ -1186,7 +1197,7 @@ else
 endif
 
 .PHONY: splint
-splint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(SYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
+splint:		$(SCIPLIBBASESRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(TPILIBSRC) $(MAINSRC) $(LINTSYMSRC) $(SCIPCONFIGHFILE) $(SCIPEXPORTHFILE) $(SCIPBUILDFLAGSFILE)
 		-rm -f splint.out
 ifeq ($(FILES),)
 		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$^) >> splint.out;'
@@ -1424,7 +1435,7 @@ endif
 liblpi:		preprocess
 		@$(MAKE) $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK)
 
-$(LPILIBFILE):	$(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(LPIEXLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
+$(LPILIBFILE):	$(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
 		@echo "-> generating library $@"
 		-rm -f $@
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(LPILIBEXTLIBS)
@@ -1704,9 +1715,11 @@ ifneq ($(GMP),false)
 		$(error invalid GMP flag selected: GMP=$(GMP). Possible options are: true false)
 endif
 endif
+ifneq ($(MPFR),auto)
 ifneq ($(MPFR),true)
 ifneq ($(MPFR),false)
-		$(error invalid GMP flag selected: MPFR=$(MPFR). Possible options are: true false)
+		$(error invalid MPFR flag selected: MPFR=$(MPFR). Possible options are: true false auto)
+endif
 endif
 endif
 ifneq ($(ZIMPL),true)

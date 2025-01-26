@@ -1,15 +1,24 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*                        This file is part of the program                   */
-/*            RECTLU --- Algorithm for Exact Rectangular LU Factorization    */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2009-2020 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*   RECTLU is distributed under the terms of the ZIB Academic License.      */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with RECTLU; see the file COPYING. If not email to scip@zib.de.    */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -35,19 +44,13 @@
 #ifdef SCIP_WITH_GMP
 #define QSnum_type mpq_t
 
-/* allocates array with size elements of QSnum_type */
-#define QSnum_AllocArray(size) ({                                \
-        int __i__ = (size);                                   \
-        QSnum_type *__res = (QSnum_type *) malloc(size*sizeof(QSnum_type));  \
-        if (__res) while(__i__--) mpq_init(__res[__i__]);        \
-        __res;})
+/*lint --e(160)*/
 
-/* frees array ea with size elements of QSnum_type */
-#define QSnum_FreeArray(ea,size) do{\
-        int __sz = size;\
-        QSnum_type* __ptr__ = (ea);\
-        if (ea) while(__sz--) mpq_clear(__ptr__[__sz]);\
-        if (ea) { free(ea);  ea = NULL;}} while(0)
+/* allocates array with size elements of QSnum_type */
+QSnum_type* QSnum_AllocArray(int size);
+
+/* frees array of QSnum_type */
+void QSnum_FreeArray(QSnum_type* ea, int size);
 
 
 /* initializes an individual element of QSnum_type */
@@ -89,10 +92,10 @@
 /* a = max(a,abs(b)), execute extra code if update is needed */
 #define QSnum_CopyMaxAbsAndDo(a,b,c)                                   \
     if(mpq_sgn(b) > 0) {                                               \
-        if(QSnum_Less(a,b)){ QSnum_Copy(a,b); c; }                     \
+        if(QSnum_Less(a,b)){ QSnum_Copy(a,b); (c); }                     \
     } else {                                                           \
         QSnum_Sign(a);                                                 \
-        if(QSnum_Less(b,a)){ QSnum_Copy(a,b); c; }                     \
+        if(QSnum_Less(b,a)){ QSnum_Copy(a,b); (c); }                     \
         QSnum_Sign(a); }
 
 /*

@@ -282,13 +282,13 @@ SCIP_DECL_SORTPTRCOMP(varCompObj)
    assert(SCIPvarGetObj(var1) != 0.0);
    assert(SCIPvarGetObj(var2) != 0.0);
 
-   /* first criteria is the absolute value of objective coefficient */
+   /* first criterion is the absolute value of objective coefficient */
    if( REALABS(SCIPvarGetObj(var1)) < REALABS(SCIPvarGetObj(var2)) )
       return -1;
    else if( REALABS(SCIPvarGetObj(var1)) > REALABS(SCIPvarGetObj(var2)) )
       return +1;
 
-   /* second criteria the locks which indicate most effect */
+   /* second criterion the locks which indicate most effect */
    if( SCIPvarGetObj(var1) > 0.0 )
       locks1 = SCIPvarGetNLocksDownType(var1, SCIP_LOCKTYPE_MODEL);
    else
@@ -304,7 +304,7 @@ SCIP_DECL_SORTPTRCOMP(varCompObj)
    if( locks1 > locks2 )
       return 1;
 
-   /* third criteria the other locks */
+   /* third criterion the other locks */
    if( SCIPvarGetObj(var1) > 0.0 )
       locks1 = SCIPvarGetNLocksUpType(var1, SCIP_LOCKTYPE_MODEL);
    else
@@ -320,7 +320,7 @@ SCIP_DECL_SORTPTRCOMP(varCompObj)
    if( locks1 > locks2 )
       return 1;
 
-   /* forth criteria use the problem index */
+   /* forth criterion use the problem index */
    return SCIPvarCompare(var1, var2);
 }
 
@@ -1820,7 +1820,7 @@ SCIP_RETCODE propdataInit(
    propdata->glbpropagated = FALSE;
    propdata->glbpseudoobjval = SCIPgetGlobalPseudoObjval(scip);
    propdata->cutoffbound = SCIPgetCutoffbound(scip);
-   assert(SCIPgetDepth(scip) > 0 || SCIPisFeasEQ(scip, propdata->glbpseudoobjval, SCIPgetPseudoObjval(scip)));
+   assert(SCIPgetDepth(scip) > 0 || SCIPisRelEQ(scip, propdata->glbpseudoobjval, SCIPgetPseudoObjval(scip)));
 
    /* create hash table which is used for resolving bound changes */
    if( nminactvars > 0 )
@@ -2430,11 +2430,11 @@ SCIP_RETCODE propagateCutoffboundBinvar(
    /* if the lbobjchg and ubobjchg are both able to fix the variable to its upper (1.0) or lower (0.0) bound,
     * respectively, we detected an cutoff
     *
-    * @note There is no need to use SCIPisFeasLT() in case the objective is integral since the cutoff bound in that case
+    * @note There is no need to use SCIPisLT() in case the objective is integral since the cutoff bound in that case
     *       is the upper bound minus 1 plus the SCIPcutoffbounddelta() (which is MIN(100.0 * feastol, 0.0001)). However,
     *       if the objective is not integral we have to check w.r.t. an epsilon to avoid numerical problems.
     */
-   if( SCIPisFeasLT(scip, cutoffbound, pseudoobjval + ubobjchg) && SCIPisFeasLT(scip, cutoffbound, pseudoobjval + lbobjchg) )
+   if( SCIPisLT(scip, cutoffbound, pseudoobjval + ubobjchg) && SCIPisLT(scip, cutoffbound, pseudoobjval + lbobjchg) )
    {
       /* check if conflict analysis is applicable */
       if( local && SCIPisConflictAnalysisApplicable(scip) )
@@ -2582,9 +2582,10 @@ SCIP_RETCODE propagateCutoffboundGlobally(
          return SCIP_OKAY;
    }
 
-#if 0 /* might fail, but is not a real error, still need to investigate */
+#ifdef SCIP_DISABLED_CODE
+   /* might fail, but is not a real error, still need to investigate */
 #ifndef NDEBUG
-   /* check that the abort criteria for the binary variables works */
+   /* check that the abort criterion for the binary variables works */
    for( ; v < nminactvars; ++v )
    {
       assert(cutoffbound - pseudoobjval >=  propdata->minactimpls[v]->maxobjchg);
@@ -2732,9 +2733,10 @@ SCIP_RETCODE propagateCutoffboundBinvars(
          return SCIP_OKAY;
    }
 
-#if 0 /* might fail, but is not a real error, still need to investigate */
+#ifdef SCIP_DISABLED_CODE
+   /* might fail, but is not a real error, still need to investigate */
 #ifndef NDEBUG
-   /* check that the abort criteria for the binary variables works */
+   /* check that the abort criterion for the binary variables works */
    for( ; v < nminactvars; ++v )
    {
       var = minactvars[v];
@@ -3336,7 +3338,7 @@ SCIP_RETCODE propagateLowerbound(
             nchgbds++;
          }
 
-         /* update globally fixed index if abort criteria was applied */
+         /* update globally fixed index if abort criterion was applied */
          propdata->maxactfirstnonfixed = v;
 
          /* check all binary variables which could potentially be fixed */
@@ -3363,9 +3365,10 @@ SCIP_RETCODE propagateLowerbound(
             }
          }
 
-#if 0 /* might fail, but is not a real error, still need to investigate */
+#ifdef SCIP_DISABLED_CODE
+         /* might fail, but is not a real error, still need to investigate */
 #ifndef NDEBUG
-         /* check that the abort criteria for the binary variables works */
+         /* check that the abort criterion for the binary variables works */
          for( ; v < nmaxactvars && !cutoff; ++v )
          {
             var = maxactvars[v];

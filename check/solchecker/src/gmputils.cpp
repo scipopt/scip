@@ -1,6 +1,6 @@
 /**
  * @file gmputils.cpp
- * @brief Basic classes to for rational arithmetic
+ * @brief Basic classes for rational arithmetic
  *
  * @author Domenico Salvagnin
  * @author Thorsten Koch
@@ -10,8 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <time.h>
-#include <algorithm>
+
 
 char Rational::buffer[] = {'\0'};
 
@@ -42,7 +41,7 @@ Rational::~Rational()
 
 Rational& Rational::operator=(const Rational& rhs)
 {
-   if (this != &rhs)
+   if( this != &rhs )
       mpq_set(number, rhs.number);
    return *this;
 }
@@ -118,7 +117,7 @@ void Rational::integralityViolation(Rational& violation) const
    }
    // otherwise, we must check w.r.t. the given tolerance
    // first calculate the fractional part
-   violation = (*this);
+   violation = *this;
    violation.abs();
    mpz_t r;
    mpz_init(r);
@@ -138,7 +137,8 @@ void Rational::toZero()
 bool Rational::isInteger(const Rational& tolerance) const
 {
    // if denominator is 1, then it is an integer for sure
-   if (mpz_cmp_ui(mpq_denref(number), 1) == 0) return true;
+   if( mpz_cmp_ui(mpq_denref(number), 1) == 0 )
+      return true;
    // otherwise, we must check w.r.t. the given tolerance
    // first calculate the fractional part
    Rational viol(*this);
@@ -169,78 +169,72 @@ bool Rational::isZero() const
    return (mpq_sgn(number) == 0);
 }
 
-/* find substring, ignore case */
-static
-std::string::const_iterator findSubStringIC(const std::string & substr, const std::string & str)
+bool Rational::fromString(const char* num)
 {
-   auto it = std::search(
-      str.begin(), str.end(),
-      substr.begin(),   substr.end(),
-      [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
-   );
-   return it;
-}
-
-void Rational::fromString(const char* num)
-{
-   char* tmp = &buffer[0];
-   int   k = 0;
-   int   exponent = 0;
-   int   fraction = 0;
-   std::string s = std::string(num);
+   int exponent;
+   int fraction;
+   int k;
 
    assert(num != NULL);
 
-   // Skip initial whitespace
-   while(isspace(*num))
+   // skip initial whitespaces
+   while( isspace(*num) )
       num++;
 
-   /* case 1: string is given in nom/den format */
-   if( s.find('.') == std::string::npos && findSubStringIC("e",s) == s.end() )
+   // string is given in rational format
+   if( strpbrk(num, "eE.") == NULL )
    {
-      mpq_set_str(number, num, 10);
+      k = mpq_set_str(number, num, 10);
       mpq_canonicalize(number);
-      return;
+      return k == 0;
    }
 
-   // Skip initial +/-
-   if (*num == '+')
-      num++;
-   else if (*num == '-')
-      tmp[k++] = *num++;
+   exponent = 0;
+   fraction = 0;
+   k = 0;
 
-   for(int i = 0; num[i] != '\0'; i++)
+   // skip initial sign
+   if( *num == '+' )
+      num++;
+   else if( *num == '-' )
+      buffer[k++] = *num++;
+
+   for( int i = 0; num[i] != '\0'; ++i )
    {
-      if (isdigit(num[i]))
+      if( isdigit(num[i]) )
       {
-         tmp[k++]  = num[i];
+         buffer[k++]  = num[i];
          exponent -= fraction;
       }
-      else if (num[i] == '.')
+      else if( num[i] == '.' )
          fraction = 1;
-      else if (tolower(num[i]) == 'e')
+      else if( tolower(num[i]) == 'e' )
       {
          exponent += atoi(&num[i + 1]);
          break;
       }
+      else
+         return false;
    }
-   while(exponent > 0)
+   while( exponent > 0 )
    {
-      tmp[k++] = '0';
+      buffer[k++] = '0';
       exponent--;
    }
-   tmp[k++] = '/';
-   tmp[k++] = '1';
+   buffer[k++] = '/';
+   buffer[k++] = '1';
 
-   while(exponent < 0)
+   while( exponent < 0 )
    {
-      tmp[k++] = '0';
+      buffer[k++] = '0';
       exponent++;
    }
-   tmp[k] = '\0';
+   buffer[k] = '\0';
 
-   mpq_set_str(number, tmp, 10);
+   k = mpq_set_str(number, buffer, 10);
    mpq_canonicalize(number);
+
+   return k == 0;
 }
 
 std::string Rational::toString() const

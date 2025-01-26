@@ -252,7 +252,7 @@
  * Alex is now ready to write his very first example, he creates a new folder `MinEx` under `examples` and puts two files in there:
  * `CMakeLists.txt`:
  * ```
- * cmake_minimum_required(VERSION 3.3)
+ * cmake_minimum_required(VERSION 3.11)
  *
  * project(minex)
  * find_package(SCIP REQUIRED)
@@ -339,6 +339,7 @@
 /**@page PROGRAMMING Programming with SCIP
  *
  * - @subpage CODE    "Coding style guidelines"
+ * - @subpage SRCORGA "Organization of source code"
  * - @subpage OBJ     "Creating, capturing, releasing, and adding data objects"
  * - @subpage MEMORY  "Using the memory functions of SCIP"
  * - @subpage DEBUG   "Debugging"
@@ -384,7 +385,7 @@
  * - @subpage TRAINESTIMATION "How to train custom tree size estimation for SCIP"
  * - @subpage SYMMETRY "How to use symmetry handling in SCIP"
  * - @subpage PROBINGDIVING "How to use probing and diving mode"
- * - @subpage PROBINGDIVING "How to use exact solving mode"
+ * - @subpage EXACTSOLVE "How to use exact solving mode"
  */
 
 /**@page AUTHORS SCIP Authors
@@ -2626,7 +2627,8 @@
  *
  * \par SEPA_DELAY: the default for whether the separation method should be delayed, if other separators or constraint handlers found cuts.
  * If the separator's separation method is marked to be delayed, it is only executed after no other separator
- * or constraint handler found a cut during the price-and-cut loop.
+ * or constraint handler found a cut during the price-and-cut loop, and in the last separation or stalling round,
+ * either in the end, or in an additional round if only the maximal subsequent round is exceeded.
  * If the separation method of the separator is very expensive, you may want to mark it to be delayed until all cheap
  * separation methods have been executed.
  *
@@ -7560,7 +7562,7 @@
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page PROBINGDIVING How to use exact solving mode
+/**@page EXACTSOLVE How to use exact solving mode
  *
  * SCIP is the only MIP solver that can solve problems exactly, i.e., without any numerical inaccuracies or errror tolerances.
  * 
@@ -7568,15 +7570,21 @@
  * 
  * Currently the exact solving mode is only supported if SCIP is built using cmake. In order to properly utilize exact solving mode, the following additional dependencies are required:
  * - GMP: The GNU Multiple Precision Arithmetic Library is required to perform exact arithmetic.
+ *   Set GMP_DIR to its installation directory if it is not found automatically.
  * - MPFR: The GNU Multiple Precision Floating-Point Reliable Library is required to correctly round rational numbers to floating-point numbers
- * - Boost: The Boost Multiprecision Library acts as a wrapper for GMP
- * - SoPlex: We recommend using SoPlex as the exact LP solver. For this, SoPlex needs to be built with GMP and preferably also with MPFR support
+ *   Set MPFR_DIR to its installation directory if it is not found automatically.
+ * - Boost: The Boost Multiprecision Library acts as a wrapper for GMP.
+ *   Set BOOST_DIR to its installation directory if it is not found automatically.
  * 
- * When configuring with cmake, ensure that the following flags are set:
- * - EXACTSOLVE=on to enable exact solving mode
- * - GMP_DIR to the directory where GMP is installed (only necessary when no global GMP install is available)
- * - MPFR_DIR to the directory where MPFR is installed (only necessary when no global MPFR install is available)
- * - BOOST_DIR to the directory where Boost is installed (only necessary when no global Boost install is available)
+ * When configuring with cmake, exact solving mode is enabled automatically if all dependencies are found.
+ * To explictly disable it, EXACTSOLVE=off can be set, while EXACTSOLVE=on aborts in case a dependency is missing.
+ * A particular exact LP solver can be selected by setting LPSEXACT to one of the the following values, which the
+ * default tries to enable in that order:
+ * - LPSEXACT=spx uses SoPlex as the exact LP solver.
+     For this, SoPlex needs to be built with GMP and preferably also with MPFR support.
+ *   Set SOPLEX_DIR to its installation directory if it is not found automatically.
+ * - LPSEXACT=qsoex uses the QSopt_ex LP solver, which in turn requires EGlib.
+ *   Set QSOEX_DIR and EGLIB_DIR to their respective installation directories if either is not found automatically.
  * - SOPLEX_DIR to the directory where SoPlex is installed (only necessary when no global SoPlex install is available)
  * 
  * We further strongly recommend building SCIP with PaPILO, as it is the only presolver available in exact solving mode.
@@ -7872,6 +7880,46 @@
  * SCIP_STAGE_FREE         = 13         /**< SCIP data structures are being freed
  * \endcode
  * Most functions can be called in a subset of the stages, this is then documented, a runtime check is often added and will throw a \ref SCIP_INVALIDCALL if the stage is not allowed.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page SRCORGA Organization of Source Code
+ *
+ *  The SCIP source code has different types of files, distinguished by their naming style. The following list gives an overview of the most important file types and their purpose.
+ *
+ *  @section SRCORGA_CORE SCIP core components
+ *
+ *  - Each core component has an implementation with an internal API and a public API.
+ *  - The internal implementation should be in a file `<component>.c,h` and should not be included in the public API.
+ *  - Internal API functions usually do not take a `SCIP*` parameter, but a pointer to the component as first argument and pointers to internal structures like `SCIP_SET*` or `SCIP_STAT*`, where necessary.
+ *  - The name of internal API functions follows the style `SCIP<component><operation>...`, e.g., <code>SCIPvarCreateOriginal()</code> or <code>SCIPvarAddLocks()</code>.
+ *  - `pub_<component>.h` declares the functions of the public API that do not need a SCIP pointer.
+ *    Often, these are getter-functions.
+ *    For example, \ref pub_var.h contains public variable API functions.
+ *  - Functions in `pub_<component>.h` follow the same naming style as those in `<component>.h` and are used by the implementation of the internal API as well.
+ *  - `scip_<component>.h` declares the functions of the public API that need a SCIP instance (`SCIP*`), e.g., \ref scip_var.h for public variable manipulation functions.
+ *    Functions declared in `scip_<component>.h` are often thin wrappers that call the internal API functions from `<component>.h`.
+ *    These functions should follow the naming style `SCIP<operation><component>...`, e.g., <code>SCIPcreateVarOriginal()</code> or <code>SCIPaddVarLocks()</code>.
+ *  - To ensure functions of the public API being reachable in shared libraries, their declaration needs to contain the <code>SCIP_EXPORT</code> attribute.
+ *  - Public types (typedef's, enumerations) are defined in file `type_<component>.h`.
+ *    Type names follow the style `SCIP_<COMPONENT>...`. For every struct, we have a typedef that shortens the name
+ *    (so one could for instance use `SCIP_PARAM` instead of `struct SCIP_Param`).
+ *    The convention is to have the mixed-casing for the struct name, and then all-capital for the typedef's type. Similar for enums.
+ *  - Structs that need to be accessed by several source files are defined in `struct_<component>.h`.
+ *    `struct_<component>.h` is usually included only by `<component>.c` and maybe `scip_<component>.c`.
+ *    Exceptions are due to manual inlining of functions via macros when compiling for optimized mode.
+ *  - All types, structs, and functions are documented with Doxygen-style comments.
+ *    The documentation of the implementation of a function must repeat the documentation of the function declaration exactly (for doxygen to treat them as identical).
+ *
+ *  @section SRCORGA_PLUGINS Plugins
+ *  - Each plugin is defined in files `<type>_<name>.c,h`, e.g.,
+ *     \ref cons_knapsack.c implements the Knapsack constraint handler plugin and
+ *     \ref cons_knapsack.h declares its public API functions.
+ *  - Public types that belong to a plugin are declared in its header, `<type>_<name>.h`.
+ *  - API functions of plugins are named as `SCIP<operation>...<Name>`, e.g., <code>SCIPincludeConshdlrAnd()</code>, <code>SCIPcreateConsAnd()</code>, or <code>SCIPgetNVarsAnd()</code>.
+ *  - Plugins access only the public API.
+ *  - Plugins that need to be included by default should be registered in <code>src/scip/scipdefplugins.c</code>.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -8425,20 +8473,21 @@
  * invariant. To detect such formulation symmetries, SCIP builds an auxiliary colored graph whose
  * color-preserving automorphisms correspond to symmetries of the integer program. The symmetries of
  * the graph, and thus of the integer program, are then computed by an external graph automorphism
- * library that needs to be linked to SCIP. Currently, SCIP ships with two such libraries: The graph
+ * library that needs to be linked to SCIP. Currently, SCIP can use two such libraries: The graph
  * automorphism libraries bliss or nauty/traces are the basic workhorses to detect symmetries. Moreover, one can use
  * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss or nauty/traces.
- * The current default is to use bliss in combination with sassy for symmetry detection.
- *
- * @note To detect symmetries, SCIP needs to be built with sassy/bliss, which can be achieved
- * by using the options <code>SYM=sassy</code> and <code>-DSYM=sassy</code> in the Makefile and CMake
- * system, respectively.
+ * The current default is to use nauty in combination with sassy for symmetry detection.
+ * To use other symmetry packages, options <code>SYM</code> and <code>-DSYM</code> in the Makefile and CMake
+ * system, respectively, need to be set.
  *
  * Besides purely integer linear problems, SCIP also supports symmetry detection for general
  * constraint mixed-integer programs containing most of the constraint types that can be handled
  * by SCIP. In particular, symmetries of mixed-integer nonlinear problems can be detected.
  * Moreover, symmetries can also be detected in code containing customized constraints.
  * To this end, a suitable callback needs to be implemented, see \ref SYMDETECTCUSTOM.
+ *
+ * The (generators of the) symmetry group detected by SCIP can be printed to the terminal
+ * by querying <code>display symmetry</code> in SCIP's interactive shell.
  *
  * @subsection SYMPROCESS Processing symmetry information
  *
@@ -9080,6 +9129,11 @@
 /**@defgroup DecompMethods Decomposition data structure
  * @ingroup DataStructures
  * @brief methods for creating and accessing user decompositions
+ */
+
+/**@defgroup NetworkMatrix Network Matrix
+ * @ingroup DataStructures
+ * @brief methods for detecting network matrices and converting them to the underlying graphs
  */
 
 /**@defgroup SymGraph Symmetry Detection Graph

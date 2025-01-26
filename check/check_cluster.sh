@@ -82,7 +82,7 @@ CLOCKTYPE="${34}"
 WITHCERTIFICATE="${35}"
 
 # check if all variables defined (by checking the last one)
-if test -z "${CLOCKTYPE}"
+if test -z "${WITHCERTIFICATE}"
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = ${TSTNAME}"
@@ -113,13 +113,13 @@ then
     echo "OPTCOMMAND    = ${OPTCOMMAND}"
     echo "SETCUTOFF     = ${SETCUTOFF}"
     echo "VISUALIZE     = ${VISUALIZE}"
-    echo "WITHCERTIFICATE = ${WITHCERTIFICATE}"
     echo "CLUSTERNODES  = ${CLUSTERNODES}"
     echo "EXCLUDENODES  = ${EXCLUDENODES}"
     echo "SLURMACCOUNT  = ${SLURMACCOUNT}"
     echo "PYTHON        = ${PYTHON}"
     echo "EMPHBENCHMARK = ${EMPHBENCHMARK}"
     echo "CLOCKTYPE     = ${CLOCKTYPE}"
+    echo "WITHCERTIFICATE = ${WITHCERTIFICATE}"
     exit 1;
 fi
 
@@ -242,7 +242,7 @@ do
                 export EXECNAME
                 export VIPRCHECKNAME=viprchk
                 export VIPRCOMPNAME=viprcomp
-		          export VIPRCOMPRESSNAME=viprttn
+                export VIPRCOMPRESSNAME=viprttn
 
                 if test "${SLURMACCOUNT}" == "default"
                 then

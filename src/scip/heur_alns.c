@@ -71,10 +71,6 @@
 #include "scip/scip_var.h"
 #include <string.h>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
-
 #define HEUR_NAME             "alns"
 #define HEUR_DESC             "Large neighborhood search heuristic that orchestrates the popular neighborhoods Local Branching, RINS, RENS, DINS etc."
 #define HEUR_DISPCHAR         SCIP_HEURDISPCHAR_LNS
@@ -220,12 +216,13 @@
 #define TABLE_EARLIEST_STAGE_NEIGHBORHOOD        SCIP_STAGE_TRANSFORMED /**< output of the statistics table is only printed from this stage onwards */
 
 /** reward types of ALNS */
-enum RewardType {
-   REWARDTYPE_TOTAL,                         /**< combination of the other rewards */
-   REWARDTYPE_BESTSOL,                       /**< 1, if a new solution was found, 0 otherwise */
-   REWARDTYPE_CLOSEDGAP,                           /**< 0 if no solution was found, closed gap otherwise */
-   REWARDTYPE_NOSOLPENALTY,                  /**< 1 if a solution was found, otherwise between 0 and 1 depending on the effort spent  */
-   NREWARDTYPES
+enum RewardType /*lint !e753*/
+{
+   REWARDTYPE_TOTAL        = 0,         /**< combination of the other rewards */
+   REWARDTYPE_BESTSOL      = 1,         /**< 1, if a new solution was found, 0 otherwise */
+   REWARDTYPE_CLOSEDGAP    = 2,         /**< 0 if no solution was found, closed gap otherwise */
+   REWARDTYPE_NOSOLPENALTY = 3,         /**< 1 if a solution was found, otherwise between 0 and 1 depending on the effort spent  */
+   NREWARDTYPES            = 4
 };
 
 /*
@@ -3824,7 +3821,7 @@ SCIP_DECL_HEURINIT(heurInitAlns)
    }
 
    /* open reward file for reading */
-   if( strncasecmp(heurdata->rewardfilename, DEFAULT_REWARDFILENAME, strlen(DEFAULT_REWARDFILENAME)) != 0 )
+   if( strcmp(heurdata->rewardfilename, DEFAULT_REWARDFILENAME) != 0 )
    {
       heurdata->rewardfile = fopen(heurdata->rewardfilename, "w");
 

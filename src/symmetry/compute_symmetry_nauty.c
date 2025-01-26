@@ -72,6 +72,9 @@ struct NAUTY_Data
    int                   nmaxperms;          /**< maximal number of permutations */
    int                   maxgenerators;      /**< maximal number of generators to be constructed (= 0 if unlimited) */
    SCIP_Bool             restricttovars;     /**< whether permutations shall be restricted to variables */
+   int                   ntreenodes;         /**< number of nodes visited in nauty's search tree */
+   int                   maxncells;          /**< maximum number of cells in nauty's search tree */
+   int                   maxnnodes;          /**< maximum number of nodes in nauty's search tree */
 };
 
 /* static data for nauty callback */
@@ -156,6 +159,52 @@ void nautyhook(
    if ( SCIPduplicateBlockMemoryArray(data_.scip, &pp, p, permlen) != SCIP_OKAY )
       return;
    data_.perms[data_.nperms++] = pp;
+}
+
+/** callback function for nauty to terminate early */  /*lint -e{715}*/
+static
+void nautyterminationhook(
+   graph*                g,                  /**< sparse graph for nauty */
+   int*                  lab,                /**< labels of node */
+   int*                  ptn,                /**< array indicating change of set in node parition of graph */
+   int                   level,              /**< level of current node in nauty's tree */
+   int                   numcells,           /**< number of cells in current partition */
+   int                   tc,                 /**< index of target cells in lab if children need to be explored */
+   int                   code,               /**< code produced by refinement and vertex-invariant procedures */
+   int                   m,                  /**< number of edges in the graph */
+   int                   n                   /**< number of nodes in the graph */
+   )
+{  /* lint --e{715} */
+   SCIP_Bool terminate = FALSE;
+   data_.ntreenodes++;
+
+   /* add some iteration limit to avoid spending too much time in nauty  */
+   if ( numcells >= data_.maxncells )
+   {
+      terminate = TRUE;
+      SCIPverbMessage(data_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "symmetry computation terminated early, because number of cells %d in Nauty exceeds limit of %d\n",
+         numcells, data_.maxncells);
+      SCIPverbMessage(data_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "for running full symmetry detection, increase value of parameter propagating/symmetry/nautymaxncells\n");
+   }
+   else if ( data_.ntreenodes >= data_.maxnnodes )
+   {
+      terminate = TRUE;
+      SCIPverbMessage(data_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "symmetry computation terminated early, because number of"
+         " nodes %d in Nauty's search tree exceeds limit of %d\n", data_.ntreenodes, data_.maxnnodes);
+      SCIPverbMessage(data_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "for running full symmetry detection, increase value of"
+         " parameter propagating/symmetry/nautymaxnnodes\n");
+   }
+
+   if ( terminate )
+   {
+      /* request a kill from nauty */
+      nauty_kill_request = 1;
+      return;
+   }
 }
 
 #else
@@ -1232,6 +1281,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    options.writeautoms = FALSE;
    options.userautomproc = nautyhook;
    options.defaultptn = FALSE; /* use color classes */
+   options.usernodeproc = nautyterminationhook;
 #else
    /* init callback functions for traces (accumulate the group generators found by traces) */
    options.writeautoms = FALSE;
@@ -1297,6 +1347,9 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    data_.perms = NULL;
    data_.symtype = SCIPgetSymgraphSymtype(symgraph);
    data_.restricttovars = TRUE;
+   data_.ntreenodes = 0;
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxncells", &data_.maxncells) );
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxnnodes", &data_.maxnnodes) );
 
    /* call nauty/traces */
 #ifdef NAUTY
@@ -1481,6 +1534,9 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    data_.perms = NULL;
    data_.symtype = symtype;
    data_.restricttovars = FALSE;
+   data_.ntreenodes = 0;
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxncells", &data_.maxncells) ); /*lint !e641*//*lint !e732*/
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxnnodes", &data_.maxnnodes) ); /*lint !e641*//*lint !e732*/
 
    /* call nauty/traces */
 #ifdef NAUTY

@@ -39,6 +39,11 @@
 #include <stdbool.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+#include <direct.h>
+#define getcwd _getcwd
+#endif
+
 #include "scip/cons_exactlp.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"

@@ -4549,15 +4549,7 @@ SCIP_RETCODE applyFixings(
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_VAR* var;
-   SCIP_VAR** aggrvars;
-   SCIP_Real val;
-   SCIP_Real* aggrscalars;
-   SCIP_Real fixedval;
-   SCIP_Real aggrconst;
    int v;
-   int naggrvars;
-   int i;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -4603,9 +4595,12 @@ SCIP_RETCODE applyFixings(
       v = 0;
       while( v < consdata->nvars )
       {
-         var = consdata->vars[v];
-         val = consdata->vals[v];
+         SCIP_VAR* var = consdata->vars[v];
+         SCIP_Real scalar = consdata->vals[v];
+         SCIP_Real constant = 0.0;
          assert(SCIPvarIsTransformed(var));
+
+         SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
 
          switch( SCIPvarGetStatus(var) )
          {
@@ -4613,20 +4608,59 @@ SCIP_RETCODE applyFixings(
             SCIPerrorMessage("original variable in transformed linear constraint\n");
             return SCIP_INVALIDDATA;
 
+         case SCIP_VARSTATUS_AGGREGATED:
+         case SCIP_VARSTATUS_NEGATED:
+            SCIPerrorMessage("aggregated variable after resolving linear term\n");
+            return SCIP_INVALIDDATA;
+
          case SCIP_VARSTATUS_LOOSE:
          case SCIP_VARSTATUS_COLUMN:
+            if( var != consdata->vars[v] )
+            {
+               assert(scalar != 0.0);
+               SCIP_CALL( addCoef(scip, cons, var, scalar) );
+               SCIP_CALL( delCoefPos(scip, cons, v) );
+
+               assert(!SCIPisInfinity(scip, ABS(constant)));
+               if( !SCIPisInfinity(scip, -consdata->lhs) )
+                  lhssubtrahend += constant;
+               if( !SCIPisInfinity(scip, consdata->rhs) )
+                  rhssubtrahend += constant;
+            }
             ++v;
             break;
 
+         case SCIP_VARSTATUS_MULTAGGR:
+            if( scalar != 0.0 )
+            {
+               SCIP_VAR** aggrvars;
+               SCIP_Real* aggrscalars;
+               SCIP_Real aggrconstant;
+               int naggrvars;
+               int i;
+
+               SCIP_CALL( SCIPflattenVarAggregationGraph(scip, var) );
+               aggrvars = SCIPvarGetMultaggrVars(var);
+               aggrscalars = SCIPvarGetMultaggrScalars(var);
+               aggrconstant = SCIPvarGetMultaggrConstant(var);
+               naggrvars = SCIPvarGetMultaggrNVars(var);
+
+               for( i = 0; i < naggrvars; ++i )
+               {
+                  SCIP_CALL( addCoef(scip, cons, aggrvars[i], scalar * aggrscalars[i]) );
+               }
+
+               constant += scalar * aggrconstant;
+            }
+            /*lint -fallthrough*/
+
          case SCIP_VARSTATUS_FIXED:
-            assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)));
-            fixedval = SCIPvarGetLbGlobal(var);
             if( !SCIPisInfinity(scip, -consdata->lhs) )
             {
-               if( SCIPisInfinity(scip, ABS(fixedval)) )
+               if( SCIPisInfinity(scip, ABS(constant)) )
                {
                   /* if lhs gets infinity it means that the problem is infeasible */
-                  if( ( val > 0.0 ) != ( fixedval > 0.0 ) )
+                  if( constant < 0.0 )
                   {
                      SCIP_CALL( chgLhs(scip, cons, SCIPinfinity(scip)) );
 
@@ -4642,14 +4676,14 @@ SCIP_RETCODE applyFixings(
                   }
                }
                else
-                  lhssubtrahend += val * fixedval;
+                  lhssubtrahend += constant;
             }
             if( !SCIPisInfinity(scip, consdata->rhs) )
             {
-               if( SCIPisInfinity(scip, ABS(fixedval)) )
+               if( SCIPisInfinity(scip, ABS(constant)) )
                {
                   /* if rhs gets -infinity it means that the problem is infeasible */
-                  if( ( val > 0.0 ) == ( fixedval > 0.0 ) )
+                  if( constant > 0.0 )
                   {
                      SCIP_CALL( chgRhs(scip, cons, -SCIPinfinity(scip)) );
 
@@ -4665,65 +4699,8 @@ SCIP_RETCODE applyFixings(
                   }
                }
                else
-                  rhssubtrahend += val * fixedval;
+                  rhssubtrahend += constant;
             }
-            SCIP_CALL( delCoefPos(scip, cons, v) );
-            break;
-
-         case SCIP_VARSTATUS_AGGREGATED:
-         {
-            SCIP_VAR* activevar = SCIPvarGetAggrVar(var);
-            SCIP_Real activescalar = SCIPvarGetAggrScalar(var);
-            SCIP_Real activeconstant = SCIPvarGetAggrConstant(var);
-
-            assert(activevar != NULL);
-            SCIP_CALL( SCIPgetProbvarSum(scip, &activevar, &activescalar, &activeconstant) );
-            assert(activevar != NULL);
-            SCIP_CALL( addCoef(scip, cons, activevar, val * activescalar) );
-
-            if( activeconstant != 0.0 )
-            {
-               if( !SCIPisInfinity(scip, -consdata->lhs) )
-                  lhssubtrahend += val * activeconstant;
-               if( !SCIPisInfinity(scip, consdata->rhs) )
-                  rhssubtrahend += val * activeconstant;
-            }
-
-            SCIP_CALL( delCoefPos(scip, cons, v) );
-            break;
-         }
-         case SCIP_VARSTATUS_MULTAGGR:
-            SCIP_CALL( SCIPflattenVarAggregationGraph(scip, var) );
-            naggrvars = SCIPvarGetMultaggrNVars(var);
-            aggrvars = SCIPvarGetMultaggrVars(var);
-            aggrscalars = SCIPvarGetMultaggrScalars(var);
-            aggrconst = SCIPvarGetMultaggrConstant(var);
-
-            for( i = 0; i < naggrvars; ++i )
-            {
-               SCIP_CALL( addCoef(scip, cons, aggrvars[i], val * aggrscalars[i]) );
-            }
-
-            if( aggrconst != 0.0 )
-            {
-               if( !SCIPisInfinity(scip, -consdata->lhs) )
-                  lhssubtrahend += val * aggrconst;
-               if( !SCIPisInfinity(scip, consdata->rhs) )
-                  rhssubtrahend += val * aggrconst;
-            }
-
-            SCIP_CALL( delCoefPos(scip, cons, v) );
-            break;
-
-         case SCIP_VARSTATUS_NEGATED:
-            SCIP_CALL( addCoef(scip, cons, SCIPvarGetNegationVar(var), -val) );
-            aggrconst = SCIPvarGetNegationConstant(var);
-
-            if( !SCIPisInfinity(scip, -consdata->lhs) )
-               lhssubtrahend += val * aggrconst;
-            if( !SCIPisInfinity(scip, consdata->rhs) )
-               rhssubtrahend += val * aggrconst;
-
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
 
@@ -8465,7 +8442,8 @@ SCIP_RETCODE extractCliques(
 
             i = nposbinvars + nnegbinvars - 1;
             j = i - 1;
-#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
+#ifdef SCIP_DISABLED_CODE
+            /* assertion should only hold when constraints were fully propagated and boundstightened */
             /* check that it is possible to choose binvar[i], otherwise it should have been fixed to zero */
             assert(SCIPisFeasGE(scip, binvarvals[i], threshold));
 #endif
@@ -8625,7 +8603,8 @@ SCIP_RETCODE extractCliques(
             i = nposbinvars + nnegbinvars - 1;
             j = i - 1;
 
-#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
+#ifdef SCIP_DISABLED_CODE
+            /* assertion should only hold when constraints were fully propagated and boundstightened */
             /* check if the variable should not have already been fixed to one */
             assert(!SCIPisFeasGT(scip, binvarvals[i], threshold));
 #endif
@@ -8784,7 +8763,8 @@ SCIP_RETCODE extractCliques(
 
             j = 1;
 
-#if 0 /* assertion should only holds when constraints were fully propagated and boundstightened */
+#ifdef SCIP_DISABLED_CODE
+            /* assertion should only hold when constraints were fully propagated and boundstightened */
             /* check if the variable should not have already been fixed to one */
             assert(!SCIPisFeasLT(scip, -binvarvals[0], threshold));
 #endif
@@ -17935,7 +17915,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
       SCIP_CALL( SCIPduplicateBufferArray(scip, &consvals, vals, nconsvars) );
 
       /* get active variables for new constraint */
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize) );
 
       /* if space was not enough we need to resize the buffers */
       if( requiredsize > nconsvars )
@@ -17943,9 +17923,9 @@ SCIP_RETCODE SCIPcreateConsLinear(
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize, TRUE) );
-         assert(requiredsize <= nconsvars);
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize) );
       }
+      assert(requiredsize == nconsvars);
 
       /* adjust sides and check that we do not subtract infinity values */
       if( SCIPisInfinity(scip, REALABS(constant)) )
@@ -18154,16 +18134,16 @@ SCIP_RETCODE SCIPcopyConsLinear(
     */
    if( !SCIPvarIsOriginal(vars[0]) )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, nvars, &constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, nvars, &constant, &requiredsize) );
 
       if( requiredsize > nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, requiredsize, &constant, &requiredsize, TRUE) );
-         assert(requiredsize <= nvars);
+         SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, requiredsize, &constant, &requiredsize) );
       }
+      assert(requiredsize == nvars);
    }
    else
    {
@@ -18251,7 +18231,7 @@ SCIP_RETCODE SCIPaddCoefLinear(
       consvals[0] = val;
 
       /* get active variables for new constraint */
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize) );
 
       /* if space was not enough we need to resize the buffers */
       if( requiredsize > nconsvars )
@@ -18259,9 +18239,9 @@ SCIP_RETCODE SCIPaddCoefLinear(
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize, TRUE) );
-         assert(requiredsize <= nconsvars);
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize) );
       }
+      assert(requiredsize == nconsvars);
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
@@ -19003,7 +18983,8 @@ SCIP_RETCODE SCIPupgradeConsLinear(
 SCIP_RETCODE SCIPcleanupConssLinear(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
-   SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether the problem was detected to be infeasible */
+   int*                  ndelconss           /**< pointer to count number of deleted constraints */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -19021,12 +19002,19 @@ SCIP_RETCODE SCIPcleanupConssLinear(
    nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
    conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
 
-   for( i = 0; i < nconss; ++i )
+   /* loop backwards since then deleted constraints do not interfere with the loop */
+   for( i = nconss - 1; i >= 0; --i )
    {
       SCIP_CALL( applyFixings(scip, conss[i], infeasible) );
 
       if( *infeasible )
          break;
+
+      if( SCIPconsGetData(conss[i])->nvars >= 1 )
+         continue;
+
+      SCIP_CALL( SCIPdelCons(scip, conss[i]) );
+      ++(*ndelconss);
    }
 
    return SCIP_OKAY;

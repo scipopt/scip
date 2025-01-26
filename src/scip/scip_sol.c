@@ -43,10 +43,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/
-#endif
 
 #include "blockmemshell/memory.h"
 #include "scip/cons.h"
@@ -2266,7 +2262,7 @@ SCIP_RETCODE SCIPprintSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
-   SCIP_Real objvalue;
+   SCIP_Real objval;
    SCIP_Bool currentsol;
    SCIP_Bool oldquiet = FALSE;
 
@@ -2307,11 +2303,11 @@ SCIP_RETCODE SCIPprintSol(
    else
    {
       if( SCIPsolIsOriginal(sol) )
-         objvalue = SCIPsolGetOrigObj(sol);
+         objval = SCIPsolGetOrigObj(sol);
       else
-         objvalue = SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
+         objval = SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
 
-      SCIPprintReal(scip, file, objvalue, 20, 15);
+      SCIPprintReal(scip, file, objval, 20, 15);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
    }
 
@@ -2340,10 +2336,12 @@ SCIP_RETCODE SCIPprintSolExact(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
-   SCIP_Rational* objvalue;
+   SCIP_Rational* objval;
    SCIP_Rational* tmp;
    SCIP_Bool currentsol;
    SCIP_Bool oldquiet = FALSE;
+   char* objvalstr;
+   int objvalsize;
 
    assert(SCIPisTransformed(scip) || sol != NULL);
 
@@ -2368,23 +2366,31 @@ SCIP_RETCODE SCIPprintSolExact(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
 
-   SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &objvalue) );
-
-   if( SCIPsolIsOriginal(sol) )
-      RatSet(objvalue, SCIPsolGetOrigObjExact(sol));
+   if( SCIPsolIsPartial(sol) )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "unknown\n");
+   }
    else
    {
-      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
-      SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob, tmp);
-      SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, objvalue);
-      RatFreeBuffer(SCIPbuffer(scip), &tmp);
+      SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &objval) );
+
+      if( SCIPsolIsOriginal(sol) )
+         RatSet(objval, SCIPsolGetOrigObjExact(sol));
+      else
+      {
+         SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &tmp) );
+         SCIPsolGetObjExact(sol, scip->set, scip->transprob, scip->origprob, tmp);
+         SCIPprobExternObjvalExact(scip->transprob, scip->origprob, scip->set, tmp, objval);
+         RatFreeBuffer(SCIPbuffer(scip), &tmp);
+      }
+
+      objvalsize = RatStrlen(objval) + 1;
+      SCIP_CALL( SCIPallocBufferArray(scip, &objvalstr, objvalsize) );
+      (void)RatToString(objval, objvalstr, objvalsize);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "%20s\n", objvalstr);
+      SCIPfreeBufferArray(scip, &objvalstr);
+      RatFreeBuffer(SCIPbuffer(scip), &objval);
    }
-
-   RatMessage(scip->messagehdlr, file, objvalue);
-
-   RatFreeBuffer(SCIPbuffer(scip), &objvalue);
-
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
 
    SCIP_CALL( SCIPsolPrintExact(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, FALSE,
          printzeros) );
@@ -2482,7 +2488,7 @@ SCIP_RETCODE SCIPprintMIPStart(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   SCIP_Real objvalue;
+   SCIP_Real objval;
    SCIP_Bool oldquiet = FALSE;
 
    assert(sol != NULL);
@@ -2499,11 +2505,11 @@ SCIP_RETCODE SCIPprintMIPStart(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
 
    if( SCIPsolIsOriginal(sol) )
-      objvalue = SCIPsolGetOrigObj(sol);
+      objval = SCIPsolGetOrigObj(sol);
    else
-      objvalue = SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
+      objval = SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
 
-   SCIPprintReal(scip, file, objvalue, 20, 15);
+   SCIPprintReal(scip, file, objval, 20, 15);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
 
    SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, TRUE,
@@ -3252,12 +3258,12 @@ SCIP_RETCODE readSolFile(
          break;
       lineno++;
 
-      /* there are some lines which may preceed the solution information */
-      if( strncasecmp(buffer, "solution status:", 16) == 0 || strncasecmp(buffer, "objective value:", 16) == 0 ||
-         strncasecmp(buffer, "Log started", 11) == 0 || strncasecmp(buffer, "Variable Name", 13) == 0 ||
-         strncasecmp(buffer, "All other variables", 19) == 0 || strspn(buffer, " \n\r\t\f") == strlen(buffer) ||
-         strncasecmp(buffer, "NAME", 4) == 0 || strncasecmp(buffer, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
-         strncasecmp(buffer, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
+      /* there are some lines which may precede the solution information */
+      if( SCIPstrncasecmp(buffer, "solution status:", 16) == 0 || SCIPstrncasecmp(buffer, "objective value:", 16) == 0 ||
+         SCIPstrncasecmp(buffer, "Log started", 11) == 0 || SCIPstrncasecmp(buffer, "Variable Name", 13) == 0 ||
+         SCIPstrncasecmp(buffer, "All other variables", 19) == 0 || strspn(buffer, " \n\r\t\f") == strlen(buffer) ||
+         SCIPstrncasecmp(buffer, "NAME", 4) == 0 || SCIPstrncasecmp(buffer, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         SCIPstrncasecmp(buffer, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
          continue;
 
       /* parse the line */
@@ -3285,13 +3291,13 @@ SCIP_RETCODE readSolFile(
       }
 
       /* cast the value */
-      if( strncasecmp(valuestring, "inv", 3) == 0 )
+      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
          continue;
-      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
          value = SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
          value = -SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "unknown", 7) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "unk", 3) == 0 )
       {
          value = SCIP_UNKNOWN;
          localpartial = TRUE;
@@ -3447,13 +3453,13 @@ SCIP_RETCODE readXmlSolFile(
       }
 
       /* cast the value */
-      if( strncasecmp(valuestring, "inv", 3) == 0 )
+      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
          continue;
-      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
          value = SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
          value = -SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "unknown", 7) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "unk", 3) == 0 )
       {
          value = SCIP_UNKNOWN;
          localpartial = TRUE;

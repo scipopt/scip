@@ -1291,7 +1291,8 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
    *result = SCIP_DIDNOTRUN;
 
-#if 0 /* need to include cons_knapsack on top of this file */
+#ifdef SCIP_DISABLED_CODE
+   /* need to include cons_knapsack on top of this file */
    /* check for possible knapsacks that form with a logicor a weak relaxation of an and-constraint
     *
     * the weak relaxation of an and-constraint looks like:

@@ -794,6 +794,19 @@ CLEANUP:
  * Callback methods of separator
  */
 
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyGauge)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of separator */
+   SCIP_CALL( SCIPincludeSepaGauge(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
@@ -1007,6 +1020,7 @@ SCIP_RETCODE SCIPincludeSepaGauge(
    assert(sepa != NULL);
 
    /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyGauge) );
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeGauge) );
    SCIP_CALL( SCIPsetSepaExitsol(scip, sepa, sepaExitsolGauge) );
 

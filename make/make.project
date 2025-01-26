@@ -98,7 +98,7 @@ SCIP_VERSION_MAJOR = 10
 SCIP_VERSION_MINOR = 0
 SCIP_VERSION_PATCH = 0
 SCIP_VERSION_SUB = 0
-SCIP_VERSION_API = 122
+SCIP_VERSION_API = 130
 SCIP_VERSION = $(SCIP_VERSION_MAJOR).$(SCIP_VERSION_MINOR).$(SCIP_VERSION_PATCH).$(SCIP_VERSION_SUB)
 
 # compiling and linking parameters
@@ -106,7 +106,11 @@ VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
-LPSEX = none
+ifeq ($(EXACTSOLVE),true)
+LPSEX		=	spx
+else
+LPSEX		=	none
+endif
 TPI		=	tny
 SYM		=	snauty
 PAPILO		=	false
@@ -151,7 +155,7 @@ OPENSOURCE   	=	true
 READLINE	=	true
 ZLIB		=	true
 GMP		=	true
-MPFR  = false
+MPFR		=	auto
 ZIMPL		=	false
 AMPL		=	true
 IPOPT		=	false
@@ -277,7 +281,7 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/blockmemshell \
 			$(LIBOBJDIR)/tclique \
 			$(LIBOBJDIR)/lpi \
-      $(LIBOBJDIR)/lpiexact \
+			$(LIBOBJDIR)/lpiexact \
 			$(LIBOBJDIR)/amplmp/src \
 			$(LIBOBJDIR)/amplmp \
 			$(LIBOBJDIR)/tpi \
@@ -506,6 +510,14 @@ LPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIB).$(LIBEXT)
 LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIBNAME).$(LIBEXT)
 
 
+#-------------------------------------------------------
+# add flags for exact SoPlex
+ifeq ($(LPSEX),spx)
+LPSLDFLAGS	+=	$(LINKCXX_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCXX_l)soplex.exact.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLIBFILES	+=	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.exact.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+endif
+
+
 #-----------------------------------------------------------------------------
 # Parallel Interface
 #-----------------------------------------------------------------------------
@@ -601,19 +613,21 @@ FLAGS		+=	$(GMP_FLAGS)
 LDFLAGS		+=	$(GMP_LDFLAGS)
 endif
 
-ifeq ($(MPFR_LDFLAGS),)
-MPFR		=	false
-endif
-
 ifeq ($(EXACTSOLVE),true)
+ifeq ($(MPFR),auto)
+MPFR		=	true
+endif
 ifeq ($(MPFR),false)
-$(error exact Solving requires MPFR to be linked. Use either EXACTSOLVE=false or MPFR=true)
+$(error Exact solving requires MPFR to be linked)
 endif
 endif
 
 ifeq ($(MPFR),true)
+ifeq ($(MPFR_LDFLAGS),)
+$(error MPFR_LDFLAGS is empty. Do not know how to link MPFR, but MPFR=true)
+endif
 FLAGS		+=	$(MPFR_FLAGS)
-LDFLAGS		+=	$(MPFR_LDFLAGS)
+LDFLAGS	+=	$(MPFR_LDFLAGS)
 endif
 
 ifeq ($(READLINE_LDFLAGS),)

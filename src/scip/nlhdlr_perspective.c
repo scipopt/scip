@@ -1241,15 +1241,6 @@ SCIP_DECL_NLHDLRFREEEXPRDATA(nlhdlrFreeExprDataPerspective)
    return SCIP_OKAY;
 }
 
-/** callback to be called in initialization */
-#ifdef SCIP_DISABLED_CODE
-static
-SCIP_DECL_NLHDLRINIT(nlhdlrInitPerspective)
-{  /*lint --e{715}*/
-   return SCIP_OKAY;
-}
-#endif
-
 /** callback to be called in deinitialization */
 static
 SCIP_DECL_NLHDLREXIT(nlhdlrExitPerspective)
@@ -1494,19 +1485,6 @@ SCIP_DECL_NLHDLRINITSEPA(nlhdlrInitSepaPerspective)
 
    return SCIP_OKAY;
 }
-
-
-#ifdef SCIP_DISABLED_CODE
-/** separation deinitialization method of a nonlinear handler (called during CONSEXITSOL) */
-static
-SCIP_DECL_NLHDLREXITSEPA(nlhdlrExitSepaPerspective)
-{ /*lint --e{715}*/
-   SCIPerrorMessage("method of perspective nonlinear handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#endif
 
 /** nonlinear handler enforcement callback
  *

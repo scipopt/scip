@@ -103,6 +103,19 @@ struct SYMMETRY_Data
    SCIP_Bool             restricttovars;     /**< whether permutations shall be restricted to variables */
 };
 
+#ifdef NAUTY
+/** struct for nauty callback */
+struct NAUTY_Data
+{
+   SCIP*                 scip;               /**< SCIP pointer */
+   int                   ntreenodes;         /**< number of nodes visitied in nauty's search tree */
+   int                   maxncells;          /**< maximum number of cells in nauty's search tree */
+   int                   maxnnodes;          /**< maximum number of nodes in nauty's search tree */
+};
+
+/** static data for nauty callback */
+static struct NAUTY_Data nautydata_;
+#endif
 
 /* ------------------- hook functions ------------------- */
 
@@ -190,6 +203,55 @@ void sassyhook(
    data->perms[data->nperms++] = p;
 }
 
+#ifdef NAUTY
+
+/** callback function for nauty to terminate early */  /*lint -e{715}*/
+static
+void nautyterminationhook(
+   graph*                g,                  /**< sparse graph for nauty */
+   int*                  lab,                /**< labels of node */
+   int*                  ptn,                /**< array indicating change of set in node parition of graph */
+   int                   level,              /**< level of current node in nauty's tree */
+   int                   numcells,           /**< number of cells in current partition */
+   int                   tc,                 /**< index of target cells in lab if children need to be explored */
+   int                   code,               /**< code produced by refinement and vertex-invariant procedures */
+   int                   m,                  /**< number of edges in the graph */
+   int                   n                   /**< number of nodes in the graph */
+   )
+{  /* lint --e{715} */
+   SCIP_Bool terminate = FALSE;
+   nautydata_.ntreenodes++;
+
+   /* add some iteration limit to avoid spending too much time in nauty  */
+   if ( numcells >= nautydata_.maxncells )
+   {
+      terminate = TRUE;
+      SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "symmetry computation terminated early, because number of cells %d in Nauty exceeds limit of %d\n",
+         numcells, nautydata_.maxncells);
+      SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "for running full symmetry detection, increase value of parameter propagating/symmetry/nautymaxncells\n");
+   }
+   else if ( nautydata_.ntreenodes >= nautydata_.maxnnodes )
+   {
+      terminate = TRUE;
+      SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "symmetry computation terminated early, because number of"
+         " nodes %d in Nauty's search tree exceeds limit of %d\n", nautydata_.ntreenodes, nautydata_.maxnnodes);
+      SCIPverbMessage(nautydata_.scip, SCIP_VERBLEVEL_MINIMAL, NULL,
+         "for running full symmetry detection, increase value of"
+         " parameter propagating/symmetry/nautymaxnnodes\n");
+   }
+
+   if ( terminate )
+   {
+      /* request a kill from nauty */
+      nauty_kill_request = 1;
+      return;
+   }
+}
+
+#endif
 
 /** return whether symmetry can be computed */
 SCIP_Bool SYMcanComputeSymmetry(void)
@@ -251,7 +313,9 @@ SCIP_RETCODE computeAutomorphisms(
                                               *   (needed for freeing storage) */
    SCIP_Real*            log10groupsize,     /**< pointer to store log10 of size of group */
    SCIP_Bool             restricttovars,     /**< whether permutations shall be restricted to variables */
-   SCIP_Real*            symcodetime         /**< pointer to store the time for symmetry code */
+   SCIP_Real*            symcodetime,        /**< pointer to store the time for symmetry code */
+   SCIP_Bool             canterminateearly   /**< whether we allow to interrupt symmetry detection early
+                                                *   (e.g., because of iteration limits) */
    )
 {
    SCIP_Real oldtime;
@@ -282,6 +346,13 @@ SCIP_RETCODE computeAutomorphisms(
    data.maxgenerators = maxgenerators;
    data.perms = NULL;
    data.restricttovars = restricttovars;
+
+#ifdef NAUTY
+   nautydata_.scip = scip;
+   nautydata_.ntreenodes = 0;
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxncells", &nautydata_.maxncells) );
+   SCIP_CALL( SCIPgetIntParam(scip, "propagating/symmetry/nautymaxnnodes", &nautydata_.maxnnodes) );
+#endif
 
    oldtime = SCIPgetSolvingTime(scip);
 
@@ -316,6 +387,8 @@ SCIP_RETCODE computeAutomorphisms(
    options.writeautoms = FALSE;
    options.userautomproc = sassy::preprocessor::nauty_hook;
    options.defaultptn = FALSE; /* use color classes */
+   if ( canterminateearly )
+      options.usernodeproc = nautyterminationhook;
    *log10groupsize = 0.0;
    if(sg.nv > 0) {
       sparsenauty(&sg, lab, ptn, orbits, &options, &stats, NULL);
@@ -400,7 +473,7 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
 
    /* compute symmetries */
    SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(symgraph), &sassygraph, SCIPgetSymgraphNVars(symgraph),
-         maxgenerators, perms, nperms, nmaxperms, log10groupsize, TRUE, symcodetime) );
+         maxgenerators, perms, nperms, nmaxperms, log10groupsize, TRUE, symcodetime, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -432,7 +505,7 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
 
    /* compute symmetries */
    SCIP_CALL_ABORT( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(G1), &sassygraph, nnodes, 0,
-         &perms, &nperms, &nmaxperms, &log10groupsize, FALSE, &symcodetime) );
+         &perms, &nperms, &nmaxperms, &log10groupsize, FALSE, &symcodetime, FALSE) );
 
    /* since G1 and G2 are connected and disjoint, they are isomorphic iff there is a permutation
     * mapping a node from G1 to a node of G2

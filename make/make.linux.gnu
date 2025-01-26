@@ -6,6 +6,7 @@ ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=
 GMP_LDFLAGS 	=	-lgmp
+MPFR_LDFLAGS	=	-lmpfr
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
 CFLAGS		=	-ffp-contract=off -std=c99 -D_XOPEN_SOURCE=600

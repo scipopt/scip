@@ -5141,7 +5141,7 @@ SCIP_RETCODE cutsRoundMIRSafely(
    SCIP_VAR** vars;
    int ndelcontvars;
    SCIP_ROUNDMODE previousroundmode;
-   SCIP_MIRINFO* mirinfo;
+   SCIP_MIRINFO* mirinfo = NULL;
    SCIP_INTERVAL tmpinterval;
 
    assert(cutrhs != NULL);
@@ -5227,7 +5227,7 @@ SCIP_RETCODE cutsRoundMIRSafely(
          {
             SCIPintervalSet(&cutaj, downaj);
 
-            if( SCIPisCertificateActive(scip) )
+            if( SCIPisCertificateActive(scip) && mirinfo != NULL )
             {
                SCIP_Rational* boundval;
 
@@ -5253,7 +5253,7 @@ SCIP_RETCODE cutsRoundMIRSafely(
             SCIPintervalMul(SCIPinfinity(scip), &tmpinterval, tmpinterval, onedivoneminusf0);
             SCIPintervalAddScalar(SCIPinfinity(scip), &cutaj, tmpinterval, downaj);
 
-            if( SCIPisCertificateActive(scip) )
+            if( SCIPisCertificateActive(scip) && mirinfo != NULL )
             {
                SCIP_Rational* boundval;
                mirinfo->splitcoefficients[v] = downaj;

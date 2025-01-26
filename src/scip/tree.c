@@ -1270,7 +1270,8 @@ SCIP_RETCODE SCIPnodeCutoff(
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
-   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE) || !set->misc_calcintegral || SCIPtreeGetLowerbound(tree, set) == stat->lastlowerbound); /*lint !e777*/
+   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
+      || !set->misc_calcintegral || SCIPsetIsRelEQ(set, SCIPtreeGetLowerbound(tree, set), stat->lastlowerbound));
 
    SCIPsetDebugMsg(set, "cutting off %s node #%" SCIP_LONGINT_FORMAT " at depth %d (cutoffdepth: %d)\n",
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
@@ -2549,10 +2550,6 @@ SCIP_RETCODE SCIPnodeAddHoleinfer(
    SCIP_Bool*            added               /**< pointer to store whether the hole was added, or NULL */
    )
 {
-#if 0
-   SCIP_VAR* infervar;
-#endif
-
    assert(node != NULL);
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_FOCUSNODE
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE
@@ -2595,10 +2592,6 @@ SCIP_RETCODE SCIPnodeAddHoleinfer(
       left, right, node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), infercons != NULL ? "cons" : "prop",
       infercons != NULL ? SCIPconsGetName(infercons) : (inferprop != NULL ? SCIPpropGetName(inferprop) : "-"), inferinfo);
 
-#if 0
-   /* remember variable as inference variable, and get corresponding active variable, bound and bound type */
-   infervar = var;
-#endif
    SCIP_CALL( SCIPvarGetProbvarHole(&var, &left, &right) );
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
@@ -2797,7 +2790,8 @@ void SCIPnodeUpdateLowerbound(
    assert(stat != NULL);
    assert(set != NULL);
    assert(!SCIPsetIsInfinity(set, newbound));
-   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE) || !set->misc_calcintegral || SCIPtreeGetLowerbound(tree, set) == stat->lastlowerbound); /*lint !e777*/
+   assert((tree->focusnode != NULL && SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_REFOCUSNODE)
+      || !set->misc_calcintegral || SCIPsetIsRelEQ(set, SCIPtreeGetLowerbound(tree, set), stat->lastlowerbound));
 
    if( SCIPnodeGetLowerbound(node) < newbound )
    {
@@ -4396,9 +4390,9 @@ SCIP_RETCODE focusnodeCleanupVars(
    }
 
    /* mark variables as deleted */
-   for( i = 0; i < transprob->nvars; i++ )
+   for( i = 0; i < SCIPprobGetNVars(transprob); i++ )
    {
-      var = transprob->vars[i];
+      var = SCIPprobGetVars(transprob)[i];
       assert(var != NULL);
 
       /* check whether variable is deletable */
@@ -5002,7 +4996,10 @@ SCIP_RETCODE SCIPnodeFocus(
 
          /* remove node from the queue */
          SCIP_CALL( SCIPnodepqRemove(tree->leaves, set, *node) );
+
          (*node)->cutoff = TRUE;
+         (*node)->lowerbound = SCIPsetInfinity(set);
+         (*node)->estimate = SCIPsetInfinity(set);
 
          if( (*node)->depth == 0 )
             stat->rootlowerbound = SCIPsetInfinity(set);
@@ -7683,8 +7680,8 @@ SCIP_RETCODE SCIPtreeStoreRelaxSol(
    assert(transprob != NULL);
    assert(SCIPrelaxationIsSolValid(relaxation));
 
-   nvars = transprob->nvars;
-   vars = transprob->vars;
+   nvars = SCIPprobGetNVars(transprob);
+   vars = SCIPprobGetVars(transprob);
 
    /* check if memory still needs to be allocated or resized */
    if( tree->probdiverelaxsol == NULL )
@@ -7726,8 +7723,8 @@ SCIP_RETCODE SCIPtreeRestoreRelaxSol(
    assert(tree->probdiverelaxstored);
    assert(tree->probdiverelaxsol != NULL);
 
-   nvars = transprob->nvars;
-   vars = transprob->vars;
+   nvars = SCIPprobGetNVars(transprob);
+   vars = SCIPprobGetVars(transprob);
    assert( nvars <= tree->nprobdiverelaxsol );
 
    /* iterate over all variables to restore the relaxation solution */

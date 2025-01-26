@@ -197,7 +197,7 @@ SCIP_RETCODE scoring(
       if( pscosts[i] > maxpscost )
          maxpscost = pscosts[i];
    }
-
+   
    /* account for the case where maxlocks or maxpscost is 0 */
    maxpscost = MAX(maxpscost, SCIPepsilon(scip)); /*lint !e666*/
    maxlocks = MAX(maxlocks, 1);
@@ -532,13 +532,13 @@ SCIP_DECL_CUTSELSELECT(cutselSelectEnsemble)
 
    cutseldata = SCIPcutselGetData(cutsel);
    assert(cutseldata != NULL);
-
+   
    if( ncuts > cutseldata->maxcuts || SCIPgetNVars(scip) > cutseldata->maxnumvars )
    {
       *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
    }
-
+   
    *result = SCIP_SUCCESS;
 
    SCIP_CALL( SCIPselectCutsEnsemble(scip, cuts, forcedcuts, cutseldata, root, ncuts, nforcedcuts,

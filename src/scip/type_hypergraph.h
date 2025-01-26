@@ -64,8 +64,7 @@ typedef int SCIP_HYPERGRAPH_EDGE;
 typedef int SCIP_HYPERGRAPH_OVERLAP;
 
 
-/**
- * Called by \ref SCIPhypergraphOverlapFind, \ref SCIPhypergraphOverlapIntersect and \ref SCIPhypergraphComputeOverlaps
+/** Called by \ref SCIPhypergraphOverlapFind, \ref SCIPhypergraphOverlapIntersectEdges and \ref SCIPhypergraphComputeOverlaps
  * whenever a new overlap set is created or an existing overlap is found.
  */
 #define SCIP_DECL_HYPERGRAPH_OVERLAP(x) SCIP_RETCODE x (SCIP_HYPERGRAPH* hypergraph, SCIP_HYPERGRAPH_OVERLAP overlap, \
