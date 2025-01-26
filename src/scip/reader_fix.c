@@ -47,6 +47,7 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_fix.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -225,6 +226,12 @@ SCIP_DECL_READERREAD(readerReadFix)
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
    {
       SCIPerrorMessage("reading of fixing file is only possible after a problem was created\n");
+      return SCIP_READERROR;
+   }
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of fixing file in exact solving mode is not yet supported\n");
       return SCIP_READERROR;
    }
 

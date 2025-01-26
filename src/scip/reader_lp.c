@@ -60,6 +60,7 @@
 #include "scip/rational.h"
 #include "scip/reader_lp.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"

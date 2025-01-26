@@ -1211,9 +1211,9 @@ if(EXACTSOLVE)
                                     DEPENDS scip-build
                                 )
 
-            if(NOT ${VIPR} STREQUAL VIPR-NOTFOUND)
+            if(VIPRCOMP AND VIPRCHK)
                add_test(NAME MIPEX-${setting}-${basename}-viprcomp
-                     COMMAND viprcomp ${basename}.${setting}.vipr)
+                     COMMAND ${VIPRCOMP} ${basename}.${setting}.vipr)
                set_tests_properties(MIPEX-${setting}-${basename}-viprcomp
                                  PROPERTIES
                                  DEPENDS MIPEX-${setting}-${basename}
@@ -1222,7 +1222,7 @@ if(EXACTSOLVE)
                                  FAIL_REGULAR_EXPRESSION "Failed")
 
                add_test(NAME MIPEX-${setting}-${basename}-vipr
-                     COMMAND viprchk ${basename}.${setting}_complete.vipr)
+                     COMMAND ${VIPRCHK} ${basename}.${setting}_complete.vipr)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr
                                  PROPERTIES
                                  DEPENDS MIPEX-${setting}-${basename}-viprcomp
@@ -1231,7 +1231,7 @@ if(EXACTSOLVE)
                                  FAIL_REGULAR_EXPRESSION "Failed")
 
                add_test(NAME MIPEX-${setting}-${basename}-vipr_ori
-                     COMMAND viprchk ${basename}.${setting}.vipr_ori)
+                     COMMAND ${VIPRCHK} ${basename}.${setting}.vipr_ori)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr_ori
                                  PROPERTIES
                                  DEPENDS MIPEX-${setting}-${basename}
