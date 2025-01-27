@@ -327,7 +327,7 @@ Presolve<SCIP_Real> setupPresolve(
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
 #if PAPILO_APIVERSION >= 6
-   if( data->enabledcliquemerging )
+   if( data -> enabledcliquemerging )
       presolve.addPresolveMethod( uptr( new CliqueMerging<SCIP_Real>() ) );
 #endif
 
@@ -383,9 +383,12 @@ Presolve<SCIP_Real> setupPresolve(
    presolve.getPresolveOptions().abortfacmedium = data->abortfacmedium;
    presolve.getPresolveOptions().abortfacfast = data->abortfacfast;
 #endif
-#if PAPILO_APIVERSION >= 6 && data->enablecliquemerging
-   cliquemerging->setParameters( data->maxedgesparallel, data->maxedgessequential, 
-                                 data->maxcliquesize, data->maxgreedycalls );
+#if PAPILO_APIVERSION >= 6
+   if ( data -> enablecliquemerging )
+   {
+      cliquemerging->setParameters( data->maxedgesparallel, data->maxedgessequential, 
+                                    data->maxcliquesize, data->maxgreedycalls );
+   }
 #endif
 
    /* communicate the time limit */
