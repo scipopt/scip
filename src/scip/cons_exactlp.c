@@ -18269,8 +18269,7 @@ SCIP_RETCODE SCIPcreateConsBasicExactLinear(
    return SCIP_OKAY;
 }
 
-/** @todo exip: since this is only used for subscips, it currently always creates linear constraints, needs to be extended in the future*/
-/** creates by copying and captures a linear constraint */
+/** creates a linear constraint from an exact linear constraint by rounding values to floating-point and captures it */
 SCIP_RETCODE SCIPcopyConsExactLinear(
    SCIP*                 scip,               /**< target SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
@@ -18314,6 +18313,12 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
       return SCIP_OKAY;
    }
 
+   /**@todo This is currently only used for subSCIPs in floating-point heuristics, but should be extended to be able to
+    *       perform an exact copy in the future.  This would allow application of the cons_components presolver, for
+    *       example.  In this case, whether an exact or an fp copy is created, could probably decided by looking at the
+    *       parameter value of exact/enabled in the target SCIP.
+    */
+   /* AG@LE Setting this to FALSE currently fails, but shouldn't FALSE be the right thing to do? */
    (*valid) = TRUE;
 
    if( nvars == 0 )

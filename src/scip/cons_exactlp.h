@@ -189,7 +189,7 @@ SCIP_RETCODE SCIPcreateConsBasicExactLinear(
    SCIP_Rational*        rhs                 /**< right hand side of constraint */
    );
 
-/** creates by copying and captures a linear constraint */
+/** creates a linear constraint from an exact linear constraint by rounding values to floating-point and captures it */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcopyConsExactLinear(
    SCIP*                 scip,               /**< target SCIP data structure */
