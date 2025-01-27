@@ -385,7 +385,7 @@ Presolve<SCIP_Real> setupPresolve(
    presolve.getPresolveOptions().abortfacmedium = data->abortfacmedium;
    presolve.getPresolveOptions().abortfacfast = data->abortfacfast;
 #endif
-#if PAPILO_API_VERSION >= 6
+#if PAPILO_APIVERSION >= 6
    presolve.getPresolveOptions().maxedgescliquemergingparallel = data->maxedgescliquemergingparallel;
    presolve.getPresolveOptions().maxedgescliquemergingsequential = data->maxedgescliquemergingsequential;
    presolve.getPresolveOptions().maxcliquesize = data->maxcliquesize;
@@ -1184,7 +1184,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/verbosity",
          "verbosity level of PaPILO (0: quiet, 1: errors, 2: warnings, 3: normal, 4: detailed)",
          &presoldata->verbosity, FALSE, DEFAULT_VERBOSITY, 0, 4, NULL, NULL));
-#if PAPILO_API_VERSION >= 6
+#if PAPILO_APIVERSION >= 6
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/" PRESOL_NAME "/enablecliquemerging",
          "should the clique merging presolver be enabled within the presolve library?",
