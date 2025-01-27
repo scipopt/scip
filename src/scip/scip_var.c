@@ -8467,7 +8467,7 @@ SCIP_RETCODE SCIPchgVarType(
  *  @note If SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed, the implied integer type of the
  *        corresponding transformed variable is changed; the type of the original variable does not change
  *
- *  @note If the implied integer type is adjusted to weak or strong for a continuous variable  the bounds of the variable get
+ *  @note If the implied integer type is adjusted to weak or strong for a continuous variable, the bounds of the variable get
  *        adjusted w.r.t. to integrality information
  */
 SCIP_RETCODE SCIPchgVarImplType(
