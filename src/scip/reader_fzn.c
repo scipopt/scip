@@ -4928,7 +4928,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
       if( legal )
       {
          SCIP_CALL( writeFzn(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-               nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
+               nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, readerdata->contimplintasint, result) );
       }
       else if( transformed )
       {
