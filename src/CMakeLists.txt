@@ -1234,7 +1234,9 @@ if(ZIMPL_NEEDED)
     get_filename_component(CONF_ZIMPL_DIR ${ZIMPL_DIR} REALPATH BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
 
-# configure the config file for the build tree
+# Configure scip-config.cmake for the build-tree:
+# We add the CMake module path from the sources.
+set(EXTRA_CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${PROJECT_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/scip-config.cmake.in
   "${PROJECT_BINARY_DIR}/scip-config.cmake" @ONLY)
@@ -1246,7 +1248,9 @@ ${PROJECT_BINARY_DIR}/scip-config-version.cmake
     COMPATIBILITY SameMajorVersion
     )
 
-# configure the config file for the installation
+# Configure the scip-config.cmake for the installation.
+# We add the current directory of the installed scip-config.cmake as a CMake module path.
+set(EXTRA_CMAKE_MODULE_PATH "\${CMAKE_CURRENT_LIST_DIR}")
 set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")
 if(SOPLEX_NEEDED)
     set(CONF_SOPLEX_DIR "\${CMAKE_CURRENT_LIST_DIR}/../soplex")
@@ -1263,3 +1267,16 @@ install(EXPORT scip-targets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scip)
 install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/scip-config.cmake"
               ${PROJECT_BINARY_DIR}/scip-config-version.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scip)
+
+# Install FindGMP.cmake module.
+if(SCIP_WITH_GMP)
+   install(FILES ${PROJECT_SOURCE_DIR}/cmake/Modules/FindGMP.cmake
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scip)
+endif()
+
+# Install FindMPFR.cmake module.
+if(SCIP_WITH_MPFR)
+   install(FILES ${PROJECT_SOURCE_DIR}/cmake/Modules/FindMPFR.cmake
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scip)
+endif()
+
