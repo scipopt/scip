@@ -328,7 +328,7 @@ Presolve<SCIP_Real> setupPresolve(
    presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
-#if PAPILO_API_VERSION >= 6
+#if PAPILO_APIVERSION >= 6
    if( data->enabledcliquemerging )
       presolve.addPresolveMethod( uptr( new CliqueMerging<SCIP_Real>() ) );
 #endif
