@@ -2496,6 +2496,21 @@ SCIP_RETCODE varParse(
    if ( *endptr == NULL )
       *endptr = strptr;
 
+   /* If bound parsing failed, the last token it parsed would be the one for implied integrality */
+   if( strncmp(token, "implied:", 8) == 0 )
+   {
+      if( strncmp(&token[8], "weak", 4) == 0 )
+         (*impltype) = SCIP_VARIMPLTYPE_WEAK;
+      else if ( strncmp(&token[8], "strong", 4) == 0 )
+         (*impltype) = SCIP_VARIMPLTYPE_STRONG;
+      else
+      {
+         SCIPerrorMessage("Expected implied integer type 'weak' or 'strong', got: '%s' ", &token[8]);
+         return SCIP_READERROR;
+      }
+   }
+
+
    /* check bounds for binary variables */
    if ( (*vartype) == SCIP_VARTYPE_BINARY )
    {
@@ -3051,32 +3066,24 @@ SCIP_RETCODE SCIPvarPrint(
    assert(var != NULL);
    assert(var->scip == set->scip);
 
-   if( SCIPvarIsImpliedIntegral(var) )
+   /* type of variable */
+   switch( SCIPvarGetType(var) )
    {
-      SCIPmessageFPrintInfo(messagehdlr, file, "  [implicit]");
+      case SCIP_VARTYPE_BINARY:
+         SCIPmessageFPrintInfo(messagehdlr, file, "  [binary]");
+         break;
+      case SCIP_VARTYPE_INTEGER:
+         SCIPmessageFPrintInfo(messagehdlr, file, "  [integer]");
+         break;
+      case SCIP_VARTYPE_CONTINUOUS:
+         SCIPmessageFPrintInfo(messagehdlr, file, "  [continuous]");
+         break;
+      case SCIP_VARTYPE_IMPLINT:
+      default:
+         SCIPerrorMessage("unknown variable type\n");
+         SCIPABORT();
+         return SCIP_ERROR; /*lint !e527*/
    }
-   else
-   {
-      /* type of variable */
-      switch( SCIPvarGetType(var) )
-      {
-         case SCIP_VARTYPE_BINARY:
-            SCIPmessageFPrintInfo(messagehdlr, file, "  [binary]");
-            break;
-         case SCIP_VARTYPE_INTEGER:
-            SCIPmessageFPrintInfo(messagehdlr, file, "  [integer]");
-            break;
-         case SCIP_VARTYPE_CONTINUOUS:
-            SCIPmessageFPrintInfo(messagehdlr, file, "  [continuous]");
-            break;
-         case SCIP_VARTYPE_IMPLINT:
-         default:
-            SCIPerrorMessage("unknown variable type\n");
-            SCIPABORT();
-            return SCIP_ERROR; /*lint !e527*/
-      }
-   }
-
    /* name */
    SCIPmessageFPrintInfo(messagehdlr, file, " <%s>:", var->name);
 
@@ -3172,6 +3179,18 @@ SCIP_RETCODE SCIPvarPrint(
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
       return SCIP_ERROR; /*lint !e527*/
+   }
+
+   switch( SCIPvarGetImplType(var) )
+   {
+      case SCIP_VARIMPLTYPE_NONE:
+         break;
+      case SCIP_VARIMPLTYPE_WEAK:
+         SCIPmessageFPrintInfo(messagehdlr, file, ", implied:weak");
+         break;
+      case SCIP_VARIMPLTYPE_STRONG:
+         SCIPmessageFPrintInfo(messagehdlr, file, ", implied:strong");
+         break;
    }
 
    SCIPmessageFPrintInfo(messagehdlr, file, "\n");
