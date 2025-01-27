@@ -10,6 +10,11 @@ if(POLICY CMP0091)
    cmake_policy(SET CMP0091 NEW)
 endif()
 
+# Avoid warnings about removed FindBoost.cmake until our minimum required version is >= 3.30.
+if(POLICY CMP0167)
+   cmake_policy(SET CMP0167 NEW)
+endif()
+
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
 
