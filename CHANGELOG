@@ -38,6 +38,7 @@ Miscellaneous
 
 - the output precision for writing CIP/OPB files has been increased at several places for nonlinear constraints
 - the solchecker tool now also supports SCIP solutions without unknown or infinite values
+- generate an error for MPS files that use linear constraints in several indicator constraints
 
 Known bugs
 ----------
