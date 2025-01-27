@@ -2972,6 +2972,13 @@ SCIP_RETCODE SCIPsolveConcurrent(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* as long as no exact copy functionality is available, concurrent solving is not possible */
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("Concurrent solve not implemented for exact solving mode.\n");
+      return SCIP_NOTIMPLEMENTED;
+   }
+
    SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", (int)SCIP_CLOCKTYPE_WALL) );
 
    minnthreads = scip->set->parallel_minnthreads;
