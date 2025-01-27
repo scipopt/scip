@@ -2746,6 +2746,10 @@ SCIP_RETCODE doCopy(
 
    /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
+
+   /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+    * handler is in place to perform a final repair step
+    */
    SCIP_CALL( SCIPsetBoolParam(targetscip, "exact/enabled", FALSE) );
 
    /* restore original quiet state */
@@ -2855,6 +2859,8 @@ SCIP_RETCODE doCopy(
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -2949,6 +2955,8 @@ SCIP_RETCODE SCIPcopy(
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -3033,6 +3041,8 @@ SCIP_RETCODE SCIPcopyConsCompression(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -3116,6 +3126,8 @@ SCIP_RETCODE SCIPcopyOrig(
  *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

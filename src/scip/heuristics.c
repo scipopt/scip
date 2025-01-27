@@ -969,15 +969,26 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    assert(varmap != NULL);
    assert(success != NULL);
 
-   SCIP_CALL( SCIPsetBoolParam(subscip, "exact/enabled", FALSE) );
-
    if( uselprows )
    {
-
+      SCIP_Bool msghdlrquiet;
       char probname[SCIP_MAXSTRLEN];
 
       /* copy all plugins */
       SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+
+      /* store the quiet state of the message handler and explicitly suppress output when copying parameters */
+      msghdlrquiet = SCIPmessagehdlrIsQuiet(subscip->messagehdlr);
+      SCIPsetMessagehdlrQuiet(subscip, TRUE);
+      SCIP_CALL( SCIPcopyParamSettings(sourcescip, subscip) );
+
+      /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+       * handler is in place to perform a final repair step
+       */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "exact/enabled", FALSE) );
+
+      /* restore original quiet state */
+      SCIPsetMessagehdlrQuiet(subscip, msghdlrquiet);
 
       /* set name to the original problem name and possibly add a suffix */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_%s", SCIPgetProbName(sourcescip), suffix);
@@ -987,9 +998,6 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
 
       /* copy all variables */
       SCIP_CALL( SCIPcopyVars(sourcescip, subscip, varmap, NULL, fixedvars, fixedvals, nfixedvars, TRUE) );
-
-      /* copy parameter settings */
-      SCIP_CALL( SCIPcopyParamSettings(sourcescip, subscip) );
 
       /* create linear constraints from LP rows of the source problem */
       SCIP_CALL( createRows(sourcescip, subscip, varmap) );

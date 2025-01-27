@@ -158,6 +158,7 @@ SCIP_RETCODE setupProbingSCIP(
    /* copy SCIP instance */
    SCIP_CALL( SCIPcopyConsCompression(scip, *probingscip, *varmapfw, NULL, "feaspump", NULL, NULL, 0, FALSE, FALSE,
          FALSE, TRUE, success) );
+   assert(!SCIPisExactSolve(*probingscip));
 
    if( copycuts )
    {
@@ -219,7 +220,12 @@ SCIP_RETCODE setupSCIPparamsStage3(
    SCIP*                 probingscip         /**< sub-SCIP data structure  */
    )
 {
+   /**@todo restore the copied settings that were changed in setupSCIPparamsFP2() without copying all parameters, since
+    *       this triggers an error message that exact/enabled cannot be changed in or after problem creatin stage
+    */
    SCIP_CALL( SCIPcopyParamSettings(scip, probingscip) );
+   assert(!SCIPisExactSolve(probingscip));
+
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(probingscip, "misc/catchctrlc", FALSE) );
 
