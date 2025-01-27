@@ -2995,17 +2995,18 @@ SCIP_RETCODE priceAndCutLoop(
             stat->nseparounds, maxseparounds, nsepastallrounds, maxsepastallrounds, mustprice, mustsepa, delayedsepa, *propagateagain);
       }
 
-      /* in exact solving mode, solve the LP once more, now allowing an exact solve if desired; we prohibited this before, since
-         solving the lp exactly after each separation round is prohibitively slow */
+      /* in exact solving mode, solve the LP once more after all separation rounds are finished, now allowing one exact
+       * LP solve if desired (solving the LP exactly after each separation round can be prohibitively slow and is
+       * therefore disabled)
+       */
       if( set->exact_enabled && !mustsepa )
       {
          lp->solved = FALSE;
          SCIPlpExactAllowExactSolve(lp->lpexact, set, TRUE);
-         /* resolve LP */
          SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr, blkmem, stat, eventqueue, eventfilter, transprob,
             set->lp_iterlim, FALSE, FALSE, FALSE, lperror) );
-	 if( !(*lperror) && !tree->focusnodehaslp )
-	    tree->focusnodehaslp = TRUE;
+         if( !(*lperror) )
+            SCIPtreeSetFocusNodeLP(tree, TRUE);
       }
    }
 
