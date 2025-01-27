@@ -58,6 +58,7 @@
 #include "scip/pub_var.h"
 #include "scip/reader_fzn.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -4772,6 +4773,18 @@ SCIP_DECL_READERREAD(readerReadFzn)
 {  /*lint --e{715}*/
    FZNINPUT fzninput;
    int i;
+
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of flatzinc format in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
 
    /* initialize FZN input data */
    fzninput.file = NULL;

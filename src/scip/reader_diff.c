@@ -48,6 +48,7 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/reader_diff.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -1021,6 +1022,15 @@ SCIP_RETCODE SCIPreadDiff(
 
    assert(scip != NULL);
    assert(reader != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of diff format in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
 
    /* initialize LP input data */
    lpinput.file = NULL;
