@@ -8587,9 +8587,18 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    for (j = 0; j < nvars; ++j)
    {
       if ( ! SCIPvarIsIntegral(vars[j]) || ! SCIPisIntegral(scip, vals[j]) )
-      {
          slackvartype = SCIP_VARTYPE_CONTINUOUS;
-         break;
+
+      /* Check whether variable is marked to not be multi-aggregated: this should only be the case for slack variables
+       * added by the indicator constraint handler. */
+      if ( SCIPdoNotMultaggrVar(scip, vars[j]) )
+      {
+         /* double check name */
+         if ( strncmp(SCIPvarGetName(vars[j]), "indslack", 8) == 0 )
+         {
+            SCIPerrorMessage("Linear constraint <%s> already used in an indicator constraint.\n", SCIPconsGetName(lincons));
+            return SCIP_INVALIDDATA;
+         }
       }
    }
 
