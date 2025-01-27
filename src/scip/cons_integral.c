@@ -117,8 +117,8 @@ static
 SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
-   int nbinvars;
-   int nintvars;
+   int nbin;
+   int nint;
    int i;
 
    assert(conshdlr != NULL);
@@ -132,9 +132,9 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
 
    *result = SCIP_FEASIBLE;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbin, &nint, NULL, NULL) );
 
-   int ninteger = nbinvars + nintvars + SCIPgetNBinImplVars(scip) + SCIPgetNIntImplVars(scip);
+   int ninteger = nbin + nint + SCIPgetNBinImplVars(scip) + SCIPgetNIntImplVars(scip);
 
    for( i = 0; i < ninteger; ++i )
    {
@@ -185,7 +185,6 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    int ninteger;
    int nbin;
    int nint;
-   int nimpl;
    int v;
 
    assert(conshdlr != NULL);
@@ -194,7 +193,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 
    SCIPdebugMsg(scip, "Check method of integrality constraint (checkintegrality=%u)\n", checkintegrality);
 
-   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, &nimpl, NULL) );
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, NULL, NULL) );
 
    *result = SCIP_FEASIBLE;
 
