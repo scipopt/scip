@@ -245,7 +245,7 @@ SCIP_RETCODE addFixedVarsConss(
    /* loop over all these variables and check if they are fixed to zero */
    for( v = 0; v < norigvars; ++v )
    {
-      assert(SCIPvarGetType(origvars[v]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(origvars[v]));
+      assert(SCIPvarGetType(origvars[v]) == SCIP_VARTYPE_BINARY);
 
       /* if the upper bound is smaller than 0.5 if follows due to the integrality that the binary variable is fixed to zero */
       if( SCIPvarGetUbLocal(origvars[v]) < 0.5 )

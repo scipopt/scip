@@ -902,7 +902,7 @@ SCIP_RETCODE createMipCpFormulation(
          /* construct variable name */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "job_%d_starts_%d", idx, i);
 
-         SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, 0.0, (SCIP_Real)lst, 0.0, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_WEAK,
+         SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, 0.0, (SCIP_Real)lst, 0.0, SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_STRONG,
                TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          SCIP_CALL( SCIPaddVar(scip, var) );

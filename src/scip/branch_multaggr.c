@@ -253,7 +253,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
 
          /* only integer and binary multi-aggregated variables are potential branching candidates */
          if( SCIPvarGetStatus(fixvars[i]) == SCIP_VARSTATUS_MULTAGGR && SCIPvarIsIntegral(fixvars[i])
-             && !SCIPvarIsImpliedIntegral(fixvars[i]) )
+            && !SCIPvarIsImpliedIntegral(fixvars[i]) )
          {
             fixvarssol = fixvarssols[i];
 
@@ -799,7 +799,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
             for( i = 0; i < nfixvars; i++ )
             {
                if( SCIPvarGetStatus(fixvars[i]) == SCIP_VARSTATUS_MULTAGGR && SCIPvarIsIntegral(fixvars[i])
-                && !SCIPvarIsImpliedIntegral(fixvars[i]) )
+                  && !SCIPvarIsImpliedIntegral(fixvars[i]) )
                {
                   branchruledata->nmultaggrvars += 1;
                }

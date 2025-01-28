@@ -1525,7 +1525,7 @@ SCIP_RETCODE tightenDualproof(
          assert(!SCIPsetIsZero(set, val));
 
          /* skip integral variables */
-         if( SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(vars[idx]) )
+         if( SCIPvarIsIntegral(vars[idx]) && !SCIPvarIsImpliedIntegral(vars[idx]) )
          {
             i++;
             continue;

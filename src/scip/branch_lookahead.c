@@ -896,8 +896,8 @@ SCIP_RETCODE level2dataGetResult(
    /* we branched twice on the same variable; the result cannot be stored already */
    if( data->branchvar1 == data->branchvar2 )
    {
-      assert(SCIPvarIsImpliedIntegral(SCIPgetVars(scip)[data->branchvar1]) ||
-             SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY
+            || SCIPvarIsImpliedIntegral(SCIPgetVars(scip)[data->branchvar1]));
       return SCIP_OKAY;
    }
 
@@ -941,8 +941,8 @@ SCIP_RETCODE level2dataStoreResult(
    /* we branched twice on the same variable; the result cannot be re-used lated */
    if( data->branchvar1 == data->branchvar2 )
    {
-      assert(SCIPvarIsImpliedIntegral(SCIPgetVars(scip)[data->branchvar1]) ||
-                SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(SCIPgetVars(scip)[data->branchvar1]) != SCIP_VARTYPE_BINARY
+            || SCIPvarIsImpliedIntegral(SCIPgetVars(scip)[data->branchvar1]));
       return SCIP_OKAY;
    }
 
