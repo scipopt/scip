@@ -42,4 +42,4 @@ for f in `git ls-files` ; do
 
 done
 
-sed -i "s/\([0-9]*\)-[0-9]* by Zuse Institute Berlin (ZIB)/\1-$NEWYEAR by Zuse Institute Berlin (ZIB)/" doc/scipfooter.html applications/*/doc/footer.html
+sed -i "s/\([0-9]*\)-[0-9]* by Zuse Institute Berlin (ZIB)/\1-$NEWYEAR by Zuse Institute Berlin (ZIB)/" doc/scipfooter.html
