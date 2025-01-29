@@ -3362,7 +3362,7 @@ SCIP_RETCODE nlpCalcFracVars(
          assert(primsol < SCIP_INVALID);
 
          /* consider only binary and integer variables */
-         if( SCIPvarIsImpliedIntegral(var) || !SCIPvarIsIntegral(var) )
+         if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
             continue;
 
          /* ignore fixed variables (due to numerics, it is possible, that the NLP solution of a fixed integer variable
