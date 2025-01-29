@@ -235,7 +235,7 @@ SCIP_RETCODE tcliquegraphAddNode(
    int i;
 
    assert(tcliquegraph != NULL);
-   assert(!SCIPvarIsImpliedIntegral(var) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var));
    assert(SCIPvarIsActive(var));
    assert(nodeidx != NULL);
 
@@ -405,7 +405,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
          SCIP_VAR* var;
 
          /* implicit integer and integer variables are currently not present in the constructed tclique graph */
-         if( SCIPvarIsImpliedIntegral(vars[u]) || SCIPvarGetType(vars[u]) != SCIP_VARTYPE_BINARY )
+         if( SCIPvarGetType(vars[u]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(vars[u]) )
             continue;
 
          var = (vals[u] ? vars[u] : SCIPvarGetNegatedVar(vars[u]));
@@ -425,7 +425,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
          unsigned int colmask;
 
          /* implicit integer and integer variables are currently not present in the constructed tclique graph */
-         if( SCIPvarIsImpliedIntegral(vars[u]) || SCIPvarGetType(vars[u]) != SCIP_VARTYPE_BINARY )
+         if( SCIPvarGetType(vars[u]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(vars[u]) )
             continue;
 
          nu = varids[u];
@@ -438,7 +438,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
             unsigned int mask;
 
             /* implicit integer and integer variables are currently not present in the constructed tclique graph */
-            if( SCIPvarIsImpliedIntegral(vars[v]) || SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY )
+            if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(vars[v]) )
                continue;
 
             nv = varids[v];
