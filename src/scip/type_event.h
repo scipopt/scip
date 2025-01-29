@@ -131,7 +131,7 @@ extern "C" {
 #define SCIP_EVENTTYPE_DOMCHANGED     (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_HOLECHANGED)
 #define SCIP_EVENTTYPE_VARCHANGED     (SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_OBJCHANGED \
                                        | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_DOMCHANGED | SCIP_EVENTTYPE_IMPLADDED \
-                                       | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED )
+                                       | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED)
 #define SCIP_EVENTTYPE_VAREVENT       (SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARCHANGED | SCIP_EVENTTYPE_TYPECHANGED | SCIP_EVENTTYPE_IMPLTYPECHANGED)
 
 /* event masks for node events */
@@ -165,7 +165,7 @@ typedef struct SCIP_EventBdChg SCIP_EVENTBDCHG;   /**< data for bound change eve
 typedef struct SCIP_EventHole SCIP_EVENTHOLE;     /**< data for domain hole events */
 typedef struct SCIP_EventImplAdd SCIP_EVENTIMPLADD; /**< data for implication added events */
 typedef struct SCIP_EventTypeChg SCIP_EVENTTYPECHG; /**< data for variable type change events */
-typedef struct SCIP_EventImplTypeChg SCIP_EVENTTYPEIMPLCHG; /**< data for implied integer variable type change events */
+typedef struct SCIP_EventImplTypeChg SCIP_EVENTTYPEIMPLCHG; /**< data for variable implied type change events */
 typedef struct SCIP_EventRowAddedSepa SCIP_EVENTROWADDEDSEPA; /**< data for row addition to sepastorage events */
 typedef struct SCIP_EventRowDeletedSepa SCIP_EVENTROWDELETEDSEPA; /**< data for row deletion from sepastorage events */
 typedef struct SCIP_EventRowAddedLP SCIP_EVENTROWADDEDLP; /**< data for row addition to LP events */
