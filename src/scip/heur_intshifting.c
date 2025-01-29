@@ -228,8 +228,7 @@ SCIP_RETCODE updateActivities(
    assert(maxactivities != NULL);
    assert(nviolrows != NULL);
    assert(0 <= *nviolrows && *nviolrows <= nlprows);
-   assert(!SCIPvarIsImpliedIntegral(var) &&
-         (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER) );
+   assert(SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var));
 
    delta = newsolval - oldsolval;
    col = SCIPvarGetCol(var);
@@ -356,8 +355,7 @@ SCIP_RETCODE selectShifting(
       solval = SCIPgetSolVal(scip, sol, var);
 
       /* only accept integer variables */
-      if( SCIPvarIsImpliedIntegral(var) ||
-         (SCIPvarGetType(var) != SCIP_VARTYPE_BINARY && SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER ) )
+      if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
          continue;
 
       isfrac = !SCIPisFeasIntegral(scip, solval);
@@ -475,8 +473,7 @@ SCIP_RETCODE selectEssentialRounding(
    for( v = 0; v < nlpcands; ++v )
    {
       var = lpcands[v];
-      assert(!SCIPvarIsImpliedIntegral(var) &&
-             (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER));
+      assert(SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var));
 
       solval = SCIPgetSolVal(scip, sol, var);
       if( !SCIPisFeasIntegral(scip, solval) )
@@ -827,7 +824,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
             SCIP_VAR* var;
 
             var = SCIPcolGetVar(cols[c]);
-            if(!SCIPvarIsImpliedIntegral(var) && ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ) )
+            if( SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var) )
             {
                SCIP_Real act;
 
@@ -986,8 +983,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          break;
       }
 
-      assert(!SCIPvarIsImpliedIntegral(shiftvar) &&
-             (SCIPvarGetType(shiftvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(shiftvar) == SCIP_VARTYPE_INTEGER));
+      assert(SCIPvarIsIntegral(shiftvar) && !SCIPvarIsImpliedIntegral(shiftvar));
 
       SCIPdebugMsg(scip, "intshifting heuristic:  -> shift var <%s>[%g,%g], type=%d, oldval=%g, newval=%g, obj=%g\n",
          SCIPvarGetName(shiftvar), SCIPvarGetLbGlobal(shiftvar), SCIPvarGetUbGlobal(shiftvar), SCIPvarGetType(shiftvar),
