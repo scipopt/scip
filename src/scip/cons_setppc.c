@@ -7360,8 +7360,8 @@ SCIP_DECL_NONLINCONSUPGD(nonlinUpgdSetppc)
       return SCIP_OKAY;
 
    /* check variable types */
-   if( ( SCIPvarIsImpliedIntegral(bilinvars[0]) || SCIPvarGetType(bilinvars[0]) != SCIP_VARTYPE_BINARY ||
-         SCIPvarIsImpliedIntegral(bilinvars[1]) || SCIPvarGetType(bilinvars[1]) != SCIP_VARTYPE_BINARY ) )
+   if( SCIPvarGetType(bilinvars[0]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(bilinvars[0])
+      || SCIPvarGetType(bilinvars[1]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(bilinvars[1]) )
       return SCIP_OKAY;
 
    /* get data of quadratic terms */
