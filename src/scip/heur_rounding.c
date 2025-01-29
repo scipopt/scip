@@ -254,7 +254,7 @@ SCIP_RETCODE selectRounding(
       col = rowcols[c];
       var = SCIPcolGetVar(col);
 
-      if( !SCIPvarIsImpliedIntegral(var) && SCIPvarIsIntegral(var) )
+      if( SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var) )
       {
          solval = SCIPgetSolVal(scip, sol, var);
 
@@ -375,7 +375,7 @@ SCIP_RETCODE selectEssentialRounding(
    for( v = 0; v < nlpcands; ++v )
    {
       var = lpcands[v];
-      assert(!SCIPvarIsImpliedIntegral(var) && SCIPvarIsIntegral(var));
+      assert(SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var));
 
       solval = SCIPgetSolVal(scip, sol, var);
       if( !SCIPisFeasIntegral(scip, solval) )
