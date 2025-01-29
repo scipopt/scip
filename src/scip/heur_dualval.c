@@ -1165,7 +1165,7 @@ SCIP_RETCODE createSubSCIP(
 
                (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "relax_%s_neg3", SCIPconsGetName(linindicons));
                SCIP_CALL( SCIPcreateVar(heurdata->subscip, &slackvarneg, varname, 0.0, SCIPinfinity(heurdata->subscip),
-                                        heurdata->lambdaslack * 100 + varobjective, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+                     heurdata->lambdaslack * 100 + varobjective, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(heurdata->subscip, slackvarneg) );
 
                /* make a copy of the indicator to relax it if this parameter is set true */
