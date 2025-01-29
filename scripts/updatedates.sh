@@ -27,14 +27,14 @@ for f in `git ls-files` ; do
 
     # skip symbolic links
     if `test -L $f`; then
-	echo "Skipping symbolic link $f"
-	continue
+        echo "Skipping symbolic link $f"
+        continue
     fi
 
     # process files with ZIB copyright string that do not include current year
     if grep -o 'Copyright (c) [0-9]*-[0-9]* Zuse Institute Berlin (ZIB)' $f | grep -vq $NEWYEAR ; then
-	echo "Updating $f"
-	sed -i "s/Copyright (c) \([0-9]*\)-[0-9]* Zuse Institute Berlin (ZIB)/Copyright (c) \1-$NEWYEAR Zuse Institute Berlin (ZIB)/g" $f
+        echo "Updating $f"
+        sed -i "s/Copyright (c) \([0-9]*\)-[0-9]* Zuse Institute Berlin (ZIB)/Copyright (c) \1-$NEWYEAR Zuse Institute Berlin (ZIB)/g" $f
     fi
 
     # print matches for lines that have "Copyright" and "Zuse" but are not a valid ZIB copyright
@@ -42,4 +42,4 @@ for f in `git ls-files` ; do
 
 done
 
-sed -i "s/\([0-9]*\)-[0-9]* by Zuse Institute Berlin (ZIB)/\1-$NEWYEAR by Zuse Institute Berlin (ZIB)/" doc/scipfooter.html applications/*/doc/footer.html
+sed -i "s/\([0-9]*\)-[0-9]* by Zuse Institute Berlin (ZIB)/\1-$NEWYEAR by Zuse Institute Berlin (ZIB)/" doc/scipfooter.html
