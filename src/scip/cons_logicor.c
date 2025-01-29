@@ -1324,7 +1324,8 @@ SCIP_RETCODE mergeMultiples(
       /* check variable type, either pure binary or an integer/implicit integer variable with 0/1 bounds */
       assert((pos < nbinvars && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var))
 	 || (SCIPvarIsBinary(var) &&
-            ((pos >= nbinvars && pos < nbinvars + nintvars && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER) ||
+            ((pos >= nbinvars && pos < nbinvars + nintvars && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER
+            && !SCIPvarIsImpliedIntegral(var)) ||
                (pos >= nbinvars + nintvars && pos < nbinvars + nintvars + nimplvars &&
                   SCIPvarIsImpliedIntegral(var)))));
 
