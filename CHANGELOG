@@ -46,42 +46,33 @@ Miscellaneous
 Fixed bugs
 ----------
 
-- apply same feasibility definition in PaPILO as SCIP to avoid numerical inconsistencies
+- apply same feasibility definition in PaPILO as in SCIP to avoid numerical inconsistencies
 - check variable cancellation in SCIPvarAddVlb() and SCIPvarAddVub() to avert wrong infeasibility
-- SCIPfreeReoptSolve now also clears the partial solutions
+- SCIPfreeReoptSolve() now also clears partial solutions
 - fixed bug in calculation of "fractionality score" for spatial branching candidates in cons_nonlinear
 - fixed bug with installing symmetry dialog in sub-SCIPs
-- add copy callbacks for default plugins presolver dualagg, presolver redvub, branchrule lookahead, branchrule cloud, heuristic dualval, heuristic repair, propagator nlobbt, separator gauge, and separator convexproj missing in SCIPsetCopyPlugins()
-- respect maximal round setting of separation by running remaining delayed separators in last round
-- replace terms consistently in applyFixings() of cons_linear.c to handle infinite aggregations
-
-Unit tests
-----------
-
-Testing
--------
+- added copy callbacks for presolvers dualagg and redvub, branching rules lookahead and cloud, primal heuristics dualval and repair, propagator nlobbt, and separators gauge and convexproj
+- respect maximal separation rounds setting by running remaining delayed separators in last round
+- replace terms consistently in applyFixings() of cons_linear to handle infinite aggregations
 
 Build system
 ------------
 
 ### Cmake
 
-- fix SCIP Optimization Suite build with -DSYM=(s)bliss and bliss being downloaded and build during configuration by cmake
+- fix SCIP Optimization Suite build with -DSYM=(s)bliss and bliss being downloaded and built during configuration by cmake
 - fix use of a bliss cmake installation (from https://github.com/scipopt/bliss) specified via BLISS_DIR if -DSYM=(s)bliss
 
 ### Makefile
 
-- the check/solchecker build now finds a GMP installation by Homebrew on macOS/arm64
+- the check/solchecker build can now use also GMP installations by Homebrew on macOS/arm64
 
 Miscellaneous
 -------------
 
 - the output precision for writing CIP/OPB files has been increased at several places for nonlinear constraints
 - the solchecker tool now also supports SCIP solutions without unknown or infinite values
-- generate an error for MPS files that use linear constraints in several indicator constraints
-
-Known bugs
-----------
+- generate an error if the same linear constraint is used by several indicator constraints
 
 @section RN920 SCIP 9.2.0
 *************************
