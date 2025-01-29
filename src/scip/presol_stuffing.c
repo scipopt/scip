@@ -286,8 +286,8 @@ SCIP_RETCODE singletonColumnStuffing(
                      break;
 
                   assert(SCIPmatrixGetColNNonzs(matrix, idx) == 1);
-                  assert(!SCIPvarIsIntegral(var) );
-                  assert((SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1);
+                  assert(!SCIPvarIsIntegral(var));
+                  assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1);
                   assert(colcoeffs[k] >= 0);
 
                   /* calculate the change in the row activities if this variable changes
