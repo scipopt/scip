@@ -141,7 +141,7 @@ SCIP_RETCODE compensateVarLock(
    assert(nfixings != NULL);
 
    /* the variable for compensation should not be a compensation variable itself */
-   assert(!(SCIPmatrixGetColNNonzs(matrix,col) == 1 && !SCIPvarIsIntegral(SCIPmatrixGetVar(matrix,col))));
+   assert(SCIPmatrixGetColNNonzs(matrix, col) != 1 || SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, col)));
 
    /* try lock compensation only if minimum one singleton continuous variable is present */
    singleton = FALSE;
@@ -151,11 +151,9 @@ SCIP_RETCODE compensateVarLock(
    {
       var = SCIPmatrixGetVar(matrix, *rowpnt);
 
-      if( SCIPmatrixGetColNNonzs(matrix, *rowpnt) == 1 &&
-         !SCIPvarIsIntegral(var) &&
-         SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNUplocks(matrix, *rowpnt) &&
-         SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, *rowpnt)
-         )
+      if( SCIPmatrixGetColNNonzs(matrix, *rowpnt) == 1 && !SCIPvarIsIntegral(var)
+         && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNUplocks(matrix, *rowpnt)
+         && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, *rowpnt) )
       {
          /* minimal one valid compensation variable is present in this row */
          singleton = TRUE;
@@ -268,10 +266,9 @@ SCIP_RETCODE compensateVarLock(
             }
          }
       }
-      else if( SCIPmatrixGetColNNonzs(matrix, colidx) == 1 &&
-         SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNUplocks(matrix, colidx) &&
-         SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, colidx) &&
-         !SCIPvarIsIntegral(var) )
+      else if( SCIPmatrixGetColNNonzs(matrix, colidx) == 1 && !SCIPvarIsIntegral(var)
+         && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNUplocks(matrix, colidx)
+         && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, colidx) )
       {
          /* this is singleton continuous variable and
           * thus a valid compensation candidate
