@@ -323,7 +323,7 @@ SCIP_RETCODE heurExec(
    for( i = 0; i < SCIPgetNBinVars(scip); ++i )
    {
       SCIP_VAR* var = SCIPgetVars(scip)[i];
-      assert(!SCIPvarIsImpliedIntegral(var) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var));
 
       if( !SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
          binvars[nbinvars++] = var;
