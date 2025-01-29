@@ -1357,7 +1357,7 @@ SCIP_RETCODE determineBestBounds(
    for(i = 0; i < ncols; i++)
    {
       var = SCIPmatrixGetVar(matrix, i);
-      if( !SCIPvarIsIntegral(var) || !SCIPvarIsImpliedIntegral(var) )
+      if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
       {
          SCIP_Real objval = SCIPvarGetObj(var);
          int cidx = colmap[i];
@@ -1641,8 +1641,8 @@ SCIP_RETCODE dualBoundStrengthening(
    {
       var = SCIPmatrixGetVar(matrix, i);
 
-      if( SCIPmatrixUplockConflict(matrix, i) || SCIPmatrixDownlockConflict(matrix, i) ||
-         (SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var)) )
+      if( SCIPmatrixUplockConflict(matrix, i) || SCIPmatrixDownlockConflict(matrix, i)
+         || ( SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var) ) )
       {
          /* we don't care about integral variables or variables that have conflicting locks */
          isubimplied[i] = FALSE;
@@ -2000,8 +2000,8 @@ SCIP_RETCODE dualBoundStrengthening(
 
       for( i = 0; i < nimplubvars; i++ )
       {
-         assert(!SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, implubvars[i])) ||
-            SCIPvarIsImpliedIntegral(SCIPmatrixGetVar(matrix, implubvars[i])));
+         assert(!SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, implubvars[i]))
+               || SCIPvarIsImpliedIntegral(SCIPmatrixGetVar(matrix, implubvars[i])));
          calcMinColActivity(scip, matrix, implubvars[i], lbdual, ubdual, mincolact, mincolactinf);
       }
 
