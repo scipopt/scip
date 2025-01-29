@@ -1107,8 +1107,8 @@ SCIP_RETCODE updatePseudocost(
                         nupdates++;
 
                         /* check for valid pseudocost updates for integer variables */
-                        if( isPseudocostUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval, updateintegers, updatecontinuous) &&
-                           SCIPvarIsIntegral(var) )
+                        if( isPseudocostUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval, updateintegers, updatecontinuous)
+                           && SCIPvarIsIntegral(var) )
                         {
                            var->pseudocostflag = PSEUDOCOST_UPDATE; /*lint !e641*/
                            nvalidupdates++;
