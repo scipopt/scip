@@ -205,7 +205,7 @@ Problem<SCIP_Real> buildProblem(
       builder.setColLbInf(i, SCIPisInfinity(scip, -lb));
       builder.setColUbInf(i, SCIPisInfinity(scip, ub));
 #if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
-      if ( SCIPvarIsImpliedIntegral(var) )
+      if( SCIPvarIsImpliedIntegral(var) )
          builder.setColImplInt(i, TRUE);
       else
          builder.setColIntegral(i, SCIPvarIsIntegral(var));
