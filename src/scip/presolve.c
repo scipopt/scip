@@ -639,7 +639,7 @@ void collectNonBinaryImplicationData(
 {
    assert(scip != NULL);
    assert(var != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var) );
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var));
    assert(varidx >= 0);
    assert(pos >= 0);
    assert(bounds != NULL);
@@ -1143,7 +1143,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
        * we only check binary to non-binary implications if we can detect further implications which either lead to
        * global reductions or to redundant set variables
        */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var) && ((usebin && implbinvarsexist) || usenonbin) )
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(var) && ( usenonbin || ( usebin && implbinvarsexist ) ) )
       {
          collectNonBinaryImplicationData(scip, var, varidx, v, *nredvars, value, bounds, boundtypes, newbounds, counts,
             countnonzeros, &ncountnonzeros, issetvar, nprobvars, &foundbin, &foundnonbin, implidx, &nimplidx, lastbounds);
@@ -1153,7 +1153,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
        * we only check the variable bounds if we can detect further implications which either lead to global reductions
        * or to redundant set variables
        */
-      else if( (SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var)) && ((usebin && implbinvarsexist) || usenonbin) )
+      else if( ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) ) && ( usenonbin || ( usebin && implbinvarsexist ) ) )
       {
          collectNonBinaryVBoundData(scip, var, varidx, v, *nredvars, bounds, boundtypes, newbounds, counts, countnonzeros,
             &ncountnonzeros, issetvar, nprobvars, &foundbin, &foundnonbin, implidx, &nimplidx, lastbounds);
