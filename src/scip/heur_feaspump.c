@@ -523,8 +523,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
       if( consvars[nconsvars] == NULL )
          continue;
       SCIP_CALL( SCIPchgVarObj(probingscip, consvars[nconsvars], consvals[nconsvars]) );
-      assert( SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY &&
-             !SCIPvarIsImpliedIntegral(consvars[nconsvars]) );
+      assert( SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(consvars[nconsvars]) );
       ++nconsvars;
    }
 
