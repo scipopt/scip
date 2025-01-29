@@ -398,7 +398,7 @@ SCIP_RETCODE dfs(
       /* the current node was completely handled, remove it from the stack */
       stacksize--;
 
-      if( (maxstacksize > 1) && SCIPvarIsIntegral(startvar))
+      if( maxstacksize > 1 && SCIPvarIsIntegral(startvar) )
       {
          /* store node in the sorted nodes array */
          dfsnodes[(*ndfsnodes)] = curridx;
