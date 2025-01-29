@@ -335,7 +335,7 @@ SCIP_RETCODE selectShifting(
       assert(!SCIPisZero(scip, val));
       solval = SCIPgetSolVal(scip, sol, var);
 
-      isinteger = ( SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var) );
+      isinteger = (SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var));
       isfrac = (isinteger && !SCIPisFeasIntegral(scip, solval));
       increase = (direction * val > 0.0);
 
@@ -906,11 +906,9 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
       SCIP_CALL( SCIPsetSolVal(scip, sol, shiftvar, newsolval) );
 
       /* update fractionality counter and minimal objective value possible after shifting remaining variables */
-      oldsolvalisfrac = !SCIPisFeasIntegral(scip, oldsolval)
-         && ( SCIPvarIsIntegral(shiftvar) && !SCIPvarIsImpliedIntegral(shiftvar) );
+      oldsolvalisfrac = (!SCIPisFeasIntegral(scip, oldsolval) && SCIPvarIsIntegral(shiftvar) && !SCIPvarIsImpliedIntegral(shiftvar));
       obj = SCIPvarGetObj(shiftvar);
-      if( (!SCIPvarIsImpliedIntegral(shiftvar) && SCIPvarIsIntegral(shiftvar) )
-         && oldsolvalisfrac )
+      if( SCIPvarIsIntegral(shiftvar) && !SCIPvarIsImpliedIntegral(shiftvar) && oldsolvalisfrac )
       {
          assert(SCIPisFeasIntegral(scip, newsolval));
          nfrac--;
