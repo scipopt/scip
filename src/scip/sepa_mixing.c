@@ -317,7 +317,7 @@ SCIP_RETCODE separateCuts(
       int j;
 
       var = vars[i];
-      assert(SCIPvarIsImpliedIntegral(var) || SCIPvarGetType(var) != SCIP_VARTYPE_BINARY );
+      assert( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) );
 
       if( SCIPvarGetProbindex(var) < 0 )
          continue;
