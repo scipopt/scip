@@ -638,7 +638,7 @@ SCIP_RETCODE aggregation(
          newub = weight1 * SCIPvarGetLbGlobal(vars[colidx1]) + SCIPvarGetUbGlobal(vars[colidx2]);
    }
 
-   newvartype = !SCIPvarIsIntegral(aggregatedvar) ? SCIP_VARTYPE_CONTINUOUS : SCIP_VARTYPE_INTEGER;
+   newvartype = SCIPvarIsIntegral(aggregatedvar) ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_CONTINUOUS;
    newvarimpltype = SCIPvarIsImpliedIntegral(aggregatedvar) ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE;
 
    lhs = SCIPvarGetLbGlobal(vars[colidx2]);
