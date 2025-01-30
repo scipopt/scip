@@ -1017,21 +1017,19 @@ SCIP_RETCODE copyVars(
       {
 #ifndef NDEBUG
          if( SCIPvarIsImpliedIntegral(sourcevars[i]) )
-         {
             ++nrelaxonlyimplvars;
-         }
          else
          {
             switch( SCIPvarGetType(sourcevars[i]) )
             {
                case SCIP_VARTYPE_BINARY:
-                  nrelaxonlybinvars++;
+                  ++nrelaxonlybinvars;
                   break;
                case SCIP_VARTYPE_INTEGER:
-                  nrelaxonlyintvars++;
+                  ++nrelaxonlyintvars;
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
-                  nrelaxonlycontvars++;
+                  ++nrelaxonlycontvars;
                   break;
                case SCIP_VARTYPE_IMPLINT:
                default:
@@ -1102,21 +1100,19 @@ SCIP_RETCODE copyVars(
       for( i = 0; i < nsourcefixedvars; ++i )
       {
          if( SCIPvarIsImpliedIntegral(sourcefixedvars[i]) )
-         {
-            nfixedimplvars++;
-         }
+            ++nfixedimplvars;
          else
          {
             switch( SCIPvarGetType(sourcefixedvars[i]) )
             {
                case SCIP_VARTYPE_BINARY:
-                  nfixedbinvars++;
+                  ++nfixedbinvars;
                   break;
                case SCIP_VARTYPE_INTEGER:
-                  nfixedintvars++;
+                  ++nfixedintvars;
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
-                  nfixedcontvars++;
+                  ++nfixedcontvars;
                   break;
                case SCIP_VARTYPE_IMPLINT:
                default:
