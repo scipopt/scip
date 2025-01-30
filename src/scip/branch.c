@@ -921,6 +921,7 @@ void branchcandInsertPseudoCand(
    )
 {
    SCIP_VARTYPE vartype;
+   SCIP_VARIMPLTYPE impltype;
    int branchpriority;
 
    assert(branchcand != NULL);
@@ -929,6 +930,7 @@ void branchcandInsertPseudoCand(
    assert(branchcand->npseudocands <= branchcand->pseudocandssize);
 
    vartype = SCIPvarGetType(var);
+   impltype = SCIPvarGetImplType(var);
    branchpriority = SCIPvarGetBranchPriority(var);
 
    SCIPdebugMessage("inserting pseudo candidate <%s> of type %d and priority %d into candidate set at position %d (maxprio: %d)\n",
@@ -949,7 +951,7 @@ void branchcandInsertPseudoCand(
          insertpos = 0;
       }
       branchcand->npriopseudocands = 1;
-      if( SCIPvarIsImpliedIntegral(var) )
+      if( impltype != SCIP_VARIMPLTYPE_NONE )
       {
          branchcand->npriopseudobins = 0;
          branchcand->npriopseudoints = 0;
@@ -974,7 +976,7 @@ void branchcandInsertPseudoCand(
          insertpos = branchcand->npriopseudocands;
       }
       branchcand->npriopseudocands++;
-      if( !SCIPvarIsImpliedIntegral(var) && vartype != SCIP_VARTYPE_CONTINUOUS )
+      if( vartype != SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_NONE )
       {
          if( insertpos != branchcand->npriopseudobins + branchcand->npriopseudoints )
          {
@@ -1095,7 +1097,7 @@ void branchcandRemovePseudoCand(
    if( freepos < branchcand->npriopseudobins + branchcand->npriopseudoints )
    {
       /* a binary or integer candidate of maximal priority was removed */
-      assert(!SCIPvarIsImpliedIntegral(var) && (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER));
+      assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(var));
       if( freepos != branchcand->npriopseudobins + branchcand->npriopseudoints - 1 )
       {
          branchcand->pseudocands[freepos] =
