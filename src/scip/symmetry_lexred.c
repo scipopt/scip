@@ -1421,7 +1421,7 @@ SCIP_RETCODE propagateStaticLexred(
                   row, lbi + centeri, fixvalj, &peekfeasible, peeklbs, peekubs, peekbdset) );
             if ( !peekfeasible )
             {
-               /* vari cannot take value lb1, so we increase the lower bound. (do not use lbi as this is a shifted domain bound) */
+               /* vari cannot take value lb1, so we increase the lower bound (do not use lbi as this is a shifted domain bound) */
                if( SCIPvarIsIntegral(vari) )
                {
                   /* discrete variable type: increase lower bound by 1. */
@@ -1470,7 +1470,7 @@ SCIP_RETCODE propagateStaticLexred(
                   row, ubi + centeri, fixvalj, &peekfeasible, peeklbs, peekubs, peekbdset) );
             if ( !peekfeasible )
             {
-               /* varj cannot take value ub2, so we decrease the upper or lower bound. (do not use ubj as this is a shifted domain bound)*/
+               /* varj cannot take value ub2, so we decrease the upper or lower bound (do not use ubj as this is a shifted domain bound) */
                if( SCIPvarIsIntegral(varj) )
                {
                   /* discrete variable type: decrease upper bound by 1. */
