@@ -2499,9 +2499,13 @@ SCIP_RETCODE varParse(
    /* If bound parsing failed, the last token it parsed would be the one for implied integrality */
    if( strncmp(token, "implied:", 8) == 0 )
    {
-      if( strncmp(&token[8], "weak", 4) == 0 )
+      /*We might parse this part again if the pointer was reset, so we need to check again. */
+      SCIPstrCopySection(strptr, ' ', '\0', token, SCIP_MAXSTRLEN, endptr);
+      strptr = *endptr;
+      SCIPstrCopySection(token, ' ', ' ', token, SCIP_MAXSTRLEN, endptr);
+      if( strncmp(*endptr, "weak", 4) == 0 )
          (*impltype) = SCIP_VARIMPLTYPE_WEAK;
-      else if ( strncmp(&token[8], "strong", 4) == 0 )
+      else if ( strncmp(*endptr, "strong", 6) == 0 )
          (*impltype) = SCIP_VARIMPLTYPE_STRONG;
       else
       {
@@ -3186,10 +3190,10 @@ SCIP_RETCODE SCIPvarPrint(
       case SCIP_VARIMPLTYPE_NONE:
          break;
       case SCIP_VARIMPLTYPE_WEAK:
-         SCIPmessageFPrintInfo(messagehdlr, file, ", implied:weak");
+         SCIPmessageFPrintInfo(messagehdlr, file, ", implied: weak");
          break;
       case SCIP_VARIMPLTYPE_STRONG:
-         SCIPmessageFPrintInfo(messagehdlr, file, ", implied:strong");
+         SCIPmessageFPrintInfo(messagehdlr, file, ", implied: strong");
          break;
    }
 
