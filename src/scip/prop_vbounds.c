@@ -3102,9 +3102,9 @@ SCIP_DECL_EVENTEXEC(eventExecVbound)
       return SCIP_OKAY;
 
    assert(getVarIndex(propdata->topoorder[idx]) < SCIPgetNVars(scip));
-   assert(( SCIPvarGetType(propdata->vars[getVarIndex(propdata->topoorder[idx])]) != SCIP_VARTYPE_BINARY
-          || SCIPvarIsImpliedIntegral(propdata->vars[getVarIndex(propdata->topoorder[idx])]) )
-      || (isIndexLowerbound(propdata->topoorder[idx]) == (SCIPeventGetNewbound(event) > 0.5)));
+   assert(SCIPvarGetType(propdata->vars[getVarIndex(propdata->topoorder[idx])]) != SCIP_VARTYPE_BINARY
+         || SCIPvarIsImpliedIntegral(propdata->vars[getVarIndex(propdata->topoorder[idx])])
+         || (isIndexLowerbound(propdata->topoorder[idx]) == (SCIPeventGetNewbound(event) > 0.5)));
 
    /* add the bound change to the propagation queue, if it is not already contained */
    if( !propdata->inqueue[idx] )
