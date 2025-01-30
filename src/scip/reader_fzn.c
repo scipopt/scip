@@ -4281,7 +4281,7 @@ SCIP_RETCODE writeFzn(
    int nintobjvars;                       /* number of discrete variables which have an integral objective coefficient */
    int c;                                 /* counter for the constraints */
    int v;                                 /* counter for the variables */
-   int ndiscretevars = nbinvars+nintvars;  /* number of discrete variables */
+   int ndiscretevars = nbinvars + nintvars; /* number of discrete variables */
    if(contimplintasint)
    {
       ndiscretevars = nimplvars;
@@ -4886,7 +4886,8 @@ SCIP_DECL_READERREAD(readerReadFzn)
 static
 SCIP_DECL_READERWRITE(readerWriteFzn)
 {  /*lint --e{715}*/
-   SCIP_READERDATA * readerdata = SCIPreaderGetData(reader);
+   SCIP_READERDATA* readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
 
    if( genericnames )
    {
