@@ -973,8 +973,8 @@ SCIP_RETCODE extractFlowRows(
                   return SCIP_INVALIDDATA;
             }
          }
-
       }
+
       if( i == rowlen )
       {
          /* Flow conservation constraints should always be a*x <= -d.
