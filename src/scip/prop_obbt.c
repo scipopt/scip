@@ -2674,10 +2674,9 @@ unsigned int getScore(
    /* score = ( nlcount * ( BASE - 1 ) / maxnlcount ) * BASE^2 + vartype * BASE + boundtype */
    score = (unsigned int) ( counter > 0 ? (OBBT_SCOREBASE * counter * ( OBBT_SCOREBASE - 1 )) / maxnlcount : 0 ); /*lint !e414*/
    if( SCIPvarIsImpliedIntegral(bound->var) )
-   {
       score += 2;
-   }
-   else{
+   else
+   {
       switch( SCIPvarGetType(bound->var) )
       {
          case SCIP_VARTYPE_INTEGER:
