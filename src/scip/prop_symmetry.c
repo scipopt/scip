@@ -2208,9 +2208,7 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
             ++propdata->nmovedpermvars;
 
             if ( SCIPvarIsImpliedIntegral(propdata->permvars[v]) )
-            {
                ++propdata->nmovedimplintpermvars;
-            }
             else
             {
                switch ( SCIPvarGetType(propdata->permvars[v]) )
@@ -4778,10 +4776,8 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
       leadervar = permvars[orbits[orbitbegins[orbitidx] + orbitleaderidx]];
 
       SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s of type ", orbitsize - 1, SCIPvarGetName(leadervar));
-      if( SCIPvarIsImpliedIntegral(leadervar) )
-      {
+      if ( SCIPvarIsImpliedIntegral(leadervar) )
          SCIPinfoMessage(scip, NULL, "IMPLICIT INTEGER\n");
-      }
       else
       {
          switch ( SCIPvarGetType(leadervar) )
@@ -4796,7 +4792,6 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
                SCIPinfoMessage(scip, NULL, "CONTINUOUS\n");
          } /*lint !e788*/
       }
-
    }
 
    /* (re-)allocate memory for Schreier Sims constraints and leaders */
@@ -5851,8 +5846,7 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
             /* only for situations where i and j are binary variables */
             assert( SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) ||
                     ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) && SCIPvarIsImpliedIntegral(propdata->permvars[j])) );
-            if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY ||
-                 SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
+            if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
                continue;
             assert( perm[j] == i );
             assert( checkSortedArraysHaveOverlappingEntry((void**) permvarssetppcconss[i], npermvarssetppcconss[i],
