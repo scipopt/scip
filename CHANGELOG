@@ -1,5 +1,21 @@
 @page RN9 Release notes for SCIP 9
 
+@section RN922 SCIP 9.2.2
+*************************
+
+Fixed bugs
+----------
+
+Build system
+------------
+
+### Cmake
+
+### Makefile
+
+Miscellaneous
+-------------
+
 @section RN921 SCIP 9.2.1
 *************************
 
