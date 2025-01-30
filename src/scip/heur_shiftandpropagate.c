@@ -201,7 +201,7 @@ SCIP_Bool varIsDiscrete(
    SCIP_Bool             impliscontinuous    /**< should implicit integer variables be counted as continuous? */
    )
 {
-   return SCIPvarIsIntegral(var) && ( !SCIPvarIsImpliedIntegral(var) || !impliscontinuous);
+   return SCIPvarIsIntegral(var) && ( !impliscontinuous || !SCIPvarIsImpliedIntegral(var) );
 }
 
 /** returns whether a given column is counted as discrete, depending on the parameter impliscontinuous */
@@ -1259,18 +1259,19 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
    col2 = (SCIP_COL*)elem2;
    var1 = SCIPcolGetVar(col1);
    var2 = SCIPcolGetVar(col2);
-   assert(var1 != NULL && var2 != NULL);
+   assert(var1 != NULL);
+   assert(var2 != NULL);
 
    vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var1);
    vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var2);
 
-   if(vartype1 > vartype2)
+   if( vartype1 < vartype2 )
+      return -1;
+   if( vartype1 > vartype2 )
       return +1;
-   if(vartype1 == vartype2)
-      return 0;
 
-   assert(vartype1 < vartype2);
-   return -1;
+   assert(vartype1 == vartype2);
+   return 0;
 }
 
 /*
@@ -1508,7 +1509,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       if( SCIPvarGetType(colvar) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(colvar) )
          ++nbinvars;
 #ifndef NDEBUG
-      else if( SCIPvarGetType(colvar) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(colvar))
+      else if( SCIPvarGetType(colvar) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(colvar) )
          ++nintvars;
 #endif
 
