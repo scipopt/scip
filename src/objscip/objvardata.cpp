@@ -184,7 +184,7 @@ SCIP_RETCODE SCIPcreateObjVar(
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    scip::ObjVardata*     objvardata,         /**< user variable data object */
    SCIP_Bool             deleteobject        /**< should the user variable data object be deleted when variable is freed? */
-)
+   )
 {
    SCIP_VARDATA* vardata;
 
@@ -195,12 +195,12 @@ SCIP_RETCODE SCIPcreateObjVar(
 
    /* create variable */
    SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, initial, removable,
-                                varDelorigObj, varTransObj, varDeltransObj, varCopyObj, vardata) ); /*lint !e429*/
+         varDelorigObj, varTransObj, varDeltransObj, varCopyObj, vardata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }
 
-/** create and capture problem variable and associates the given variable data with the variable;
+/** create and capture problem variable with implied type and associates the given variable data with the variable;
  *  if variable is of integral type, fractional bounds are automatically rounded
  */
 SCIP_RETCODE SCIPcreateObjVarImpl(
@@ -211,7 +211,7 @@ SCIP_RETCODE SCIPcreateObjVarImpl(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< Implied integer type of the variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    scip::ObjVardata*     objvardata,         /**< user variable data object */
