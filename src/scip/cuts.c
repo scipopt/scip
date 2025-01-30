@@ -7662,7 +7662,7 @@ SCIP_RETCODE cutsTransformKnapsackCover(
       SCIP_Bool setzero;
       int v = cutinds[i];
 
-      assert( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[v]) );
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(vars[v]));
 
       assert(v < firstnonbinvar);
       QUAD_ARRAY_LOAD(coef, cutcoefs, v);
