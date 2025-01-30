@@ -316,7 +316,7 @@ SCIP_RETCODE branchcandCalcLPCands(
          if( impltype == SCIP_VARIMPLTYPE_NONE && branchcand->nimpllpfracs > 0 )
          {
             assert(branchcand->lpcands[branchcand->nlpcands] != NULL
-                  && SCIPvarGetImplType(branchcand->lpcands[branchcand->nlpcands]) != SCIP_VARIMPLTYPE_NONE );
+                  && SCIPvarIsImpliedIntegral(branchcand->lpcands[branchcand->nlpcands]));
 
             branchcand->lpcands[insertpos] = branchcand->lpcands[branchcand->nlpcands];
             branchcand->lpcandssol[insertpos] = branchcand->lpcandssol[branchcand->nlpcands];
@@ -392,8 +392,7 @@ SCIP_RETCODE branchcandCalcLPCands(
        */
       for( c = 0; c < branchcand->nlpcands + branchcand->nimpllpfracs; ++c )
       {
-         assert(c >= branchcand->nlpcands || SCIPvarGetImplType(branchcand->lpcands[c]) == SCIP_VARIMPLTYPE_NONE);
-         assert(c < branchcand->nlpcands || SCIPvarGetImplType(branchcand->lpcands[c]) != SCIP_VARIMPLTYPE_NONE);
+         assert(SCIPvarIsImpliedIntegral(branchcand->lpcands[c]) == (c >= branchcand->nlpcands));
       }
 #endif
 
@@ -621,17 +620,11 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
       branchcand->nprioexternints = 0;
       branchcand->nprioexternimpls = 0;
       if( impltype != SCIP_VARIMPLTYPE_NONE )
-      {
          branchcand->nprioexternimpls = 1;
-      }
-      else if ( vartype == SCIP_VARTYPE_BINARY )
-      {
+      else if( vartype == SCIP_VARTYPE_BINARY )
          branchcand->nprioexternbins = 1;
-      }
-      else if ( vartype == SCIP_VARTYPE_INTEGER )
-      {
+      else if( vartype == SCIP_VARTYPE_INTEGER )
          branchcand->nprioexternints = 1;
-      }
       branchcand->externmaxpriority = branchpriority;
    }
    else if( branchpriority == branchcand->externmaxpriority )
@@ -667,6 +660,7 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
 
          if( impltype == SCIP_VARIMPLTYPE_NONE )
          {
+            assert(vartype != SCIP_VARTYPE_CONTINUOUS);
             if( insertpos != branchcand->nprioexternbins + branchcand->nprioexternints )
             {
                branchcand->externcands[insertpos] = 
@@ -770,7 +764,6 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
                return TRUE;
          return FALSE;
       }
-
       if( vartype == SCIP_VARTYPE_BINARY )
       {
          /* the variable is binary, look at the first branchcand->nprioexternbins slots */
