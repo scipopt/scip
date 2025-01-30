@@ -886,7 +886,7 @@ SCIP_RETCODE addVar(
       vartype = SCIP_VARTYPE_INTEGER;
       varimpltype = SCIP_VARIMPLTYPE_NONE;
       break;
-   case VAR_IMP:\
+   case VAR_IMP:
       vartype = SCIP_VARTYPE_CONTINUOUS;
       varimpltype = SCIP_VARIMPLTYPE_WEAK;
       break;
@@ -901,7 +901,7 @@ SCIP_RETCODE addVar(
 
    /* create variable */
    SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, lb, ub, 0.0, vartype, varimpltype,
-                            initial, removable, NULL, NULL, NULL, NULL, NULL) );
+         initial, removable, NULL, NULL, NULL, NULL, NULL) );
 
    /* add variable to the problem; we are releasing the variable later */
    SCIP_CALL( SCIPaddVar(scip, var) );
@@ -1126,8 +1126,7 @@ VarClass xlp_getclass(
    assert(readerdata != NULL);
 
    scipvar = (SCIP_VAR*)var;
-   /**< TODO; for now only pass implied integer variables that are not enforced. Check if this is correct / if the
-    * definition of zimpl matches with SCIP's definition here. */
+
    switch( SCIPvarGetType(scipvar) )
    {
    case SCIP_VARTYPE_BINARY:
