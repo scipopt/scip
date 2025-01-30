@@ -829,11 +829,11 @@ SCIP_RETCODE SCIPeventCreateImplAdded(
    return SCIP_OKAY;
 }
 
-/** creates an event for a changeing the type of a variable */
+/** creates an event for changing the type of a variable */
 SCIP_RETCODE SCIPeventCreateTypeChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR*             var,                /**< variable whose objective value changed */
+   SCIP_VAR*             var,                /**< variable whose type changed */
    SCIP_VARTYPE          oldtype,            /**< old variable type */
    SCIP_VARTYPE          newtype             /**< new variable type */
    )
@@ -852,13 +852,13 @@ SCIP_RETCODE SCIPeventCreateTypeChanged(
    return SCIP_OKAY;
 }
 
-/** creates an event for a changing the implied integer type of a variable */
+/** creates an event for changing the implied integer type of a variable */
 SCIP_RETCODE SCIPeventCreateImplTypeChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR*             var,                /**< variable whose objective value changed */
-   SCIP_VARIMPLTYPE      oldtype,            /**< old variable implied integer type */
-   SCIP_VARIMPLTYPE      newtype             /**< new variable implied integer type */
+   SCIP_VAR*             var,                /**< variable whose implied type changed */
+   SCIP_VARIMPLTYPE      oldtype,            /**< old variable implied type */
+   SCIP_VARIMPLTYPE      newtype             /**< new variable implied type */
    )
 {
    assert(event != NULL);
@@ -1344,6 +1344,7 @@ SCIP_VARIMPLTYPE SCIPeventGetOldImpltype(
 
    return event->data.eventimpltypechg.oldtype;
 }
+
 /** gets new implied integer type for an implied integer type change event */
 SCIP_VARIMPLTYPE SCIPeventGetNewImpltype(
    SCIP_EVENT*           event               /**< event */
@@ -1840,14 +1841,12 @@ SCIP_RETCODE SCIPeventProcess(
       break;
 
    case SCIP_EVENTTYPE_IMPLTYPECHANGED: /*lint !e30 !e142*/
-   {
       var = event->data.eventimpltypechg.var;
       assert(var != NULL);
 
       /* process variable's event filter */
       SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
-   }
 
    default:
       SCIPerrorMessage("unknown event type <%" SCIP_EVENTTYPE_FORMAT ">\n", event->eventtype);
