@@ -8659,10 +8659,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       /* check whether call variables are non-integer */
       for (j = 0; j < nvars; ++j)
       {
-         SCIP_VARTYPE vartype;
-
-         vartype = SCIPvarGetType(vars[j]);
-         if ( vartype != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(vars[j]) )
+         if ( SCIPvarIsIntegral(vars[j]) && !SCIPvarIsImpliedIntegral(vars[j]) )
          {
             onlyCont = FALSE;
             break;
@@ -8868,10 +8865,7 @@ SCIP_RETCODE SCIPsetLinearConsIndicator(
       /* check whether call variables are non-integer */
       for (v = 0; v < nvars; ++v)
       {
-         SCIP_VARTYPE vartype;
-
-         vartype = SCIPvarGetType(vars[v]);
-         if ( vartype != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(vars[v]) )
+         if ( SCIPvarIsIntegral(vars[v]) && !SCIPvarIsImpliedIntegral(vars[v]) )
          {
             onlyCont = FALSE;
             break;
