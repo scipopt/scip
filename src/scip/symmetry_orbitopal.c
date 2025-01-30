@@ -1673,7 +1673,7 @@ SCIP_RETCODE propagateStaticOrbitope(
                else if ( lexminepsrow[colid + 1] == rowid )
                {
                   assert( SCIPsymEQ(scip, lexminface[i], lexminface[i + 1]) );
-                  assert( !SCIPvarIsIntegral(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid]));
+                  assert( !SCIPvarIsIntegral(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid]) );
                   assert( !SCIPvarIsIntegral(var) );
                   /* right column (colid+1) has value x + epsilon, left column (colid) has value x, now
                    * must also become  x + epsilon in order to be larger or equal
@@ -1832,8 +1832,8 @@ SCIP_RETCODE propagateStaticOrbitope(
                else if ( lexmaxepsrow[colid - 1] == rowid )
                {
                   assert( SCIPsymEQ(scip, lexmaxface[i - 1], lexmaxface[i]) );
-                  assert( !SCIPvarIsIntegral(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid]));
-                  assert( !SCIPvarIsIntegral(var));
+                  assert( !SCIPvarIsIntegral(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid]) );
+                  assert( !SCIPvarIsIntegral(var) );
                   /* left column (colid-1) has value x - epsilon, right column (colid) has value x, now
                    * must also become  x - epsilon in order to be larger or equal
                    * by axioms, we can squeeze infinitesimals between one other; epsilon > epsilon.
