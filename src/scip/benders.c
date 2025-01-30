@@ -781,8 +781,8 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
             impltype = SCIP_VARIMPLTYPE_NONE;
 
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
-         SCIP_CALL( SCIPcreateVarImpl(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip),
-               1.0, SCIP_VARTYPE_CONTINUOUS, impltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVarImpl(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip), 1.0,
+               SCIP_VARTYPE_CONTINUOUS, impltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          SCIPvarSetData(auxiliaryvar, vardata);
 
@@ -6899,7 +6899,7 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
             /* changing the type of the subproblem variable corresponding to mastervar to CONTINUOUS */
             SCIP_CALL( SCIPchgVarType(subproblem, vars[i], SCIP_VARTYPE_CONTINUOUS, &infeasible) );
             assert(!infeasible);
-            SCIP_CALL( SCIPchgVarImplType(subproblem, vars[i], SCIP_VARIMPLTYPE_NONE, &infeasible ) );
+            SCIP_CALL( SCIPchgVarImplType(subproblem, vars[i], SCIP_VARIMPLTYPE_NONE, &infeasible) );
             assert(!infeasible);
 
             chgvarscount++;
