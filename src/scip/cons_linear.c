@@ -3232,7 +3232,6 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
    }
    else
    {
-      /* Weird check but this was the easiest way to keep the old logic when refactoring implied integers */
       SCIP_VARTYPE vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var1);
       SCIP_VARTYPE vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var2);
 
@@ -5284,14 +5283,13 @@ SCIP_RETCODE tightenVarUb(
 
    if( force || SCIPisUbBetter(scip, newub, lb, oldub) )
    {
-      SCIP_VARTYPE vartype;
+      SCIP_VARTYPE vartype = SCIPvarGetType(var);
+      SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
 
-      SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
+      SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g
+",
          SCIPconsGetName(cons), SCIPvarGetName(var), lb, oldub, consdata->vals[pos],
          QUAD_TO_DBL(consdata->minactivity), QUAD_TO_DBL(consdata->maxactivity), consdata->lhs, consdata->rhs, newub);
-
-      vartype = SCIPvarGetType(var);
-      SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
 
       /* tighten upper bound */
       SCIP_CALL( SCIPinferVarUbCons(scip, var, newub, cons, getInferInt(proprule, pos), force, &infeasible, &tightened) );
@@ -5355,14 +5353,13 @@ SCIP_RETCODE tightenVarLb(
 
    if( force || SCIPisLbBetter(scip, newlb, oldlb, ub) )
    {
-      SCIP_VARTYPE vartype;
+      SCIP_VARTYPE vartype = SCIPvarGetType(var);
+      SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
 
-      SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
+      SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g
+",
          SCIPconsGetName(cons), SCIPvarGetName(var), oldlb, ub, consdata->vals[pos],
          QUAD_TO_DBL(consdata->minactivity), QUAD_TO_DBL(consdata->maxactivity), consdata->lhs, consdata->rhs, newlb);
-
-      vartype = SCIPvarGetType(var);
-      SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
 
       /* tighten lower bound */
       SCIP_CALL( SCIPinferVarLbCons(scip, var, newlb, cons, getInferInt(proprule, pos), force, &infeasible, &tightened) );
@@ -5386,7 +5383,7 @@ SCIP_RETCODE tightenVarLb(
          (*nchgbds)++;
 
          /* if variable type was changed we might be able to upgrade the constraint */
-         if( vartype != SCIPvarGetType(var) || impltype != SCIPvarGetImplType(var) )
+         if( SCIPvarGetType(var) != vartype || SCIPvarGetImplType(var) != impltype )
             consdata->upgradetried = FALSE;
       }
    }
@@ -5876,9 +5873,7 @@ SCIP_RETCODE rangedRowPropagation(
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) )
          {
             if( !SCIPvarIsIntegral(consdata->vars[v]) )
-            {
                ++ncontvars;
-            }
             else if( SCIPvarIsBinary(consdata->vars[v]) )
             {
                SCIP_Real absval;
@@ -5916,7 +5911,7 @@ SCIP_RETCODE rangedRowPropagation(
       goto TERMINATE;
 
    assert(!SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])));
-   assert(SCIPisIntegral(scip, consdata->vals[v]) && SCIPvarIsIntegral(consdata->vars[v]) && REALABS(consdata->vals[v]) > 1.5);
+   assert(SCIPvarIsIntegral(consdata->vars[v]) && SCIPisIntegral(scip, consdata->vals[v]) && REALABS(consdata->vals[v]) > 1.5);
 
    feastol = SCIPfeastol(scip);
 
@@ -5940,8 +5935,8 @@ SCIP_RETCODE rangedRowPropagation(
             absminbincoef = absval;
       }
 
-      if( !SCIPisIntegral(scip, consdata->vals[v]) || !SCIPvarIsIntegral(consdata->vars[v]) ||
-         SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0) )
+      if( !SCIPvarIsIntegral(consdata->vars[v]) || !SCIPisIntegral(scip, consdata->vals[v])
+         || SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0) )
       {
          if( !SCIPvarIsIntegral(consdata->vars[v]) )
             ++ncontvars;
@@ -8936,7 +8931,7 @@ SCIP_RETCODE tightenSides(
    {
       integral = TRUE;
       for( i = 0; i < consdata->nvars && integral; ++i )
-         integral = SCIPisIntegral(scip, consdata->vals[i]) && SCIPvarIsIntegral(consdata->vars[i]);
+         integral = SCIPvarIsIntegral(consdata->vars[i]) && SCIPisIntegral(scip, consdata->vals[i]);
       if( integral )
       {
          if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisIntegral(scip, consdata->lhs) )
@@ -9810,7 +9805,8 @@ SCIP_RETCODE convertLongEquality(
             assert(!SCIPisInfinity(scip, slackdomrng));
          }
          equal = FALSE;
-         //continuous -> implied  -> integer -> binary
+
+         /* continuous > implied > integer > binary */
          better = (slacktype > bestslacktype) || (bestslackpos == -1);
          if( !better && slacktype == bestslacktype )
          {
@@ -10923,8 +10919,7 @@ SCIP_RETCODE dualPresolve(
 
       bestvar = consdata->vars[bestpos];
       bestval = consdata->vals[bestpos];
-      assert(bestisint == ( !SCIPvarIsImpliedIntegral(bestvar) &&
-         (SCIPvarGetType(bestvar) == SCIP_VARTYPE_BINARY || SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER) ));
+      assert(bestisint == (SCIPvarIsIntegral(bestvar) && !SCIPvarIsImpliedIntegral(bestvar)));
 
       /* allocate temporary memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &aggrvars, consdata->nvars-1) );
@@ -11189,7 +11184,7 @@ SCIP_RETCODE aggregateVariables(
          SCIP_Longint val;
 
          /* all coefficients and variables have to be integral */
-         if( !SCIPisIntegral(scip, vals[v]) || !SCIPvarIsIntegral(vars[v]) )
+         if( !SCIPvarIsIntegral(vars[v]) || !SCIPisIntegral(scip, vals[v]) )
             return SCIP_OKAY;
 
          val = (SCIP_Longint)SCIPfeasFloor(scip, vals[v]);
