@@ -5573,7 +5573,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
-   /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
+   /* ensure that branching on continuous variables will only be performed when a branching point is given */
    if( !SCIPvarIsIntegral(var) && !validval )
    {
       SCIPerrorMessage("Cannot branch on continuous variable <%s> without a given branching value.", SCIPvarGetName(var));
@@ -5617,10 +5617,10 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
    /* see comment in SCIPbranchVarVal */
-   assert(SCIPvarIsIntegral(var) ||
-      SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set) ||
-      SCIPsetIsInfinity(set, -2.1*SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, 2.1*SCIPvarGetUbLocal(var)) ||
-      (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))) );
+   assert(SCIPvarIsIntegral(var)
+         || SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set)
+         || SCIPsetIsInfinity(set, -2.1*SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, 2.1*SCIPvarGetUbLocal(var))
+         || (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))));
 
    downub = SCIP_INVALID;
    fixval = SCIP_INVALID;
@@ -6059,8 +6059,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
-   /* ensure, that branching on continuous variables will only be performed when a branching point is given. */
-   if( !SCIPvarIsIntegral(var)  && !validval )
+   /* ensure that branching on continuous variables will only be performed when a branching point is given */
+   if( !SCIPvarIsIntegral(var) && !validval )
    {
       SCIPerrorMessage("Cannot branch on continuous variable <%s> without a given branching value.", SCIPvarGetName(var));
       SCIPABORT();
@@ -6099,9 +6099,10 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
 
    assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
-   assert(SCIPvarIsIntegral(var) ||
-      SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) ||
-      (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))) );  /* see comment in SCIPbranchVarVal */
+   /* see comment in SCIPbranchVarVal */
+   assert(SCIPvarIsIntegral(var)
+         || SCIPsetIsRelEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))
+         || (SCIPsetIsLT(set, 2.1*SCIPvarGetLbLocal(var), 2.1*val) && SCIPsetIsLT(set, 2.1*val, 2.1*SCIPvarGetUbLocal(var))));
 
    /* calculate minimal distance of val from bounds */
    width = SCIP_REAL_MAX;
@@ -6229,8 +6230,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    n /= 2;
    for( i = 0; i < n; ++i )
    {
-      /* create child node left - width <= x <= left, if left > lb(x) or x is discrete */
-      if( SCIPsetIsRelLT(set, SCIPvarGetLbLocal(var), left) || SCIPvarIsIntegral(var) )
+      /* create child node left - width <= x <= left, if x is discrete or left > lb(x) */
+      if( SCIPvarIsIntegral(var) || SCIPsetIsRelLT(set, SCIPvarGetLbLocal(var), left) )
       {
          /* new lower bound should be variables lower bound, if we are in the last round or left - width is very close to lower bound
           * otherwise we take left - width
@@ -6280,8 +6281,8 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
             left -= 1.0;
       }
 
-      /* create child node right <= x <= right + width, if right < ub(x) */
-      if( SCIPsetIsRelGT(set, SCIPvarGetUbLocal(var), right) || SCIPvarIsIntegral(var) )
+      /* create child node right <= x <= right + width, if x is discrete or right < ub(x) */
+      if( SCIPvarIsIntegral(var) || SCIPsetIsRelGT(set, SCIPvarGetUbLocal(var), right) )
       {
          /* new upper bound should be variables upper bound, if we are in the last round or right + width is very close to upper bound
           * otherwise we take right + width
@@ -7711,14 +7712,11 @@ int SCIPnodeGetNDualBndchgs(
     */
    for( i = nboundchgs-1; i >= 0; i--)
    {
-      SCIP_Bool isint;
-
-      isint = SCIPvarIsIntegral(boundchgs[i].var);
-
-      if( isint && ((boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
-            && boundchgs[i].data.inferencedata.reason.cons == NULL)
-        || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-            && boundchgs[i].data.inferencedata.reason.prop == NULL)) )
+      if( SCIPvarIsIntegral(boundchgs[i].var)
+         && ( ( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+         && boundchgs[i].data.inferencedata.reason.cons == NULL )
+         || ( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
+         && boundchgs[i].data.inferencedata.reason.prop == NULL ) ) )
          npseudobranchvars++;
       else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
          break;
