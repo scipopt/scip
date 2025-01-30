@@ -461,7 +461,7 @@ SCIP_VARTYPE SCIPvarGetType(
 /** gets the implied integer type of the variable */
 SCIP_EXPORT
 SCIP_VARIMPLTYPE SCIPvarGetImplType(
-   SCIP_VAR*             var
+   SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns TRUE if the variable is of binary type; this is the case if:
@@ -481,10 +481,10 @@ SCIP_Bool SCIPvarIsIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns whether the variable is implied integer by other variables */
+/** returns whether the variable is implied integral */
 SCIP_EXPORT
 SCIP_Bool SCIPvarIsImpliedIntegral(
-   SCIP_VAR*             var
+   SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** returns whether variable's column should be present in the initial root LP */
@@ -981,7 +981,7 @@ void SCIPvarMarkRelaxationOnly(
 #define SCIPvarIsBinary(var)            ((var)->vartype == SCIP_VARTYPE_BINARY || \
       (((var)->vartype != SCIP_VARTYPE_CONTINUOUS || (var)->varimpltype != SCIP_VARIMPLTYPE_NONE) \
       && (var)->glbdom.lb >= 0.0 && (var)->glbdom.ub <= 1.0))
-#define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS || (var)->varimpltype != SCIP_VARIMPLTYPE_NONE )
+#define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS || (var)->varimpltype != SCIP_VARIMPLTYPE_NONE)
 #define SCIPvarIsImpliedIntegral(var)   ((var)->varimpltype != SCIP_VARIMPLTYPE_NONE)
 #define SCIPvarIsInitial(var)           (var)->initial
 #define SCIPvarIsRemovable(var)         (var)->removable
