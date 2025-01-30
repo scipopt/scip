@@ -228,6 +228,7 @@ SCIP_RETCODE printDomRelInfo(
    case SCIP_VARTYPE_INTEGER:
       type='I';
       break;
+   case SCIP_VARTYPE_IMPLINT:
    default:
       SCIPerrorMessage("unknown variable type\n");
       SCIPABORT();
@@ -2186,7 +2187,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                }
                else
                {
-                  assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarIsImpliedIntegral(var) );
+                  assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarIsImpliedIntegral(var));
                   intsearchcols[nintfill++] = varidx;
                }
             }
