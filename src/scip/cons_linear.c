@@ -5286,8 +5286,7 @@ SCIP_RETCODE tightenVarUb(
       SCIP_VARTYPE vartype = SCIPvarGetType(var);
       SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
 
-      SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g
-",
+      SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g",
          SCIPconsGetName(cons), SCIPvarGetName(var), lb, oldub, consdata->vals[pos],
          QUAD_TO_DBL(consdata->minactivity), QUAD_TO_DBL(consdata->maxactivity), consdata->lhs, consdata->rhs, newub);
 
@@ -5356,8 +5355,7 @@ SCIP_RETCODE tightenVarLb(
       SCIP_VARTYPE vartype = SCIPvarGetType(var);
       SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
 
-      SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g
-",
+      SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g",
          SCIPconsGetName(cons), SCIPvarGetName(var), oldlb, ub, consdata->vals[pos],
          QUAD_TO_DBL(consdata->minactivity), QUAD_TO_DBL(consdata->maxactivity), consdata->lhs, consdata->rhs, newlb);
 
