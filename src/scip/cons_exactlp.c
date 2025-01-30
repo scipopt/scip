@@ -26,7 +26,6 @@
  * @brief Constraint handler for exact linear constraints in their most general form, \f$lhs <= a^T x <= rhs\f$.
  * @author Leon Eifler
  * @author Sander Borst
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -18307,19 +18306,18 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
    int v;
    SCIP_Bool success;
 
+   /**@todo This method is currently only used for subSCIPs in floating-point heuristics, but should be extended to be
+    *       able to perform an exact copy in the future.  This would allow application of the cons_components presolver,
+    *       for example.  In this case, whether an exact or an fp copy is created, could probably decided by looking at
+    *       the parameter value of exact/enabled in the target SCIP.
+    */
+   assert(!SCIPisExactSolve(scip));
+   (*valid) = FALSE;
+
    if( SCIPisGT(scip, lhs, rhs) )
    {
-      *valid = FALSE;
       return SCIP_OKAY;
    }
-
-   /**@todo This is currently only used for subSCIPs in floating-point heuristics, but should be extended to be able to
-    *       perform an exact copy in the future.  This would allow application of the cons_components presolver, for
-    *       example.  In this case, whether an exact or an fp copy is created, could probably decided by looking at the
-    *       parameter value of exact/enabled in the target SCIP.
-    */
-   /* AG@LE Setting this to FALSE currently fails, but shouldn't FALSE be the right thing to do? */
-   (*valid) = TRUE;
 
    if( nvars == 0 )
    {
@@ -18399,8 +18397,6 @@ SCIP_RETCODE SCIPcopyConsExactLinear(
       SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
-   else
-      *valid = FALSE;
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &coefs);
