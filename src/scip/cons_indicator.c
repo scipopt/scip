@@ -781,7 +781,7 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
       SCIP_Real newbound;
 
       assert( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_BINARY &&
-              !SCIPvarIsImpliedIntegral(SCIPeventGetVar(event)) );
+            !SCIPvarIsImpliedIntegral(SCIPeventGetVar(event)) );
       oldbound = SCIPeventGetOldbound(event);
       newbound = SCIPeventGetNewbound(event);
       assert( SCIPisIntegral(scip, oldbound) );
@@ -3419,7 +3419,7 @@ SCIP_RETCODE consdataCreate(
          (*consdata)->binvar = var;
 
          /* check type */
-         if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY  || SCIPvarIsImpliedIntegral(var) )
+         if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
          {
             SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(var), SCIPvarGetType(var));
             return SCIP_ERROR;
@@ -8035,7 +8035,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    {
       if ( conshdlrdata->scaleslackvar )
          absvalsum += REALABS(valscopy[j]);
-      if ( ! SCIPvarIsIntegral(vars[j]) || !SCIPisIntegral(scip, valscopy[j]) )
+      if ( !SCIPvarIsIntegral(vars[j]) || !SCIPisIntegral(scip, valscopy[j]) )
       {
          slackvarimpltype = SCIP_VARIMPLTYPE_NONE;
          if ( ! conshdlrdata->scaleslackvar )
@@ -8080,8 +8080,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       {
          /* create slack variable */
          (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
-         SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
-                                  slackvarimpltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0,
+               SCIP_VARTYPE_CONTINUOUS, slackvarimpltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          SCIP_CALL( SCIPaddVar(scip, slackvar) );
 
@@ -8098,8 +8098,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    {
       /* create slack variable */
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
-      SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, slackvarimpltype,
-                               TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, slackvarimpltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, slackvar) );
 
@@ -8118,10 +8118,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       /* check whether call variables are non-integer */
       for (j = 0; j < nvars; ++j)
       {
-         SCIP_VARTYPE vartype;
-
-         vartype = SCIPvarGetType(vars[j]);
-         if ( vartype != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(vars[j]) )
+         if ( SCIPvarIsIntegral(vars[j]) && !SCIPvarIsImpliedIntegral(vars[j]) )
          {
             onlyCont = FALSE;
             break;
@@ -8346,10 +8343,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
       /* check whether call variables are non-integer */
       for (v = 0; v < nvars; ++v)
       {
-         SCIP_VARTYPE vartype;
-
-         vartype = SCIPvarGetType(vars[v]);
-         if ( vartype != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(vars[v]))
+         if ( SCIPvarIsIntegral(vars[v]) && !SCIPvarIsImpliedIntegral(vars[v]) )
          {
             onlyCont = FALSE;
             break;
@@ -8589,7 +8583,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    vals = SCIPgetValsLinear(scip, lincons);
    for (j = 0; j < nvars; ++j)
    {
-      if ( ! SCIPvarIsIntegral(vars[j]) || ! SCIPisIntegral(scip, vals[j]) )
+      if ( !SCIPvarIsIntegral(vars[j]) || !SCIPisIntegral(scip, vals[j]) )
          slackvarimpltype = SCIP_VARIMPLTYPE_NONE;
 
       /* Check whether variable is marked to not be multi-aggregated: this should only be the case for slack variables
@@ -8639,8 +8633,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    {
       /* create slack variable */
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
-      SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
-                                   slackvarimpltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, slackvarimpltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, slackvar) );
 
