@@ -56,6 +56,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/var.h"
 #include <string.h>
 
 #define HEUR_NAME             "shiftandpropagate"
@@ -1262,8 +1263,8 @@ SCIP_DECL_SORTPTRCOMP(heurSortColsShiftandpropagate)
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var1);
-   vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var2);
+   vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var1);
+   vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var2);
 
    if( vartype1 < vartype2 )
       return -1;

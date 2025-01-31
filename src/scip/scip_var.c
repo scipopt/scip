@@ -134,11 +134,10 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateVar", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_VARIMPLTYPE impltype = SCIP_VARIMPLTYPE_NONE;
-   if( vartype == SCIP_VARTYPE_IMPLINT )
+   /* For now, we help users and automatically convert the variable to an implied integer one if they are using the
+    * deprecated variable type. This feature will be deprecated in a future version */
+   if( vartype == SCIP_IMPLINT_PLACEHOLDER )
    {
-      SCIPwarningMessage(scip,"the variable type SCIP_VARTYPE_IMPLINT is deprecated; converting variable to continuous variable that is "
-                              " weakly implied integer. Use `SCIPcreateVarImpl` or change the variables implied integer"
-                              " type manually after creation using `SCIPchgVarImplType`. ");
       vartype = SCIP_VARTYPE_CONTINUOUS;
       impltype = SCIP_VARIMPLTYPE_WEAK;
    }

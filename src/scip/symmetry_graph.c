@@ -33,8 +33,10 @@
 #include "scip/symmetry_graph.h"
 #include "scip/scip.h"
 #include "scip/misc.h"
+#include "scip/var.h"
 #include "symmetry/struct_symmetry.h"
 #include "symmetry/type_symmetry.h"
+
 
 
 /** creates and initializes a symmetry detection graph with memory for the given number of nodes and edges
@@ -836,8 +838,8 @@ int compareVars(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var1);
-   SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var2);
+   SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var1);
+   SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var2);
    if( type1 < type2 )
       return -1;
    if( type1 > type2 )
@@ -974,8 +976,8 @@ int compareVarsSignedPerm(
    assert(var1 != NULL);
    assert(var2 != NULL);
 
-   SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var1);
-   SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(var2);
+   SCIP_VARTYPE type1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var1);
+   SCIP_VARTYPE type2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var2);
    if( type1 < type2 )
       return -1;
    if( type1 > type2 )

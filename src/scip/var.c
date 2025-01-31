@@ -1954,11 +1954,7 @@ SCIP_RETCODE varCreate(
    assert(blkmem != NULL);
    assert(stat != NULL);
 
-   if( vartype == SCIP_VARTYPE_IMPLINT )
-   {
-      SCIPerrorMessage("Implied integer variables are deprecated. Please set the implied integer flag using `SCIPchgVarImplType` instead\n");
-      return SCIP_INVALIDDATA;
-   }
+   assert(vartype != SCIP_IMPLINT_PLACEHOLDER);
    SCIP_Bool integral = vartype != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_VARIMPLTYPE_NONE;
    /* adjust bounds of variable */
    lb = adjustedLb(set, integral, lb);
@@ -1982,7 +1978,7 @@ SCIP_RETCODE varCreate(
 
    assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0));
    assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0));
-   assert(vartype != SCIP_VARTYPE_IMPLINT);
+   assert(vartype != SCIP_IMPLINT_PLACEHOLDER);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, var) );
 
@@ -5237,8 +5233,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       return SCIP_OKAY;
 
    /* A bit strange, but this was introduced to stay compatible with legacy code */
-   SCIP_VARTYPE xtype = SCIPvarIsImpliedIntegral(varx) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(varx);
-   SCIP_VARTYPE ytype = SCIPvarIsImpliedIntegral(vary) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(vary);
+   SCIP_VARTYPE xtype = SCIPvarIsImpliedIntegral(varx) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(varx);
+   SCIP_VARTYPE ytype = SCIPvarIsImpliedIntegral(vary) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(vary);
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
    if( ytype > xtype ||
@@ -6104,9 +6100,8 @@ SCIP_RETCODE SCIPvarChgType(
       return SCIP_INVALIDDATA;
    }
 
-   if( vartype == SCIP_VARTYPE_IMPLINT )
+   if( vartype == SCIP_IMPLINT_PLACEHOLDER )
    {
-      SCIPerrorMessage("Using SCIP_VARTYPE_IMPLINT is deprecated, converting implied integer type of variable to weak instead.\n");
       if( SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_WEAK )
       {
          SCIP_CALL(SCIPvarChgImplType(var,blkmem,set,primal,lp,eventqueue,SCIP_VARIMPLTYPE_WEAK));

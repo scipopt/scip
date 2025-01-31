@@ -49,6 +49,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
+#include "scip/var.h"
 #include <string.h>
 
 #define BRANCHRULE_NAME          "pscost"
@@ -401,8 +402,8 @@ SCIP_RETCODE updateBestCandidate(
       /* both are equally good */
    }
 
-   SCIP_VARTYPE besttype = SCIPvarIsImpliedIntegral(*bestvar) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(*bestvar);
-   SCIP_VARTYPE candtype = SCIPvarIsImpliedIntegral(cand) ? SCIP_VARTYPE_IMPLINT : SCIPvarGetType(cand);
+   SCIP_VARTYPE besttype = SCIPvarIsImpliedIntegral(*bestvar) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(*bestvar);
+   SCIP_VARTYPE candtype = SCIPvarIsImpliedIntegral(cand) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(cand);
    if( besttype == candtype )
    {
       /* if both have the same type, take the one with larger relative diameter */
