@@ -456,9 +456,15 @@ SCIP_VARSTATUS SCIPvarGetStatus(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** return the status of the exact variable data */
+/** returns the status of the exact variable data */
 SCIP_EXPORT
 SCIP_VARSTATUS SCIPvarGetStatusExact(
+   SCIP_VAR*             var                 /**< scip variable */
+   );
+
+/** returns whether the variable has exact variable data */
+SCIP_EXPORT
+SCIP_Bool SCIPvarIsExact(
    SCIP_VAR*             var                 /**< scip variable */
    );
 
