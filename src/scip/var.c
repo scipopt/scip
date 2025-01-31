@@ -1955,8 +1955,9 @@ SCIP_RETCODE varCreate(
    assert(stat != NULL);
 
    assert(vartype != SCIP_IMPLINT_PLACEHOLDER);
-   SCIP_Bool integral = vartype != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_VARIMPLTYPE_NONE;
+
    /* adjust bounds of variable */
+   integral = vartype != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_VARIMPLTYPE_NONE;
    lb = adjustedLb(set, integral, lb);
    ub = adjustedUb(set, integral, ub);
 
@@ -2088,7 +2089,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable (None, weak or strong) */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -2132,7 +2133,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable (none, weak or strong) */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -2492,24 +2493,25 @@ SCIP_RETCODE varParse(
    if ( *endptr == NULL )
       *endptr = strptr;
 
-   /* If bound parsing failed, the last token it parsed would be the one for implied integrality */
+   /* if bound parsing failed, the last token should be the implied integrality declaration */
    if( strncmp(token, "implied:", 8) == 0 )
    {
       /*We might parse this part again if the pointer was reset, so we need to check again. */
       SCIPstrCopySection(strptr, ' ', '\0', token, SCIP_MAXSTRLEN, endptr);
       strptr = *endptr;
       SCIPstrCopySection(token, ' ', ' ', token, SCIP_MAXSTRLEN, endptr);
-      if( strncmp(*endptr, "weak", 4) == 0 )
-         (*impltype) = SCIP_VARIMPLTYPE_WEAK;
-      else if ( strncmp(*endptr, "strong", 6) == 0 )
+      if( strncmp(*endptr, "strong", 6) == 0 )
          (*impltype) = SCIP_VARIMPLTYPE_STRONG;
+      else if( strncmp(*endptr, "weak", 4) == 0 )
+         (*impltype) = SCIP_VARIMPLTYPE_WEAK;
+      else if( strncmp(*endptr, "none", 4) == 0 )
+         (*impltype) = SCIP_VARIMPLTYPE_NONE;
       else
       {
-         SCIPerrorMessage("Expected implied integer type 'weak' or 'strong', got: '%s' ", &token[8]);
+         SCIPerrorMessage("Expected implied integer type 'none', 'weak', or 'strong', got: '%s'.\n", *endptr);
          return SCIP_READERROR;
       }
    }
-
 
    /* check bounds for binary variables */
    if ( (*vartype) == SCIP_VARTYPE_BINARY )
