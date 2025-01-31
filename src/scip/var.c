@@ -2050,8 +2050,8 @@ SCIP_RETCODE varCreate(
    (*var)->deleted = FALSE;
    (*var)->donotaggr = FALSE;
    (*var)->donotmultaggr = FALSE;
-   (*var)->vartype = vartype; /*lint !e641*/
-   (*var)->varimpltype = impltype; /*lint !e641*/
+   (*var)->vartype = (unsigned int)vartype;
+   (*var)->varimpltype = (unsigned int)impltype;
    (*var)->pseudocostflag = FALSE;
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
