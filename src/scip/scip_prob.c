@@ -2153,9 +2153,9 @@ int SCIPgetNImplVars(
    }  /*lint !e788*/
 }
 
-/** gets number of binary implicit integer active problem variables
+/** gets number of enforced binary implicit integer active problem variables
  *
- *  @return the number of implicit integer active problem variables
+ *  @return the number of enforced binary implicit integer active problem variables
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -2199,9 +2199,9 @@ int SCIPgetNBinImplVars(
    }  /*lint !e788*/
 }
 
-/** gets number of implicit integer active problem variables that were originally integer
+/** gets number of enforced integer implicit integer active problem variables
  *
- *  @return the number of originally integer implicit integer active problem variables
+ *  @return the number of enforced integer implicit integer active problem variables
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -2245,9 +2245,9 @@ int SCIPgetNIntImplVars(
    }  /*lint !e788*/
 }
 
-/** gets number of implicit integer active problem variables that were originally continuous
+/** gets number of continuous implicit integer active problem variables
  *
- *  @return the number of originally continuous implicit integer active problem variables
+ *  @return the number of continuous implicit integer active problem variables
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM

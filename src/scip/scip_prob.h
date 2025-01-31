@@ -816,10 +816,10 @@ SCIP_RETCODE SCIPgetVarsData(
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
- *  @warning If your are using the methods which add or change bound of variables (e.g., SCIPchgVarType(), SCIPfixVar(),
- *           SCIPaggregateVars(), SCIPmultiaggregateVar() and SCIPchgVarImplType()), it can happen that the internal
- *           variable array (which is accessed via this method) gets resized and/or resorted.
- *           This can invalidate the data pointer which is returned by this method.
+ *  @warning If your are using the methods which add or change bound of variables (e.g., SCIPchgVarType(),
+ *           SCIPchgVarImplType(), SCIPfixVar(), SCIPaggregateVars(), and SCIPmultiaggregateVar()), it can happen that
+ *           the internal variable array (which is accessed via this method) gets resized and/or resorted. This can
+ *           invalidate the data pointer which is returned by this method.
  *
  *  @note Variables in the array are ordered: binaries first, then integers, implicit integers and continuous last.
  */
@@ -912,9 +912,9 @@ int SCIPgetNImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of binary implicit integer active problem variables
+/** gets number of enforced binary implicit integer active problem variables
  *
- *  @return the number of binary implicit integer active problem variables
+ *  @return the number of enforced binary implicit integer active problem variables
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -933,9 +933,9 @@ int SCIPgetNBinImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of implicit integer active problem variables that were originally integer
+/** gets number of enforced integer implicit integer active problem variables
  *
- *  @return the number of originally integer implicit integer active problem variables
+ *  @return the number of enforced integer implicit integer active problem variables
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -954,9 +954,9 @@ int SCIPgetNIntImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of implicit integer active problem variables that were originally continuous
+/** gets number of continuous implicit integer active problem variables
  *
- *  @return the number of originally continuous implicit integer active problem variables
+ *  @return the number of continuous implicit integer active problem variables
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
