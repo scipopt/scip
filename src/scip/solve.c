@@ -829,9 +829,8 @@ SCIP_RETCODE updatePseudocost(
 
                   /* check, if the bound change would lead to a valid pseudo cost update
                    * and see comment above (however, ...) */
-                  if( isPseudocostUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval, updateintegers, updatecontinuous) &&
-                      (SCIPvarIsIntegral(var) || !boundchgs[i].redundant || set->branch_lpgainnorm != 'd')
-                    )
+                  if( isPseudocostUpdateValid(var, set, boundchgs[i].data.branchingdata.lpsolval, updateintegers, updatecontinuous)
+                     && ( SCIPvarIsIntegral(var) || !boundchgs[i].redundant || set->branch_lpgainnorm != 'd' ) )
                   {
                      var->pseudocostflag = PSEUDOCOST_UPDATE; /*lint !e641*/
                      nvalidupdates++;
@@ -4680,7 +4679,7 @@ SCIP_RETCODE solveNode(
             SCIP_VAR* var = stat->lastbranchvar;
 
             if( var != NULL && !stat->branchedunbdvar && !SCIPvarIsIntegral(var)
-               && (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))) )
+               && ( SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)) ) )
             {
                SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
                   "Starting spatial branch-and-bound on unbounded variable <%s> ([%g,%g]) - cannot guarantee finite termination.\n",
