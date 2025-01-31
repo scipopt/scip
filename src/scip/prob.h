@@ -257,7 +257,7 @@ SCIP_RETCODE SCIPprobChgVarType(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_VAR*             var,                /**< variable to add */
+   SCIP_VAR*             var,                /**< variable to change type of */
    SCIP_VARTYPE          vartype             /**< new type of variable */
    );
 
@@ -271,7 +271,7 @@ SCIP_RETCODE SCIPprobChgVarImplType(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_VAR*             var,                /**< variable to add */
+   SCIP_VAR*             var,                /**< variable to change implied integer type of */
    SCIP_VARIMPLTYPE      impltype            /**< new implied integer type of variable */
    );
 
@@ -616,7 +616,7 @@ int SCIPprobGetNIntVars(
    SCIP_PROB*            prob                /**< problem data */
    );
 
-/** gets number of implicit integer problem variables */
+/** gets number of implied integral problem variables of any type */
 int SCIPprobGetNImplVars(
    SCIP_PROB*            prob                /**< problem data */
    );
