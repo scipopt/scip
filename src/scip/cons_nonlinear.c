@@ -78,6 +78,7 @@
 #include "symmetry/struct_symmetry.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/scip_datatree.h"
+#include "scip/var.h"
 
 
 /* fundamental constraint handler properties */
@@ -7154,7 +7155,7 @@ void scoreBranchingCandidates(
                   cands[c].vartype = 0.1;
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
-               case SCIP_VARTYPE_IMPLINT:
+               case SCIP_IMPLINT_PLACEHOLDER:
                default:
                   cands[c].vartype = 0.0;
                   break;
