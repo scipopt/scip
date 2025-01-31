@@ -578,22 +578,18 @@ SCIP_RETCODE SCIPbranchcandAddExternCand(
    SCIP_Real             solval              /**< value of the variable in the current solution */
    )
 {
-   SCIP_VARTYPE vartype;
-   SCIP_VARIMPLTYPE impltype;
-   int branchpriority;
+   SCIP_VARTYPE vartype = SCIPvarGetType(var);
+   SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
+   int branchpriority = SCIPvarGetBranchPriority(var);
    int insertpos;
 
    assert(branchcand != NULL);
-   assert(var != NULL);
    assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))); /* the variable should not be fixed yet */
-   assert(!SCIPvarIsIntegral(var) || !SCIPsetIsEQ(set, SCIPsetCeil(set, SCIPvarGetLbLocal(var)), SCIPsetFloor(set, SCIPvarGetUbLocal(var)))); /* a discrete variable should also not be fixed, even after rounding bounds to integral values */
+   assert((vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_NONE) || !SCIPsetIsEQ(set, SCIPsetCeil(set, SCIPvarGetLbLocal(var)), SCIPsetFloor(set, SCIPvarGetUbLocal(var)))); /* a discrete variable should also not be fixed, even after rounding bounds to integral values */
    assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR || !SCIPsetIsEQ(set, SCIPvarGetMultaggrLbLocal(var, set), SCIPvarGetMultaggrUbLocal(var, set))); /* also the current bounds of a multi-aggregated variable should not be fixed yet */
    assert(branchcand->nprioexterncands <= branchcand->nexterncands);
    assert(branchcand->nexterncands <= branchcand->externcandssize);
 
-   vartype = SCIPvarGetType(var);
-   impltype = SCIPvarGetImplType(var);
-   branchpriority = SCIPvarGetBranchPriority(var);
    insertpos = branchcand->nexterncands;
 
    SCIP_CALL( ensureExterncandsSize(branchcand, set, branchcand->nexterncands+1) );
@@ -755,7 +751,6 @@ SCIP_Bool SCIPbranchcandContainsExternCand(
       /* variable has equal priority as the current maximum:
        * look for it in the correct slot (binaries first, integers next, implicit integers next, continuous last)
        */
-      assert(!(SCIPvarIsImpliedIntegral(var) && (vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER)));
       if( SCIPvarIsImpliedIntegral(var) )
       {
          /* the variable is implicit integer, look at the slots containing implicit integers */
