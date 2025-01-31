@@ -595,8 +595,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
          var = SCIPmatrixGetVar(matrix, i);
 
          /* exclude compensation variables itself for compensation */
-         if( !SCIPvarIsIntegral(var) &&
-            SCIPmatrixGetColNNonzs(matrix, i) == 1 )
+         if( !SCIPvarIsIntegral(var) && SCIPmatrixGetColNNonzs(matrix, i) == 1 )
             continue;
 
          /* if requested exclude continuous variables for compensation */
