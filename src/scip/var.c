@@ -61,7 +61,6 @@
 #include "scip/pub_prop.h"
 #include "scip/pub_var.h"
 #include "scip/relax.h"
-#include "scip/scip_message.h"
 #include "scip/scip_prob.h"
 #include "scip/set.h"
 #include "scip/sol.h"
@@ -1443,7 +1442,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(!SCIPvarIsBinary(var) || SCIPsetIsEQ(set, newbound, boundtype == SCIP_BOUNDTYPE_LOWER ? 1.0 : 0.0));
-   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set,newbound));
+   assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, newbound));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING || infervar != NULL);
    assert((boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER) == (infercons != NULL));
    assert(boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER || inferprop == NULL);
@@ -1569,7 +1568,7 @@ SCIP_RETCODE SCIPdomchgAddHolechg(
 static
 SCIP_Real adjustedLb(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isIntegral,         /**< Whether the variable is integral */
+   SCIP_Bool             isIntegral,         /**< is variable integral? */
    SCIP_Real             lb                  /**< lower bound to adjust */
    )
 {
@@ -1589,7 +1588,7 @@ SCIP_Real adjustedLb(
 static
 SCIP_Real adjustedUb(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isIntegral,         /**< Whether the variable is integral */
+   SCIP_Bool             isIntegral,         /**< is variable integral? */
    SCIP_Real             ub                  /**< upper bound to adjust */
    )
 {
@@ -1623,7 +1622,7 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
 
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarIsActive(var) || (SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var)) );
+   assert(SCIPvarIsActive(var) || SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var));
 
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
@@ -2571,7 +2570,8 @@ SCIP_RETCODE SCIPvarParseOriginal(
    assert(success != NULL);
 
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &impltype, &lazylb, &lazyub, FALSE, endptr, success) );
+   SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &impltype, &lazylb, &lazyub,
+         FALSE, endptr, success) );
 
    if( *success ) /*lint !e774*/
    {
@@ -2640,7 +2640,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
 
    /* parse string in cip format for variable information */
    SCIP_CALL( varParse(set, messagehdlr, str, name, &lb, &ub, &obj, &vartype, &impltype, &lazylb, &lazyub,
-                       TRUE, endptr, success) );
+         TRUE, endptr, success) );
 
    if( *success ) /*lint !e774*/
    {
@@ -3084,9 +3084,9 @@ SCIP_RETCODE SCIPvarPrint(
       case SCIP_VARTYPE_IMPLINT:
       default:
          SCIPerrorMessage("unknown variable type\n");
-         SCIPABORT();
-         return SCIP_ERROR; /*lint !e527*/
+         return SCIP_INVALIDDATA;
    }
+
    /* name */
    SCIPmessageFPrintInfo(messagehdlr, file, " <%s>:", var->name);
 
@@ -3180,8 +3180,7 @@ SCIP_RETCODE SCIPvarPrint(
 
    default:
       SCIPerrorMessage("unknown variable status\n");
-      SCIPABORT();
-      return SCIP_ERROR; /*lint !e527*/
+      return SCIP_INVALIDDATA;
    }
 
    switch( SCIPvarGetImplType(var) )
@@ -3194,6 +3193,9 @@ SCIP_RETCODE SCIPvarPrint(
       case SCIP_VARIMPLTYPE_STRONG:
          SCIPmessageFPrintInfo(messagehdlr, file, ", implied: strong");
          break;
+      default:
+         SCIPerrorMessage("unknown implied type\n");
+         return SCIP_INVALIDDATA;
    }
 
    SCIPmessageFPrintInfo(messagehdlr, file, "\n");
@@ -3580,9 +3582,6 @@ SCIP_RETCODE SCIPvarTransform(
       /* copy donot(mult)aggr status */
       (*transvar)->donotaggr = origvar->donotaggr;
       (*transvar)->donotmultaggr = origvar->donotmultaggr;
-
-      /* copy implied integer status */
-      (*transvar)->varimpltype = origvar->varimpltype; /*lint !e732*/
 
       /* copy lazy bounds */
       (*transvar)->lazylb = origvar->lazylb;
