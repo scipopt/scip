@@ -11303,20 +11303,20 @@ SCIP_DECL_SORTINDCOMP(consdataCompSim)
    assert(0 <= ind1 && ind1 < consdata->nvars);
    assert(0 <= ind2 && ind2 < consdata->nvars);
 
-   SCIP_Bool firstContinuous = !SCIPvarIsIntegral(consdata->vars[ind1]);
-   SCIP_Bool secondContinuous = !SCIPvarIsIntegral(consdata->vars[ind2]);
+   SCIP_Bool varcont1 = !SCIPvarIsIntegral(consdata->vars[ind1]);
+   SCIP_Bool varcont2 = !SCIPvarIsIntegral(consdata->vars[ind2]);
 
-   if( firstContinuous )
+   if( varcont1 )
    {
       /* continuous variables will be sorted to the back */
-      if( firstContinuous != secondContinuous )
+      if( varcont1 != varcont2 )
          return +1;
       /* both variables are continuous */
       else
          return 0;
    }
    /* continuous variables will be sorted to the back */
-   else if( secondContinuous  )
+   else if( varcont2 )
       return -1;
 
    value = REALABS(consdata->vals[ind2]) - REALABS(consdata->vals[ind1]);
