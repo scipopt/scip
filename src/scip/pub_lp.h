@@ -131,9 +131,15 @@ int SCIPcolGetVarProbindex(
    SCIP_COL*             col                 /**< LP col */
    );
 
-/** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
+/** returns whether the associated variable is of integral type (binary, integer or implied integer) */
 SCIP_EXPORT
 SCIP_Bool SCIPcolIsIntegral(
+   SCIP_COL*             col                 /**< LP column */
+   );
+
+/** returns whether the associated variable is implied integer */
+SCIP_EXPORT
+SCIP_Bool SCIPcolIsImpliedIntegral(
    SCIP_COL*             col                 /**< LP column */
    );
 

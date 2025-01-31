@@ -212,7 +212,7 @@ SCIP_Bool colIsDiscrete(
    SCIP_Bool             impliscontinuous    /**< should implicit integer variables be counted as continuous? */
    )
 {
-   return SCIPcolIsIntegral(col) && (!impliscontinuous || !SCIPvarIsImpliedIntegral(SCIPcolGetVar(col)));
+   return SCIPcolIsIntegral(col) && (!impliscontinuous || !SCIPcolIsImpliedIntegral(col));
 }
 
 /** returns nonzero values and corresponding columns of given row */
