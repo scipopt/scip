@@ -2430,7 +2430,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    assert(SCIPsetIsInfinity(set,  ub) || SCIPsetIsLE(set, branchpoint, ub));
    assert(SCIPsetIsInfinity(set, -lb) || SCIPsetIsGE(set, branchpoint, lb));
 
-   if( SCIPvarIsImpliedIntegral(var) || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
    {
       if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
       {
