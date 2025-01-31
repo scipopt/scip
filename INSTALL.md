@@ -213,7 +213,7 @@ Parameters can be set all at once or in subsequent calls to `cmake` - extending 
 Testing with CTest
 ------------------
 
-There is an extensive test suite written for [CTest]("https://cmake.org/cmake/help/latest/manual/ctest.1.html)
+There is an extensive test suite written for [CTest](https://cmake.org/cmake/help/latest/manual/ctest.1.html)
 that may take a while to complete.
 To perform a quick test to see whether the compilation was really successful you may run `make check`.
 To see all available tests, run
