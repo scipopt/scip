@@ -1938,7 +1938,7 @@ SCIP_RETCODE varCreate(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable (none, weak or strong) */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
@@ -1948,6 +1948,7 @@ SCIP_RETCODE varCreate(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
    )
 {
+   SCIP_Bool integral;
    int i;
 
    assert(var != NULL);
