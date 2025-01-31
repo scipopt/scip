@@ -2750,7 +2750,7 @@ SCIP_RETCODE determineBestBounds(
    /* check if the user specified a bound to be used */
    if( boundsfortrans != NULL && boundsfortrans[v] > -3 )
    {
-      assert(!SCIPvarIsIntegral(var) || ( boundsfortrans[v] == -2 || boundsfortrans[v] == -1 ));
+      assert(!SCIPvarIsIntegral(var) || boundsfortrans[v] == -2 || boundsfortrans[v] == -1);
       assert(boundtypesfortrans != NULL);
 
       /* user has explicitly specified a bound to be used */
