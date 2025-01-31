@@ -2642,9 +2642,9 @@ SCIP_RETCODE findBestLb(
           */
          vlbvars = SCIPvarGetVlbVars(var);
          assert(vlbvars != NULL);
-         if( (usevbds == 2 || ( (SCIPvarGetType(vlbvars[bestvlbidx]) == SCIP_VARTYPE_BINARY) &&
-            !SCIPvarIsImpliedIntegral(vlbvars[bestvlbidx]) ) ) &&
-             SCIPvarGetProbindex(vlbvars[bestvlbidx]) < SCIPvarGetProbindex(var) )
+         if( ( usevbds == 2 || ( SCIPvarGetType(vlbvars[bestvlbidx]) == SCIP_VARTYPE_BINARY
+            && !SCIPvarIsImpliedIntegral(vlbvars[bestvlbidx]) ) )
+            && SCIPvarGetProbindex(vlbvars[bestvlbidx]) < SCIPvarGetProbindex(var) )
          {
             *bestlb = bestvlb;
             *bestlbtype = bestvlbidx;
@@ -2704,9 +2704,9 @@ SCIP_RETCODE findBestUb(
           */
          vubvars = SCIPvarGetVubVars(var);
          assert(vubvars != NULL);
-         if( (usevbds == 2 || ( SCIPvarGetType(vubvars[bestvubidx]) == SCIP_VARTYPE_BINARY
-         && !SCIPvarIsImpliedIntegral(vubvars[bestvubidx]) ))&&
-             SCIPvarGetProbindex(vubvars[bestvubidx]) < SCIPvarGetProbindex(var) )
+         if( ( usevbds == 2 || ( SCIPvarGetType(vubvars[bestvubidx]) == SCIP_VARTYPE_BINARY
+            && !SCIPvarIsImpliedIntegral(vubvars[bestvubidx]) ) )
+            && SCIPvarGetProbindex(vubvars[bestvubidx]) < SCIPvarGetProbindex(var) )
          {
             *bestub = bestvub;
             *bestubtype = bestvubidx;
