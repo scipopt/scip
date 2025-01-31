@@ -5779,9 +5779,9 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
          if ( i == j )
             continue;
          /* only check for situations where i and j are binary variables */
-         assert( SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) ||
-         ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) && SCIPvarIsImpliedIntegral(propdata->permvars[j])) );
-         if( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
+         assert( ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) == SCIPvarIsImpliedIntegral(propdata->permvars[j]) )
+               && ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) || SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) ) );
+         if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
             continue;
          /* the permutation must be an involution on binary variables */
          if ( perm[j] != i )
@@ -5843,9 +5843,9 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
             /* ignore fixed points in permutation, and only consider rows with i < j */
             if ( i >= j )
                continue;
-            /* only for situations where i and j are binary variables */
-            assert( SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) ||
-                    ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) && SCIPvarIsImpliedIntegral(propdata->permvars[j])) );
+            /* only check for situations where i and j are binary variables */
+            assert( ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) == SCIPvarIsImpliedIntegral(propdata->permvars[j]) )
+                  && ( SCIPvarIsImpliedIntegral(propdata->permvars[i]) || SCIPvarGetType(propdata->permvars[i]) == SCIPvarGetType(propdata->permvars[j]) ) );
             if ( SCIPvarGetType(propdata->permvars[i]) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(propdata->permvars[i]) )
                continue;
             assert( perm[j] == i );
