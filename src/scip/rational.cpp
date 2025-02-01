@@ -1594,7 +1594,7 @@ int RatToString(
    }
    if( ret == strlen )
    {
-      RatDebugMessage("Rational string to long to fit in buffer. Rational : %q \n", rational);
+      RatDebugMessage("Rational string too long to fit in buffer. Rational : %q \n", rational);
    }
 
    return ret;
