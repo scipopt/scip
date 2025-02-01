@@ -117,8 +117,8 @@ static
 SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
-   int nbin;
-   int nint;
+   int nbinvars;
+   int nintvars;
    int i;
 
    assert(conshdlr != NULL);
@@ -132,11 +132,11 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
 
    *result = SCIP_FEASIBLE;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbin, &nint, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
 
-   int ninteger = nbin + nint + SCIPgetNBinImplVars(scip) + SCIPgetNIntImplVars(scip);
+   int nintegers = nbinvars + nintvars + SCIPgetNBinImplVars(scip) + SCIPgetNIntImplVars(scip);
 
-   for( i = 0; i < ninteger; ++i )
+   for( i = 0; i < nintegers; ++i )
    {
       assert(vars[i] != NULL);
       assert(SCIPvarIsIntegral(vars[i]));
@@ -182,9 +182,9 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_Real solval;
-   int ninteger;
-   int nbin;
-   int nint;
+   int nintegers;
+   int nbinvars;
+   int nintvars;
    int v;
 
    assert(conshdlr != NULL);
@@ -193,16 +193,16 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
 
    SCIPdebugMsg(scip, "Check method of integrality constraint (checkintegrality=%u)\n", checkintegrality);
 
-   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, NULL, NULL) );
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
 
    *result = SCIP_FEASIBLE;
 
    if( !checkintegrality )
       return SCIP_OKAY;
 
-   ninteger = nbin + nint + SCIPgetNBinImplVars(scip) + SCIPgetNIntImplVars(scip);
+   nintegers = nbinvars + nintvars + SCIPgetNBinImplVars(scip) + SCIPgetNIntImplVars(scip);
 
-   for( v = 0; v < ninteger; ++v )
+   for( v = 0; v < nintegers; ++v )
    {
       solval = SCIPgetSolVal(scip, sol, vars[v]);
 
@@ -242,10 +242,10 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
    SCIP_Real score;
    SCIP_Real bestscore;
    SCIP_Bool bestroundup;
-   int ninteger;
-   int nbin;
-   int nint;
-   int nimpl;
+   int nintegers;
+   int nbinvars;
+   int nintvars;
+   int nimplvars;
    int v;
    int bestcandidx;
 
@@ -259,16 +259,16 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
 
    SCIPdebugMsg(scip, "integral constraint handler: determine diving bound changes\n");
 
-   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, &nimpl, NULL) );
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
 
-   ninteger = nbin + nint + nimpl;
+   nintegers = nbinvars + nintvars + nimplvars;
    bestscore = SCIP_REAL_MIN;
    bestcandidx = -1;
    *success = FALSE;
    bestroundup = FALSE; /* only for lint */
 
    /* loop over solution values and get score of fractional variables */
-   for( v = 0; v < ninteger; ++v )
+   for( v = 0; v < nintegers; ++v )
    {
       solval = SCIPgetSolVal(scip, sol, vars[v]);
 
