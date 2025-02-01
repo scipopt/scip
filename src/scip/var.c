@@ -5069,7 +5069,7 @@ SCIP_RETCODE tryAggregateIntVars(
       assert(*aggregated);
       return SCIP_OKAY;
    }
-   if( (b == 1 || b == -1) && !SCIPvarIsImpliedIntegral(varx) )
+   if( ( b == 1 || b == -1 ) && !SCIPvarIsImpliedIntegral(varx) )
    {
       /* aggregate y = - a/b*x + c/b */
       /*lint --e{653}*/
@@ -5135,8 +5135,9 @@ SCIP_RETCODE tryAggregateIntVars(
     * these both variables should be enforced by some other variables, otherwise the new variable needs to be of
     * integral type
     */
-   vartype = SCIP_VARTYPE_INTEGER; /*TODO; check if we can also use continuous here if both are implied integers and continuous */
-   impltype = (SCIPvarIsImpliedIntegral(varx) && SCIPvarIsImpliedIntegral(vary)) ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE;
+   vartype = (SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS)
+         ? SCIP_VARTYPE_CONTINUOUS : SCIP_VARTYPE_INTEGER);
+   impltype = MIN(SCIPvarGetImplType(varx), SCIPvarGetImplType(vary));
 
    /* feasible solutions are (x,y) = (x',y') + z * (-b,a)
     * - create new integer variable z with infinite bounds
