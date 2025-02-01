@@ -249,7 +249,7 @@ SCIP_RETCODE SCIPcertificateUpdateInheritanceData(
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
 
-   /* do nothing if the newbound is worse than the inherited bound */
+   /* do nothing if newbound is not better than the inherited bound */
    if( RatIsLT(newbound, nodedata->derbound_inherit) )
       return SCIP_OKAY;
 
