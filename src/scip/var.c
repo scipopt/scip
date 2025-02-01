@@ -5239,8 +5239,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    typey = SCIPvarIsImpliedIntegral(vary) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(vary);
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
-   if( typey > typex ||
-       ( typey == typex && !SCIPvarIsBinary(vary) && SCIPvarIsBinary(varx))  )
+   if( typex < typey ||
+       ( typex == typey && SCIPvarIsBinary(varx) && !SCIPvarIsBinary(vary))  )
    {
       SCIP_VAR* var;
       SCIP_Real scalar;
@@ -5268,7 +5268,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    easyaggr = FALSE;
 
    /* check if it is an easy aggregation */
-   if( typex == SCIP_VARTYPE_CONTINUOUS && typey < SCIP_VARTYPE_CONTINUOUS )
+   if( typex == SCIP_VARTYPE_CONTINUOUS && typey != SCIP_VARTYPE_CONTINUOUS )
    {
       easyaggr = TRUE;
    }
@@ -5276,7 +5276,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    {
       easyaggr = TRUE;
    }
-   else if( SCIPsetIsFeasIntegral(set, scalarx/scalary) && typey == typex )
+   else if( typex == typey && SCIPsetIsFeasIntegral(set, scalarx / scalary) )
    {
       /* we have an easy aggregation if we flip the variables x and y */
       SCIP_VAR* var;
@@ -5314,8 +5314,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
          return SCIP_OKAY;
 
       /* check aggregation for integer feasibility */
-      if( ( typex != SCIP_VARTYPE_CONTINUOUS)
-         && ( typey != SCIP_VARTYPE_CONTINUOUS)
+      if( typex != SCIP_VARTYPE_CONTINUOUS && typey != SCIP_VARTYPE_CONTINUOUS
          && SCIPsetIsFeasIntegral(set, scalar) && !SCIPsetIsFeasIntegral(set, constant) )
       {
          *infeasible = TRUE;
@@ -5325,15 +5324,15 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       /* if the aggregation scalar is fractional, we cannot (for technical reasons) and do not want to aggregate implicit integer variables,
        * since then we would loose the corresponding divisibility property
        */
-      assert(!SCIPvarIsImpliedIntegral(varx) || SCIPsetIsFeasIntegral(set, scalar));
+      assert(typex != SCIP_IMPLINT_PLACEHOLDER || SCIPsetIsFeasIntegral(set, scalar));
 
       /* aggregate the variable */
       SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
             branchcand, eventfilter, eventqueue, vary, scalar, constant, infeasible, aggregated) );
       assert(*aggregated || *infeasible || SCIPvarDoNotAggr(varx));
    }
-   else if( ( typex == (SCIP_VARTYPE_INTEGER) || SCIPvarIsImpliedIntegral(varx) )
-      && ( typey == (SCIP_VARTYPE_INTEGER) || SCIPvarIsImpliedIntegral(vary)) )
+   else if( ( typex == SCIP_VARTYPE_INTEGER || typex == SCIP_IMPLINT_PLACEHOLDER )
+      && ( typey == SCIP_VARTYPE_INTEGER || typey == SCIP_IMPLINT_PLACEHOLDER ) )
    {
       /* the variables are both integral: we have to try to find an integer aggregation */
       SCIP_CALL( tryAggregateIntVars(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
