@@ -90,7 +90,7 @@
 #endif
 
 
-#define CONSHDLR_NAME          "linear-exact"
+#define CONSHDLR_NAME          "exactlinear"
 #define CONSHDLR_DESC          "exact linear constraints of the form  lhs <= a^T x <= rhs"
 #define CONSHDLR_SEPAPRIORITY   +100000 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY  -1000000 /**< priority of the constraint handler for constraint enforcing */
@@ -107,7 +107,7 @@
 #define CONSHDLR_PRESOLTIMING    (SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_EXHAUSTIVE) /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP
 
-#define EVENTHDLR_NAME         "linear-exact"
+#define EVENTHDLR_NAME         "exactlinear"
 #define EVENTHDLR_DESC         "bound change event handler for linear constraints"
 
 #define DEFAULT_TIGHTENBOUNDSFREQ       1 /**< multiplier on propagation frequency, how often the bounds are tightened */
@@ -3186,7 +3186,7 @@ SCIP_Longint SCIPcertificatePrintActivityVarBoundEx(
    SCIP_Bool upperboundcontribution;
    SCIP_CONSDATA* consdata;
 
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(constraint)), "linear-exact") == 0 );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(constraint)), "exactlinear") == 0 );
 
    switch (variable->varstatus)
    {
@@ -8633,7 +8633,7 @@ void SCIPgetRunningErrorStatsExactLinear(
 
    assert(scip != NULL);
 
-   conshdlr = SCIPfindConshdlr(scip, "linear-exact");
+   conshdlr = SCIPfindConshdlr(scip, "exactlinear");
 
    assert(conshdlr != NULL);
 
@@ -8659,7 +8659,7 @@ void SCIPgetPropStatsExactLinear(
 
    assert(scip != NULL);
 
-   conshdlr = SCIPfindConshdlr(scip, "linear-exact");
+   conshdlr = SCIPfindConshdlr(scip, "exactlinear");
 
    assert(conshdlr != NULL);
 

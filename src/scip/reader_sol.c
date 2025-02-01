@@ -40,6 +40,7 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_sol.h"
 #include "scip/reader_sol.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_message.h"
 #include "scip/scip_param.h"
@@ -175,6 +176,12 @@ SCIP_DECL_READERREAD(readerReadSol)
          filename);
       *result = SCIP_SUCCESS;
       return SCIP_OKAY;
+   }
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of solution file in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
    }
 
    /* open input file in order to determine type */

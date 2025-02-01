@@ -46,6 +46,7 @@
 #include "scip/scip_cons.h"
 #include "scip/scip_debug.h"
 #include "scip/scipdefplugins.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -2744,6 +2745,15 @@ SCIP_DECL_READERREAD(readerReadSto)
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of sto format in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
 
    correader = SCIPfindReader(scip, "correader");
    timreader = SCIPfindReader(scip, "timreader");

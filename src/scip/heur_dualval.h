@@ -28,7 +28,7 @@
  * @author Tobias Buchwald
  *
  * This heuristic tries to find solutions by taking the LP or NLP, rounding solution values, fixing the variables to the
- * rounded values and then changing some of the values.To determine which variable is changed we give each variable a
+ * rounded values and then changing some of the values. To determine which variable is changed we give each variable a
  * ranking dependent on its dualvalue.  We work with a transformed problem that is always feasible and has objective = 0
  * iff the original problem is also feasible. Thus we cannot expect to find really good solutions.
  */

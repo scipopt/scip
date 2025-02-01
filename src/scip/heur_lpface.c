@@ -752,7 +752,6 @@ SCIP_RETCODE setupSubscipLpface(
 
    /* create the variable hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "exact/enabled", FALSE) );
    success = FALSE;
 
    if( heurdata->uselprows )
@@ -763,6 +762,15 @@ SCIP_RETCODE setupSubscipLpface(
       /* copy all plugins */
       SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
             TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+
+      /* copy parameter settings */
+      SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
+
+      /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+       * handler is in place to perform a final repair step
+       */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "exact/enabled", FALSE) );
+
       /* get name of the original problem and add the string "_lpfacesub" */
       (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_lpfacesub", SCIPgetProbName(scip));
 
@@ -772,9 +780,6 @@ SCIP_RETCODE setupSubscipLpface(
 
       /* copy all variables */
       SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, fixvars, fixvals, nfixvars, TRUE) );
-
-      /* copy parameter settings */
-      SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
    }
    else
    {
@@ -786,6 +791,7 @@ SCIP_RETCODE setupSubscipLpface(
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, TRUE, NULL) );
       }
    }
+   assert(!SCIPisExactSolve(subscip));
 
    /* fill subvars array with mapping from original variables and set the objective coefficient to the desired value */
    for( i = 0; i < nvars; i++ )

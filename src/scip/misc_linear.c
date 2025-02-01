@@ -96,7 +96,7 @@ SCIP_Real SCIPconsGetRhs(
    {
       rhs = SCIPgetRhsVarbound(scip, cons);
    }
-   else if( strcmp(conshdlrname, "linear-exact") == 0 )
+   else if( strcmp(conshdlrname, "exactlinear") == 0 )
    {
       rhs = RatApproxReal(SCIPgetRhsExactLinear(scip, cons));
    }
@@ -164,7 +164,7 @@ SCIP_Real SCIPconsGetLhs(
    {
       lhs = SCIPgetLhsVarbound(scip, cons);
    }
-   else if( strcmp(conshdlrname, "linear-exact") == 0 )
+   else if( strcmp(conshdlrname, "exactlinear") == 0 )
    {
       lhs = RatApproxReal(SCIPgetLhsExactLinear(scip, cons));
    }
@@ -201,7 +201,7 @@ SCIP_Rational* SCIPconsGetRhsExact(
 
    *success = TRUE;
 
-   if( strcmp(conshdlrname, "linear-exact") == 0 )
+   if( strcmp(conshdlrname, "exactlinear") == 0 )
    {
       rhs = SCIPgetRhsExactLinear(scip, cons);
    }
@@ -238,7 +238,7 @@ SCIP_Rational* SCIPconsGetLhsExact(
 
    *success = TRUE;
 
-   if( strcmp(conshdlrname, "linear-exact") == 0 )
+   if( strcmp(conshdlrname, "exactlinear") == 0 )
    {
       lhs = SCIPgetLhsExactLinear(scip, cons);
    }
@@ -367,7 +367,7 @@ SCIP_RETCODE SCIPgetConsVals(
          vals[i] = weights[i];
       }
    }
-   else if( strcmp(conshdlrname, "linear-exact") == 0 )
+   else if( strcmp(conshdlrname, "exactlinear") == 0 )
    {
       SCIP_INTERVAL* weights;
 
@@ -433,7 +433,7 @@ SCIP_RETCODE SCIPgetConsValsExact(
       return SCIP_OKAY;
    }
 
-   if( strcmp(conshdlrname, "linear-exact") == 0 )
+   if( strcmp(conshdlrname, "exactlinear") == 0 )
    {
       SCIP_Rational** weights;
       weights = SCIPgetValsExactLinear(scip, cons);
@@ -599,7 +599,7 @@ SCIP_ROW* SCIPconsGetRow(
    {
       return SCIPgetRowVarbound(scip, cons);
    }
-   else if( strcmp(conshdlrname, "linear-exact") == 0 )
+   else if( strcmp(conshdlrname, "exactlinear") == 0 )
    {
       return SCIPgetRowExactLinear(scip, cons);
    }

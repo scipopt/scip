@@ -211,7 +211,7 @@ SCIP_RETCODE SCIPcreateVarBasic(
    return SCIP_OKAY;
 }
 
-/** Add exact data to variable
+/** adds exact data to variable
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -249,9 +249,6 @@ SCIP_RETCODE SCIPaddVarExactData(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      SCIP_CALL( SCIPvarAddExactData(var, scip->mem->probmem, lb, ub, obj) );
-      break;
-
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:

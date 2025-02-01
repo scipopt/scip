@@ -70,8 +70,6 @@ extern "C" {
 
 /** returns whether the solution process is arithmetically exact, i.e., not subject to roundoff errors
  *
- *  @note This feature is not supported yet!
- *
  *  @return Returns TRUE if \SCIP is exact solving mode, otherwise FALSE
  */
 SCIP_EXPORT

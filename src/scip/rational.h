@@ -264,7 +264,7 @@ void RatSetInt(
 
 /** checks if a string describes a rational number */
 SCIP_EXPORT
-bool SCIPisRationalString(
+SCIP_Bool SCIPisRationalString(
    const char*           desc                /**< string to check */
    );
 
@@ -647,7 +647,7 @@ int RatToString(
 
 /** returns the strlen of a rational number */
 SCIP_EXPORT
-SCIP_Longint RatStrlen(
+int RatStrlen(
    SCIP_Rational*        r                   /** rational to consider */
    );
 

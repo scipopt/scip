@@ -10,8 +10,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <time.h>
-#include <algorithm>
 
 
 char Rational::buffer[] = {'\0'};
@@ -171,25 +169,11 @@ bool Rational::isZero() const
    return (mpq_sgn(number) == 0);
 }
 
-/* find substring, ignore case */
-static
-std::string::const_iterator findSubStringIC(const std::string & substr, const std::string & str)
+bool Rational::fromString(const char* num)
 {
-   auto it = std::search(
-      str.begin(), str.end(),
-      substr.begin(),   substr.end(),
-      [](char ch1, char ch2) { return std::toupper(ch1) == std::toupper(ch2); }
-   );
-   return it;
-}
-
-void Rational::fromString(const char* num)
-{
-   char* tmp = &buffer[0];
-   int exponent = 0;
-   int fraction = 0;
-   int k = 0;
-   std::string s = std::string(num);
+   int exponent;
+   int fraction;
+   int k;
 
    assert(num != NULL);
 
@@ -197,25 +181,29 @@ void Rational::fromString(const char* num)
    while( isspace(*num) )
       num++;
 
-   /* case 1: string is given in nom/den format */
-   if( s.find('.') == std::string::npos && findSubStringIC("e",s) == s.end() )
+   // string is given in rational format
+   if( strpbrk(num, "eE.") == NULL )
    {
-      mpq_set_str(number, num, 10);
+      k = mpq_set_str(number, num, 10);
       mpq_canonicalize(number);
-      return;
+      return k == 0;
    }
+
+   exponent = 0;
+   fraction = 0;
+   k = 0;
 
    // skip initial sign
    if( *num == '+' )
       num++;
    else if( *num == '-' )
-      tmp[k++] = *num++;
+      buffer[k++] = *num++;
 
    for( int i = 0; num[i] != '\0'; ++i )
    {
       if( isdigit(num[i]) )
       {
-         tmp[k++]  = num[i];
+         buffer[k++]  = num[i];
          exponent -= fraction;
       }
       else if( num[i] == '.' )
@@ -225,24 +213,28 @@ void Rational::fromString(const char* num)
          exponent += atoi(&num[i + 1]);
          break;
       }
+      else
+         return false;
    }
    while( exponent > 0 )
    {
-      tmp[k++] = '0';
+      buffer[k++] = '0';
       exponent--;
    }
-   tmp[k++] = '/';
-   tmp[k++] = '1';
+   buffer[k++] = '/';
+   buffer[k++] = '1';
 
    while( exponent < 0 )
    {
-      tmp[k++] = '0';
+      buffer[k++] = '0';
       exponent++;
    }
-   tmp[k] = '\0';
+   buffer[k] = '\0';
 
-   mpq_set_str(number, tmp, 10);
+   k = mpq_set_str(number, buffer, 10);
    mpq_canonicalize(number);
+
+   return k == 0;
 }
 
 std::string Rational::toString() const

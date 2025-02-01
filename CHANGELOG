@@ -72,6 +72,8 @@ Interface changes
 
 ### Changed parameters
 
+- heuristics/scheduler/heurtimelimit removed to avoid indeterministic behavior of scheduler heuristic, uses main time limit instead
+
 ### New parameters
 
 - branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
@@ -114,6 +116,8 @@ Miscellaneous
 -------------
 
 - add objective offset instead of objective offset variable in cip reader
+- the solchecker tool is extended for rational values
+- updated ampl/mp to v4.0.0
 
 Known bugs
 ----------
@@ -173,6 +177,7 @@ Fixed bugs
 - fixed bug with installing symmetry dialog in sub-SCIPs
 - add copy callbacks for default plugins presolver dualagg, presolver redvub, branchrule lookahead, branchrule cloud, heuristic dualval, heuristic repair, propagator nlobbt, separator gauge, and separator convexproj missing in SCIPsetCopyPlugins()
 - respect maximal round setting of separation by running remaining delayed separators in last round
+- replace terms consistently in applyFixings() of cons_linear.c to handle infinite aggregations
 
 Unit tests
 ----------
@@ -196,7 +201,7 @@ Miscellaneous
 -------------
 
 - the output precision for writing CIP/OPB files has been increased at several places for nonlinear constraints
-- the solchecker tool now also supports SCIP solution format
+- the solchecker tool now also supports SCIP solutions without unknown or infinite values
 
 Known bugs
 ----------

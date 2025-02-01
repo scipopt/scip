@@ -52,6 +52,7 @@
 #include "scip/struct_certificate.h"
 #include "scip/sol.h"
 #include "scip/struct_scip.h"
+#include "scip/scip_lp.h"
 #include "scip/var.h"
 
 #define SCIP_HASHSIZE_CERTIFICATE    500 /**< size of hash map for certificate -> nodesdata mapping used for certificate output */
@@ -316,6 +317,7 @@ void SCIPcertificateFree(
    BMSfreeMemory(certificate);
 }
 
+/* @todo exip: replace scip pointer by set->scip */
 /** initializes certificate information and creates files for certificate output */
 SCIP_RETCODE SCIPcertificateInit(
    SCIP*                 scip,               /**< scip data structure */
@@ -494,7 +496,7 @@ SCIP_RETCODE SCIPcertificateInit(
       cons = conss[j];
       conshdlr = SCIPconsGetHdlr(cons);
 
-      if( strcmp(SCIPconshdlrGetName(conshdlr), "linear-exact") == 0 )
+      if( strcmp(SCIPconshdlrGetName(conshdlr), "exactlinear") == 0 )
       {
          lb = SCIPgetLhsExactLinear(scip, cons);
          ub = SCIPgetRhsExactLinear(scip, cons);
@@ -558,17 +560,25 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
    SCIP_Rational* ub;
    SCIP_CERTIFICATE* certificate;
    BMS_BLKMEM* blkmem;
+   SCIP_Bool cutoff;
 
    assert(scip != NULL);
    assert(scip->set->certificate_filename != NULL);
 
    certificate = SCIPgetCertificate(scip);
    blkmem = SCIPblkmem(scip);
+   cutoff = false;
 
    assert(certificate != NULL);
 
    if( certificate->transfile_initialized )
       return SCIP_OKAY;
+
+   /* the transfile is constructed using the (exact) LP, so make sure this is constructed here */
+   if( !SCIPisLPConstructed(scip) )
+   {
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+   }
 
    if( certificate->origfile == NULL || certificate->derivationfile == NULL )
    {
@@ -647,7 +657,7 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
 
       SCIPdebug(SCIPprintCons(scip, conss[j], NULL));
 
-      if( strcmp(SCIPconshdlrGetName(conshdlr), "linear-exact") == 0 )
+      if( strcmp(SCIPconshdlrGetName(conshdlr), "exactlinear") == 0 )
       {
          lb = SCIPgetLhsExactLinear(scip, cons);
          ub = SCIPgetRhsExactLinear(scip, cons);

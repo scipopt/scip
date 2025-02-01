@@ -2161,12 +2161,12 @@ void SCIPsolGetValExact(
       {
          if( RatGetSign(res) * RatGetSign(SCIPvarGetAggrScalarExact(var)) > 0 )
          {
-            RatSetString(res, "inf");
+            RatSetString(res, "+infinity");
             return;
          }
          if( RatGetSign(res) * RatGetSign(SCIPvarGetAggrScalarExact(var)) < 0 )
          {
-            RatSetString(res, "-inf");
+            RatSetString(res, "-infinity");
             return;
          }
       }
@@ -2187,9 +2187,9 @@ void SCIPsolGetValExact(
          if( RatIsAbsInfinity(solval) )
          {
             if( RatGetSign(scalars[i]) == RatGetSign(solval) )
-               RatSetString(res, "inf");
+               RatSetString(res, "+infinity");
             if( RatGetSign(scalars[i]) != RatGetSign(solval) && !RatIsZero(scalars[i]) )
-               RatSetString(res, "-inf");
+               RatSetString(res, "-infinity");
             break;
          }
          RatAddProd(res, scalars[i], solval);
@@ -3476,7 +3476,7 @@ SCIP_RETCODE SCIPsolPrint(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
          SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->fixedvars[v]));
       }
    }
@@ -3535,7 +3535,7 @@ SCIP_RETCODE SCIPsolPrint(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
             SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->fixedvars[v]));
          }
       }
@@ -3560,7 +3560,7 @@ SCIP_RETCODE SCIPsolPrint(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
             SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->vars[v]));
          }
       }
@@ -3583,6 +3583,9 @@ SCIP_RETCODE SCIPsolPrintExact(
    )
 {
    SCIP_Rational* solval;
+   char* solvalstr;
+   int solvallen;
+   int solvalsize = SCIP_MAXSTRLEN;
    int v;
 
    assert(sol != NULL);
@@ -3591,6 +3594,7 @@ SCIP_RETCODE SCIPsolPrintExact(
    assert(SCIPsolIsExact(sol));
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &solval) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &solvalstr, solvalsize) );
 
    /* display variables of problem data */
    for( v = 0; v < prob->nfixedvars; ++v )
@@ -3606,10 +3610,28 @@ SCIP_RETCODE SCIPsolPrintExact(
          || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !RatIsZero(solval))
          || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL) ) /*lint !e777*/
       {
-         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
-         RatMessage(messagehdlr, file, solval);
+         solvallen = RatToString(solval, solvalstr, solvalsize);
+         if( solvallen >= solvalsize )
+         {
+            solvalsize = RatStrlen(solval) + 1;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+            solvallen = RatToString(solval, solvalstr, solvalsize);
+            assert(solvallen < solvalsize);
+         }
 
-         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->fixedvars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " %20s", solvalstr);
+
+         solvallen = RatToString(SCIPvarGetObjExact(prob->fixedvars[v]), solvalstr, solvalsize);
+         if( solvallen >= solvalsize )
+         {
+            solvalsize = RatStrlen(solval) + 1;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+            solvallen = RatToString(solval, solvalstr, solvalsize);
+            assert(solvallen < solvalsize);
+         }
+
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%s)\n", solvalstr);
       }
    }
 
@@ -3625,9 +3647,28 @@ SCIP_RETCODE SCIPsolPrintExact(
       if( printzeros || mipstart
          || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !RatIsZero(solval)) ) /*lint !e777*/
       {
+         solvallen = RatToString(solval, solvalstr, solvalsize);
+         if( solvallen >= solvalsize )
+         {
+            solvalsize = RatStrlen(solval) + 1;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+            solvallen = RatToString(solval, solvalstr, solvalsize);
+            assert(solvallen < solvalsize);
+         }
+
          SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->vars[v]));
-         RatMessage(messagehdlr, file, solval);
-         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->vars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " %20s", solvalstr);
+
+         solvallen = RatToString(SCIPvarGetObjExact(prob->vars[v]), solvalstr, solvalsize);
+         if( solvallen >= solvalsize )
+         {
+            solvalsize = RatStrlen(solval) + 1;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+            solvallen = RatToString(solval, solvalstr, solvalsize);
+            assert(solvallen < solvalsize);
+         }
+
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%s)\n", solvalstr);
       }
    }
 
@@ -3648,9 +3689,28 @@ SCIP_RETCODE SCIPsolPrintExact(
          SCIPsolGetValExact(solval, sol, set, stat, transprob->fixedvars[v]);
          if( printzeros || mipstart || !RatIsZero(solval) )
          {
+            solvallen = RatToString(solval, solvalstr, solvalsize);
+            if( solvallen >= solvalsize )
+            {
+               solvalsize = RatStrlen(solval) + 1;
+               SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+               solvallen = RatToString(solval, solvalstr, solvalsize);
+               assert(solvallen < solvalsize);
+            }
+
             SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
-            RatMessage(messagehdlr, file, solval);
-            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->fixedvars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " %20s", solvalstr);
+
+            solvallen = RatToString(SCIPvarGetObjExact(transprob->fixedvars[v]), solvalstr, solvalsize);
+            if( solvallen >= solvalsize )
+            {
+               solvalsize = RatStrlen(solval) + 1;
+               SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+               solvallen = RatToString(solval, solvalstr, solvalsize);
+               assert(solvallen < solvalsize);
+            }
+
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%s)\n", solvalstr);
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
@@ -3666,13 +3726,33 @@ SCIP_RETCODE SCIPsolPrintExact(
          SCIPsolGetValExact(solval, sol, set, stat, transprob->vars[v]);
          if( printzeros || !RatIsZero(solval) )
          {
+            solvallen = RatToString(solval, solvalstr, solvalsize);
+            if( solvallen >= solvalsize )
+            {
+               solvalsize = RatStrlen(solval) + 1;
+               SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+               solvallen = RatToString(solval, solvalstr, solvalsize);
+               assert(solvallen < solvalsize);
+            }
+
             SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->vars[v]));
-            RatMessage(messagehdlr, file, solval);
-            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->vars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " %20s", solvalstr);
+
+            solvallen = RatToString(SCIPvarGetObjExact(transprob->vars[v]), solvalstr, solvalsize);
+            if( solvallen >= solvalsize )
+            {
+               solvalsize = RatStrlen(solval) + 1;
+               SCIP_CALL( SCIPsetReallocBufferArray(set, &solvalstr, solvalsize) );
+               solvallen = RatToString(solval, solvalstr, solvalsize);
+               assert(solvallen < solvalsize);
+            }
+
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%s)\n", solvalstr);
          }
       }
    }
 
+   SCIPsetFreeBufferArray(set, &solvalstr);
    RatFreeBuffer(set->buffer, &solval);
 
    return SCIP_OKAY;
@@ -3712,7 +3792,7 @@ SCIP_RETCODE SCIPsolPrintRay(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
          SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->fixedvars[v]));
       }
    }
@@ -3756,7 +3836,7 @@ SCIP_RETCODE SCIPsolPrintRay(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
             SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->fixedvars[v]));
          }
       }
@@ -3777,7 +3857,7 @@ SCIP_RETCODE SCIPsolPrintRay(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
             SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->vars[v]));
          }
       }

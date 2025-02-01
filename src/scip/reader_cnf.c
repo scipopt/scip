@@ -44,6 +44,7 @@
 #include "scip/pub_reader.h"
 #include "scip/reader_cnf.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -402,6 +403,14 @@ SCIP_DECL_READERREAD(readerReadCnf)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(filename != NULL);
    assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of cnf format in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
 
    /* open file */
    f = SCIPfopen(filename, "r");

@@ -261,7 +261,7 @@ void setProbHasEquations(
 
    for( c = 0; c < nconss; ++c )
    {
-      if( SCIPconsGetHdlr(conss[c]) == SCIPfindConshdlr(scip, "linear-exact") )
+      if( SCIPconsGetHdlr(conss[c]) == SCIPfindConshdlr(scip, "exactlinear") )
       {
          // constraint is an equality constraint
          if( RatIsEqual(SCIPconsGetRhsExact(scip, conss[c], &success), SCIPconsGetLhsExact(scip, conss[c], &success)) ) /*lint !e864*/

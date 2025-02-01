@@ -28,7 +28,7 @@
  * @author Tobias Buchwald
  *
  * This heuristic tries to find solutions by taking the LP or NLP, rounding solution values, fixing the variables to the
- * rounded values and then changing some of the values.To determine which variable is changed we give each variable a
+ * rounded values and then changing some of the values. To determine which variable is changed we give each variable a
  * ranking dependent on its dualvalue.  We work with a transformed problem that is always feasible and has objective = 0
  * iff the original problem is also feasible. Thus we cannot expect to find really good solutions.
  */
@@ -906,7 +906,7 @@ SCIP_RETCODE createSubSCIP(
    heurdata->solfound = FALSE;
    heurdata->nonimprovingRounds = 0;
 
-   /* we can't change the vartype in some constraints, so we have to check that only the right constraints are present*/
+   /* we can't change the vartype in some constraints, so we have to check that only the right constraints are present */
    conshdlrindi = SCIPfindConshdlr(scip, "indicator");
    conshdlrlin = SCIPfindConshdlr(scip, "linear");
    conshdlrnonlin = SCIPfindConshdlr(scip, "nonlinear");
@@ -919,7 +919,7 @@ SCIP_RETCODE createSubSCIP(
    conss = SCIPgetOrigConss(scip);
 
    /* for each constraint ask if it has an allowed type */
-   for (i = 0; i < nconss; i++ )
+   for( i = 0; i < nconss; i++ )
    {
       cons = conss[i];
       currentconshdlr = SCIPconsGetHdlr(cons);
@@ -970,6 +970,11 @@ SCIP_RETCODE createSubSCIP(
 
    /* copy parameter settings */
    SCIP_CALL( SCIPcopyParamSettings(scip, heurdata->subscip) );
+
+   /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+    * handler is in place to perform a final repair step
+    */
+   SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "exact/enabled", FALSE) );
 
    /* disable bound limits */
    SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/primal", SCIP_INVALID) );

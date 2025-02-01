@@ -315,7 +315,18 @@ list(APPEND
     "instances/Indicator/indicatortest.zpl\;-2"
     "instances/Indicator/mcf64-4-1.zpl\;10"
     )
+#
+# this instance was part of the original coverage tests. However, it causes
+# a significant overhead without providing relevant benefit.
+#
+#list(APPEND
+#    instances_MIP
+#    "instances/MIP/rocII_2_11.zpl\;+4.61527698552400e+00"
+#    )
+endif()
+
 # exact ip instances
+if(EXACTSOLVE)
 set(instances_MIPEX
     "instances/MIPEX/egout.zpl\;568.1007"
     "instances/MIPEX/enigma.zpl\;0"
@@ -326,15 +337,6 @@ set(instances_MIPEX
     "instances/MIPEX/stein27.zpl\;18"
     "instances/MIPEX/stein45.zpl\;30"
     )
-#
-# this instance was part of the original coverage tests. However, it causes
-# a significant overhead without providing relevant benefit.
-#
-#list(APPEND
-#    instances_MIP
-#    "instances/MIP/rocII_2_11.zpl\;+4.61527698552400e+00"
-#    )
-
 endif()
 
 #
@@ -526,6 +528,7 @@ set(pairs_Issue
     "instances/Issue/3728.cip\;0\;reduced_presolving_heuristics"
     "instances/Issue/3746.cip\;0\;seed_1"
     "instances/Issue/3752.cip\;28066\;default"
+    "instances/Issue/3787.lp\;1\;default"
 )
 
 #
@@ -621,8 +624,7 @@ macro(add_instancetests instances settings prefix)
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                    FAIL_REGULAR_EXPRESSION "ERROR"
-                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
             endif()  # integrality violated in multiaggregated integer variable, #3724 (LPS=cpx, MIP-convertinttobin_mostinf-bell5.mps)
@@ -658,8 +660,7 @@ if((${TEST_BENDERSQP} AND (NOT ${LPS} STREQUAL "msk" )) OR (NOT ${prefix} STREQU
             set_tests_properties(${prefix}-${setting}-${basename}
                                 PROPERTIES
                                     PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                    FAIL_REGULAR_EXPRESSION "ERROR"
-                                    FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                    FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                     DEPENDS scip-build
                                 )
             endif()  # separation does not converge, #3724 (LPS=grb, BendersQP-benders-qp-classical_30_0.mps)
@@ -683,8 +684,7 @@ macro(add_pairtests pairs prefix)
         set_tests_properties(${prefix}-${setting}-${basename}
                             PROPERTIES
                                 PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                FAIL_REGULAR_EXPRESSION "ERROR"
-                                FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                 DEPENDS scip-build
                             )
     endforeach(pair)
@@ -771,8 +771,7 @@ foreach(instance ${instances_Objlim})
     set_tests_properties(Objlim-${setting}-${basename}
         PROPERTIES
             PASS_REGULAR_EXPRESSION "Validation         : Success"
-            FAIL_REGULAR_EXPRESSION "ERROR"
-            FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+            FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
             DEPENDS scip-build
         )
 endforeach(instance)
@@ -932,10 +931,8 @@ foreach(instance ${instances_MIP})
                 )
         set_tests_properties(MIP-mipstart-${basename}
                             PROPERTIES
-                                PASS_REGULAR_EXPRESSION "Validation         : Success"
+                                PASS_REGULAR_EXPRESSION "Validation         : Success.*Validation         : Success"
                                 FAIL_REGULAR_EXPRESSION "ERROR"
-                                # the MIP start instances are validated twice.
-                                FAIL_REGULAR_EXPRESSION "Validation         : Fail"
                                 DEPENDS scip-build
                             )
     endif()
@@ -982,8 +979,7 @@ foreach(testname reopt-chg-obj-stein27 reopt-chg-obj-flugpl reopt-chg-obj-1-Full
                 )
         set_tests_properties(${testname}-${setting} PROPERTIES
                                             PASS_REGULAR_EXPRESSION "Validation         : Success"
-                                            FAIL_REGULAR_EXPRESSION "ERROR"
-                                            FAIL_REGULAR_EXPRESSION "user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
+                                            FAIL_REGULAR_EXPRESSION "ERROR|user parameter file <${PROJECT_SOURCE_DIR}/check/coverage/settings/${setting}.set> not found"
                                             DEPENDS scip-build)
         endforeach()
 endforeach()
@@ -1185,7 +1181,7 @@ endif (UNIX)
 endif()
 
 # @todo exip: this assumes you have vipr on your path, needs to be fixed eventually
-if(TEST_MIPEX)
+if(EXACTSOLVE)
     foreach(instance ${instances_MIPEX})
         split_instance(instance)
         #
@@ -1215,9 +1211,9 @@ if(TEST_MIPEX)
                                     DEPENDS scip-build
                                 )
 
-            if(NOT ${VIPR} STREQUAL VIPR-NOTFOUND)
+            if(VIPRCOMP AND VIPRCHK)
                add_test(NAME MIPEX-${setting}-${basename}-viprcomp
-                     COMMAND viprcomp ${basename}.${setting}.vipr)
+                     COMMAND ${VIPRCOMP} ${basename}.${setting}.vipr)
                set_tests_properties(MIPEX-${setting}-${basename}-viprcomp
                                  PROPERTIES
                                  DEPENDS MIPEX-${setting}-${basename}
@@ -1226,7 +1222,7 @@ if(TEST_MIPEX)
                                  FAIL_REGULAR_EXPRESSION "Failed")
 
                add_test(NAME MIPEX-${setting}-${basename}-vipr
-                     COMMAND viprchk ${basename}.${setting}_complete.vipr)
+                     COMMAND ${VIPRCHK} ${basename}.${setting}_complete.vipr)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr
                                  PROPERTIES
                                  DEPENDS MIPEX-${setting}-${basename}-viprcomp
@@ -1235,7 +1231,7 @@ if(TEST_MIPEX)
                                  FAIL_REGULAR_EXPRESSION "Failed")
 
                add_test(NAME MIPEX-${setting}-${basename}-vipr_ori
-                     COMMAND viprchk ${basename}.${setting}.vipr_ori)
+                     COMMAND ${VIPRCHK} ${basename}.${setting}.vipr_ori)
                set_tests_properties(MIPEX-${setting}-${basename}-vipr_ori
                                  PROPERTIES
                                  DEPENDS MIPEX-${setting}-${basename}

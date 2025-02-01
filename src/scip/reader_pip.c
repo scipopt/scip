@@ -53,6 +53,7 @@
 #include "scip/pub_reader.h"
 #include "scip/pub_var.h"
 #include "scip/scip_cons.h"
+#include "scip/scip_exact.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
 #include "scip/scip_numerics.h"
@@ -3237,6 +3238,15 @@ SCIP_RETCODE SCIPreadPip(
 
    assert(scip != NULL);  /* for lint */
    assert(reader != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIPerrorMessage("reading of pip format in exact solving mode is not yet supported\n");
+      return SCIP_READERROR;
+   }
 
    /* initialize PIP input data */
    pipinput.file = NULL;

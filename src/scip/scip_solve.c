@@ -289,9 +289,6 @@ SCIP_RETCODE SCIPtransformProb(
    /* switch stage to TRANSFORMED */
    scip->set->stage = SCIP_STAGE_TRANSFORMED;
 
-   /* possibly create a certificate output file */
-   SCIP_CALL( SCIPcertificateInit(scip, SCIPgetCertificate(scip), scip->mem->probmem, scip->set, scip->messagehdlr) );
-
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
     * cutoff bound if primal solution is already known
     */
@@ -1550,6 +1547,9 @@ SCIP_RETCODE initSolve(
 
    /* possibly create visualization output file */
    SCIP_CALL( SCIPvisualInit(scip->stat->visual, scip->mem->probmem, scip->set, scip->messagehdlr) );
+
+   /* possibly create certificate output file */
+   SCIP_CALL( SCIPcertificateInit(scip, scip->stat->certificate, scip->mem->probmem, scip->set, scip->messagehdlr) );
 
    /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );

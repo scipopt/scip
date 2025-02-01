@@ -1083,7 +1083,7 @@ SCIP_RETCODE createAndAddProofcons(
 
          assert(conshdlr != NULL);
          assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 || set->exact_enabled );
-         assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear-exact") == 0 || !set->exact_enabled );
+         assert(strcmp(SCIPconshdlrGetName(conshdlr), "exactlinear") == 0 || !set->exact_enabled );
 #endif
          side = set->exact_enabled ? RatRoundReal(SCIPgetLhsExactLinear(set->scip, cons), SCIP_R_ROUND_NEAREST) : SCIPgetLhsLinear(set->scip, cons);
 

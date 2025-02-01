@@ -769,7 +769,7 @@ SCIP_RETCODE SCIPmatrixCreate(
 
          if( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "knapsack") == 0
             || strcmp(conshdlrname, "setppc") == 0 || strcmp(conshdlrname, "logicor") == 0
-            || strcmp(conshdlrname, "varbound") == 0 || (strcmp(conshdlrname, "linear-exact") == 0) )
+            || strcmp(conshdlrname, "varbound") == 0 || (strcmp(conshdlrname, "exactlinear") == 0) )
          {
             /* increment number of supported constraints */
             nconss += nconshdlrconss;
@@ -971,7 +971,7 @@ SCIP_RETCODE SCIPmatrixCreate(
             }
          }
       }
-      else if( strcmp(conshdlrname, "linear-exact") == 0 )
+      else if( strcmp(conshdlrname, "exactlinear") == 0 )
       {
          for( c = 0; c < nconshdlrconss && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
          {
