@@ -550,6 +550,10 @@ LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.
 endif
 endif
 
+ifeq ($(SYM),dejavu)
+CXXFLAGS	+=	$(CXX14FLAG)
+endif
+
 #-----------------------------------------------------------------------------
 # PaPILO Library
 #-----------------------------------------------------------------------------
