@@ -3848,7 +3848,7 @@ SCIP_RETCODE SCIPvarFix(
       SCIPsetDebugMsg(set, " -> variable already fixed to %g (fixedval=%g): infeasible=%u\n", var->locdom.lb, fixedval, *infeasible);
       return SCIP_OKAY;
    }
-   else if( (SCIPvarIsIntegral(var) && !SCIPsetIsFeasIntegral(set, fixedval))
+   else if( ( SCIPvarIsIntegral(var) && !SCIPsetIsFeasIntegral(set, fixedval) )
       || SCIPsetIsFeasLT(set, fixedval, var->locdom.lb)
       || SCIPsetIsFeasGT(set, fixedval, var->locdom.ub) )
    {
@@ -5058,7 +5058,7 @@ SCIP_RETCODE tryAggregateIntVars(
    }
 
    /* check, if we are in an easy case with either |a| = 1 or |b| = 1 */
-   if( (a == 1 || a == -1) && !SCIPvarIsImpliedIntegral(vary) )
+   if( ( a == 1 || a == -1 ) && !SCIPvarIsImpliedIntegral(vary) )
    {
       /* aggregate x = - b/a*y + c/a */
       /*lint --e{653}*/
@@ -5136,8 +5136,7 @@ SCIP_RETCODE tryAggregateIntVars(
    vartype = SCIP_VARTYPE_INTEGER; /*TODO; check if we can also use continuous here if both are implied integers and continuous */
    impltype = (SCIPvarIsImpliedIntegral(varx) && SCIPvarIsImpliedIntegral(vary)) ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE;
 
-
-      /* feasible solutions are (x,y) = (x',y') + z*(-b,a)
+   /* feasible solutions are (x,y) = (x',y') + z * (-b,a)
     * - create new integer variable z with infinite bounds
     * - aggregate variable x = -b*z + x'
     * - aggregate variable y =  a*z + y'
