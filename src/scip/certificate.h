@@ -380,7 +380,7 @@ SCIP_RETCODE SCIPcertificateNewAggrInfo(
    );
 
 /** prints unsplitting information to proof section */
-void SCIPcertificatePrintUnsplitting(
+SCIP_RETCODE SCIPcertificatePrintUnsplitting(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    SCIP_NODE*            node                /**< node data */
