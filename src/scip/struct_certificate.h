@@ -99,15 +99,15 @@ struct SCIP_MirInfo
 
 struct SCIP_Certnodedata
 {
-   SCIP_Longint          assumptionindex_self;/**< Line Index where assumption is printed */
-   SCIP_Longint          assumptionindex_left;/**< Line Index of left branch assumption */
-   SCIP_Longint          derindex_left;      /**< Line Index of derivation assuming assumption left */
-   SCIP_Rational*        derbound_left;      /**< Bound of left derivation */
-   SCIP_Longint          assumptionindex_right;/**< Line Index of right branch assumption */
-   SCIP_Longint          derindex_right;     /**< Line Index of derivation assuming assumption right */
-   SCIP_Rational*        derbound_right;     /**< Bound of right derivation */
-   SCIP_Longint          derindex_inherit;   /**< Line index of bound inherited from parent */
-   SCIP_Rational*        derbound_inherit;   /**< inherited bound */
+   SCIP_Longint          assumptionindex_self;/**< line index where assumption is printed */
+   SCIP_Longint          assumptionindex_left;/**< line index of left branch assumption */
+   SCIP_Longint          derindex_left;      /**< line index of derivation assuming assumption left */
+   SCIP_Rational*        derbound_left;      /**< bound of left derivation */
+   SCIP_Longint          assumptionindex_right;/**< line index of right branch assumption */
+   SCIP_Longint          derindex_right;     /**< line index of derivation assuming assumption right */
+   SCIP_Rational*        derbound_right;     /**< bound of right derivation */
+   SCIP_Longint          derindex_self;      /**< line index of node's own bound, initially inherited from parent */
+   SCIP_Rational*        derbound_self;      /**< node's own bound, initially inherited from parent */
    unsigned int          leftfilled:1;       /**< is the data for the left child node set? */
    unsigned int          leftinfeas:1;       /**< is the left node infeasible ? */
    unsigned int          rightfilled:1;      /**< is the data for the right child node set? */

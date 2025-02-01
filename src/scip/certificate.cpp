@@ -152,7 +152,7 @@ SCIP_RETCODE certificateFreeNodeData(
    nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
    RatFreeBlock(certificate->blkmem, &nodedata->derbound_left);
    RatFreeBlock(certificate->blkmem, &nodedata->derbound_right);
-   RatFreeBlock(certificate->blkmem, &nodedata->derbound_inherit);
+   RatFreeBlock(certificate->blkmem, &nodedata->derbound_self);
    BMSfreeBlockMemory(certificate->blkmem, &nodedata);
    SCIP_CALL( SCIPhashmapRemove(certificate->nodedatahash, node) );
 
@@ -246,12 +246,12 @@ SCIP_RETCODE SCIPcertificateUpdateBoundData(
    nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
 
    /* do nothing if newbound is not better than the current bound */
-   if( RatIsLT(newbound, nodedata->derbound_inherit) )
+   if( RatIsLT(newbound, nodedata->derbound_self) )
       return SCIP_OKAY;
 
    nodedata->inheritedbound = FALSE;
-   nodedata->derindex_inherit = fileindex;
-   RatSet(nodedata->derbound_inherit, newbound);
+   nodedata->derindex_self = fileindex;
+   RatSet(nodedata->derbound_self, newbound);
 
    return SCIP_OKAY;
 }
@@ -2051,7 +2051,7 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
 
-   if( newbound != NULL && RatIsLT(newbound, nodedata->derbound_inherit) )
+   if( newbound != NULL && RatIsLT(newbound, nodedata->derbound_self) )
       return SCIP_OKAY;
 
    /* if the node is the root node, then only update the index and bound */
@@ -2400,12 +2400,12 @@ SCIP_RETCODE SCIPcertificatePrintInheritedBound(
       SCIP_Longint ind[1];
       SCIP_Rational* val;
 
-      ind[0] = nodedata->derindex_inherit;
+      ind[0] = nodedata->derindex_self;
 
       SCIP_CALL( RatCreateBuffer(set->buffer, &lowerbound) );
       SCIP_CALL( RatCreateBuffer(set->buffer, &val) );
 
-      RatSet(lowerbound, nodedata->derbound_inherit);
+      RatSet(lowerbound, nodedata->derbound_self);
       RatSetInt(val, 1, 1);
 
       SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, 1, ind, &val);
@@ -2604,14 +2604,14 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
    nodedata->assumptionindex_right = -1;
    SCIP_CALL( RatCreateString(certificate->blkmem, &nodedata->derbound_left, "-inf") );
    SCIP_CALL( RatCreateString(certificate->blkmem, &nodedata->derbound_right, "-inf") );
-   SCIP_CALL( RatCreateString(certificate->blkmem, &nodedata->derbound_inherit, "-inf") );
+   SCIP_CALL( RatCreateString(certificate->blkmem, &nodedata->derbound_self, "-inf") );
    nodedata->assumptionindex_self = -1;
    nodedata->leftinfeas = FALSE;
    nodedata->leftfilled = FALSE;
    nodedata->rightinfeas = FALSE;
    nodedata->rightfilled = FALSE;
    nodedata->inheritedbound = TRUE;
-   nodedata->derindex_inherit = -1;
+   nodedata->derindex_self = -1;
    if( SCIPnodeGetParent(node) != NULL )
    {
       SCIP_NODE* parent = SCIPnodeGetParent(node);
@@ -2620,8 +2620,8 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
       parentdata = (SCIP_CERTNODEDATA*) SCIPhashmapGetImage(certificate->nodedatahash, (void*) parent);
       assert(parentdata != NULL);
 
-      nodedata->derindex_inherit = parentdata->derindex_inherit;
-      RatSet(nodedata->derbound_inherit, parentdata->derbound_inherit);
+      nodedata->derindex_self = parentdata->derindex_self;
+      RatSet(nodedata->derbound_self, parentdata->derbound_self);
    }
 
    /* link the node to its nodedata in the corresponding hashmap */
@@ -3305,11 +3305,11 @@ SCIP_RETCODE SCIPcertificatePrintUnsplitting(
          SCIP_Longint ind[1];
          SCIP_Rational* val;
 
-         ind[0] = nodedata->derindex_inherit;
+         ind[0] = nodedata->derindex_self;
 
          (void) RatCreateBuffer(set->buffer, &val);
 
-         RatSet(lowerbound, nodedata->derbound_inherit);
+         RatSet(lowerbound, nodedata->derbound_self);
          RatSetInt(val, 1, 1);
 
          SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, 1, ind, &val);
