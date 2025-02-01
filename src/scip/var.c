@@ -1953,7 +1953,6 @@ SCIP_RETCODE varCreate(
    assert(var != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
-
    assert(vartype != SCIP_IMPLINT_PLACEHOLDER);
 
    /* adjust bounds of variable */
@@ -5884,9 +5883,6 @@ SCIP_RETCODE SCIPvarNegate(
       (*negvar)->donotaggr = var->donotaggr;
       (*negvar)->donotmultaggr = var->donotmultaggr;
 
-      /* copy implied integer status */
-      (*negvar)->varimpltype = var->varimpltype; /*lint !e732*/
-
       /* copy lazy bounds (they have to be flipped) */
       (*negvar)->lazylb = (*negvar)->data.negate.constant - var->lazyub;
       (*negvar)->lazyub = (*negvar)->data.negate.constant - var->lazylb;
@@ -6145,8 +6141,8 @@ SCIP_RETCODE SCIPvarChgImplType(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_VARIMPLTYPE      impltype             /**< new implied integer type of variable */
-)
+   SCIP_VARIMPLTYPE      impltype            /**< new implied integer type of variable */
+   )
 {
    SCIP_EVENT* event;
    SCIP_VARIMPLTYPE oldtype;
@@ -6829,7 +6825,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
    }
    assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, newbound));
 
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
+   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0)); /*lint !e641*/
 
    SCIPsetDebugMsg(set, "process changing global lower bound of <%s> from %f to %f\n", var->name, var->glbdom.lb, newbound);
 
@@ -7005,7 +7001,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
    }
    assert(!SCIPvarIsIntegral(var) || SCIPsetIsFeasIntegral(set, newbound));
 
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0));  /*lint !e641*/
+   assert(var->vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, newbound, 0.0) || SCIPsetIsEQ(set, newbound, 1.0)); /*lint !e641*/
 
    SCIPsetDebugMsg(set, "process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
 
@@ -7616,7 +7612,7 @@ SCIP_RETCODE varProcessChgLbLocal(
             || SCIPsetIsEQ(set, newbound, var->locdom.ub)))
       || (SCIPvarIsIntegral(var) && (SCIPsetIsIntegral(set, newbound)
             || SCIPsetIsEQ(set, newbound, var->locdom.ub)))
-      || !SCIPvarIsIntegral(var) );
+      || !SCIPvarIsIntegral(var));
 
    /* check that the bound is feasible */
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsLE(set, newbound, var->glbdom.ub));
@@ -7783,7 +7779,7 @@ SCIP_RETCODE varProcessChgUbLocal(
             || SCIPsetIsEQ(set, newbound, var->locdom.lb)))
       || (SCIPvarIsIntegral(var) && (SCIPsetIsIntegral(set, newbound)
             || SCIPsetIsEQ(set, newbound, var->locdom.lb)))
-      || !SCIPvarIsIntegral(var) );
+      || !SCIPvarIsIntegral(var));
 
    /* check that the bound is feasible */
    assert(SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM || SCIPsetIsGE(set, newbound, var->glbdom.lb));
@@ -17739,11 +17735,13 @@ SCIP_VARTYPE SCIPvarGetType(
    return (SCIP_VARTYPE)(var->vartype);
 }
 
+/** gets the implied integer type of the variable */
 SCIP_VARIMPLTYPE SCIPvarGetImplType(
-   SCIP_VAR*             var
+   SCIP_VAR*             var                 /**< problem variable */
    )
 {
    assert(var != NULL);
+
    return (SCIP_VARIMPLTYPE)(var->varimpltype);
 }
 
@@ -17764,7 +17762,7 @@ SCIP_Bool SCIPvarIsBinary(
       && var->glbdom.lb >= 0.0 && var->glbdom.ub <= 1.0));
 }
 
-/** returns whether variable is of integral type (binary, integer, or a continuous variable that is implied integer) */
+/** returns whether variable is of integral type (binary, integer, or implied integral of any type) */
 SCIP_Bool SCIPvarIsIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -17774,9 +17772,9 @@ SCIP_Bool SCIPvarIsIntegral(
    return (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE);
 }
 
-SCIP_EXPORT
+/** returns whether variable is implied integral (weakly or strongly) */
 SCIP_Bool SCIPvarIsImpliedIntegral(
-   SCIP_VAR*             var
+   SCIP_VAR*             var                 /**< problem variable */
    )
 {
    assert(var != NULL);

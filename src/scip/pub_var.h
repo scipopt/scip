@@ -475,13 +475,13 @@ SCIP_Bool SCIPvarIsBinary(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns whether variable is of integral type (binary, integer, or implicit integer) */
+/** returns whether variable is of integral type (binary, integer, or implied integral of any type) */
 SCIP_EXPORT
 SCIP_Bool SCIPvarIsIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns whether the variable is implied integral */
+/** returns whether variable is implied integral (weakly or strongly) */
 SCIP_EXPORT
 SCIP_Bool SCIPvarIsImpliedIntegral(
    SCIP_VAR*             var                 /**< problem variable */
