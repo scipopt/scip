@@ -23043,7 +23043,7 @@ SCIP_VARSTATUS SCIPvarGetStatus(
    return (SCIP_VARSTATUS)(var->varstatus);
 }
 
-/** return the status of the exact variable data */
+/** returns the status of the exact variable data */
 SCIP_VARSTATUS SCIPvarGetStatusExact(
    SCIP_VAR*             var                 /**< scip variable */
    )
@@ -23054,6 +23054,15 @@ SCIP_VARSTATUS SCIPvarGetStatusExact(
    return var->exactdata->varstatusexact;
 }
 
+/** returns whether the variable has exact variable data */
+SCIP_Bool SCIPvarIsExact(
+   SCIP_VAR*             var                 /**< scip variable */
+   )
+{
+   assert(var != NULL);
+
+   return (var->exactdata != NULL);
+}
 
 /** returns whether the variable belongs to the original problem */
 SCIP_Bool SCIPvarIsOriginal(
