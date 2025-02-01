@@ -768,7 +768,7 @@ void SCIPprobSetData(
 }
 
 static
-int computeInsertPos(
+int provideInsertPos(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_VARTYPE          vartype,            /**< type of the variable to be inserted */
    SCIP_VARIMPLTYPE      impltype            /**< implied integer type of the variable to be inserted */
@@ -881,7 +881,7 @@ void probInsertVar(
 
    SCIP_VARTYPE vartype = SCIPvarGetType(var);
    SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
-   int insertpos = computeInsertPos(prob, vartype, impltype);
+   int insertpos = provideInsertPos(prob, vartype, impltype);
 
    ++prob->nvars;
 
