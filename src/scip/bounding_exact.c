@@ -1911,7 +1911,7 @@ char chooseInitialBoundingMethod(
       else
       {
          /* check if Neumaier-Shcherbina is possible */
-         if( SCIPlpExactBoundShiftPossible(lpexact) )
+         if( SCIPlpExactBoundShiftUseful(lpexact) )
             dualboundmethod = 'n';
          /* check if project and shift is possible */
          else if( SCIPlpExactProjectShiftPossible(lpexact) )
@@ -1954,7 +1954,7 @@ char chooseFallbackBoundingMethod(
       /* exactlp -> try bound shift next, if possible, otherwise project-shift, if possible,
        * otherwise try exactlp again
        */
-      if( SCIPlpExactBoundShiftPossible(lpexact) )
+      if( SCIPlpExactBoundShiftUseful(lpexact) )
          dualboundmethod = 'n';
       else
          dualboundmethod = SCIPlpExactProjectShiftPossible(lpexact) ? 'p' : 't';
@@ -2037,7 +2037,7 @@ SCIP_RETCODE boundShift(
    lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    lpexact->solved = 0;
 
-   if( !SCIPlpExactBoundShiftPossible(lpexact) )
+   if( !SCIPlpExactBoundShiftUseful(lpexact) )
       return SCIP_OKAY;
 
    /* start timing */
@@ -2312,7 +2312,7 @@ CLEANUP:
    if( stat->nboundshift + stat->nboundshiftinf > 10
       && (1.0 * stat->nfailboundshift + stat->nfailboundshiftinf) / (stat->nboundshift + stat->nboundshiftinf) > 0.8 )
    {
-      lpexact->boundshiftviable = FALSE;
+      lpexact->boundshiftuseful = FALSE;
    }
    /* free buffer for storing y in interval arithmetic */
    SCIPsetFreeBufferArray(set, &ublbcol);

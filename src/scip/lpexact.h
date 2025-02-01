@@ -287,8 +287,8 @@ SCIP_RETCODE SCIPlpExactLink(
  * lp methods
  */
 
-/** returns whether it is possible to use neumair-shcherbina bounding method */
-SCIP_Bool SCIPlpExactBoundShiftPossible(
+/** returns whether the success rate of the Neumaier-Shcherbina safe bounding method is sufficiently high */
+SCIP_Bool SCIPlpExactBoundShiftUseful(
    SCIP_LPEXACT*         lp                  /**< pointer to LP data object */
    );
 

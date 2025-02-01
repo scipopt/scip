@@ -3933,14 +3933,14 @@ SCIP_RETCODE SCIPlpExactProjectShiftFree(
    return SCIP_OKAY;
 }
 
-/** returns whether it is possible to use Neumaier-Shcherbina Safe bounding method */
-SCIP_Bool SCIPlpExactBoundShiftPossible(
+/** returns whether the success rate of the Neumaier-Shcherbina safe bounding method is sufficiently high */
+SCIP_Bool SCIPlpExactBoundShiftUseful(
    SCIP_LPEXACT*         lp                  /**< pointer to LP data object */
    )
 {
    assert(lp != NULL);
 
-   return lp->boundshiftviable;
+   return lp->boundshiftuseful;
 }
 
 /** returns whether it is possible to use project and shift bounding method */
@@ -4025,7 +4025,7 @@ SCIP_RETCODE SCIPlpExactCreate(
    (*lp)->solisbasic = FALSE;
    (*lp)->resolvelperror = FALSE;
    (*lp)->projshiftpossible = FALSE;
-   (*lp)->boundshiftviable = TRUE;
+   (*lp)->boundshiftuseful = TRUE;
    (*lp)->forceexactsolve = FALSE;
    (*lp)->allowexactsolve = FALSE;
    (*lp)->forcesafebound = FALSE;
