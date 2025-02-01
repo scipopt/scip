@@ -568,6 +568,11 @@ SCIP_RETCODE applyRepair(
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
    SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
 
+   /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+    * handler is in place to perform a final repair step
+    */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "exact/enabled", FALSE) );
+
    /* use inference branching */
    if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
@@ -578,6 +583,7 @@ SCIP_RETCODE applyRepair(
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_repairsub", SCIPgetProbName(scip));
 
    SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   assert(!SCIPisExactSolve(subscip));
 
    /* a trivial feasible solution can be constructed if violations are modeled with slack variables */
    if( heurdata->useslackvars )
