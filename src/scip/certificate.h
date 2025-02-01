@@ -422,12 +422,12 @@ void SCIPcertificatePrintSolExact(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/** set the node to have its own bound proof */
-SCIP_RETCODE SCIPcertificateUpdateInheritanceData(
+/** updates the current derived bound of the node with newbound, if newbound is better */
+SCIP_RETCODE SCIPcertificateUpdateBoundData(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_NODE*            node,               /**< node data structure */
-   SCIP_Longint          fileindex,          /**< index of new bound */
-   SCIP_Rational*        newbound            /**< the inherited bound */
+   SCIP_Longint          fileindex,          /**< index of new bound's proof */
+   SCIP_Rational*        newbound            /**< value of new bound */
    );
 
 /** sets the last bound index for the certificate */

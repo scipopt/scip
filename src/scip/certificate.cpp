@@ -229,12 +229,12 @@ SCIP_RETCODE SCIPcertificatePrintSol(
    return SCIP_OKAY;
 }
 
-/** updates the inherited bound of the node with the newbound, if the newbound is better */
-SCIP_RETCODE SCIPcertificateUpdateInheritanceData(
+/** updates the current derived bound of the node with newbound, if newbound is better */
+SCIP_RETCODE SCIPcertificateUpdateBoundData(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_NODE*            node,               /**< node data structure */
-   SCIP_Longint          fileindex,          /**< index of new bound */
-   SCIP_Rational*        newbound            /**< the inherited bound */
+   SCIP_Longint          fileindex,          /**< index of new bound's proof */
+   SCIP_Rational*        newbound            /**< value of new bound */
    )
 {
    SCIP_CERTNODEDATA* nodedata;
@@ -245,7 +245,7 @@ SCIP_RETCODE SCIPcertificateUpdateInheritanceData(
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
 
-   /* do nothing if newbound is not better than the inherited bound */
+   /* do nothing if newbound is not better than the current bound */
    if( RatIsLT(newbound, nodedata->derbound_inherit) )
       return SCIP_OKAY;
 
@@ -2259,7 +2259,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 
    SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, len, ind, vals);
    SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound);
-   SCIPcertificateUpdateInheritanceData(certificate, node, certificate->indexcounter - 1, lowerbound);
+   SCIPcertificateUpdateBoundData(certificate, node, certificate->indexcounter - 1, lowerbound);
 
    RatFreeBuffer(set->buffer, &lowerbound);
    SCIPsetFreeBufferArray(set, &ind);
@@ -2362,7 +2362,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundPseudo(
    SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1,
       pseudoobjval) );
 
-   SCIPcertificateUpdateInheritanceData(certificate, node, certificate->indexcounter - 1, pseudoobjval);
+   SCIPcertificateUpdateBoundData(certificate, node, certificate->indexcounter - 1, pseudoobjval);
 
    SCIPsetFreeBufferArray(set, &dualind);
    RatFreeBufferArray(set->buffer, &bounds, nnonzeros);
