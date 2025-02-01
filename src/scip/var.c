@@ -17769,8 +17769,6 @@ SCIP_Bool SCIPvarIsIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   assert(var != NULL);
-
    return (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE);
 }
 
@@ -17779,8 +17777,6 @@ SCIP_Bool SCIPvarIsImpliedIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   assert(var != NULL);
-
    return (SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE);
 }
 
