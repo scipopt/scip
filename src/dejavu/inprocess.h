@@ -1,5 +1,5 @@
-// Copyright 2023 Markus Anders
-// This file is part of dejavu 2.0.
+// Copyright 2025 Markus Anders
+// This file is part of dejavu 2.1.
 // See LICENSE for extended copyright information.
 
 #ifndef DEJAVU_INPROCESS_H
@@ -11,8 +11,6 @@
 #include "components.h"
 
 namespace dejavu { namespace search_strategy {
-    // (need to nest namespaces due to C++ 14)
-
     /**
      * \brief Inprocessing for symmetry detection
      *
@@ -40,11 +38,7 @@ namespace dejavu { namespace search_strategy {
         static void shallow_bfs_invariant(sgraph* g, ir::controller &local_state, worklist_t<unsigned long>& inv,
                                           groups::orbit& orbit_partition,
                                           int depth = 8, bool lower_depth = true) {
-            #ifndef dej_noconstexpr
             constexpr int test_frac = 100; // (1 / test_frac) elements used to find a better depth
-            #else
-            const int test_frac = 100; // (1 / test_frac) elements used to find a better depth
-            #endif
 
             local_state.use_reversible(true);
             local_state.use_trace_early_out(lower_depth); // TODO bad for groups128, otherwise seems fine
@@ -175,13 +169,8 @@ namespace dejavu { namespace search_strategy {
          * @param inv place to store the invariant
          */
         static void shallow_bfs_invariant2(sgraph* g, ir::controller &local_state, worklist_t<unsigned long>& inv) {
-            #ifndef dej_noconstexpr
             constexpr int col_sz_upper_bound = 16;
             constexpr int fixed_split_limit  = 8;
-            #else
-            const int col_sz_upper_bound = 16;
-            const int fixed_split_limit  = 8;
-            #endif
 
             local_state.use_reversible(true);
             local_state.use_trace_early_out(false);

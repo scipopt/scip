@@ -1,5 +1,5 @@
-// Copyright 2023 Markus Anders
-// This file is part of dejavu 2.0.
+// Copyright 2025 Markus Anders
+// This file is part of dejavu 2.1.
 // See LICENSE for extended copyright information.
 
 #ifndef SASSY_H
@@ -956,7 +956,6 @@ namespace dejavu {
                 for(int j = 0; j < color_size; ++j) {
                     const int vertex = c.lab[color + j];
 
-                    int sanity_check = 0;
                     // paths left in filter (color_unique) are now collected for reduction
                     color_test.reset();
                     for(int k = 0; k < g->d[vertex]; ++k) {
@@ -965,13 +964,10 @@ namespace dejavu {
                         if(color_unique.get(neighbour_col)) {
                             const int pos = color_pos[neighbour_col];
                             path_list[pos] = neighbour;
-                            ++sanity_check;
                             dej_assert(!color_test.get(neighbour_col));
                             color_test.set(neighbour_col);
                         }
                     }
-
-                    dej_assert(sanity_check == num_paths);
 
                     for(int k = 0; k < num_paths; ++k) {
                         const int path_start_vertex = path_list[k];
@@ -1316,8 +1312,6 @@ namespace dejavu {
                         color_deg[filter_col] = 0;
                     }
 
-                    int sanity_check_num_paths = 0;
-
                     for(int k = 0; k < g->d[vertex]; ++k) {
                         const int neighbour     = g->e[g->v[vertex] + k];
                         const int neighbour_col = c.vertex_to_col[neighbour];
@@ -1327,11 +1321,8 @@ namespace dejavu {
                             dej_assert(g->d[neighbour] == 2);
                             color_canonical_v[neighbour_col] = neighbour; // "hub vertex" used to emulate all the paths
                             ++color_deg[neighbour_col];
-                            ++sanity_check_num_paths;
                         }
                     }
-
-                    dej_assert(num_paths == sanity_check_num_paths);
 
                     for(int k = 0; k < num_paths; ++k) {
                         const int path_start_vertex = path_list[k];
@@ -1555,7 +1546,6 @@ namespace dejavu {
 
                     // reset color_deg to 0
                     int next_pos = 0;
-                    int sanity_check_num_paths = 0;
 
                     for(int k = 0; k < g->d[vertex]; ++k) {
                         const int neighbour     = g->e[g->v[vertex] + k];
@@ -1565,11 +1555,8 @@ namespace dejavu {
                             path_list[pos] = neighbour;
                             dej_assert(g->d[neighbour] == 2);
                             ++next_pos;
-                            ++sanity_check_num_paths;
                         }
                     }
-
-                    dej_assert(num_paths == sanity_check_num_paths);
 
                     for(int k = 0; k < num_paths; ++k) {
                         const int path_start_vertex = path_list[k];
@@ -3271,13 +3258,10 @@ namespace dejavu {
 
         // deletes edges connected to discrete vertices, and marks discrete vertices for deletion later
         void del_discrete_edges_inplace(dejavu::sgraph *g, coloring *col) {
-            int rem_edges = 0;
-            int discrete_vert = 0;
             del.reset();
             for (int i = 0; i < col->domain_size;) {
                 const int col_sz = col->ptn[i];
                 if (col_sz == 0) {
-                    ++discrete_vert;
                     del.set(col->lab[i]);
                 }
                 i += col_sz + 1;
@@ -3286,7 +3270,6 @@ namespace dejavu {
             for (int v = 0; v < g->v_size; ++v) {
                 if (del.get(v)) {
                     dej_assert(col->ptn[col->vertex_to_col[v]] == 0);
-                    rem_edges += g->d[v];
                     g->d[v] = 0;
                     continue;
                 }
@@ -3299,13 +3282,11 @@ namespace dejavu {
                         //g->e[g->v[v] + g->d[v] - 1] = neigh; // removed this operation because unnecessary?
                         g->e[n] = swap_neigh;
                         --g->d[v];
-                        ++rem_edges;
                     } else {
                         ++n;
                     }
                 }
             }
-            dej_assert(rem_edges % 2 == 0);
         }
 
         void order_according_to_color(dejavu::sgraph *g, int* colmap) {
@@ -3621,7 +3602,7 @@ namespace dejavu {
                 }
             }
 
-            skipped_preprocessing = g->v_size == domain_size;
+            //skipped_preprocessing = g->v_size == domain_size;
         }
 
         void save_my_hook(dejavu_hook *hook) {

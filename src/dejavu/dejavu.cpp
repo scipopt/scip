@@ -1,9 +1,8 @@
-// Copyright 2023 Markus Anders
-// This file is part of dejavu 2.0.
+// Copyright 2025 Markus Anders
+// This file is part of dejavu 2.1.
 // See LICENSE for extended copyright information.
 
 #include <iostream>
-#include <thread>
 #include "dejavu.h"
 #include <chrono>
 #include <string>
@@ -182,7 +181,8 @@ int commandline_mode(int argc, char **argv) {
         if(print) std::cout << (true_random?"true_random=true, ":"") << (true_random_seed?"true_random_seed=true":"");
         if(print) std::cout << "permutation_seed=" << permute_seed << ", ";
     }
-    parse_dimacs(filename, &g, &colmap, !print, permute_seed);
+    const bool parse_success = parse_dimacs(filename, &g, &colmap, !print, permute_seed);
+    if(!parse_success) return 1;
     if(print) std::cout << ", n=" << g.v_size << ", " << "m=" << g.e_size/2 << std::endl << std::endl;
 
     // manage hooks
@@ -202,9 +202,11 @@ int commandline_mode(int argc, char **argv) {
 
     // debug hook
 #ifndef NDEBUG
+#ifdef DEJDEBUG
     auto test_hook_func = dejavu_hook(dejavu::test_hook);
     dej_test_graph.copy_graph(&g);
     hooks.add_hook(&test_hook_func);
+#endif
 #endif
 
     // use multi-hook or empty hook

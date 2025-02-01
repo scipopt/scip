@@ -44,10 +44,8 @@ static void convert_dejavu_to_nauty(dejavu::sgraph *g, int* colmap, sparsegraph*
     DYNALLOC1(int, *ptn, (*ptn_sz), (g->v_size), "malloc");
 
     for (int i = 0; i < g->v_size; ++i) {
-/*TODO: warning: Array access results in a null pointer dereference*/
         (*lab)[i] = i;
-/*TODO: warning: Array access results in a null pointer dereference*/
-       (*ptn)[i] = 1;
+        (*ptn)[i] = 1;
         sg->v[i] = g->v[i];
         sg->d[i] = g->d[i];
     }

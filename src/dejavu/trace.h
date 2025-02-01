@@ -1,9 +1,13 @@
+// Copyright 2025 Markus Anders
+// This file is part of dejavu 2.1.
+// See LICENSE for extended copyright information.
+
 #ifndef DEJAVU_TRACE_H
 #define DEJAVU_TRACE_H
 
 #include <vector>
-#include <cassert>
 #include <cstdint>
+#include "utility.h"
 
 namespace dejavu {
     namespace ir {

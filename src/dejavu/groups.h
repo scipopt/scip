@@ -1,5 +1,5 @@
-// Copyright 2023 Markus Anders
-// This file is part of dejavu 2.0.
+// Copyright 2025 Markus Anders
+// This file is part of dejavu 2.1.
 // See LICENSE for extended copyright information.
 
 #ifndef DEJAVU_GROUPS_H
@@ -93,6 +93,28 @@ namespace dejavu {
             void invalidate_inverse_automorphism() {
                 have_inverse_automorphism = false;
             }
+
+            /**
+             * Updates the support using the internal dense notation.
+             */
+            void update_support() {
+                // rewrite support
+                if (!support01) {
+                    automorphism_supp.reset();
+                    for (int i = 0; i < domain_size; ++i) {
+                        if (i != automorphism[i])
+                            automorphism_supp.push_back(i);
+                    }
+                } else {
+                    automorphism_supp.reset();
+                    int i;
+                    for (i = 0; i < domain_size; ++i) {
+                        if (i != automorphism[i]) break;
+                    }
+                    automorphism_supp.cur_pos = (i != domain_size);
+                }
+            }
+
         public:
             /**
              * Initializes the stored automorphism to the identity.
@@ -146,7 +168,13 @@ namespace dejavu {
              * @param new_support01 Flag of whether to use 0/1 support, or not.
              */
             void set_support01(const bool new_support01) {
+                bool update_support_necessary = support01 && !new_support01;
                 this->support01 = new_support01;
+                if(update_support_necessary) update_support();
+            }
+
+            bool get_support01() {
+                return support01;
             }
 
             /**
@@ -164,23 +192,16 @@ namespace dejavu {
             }
 
             /**
-             * Updates the support using the internal dense notation.
+             * @return Size of the support, independent of support01. Runs in O(n) if support01 is set, and in O(1)
+             * otherwise.
              */
-            void update_support() {
-                // rewrite support
-                if (!support01) {
-                    automorphism_supp.reset();
-                    for (int i = 0; i < domain_size; ++i) {
-                        if (i != automorphism[i])
-                            automorphism_supp.push_back(i);
-                    }
+            int compute_support() {
+                if(support01) {
+                    int supp = 0;
+                    for (int i = 0; i < domain_size; ++i) supp += (i != automorphism[i]);
+                    return supp;
                 } else {
-                    automorphism_supp.reset();
-                    int i;
-                    for (i = 0; i < domain_size; ++i) {
-                        if (i != automorphism[i]) break;
-                    }
-                    automorphism_supp.cur_pos = (i != domain_size);
+                    return nsupp();
                 }
             }
 
@@ -492,7 +513,9 @@ namespace dejavu {
             }
 
             /**
-             * @return Size of the support.
+             *
+             * @return Size of the support. If support01 is set, only returns 0 or 1 depending on whether support is
+             * trivial.
              */
             dej_nodiscard int nsupp() const {
                 return automorphism_supp.cur_pos;
@@ -770,12 +793,7 @@ namespace dejavu {
                 }
             }
 
-            /**
-             * Store the given automorphism workspace.
-             *
-             * @param automorphism The automorphism to be stored.
-             */
-            void store(int new_domain_size, automorphism_workspace &automorphism, markset &helper) {
+            /*void store(int new_domain_size, automorphism_workspace &automorphism, markset &helper) {
                 domain_size = new_domain_size;
                 dej_assert(data.empty());
 
@@ -806,6 +824,62 @@ namespace dejavu {
                     helper.reset();
                     dej_assert(data.size() == support);
                 } else {
+                    store_type = STORE_DENSE;
+                    data.allocate(domain_size);
+                    data.set_size(domain_size);
+                    memcpy(data.get_array(), automorphism.p(), domain_size * sizeof(int));
+                    dej_assert(data.size() == domain_size);
+                }
+            }*/
+
+            /**
+             * Store the given automorphism workspace. Depending on the support of the automorphism, it is either stored
+             * using a dense encoding, or a sparse encoding based on cycle notation. Overall, uses O(|support|) space.
+             *
+             * @param new_domain_size The domain size of the automorphism to be stored.
+             * @param automorphism The automorphism to be stored.
+             * @param helper A `markset` which is used as auxiliary space for the algorithm.
+             */
+            void store(int new_domain_size, automorphism_workspace &automorphism, markset &helper) {
+                domain_size = new_domain_size;
+                dej_assert(data.empty());
+
+                // automorphism may be encoded with support01, hence we compute the support if necessary
+                int support = automorphism.compute_support();
+
+                // decide whether to store dense or sparse representation
+                if (support < domain_size / 4) {
+                    store_type = STORE_SPARSE;
+                    helper.reset();
+
+                    // for sparse encoding, we need access to the support, so we deactivate support01 encoding
+                    automorphism.set_support01(false);
+
+                    // store cycle notation of the automorphism
+                    data.allocate(support);
+                    for (int i = 0; i < automorphism.nsupp(); ++i) {
+                        const int j = automorphism.supp()[i];
+                        if (automorphism.p()[j] == j) continue; // no need to consider trivially mapped vertices
+                        if (helper.get(j)) continue; // we have already considered cycle of this vertex
+                        helper.set(j); // mark that we have already considered the vertex
+
+                        // move along the cycle of j, until we come back to j
+                        int map_j = automorphism.p()[j];
+                        dej_assert(map_j != j);
+                        while (!helper.get(map_j)) {
+                            data.push_back(map_j + 1); // offset +1 because we use negation in the encoding, see below
+                            helper.set(map_j); // mark that we have already considered the vertex
+                            map_j = automorphism.p()[map_j];
+                        }
+
+                        // finally we store j, the vertex we started with
+                        dej_assert(map_j == j);
+                        data.push_back(-(j + 1)); // `-` marks the end of the cycle
+                    }
+                    helper.reset();
+                    dej_assert(data.size() == support);
+                } else {
+                    // we simply store the dense portion of the automorphism_workspace
                     store_type = STORE_DENSE;
                     data.allocate(domain_size);
                     data.set_size(domain_size);
@@ -853,10 +927,11 @@ namespace dejavu {
          */
         class generating_set {
             std::vector<stored_automorphism *> generators; /** list of generators */
-            int domain_size = 0;
+            int  domain_size  = 0;
+            long support_size = 0;
         public:
             int s_stored_sparse = 0; /**< how many generators are stored in a sparse manner */
-            int s_stored_dense = 0;  /**< how many generators are stored in a dense manner */
+            int s_stored_dense  = 0; /**< how many generators are stored in a dense manner  */
 
             generating_set() = default;
             generating_set(const generating_set&) = delete;
@@ -878,14 +953,22 @@ namespace dejavu {
              * @return Identifier of the new generator in the generating set.
              */
             int add_generator(schreier_workspace &w, automorphism_workspace &automorphism) {
+                // store the automorphism
                 generators.emplace_back(new stored_automorphism);
                 const auto num = generators.size() - 1;
                 generators[num]->store(domain_size, automorphism, w.scratch2);
 
+                // update statistic on sparse and dense generators
                 s_stored_sparse += (generators[num]->get_store_type() ==
                                     stored_automorphism::stored_automorphism_type::STORE_SPARSE);
                 s_stored_dense += (generators[num]->get_store_type() ==
                                    stored_automorphism::stored_automorphism_type::STORE_DENSE);
+
+                // update support size
+                if (generators[num]->get_store_type() == stored_automorphism::stored_automorphism_type::STORE_DENSE)
+                    support_size += domain_size;
+                else
+                    support_size += automorphism.nsupp();
 
                 return static_cast<int>(num);
             }
@@ -946,6 +1029,13 @@ namespace dejavu {
              */
             dej_nodiscard int size() const {
                 return static_cast<int>(generators.size());
+            }
+
+            /**
+             * @return memory size of stored generators
+             */
+            dej_nodiscard long get_support() const {
+                return support_size;
             }
 
             void clear() {
@@ -1222,9 +1312,8 @@ namespace dejavu {
          *
          */
         class random_schreier_internal {
-        private:
-            int domain_size    = -1;
-            int finished_up_to = -1;
+            int  domain_size    = -1;
+            int  finished_up_to = -1;
 
             generating_set generators;
             std::vector<shared_transversal> transversals;
@@ -1470,6 +1559,13 @@ namespace dejavu {
             }
 
             /**
+             * @return memory size of stored generators
+             */
+            dej_nodiscard long get_support() const {
+                return generators.get_support();
+            }
+
+            /**
              * Sift automorphism into the Schreier structure.
              *
              * @param w Auxiliary workspace used for procedures.
@@ -1507,7 +1603,6 @@ namespace dejavu {
 
                     // reset the automorphism_workspace
                 automorphism.set_support01(false);
-                automorphism.update_support();
                 automorphism.reset();
 
                 if(uniform) record_sift_result(changed); // uniform automorphisms count towards abort criterion
@@ -1635,22 +1730,24 @@ namespace dejavu {
          * \brief API for the dejavu Schreier structure
          *
          * Enables sifting of automorphisms into a Schreier structure with given base. The Schreier structure does not
-         * compute proper random elements of the group, hence no guarantees regarding the error bound are given.
+         * compute proper random elements of the group, hence no guarantees regarding the error bound are given. The
+         * group described by the Schreier structure is always guaranteed to be a subgroup of the actual group generated
+         * by the contained elements.
          *
          */
         class random_schreier {
         private:
-            int h_domain_size    = -1;
-            random_schreier_internal schreier;
+            int h_domain_size    = -1;          /**< size of the underlying domain */
+            random_schreier_internal schreier;  /**< Schreier structure */
 
-            automorphism_workspace ws_auto;
-            schreier_workspace     ws_schreier;
-            random_source rng;
+            automorphism_workspace ws_auto;     /**< a workspace to store automorphisms */
+            schreier_workspace     ws_schreier; /**< a workspace for Schreier-Sims computations */
+            random_source rng;                  /**< source of randomness */
 
-            markset auxiliary_set;
+            markset auxiliary_set;              /**< auxiliary workspace used by some methods */
 
             int h_error_bound = 10; /**< higher value reduces likelihood of error (AKA missing generators) */
-            bool init = false;
+            bool init = false;      /**< whether the structure has been initialized */
 
         public:
             /**
@@ -1702,6 +1799,9 @@ namespace dejavu {
                 sift_random();
             }
 
+            /**
+             * Generate random elements to complete the Schreier structure.
+             */
             void sift_random() {
                 schreier.sift_random(ws_schreier, ws_auto, rng, h_error_bound);
             }
@@ -1782,15 +1882,50 @@ namespace dejavu {
             }
 
             /**
-             * Sift automorphism into the Schreier structure.
+             * Computes a list of generators for the pointwise stabilizer fixing the first \p base_pos points of the
+             * current base. The returned vector contains a list of generator ID's as stored in the Schreier structure.
+             * The generators can then be loaded using `get_generator`.
+             *
+             * @param base_pos position of base to consider
+             * @returns a list of generator numbers
+             */
+            std::vector<int> get_stabilizer_generators(int base_pos) {
+                auxiliary_set.initialize(get_number_of_generators());
+                auxiliary_set.reset();
+                std::vector<int> all_generators;
+
+                // TODO this can be done much more efficiently...
+                for(int j = base_pos; j < schreier.base_size(); ++j) {
+                    const std::vector<int> &generators = schreier.get_stabilizer_generators(j);
+                    for (auto i: generators) {
+                        if (i < 0) continue;
+                        dej_assert(i < get_number_of_generators());
+                        if (auxiliary_set.get(i)) continue;
+                        auxiliary_set.set(i);
+                        all_generators.push_back(i);
+                    }
+                }
+
+                for(auto i : schreier.get_stabilized_generators()) {
+                    if (auxiliary_set.get(i)) continue;
+                    auxiliary_set.set(i);
+                    all_generators.push_back(i);
+                }
+
+                return all_generators;
+            }
+
+            /**
+             * Sift automorphism into the Schreier structure. If the automorphism is not yet represented in the Schreier
+             * structure, the structure is extended using the automorphism. I.e., the routine will add the given
+             * automorphism to the structure, if necessary.
              *
              * @param w Auxiliary workspace used for procedures.
              * @param automorphism Automorphism to be sifted. Will be manipulated by the method.
              * @return Whether automorphism was added to the Schreier structure or not.
              */
             bool sift(automorphism_workspace &automorphism, bool known_in_group = false) {
-                return sift(h_domain_size, automorphism.p(), automorphism.nsupp(), automorphism.supp(),
-                            known_in_group);
+                return sift(h_domain_size, automorphism.p(), automorphism.nsupp(), automorphism.supp(), known_in_group);
             }
 
             /**
@@ -1818,7 +1953,8 @@ namespace dejavu {
             }
 
             /**
-             * @return Size of group described by this Schreier structure.
+             * @return Order of group described by this Schreier structure. Note that if the base is incomplete, the
+             * group order will not match the actual order the group.
              */
             big_number group_size() {
                 sift_random();
@@ -1933,7 +2069,6 @@ namespace dejavu {
          * Internally, stores a `random_schreier_internal` structure in a compressed form using `domain_compressor`.
          */
         class compressed_schreier {
-        private:
             random_schreier_internal internal_schreier;
             domain_compressor*       compressor;
             automorphism_workspace   compressed_automorphism;
@@ -2134,6 +2269,13 @@ namespace dejavu {
              */
             void reset_probabilistic_criterion() {
                 internal_schreier.reset_probabilistic_criterion();
+            }
+
+            /**
+             * @return memory size of stored generators
+             */
+            dej_nodiscard long get_support() const {
+                return internal_schreier.get_support();
             }
 
             /**

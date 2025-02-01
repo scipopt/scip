@@ -1,5 +1,5 @@
-// Copyright 2023 Markus Anders
-// This file is part of dejavu 2.0.
+// Copyright 2025 Markus Anders
+// This file is part of dejavu 2.1.
 // See LICENSE for extended copyright information.
 
 #ifndef DEJAVU_COMPONENTS_H
@@ -22,7 +22,7 @@ namespace ir {
      * @returns number of components
      */
     static int quotient_components(sgraph *g, int* colmap, ds::worklist *vertex_to_component) {
-        coloring c;
+        ds::coloring c;
         g->initialize_coloring(&c, colmap); // TODO certainly possible without a coloring, just keep a
                                             // TODO color_to_component array
 

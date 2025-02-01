@@ -1,3 +1,7 @@
+// Copyright 2025 Markus Anders
+// This file is part of dejavu 2.1.
+// See LICENSE for extended copyright information.
+
 #ifndef SASSY_GRAPH_BUILDER_H
 #define SASSY_GRAPH_BUILDER_H
 
@@ -10,7 +14,7 @@ namespace dejavu {
     /**
      * \brief Internal graph data structure
      *
-     * Graph data strcture as used internally by the dejavu solver. See \
+     * Graph data structure as used internally by the dejavu solver.
      */
     class sgraph {
         struct vertexComparator {
@@ -23,7 +27,7 @@ namespace dejavu {
             }
         };
 
-        struct vertexComparatorColor {
+        /*struct vertexComparatorColor {
             vertexComparatorColor(const sgraph &g, const int *vtocol) : graph(g), vertex_to_col(vtocol) {}
 
             const sgraph &graph;
@@ -33,19 +37,24 @@ namespace dejavu {
                 //return (g.d[v1] < g.d[v2]) || ((g.d[v1] == g.d[v2]) && (vertex_to_col[v1] < vertex_to_col[v2]));
                 return (vertex_to_col[v1] < vertex_to_col[v2]);
             }
-        };
+        };*/
 
     public:
         bool initialized = false;
-        int *v = nullptr;
-        int *d = nullptr;
-        int *e = nullptr;
+        int *v = nullptr; /**< maps vertices to positions in edge array `e`*/
+        int *d = nullptr; /**< maps vertices to their degree */
+        int *e = nullptr; /**< vertices adjacent to given vertex w are stored in `e[v[w]] ... e[v[w] + d[w]]`*/
 
-        int v_size = 0;
-        int e_size = 0;
+        int v_size = 0; /**< number of vertices of the graph */
+        int e_size = 0; /**< number of (directed) edges of the graph, i.e., the size of the array `e` */
 
-        bool dense = false;
+        bool dense = false; /**< flag whether the graph is considered dense, set internally by the solver */
 
+        /**
+         * Allocate arrays according to the given sizes.
+         * @param nv number of vertices
+         * @param ne number of (directed) edges
+         */
         void initialize(int nv, int ne) {
             initialized = true;
             v = new int[nv];
@@ -53,7 +62,7 @@ namespace dejavu {
             e = new int[ne];
         }
 
-        // initialize a coloring of this sgraph, partitioning degrees of vertices
+        // initialize a vertex coloring of this sgraph, that already partitions according to the degrees of vertices
         void initialize_coloring(ds::coloring *c, int *vertex_to_col) {
             c->initialize(this->v_size);
             std::memset(c->ptn, 1, sizeof(int) * v_size);
@@ -236,7 +245,7 @@ namespace dejavu {
 #endif
         }
 
-        void copy_graph(sgraph *g) {
+        void copy_graph(const sgraph *g) {
             if (initialized) {
                 delete[] v;
                 delete[] d;
@@ -271,8 +280,8 @@ namespace dejavu {
     /**
      * \brief Graph with static number of vertices and edges
      *
-     * Graph format based on the internal format of dejavu (`sgraph`), but adding sanity checks and easy access to the
-     * construction. Essentially, this class provides a more convenient interface to construct `sgraph`s.
+     * Graph format based on the internal format of dejavu (`sgraph`), but with additional sanity checks and easy access
+     * to the construction. Essentially, this class provides a more convenient interface to construct `sgraph`s.
      *
      * The graph must first be initialized (either using the respective constructor or using initialize_graph). For the
      * initialization, the final number of vertices or edges must be given. The number of vertices or edges can not be
@@ -282,7 +291,7 @@ namespace dejavu {
      * The `add_edge(v1, v2)` function adds an undirected edge from `v1` to `v2`. It is always required that `v1 < v2`
      * holds, to prevent the accidental addition of hyper-edges.
      *
-     * After the graph was built, the internal sassy graph (sgraph) can be accessed either by the user, or the provided
+     * After the graph is built, the internal graph (sgraph) can be accessed either by the user, or the provided
      * functions. Once the graph construction is finished, the internal sgraph can be changed arbitrarily.
      */
     class static_graph {
@@ -293,10 +302,9 @@ namespace dejavu {
         unsigned int num_vertices_defined  = 0;
         unsigned int num_edges_defined     = 0;
         unsigned int num_deg_edges_defined = 0;
-        bool initialized;
-        bool finalized = false;
+        bool initialized = false;
+        bool finalized   = false;
 
-    private:
         void finalize() {
             if(!finalized) {
                 if (!initialized)
@@ -311,43 +319,65 @@ namespace dejavu {
                 finalized = true;
             }
         }
-    public:
-        static_graph(const int nv, const int ne) {
-            if(nv <= 0) throw std::out_of_range("number of vertices must be positive");
-            if(ne <= 0) throw std::out_of_range("number of edges must be positive");
-            g.initialize(nv, 2*ne);
-            g.v_size = nv;
-            g.e_size = 2*ne;
-            c = new int[nv];
-            edge_cnt = new int[nv];
-            for(int i = 0; i < nv; ++i) edge_cnt[i] = 0;
-            initialized = true;
-        };
 
-        static_graph() {
-            initialized = false;
+        void alloc(const int nv) {
+            c        = new int[nv];
+            edge_cnt = new int[nv];
+            initialized = true;
         }
 
-        ~static_graph() {
+        void dealloc() {
             if(initialized && c != nullptr)
                 delete[] c;
             if(initialized && edge_cnt != nullptr)
                 delete[] edge_cnt;
+            initialized = false;
+        }
+    public:
+
+        /**
+         * @param nv number of vertices
+         * @param ne number of undirected edges
+         */
+        static_graph(const int nv, const int ne) {
+            initialize_graph(nv, ne);
+        };
+
+        static_graph() = default;
+
+        static_graph(const static_graph& other)  {
+            copy(&other);
         }
 
-        void initialize_graph(const unsigned int nv, const unsigned int ne) {
+        ~static_graph() {
+            dealloc();
+        }
+
+        /**
+         * @param nv number of vertices
+         * @param ne number of undirected edges
+         */
+        void initialize_graph(const int nv, const int ne) {
+            if(nv < 0) throw std::out_of_range("number of vertices must be positive");
+            if(ne < 0) throw std::out_of_range("number of edges must be positive");
             if(initialized || finalized)
                 throw std::logic_error("can not initialize a graph that is already initialized");
-            initialized = true;
+            alloc(nv);
             g.initialize((int) nv, (int) (2*ne));
             g.v_size = (int) nv;
             g.e_size = (int) (2*ne);
-            c = new int[nv];
-            edge_cnt = new int[nv];
-            for(unsigned int i = 0; i < nv; ++i)
+            for(int i = 0; i < nv; ++i)
                 edge_cnt[i] = 0;
         };
 
+        /**
+         * Add a vertex to the graph with given color and degree. Returns the index of the vertex, which is simply the
+         * number of vertices previously added.
+         *
+         * @param color the vertex color
+         * @param deg the number of outgoing edges of the vertex
+         * @return index of the newly added vertex (= number of previously added vertices)
+         */
         unsigned int add_vertex(const int color, const int deg) {
             if(!initialized)
                 throw std::logic_error("uninitialized graph");
@@ -361,9 +391,17 @@ namespace dejavu {
             g.d[vertex] = deg;
             g.v[vertex] = (int) num_deg_edges_defined;
             num_deg_edges_defined += deg;
+            if(num_deg_edges_defined > (unsigned int) g.e_size)
+                throw std::out_of_range("edges out-of-range, define more edges initially");
             return vertex;
         };
 
+        /**
+         * Add an undirected edge between two given vertices.
+         *
+         * @param v1 first vertex incident to the edge
+         * @param v2 second vertex incident to the edge
+         */
         void add_edge(const unsigned int v1, const unsigned int v2) {
             if(!initialized)
                 throw std::logic_error("uninitialized graph");
@@ -400,6 +438,11 @@ namespace dejavu {
             g.sanity_check();
         }
 
+        /**
+         * Export the graph to a file. Outputs the graph in DIMACS format.
+         *
+         * @param filename the file
+         */
         void dump_dimacs(const std::string& filename) {
             finalize();
             std::ofstream dumpfile;
@@ -421,19 +464,46 @@ namespace dejavu {
             }
         }
 
+        /**
+         * @return internal graph representation as used by dejavu
+         */
         dejavu::sgraph* get_sgraph() {
             finalize();
             return &g;
         };
 
+        /**
+         * @return internal vertex coloring representation as used by dejavu
+         */
         int* get_coloring() {
             finalize();
             return c;
-        };
+        }
+
+        void copy(const static_graph* other) {
+            finalized   = false;
+            dealloc();
+            if(!other->initialized) return;
+            g.copy_graph(&other->g);
+            alloc(other->g.v_size);
+            memcpy(c, other->c, other->g.v_size  * sizeof(int));
+            memcpy(edge_cnt, other->edge_cnt, other->g.v_size  * sizeof(int));
+            num_vertices_defined  = other->num_vertices_defined;
+            num_edges_defined     = other->num_edges_defined;
+            num_deg_edges_defined = other->num_deg_edges_defined;
+            initialized           = other->initialized;
+            finalized             = other->finalized;
+        }
+
+        static_graph& operator=(const static_graph& other) {
+            if(&other == this) return *this;
+            copy(&other);
+            return *this;
+        }
     };
 }
 
-static inline void parse_dimacs(const std::string& filename, dejavu::sgraph* g, int** colmap, bool silent=true,
+static inline bool parse_dimacs(const std::string& filename, dejavu::sgraph* g, int** colmap, bool silent=true,
                          int seed_permute=0) {
     std::chrono::high_resolution_clock::time_point timer = std::chrono::high_resolution_clock::now();
     std::ifstream infile(filename);
@@ -450,21 +520,35 @@ static inline void parse_dimacs(const std::string& filename, dejavu::sgraph* g, 
     size_t i;
     int nv = 0;
     int ne = 0;
+    int line_number = 0;
+
+    bool fail = false;
+    bool initialized = false;
     while (std::getline(infile, line)) {
-        char m = line[0];
+        ++line_number;
+        const char m = line[0];
         int average_d;
         switch (m) {
             case 'p':
-                for(i = 7; i < line.size() && line[i] != ' '; ++i) {
-                    nv_str += line[i];
-                }
+                for(i = 7; i < line.size() && line[i] != ' '; ++i) nv_str += line[i];
 
                 ++i;
-                for(; i < line.size() && line[i] != ' '; ++i) {
-                    ne_str += line[i];
+                for(; i < line.size() && line[i] != ' '; ++i) ne_str += line[i];
+
+                try {
+                    nv = std::stoi(nv_str);
+                    ne = std::stoi(ne_str);
+                } catch(...) {
+                    fail = true;
+                    break;
                 }
-                nv = std::stoi(nv_str);
-                ne = std::stoi(ne_str);
+
+                if(line[2] != 'e' || line[3] != 'd'  || line[4] != 'g' ||  line[5] != 'e' || nv < 0 || ne < 0) {
+                    fail = true;
+                    break;
+                }
+
+                initialized = true;
                 average_d = (ne / nv) + 3;
                 g->initialize(nv, ne * 2);
 
@@ -482,55 +566,77 @@ static inline void parse_dimacs(const std::string& filename, dejavu::sgraph* g, 
                 }
                 break;
             case 'e':
+                if(!initialized) {
+                    fail = true;
+                    break;
+                }
+
                 nv1_string = "";
                 nv2_string = "";
-                for(i = 2; i < line.size() && line[i] != ' '; ++i) {
-                    nv1_string += line[i];
-                }
+                for(i = 2; i < line.size() && line[i] != ' '; ++i) nv1_string += line[i];
+
                 ++i;
-                for(; i < line.size() && line[i] != ' '; ++i) {
-                    nv2_string += line[i];
-                }
+                for(; i < line.size() && line[i] != ' '; ++i) nv2_string += line[i];
 
                 nv1 = reshuffle[std::stoi(nv1_string)-1];
                 nv2 = reshuffle[std::stoi(nv2_string)-1];
+
+                if(nv1 < 0 || nv2 < 0 || nv1 > nv || nv2 > nv) {
+                    fail = true;
+                    break;
+                }
 
                 incidence_list[nv1 - 1].push_back(nv2 - 1);
                 incidence_list[nv2 - 1].push_back(nv1 - 1);
                 break;
             case 'n':
-                if(*colmap == nullptr)
-                    *colmap = (int *) calloc(nv, sizeof(int));
+                if(!initialized) {
+                    fail = true;
+                    break;
+                }
+
+                if(*colmap == nullptr) *colmap = (int *) calloc(nv, sizeof(int));
+
                 nv1_string = "";
                 nv2_string = "";
-                for(i = 2; i < line.size() && line[i] != ' '; ++i) {
-                    nv1_string += line[i];
-                }
+                for(i = 2; i < line.size() && line[i] != ' '; ++i) nv1_string += line[i];
+
                 ++i;
-                for(; i < line.size() && line[i] != ' '; ++i) {
-                    nv2_string += line[i];
-                }
+                for(; i < line.size() && line[i] != ' '; ++i) nv2_string += line[i];
 
                 nv1 = reshuffle[std::stoi(nv1_string)-1];
                 nv2 = std::stoi(nv2_string);
+
+                if(nv1 < 0 || nv1 > nv) {
+                    fail = true;
+                    break;
+                }
+
                 (*colmap)[nv1 - 1] = nv2;
                 break;
             default:
                 break;
         }
+        if(fail) break;
+    }
+
+    if(fail) {
+        std::cout << "parsing failed in line " << line_number << std::endl;
+        std::cout << "> \'" << line << "\'" << std::endl;
+        return false;
+    }
+
+    if(!initialized) {
+        std::cout << "file does not contain a graph " << std::endl;
+        return false;
     }
 
     int epos = 0;
     int vpos = 0;
 
-    int maxd = 0;
-
     for(auto & incident : incidence_list) {
         g->v[vpos] = epos;
         g->d[vpos] = (int) incident.size();
-        //degrees.insert(g->d[vpos]);
-        if(g->d[vpos] > maxd)
-            maxd = g->d[vpos];
         vpos += 1;
         for(int j : incident) {
             g->e[epos] = j;
@@ -545,6 +651,8 @@ static inline void parse_dimacs(const std::string& filename, dejavu::sgraph* g, 
     dej_assert(2 * ne == g->e_size);
     const double parse_time = (double) (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - timer).count());
     if(!silent) std::cout << std::setprecision(2) << "parse_time=" << parse_time / 1000000.0 << "ms";
+
+    return true;
 }
 
 #endif //SASSY_GRAPH_BUILDER_H

@@ -1,5 +1,5 @@
-// Copyright 2023 Markus Anders
-// This file is part of dejavu 2.0.
+// Copyright 2025 Markus Anders
+// This file is part of dejavu 2.1.
 // See LICENSE for extended copyright information.
 
 #ifndef DEJAVU_BFS_H
@@ -16,7 +16,6 @@ namespace dejavu {
         class bfs_ir {
             timed_print& gl_printer;
             groups::automorphism_workspace& gl_automorphism;
-            // groups::schreier_workspace&     gl_schreier;
 
         public:
             bool h_use_deviation_pruning = true; /**< use pruning using deviation maps */
@@ -30,9 +29,7 @@ namespace dejavu {
             int s_deviation_prune          = 0; /**< how many nodes were pruned using deviation maps */
 
             bfs_ir(timed_print& printer, groups::automorphism_workspace& automorphism) :
-                   // groups::schreier_workspace& schreier) :
                    gl_printer(printer), gl_automorphism(automorphism) {}
-                   // gl_printer(printer), gl_automorphism(automorphism), gl_schreier(schreier) {}
 
             void do_a_level(sgraph* g, dejavu_hook* hook, ir::shared_tree& ir_tree, ir::controller& local_state,
                             std::function<ir::type_selector_hook> *selector) {
@@ -129,11 +126,7 @@ namespace dejavu {
                     return;
                 }
 
-                #ifndef dej_noconstexpr
                 constexpr int size_threshold = 1000;
-                #else
-                const int size_threshold = 1000;
-                #endif
 
                 // do efficient loading if parent is the same as previous load
                 if(next_node_save != last_load || g->v_size < size_threshold) { // TODO heuristic to check how much has changed

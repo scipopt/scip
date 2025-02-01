@@ -1,5 +1,5 @@
-// Copyright 2023 Markus Anders
-// This file is part of dejavu 2.0.
+// Copyright 2025 Markus Anders
+// This file is part of dejavu 2.1.
 // See LICENSE for extended copyright information.
 
 #ifndef DEJAVU_RAND_H
@@ -24,7 +24,6 @@ namespace dejavu {namespace search_strategy {
      * for statistics of the search.
      */
     class random_ir {
-    private:
         random_source& rng;
         std::vector<int> heuristic_reroll;
 
@@ -103,6 +102,10 @@ namespace dejavu {namespace search_strategy {
                     s_rolling_success = (9.0 * s_rolling_success + 1.0) / 10.0;
                     ++s_succeed;
 
+                    // update and check support limits
+                    s_support_limit_reached = (h_schreier_support_limit >= 0) &&
+                                              (group.get_support() >h_schreier_support_limit);
+
                     // output the automorphism
                     if(hook) (*hook)(g->v_size, gl_automorphism.p(), gl_automorphism.nsupp(),
                                      gl_automorphism.supp());
@@ -151,6 +154,7 @@ namespace dejavu {namespace search_strategy {
         int       s_succeed       = 0;                    /**< how many total paths have succeeded        */
         int       s_leaves        = 0;                    /**< how many leaves were added                 */
         int       s_min_split_number = 0;
+        bool      s_support_limit_reached = false;        /**< Schreier support limit was reached         */
 
         int s_random_sift_success = 0;
 
@@ -160,6 +164,7 @@ namespace dejavu {namespace search_strategy {
         bool      h_sift_random     = true;               /**< sift random elements into Schreier structure    */
         int       h_sift_random_lim = 8;                  /**< after how many paths random elements are sifted */
         int       h_randomize_up_to = INT32_MAX;          /**< randomize vertex selection up to this level */
+        long      h_schreier_support_limit = -1;          /**< impose a limit on support of Schreier structure */
 
         void use_look_close(bool look_close = false) {
             h_look_close = look_close;
@@ -189,6 +194,7 @@ namespace dejavu {namespace search_strategy {
             s_rolling_success  = 0;
             s_rolling_first_level_success  = 1.0;
             s_min_split_number = INT32_MAX;
+            s_support_limit_reached    = false;
         }
 
         static bool h_almost_done(groups::compressed_schreier &group) {
@@ -243,11 +249,11 @@ namespace dejavu {namespace search_strategy {
 
             const int target_level = ir_tree.get_finished_up_to();
 
-            int s_sifting_success = 0;
+            int  s_sifting_success = 0;
 
-            // continue until budget exhausted, or search successful
+            // continue until budget exhausted, search successful, or support limits reached
             while(!group.probabilistic_abort_criterion() && !group.deterministic_abort_criterion() &&
-                    s_paths_failany < fail_limit) {
+                    s_paths_failany < fail_limit && !s_support_limit_reached) {
                 local_state.load_reduced_state(*start_from);
 
                 int could_start_from = group.finished_up_to_level();
@@ -402,7 +408,7 @@ namespace dejavu {namespace search_strategy {
 
             // continue until budget exhausted, or search successful
             while(!group.probabilistic_abort_criterion() && !group.deterministic_abort_criterion() &&
-                    s_paths_failany < fail_limit) {
+                    s_paths_failany < fail_limit && !s_support_limit_reached) {
 
                 // print progress, sometimes
                 if((s_paths & 0x000000FF) == 0x000000FE)

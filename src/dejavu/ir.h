@@ -1,5 +1,5 @@
-// Copyright 2023 Markus Anders
-// This file is part of dejavu 2.0.
+// Copyright 2025 Markus Anders
+// This file is part of dejavu 2.1.
 // See LICENSE for extended copyright information.
 
 #ifndef DEJAVU_IR_H
@@ -1283,15 +1283,9 @@ namespace dejavu {
              */
             void find_sparse_optimized_base(sgraph *g, controller *state) {
                 // some settings for heuristics
-                #ifndef dej_noconstexpr
                 constexpr int base_lim = 1000;
                 constexpr int test_lim_pre  = 512;
                 constexpr int test_lim_post = 1;
-                #else
-                const int base_lim = 1000;
-                const int test_lim_pre  = 512;
-                const int test_lim_post = 1;
-                #endif
 
                 state->mode_write_base();
 
@@ -1620,11 +1614,7 @@ namespace dejavu {
              */
             void find_early_trace_deviation_base(sgraph *g, controller* state, controller* state_probe, int perturbe) {
                 state->mode_write_base();
-                #ifndef dej_noconstexpr
                 constexpr int probe_limit = 5;
-                #else
-                const int probe_limit = 5;
-                #endif
 
                 state_probe->link(state);
                 state_probe->mode_compare_base();
@@ -1764,7 +1754,7 @@ namespace dejavu {
          */
         class deviation_map {
         private:
-            std::unordered_set<unsigned long> deviation_map_;
+            std::unordered_set<unsigned long> map;
             int computed_for_base = 0;
             int expected_for_base = 0;
             bool deviation_done = false;
@@ -1779,12 +1769,12 @@ namespace dejavu {
                 computed_for_base = 0;
                 expected_for_base = h_expected_for_base;
 
-                deviation_map_.clear();
+                map.clear();
                 deviation_done = false;
             }
 
             void record_deviation(unsigned long deviation) {
-                deviation_map_.insert(deviation);
+                map.insert(deviation);
                 ++computed_for_base;
                 dej_assert(computed_for_base <= expected_for_base);
                 check_finished();
@@ -1797,7 +1787,7 @@ namespace dejavu {
             }
 
             bool check_deviation(unsigned long deviation) {
-                return !deviation_done || deviation_map_.find(deviation) != deviation_map_.end();
+                return !deviation_done || map.find(deviation) != map.end();
             }
         };
 
