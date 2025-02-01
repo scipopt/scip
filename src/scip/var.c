@@ -2495,21 +2495,23 @@ SCIP_RETCODE varParse(
    /* if bound parsing failed, the last token should be the implied integrality declaration */
    if( strncmp(token, "implied:", 8) == 0 )
    {
-      /*We might parse this part again if the pointer was reset, so we need to check again. */
-      SCIPstrCopySection(strptr, ' ', '\0', token, SCIP_MAXSTRLEN, endptr);
-      strptr = *endptr;
-      SCIPstrCopySection(token, ' ', ' ', token, SCIP_MAXSTRLEN, endptr);
-      if( strncmp(*endptr, "strong", 6) == 0 )
+      /* Find the start of the "implied:" string */
+      char * start = strstr(strptr,"implied:");
+      start += 8; /* skip the implied: part. */
+      SCIP_CALL(SCIPskipSpace(&start)); /* Skip any spaces after "implied:" */
+      *endptr = start;
+      if( strncmp(start, "strong", 6) == 0 )
          (*impltype) = SCIP_VARIMPLTYPE_STRONG;
-      else if( strncmp(*endptr, "weak", 4) == 0 )
+      else if( strncmp(start, "weak", 4) == 0 )
          (*impltype) = SCIP_VARIMPLTYPE_WEAK;
-      else if( strncmp(*endptr, "none", 4) == 0 )
+      else if( strncmp(start, "none", 4) == 0 )
          (*impltype) = SCIP_VARIMPLTYPE_NONE;
       else
       {
          SCIPerrorMessage("Expected implied integer type 'none', 'weak', or 'strong', got: '%s'.\n", *endptr);
          return SCIP_READERROR;
       }
+      *endptr = *endptr + (*impltype == SCIP_VARIMPLTYPE_STRONG ? 6 : 4);
    }
 
    /* check bounds for binary variables */
