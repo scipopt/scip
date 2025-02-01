@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1550,10 +1550,10 @@ SCIP_RETCODE checkConsQuadraticProblem(
    SCIP_EXPR*            quadexpr,           /**< quadratic expression */
    SCIP_Bool             allowbinary,        /**< if TRUE then allow binary variables in the problem, if FALSE then all
                                               *   variables have to be continuous */
-   SCIP_VAR**            objvar,             /**< pointer to store the objective variable @p z */
+   SCIP_VAR**            objvar,             /**< pointer to store the objective variable z */
    SCIP_Real*            scale,              /**< pointer to store the value by which we have to scale the quadratic
-                                              *   constraint such that the objective variable @p z has coefficient -1 */
-   SCIP_Real*            objrhs,             /**< pointer to store the right hand side @p -d of the objective constraint */
+                                              *   constraint such that the objective variable z has coefficient -1 */
+   SCIP_Real*            objrhs,             /**< pointer to store the right hand side -d of the objective constraint */
    SCIP_Bool*            isqp                /**< pointer to store whether the problem is a (mixed-binary) QP */
    )
 {

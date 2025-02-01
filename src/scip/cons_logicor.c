@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -995,6 +995,7 @@ SCIP_RETCODE applyFixings(
          SCIP_Bool easycase;
          int nconsvars;
          int requiredsize;
+         int size = 1;
          int v2;
 
          nconsvars = 1;
@@ -1004,16 +1005,18 @@ SCIP_RETCODE applyFixings(
          consvals[0] = 1.0;
 
          /* get active variables for new constraint */
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, nconsvars, &constant, &requiredsize, TRUE) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize) );
          /* if space was not enough we need to resize the buffers */
-         if( requiredsize > nconsvars )
+         if( requiredsize > size )
          {
             SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
             SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
+            size = requiredsize;
 
-            SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize, TRUE) );
-            assert(requiredsize <= nconsvars);
+            SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize) );
+            assert(requiredsize <= size);
          }
+         assert(requiredsize == nconsvars);
 
          easycase = FALSE;
 
@@ -1057,7 +1060,6 @@ SCIP_RETCODE applyFixings(
             SCIP_CONS* newcons;
             SCIP_Real lhs;
             SCIP_Real rhs;
-            int size;
             int k;
 
             /* it might happen that there are more than one multi-aggregated variable, so we need to get the whole probvar sum over all variables */
@@ -1080,17 +1082,19 @@ SCIP_RETCODE applyFixings(
             constant = 0.0;
 
             /* get active variables for new constraint */
-            SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize, TRUE) );
+            SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize) );
 
             /* if space was not enough(we found another multi-aggregation), we need to resize the buffers */
-            if( requiredsize > nconsvars )
+            if( requiredsize > size )
             {
                SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
                SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, requiredsize) );
+               size = requiredsize;
 
-               SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, requiredsize, &constant, &requiredsize, TRUE) );
-               assert(requiredsize <= nconsvars);
+               SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize) );
+               assert(requiredsize <= size);
             }
+            assert(requiredsize == nconsvars);
 
             lhs = 1.0 - constant;
             rhs = SCIPinfinity(scip);

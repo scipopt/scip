@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -48,6 +48,7 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
+#include "scip/symmetry_graph.h"
 #include <string.h>
 
 
@@ -443,6 +444,96 @@ SCIP_RETCODE enforceConstraint(
          SCIP_CALL( branchCons(scip, conss[c], result) );
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SYM_GRAPH* symgraph;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+   int rootnode;
+   int subroot = -1;
+   int c;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   *success = TRUE;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check whether all constraints in the disjunction can build symmetry detection graphs */
+   for( c = 0; c < consdata->nconss && *success; ++c )
+   {
+      conshdlr = SCIPconsGetHdlr(consdata->conss[c]);
+      assert(conshdlr != NULL);
+
+      if( symtype == SYM_SYMTYPE_PERM )
+      {
+         if( !SCIPconshdlrSupportsPermsymDetection(conshdlr) )
+            *success = FALSE;
+      }
+      else
+      {
+         assert(symtype == SYM_SYMTYPE_SIGNPERM);
+         if( !SCIPconshdlrSupportsSignedPermsymDetection(conshdlr) )
+            *success = FALSE;
+      }
+   }
+
+   /* terminate if not all constraints can build symmetry detection graphs */
+   if( !(*success) )
+      return SCIP_OKAY;
+
+   /* start building the symmetry detection graph for the disjunctive constraint */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &rootnode) );
+
+   /* copy of graph: most constraints are linear, use modest estimation of number of nodes */
+   SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &symgraph, SCIPgetVars(scip), SCIPgetNVars(scip),
+         5, 5, 1, SCIPgetNVars(scip)) );
+
+   /* for each constraint, build the symmetry detection graph and copy it to the global graph */
+   for( c = 0; c < consdata->nconss && *success; ++c )
+   {
+      SCIP_CALL( SCIPclearSymgraph(scip, symgraph, SCIPgetVars(scip), SCIPgetNVars(scip), symtype) );
+
+      if( symtype == SYM_SYMTYPE_PERM )
+      {
+         SCIP_CALL( SCIPgetConsPermsymGraph(scip, consdata->conss[c], symgraph, success) );
+      }
+      else
+      {
+         assert(symtype == SYM_SYMTYPE_SIGNPERM);
+
+         SCIP_CALL( SCIPgetConsSignedPermsymGraph(scip, consdata->conss[c], symgraph, success) );
+      }
+
+      if( *success )
+      {
+         /* copy the symmetry detection graph and find its root node with index in target graph */
+         SCIP_CALL( SCIPcopySymgraphAsSubgraph(scip, symgraph, graph, consdata->conss[c], &subroot) );
+
+         if( subroot < 0 )
+            *success = FALSE;
+
+         /* connect root of disjunction constraint with root of copied graph */
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnode, subroot, FALSE, 0.0) );
+      }
+   }
+   SCIP_CALL( SCIPfreeSymgraph(scip, &symgraph) );
 
    return SCIP_OKAY;
 }
@@ -1035,6 +1126,26 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
 }
 
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphDisjunction)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphDisjunction)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * constraint specific interface methods
  */
@@ -1071,6 +1182,8 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
          CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransDisjunction) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxDisjunction) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphDisjunction) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphDisjunction) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/alwaysbranch",

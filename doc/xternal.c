@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -252,7 +252,7 @@
  * Alex is now ready to write his very first example, he creates a new folder `MinEx` under `examples` and puts two files in there:
  * `CMakeLists.txt`:
  * ```
- * cmake_minimum_required(VERSION 3.3)
+ * cmake_minimum_required(VERSION 3.11)
  *
  * project(minex)
  * find_package(SCIP REQUIRED)
@@ -339,6 +339,7 @@
 /**@page PROGRAMMING Programming with SCIP
  *
  * - @subpage CODE    "Coding style guidelines"
+ * - @subpage SRCORGA "Organization of source code"
  * - @subpage OBJ     "Creating, capturing, releasing, and adding data objects"
  * - @subpage MEMORY  "Using the memory functions of SCIP"
  * - @subpage DEBUG   "Debugging"
@@ -357,6 +358,7 @@
  * - @subpage CUTSEL  "Cut selectors"
  * - @subpage NODESEL "Node selectors"
  * - @subpage HEUR    "Primal heuristics"
+ * - @subpage IISFINDER "IIS finders"
  * - @subpage DIVINGHEUR "Diving heuristics"
  * - @subpage RELAX   "Relaxation handlers"
  * - @subpage READER  "File readers"
@@ -379,6 +381,7 @@
  * - @subpage COUNTER "How to use SCIP to count feasible solutions"
  * - @subpage REOPT   "How to use reoptimization in SCIP"
  * - @subpage CONCSCIP "How to use the concurrent solving mode in SCIP"
+ * - @subpage MINUCIIS "How to deduce reasons for infeasibility in SCIP"
  * - @subpage DECOMP "How to provide a problem decomposition"
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
  * - @subpage TRAINESTIMATION "How to train custom tree size estimation for SCIP"
@@ -405,22 +408,24 @@
  * New features, peformance improvements, and interface changes between different versions of SCIP are documented in the
  * release notes:
  *
- * - \subpage RN80         "SCIP 8.0"
- * - \subpage RN70         "SCIP 7.0"
- * - \subpage RN60         "SCIP 6.0"
- * - \subpage RN50         "SCIP 5.0"
- * - \subpage RN40         "SCIP 4.0"
- * - \subpage RN32         "SCIP 3.2"
- * - \subpage RN31         "SCIP 3.1"
- * - \subpage RN30         "SCIP 3.0"
- * - \subpage RN21         "SCIP 2.1"
- * - \subpage RN20         "SCIP 2.0"
- * - \subpage RN12         "SCIP 1.2"
- * - \subpage RN11         "SCIP 1.1"
- * - \subpage RN10         "SCIP 1.0"
- * - \subpage RN09         "SCIP 0.9"
- * - \subpage RN08         "SCIP 0.8"
- * - \subpage RN07         "SCIP 0.7"
+ * - \subpage RN10         "SCIP 10"
+ * - \subpage RN9          "SCIP 9"
+ * - \subpage RN8          "SCIP 8"
+ * - \subpage RN7          "SCIP 7.0"
+ * - \subpage RN6          "SCIP 6.0"
+ * - \subpage RN5          "SCIP 5.0"
+ * - \subpage RN4          "SCIP 4.0"
+ * - \subpage RN3_2        "SCIP 3.2"
+ * - \subpage RN3_1        "SCIP 3.1"
+ * - \subpage RN3_0        "SCIP 3.0"
+ * - \subpage RN2_1        "SCIP 2.1"
+ * - \subpage RN2_0        "SCIP 2.0"
+ * - \subpage RN1_2        "SCIP 1.2"
+ * - \subpage RN1_1        "SCIP 1.1"
+ * - \subpage RN1_0        "SCIP 1.0"
+ * - \subpage RN0_9        "SCIP 0.9"
+ * - \subpage RN0_8        "SCIP 0.8"
+ * - \subpage RN0_7        "SCIP 0.7"
  *
  */
 
@@ -981,14 +986,6 @@
  *  </td>
  *  <td>
  *  A solver that computes irreducible infeasible subsystems using Benders decomposition
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  @subpage POLYSCIP_MAIN
- *  </td>
- *  <td>
- *  A solver for multi-objective optimization problems.
  *  </td>
  *  </tr>
  *  <tr>
@@ -2631,7 +2628,8 @@
  *
  * \par SEPA_DELAY: the default for whether the separation method should be delayed, if other separators or constraint handlers found cuts.
  * If the separator's separation method is marked to be delayed, it is only executed after no other separator
- * or constraint handler found a cut during the price-and-cut loop.
+ * or constraint handler found a cut during the price-and-cut loop, and in the last separation or stalling round,
+ * either in the end, or in an additional round if only the maximal subsequent round is exceeded.
  * If the separation method of the separator is very expensive, you may want to mark it to be delayed until all cheap
  * separation methods have been executed.
  *
@@ -4061,6 +4059,151 @@
  *
  * The HEUREXITSOL callback is executed before the branch-and-bound process is freed. The primal heuristic should use this
  * call to clean up its branch-and-bound data, which was allocated in HEURINITSOL.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page IISFINDER How to add IIS finders
+ *
+ * IIS finders are used to generate an (I)IS ((irreducible) infeasible subsystem) for an infeasible instance.
+ * \n
+ * A complete list of all iis finders contained in this release can be found \ref IISFINDERS "here".
+ *
+ * We now explain how users can add their own iis finders.
+ * Take the greedy iis finder (src/scip/iisfinder_greedy.c) as an example.
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjIISfinder wrapper
+ * base class and implement the `scip_...()` virtual methods instead of the `SCIP_DECL_IISFINDER...` callback methods.
+ *
+ * Additional documentation for the callback methods of an iis finder can be found in the file type_iisfinder.h.
+ *
+ * Here is what you have to do to implement an iis finder:
+ * -# Copy the template files `src/scip/iisfinder_xyz.c` and `src/scip/iisfinder_xyz.h` into files named `iisfinder_myiisfinder.c`
+ *    and `iisfinder_myiisfinder.h`.
+ *    \n
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin for SCIP, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeIIsfinderMyiisfinder()` in order to include the iis finder into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., `src/cmain.c` in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myiisfinder".
+ * -# Adjust the properties of the iis finder (see \ref IISFINDER_PROPERTIES).
+ * -# Define the iis finder data (see \ref IISFINDER_DATA). This is optional.
+ * -# Implement the interface methods (see \ref IISFINDER_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref IISFINDER_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref IISFINDER_ADDITIONALCALLBACKS). This is optional.
+ *
+ *
+ * @section IISFINDER_PROPERTIES Properties of an IIS finder
+ *
+ * At the top of the new file `iisfinder_myiisfinder.c` you can find the iis finder properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the iis finder properties by calling the constructor
+ * of the abstract base class scip::ObjIISfinder from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par IISFINDER_NAME: the name of the iis finder.
+ * This name is used in the interactive shell to address the iis finder.
+ * Additionally, if you are searching for an iis finder with SCIPfindIISfinder(), this name is looked up.
+ * Names have to be unique: no two iis finders may have the same name.
+ *
+ * \par IISFINDER_DESC: the description of the iis finder.
+ * This string is printed as a description of the iis finder in the interactive shell.
+ *
+ * \par IISFINDER_PRIORITY: the priority of the iis finder.
+ * When an IIS is desired, SCIP orders the IIS finders by priority.
+ * The iis finders are then called in this order (highest goes first), until depending on the users settings,
+ * one succeeds in finding an infeasible subsystem, an irreducible infeasible subsystem is found,
+ * all iis finders have been run, or some limit has been hit.
+ * \n
+ * Note that this property only defines the default value of the priority. The user may change this value arbitrarily by
+ * adjusting the corresponding parameter setting. Whenever, even during solving, the priority of an iis finder is
+ * changed, then when a call is made to generate an IIS, the iis finders are resorted by the new priorities.
+ *
+ *
+ * @section IISFINDER_DATA IIS Finder Data
+ *
+ * Below the header "Data structures" you can find a struct which is called `struct SCIP_IISfinderData`.
+ * In this data structure, you can store the data of your iis finder. For example, you should store the adjustable
+ * parameters of the iis finder in this data structure.
+ * If you are using C++, you can add iis finder data as usual as object variables to your class.
+ * \n
+ * Defining iis finder data is optional. You can leave the struct empty.
+ *
+ *
+ * @section IISFINDER_INTERFACE Interface Methods
+ *
+ * At the bottom of `iisfinder_myiisfinder.c`, you can find the interface method `SCIPincludeIISfinderMyiisfinder()`,
+ * which also appears in `iisfinder_myiisfinder.h`
+ * `SCIPincludeIISfinderMyiisfinder()` is called by the users, if they want to include the iis finder, i.e., if they want
+ * to use the iis finder in their application.
+ *
+ * This method only has to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the iis finder. For this, you can either call
+ * SCIPincludeIISfinder()
+ * or SCIPincludeIISfinderBasic(). In the latter variant, \ref IISFINDER_ADDITIONALCALLBACKS "additional callbacks"
+ * must be added via setter functions as, e.g., SCIPsetIISfinderCopy(). We recommend this latter variant because
+ * it is more stable towards future SCIP versions which might have more callbacks, whereas source code using the first
+ * variant must be manually adjusted with every SCIP release containing new callbacks for iis finders in order to compile.
+ *
+ *
+ * If you are using iis finder data, you have to allocate the memory for the data at this point.
+ * You can do this by calling:
+ * \code
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &iisfinderdata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_IISfinderData afterwards.
+ *
+ * You may also add user parameters for your iis finder, see the method SCIPincludeIISfinderGreedy() in
+ * src/scip/iisfinder_greedy.c for an example.
+ *
+ *
+ * @section IISFINDER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of an IIS Finder
+ *
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * an operational algorithm.
+ * They are passed together with the iis finder itself to SCIP using SCIPincludeIISfinder() or SCIPincludeIISfinderBasic(),
+ * see @ref IISFINDER_INTERFACE.
+ *
+ * IIS finder plugins have a single fundamental callback method, namely the IISFINDEREXEC method.
+ * This method has to be implemented for every iis funder; the other callback methods are optional.
+ * It implements the single contribution every iis finder has to provide: Generating an (I)IS from an infeasible instance.
+ * In the C++ wrapper class scip::ObjIISfinder, the scip_exec() method is a virtual abstract member function.
+ * You have to implement it in order to be able to construct an object of your iis finder class.
+ *
+ * @subsection IISFINDEREXEC
+ *
+ * The IISFINDEREXEC callback should generate an (I)IS from an infeasible instance.
+ * The callback receives the IIS object, which contains the infeasible subscip that should be reduced in size,
+ * as well as multiple parameters that limit how the IIS finder procedure should be performed.
+ * The contained subscip should be transformed such that it remains infeasible and decreases in size,
+ * and information about the current state of the subscip, e.g., is it still infeasible, should be recorded.
+ *
+ * Additional documentation for this callback can be found in type_iisfinder.h.
+ *
+ * @section IISFINDER_ADDITIONALCALLBACKS Additional Callback Methods of an IIS Finder
+ *
+ * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * implemented for most applications. They can be used, for example, to initialize and free private data.
+ * Additional callbacks can either be passed directly with SCIPincludeIISfinder() to SCIP or via specific
+ * <b>setter functions</b> after a call of SCIPincludeIISfinderBasic(), see also @ref IISFINDER_INTERFACE.
+ *
+ * @subsection IISFINDERFREE
+ *
+ * If you are using iis finder data, you have to implement this method in order to free the iis finder data.
+ * This can be done by the following procedure:
+ *
+ * @refsnippet{src/scip/iisfinder_greedy.c,SnippetIISfinderFreeGreedy}
+ *
+ * If you have allocated memory for fields in your iis finder data, remember to free this memory
+ * before freeing the iis finder data itself.
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection IISFINDERCOPY
+ *
+ * The IISFINDERCOPY callback is executed when a SCIP instance is copied, e.g., to solve a sub-SCIP. By defining this
+ * callback as `NULL` the user disables the execution of the specified iis finder for all copied SCIP
+ * instances
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -7207,6 +7350,51 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page MINUCIIS How to deduce reasons for infeasibility in SCIP
+ *
+ * It is a common problem for integer programming practitioners to (unexpectedly) encounter infeasible instances.
+ * Often it desirable to better understand exactly why the instance is infeasible. Was it an error in the
+ * input data, was the underlying formulation incorrect, or is my model simply infeasible by construction?
+ * There are two main ways to analyse infeasible instances using SCIP:
+ *
+ * Firstly, there is IIS (irreducible infeasible subsystem) functionality in SCIP.
+ * This produces an infeasible problem, which contains a subset of constraints and variable bounds from
+ * the original problem. The infeasible problem is also irreducible, in that removing any additional
+ * constraints results in the problem becoming feasible. This is a fantastic method for debugging
+ * problems, and for determining what needs to be changed in the formulation. To use this functionality
+ * in the SCIP shell do the following
+ * \code
+ * SCIP> read path_to_instance
+ * SCIP> iis
+ * \endcode
+ * This will read in your instance and then compute an IIS of your infeasible instance.
+ * To display or print the subscip that contains the modified instance that is still
+ * infeasible, and hopefully substantially smaller, do the following
+ * \code
+ * SCIP> display/iis
+ * SCIP> write/iis path_to_where_iis_should_be_printed
+ * \endcode
+ *
+ * Secondly there is the MinUC (minimize number of unsatisfied constraints) functionality in SCIP.
+ * This produces a minimum set of constraints, such that if those constraints were relaxed, the original
+ * problem would be feasible. To use this functionality in the SCIP shell do the following
+ * \code
+ * SCIP> read path_to_instance
+ * SCIP> change/minuc
+ * SCIP> optimize
+ * \endcode
+ * The second command changes the loaded problem to now minimize the number of
+ * unsatisfied constraints. The primal bound during solving corresponds to current best solution,
+ * i.e., a set of constraints which when removed or relaxed will induce feasibility.
+ * One can view the constraints that art part of the MinUC by seeing which of the variables
+ * have value 1. The variables in the new problem have naming conventions `originalconsname_master`.
+ * The solution can be displayed in the shell with the command
+ * \code
+ * SCIP> display/solution
+ * \endcode
+ *
+ */
+
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page DECOMP How to provide a problem decomposition
@@ -7854,6 +8042,46 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page SRCORGA Organization of Source Code
+ *
+ *  The SCIP source code has different types of files, distinguished by their naming style. The following list gives an overview of the most important file types and their purpose.
+ *
+ *  @section SRCORGA_CORE SCIP core components
+ *
+ *  - Each core component has an implementation with an internal API and a public API.
+ *  - The internal implementation should be in a file `<component>.c,h` and should not be included in the public API.
+ *  - Internal API functions usually do not take a `SCIP*` parameter, but a pointer to the component as first argument and pointers to internal structures like `SCIP_SET*` or `SCIP_STAT*`, where necessary.
+ *  - The name of internal API functions follows the style `SCIP<component><operation>...`, e.g., <code>SCIPvarCreateOriginal()</code> or <code>SCIPvarAddLocks()</code>.
+ *  - `pub_<component>.h` declares the functions of the public API that do not need a SCIP pointer.
+ *    Often, these are getter-functions.
+ *    For example, \ref pub_var.h contains public variable API functions.
+ *  - Functions in `pub_<component>.h` follow the same naming style as those in `<component>.h` and are used by the implementation of the internal API as well.
+ *  - `scip_<component>.h` declares the functions of the public API that need a SCIP instance (`SCIP*`), e.g., \ref scip_var.h for public variable manipulation functions.
+ *    Functions declared in `scip_<component>.h` are often thin wrappers that call the internal API functions from `<component>.h`.
+ *    These functions should follow the naming style `SCIP<operation><component>...`, e.g., <code>SCIPcreateVarOriginal()</code> or <code>SCIPaddVarLocks()</code>.
+ *  - To ensure functions of the public API being reachable in shared libraries, their declaration needs to contain the <code>SCIP_EXPORT</code> attribute.
+ *  - Public types (typedef's, enumerations) are defined in file `type_<component>.h`.
+ *    Type names follow the style `SCIP_<COMPONENT>...`. For every struct, we have a typedef that shortens the name
+ *    (so one could for instance use `SCIP_PARAM` instead of `struct SCIP_Param`).
+ *    The convention is to have the mixed-casing for the struct name, and then all-capital for the typedef's type. Similar for enums.
+ *  - Structs that need to be accessed by several source files are defined in `struct_<component>.h`.
+ *    `struct_<component>.h` is usually included only by `<component>.c` and maybe `scip_<component>.c`.
+ *    Exceptions are due to manual inlining of functions via macros when compiling for optimized mode.
+ *  - All types, structs, and functions are documented with Doxygen-style comments.
+ *    The documentation of the implementation of a function must repeat the documentation of the function declaration exactly (for doxygen to treat them as identical).
+ *
+ *  @section SRCORGA_PLUGINS Plugins
+ *  - Each plugin is defined in files `<type>_<name>.c,h`, e.g.,
+ *     \ref cons_knapsack.c implements the Knapsack constraint handler plugin and
+ *     \ref cons_knapsack.h declares its public API functions.
+ *  - Public types that belong to a plugin are declared in its header, `<type>_<name>.h`.
+ *  - API functions of plugins are named as `SCIP<operation>...<Name>`, e.g., <code>SCIPincludeConshdlrAnd()</code>, <code>SCIPcreateConsAnd()</code>, or <code>SCIPgetNVarsAnd()</code>.
+ *  - Plugins access only the public API.
+ *  - Plugins that need to be included by default should be registered in <code>src/scip/scipdefplugins.c</code>.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page TEST How to run automated tests with SCIP
  *
  *  SCIP comes along with a set of useful tools that allow to perform automated tests. The
@@ -8403,20 +8631,21 @@
  * invariant. To detect such formulation symmetries, SCIP builds an auxiliary colored graph whose
  * color-preserving automorphisms correspond to symmetries of the integer program. The symmetries of
  * the graph, and thus of the integer program, are then computed by an external graph automorphism
- * library, which form the basic workhorses to detect symmetry. Currently, SCIP ships with three such
- * libraries: bliss, nauty/traces, and dejavu. Moreover, one can use
- * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss or nauty/traces;
- * sassy is automatically included in dejavu. The current default is to use bliss in combination with
- * sassy for symmetry detection.
- *
- * @note To build SCIP with sassy/bliss, one can use the options <code>SYM=sassy</code> and <code>-DSYM=sassy</code> in
- * the Makefile and CMake system, respectively.
+ * library that needs to be linked to SCIP. Currently, SCIP can use three such libraries: The graph
+ * automorphism libraries bliss, nauty/traces, and dejavu. They are the basic workhorses to detect symmetries. Moreover, one can use
+ * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss or nauty/traces; sassy is automatically included in dejavu.
+ * The current default is to use nauty in combination with sassy for symmetry detection.
+ * To use other symmetry packages, options <code>SYM</code> and <code>-DSYM</code> in the Makefile and CMake
+ * system, respectively, need to be set.
  *
  * Besides purely integer linear problems, SCIP also supports symmetry detection for general
  * constraint mixed-integer programs containing most of the constraint types that can be handled
  * by SCIP. In particular, symmetries of mixed-integer nonlinear problems can be detected.
  * Moreover, symmetries can also be detected in code containing customized constraints.
  * To this end, a suitable callback needs to be implemented, see \ref SYMDETECTCUSTOM.
+ *
+ * The (generators of the) symmetry group detected by SCIP can be printed to the terminal
+ * by querying <code>display symmetry</code> in SCIP's interactive shell.
  *
  * @subsection SYMPROCESS Processing symmetry information
  *
@@ -8496,7 +8725,7 @@
  *    symmetries.
  * -# Orbital reduction is a generalization of orbital fixing that also works for non-binary variable domains.
  *    Orbital reduction respects the 2-bit of the bitset <code>misc/usesymmetry</code>.
- *    See \ref SYMMETHODSELECT <method selection>. Since there is no static counterpart, this method ignores
+ *    See \ref SYMMETHODSELECT "method selection". Since there is no static counterpart, this method ignores
  *    <code>propagating/symmetry/usedynamicprop</code>.
  *
  * In all cases, the dynamic variable ordering is derived from the branching decisions.
@@ -8804,10 +9033,12 @@
   * - There is a <a href="https://github.com/scipopt/MatlabSCIPInterface">Matlab interface</a>
   *   to use SCIP and SCIP-SDP from Matlab and Octave.
   * - <a href="https://github.com/scipopt/JSCIPOpt">JSCIPOpt</a> is an interface for Java.
+  * - <a href="https://github.com/scipopt/russcip">Russcip</a> is an interface for Rust.
+  * - <a href="https://github.com/scipopt/SCIPpp">SCIP++</a> is a modeling interface for C++.
   *
   * Contributions to these projects are very welcome.
   *
-  * There are also several third-party python interfaces to the \SCIP Optimization Suite:
+  * There are also many third-party python interfaces to the \SCIP Optimization Suite, for example:
   * - <a href="https://github.com/eomahony/Numberjack">NUMBERJACK</a> is a constraint programming platform implemented in python.
   *   It supports a variety of different solvers, one of them being the \SCIP Optimization Suite .
   * - <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
@@ -9056,6 +9287,18 @@
 /**@defgroup DecompMethods Decomposition data structure
  * @ingroup DataStructures
  * @brief methods for creating and accessing user decompositions
+ */
+
+/**@defgroup NetworkMatrix Network Matrix
+ * @ingroup DataStructures
+ * @brief methods for detecting network matrices and converting them to the underlying graphs
+ */
+
+/**@defgroup SymGraph Symmetry Detection Graph
+ * @ingroup DataStructures
+ * @brief methods for creating and manipulating symmetry detection graphs
+ *
+ * Below you find a list of functions to create and manipulate symmetry detection graphs.
  */
 
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
@@ -9464,7 +9707,7 @@
  */
 
 /**@defgroup PublicSymmetryMethods Symmetry
- * @ingroup INTERNALAPI
+ * @ingroup PUBLICCOREAPI
  * @brief methods for symmetry handling
  */
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -235,6 +235,41 @@ Test(quad, detectandfree3, .init = setup, .fini = teardown)
       cr_assert_eq(curv, SCIP_EXPRCURV_CONVEX);
 
    SCIPhashmapFree(&assumevarfixed);
+
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+}
+
+/* detects x^2 + 0*x*y + y^2 as quadratic expression */
+Test(quad, detectandfree4, .init = setup, .fini = teardown)
+{
+   SCIP_EXPR* expr;
+   SCIP_EXPR* simplified;
+   SCIP_Bool changed = FALSE;
+   SCIP_Bool infeasible;
+   SCIP_Bool isquadratic;
+
+   /* create expression and simplify it */
+   SCIP_CALL( SCIPparseExpr(scip, &expr, (char*)"<x>^2 + <x>*<y> + <y>^2 + <z>^2", NULL, NULL, NULL) );
+   SCIP_CALL( SCIPsimplifyExpr(scip, expr, &simplified, &changed, &infeasible, NULL, NULL) );
+   cr_expect(!changed);
+   cr_expect_not(infeasible);
+   SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
+   expr = simplified;
+   SCIP_CALL( SCIPreplaceCommonSubexpressions(scip, &expr, 1, &changed) );
+
+   /* set coef of x*y and of z^2 to 0 */
+   cr_assert_eq(SCIPexprGetNChildren(expr), 4);
+   SCIPgetCoefsExprSum(expr)[1] = 0.0;
+   SCIPgetCoefsExprSum(expr)[3] = 0.0;
+
+   /* detect */
+   SCIP_CALL( SCIPcheckExprQuadratic(scip, expr, &isquadratic) );
+   cr_expect(isquadratic);
+
+   cr_expect_eq(expr->quaddata->nlinexprs, 0, "Expecting 0 linear expr, got %d\n", expr->quaddata->nlinexprs);
+   cr_expect_eq(expr->quaddata->nquadexprs, 2, "Expecting 2 quadratic terms, got %d\n", expr->quaddata->nquadexprs);
+   cr_expect_eq(expr->quaddata->nbilinexprterms, 0, "Expecting 0 bilinear terms, got %d\n", expr->quaddata->nbilinexprterms);
+   cr_expect(expr->quaddata->allexprsarevars);
 
    SCIP_CALL( SCIPreleaseExpr(scip, &expr) );
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -107,7 +107,8 @@ struct parse_pos_struct
 
 
 /** output error message with corresponding line and position */
-static void xmlErrmsg(
+static
+void xmlErrmsg(
    PPOS*                 ppos,
    const char*           msg,
    XML_Bool              msg_only,
@@ -189,7 +190,8 @@ XML_Bool pushPstack(
 }
 
 /** returns top element on stack (which has to be present) */
-static XML_NODE* topPstack(
+static
+XML_NODE* topPstack(
    const PPOS*           ppos
    )
 {
@@ -727,7 +729,7 @@ void handleDecl(
             ppos->state = XML_STATE_ERROR;
          else
          {
-            if ( NULL == (node = xmlNewNode("#CDATA", ppos->lineno)) )
+            if ( NULL == (node = SCIPxmlNewNode("#CDATA", ppos->lineno)) )
             {
                xmlError(ppos, "Can't create new node");
                ppos->state = XML_STATE_ERROR;
@@ -736,7 +738,7 @@ void handleDecl(
             {
                BMSduplicateMemoryArray(&node->data, data, strlen(data)+1);
                BMSfreeMemoryArray(&data);
-               xmlAppendChild(topPstack(ppos), node);
+               SCIPxmlAppendChild(topPstack(ppos), node);
             }
          }
          break;
@@ -813,7 +815,7 @@ void handleStarttag(
    }
    else
    {
-      node = xmlNewNode(name, ppos->lineno);
+      node = SCIPxmlNewNode(name, ppos->lineno);
       if ( node == NULL )
       {
          xmlError(ppos, "Can't create new node");
@@ -821,7 +823,7 @@ void handleStarttag(
       }
       else
       {
-         xmlAppendChild(topPstack(ppos), node);
+         SCIPxmlAppendChild(topPstack(ppos), node);
 
          if ( pushPstack(ppos, node) )
             ppos->state = XML_STATE_IN_TAG;
@@ -943,7 +945,7 @@ void procInTag(
          }
          else
          {
-            attr = xmlNewAttr(name, value);
+            attr = SCIPxmlNewAttr(name, value);
             if ( attr == NULL )
             {
                xmlError(ppos, "Can't create new attribute");
@@ -951,7 +953,7 @@ void procInTag(
             }
             else
             {
-               xmlAddAttr(topPstack(ppos), attr);
+               SCIPxmlAddAttr(topPstack(ppos), attr);
             }
             BMSfreeMemoryArray(&name);
             BMSfreeMemoryArray(&value);
@@ -1026,7 +1028,7 @@ void procPcdata(
       {
          ungetsymbol(ppos, c);
 
-         node = xmlNewNode("#PCDATA", ppos->lineno);
+         node = SCIPxmlNewNode("#PCDATA", ppos->lineno);
          if ( node == NULL )
          {
             xmlError(ppos, "Can't create new node");
@@ -1035,7 +1037,7 @@ void procPcdata(
          else
          {
             BMSduplicateMemoryArray(&node->data, data, strlen(data)+1);
-            xmlAppendChild(topPstack(ppos), node);
+            SCIPxmlAppendChild(topPstack(ppos), node);
             ppos->state = XML_STATE_BEFORE;
          }
       }
@@ -1081,8 +1083,10 @@ XML_Bool xmlParse(
    return (ppos->state == XML_STATE_EOF);
 }
 
+/*----------------------------------------------------------------------------------------------*/
+
 /** Parse file */
-XML_NODE* xmlProcess(
+XML_NODE* SCIPxmlProcess(
    const char*           filename            /**< XML file name */
    )
 {
@@ -1126,19 +1130,19 @@ XML_NODE* xmlProcess(
       ppos.state    = XML_STATE_BEFORE;
       ppos.top      = NULL;
 
-      node = xmlNewNode("#ROOT", ppos.lineno);
+      node = SCIPxmlNewNode("#ROOT", ppos.lineno);
       if ( node == NULL )
       {
          xmlError(&ppos, "Can't create new node");
       }
       else
       {
-         attr = xmlNewAttr("filename", myfilename);
+         attr = SCIPxmlNewAttr("filename", myfilename);
          if ( attr == NULL )
             xmlError(&ppos, "Can't create new attribute");
          else
          {
-            xmlAddAttr(node, attr);
+            SCIPxmlAddAttr(node, attr);
 
             /* push root node on stack and start to process */
             if ( pushPstack(&ppos, node) )
@@ -1153,7 +1157,7 @@ XML_NODE* xmlProcess(
       if ( ! result && (node != NULL) )
       {
          xmlErrmsg(&ppos, "Parsing error, processing stopped", TRUE, __FILE__, __LINE__);
-         xmlFreeNode(node);
+         SCIPxmlFreeNode(node);
          node = NULL;
       }
       if ( FCLOSE(ppos.fp) )
@@ -1164,16 +1168,8 @@ XML_NODE* xmlProcess(
    return node;
 }
 
-
-
-
-
-
-/*----------------------------------------------------------------------------------------------*/
-
-
 /** create new node */
-XML_NODE* xmlNewNode(
+XML_NODE* SCIPxmlNewNode(
    const char*           name,
    int                   lineno
    )
@@ -1192,7 +1188,7 @@ XML_NODE* xmlNewNode(
 }
 
 /** create new attribute */
-XML_ATTR* xmlNewAttr(
+XML_ATTR* SCIPxmlNewAttr(
    const char*           name,
    const char*           value
    )
@@ -1212,7 +1208,7 @@ XML_ATTR* xmlNewAttr(
 }
 
 /** add attribute */
-void xmlAddAttr(
+void SCIPxmlAddAttr(
    XML_NODE*             n,
    XML_ATTR*             a
    )
@@ -1225,7 +1221,7 @@ void xmlAddAttr(
 }
 
 /** append child node */
-void xmlAppendChild(
+void SCIPxmlAppendChild(
    XML_NODE*             parent,
    XML_NODE*             child
    )
@@ -1272,7 +1268,7 @@ void xmlFreeAttr(
 }
 
 /** free node */
-void xmlFreeNode(
+void SCIPxmlFreeNode(
    XML_NODE*             node
    )
 {
@@ -1289,7 +1285,7 @@ void xmlFreeNode(
    {
       XML_NODE* m;
       m = n->prevsibl;
-      xmlFreeNode(n);
+      SCIPxmlFreeNode(n);
       n = m;
    }
 
@@ -1306,7 +1302,7 @@ void xmlFreeNode(
 }
 
 /** output node */
-void xmlShowNode(
+void SCIPxmlShowNode(
    const XML_NODE*       root
    )
 {
@@ -1327,14 +1323,14 @@ void xmlShowNode(
       if ( n->firstchild != NULL )
       {
          infoMessage("->\n");
-         xmlShowNode(n->firstchild);
+         SCIPxmlShowNode(n->firstchild);
          infoMessage("<-\n");
       }
    }
 }
 
 /** get attribute value */
-const char* xmlGetAttrval(
+const char* SCIPxmlGetAttrval(
    const XML_NODE*       node,
    const char*           name
    )
@@ -1359,7 +1355,7 @@ const char* xmlGetAttrval(
 }
 
 /** return first node */
-const XML_NODE* xmlFirstNode(
+const XML_NODE* SCIPxmlFirstNode(
    const XML_NODE*       node,
    const char*           name
    )
@@ -1379,7 +1375,7 @@ const XML_NODE* xmlFirstNode(
 }
 
 /** return next node */
-const XML_NODE* xmlNextNode(
+const XML_NODE* SCIPxmlNextNode(
    const XML_NODE*       node,
    const char*           name
    )
@@ -1387,11 +1383,11 @@ const XML_NODE* xmlNextNode(
    assert(node != NULL);
    assert(name != NULL);
 
-   return (node->nextsibl == NULL) ? NULL : xmlFirstNode(node->nextsibl, name);
+   return (node->nextsibl == NULL) ? NULL : SCIPxmlFirstNode(node->nextsibl, name);
 }
 
 /** find node */
-const XML_NODE* xmlFindNode(
+const XML_NODE* SCIPxmlFindNode(
    const XML_NODE*       node,
    const char*           name
    )
@@ -1407,7 +1403,7 @@ const XML_NODE* xmlFindNode(
 
    for (n = node->firstchild; n != NULL; n = n->nextsibl)
    {
-      r = xmlFindNode(n, name);
+      r = SCIPxmlFindNode(n, name);
       if ( r != NULL )
          return r;
    }
@@ -1416,7 +1412,7 @@ const XML_NODE* xmlFindNode(
 }
 
 /** find node with bound on the depth */
-const XML_NODE* xmlFindNodeMaxdepth(
+const XML_NODE* SCIPxmlFindNodeMaxdepth(
    const XML_NODE*       node,               /**< current node - use start node to begin */
    const char*           name,               /**< name of tag to search for */
    int                   depth,              /**< current depth - start with 0 for root */
@@ -1436,7 +1432,7 @@ const XML_NODE* xmlFindNodeMaxdepth(
    {
       for (n = node->firstchild; n != NULL; n = n->nextsibl)
       {
-         r = xmlFindNodeMaxdepth(n, name, depth+1, maxdepth);
+         r = SCIPxmlFindNodeMaxdepth(n, name, depth+1, maxdepth);
          if ( r != NULL )
             return r;
       }
@@ -1446,7 +1442,7 @@ const XML_NODE* xmlFindNodeMaxdepth(
 }
 
 /** return next sibling */
-const XML_NODE* xmlNextSibl(
+const XML_NODE* SCIPxmlNextSibl(
    const XML_NODE*       node
    )
 {
@@ -1456,7 +1452,7 @@ const XML_NODE* xmlNextSibl(
 }
 
 /** return previous sibling */
-const XML_NODE* xmlPrevSibl(
+const XML_NODE* SCIPxmlPrevSibl(
    const XML_NODE*       node
    )
 {
@@ -1466,7 +1462,7 @@ const XML_NODE* xmlPrevSibl(
 }
 
 /** return first child */
-const XML_NODE* xmlFirstChild(
+const XML_NODE* SCIPxmlFirstChild(
    const XML_NODE*       node
    )
 {
@@ -1476,7 +1472,7 @@ const XML_NODE* xmlFirstChild(
 }
 
 /** return last child */
-const XML_NODE* xmlLastChild(
+const XML_NODE* SCIPxmlLastChild(
    const XML_NODE*       node
    )
 {
@@ -1486,7 +1482,7 @@ const XML_NODE* xmlLastChild(
 }
 
 /** return name of node */
-const char* xmlGetName(
+const char* SCIPxmlGetName(
    const XML_NODE*       node
    )
 {
@@ -1496,7 +1492,7 @@ const char* xmlGetName(
 }
 
 /** get line number */
-int xmlGetLine(
+int SCIPxmlGetLine(
    const XML_NODE*       node
    )
 {
@@ -1506,7 +1502,7 @@ int xmlGetLine(
 }
 
 /** get data */
-const char* xmlGetData(
+const char* SCIPxmlGetData(
    const XML_NODE*       node
    )
 {
@@ -1516,7 +1512,7 @@ const char* xmlGetData(
 }
 
 /** find PCDATA */
-const char* xmlFindPcdata(
+const char* SCIPxmlFindPcdata(
    const XML_NODE*       node,
    const char*           name
    )
@@ -1526,7 +1522,7 @@ const char* xmlFindPcdata(
    assert(node != NULL);
    assert(name != NULL);
 
-   n = xmlFindNode(node, name);
+   n = SCIPxmlFindNode(node, name);
    if ( n == NULL )
       return NULL;
 

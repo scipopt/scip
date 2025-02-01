@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -57,10 +57,6 @@
 #include "scip/scip_solve.h"
 #include <stdlib.h>
 #include <string.h>
-
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
 
 #define READER_NAME             "diffreader"
 #define READER_DESC             "file reader for changes in the LP file"
@@ -577,7 +573,7 @@ SCIP_Bool isValue(
    assert(lpinput != NULL);
    assert(value != NULL);
 
-   if( strcasecmp(lpinput->token, "INFINITY") == 0 || strcasecmp(lpinput->token, "INF") == 0 )
+   if( SCIPstrcasecmp(lpinput->token, "INFINITY") == 0 || SCIPstrcasecmp(lpinput->token, "INF") == 0 )
    {
       *value = SCIPinfinity(scip);
       return TRUE;

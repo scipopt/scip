@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -25,6 +25,7 @@
 /**@file   branch_coloring.h
  * @brief  default branching rule for the vertex coloring problem
  * @author Gerald Gamrath
+ * @author Julian Meffert
  *
  * This file implements the standard branching rule for the coloring algorithm.
  *
@@ -39,7 +40,7 @@
  * solution and can therefore be used as the branching rule.
  *
  * The branching is done as follows: Given the optimal (fractional) solution of the current
- * branch-and-bound node, choose the most fractional variable and the corresponding stable set
+ * branch-and-bound node, choose the least/most fractional variable and the corresponding stable set
  * s1. Now choose two nodes v, w and another stable set s2, such that v is part of both stable sets,
  * whereas w is part of exactly one of the stable sets.  Create two children of the current node,
  * one with the restriction SAME(v,w), the other one with restriction DIFFER(v,w). Therefore, each

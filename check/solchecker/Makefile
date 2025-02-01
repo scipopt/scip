@@ -14,8 +14,8 @@ LINKCXX_l	=	-l
 LINKCXX_o	=	-o # the trailing space is important
 FLAGS		=	
 OFLAGS		=	
-CXXFLAGS	=	-I/usr/local/include
-LDFLAGS		=	-L/usr/local/lib
+CXXFLAGS	=	-I/usr/local/include -I/opt/homebrew/include
+LDFLAGS		=	-L/usr/local/lib -L/opt/homebrew/lib
 
 DOXY		=	doxygen
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -65,6 +65,7 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_sol.h"
 #include "scip/scip_var.h"
+#include "scip/symmetry_graph.h"
 #include <string.h>
 
 /* constraint handler properties */
@@ -797,6 +798,130 @@ SCIP_RETCODE enforceConstraint(
    }
 
    SCIPdebugMsg(scip, "enforcement result=%d\n", *result);
+
+   return SCIP_OKAY;
+}
+
+
+/** adds symmetry information of constraint to a symmetry detection graph */
+static
+SCIP_RETCODE addSymmetryInformation(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be added */
+   SCIP_CONS*            cons,               /**< constraint */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_Bool*            success             /**< pointer to store whether symmetry information could be added */
+   )
+{
+   SYM_GRAPH* symgraph;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real constant;
+   int nlocvars;
+   int rootnode;
+   int subroot = -1;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(graph != NULL);
+   assert(success != NULL);
+
+   *success = TRUE;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->binvar != NULL);
+   assert(consdata->slackcons != NULL);
+
+   /* terminate if slackcons cannot provide a symmetry detection graph */
+   conshdlr = SCIPconsGetHdlr(consdata->slackcons);
+   assert(conshdlr != NULL);
+
+   if( (symtype == SYM_SYMTYPE_PERM && !SCIPconshdlrSupportsPermsymDetection(conshdlr))
+      || (symtype == SYM_SYMTYPE_SIGNPERM && !SCIPconshdlrSupportsSignedPermsymDetection(conshdlr)) )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   /* start building the symmetry detection graph for the superindicator constraint */
+   SCIP_CALL( SCIPaddSymgraphConsnode(scip, graph, cons, 0.0, 0.0, &rootnode) );
+
+   /* copy symmetry detection graph of slackcons, use modest estimation for graph size */
+   SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &symgraph, SCIPgetVars(scip), SCIPgetNVars(scip),
+         15, 15, 1, SCIPgetNVars(scip)) );
+
+   if( symtype == SYM_SYMTYPE_PERM )
+   {
+      SCIP_CALL( SCIPgetConsPermsymGraph(scip, consdata->slackcons, symgraph, success) );
+   }
+   else
+   {
+      assert(symtype == SYM_SYMTYPE_SIGNPERM);
+
+      SCIP_CALL( SCIPgetConsSignedPermsymGraph(scip, consdata->slackcons, symgraph, success) );
+   }
+
+   if( *success )
+   {
+      /* copy the symmetry detection graph and find its root node with index in target graph */
+      SCIP_CALL( SCIPcopySymgraphAsSubgraph(scip, symgraph, graph, consdata->slackcons, &subroot) );
+
+      if( subroot < 0 )
+         *success = FALSE;
+
+      /* connect root of superindicator constraint with root of copied graph */
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnode, subroot, FALSE, 0.0) );
+   }
+   SCIP_CALL( SCIPfreeSymgraph(scip, &symgraph) );
+
+   if( !(*success) )
+      return SCIP_OKAY;
+
+   /* connect root node with binary variable (possibly resolve aggregation) */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, SCIPgetNVars(scip)) );
+
+   vars[0] = consdata->binvar;
+   vals[0] = 1.0;
+   constant = 0.0;
+   nlocvars = 1;
+
+   SCIP_CALL( SCIPgetSymActiveVariables(scip, symtype, &vars, &vals, &nlocvars, &constant, SCIPisTransformed(scip)) );
+
+   if( nlocvars > 1 || !SCIPisEQ(scip, vals[0], 1.0) || !SCIPisZero(scip, constant) )
+   {
+      int opnodeidx;
+
+      /* encode aggregation by a sum-expression and connect it to indicator node */
+      SCIP_CALL( SCIPaddSymgraphOpnode(scip, graph, (int) SYM_CONSOPTYPE_SUM, &opnodeidx) ); /*lint !e641*/
+      SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnode, opnodeidx, FALSE, 0.0) );
+
+      /* add nodes and edges for variables in aggregation */
+      SCIP_CALL( SCIPaddSymgraphVarAggregation(scip, graph, opnodeidx, vars, vals, nlocvars, constant) );
+   }
+   else if( nlocvars == 1 )
+   {
+      int nodeidx;
+
+      if( symtype == SYM_SYMTYPE_SIGNPERM )
+      {
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnode, nodeidx, TRUE, 1.0) );
+
+         nodeidx = SCIPgetSymgraphNegatedVarnodeidx(scip, graph, vars[0]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnode, nodeidx, TRUE, -1.0) );
+      }
+      else
+      {
+         nodeidx = SCIPgetSymgraphVarnodeidx(scip, graph, vars[0]);
+         SCIP_CALL( SCIPaddSymgraphEdge(scip, graph, rootnode, nodeidx, TRUE, 1.0) );
+      }
+   }
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -1886,6 +2011,26 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSuperindicator)
 }
 
 
+/** constraint handler method which returns the permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSuperindicator)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_PERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint handler method which returns the signed permutation symmetry detection graph of a constraint */
+static
+SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSuperindicator)
+{  /*lint --e{715}*/
+   SCIP_CALL( addSymmetryInformation(scip, SYM_SYMTYPE_SIGNPERM, cons, graph, success) );
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * constraint specific interface methods
  */
@@ -1930,6 +2075,8 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSuperindicator, consSepasolSuperindicator, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSuperindicator) );
    SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSuperindicator) );
+   SCIP_CALL( SCIPsetConshdlrGetPermsymGraph(scip, conshdlr, consGetPermsymGraphSuperindicator) );
+   SCIP_CALL( SCIPsetConshdlrGetSignedPermsymGraph(scip, conshdlr, consGetSignedPermsymGraphSuperindicator) );
 
    /* add dialogs if they are not disabled */
    root = SCIPgetRootDialog(scip);

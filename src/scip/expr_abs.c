@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -89,7 +89,7 @@ SCIP_RETCODE computeCutsAbs(
       ub = bounds.sup;
 
       /* it does not make sense to add a cut if child variable is unbounded or fixed */
-      if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) && !SCIPisEQ(scip, lb, ub) )
+      if( !SCIPisEQ(scip, lb, ub) )
       {
          if( !SCIPisPositive(scip, ub) )
          {
@@ -105,7 +105,7 @@ SCIP_RETCODE computeCutsAbs(
             constant[*nreturned] = 0.0;
             (*nreturned)++;
          }
-         else
+         else if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
          {
             /* z = abs(x), x still has mixed sign */
             SCIP_Real alpha;

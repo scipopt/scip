@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -100,24 +100,15 @@
 #endif
 
 /*
- * Add some macros for differing functions on Windows
- */
-#ifdef _WIN32
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
-#define getcwd _getcwd
-#endif
-
-/*
  * Define the macro SCIP_EXPORT if it is not included from the generated header
  */
 #ifndef SCIP_EXPORT
 #if defined(_WIN32)
-#define SCIP_EXPORT __declspec(dllexport)
+#define SCIP_EXPORT __declspec(dllexport)                         /**< mark symbol to be exported in DLL */
 #elif defined(__GNUC__) && __GNUC__ >= 4
-#define SCIP_EXPORT __attribute__((__visibility__("default")))
+#define SCIP_EXPORT __attribute__((__visibility__("default")))    /**< mark symbol to be visible in shared library */
 #else
-#define SCIP_EXPORT
+#define SCIP_EXPORT                                               /**< no symbol export attribute known for current compiler */
 #endif
 #endif
 
@@ -134,7 +125,7 @@
 #define SCIP_VERSION     (100*SCIP_VERSION_MAJOR + 10*SCIP_VERSION_MINOR + SCIP_VERSION_PATCH) /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION  SCIP_VERSION_SUB  /**< SCIP sub version number */
 #define SCIP_APIVERSION  SCIP_VERSION_API  /**< SCIP API version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)"
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)"
 
 
 /*
@@ -186,7 +177,7 @@
 #define SCIP_DEFAULT_BOUNDSTREPS       0.05  /**< default minimal relative improve for strengthening bounds */
 #define SCIP_DEFAULT_PSEUDOCOSTEPS    1e-01  /**< default minimal variable distance value to use for pseudo cost updates */
 #define SCIP_DEFAULT_PSEUDOCOSTDELTA  1e-04  /**< default minimal objective distance value to use for pseudo cost updates */
-#define SCIP_DEFAULT_RECOMPFAC        1e+07  /**< default minimal decrease factor that causes the recomputation of a value (e.g., pseudo objective) instead of an update */
+#define SCIP_DEFAULT_RECOMPFAC        1e+06  /**< default minimal decrease factor that causes the recomputation of a value (e.g., pseudo objective) instead of an update */
 #define SCIP_DEFAULT_HUGEVAL          1e+15  /**< values larger than this are considered huge and should be handled separately (e.g., in activity computation) */
 #define SCIP_MAXEPSILON               1e-03  /**< maximum value for any numerical epsilon */
 #define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */

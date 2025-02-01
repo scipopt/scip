@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -45,6 +45,7 @@
 #include "scip/pub_disp.h"
 #include "scip/pub_expr.h"
 #include "scip/pub_heur.h"
+#include "scip/pub_iisfinder.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/pub_misc_sort.h"
@@ -69,6 +70,7 @@
 #include "scip/scip_expr.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
+#include "scip/scip_iisfinder.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -89,6 +91,7 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_validation.h"
 #include "scip/scip_var.h"
+#include "scip/prop_symmetry.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -277,7 +280,7 @@ SCIP_RETCODE writeProblem(
             SCIPdialogMessage(scip, NULL, "error creating the file <%s>\n", filename);
             SCIPdialoghdlrClearBuffer(dialoghdlr);
             break;
-         }         
+         }
          else if(retcode == SCIP_WRITEERROR )
          {
             SCIPdialogMessage(scip, NULL, "error writing file <%s>\n", filename);
@@ -294,7 +297,7 @@ SCIP_RETCODE writeProblem(
                SCIPdialogMessage(scip, NULL, "The following readers are available for writing:\n");
                displayReaders(scip, FALSE, TRUE);
 
-               SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
+               SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
                      "select a suitable reader by extension (or return): ", &extension, &endoffile) );
 
                if( extension[0] == '\0' )
@@ -351,6 +354,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenu)
       SCIPdialogMessage(scip, NULL, "\n");
       SCIP_CALL( SCIPdialogDisplayMenu(dialog, scip) );
       SCIPdialogMessage(scip, NULL, "\n");
+      SCIPdialogMessage(scip, NULL, "Press 'Return' or enter '..' to navigate back in the menu.\n");
    }
 
    SCIP_CALL( dialogExecMenu(scip, dialog, dialoghdlr, nextdialog) );
@@ -401,7 +405,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
             SCIP_CALL( SCIPaddCons(scip, cons) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-            SCIPdialogMessage(scip, NULL, "successfully added constraint\n"); 
+            SCIPdialogMessage(scip, NULL, "successfully added constraint\n");
             SCIPescapeString(consstr, SCIP_MAXSTRLEN, str);
 
             SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, consstr, FALSE) );
@@ -1047,6 +1051,33 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics)
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &sorted);
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display iis command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayIIS)
+{  /*lint --e{715}*/
+   SCIP_IIS* iis;
+   SCIP* subscip;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   iis = SCIPgetIIS(scip);
+   subscip = SCIPiisGetSubscip(iis);
+
+   if( subscip != NULL && SCIPgetStage(subscip) >= SCIP_STAGE_PROBLEM )
+   {
+      SCIP_CALL( SCIPprintOrigProblem(subscip, NULL, "cip", FALSE) );
+   }
+   else
+      SCIPdialogMessage(scip, NULL, "no IIS available\n");
+
+   SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -1862,6 +1893,30 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the display symmetry command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySymmetry)
+{  /*lint --e{715}*/
+   SCIP_PROP* prop;
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   prop = SCIPfindProp(scip, "symmetry");
+   if( prop == NULL )
+   {
+      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. Symmetry propagator has not been included.\n");
+      return SCIP_OKAY;
+   }
+   SCIP_CALL( SCIPdisplaySymmetryGenerators(scip, prop) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the display reoptstatistics command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReoptStatistics)
 {  /*lint --e{715}*/
@@ -2030,8 +2085,44 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecHelp)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPdialogDisplayMenu(SCIPdialogGetParent(dialog), scip) );
+
+   /* check whether the user entered "help <command>" */
+   if( ! SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
+   {
+      SCIP_DIALOG* rootdialog;
+      SCIP_DIALOG* subdialog;
+      SCIP_Bool endoffile;
+      char* command;
+
+      /* get command as next word on line */
+      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, NULL, &command, &endoffile) );
+
+      /* search for command */
+      rootdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+      if ( SCIPdialogFindEntry(rootdialog, command, &subdialog) )
+      {
+         /* if the command has subdialogs */
+         if( SCIPdialogGetNSubdialogs(subdialog) > 0 )
+         {
+            /* print information on command itself and its subdialogs */
+            SCIP_CALL( SCIPdialogDisplayMenuEntry(subdialog, scip) );
+            SCIPdialogMessage(scip, NULL, "\n");
+            SCIP_CALL( SCIPdialogDisplayMenu(subdialog, scip) );
+         }
+         else
+         {
+            /* print information on command */
+            SCIP_CALL( SCIPdialogDisplayMenuEntry(subdialog, scip) );
+         }
+      }
+   }
+   else
+   {
+      /* print information on all subdialogs */
+      SCIP_CALL( SCIPdialogDisplayMenu(SCIPdialogGetParent(dialog), scip) );
+   }
    SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, "Press 'Return' or enter '..' to navigate back in the menu.\n");
 
    *nextdialog = SCIPdialogGetParent(dialog);
 
@@ -2147,7 +2238,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecConcurrentOpt)
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      SCIP_CALL( SCIPsolveParallel(scip) );
+      SCIP_CALL( SCIPsolveConcurrent(scip) );
       break;
 
    case SCIP_STAGE_SOLVED:
@@ -2250,6 +2341,58 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecPresolve)
    case SCIP_STAGE_FREE:
    default:
       SCIPerrorMessage("invalid SCIP stage\n");
+      return SCIP_INVALIDCALL;
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the iis command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   switch( SCIPgetStage(scip) )
+   {
+   case SCIP_STAGE_INIT:
+      SCIPdialogMessage(scip, NULL, "No problem exists.\n");
+      break;
+
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPgenerateIIS(scip) );
+      break;
+
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_EXITSOLVE:
+      SCIPdialogMessage(scip, NULL, "SCIP is in some intermediate solving stage, i.e., not PROBLEM or SOLVED. An IIS therefore cannot be computed.\n");
+      break;
+
+   case SCIP_STAGE_SOLVED:
+   {
+      if ( SCIPgetStatus(scip) != SCIP_STATUS_INFEASIBLE )
+         SCIPdialogMessage(scip, NULL, "Cannot find an IIS for model that is not infeasible. Current status is %d.\n", SCIPgetStatus(scip));
+      else
+      {
+         SCIP_CALL( SCIPgenerateIIS(scip) );
+      }
+      break;
+   }
+
+   case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_FREE:
+   default:
+      SCIPerrorMessage("Invalid SCIP stage.\n");
       return SCIP_INVALIDCALL;
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -2427,7 +2570,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSave)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
 
-      retcode =  SCIPwriteParams(scip, filename, TRUE, FALSE);
+      retcode = SCIPwriteParams(scip, filename, TRUE, FALSE);
 
       if( retcode == SCIP_FILECREATEERROR )
       {
@@ -3364,7 +3507,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteLp)
       SCIP_RETCODE retcode;
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-      retcode =  SCIPwriteLP(scip, filename);
+      retcode = SCIPwriteLP(scip, filename);
 
       if( retcode == SCIP_FILECREATEERROR )
       {
@@ -3554,7 +3697,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteNlp)
       SCIP_RETCODE retcode;
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-      retcode =  SCIPwriteNLP(scip, filename);
+      retcode = SCIPwriteNLP(scip, filename);
 
       if( retcode == SCIP_FILECREATEERROR )
       {
@@ -3918,6 +4061,30 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteGenTransproblem)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the write IIS command */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteIIS)
+{  /*lint --e{715}*/
+   SCIP* subscip;
+   SCIP_IIS* iis;
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   iis = SCIPgetIIS(scip);
+   subscip = SCIPiisGetSubscip(iis);
+
+   if( subscip != NULL )
+   {
+      SCIP_CALL( writeProblem(subscip, dialog, dialoghdlr, nextdialog, FALSE, FALSE) );
+   }
+   else
+      SCIPdialogMessage(scip, NULL, "no IIS available.\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for solution validation */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
@@ -4005,7 +4172,7 @@ SCIP_RETCODE SCIPcreateRootDialog(
    SCIP_DIALOG**         root                /**< pointer to store the root dialog */
    )
 {
-   SCIP_CALL( SCIPincludeDialog(scip, root, 
+   SCIP_CALL( SCIPincludeDialog(scip, root,
          dialogCopyDefault,
          SCIPdialogExecMenuLazy, NULL, NULL,
          "SCIP", "SCIP's main menu", TRUE, NULL) );
@@ -4037,7 +4204,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
    /* change */
    if( !SCIPdialogHasEntry(root, "change") )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &submenu, 
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
             NULL,
             SCIPdialogExecMenu, NULL, NULL,
             "change", "change the problem", TRUE, NULL) );
@@ -4097,7 +4264,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
    /* checksol */
    if( !SCIPdialogHasEntry(root, "checksol") )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog, 
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecChecksol, NULL, NULL,
             "checksol", "double checks best solution w.r.t. original problem", FALSE, NULL) );
@@ -4215,6 +4382,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
             NULL,
             SCIPdialogExecDisplayHeuristics, NULL, NULL,
             "heuristics", "display primal heuristics", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display IIS */
+   if( !SCIPdialogHasEntry(submenu, "iis") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayIIS, NULL, NULL,
+            "iis", "display iis of problem", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -4417,6 +4595,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* display symmetry information */
+   if( !SCIPdialogHasEntry(submenu, "symmetry") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplaySymmetry, NULL, NULL,
+            "symmetry", "display generators of symmetry group in cycle notation, if available", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* display reoptimization statistics */
    if( !SCIPdialogHasEntry(submenu, "reoptstatistics") )
    {
@@ -4511,7 +4700,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecHelp, NULL, NULL,
-            "help", "display this help", FALSE, NULL) );
+            "help", "display this help (add <command> to show information on specific command)", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -4573,14 +4762,40 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* IIS */
+   if( !SCIPdialogHasEntry(root, "iis") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecIIS, NULL, NULL,
+            "iis", "compute an (I)IS for an infeasible problem, i.e., an (irreducible) infeasible set.", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* quit */
    if( !SCIPdialogHasEntry(root, "quit") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecQuit, NULL, NULL,
-            "quit", "leave SCIP", FALSE, NULL) );
+            "quit", "leave SCIP (<exit> works as well)", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* exit - same as quit */
+   if( !SCIPdialogHasEntry(root, "exit") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecQuit, NULL, NULL,
+            "exit", "leave SCIP", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+
+      /* mark command as hidden, because "exit" is already there */
+      SCIPdialogSetHidden(dialog);
+
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
@@ -4761,6 +4976,19 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
             SCIPdialogExecWriteCommandHistory, NULL, NULL,
             "history",
             "write command line history to a file (only works if SCIP was compiled with 'readline')",
+            FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* write IIS of problem */
+   if( !SCIPdialogHasEntry(submenu, "iis") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecWriteIIS, NULL, NULL,
+            "iis",
+            "write (I)IS (irreducible infeasible subsystem) of infeasible problem to file (format is given by file extension (e.g., {.cip, .lp, .mps}))",
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
@@ -5045,7 +5273,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    int nparams;
    int i;
 
-   SCIP_BRANCHRULE** branchrules; 
+   SCIP_BRANCHRULE** branchrules;
    SCIP_CONFLICTHDLR** conflicthdlrs;
    SCIP_CONSHDLR** conshdlrs;
    SCIP_CUTSEL** cutsels;

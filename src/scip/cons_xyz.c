@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -740,6 +740,7 @@ SCIP_RETCODE SCIPcreateConsXyz(
    /* create constraint data */
    consdata = NULL;
    /* TODO: create and store constraint specific data here */
+   /* TODO: if applicable, check that there are no infinite or nan coefficients (use SCIPifFinite() and SCIPisInfinity()) */
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,

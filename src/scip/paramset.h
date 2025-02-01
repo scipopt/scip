@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -368,7 +368,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter emphasis */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    );
 
 /** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances; should be called for
@@ -378,7 +378,7 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    );
 
 /** sets heuristic parameters values to 
@@ -392,7 +392,7 @@ SCIP_RETCODE SCIPparamsetSetHeuristics(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    );
 
 /** sets presolving parameters to 
@@ -406,7 +406,7 @@ SCIP_RETCODE SCIPparamsetSetPresolving(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    );
 
 /** sets separating parameters to 
@@ -420,7 +420,7 @@ SCIP_RETCODE SCIPparamsetSetSeparating(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    );
 
 /** returns the array of parameters */
@@ -484,7 +484,7 @@ SCIP_RETCODE SCIPparamSetBool(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             value,              /**< new value of the parameter */
    SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    );
 
 /** sets value of int parameter */
@@ -494,7 +494,7 @@ SCIP_RETCODE SCIPparamSetInt(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    int                   value,              /**< new value of the parameter */
    SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    );
 
 /** sets value of SCIP_Longint parameter */
@@ -504,7 +504,7 @@ SCIP_RETCODE SCIPparamSetLongint(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Longint          value,              /**< new value of the parameter */
    SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    );
 
 /** sets value of SCIP_Real parameter */
@@ -514,7 +514,7 @@ SCIP_RETCODE SCIPparamSetReal(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             value,              /**< new value of the parameter */
    SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    );
 
 /** sets value of char parameter */
@@ -524,7 +524,7 @@ SCIP_RETCODE SCIPparamSetChar(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    char                  value,              /**< new value of the parameter */
    SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    );
 
 /** sets value of string parameter */
@@ -534,7 +534,7 @@ SCIP_RETCODE SCIPparamSetString(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           value,              /**< new value of the parameter */
    SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    );
 
 /** sets default value of SCIP_Bool parameter */

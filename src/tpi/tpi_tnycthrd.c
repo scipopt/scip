@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -36,6 +36,7 @@
 #include "blockmemshell/memory.h"
 #include "tinycthread/tinycthread.h"
 #include "scip/pub_message.h"
+#include "scip/pub_misc.h"
 
 /* macros for direct access */
 
@@ -574,7 +575,7 @@ int SCIPtpiGetNumThreads(
    void
    )
 {
-   return _threadpool->nthreads;
+   return _threadpool != NULL ? _threadpool->nthreads : 0;
 }
 
 /** initializes tpi */
@@ -839,4 +840,32 @@ int SCIPtpiGetThreadNum(
    )
 {
    return _threadnumber;
+}
+
+/** indicate whether a working TPI is available */
+SCIP_Bool SCIPtpiIsAvailable(void)
+{
+   return TRUE;
+}
+
+/** get name of library that the TPI interfaces to */
+void SCIPtpiGetLibraryName(
+   char*                 name,               /**< buffer to store name */
+   int                   namesize            /**< length of name buffer */
+   )
+{
+   assert(name != NULL);
+
+   (void) SCIPsnprintf(name, namesize, "TinyCThread %d.%d", TINYCTHREAD_VERSION_MAJOR, TINYCTHREAD_VERSION_MINOR);
+}
+
+/** get description of library that the TPI interfaces to */
+void SCIPtpiGetLibraryDesc(
+   char*                 desc,               /**< buffer to store description */
+   int                   descsize            /**< length of description */
+   )
+{
+   assert(desc != NULL);
+
+   (void) SCIPsnprintf(desc, descsize, "small portable implementation of the C11 threads API (tinycthread.github.io)");
 }

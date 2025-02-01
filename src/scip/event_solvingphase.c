@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1222,7 +1222,7 @@ void testCriteria(
  */
 
 /** copy method for event handler (called when SCIP copies plugins) */
-/* todo this code needs to stay disabled as long as the soft limit event handler is not copied, because we save
+/* @todo: this code needs to stay disabled as long as the soft limit event handler is not copied, because we save
  * the soft time limit parameter but this will crash as soon as we are in a SCIP copy */
 #ifdef SCIP_DISABLED_CODE
 static

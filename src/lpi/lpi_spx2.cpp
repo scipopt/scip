@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -974,9 +974,9 @@ void invalidateSolution(SCIP_LPI* lpi)
  */
 
 #if (SOPLEX_SUBVERSION > 0)
-   const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '.', SOPLEX_SUBVERSION + '0'};
+   const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '.', SOPLEX_SUBVERSION + '0', '\0'};
 #else
-   const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0'};
+   const static char spxname[20] = {'S', 'o', 'p', 'l', 'e', 'x', ' ', SOPLEX_VERSION/100 + '0', '.', (SOPLEX_VERSION % 100)/10 + '0', '.', SOPLEX_VERSION % 10 + '0', '\0'};
 #endif
 const static char spxdesc[200] =  {'L', 'i', 'n', 'e', 'a', 'r', ' ', 'P', 'r', 'o', 'g', 'r', 'a', 'm', 'm', 'i', 'n', 'g',
                                    ' ', 'S', 'o', 'l', 'v', 'e', 'r', ' ' , 'd', 'e', 'v', 'e', 'l', 'o', 'p', 'e', 'd',
@@ -989,7 +989,7 @@ const static char spxdesc[200] =  {'L', 'i', 'n', 'e', 'a', 'r', ' ', 'P', 'r', 
                                    ' ', '[', 'G', 'i', 't', 'H', 'a', 's', 'h', ':', ' ',
                                    getGitHash()[0], getGitHash()[1], getGitHash()[2], getGitHash()[3],
                                    getGitHash()[4], getGitHash()[5], getGitHash()[6], getGitHash()[7],
-                                   ']'};
+                                   ']', '\0'};
 
 /**@name Miscellaneous Methods */
 /**@{ */

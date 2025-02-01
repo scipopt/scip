@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -61,9 +61,6 @@
 #include "scip/scip_timing.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/set.h"
-#include "scip/struct_scip.h"
-#include "scip/var.h"
 #include <string.h>
 
 #define BRANCHRULE_NAME            "multaggr"
@@ -349,8 +346,8 @@ SCIP_RETCODE selectVarMultAggrBranching(
                      assert(downvars != NULL);
                      assert(downvars[j] != NULL);
 
-                     pscdown = SCIPvarGetPseudocost(downvars[j], scip->stat, SCIPsetFeasFloor(scip->set, downvarssols[j]) - downvarssols[j]);
-                     pscup = SCIPvarGetPseudocost(downvars[j], scip->stat, SCIPsetFeasCeil(scip->set, downvarssols[j]) - downvarssols[j]);
+                     pscdown = SCIPgetVarPseudocostVal(scip, downvars[j], SCIPfeasFloor(scip, downvarssols[j]) - downvarssols[j]);
+                     pscup = SCIPgetVarPseudocostVal(scip, downvars[j], SCIPfeasCeil(scip, downvarssols[j]) - downvarssols[j]);
                      estimateincr = MIN(pscdown, pscup);
 
                      estimateprobdown += estimateincr;
@@ -413,8 +410,8 @@ SCIP_RETCODE selectVarMultAggrBranching(
                      assert(upvars != NULL);
                      assert(upvars[k] != NULL);
 
-                     pscdown = SCIPvarGetPseudocost(upvars[k], scip->stat, SCIPsetFeasFloor(scip->set, upvarssols[k]) - upvarssols[k]);
-                     pscup = SCIPvarGetPseudocost(upvars[k], scip->stat, SCIPsetFeasCeil(scip->set, upvarssols[k]) - upvarssols[k]);
+                     pscdown = SCIPgetVarPseudocostVal(scip, upvars[k], SCIPfeasFloor(scip, upvarssols[k]) - upvarssols[k]);
+                     pscup = SCIPgetVarPseudocostVal(scip, upvars[k], SCIPfeasCeil(scip, upvarssols[k]) - upvarssols[k]);
                      estimateincr = MIN(pscdown, pscup);
                      estimateprobup += estimateincr;
                   }

@@ -4,7 +4,6 @@ STATISTICS
   Constraints      : 273 initial, 273 maximal
 OBJECTIVE
   Sense            : minimize
-  Offset           : +9
 VARIABLES
   [binary] <t_x224>: obj=0, global bounds=[-0,1], local bounds=[-0,1]
   [binary] <t_x143>: obj=1, global bounds=[-0,1], local bounds=[-0,1]

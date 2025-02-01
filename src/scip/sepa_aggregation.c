@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -839,7 +839,7 @@ SCIP_RETCODE aggregation(
    /* add start row to the initially empty aggregation row (aggrrow) */
    if( startrow < 0 )
    {
-      SCIP_Real rhs;
+      SCIP_Real rhs = SCIPgetCutoffbound(scip);
 
       /* if the objective is integral we round the right hand side of the cutoff constraint.
        * Therefore the constraint may not be valid for the problem but it is valid for the set
@@ -848,9 +848,7 @@ SCIP_RETCODE aggregation(
        * if the improvement is below some epsilon value.
        */
       if( SCIPisObjIntegral(scip) )
-         rhs = floor(SCIPgetUpperbound(scip) - 0.5);
-      else
-         rhs = SCIPgetUpperbound(scip);
+         rhs = floor(rhs);
 
       SCIP_CALL( SCIPaggrRowAddObjectiveFunction(scip, aggrdata->aggrrow, rhs, 1.0) );
 

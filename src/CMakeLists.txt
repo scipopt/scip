@@ -166,7 +166,10 @@ set(scipsources
     scip/heur_veclendiving.c
     scip/heur_zeroobj.c
     scip/heur_zirounding.c
+    scip/hypergraph.c
+    scip/iisfinder_greedy.c
     scip/message_default.c
+    scip/network.c
     scip/nlhdlr_bilinear.c
     scip/nlhdlr_convex.c
     scip/nlhdlr_default.c
@@ -193,6 +196,7 @@ set(scipsources
     scip/presol_dualinfer.c
     scip/presol_gateextraction.c
     scip/presol_implics.c
+    scip/presol_implint.c
     scip/presol_inttobinary.c
     scip/presol_qpkktref.c
     scip/presol_redvub.c
@@ -254,6 +258,7 @@ set(scipsources
     scip/sepa_mcf.c
     scip/sepa_minor.c
     scip/sepa_mixing.c
+    scip/sepa_multilinear.c
     scip/sepa_oddcycle.c
     scip/sepa_rapidlearning.c
     scip/sepa_rlt.c
@@ -294,6 +299,7 @@ set(scipsources
     scip/heuristics.c
     scip/compr.c
     scip/history.c
+    scip/iisfinder.c
     scip/implics.c
     scip/interrupt.c
     scip/intervalarith.c
@@ -340,6 +346,7 @@ set(scipsources
     scip/scip_expr.c
     scip/scip_general.c
     scip/scip_heur.c
+    scip/scip_iisfinder.c
     scip/scip_lp.c
     scip/scip_mem.c
     scip/scip_message.c
@@ -405,6 +412,7 @@ set(objscipsources
     objscip/objdisp.cpp
     objscip/objeventhdlr.cpp
     objscip/objheur.cpp
+    objscip/objiisfinder.cpp
     objscip/objmessagehdlr.cpp
     objscip/objnodesel.cpp
     objscip/objpresol.cpp
@@ -450,6 +458,7 @@ set(objscipheaders
     objscip/objdisp.h
     objscip/objeventhdlr.h
     objscip/objheur.h
+    objscip/objiisfinder.h
     objscip/objmessagehdlr.h
     objscip/objnodesel.h
     objscip/objpresol.h
@@ -644,6 +653,9 @@ set(scipheaders
     scip/heur_zeroobj.h
     scip/heur_zirounding.h
     scip/history.h
+    scip/hypergraph.h
+    scip/iisfinder.h
+    scip/iisfinder_greedy.h
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
@@ -688,6 +700,7 @@ set(scipheaders
     scip/presol_gateextraction.h
     scip/presol.h
     scip/presol_implics.h
+    scip/presol_implint.h
     scip/presol_inttobinary.h
     scip/presol_qpkktref.h
     scip/presol_redvub.h
@@ -734,6 +747,7 @@ set(scipheaders
     scip/pub_fileio.h
     scip/pub_heur.h
     scip/pub_history.h
+    scip/pub_iisfinder.h
     scip/pub_implics.h
     scip/pub_lp.h
     scip/pub_matrix.h
@@ -743,6 +757,7 @@ set(scipheaders
     scip/pub_misc_rowprep.h
     scip/pub_misc_select.h
     scip/pub_misc_sort.h
+    scip/pub_network.h
     scip/pub_nlhdlr.h
     scip/pub_nlp.h
     scip/pub_nlpi.h
@@ -814,6 +829,7 @@ set(scipheaders
     scip/scip_expr.h
     scip/scip_general.h
     scip/scip_heur.h
+    scip/scip_iisfinder.h
     scip/scip_lp.h
     scip/scip_mem.h
     scip/scip_message.h
@@ -858,6 +874,7 @@ set(scipheaders
     scip/sepa_mcf.h
     scip/sepa_minor.h
     scip/sepa_mixing.h
+    scip/sepa_multilinear.h
     scip/sepa_oddcycle.h
     scip/sepa_rapidlearning.h
     scip/sepa_rlt.h
@@ -888,6 +905,8 @@ set(scipheaders
     scip/struct_expr.h
     scip/struct_heur.h
     scip/struct_history.h
+    scip/struct_hypergraph.h
+    scip/struct_iisfinder.h
     scip/struct_implics.h
     scip/struct_lp.h
     scip/struct_matrix.h
@@ -951,6 +970,8 @@ set(scipheaders
     scip/type_exprinterpret.h
     scip/type_heur.h
     scip/type_history.h
+    scip/type_hypergraph.h
+    scip/type_iisfinder.h
     scip/type_implics.h
     scip/type_interrupt.h
     scip/type_lp.h
@@ -1068,28 +1089,12 @@ if(SHARED)
     set(ZIMPL_NEEDED 0)
     target_link_libraries(libscip PRIVATE ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${SYM_PIC_LIBRARIES})
     add_executable(scip main.c ${scipsources} ${objscipsources} ${lpisources} ${tpisources} ${symsources})
-    if(DEFINED NAUTY_TARGET)
-      target_link_libraries(scip PRIVATE ${NAUTY_TARGET})
-    endif()
 else()
     set(SOPLEX_NEEDED ${SOPLEX_FOUND})
     set(ZIMPL_NEEDED ${ZIMPL_FOUND})
-    if(DEFINED BLISS_TARGET)
-        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
-    elseif(DEFINED NAUTY_TARGET)
-        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES})
-    else()
-        target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
-    endif()
+    target_link_libraries(libscip PRIVATE ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${SYM_LIBRARIES})
     add_executable(scip main.c)
-    if(DEFINED BLISS_TARGET)
-        target_link_libraries(scip PUBLIC libscip ${BLISS_TARGET})
-    elseif(DEFINED NAUTY_TARGET)
-        target_link_libraries(scip PUBLIC libscip)
-        target_link_libraries(scip PRIVATE ${NAUTY_TARGET})
-    else()
-        target_link_libraries(scip PUBLIC libscip)
-    endif()
+    target_link_libraries(scip PUBLIC libscip)
 endif()
 
 add_executable(SCIP::SCIP ALIAS scip)
@@ -1165,7 +1170,7 @@ install(TARGETS scip libscip EXPORT scip-targets
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Add all targets to the build-tree export set
-export(TARGETS scip libscip ${BLISS_TARGET} ${NAUTY_TARGET}
+export(TARGETS scip libscip
   FILE "${PROJECT_BINARY_DIR}/scip-targets.cmake")
 
 # make soplex and zimpl dir absolute for the config file

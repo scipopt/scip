@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -221,7 +221,7 @@ SCIP_RETCODE SCIPgetConsVals(
       SCIP_Real* linvals;
 
       linvals = SCIPgetValsLinear(scip, cons);
-      assert(linvals != NULL);
+      assert(nvars == 0 || linvals != NULL);
 
       for( i = 0; i < nvars; i++ )
       {
@@ -247,7 +247,7 @@ SCIP_RETCODE SCIPgetConsVals(
       SCIP_Longint* weights;
 
       weights = SCIPgetWeightsKnapsack(scip, cons);
-      assert(weights != NULL);
+      assert(nvars == 0 || weights != NULL);
 
       for( i = 0; i < nvars; i++ )
       {
@@ -266,7 +266,7 @@ SCIP_RETCODE SCIPgetConsVals(
       SCIP_Real* weights;
 
       weights = SCIPgetWeightsSOS1(scip, cons);
-      assert(weights != NULL);
+      assert(nvars == 0 || weights != NULL);
 
       for( i = 0; i < nvars; i++ )
       {
@@ -278,7 +278,7 @@ SCIP_RETCODE SCIPgetConsVals(
       SCIP_Real* weights;
 
       weights = SCIPgetWeightsSOS2(scip, cons);
-      assert(weights != NULL);
+      assert(nvars == 0 || weights != NULL);
 
       for( i = 0; i < nvars; i++ )
       {

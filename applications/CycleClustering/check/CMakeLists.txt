@@ -38,6 +38,11 @@ foreach(instance ${instances})
         #
         # call the Binpacking binary and validate the solve with the given objective value
         #
+        if(NOT DEFINED LPS)
+          # just for the following if() to compile also if LPS is not defined
+          set(LPS "unknown")
+        endif()
+        if(NOT ((${basename} STREQUAL "Pot/6Cycle/Pot6_T_20.txt_6cluster") AND (${LPS} STREQUAL "xprs")))
         add_test(NAME "applications-cycleclustering-${basename}-${setting}"
                 COMMAND $<TARGET_FILE:cycleclustering> -f ${CMAKE_CURRENT_SOURCE_DIR}/../instances/${basename}.cyc -s  ${CMAKE_CURRENT_SOURCE_DIR}/../settings/${setting}.set
                 )
@@ -55,5 +60,6 @@ foreach(instance ${instances})
                         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
                 )
         endif()
+        endif()  # LP Error: Xpress returned 120, #3724 (LPS=xprs, applications-cycleclustering-Pot/6Cycle/Pot6_T_20.txt_6cluster-{default,nosepa})
     endforeach()
 endforeach()

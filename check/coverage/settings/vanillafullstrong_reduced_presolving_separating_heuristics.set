@@ -1,0 +1,13 @@
+propagating/maxrounds = 0
+propagating/maxroundsroot = 0
+constraints/linear/maxprerounds = 0
+constraints/components/maxprerounds = 0
+presolving/milp/maxrounds = 0
+presolving/trivial/maxrounds = 0
+branching/vanillafullstrong/priority = 10000000
+heuristics/locks/freq = -1
+heuristics/shiftandpropagate/freq = -1
+heuristics/shifting/freq = -1
+propagating/probing/maxprerounds = 0
+separating/aggregation/freq = -1
+separating/gomorymi/freq = -1

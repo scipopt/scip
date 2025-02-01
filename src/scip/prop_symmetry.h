@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -35,9 +35,8 @@
 #ifndef __SCIP_PROP_SYMMETRY_H_
 #define __SCIP_PROP_SYMMETRY_H_
 
-#include <scip/scip.h>
-
-#include <symmetry/type_symmetry.h>
+#include "scip/scip.h"
+#include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,6 +70,13 @@ SCIP_RETCODE SCIPgetSymmetry(
 SCIP_EXPORT
 int SCIPgetSymmetryNGenerators(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** displays generators of symmetry group, if available */
+SCIP_EXPORT
+SCIP_RETCODE SCIPdisplaySymmetryGenerators(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop                /**< symmetry propagator or NULL */
    );
 
 /** creates new operator node type (used for symmetry detection) and returns its representation

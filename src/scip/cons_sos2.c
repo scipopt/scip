@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2257,6 +2257,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
    int i;
    int j;
 
+   assert(success != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2306,6 +2308,8 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS2)
    SCIPfreeBufferArray(scip, &locvals);
    SCIPfreeBufferArray(scip, &locvars);
 
+   *success = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -2327,6 +2331,8 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS2)
    int nvars;
    int i;
    int j;
+
+   assert(success != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2415,6 +2421,8 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS2)
 
    SCIPfreeBufferArray(scip, &locvals);
    SCIPfreeBufferArray(scip, &locvars);
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.11)
 
 # option() honors normal variables.
 if(POLICY CMP0077)
@@ -17,7 +17,7 @@ set(SCIP_VERSION_MAJOR 10)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
 set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 117)
+set(SCIP_VERSION_API 131)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
@@ -78,7 +78,7 @@ option(AMPL "should ampl interface be compiled" ON)
 option(IPOPT "should ipopt be linked" ON)
 option(LAPACK "should lapack be linked" OFF)
 option(WORHP "should worhp be linked" OFF)
-# for backward compability
+# for backward compatibility
 option(PARASCIP "should scip be compiled thread safe (deprecated, use THREADSAFE)" OFF)
 option(THREADSAFE "should scip be compiled thread safe" ON)
 option(LPSCHECK "double check SoPlex results with CPLEX" OFF)
@@ -96,7 +96,7 @@ SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage
 option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 option(CXXONLY "use a c++ compiler for all source files" OFF)
 
-set(TPI none CACHE STRING "options for thread support library")  #create the variable
+set(TPI tny CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
 
 set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create the variable
@@ -124,58 +124,23 @@ set(CMAKE_CXX_STANDARD 14)
 #search the selected symmetry computation program
 message(STATUS "Finding symmetry computation program \"${SYM}\"")
 
-unset(BLISS_TARGET)
-unset(NAUTY_TARGET)
-if(SYM STREQUAL "bliss")
-    message(STATUS "Support SYM: bliss")
-    set(sym symmetry/compute_symmetry_bliss.cpp)
+if(SYM STREQUAL "bliss" OR SYM STREQUAL "sbliss")
+    if(SYM STREQUAL "bliss")
+        message(STATUS "Support SYM: bliss")
+        set(sym symmetry/compute_symmetry_bliss.cpp)
+    else()
+        message(STATUS "Support SYM: sassy+bliss")
+        set(sym symmetry/compute_symmetry_sassy_bliss.cpp symmetry/build_sassy_graph.cpp)
+        set(CMAKE_CXX_STANDARD 17)
+    endif()
 
-    # modify configuration for bliss
-    set(BUILD_SHARED_LIBS OFF)
-    set(TMPFLAGS ${CMAKE_C_FLAGS})
-    set(TMXFLAGS ${CMAKE_CXX_FLAGS})
-    set(CMAKE_C_FLAGS -w)
-    set(CMAKE_CXX_FLAGS -w)
-
-    add_subdirectory(src/bliss EXCLUDE_FROM_ALL)
-
-    # undo modification
-    set(CMAKE_C_FLAGS ${TMPFLAGS})
-    set(CMAKE_CXX_FLAGS ${TMXFLAGS})
-    set(BUILD_SHARED_LIBS ${SHARED})
-
-    set(BLISS_TARGET libbliss)
-    set(SYM_LIBRARIES libbliss)
-    set(SYM_PIC_LIBRARIES libbliss)
-elseif(SYM STREQUAL "sbliss")
-    message(STATUS "Support SYM: sassy+bliss")
-    set(sym symmetry/compute_symmetry_sassy_bliss.cpp symmetry/build_dejavu_graph.cpp)
-
-    # configure bliss
-    set(BUILD_SHARED_LIBS OFF)
-    set(TMPFLAGS ${CMAKE_C_FLAGS})
-    set(TMXFLAGS ${CMAKE_CXX_FLAGS})
-    set(CMAKE_C_FLAGS -w)
-    set(CMAKE_CXX_FLAGS -w)
-
-    add_subdirectory(src/bliss EXCLUDE_FROM_ALL)
-
-    # undo modification
-    set(CMAKE_C_FLAGS ${TMPFLAGS})
-    set(CMAKE_CXX_FLAGS ${TMXFLAGS})
-    set(BUILD_SHARED_LIBS ${SHARED})
-
-    set(BLISS_TARGET libbliss)
-    set(SYM_LIBRARIES libbliss)
-    set(SYM_PIC_LIBRARIES libbliss)
-
-    # sassy needs C++-14
-    set(CMAKE_CXX_STANDARD 14)
-
-    if(NOT BLISS_INCLUDE_DIR OR NOT BLISS_LIBRARY)
-      find_path(BLISS_INCLUDE_DIR
-	NAMES bliss/graph.hh
-	PATH_SUFFIXES include src)
+    find_package(Bliss CONFIG HINTS ${BLISS_DIR})
+    if(Bliss_FOUND)
+        set(SYM_LIBRARIES Bliss::libbliss)
+        set(SYM_PIC_LIBRARIES Bliss::libbliss)
+        message(STATUS "Found Bliss: ${Bliss_DIR}")
+    else()
+        message(FATAL_ERROR "Bliss not found, try installing https://github.com/scipopt/bliss and specifying BLISS_DIR.")
     endif()
 elseif(SYM STREQUAL "nauty" OR SYM STREQUAL "snauty")
     if(NAUTY_DIR)
@@ -183,30 +148,17 @@ elseif(SYM STREQUAL "nauty" OR SYM STREQUAL "snauty")
         set(SYM_LIBRARIES ${NAUTY_DIR}/nauty/nauty.a)
         set(SYM_PIC_LIBRARIES ${NAUTY_DIR}/nauty/nauty.a)
     else()
-        add_subdirectory(src/nauty)
-        set(SYM_PIC_LIBRARIES nauty)
-        set(NAUTY_TARGET nauty)
+        include_directories(src/nauty)
+        set(sym nauty/nauty.c nauty/nautil.c nauty/nausparse.c nauty/schreier.c nauty/naurng.c)
     endif()
     if(SYM STREQUAL "nauty")
         message(STATUS "Support SYM: nauty")
-        set(sym symmetry/compute_symmetry_nauty.c)
+        set(sym ${sym} symmetry/compute_symmetry_nauty.c)
     elseif(SYM STREQUAL "snauty")
         message(STATUS "Support SYM: sassy+nauty")
-        set(sym symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_dejavu_graph.cpp)
-        # sassy needs C++-14
-        set(CMAKE_CXX_STANDARD 14)
-    endif()
-elseif(SYM STREQUAL "dejavu")
-    message(STATUS "Support SYM: dejavu")
-    set(sym symmetry/compute_symmetry_dejavu.cpp symmetry/build_dejavu_graph.cpp)
-
-    # dejavu needs C++-14
-    set(CMAKE_CXX_STANDARD 14)
-
-    if(NOT DEJAVU_INCLUDE_DIR)
-      find_path(DEJAVU_INCLUDE_DIR
-	NAMES dejavu/dejavu.h
-	PATH_SUFFIXES include src)
+        set(sym ${sym} symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_sassy_graph.cpp)
+        # sassy needs C++-17
+        set(CMAKE_CXX_STANDARD 17)
     endif()
 elseif(SYM STREQUAL "none")
     message(STATUS "Support SYM: OFF")
@@ -423,16 +375,8 @@ endif()
 if(PAPILO OR AUTOBUILD)
     message(STATUS "Finding PAPILO")
     find_package(PAPILO CONFIG HINTS ${PAPILO_DIR})
-    if(NOT PAPILO_FOUND)
-        # Utilities to automatically download missing dependencies
-        include(cmake/Dependencies.cmake)
-        find_or_download_package(
-          NAME PAPILO
-          VERSION 2.2.1
-          URL https://github.com/scipopt/papilo/archive/refs/tags/v2.2.1.tar.gz
-          URL_HASH SHA256=b022af82bda3db1a594fe67524d98be82e67279f9d9d645b2fcdfc9349cdc6f7
-          COMPONENTS papilo)
-        find_package(PAPILO REQUIRED CONFIG HINTS _deps/local)
+    if((NOT PAPILO_FOUND) AND (NOT AUTOBUILD))
+        message(FATAL_ERROR "PAPILO not found, try specifying PAPILO_DIR. ${AUTOBUILD_MSG}")
     endif()
 endif()
 if(PAPILO_FOUND)
@@ -448,17 +392,9 @@ endif()
 message(STATUS "Finding Solver \"${LPS}\"")
 if(LPS STREQUAL "spx")
     message(STATUS "Finding Soplex")
-    find_package(SOPLEX CONFIG HINTS ${SOPLEX_DIR})
+    find_package(SOPLEX REQUIRED CONFIG HINTS ${SOPLEX_DIR})
     if(NOT SOPLEX_FOUND)
-        # Utilities to automatically download missing dependencies
-        include(cmake/Dependencies.cmake)
-        find_or_download_package(
-          NAME SOPLEX
-          VERSION 7.0.1
-          URL https://github.com/scipopt/soplex/archive/refs/tags/release-701.tar.gz
-          URL_HASH SHA256=80cce994dcbe45fd52b60e31a3aeb5d2c60a7ddbaae495e0ce6bf58481675696
-          COMPONENTS soplex)
-        find_package(SOPLEX REQUIRED CONFIG HINTS _deps/local)
+        message(FATAL_ERROR "Requested LP solver SoPlex not found.")
     endif()
     if (DEFINED SOPLEX_WITH_PAPILO)
         message(STATUS "SOPLEX links PAPILO")
@@ -468,29 +404,56 @@ if(LPS STREQUAL "spx")
     endif ()
     if(LPSCHECK)
         find_package(CPLEX REQUIRED)
+        if(NOT CPLEX_FOUND)
+            message(FATAL_ERROR "Requested LP check solver CPLEX not found.")
+        endif()
         set(SCIP_WITH_LPSCHECK on)
     endif()
 elseif(LPS STREQUAL "cpx")
     find_package(CPLEX REQUIRED)
+    if(NOT CPLEX_FOUND)
+        message(FATAL_ERROR "Requested LP solver CPLEX not found.")
+    endif()
 elseif(LPS STREQUAL "glop")
     if(NOT TPI STREQUAL "tny")
         message(FATAL_ERROR "When using GLOP as an lp solver, TPI needs to be set to 'tny'.")
     endif()
     find_package(GLOP REQUIRED)
+    if(NOT GLOP_FOUND)
+        message(FATAL_ERROR "Requested LP solver Glop not found.")
+    endif()
 elseif(LPS STREQUAL "grb")
     find_package(GUROBI REQUIRED)
+    if(NOT GUROBI_FOUND)
+        message(FATAL_ERROR "Requested LP solver Gurobi not found.")
+    endif()
 elseif(LPS STREQUAL "qso")
     find_package(QSO REQUIRED)
+    if(NOT QSO_FOUND)
+        message(FATAL_ERROR "Requested LP solver Qsopt not found.")
+    endif()
     set(BUILD_SHARED_LIBS off)
     message(STATUS "Turning off shared libraries.")
 elseif(LPS STREQUAL "clp")
     find_package(CLP REQUIRED)
+    if(NOT CLP_FOUND)
+        message(FATAL_ERROR "Requested LP solver CLP not found.")
+    endif()
 elseif(LPS STREQUAL "xprs")
     find_package(XPRESS REQUIRED)
+    if(NOT XPRESS_FOUND)
+        message(FATAL_ERROR "Requested LP solver XPRESS not found.")
+    endif()
 elseif(LPS STREQUAL "msk")
     find_package(MOSEK REQUIRED)
+    if(NOT MOSEK_FOUND)
+        message(FATAL_ERROR "Requested LP solver MOSEK not found.")
+    endif()
 elseif(LPS STREQUAL "highs")
     find_package(HIGHS REQUIRED CONFIG)
+    if(NOT HIGHS_FOUND)
+        message(FATAL_ERROR "Requested LP solver HiGHS not found.")
+    endif()
     find_package(Threads REQUIRED)
     find_package(OpenMP)
     if(OPENMP_FOUND)
@@ -587,12 +550,11 @@ else()
 endif()
 
 if(HIGHS_FOUND)
-    include_directories(${HIGHS_INCLUDE_DIRS})
     if(LPS STREQUAL "highs")
         set(lpi lpi/lpi_highs.cpp)
     endif()
-    set(LPS_LIBRARIES ${LPS_LIBRARIES} ${HIGHS_LIBRARIES} Threads::Threads)
-    set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} ${HIGHS_LIBRARIES} Threads::Threads)
+    set(LPS_LIBRARIES ${LPS_LIBRARIES} highs::highs)
+    set(LPS_PIC_LIBRARIES ${LPS_PIC_LIBRARIES} highs::highs)
     message(WARNING "EXPERIMENTAL: You are using the experimental HiGHS interface. Please report any issues on https://github.com/scipopt/scip.")
 endif()
 

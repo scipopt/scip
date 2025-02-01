@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2309,6 +2309,21 @@ int SCIPstrncpy(
    char*                 t,                  /**< target string */
    const char*           s,                  /**< source string */
    int                   size                /**< maximal size of t */
+   );
+
+/** portable version of strcasecmp for case-insensitive comparison of two strings  */
+SCIP_EXPORT
+int SCIPstrcasecmp(
+   const char*           s1,                 /**< first string */
+   const char*           s2                  /**< second string */
+   );
+
+/** portable version of strncasecmp for case-insensitive comparison of two strings up to a given number of characters */
+SCIP_EXPORT
+int SCIPstrncasecmp(
+   const char*           s1,                 /**< first string */
+   const char*           s2,                 /**< second string */
+   int                   length              /**< maximal length to compare */
    );
 
 /** extract the next token as a integer value if it is one; in case no value is parsed the endptr is set to @p str

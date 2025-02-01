@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -45,6 +45,9 @@
 #include <errno.h>
 #include <ctype.h>
 #include <math.h>
+#ifndef _MSC_VER
+#include <strings.h>
+#endif
 
 #include "scip/def.h"
 #include "scip/pub_message.h"
@@ -8709,7 +8712,7 @@ void btnodeFreeLeaf(
    assert((*node)->left == NULL);
    assert((*node)->right == NULL);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* remove reference from parent node */
    if( (*node)->parent != NULL )
    {
@@ -10889,7 +10892,7 @@ int SCIPsnprintf(
 
    va_start(ap, s); /*lint !e826*/
 
-#if defined(_WIN32) || defined(_WIN64)
+#if defined(_MSC_VER) && _MSC_VER < 1900
    n = _vsnprintf(t, (size_t) len, s, ap);
 #else
    n = vsnprintf(t, (size_t) len, s, ap); /*lint !e571*/
@@ -10907,6 +10910,34 @@ int SCIPsnprintf(
       t[len-1] = '\0';
    }
    return n;
+}
+
+/** portable version of strcasecmp for case-insensitive comparison of two strings  */
+int SCIPstrcasecmp(
+   const char*           s1,                 /**< first string */
+   const char*           s2                  /**< second string */
+   )
+{
+#ifdef _MSC_VER
+   return _stricmp(s1, s2);
+#else
+   return strcasecmp(s1, s2);
+#endif
+}
+
+/** portable version of strncasecmp for case-insensitive comparison of two strings up to a given number of characters */
+int SCIPstrncasecmp(
+   const char*           s1,                 /**< first string */
+   const char*           s2,                 /**< second string */
+   int                   length              /**< maximal length to compare */
+   )
+{
+   assert(length >= 0);
+#ifdef _MSC_VER
+   return _strnicmp(s1, s2, (size_t)length);
+#else
+   return strncasecmp(s1, s2, (size_t)length);  /*lint !e571*/
+#endif
 }
 
 /** safe version of strncpy

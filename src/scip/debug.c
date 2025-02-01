@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -121,21 +121,21 @@ SCIP_Bool debugSolutionAvailable(
    debugsoldata = SCIPsetGetDebugSolData(set);
 
    /* check whether a debug solution is specified */
-    if( strcmp(set->misc_debugsol, "-") == 0 )
-    {
-       if( !debugsoldata->warningprinted )
-       {
-          SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "SCIP is compiled with 'DEBUGSOL=true' but no debug solution is given:\n ");
-          SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "*** Please set the parameter 'misc/debugsol' and reload the problem again to use the debugging-mechanism ***\n\n");
-          debugsoldata->warningprinted = TRUE;
-       }
-       return FALSE;
-    }
-    else
-    {
-       debugsoldata->warningprinted = FALSE;
-       return TRUE;
-    }
+   if( strcmp(set->misc_debugsol, "-") == 0 )
+   {
+      if( !debugsoldata->warningprinted )
+      {
+         SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "SCIP is compiled with 'DEBUGSOL=true' but no debug solution is given:\n");
+         SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "*** Please set the parameter 'misc/debugsol' and reload the problem again to use the debugging-mechanism ***\n\n");
+         debugsoldata->warningprinted = TRUE;
+      }
+      return FALSE;
+   }
+   else
+   {
+      debugsoldata->warningprinted = FALSE;
+      return TRUE;
+   }
 }
 
 /** reads solution from given file into given arrays */
@@ -206,11 +206,11 @@ SCIP_RETCODE readSolfile(
       }
 
       /* there are some lines which may preceed the solution information */
-      if( strncasecmp(buf, "solution status:", 16) == 0 || strncasecmp(buf, "objective value:", 16) == 0 ||
-         strncasecmp(buf, "Log started", 11) == 0 || strncasecmp(buf, "Variable Name", 13) == 0 ||
-         strncasecmp(buf, "All other variables", 19) == 0 || strspn(buf, " \n\r\t\f") == strlen(buf) ||
-         strncasecmp(buf, "NAME", 4) == 0 || strncasecmp(buf, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
-         strncasecmp(buf, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
+      if( SCIPstrncasecmp(buf, "solution status:", 16) == 0 || SCIPstrncasecmp(buf, "objective value:", 16) == 0 ||
+         SCIPstrncasecmp(buf, "Log started", 11) == 0 || SCIPstrncasecmp(buf, "Variable Name", 13) == 0 ||
+         SCIPstrncasecmp(buf, "All other variables", 19) == 0 || strspn(buf, " \n\r\t\f") == strlen(buf) ||
+         SCIPstrncasecmp(buf, "NAME", 4) == 0 || SCIPstrncasecmp(buf, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         SCIPstrncasecmp(buf, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
       {
          ++nonvalues;
          continue;
@@ -240,11 +240,11 @@ SCIP_RETCODE readSolfile(
       }
 
       /* cast the value, check first for inv(alid) or inf(inite) ones that need special treatment */
-      if( strncasecmp(valuestring, "inv", 3) == 0 )
+      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
          continue;
-      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
          val = SCIPsetInfinity(set);
-      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
          val = -SCIPsetInfinity(set);
       else
       {
@@ -713,6 +713,35 @@ SCIP_RETCODE SCIPdebugFreeSol(
    {
       SCIP_CALL( SCIPfreeSol(set->scip, &debugsoldata->debugsol) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** clears the debug solution */
+SCIP_RETCODE SCIPdebugClearSol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+   int s;
+
+   assert(scip != NULL);
+
+   debugsoldata = SCIPsetGetDebugSolData(scip->set);
+   assert(debugsoldata != NULL);
+
+   if( debugsoldata->debugsol != NULL )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &debugsoldata->debugsol) );
+   }
+   SCIP_CALL( SCIPcreateOrigSol(scip, &debugsoldata->debugsol, NULL) );
+
+   for( s = debugsoldata->nsolvals - 1; s >= 0; --s )
+      BMSfreeMemoryArrayNull(&(debugsoldata->solnames[s]));
+
+   debugsoldata->nsolvals = 0;
+   debugsoldata->debugsolval= 0.0;
+   debugsoldata->solisachieved = FALSE;
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -162,34 +162,10 @@ SCIP_RETCODE SCIPprimalFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   int s;
-
    assert(primal != NULL);
    assert(*primal != NULL);
 
-   /* free temporary solution for storing current solution */
-   if( (*primal)->currentsol != NULL )
-   {
-      SCIP_CALL( SCIPsolFree(&(*primal)->currentsol, blkmem, *primal) );
-   }
-
-   /* free solution for storing primal ray */
-   if( (*primal)->primalray != NULL )
-   {
-      SCIP_CALL( SCIPsolFree(&(*primal)->primalray, blkmem, *primal) );
-   }
-
-   /* free feasible primal CIP solutions */
-   for( s = 0; s < (*primal)->nsols; ++s )
-   {
-      SCIP_CALL( SCIPsolFree(&(*primal)->sols[s], blkmem, *primal) );
-   }
-   /* free partial CIP solutions */
-   for( s = 0; s < (*primal)->npartialsols; ++s )
-   {
-      SCIP_CALL( SCIPsolFree(&(*primal)->partialsols[s], blkmem, *primal) );
-   }
-   assert((*primal)->nexistingsols == 0);
+   SCIP_CALL( SCIPprimalClear(*primal, blkmem) );
 
    BMSfreeMemoryArrayNull(&(*primal)->sols);
    BMSfreeMemoryArrayNull(&(*primal)->partialsols);
@@ -201,43 +177,50 @@ SCIP_RETCODE SCIPprimalFree(
 
 /** clears primal data */
 SCIP_RETCODE SCIPprimalClear(
-   SCIP_PRIMAL**         primal,             /**< pointer to primal data */
+   SCIP_PRIMAL*          primal,             /**< pointer to primal data */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    int s;
 
    assert(primal != NULL);
-   assert(*primal != NULL);
 
    /* free temporary solution for storing current solution */
-   if( (*primal)->currentsol != NULL )
+   if( primal->currentsol != NULL )
    {
-      SCIP_CALL( SCIPsolFree(&(*primal)->currentsol, blkmem, *primal) );
+      SCIP_CALL( SCIPsolFree(&primal->currentsol, blkmem, primal) );
    }
 
    /* free solution for storing primal ray */
-   if( (*primal)->primalray != NULL )
+   if( primal->primalray != NULL )
    {
-      SCIP_CALL( SCIPsolFree(&(*primal)->primalray, blkmem, *primal) );
+      SCIP_CALL( SCIPsolFree(&primal->primalray, blkmem, primal) );
    }
 
    /* free feasible primal CIP solutions */
-   for( s = 0; s < (*primal)->nsols; ++s )
+   for( s = 0; s < primal->nsols; ++s )
    {
-      SCIP_CALL( SCIPsolFree(&(*primal)->sols[s], blkmem, *primal) );
+      SCIP_CALL( SCIPsolFree(&primal->sols[s], blkmem, primal) );
    }
 
-   (*primal)->currentsol = NULL;
-   (*primal)->primalray = NULL;
-   (*primal)->nsols = 0;
-   (*primal)->nsolsfound = 0;
-   (*primal)->nlimsolsfound = 0;
-   (*primal)->nbestsolsfound = 0;
-   (*primal)->nlimbestsolsfound = 0;
-   (*primal)->upperbound = SCIP_INVALID;
-   (*primal)->cutoffbound = SCIP_INVALID;
-   (*primal)->updateviolations = TRUE;
+   /* free partial CIP solutions */
+   for( s = 0; s < primal->npartialsols; ++s )
+   {
+      SCIP_CALL( SCIPsolFree(&primal->partialsols[s], blkmem, primal) );
+   }
+   assert(primal->nexistingsols == 0);
+
+   primal->currentsol = NULL;
+   primal->primalray = NULL;
+   primal->nsols = 0;
+   primal->nsolsfound = 0;
+   primal->npartialsols = 0;
+   primal->nlimsolsfound = 0;
+   primal->nbestsolsfound = 0;
+   primal->nlimbestsolsfound = 0;
+   primal->upperbound = SCIP_INVALID;
+   primal->cutoffbound = SCIP_INVALID;
+   primal->updateviolations = TRUE;
 
    return SCIP_OKAY;
 }
@@ -682,7 +665,7 @@ SCIP_RETCODE primalAddSol(
    /* make sure that the primal bound is at least the lower bound */
    if( ! SCIPsetIsInfinity(set, obj) && ! SCIPsetIsInfinity(set, -SCIPgetLowerbound(set->scip)) && SCIPsetIsFeasGT(set, SCIPgetLowerbound(set->scip), obj) )
    {
-      if( origprob->objsense == SCIP_OBJSENSE_MINIMIZE )
+      if( SCIPprobGetObjsense(origprob) == SCIP_OBJSENSE_MINIMIZE )
       {
          SCIPmessagePrintWarning(messagehdlr, "Dual bound %g is larger than the objective of the primal solution %g. The solution might not be optimal.\n",
             SCIPprobExternObjval(transprob, origprob, set, SCIPgetLowerbound(set->scip)), SCIPprobExternObjval(transprob, origprob, set, obj));
@@ -699,7 +682,8 @@ SCIP_RETCODE primalAddSol(
 
    SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
 
-#if 0 /* this is not a valid debug check, but can be used to track down numerical troubles */
+#ifdef SCIP_DISABLED_CODE
+   /* this is not a valid debug check, but can be used to track down numerical troubles */
 #ifndef NDEBUG
    /* check solution again completely
     * it fail for different reasons:
@@ -805,11 +789,14 @@ SCIP_RETCODE primalAddSol(
    /* check, if the global upper bound has to be updated */
    if( obj < primal->cutoffbound && insertpos == 0 )
    {
+      /* issue BESTSOLFOUND event */
+      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
+      SCIP_CALL( SCIPeventChgSol(&event, sol) );
+      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+
       /* update the upper bound */
       SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventfilter, eventqueue, transprob, tree, reopt, lp, obj) );
 
-      /* issue BESTSOLFOUND event */
-      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
       primal->nbestsolsfound++;
       stat->bestsolnode = stat->nnodes;
    }
@@ -817,9 +804,10 @@ SCIP_RETCODE primalAddSol(
    {
       /* issue POORSOLFOUND event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_POORSOLFOUND) );
+      SCIP_CALL( SCIPeventChgSol(&event, sol) );
+      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
    }
-   SCIP_CALL( SCIPeventChgSol(&event, sol) );
-   SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+
 
    /* display node information line */
    if( insertpos == 0 && !replace && set->stage >= SCIP_STAGE_SOLVING )
@@ -1846,10 +1834,10 @@ SCIP_RETCODE SCIPprimalTransformSol(
    assert(solvalssize == 0 || solvals != NULL);
    assert(solvalssize == 0 || solvalset != NULL);
 
-   origvars = origprob->vars;
-   norigvars = origprob->nvars;
-   transvars = transprob->vars;
-   ntransvars = transprob->nvars;
+   origvars = SCIPprobGetVars(origprob);
+   norigvars = SCIPprobGetNVars(origprob);
+   transvars = SCIPprobGetVars(transprob);
+   ntransvars = SCIPprobGetNVars(transprob);
    assert(solvalssize == 0 || solvalssize >= ntransvars);
 
    SCIPsetDebugMsg(set, "try to transfer original solution %p with objective %g into the transformed problem space\n",

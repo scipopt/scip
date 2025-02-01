@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2298,9 +2298,17 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNIntVars
 #undef SCIPprobGetNImplVars
 #undef SCIPprobGetNContVars
-#undef SCIPprobGetNConss
 #undef SCIPprobGetVars
+#undef SCIPprobGetNFixedVars
+#undef SCIPprobGetFixedVars
+#undef SCIPprobGetStartNVars
+#undef SCIPprobGetNConss
+#undef SCIPprobGetConss
+#undef SCIPprobGetMaxNConss
+#undef SCIPprobGetStartNConss
+#undef SCIPprobGetObjsense
 #undef SCIPprobGetObjoffset
+#undef SCIPprobGetObjscale
 #undef SCIPisConsCompressedEnabled
 #undef SCIPprobEnableConsCompression
 
@@ -2443,6 +2451,33 @@ SCIP_VAR** SCIPprobGetVars(
    return prob->vars;
 }
 
+/** gets number of fixed variables */
+int SCIPprobGetNFixedVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nfixedvars;
+}
+
+/** gets fixed variables */
+SCIP_VAR** SCIPprobGetFixedVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->fixedvars;
+}
+
+/** gets number of variables existing when problem solving started */
+int SCIPprobGetStartNVars(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->startnvars;
+}
+
 /** gets number of problem constraints */
 int SCIPprobGetNConss(
    SCIP_PROB*            prob                /**< problem data */
@@ -2450,6 +2485,42 @@ int SCIPprobGetNConss(
 {
    assert(prob != NULL);
    return prob->nconss;
+}
+
+/** gets problem constraints */
+SCIP_CONS** SCIPprobGetConss(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->conss;
+}
+
+/** gets maximum number of constraints existing at the same time */
+int SCIPprobGetMaxNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->maxnconss;
+}
+
+/** gets number of constraints existing when problem solving started */
+int SCIPprobGetStartNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->startnconss;
+}
+
+/** gets the objective sense*/
+SCIP_OBJSENSE SCIPprobGetObjsense(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->objsense;
 }
 
 /** gets the objective offset */

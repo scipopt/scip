@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -129,7 +129,7 @@ struct SCIP_HeurData
    SCIP_Bool             nozerofixing;       /**< should variables with a zero shifting value be delayed instead of being fixed? */
    SCIP_Bool             fixbinlocks;        /**< should binary variables with no locks in one direction be fixed to that direction? */
    SCIP_Bool             binlocksfirst;      /**< should binary variables with no locks be preferred in the ordering? */
-   SCIP_Bool             normalize;          /**< should coefficients and left/right hand sides be normalized by max row coeff? */
+   SCIP_Bool             normalize;          /**< should coefficients be normalized by max row coeff for col norm? */
    SCIP_Bool             updateweights;      /**< should row weight be increased every time the row is violated? */
    SCIP_Bool             impliscontinuous;   /**< should implicit integer variables be treated as continuous variables? */
    SCIP_Bool             selectbest;         /**< should the heuristic choose the best candidate in every round? (set to FALSE for static order)? */
@@ -291,8 +291,7 @@ static
 void relaxVar(
    SCIP*                 scip,               /**< current scip instance */
    SCIP_VAR*             var,                /**< variable which is relaxed from the problem */
-   CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object */
-   SCIP_Bool             normalize           /**< should coefficients and be normalized by rows maximum norms? */
+   CONSTRAINTMATRIX*     matrix              /**< constraint matrix object */
    )
 {
    SCIP_ROW** colrows;
@@ -331,7 +330,6 @@ void relaxVar(
       SCIP_Real rhs;
       SCIP_Real lhsvarbound;
       SCIP_Real rhsvarbound;
-      SCIP_Real rowabs;
       SCIP_Real colval;
       int rowindex;
 
@@ -341,11 +339,8 @@ void relaxVar(
       if( rowindex == -1 )
          break;
 
-      rowabs = SCIPgetRowMaxCoef(scip, colrow);
       assert(colvals != NULL); /* to please flexelint */
       colval = colvals[r];
-      if( normalize && SCIPisFeasGT(scip, rowabs, 0.0) )
-         colval /= rowabs;
 
       assert(0 <= rowindex && rowindex < matrix->nrows);
       getRowData(matrix, rowindex, NULL, &lhs, &rhs, NULL, NULL);
@@ -504,7 +499,6 @@ SCIP_RETCODE initMatrix(
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object to be initialized */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    int*                  colposs,            /**< position of columns according to variable type sorting */
-   SCIP_Bool             normalize,          /**< should coefficients and be normalized by rows maximum norms? */
    int*                  nmaxrows,           /**< maximum number of rows a variable appears in */
    SCIP_Bool             relax,              /**< should continuous variables be relaxed from the problem? */
    SCIP_Bool*            initialized,        /**< was the initialization successful? */
@@ -596,26 +590,21 @@ SCIP_RETCODE initMatrix(
       SCIP_ROW* row;
       SCIP_Real* rowvals;
       SCIP_Real constant;
-      SCIP_Real maxval;
       int nrowlpnonz;
 
       /* get LP row information */
       row = lprows[i];
       rowvals = SCIProwGetVals(row);
       nrowlpnonz = SCIProwGetNLPNonz(row);
-      maxval = SCIPgetRowMaxCoef(scip, row);
       cols = SCIProwGetCols(row);
       constant = SCIProwGetConstant(row);
 
-      SCIPdebugMsg(scip, " %s : maxval=%g \n", SCIProwGetName(row), maxval);
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
       assert(!SCIPisInfinity(scip, constant));
 
       matrix->rowmatbegin[i] = currentpointer;
 
-      /* modify the lhs and rhs w.r.t to the rows constant and normalize by 1-norm, i.e divide the lhs and rhs by the
-       * maximum absolute value of the row
-       */
+      /* modify the lhs and rhs w.r.t to the rows constant */
       if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
          matrix->lhs[i] = SCIProwGetLhs(row) - constant;
       else
@@ -625,17 +614,6 @@ SCIP_RETCODE initMatrix(
          matrix->rhs[i] = SCIProwGetRhs(row) - constant;
       else
          matrix->rhs[i] = SCIPinfinity(scip);
-
-      /* make sure that maxval is larger than zero before normalization.
-       * Maxval may be zero if the constraint contains no variables but is modifiable, hence not redundant
-       */
-      if( normalize && !SCIPisFeasZero(scip, maxval) )
-      {
-         if( !SCIPisInfinity(scip, -matrix->lhs[i]) )
-            matrix->lhs[i] /= maxval;
-         if( !SCIPisInfinity(scip, matrix->rhs[i]) )
-            matrix->rhs[i] /= maxval;
-      }
 
       /* in case of empty rows with a 0 < lhs <= 0.0 or 0.0 <= rhs < 0 we deduce the infeasibility of the problem */
       if( nrowlpnonz == 0 && (SCIPisFeasPositive(scip, matrix->lhs[i]) || SCIPisFeasNegative(scip, matrix->rhs[i])) )
@@ -654,9 +632,6 @@ SCIP_RETCODE initMatrix(
          assert(currentpointer < matrix->nnonzs);
 
          matrix->rowmatvals[currentpointer] = rowvals[j];
-         if( normalize && SCIPisFeasGT(scip, maxval, 0.0) )
-            matrix->rowmatvals[currentpointer] /= maxval;
-
          matrix->rowmatind[currentpointer] = colposs[SCIPcolGetLPPos(cols[j])];
 
          ++currentpointer;
@@ -697,26 +672,20 @@ SCIP_RETCODE initMatrix(
 
       for( i = 0; i < ncolnonz; ++i )
       {
-         SCIP_Real maxval;
+         SCIP_Real normval = colvals[i];
 
          assert(rows[i] != NULL);
          assert(0 <= SCIProwGetLPPos(rows[i]));
          assert(SCIProwGetLPPos(rows[i]) < nrows);
          assert(currentpointer < matrix->nnonzs);
-
-         /* rows are normalized by maximum norm */
-         maxval = SCIPgetRowMaxCoef(scip, rows[i]);
-
-         assert(maxval > 0);
-
          matrix->colmatvals[currentpointer] = colvals[i];
-         if( normalize && SCIPisFeasGT(scip, maxval, 0.0) )
-            matrix->colmatvals[currentpointer] /= maxval;
-
          matrix->colmatind[currentpointer] = SCIProwGetLPPos(rows[i]);
 
-         /* update the column norm */
-         matrix->colnorms[j] += ABS(matrix->colmatvals[currentpointer]);
+         if( heurdata->normalize )
+            normval /= SCIPgetRowMaxCoef(scip, rows[i]);
+
+         /* update the column norm for maximum normalized rows */
+         matrix->colnorms[j] += ABS(normval);
          ++currentpointer;
       }
    }
@@ -738,7 +707,7 @@ SCIP_RETCODE initMatrix(
          SCIP_VAR* var;
          var = SCIPcolGetVar(col);
          assert(!varIsDiscrete(var, impliscontinuous));
-         relaxVar(scip, var, matrix, normalize);
+         relaxVar(scip, var, matrix);
       }
    }
    *initialized = TRUE;
@@ -1015,9 +984,10 @@ SCIP_RETCODE getOptimalShiftingValue(
       rhs = matrix->rhs[rowpos];
       rowweight = rowweights[rowpos];
       val = direction * vals[i];
+      assert(!SCIPisZero(scip, val));
 
       /* determine if current row is violated or not */
-      rowisviolated =(SCIPisFeasLT(scip, rhs, 0.0) || SCIPisFeasLT(scip, -lhs, 0.0));
+      rowisviolated = (SCIPisFeasLT(scip, rhs, 0.0) || SCIPisFeasLT(scip, -lhs, 0.0));
 
       /* for a feasible row, determine the minimum integer value within the bounds of the variable by which it has to be
        * shifted to make row infeasible.
@@ -1030,19 +1000,23 @@ SCIP_RETCODE getOptimalShiftingValue(
 
          /* feasibility can only be violated if the variable has a lock in the corresponding direction,
           * i.e. a positive coefficient for a "<="-constraint, a negative coefficient for a ">="-constraint.
-          */
-         if( SCIPisFeasGT(scip, val, 0.0) && !SCIPisInfinity(scip, rhs) )
-            maxfeasshift = SCIPfeasFloor(scip, rhs/val);
-         else if( SCIPisFeasLT(scip, val, 0.0) && !SCIPisInfinity(scip, -lhs) )
-            maxfeasshift = SCIPfeasFloor(scip, lhs/val);
-
-         /* if the variable has no lock in the current row, it can still help to increase the slack of this row;
+          * if the variable has no lock in the current row, it can still help to increase the slack of this row;
           * we measure slack increase for shifting by one
           */
-         if( SCIPisFeasGT(scip, val, 0.0) && SCIPisInfinity(scip, rhs) )
-            slacksurplus += val;
-         if( SCIPisFeasLT(scip, val, 0.0) && SCIPisInfinity(scip, -lhs) )
-            slacksurplus -= val;
+         if( val < 0.0 )
+         {
+            if( !SCIPisInfinity(scip, -lhs) )
+               maxfeasshift = SCIPfeasFloor(scip, MIN(lhs, 0.0) / val);
+            else
+               slacksurplus -= val;
+         }
+         else
+         {
+            if( !SCIPisInfinity(scip, rhs) )
+               maxfeasshift = SCIPfeasFloor(scip, MAX(rhs, 0.0) / val);
+            else
+               slacksurplus += val;
+         }
 
          /* check if the least violating shift lies within variable bounds and set corresponding array values */
          if( !SCIPisInfinity(scip, maxfeasshift) && SCIPisFeasLE(scip, maxfeasshift + 1.0, upperbound) )
@@ -1069,10 +1043,16 @@ SCIP_RETCODE getOptimalShiftingValue(
          /* if coefficient has the right sign to make row feasible, determine the minimum integer to shift variable
           * to obtain feasibility
           */
-         if( SCIPisFeasLT(scip, -lhs, 0.0) && SCIPisFeasGT(scip, val, 0.0) )
-            minfeasshift = SCIPfeasCeil(scip, lhs/val);
-         else if( SCIPisFeasLT(scip, rhs,0.0) && SCIPisFeasLT(scip, val, 0.0) )
-            minfeasshift = SCIPfeasCeil(scip, rhs/val);
+         if( val < 0.0 )
+         {
+            if( SCIPisFeasLT(scip, rhs, 0.0) )
+               minfeasshift = SCIPfeasCeil(scip, MIN(rhs, val) / val);
+         }
+         else
+         {
+            if( SCIPisFeasLT(scip, -lhs, 0.0) )
+               minfeasshift = SCIPfeasCeil(scip, MAX(lhs, val) / val);
+         }
 
          /* check if the minimum feasibility recovery shift lies within variable bounds and set corresponding array
           * values
@@ -1595,7 +1575,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
    /* initialize heuristic matrix and working solution */
    SCIP_CALL( SCIPallocBuffer(scip, &matrix) );
-   SCIP_CALL( initMatrix(scip, matrix, heurdata, colposs, heurdata->normalize, &nmaxrows, heurdata->relax, &initialized, &infeasible) );
+   SCIP_CALL( initMatrix(scip, matrix, heurdata, colposs, &nmaxrows, heurdata->relax, &initialized, &infeasible) );
 
    /* could not initialize matrix */
    if( !initialized || infeasible )
@@ -2506,7 +2486,7 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          "should binary variables with no locks be preferred in the ordering?",
          &heurdata->binlocksfirst, TRUE, DEFAULT_BINLOCKSFIRST, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/normalize",
-         "should coefficients and left/right hand sides be normalized by max row coeff?",
+         "should coefficients be normalized by max row coeff for col norm?",
          &heurdata->normalize, TRUE, DEFAULT_NORMALIZE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/updateweights",
          "should row weight be increased every time the row is violated?",

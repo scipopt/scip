@@ -90,6 +90,10 @@ typedef __int64          intmax_t;
 // an integer; silencing it otherwise would require many explicit casts.
 #  pragma GCC diagnostic ignored "-Wsign-conversion"
 # endif
+# if FMT_GCC_VERSION >= 700
+// SV Disable 'this use of "defined" may not be portable' for ifdef __has_feature below
+#  pragma GCC diagnostic ignored "-Wexpansion-to-defined"
+# endif
 # if __cplusplus >= 201103L || defined __GXX_EXPERIMENTAL_CXX0X__
 #  define FMT_HAS_GXX_CXX11 1
 # endif

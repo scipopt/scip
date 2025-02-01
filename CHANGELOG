@@ -1,12 +1,147 @@
+@page RN10 Release notes for SCIP 10
+
 @section RN1000 SCIP 10.0.0
 ***************************
 
 Features
 --------
-- Added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
-- Copy variable data pointer if no copy routine was supplied.
-- Added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry.
+
+- added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
+- copy variable data pointer if no copy routine was supplied.
+- added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
 - Dejavu can be used to compute symmetries; the source code is shipped with SCIP and incorporates sassy.
+- implemented symmetry detection callbacks for cons_disjunction and cons_superindicator
+- detailed information about applied symmetry handling techniques can be printed to the terminal
+- added a new separator sepa_multilinear to generate flower cuts from AND constraints nonlinear product expressions.
+- added functionality to deal with hypergraphs by means of efficient access to vertices, edges and intersections edges.
+- added support for (transposed) network matrix detection in pub_network.h
+- added a new presolver presol_implint which detects implied integers by detecting (transposed) network submatrices in the problem. For now, this plugin is disabled by default.
+- added new plugin type for finding irreducible infeasible subsystems (IIS). Users can now include their own IIS algorithms. Basic addition and deletion based algorithm implemented in iisfinder_greedy.
+
+Performance improvements
+------------------------
+
+- reimplemented SCIPvarGetActiveRepresentatives() by using dense arrays to avoid repeated resorting.
+
+Examples and applications
+-------------------------
+
+- Coloring: new parameter branching/coloring/strategy to choose the least/most fractional variable for branching
+
+Interface changes
+-----------------
+
+### New and changed callbacks
+
+### Deleted and changed API methods
+
+- SCIPgetProbvarLinearSum: remove parameter mergemultiples, which is now automatically true with the new implementation of SCIPvarGetActiveRepresentatives.
+- SCIPcreateRow*(), SCIPaddVarToRow(), SCIPaddVarsToRow(), SCIPaddVarsToRowSameCoef() can now only be called in the solving stage,
+  because otherwise the LP is not yet available and the row data is invalid.
+- intvar removed from arguments for SCIPcreateConsPseudobooleanWithConss(), SCIPcreateConsPseudoboolean(), and SCIPcreateConsBasicPseudoboolean() due to dysfunctionality of non-linear objective reformulation with pseudoboolean constraint
+- ndelconss added to arguments for SCIPcleanupConssLinear() and SCIPcleanupConssKnapsack() to directly delete empty redundant constraints before creating problem matrix
+- copyiisfinders added to arguments for SCIPcopyPlugins() (16th position)
+
+### New API functions
+
+- SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
+- SCIPhistoryGetAncPseudocost(), SCIPhistoryGetAncPseudocostCount(), SCIPhistoryIsAncPseudocostEmpty(), SCIPgetVarAncPseudocostVal(),
+  SCIPvarGetAncPseudocost() for retrieving the values related to ancestral pseudo cost fields in variable history
+- SCIPgetAvgDPseudocostScore(), SCIPgetVarDPseudocostScore() for computing the discounted pseudo cost scores using ancestral pseudo costs
+- SCIPboundchgGetLPSolVal() for accessing the LP solution value in the branching data of the bound change
+- SCIPclearSymgraph() and SCIPcopySymgraphAsSubgraph() to clear and copy as symmetry detection graph, respectively
+- SCIPincludeSepaMultilinear() to include the new multilinear cut separator
+- SCIPhypergraphCreate(), SCIPhypergraphClear(), SCIPhypergraphFree(), SCIPhypergraphAddVertex(), SCIPhypergraphAddEdge(), SCIPhypergraphIsValid() and SCIPhypergraphComputeVerticesEdges() for building and deleting hypergraphs, SCIPhypergraphComputeOverlaps(), SCIPhypergraphOverlapFind(), SCIPhypergraphIntersectEdges(), SCIPhypergraphComputeOverlapsEdges(), SCIPhypergraphComputeVerticesOverlaps(), SCIPhypergraphOverlapsDisjoint() to deal with pair-wise intersections of hyperedges, SCIPhypergraphIterInit(), SCIPhypergraphIterClear(), SCIPhypergraphIterStart(), SCIPhypergraphIterValid(), SCIPhypergraphIterNext(), SCIPhypergraphIterBase(), SCIPhypergraphIterAdjacent(), SCIPhypergraphIterMinVertex(), SCIPhypergraphIterOverlap() for iterating over adjacent edges, SCIPhypergraphHasVertexEdges() SCIPhypergraphHasOverlaps(), SCIPhypergraphHasOverlapsEdges(), SCIPhypergraphHasVertexOverlaps(), SCIPhypergraphGetNVertices(), SCIPhypergraphGetNEdges(), SCIPhypergraphBlkmem(), SCIPhypergraphGetNOverlaps(), SCIPhypergraphVertexData(), SCIPhypergraphEdgeData(), SCIPhypergraphEdgeSize(), SCIPhypergraphEdgeVertices(), SCIPhypergraphVertexEdgesFirst(), SCIPhypergraphVertexEdgesBeyond(), SCIPhypergraphVertexEdgesGetAtIndex(), SCIPhypergraphOverlapData(), SCIPhypergraphOverlapSize(), SCIPhypergraphOverlapVertices() SCIPhypergraphEdgesOverlapsFirst(), SCIPhypergraphEdgesOverlapsBeyond(), SCIPhypergraphEdgesOverlapsGetAtIndex(), SCIPhypergraphOverlapsEdgesFirst(), SCIPhypergraphOverlapsEdgesBeyond(), SCIPhypergraphOverlapsEdgesGetAtIndex(), SCIPhypergraphVertexOverlapsFirst(), SCIPhypergraphVertexOverlapsBeyond() and SCIPhypergraphVertexOverlapsGetAtIndex() to query information about vertices, edges and overlaps as well as their incidences.
+- SCIPdebugClearSol() for clearing the debug solution
+- Renamed XML functions to avoid name clash with libxml2 by adding "SCIP": SCIPxmlProcess(), SCIPxmlNewNode(), SCIPxmlNewAttr(), SCIPxmlAddAttr(), SCIPxmlAppendChild(), SCIPxmlFreeNode(), SCIPxmlShowNode(), SCIPxmlGetAttrval(), SCIPxmlFirstNode(), SCIPxmlNextNode(), SCIPxmlFindNode(), SCIPxmlFindNodeMaxdepth(), SCIPxmlNextSibl(), SCIPxmlPrevSibl(), SCIPxmlFirstChild(), SCIPxmlLastChild(), SCIPxmlGetName(), SCIPxmlGetLine(), SCIPxmlGetData(), SCIPxmlFindPcdata().
+- SCIPincludePresolImplint() to include the new implied integer presolver
+- SCIPnetmatdecCreate() and SCIPnetmatdecFree() for creating and deleting a network matrix decomposition. SCIPnetmatdecTryAddCol() and SCIPnetmatdecTryAddRow() are used to add columns and rows of the matrix to the decomposition. SCIPnetmatdecContainsRow() and SCIPnetmatdecContainsColumn() check if the decomposition contains the given row or columns. SCIPnetmatdecRemoveComponent() can remove connected components from the decomposition. SCIPnetmatdecCreateDiGraph() can be used to expose the underlying digraph. SCIPnetmatdecIsMinimal() and SCIPnetmatdecVerifyCycle() check if certain invariants of the decomposition are satisfied and are used in tests.
+- SCIPfreeReaderdataCor(), SCIPfreeReaderdataTim() and SCIPfreeReaderdataSto() for freeing the data for the COR, TIM and
+  STO readers respectively. These readers are all used when reading an SMPS instance.
+- SCIPdialogIsHidden(), SCIPdialogSetHidden() to determine whether a dialog should be hidden in help list
+- added SCIPincludeIISfinder(), SCIPincludeIISfinderBasic(), SCIPsetIISfinderCopy(), SCIPsetIISfinderFree(), SCIPgenerateIIS(), SCIPfindIISfinder(), SCIPgetIISfinders(), SCIPgetNIISfinders(), SCIPsetIISfinderPriority(), SCIPgetIIS()
+- added SCIPiisfinderGetName(), SCIPiisfinderGetData(), SCIPiisfinderGetDesc(), SCIPiisfinderGetPriority(), SCIPiisfinderSetData(), SCIPiisfinderGetTime(), SCIPiisfinderInfoMessage(), SCIPiisGetTime(), SCIPiisIsSubscipInfeasible(), SCIPiisIsSubscipIrreducible(), SCIPiisGetNNodes(), SCIPiisSetSubscipInfeasible(), SCIPiisSetSubscipIrreducible(), SCIPiisAddNNodes(), SCIPiisGetRandnumgen(), SCIPiisGetSubscip()
+
+### Changes in preprocessor macros
+
+- removed `#define` of `strcasecmp` and `strncasecmp` (in case of Windows builds) in scip/def.h;
+  use SCIPstr(n)casecmp() (scip/pub_misc.h) instead
+
+### Command line interface
+
+- help <command> now allows to display information on specific command.
+- allow to hide certain commands in the help list
+- add the (hidden) command "exit" to exit SCIP.
+- Add iis option to create an infeasible subsystem
+- Add write/iis option to write out the infeasible subsystem to file
+- Add display/iis option to write out the infeasible subsystem to console
+
+### Interfaces to external software
+
+### Changed parameters
+
+- heuristics/scheduler/heurtimelimit removed to avoid indeterministic behavior of scheduler heuristic, uses main time limit instead
+
+### New parameters
+
+- branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
+- branching/discountedpscost to enable/disable recording ancestral pseudo costs
+- new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
+- new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
+- new parameter "propagating/symmetry/dispsyminfo" to control whether information about which symmetry handling methods are applied are printed
+- new parameter "presolving/implint/columnrowratio" indicates the ratio of rows/columns where the row-wise network matrix detection algorithm is used instead of the column-wise network matrix detection algorithm
+- new parameter "presolving/implint/numericslimit" determines the limit for absolute integral coefficients beyond which the corresponding rows and variables are excluded from implied integer detection
+- iis/minimal, iis/nodes, iis/removedbounds, iis/removeunusedvars, iis/silent, iis/stopafterone, iis/time, iis/greedy/additive, iis/greedy/conservative, iis/greedy/delafteradd, iis/greedy/dynamicreordering, iis/greedy/maxbatchsize, iis/greedy/maxrelbatchsize, iis/greedy/nodelimperiter, iis/greedy/priority, iis/greedy/timelimperiter
+
+### Data structures
+
+- added structs SCIP_IISFINDER, SCIP_IISFINDERDATA, SCIP_IIS
+
+Deleted files
+-------------
+
+Testing
+-------
+
+Build system
+------------
+
+- changed the default for TPI to tny
+
+### Makefile
+
+### Cmake
+
+- increased minimal required cmake version to 3.11
+- removed automatic download and build of Bliss during cmake configuration when -DSYM=(s)bliss;
+  please build and install from https://github.com/scipopt/bliss before and specify -DBLISS_DIR
+
+Fixed bugs
+----------
+
+- fixed bug related to unreleased data for the Benders' decomposition framework. When reading an SMPS file and applying
+  Benders' decomposition, data is created that was not correctly released. Also, data within the Benders' decomposition
+  framework was not appropriately reset. The data is now released/reset as expected.
+
+Miscellaneous
+-------------
+- We now use sassy as shipped with dejavu.
+
+- add objective offset instead of objective offset variable in cip reader
+- updated ampl/mp to v4.0.0
+
+Known bugs
+----------
+
+@page RN9 Release notes for SCIP 9
+
+@section RN930 SCIP 9.3.0
+*************************
+
+Features
+--------
+
+- simplify expressions of nonlinear constraints in MPS and LP writing to increase chance that they are recognized as quadratic
 
 Performance improvements
 ------------------------
@@ -19,15 +154,8 @@ Interface changes
 
 ### New and changed callbacks
 
-### Deleted and changed API methods
-
 ### New API functions
-
-- SCIPhistoryUpdateAncPseudocost(), SCIPvarUpdateAncPseudocost() for updating the ancestral pseudo cost fields in variable history
-- SCIPhistoryGetAncPseudocost(), SCIPhistoryGetAncPseudocostCount(), SCIPhistoryIsAncPseudocostEmpty(), SCIPgetVarAncPseudocostVal(),
-  SCIPvarGetAncPseudocost() for retrieving the values related to ancestral pseudo cost fields in variable history
-- SCIPgetAvgDPseudocostScore(), SCIPgetVarDPseudocostScore() for computing the discounted pseudo cost scores using ancestral pseudo costs
-- SCIPboundchgGetLPSolVal() for accessing the LP solution value in the branching data of the bound change
+- SCIPdisplaySymmetryGenerators() and SCIPdialogExecDisplaySymmetry() to display generators of symmetry group
 
 ### Command line interface
 
@@ -37,40 +165,201 @@ Interface changes
 
 ### New parameters
 
-- branching/pscost/discountfactor, branching/relpscost/discountfactor as the discount factor for ancestral pseudo costs in pscost and relpscost branching rules
-- branching/discountedpscost to enable/disable recording ancestral pseudo costs
-- new parameter "propagating/symmetry/handlesignedorbitopes" to control whether special symmetry handling techniques for orbitopes whose columns can be (partially) reflected shall be applied
-- new parameter "propagating/symmetry/usesimplesgncomp" to control whether symmetry components all of whose variables are simultaneously reflected by a symmetry shall be handled by a special inequality
-
 ### Data structures
-
-Deleted files
--------------
-
-Testing
--------
-
-Build system
-------------
-
-### Makefile
-
-### Cmake
-
-- cmake now automatically downloads and installs the latest release version of SoPlex+PaPilo from GitHub if they are not found directly
 
 Fixed bugs
 ----------
 
 Miscellaneous
 -------------
-- We now use sassy as shipped with dejavu.
 
-Known bugs
+- updated description of paramater misc/usesymmetry
+
+@section RN922 SCIP 9.2.2
+*************************
+
+Fixed bugs
 ----------
 
+Build system
+------------
 
-@page RN90 Release notes for SCIP 9
+### Cmake
+
+### Makefile
+
+Miscellaneous
+-------------
+
+@section RN921 SCIP 9.2.1
+*************************
+
+Fixed bugs
+----------
+
+- apply same feasibility definition in PaPILO as in SCIP to avoid numerical inconsistencies
+- check variable cancellation in SCIPvarAddVlb() and SCIPvarAddVub() to avert wrong infeasibility
+- SCIPfreeReoptSolve() now also clears partial solutions
+- fixed bug in calculation of "fractionality score" for spatial branching candidates in cons_nonlinear
+- fixed bug with installing symmetry dialog in sub-SCIPs
+- added copy callbacks for presolvers dualagg and redvub, branching rules lookahead and cloud, primal heuristics dualval and repair, propagator nlobbt, and separators gauge and convexproj
+- respect maximal separation rounds setting by running remaining delayed separators in last round
+- replace terms consistently in applyFixings() of cons_linear to handle infinite aggregations
+
+Build system
+------------
+
+### Cmake
+
+- fix SCIP Optimization Suite build with -DSYM=(s)bliss and bliss being downloaded and built during configuration by cmake
+- fix use of a bliss cmake installation (from https://github.com/scipopt/bliss) specified via BLISS_DIR if -DSYM=(s)bliss
+
+### Makefile
+
+- the check/solchecker build can now use also GMP installations by Homebrew on macOS/arm64
+
+Miscellaneous
+-------------
+
+- the output precision for writing CIP/OPB files has been increased at several places for nonlinear constraints
+- the solchecker tool now also supports SCIP solutions without unknown or infinite values
+- generate an error if the same linear constraint is used by several indicator constraints
+
+@section RN920 SCIP 9.2.0
+*************************
+
+Features
+--------
+
+- added check for absolute and relative gap limits at end of synchronization in concurrent solving mode, in order to terminate earlier;
+  note that if the concurrent solve is stopped due to a gap limit, the "winner" solver will have an interrupted solution status and
+  its primal and dual bounds may not be the best possible ones (use SCIPgetConcurrentPrimalbound() and SCIPgetConcurrentDualbound() instead)
+- parse pseudoboolean constraint from CIP format (and add linear-"and"-reformulation)
+
+
+Performance improvements
+------------------------
+
+- reoptimization now also stores propagations from propagators if reoptimization/saveconsprop is enabled;
+  the parameter will be renamed to reoptimization/saveprop in a next major release
+- imposed stricter limits on the size of disconnected components which may be solved separately during presolve
+- use individual slack variables also for constraints indicated by a common binary variable to use tighter formulation by default
+- when computing symmetries using Nauty, iteration limits are now available to terminate Nauty early
+
+Fixed bugs
+----------
+
+- Benders' decomposition subproblems that are always infeasible are correctly handled and the complete problem is declared infeasible
+- skip linear constraint propagation if the residual activity bound cancels the side precision
+- correct bound tracking to make the evaluation of primal-dual-integrals work
+- skip aggregations on fixed variables in milp presolver to avoid errors for earlier versions of PaPILO
+- use indices of negation counterparts and accept fixings when ordering and-resultants of pseudoboolean constraints
+- update locks on model variables before removing pseudoboolean constraints in presolve
+- reformulate soft pseudoboolean constraints with linear constraints if the indicator decomposition is disabled
+- add workaround for recent HiGHS versions resetting the model status when changing the presolve option after a solve
+- avoid hashmap key error in removal of doubletons and singletons in dual presolve of setppc constraints by updating constraints and corresponding hashmaps after each multi-aggregation
+
+Interface changes
+-----------------
+
+### New API functions
+
+- added SCIPtpiIsAvailable() to check whether a working task processing interface is available (TPI != none)
+- added SCIPtpiGetLibraryName() and SCIPtpiGetLibraryDesc()
+- SCIPdelCons() can now also be called in SCIP_STAGE_TRANSFORMED
+- added SCIPstrcasecmp() and SCIPstrncasecmp() for case-insensitive string comparison
+- added SCIPbendersSubproblemsAreInfeasible() to return if at least one subproblem has been identified as being
+  infeasible prior to performing any variable fixing
+
+### New parameters
+
+- presolving/milp/abortfacexhaustive to control the abort threshold for exhaustive presolving in PAPILO
+- presolving/milp/abortfacmedium to control the abort threshold for medium presolving in PAPILO
+- presolving/milp/abortfacfast to control the abort threshold for fast presolving in PAPILO
+- constraints/components/maxcompweight to determine the maximum weight for a disconnected component that is solved during presolve
+- constraints/components/contfactor counts the contributing factor of a single continuous variables with respect to the weight limit specified by constraints/components/maxcompweight
+- constraints/indicator/usesameslackvar to decide whether the same slack variable should be used for indicators constraints with common binary variable
+- propagating/symmetry/nautymaxncells and propagating/symmetry/nautymaxnnodes to set iteration limits in Nauty (only available if build with SYM=nauty or SYM=snauty)
+
+### Changed parameters
+
+- presolving/milp/threads is now only available if PaPILO is built with TBB
+- changed default of numerics/recomputefac to 1e+6 to aim at relative epsilon precision
+
+Build system
+------------
+
+### Cmake
+
+- attempted to fix detection of CPLEX library on macOS and Windows systems
+
+Testing
+-------
+
+- added parameter FILTER for tests/Makefile to run only tests with a specific pattern (ctest with -R FILTER)
+
+Miscellaneous
+-------------
+
+- adjusted Gurobi interface for Gurobi 12
+- reordered events: BESTSOLFOUND/NODE_FEASIBLE are now processed before the nodes are cut off and before NODE_DELETE events are processed
+- removed `#define` of `getcwd` (in case of Windows builds) in scip/def.h
+- the `#define` of `strcasecmp` and `strncasecmp` (in case of Windows builds) in scip/def.h will be removed with SCIP 10;
+  use `SCIPstr(n)casecmp()` (scip/pub_misc.h) instead
+
+@section RN911 SCIP 9.1.1
+*************************
+
+Fixed bugs
+----------
+
+- fix bug in separator aggregation that caused incorrect terminations when for an integral objective the objective limit was set to a fractional value
+- fix bug in memory management of doublelex matrices where indices were set beyond array bounds
+- store relevance flags in consdataTightenCoefs() of cons_linear.c to avoid dropping variables unintentionally due to numerical changes
+- fix possible segmentation fault when resetting local and global bounds of original variables after abnormal termination
+- compare coefficient scales to detect parallelism to avoid integral relaxations in detectRedundantConstraints() of cons_linear.c
+- remove coefficient information from linear constraint hashes in order to compare keys with tolerances
+- fixed NULL pointer dereference in SCIPtpiGetNumThreads() of TinyCThread interface if called before SCIPtpiInit(); now returns 0 in this case
+- calling SCIPsolveConcurrent() when SCIP was compiled without a TPI now results in a plugin-not-found error
+- fixed LPI status functions of lpi_cpx if the barrier is called
+- check cuts for redundancy after scaling in cutTightenCoefs() and cutTightenCoefsQuad() of cuts.c
+- maintain definition of artificial integral variables in xor constraints to avoid invalidation of conflict constraints
+- free childless nodes only after the deactivation of the old focus path in treeSwitchPath() of tree.c
+- only normalize rows for column norm evaluations in shift-and-propagate heuristic to avoid unscaled violations
+- expression handler for absolute value computes now also a cut when one of the bounds is infinite as long as the sign of the argument is known
+- check for more data to be freed before modifying nonlinear constraints in SCIPaddExprNonlinear()
+- allow for terms with zero coefficients when checking sum in SCIPexprCheckQuadratic()
+- do not abort writing of constraints to lp/pip files (and forget to free buffer memory) when encountering unsupported nonlinear constraint
+- fixed that strings with names and descriptions of the LPI's were not null-terminated
+- fixed decision on when to enforce nonlinear constraints on relaxation solutions if integer variables are present
+- fixed reading of very long lines (>78000 characters) in FlatZinc reader
+- fixed write of strings with at least 1024 characters when compiling with MSVS 2015 (14.0) or later (still an issue with earlier MSVS, which will not be fixed)
+- keep epsilon coefficients in applyFixings() of cons_linear.c until multiples are merged to avoid loss of relevant contributions
+- fixed that some variable type changes were not accounted correctly in presolve of linear constraints
+- fix constraint sorting in setpp-orbitope upgrade in symmetry code
+- fixed that SCIPnodeGetConsProps() also counted bound changes from propagators
+- use original and-constraints of an untransformed pseudoboolean constraint when copying original problems to avert segmentation faults
+- sort and-constraints of a pseudoboolean constraint with respect to the resultant problem indices to avoid shuffled copies
+- treat pseudoboolean constraints as nonlinear constraints in OPB reader to prevent duplication mistakes
+
+Examples and applications
+-------------------------
+
+- in example Binpacking implement Farkas pricing for packings because branching can actually lead to infeasible restricted master LPs
+
+Testing
+-------
+
+- allow unknown parameters to let tests pass if only optional dependencies are missing
+
+Build system
+------------
+
+### Cmake
+
+- fixed compilation and linking with HiGHS; to use HiGHS, cmake now requires to specify the directory containing the `highs-config.cmake` file via `-DHIGHS_DIR`
+- extended identification of Ipopt library on Windows to also look for ipopt.dll.lib, as this is used since Ipopt 3.13.0 (2019)
+
 
 @section RN910 SCIP 9.1.0
 *************************
@@ -80,17 +369,19 @@ Features
 
 - added constraint handler that checks and enforces bounds on original variables which have been fixed or aggregated in the transformed problem
 - allow for implicit integer variables in xor constraints
-- implemented symmetry detection callbacks for cons_pseudoboolean
+- implemented symmetry detection callbacks for pseudoboolean constraints
 - added option to consider enforcement of nonlinear constraints (including spatial branching) before integrality has been enforced
-
-
-Performance improvements
-------------------------
-
-- changed the default symmetry computation package from sassy+bliss to sassy+nauty
 
 Fixed bugs
 ----------
+
+- make sure that, in dual proof analysis, upgraded constraints can report their number of variables
+- check knapsack constraints as linear constraints to avoid violations based on implicit integrality
+- make sure that symmetry detection callbacks report success
+- make arithmetics in cuts.c more robust to avoid invalid scg cuts due to numerical rounding sensitivity
+- allow to copy pseudoboolean constraints even if no AND constraints are present in order to avoid a warning
+- set value for variable that is introduced to reformulate nonlinear objective function when reading .nl files with initial solution
+- fixed that multi-aggregations from PaPILO were accepted without ensuring that their bounds hold
 
 Examples and applications
 -------------------------
@@ -110,10 +401,6 @@ Interface changes
 - new function SCIPgetExprActivityNonlinear() to get activity of nonlinear constraint
 - new function SCIPincludeConshdlrFixedvar() to include new constraint handler that checks bounds on fixed original variables
 
-### Command line interface
-
-### Interfaces to external software
-
 ### New parameters
 
 - limits/primal to terminate the solve as soon as the primal bound is at least as good as this value, same as limits/objectivestop (deprecated)
@@ -131,39 +418,16 @@ Interface changes
 
 Build system
 ------------
-
-### Makefile
-
 - new option SYM=dejavu to choose Dejavu for computing symmetries
-
-### Cmake
-
-- new option SYM=dejavu to choose Dejavu for computing symmetries
+- changed the default symmetry computation package from sassy+bliss to sassy+nauty
+- bliss source is no longer included in the source tree, but can be linked as external library (https://github.com/ds4dm/Bliss)
 - cmake now automatically downloads and installs the latest release version of SoPlex from GitHub if it is not found directly
-
-Testing
--------
-
-@section RN902 SCIP 9.0.2
-*************************
-
-Fixed bugs
-----------
-
-- make sure that, in dual proof analysis, upgraded constraints can report their number of variables
-- check knapsack constraints as linear constraints to avoid violations based on implicit integrality
 
 Miscellaneous
 -------------
 
-Build system
-------------
+- updated nauty to version 2.8.8
 
-### Cmake
-
-### Makefile
-
-- fixed that bliss main() was included in SCIP library
 
 @section RN901 SCIP 9.0.1
 *************************
@@ -499,13 +763,13 @@ Miscellaneous
 
 - The TPI has been changed to become mostly independent from the actual parallel interface during compile time.
   For this, the locks and conditions are now pointers to abstract structs.
-- fixed that scip/def.h, the header for C preprocessor definition (#define's), included headers for some SCIP type and function definitions
+- fixed that scip/def.h, the header for C preprocessor definition (`#define`'s), included headers for some SCIP type and function definitions
   (scip/type_retcode.h, scip/type_message.h, scip/pub_message.h)
 
 
-@page RN80 Release notes for SCIP 8.1
+@page RN8 Release notes for SCIP 8
 
-@section RN805 SCIP 8.1.0
+@section RN810 SCIP 8.1.0
 *************************
 
 Fixed bugs
@@ -577,8 +841,6 @@ Miscellaneous
 -------------
 
 - the parameter change callback is no longer called at the moment a parameter is created
-
-@page RN80 Release notes for SCIP 8.0
 
 @section RN804 SCIP 8.0.4
 *************************
@@ -1737,7 +1999,7 @@ Miscellaneous
   different emphasis settings.
 - If a lazy bound is set to a value that is tighter than the current global bound, then the global bound is now tightened accordingly.
 
-@page RN70 Release notes for SCIP 7.0
+@page RN7 Release notes for SCIP 7
 
 @section RN703 SCIP 7.0.3
 *************************
@@ -2582,7 +2844,7 @@ Miscellaneous
 - changed the name of the variable that is added by the OSiL reader to represent the quadratic or nonlinear parts of the objective function
 - SCIP_EXPORT is now defined as __attribute__((__visibility__("default"))) if GCC and no SCIP config header is used
 
-@page RN60 Release notes for SCIP 6.0
+@page RN6 Release notes for SCIP 6
 
 @section RN602 SCIP 6.0.2
 *************************
@@ -2911,7 +3173,7 @@ Miscellaneous
 - updated CppAD to version 20180000.0
 - remove LEGACY mode, compiler needs to be C++11-compliant
 
-@page RN50 Release notes for SCIP 5.0
+@page RN5 Release notes for SCIP 5
 
 @section RN501 SCIP 5.0.1
 *************************
@@ -3120,7 +3382,6 @@ Interface changes
 
 - Misc:
   - changed return type of SCIPcliqueGetId() from `int` to `unsigned int`
-  - SCIPsolveParallel() is deprecated; use SCIPsolveConcurrent() instead
   - removed SCIPvarGetCliqueComponentIdx(); the connectedness information of the clique table is now stored as a
     `SCIP_DISJOINTSET` member of the clique table and cannot be publicly accessed
   - added parameter `copytables` to SCIPcopyPlugins()
@@ -3332,7 +3593,7 @@ Fixed bugs
   - fixed releasing of variables in the genvbounds propagator in case the problem could be solved during presolving of a restart
   - fixed numerical issues in bound widening of variable bound constraint handler and vbound propagator during conflict analysis
 
-@page RN40 Release notes for SCIP 4.0
+@page RN4 Release notes for SCIP 4
 
 @section RN401 SCIP 4.0.1
 *************************
@@ -3832,7 +4093,7 @@ Fixed bugs
   - correct handling of implicit integer variables with fractional solution value in simplerounding heuristic
   - fixed bug in heur_octane with uninitialized ray direction
 
-@page RN32 Release notes for SCIP 3.2
+@page RN3_2 Release notes for SCIP 3.2
 
 @section RN321 SCIP 3.2.1
 *************************
@@ -4393,7 +4654,7 @@ Fixed bugs
   - fixed bug in cons_quadratic.c: do not generate linearization cuts for disabled constraints
   - fix missing clean phase of bilinear terms with zero coefficient in cons_quadratic.c
 
-@page RN31 Release notes for SCIP 3.1
+@page RN3_1 Release notes for SCIP 3.1
 
 @section RN311 SCIP 3.1.1
 *************************
@@ -5021,7 +5282,7 @@ Miscellaneous
 
 - new SCIP Optimization Suite homepages
 
-@page RN30 Release notes for SCIP 3.0
+@page RN3_0 Release notes for SCIP 3.0
 
 @section RN302 SCIP 3.0.2
 *************************
@@ -5770,7 +6031,7 @@ Miscellaneous
 - new SCIP T-shirts
 - renamed ZIB Optimization Suite to SCIP Optimization Suite
 
-@page RN21 Release notes for SCIP 2.1
+@page RN2_1 Release notes for SCIP 2.1
 
 @section RN212 SCIP 2.1.2
 *************************
@@ -6440,7 +6701,7 @@ Miscellaneous
 - The interface contains several additional callback functions and parameters for plugins. Some effort may be required to compile your old
   projects with SCIP 2.1. For details see section `Changes between version 2.0 and 2.1` in the doxygen documentation.
 
-@page RN20 Release notes for SCIP 2.0
+@page RN2_0 Release notes for SCIP 2.0
 
 @section RN202 SCIP 2.0.2
 *************************
@@ -7210,7 +7471,7 @@ Miscellaneous
   own projects with SCIP 2.0. See also `Changes between version 1.2 and 2.0` in the doxygen
   documentation for additional information.
 
-@page RN12 Release notes for SCIP 1.2
+@page RN1_2 Release notes for SCIP 1.2
 
 @section RN120 SCIP 1.2.0
 *************************
@@ -7550,7 +7811,7 @@ Fixed bugs
   - fixed potential interface bug: time limits of 0.0 are not anymore passed to the LP solver, which may have caused
     errors
 
-@page RN11 Release notes for SCIP 1.1
+@page RN1_1 Release notes for SCIP 1.1
 
 @section RN110 SCIP 1.1.0
 *************************
@@ -7947,7 +8208,7 @@ Fixed bugs
   - fixed obvious bug in linear constraint data sorting. Most part of the code assumed pure index sorting, but in fact, it
     was sorted by variable type as first criterion and index as second criterion.
 
-@page RN10 Release notes for SCIP 1.0
+@page RN1_0 Release notes for SCIP 1.0
 
 @section RN100 SCIP 1.0.0
 *************************
@@ -8194,7 +8455,7 @@ Fixed bugs
   - fixed bug with primal heuristics reducing the cutoff bound such that the current node is cut off
   - fixed bug in oneopt heuristic: must not be called on pseudo nodes if continuous variables are present
 
-@page RN09 Release notes for SCIP 0.9
+@page RN0_9 Release notes for SCIP 0.9
 
 @section RN090 SCIP 0.9.0
 *************************
@@ -8373,7 +8634,7 @@ Fixed bugs
   - fixed bug in cmir cut separator with weights fixed to zero, thus making the current aggregation invalid
   - fixed bug in cmir cut separator with wrong calculation of cut efficacies
 
-@page RN08 Release notes for SCIP 0.8
+@page RN0_8 Release notes for SCIP 0.8
 
 @section RN082 SCIP 0.8.2
 *************************
@@ -8964,7 +9225,7 @@ Fixed bugs
   - fixed bug in clique separator that reduced performance
   - increased performance of clique separator by allowing only a certain number of zero-weighted fill ins
 
-@page RN07 Release notes for SCIP 0.7
+@page RN0_7 Release notes for SCIP 0.7
 
 @section RN079 SCIP 0.7.9
 *************************

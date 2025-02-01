@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1122,7 +1122,7 @@ void exampleSOS1(
 
    if( detectsignedperms )
    {
-      cr_assert( nperms == 2 );
+      cr_assert( nperms == 2 || nperms == 3 );
    }
    else
    {
@@ -1398,8 +1398,8 @@ void examplePB(
    vals[1] = 1.0;
    vals[2] = -1.0;
 
-   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &cons, "c1", NULL, 0, NULL, terms, 3, nterms, vals,
-         NULL, 0.0, FALSE, NULL, -2.0, 2.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcreateConsPseudoboolean(scip, &cons, "c1", NULL, 0, NULL, terms, 3, nterms, vals, NULL, 0.0, FALSE,
+         -2.0, 2.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -1918,7 +1918,7 @@ void exampleExpr3(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 2 );
+      cr_assert( nperms == 2 || nperms == 3 );
    }
    else
    {
@@ -2430,7 +2430,7 @@ void exampleExpr6(
 
    if ( detectsignedperms )
    {
-      cr_assert( nperms == 4 );
+      cr_assert( nperms == 4 || nperms == 5 );
    }
    else
    {
@@ -2656,14 +2656,14 @@ Test(test_compute_symmetry, expr10, .description = "compute signed permutation s
    exampleExpr5(TRUE);
 }
 
-/* TEST 29 */  /* disabled because failing with snauty, #3709 */
-Test(test_compute_symmetry, expr11, .description = "compute permutation symmetries for an example containing nonlinear constraints", .disabled = true)
+/* TEST 29 */
+Test(test_compute_symmetry, expr11, .description = "compute permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr6(FALSE);
 }
 
-/* TEST 30 */  /* disabled because failing with snauty, #3709 */
-Test(test_compute_symmetry, expr12, .description = "compute signed permutation symmetries for an example containing nonlinear constraints", .disabled = true)
+/* TEST 30 */
+Test(test_compute_symmetry, expr12, .description = "compute signed permutation symmetries for an example containing nonlinear constraints")
 {
    exampleExpr6(TRUE);
 }

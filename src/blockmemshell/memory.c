@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -926,6 +926,40 @@ void checkChkmem(
 #define checkChkmem(chkmem) /**/
 #endif
 
+#ifdef CHECKCLEANBUFFER
+#define CHECKCLEANBUFFER_TESTSIZE 1048576     /**< size of test block */
+
+/** a memory block that will be initialized to all zero, to be used in memcmp() */
+static uint8_t checkcleanbuffer_testblock[CHECKCLEANBUFFER_TESTSIZE];
+
+/** whether checkcleanbuffer_testblock has been initialized to be all zero */
+static SCIP_Bool checkcleanbuffer_testblockinit = FALSE;
+
+/** check whether a memory block has all zero values */
+static
+void checkCleanmem(
+   void*                 mem,                /**< memory block to check */
+   int                   size                /**< size of memory block */
+   )
+{
+   uint8_t* startptr;
+   uint8_t* endptr;
+
+   if( !checkcleanbuffer_testblockinit )
+   {
+      BMSclearMemorySize(checkcleanbuffer_testblock, CHECKCLEANBUFFER_TESTSIZE);
+      checkcleanbuffer_testblockinit = TRUE;
+   }
+
+   for( startptr = (uint8_t*)mem, endptr = (uint8_t*)(mem) + size;
+      startptr + CHECKCLEANBUFFER_TESTSIZE < endptr;
+      startptr += CHECKCLEANBUFFER_TESTSIZE )
+   {
+      assert(memcmp(startptr, checkcleanbuffer_testblock, CHECKCLEANBUFFER_TESTSIZE) == 0);
+   }
+   assert(memcmp(startptr, checkcleanbuffer_testblock, endptr - startptr) == 0);
+}
+#endif
 
 /** links chunk to the block's chunk array, sort it by store pointer;
  *  returns TRUE if successful, FALSE otherwise
@@ -2753,14 +2787,7 @@ void* BMSallocBufferMemory_work(
 #ifdef CHECKCLEANBUFFER
    /* check that the memory is cleared */
    if( buffer->clean )
-   {
-      char* tmpptr = (char*)(buffer->data[bufnum]);
-      unsigned int inc = buffer->size[bufnum] / sizeof(*tmpptr);
-      tmpptr += inc;
-
-      while( --tmpptr >= (char*)(buffer->data[bufnum]) )
-         assert(*tmpptr == '\0');
-   }
+      checkCleanmem(buffer->data[bufnum], buffer->size[bufnum]);
 #endif
 
    ptr = buffer->data[bufnum];
@@ -3060,13 +3087,7 @@ void BMSfreeBufferMemory_work(
 #ifdef CHECKCLEANBUFFER
    /* check that the memory is cleared */
    if( buffer->clean )
-   {
-      size_t i;
-      uint8_t* tmpptr = (uint8_t*)(buffer->data[bufnum]);
-
-      for( i = 0; i < buffer->size[bufnum]; ++i )
-         assert(tmpptr[i] == 0);
-   }
+      checkCleanmem(buffer->data[bufnum], buffer->size[bufnum]);
 #endif
 
    assert( buffer->data[bufnum] == *ptr );

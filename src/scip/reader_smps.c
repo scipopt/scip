@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -46,9 +46,6 @@
 #include "scip/scip_reader.h"
 #include <string.h>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#include <strings.h> /*lint --e{766}*/ /* needed for strncasecmp() */
-#endif
 
 /*
  * The SMPS reader coordinates the reading of the cor, tim and sto files. The public reading methods from the cor, tim
@@ -298,17 +295,17 @@ SCIP_DECL_READERREAD(readerReadSmps)
       /* get extension from filename */
       SCIPsplitFilename(tmpinput, NULL, NULL, &fileextension, NULL);
 
-      if( strcasecmp(fileextension, COR_FILEEXTENSION) == 0 )
+      if( SCIPstrcasecmp(fileextension, COR_FILEEXTENSION) == 0 )
       {
          (void) SCIPsnprintf(corfilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
          hascorfile = TRUE;
       }
-      else if( strcasecmp(fileextension, TIM_FILEEXTENSION) == 0 )
+      else if( SCIPstrcasecmp(fileextension, TIM_FILEEXTENSION) == 0 )
       {
          (void) SCIPsnprintf(timfilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
          hastimfile = TRUE;
       }
-      else if( strcasecmp(fileextension, STO_FILEEXTENSION) == 0 )
+      else if( SCIPstrcasecmp(fileextension, STO_FILEEXTENSION) == 0 )
       {
          (void) SCIPsnprintf(stofilename, SCIP_MAXSTRLEN, "%s%s", parent, smpsinputField0(smpsi));
          hasstofile = TRUE;

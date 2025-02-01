@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -43,10 +43,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h> /*lint --e{766}*/
-#endif
 
 #include "blockmemshell/memory.h"
 #include "scip/cons.h"
@@ -540,6 +536,7 @@ SCIP_RETCODE SCIPcreateSolCopyOrig(
       case SCIP_STAGE_INITSOLVE:
       case SCIP_STAGE_SOLVING:
          SCIP_CALL( SCIPsolCopy(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, sourcesol) );
+         SCIPsolSetOrigin(*sol, SCIP_SOLORIGIN_ORIGINAL);
          break;
       default:
          assert(FALSE); /*lint !e506*/
@@ -2466,12 +2463,12 @@ SCIP_RETCODE readSolFile(
          break;
       lineno++;
 
-      /* there are some lines which may preceed the solution information */
-      if( strncasecmp(buffer, "solution status:", 16) == 0 || strncasecmp(buffer, "objective value:", 16) == 0 ||
-         strncasecmp(buffer, "Log started", 11) == 0 || strncasecmp(buffer, "Variable Name", 13) == 0 ||
-         strncasecmp(buffer, "All other variables", 19) == 0 || strspn(buffer, " \n\r\t\f") == strlen(buffer) ||
-         strncasecmp(buffer, "NAME", 4) == 0 || strncasecmp(buffer, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
-         strncasecmp(buffer, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
+      /* there are some lines which may precede the solution information */
+      if( SCIPstrncasecmp(buffer, "solution status:", 16) == 0 || SCIPstrncasecmp(buffer, "objective value:", 16) == 0 ||
+         SCIPstrncasecmp(buffer, "Log started", 11) == 0 || SCIPstrncasecmp(buffer, "Variable Name", 13) == 0 ||
+         SCIPstrncasecmp(buffer, "All other variables", 19) == 0 || strspn(buffer, " \n\r\t\f") == strlen(buffer) ||
+         SCIPstrncasecmp(buffer, "NAME", 4) == 0 || SCIPstrncasecmp(buffer, "ENDATA", 6) == 0 ||    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         SCIPstrncasecmp(buffer, "=obj=", 5) == 0 )    /* avoid "unknown variable" warning when reading MIPLIB SOL files */
          continue;
 
       /* parse the line */
@@ -2499,13 +2496,13 @@ SCIP_RETCODE readSolFile(
       }
 
       /* cast the value */
-      if( strncasecmp(valuestring, "inv", 3) == 0 )
+      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
          continue;
-      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
          value = SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
          value = -SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "unknown", 7) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "unknown", 7) == 0 )
       {
          value = SCIP_UNKNOWN;
          localpartial = TRUE;
@@ -2595,7 +2592,7 @@ SCIP_RETCODE readXmlSolFile(
    assert(error != NULL);
 
    /* read xml file */
-   start = xmlProcess(filename);
+   start = SCIPxmlProcess(filename);
 
    if( start == NULL )
    {
@@ -2608,11 +2605,11 @@ SCIP_RETCODE readXmlSolFile(
 
    /* find variable sections */
    tag = "variables";
-   varsnode = xmlFindNodeMaxdepth(start, tag, 0, 3);
+   varsnode = SCIPxmlFindNodeMaxdepth(start, tag, 0, 3);
    if( varsnode == NULL )
    {
       /* free xml data */
-      xmlFreeNode(start);
+      SCIPxmlFreeNode(start);
 
       SCIPerrorMessage("Variable section not found.\n");
       return SCIP_READERROR;
@@ -2620,7 +2617,7 @@ SCIP_RETCODE readXmlSolFile(
 
    /* loop through all variables */
    unknownvariablemessage = FALSE;
-   for( varnode = xmlFirstChild(varsnode); varnode != NULL; varnode = xmlNextSibl(varnode) )
+   for( varnode = SCIPxmlFirstChild(varsnode); varnode != NULL; varnode = SCIPxmlNextSibl(varnode) )
    {
       SCIP_VAR* var;
       const char* varname;
@@ -2629,7 +2626,7 @@ SCIP_RETCODE readXmlSolFile(
       int nread;
 
       /* find variable name */
-      varname = xmlGetAttrval(varnode, "name");
+      varname = SCIPxmlGetAttrval(varnode, "name");
       if( varname == NULL )
       {
          SCIPerrorMessage("Attribute \"name\" of variable not found.\n");
@@ -2652,7 +2649,7 @@ SCIP_RETCODE readXmlSolFile(
       }
 
       /* find value of variable */
-      valuestring = xmlGetAttrval(varnode, "value");
+      valuestring = SCIPxmlGetAttrval(varnode, "value");
       if( valuestring == NULL )
       {
          SCIPerrorMessage("Attribute \"value\" of variable not found.\n");
@@ -2661,13 +2658,13 @@ SCIP_RETCODE readXmlSolFile(
       }
 
       /* cast the value */
-      if( strncasecmp(valuestring, "inv", 3) == 0 )
+      if( SCIPstrncasecmp(valuestring, "inv", 3) == 0 )
          continue;
-      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "+inf", 4) == 0 || SCIPstrncasecmp(valuestring, "inf", 3) == 0 )
          value = SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "-inf", 4) == 0 )
          value = -SCIPinfinity(scip);
-      else if( strncasecmp(valuestring, "unknown", 7) == 0 )
+      else if( SCIPstrncasecmp(valuestring, "unknown", 7) == 0 )
       {
          value = SCIP_UNKNOWN;
          localpartial = TRUE;
@@ -2715,7 +2712,7 @@ SCIP_RETCODE readXmlSolFile(
    }
 
    /* free xml data */
-   xmlFreeNode(start);
+   SCIPxmlFreeNode(start);
 
    if( localpartial && !SCIPsolIsPartial(sol)  )
    {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -904,7 +904,6 @@ SCIP_RETCODE execRelpscost(
 
    /* remember which variables strong branching is performed on, and the
     * recorded lp bound changes that are observed */
-   SCIP_Bool* sbvars = NULL;
    SCIP_Real* sbdown = NULL;
    SCIP_Real* sbup = NULL;
    SCIP_Bool* sbdownvalid = NULL;
@@ -946,14 +945,14 @@ SCIP_RETCODE execRelpscost(
    SCIP_CALL( SCIPallocBufferArray(scip, &sbup, nbranchcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sbdownvalid, nbranchcands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sbupvalid, nbranchcands) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &sbvars, nbranchcands) );
 
    if( nbranchcands == 1 )
    {
       /* only one candidate: nothing has to be done */
       bestcand = 0;
       SCIPdebug(ninitcands = 0);
-      sbvars[0] = FALSE;
+      sbdownvalid[0] = FALSE;
+      sbupvalid[0] = FALSE;
    }
    else
    {
@@ -1234,8 +1233,8 @@ SCIP_RETCODE execRelpscost(
          for( c = 0; c < nbranchcands; ++c )
          {
             if( needsStrongBranching(scip, branchrule, branchcands[c], branchcandsfrac[c],
-                  bestpscand > 0 ? branchcands[bestpscand] : NULL,
-                  bestpscand > 0 ? branchcandsfrac[bestpscand] : 0.0,
+                  bestpscand >= 0 ? branchcands[bestpscand] : NULL,
+                  bestpscand >= 0 ? branchcandsfrac[bestpscand] : 0.0,
                   reliable, relerrorthreshold, clevel, useancpscost) )
             {
                useancpscost = FALSE;
@@ -1270,7 +1269,8 @@ SCIP_RETCODE execRelpscost(
          /* Record the variables current pseudocosts. These may be overwritten if
           * strong branching is performed.
           */
-         sbvars[c] = FALSE;
+         sbdownvalid[c] = FALSE;
+         sbupvalid[c] = FALSE;
          fracpart = SCIPfeasFrac(scip, SCIPvarGetLPSol(branchcands[c]));
          downgain = SCIPgetVarPseudocostVal(scip, branchcands[c], 0.0 - fracpart);
          upgain = SCIPgetVarPseudocostVal(scip, branchcands[c], 1.0 - fracpart);
@@ -1336,8 +1336,8 @@ SCIP_RETCODE execRelpscost(
             size = MIN(downsize, upsize);
 
             usesb = needsStrongBranching(scip, branchrule, branchcands[c], branchcandsfrac[c],
-                  bestpscand > 0 ? branchcands[bestpscand] : NULL,
-                  bestpscand > 0 ? branchcandsfrac[bestpscand] : 0.0,
+                  bestpscand >= 0 ? branchcands[bestpscand] : NULL,
+                  bestpscand >= 0 ? branchcandsfrac[bestpscand] : 0.0,
                   reliable, relerrorthreshold, clevel, FALSE);
 
             /* count the number of variables that are completely uninitialized */
@@ -1695,7 +1695,7 @@ SCIP_RETCODE execRelpscost(
             assert((downinf && upinf) || SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
 
             /* save probing-like bounds detected during strong branching */
-            if( probingbounds )
+            if( probingbounds && ( !downinf || !upinf ) )
             {
                int v;
 
@@ -1769,7 +1769,6 @@ SCIP_RETCODE execRelpscost(
             sbup[c] = up;
             sbdownvalid[c] = downvalid;
             sbupvalid[c] = upvalid;
-            sbvars[c] = TRUE;
 
             /* check for a better score */
             conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
@@ -1895,7 +1894,8 @@ SCIP_RETCODE execRelpscost(
          if( allcolsinlp && !exactsolve )
          {
             assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
-            SCIP_CALL( SCIPupdateNodeLowerbound(scip, SCIPgetCurrentNode(scip), provedbound) );
+            SCIP_CALL( SCIPupdateLocalLowerbound(scip, provedbound) );
+            assert(SCIPisGE(scip, SCIPgetLocalLowerbound(scip), provedbound));
          }
       }
 
@@ -1999,7 +1999,7 @@ SCIP_RETCODE execRelpscost(
       assert(upchild != NULL);
 
       /* update the lower bounds in the children */
-      if( sbvars[bestcand] && allcolsinlp && !exactsolve )
+      if( allcolsinlp && !exactsolve )
       {
          if( sbdownvalid[bestcand] )
          {
@@ -2024,7 +2024,6 @@ SCIP_RETCODE execRelpscost(
    }
 
    /* free buffer for the strong branching lp gains */
-   SCIPfreeBufferArray(scip, &sbvars);
    SCIPfreeBufferArray(scip, &sbupvalid);
    SCIPfreeBufferArray(scip, &sbdownvalid);
    SCIPfreeBufferArray(scip, &sbup);

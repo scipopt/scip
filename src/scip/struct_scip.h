@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -40,6 +40,7 @@
 #include "scip/type_clock.h"
 #include "scip/type_dcmp.h"
 #include "scip/type_event.h"
+#include "scip/type_iisfinder.h"
 #include "scip/type_interrupt.h"
 #include "scip/type_mem.h"
 #include "scip/type_message.h"
@@ -109,6 +110,9 @@ struct Scip
    /* PARALLEL */
    SCIP_SYNCSTORE*       syncstore;          /**< the data structure for storing synchronization information */
    SCIP_CONCURRENT*      concurrent;         /**< data required for concurrent solve */
+   
+   /* IIS */
+   SCIP_IIS*             iis;                /**< the data structure for storing IIS information */
 };
 
 #ifdef __cplusplus

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -81,7 +81,7 @@ struct SCIP_ConshdlrData
  * above the feasibility tolerance by aggregation factors. Usually, the violation should still be
  * rather "small". For this test, we quantify "small" as 0.5.
  */
-#define assertSmallViolation(lb, val, ub) (assert((val) >= (lb) - 0.5 && (val) <= (ub) + 0.5));
+#define assertSmallViolation(lb, val, ub) (assert((val) >= (lb) - 0.5 && (val) <= (ub) + 0.5))
 
 /** add cut to enforce global bounds on variable aggregation
  *
@@ -413,6 +413,12 @@ SCIP_DECL_CONSENFOPS(consEnfopsFixedvar)
 
    *result = SCIP_FEASIBLE;
 
+   /* skip check for solutions that are already declared infeasible
+    * we could not do anything else than also signaling infeasibility
+    */
+   if( solinfeasible )
+      return SCIP_OKAY;
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -432,11 +438,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsFixedvar)
 
       if( (!SCIPisInfinity(scip, -lb) && SCIPisFeasLT(scip, val, lb)) || (!SCIPisInfinity(scip, ub) && SCIPisFeasGT(scip, val, ub)) )
       {
-         /* if solution is already declared infeasible, then do not force solving an LP, as it may fail (we may be in enfops because the LP failed) */
-         *result = solinfeasible ? SCIP_INFEASIBLE : SCIP_SOLVELP;
+         *result = SCIP_SOLVELP;
 
-         if( !solinfeasible )
-            assertSmallViolation(lb, val, ub);
+         assertSmallViolation(lb, val, ub);
 
          break;
       }

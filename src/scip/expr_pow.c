@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1868,9 +1868,9 @@ SCIP_DECL_EXPRPRINT(printPow)
 
          /* print closing parenthesis */
          if( exponent >= 0.0 )
-            SCIPinfoMessage(scip, file, ")^%g", exponent);
+            SCIPinfoMessage(scip, file, ")^%.15g", exponent);
          else
-            SCIPinfoMessage(scip, file, ")^(%g)", exponent);
+            SCIPinfoMessage(scip, file, ")^(%.15g)", exponent);
 
          break;
       }
@@ -2684,7 +2684,7 @@ SCIP_DECL_EXPRPRINT(printSignpower)
 
       case SCIP_EXPRITER_LEAVEEXPR :
       {
-         SCIPinfoMessage(scip, file, ",%g)", SCIPgetExponentExprPow(expr));
+         SCIPinfoMessage(scip, file, ",%.15g)", SCIPgetExponentExprPow(expr));
          break;
       }
 

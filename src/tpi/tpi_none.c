@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -33,6 +33,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "tpi/tpi.h"
+#include "scip/pub_misc.h"
 
 /* do not define struct SCIP_Lock and struct SCIP_Condition, since they are not used */
 
@@ -218,4 +219,33 @@ SCIP_RETCODE SCIPtpiExit(
    )
 {
    return SCIP_ERROR;
+}
+
+/** indicate whether a working TPI is available */
+SCIP_Bool SCIPtpiIsAvailable(void)
+{
+   return FALSE;
+}
+
+/** get name of library that the TPI interfaces to */
+void SCIPtpiGetLibraryName(
+   char*                 name,               /**< buffer to store name */
+   int                   namesize            /**< length of name buffer */
+   )
+{
+   assert(name != NULL);
+
+   (void) SCIPsnprintf(name, namesize, "none");
+}
+
+/** get description of library that the TPI interfaces to */
+void SCIPtpiGetLibraryDesc(
+   char*                 desc,               /**< buffer to store description */
+   int                   descsize            /**< length of description */
+   )
+{
+   assert(desc != NULL);
+   assert(descsize >= 1);
+
+   *desc = '\0';
 }

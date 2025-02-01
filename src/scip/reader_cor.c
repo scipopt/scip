@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -34,8 +34,11 @@
 #include "scip/pub_reader.h"
 #include "scip/reader_cor.h"
 #include "scip/reader_mps.h"
+#include "scip/reader_tim.h"
+#include "scip/reader_sto.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_reader.h"
+#include "scip/scip_prob.h"
 #include <string.h>
 
 #define READER_NAME             "correader"
@@ -53,6 +56,7 @@ struct SCIP_ReaderData
    int                   consnamessize;
    int                   nvarnames;
    int                   nconsnames;
+   SCIP_Bool             created;
    SCIP_Bool             read;
 };
 
@@ -66,14 +70,18 @@ SCIP_RETCODE createReaderdata(
    assert(scip != NULL);
    assert(readerdata != NULL);
 
-   readerdata->read = FALSE;
-   readerdata->nvarnames = 0;
-   readerdata->nconsnames = 0;
-   readerdata->varnamessize = SCIP_DEFAULT_ARRAYSIZE;
-   readerdata->consnamessize = SCIP_DEFAULT_ARRAYSIZE;
+   if( !readerdata->created )
+   {
+      readerdata->created = TRUE;
+      readerdata->read = FALSE;
+      readerdata->nvarnames = 0;
+      readerdata->nconsnames = 0;
+      readerdata->varnamessize = SCIP_DEFAULT_ARRAYSIZE;
+      readerdata->consnamessize = SCIP_DEFAULT_ARRAYSIZE;
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->varnames, readerdata->varnamessize) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->consnames, readerdata->consnamessize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->varnames, readerdata->varnamessize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->consnames, readerdata->consnamessize) );
+   }
 
    return SCIP_OKAY;
 }
@@ -90,14 +98,19 @@ SCIP_RETCODE freeReaderdata(
    assert(scip != NULL);
    assert(readerdata != NULL);
 
-   for( i = readerdata->nvarnames - 1; i >= 0; i-- )
-      SCIPfreeBlockMemoryArray(scip, &readerdata->varnames[i], strlen(readerdata->varnames[i]) + 1);
+   if( readerdata->created )
+   {
+      for( i = readerdata->nvarnames - 1; i >= 0; i-- )
+         SCIPfreeBlockMemoryArray(scip, &readerdata->varnames[i], strlen(readerdata->varnames[i]) + 1);
 
-   for( i = readerdata->nconsnames - 1; i >= 0; i-- )
-      SCIPfreeBlockMemoryArray(scip, &readerdata->consnames[i], strlen(readerdata->consnames[i]) + 1);
+      for( i = readerdata->nconsnames - 1; i >= 0; i-- )
+         SCIPfreeBlockMemoryArray(scip, &readerdata->consnames[i], strlen(readerdata->consnames[i]) + 1);
 
-   SCIPfreeBlockMemoryArray(scip, &readerdata->consnames, readerdata->consnamessize);
-   SCIPfreeBlockMemoryArray(scip, &readerdata->varnames, readerdata->varnamessize);
+      SCIPfreeBlockMemoryArray(scip, &readerdata->consnames, readerdata->consnamessize);
+      SCIPfreeBlockMemoryArray(scip, &readerdata->varnames, readerdata->varnamessize);
+   }
+
+   readerdata->created = FALSE;
 
    return SCIP_OKAY;
 }
@@ -166,7 +179,7 @@ SCIP_RETCODE SCIPincludeReaderCor(
 
    /* create reader data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
-   SCIP_CALL( createReaderdata(scip, readerdata) );
+   readerdata->created = FALSE;
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
@@ -199,11 +212,44 @@ SCIP_RETCODE SCIPreadCor(
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
 
+   /* when the COR file is read, it is necessary to free the reader data from the COR, TIM and STO readers. This is
+    * because the COR file is the base file for the TIM and STO files. For most readers, there is no problem data stored
+    * in the reader data, and hence the data doesn't need to be freed.
+    */
+   SCIP_CALL( SCIPfreeProb(scip) );
+   SCIP_CALL( SCIPfreeReaderdataCor(scip) );
+   SCIP_CALL( SCIPfreeReaderdataTim(scip) );
+   SCIP_CALL( SCIPfreeReaderdataSto(scip) );
+
+   /* creating the reader data at the start of the instance read */
+   SCIP_CALL( createReaderdata(scip, readerdata) );
+
    SCIP_CALL( SCIPreadMps(scip, reader, filename, result, &readerdata->varnames, &readerdata->consnames,
          &readerdata->varnamessize, &readerdata->consnamessize, &readerdata->nvarnames, &readerdata->nconsnames) );
 
    if( (*result) == SCIP_SUCCESS )
       readerdata->read = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** frees the COR reader data */
+SCIP_RETCODE SCIPfreeReaderdataCor(
+   SCIP*                 scip                /**< the SCIP data structure */
+   )
+{
+   SCIP_READER* reader;
+   SCIP_READERDATA* readerdata;
+
+   assert(scip != NULL);
+
+   reader = SCIPfindReader(scip, READER_NAME);
+   assert(reader != NULL);
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+
+   SCIP_CALL( freeReaderdata(scip, readerdata) );
 
    return SCIP_OKAY;
 }

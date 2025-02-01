@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -288,6 +288,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
@@ -315,7 +316,7 @@ SCIP_RETCODE SCIPcopyPlugins(
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set,
          copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copycutselectors, copypropagators,
-         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copytables, copyexprhdlrs, copynlpis, valid) );
+         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copyiisfinders, copydisplays, copydialogs, copytables, copyexprhdlrs, copynlpis, valid) );
 
    return SCIP_OKAY;
 }
@@ -1050,7 +1051,7 @@ SCIP_RETCODE copyVars(
       SCIP_Bool infeasible;
       SCIP_Bool fixed;
 
-      if( SCIPvarIsRelaxationOnly(sourcevars[i]) )
+      if( SCIPvarIsRelaxationOnly(fixedvars[i]) )
          continue;
 
       /* retrieve target variable as image of the source variable */
@@ -1362,14 +1363,14 @@ void SCIPmergeNLPIStatistics(
  *
  * Given a subscip solution, fills an array with solution values, matching the variables given by SCIPgetVars().
  * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
- * are represented as NULL entry in the \p subvars array.
+ * are represented as NULL entry in the subvars array.
  */
 static
 SCIP_RETCODE translateSubSol(
    SCIP*                 scip,               /**< SCIP data structure of the original problem */
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
    SCIP_SOL*             subsol,             /**< solution of the subproblem */
-   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main scip */
    SCIP_Real*            solvals             /**< array where to set values taken from subsol, must have length at least SCIPgetNVars(scip) */
    )
 {
@@ -1401,16 +1402,16 @@ SCIP_RETCODE translateSubSol(
 /** translates a solution from a subscip to the main scip
  *
  * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
- * are represented as NULL entry in the \p subvars array.
+ * are represented as NULL entry in the subvars array.
  *
- * @note This method allocates a new solution of the main \p scip that needs to be freed by the user.
+ * @note This method allocates a new solution of the main scip that needs to be freed by the user.
  */
 SCIP_RETCODE SCIPtranslateSubSol(
    SCIP*                 scip,               /**< SCIP data structure of the original problem */
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
    SCIP_SOL*             subsol,             /**< solution of the subproblem */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
-   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main scip */
    SCIP_SOL**            newsol              /**< buffer to store pointer to created solution in main SCIP */
    )
 {
@@ -1443,13 +1444,13 @@ SCIP_RETCODE SCIPtranslateSubSol(
 /** checks the solutions from the subscip and adds the first one that is found feasible to the master SCIP
  *
  * Variables that are relaxation-only in the master SCIP are set to 0 or the bound closest to 0. Such variables
- * are represented as NULL entry in the \p subvars array.
+ * are represented as NULL entry in the subvars array.
  */
 SCIP_RETCODE SCIPtranslateSubSols(
    SCIP*                 scip,               /**< the SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
-   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main \p scip */
+   SCIP_VAR**            subvars,            /**< the variables from the subproblem in the same order as the main scip */
    SCIP_Bool*            success,            /**< pointer to store, whether new solution was found */
    int*                  solindex            /**< pointer to store solution index of stored solution, or NULL if not of interest */
    )
@@ -2246,8 +2247,8 @@ SCIP_RETCODE SCIPcopyConflicts(
    assert(targetscip != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( SCIPcheckStage(sourcescip, "SCIPcopyConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPcheckStage(targetscip, "SCIPcopyConss", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(sourcescip, "SCIPcopyConflicts", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(targetscip, "SCIPcopyConflicts", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check if we locally need to create a variable or constraint hash map */
    uselocalvarmap = (varmap == NULL);
@@ -2702,7 +2703,7 @@ SCIP_RETCODE doCopy(
 
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
 
    /* in case there are active pricers and pricing is disabled, targetscip will not be a valid copy of sourcescip */
    if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )
@@ -2830,8 +2831,8 @@ SCIP_RETCODE doCopy(
 }
 
 /** copies source SCIP to target SCIP; the copying process is done in the following order:
- *  1) copy the plugins
- *  2) copy the settings
+ *  1) copy those plugins that have copy callbacks
+ *  2) copy the settings for the present parameters
  *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
  *  4) copy all active variables except those that are marked as relaxation-only
  *  5) copy all constraints
@@ -3338,7 +3339,7 @@ SCIP_RETCODE SCIPcopyLimits(
  */
 SCIP_RETCODE SCIPsetCommonSubscipParams(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
-   SCIP*                 subscip,            /**< target SCIP data structure, often a copy of \p sourcescip */
+   SCIP*                 subscip,            /**< target SCIP data structure, often a copy of sourcescip */
    SCIP_Longint          nsubnodes,          /**< nodelimit for subscip, or -1 for no limit */
    SCIP_Longint          nstallnodes,        /**< stall node limit for subscip, or -1 for no limit */
    int                   bestsollimit        /**< the limit on the number of best solutions found, or -1 for no limit */

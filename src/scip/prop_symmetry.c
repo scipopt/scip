@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -103,36 +103,36 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <scip/cons_linear.h>
-#include <scip/cons_knapsack.h>
-#include <scip/cons_varbound.h>
-#include <scip/cons_setppc.h>
-#include <scip/cons_and.h>
-#include <scip/cons_logicor.h>
-#include <scip/cons_or.h>
-#include <scip/cons_orbitope.h>
-#include <scip/cons_symresack.h>
-#include <scip/cons_xor.h>
-#include <scip/cons_linking.h>
-#include <scip/cons_bounddisjunction.h>
-#include <scip/cons_indicator.h>
-#include <scip/cons_nonlinear.h>
-#include <scip/cons_sos1.h>
-#include <scip/cons_sos2.h>
-#include <scip/expr_pow.h>
-#include <scip/expr_product.h>
-#include <scip/pub_expr.h>
-#include <scip/misc.h>
-#include <scip/scip_datastructures.h>
+#include "scip/cons_linear.h"
+#include "scip/cons_knapsack.h"
+#include "scip/cons_varbound.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_and.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_or.h"
+#include "scip/cons_orbitope.h"
+#include "scip/cons_symresack.h"
+#include "scip/cons_xor.h"
+#include "scip/cons_linking.h"
+#include "scip/cons_bounddisjunction.h"
+#include "scip/cons_indicator.h"
+#include "scip/cons_nonlinear.h"
+#include "scip/cons_sos1.h"
+#include "scip/cons_sos2.h"
+#include "scip/expr_pow.h"
+#include "scip/expr_product.h"
+#include "scip/pub_expr.h"
+#include "scip/misc.h"
+#include "scip/scip_datastructures.h"
 
-#include <scip/prop_symmetry.h>
-#include <symmetry/compute_symmetry.h>
-#include <scip/event_shadowtree.h>
-#include <scip/symmetry.h>
-#include <scip/symmetry_graph.h>
-#include <scip/symmetry_orbitopal.h>
-#include <scip/symmetry_orbital.h>
-#include <scip/symmetry_lexred.h>
+#include "scip/prop_symmetry.h"
+#include "symmetry/compute_symmetry.h"
+#include "scip/event_shadowtree.h"
+#include "scip/symmetry.h"
+#include "scip/symmetry_graph.h"
+#include "scip/symmetry_orbitopal.h"
+#include "scip/symmetry_orbital.h"
+#include "scip/symmetry_lexred.h"
 
 #include <math.h>
 #include <string.h>
@@ -161,6 +161,7 @@
 #define DEFAULT_SYMFIXNONBINARYVARS FALSE    /**< Disabled parameter */
 #define DEFAULT_ENFORCECOMPUTESYMMETRY FALSE /**< always compute symmetries, even if they cannot be handled */
 #define DEFAULT_SYMTYPE (int) SYM_SYMTYPE_PERM /**< type of symmetries to be computed */
+#define DEFAULT_DISPSYMINFO         FALSE    /**< Shall symmetry information be printed to the terminal? */
 
 /* default parameters for linear symmetry constraints */
 #define DEFAULT_CONSSADDLP           TRUE    /**< Should the symmetry breaking constraints be added to the LP? */
@@ -201,6 +202,11 @@
 /* other defines */
 #define MAXGENNUMERATOR          64000000    /**< determine maximal number of generators by dividing this number by the number of variables */
 #define COMPRESSNVARSLB             25000    /**< lower bound on the number of variables above which compression could be performed */
+#define DEFAULT_NAUTYMAXNCELLS     100000    /**< terminate symmetry detection using Nauty when number of cells in color refinment is at least this number
+                                              *   (avoids segfaults due to Nauty for large graphs) */
+#define DEFAULT_NAUTYMAXNNODES   10000000    /**< terminate symmetry detection using Nauty when its search tree has at least this number of nodes */
+/*@todo investigate why the Nauty works well for some large instances (miplib2010/mspp16.mps) but not for PB instances (e.g., normalized-celar6-sub0_wcsp.wbo) */
+
 
 /* macros for getting activeness of symmetry handling methods */
 #define ISSYMRETOPESACTIVE(x)      (((unsigned) x & SYM_HANDLETYPE_SYMBREAK) != 0)
@@ -269,6 +275,7 @@ struct SCIP_PropData
    SCIP_Bool             doubleequations;    /**< Double equations to positive/negative version? */
    SCIP_Bool             enforcecomputesymmetry; /**< always compute symmetries, even if they cannot be handled */
    int                   symtiming;          /**< timing of computing and handling symmetries (0 = before presolving, 1 = during presolving, 2 = after presolving) */
+   SCIP_Bool             dispsyminfo;        /**< Shall symmetry information be printed to the terminal? */
 
    /* for symmetry constraints */
    SCIP_Bool             triedaddsymmethods; /**< whether we already tried to add symmetry handling methods */
@@ -543,15 +550,17 @@ SCIP_RETCODE displaySymmetriesWithComponents(
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, permlen) );
 
+   if ( symtype == SYM_SYMTYPE_PERM )
+      SCIPinfoMessage(scip, NULL, "   Symmetries of different components are displayed as permutations.\n\n");
+   else
+      SCIPinfoMessage(scip, NULL, "   Symmetries of different components are displayed as permutations,\n"
+      "   or signed permutations (allowing translations) if the component has signed permutations.\n\n");
    for (c = 0; c < propdata->ncomponents; ++c)
    {
       int cnt;
 
-      SCIPinfoMessage(scip, NULL, "Display symmetries of component %d.\n", c);
-      if ( propdata->componenthassignedperm[c] )
-         SCIPinfoMessage(scip, NULL, "   Symmetries are displayed as signed permutations (allowing translations).\n");
-      else
-         SCIPinfoMessage(scip, NULL, "   Symmetries are displayed as permutations.\n");
+      SCIPinfoMessage(scip, NULL, "Display symmetries of component %d%s.\n", c,
+         propdata->componenthassignedperm[c] ? " as signed permutations" : "");
 
       comppermlen = propdata->componenthassignedperm[c] ? 2 * npermvars : npermvars;
 
@@ -575,41 +584,97 @@ SCIP_RETCODE displaySymmetriesWithComponents(
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the display symmetry information command */
+/*
+ * Methods for printing symmetry information
+ */
+
+/** prints header of symmetry information to terminal */
 static
-SCIP_DECL_DIALOGEXEC(dialogExecDisplaySymmetry)
-{  /*lint --e{715}*/
-   SCIP_PROPDATA* propdata;
+SCIP_RETCODE printSyminfoHeader(
+   SCIP*                 scip                /**< SCIP pointer */
+   )
+{
+   assert( scip != NULL );
 
-   /* add your dialog to history of dialogs that have been executed */
-   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
-
-   propdata = (SCIP_PROPDATA*)SCIPdialogGetData(dialog);
-   assert( propdata != NULL );
-
-   if ( propdata->nperms == -1 )
-   {
-      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. Symmetries have not been computed yet.\n");
-   }
-   else if ( propdata->nperms == 0 )
-   {
-      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. No symmetries detected.\n");
-   }
-   else if ( propdata->ncomponents < 0 )
-   {
-      SCIP_CALL( displaySymmetriesWithoutComponents(scip, propdata) );
-   }
-   else
-   {
-      SCIP_CALL( displaySymmetriesWithComponents(scip, propdata) );
-   }
-
-   /* next dialog will be root dialog again */
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+   SCIPinfoMessage(scip, NULL, "### SYMMETRY INFORMATION ###\n");
 
    return SCIP_OKAY;
 }
 
+/** prints footer of symmetry information to terminal */
+static
+SCIP_RETCODE printSyminfoFooter(
+   SCIP*                 scip                /**< SCIP pointer */
+   )
+{
+   assert( scip != NULL );
+
+   SCIPinfoMessage(scip, NULL, "### END SYMMETRY INFORMATION ###\n");
+
+   return SCIP_OKAY;
+}
+
+/** prints general information about symmetry component to terminal */
+static
+SCIP_RETCODE printSyminfoComponentHeader(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_PROPDATA*        propdata,           /**< data of symmetry propagator */
+   int                   cidx                /**< index of component */
+   )
+{
+   assert( scip != NULL );
+   assert( propdata != NULL );
+   assert( 0 <= cidx && cidx < propdata->ncomponents );
+
+   SCIPinfoMessage(scip, NULL, "%sSymmetry information component %d\n", cidx == 0 ? "" : "\n", cidx);
+   SCIPinfoMessage(scip, NULL, "  number of generators:\t\t%d\n",
+      propdata->componentbegins[cidx + 1] - propdata->componentbegins[cidx]);
+
+   return SCIP_OKAY;
+}
+
+/** prints general information about symmetry component to terminal */
+static
+SCIP_RETCODE printSyminfoGroupAction(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_Bool             isorbitope,         /**< whether group action is orbitopal */
+   SCIP_Bool             isdoublelex,        /**< whether group action id doublelex */
+   int                   nrows,              /**< number of rows for matrix actions */
+   int                   ncols,              /**< number of columns for matrix actions */
+   int                   nrowmatrices,       /**< number of row matrices (for doublelex) */
+   int                   ncolmatrices,       /**< number of column matrices (for doublelex) */
+   int*                  rowsbegin,          /**< array to indicate length of row matrices (for doublelex) */
+   int*                  colsbegin           /**< array to indicate length of column matrices (for doublelex) */
+   )
+{
+   assert( scip != NULL );
+   assert( isorbitope || rowsbegin != NULL );
+   assert( isorbitope || colsbegin != NULL );
+
+   SCIPinfoMessage(scip, NULL, "  Group action:\t\t\t");
+   if ( isorbitope )
+      SCIPinfoMessage(scip, NULL, "column action on %d x %d matrix\n", nrows, ncols);
+   else if ( isdoublelex )
+   {
+      int i;
+
+      SCIPinfoMessage(scip, NULL, "row and column action on %d x %d matrix\n", nrows, ncols);
+      SCIPinfoMessage(scip, NULL, "  number of row blocks:\t\t%d (blocks of length %d", nrowmatrices,
+         rowsbegin[1] - rowsbegin[0]);
+      for (i = 1; i < nrowmatrices; ++i)
+         SCIPinfoMessage(scip, NULL, ", %d", rowsbegin[i + 1] - rowsbegin[i]);
+      SCIPinfoMessage(scip, NULL, ")\n");
+      SCIPinfoMessage(scip, NULL, "  number of column blocks:\t%d (blocks of length %d", ncolmatrices,
+         colsbegin[1] - colsbegin[0]);
+      for (i = 1; i < ncolmatrices; ++i)
+         SCIPinfoMessage(scip, NULL, ", %d", colsbegin[i + 1] - colsbegin[i]);
+      SCIPinfoMessage(scip, NULL, ")\n");
+   }
+   else
+      SCIPinfoMessage(scip, NULL, "unknown\n");
+
+   return SCIP_OKAY;
+}
 
 /*
  * Table callback methods
@@ -1568,6 +1633,7 @@ SCIP_RETCODE checkSymmetriesAreSymmetries(
    {
       SCIP_CALL( SCIPcreateSymgraph(scip, symtype, &graphs[c], symvars, nsymvars, 10, 10, 1, 100) );
 
+      success = FALSE;
       switch ( symtype )
       {
       case SYM_SYMTYPE_PERM:
@@ -3077,6 +3143,13 @@ SCIP_RETCODE addOrbitopeSubgroup(
    SCIP_CALL( SCIPaddCons(scip, cons) );
    *success = TRUE;
 
+   if( propdata->dispsyminfo )
+   {
+      SCIPinfoMessage(scip, NULL, "  detected subgroup acting as symmetric group on columns of %d x %d matrix\n",
+         nrows, ngencols);
+      SCIPinfoMessage(scip, NULL, "  use full orbitope constraint\n");
+   }
+
    /* do not release constraint here - will be done later */
    SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
       &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
@@ -3176,6 +3249,10 @@ SCIP_RETCODE addStrongSBCsSubgroup(
       propdata->genlinconss[propdata->ngenlinconss] = cons;
       ++propdata->ngenlinconss;
    }
+
+   if( propdata->dispsyminfo )
+      SCIPinfoMessage(scip, NULL, "  use %d SST cuts to sort first row\n",
+         graphcompbegins[graphcompidx+1] - graphcompbegins[graphcompidx] - 1);
 
    return SCIP_OKAY;
 }
@@ -3358,6 +3435,10 @@ SCIP_RETCODE addWeakSBCsSubgroup(
          propdata->genlinconss[propdata->ngenlinconss] = cons;
          ++propdata->ngenlinconss;
       }
+      if ( orbitsize[activeorb] > 0 && propdata->dispsyminfo )
+         SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s\n",
+            orbitsize[activeorb] - 1, SCIPvarGetName(vars[0]));
+
 
       /* possibly store lexicographic order defined by weak SBCs */
       if ( storelexorder )
@@ -3788,6 +3869,13 @@ SCIP_RETCODE detectAndHandleSubgroups(
    {
       int k;
 
+      if( propdata->dispsyminfo )
+      {
+         SCIPinfoMessage(scip, NULL, "  detected subgroup acting as symmetric group on columns of 1 x %d matrix\n",
+            npermsincomp + 1);
+         SCIPinfoMessage(scip, NULL, "  use %d orbisack constraints to handle column permutations\n", npermsincomp);
+      }
+
       for (k = 0; k < npermsincomp; ++k)
       {
          SCIP_CONS* cons;
@@ -4028,6 +4116,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
     */
    if ( nvarslexorder > 0 && propdata->addsymresacks && ! handlednonbinarysymmetry )
    {
+      int naddedconss = 0;
       int k;
 
       SCIP_CALL( adaptSymmetryDataSST(scip, propdata->perms, modifiedperms, propdata->nperms,
@@ -4067,6 +4156,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
                &propdata->genorbconsssize, propdata->ngenorbconss + 1) );
          propdata->genorbconss[propdata->ngenorbconss++] = cons;
          ++propdata->nsymresacks;
+         ++naddedconss;
 
          if ( ! propdata->componentblocked[cidx] )
          {
@@ -4076,6 +4166,9 @@ SCIP_RETCODE detectAndHandleSubgroups(
 
          SCIPdebugMsg(scip, "  add symresack for permutation %d of component %d adapted to suborbitope lexorder\n", k, cidx);
       }
+
+      if ( propdata->dispsyminfo )
+         SCIPinfoMessage(scip, NULL, "  use %d symresack constraints\n", naddedconss);
    }
 
  FREEMEMORY:
@@ -4541,6 +4634,9 @@ SCIP_RETCODE addSymresackConss(
       ++nsymresackcons;
    }
 
+   if ( nsymresackcons > 0 && propdata->dispsyminfo )
+      SCIPinfoMessage(scip, NULL, "  use %d symresack constraints\n", nsymresackcons);
+
    if ( propdata->nleaders > 0 && ISSSTBINACTIVE(propdata->sstleadervartype) )
    {
       assert( modifiedperms != NULL );
@@ -4613,6 +4709,29 @@ SCIP_RETCODE addSSTConssOrbitAndUpdateSST(
 
    if ( addcuts )
       ncuts = orbitsize - norbitvarinconflict - 1;
+
+   if ( propdata->dispsyminfo )
+   {
+      SCIP_VAR* leadervar;
+
+      leadervar = permvars[orbits[orbitbegins[orbitidx] + orbitleaderidx]];
+
+      SCIPinfoMessage(scip, NULL, "  use %d SST cuts for leader %s of type ", orbitsize - 1, SCIPvarGetName(leadervar));
+      switch ( SCIPvarGetType(leadervar) )
+      {
+      case SCIP_VARTYPE_BINARY:
+         SCIPinfoMessage(scip, NULL, "BINARY\n");
+         break;
+      case SCIP_VARTYPE_INTEGER:
+         SCIPinfoMessage(scip, NULL, "INTEGER\n");
+         break;
+      case SCIP_VARTYPE_IMPLINT:
+         SCIPinfoMessage(scip, NULL, "IMPLICIT INTEGER\n");
+         break;
+      default:
+         SCIPinfoMessage(scip, NULL, "CONTINUOUS\n");
+      } /*lint !e788*/
+   }
 
    /* (re-)allocate memory for Schreier Sims constraints and leaders */
    if ( ncuts > 0 )
@@ -5310,6 +5429,11 @@ SCIP_RETCODE addOrbitopesDynamic(
       SCIP_VAR* consvars[2];
       SCIP_Real conscoefs[2] = { -1.0, 1.0 };
 
+      if ( propdata->dispsyminfo )
+      {
+         SCIPinfoMessage(scip, NULL, "  use %d SST cuts to sort first row\n", ncols - 1);
+      }
+
       /* for all adjacent column pairs, add linear constraint */
       SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
             &propdata->genlinconsssize, propdata->ngenlinconss + ncols - 1) );
@@ -5335,6 +5459,11 @@ SCIP_RETCODE addOrbitopesDynamic(
    if ( ncols == 2 && propdata->lexreddata != NULL )
    {
       int* orbisackperm;
+
+      if ( propdata->dispsyminfo )
+      {
+         SCIPinfoMessage(scip, NULL, "  use dynamic lexicographic reduction on columns\n");
+      }
 
       /* If the component is an orbitope with 2 columns, then there is 1 generator of order 2. */
       orbisackperm = propdata->perms[propdata->components[propdata->componentbegins[componentid]]];
@@ -5383,6 +5512,11 @@ SCIP_RETCODE addOrbitopesDynamic(
       }
       assert( r == npprows );
 
+      if ( propdata->dispsyminfo )
+      {
+         SCIPinfoMessage(scip, NULL, "  use packing orbitope on %d x %d matrix\n", npprows, ncols);
+      }
+
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_pp", partialname);
       SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, name, ppvarsarrayonlypprows, SCIP_ORBITOPETYPE_PACKING,
             npprows, ncols, FALSE, FALSE, FALSE, FALSE, propdata->conssaddlp,
@@ -5408,6 +5542,11 @@ SCIP_RETCODE addOrbitopesDynamic(
       SCIP_VAR** orbitopevarmatrix;
       int nelem;
       int pos = 0;
+
+      if ( propdata->dispsyminfo )
+      {
+         SCIPinfoMessage(scip, NULL, "  use dynamic orbitopal reduction\n");
+      }
 
       /* variable array */
       nelem = nrows * ncols;
@@ -5450,7 +5589,8 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
    int**                 componentperms,     /**< permutations in the component */
    int                   componentsize,      /**< number of permutations in the component */
    SCIP_Bool             hassignedperm,      /**< whether the component has a signed permutation */
-   SCIP_Bool*            success             /**< whether the packing partitioning upgrade succeeded */
+   SCIP_Bool*            success,            /**< whether the packing partitioning upgrade succeeded */
+   int*                  naddedconss         /**< pointer to store number of added constraints */
    )
 {
    int c;
@@ -5484,6 +5624,7 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
 
    /* we did not upgrade yet */
    *success = FALSE;
+   *naddedconss = 0;
 
    /* currently, we cannot handle signed permutations */
    if ( hassignedperm )
@@ -5515,7 +5656,7 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
 
       setppconsssort[nsetppconss++] = cons;
    }
-   SCIPsortPtr((void**) setppconsssort, sortByPointerValue, nsetppcconss);
+   SCIPsortPtr((void**) setppconsssort, sortByPointerValue, nsetppconss);
 
    /* For each permvar, introduce an array of setppc constraints (initially NULL) for each variable,
     * and populate it with the setppc constraints that it contains. This array follows the ordering by cons ptr address.
@@ -5660,6 +5801,7 @@ SCIP_RETCODE componentPackingPartitioningOrbisackUpgrade(
           */
          propdata->genlinconss[propdata->ngenlinconss++] = cons;
          SCIP_CALL( SCIPaddCons(scip, cons) );
+         ++(*naddedconss);
       }
 
       SCIPfreeBufferArray(scip, &ppvarsmatrix);
@@ -5766,12 +5908,16 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
    if ( checklexred && ( checkpporbisack == NULL || SCIPparamGetBool(checkpporbisack) == TRUE )
       && nproperperms > 0 && propdata->nmovedbinpermvars > 0 )
    {
+      int naddedconss = 0;
+
       assert( properperms != NULL );
       SCIP_CALL( componentPackingPartitioningOrbisackUpgrade(scip, propdata,
-            properperms, nproperperms, FALSE /* we filter proper permutations */, &success) );
+            properperms, nproperperms, FALSE /* we filter proper permutations */, &success, &naddedconss) );
 
       if ( success )
       {
+         if ( propdata->dispsyminfo )
+            SCIPinfoMessage(scip, NULL, "  use %d packing/partitioning orbisacks\n", naddedconss);
          propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
          goto FINISHCOMPONENT;
       }
@@ -5783,7 +5929,12 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
       SCIP_CALL( SCIPorbitalReductionAddComponent(scip, propdata->orbitalreddata,
             propdata->permvars, propdata->npermvars, properperms, nproperperms, &success) );
       if ( success )
+      {
          propdata->componentblocked[cidx] |= SYM_HANDLETYPE_ORBITALREDUCTION;
+
+         if ( propdata->dispsyminfo )
+            SCIPinfoMessage(scip, NULL, "  use orbital reduction\n");
+      }
    }
 
    /* handle component permutations with the dynamic lexicographic reduction propagator */
@@ -5800,6 +5951,10 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
          if ( success )
             propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
       }
+
+      if ( propdata->dispsyminfo )
+         SCIPinfoMessage(scip, NULL, "  use lexicographic reduction for %d permutations\n", componentsize);
+
    }
    else if ( propdata->usesimplesgncomp && ! propdata->componentblocked[cidx] )
    {
@@ -5861,6 +6016,9 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
             SCIPfreeBufferArray(scip, &vars);
 
             propdata->componentblocked[cidx] |= SYM_HANDLETYPE_SYMBREAK;
+
+            if ( propdata->dispsyminfo )
+               SCIPinfoMessage(scip, NULL, "  use simple cut for reflection symmetries of full component\n");
          }
       }
    }
@@ -6007,7 +6165,7 @@ SCIP_Bool isEquallyCenteredOrbitope(
    assert( vardomaincenter != NULL );
    assert( varidxmatrix != NULL );
    assert( 0 <= startrow && startrow < endrow );
-   assert( 0 <= startcol && startrow < endcol );
+   assert( 0 <= startcol && startcol < endcol );
 
    if ( equalrowcenters )
    {
@@ -6085,6 +6243,15 @@ SCIP_RETCODE handleOrbitope(
       {
          for (j = 0; j < ncols; ++j)
             orbitopevarmatrix[pos++] = propdata->permvars[varidxmatrix[i][j]];
+      }
+
+      if ( propdata->dispsyminfo )
+      {
+         SCIPinfoMessage(scip, NULL, "  use static orbitopal reduction on %d x %d matrix\n", nrows, ncols);
+         SCIPinfoMessage(scip, NULL, "  use %d SST cuts to sort first row of %d x %d matrix\n",
+            ncols - 1, nrows, ncols);
+         if ( issigned )
+            SCIPinfoMessage(scip, NULL, "  first row in upper variable domain (signed orbitope)\n");
       }
 
       SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
@@ -6190,6 +6357,10 @@ SCIP_RETCODE handleOrbitope(
 
          if ( nbinrows > 0 )
          {
+            if ( propdata->dispsyminfo )
+            {
+               SCIPinfoMessage(scip, NULL, "  use full orbitope on %d x %d matrix\n", nbinrows, ncols);
+            }
             SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, partialname, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
                   nbinrows, ncols, propdata->usedynamicprop /* @todo disable */, FALSE, FALSE, FALSE,
                   propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -6286,6 +6457,16 @@ SCIP_RETCODE handleDoubleLexOrbitope(
       }
       else
          nsortconss += nrows - 1;
+
+      if ( propdata->dispsyminfo )
+      {
+         SCIPinfoMessage(scip, NULL, "  use static orbitopal reduction on %d x %d matrix\n", nrows, ncols);
+         SCIPinfoMessage(scip, NULL, "  use %d SST cuts to sort first row of %d x %d matrix\n",
+            ncols - 1, nrows, ncols);
+         if ( nsignedconss > 0 )
+            SCIPinfoMessage(scip, NULL, "  recursively enforce first half of entries per column to %s\n",
+               "upper half and sort by static orbitopal reduction");
+      }
 
       /* create linear constraints */
       SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genlinconss,
@@ -6483,6 +6664,11 @@ SCIP_RETCODE handleDoubleLexOrbitope(
 
          if ( nbinrows > 0 )
          {
+            if ( propdata->dispsyminfo )
+            {
+               SCIPinfoMessage(scip, NULL, "  use full orbitope on %d x %d matrix\n", nbinrows, ncols);
+            }
+
             SCIP_CALL( SCIPcreateConsOrbitope(scip, &cons, partialname, orbitopematrix, SCIP_ORBITOPETYPE_FULL,
                   nbinrows, ncols, propdata->usedynamicprop /* @todo disable */, FALSE, FALSE, FALSE,
                   propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -6864,6 +7050,11 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
                goto FREEMEMORY;
          }
 
+         if ( propdata->dispsyminfo )
+         {
+            SCIP_CALL( printSyminfoGroupAction(scip, TRUE, FALSE, nrows, ncols, 0, 0, NULL, NULL) );
+         }
+
          (void) SCIPsnprintf(partialname, SCIP_MAXSTRLEN, "orbitope_component_%d", cidx);
 
          if ( propdata->handlesignedorbitopes )
@@ -6935,26 +7126,32 @@ SCIP_RETCODE tryHandleSingleOrDoubleLexMatricesComponent(
       }
       else
       {
+         if ( propdata->dispsyminfo )
+         {
+            SCIP_CALL( printSyminfoGroupAction(scip, FALSE, TRUE, nrows, ncols,
+                  nrowmatrices, ncolmatrices, lexrowsbegin, lexcolsbegin) );
+         }
+
          SCIP_CALL( handleDoublelLexMatrix(scip, propdata, cidx, lexmatrix, nrows, ncols,
                lexrowsbegin, lexcolsbegin, nrowmatrices, ncolmatrices, perms, nselectedperms, &success,
                allowchgbds, nchgbds) );
       }
 
-      FREEMEMORY:
-         /* free memory not needed anymore */
-         for (i = nrows - 1; i >= 0; --i)
-         {
-            SCIPfreeBlockMemoryArray(scip, &lexmatrix[i], ncols);
-         }
-         SCIPfreeBlockMemoryArray(scip, &lexmatrix, nrows);
-         if ( ncolmatrices > 0 )
-         {
-            SCIPfreeBlockMemoryArray(scip, &lexcolsbegin, ncolmatrices + 1);
-         }
-         if ( nrowmatrices > 0 )
-         {
-            SCIPfreeBlockMemoryArray(scip, &lexrowsbegin, nrowmatrices + 1);
-         }
+   FREEMEMORY:
+      /* free memory not needed anymore */
+      for (i = nrows - 1; i >= 0; --i)
+      {
+         SCIPfreeBlockMemoryArray(scip, &lexmatrix[i], ncols);
+      }
+      SCIPfreeBlockMemoryArray(scip, &lexmatrix, nrows);
+      if ( ncolmatrices > 0 )
+      {
+         SCIPfreeBlockMemoryArray(scip, &lexcolsbegin, ncolmatrices + 1);
+      }
+      if ( nrowmatrices > 0 )
+      {
+         SCIPfreeBlockMemoryArray(scip, &lexrowsbegin, nrowmatrices + 1);
+      }
    }
    SCIPfreeBufferArray(scip, &perms);
 
@@ -7040,6 +7237,11 @@ SCIP_RETCODE tryAddSymmetryHandlingMethodsComponent(
    /* ignore blocked components */
    if ( propdata->componentblocked[cidx] )
       return SCIP_OKAY;
+
+   if ( propdata->dispsyminfo )
+   {
+      SCIP_CALL( printSyminfoComponentHeader(scip, propdata, cidx) );
+   }
 
    /* try to apply symmetry handling methods */
    if ( propdata->detectdoublelex || propdata->detectorbitopes )
@@ -7153,6 +7355,11 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    SCIP_CALL( ensureSymmetryComponentsComputed(scip, propdata) );
    assert( propdata->ncomponents > 0 );
 
+   if ( propdata->dispsyminfo )
+   {
+      SCIP_CALL( printSyminfoHeader(scip) );
+   }
+
    /* iterate over components and handle each by suitable symmetry handling methods */
    for (c = 0; c < propdata->ncomponents; ++c)
    {
@@ -7161,6 +7368,12 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
       if ( SCIPisStopped(scip) || propdata->ncompblocked >= propdata->ncomponents )
          break;
    }
+
+   if ( propdata->dispsyminfo )
+   {
+      SCIP_CALL( printSyminfoFooter(scip) );
+   }
+
 
 #ifdef SYMMETRY_STATISTICS
    SCIP_CALL( SCIPdisplaySymmetryStatistics(scip, propdata) );
@@ -7565,9 +7778,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_TABLEDATA* tabledata;
    SCIP_PROPDATA* propdata = NULL;
    SCIP_PROP* prop = NULL;
-   SCIP_DIALOG* rootdialog;
-   SCIP_DIALOG* displaymenu;
-   SCIP_DIALOG* dialog;
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
    assert( propdata != NULL );
@@ -7647,22 +7857,6 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          NULL, tableFreeSymmetry, NULL, NULL, NULL, NULL, tableOutputSymmetry,
          tabledata, TABLE_POSITION_SYMMETRY, TABLE_EARLIEST_SYMMETRY) );
 
-   /* include display dialog */
-   rootdialog = SCIPgetRootDialog(scip);
-   assert(rootdialog != NULL);
-   if( SCIPdialogFindEntry(rootdialog, "display", &displaymenu) != 1 )
-   {
-      SCIPerrorMessage("display sub menu not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-   assert( ! SCIPdialogHasEntry(displaymenu, "symmetries") );
-   SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-      NULL, dialogExecDisplaySymmetry, NULL, NULL,
-      "symmetry", "display generators of symmetry group in cycle notation, if available",
-         FALSE, (SCIP_DIALOGDATA*)propdata) );
-   SCIP_CALL( SCIPaddDialogEntry(scip, displaymenu, dialog) );
-   SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-
    /* add parameters for computing symmetry */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/maxgenerators",
@@ -7683,6 +7877,11 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "propagating/" PROP_NAME "/doubleequations",
          "Double equations to positive/negative version?",
          &propdata->doubleequations, TRUE, DEFAULT_DOUBLEEQUATIONS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/dispsyminfo",
+         "Shall symmetry information be printed to the terminal?",
+         &propdata->dispsyminfo, TRUE, DEFAULT_DISPSYMINFO, NULL, NULL) );
 
    /* add parameters for adding symmetry handling constraints */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -7832,6 +8031,20 @@ SCIP_RETCODE SCIPincludePropSymmetry(
          "timing of symmetry computation and handling (0 = before presolving, 1 = during presolving, 2 = after presolving)",
          &propdata->symtiming, TRUE, DEFAULT_SYMCOMPTIMING, 0, 2, NULL, NULL) );
 
+   /* for symmetry detection tool Nauty, we add further parameters to terminate it early */
+   if ( strncmp(SYMsymmetryGetName(), "Nauty", 5) == 0 )
+   {
+      SCIP_CALL( SCIPaddIntParam(scip,
+            "propagating/" PROP_NAME "/nautymaxncells",
+            "terminate symmetry detection using Nauty when number of cells in color refinment is at least this number",
+            NULL, TRUE, DEFAULT_NAUTYMAXNCELLS, 0, INT_MAX, NULL, NULL) );
+
+      SCIP_CALL( SCIPaddIntParam(scip,
+            "propagating/" PROP_NAME "/nautymaxnnodes",
+            "terminate symmetry detection using Nauty when its search tree has at least this number of nodes",
+            NULL, TRUE, DEFAULT_NAUTYMAXNNODES, 0, INT_MAX, NULL, NULL) );
+   }
+
    /* possibly add description */
    if ( SYMcanComputeSymmetry() )
    {
@@ -7979,6 +8192,41 @@ int SCIPgetSymmetryNGenerators(
       return 0;
    else
       return propdata->nperms;
+}
+
+/** displays generators of symmetry group, if available */
+SCIP_RETCODE SCIPdisplaySymmetryGenerators(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROP*            prop                /**< symmetry propagator or NULL */
+   )
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   if ( prop == NULL )
+      prop = SCIPfindProp(scip, PROP_NAME);
+   assert( prop != NULL );
+
+   propdata = SCIPpropGetData(prop);
+   assert( propdata != NULL );
+
+   if ( propdata->nperms == -1 )
+   {
+      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. Symmetries have not been computed yet.\n");
+   }
+   else if ( propdata->nperms == 0 )
+   {
+      SCIPinfoMessage(scip, NULL, "Cannot display symmetries. No symmetries detected.\n");
+   }
+   else if ( propdata->ncomponents < 0 )
+   {
+      SCIP_CALL( displaySymmetriesWithoutComponents(scip, propdata) );
+   }
+   else
+   {
+      SCIP_CALL( displaySymmetriesWithComponents(scip, propdata) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** creates new operator node type (used for symmetry detection) and returns its representation

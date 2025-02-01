@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -132,6 +132,7 @@ if( CRITERION_FOUND )
             set( ADDITIONAL_FLAGS "" )
         endif()
 
+        if(NOT ((${testName} STREQUAL "unittest-cons-nonlinear-vertexpolyhedral") AND (${LPS} STREQUAL "xprs")))
         add_test(NAME ${testName}
             COMMAND $<TARGET_FILE:${testName}> ${ADDITIONAL_FLAGS}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -141,5 +142,6 @@ if( CRITERION_FOUND )
                                 DEPENDS ${testName}-build
                                 RESOURCE_LOCK libscip
                             )
+        endif()  # LP Error: Xpress returned 120, #3724 (LPS=xprs, unittest-cons-nonlinear-vertexpolyhedral)
     endforeach(testSrc)
 endif()

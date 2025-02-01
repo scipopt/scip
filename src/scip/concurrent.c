@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -31,14 +31,14 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/concurrent.h"
-#include "scip/struct_concurrent.h"
 #include "scip/concsolver.h"
 #include "scip/event.h"
-#include "scip/struct_scip.h"
 #include "scip/stat.h"
+#include "scip/struct_concurrent.h"
+#include "scip/struct_scip.h"
 #include "scip/struct_set.h"
+#include "scip/struct_tree.h"
 #include "scip/struct_primal.h"
-#include "scip/struct_stat.h"
 #include "scip/struct_sol.h"
 #include "scip/struct_prop.h"
 #include "scip/struct_heur.h"
@@ -695,7 +695,9 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    if( root != NULL )
    {
       /* in the copied SCIP the dualbound is in the transformed space of the target */
-      SCIP_CALL( SCIPupdateNodeLowerbound(target, root, SCIPgetDualbound(source)) );
+      root->lowerbound = SCIPgetDualbound(source);
+      root->estimate = root->lowerbound;
+      target->stat->rootlowerbound = root->lowerbound;
    }
 
    target->stat->nlpiterations = source->stat->nlpiterations;
@@ -756,7 +758,6 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    target->stat->nnodesbeforefirst = source->stat->nnodesbeforefirst;
    target->stat->ninitconssadded = source->stat->ninitconssadded;
    target->stat->firstlpdualbound = SCIPprobExternObjval(target->transprob, target->origprob, target->set, source->stat->firstlpdualbound);
-   target->stat->rootlowerbound = SCIPprobExternObjval(source->transprob, source->origprob, source->set, source->stat->rootlowerbound);
    target->stat->vsidsweight = source->stat->vsidsweight;
    target->stat->firstprimalbound = SCIPprobExternObjval(target->transprob, target->origprob, target->set, source->stat->firstprimalbound);
    target->stat->firstprimaltime = source->stat->firstprimaltime;
@@ -776,10 +777,10 @@ SCIP_RETCODE SCIPcopyConcurrentSolvingStats(
    target->stat->previousdualrefgap = source->stat->previousdualrefgap;
    target->stat->previousprimalrefgap = source->stat->previousprimalrefgap;
    target->stat->previntegralevaltime = source->stat->previntegralevaltime;
-   target->stat->lastprimalbound = SCIPprobExternObjval(source->transprob, source->origprob, source->set, source->stat->lastprimalbound);
-   target->stat->lastdualbound = SCIPprobExternObjval(source->transprob, source->origprob, source->set, source->stat->lastdualbound);
-   target->stat->lastlowerbound = SCIPprobExternObjval(source->transprob, source->origprob, source->set, source->stat->lastlowerbound);
-   target->stat->lastupperbound = SCIPprobExternObjval(source->transprob, source->origprob, source->set, source->stat->lastupperbound);
+   target->stat->lastlowerbound = source->stat->lastdualbound;
+   target->stat->lastupperbound = source->stat->lastprimalbound;
+   target->stat->lastdualbound = SCIPprobExternObjval(target->transprob, target->origprob, target->set, target->stat->lastlowerbound);
+   target->stat->lastprimalbound = SCIPprobExternObjval(target->transprob, target->origprob, target->set, target->stat->lastupperbound);
    target->stat->rootlpbestestimate = source->stat->rootlpbestestimate;
    target->stat->referencebound = source->stat->referencebound;
 

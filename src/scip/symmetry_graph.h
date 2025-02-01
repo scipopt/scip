@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -37,14 +37,14 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 #include "scip/type_var.h"
-#include <symmetry/type_symmetry.h>
+#include "symmetry/type_symmetry.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-/**@addtogroup PublicSymmetryGraphMethods
+/**@addtogroup SymGraph
  *
  * @{
  */
@@ -73,6 +73,16 @@ SCIP_RETCODE SCIPfreeSymgraph(
    SYM_GRAPH**           graph               /**< pointer to symmetry detection graph */
    );
 
+/**  clears data of symmetry detection graph */
+SCIP_EXPORT
+SCIP_RETCODE SCIPclearSymgraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SYM_GRAPH*            graph,              /**< symmetry detection graph */
+   SCIP_VAR**            symvars,            /**< variables used in symmetry detection */
+   int                   nsymvars,           /**< number of variables used in symmetry detection */
+   SYM_SYMTYPE           symtype             /**< type of symmetries encoded in graph */
+   );
+
 /** copies an existing graph and changes variable nodes according to a permutation */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcopySymgraph(
@@ -81,6 +91,17 @@ SCIP_RETCODE SCIPcopySymgraph(
    SYM_GRAPH*            origgraph,          /**< graph to be copied */
    int*                  perm,               /**< permutation of variables */
    SYM_SPEC              fixedtype           /**< variable types that must be fixed by symmetries */
+   );
+
+/** copies a symmetry detection graph into another symmetry detection graph */
+SCIP_EXPORT
+SCIP_RETCODE SCIPcopySymgraphAsSubgraph(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SYM_GRAPH*            sourcegraph,        /**< graph to be copied */
+   SYM_GRAPH*            targetgraph,        /**< graph into which copy shall be included */
+   SCIP_CONS*            sourcecons,         /**< constraint associated with sourcegraph */
+   int*                  rootidx             /**< pointer to hold index of root node of sourcegraph in targetgraph
+                                              *   (or -1 if root cannot be detected) */
    );
 
 /** adds a symmetry detection graph for a linear constraint to existing graph

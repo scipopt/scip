@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -104,16 +104,17 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyVar)
    {
       int requsize;
 
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize) );
 
       if( requsize > varssize )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requsize) );
          varssize = requsize;
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
-         assert(requsize <= nvars);
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize) );
+         assert(requsize <= varssize);
       }
+      assert(requsize == nvars);
    }
 
    /* create expression for constant + sum coefs_i vars_i */

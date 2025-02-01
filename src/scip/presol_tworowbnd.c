@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -592,8 +592,8 @@ SCIP_RETCODE transformAndSolve(
 
    SCIP_Real newbnd;
 
-   assert(!swaprow1 || (swaprow1 && !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, row1idx))));
-   assert(!swaprow2 || (swaprow2 && !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, row2idx))));
+   assert(!swaprow1 || !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, row1idx)));
+   assert(!swaprow2 || !SCIPisInfinity(scip, SCIPmatrixGetRowRhs(matrix, row2idx)));
 
    row1len = SCIPmatrixGetRowNNonzs(matrix, row1idx);
    row2len = SCIPmatrixGetRowNNonzs(matrix, row2idx);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -116,6 +116,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayCutselectors);
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayHeuristics);
 
+/** dialog execution method for the display IIS command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayIIS);
+
 /** dialog execution method for the display memory command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayMemory);
@@ -188,6 +192,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySubSolution);
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayStatistics);
 
+/** dialog execution method for the display symmetry command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySymmetry);
+
 /** dialog execution method for the display reoptstatistics command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReoptStatistics);
@@ -238,6 +246,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecConcurrentOpt);
 /** dialog execution method for the presolve command */
 SCIP_EXPORT
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecPresolve);
+
+/** dialog execution method for the iis command */
+SCIP_EXPORT
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecIIS);
 
 /** dialog execution method for the quit command */
 SCIP_EXPORT

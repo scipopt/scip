@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -40,7 +40,8 @@
 
 #include <assert.h>
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _MSC_VER
+#define strcasecmp _stricmp
 #else
 #include <strings.h> /*lint --e{766}*/
 #endif
@@ -655,7 +656,7 @@ void invalidateSolution(
 #ifdef _Thread_local
 static _Thread_local char xprsname[100];
 #else
-static char xprsname[] = {'X', 'p', 'r', 'e', 's', 's', ' ', '0' + XPVERSION / 10, '0' + XPVERSION % 10};
+static char xprsname[] = {'X', 'p', 'r', 'e', 's', 's', ' ', '0' + XPVERSION / 10, '0' + XPVERSION % 10, '\0'};
 #endif
 /** gets name and version of LP solver */
 const char* SCIPlpiGetSolverName(

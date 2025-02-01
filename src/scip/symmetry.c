@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1678,7 +1678,7 @@ SCIP_RETCODE detectOrbitopalSymmetries(
       for (p = 0; p < nselectedperms; ++p)
       {
          perm = perms[selectedperms[p]];
-         for (v = colorbegins[c]; compidx[v] == compidx[colorbegins[c]] && v < nposdegree; ++v)
+         for (v = colorbegins[c]; v < nposdegree && compidx[v] == compidx[colorbegins[c]]; ++v)
          {
             if ( perm[varidx[v]] != varidx[v] )
             {
@@ -1824,7 +1824,6 @@ SCIP_RETCODE isDoublelLexSym(
    int col;
    int col2;
    int mat2;
-   int nidx;
    int cnt;
    int c;
    int d;
@@ -1871,13 +1870,12 @@ SCIP_RETCODE isDoublelLexSym(
    }
 
    /* collect information about entries in matrices */
-   nidx = nrows1 * nrows2;
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxtomatrix1, nidx) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxtomatrix2, nidx) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxtorow1, nidx) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxtorow2, nidx) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxtocol1, nidx) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &idxtocol2, nidx) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxtomatrix1, nsymvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxtomatrix2, nsymvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxtorow1, nsymvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxtorow2, nsymvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxtocol1, nsymvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &idxtocol2, nsymvars) );
 
    /* use separate loops for efficiency reasons */
    for (i = 0; i < nsymvars; ++i)
@@ -2007,6 +2005,7 @@ SCIP_RETCODE isDoublelLexSym(
    /* store begin positions of row and column blocks */
    if ( *success )
    {
+      assert( nmatrices2 > 0 );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, rowsbegin, nmatrices2 + 1) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, colsbegin, nmatrices1 + 1) );
       (*rowsbegin)[0] = 0;

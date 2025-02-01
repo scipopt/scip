@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -131,6 +131,8 @@ struct SCIP_Benders
    int                   nnonlinearsubprobs; /**< the number of subproblems that are non-linear */
    SCIP_Bool             subprobscreated;    /**< have the subproblems been created for this Benders' decomposition.
                                                   This flag is used when retransforming the problem.*/
+   SCIP_Bool             subprobsinfeasible; /**< flag to indicate that infeasibility of at least one subproblem has
+                                                  been detected in the initialisation stages. */
    SCIP_Bool*            mastervarscont;     /**< flag to indicate that the master problem variable have been converted
                                                to continuous variables. */
    SCIP_Bool*            subprobsetup;       /**< flag to indicate whether the subproblem has been set up. */

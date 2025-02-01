@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -23,7 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   objbenderscut.h
- * @brief  C++ wrapper for Benders' decomposition cuts
+ * @brief  C++ wrapper for the Benders' decomposition cut plugins
  * @author Stephen J. Maher
  */
 
@@ -44,7 +44,7 @@
 namespace scip
 {
 
-/** @brief C++ wrapper for Benders' decomposition cut
+/** @brief C++ wrapper for Benders' decomposition cut plugin
  *
  *  This class defines the interface for the Benders' decomposition cuts implemented in C++. Note that there is
  *  a pure virtual function (this must be implemented). This function is: benderscut_exec().

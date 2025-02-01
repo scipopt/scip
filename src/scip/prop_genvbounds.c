@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2480,7 +2480,7 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
       /* replace non-active by active variables and update constant; note that this may result in coefficients where
        * SCIPisZero() is true; this should not create any problems
        */
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, genvbound->ncoefs, &genvbound->constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, genvbound->ncoefs, &genvbound->constant, &requiredsize) );
 
       /* if space was not enough we need to resize the buffers */
       if( requiredsize > genvbound->ncoefs )
@@ -2493,9 +2493,10 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
             genvbound->coefssize = requiredsize;
          }
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, requiredsize, &genvbound->constant, &requiredsize, TRUE) );
-         assert(requiredsize <= genvbound->ncoefs);
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, requiredsize, &genvbound->constant, &requiredsize) );
+         assert(requiredsize <= genvbound->coefssize);
       }
+      assert(requiredsize == genvbound->ncoefs);
 
       /* capture new and release old variables */
       for( j = 0; j < genvbound->ncoefs; ++j )

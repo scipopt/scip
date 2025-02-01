@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -49,7 +49,7 @@
  * separation round.
  *
  * \f[
- *    {\alpha^i}^T x \leq \alpha^i_0, i = 1, 2, \hdots, M
+ *    {\alpha^i}^T x \leq \alpha^i_0, i = 1, 2, \ldots, M
  * \f]
  *
  * Then, the following is the Lagrangian dual problem considered in the relax-and-cut framework used in the separator.
@@ -63,57 +63,51 @@
  * violation of the generated cuts, and \f$z_D\f$ is the optimal objective value (which is approximated via \a ubparam in this separator).
  * Then, the following are the steps of the relax-and-cut algorithm implemented in this separator.
  *
- * \begin{itemize}
- *    \item Generate an initial pool of cuts to build the initial Lagrangian dual problem.
- *    \item Select initial values for Lagrangian multipliers \f$u^0\f$ (e.g., all zeroes vector).
- *    \item In the outer main loop \f$i\f$ of the algorithm:
- *       \begin{enumerate}
- *          \item Solve the Lagrangian dual problem until certain termination criterion is met. This results in an inner
- *          subgradient loop, whose iteration \f$j\f$ is described below.
- *             \begin{enumerate}
- *                \item Fix \f$u^j\f$, and solve the LP corresponding to the Lagrangian dual with fixed multipliers.
- *                Gather its optimal simplex tableau and optimal objective value (i.e., the Lagrangian value)
- *                \f$L(u^j)\f$.
- *                \item Update \f$u^j\f$ to \f$u^{j+1}\f$ as follows.
- *                   \f[
- *                      u^{j+1} = \left(u^j + \lambda_j s^k\right)_+,
- *                   \f]
- *                   where \f$\lambda_j\f$ is the step length:
- *                   \f[
- *                      \lambda_j = \frac{\mu_j (UB - L(u^j))}{\|s^j\|^2_2},
- *                   \f]
- *                   where \f$mu_j\f$ is a factor (i.e., \a muparam) such that \f$0 < \mu_j \leq 2\f$, UB is \p ubparam,
- *                   and \f$s^j\f$ is the subgradient vector defined as:
- *                   \f[
- *                      s^j_k = \left({\alpha^k}^T x - \alpha^k_0\right), k = 1, 2, \hdots, M.
- *                   \f]
- *                   The factor \f$mu_j\f$ is updated as below.
- *                   \f[
- *                      mu_j = \begin{cases}
- *                               \p mubacktrackfactor * mu_j & \text{if } L(u^j) < bestLB - \delta\\
- *                               \begin{cases}
- *                                  \p muslab1factor * mu_j & \text{if } bestLB - avgLB < \p deltaslab1ub * delta\\
- *                                  \p muslab2factor * mu_j & \text{if } \p deltaslab1ub * \delta \leq bestLB - avgLB < \p deltaslab2ub * delta\\
- *                                  \p muslab3factor * mu_j & \text{otherwise}
- *                               \end{cases} & \text{otherwise},
- *                             \end{cases}
- *                   \f]
- *                   where \f$bestLB\f$ and \f$avgLB\f$ are best and average Lagrangian values found so far, and
- *                   \f$\delta = UB - bestLB\f$.
- *                \item Stabilize \f$u^{j+1}\f$ by projecting onto a norm ball followed by taking a convex combination
- *                with a core vector of Lagrangian multipliers.
- *                \item Generate GMI cuts based on the optimal simplex tableau.
- *                \item Relax the newly generated cuts by penalizing and adding them to the objective function.
- *                \item Go to the next iteration \f$j+1\f$.
- *             \end{enumerate}
- *          \item Gather all the generated cuts and build an LP by adding all these cuts to the node relaxation.
- *          \item Solve this LP to obtain its optimal primal and dual solutions.
- *          \item If this primal solution is MIP primal feasible, then add this solution to the solution pool, add all
- *          the generated cuts to the cutpool or sepastore as needed, and exit the separator.
- *          \item Otherwise, update the Lagrangian multipliers based on this optimal dual solution, and go to the next
- *          iteration \f$i+1\f$.
- *       \end{enumerate}
- * \end{itemize}
+ * - Generate an initial pool of cuts to build the initial Lagrangian dual problem.
+ * - Select initial values for Lagrangian multipliers \f$u^0\f$ (e.g., all zeroes vector).
+ * - In the outer main loop \f$i\f$ of the algorithm:
+ *   1. Solve the Lagrangian dual problem until certain termination criterion is met. This results in an inner
+ *      subgradient loop, whose iteration \f$j\f$ is described below.
+ *      1. Fix \f$u^j\f$, and solve the LP corresponding to the Lagrangian dual with fixed multipliers.
+ *         Gather its optimal simplex tableau and optimal objective value (i.e., the Lagrangian value)
+ *         \f$L(u^j)\f$.
+ *      2. Update \f$u^j\f$ to \f$u^{j+1}\f$ as follows.
+ *         \f[
+ *            u^{j+1} = \left(u^j + \lambda_j s^k\right)_+,
+ *         \f]
+ *         where \f$\lambda_j\f$ is the step length:
+ *         \f[
+ *            \lambda_j = \frac{\mu_j (UB - L(u^j))}{\|s^j\|^2_2},
+ *         \f]
+ *         where \f$mu_j\f$ is a factor (i.e., \a muparam) such that \f$0 < \mu_j \leq 2\f$, UB is \p ubparam,
+ *         and \f$s^j\f$ is the subgradient vector defined as:
+ *         \f[
+ *            s^j_k = \left({\alpha^k}^T x - \alpha^k_0\right), k = 1, 2, \ldots, M.
+ *         \f]
+ *         The factor \f$mu_j\f$ is updated as below.
+ *         \f[
+ *            mu_j = \begin{cases}
+ *                   mubacktrackfactor * mu_j & \text{if } L(u^j) < bestLB - \delta\\
+ *                   \begin{cases}
+ *                       muslab1factor * mu_j & \text{if } bestLB - avgLB < deltaslab1ub * delta\\
+ *                       muslab2factor * mu_j & \text{if } deltaslab1ub * \delta \leq bestLB - avgLB < deltaslab2ub * delta\\
+ *                       muslab3factor * mu_j & \text{otherwise}
+ *                   \end{cases} & \text{otherwise},
+ *                   \end{cases}
+ *         \f]
+ *         where \f$bestLB\f$ and \f$avgLB\f$ are best and average Lagrangian values found so far, and
+ *         \f$\delta = UB - bestLB\f$.
+ *      3. Stabilize \f$u^{j+1}\f$ by projecting onto a norm ball followed by taking a convex combination
+ *         with a core vector of Lagrangian multipliers.
+ *      4. Generate GMI cuts based on the optimal simplex tableau.
+ *      5. Relax the newly generated cuts by penalizing and adding them to the objective function.
+ *      6. Go to the next iteration \f$j+1\f$.
+ *   2. Gather all the generated cuts and build an LP by adding all these cuts to the node relaxation.
+ *   3. Solve this LP to obtain its optimal primal and dual solutions.
+ *   4. If this primal solution is MIP primal feasible, then add this solution to the solution pool, add all
+ *      the generated cuts to the cutpool or sepastore as needed, and exit the separator.
+ *   5. Otherwise, update the Lagrangian multipliers based on this optimal dual solution, and go to the next
+ *      iteration \f$i+1\f$.
  *
  * @todo store all LP sols in a data structure, and send them to fix-and-propagate at the end.
  *

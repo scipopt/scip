@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -2412,13 +2412,13 @@ SCIP_RETCODE updateImplicationGraphSOS1(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    SCIP_Bool**           adjacencymatrix,    /**< adjacency matrix of conflict graph (lower half) */
-   SCIP_DIGRAPH*         implgraph,          /**< implication graph (@p j is successor of @p i if and only if \f$ x_i\not = 0 \Rightarrow x_j\not = 0\f$) */
+   SCIP_DIGRAPH*         implgraph,          /**< implication graph (\f$j\f$ is successor of \f$i\f$ if and only if \f$ x_i\not = 0 \Rightarrow x_j\not = 0\f$) */
    SCIP_HASHMAP*         implhash,           /**< hash map from variable to node in implication graph */
    SCIP_Bool*            implnodes,          /**< implnodes[i] = TRUE if the SOS1 variable corresponding to node i in the implication graph is implied to be nonzero */
    SCIP_VAR**            totalvars,          /**< problem and SOS1 variables */
    int**                 cliquecovers,       /**< clique covers of linear constraint */
    int*                  cliquecoversizes,   /**< size of clique covers */
-   int*                  varincover,         /**< array with varincover[i] = cover of SOS1 index @p i */
+   int*                  varincover,         /**< array with varincover[i] = cover of SOS1 index \f$i\f$ */
    SCIP_VAR**            vars,               /**< variables to be checked */
    SCIP_Real*            coefs,              /**< coefficients of variables in linear constraint */
    int                   nvars,              /**< number of variables to be checked */
@@ -2564,19 +2564,19 @@ SCIP_RETCODE updateImplicationGraphSOS1(
 
 /** search new disjoint clique that covers given node
  *
- *  For a given vertex @p v search for a clique of the conflict graph induced by the variables of a linear constraint that
- *  - covers @p v and
+ *  For a given vertex v search for a clique of the conflict graph induced by the variables of a linear constraint that
+ *  - covers v and
  *  - has an an empty intersection with already computed clique cover.
  */
 static
 SCIP_RETCODE computeVarsCoverSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_DIGRAPH*         conflictgraphroot,  /**< conflict graph of the root node (nodes: 1, ..., @p nsos1vars) */
-   SCIP_DIGRAPH*         conflictgraphlin,   /**< conflict graph of linear constraint (nodes: 1, ..., @p nlinvars) */
+   SCIP_DIGRAPH*         conflictgraphroot,  /**< conflict graph of the root node (nodes: 1, ..., nsos1vars) */
+   SCIP_DIGRAPH*         conflictgraphlin,   /**< conflict graph of linear constraint (nodes: 1, ..., nlinvars) */
    SCIP_VAR**            linvars,            /**< variables in linear constraint */
    SCIP_Bool*            coveredvars,        /**< states which variables of the linear constraint are currently covered by a clique */
    int*                  clique,             /**< array to store new clique in cover */
-   int*                  cliquesize,         /**< pointer to store the size of @p clique */
+   int*                  cliquesize,         /**< pointer to store the size of clique */
    int                   v,                  /**< position of variable in linear constraint that should be covered */
    SCIP_Bool             considersolvals     /**< TRUE if largest auxiliary bigM values of variables should be prefered */
    )
@@ -2805,15 +2805,15 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
 
       /* transform linear constraint */
       constant = 0.0;
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, ntrafolinvars, &constant, &requiredsize, TRUE) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, ntrafolinvars, &constant, &requiredsize) );
       if( requiredsize > ntrafolinvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvars, requiredsize + 1) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &trafolinvals, requiredsize + 1) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, requiredsize, &constant, &requiredsize, TRUE) );
-         assert( requiredsize <= ntrafolinvars );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, trafolinvars, trafolinvals, &ntrafolinvars, requiredsize, &constant, &requiredsize) );
       }
+      assert(requiredsize == ntrafolinvars);
       if( !SCIPisInfinity(scip, -trafolhs) )
          trafolhs -= constant;
       if( !SCIPisInfinity(scip,  traforhs) )
@@ -10244,6 +10244,9 @@ SCIP_DECL_CONSGETPERMSYMGRAPH(consGetPermsymGraphSOS1)
    SCIPfreeBufferArray(scip, &locvals);
    SCIPfreeBufferArray(scip, &locvars);
 
+   assert(success != NULL);
+   *success = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -10345,6 +10348,9 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphSOS1)
 
    SCIPfreeBufferArray(scip, &locvals);
    SCIPfreeBufferArray(scip, &locvars);
+
+   assert(success != NULL);
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

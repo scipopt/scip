@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
+
 helptext='''
 Created on 06.01.2014
 
-this parser generates php-readable data out of faqtext.txt.
+this parser generates php-readable data and static html out of faqtext.txt.
 
 The format is strict, but very easy: The FAQ is separated into SECTIONs,
 each of which may contain an arbitrary number of items, which consist (in this order)
@@ -32,9 +34,12 @@ relative locations to the documentation and file extensions:
    - use PATHTODOC to denote relative paths to the documentation.
    - use LINKEXT to denote file-extensions.
 
-The parser automatically interpretes this.
+The parser automatically interprets this.
 
-@author: Gregor Hendel
+The written faqdata.php can be transformed with php into static HTML by use of localfaq.php.
+The written faq.inc produces the same output (without the need for php).
+
+@author Gregor Hendel
 @author Matthias Miltenberger
 '''
 import re
@@ -49,6 +54,25 @@ sectiontag = "SECTION:"
 questiontag = "QUESTION:"
 answertag = "ANSWER:"
 labeltag = "LABEL:"
+
+faqinc_header='''<!-- this file is used to generate the local doxygen documentation -->
+<!-- using make doc from within scip or soplex -->
+
+<style>
+@media (prefers-color-scheme: light) {
+.reveal:hover {
+    text-shadow: 1px 1px 1px #777;
+}
+.answer {
+    background-color: #fff;
+}
+}
+.answer {
+    padding-left:   1em;
+}
+</style>
+
+'''
 
 def formatitem(item):
    '''
@@ -85,6 +109,52 @@ def formatallsections(sections, sectionitems):
    $faq = array(
         %s
         );""" % (",\n".join([formatsection((section, sectionitems[section])) for section in sections]))
+
+def write_faqinc(f, sections, sectiontimes):
+   '''
+   write main part of faq.inc
+   '''
+
+   # table of contents
+   for section in sections :
+      sectionlabel = "faq_{}".format(re.sub(r'[^a-zA-Z]', '', section).lower())
+      f.write('<h3><a class="reveal_faq" href="#%s"><span class="fa fa-caret-right"></span> %s</a></h3>' % (sectionlabel, section));
+      f.write('<ol>')
+      for item in sectionitems[section] :
+         question = item[0]
+         label = item[2]
+         question = re.sub(r"\\'", r"'", question)
+         f.write('  <li>\n')
+         f.write('    <a class="reveal_faq" href="#%s">\n' % label)
+         f.write('      %s' % question)
+         f.write('    </a>\n')
+         f.write('  </li>\n  ')
+      f.write('</ol>\n')
+   f.write('<hr />\n')
+
+   for section in sections :
+      sectionlabel = "faq_{}".format(re.sub(r'[^a-zA-Z]', '', section).lower())
+      f.write('<h3 id="%s" class="anchor">' % sectionlabel)
+      f.write('<span class="fa fa-caret-right"></span> %s<a href="#" class="pull-right"><span title="go to top" class="fa fa-caret-up"></span></a></h3><ol>' % section)
+      for item in sectionitems[section] :
+         question = item[0]
+         answer = item[1]
+         # this undoes the replacement done in notagline = re.sub(r"'", r"\'", notagline) below
+         # if the PHP output is dropped, then we could clean this up
+         question = re.sub(r"\\'", r"'", question)
+         answer = re.sub(r"\\'", r"'", answer)
+         label = item[2]
+         f.write('  <li id="%s" class="anchor">\n' % label)
+         f.write('    <h4>\n')
+         f.write('      <a class="reveal_faq" href="#%s">%s</a>\n\n' % (label, question))
+         f.write('      <a href="#" class="pull-right"><span class="fa fa-caret-up" title="go to top"></span></a>\n')
+         f.write('    </h4>\n')
+         f.write('    <div id="%s_ans">\n' % label)
+         f.write('      %s' % answer)
+         f.write('    </div>\n')
+         f.write('  </li>\n  ')
+      f.write('</ol>\n')
+
 
 if __name__ == '__main__':
    '''
@@ -152,4 +222,8 @@ if __name__ == '__main__':
             # print "Keys:" , sectionitems.keys()
             f = open("faqdata.php", 'w')
             f.write("<?php \n%s\n ?>" % formatallsections(sections, sectionitems))
+            f.close()
+            f = open("faq.inc", 'w')
+            f.write(faqinc_header)
+            write_faqinc(f, sections, sectionitems)
             f.close()

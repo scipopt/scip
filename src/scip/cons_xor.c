@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -911,7 +911,7 @@ SCIP_RETCODE applyFixings(
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
          (*nchgcoefs)++;
       }
-      else if( SCIPvarGetLbGlobal(var) > 0.5 && consdata->deleteintvar )
+      else if( SCIPvarGetLbGlobal(var) > 0.5 && consdata->intvar == NULL )
       {
          assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(var), 1.0));
          SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
@@ -3108,7 +3108,7 @@ SCIP_RETCODE propagateCons(
       else
       {
          /* fix integral variable if present */
-         if ( consdata->intvar != NULL && !consdata->deleteintvar )
+         if ( consdata->intvar != NULL )
          {
             int fixval;
 
@@ -3187,7 +3187,7 @@ SCIP_RETCODE propagateCons(
       (*nfixedvars)++;
 
       /* fix integral variable if present and not multi-aggregated */
-      if ( consdata->intvar != NULL && !consdata->deleteintvar && SCIPvarGetStatus(consdata->intvar) != SCIP_VARSTATUS_MULTAGGR )
+      if ( consdata->intvar != NULL && SCIPvarGetStatus(consdata->intvar) != SCIP_VARSTATUS_MULTAGGR )
       {
          int fixval;
 
@@ -3464,7 +3464,8 @@ SCIP_RETCODE cliquePresolve(
    if( !consdata->deleteintvar )
       return SCIP_OKAY;
 
-#if 0 /* try to evaluate if clique presolving should only be done multiple times when the constraint changed */
+#ifdef SCIP_DISABLED_CODE
+   /* try to evaluate if clique presolving should only be done multiple times when the constraint changed */
    if( !consdata->changed )
       return SCIP_OKAY;
 #endif
@@ -3800,7 +3801,7 @@ SCIP_RETCODE detectRedundantConstraints(
          }
 
          /* fix integral variable if present */
-         if( consdata0->intvar != NULL && !consdata0->deleteintvar )
+         if( consdata0->intvar != NULL )
          {
             SCIP_Bool infeasible;
             SCIP_Bool fixed;
@@ -4026,7 +4027,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          else
          {
             /* fix integral variable if present */
-            if( consdata1->intvar != NULL && !consdata1->deleteintvar )
+            if( consdata1->intvar != NULL )
             {
                SCIP_CALL( SCIPfixVar(scip, consdata1->intvar, 0.0, &infeasible, &fixed) );
                assert(!infeasible);
@@ -4051,7 +4052,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             ++(*nfixedvars);
 
          /* fix integral variable if present */
-         if( consdata1->intvar != NULL && !consdata1->deleteintvar )
+         if( consdata1->intvar != NULL )
          {
             SCIP_CALL( SCIPfixVar(scip, consdata1->intvar, 0.0, &infeasible, &fixed) );
             assert(!infeasible);
@@ -4106,7 +4107,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          if( redundant )
          {
             /* fix or aggregate the intvar, if it exists */
-            if( consdata1->intvar != NULL && !consdata1->deleteintvar )
+            if( consdata1->intvar != NULL )
             {
                /* we have var0 + var1 - 2 * intvar = 1, and aggregated var1 = 1 - var0,
                 * thus, intvar is always 0 */
@@ -4468,10 +4469,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             consdataSort(consdata0);
          assert(consdata0->sorted);
 
-#if 0
-      /* if aggregation in the core of SCIP is not changed we do not need to call applyFixing, this would be the correct
-       * way
-       */
+#ifdef SCIP_DISABLED_CODE
+      /* TODO: consider running applyFixings() on the persistent constraint to detect a cutoff */
       /* remove all variables that are fixed to zero and all pairs of variables fixed to one;
        * merge multiple entries of the same or negated variables
        */
@@ -5356,8 +5355,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
 
                if( fixedintvar )
                {
-                  /* if the integer variable is an original variable, i.e.,
-                   * consdata->deleteintvar == FALSE then the following
+                  /* if there is an integer variable then the following
                    * must hold:
                    *
                    *   if consdata->rhs == 1 then the integer variable needs
@@ -5367,7 +5365,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
                    *   if consdata->rhs == 0 then the integer variable needs
                    *   to be aggregated to one of the binary variables
                    */
-                  assert(consdata->deleteintvar || (consdata->rhs && SCIPvarGetLbGlobal(consdata->intvar) < 0.5));
+                  assert(consdata->intvar == NULL || (consdata->rhs && SCIPvarGetUbGlobal(consdata->intvar) < 0.5));
 
                   /* delete constraint */
                   SCIP_CALL( SCIPdelCons(scip, cons) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -204,11 +204,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
 
          if( bestvalue < value )
          {
-            /* there is no variable with (fractional) LP value > 0 that contains exactly one of the items */
-            if( SCIPisEQ(scip, pairweights[i][j], pairweights[i][i])
-               && SCIPisEQ(scip, pairweights[i][j], pairweights[j][j]) )
-               continue;
-
             bestvalue = value;
             id1 = j;
             id2 = i;
@@ -216,7 +211,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
       }
    }
 
-   assert( bestvalue > 0.0 );
+   assert( SCIPisFeasPositive(scip, bestvalue) );
    assert( id1 >= 0 && id1 < nitems);
    assert( id2 >= 0 && id2 < nitems);
 

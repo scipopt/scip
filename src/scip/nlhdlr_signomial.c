@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -68,7 +68,7 @@
  * negative exponents and \f$ t \f$  form negative variables \f$ v \f$, and the associated exponents form negative
  * exponents \f$ g \f$. Let \f$ s =  \max(|f|,|g|) \f$ be a normalization constant, where \f$ |\cdot| \f$ denotes the L1 norm. Apply a scaling step:
  * Dividing the entries of \f$ f \f$  by \f$ s \f$, and dividing the entries of \f$ g \f$  by \f$ s \f$ as well. Then \f$ x^a = t \f$ has
- * a reformulation \f$ u^f = v^g \f$, where \f$ u^f, v^g \$ are two concave power functions.
+ * a reformulation \f$ u^f = v^g \f$, where \f$ u^f, v^g \f$ are two concave power functions.
  */
 struct SCIP_NlhdlrExprData
 {

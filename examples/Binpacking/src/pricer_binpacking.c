@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -50,8 +50,9 @@
  *
  * To solve the above integer program, we create a new SCIP instance within SCIP and use the usual functions to create
  * variables and constraints. Besides, we need the current dual solutions to all set covering constraints (each stands
- * for one item) which are the objective coefficients of the binary variables. Therefore, we use the function
- * SCIPgetDualsolSetppc() which returns the dual solutions for the given set covering constraint.
+ * for one item) which are the objective coefficients of the binary variables. Therefore, we use the functions
+ * SCIPgetDualsolSetppc() and SCIPgetDualfarkasSetppc() which return the dual solution or ray for the given set
+ * covering constraint for a feasible or infeasible restricted master LP.
  *
  * Since we also want to generate new variables during search, we have to care that we do not generate variables over
  * and over again. For example, if we branched or fixed a certain packing to zero, we have to make sure that we do not
@@ -59,19 +60,6 @@
  * variables which are locally fixed to zero. See the function addFixedVarsConss() for more details. While using the
  * \ref BINPACKING_BRANCHING "Ryan/Foster branching", we also have to ensure that these branching decisions are respected. This is
  * realized within the function addBranchingDecisionConss().
- *
- * @note In case of this binpacking example, the master LP should not get infeasible after branching, because of the way
- *       branching is performed. Therefore, the Farkas pricing is not implemented.
- *       1. In case of Ryan/Foster branching, the two items are selected in a way such that the sum of the LP values of
- *          all columns/packings containing both items is fractional. Hence, it exists at least one column/packing which
- *          contains both items and also at least one column/packing for each item containing this but not the other
- *          item. That means, branching in the "same" direction stays LP feasible since there exists at least one
- *          column/packing with both items and branching in the "differ" direction stays LP feasible since there exists
- *          at least one column/packing containing one item, but not the other.
- *       2. In case of variable branching, we only branch on fractional variables. If a variable is fixed to one, there
- *          is no issue.  If a variable is fixed to zero, then we know that for each item which is part of that
- *          column/packing, there exists at least one other column/packing containing this particular item due to the
- *          covering constraints.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -338,6 +326,7 @@ static
 SCIP_RETCODE initPricing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICERDATA*      pricerdata,         /**< pricer data */
+   SCIP_Bool             isfarkas,           /**< whether we perform Farkas pricing */
    SCIP*                 subscip,            /**< pricing SCIP data structure */
    SCIP_VAR**            vars                /**< variable array for the items */
    )
@@ -387,8 +376,8 @@ SCIP_RETCODE initPricing(
       }
 
       /* dual value in original SCIP */
-      dual = SCIPgetDualsolSetppc(scip, cons);
-      
+      dual = isfarkas ? SCIPgetDualfarkasSetppc(scip, cons) : SCIPgetDualsolSetppc(scip, cons);
+
       SCIP_CALL( SCIPcreateVarBasic(subscip, &var, SCIPconsGetName(cons), 0.0, 1.0, dual, SCIP_VARTYPE_BINARY) );
       SCIP_CALL( SCIPaddVar(subscip, var) );
 
@@ -413,6 +402,197 @@ SCIP_RETCODE initPricing(
    SCIP_CALL( addFixedVarsConss(scip, subscip, vars, conss, nitems) );
 
    SCIPfreeBufferArray(subscip, &vals);
+
+   return SCIP_OKAY;
+}
+
+/** perform packing pricing */
+static
+SCIP_RETCODE doPricing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer,             /**< variable pricer structure */
+   SCIP_Bool             isfarkas,           /**< whether we perform Farkas pricing */
+   SCIP_RESULT*          result              /**< pointer to store the result */
+   )
+{
+   SCIP* subscip;
+   SCIP_PRICERDATA* pricerdata;
+   SCIP_CONS** conss;
+   SCIP_VAR** vars;
+   int* ids;
+   SCIP_Bool addvar;
+
+   SCIP_SOL** sols;
+   int nsols;
+   int s;
+
+   int nitems;
+   SCIP_Longint capacity;
+
+   SCIP_Real timelimit;
+   SCIP_Real memorylimit;
+
+   assert(scip != NULL);
+   assert(pricer != NULL);
+   assert(result != NULL);
+
+   (*result) = SCIP_DIDNOTRUN;
+
+   /* get the pricer data */
+   pricerdata = SCIPpricerGetData(pricer);
+   assert(pricerdata != NULL);
+
+   capacity = pricerdata->capacity;
+   conss = pricerdata->conss;
+   ids = pricerdata->ids;
+   nitems = pricerdata->nitems;
+
+   /* get the remaining time and memory limit */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   if( !SCIPisInfinity(scip, memorylimit) )
+      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
+
+   /* initialize SCIP */
+   SCIP_CALL( SCIPcreate(&subscip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+
+   /* create problem in sub SCIP */
+   SCIP_CALL( SCIPcreateProbBasic(subscip, "pricing") );
+   SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
+
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
+   /* disable output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+
+   /* set time and memory limit */
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+
+   /* allocate in orginal scip, since otherwise the buffer counts in subscip are not correct */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nitems) );
+
+   /* initialization local pricing problem */
+   SCIP_CALL( initPricing(scip, pricerdata, isfarkas, subscip, vars) );
+
+   SCIPdebugMsg(scip, "solve pricer problem\n");
+
+   /* solve sub SCIP */
+   SCIP_CALL( SCIPsolve(subscip) );
+
+   sols = SCIPgetSols(subscip);
+   nsols = SCIPgetNSols(subscip);
+   addvar = FALSE;
+
+   /* loop over all solutions and create the corresponding column to master if the reduced cost is negative for a
+    * feasible dual solution of the restricted master LP, that is, the objective value is greater than 1.0 if the LP is
+    * feasible or greater than 0.0 if the LP is infeasible
+    */
+   for( s = 0; s < nsols; ++s )
+   {
+      SCIP_Bool feasible;
+      SCIP_SOL* sol;
+
+      /* the soultion should be sorted w.r.t. the objective function value */
+      assert(s == 0 || SCIPisFeasGE(subscip, SCIPgetSolOrigObj(subscip, sols[s-1]), SCIPgetSolOrigObj(subscip, sols[s])));
+
+      sol = sols[s];
+      assert(sol != NULL);
+
+      /* check if solution is feasible in original sub SCIP */
+      SCIP_CALL( SCIPcheckSolOrig(subscip, sol, &feasible, FALSE, FALSE ) );
+
+      if( !feasible )
+      {
+         SCIPwarningMessage(scip, "solution in pricing problem (capacity <%" SCIP_LONGINT_FORMAT ">) is infeasible\n", capacity);
+         continue;
+      }
+
+      /* check if the solution has a value greater than 1.0 in redcost pricing or greater than 0.0 in Farkas pricing */
+      if( SCIPisFeasGT(subscip, SCIPgetSolOrigObj(subscip, sol), isfarkas ? 0.0 : 1.0) )
+      {
+         SCIP_VAR* var;
+         SCIP_VARDATA* vardata;
+         int* consids;
+         char strtmp[SCIP_MAXSTRLEN];
+         char name[SCIP_MAXSTRLEN];
+         int nconss;
+         int o;
+         int v;
+
+         SCIPdebug( SCIP_CALL( SCIPprintSol(subscip, sol, NULL, FALSE) ) );
+
+         nconss = 0;
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "items");
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &consids, nitems) );
+
+         /* check which variables are fixed -> which item belongs to this packing */
+         for( o = 0, v = 0; o < nitems; ++o )
+         {
+            if( !SCIPconsIsEnabled(conss[o]) )
+               continue;
+
+            assert(SCIPgetNFixedonesSetppc(scip, conss[o]) == 0);
+
+            if( SCIPgetSolVal(subscip, sol, vars[v]) > 0.5 )
+            {
+               (void) SCIPsnprintf(strtmp, SCIP_MAXSTRLEN, "_%d", ids[o]);
+               strcat(name, strtmp);
+
+               consids[nconss] = o;
+               nconss++;
+            }
+            else
+               assert( SCIPisFeasEQ(subscip, SCIPgetSolVal(subscip, sol, vars[v]), 0.0) );
+
+            v++;
+         }
+
+         SCIP_CALL( SCIPvardataCreateBinpacking(scip, &vardata, consids, nconss) );
+
+         /* create variable for a new column with objective function coefficient 1.0 */
+         SCIP_CALL( SCIPcreateVarBinpacking(scip, &var, name, 1.0, FALSE, TRUE, vardata) );
+
+         /* add the new variable to the pricer store */
+         SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
+         addvar = TRUE;
+
+         /* change the upper bound of the binary variable to lazy since the upper bound is already enforced due to
+          * the objective function the set covering constraint; The reason for doing is that, is to avoid the bound
+          * of x <= 1 in the LP relaxation since this bound constraint would produce a dual variable which might have
+          * a positive reduced cost
+          */
+         SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
+
+         /* check which variable are fixed -> which orders belong to this packing */
+         for( v = 0; v < nconss; ++v )
+         {
+            assert(SCIPconsIsEnabled(conss[consids[v]]));
+            SCIP_CALL( SCIPaddCoefSetppc(scip, conss[consids[v]], var) );
+         }
+
+         SCIPdebug(SCIPprintVar(scip, var, NULL) );
+         SCIP_CALL( SCIPreleaseVar(scip, &var) );
+
+         SCIPfreeBufferArray(scip, &consids);
+      }
+      else
+         break;
+   }
+
+   /* free pricer MIP */
+   SCIPfreeBufferArray(scip, &vars);
+
+   if( addvar || SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
+      (*result) = SCIP_SUCCESS;
+
+   /* free sub SCIP */
+   SCIP_CALL( SCIPfree(&subscip) );
 
    return SCIP_OKAY;
 }
@@ -505,187 +685,11 @@ SCIP_DECL_PRICEREXITSOL(pricerExitsolBinpacking)
    return SCIP_OKAY;
 }
 
-
 /** reduced cost pricing method of variable pricer for feasible LPs */
 static
 SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
 {  /*lint --e{715}*/
-   SCIP* subscip;
-   SCIP_PRICERDATA* pricerdata;
-   SCIP_CONS** conss;
-   SCIP_VAR** vars;
-   int* ids;
-   SCIP_Bool addvar;
-
-   SCIP_SOL** sols;
-   int nsols;
-   int s;
-
-   int nitems;
-   SCIP_Longint capacity;
-
-   SCIP_Real timelimit;
-   SCIP_Real memorylimit;
-
-   assert(scip != NULL);
-   assert(pricer != NULL);
-
-   (*result) = SCIP_DIDNOTRUN;
-
-   /* get the pricer data */
-   pricerdata = SCIPpricerGetData(pricer);
-   assert(pricerdata != NULL);
-
-   capacity = pricerdata->capacity;
-   conss = pricerdata->conss;
-   ids = pricerdata->ids;
-   nitems = pricerdata->nitems;
-
-   /* get the remaining time and memory limit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   if( !SCIPisInfinity(scip, memorylimit) )
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-
-   /* initialize SCIP */
-   SCIP_CALL( SCIPcreate(&subscip) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-
-   /* create problem in sub SCIP */
-   SCIP_CALL( SCIPcreateProbBasic(subscip, "pricing") );
-   SCIP_CALL( SCIPsetObjsense(subscip, SCIP_OBJSENSE_MAXIMIZE) );
-
-   /* do not abort subproblem on CTRL-C */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-   /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-
-   /* set time and memory limit */
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-
-   /* allocate in orginal scip, since otherwise the buffer counts in subscip are not correct */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nitems) );
-
-   /* initialization local pricing problem */
-   SCIP_CALL( initPricing(scip, pricerdata, subscip, vars) );
-
-   SCIPdebugMsg(scip, "solve pricer problem\n");
-
-   /* solve sub SCIP */
-   SCIP_CALL( SCIPsolve(subscip) );
-
-   sols = SCIPgetSols(subscip);
-   nsols = SCIPgetNSols(subscip);
-   addvar = FALSE;
-
-   /* loop over all solutions and create the corresponding column to master if the reduced cost are negative for master,
-    * that is the objective value i greater than 1.0
-    */
-   for( s = 0; s < nsols; ++s )
-   {
-      SCIP_Bool feasible;
-      SCIP_SOL* sol;
-
-      /* the soultion should be sorted w.r.t. the objective function value */
-      assert(s == 0 || SCIPisFeasGE(subscip, SCIPgetSolOrigObj(subscip, sols[s-1]), SCIPgetSolOrigObj(subscip, sols[s])));
-
-      sol = sols[s];
-      assert(sol != NULL);
-
-      /* check if solution is feasible in original sub SCIP */
-      SCIP_CALL( SCIPcheckSolOrig(subscip, sol, &feasible, FALSE, FALSE ) );
-
-      if( !feasible )
-      {
-         SCIPwarningMessage(scip, "solution in pricing problem (capacity <%" SCIP_LONGINT_FORMAT ">) is infeasible\n", capacity);
-         continue;
-      }
-
-      /* check if the solution has a value greater than 1.0 */
-      if( SCIPisFeasGT(subscip, SCIPgetSolOrigObj(subscip, sol), 1.0) )
-      {
-         SCIP_VAR* var;
-         SCIP_VARDATA* vardata;
-         int* consids;
-         char strtmp[SCIP_MAXSTRLEN];
-         char name[SCIP_MAXSTRLEN];
-         int nconss;
-         int o;
-         int v;
-
-         SCIPdebug( SCIP_CALL( SCIPprintSol(subscip, sol, NULL, FALSE) ) );
-
-         nconss = 0;
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "items");
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &consids, nitems) );
-
-         /* check which variables are fixed -> which item belongs to this packing */
-         for( o = 0, v = 0; o < nitems; ++o )
-         {
-            if( !SCIPconsIsEnabled(conss[o]) )
-               continue;
-
-            assert(SCIPgetNFixedonesSetppc(scip, conss[o]) == 0);
-
-            if( SCIPgetSolVal(subscip, sol, vars[v]) > 0.5 )
-            {
-               (void) SCIPsnprintf(strtmp, SCIP_MAXSTRLEN, "_%d", ids[o]);
-               strcat(name, strtmp);
-
-               consids[nconss] = o;
-               nconss++;
-            }
-            else
-               assert( SCIPisFeasEQ(subscip, SCIPgetSolVal(subscip, sol, vars[v]), 0.0) );
-
-            v++;
-         }
-
-         SCIP_CALL( SCIPvardataCreateBinpacking(scip, &vardata, consids, nconss) );
-
-         /* create variable for a new column with objective function coefficient 0.0 */
-         SCIP_CALL( SCIPcreateVarBinpacking(scip, &var, name, 1.0, FALSE, TRUE, vardata) );
-
-         /* add the new variable to the pricer store */
-         SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
-         addvar = TRUE;
-
-         /* change the upper bound of the binary variable to lazy since the upper bound is already enforced due to
-          * the objective function the set covering constraint; The reason for doing is that, is to avoid the bound
-          * of x <= 1 in the LP relaxation since this bound constraint would produce a dual variable which might have
-          * a positive reduced cost
-          */
-         SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
-
-         /* check which variable are fixed -> which orders belong to this packing */
-         for( v = 0; v < nconss; ++v )
-         {
-            assert(SCIPconsIsEnabled(conss[consids[v]]));
-            SCIP_CALL( SCIPaddCoefSetppc(scip, conss[consids[v]], var) );
-         }
-
-         SCIPdebug(SCIPprintVar(scip, var, NULL) );
-         SCIP_CALL( SCIPreleaseVar(scip, &var) );
-
-         SCIPfreeBufferArray(scip, &consids);
-      }
-      else
-         break;
-   }
-
-   /* free pricer MIP */
-   SCIPfreeBufferArray(scip, &vars);
-
-   if( addvar || SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
-      (*result) = SCIP_SUCCESS;
-
-   /* free sub SCIP */
-   SCIP_CALL( SCIPfree(&subscip) );
+   SCIP_CALL( doPricing(scip, pricer, FALSE, result) );
 
    return SCIP_OKAY;
 }
@@ -694,23 +698,9 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
 static
 SCIP_DECL_PRICERFARKAS(pricerFarkasBinpacking)
 {  /*lint --e{715}*/
-   /** @note In case of this binpacking example, the master LP should not get infeasible after branching, because of the
-    *        way branching is performed. Therefore, the Farkas pricing is not implemented.
-    *        1. In case of Ryan/Foster branching, the two items are selected in a way such that the sum of the LP values
-    *           of all columns/packings containing both items is fractional. Hence, it exists at least one
-    *           column/packing which contains both items and also at least one column/packing for each item containing
-    *           this but not the other item. That means, branching in the "same" direction stays LP feasible since there
-    *           exists at least one column/packing with both items and branching in the "differ" direction stays LP
-    *           feasible since there exists at least one column/packing containing one item, but not the other.
-    *        2. In case of variable branching, we only branch on fractional variables. If a variable is fixed to one,
-    *           there is no issue.  If a variable is fixed to zero, then we know that for each item which is part of
-    *           that column/packing, there exists at least one other column/packing containing this particular item due
-    *           to the covering constraints.
-    */
-   SCIPwarningMessage(scip, "Current master LP is infeasible, but Farkas pricing was not implemented\n");
-   SCIPABORT();
+   SCIP_CALL( doPricing(scip, pricer, TRUE, result) );
 
-   return SCIP_OKAY; /*lint !e527*/
+   return SCIP_OKAY;
 }
 
 /**@} */
