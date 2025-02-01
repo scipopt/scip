@@ -166,9 +166,9 @@ SCIP_RETCODE singletonColumnStuffing(
                 * all constraints containing this variable are present inside
                 * the mixed integer linear matrix
                 */
-               if( SCIPmatrixGetColNNonzs(matrix, idx) == 1
-                  && (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL)) == 1
-                  && !SCIPvarIsIntegral(var) )
+               if( !SCIPvarIsIntegral(var)
+                  && SCIPmatrixGetColNNonzs(matrix, idx) == 1
+                  && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) + SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 1 )
                {
                   if( SCIPisLT(scip, SCIPvarGetObj(var), 0.0) && SCIPisGT(scip, coef, 0.0) )
                   {
