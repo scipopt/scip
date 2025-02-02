@@ -56,6 +56,7 @@
 #include "scip/var.h"
 
 #define SCIP_HASHSIZE_CERTIFICATE    500 /**< size of hash map for certificate -> nodesdata mapping used for certificate output */
+#define SCIP_MB_TO_CHAR_RATE   1048576.0 /**< conversion rate from MB to characters */
 
 /** updates file size */
 static
@@ -64,8 +65,7 @@ void updateFilesize(
    SCIP_Real             nchars              /**< number of characters printed */
    )
 {
-   //TODO: number maybe should be excluded to a const with a good naming
-   certificate->filesize += nchars/1048576.0;
+   certificate->filesize += nchars/(SCIP_MB_TO_CHAR_RATE);
 }
 
 /** checks whether node is a left node or not */
