@@ -332,7 +332,6 @@ SCIP_RETCODE SCIPcertificateInit(
    int ntransvars;
    int j;
    char* name = NULL;
-   char* compression = NULL;
    SCIP_VAR** vars;
    SCIP_VAR** transvars;
    SCIP_CONS** conss;
@@ -354,18 +353,10 @@ SCIP_RETCODE SCIPcertificateInit(
    BMScopyMemoryArray(name, set->certificate_filename, filenamelen);
    name[filenamelen] = '\0';
 
-   /** @todo this currently strips the .vipr from the filename if there is no compression...
-    * the whole compression code currently makes no sense, since the certificate has to be unpacked to be read by vipr
-    * again anyway, so it is just disabled.
-    */
-
    SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       "storing certificate information in file <%s>\n", set->certificate_filename);
 
-   if( NULL != compression && 0 == strncmp(compression, "gz", 2) )
-      certificate->transfile = SCIPfopen(set->certificate_filename, "wb");
-   else
-      certificate->transfile = SCIPfopen(set->certificate_filename, "wT");
+   certificate->transfile = SCIPfopen(set->certificate_filename, "wT");
 
    bufferlen = strlen(name);
    SCIP_ALLOC( BMSallocMemoryArray(&certificate->derivationfilename, filenamelen+5) );
@@ -380,28 +371,10 @@ SCIP_RETCODE SCIPcertificateInit(
    certificate->origfilename[bufferlen+1] = 'o';
    certificate->origfilename[bufferlen+2] = 'r';
    certificate->origfilename[bufferlen+3] = 'i';
-   if( NULL != compression && 0 == strncmp(compression, "gz", 2) )
-   {
-      certificate->derivationfilename[bufferlen+4] = '.';
-      certificate->derivationfilename[bufferlen+5] = 'g';
-      certificate->derivationfilename[bufferlen+6] = 'z';
-      certificate->derivationfilename[bufferlen+7] = '\0';
-
-      certificate->origfilename[bufferlen+4] = '.';
-      certificate->origfilename[bufferlen+5] = 'g';
-      certificate->origfilename[bufferlen+6] = 'z';
-      certificate->origfilename[bufferlen+7] = '\0';
-
-      certificate->derivationfile = SCIPfopen(certificate->derivationfilename, "wb");
-      certificate->origfile = SCIPfopen(certificate->origfilename, "wb");
-   }
-   else
-   {
-      certificate->derivationfilename[bufferlen+4] = '\0';
-      certificate->origfilename[bufferlen+4] = '\0';
-      certificate->derivationfile = SCIPfopen(certificate->derivationfilename, "wT");
-      certificate->origfile = SCIPfopen(certificate->origfilename, "wT");
-   }
+   certificate->derivationfilename[bufferlen+4] = '\0';
+   certificate->origfilename[bufferlen+4] = '\0';
+   certificate->derivationfile = SCIPfopen(certificate->derivationfilename, "wT");
+   certificate->origfile = SCIPfopen(certificate->origfilename, "wT");
 
    if( certificate->transfile == NULL || certificate->origfile == NULL || certificate->derivationfile == NULL )
    {
