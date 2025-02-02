@@ -1133,7 +1133,7 @@ SCIP_RETCODE SCIPnodeFree(
    SCIPsetDebugMsg(set, "free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n", SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
    /* if certificate is active, unsplit current node and free the memory in hashmap of certificate */
-   SCIPcertificatePrintUnsplitting(set, stat->certificate, *node);
+   SCIP_CALL( SCIPcertificatePrintUnsplitting(set, stat->certificate, *node) );
 
    /* check lower bound w.r.t. debugging solution */
    SCIP_CALL( SCIPdebugCheckGlobalLowerbound(blkmem, set) );
@@ -2097,7 +2097,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
       if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
-         SCIPdomchgAddCurrentCertificateIndex(node->domchg, set, stat->certificate);
+         SCIPdomchgAddCurrentCertificateIndex(node->domchg, stat->certificate);
 
       /* update the child's lower bound */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, transprob, var, oldbound, newbound, boundtype);
@@ -2132,7 +2132,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
             0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
 
       if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
-         SCIPdomchgAddCurrentCertificateIndex(node->domchg, set, stat->certificate);
+         SCIPdomchgAddCurrentCertificateIndex(node->domchg, stat->certificate);
    }
 
    assert(node->domchg != NULL);
@@ -2414,7 +2414,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
             lpsolval, NULL, NULL, NULL, 0, inferboundtype) );
 
       if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
-         SCIPdomchgAddCurrentCertificateIndex(node->domchg, set, stat->certificate);
+         SCIPdomchgAddCurrentCertificateIndex(node->domchg, stat->certificate);
 
       /* update the child's lower bound (pseudoobjval is safe, so can use the fp version) */
       newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lpexact->fplp, set, transprob, var, oldboundreal, newboundreal, boundtype);
@@ -2447,7 +2447,7 @@ SCIP_RETCODE SCIPnodeAddBoundinferExact(
             0.0, infervar, infercons, inferprop, inferinfo, inferboundtype) );
 
       if( SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
-         SCIPdomchgAddCurrentCertificateIndex(node->domchg, set, stat->certificate);
+         SCIPdomchgAddCurrentCertificateIndex(node->domchg, stat->certificate);
    }
 
    assert(node->domchg != NULL);

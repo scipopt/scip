@@ -159,7 +159,6 @@ SCIP_RETCODE SCIPdomchgUndo(
 /** adds certificate line number to domain changes */
 void SCIPdomchgAddCurrentCertificateIndex(
    SCIP_DOMCHG*          domchg,             /**< pointer to domain change data structure */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    );
 
