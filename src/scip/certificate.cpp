@@ -2362,6 +2362,9 @@ SCIP_RETCODE SCIPcertificatePrintDualboundPseudo(
    /* print pseudo solution into certificate file */
    (void) SCIPcertificatePrintDualbound(certificate, NULL, pseudoobjval, duallen, dualind, bounds);
 
+   SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1,
+      pseudoobjval) );
+
    SCIP_CALL( SCIPcertificateUpdateBoundData(certificate, node, certificate->indexcounter - 1, pseudoobjval) );
 
    SCIPsetFreeBufferArray(set, &dualind);
