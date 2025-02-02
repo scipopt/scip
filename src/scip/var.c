@@ -1240,7 +1240,7 @@ SCIP_RETCODE boundchgApplyGlobal(
       return SCIP_OKAY;
    }
 
-   if( SCIPsetCertificateEnabled(set) )
+   if( SCIPcertificateIsEnabled(stat->certificate) )
    {
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
@@ -1729,7 +1729,7 @@ void SCIPdomchgAddCurrentCertificateIndex(
 {
    SCIP_BOUNDCHG* change;
 
-   if( !SCIPsetCertificateEnabled(set) )
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
 
    change = &(domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1]);

@@ -30,7 +30,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 #include <stdio.h>
 #include <assert.h>
-#include <time.h>
 
 #include "scip/bounding_exact.h"
 #include "scip/struct_set.h"
@@ -46,7 +45,6 @@
 #include "scip/scip_prob.h"
 #include "scip/prob.h"
 #include "scip/scip.h"
-#include "scip/sol.h"
 #include "scip/primal.h"
 #include "scip/sepastoreexact.h"
 #include "scip/struct_scip.h"
@@ -1731,7 +1729,7 @@ SCIP_RETCODE projectShift(
    {
       if( !RatIsZero(violation[i]) )
       {
-         SCIPdebugMessage("   dual solution incorrect, violates equalties\n");
+         SCIPdebugMessage("   dual solution incorrect, violates equalities\n");
          rval = 1;
       }
    }
@@ -1912,11 +1910,11 @@ char chooseInitialBoundingMethod(
       }
       else
       {
-         /* check if neumair-shcherbina is possible */
-         if( SCIPlpExactBSpossible(lpexact) )
+         /* check if Neumaier-Shcherbina is possible */
+         if( SCIPlpExactBoundShiftUseful(lpexact) )
             dualboundmethod = 'n';
          /* check if project and shift is possible */
-         else if( SCIPlpExactPSpossible(lpexact) )
+         else if( SCIPlpExactProjectShiftPossible(lpexact) )
             dualboundmethod = 'p';
          /* otherwise solve exactly */
          else
@@ -1946,7 +1944,7 @@ char chooseFallbackBoundingMethod(
    {
    case 'n':
       /* bound-shift -> try project shift next if possible, otherwise exactlp */
-      dualboundmethod = SCIPlpExactPSpossible(lpexact) ? 'p' : 'e';
+      dualboundmethod = SCIPlpExactProjectShiftPossible(lpexact) ? 'p' : 'e';
       break;
    case 'p':
       /* project-shift -> try exactlp next */
@@ -1956,10 +1954,10 @@ char chooseFallbackBoundingMethod(
       /* exactlp -> try bound shift next, if possible, otherwise project-shift, if possible,
        * otherwise try exactlp again
        */
-      if( SCIPlpExactBSpossible(lpexact) )
+      if( SCIPlpExactBoundShiftUseful(lpexact) )
          dualboundmethod = 'n';
       else
-         dualboundmethod = SCIPlpExactPSpossible(lpexact) ? 'p' : 't';
+         dualboundmethod = SCIPlpExactProjectShiftPossible(lpexact) ? 'p' : 't';
       break;
    default:
       /* else -> return unknown */
@@ -2013,14 +2011,13 @@ SCIP_RETCODE boundShift(
    SCIP_Real*            safebound           /**< pointer to store the computed safe bound (usually lpobj) */
    )
 {
-   // SCIP_ROUNDMODE roundmode;
-   SCIP_INTERVAL* rhslhsrow; // the rhs or lhs of row depending on sign of dual solution
-   SCIP_INTERVAL* ublbcol; // the ub or lb of col depending on sign of dual solution
+   SCIP_INTERVAL* rhslhsrow;
+   SCIP_INTERVAL* ublbcol;
    SCIP_INTERVAL* constantinter;
-   SCIP_INTERVAL* lpcolvals; // values in a column of the constraint matrix
-   SCIP_INTERVAL* productcoldualval; // scalar product of lp column with dual solution vector
-   SCIP_INTERVAL* obj; // objective (or 0 in farkas proof)
-   SCIP_INTERVAL productsidedualval; //scalar product of sides with dual solution vector
+   SCIP_INTERVAL* lpcolvals;
+   SCIP_INTERVAL* productcoldualval;
+   SCIP_INTERVAL* obj;
+   SCIP_INTERVAL productsidedualval;
    SCIP_INTERVAL safeboundinterval;
    SCIP_ROW* row;
    SCIP_COL* col;
@@ -2040,7 +2037,7 @@ SCIP_RETCODE boundShift(
    lpexact->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
    lpexact->solved = 0;
 
-   if( !SCIPlpExactBSpossible(lpexact) )
+   if( !SCIPlpExactBoundShiftUseful(lpexact) )
       return SCIP_OKAY;
 
    /* start timing */
@@ -2069,7 +2066,7 @@ SCIP_RETCODE boundShift(
 
    /* calculate y^Tb */
    SCIPintervalSet(&productsidedualval, 0.0);
-   SCIPdebugMessage("productsidedualval intervall computation with vectors:\n");
+   SCIPdebugMessage("productsidedualval interval computation with vectors:\n");
 
    /* create dual vector, sides and constant vector in interval arithmetic */
    for( j = 0; j < lp->nrows; ++j )
@@ -2111,7 +2108,7 @@ SCIP_RETCODE boundShift(
       SCIPdebugMessage("   j=%d: b=[%g,%g] (lhs=%g, rhs=%g, const=%g, fpdual=%g)\n", j, rhslhsrow[j].inf, rhslhsrow[j].sup, row->lhs,
             row->rhs, row->constant, fpdual[j]);
    }
-   /* substract constant from sides in interval arithmetic and calculate fpdual * side */
+   /* subtract constant from sides in interval arithmetic and calculate fpdual * side */
    SCIPintervalAddVectors(SCIPsetInfinity(set), rhslhsrow, lp->nrows, rhslhsrow, constantinter);
    SCIPintervalScalprodScalars(SCIPsetInfinity(set), &productsidedualval, lp->nrows, rhslhsrow, fpdual);
 
@@ -2182,7 +2179,7 @@ SCIP_RETCODE boundShift(
       assert(SCIPcolGetUb(col) >= RatRoundReal(SCIPvarGetUbLocalExact(col->var), SCIP_R_ROUND_UPWARDS));
       SCIPintervalSetBounds(&ublbcol[j], SCIPcolGetLb(col), SCIPcolGetUb(col));
 
-      /* opt out if there are infinity bounds and a non-infinte value */
+      /* opt out if there are infinity bounds and a non-infinty value */
       if( (SCIPsetIsInfinity(set, -SCIPcolGetLb(col)) || SCIPsetIsInfinity(set, SCIPcolGetUb(col))) )
       {
          if( productcoldualval[j].inf + obj[j].inf != 0 || productcoldualval[j].sup + obj[j].sup != 0 )
@@ -2315,7 +2312,7 @@ CLEANUP:
    if( stat->nboundshift + stat->nboundshiftinf > 10
       && (1.0 * stat->nfailboundshift + stat->nfailboundshiftinf) / (stat->nboundshift + stat->nboundshiftinf) > 0.8 )
    {
-      lpexact->boundshiftviable = FALSE;
+      lpexact->boundshiftuseful = FALSE;
    }
    /* free buffer for storing y in interval arithmetic */
    SCIPsetFreeBufferArray(set, &ublbcol);
@@ -2343,7 +2340,7 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved LP error occurred */
-   SCIP_Bool             usefarkas,          /**< should infeasiblity be proven? */
+   SCIP_Bool             usefarkas,          /**< should infeasibility be proven? */
    SCIP_Real*            safebound,          /**< pointer to store the calculated safe bound */
    SCIP_Bool*            primalfeasible,     /**< pointer to store whether the solution is primal feasible, or NULL */
    SCIP_Bool*            dualfeasible        /**< pointer to store whether the solution is dual feasible, or NULL */
@@ -2389,17 +2386,21 @@ SCIP_RETCODE SCIPlpExactComputeSafeBound(
       SCIPlpExactAllowExactSolve(lpexact, set, FALSE);
       nattempts++;
 
+      /**
+       * For the methods used please refer to
+       * "Valid Linear Programming Bounds for Exact Mixed-Integer Programming" from Steffy and Wolter (2011)
+       */
       switch( dualboundmethod )
       {
          case 'n':
-            /* Neumaier-Shcherbina */
+            /* Safe Bounding introduced by Neumaier and Shcherbina (Chapter 2)*/
             *lperror = FALSE;
             SCIP_CALL( boundShift(lp, lpexact, set, messagehdlr, blkmem, stat, eventqueue, eventfilter,
                   prob, usefarkas, safebound) );
             break;
       #ifdef SCIP_WITH_GMP
          case 'p':
-            /* project-and-shift */
+            /* Project-and-Shift (Chapter 3)*/
             *lperror = FALSE;
             SCIP_CALL( projectShift(lp, lpexact, set, stat, messagehdlr, eventqueue, eventfilter,
                   prob, blkmem, usefarkas, safebound) );

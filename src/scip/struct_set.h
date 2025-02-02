@@ -632,8 +632,9 @@ struct SCIP_Set
    SCIP_Longint          exact_cutapproxmaxboundval; /**< maximal absolute bound value for wich cut coefficient should
                                               *   be approximated with bounded denominator (0: no restriction) */
 
-   /* CERTIFICATE tool settings */
-   char*                 certificate_filename; /**< name of the CERTIFICATE Tool output file, or - if no output should be created */
+   /* certificate settings */
+   char*                 certificate_filename;/**< name of the certificate file, or "-" if no output should be created */
+   SCIP_Real             certificate_maxfilesize;/**< maximum size of the certificate file in MB (stop printing when reached) */
 
    /* Reading */
    SCIP_Bool             read_initialconss;  /**< should model constraints be marked as initial? */
