@@ -4791,7 +4791,15 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    /* set up rhs */
    b.len = 1;
    ind = r;
-   val = (x.ind)[r] >= 0 ? 1.0 : -1.0;
+   val = 1.0;
+   if ( x.ind[r] < 0 )
+   {
+      /* the sign of the slack variables seems to be 1 for <= inequalities and equations, but -1 for >= inequalities */
+      char sense;
+      CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, -(x.ind[r] + 1), 1, &sense) );
+      if ( sense == '>' )
+         val = -1.0;
+   }
    b.ind = &ind;
    b.val = &val;
 
