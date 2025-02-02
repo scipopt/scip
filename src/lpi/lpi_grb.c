@@ -4781,7 +4781,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    }
 
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
-   SCIP_CALL( SCIPlpiGetNRows(lpi, &ncols) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ngrbcols) );
 
    /* set up solution vector */
@@ -4900,7 +4900,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    }
 
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
-   SCIP_CALL( SCIPlpiGetNRows(lpi, &ncols) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ngrbcols) );
 
    /* set up solution vector */
