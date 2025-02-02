@@ -1703,15 +1703,17 @@ void SCIPfreeParseVarsPolynomialData(
    assert(monomialexps  != NULL);
    assert(monomialcoefs != NULL);
    assert(monomialnvars != NULL);
-   assert((*monomialvars  != NULL) == (nmonomials > 0));
-   assert((*monomialexps  != NULL) == (nmonomials > 0));
-   assert((*monomialcoefs != NULL) == (nmonomials > 0));
-   assert((*monomialnvars != NULL) == (nmonomials > 0));
+   assert(nmonomials >= 0);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPfreeParseVarsPolynomialData", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( nmonomials == 0 )
       return;
+
+   assert(*monomialvars  != NULL);
+   assert(*monomialexps  != NULL);
+   assert(*monomialcoefs != NULL);
+   assert(*monomialnvars != NULL);
 
    for( i = nmonomials - 1; i >= 0; --i )
    {
