@@ -6478,11 +6478,12 @@
  *
  * @section TABLE_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Statistics Table
  *
- * Statistics table plugins have only one fundamental callback method, namely the \ref TABLEOUTPUT method.
- * This method has to be implemented for every display column; the other callback methods are optional.
- * In the C++ wrapper class scip::ObjTable, the scip_output() method (which corresponds to the \ref TABLEOUTPUT callback) is a virtual
- * abstract member function.
- * You have to implement it in order to be able to construct an object of your statistics table class.
+ * Statistics table plugins have callback methods that output and collect data.
+ * One or both of these methods have to be implemented for every table.
+ * If the output method is not implemented, then SCIP tries to print the data that is retrieved from the collect callback in table form.
+ * In the C++ wrapper class scip::ObjTable, the scip_output() method (which corresponds to the \ref TABLEOUTPUT callback) and 
+ * scip_collect() method (which corresponds to the \ref TABLECOLLECT callback) are virtual member functions.
+ * One or both of them should be overwritten.
  *
  * Additional documentation for the callback methods can be found in type_table.h.
  *
@@ -6494,6 +6495,14 @@
  *
  * Typical methods called by a statistics table are, for example, SCIPdispLongint(), SCIPdispInt(), SCIPdispTime(), and
  * SCIPinfoMessage().
+ *
+ * @subsection TABLECOLLECT
+ *
+ * The TABLECOLLECT callback is called when the statistics table should collect its information in a SCIP_DATATREE.
+ * This is used, for example, to write statistics to a JSON file (SCIPprintStatisticsJson()).
+ * To implement the TABLECOLLECT callback, `SCIPinsertDatatree*()` functions should be used to insert information
+ * into the given SCIP_DATATREE. Currently, inserting data of different types is supported: long, double, char*,
+ * another SCIP_DATATREE*, or arrays of long, double, and char*. See also scip_datatree.h and pub_datatree.h.
  *
  *
  * @section TABLE_ADDITIONALCALLBACKS Additional Callback Methods of a Statistics Table

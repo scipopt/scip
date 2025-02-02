@@ -26,6 +26,7 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for displaying statistics tables
  * @author Tristan Gally
+ * @author Mohammed Ghannam
  *
  *  This file defines the interface for statistics tables implemented in C.
  *
@@ -47,6 +48,7 @@
 #include <stdio.h>
 
 #include "scip/def.h"
+#include "scip/type_datatree.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 
@@ -120,6 +122,15 @@ typedef struct SCIP_TableData SCIP_TABLEDATA; /**< statistics table specific dat
  *  - file            : file stream for output
  */
 #define SCIP_DECL_TABLEOUTPUT(x) SCIP_RETCODE x (SCIP* scip, SCIP_TABLE* table, FILE* file)
+
+/** method to collect (serializable) data of statistics table
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - table           : the statistics table itself
+ *  - datatree        : datatree where to insert data
+ */
+#define SCIP_DECL_TABLECOLLECT(x) SCIP_RETCODE x (SCIP* scip, SCIP_TABLE* table, SCIP_DATATREE* datatree)
 
 #ifdef __cplusplus
 }

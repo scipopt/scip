@@ -2992,7 +2992,7 @@ SCIP_RETCODE SCIPincludeEventHdlrEstim(
 
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputEstim,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputEstim, NULL,
          NULL, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
 
    /* include time series into event handler */

@@ -1089,6 +1089,92 @@ void printNeighborhoodStatistics(
    }
 }
 
+/** collects neighborhood statistics into a SCIP_DATATREE object */
+static
+SCIP_RETCODE collectNeighborhoodStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   int i;
+   int j;
+   HISTINDEX statusses[] = {HIDX_OPT, HIDX_INFEAS, HIDX_NODELIM, HIDX_STALLNODE, HIDX_SOLLIM, HIDX_USR, HIDX_OTHER};
+   const char* statusnames[] = {"optimal", "infeasible", "nodelimit", "stallnodelimit", "sollimit", "userinterrupt", "other"};
+   SCIP_DATATREE* lnsstats;
+
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(datatree != NULL);
+
+   /* Create a subtree for LNS statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &lnsstats, "plugins", -1) );
+
+   /* Loop over neighborhoods and collect statistics */
+   for( i = 0; i < heurdata->nneighborhoods; ++i )
+   {
+      SCIP_DATATREE* neighborhoodtree;
+      SCIP_DATATREE* statushist;
+      const char* statusname;
+      NH* neighborhood = heurdata->neighborhoods[i];
+      assert(neighborhood != NULL);
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, lnsstats, &neighborhoodtree, neighborhood->name, -1) );
+
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, neighborhoodtree, "calls", neighborhood->stats.nruns) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "setup_time", SCIPgetClockTime(scip, neighborhood->stats.setupclock)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "solve_time", SCIPgetClockTime(scip, neighborhood->stats.execclock)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, neighborhoodtree, "solve_nodes", neighborhood->stats.usednodes) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, neighborhoodtree, "solutions_found", neighborhood->stats.nsolsfound) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, neighborhoodtree, "best_solutions_found", neighborhood->stats.nbestsolsfound) );
+
+      SCIP_Real proba = 0.0;
+      SCIP_Real probaix = 0.0;
+      SCIP_Real ucb = 1.0;
+      SCIP_Real epsgreedyweight = -1.0;
+
+      if( heurdata->bandit != NULL && i < heurdata->nactiveneighborhoods )
+      {
+         switch( heurdata->banditalgo )
+         {
+            case 'u':
+               ucb = SCIPgetConfidenceBoundUcb(heurdata->bandit, i + heurdata->ndiving);
+               break;
+            case 'g':
+               epsgreedyweight = SCIPgetWeightsEpsgreedy(heurdata->bandit)[i + heurdata->ndiving];
+               break;
+            case 'e':
+               proba = SCIPgetProbabilityExp3(heurdata->bandit, i + heurdata->ndiving);
+               break;
+            case 'i':
+               probaix = SCIPgetProbabilityExp3IX(heurdata->bandit, i + heurdata->ndiving);
+               break;
+            default:
+               break;
+         }
+      }
+
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "exp3_probability", proba) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "exp3_ix_probability", probaix) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "eps_greedy_weight", epsgreedyweight) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "ucb", ucb) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "target_fixing_rate", neighborhood->fixingrate.targetfixingrate) );
+
+      /* Status histogram */
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, neighborhoodtree, &statushist, "status_histogram", -1) );
+      for( j = 0; j < NHISTENTRIES; ++j )
+      {
+         statusname = statusnames[j];
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, statushist, statusname, neighborhood->stats.statushist[statusses[j]]) );
+      }
+
+      /* Active flag */
+      SCIP_CALL( SCIPinsertDatatreeBool(scip, neighborhoodtree, "active", i < heurdata->nactiveneighborhoods ? 1 : 0) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** print diving heuristic statistics */
 static
 void printDivingHeurStatistics(
@@ -1155,6 +1241,77 @@ void printDivingHeurStatistics(
 
       SCIPinfoMessage(scip, file, "\n");
    }
+}
+
+/** collects diving heuristic statistics into a SCIP_DATATREE object */
+static
+SCIP_RETCODE collectDivingHeurStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* divingstats;
+   int i;
+
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(datatree != NULL);
+
+   /* Create a subtree for diving heuristic statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &divingstats, "diving_statistics", -1) );
+
+   /* Loop over diving heuristics and collect statistics */
+   for( i = 0; i < heurdata->ndiving; ++i )
+   {
+      DIVING_HEUR* divingheur = heurdata->divingheurs[i];
+      SCIP_DATATREE* divingtree;
+      assert(divingheur != NULL);
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, divingstats, &divingtree, SCIPdivesetGetName(divingheur->diveset), -1) );
+
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, divingtree, "calls", divingheur->stats->nruns) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "setup_time", SCIPgetClockTime(scip, divingheur->stats->setupclock)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "solve_time", SCIPgetClockTime(scip, divingheur->stats->execclock)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, divingtree, "solve_nodes", divingheur->stats->nprobnodes) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, divingtree, "solutions_found", divingheur->stats->nsolsfound) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, divingtree, "best_solutions_found", divingheur->stats->nbestsolsfound) );
+
+      SCIP_Real proba = 0.0;
+      SCIP_Real probaix = 0.0;
+      SCIP_Real ucb = 1.0;
+      SCIP_Real epsgreedyweight = -1.0;
+
+      if( heurdata->bandit != NULL )
+      {
+         switch( heurdata->banditalgo )
+         {
+            case 'u':
+               ucb = SCIPgetConfidenceBoundUcb(heurdata->bandit, i);
+               break;
+            case 'g':
+               epsgreedyweight = SCIPgetWeightsEpsgreedy(heurdata->bandit)[i];
+               break;
+            case 'e':
+               proba = SCIPgetProbabilityExp3(heurdata->bandit, i);
+               break;
+            case 'i':
+               probaix = SCIPgetProbabilityExp3IX(heurdata->bandit, i);
+               break;
+            default:
+               break;
+         }
+      }
+
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "exp3_probability", proba) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "exp3_ix_probability", probaix) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "eps_greedy_weight", epsgreedyweight) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "ucb", ucb) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "lp_resolve_quotient", divingheur->solvefreqdata->currentsolvefreq) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, divingtree, "max_dive_depth", divingheur->nodelimit) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** update the statistics of the diving heuristic based on the heuristic run */
@@ -4276,10 +4433,32 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNeighborhood)
    /* print only diving statistics if scheduler got executed at least once (because we only then
     * initialize the diving heuristics)
     * Note: More Diving statistics will be printed in scip_solvingstats.c with all other stats about
-    * diving since adaptive diving and the scheudler use the same diving context
+    * diving since adaptive diving and the scheduler use the same diving context
     */
    if( heurdata->divingheurs != NULL )
       printDivingHeurStatistics(scip, heurdata, file);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_TABLECOLLECT(tableCollectNeighborhood)
+{
+   assert(table != NULL);
+
+   SCIP_HEURDATA* heurdata;
+
+   assert(SCIPfindHeur(scip, HEUR_NAME) != NULL);
+   heurdata = SCIPheurGetData(SCIPfindHeur(scip, HEUR_NAME));
+   assert(heurdata != NULL);
+
+   /* print neighborhood statistics */
+   SCIP_CALL( collectNeighborhoodStatistics(scip, heurdata, datatree) );
+
+   if( heurdata->divingheurs != NULL )
+   {
+      SCIP_CALL( collectDivingHeurStatistics(scip, heurdata, datatree) );
+   }
 
    return SCIP_OKAY;
 }
@@ -4476,7 +4655,7 @@ SCIP_RETCODE SCIPincludeHeurScheduler(
 
    assert(SCIPfindTable(scip, TABLE_NAME_NEIGHBORHOOD) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NEIGHBORHOOD, TABLE_DESC_NEIGHBORHOOD, TRUE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNeighborhood,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNeighborhood, tableCollectNeighborhood,
          NULL, TABLE_POSITION_NEIGHBORHOOD, TABLE_EARLIEST_STAGE_NEIGHBORHOOD) );
 
    return SCIP_OKAY;

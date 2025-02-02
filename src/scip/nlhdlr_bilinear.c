@@ -1027,6 +1027,91 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBilinear)
    return SCIP_OKAY;
 }
 
+/** collects bilinear nonlinear handler statistics into a SCIP_DATATREE object */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectBilinear)
+{
+   SCIP_NLHDLR* nlhdlr;
+   SCIP_NLHDLRDATA* nlhdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_HASHMAP* hashmap;
+   SCIP_EXPRITER* it;
+   int resfound = 0;
+   int restotal = 0;
+   int c;
+
+   assert(scip != NULL);
+   assert(table != NULL);
+   assert(datatree != NULL);
+
+   /* Find the nonlinear constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+   assert(conshdlr != NULL);
+
+   /* Find the bilinear nonlinear handler */
+   nlhdlr = SCIPfindNlhdlrNonlinear(conshdlr, NLHDLR_NAME);
+   assert(nlhdlr != NULL);
+
+   nlhdlrdata = SCIPnlhdlrGetData(nlhdlr);
+   assert(nlhdlrdata != NULL);
+
+   /* Allocate memory */
+   SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), nlhdlrdata->nexprs) );
+   SCIP_CALL( SCIPcreateExpriter(scip, &it) );
+
+   /* Initialize hashmap */
+   for( c = 0; c < nlhdlrdata->nexprs; ++c )
+   {
+      assert(!SCIPhashmapExists(hashmap, nlhdlrdata->exprs[c]));
+      SCIP_CALL( SCIPhashmapInsertInt(hashmap, nlhdlrdata->exprs[c], 0) );
+   }
+
+   /* Count occurrences of each expression in constraints */
+   for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
+   {
+      SCIP_CONS* cons = SCIPconshdlrGetConss(conshdlr)[c];
+      SCIP_EXPR* expr;
+
+      SCIP_CALL( SCIPexpriterInit(it, SCIPgetExprNonlinear(cons), SCIP_EXPRITER_DFS, FALSE) );
+
+      for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) ) /*lint !e441*//*lint !e440*/
+      {
+         if( SCIPhashmapExists(hashmap, expr) )
+         {
+            int nuses = SCIPhashmapGetImageInt(hashmap, expr);
+            SCIP_CALL( SCIPhashmapSetImageInt(hashmap, expr, nuses + 1) );
+         }
+      }
+   }
+
+   /* Compute success ratio */
+   for( c = 0; c < nlhdlrdata->nexprs; ++c )
+   {
+      SCIP_NLHDLREXPRDATA* nlhdlrexprdata;
+      int nuses;
+
+      nuses = SCIPhashmapGetImageInt(hashmap, nlhdlrdata->exprs[c]);
+      assert(nuses > 0);
+
+      nlhdlrexprdata = SCIPgetNlhdlrExprDataNonlinear(nlhdlr, nlhdlrdata->exprs[c]);
+      assert(nlhdlrexprdata != NULL);
+
+      if( nlhdlrexprdata->nunderineqs > 0 || nlhdlrexprdata->noverineqs > 0 )
+         resfound += nuses;
+      restotal += nuses;
+   }
+
+   /* Insert statistics into the data tree */
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "expressionsfound", resfound) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "expressionstotal", restotal) );
+
+   /* Free memory */
+   SCIPfreeExpriter(&it);
+   SCIPhashmapFree(&hashmap);
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of nonlinear handler
@@ -1516,7 +1601,7 @@ SCIP_RETCODE SCIPincludeNlhdlrBilinear(
    /* statistic table */
    assert(SCIPfindTable(scip, TABLE_NAME_BILINEAR) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BILINEAR, TABLE_DESC_BILINEAR, FALSE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputBilinear,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputBilinear, tableCollectBilinear,
          NULL, TABLE_POSITION_BILINEAR, TABLE_EARLIEST_STAGE_BILINEAR) );
    /**! [SnippetIncludeNlhdlrBilinear] */
 
