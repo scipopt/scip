@@ -749,7 +749,6 @@ void SCIPcertificateExit(
 
       if( certificate->derivationfile != NULL )
       {
-         /* CERT TODO: DER line with counter and append two files */
          SCIPfclose(certificate->derivationfile);
          certificate->derivationfile = NULL;
          concatCert(certificate, set->certificate_filename);
@@ -2701,8 +2700,8 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    for( i = 0; i < SCIPaggrRowGetNNz(aggrrow); i++ )
    {
       int varindex;
-      /** @todo perform line breaking before exceeding maximum line length */
 
+      /** @todo perform line breaking before exceeding maximum line length */
       varindex = SCIPvarGetCertificateIndex(vars[SCIPaggrRowGetInds(aggrrow)[i]]);
       RatSetReal(tmpval, SCIPaggrRowGetValueSafely(aggrrow, i));
 
