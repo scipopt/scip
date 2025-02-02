@@ -523,6 +523,7 @@
 
 /* certificate settings */
 #define SCIP_DEFAULT_CERTIFICATE_FILENAME   "-" /**< name of the certificate file, or "-" if no output should be created */
+#define SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE SCIP_MEM_NOLIMIT /**< maximum size of the certificate file in MB (stop printing when reached) */
 
 /* Reading */
 
@@ -2778,11 +2779,16 @@ SCIP_RETCODE SCIPsetCreate(
          "maximal absolute bound value for wich cut coefficient should be approximated with bounded denominator (0: no restriction)",
          &(*set)->exact_cutapproxmaxboundval, FALSE, SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   /* CERTIFICATE tool parameters */
+   /* certificate settings */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
          "certificate/filename",
          "name of the certificate file, or \"-\" if no output should be created",
          &(*set)->certificate_filename, FALSE, SCIP_DEFAULT_CERTIFICATE_FILENAME,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "certificate/maxfilesize",
+         "maximum size of the certificate file in MB (stop printing when reached)",
+         &(*set)->certificate_maxfilesize, FALSE, (SCIP_Real)SCIP_DEFAULT_CERTIFICATE_MAXFILESIZE, 0.0, (SCIP_Real)SCIP_MEM_NOLIMIT,
          NULL, NULL) );
 
    /* Reading parameters */

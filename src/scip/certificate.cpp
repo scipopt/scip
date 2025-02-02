@@ -58,14 +58,16 @@
 #define SCIP_HASHSIZE_CERTIFICATE    500 /**< size of hash map for certificate -> nodesdata mapping used for certificate output */
 #define SCIP_MB_TO_CHAR_RATE   1048576.0 /**< conversion rate from MB to characters */
 
-/** updates file size */
+/** updates file size and returns whether maximum file size has been reached */
 static
-void updateFilesize(
+SCIP_Bool checkAndUpdateFilesize(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Real             nchars              /**< number of characters printed */
    )
 {
-   certificate->filesize += nchars/(SCIP_MB_TO_CHAR_RATE);
+   if( certificate->filesize < certificate->maxfilesize )
+      certificate->filesize += nchars/(SCIP_MB_TO_CHAR_RATE);
+   return certificate->filesize < certificate->maxfilesize;
 }
 
 /** checks whether node is a left node or not */
@@ -276,6 +278,7 @@ SCIP_RETCODE SCIPcertificateCreate(
    (*certificate)->derivationfile = NULL;
    (*certificate)->derivationfilename = NULL;
    (*certificate)->filesize = 0.0;
+   (*certificate)->maxfilesize = SCIP_REAL_MAX;
    (*certificate)->rowdatahash = NULL;
    (*certificate)->naggrinfos = 0;
    (*certificate)->nmirinfos = 0;
@@ -357,6 +360,7 @@ SCIP_RETCODE SCIPcertificateInit(
       "storing certificate information in file <%s>\n", set->certificate_filename);
 
    certificate->transfile = SCIPfopen(set->certificate_filename, "wT");
+   certificate->maxfilesize = set->certificate_maxfilesize;
 
    bufferlen = strlen(name);
    SCIP_ALLOC( BMSallocMemoryArray(&certificate->derivationfilename, filenamelen+5) );
@@ -717,8 +721,18 @@ void SCIPcertificateExit(
 
    if( certificate->origfile != NULL )
    {
+      SCIP_Bool printingaborted = !checkAndUpdateFilesize(certificate, 0);
+
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-         "closing CERTIFICATE information file (wrote %.1f MB)\n", certificate->filesize);
+         "closing certificate file (wrote approx. %.1f MB%s)\n", certificate->filesize,
+         printingaborted ? ", aborted printing after reaching max. file size" : "");
+
+      if( printingaborted )
+      {
+         (void) SCIPfprintf(certificate->origfile, "\n# ... aborted printing: max. file size reached.\n");
+         (void) SCIPfprintf(certificate->transfile, "\n# ... aborted printing: max. file size reached.\n");
+         (void) SCIPfprintf(certificate->derivationfile, "\n# ... aborted printing: max. file size reached.\n");
+      }
 
       if( certificate->derivationfile != NULL )
       {
@@ -1029,13 +1043,14 @@ void SCIPcertificatePrintProblemMessage(
    va_start(ap, formatstr);
    vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
-   if( isorigfile )
-      (void) SCIPfprintf(certificate->origfile, "%s", buffer);
-   else
-      (void) SCIPfprintf(certificate->transfile, "%s", buffer);
-
+   if( checkAndUpdateFilesize(certificate, strlen(buffer)) )
+   {
+      if( isorigfile )
+         (void) SCIPfprintf(certificate->origfile, "%s", buffer);
+      else
+         (void) SCIPfprintf(certificate->transfile, "%s", buffer);
+   }
    va_end(ap);
-   updateFilesize(certificate, strlen(buffer));
 }
 
 /** prints a string to the proof section of the certificate file */
@@ -1055,9 +1070,10 @@ void SCIPcertificatePrintProofMessage(
    va_start(ap, formatstr);
    vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
-   (void) SCIPfprintf(certificate->derivationfile, "%s", buffer);
+   if( checkAndUpdateFilesize(certificate, strlen(buffer)) )
+      (void) SCIPfprintf(certificate->derivationfile, "%s", buffer);
+
    va_end(ap);
-   updateFilesize(certificate, strlen(buffer));
 }
 
 
@@ -1070,7 +1086,7 @@ void SCIPcertificatePrintProblemRational(
    )
 {
    SCIP_Longint len = RatStrlen(val) + 1;
-   char* formatstr = NULL;
+   char* buffer = NULL;
 
    assert(len <= INT_MAX);
 
@@ -1078,15 +1094,16 @@ void SCIPcertificatePrintProblemRational(
    if( !SCIPcertificateIsEnabled(certificate) )
      return;
 
-   BMSallocMemoryArray(&formatstr, len);
-   RatToString(val, formatstr, len);
-   if( isorigfile )
-      SCIPfputs(formatstr, certificate->origfile);
-   else
-      SCIPfputs(formatstr, certificate->transfile);
-
-   updateFilesize(certificate, strlen(formatstr));
-   BMSfreeMemoryArray(&formatstr);
+   BMSallocMemoryArray(&buffer, len);
+   RatToString(val, buffer, len);
+   if( checkAndUpdateFilesize(certificate, strlen(buffer)) )
+   {
+      if( isorigfile )
+         SCIPfputs(buffer, certificate->origfile);
+      else
+         SCIPfputs(buffer, certificate->transfile);
+   }
+   BMSfreeMemoryArray(&buffer);
 }
 
 
@@ -1098,7 +1115,7 @@ void SCIPcertificatePrintProofRational(
    )
 {
    SCIP_Longint len = RatStrlen(val) + 1;
-   char* formatstr = NULL;
+   char* buffer = NULL;
 
    assert(len <= INT_MAX);
 
@@ -1106,12 +1123,13 @@ void SCIPcertificatePrintProofRational(
    if( !SCIPcertificateIsEnabled(certificate) )
      return;
 
-   BMSallocMemoryArray(&formatstr, len);
-   RatToString(val, formatstr, len);
-   SCIPfputs(formatstr, certificate->derivationfile);
+   BMSallocMemoryArray(&buffer, len);
+   RatToString(val, buffer, len);
 
-   updateFilesize(certificate, strlen(formatstr));
-   BMSfreeMemoryArray(&formatstr);
+   if( checkAndUpdateFilesize(certificate, strlen(buffer)) )
+      SCIPfputs(buffer, certificate->derivationfile);
+
+   BMSfreeMemoryArray(&buffer);
 }
 
 /** prints a comment to the problem section of the certificate file */
@@ -1134,13 +1152,14 @@ void SCIPcertificatePrintProblemComment(
    va_start(ap, formatstr);
    vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
-   if( isorigfile )
-      SCIPfprintf(certificate->origfile, "%s", formatstr);
-   else
-      SCIPfprintf(certificate->transfile, "%s", formatstr);
-
+   if( checkAndUpdateFilesize(certificate, 2 + strlen(buffer)) )
+   {
+      if( isorigfile )
+         SCIPfprintf(certificate->origfile, "%s", buffer);
+      else
+         SCIPfprintf(certificate->transfile, "%s", buffer);
+   }
    va_end(ap);
-   updateFilesize(certificate, 2 + strlen(formatstr));
 }
 
 /** prints a comment to the proof section of the certificate file */
@@ -1162,9 +1181,10 @@ void SCIPcertificatePrintProofComment(
    va_start(ap, formatstr);
    vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
-   SCIPfprintf(certificate->derivationfile, "%s", formatstr);
+   if( checkAndUpdateFilesize(certificate, 2 + strlen(buffer)) )
+      SCIPfprintf(certificate->derivationfile, "%s", buffer);
+
    va_end(ap);
-   updateFilesize(certificate, 2 + strlen(formatstr));
 }
 
 /** prints version header */
@@ -2458,7 +2478,6 @@ SCIP_Longint SCIPcertificatePrintDualbound(
       certificate->lastinfo->isbound = FALSE;
 
       SCIPcertificatePrintProofMessage(certificate, "R%d G ", certificate->indexcounter - 1);
-      updateFilesize(certificate, 4.0 + ceil(log10(certificate->indexcounter - 1 + 1)));
       RatRound(lowerbound, lowerbound, SCIP_R_ROUND_UPWARDS);
 
       SCIPcertificatePrintProofRational(certificate, lowerbound, 10);

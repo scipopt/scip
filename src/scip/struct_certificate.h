@@ -141,6 +141,7 @@ struct SCIP_Certificate
    char*                 derivationfilename; /**< name of the derivation file */
    char*                 origfilename;       /**< name of the original problem file */
    SCIP_Real             filesize;           /**< size of derivation file in MB */
+   SCIP_Real             maxfilesize;        /**< maximum size of derivation file in MB (stop printing if exceeded) */
    SCIP_HASHMAP*         rowdatahash;        /**< Hashmap storing mapping between rows and file index */
    SCIP_Rational*        rootbound;          /**< the bound for the root node */
    SCIP_Rational*        finalbound;         /**< the final dual bound value */
