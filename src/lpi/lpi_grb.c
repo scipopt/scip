@@ -4764,6 +4764,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    double val;
    int ind;
    int status;
+   int ncols;
+   int ngrbcols;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -4779,6 +4781,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    }
 
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ngrbcols) );
 
    /* set up solution vector */
    x.len = 0;
@@ -4786,19 +4790,24 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_ALLOC( BMSallocMemoryArray(&(x.val), nrows) );
 
    /* get basis indices, temporarily using memory of x.ind */
-   SCIP_CALL( SCIPlpiGetBasisInd(lpi, x.ind) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetBasisHead(lpi->grbmodel, x.ind) );
 
    /* set up rhs */
    b.len = 1;
    ind = r;
    val = 1.0;
-   if ( x.ind[r] < 0 )
+   if ( x.ind[r] > ncols )
    {
-      /* the sign of the slack variables seems to be 1 for <= inequalities and equations, but -1 for >= inequalities */
-      char sense;
-      CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, -(x.ind[r] + 1), 1, &sense) );
-      if ( sense == '>' )
+      /* the sign of the slack variables seems to be 1 for <= inequalities, equations, but -1 for >= inequalities and ranged rows */
+      if ( x.ind[r] < ngrbcols )
          val = -1.0;
+      else
+      {
+         char sense;
+         CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, x.ind[r] - ncols, 1, &sense) );
+         if ( sense == '>' )
+            val = -1.0;
+      }
    }
    b.ind = &ind;
    b.val = &val;
