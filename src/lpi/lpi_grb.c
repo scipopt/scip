@@ -4879,11 +4879,12 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 {
    SVECTOR x;
    SVECTOR b;
-   int* bind;
    int nrows;
    double val;
    int ind;
    int status;
+   int ncols;
+   int ngrbcols;
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -4899,16 +4900,34 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    }
 
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+   SCIP_CALL( SCIPlpiGetNRows(lpi, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ngrbcols) );
 
    /* set up solution vector */
    x.len = 0;
    SCIP_ALLOC( BMSallocMemoryArray(&(x.ind), nrows) );
    SCIP_ALLOC( BMSallocMemoryArray(&(x.val), nrows) );
 
+   /* get basis indices, temporarily using memory of x.ind */
+   CHECK_ZERO( lpi->messagehdlr, GRBgetBasisHead(lpi->grbmodel, x.ind) );
+
    /* set up rhs */
    b.len = 1;
    ind = c;
    val = 1.0;
+   if ( x.ind[c] > ncols )
+   {
+      /* the sign of the slack variables seems to be 1 for <= inequalities, equations, but -1 for >= inequalities and ranged rows */
+      if ( x.ind[c] < ngrbcols )
+         val = -1.0;
+      else
+      {
+         char sense;
+         CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, x.ind[c] - ncols, 1, &sense) );
+         if ( sense == '>' )
+            val = -1.0;
+      }
+   }
    b.ind = &ind;
    b.val = &val;
 
@@ -4917,10 +4936,6 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 
    /* size should be at most the number of rows */
    assert( x.len <= nrows );
-
-   /* get basis indices: entries that correspond to slack variables with coefficient -1 must be negated */
-   SCIP_ALLOC( BMSallocMemoryArray(&bind, nrows) );
-   SCIP_CALL( SCIPlpiGetBasisInd(lpi, bind) );
 
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
@@ -4935,8 +4950,6 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
          assert( idx >= 0 && idx < nrows );
          inds[i] = idx;
          coef[idx] = (x.val)[i];
-         if( bind[idx] < 0 )
-            coef[idx] *= -1.0;
       }
       *ninds = x.len;
    }
@@ -4952,13 +4965,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
          idx = (x.ind)[i];
          assert( idx >= 0 && idx < nrows );
          coef[idx] = (x.val)[i];
-         if( bind[idx] < 0 )
-            coef[idx] *= -1.0;
       }
    }
 
    /* free solution space and basis index array */
-   BMSfreeMemoryArray(&bind);
    BMSfreeMemoryArray(&(x.val));
    BMSfreeMemoryArray(&(x.ind));
 
