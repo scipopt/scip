@@ -1112,6 +1112,7 @@ void SCIPcertificatePrintProblemRational(
    else
       SCIPfputs(formatstr, certificate->transfile);
 
+   updateFilesize(certificate, strlen(formatstr));
    BMSfreeMemoryArray(&formatstr);
 }
 
@@ -1135,6 +1136,8 @@ void SCIPcertificatePrintProofRational(
    BMSallocMemoryArray(&formatstr, len);
    RatToString(val, formatstr, len);
    SCIPfputs(formatstr, certificate->derivationfile);
+
+   updateFilesize(certificate, strlen(formatstr));
    BMSfreeMemoryArray(&formatstr);
 }
 
