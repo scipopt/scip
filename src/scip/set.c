@@ -521,8 +521,8 @@
 #define SCIP_DEFAULT_CUTAPPROXMAXBOUNDVAL 10000L /**< maximal absolute bound value for wich cut coefficient should
                                                  *   be approximated with bounded denominator (0: no restriction) */
 
-/* certificate output */
-#define SCIP_DEFAULT_CERTIFICATE_FILENAME   "-" /**< name of the certificate output file, or "-" if no output should be created */
+/* certificate settings */
+#define SCIP_DEFAULT_CERTIFICATE_FILENAME   "-" /**< name of the certificate file, or "-" if no output should be created */
 
 /* Reading */
 
@@ -2781,7 +2781,7 @@ SCIP_RETCODE SCIPsetCreate(
    /* CERTIFICATE tool parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
          "certificate/filename",
-         "name of the CERTIFICATE Tool output file, or - if no CERTIFICATE Tool output should be created",
+         "name of the certificate file, or \"-\" if no output should be created",
          &(*set)->certificate_filename, FALSE, SCIP_DEFAULT_CERTIFICATE_FILENAME,
          NULL, NULL) );
 
