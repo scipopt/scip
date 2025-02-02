@@ -5135,7 +5135,7 @@ SCIP_RETCODE tryAggregateIntVars(
     * these both variables should be enforced by some other variables, otherwise the new variable needs to be of
     * integral type
     */
-   vartype = (SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS)
+   vartype = (SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS
          ? SCIP_VARTYPE_CONTINUOUS : SCIP_VARTYPE_INTEGER);
    impltype = MIN(SCIPvarGetImplType(varx), SCIPvarGetImplType(vary));
 
