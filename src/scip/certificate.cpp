@@ -3544,14 +3544,14 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
          return SCIP_ERROR;
    }
 
-   #ifndef NDEBUG
-      certificate->lastinfo->isbound = TRUE;
-      certificate->lastinfo->boundtype = boundtype;
-      certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
-      certificate->lastinfo->isglobal = TRUE;
-      certificate->lastinfo->certificateindex = certificate->indexcounter;
-      RatSet(certificate->lastinfo->boundval, value);
-   #endif
+#ifndef NDEBUG
+   certificate->lastinfo->isbound = TRUE;
+   certificate->lastinfo->boundtype = boundtype;
+   certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
+   certificate->lastinfo->isglobal = TRUE;
+   certificate->lastinfo->certificateindex = certificate->indexcounter;
+   RatSet(certificate->lastinfo->boundval, value);
+#endif
 
    SCIPcertificatePrintProofMessage(certificate, "GlobalBound_%d %c ", certificate->indexcounter,
       boundtype == SCIP_BOUNDTYPE_UPPER ? 'L' : 'G');
