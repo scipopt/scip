@@ -204,7 +204,7 @@ SCIP_RETCODE SCIPincludeMytable(
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, "my statistics table", "an example of a statistics table", TRUE,
           NULL, tableFreeMystatisticstable, NULL, NULL,
-          NULL, NULL, tableOutputMystatisticstable,
+          NULL, NULL, tableOutputMystatisticstable, NULL,
           tabledata, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
 
    return SCIP_OKAY;

@@ -35,6 +35,7 @@
 #define SCIP_NLHDLR_H_
 
 #include "scip/pub_nlhdlr.h"
+#include "scip/type_datatree.h"
 
 #ifndef NDEBUG
 #include "scip/struct_nlhdlr.h"
@@ -123,6 +124,14 @@ void SCIPnlhdlrPrintStatistics(
    SCIP_NLHDLR**         nlhdlrs,            /**< nonlinear handlers */
    int                   nnlhdlrs,           /**< number of nonlinear handlers */
    FILE*                 file                /**< file handle, or NULL for standard out */
+   );
+
+/** collect statistics for nonlinear handlers */
+SCIP_RETCODE SCIPnlhdlrCollectStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLHDLR**         nlhdlrs,            /**< nonlinear handlers */
+   int                   nnlhdlrs,           /**< number of nonlinear handlers */
+   SCIP_DATATREE*        datatree            /**< datatree where to add statistics */
    );
 
 #ifndef NDEBUG

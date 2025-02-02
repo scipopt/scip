@@ -4011,9 +4011,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
       }
       else
       {
-         SCIP_CALL_FINALLY( SCIPprintStatistics(scip, file), fclose(file) );
+         SCIP_Bool is_json = (SCIPstrcasecmp(filename + strlen(filename) - strlen(".json"), ".json") == 0);
 
-         SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
+         if( is_json )
+         {
+            SCIP_CALL_FINALLY( SCIPprintStatisticsJson(scip, file), fclose(file) );
+            SCIPdialogMessage(scip, NULL, "written statistics to file <%s> in JSON format\n", filename);
+         }
+         else
+         {
+            SCIP_CALL_FINALLY( SCIPprintStatistics(scip, file), fclose(file) );
+            SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
+         }
+
          fclose(file);
       }
    } /*lint !e593*/

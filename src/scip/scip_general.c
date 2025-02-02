@@ -524,6 +524,55 @@ SCIP_STATUS SCIPgetStatus(
    }
 }
 
+/** gets name for a solution status */
+const char* SCIPstatusName(
+   SCIP_STATUS           status              /**< SCIP status code */
+   )
+{
+   switch( status )
+   {
+   case SCIP_STATUS_UNKNOWN:
+      return "unknown";
+   case SCIP_STATUS_USERINTERRUPT:
+      return "user interrupt";
+   case SCIP_STATUS_NODELIMIT:
+      return "node limit reached";
+   case SCIP_STATUS_TOTALNODELIMIT:
+      return "total node limit reached";
+   case SCIP_STATUS_STALLNODELIMIT:
+      return "stall node limit reached";
+   case SCIP_STATUS_TIMELIMIT:
+      return "time limit reached";
+   case SCIP_STATUS_MEMLIMIT:
+      return "memory limit reached";
+   case SCIP_STATUS_GAPLIMIT:
+      return "gap limit reached";
+   case SCIP_STATUS_PRIMALLIMIT:
+      return "primal limit reached";
+   case SCIP_STATUS_DUALLIMIT:
+      return "dual limit reached";
+   case SCIP_STATUS_SOLLIMIT:
+      return "solution limit reached";
+   case SCIP_STATUS_BESTSOLLIMIT:
+      return "solution improvement limit reached";
+   case SCIP_STATUS_RESTARTLIMIT:
+      return "restart limit reached";
+   case SCIP_STATUS_OPTIMAL:
+      return "optimal solution found";
+   case SCIP_STATUS_INFEASIBLE:
+      return "infeasible";
+   case SCIP_STATUS_UNBOUNDED:
+      return "unbounded";
+   case SCIP_STATUS_INFORUNBD:
+      return "infeasible or unbounded";
+   case SCIP_STATUS_TERMINATE:
+      return "termination signal received";
+   default:
+      SCIPerrorMessage("invalid status code <%d>\n", status);
+      return NULL;
+   }
+}
+
 /** outputs solution status
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -538,66 +587,7 @@ SCIP_RETCODE SCIPprintStatus(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPprintStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   switch( SCIPgetStatus(scip) )
-   {
-   case SCIP_STATUS_UNKNOWN:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "unknown");
-      break;
-   case SCIP_STATUS_USERINTERRUPT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "user interrupt");
-      break;
-   case SCIP_STATUS_NODELIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "node limit reached");
-      break;
-   case SCIP_STATUS_TOTALNODELIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "total node limit reached");
-      break;
-   case SCIP_STATUS_STALLNODELIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "stall node limit reached");
-      break;
-   case SCIP_STATUS_TIMELIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "time limit reached");
-      break;
-   case SCIP_STATUS_MEMLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "memory limit reached");
-      break;
-   case SCIP_STATUS_GAPLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "gap limit reached");
-      break;
-   case SCIP_STATUS_PRIMALLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "primal limit reached");
-      break;
-   case SCIP_STATUS_DUALLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "dual limit reached");
-      break;
-   case SCIP_STATUS_SOLLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "solution limit reached");
-      break;
-   case SCIP_STATUS_BESTSOLLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "solution improvement limit reached");
-      break;
-   case SCIP_STATUS_RESTARTLIMIT:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "restart limit reached");
-      break;
-   case SCIP_STATUS_OPTIMAL:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "optimal solution found");
-      break;
-   case SCIP_STATUS_INFEASIBLE:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "infeasible");
-      break;
-   case SCIP_STATUS_UNBOUNDED:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "unbounded");
-      break;
-   case SCIP_STATUS_INFORUNBD:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "infeasible or unbounded");
-      break;
-   case SCIP_STATUS_TERMINATE:
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "termination signal received");
-      break;
-   default:
-      SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(scip));
-      return SCIP_INVALIDDATA;
-   }
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "%s", SCIPstatusName(SCIPgetStatus(scip)));
 
    return SCIP_OKAY;
 }

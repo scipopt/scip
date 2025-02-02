@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -22,45 +22,40 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_table.h
- * @ingroup INTERNALAPI
- * @brief  data structures for displaying statistics tables
- * @author Tristan Gally
+/**@file    type_datatree.h
+ * @ingroup TYPEDEFINITIONS
+ * @brief  type definitions for data tree
  * @author Mohammed Ghannam
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_STRUCT_TABLE_H__
-#define __SCIP_STRUCT_TABLE_H__
-
-
-#include "scip/def.h"
-#include "scip/type_table.h"
+#ifndef __SCIP_TYPE_DATATREE_H__
+#define __SCIP_TYPE_DATATREE_H__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** statistics table */
-struct SCIP_Table
+/** type of values stored in a SCIP_DATATREE */
+enum SCIP_Datatree_Valuetype
 {
-   char*                 name;               /**< name of statistics table */
-   char*                 desc;               /**< description of statistics table */
-   SCIP_DECL_TABLECOPY   ((*tablecopy));     /**< copy method of statistics table or NULL if you don't want to copy your plugin into sub-SCIPs */
-   SCIP_DECL_TABLEFREE   ((*tablefree));     /**< destructor of statistics table */
-   SCIP_DECL_TABLEINIT   ((*tableinit));     /**< initialize statistics table */
-   SCIP_DECL_TABLEEXIT   ((*tableexit));     /**< deinitialize statistics table */
-   SCIP_DECL_TABLEINITSOL ((*tableinitsol)); /**< solving process initialization method of statistics table */
-   SCIP_DECL_TABLEEXITSOL ((*tableexitsol)); /**< solving process deinitialization method of statistics table */
-   SCIP_DECL_TABLEOUTPUT ((*tableoutput));   /**< output method */
-   SCIP_DECL_TABLECOLLECT ((*tablecollect)); /**< data collection method */
-   SCIP_TABLEDATA*       tabledata;          /**< statistics table data */
-   int                   position;           /**< relative position of statistics table */
-   SCIP_STAGE            earlieststage;      /**< output of the statistics table is only printed from this stage onwards */
-   SCIP_Bool             initialized;        /**< is statistics table initialized? */
-   SCIP_Bool             active;             /**< should statistics table be displayed to the screen? */
+    SCIP_DATATREE_BOOL,     /**< a SCIP_Bool value */
+    SCIP_DATATREE_LONG,     /**< a SCIP_Longint integer value */
+    SCIP_DATATREE_REAL,     /**< a SCIP_Real floating point value */
+    SCIP_DATATREE_STRING,   /**< a C string */
+    SCIP_DATATREE_BOOLARRAY,/**< an array of SCIP_Bool values */
+    SCIP_DATATREE_LONGARRAY,/**< an array of SCIP_Longint values */
+    SCIP_DATATREE_REALARRAY,/**< an array of SCIP_Real values */
+    SCIP_DATATREE_STRINGARRAY,/**< an array of C strings */
+    SCIP_DATATREE_DATATREE, /**< a SCIP_DATATREE object */
 };
+
+/** type of values stored in a SCIP_DATATREE */
+typedef enum SCIP_Datatree_Valuetype SCIP_DATATREE_VALUETYPE;
+
+/** generic hierarchical data storage */
+typedef struct SCIP_Datatree SCIP_DATATREE;
 
 #ifdef __cplusplus
 }

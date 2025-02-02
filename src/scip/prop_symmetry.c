@@ -736,6 +736,67 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSymmetry)
 }
 
 
+static
+SCIP_DECL_TABLECOLLECT(tableCollectSymmetry)
+{
+   SCIP_TABLEDATA* tabledata;
+   int nred;
+   int ncutoff;
+
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   tabledata = SCIPtableGetData(table);
+   assert(tabledata != NULL);
+   assert(datatree != NULL);
+
+   /* Create a subtree for symmetry statistics */
+   SCIP_DATATREE* symmetry_stats;
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &symmetry_stats, "plugins", -1) );
+
+   /* Collect orbitopal reduction statistics */
+   if( tabledata->propdata->orbitopalreddata )
+   {
+      SCIP_DATATREE* orbitopal_red;
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, symmetry_stats, &orbitopal_red, "orbitopalreduction", 2) );
+
+      SCIP_CALL( SCIPorbitopalReductionGetStatistics(scip, tabledata->propdata->orbitopalreddata, &nred, &ncutoff) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, orbitopal_red, "nreductionsapplied", nred) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, orbitopal_red, "ncutoffs", ncutoff) );
+   }
+
+   /* Collect orbital reduction statistics */
+   if( tabledata->propdata->orbitalreddata )
+   {
+      SCIP_DATATREE* orbital_red;
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, symmetry_stats, &orbital_red, "orbital_reduction", 2) );
+
+      SCIP_CALL( SCIPorbitalReductionGetStatistics(scip, tabledata->propdata->orbitalreddata, &nred, &ncutoff) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, orbital_red, "nreductionsapplied", nred) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, orbital_red, "ncutoffs", ncutoff) );
+   }
+
+   /* Collect lexicographic reduction statistics */
+   if( tabledata->propdata->lexreddata )
+   {
+      SCIP_DATATREE* lex_red;
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, symmetry_stats, &lex_red, "lexicographicreduction", 2) );
+
+      SCIP_CALL( SCIPlexicographicReductionGetStatistics(scip, tabledata->propdata->lexreddata, &nred, &ncutoff) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, lex_red, "nreductionsapplied", nred) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, lex_red, "ncutoffs", ncutoff) );
+   }
+
+   /* Collect shadow tree event handler execution time */
+   if( tabledata->propdata->shadowtreeeventhdlr )
+   {
+      SCIP_Real time = SCIPgetShadowTreeEventHandlerExecutionTime(scip, tabledata->propdata->shadowtreeeventhdlr);
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "shadowtreeexecutiontime", time) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of statistics table to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_TABLEFREE(tableFreeSymmetry)
@@ -7854,7 +7915,7 @@ SCIP_RETCODE SCIPincludePropSymmetry(
    SCIP_CALL( SCIPallocBlockMemory(scip, &tabledata) );
    tabledata->propdata = propdata;
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SYMMETRY, TABLE_DESC_SYMMETRY, TRUE,
-         NULL, tableFreeSymmetry, NULL, NULL, NULL, NULL, tableOutputSymmetry,
+         NULL, tableFreeSymmetry, NULL, NULL, NULL, NULL, tableOutputSymmetry, tableCollectSymmetry,
          tabledata, TABLE_POSITION_SYMMETRY, TABLE_EARLIEST_SYMMETRY) );
 
    /* add parameters for computing symmetry */

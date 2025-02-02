@@ -338,6 +338,7 @@ set(scipsources
     scip/scip_cut.c
     scip/scip_cutsel.c
     scip/scip_datastructures.c
+    scip/scip_datatree.c
     scip/scip_debug.c
     scip/scip_dcmp.c
     scip/scip_dialog.c
@@ -373,6 +374,7 @@ set(scipsources
     scip/scip_tree.c
     scip/scip_validation.c
     scip/scip_var.c
+    scip/datatree.c
     scip/scipdefplugins.c
     scip/scipcoreplugins.c
     scip/scipgithash.c
@@ -739,6 +741,7 @@ set(scipheaders
     scip/pub_cons.h
     scip/pub_cutpool.h
     scip/pub_cutsel.h
+    scip/pub_datatree.h
     scip/pub_dcmp.h
     scip/pub_dialog.h
     scip/pub_disp.h
@@ -821,6 +824,7 @@ set(scipheaders
     scip/scip_cut.h
     scip/scip_cutsel.h
     scip/scip_datastructures.h
+    scip/scip_datatree.h
     scip/scip_debug.h
     scip/scip_dcmp.h
     scip/scip_dialog.h
@@ -898,6 +902,7 @@ set(scipheaders
     scip/struct_cutpool.h
     scip/struct_cuts.h
     scip/struct_cutsel.h
+    scip/struct_datatree.h
     scip/struct_dcmp.h
     scip/struct_dialog.h
     scip/struct_disp.h
@@ -938,6 +943,7 @@ set(scipheaders
     scip/struct_tree.h
     scip/struct_var.h
     scip/struct_visual.h
+    scip/datatree.h
     scip/symmetry.h
     scip/symmetry_graph.h
     scip/symmetry_orbitopal.h
@@ -962,6 +968,7 @@ set(scipheaders
     scip/type_cutpool.h
     scip/type_cuts.h
     scip/type_cutsel.h
+    scip/type_datatree.h
     scip/type_dcmp.h
     scip/type_dialog.h
     scip/type_disp.h

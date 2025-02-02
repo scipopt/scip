@@ -1433,7 +1433,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* add table output */
    assert(SCIPfindTable(scip, TABLE_NAME_RPA) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_RPA, TABLE_DESC_RPA, TRUE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputRpa,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputRpa, NULL,
          NULL, TABLE_POSITION_RPA, TABLE_EARLIEST_STAGE_RPA) );
 
    return SCIP_OKAY;

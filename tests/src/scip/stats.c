@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -22,48 +22,50 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_table.h
- * @ingroup INTERNALAPI
- * @brief  data structures for displaying statistics tables
- * @author Tristan Gally
+/**@file   stats.c
+ * @brief  unit tests for the methods in scip_solvingstats.c
  * @author Mohammed Ghannam
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_STRUCT_TABLE_H__
-#define __SCIP_STRUCT_TABLE_H__
+#include "include/scip_test.h"
+#include "scip/scipdefplugins.h"
 
+/** GLOBAL VARIABLES **/
+static SCIP* scip;
 
-#include "scip/def.h"
-#include "scip/type_table.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** statistics table */
-struct SCIP_Table
+/** TEST SUITES **/
+static void setup(void)
 {
-   char*                 name;               /**< name of statistics table */
-   char*                 desc;               /**< description of statistics table */
-   SCIP_DECL_TABLECOPY   ((*tablecopy));     /**< copy method of statistics table or NULL if you don't want to copy your plugin into sub-SCIPs */
-   SCIP_DECL_TABLEFREE   ((*tablefree));     /**< destructor of statistics table */
-   SCIP_DECL_TABLEINIT   ((*tableinit));     /**< initialize statistics table */
-   SCIP_DECL_TABLEEXIT   ((*tableexit));     /**< deinitialize statistics table */
-   SCIP_DECL_TABLEINITSOL ((*tableinitsol)); /**< solving process initialization method of statistics table */
-   SCIP_DECL_TABLEEXITSOL ((*tableexitsol)); /**< solving process deinitialization method of statistics table */
-   SCIP_DECL_TABLEOUTPUT ((*tableoutput));   /**< output method */
-   SCIP_DECL_TABLECOLLECT ((*tablecollect)); /**< data collection method */
-   SCIP_TABLEDATA*       tabledata;          /**< statistics table data */
-   int                   position;           /**< relative position of statistics table */
-   SCIP_STAGE            earlieststage;      /**< output of the statistics table is only printed from this stage onwards */
-   SCIP_Bool             initialized;        /**< is statistics table initialized? */
-   SCIP_Bool             active;             /**< should statistics table be displayed to the screen? */
-};
+   scip = NULL;
 
-#ifdef __cplusplus
+   /* initialize SCIP */
+   SCIP_CALL( SCIPcreate(&scip) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
+
+   SCIPsetMessagehdlrQuiet(scip, TRUE);
 }
-#endif
 
-#endif
+static void teardown(void)
+{
+   SCIP_CALL( SCIPfree(&scip) );
+
+   cr_assert_null(scip);
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
+}
+
+TestSuite(stats, .init = setup, .fini = teardown);
+
+Test(stats, print_json)
+{
+   /* read problem */
+   char filename[SCIP_MAXSTRLEN];
+   TESTsetTestfilename(filename, __FILE__, "../../../check/instances/MIP/flugpl.mps");
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
+
+   SCIP_CALL( SCIPsolve(scip) );
+
+   /* just to test that it doesn't raise any errors or has a memory leak */
+   SCIP_CALL( SCIPprintStatisticsJson(scip, NULL) );
+}
