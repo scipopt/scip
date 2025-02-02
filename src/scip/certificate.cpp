@@ -2514,8 +2514,8 @@ SCIP_Longint SCIPcertificateGetRowIndex(
 }
 
 
-/** update the parent certificate node data when branching, print branching into certificate if not already present */
-SCIP_RETCODE SCIPcertificatePrintBranching(
+/** updates the parent certificate node data when branching */
+SCIP_RETCODE SCIPcertificateUpdateBranchingData(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
