@@ -414,7 +414,7 @@ SCIP_RETCODE checkParameters(
          valid = FALSE;
    }
 
-   if( valid )
+   if( !valid )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
          "At least one heuristic is not turned off! Heuristic solutions are currently not accepted while couting.\n");

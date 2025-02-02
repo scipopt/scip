@@ -283,12 +283,12 @@ SCIP_RETCODE lapackComputeEigenvalues(
 
    /* allocate workspace */
    LWORK = SCIP_RealTOINT(WSIZE);
-   LIWORK = WISIZE;
+   LIWORK = MAX(1, 10 * N);  /* the size is also returned in WISIZE, but is always equal to the value used here */
 
    SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &WORK, (int) LWORK) );
    SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &IWORK, (int) LIWORK) );
    SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &WTMP, (int) N) );
-   SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &ISUPPZ, 2) ); /*lint !e506*/
+   SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &ISUPPZ, 2 * n) ); /*lint !e506*/
    if ( geteigenvectors )
    {
       SCIP_ALLOC( BMSallocBufferMemoryArray(bufmem, &Z, n * n) ); /*lint !e647*/
