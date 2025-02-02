@@ -62,8 +62,10 @@ void *CGutil_allocrus (
    if( size == 0 )
    {
       fprintf (stderr, "Warning: 0 bytes allocated\n");
+      mem = NULL;
    }
-   mem = (void *) malloc (size);
+   else
+      mem = (void *) malloc (size);
    if( mem == (void *) NULL )
    {
       fprintf (stderr, "Out of memory. Asked for %d bytes\n", (int) size);
@@ -3437,7 +3439,7 @@ int clear_sxvector (
    qsnum_svector *       v                   /**< sparse vector */
    )
 {
-   if(v->indx)
+   if(v->indx != NULL)
       free(v->indx);
    QSnum_FreeArray(v->coef,v->nzcnt);
    return 0;
@@ -3535,6 +3537,7 @@ int RECTLUsolveSystem(
 
    /* set up sparse vectors for solve interface */
    QSnum_svector_init(&srhs);
+   QSnum_svector_init(&ssol);
    rval = QSnum_svector_alloc(&srhs, rhsnz);
    CGcheck_rval (rval, "init_sxvector failed");
 
@@ -3551,7 +3554,6 @@ int RECTLUsolveSystem(
 
    /* sparse solution will have at most n nonzeros because it */
    /* will be a basic solution */
-   QSnum_svector_init(&ssol);
    rval = QSnum_svector_alloc(&ssol, n);
    CGcheck_rval (rval, "init_sxvector failed");
 
