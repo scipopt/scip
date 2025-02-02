@@ -312,7 +312,7 @@ void SCIPcertificateFree(
    BMSfreeMemory(certificate);
 }
 
-/* @todo exip: replace scip pointer by set->scip */
+/* @todo replace scip pointer by set->scip */
 /** initializes certificate information and creates files for certificate output */
 SCIP_RETCODE SCIPcertificateInit(
    SCIP*                 scip,               /**< scip data structure */
@@ -354,7 +354,7 @@ SCIP_RETCODE SCIPcertificateInit(
    BMScopyMemoryArray(name, set->certificate_filename, filenamelen);
    name[filenamelen] = '\0';
 
-   /** @todo exip: this currently strips the .vipr from the filename if there is no compression...
+   /** @todo this currently strips the .vipr from the filename if there is no compression...
     * the whole compression code currently makes no sense, since the certificate has to be unpacked to be read by vipr
     * again anyway, so it is just disabled.
     */
@@ -1316,7 +1316,7 @@ void SCIPcertificatePrintCons(
 
    for( i = 0; i < len; i++ )
    {
-      /** @todo exip: perform line breaking before exceeding maximum line length */
+      /** @todo perform line breaking before exceeding maximum line length */
       SCIPcertificatePrintProblemMessage(certificate, isorigfile, " %d ", ind[i]);
       SCIPcertificatePrintProblemRational(certificate, isorigfile, val[i], 10);
    }
@@ -1384,7 +1384,7 @@ SCIP_RETCODE SCIPcertificatePrintRow(
    {
       SCIP_Rational* val;
       int varindex;
-      /** @todo exip: perform line breaking before exceeding maximum line length */
+      /** @todo perform line breaking before exceeding maximum line length */
       assert(rowexact->cols[i]->fpcol->var->index == rowexact->fprow->cols[i]->var->index);
 
       varindex = SCIPvarGetCertificateIndex(SCIPcolExactGetVar(SCIProwExactGetCols(rowexact)[i]));
@@ -1480,9 +1480,9 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
-   for(auto & coef : coefs)
+   for( auto & coef : coefs )
    {
-      /** @todo exip: perform line breaking before exceeding maximum line length */
+      /** @todo perform line breaking before exceeding maximum line length */
       int varindex = coef.first;
       RatSetReal(val, coef.second);
 
@@ -1504,9 +1504,9 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
-   for(auto & coef : coefs)
+   for( auto & coef : coefs )
    {
-      /** @todo exip: perform line breaking before exceeding maximum line length */
+      /** @todo perform line breaking before exceeding maximum line length */
       int varindex = coef.first;
       RatSetReal(val, coef.second);
 
@@ -2468,7 +2468,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
 
       for( i = 0; i < len; i++ )
       {
-         /** @todo exip: perform line breaking before exceeding maximum line length */
+         /** @todo perform line breaking before exceeding maximum line length */
          assert(!RatIsAbsInfinity(val[i]));
          SCIPcertificatePrintProofMessage(certificate, " %d ", ind[i]);
          SCIPcertificatePrintProofRational(certificate, val[i], 10);
@@ -2496,7 +2496,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    return (certificate->indexcounter - 1);
 }
 
-/** @todo exip: let this method return LONG_MAX if row is not in the hashmap; add method to check existence, and to
+/** @todo let this method return LONG_MAX if row is not in the hashmap; add method to check existence, and to
  *  insert an element, and use these throughout the SCIP core */
 /** returns the index for a row in the certificate */
 SCIP_Longint SCIPcertificateGetRowIndex(
@@ -2701,7 +2701,7 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    for( i = 0; i < SCIPaggrRowGetNNz(aggrrow); i++ )
    {
       int varindex;
-      /** @todo exip: perform line breaking before exceeding maximum line length */
+      /** @todo perform line breaking before exceeding maximum line length */
 
       varindex = SCIPvarGetCertificateIndex(vars[SCIPaggrRowGetInds(aggrrow)[i]]);
       RatSetReal(tmpval, SCIPaggrRowGetValueSafely(aggrrow, i));
