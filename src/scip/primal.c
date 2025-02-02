@@ -1446,7 +1446,7 @@ SCIP_Bool solOfInterest(
    /* check if we are willing to check worse solutions; a solution is better if the objective is smaller than the
     * current cutoff bound; solutions with infinite objective value are never accepted
     */
-   if( !SCIPsetIsInfinity(set, obj) && (!set->exact_enabled || !set->exact_improvingsols || obj < primal->cutoffbound || solisbetterexact)
+   if( !SCIPsetIsInfinity(set, obj) && (!set->exact_enabled || !set->exact_improvingsols || solisbetterexact)
       && (set->exact_enabled || !set->misc_improvingsols || obj < primal->cutoffbound) )
    {
       /* find insert position for the solution */
@@ -2327,9 +2327,6 @@ SCIP_RETCODE primalAddSolExact(
    SCIP_CALL( SCIPsolUnlinkExact(sol, set, transprob) );
 
    SCIP_CALL( SCIPsolOverwriteFPSolWithExact(sol, set, stat, origprob, transprob, tree) );
-
-   RatMIN(primal->cutoffboundexact, primal->cutoffboundexact, obj);
-   RatMIN(primal->upperboundexact, primal->upperboundexact, obj);
 
    /* note: we copy the solution so to not destroy the double-link between sol and fpsol */
    SCIP_CALL( SCIPprimalAddSolFree(primal, blkmem, set, messagehdlr, stat,
