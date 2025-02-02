@@ -91,6 +91,10 @@
 #include <zlib.h>
 #endif
 
+#ifdef SCIP_WITH_BOOST
+#include <boost/version.hpp>
+#endif
+
 /* In debug mode, the following methods are implemented as function calls to ensure
  * type validity.
  * In optimized mode, the methods are implemented as defines to improve performance.
@@ -305,7 +309,15 @@ SCIP_RETCODE doScipCreate(
    SCIPerrorMessage("SCIP was compiled with exact solve support, but without Boost. Please recompile SCIP with Boost.\n");
    return SCIP_ERROR;
 #else
-   /* TODO add boost as external code */
+   {
+      char name[SCIP_MAXSTRLEN];
+      int boost_version_major = BOOST_VERSION / 100000;
+      int boost_version_minor = BOOST_VERSION / 100 % 1000;
+      int boost_version_patch = BOOST_VERSION % 100;
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "BOOST %d.%d.%d", boost_version_major, boost_version_minor, boost_version_patch);
+      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, name, "Boost C++ Libraries (boost.org)") );
+   }
 #endif
 #ifndef SCIP_WITH_MPFR
    SCIPerrorMessage("SCIP was compiled with exact solve support, but without MPFR. Please recompile SCIP with MPFR.\n");
