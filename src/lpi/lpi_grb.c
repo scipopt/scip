@@ -4804,7 +4804,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
       else
       {
          char sense;
-         CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, x.ind[r] - ncols, 1, &sense) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, x.ind[r] - ngrbcols, 1, &sense) );
          if ( sense == '>' )
             val = -1.0;
       }
@@ -4923,7 +4923,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
       else
       {
          char sense;
-         CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, x.ind[c] - ncols, 1, &sense) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, x.ind[c] - ngrbcols, 1, &sense) );
          if ( sense == '>' )
             val = -1.0;
       }
