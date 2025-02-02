@@ -639,6 +639,9 @@ SCIP_RETCODE SCIPprintStatus(
       return SCIP_INVALIDDATA;
    }
 
+   if(SCIPisExactSolve(scip))
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, " - running in exact solving mode");
+
    return SCIP_OKAY;
 }
 

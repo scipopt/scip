@@ -2656,6 +2656,9 @@ SCIP_RETCODE SCIPsolve(
    /* automatic restarting loop */
    restart = scip->stat->userrestart;
 
+   if(SCIPisExactSolve(scip))
+      SCIPinfoMessage(scip, NULL, "solving problem using exact solving mode \n\n");
+
    do
    {
       if( restart )
