@@ -33,26 +33,22 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "scip/set.h"
-#include "scip/stat.h"
-#include "scip/clock.h"
-#include "scip/paramset.h"
-#include "scip/event.h"
-#include "scip/lp.h"
-#include "scip/var.h"
-#include "scip/prob.h"
-#include "scip/tree.h"
-#include "scip/sepastore.h"
-#include "scip/scip.h"
 #include "scip/branch.h"
 #include "scip/branchexact.h"
-#include "scip/solve.h"
-#include "scip/visual.h"
 #include "scip/certificate.h"
-
+#include "scip/def.h"
+#include "scip/event.h"
+#include "scip/lp.h"
+#include "scip/prob.h"
+#include "scip/set.h"
+#include "scip/stat.h"
+#include "scip/scip.h"
 #include "scip/struct_branch.h"
+#include "scip/tree.h"
+#include "scip/var.h"
+#include "scip/visual.h"
+
 
 /** ensures, that lpcands array can store at least num entries */
 static
@@ -174,9 +170,9 @@ SCIP_RETCODE branchcandCalcLPCandsExact(
       if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
          continue;
 
-      /* check, if the LP solution value is fractional */
       RatSetReal(tmp, primsol);
 
+      /* check, if the LP solution value is fractional */
       if( RatIsIntegral(tmp) )
          continue;
 
@@ -401,8 +397,8 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
          SCIPvarGetName(var), downub, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
-      /* print branching information to certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
+      /* update branching information in certificate, if certificate is active */
+      SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_UPPER, downub) );
 
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
             NULL, var, downub, SCIP_BOUNDTYPE_UPPER, FALSE) );
@@ -425,8 +421,8 @@ SCIP_RETCODE SCIPtreeBranchVarExact(
          SCIPvarGetName(var), uplb, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
 
-      /* print branching information to certificate, if certificate is active */
-      SCIP_CALL( SCIPcertificatePrintBranching(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, uplb) );
+      /* update branching information in certificate, if certificate is active */
+      SCIP_CALL( SCIPcertificateUpdateBranchingData(set, stat->certificate, stat, transprob, lp, tree, node, var, SCIP_BOUNDTYPE_LOWER, uplb) );
 
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
             NULL, var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );

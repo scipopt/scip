@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -903,10 +903,6 @@ SCIP_RETCODE createAndAddProofcons(
       if( SCIPsetIsGT(set, globalminactivity, rhs) )
       {
          SCIPsetDebugMsg(set, "detect global infeasibility: minactivity=%g, rhs=%g\n", globalminactivity, rhs);
-         if( SCIPisCertificateActive(set->scip) )
-         {
-            // @TODO SCIPcertificatePrintActivityBound(set->scip, SCIPgetCertificate(set->scip), NULL, SCIP_BOUNDTYPE_LOWER, globalminactivity, globalminactivity, false, cons);
-         }
          SCIP_CALL( SCIPnodeCutoff(tree->path[proofset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
          goto UPDATESTATISTICS;
@@ -1002,7 +998,6 @@ SCIP_RETCODE createAndAddProofcons(
          RatSetReal(coefs_exact[i], coefs[i]);
          assert(!RatIsAbsInfinity(coefs_exact[i]));
       }
-      //SCIP_CALL( SCIPcertificatePrintAggrrow(set, lp, prob, certificate, aggrinfo->aggrrow, aggrinfo->aggrrows, aggrinfo->weights, naggrrows) );
       SCIP_CALL( SCIPcreateConsExactLinear(set->scip, &cons, name, nnz, consvars, coefs_exact, lhs_exact, rhs_exact,
             FALSE, FALSE, FALSE, FALSE, TRUE, !applyglobal,
             FALSE, TRUE, TRUE, FALSE) );

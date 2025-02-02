@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -211,7 +211,7 @@ SCIP_RETCODE SCIPcreateVarBasic(
    return SCIP_OKAY;
 }
 
-/** Add exact data to variable
+/** adds exact data to variable
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -249,9 +249,6 @@ SCIP_RETCODE SCIPaddVarExactData(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
-      SCIP_CALL( SCIPvarAddExactData(var, scip->mem->probmem, lb, ub, obj) );
-      break;
-
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
@@ -1706,15 +1703,17 @@ void SCIPfreeParseVarsPolynomialData(
    assert(monomialexps  != NULL);
    assert(monomialcoefs != NULL);
    assert(monomialnvars != NULL);
-   assert((*monomialvars  != NULL) == (nmonomials > 0));
-   assert((*monomialexps  != NULL) == (nmonomials > 0));
-   assert((*monomialcoefs != NULL) == (nmonomials > 0));
-   assert((*monomialnvars != NULL) == (nmonomials > 0));
+   assert(nmonomials >= 0);
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPfreeParseVarsPolynomialData", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( nmonomials == 0 )
       return;
+
+   assert(*monomialvars  != NULL);
+   assert(*monomialexps  != NULL);
+   assert(*monomialcoefs != NULL);
+   assert(*monomialnvars != NULL);
 
    for( i = nmonomials - 1; i >= 0; --i )
    {

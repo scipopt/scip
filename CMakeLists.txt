@@ -10,6 +10,11 @@ if(POLICY CMP0091)
    cmake_policy(SET CMP0091 NEW)
 endif()
 
+# Avoid warnings about removed FindBoost.cmake until our minimum required version is >= 3.30.
+if(POLICY CMP0167)
+   cmake_policy(SET CMP0167 NEW)
+endif()
+
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
 
@@ -17,7 +22,7 @@ set(SCIP_VERSION_MAJOR 10)
 set(SCIP_VERSION_MINOR 0)
 set(SCIP_VERSION_PATCH 0)
 set(SCIP_VERSION_SUB 0)
-set(SCIP_VERSION_API 130)
+set(SCIP_VERSION_API 131)
 
 project(SCIP
     VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
@@ -116,7 +121,7 @@ if(MPFR)
 else()
     set(SCIP_WITH_MPFR OFF)
     if(SCIP_WITH_EXACTSOLVE)
-        message(WARNING "MPFR disabled, which is required for EXACTSOLVE.")
+        message(WARNING "EXACTSOLVE is disabled because this requires MPFR.")
         set(SCIP_WITH_EXACTSOLVE OFF)
     endif()
 endif()
@@ -127,7 +132,7 @@ if(GMP)
 else()
     set(SCIP_WITH_GMP OFF)
     if(SCIP_WITH_EXACTSOLVE)
-        message(WARNING "GMP disabled, which is required for EXACTSOLVE. ${AUTOBUILD_MSG}")
+        message(WARNING "EXACTSOLVE is disabled because this requires GMP. ${AUTOBUILD_MSG}")
         set(SCIP_WITH_EXACTSOLVE OFF)
     endif()
 endif()

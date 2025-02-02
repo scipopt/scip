@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -347,7 +347,7 @@ SCIP_RETCODE paramSetBool(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           paramname,          /**< parameter name */
    SCIP_Bool             value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    )
 {
    SCIP_PARAM* param;
@@ -383,7 +383,7 @@ SCIP_RETCODE paramSetChar(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           paramname,          /**< parameter name */
    char                  value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    )
 {
    SCIP_PARAM* param;
@@ -419,7 +419,7 @@ SCIP_RETCODE paramSetInt(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           paramname,          /**< parameter name */
    int                   value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    )
 {
    SCIP_PARAM* param;
@@ -455,7 +455,7 @@ SCIP_RETCODE paramSetLongint(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           paramname,          /**< parameter name */
    SCIP_Longint          value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    )
 {
    SCIP_PARAM* param;
@@ -491,7 +491,7 @@ SCIP_RETCODE paramSetReal(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           paramname,          /**< parameter name */
    SCIP_Real             value,              /**< new value of the parameter */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    )
 {
    SCIP_PARAM* param;
@@ -2836,7 +2836,7 @@ SCIP_RETCODE paramsetSetHeuristicsDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {  /*lint --e{715}*/
    SCIP_HEUR** heurs;
@@ -2884,7 +2884,7 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    SCIP_HEUR** heurs;
@@ -3018,7 +3018,7 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    int i;
@@ -3073,7 +3073,7 @@ SCIP_RETCODE paramsetSetHeuristicsOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    SCIP_HEUR** heurs;
@@ -3111,7 +3111,7 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {  /*lint --e{715}*/
    SCIP_PROP** props;
@@ -3196,7 +3196,7 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    SCIP_PARAM* param;
@@ -3272,7 +3272,7 @@ SCIP_RETCODE paramsetSetPresolvingFast(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    SCIP_CONSHDLR** conshdlrs;
@@ -3387,7 +3387,7 @@ SCIP_RETCODE paramsetSetPresolvingOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    SCIP_PRESOL** presols;
@@ -3465,7 +3465,7 @@ SCIP_RETCODE paramsetSetSeparatingDefault(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {  /*lint --e{715}*/
    SCIP_SEPA** sepas;
@@ -3545,7 +3545,7 @@ SCIP_RETCODE paramsetSetSeparatingAggressive(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    SCIP_CONSHDLR** conshdlrs;
@@ -3719,7 +3719,7 @@ SCIP_RETCODE paramsetSetSeparatingFast(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    /* reset previous changes on separating parameters */
@@ -3776,7 +3776,7 @@ SCIP_RETCODE paramsetSetSeparatingOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    SCIP_SEPA** sepas;
@@ -3840,7 +3840,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter emphasis */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    switch( paramemphasis )
@@ -4110,7 +4110,7 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    SCIP_HEUR** heurs;
@@ -4216,7 +4216,7 @@ SCIP_RETCODE SCIPparamsetSetHeuristics(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    switch( paramsetting )
@@ -4252,7 +4252,7 @@ SCIP_RETCODE SCIPparamsetSetPresolving(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    switch( paramsetting )
@@ -4288,7 +4288,7 @@ SCIP_RETCODE SCIPparamsetSetSeparating(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMSETTING     paramsetting,       /**< parameter settings */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameters be set quietly (no output)? */
    )
 {
    switch( paramsetting )
@@ -4536,7 +4536,7 @@ SCIP_RETCODE SCIPparamSetBool(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             value,              /**< new value of the parameter */
    SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    )
 {
    assert(param != NULL);
@@ -4598,7 +4598,7 @@ SCIP_RETCODE SCIPparamSetInt(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    int                   value,              /**< new value of the parameter */
    SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    )
 {
    assert(param != NULL);
@@ -4660,7 +4660,7 @@ SCIP_RETCODE SCIPparamSetLongint(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Longint          value,              /**< new value of the parameter */
    SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    )
 {
    assert(param != NULL);
@@ -4722,7 +4722,7 @@ SCIP_RETCODE SCIPparamSetReal(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             value,              /**< new value of the parameter */
    SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    )
 {
    assert(param != NULL);
@@ -4786,7 +4786,7 @@ SCIP_RETCODE SCIPparamSetChar(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    char                  value,              /**< new value of the parameter */
    SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    )
 {
    assert(param != NULL);
@@ -4847,7 +4847,7 @@ SCIP_RETCODE SCIPparamSetString(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           value,              /**< new value of the parameter */
    SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
-   SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   SCIP_Bool             quiet               /**< should the parameter be set quietly (no output)? */
    )
 {
    char* oldvalue = NULL;

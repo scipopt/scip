@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1292,14 +1292,6 @@ SCIP_RETCODE SCIPheurExec(
 
    delayed = FALSE;
    execute = SCIPheurShouldBeExecuted(heur, depth, lpstateforkdepth, heurtiming, &delayed);
-
-   //if( strcmp(SCIPheurGetName(heur),"locks") != 0 )
-   //{
-   //printf("looking at heuristic <%s> \n",SCIPheurGetName(heur) );
-   //   execute = execute && (!set->exact_enabled || SCIPheurIsExact(heur));
-   //}
-   //else
-   //   printf("looking at heuristic <%s> \n",SCIPheurGetName(heur) );
 
    if( delayed )
    {

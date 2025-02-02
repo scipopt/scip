@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -48,8 +48,16 @@ SETFILE="${TMPDIR}/${BASENAME}.prm"
 SCIPSETFILE="${TMPDIR}/${BASENAME}.set"
 TMPFILE="${TMPDIR}/${BASENAME}.tmp"
 
-SETTINGS="${SOLVERPATH}/../../ug/settings/${SETNAME}.prm"
-SCIPSETTINGS="${SOLVERPATH}/../../ug/settings/${SETNAME}.set"
+SETTINGS="${SOLVERPATH}/../settings/${SETNAME}.prm"
+if test ! -e "${SETTINGS}"
+then
+    SETTINGS="${SOLVERPATH}/../../ug/settings/${SETNAME}.prm"
+fi
+SCIPSETTINGS="${SOLVERPATH}/../settings/${SETNAME}.set"
+if test ! -e "${SCIPSETTINGS}"
+then
+    SCIPSETTINGS="${SOLVERPATH}/../../ug/settings/${SETNAME}.set"
+fi
 
 uname -a                            > "${OUTFILE}"
 uname -a                            > "${ERRFILE}"
@@ -83,28 +91,14 @@ function cleanup {
 # ensure TMPFILE is deleted and results are copied when exiting (normally or due to abort/interrupt)
 trap cleanup EXIT
 
-# only wait for optimi to be mounted in run.sh if you are on an opt computer at zib
-OPTHOST=$(uname -n | sed 's/.zib.de//g' | sed 's/portal//g' | tr -cd '[:alpha:]')
-
-# check if the scripts runs a *.zib.de host
-if $(hostname -f | grep -q zib.de) && $([[ "${OPTHOST}" == "opt" ]] || [[ "${OPTHOST}" == "optc" ]]);
+# check if the scripts runs a *.zib.de Linux host
+if $(hostname -f | grep -q zib.de) && [ $(uname) == Linux ]
 then
-    # file on optimi to check for
-    case "$OPTHOST" in
-      opt | optc )
-        . /etc/os-release
-        case "$ID" in
-          debian ) OPTIMIFILE=/data/optimi/optimi/QUOTAS ;;
-          ubuntu ) OPTIMIFILE=/nfs/optimi/QUOTAS ;;
-        esac
-        ;;
-      htccmp     ) OPTIMIFILE=/data/optimi/optimi/QUOTAS ;;
-    esac
-
-    # access /optimi once to force a mount
+    # access optimi once to force a mount
+    OPTIMIFILE=/data/optimi/optimi/kombadon/IP/miplib2003/10teams.mps.gz
     ls $OPTIMIFILE >/dev/null 2>&1
 
-    # check if /optimi is mounted
+    # check if optimi is mounted
     MOUNTED=0
 
     # count number of fails and abort after 10 min to avoid an endless loop
@@ -112,7 +106,7 @@ then
 
     while [ "${MOUNTED}" -ne 1 ]
     do
-        # stop if the system does not mount /optimi for ~10 minutes
+        # stop if the system does not mount optimi for ~10 minutes
         if [ "${FAILED}" -eq 600 ]
         then
             exit 1
@@ -123,7 +117,7 @@ then
             MOUNTED=1
         else
             ((FAILED++))
-            echo "/optimi is not mounted yet, waiting 1 second"
+            echo "optimi is not mounted yet ($OPTIMIFILE is no file), waiting 1 second"
             sleep 1
         fi
     done

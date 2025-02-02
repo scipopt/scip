@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -261,6 +261,11 @@ SCIP_RETCODE createSubscip(
 
    /* speed up sub-SCIP by not checking dual LP feasibility */
    SCIP_CALL( SCIPsetBoolParam(*subscip, "lp/checkdualfeas", FALSE) );
+
+   /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+    * handler is in place to perform a final repair step
+    */
+   SCIP_CALL( SCIPsetBoolParam(*subscip, "exact/enabled", FALSE) );
 
    return SCIP_OKAY;
 }

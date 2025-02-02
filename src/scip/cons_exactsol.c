@@ -60,7 +60,7 @@
 #define DEFAULT_SOLBUFSIZE           10 /**< how many heuristic solutions should be buffered before we start checking */
 #define DEFAULT_CHECKFPFEASIBILITY TRUE /**< should a solution be checked in floating-point arithmetic prior to being processed? */
 
-static int ncurrentstalls = 0; /* number of times the exact lp was solved unsuccesfully in a row */
+static int ncurrentstalls = 0; /* number of times the exact lp was solved unsuccessfully in a row */
 
 /** constraint handler data */
 struct SolIntAssignment
@@ -283,7 +283,7 @@ void setProbHasEquations(
       }
       else
       {
-         // unspported constraint type -> throw error
+         // unsupported constraint type -> throw error
          SCIPerrorMessage("Unsupported constraint type in exactsol constraint handler: %s\n", SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])));
          SCIPABORT();
       }
@@ -325,7 +325,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactSol)
    return SCIP_OKAY;
 }
 
-/** TODO */
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckExactSol)

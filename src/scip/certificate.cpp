@@ -56,15 +56,18 @@
 #include "scip/var.h"
 
 #define SCIP_HASHSIZE_CERTIFICATE    500 /**< size of hash map for certificate -> nodesdata mapping used for certificate output */
+#define SCIP_MB_TO_CHAR_RATE   1048576.0 /**< conversion rate from MB to characters */
 
-/** updates file size */
+/** updates file size and returns whether maximum file size has been reached */
 static
-void updateFilesize(
+SCIP_Bool checkAndUpdateFilesize(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_Real             nchars              /**< number of characters printed */
    )
 {
-   certificate->filesize += nchars/1048576.0;
+   if( certificate->filesize < certificate->maxfilesize )
+      certificate->filesize += nchars/(SCIP_MB_TO_CHAR_RATE);
+   return certificate->filesize < certificate->maxfilesize;
 }
 
 /** checks whether node is a left node or not */
@@ -76,6 +79,9 @@ SCIP_Bool certificateIsLeftNode(
 {
    SCIP_CERTNODEDATA* nodedata;
    SCIP_CERTNODEDATA* nodedataparent;
+
+   assert(certificate != NULL);
+   assert(SCIPcertificateIsEnabled(certificate));
 
    assert(node != NULL);
    assert(SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE);
@@ -96,8 +102,9 @@ SCIP_Bool certificateIsLeftNode(
       return FALSE;
 }
 
-/** print variable bound assumption into certificate,
- *  return index of this bound in the certificate file
+/** prints variable bound assumption into certificate
+ *
+ *  @return index of this bound in the certificate file
  */
 static
 SCIP_Longint printBoundAssumption(
@@ -108,9 +115,8 @@ SCIP_Longint printBoundAssumption(
    SCIP_BOUNDTYPE        boundtype           /**< is it the upper bound? */
    )
 {
-   /* check whether output should be created */
-   if ( certificate->origfile == NULL )
-      return SCIP_OKAY;
+   assert(certificate != NULL);
+   assert(SCIPcertificateIsEnabled(certificate));
 
 #ifndef NDEBUG
    certificate->lastinfo->isbound = TRUE;
@@ -121,7 +127,7 @@ SCIP_Longint printBoundAssumption(
    RatSet(certificate->lastinfo->boundval, boundval);
 #endif
 
-   /** @todo: it could be better to seperate the printing from insertion of variable bound */
+   /** @todo: it could be better to separate the printing from insertion of variable bound */
    SCIPcertificatePrintProofMessage(certificate, "A%lld %c ", certificate->indexcounter, (boundtype == SCIP_BOUNDTYPE_LOWER) ? 'G' : 'L');
 
    SCIP_CALL( SCIPcertificatePrintProofRational(certificate, boundval, 10) );
@@ -142,19 +148,20 @@ SCIP_RETCODE certificateFreeNodeData(
 
    assert(node != NULL);
    assert(certificate != NULL);
+   assert(SCIPcertificateIsEnabled(certificate));
 
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
    RatFreeBlock(certificate->blkmem, &nodedata->derbound_left);
    RatFreeBlock(certificate->blkmem, &nodedata->derbound_right);
-   RatFreeBlock(certificate->blkmem, &nodedata->derbound_inherit);
+   RatFreeBlock(certificate->blkmem, &nodedata->derbound_self);
    BMSfreeBlockMemory(certificate->blkmem, &nodedata);
    SCIP_CALL( SCIPhashmapRemove(certificate->nodedatahash, node) );
 
    return SCIP_OKAY;
 }
 
-/** print the best solution found */
+/** prints the best solution found */
 static
 SCIP_RETCODE SCIPcertificatePrintSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -224,26 +231,29 @@ SCIP_RETCODE SCIPcertificatePrintSol(
    return SCIP_OKAY;
 }
 
-/** set the node to have its own bound proof */
-SCIP_RETCODE SCIPcertificateSetInheritanceData(
+/** updates the current derived bound of the node with newbound, if newbound is better */
+SCIP_RETCODE SCIPcertificateUpdateBoundData(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_NODE*            node,               /**< node data structure */
-   SCIP_Longint          fileindex,          /**< index of new bound */
-   SCIP_Rational*        newbound            /**< the inherited bound */
+   SCIP_Longint          fileindex,          /**< index of new bound's proof */
+   SCIP_Rational*        newbound            /**< value of new bound */
    )
 {
    SCIP_CERTNODEDATA* nodedata;
 
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return SCIP_OKAY;
+
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
 
-   /* do nothing if the newbound is worse than the inherited bound */
-   if( RatIsLT(newbound, nodedata->derbound_inherit) )
+   /* do nothing if newbound is not better than the current bound */
+   if( RatIsLT(newbound, nodedata->derbound_self) )
       return SCIP_OKAY;
 
    nodedata->inheritedbound = FALSE;
-   nodedata->derindex_inherit = fileindex;
-   RatSet(nodedata->derbound_inherit, newbound);
+   nodedata->derindex_self = fileindex;
+   RatSet(nodedata->derbound_self, newbound);
 
    return SCIP_OKAY;
 }
@@ -268,6 +278,7 @@ SCIP_RETCODE SCIPcertificateCreate(
    (*certificate)->derivationfile = NULL;
    (*certificate)->derivationfilename = NULL;
    (*certificate)->filesize = 0.0;
+   (*certificate)->maxfilesize = SCIP_REAL_MAX;
    (*certificate)->rowdatahash = NULL;
    (*certificate)->naggrinfos = 0;
    (*certificate)->nmirinfos = 0;
@@ -304,7 +315,7 @@ void SCIPcertificateFree(
    BMSfreeMemory(certificate);
 }
 
-/* @todo exip: replace scip pointer by set->scip */
+/* @todo replace scip pointer by set->scip */
 /** initializes certificate information and creates files for certificate output */
 SCIP_RETCODE SCIPcertificateInit(
    SCIP*                 scip,               /**< scip data structure */
@@ -324,7 +335,6 @@ SCIP_RETCODE SCIPcertificateInit(
    int ntransvars;
    int j;
    char* name = NULL;
-   char* compression = NULL;
    SCIP_VAR** vars;
    SCIP_VAR** transvars;
    SCIP_CONS** conss;
@@ -346,19 +356,11 @@ SCIP_RETCODE SCIPcertificateInit(
    BMScopyMemoryArray(name, set->certificate_filename, filenamelen);
    name[filenamelen] = '\0';
 
-   /** @todo exip: this currently strips the .vipr from the filename if there is no compression...
-    * the whole compression code currently makes no sense, since the certificate has to be unpacked to be read by vipr
-    * again anyway, so it is just disabled.
-    */
-   //SCIPsplitFilename(name, NULL, NULL, NULL, &compression);
-
    SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       "storing certificate information in file <%s>\n", set->certificate_filename);
 
-   if( compression != NULL && 0 == strncmp(compression, "gz", 2) )
-      certificate->transfile = SCIPfopen(set->certificate_filename, "wb");
-   else
-      certificate->transfile = SCIPfopen(set->certificate_filename, "wT");
+   certificate->transfile = SCIPfopen(set->certificate_filename, "wT");
+   certificate->maxfilesize = set->certificate_maxfilesize;
 
    bufferlen = (int) strlen(name);
    SCIP_ALLOC( BMSallocMemoryArray(&certificate->derivationfilename, filenamelen+5) );
@@ -373,30 +375,12 @@ SCIP_RETCODE SCIPcertificateInit(
    certificate->origfilename[bufferlen+1] = 'o';
    certificate->origfilename[bufferlen+2] = 'r';
    certificate->origfilename[bufferlen+3] = 'i';
-   if( NULL != compression && 0 == strncmp(compression, "gz", 2) )
-   {
-      certificate->derivationfilename[bufferlen+4] = '.';
-      certificate->derivationfilename[bufferlen+5] = 'g';
-      certificate->derivationfilename[bufferlen+6] = 'z';
-      certificate->derivationfilename[bufferlen+7] = '\0';
+   certificate->derivationfilename[bufferlen+4] = '\0';
+   certificate->origfilename[bufferlen+4] = '\0';
+   certificate->derivationfile = SCIPfopen(certificate->derivationfilename, "wT");
+   certificate->origfile = SCIPfopen(certificate->origfilename, "wT");
 
-      certificate->origfilename[bufferlen+4] = '.';
-      certificate->origfilename[bufferlen+5] = 'g';
-      certificate->origfilename[bufferlen+6] = 'z';
-      certificate->origfilename[bufferlen+7] = '\0';
-
-      certificate->derivationfile = SCIPfopen(certificate->derivationfilename, "wb");
-      certificate->origfile = SCIPfopen(certificate->origfilename, "wb");
-   }
-   else
-   {
-      certificate->derivationfilename[bufferlen+4] = '\0';
-      certificate->origfilename[bufferlen+4] = '\0';
-      certificate->derivationfile = SCIPfopen(certificate->derivationfilename, "wT");
-      certificate->origfile = SCIPfopen(certificate->origfilename, "wT");
-   }
-
-   if( certificate->origfile == NULL || certificate->derivationfile == NULL )
+   if( certificate->transfile == NULL || certificate->origfile == NULL || certificate->derivationfile == NULL )
    {
       SCIPerrorMessage("error creating file <%s> and derivation file\n", set->certificate_filename);
       SCIPprintSysError(set->certificate_filename);
@@ -559,7 +543,7 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
 
    assert(certificate != NULL);
 
-   if( !(scip->set->exact_enabled) || (scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0') || certificate->transfile_initialized )
+   if( certificate->transfile_initialized )
       return SCIP_OKAY;
 
    /* the transfile is constructed using the (exact) LP, so make sure this is constructed here */
@@ -578,7 +562,7 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
    certificate->transfile_initialized = TRUE;
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    nboundconss = 0;
-   for ( j = 0 ; j < nvars ; j++ )
+   for( j = 0 ; j < nvars ; j++ )
    {
       lb = SCIPvarGetLbGlobalExact(vars[j]);
       ub = SCIPvarGetUbGlobalExact(vars[j]);
@@ -697,11 +681,11 @@ SCIP_RETCODE SCIPcertificateInitTransFile(
    return SCIP_OKAY;
 }
 
-/** Concatenate the certificate and the _der file and delete the _der file  */
+/** concatenates the certificate and the _der file and deletes the _der file */
 static
 void concatCert(
-   SCIP_CERTIFICATE*     certificate,        /**< The certificate pointer */
-   const char*           certificatefilename /**< The name of the certificate file */
+   SCIP_CERTIFICATE*     certificate,        /**< the certificate pointer */
+   const char*           certificatefilename /**< the name of the certificate file */
    )
 {
    SCIP_FILE* derivationfile;
@@ -725,25 +709,38 @@ SCIP_RETCODE SCIPcertificateExit(
    SCIP*                 scip                /**< scip data structure */
    )
 {
+   assert(scip != NULL);
+
    SCIP_CERTIFICATE* certificate = SCIPgetCertificate(scip);
    SCIP_MESSAGEHDLR* messagehdlr = SCIPgetMessagehdlr(scip);
    SCIP_SET* set = scip->set;
 
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return SCIP_OKAY;
+
    assert(certificate != NULL);
-   assert(scip->set != NULL);
 
    if( certificate->origfile != NULL )
    {
+      SCIP_Bool printingaborted = !checkAndUpdateFilesize(certificate, 0);
+
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-         "closing CERTIFICATE information file (wrote %.1f MB)\n", certificate->filesize);
+         "closing certificate file (wrote approx. %.1f MB%s)\n", certificate->filesize,
+         printingaborted ? ", aborted printing after reaching max. file size" : "");
+
+      if( printingaborted )
+      {
+         (void) SCIPfprintf(certificate->origfile, "\n# ... aborted printing: max. file size reached.\n");
+         (void) SCIPfprintf(certificate->transfile, "\n# ... aborted printing: max. file size reached.\n");
+         (void) SCIPfprintf(certificate->derivationfile, "\n# ... aborted printing: max. file size reached.\n");
+      }
 
       if( certificate->derivationfile != NULL )
       {
-         /* CERT TODO: DER line with counter and append two files */
          SCIPfclose(certificate->derivationfile);
          certificate->derivationfile = NULL;
          concatCert(certificate, set->certificate_filename);
-         // if the file is empty (e.g. because we detected infeasibility in presolving) we delete it
+         /* if the file is empty (e.g. because we detected infeasibility in presolving) we delete it */
          if( certificate->indexcounter == 0 )
          {
             SCIPdebugMessage("derivation file is empty; deleting it");
@@ -789,17 +786,13 @@ SCIP_RETCODE SCIPcertificateExit(
    return SCIP_OKAY;
 }
 
-/** returns whether the certificate output is activated? */
-SCIP_Bool SCIPsetCertificateEnabled(
-   SCIP_SET*             set                 /**< SCIP settings */
+/** returns whether the certificate output is activated */
+SCIP_Bool SCIPcertificateIsEnabled(
+   SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
 {
-   if( !set->exact_enabled )
-      return FALSE;
-   if( (set->certificate_filename[0] == '-' && set->certificate_filename[1] == '\0') )
-      return FALSE;
-
-   return TRUE;
+   return certificate != NULL && certificate->transfile != NULL && certificate->origfile != NULL
+      && certificate->derivationfile != NULL;
 }
 
 /** returns current certificate file size in MB */
@@ -807,7 +800,7 @@ SCIP_Real SCIPcertificateGetFilesize(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
 {
-   if( certificate == NULL || certificate->transfile == NULL)
+   if( !SCIPcertificateIsEnabled(certificate) )
       return 0.0;
    else
       return certificate->filesize;
@@ -818,7 +811,7 @@ SCIP_Longint SCIPcertificateGetCurrentIndex(
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
 {
-   if( certificate == NULL || certificate->transfile == NULL)
+   if( !SCIPcertificateIsEnabled(certificate) )
       return -1;
    else
       return certificate->indexcounter;
@@ -835,6 +828,9 @@ SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
    )
 {
    SCIP_Bool consistent;
+
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return true;
 
    assert(certificate != NULL);
 
@@ -860,7 +856,7 @@ SCIP_Bool SCIPcertificateEnsureLastBoundInfoConsistent(
 /** sets the objective function used when printing dual bounds */
 SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_Rational**       coefs,              /**< objective function coefficients */
    int                   nvars               /**< number of variables */
@@ -872,8 +868,8 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
 
    assert(coefs != NULL);
 
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
    /* create a hash table for the variable bounds (we work on the tranformed problem) */
@@ -912,7 +908,7 @@ SCIP_RETCODE SCIPcertificateSetAndPrintObjective(
 /** prints the last part of the certificate header (RTP range/sol, ...) */
 SCIP_RETCODE SCIPcertificatePrintResult(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
@@ -923,7 +919,8 @@ SCIP_RETCODE SCIPcertificatePrintResult(
 
    assert(scip != NULL);
 
-   if( certificate->transfile == NULL)
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &primalbound) );
@@ -1022,7 +1019,7 @@ SCIP_RETCODE SCIPcertificateSaveFinalbound(
 {
    assert(scip != NULL);
 
-   if( certificate->transfile == NULL)
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
    SCIPgetLowerboundExact(scip, certificate->finalbound);
@@ -1033,7 +1030,7 @@ SCIP_RETCODE SCIPcertificateSaveFinalbound(
 /** prints a string to the problem section of the certificate file */
 void SCIPcertificatePrintProblemMessage(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
    )
@@ -1041,20 +1038,21 @@ void SCIPcertificatePrintProblemMessage(
    va_list ap;
    char buffer[3 * SCIP_MAXSTRLEN];
 
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
 
    va_start(ap, formatstr);
    (void) vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
-   if( isorigfile )
-      (void) SCIPfprintf(certificate->origfile, "%s", buffer);
-   else
-      (void) SCIPfprintf(certificate->transfile, "%s", buffer);
-
+   if( checkAndUpdateFilesize(certificate, strlen(buffer)) )
+   {
+      if( isorigfile )
+         (void) SCIPfprintf(certificate->origfile, "%s", buffer);
+      else
+         (void) SCIPfprintf(certificate->transfile, "%s", buffer);
+   }
    va_end(ap);
-   updateFilesize(certificate, strlen(buffer));
 }
 
 /** prints a string to the proof section of the certificate file */
@@ -1067,43 +1065,47 @@ void SCIPcertificatePrintProofMessage(
    va_list ap;
    char buffer[3 * SCIP_MAXSTRLEN];
 
-   /* check if certificate output should be created */
-   if( certificate->derivationfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
+
    va_start(ap, formatstr);
    vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
-   (void) SCIPfprintf(certificate->derivationfile, "%s", buffer); // todo: is this correct?
+   if( checkAndUpdateFilesize(certificate, strlen(buffer)) )
+      (void) SCIPfprintf(certificate->derivationfile, "%s", buffer);
+
    va_end(ap);
-   updateFilesize(certificate, strlen(buffer));
 }
 
 
 /** prints a rational number to the problem section of the certificate file */
 SCIP_RETCODE SCIPcertificatePrintProblemRational(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    SCIP_Rational*        val,                /**< Rational to print to the problem*/
    int                   base                /**< The base representation*/
    )
 {
    SCIP_Longint len = RatStrlen(val) + 1;
-   char* formatstr = NULL;
+   char* buffer = NULL;
 
    assert(len <= INT_MAX);
 
-   /* check if certificate output should be created */
-   if( certificate->derivationfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
      return SCIP_OKAY;
 
-   SCIP_ALLOC( BMSallocMemoryArray(&formatstr, len) );
-   (void) RatToString(val, formatstr, len);
-   if( isorigfile )
-      (void) SCIPfputs(formatstr, certificate->origfile);
-   else
-      (void) SCIPfputs(formatstr, certificate->transfile);
-
-   BMSfreeMemoryArray(&formatstr);
+   SCIP_ALLOC( BMSallocMemoryArray(&buffer, len) );
+   RatToString(val, buffer, len);
+   if( checkAndUpdateFilesize(certificate, strlen(buffer)) )
+   {
+      if( isorigfile )
+         SCIPfputs(buffer, certificate->origfile);
+      else
+         SCIPfputs(buffer, certificate->transfile);
+   }
+   BMSfreeMemoryArray(&buffer);
 
    return SCIP_OKAY;
 }
@@ -1117,18 +1119,21 @@ SCIP_RETCODE SCIPcertificatePrintProofRational(
    )
 {
    SCIP_Longint len = RatStrlen(val) + 1;
-   char* formatstr = NULL;
+   char* buffer = NULL;
 
    assert(len <= INT_MAX);
 
-   /* check if certificate output should be created */
-   if( certificate->derivationfile == NULL )
-     return SCIP_OKAY;
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
+     return SCIP_OKAY;;
 
-   SCIP_ALLOC( BMSallocMemoryArray(&formatstr, len) );
-   (void) RatToString(val, formatstr, len);
-   (void) SCIPfputs(formatstr, certificate->derivationfile);
-   BMSfreeMemoryArray(&formatstr);
+   SCIP_ALLOC( BMSallocMemoryArray(&buffer, len) );
+   RatToString(val, buffer, len);
+
+   if( checkAndUpdateFilesize(certificate, strlen(buffer)) )
+      SCIPfputs(buffer, certificate->derivationfile);
+
+   BMSfreeMemoryArray(&buffer);
 
    return SCIP_OKAY;
 }
@@ -1136,7 +1141,7 @@ SCIP_RETCODE SCIPcertificatePrintProofRational(
 /** prints a comment to the problem section of the certificate file */
 void SCIPcertificatePrintProblemComment(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
    )
@@ -1144,8 +1149,8 @@ void SCIPcertificatePrintProblemComment(
    va_list ap;
    char buffer[3 * SCIP_MAXSTRLEN];
 
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
 
    (void) SCIPfprintf(certificate->origfile, "# ");
@@ -1153,13 +1158,14 @@ void SCIPcertificatePrintProblemComment(
    va_start(ap, formatstr);
    (void) vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
-   if( isorigfile )
-      (void) SCIPfprintf(certificate->origfile, "%s", formatstr); // todo: is this correct?
-   else
-      (void) SCIPfprintf(certificate->transfile, "%s", formatstr); // todo: is this correct?
-
+   if( checkAndUpdateFilesize(certificate, 2 + strlen(buffer)) )
+   {
+      if( isorigfile )
+         (void) SCIPfprintf(certificate->origfile, "%s", buffer);
+      else
+         (void) SCIPfprintf(certificate->transfile, "%s", buffer);
+   }
    va_end(ap);
-   updateFilesize(certificate, 2 + strlen(formatstr));
 }
 
 /** prints a comment to the proof section of the certificate file */
@@ -1172,8 +1178,8 @@ void SCIPcertificatePrintProofComment(
    va_list ap;
    char buffer[3 * SCIP_MAXSTRLEN];
 
-   /* check if certificate output should be created */
-   if( certificate->derivationfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
 
    (void) SCIPfprintf(certificate->derivationfile, "# ");
@@ -1181,22 +1187,23 @@ void SCIPcertificatePrintProofComment(
    va_start(ap, formatstr);
    (void) vsnprintf(buffer, 3 * SCIP_MAXSTRLEN, formatstr, ap);
 
-   (void) SCIPfprintf(certificate->derivationfile, "%s", formatstr); // todo: is this correct?
+   if( checkAndUpdateFilesize(certificate, 2 + strlen(buffer)) )
+      (void) SCIPfprintf(certificate->derivationfile, "%s", buffer);
+
    va_end(ap);
-   updateFilesize(certificate, 2 + strlen(formatstr));
 }
 
 /** prints version header */
 void SCIPcertificatePrintVersionHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile          /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile          /**< should the line be printed to the origfile or the transfile */
    )
 {
-   assert(certificate != NULL);
-
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
+
+   assert(certificate != NULL);
 
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "VER 1.0 \n");
 }
@@ -1204,16 +1211,17 @@ void SCIPcertificatePrintVersionHeader(
 /** prints variable section header */
 void SCIPcertificatePrintVarHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    int                   nvars               /**< number of variables */
    )
 {
-   assert(certificate != NULL);
    assert(nvars >= 0);
 
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
+
+   assert(certificate != NULL);
 
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "VAR %d \n", nvars);
 }
@@ -1221,16 +1229,17 @@ void SCIPcertificatePrintVarHeader(
 /** prints integer section header */
 void SCIPcertificatePrintIntHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    int                   nints               /**< number of integer variables */
    )
 {
-   assert(certificate != NULL);
    assert(nints >= 0);
 
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
+
+   assert(certificate != NULL);
 
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "INT %d\n", nints);
 }
@@ -1238,17 +1247,18 @@ void SCIPcertificatePrintIntHeader(
 /** prints constraint section header */
 void SCIPcertificatePrintConsHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    int                   nconss,             /**< number of all constraints */
    int                   nboundconss         /**< number of bound constraints */
    )
 {
-   assert(certificate != NULL);
    assert(nconss >= 0);
 
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
+
+   assert(certificate != NULL);
 
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "CON %d %d\n", nconss + nboundconss, nboundconss);
 }
@@ -1256,15 +1266,16 @@ void SCIPcertificatePrintConsHeader(
 /** prints derivation section header */
 void SCIPcertificatePrintDerHeader(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile          /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile          /**< should the line be printed to the origfile or the transfile */
    )
 {
-   int nders;
-   assert(certificate != NULL);
+   SCIP_Longint nders;
 
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
+
+   assert(certificate != NULL);
 
    if( !isorigfile )
       nders = certificate->indexcounter - certificate->conscounter;
@@ -1277,7 +1288,7 @@ void SCIPcertificatePrintDerHeader(
 /** prints constraint */
 SCIP_RETCODE SCIPcertificatePrintCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    const char*           consname,           /**< name of the constraint */
    const char            sense,              /**< sense of the constraint, i.e., G, L, or E */
    SCIP_Rational*        side,               /**< left/right-hand side */
@@ -1286,11 +1297,11 @@ SCIP_RETCODE SCIPcertificatePrintCons(
    SCIP_Rational**       val                 /**< coefficient array */
    )
 {
-   int i;
    SCIP_Longint index;
+   int i;
 
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
    index = isorigfile ? certificate->indexcounter_ori : certificate->indexcounter;
@@ -1306,7 +1317,7 @@ SCIP_RETCODE SCIPcertificatePrintCons(
 
    for( i = 0; i < len; i++ )
    {
-      /** @todo exip: perform line breaking before exceeding maximum line length */
+      /** @todo perform line breaking before exceeding maximum line length */
       SCIPcertificatePrintProblemMessage(certificate, isorigfile, " %d ", ind[i]);
       SCIP_CALL( SCIPcertificatePrintProblemRational(certificate, isorigfile, val[i], 10) );
    }
@@ -1328,9 +1339,11 @@ SCIP_RETCODE SCIPcertificatePrintCons(
    return SCIP_OKAY;
 }
 
-/** print a line for an exact row to the certificate (without derivation), @param alternativerhs is used instead
- * of the real rhs of the row (infinity if real rhs should be used). This is necessary for integer cuts
- * where the rhs was rounded down from the original rhs */
+/** prints a line for an exact row to the certificate (without derivation)
+ *
+ *  @param alternativerhs is used instead of the real rhs of the row (infinity if real rhs should be used).
+ *  This is necessary for integer cut where the rhs was rounded down from the original rhs
+ */
 static
 SCIP_RETCODE SCIPcertificatePrintRow(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1342,6 +1355,10 @@ SCIP_RETCODE SCIPcertificatePrintRow(
    SCIP_ROW* row;
    SCIP_Rational* rhs;
    int i;
+
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return SCIP_OKAY;
 
    assert(rowexact != NULL);
 
@@ -1370,7 +1387,7 @@ SCIP_RETCODE SCIPcertificatePrintRow(
    {
       SCIP_Rational* val;
       int varindex;
-      /** @todo exip: perform line breaking before exceeding maximum line length */
+      /** @todo perform line breaking before exceeding maximum line length */
       assert(rowexact->cols[i]->fpcol->var->index == rowexact->fprow->cols[i]->var->index);
 
       varindex = SCIPvarGetCertificateIndex(SCIPcolExactGetVar(SCIProwExactGetCols(rowexact)[i]));
@@ -1401,6 +1418,7 @@ SCIP_RETCODE certificatePrintMirSplit(
    SCIP_Real slackrhs;
    std::map<int, SCIP_Real> coefs;
 
+   assert(SCIPcertificateIsEnabled(certificate));
    assert(SCIPhashmapExists(certificate->mirinfohash, (void*) row));
 
    mirinfo = (SCIP_MIRINFO*) SCIPhashmapGetImage(certificate->mirinfohash, (void*) row);
@@ -1465,11 +1483,11 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
-   for( auto it = coefs.begin(); it != coefs.end(); ++it )
+   for( auto & coef : coefs )
    {
-      /** @todo exip: perform line breaking before exceeding maximum line length */
-      int varindex = it->first;
-      RatSetReal(val, it->second);
+      /** @todo perform line breaking before exceeding maximum line length */
+      int varindex = coef.first;
+      RatSetReal(val, coef.second);
 
       assert(RatIsIntegral(val));
 
@@ -1489,11 +1507,11 @@ SCIP_RETCODE certificatePrintMirSplit(
 
    SCIPcertificatePrintProofMessage(certificate, " %d", coefs.size());
 
-   for( auto it = coefs.begin(); it != coefs.end(); ++it )
+   for( auto & coef : coefs )
    {
-      /** @todo exip: perform line breaking before exceeding maximum line length */
-      int varindex = it->first;
-      RatSetReal(val, it->second);
+      /** @todo perform line breaking before exceeding maximum line length */
+      int varindex = coef.first;
+      RatSetReal(val, coef.second);
 
       assert(RatIsIntegral(val));
 
@@ -1525,6 +1543,8 @@ SCIP_RETCODE certificatePrintIncompleteDerStart(
    SCIP_VAR** vars;
    int nvars;
    int i;
+
+   assert(!SCIPcertificateIsEnabled(certificate));
 
    vars = SCIPprobGetVars(prob);
    nvars = SCIPprobGetNVars(prob);
@@ -1588,6 +1608,8 @@ SCIP_RETCODE certificatePrintWeakDerStart(
    int nvars;
    int i;
    int nboundentries;
+
+   assert(SCIPcertificateIsEnabled(certificate));
 
    nboundentries = 0;
 
@@ -1660,8 +1682,8 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    SCIP_MIRINFO* mirinfo;
    int i;
 
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
    assert(row != NULL);
@@ -1826,7 +1848,6 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
       RatDivReal(tmpval, tmpval, mirinfo->scale);
 
       SCIPdebugMessage("Correcting for negative continous slacks \n");
-      /** @todo exip: really necessary? if so this is only for rounding error correction */
       /* we also have to add the correct multipliers for the negative continuous slacks that were used here */
       for( i = 0; i < aggrinfo->nnegslackrows; i++ )
       {
@@ -1959,22 +1980,19 @@ SCIP_RETCODE SCIPcertificatePrintMirCut(
    return SCIP_OKAY;
 }
 
-/** @todo exip: refactor this so duplicates and redundant bounds do not get printed */
 /** prints a variable bound to the problem section of the certificate file and returns line index */
 SCIP_RETCODE SCIPcertificatePrintBoundCons(
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
-   SCIP_Bool             isorigfile,         /**< shoud the line be printed to the origfile or the transfile */
+   SCIP_Bool             isorigfile,         /**< should the line be printed to the origfile or the transfile */
    const char*           boundname,          /**< name of the bound constraint */
    SCIP_VAR*             var,                /**< variable to print the bound cons for */
    SCIP_Rational*        boundval,           /**< value of the bound */
    SCIP_Bool             isupper             /**< is it the upper bound? */
    )
 {
-
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
-
 
    if( !isorigfile )
    {
@@ -2029,18 +2047,17 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
    assert(node != NULL);
    assert(fileindex >= 0);
 
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
-   /* Retrieve node data */
+   /* retrieve node data */
    assert(SCIPhashmapExists(certificate->nodedatahash, node));
    nodedata = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, node);
 
-   if( newbound != NULL && RatIsLT(newbound, nodedata->derbound_inherit) )
+   if( newbound != NULL && RatIsLT(newbound, nodedata->derbound_self) )
       return SCIP_OKAY;
 
-   /* If the node is the root node, then when only update the index and bound */
+   /* if the node is the root node, then only update the index and bound */
    if( SCIPnodeGetParent(node) == NULL )
    {
       certificate->derindex_root = fileindex;
@@ -2051,18 +2068,17 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
       return SCIP_OKAY;
    }
 
-   /* Retrieve parent node data */
+   /* retrieve parent node data */
    assert(SCIPhashmapExists(certificate->nodedatahash, SCIPnodeGetParent(node)));
    nodedataparent = (SCIP_CERTNODEDATA*)SCIPhashmapGetImage(certificate->nodedatahash, SCIPnodeGetParent(node));
 
-   /* First ensure whether the node is left/right child of node parent, then left/rightfilled tells us if,
-    * a bound has already been derived for this node, if yes then depending on the value of the bound we update it.
-    * Else it is the first time this node is processed.Therefore, we also have to set left/rightfilled to TRUE
+   /* First we check whether the node is left/right child of its parent node; left/rightfilled tells us if a bound has
+    * already been derived for this node. We only install the new bound if the node is not already marked as infeasible
+    * and the new bound is better than the current bound if it is filled.
     */
    if( certificateIsLeftNode(certificate, node) )
    {
-      nodedataparent->leftfilled = TRUE;
-      if( newbound != NULL && RatIsGT(newbound, nodedataparent->derbound_left) && !nodedataparent->leftinfeas )
+      if( newbound != NULL && !nodedataparent->leftinfeas && (!nodedataparent->leftfilled || RatIsGT(newbound, nodedataparent->derbound_left)) )
       {
          nodedataparent->derindex_left = fileindex;
          RatSet(nodedataparent->derbound_left, newbound);
@@ -2072,11 +2088,11 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
          nodedataparent->derindex_left = fileindex;
          nodedataparent->leftinfeas = TRUE;
       }
+      nodedataparent->leftfilled = TRUE;
    }
    else
    {
-      nodedataparent->rightfilled = TRUE;
-      if( newbound != NULL && RatIsGT(newbound, nodedataparent->derbound_right) && !nodedataparent->rightinfeas )
+      if( newbound != NULL && !nodedataparent->rightinfeas && (!nodedataparent->rightfilled || RatIsGT(newbound, nodedataparent->derbound_right)) )
       {
          nodedataparent->derindex_right = fileindex;
          RatSet(nodedataparent->derbound_right, newbound);
@@ -2086,12 +2102,13 @@ SCIP_RETCODE SCIPcertificateUpdateParentData(
          nodedataparent->rightinfeas = TRUE;
          nodedataparent->derindex_right = fileindex;
       }
+      nodedataparent->rightfilled = TRUE;
    }
 
    return SCIP_OKAY;
 }
 
-/** Print a dual bound from an exact lp solution */
+/** prints a dual bound from an exact lp solution */
 SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
    SCIP_LPEXACT*         lpexact,            /**< the exact lp */
@@ -2111,7 +2128,8 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    int i;
    unsigned long key;
 
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
    SCIPdebugMessage("Printing dual bound from exact LP. Certificate index %lld \n", certificate->indexcounter);
@@ -2126,11 +2144,11 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
       return SCIP_OKAY;
    }
 
-   /* if at root node set, objintegral flag */
+   /* init the flag objintegral if at root node */
    if( SCIPnodeGetParent(node) == NULL )
       certificate->objintegral = SCIPprobIsObjIntegral(prob);
 
-   assert(lpexact!= NULL);
+   assert(lpexact != NULL);
    assert(certificate->transfile != NULL);
 
    /* if needed extend vals array */
@@ -2230,9 +2248,6 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    if( usefarkas )
    {
       RatSetString(lowerbound, "inf");
-      /* Scale proof to have RHS = 1 */
-      // for( i = 0; i < len; ++i)
-      //    RatDiv(vals[i], vals[i], farkasrhs);
    }
    else
    {
@@ -2247,7 +2262,7 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
 
    (void) SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, len, ind, vals);
    SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, lowerbound) );
-   SCIP_CALL( SCIPcertificateSetInheritanceData(certificate, node, certificate->indexcounter - 1, lowerbound) );
+   SCIP_CALL( SCIPcertificateUpdateBoundData(certificate, node, certificate->indexcounter - 1, lowerbound) );
 
    RatFreeBuffer(set->buffer, &lowerbound);
    SCIPsetFreeBufferArray(set, &ind);
@@ -2257,17 +2272,18 @@ SCIP_RETCODE SCIPcertificatePrintDualboundExactLP(
    return SCIP_OKAY;
 }
 
-/** Print a dual bound from the pseudo solution
+/** prints a dual bound from the pseudo solution
+ *
  *  in case of a bound change (branching), this happens before the bound change is processed;
  *  therefore we add the option to give on varindex, boundchgindex pair to pass directly to the method
  */
-SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
+SCIP_RETCODE SCIPcertificatePrintDualboundPseudo(
    SCIP_CERTIFICATE*     certificate,        /**< scip certificate struct */
    SCIP_LPEXACT*         lpexact,            /**< the exact lp */
    SCIP_NODE*            node,               /**< current node */
    SCIP_SET*             set,                /**< scip settings */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Bool             lowerchanged,       /**< to the modified indices address a change in lb or ub? */
+   SCIP_Bool             lowerchanged,       /**< do the modified indices address a change in lb or ub? */
    int                   modifiedvarindex,   /**< index of modified variable, or -1 */
    SCIP_Longint          boundchangeindex,   /**< index of unprocessed bound change in the certificate, or -1 */
    SCIP_Real             psval               /**< the pseudo obj value (or inf to use exact lp value) */
@@ -2287,11 +2303,12 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    assert(set != NULL);
    assert((modifiedvarindex >= 0 && boundchangeindex >= 0) || (modifiedvarindex == -1 && boundchangeindex == -1) );
 
-   /* only print if not -infinity and certificate is active */
-   if( !set->exact_enabled || !SCIPsetCertificateEnabled(set) || SCIPsetIsInfinity(set, -psval) )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
-   if( psval < SCIPnodeGetLowerbound(node) )
+   /* only print if bound is finite and improving */
+   if( SCIPsetIsInfinity(set, -psval) || psval < SCIPnodeGetLowerbound(node) )
       return SCIP_OKAY;
 
    /* if at root node set, objintegral flag */
@@ -2345,8 +2362,7 @@ SCIP_RETCODE  SCIPcertificatePrintDualboundPseudo(
    /* print pseudo solution into certificate file */
    (void) SCIPcertificatePrintDualbound(certificate, NULL, pseudoobjval, duallen, dualind, bounds);
 
-   SCIP_CALL( SCIPcertificateUpdateParentData(certificate, node, certificate->indexcounter - 1, pseudoobjval) );
-   SCIP_CALL( SCIPcertificateSetInheritanceData(certificate, node, certificate->indexcounter - 1, pseudoobjval) );
+   SCIP_CALL( SCIPcertificateUpdateBoundData(certificate, node, certificate->indexcounter - 1, pseudoobjval) );
 
    SCIPsetFreeBufferArray(set, &dualind);
    RatFreeBufferArray(set->buffer, &bounds, nnonzeros);
@@ -2362,14 +2378,17 @@ SCIP_RETCODE SCIPcertificatePrintInheritedBound(
    SCIP_NODE*            node                /**< node data */
    )
 {
-
    SCIP_CERTNODEDATA* nodedata;
    SCIP_Rational* lowerbound;
 
    assert(node != NULL);
 
    /* check whether certificate output should be created */
-   if( certificate->transfile == NULL || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return SCIP_OKAY;
+
+   /* certificate is disabled on probing nodes */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
       return SCIP_OKAY;
 
    /* get the current node data */
@@ -2381,12 +2400,12 @@ SCIP_RETCODE SCIPcertificatePrintInheritedBound(
       SCIP_Longint ind[1];
       SCIP_Rational* val;
 
-      ind[0] = nodedata->derindex_inherit;
+      ind[0] = nodedata->derindex_self;
 
       SCIP_CALL( RatCreateBuffer(set->buffer, &lowerbound) );
       SCIP_CALL( RatCreateBuffer(set->buffer, &val) );
 
-      RatSet(lowerbound, nodedata->derbound_inherit);
+      RatSet(lowerbound, nodedata->derbound_self);
       RatSetInt(val, 1, 1);
 
       (void) SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, 1, ind, &val);
@@ -2399,7 +2418,7 @@ SCIP_RETCODE SCIPcertificatePrintInheritedBound(
    return SCIP_OKAY;
 }
 
-/** prints dual bound to proof section */
+/** prints dual bound to proof section and increments indexcounter */
 SCIP_Longint SCIPcertificatePrintDualbound(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
    const char*           linename,           /**< name of the unsplitting line */
@@ -2409,9 +2428,9 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    SCIP_Rational**       val                 /**< array of dual multipliers */
    )
 {
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
-      return 0;
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return 0L;
 
    certificate->indexcounter++;
    certificate->lastinfo->isbound = FALSE;
@@ -2449,7 +2468,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
 
       for( i = 0; i < len; i++ )
       {
-         /** @todo exip: perform line breaking before exceeding maximum line length */
+         /** @todo perform line breaking before exceeding maximum line length */
          assert(!RatIsAbsInfinity(val[i]));
          SCIPcertificatePrintProofMessage(certificate, " %d ", ind[i]);
          SCIP_CALL( SCIPcertificatePrintProofRational(certificate, val[i], 10) );
@@ -2464,7 +2483,6 @@ SCIP_Longint SCIPcertificatePrintDualbound(
       certificate->lastinfo->isbound = FALSE;
 
       SCIPcertificatePrintProofMessage(certificate, "R%d G ", certificate->indexcounter - 1);
-      updateFilesize(certificate, 4.0 + ceil(log10(certificate->indexcounter - 1 + 1)));
       RatRound(lowerbound, lowerbound, SCIP_R_ROUND_UPWARDS);
 
       SCIP_CALL( SCIPcertificatePrintProofRational(certificate, lowerbound, 10) );
@@ -2477,6 +2495,8 @@ SCIP_Longint SCIPcertificatePrintDualbound(
    return (certificate->indexcounter - 1);
 }
 
+/** @todo let this method return LONG_MAX if row is not in the hashmap; add method to check existence, and to
+ *  insert an element, and use these throughout the SCIP core */
 /** returns the index for a row in the certificate */
 SCIP_Longint SCIPcertificateGetRowIndex(
    SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
@@ -2494,8 +2514,8 @@ SCIP_Longint SCIPcertificateGetRowIndex(
 }
 
 
-/** update the parent certificate node data when branching, print branching into certificate if not already present */
-SCIP_RETCODE SCIPcertificatePrintBranching(
+/** updates the parent certificate node data when branching */
+SCIP_RETCODE SCIPcertificateUpdateBranchingData(
    SCIP_SET*             set,                /**< general SCIP settings */
    SCIP_CERTIFICATE*     certificate,        /**< certificate information */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -2515,12 +2535,12 @@ SCIP_RETCODE SCIPcertificatePrintBranching(
    assert(node != NULL);
    assert(stat != NULL);
 
-   /* certificate is disabled on probing nodes */
-   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE || lp->diving )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
-   /* check whether output should be created */
-   if ( certificate->transfile == NULL )
+   /* certificate is disabled on probing nodes */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE || lp->diving )
       return SCIP_OKAY;
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &branchbound) );
@@ -2567,12 +2587,12 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
    assert(stat != NULL );
    assert(node != NULL );
 
-   /* certificate is disabled on probing nodes */
-   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
-   /* check whether output should be created */
-   if( certificate->transfile == NULL )
+   /* certificate is disabled on probing nodes */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
       return SCIP_OKAY;
 
    SCIP_ALLOC( BMSallocBlockMemory(certificate->blkmem, &nodedata) );
@@ -2583,14 +2603,14 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
    nodedata->assumptionindex_right = -1;
    SCIP_CALL( RatCreateString(certificate->blkmem, &nodedata->derbound_left, "-inf") );
    SCIP_CALL( RatCreateString(certificate->blkmem, &nodedata->derbound_right, "-inf") );
-   SCIP_CALL( RatCreateString(certificate->blkmem, &nodedata->derbound_inherit, "-inf") );
+   SCIP_CALL( RatCreateString(certificate->blkmem, &nodedata->derbound_self, "-inf") );
    nodedata->assumptionindex_self = -1;
    nodedata->leftinfeas = FALSE;
    nodedata->leftfilled = FALSE;
    nodedata->rightinfeas = FALSE;
    nodedata->rightfilled = FALSE;
    nodedata->inheritedbound = TRUE;
-   nodedata->derindex_inherit = -1;
+   nodedata->derindex_self = -1;
    if( SCIPnodeGetParent(node) != NULL )
    {
       SCIP_NODE* parent = SCIPnodeGetParent(node);
@@ -2599,8 +2619,8 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
       parentdata = (SCIP_CERTNODEDATA*) SCIPhashmapGetImage(certificate->nodedatahash, (void*) parent);
       assert(parentdata != NULL);
 
-      nodedata->derindex_inherit = parentdata->derindex_inherit;
-      RatSet(nodedata->derbound_inherit, parentdata->derbound_inherit);
+      nodedata->derindex_self = parentdata->derindex_self;
+      RatSet(nodedata->derbound_self, parentdata->derbound_self);
    }
 
    /* link the node to its nodedata in the corresponding hashmap */
@@ -2609,7 +2629,7 @@ SCIP_RETCODE SCIPcertificateNewNodeData(
    return SCIP_OKAY;
 }
 
-/** Print cutoff bound for objective value **/
+/** prints cutoff bound for objective value **/
 SCIP_RETCODE SCIPcertificatePrintCutoffBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CERTIFICATE*     certificate,        /**< SCIP certificate */
@@ -2618,6 +2638,10 @@ SCIP_RETCODE SCIPcertificatePrintCutoffBound(
    )
 {
    SCIP_Rational* newbound;
+
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return SCIP_OKAY;
 
    SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &newbound) );
    if( SCIPisObjIntegral(scip) && ! RatIsIntegral(bound) )
@@ -2655,7 +2679,9 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    SCIP_ROWEXACT* rowexact;
    SCIP_VAR** vars;
 
-
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return SCIP_OKAY;
 
    SCIP_CALL( RatCreateBuffer(set->buffer, &tmpval) );
    vars = SCIPprobGetVars(prob);
@@ -2674,8 +2700,8 @@ SCIP_RETCODE SCIPcertificatePrintAggrrow(
    for( i = 0; i < SCIPaggrRowGetNNz(aggrrow); i++ )
    {
       int varindex;
-      /** @todo exip: perform line breaking before exceeding maximum line length */
 
+      /** @todo perform line breaking before exceeding maximum line length */
       varindex = SCIPvarGetCertificateIndex(vars[SCIPaggrRowGetInds(aggrrow)[i]]);
       RatSetReal(tmpval, SCIPaggrRowGetValueSafely(aggrrow, i));
 
@@ -2720,10 +2746,14 @@ SCIP_RETCODE SCIPcertificateClearAggrinfo(
    SCIP*                 scip                /**< global SCIP data structure */
    )
 {
-   int i;
+   SCIP_Longint i;
    SCIP_CERTIFICATE* certificate;
 
    certificate = SCIPgetCertificate(scip);
+
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return SCIP_OKAY;
 
    if( certificate == NULL || certificate->aggrinfo == NULL )
       return SCIP_OKAY;
@@ -2753,6 +2783,10 @@ SCIP_RETCODE SCIPcertificateClearMirinfo(
    SCIP_CERTIFICATE* certificate;
 
    certificate = SCIPgetCertificate(scip);
+
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return SCIP_OKAY;
 
    if( certificate == NULL || certificate->mirinfo == NULL )
       return SCIP_OKAY;
@@ -2798,8 +2832,12 @@ SCIP_RETCODE SCIPcertificateFreeAggrInfo(
    SCIP_ROW*             row                 /**< row that should be freed, or NULL if not needed */
    )
 {
-   int arraypos;
+   SCIP_Longint arraypos;
    int i;
+
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return SCIP_OKAY;
 
    /* remove the (no longer needed aggrinfo), move last element to now freed spot */
    arraypos = aggrinfo->arpos;
@@ -2844,8 +2882,12 @@ SCIP_RETCODE SCIPcertificateFreeMirInfo(
    SCIP_ROW*             row                 /**< row that should be freed, or NULL if not needed */
    )
 {
-   int arraypos;
+   SCIP_Longint arraypos;
    int i;
+
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return SCIP_OKAY;
 
    /* remove the mirinfo, move last element to the now freed up one */
    arraypos = mirinfo->arpos;
@@ -2901,11 +2943,11 @@ SCIP_RETCODE SCIPcertificateNewAggrInfo(
 
    certificate = SCIPgetCertificate(scip);
 
-   assert(certificate != NULL);
-
-   /* check whether output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
+
+   assert(certificate != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &info) );
 
@@ -2963,10 +3005,8 @@ SCIP_RETCODE SCIPcertificateNewMirInfo(
 
    certificate = SCIPgetCertificate(scip);
 
-   assert(certificate != NULL);
-
-   /* check whether output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
    if( certificate->mirinfosize == certificate->nmirinfos )
@@ -3017,8 +3057,6 @@ SCIP_RETCODE SCIPstoreCertificateActiveAggregationInfo(
    SCIP_CERTIFICATE* certificate;
    SCIP_AGGREGATIONINFO* aggrinfo;
 
-   assert(SCIPisExactSolve(scip));
-
    if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
 
@@ -3047,8 +3085,6 @@ SCIP_RETCODE SCIPstoreCertificateActiveMirInfo(
    SCIP_MIRINFO* mirinfo;
    int i;
    int csplit;
-
-   assert(SCIPisExactSolve(scip));
 
    if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
@@ -3111,8 +3147,6 @@ SCIP_RETCODE SCIPfreeCertificateActiveMirInfo(
    SCIP_MIRINFO* mirinfo;
    int i;
 
-   assert(SCIPisExactSolve(scip));
-
    if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
 
@@ -3166,8 +3200,6 @@ SCIP_RETCODE SCIPfreeCertificateActiveAggregationInfo(
    SCIP_CERTIFICATE* certificate;
    SCIP_AGGREGATIONINFO* aggrinfo;
 
-   assert(SCIPisExactSolve(scip));
-
    if( !SCIPisExactSolve(scip) || !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
 
@@ -3205,7 +3237,11 @@ SCIP_RETCODE SCIPcertificatePrintUnsplitting(
    assert(node != NULL);
 
    /* check whether certificate output should be created */
-   if( certificate->transfile == NULL || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
+   if( !SCIPcertificateIsEnabled(certificate) )
+      return SCIP_OKAY;
+
+   /* certificate is disabled on probing nodes */
+   if( SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE )
       return SCIP_OKAY;
 
    /* get the current node data */
@@ -3270,11 +3306,11 @@ SCIP_RETCODE SCIPcertificatePrintUnsplitting(
          SCIP_Longint ind[1];
          SCIP_Rational* val;
 
-         ind[0] = nodedata->derindex_inherit;
+         ind[0] = nodedata->derindex_self;
 
          (void) RatCreateBuffer(set->buffer, &val);
 
-         RatSet(lowerbound, nodedata->derbound_inherit);
+         RatSet(lowerbound, nodedata->derbound_self);
          RatSetInt(val, 1, 1);
 
          (void) SCIPcertificatePrintDualbound(certificate, NULL, lowerbound, 1, ind, &val);
@@ -3299,8 +3335,8 @@ SCIP_RETCODE SCIPcertificatePrintRtpRange(
    SCIP_Rational*        upperbound          /**< pointer to upper bound on the objective */
    )
 {
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return SCIP_OKAY;
 
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "RTP range ");
@@ -3333,8 +3369,8 @@ void SCIPcertificatePrintRtpInfeas(
    SCIP_Bool             isorigfile          /**< should the original solution be printed or in transformed space */
    )
 {
-   /* check if certificate output should be created */
-   if( certificate->transfile == NULL )
+   /* check whether certificate output should be created */
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
 
    SCIPcertificatePrintProblemMessage(certificate, isorigfile, "RTP infeas\n");
@@ -3347,12 +3383,12 @@ SCIP_RETCODE SCIPcertificateSetLastBoundIndex(
    SCIP_Longint          index               /**< index of new bound */
    )
 {
-      assert(certificate != NULL);
-      assert(index >= 0);
+   assert(index >= 0);
 
+   if( SCIPcertificateIsEnabled(certificate) )
       certificate->lastboundindex = index;
 
-      return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 /** returns the last bound index for the certificate */
@@ -3361,9 +3397,7 @@ SCIP_Longint SCIPcertificateGetLastBoundIndex(
    SCIP_CERTIFICATE*     certificate         /**< certificate data structure */
    )
 {
-      assert(certificate != NULL);
-
-      return certificate->lastboundindex;
+   return SCIPcertificateIsEnabled(certificate) ? certificate->lastboundindex : -1;
 }
 
 /** prints a proof that boundchange is leads to infeasibility */
@@ -3378,8 +3412,6 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
    )
 {
    SCIP_Rational* lowerbound;
-
-   assert(SCIPisExactSolve(scip));
 
    if( !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
@@ -3440,12 +3472,12 @@ SCIP_RETCODE SCIPcertificatePrintCutoffConflictingBounds(
          return SCIP_ERROR;
    }
 
-   if ( lb == NULL )
+   if( lb == NULL )
    {
       lb = SCIPvarGetLbLocalExact(var);
       lbindex = SCIPvarGetLbCertificateIndexLocal(var);
    }
-   if ( ub == NULL )
+   if( ub == NULL )
    {
       ub = SCIPvarGetUbLocalExact(var);
       ubindex = SCIPvarGetUbCertificateIndexLocal(var);
@@ -3479,10 +3511,9 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
 {
    SCIP_RETCODE res;
 
-   assert(SCIPisExactSolve(scip));
-
    if( !SCIPisCertificateActive(scip) )
       return SCIP_OKAY;
+
    assert(certificate != NULL);
 
    switch (var->varstatus)
@@ -3517,14 +3548,14 @@ SCIP_RETCODE SCIPcertificatePrintGlobalBound(
          return SCIP_ERROR;
    }
 
-   #ifndef NDEBUG
-      certificate->lastinfo->isbound = TRUE;
-      certificate->lastinfo->boundtype = boundtype;
-      certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
-      certificate->lastinfo->isglobal = TRUE;
-      certificate->lastinfo->certificateindex = certificate->indexcounter;
-      RatSet(certificate->lastinfo->boundval, value);
-   #endif
+#ifndef NDEBUG
+   certificate->lastinfo->isbound = TRUE;
+   certificate->lastinfo->boundtype = boundtype;
+   certificate->lastinfo->varindex = SCIPvarGetCertificateIndex(var);
+   certificate->lastinfo->isglobal = TRUE;
+   certificate->lastinfo->certificateindex = certificate->indexcounter;
+   RatSet(certificate->lastinfo->boundval, value);
+#endif
 
    SCIPcertificatePrintProofMessage(certificate, "GlobalBound_%d %c ", certificate->indexcounter,
       boundtype == SCIP_BOUNDTYPE_UPPER ? 'L' : 'G');

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -49,6 +49,7 @@
 #include "scip/clock.h"
 #include "scip/debug.h"
 #include "scip/dialog.h"
+#include "scip/iisfinder.h"
 #include "scip/interrupt.h"
 #include "scip/mem.h"
 #include "scip/message_default.h"
@@ -259,6 +260,7 @@ SCIP_RETCODE doScipCreate(
    SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
    SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
+   SCIP_CALL( SCIPiisCreate(&(*scip)->iis, (*scip)->set, SCIPblkmem(*scip)) );
 
    /* include additional core functionality */
    SCIP_CALL( SCIPincludeCorePlugins(*scip) );
@@ -390,6 +392,7 @@ SCIP_RETCODE SCIPfree(
    /* switch stage to FREE */
    (*scip)->set->stage = SCIP_STAGE_FREE;
 
+   SCIP_CALL( SCIPiisFree(&(*scip)->iis, SCIPblkmem(*scip)) );
    SCIP_CALL( SCIPsyncstoreRelease(&(*scip)->syncstore) );
    SCIP_CALL( SCIPsetFree(&(*scip)->set, (*scip)->mem->setmem) );
    SCIP_CALL( SCIPdialoghdlrFree(*scip, &(*scip)->dialoghdlr) );

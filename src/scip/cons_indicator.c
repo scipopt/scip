@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -7170,7 +7170,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
 
       /* if copying scip after transforming the original instance before presolving, we need to correct the linear
        * constraint pointer */
-      if ( SCIPisTransformed(sourcescip) && ! SCIPconsIsTransformed(sourcelincons) )
+      if ( SCIPconsIsTransformed(sourcecons) && ! SCIPconsIsTransformed(sourcelincons) )
       {
          SCIP_CONS* translincons;
 
@@ -8587,9 +8587,18 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    for (j = 0; j < nvars; ++j)
    {
       if ( ! SCIPvarIsIntegral(vars[j]) || ! SCIPisIntegral(scip, vals[j]) )
-      {
          slackvartype = SCIP_VARTYPE_CONTINUOUS;
-         break;
+
+      /* Check whether variable is marked to not be multi-aggregated: this should only be the case for slack variables
+       * added by the indicator constraint handler. */
+      if ( SCIPdoNotMultaggrVar(scip, vars[j]) )
+      {
+         /* double check name */
+         if ( strncmp(SCIPvarGetName(vars[j]), "indslack", 8) == 0 )
+         {
+            SCIPerrorMessage("Linear constraint <%s> already used in an indicator constraint.\n", SCIPconsGetName(lincons));
+            return SCIP_INVALIDDATA;
+         }
       }
    }
 

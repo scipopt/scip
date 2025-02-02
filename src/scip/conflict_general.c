@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1419,8 +1419,6 @@ SCIP_RETCODE SCIPgetFarkasProof(
 
          if( set->exact_enabled )
          {
-            SCIP_Longint certificateIndex;
-
             for( int i = 0; i < row->len; i++ )
             {
                if( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(row->cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(row->cols[i]->var)) )
@@ -1429,15 +1427,18 @@ SCIP_RETCODE SCIPgetFarkasProof(
                   goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
                }
             }
-            if( SCIPsetCertificateEnabled(set) )
+
+            if( SCIPisCertificateActive(set->scip) )
             {
-               certificateIndex = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, row->rowexact);
-               if( certificateIndex  == SCIP_LONGINT_MAX && SCIProwGetOrigintype(row) == SCIP_ROWORIGINTYPE_SEPA )
+               SCIP_Longint certificate_index;
+
+               certificate_index = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, row->rowexact);
+               if( certificate_index == LONG_MAX && SCIProwGetOrigintype(row) == SCIP_ROWORIGINTYPE_SEPA )
                {
                   SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, SCIPgetCertificate(set->scip), prob, row, 'L') );
-                  certificateIndex = SCIPcertificateGetRowIndex(SCIPgetCertificate(set->scip), row->rowexact, dualfarkas[r] > 0);
+                  certificate_index = SCIPcertificateGetRowIndex(SCIPgetCertificate(set->scip), row->rowexact, dualfarkas[r] > 0);
                }
-               assert(certificateIndex != SCIP_LONGINT_MAX);
+               assert(certificate_index != LONG_MAX);
             }
 
          }
@@ -1538,7 +1539,7 @@ SCIP_RETCODE SCIPgetFarkasProof(
             usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
          }
          SCIP_CALL( SCIPcertificatePrintAggrrow(set, lp, prob, SCIPgetCertificate(set->scip),
-            farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, false, &farkasrow->certificateline) );
+            farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, FALSE, &farkasrow->certificateline) );
          SCIPfreeBufferArray(set->scip, &usedrows);
       }
    }
@@ -1716,9 +1717,9 @@ SCIP_RETCODE SCIPgetDualProof(
    if( set->exact_enabled )
    {
       SCIP_COL** cols = SCIPgetLPCols(set->scip);
-      for (int i = 0; i < SCIPgetNLPCols(set->scip); i++)
+      for( int i = 0; i < SCIPgetNLPCols(set->scip); i++ )
       {
-         if ( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(cols[i]->var)) )
+         if( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(cols[i]->var)) && SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(cols[i]->var)) )
          {
             (*valid) = FALSE;
             goto TERMINATE; // Adding unbounded variables safely to an aggregation row is not yet supported
@@ -1878,9 +1879,8 @@ SCIP_RETCODE SCIPgetDualProof(
       }
    }
 
-   if ( set->exact_enabled && SCIPisCertificateActive(set->scip))
+   if( set->exact_enabled && SCIPisCertificateActive(set->scip) )
    {
-      //certificatePrintAggrrow(set->scip, SCIPgetCertificate(set->scip), farkasrow, &farkasrow->certificateline);
       SCIP_Longint certificateline;
       SCIP_ROW** usedrows;
 
@@ -1890,31 +1890,30 @@ SCIP_RETCODE SCIPgetDualProof(
       SCIP_CALL( SCIPhashmapInsertLong(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact, certificateline) );
       SCIP_CALL( SCIPallocBufferArray(set->scip, &usedrows, farkasrow->nrows + 1) );
       usedrows[0] = objectiverow;
-      for (int i = 1; i < farkasrow->nrows; i++)
+      for( int i = 1; i < farkasrow->nrows; i++ )
       {
+         SCIP_Longint certificate_index;
+
          usedrows[i] = SCIPgetLPRows(set->scip)[farkasrow->rowsinds[i]];
-         if( SCIPsetCertificateEnabled(set) )
+         certificate_index = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, usedrows[i]->rowexact);
+         if( certificate_index == LONG_MAX && SCIProwGetOrigintype(usedrows[i]) == SCIP_ROWORIGINTYPE_SEPA )
          {
-            SCIP_Longint certificateIndex;
-            certificateIndex = SCIPhashmapGetImageLong(SCIPgetCertificate(set->scip)->rowdatahash, usedrows[i]->rowexact);
-            if(certificateIndex  == SCIP_LONGINT_MAX && SCIProwGetOrigintype(usedrows[i]) == SCIP_ROWORIGINTYPE_SEPA )
-            {
-               SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, SCIPgetCertificate(set->scip), transprob, usedrows[i], 'L') );
-            }
-            else
-            {
-               assert(certificateIndex != SCIP_LONGINT_MAX);
-            }
+            SCIP_CALL( SCIPcertificatePrintMirCut(set, lp, SCIPgetCertificate(set->scip), transprob, usedrows[i], 'L') );
+         }
+         else
+         {
+            assert(certificate_index != LONG_MAX);
          }
       }
-      SCIP_CALL( SCIPcertificatePrintAggrrow(set, lp, transprob, SCIPgetCertificate(set->scip), farkasrow, usedrows, farkasrow->rowweights, farkasrow->nrows, false, &farkasrow->certificateline) );
+      SCIP_CALL( SCIPcertificatePrintAggrrow(set, lp, transprob, SCIPgetCertificate(set->scip), farkasrow, usedrows,
+            farkasrow->rowweights, farkasrow->nrows, false, &farkasrow->certificateline) );
       SCIP_CALL( SCIPhashmapRemove(SCIPgetCertificate(set->scip)->rowdatahash, objectiverow->rowexact) );
       SCIPfreeBufferArray(set->scip, &usedrows);
    }
 
   TERMINATE:
 
-   if (objectiverow != NULL)
+   if( objectiverow != NULL )
    {
       SCIP_CALL( SCIProwExactRelease(&objectiverow->rowexact, set->scip->mem->probmem, set->scip->set, set->scip->lpexact) );
       SCIP_CALL( SCIPreleaseRow(set->scip, &objectiverow) );

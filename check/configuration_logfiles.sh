@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *
+#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *
 #*                                                                           *
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *
 #*  you may not use this file except in compliance with the License.         *
@@ -154,7 +154,7 @@ then
     OBJECTIVEVAL=$(grep " ${SHORTPROBNAME} " "${SOLUFILE}" | grep -e =opt= -e =best= | sort -k 3 -g | tail -n 1 | awk '{print $3}')
     CHECKOBJECTIVEVAL=$(grep " ${SHORTPROBNAME} " "${SOLUFILE}" | grep -e =opt= -e =best= | sort -k 3 -g -r | tail -n 1 | awk '{print $3}')
 
-    # if largest and smalles reference value given in the solution file differ by more than 1e-04, stop because of this inconsistency
+    # if largest and smallest reference value given in the solution file differ by more than 1e-04, stop because of this inconsistency
     if awk -v n1="${OBJECTIVEVAL}" -v n2="${CHECKOBJECTIVEVAL}" 'BEGIN { exit (n1 <= n2 + 0.0001 && n2 <= n1 + 0.0001) }' /dev/null;
     then
         echo "Exiting test because objective value for instance ${SHORTPROBNAME} in solu file ${SOLUFILE} is inconsistent: ${OBJECTIVEVAL} vs. ${CHECKOBJECTIVEVAL}"

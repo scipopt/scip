@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -90,6 +90,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
@@ -836,6 +837,23 @@ void SCIPsetSortBranchrules(
 
 /** sorts branching rules by name */
 void SCIPsetSortBranchrulesName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** inserts IIS finders in IIS finder list */
+SCIP_RETCODE SCIPsetIncludeIISfinder(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_IISFINDER*       iisfinder           /**< IIS finder */
+   );
+
+/** returns the IIS finder of the given name, or NULL if not existing */
+SCIP_IISFINDER* SCIPsetFindIISfinder(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of IIS finder */
+   );
+
+/** sorts the IIS finders by priorities */
+void SCIPsetSortIISfinders(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

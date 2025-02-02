@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -289,6 +289,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copyiisfinders,     /**< should the IIS finders be copied */
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copytables,         /**< should the statistics tables be copied */
@@ -316,7 +317,7 @@ SCIP_RETCODE SCIPcopyPlugins(
 
    SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set,
          copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copycutselectors, copypropagators,
-         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs, copytables, copyexprhdlrs, copynlpis, valid) );
+         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copyiisfinders, copydisplays, copydialogs, copytables, copyexprhdlrs, copynlpis, valid) );
 
    return SCIP_OKAY;
 }
@@ -2246,8 +2247,8 @@ SCIP_RETCODE SCIPcopyConflicts(
    assert(targetscip != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( SCIPcheckStage(sourcescip, "SCIPcopyConss", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( SCIPcheckStage(targetscip, "SCIPcopyConss", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(sourcescip, "SCIPcopyConflicts", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPcheckStage(targetscip, "SCIPcopyConflicts", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check if we locally need to create a variable or constraint hash map */
    uselocalvarmap = (varmap == NULL);
@@ -2702,7 +2703,7 @@ SCIP_RETCODE doCopy(
 
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
 
    /* in case there are active pricers and pricing is disabled, targetscip will not be a valid copy of sourcescip */
    if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )
@@ -2740,6 +2741,10 @@ SCIP_RETCODE doCopy(
 
    /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
+
+   /* even when solving exactly, sub-SCIP heuristics should be run in floating-point mode, since the exactsol constraint
+    * handler is in place to perform a final repair step
+    */
    SCIP_CALL( SCIPsetBoolParam(targetscip, "exact/enabled", FALSE) );
 
    /* restore original quiet state */
@@ -2849,6 +2854,8 @@ SCIP_RETCODE doCopy(
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -2943,6 +2950,8 @@ SCIP_RETCODE SCIPcopy(
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
@@ -3027,6 +3036,8 @@ SCIP_RETCODE SCIPcopyConsCompression(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
+ *
  *  @pre This method can be called if sourcescip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -3110,6 +3121,8 @@ SCIP_RETCODE SCIPcopyOrig(
  *        SCIP instances will be solved in parallel. The usual case is to set this to FALSE, since thread safety
  *        typically incurs a performance cost.
  *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @note Reoptimization and exact solving are explicitly disabled in the target-SCIP.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

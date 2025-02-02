@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1235,7 +1235,7 @@ SCIP_RETCODE boundchgApplyGlobal(
       return SCIP_OKAY;
    }
 
-   if( SCIPsetCertificateEnabled(set) )
+   if( SCIPcertificateIsEnabled(stat->certificate) )
    {
       if( boundtype == SCIP_BOUNDTYPE_LOWER )
       {
@@ -1718,13 +1718,12 @@ SCIP_RETCODE SCIPdomchgApplyGlobal(
 /** adds certificate line number to domain changes */
 void SCIPdomchgAddCurrentCertificateIndex(
    SCIP_DOMCHG*          domchg,             /**< pointer to domain change data structure */
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CERTIFICATE*     certificate         /**< certificate information */
    )
 {
    SCIP_BOUNDCHG* change;
 
-   if( !SCIPsetCertificateEnabled(set) )
+   if( !SCIPcertificateIsEnabled(certificate) )
       return;
 
    change = &(domchg->domchgdyn.boundchgs[domchg->domchgdyn.nboundchgs - 1]);
@@ -23055,7 +23054,7 @@ SCIP_VARSTATUS SCIPvarGetStatus(
    return (SCIP_VARSTATUS)(var->varstatus);
 }
 
-/** return the status of the exact variable data */
+/** returns the status of the exact variable data */
 SCIP_VARSTATUS SCIPvarGetStatusExact(
    SCIP_VAR*             var                 /**< scip variable */
    )
@@ -23066,6 +23065,15 @@ SCIP_VARSTATUS SCIPvarGetStatusExact(
    return var->exactdata->varstatusexact;
 }
 
+/** returns whether the variable has exact variable data */
+SCIP_Bool SCIPvarIsExact(
+   SCIP_VAR*             var                 /**< scip variable */
+   )
+{
+   assert(var != NULL);
+
+   return (var->exactdata != NULL);
+}
 
 /** returns whether the variable belongs to the original problem */
 SCIP_Bool SCIPvarIsOriginal(

@@ -413,6 +413,36 @@ SECTION: General Questions about SCIP
        For this reason, and to avoid major API changes, the variable type has not been renamed.
     </p>
 
+    QUESTION: How can I analyse an infeasible problem?
+    LABEL:infeasibleinstances
+    ANSWER:
+    <p>
+       There are two main ways to analyse infeasible instances using SCIP:
+    <\p>
+    <p>
+       Firstly, there is IIS (irreducible infeasible subsystem) functionality in SCIP.
+       This can be called from the command line using `iis` or from the C API using `SCIPgenerateIIS(scip)`.
+       SCIP will then call its `iisfinders` and find a minimal subset of constraints (variable bounds too,
+       depending on the settings) that still results in an infeasible instance. There is no guarantee that
+       the returned reduced instance is the smallest possible infeasible subsystem for the whole instance,
+       but there is a guarantee that it contains no smaller infeasible subsystem, i.e., is irreducible.
+       This functionality helps with identifying a small portion of constraints / variable bounds
+       that together result in an infeasible problem.
+       After computing the IIS, it can be printed via the command line using `display/iis` or `write/iis`.
+    <\p>
+    <p>
+       Secondly, there is MinUC (minimize number of unsatisfied constraints) functionality in SCIP.
+       This can be called from the command line using `change/minuc`.
+       SCIP will then alter the current problem into a new problem.
+       One can then simply call `optimize` and solve the altered problem, which now minimizes the number
+       of unsatisfied constraints.
+       In other words, SCIP will find a solution that marks a minimum number of constraints,
+       such that if those constraints were relaxed, the original problem would be feasible.
+       One can view this by printing the solution, where `originalconsname_master` has value 1
+       if the constraint is part of the MinUC.
+    <\p>
+
+
 SECTION: Using SCIP as a standalone solver
 
     QUESTION: The output is too wide for my terminal window. What can I do?

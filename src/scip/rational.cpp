@@ -1633,7 +1633,7 @@ int RatToString(
    }
    if( ret == strlen )
    {
-      RatDebugMessage("Rational string to long to fit in buffer. Rational : %q \n", rational);
+      RatDebugMessage("Rational string too long to fit in buffer. Rational : %q \n", rational);
    }
 
    return ret;
@@ -2153,13 +2153,13 @@ void chooseSemiconv(
 }
 #endif
 
-/** choose the best semiconvergent with demnominator <= maxdenom between p1/q1 and p2/q2 */
+/* choose the best semi-convergent with denominator <= maxdenom between p1/q1 and p2/q2 */
 static
 void chooseSemiconvLong(
    SCIP_Longint&         resnum,             /**< the resulting numerator */
    SCIP_Longint&         resden,             /**< the resulting denominator */
-   SCIP_Longint*         p,                  /**< the last 3 numerators of convergents */
-   SCIP_Longint*         q,                  /**< the last 3 denominators of convergents */
+   const SCIP_Longint*   p,                  /**< the last 3 numerators of convergents */
+   const SCIP_Longint*   q,                  /**< the last 3 denominators of convergents */
    long                  ai,                 /**< the coefficient in the continuous fraction */
    long                  maxdenom            /**< the maximal denominator */
    )
