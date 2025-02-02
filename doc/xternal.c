@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -358,6 +358,7 @@
  * - @subpage CUTSEL  "Cut selectors"
  * - @subpage NODESEL "Node selectors"
  * - @subpage HEUR    "Primal heuristics"
+ * - @subpage IISFINDER "IIS finders"
  * - @subpage DIVINGHEUR "Diving heuristics"
  * - @subpage RELAX   "Relaxation handlers"
  * - @subpage READER  "File readers"
@@ -380,6 +381,7 @@
  * - @subpage COUNTER "How to use SCIP to count feasible solutions"
  * - @subpage REOPT   "How to use reoptimization in SCIP"
  * - @subpage CONCSCIP "How to use the concurrent solving mode in SCIP"
+ * - @subpage MINUCIIS "How to deduce reasons for infeasibility in SCIP"
  * - @subpage DECOMP "How to provide a problem decomposition"
  * - @subpage BENDDECF "How to use the Benders' decomposition framework"
  * - @subpage TRAINESTIMATION "How to train custom tree size estimation for SCIP"
@@ -4062,6 +4064,151 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page IISFINDER How to add IIS finders
+ *
+ * IIS finders are used to generate an (I)IS ((irreducible) infeasible subsystem) for an infeasible instance.
+ * \n
+ * A complete list of all iis finders contained in this release can be found \ref IISFINDERS "here".
+ *
+ * We now explain how users can add their own iis finders.
+ * Take the greedy iis finder (src/scip/iisfinder_greedy.c) as an example.
+ * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjIISfinder wrapper
+ * base class and implement the `scip_...()` virtual methods instead of the `SCIP_DECL_IISFINDER...` callback methods.
+ *
+ * Additional documentation for the callback methods of an iis finder can be found in the file type_iisfinder.h.
+ *
+ * Here is what you have to do to implement an iis finder:
+ * -# Copy the template files `src/scip/iisfinder_xyz.c` and `src/scip/iisfinder_xyz.h` into files named `iisfinder_myiisfinder.c`
+ *    and `iisfinder_myiisfinder.h`.
+ *    \n
+ *    Make sure to adjust your build system such that these files are compiled and linked to your project. \n
+ *    If you are adding a new default plugin for SCIP, this means updating the `src/CMakeLists.txt` and `Makefile` files in the SCIP distribution.
+ * -# Use `SCIPincludeIIsfinderMyiisfinder()` in order to include the iis finder into your SCIP instance,
+ *    e.g., in the main file of your project (see, e.g., `src/cmain.c` in the Binpacking example). \n
+ *    If you are adding a new default plugin, this include function must be added to `src/scipdefplugins.c`.
+ * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myiisfinder".
+ * -# Adjust the properties of the iis finder (see \ref IISFINDER_PROPERTIES).
+ * -# Define the iis finder data (see \ref IISFINDER_DATA). This is optional.
+ * -# Implement the interface methods (see \ref IISFINDER_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref IISFINDER_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref IISFINDER_ADDITIONALCALLBACKS). This is optional.
+ *
+ *
+ * @section IISFINDER_PROPERTIES Properties of an IIS finder
+ *
+ * At the top of the new file `iisfinder_myiisfinder.c` you can find the iis finder properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the iis finder properties by calling the constructor
+ * of the abstract base class scip::ObjIISfinder from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par IISFINDER_NAME: the name of the iis finder.
+ * This name is used in the interactive shell to address the iis finder.
+ * Additionally, if you are searching for an iis finder with SCIPfindIISfinder(), this name is looked up.
+ * Names have to be unique: no two iis finders may have the same name.
+ *
+ * \par IISFINDER_DESC: the description of the iis finder.
+ * This string is printed as a description of the iis finder in the interactive shell.
+ *
+ * \par IISFINDER_PRIORITY: the priority of the iis finder.
+ * When an IIS is desired, SCIP orders the IIS finders by priority.
+ * The iis finders are then called in this order (highest goes first), until depending on the users settings,
+ * one succeeds in finding an infeasible subsystem, an irreducible infeasible subsystem is found,
+ * all iis finders have been run, or some limit has been hit.
+ * \n
+ * Note that this property only defines the default value of the priority. The user may change this value arbitrarily by
+ * adjusting the corresponding parameter setting. Whenever, even during solving, the priority of an iis finder is
+ * changed, then when a call is made to generate an IIS, the iis finders are resorted by the new priorities.
+ *
+ *
+ * @section IISFINDER_DATA IIS Finder Data
+ *
+ * Below the header "Data structures" you can find a struct which is called `struct SCIP_IISfinderData`.
+ * In this data structure, you can store the data of your iis finder. For example, you should store the adjustable
+ * parameters of the iis finder in this data structure.
+ * If you are using C++, you can add iis finder data as usual as object variables to your class.
+ * \n
+ * Defining iis finder data is optional. You can leave the struct empty.
+ *
+ *
+ * @section IISFINDER_INTERFACE Interface Methods
+ *
+ * At the bottom of `iisfinder_myiisfinder.c`, you can find the interface method `SCIPincludeIISfinderMyiisfinder()`,
+ * which also appears in `iisfinder_myiisfinder.h`
+ * `SCIPincludeIISfinderMyiisfinder()` is called by the users, if they want to include the iis finder, i.e., if they want
+ * to use the iis finder in their application.
+ *
+ * This method only has to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the iis finder. For this, you can either call
+ * SCIPincludeIISfinder()
+ * or SCIPincludeIISfinderBasic(). In the latter variant, \ref IISFINDER_ADDITIONALCALLBACKS "additional callbacks"
+ * must be added via setter functions as, e.g., SCIPsetIISfinderCopy(). We recommend this latter variant because
+ * it is more stable towards future SCIP versions which might have more callbacks, whereas source code using the first
+ * variant must be manually adjusted with every SCIP release containing new callbacks for iis finders in order to compile.
+ *
+ *
+ * If you are using iis finder data, you have to allocate the memory for the data at this point.
+ * You can do this by calling:
+ * \code
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &iisfinderdata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_IISfinderData afterwards.
+ *
+ * You may also add user parameters for your iis finder, see the method SCIPincludeIISfinderGreedy() in
+ * src/scip/iisfinder_greedy.c for an example.
+ *
+ *
+ * @section IISFINDER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of an IIS Finder
+ *
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain
+ * an operational algorithm.
+ * They are passed together with the iis finder itself to SCIP using SCIPincludeIISfinder() or SCIPincludeIISfinderBasic(),
+ * see @ref IISFINDER_INTERFACE.
+ *
+ * IIS finder plugins have a single fundamental callback method, namely the IISFINDEREXEC method.
+ * This method has to be implemented for every iis funder; the other callback methods are optional.
+ * It implements the single contribution every iis finder has to provide: Generating an (I)IS from an infeasible instance.
+ * In the C++ wrapper class scip::ObjIISfinder, the scip_exec() method is a virtual abstract member function.
+ * You have to implement it in order to be able to construct an object of your iis finder class.
+ *
+ * @subsection IISFINDEREXEC
+ *
+ * The IISFINDEREXEC callback should generate an (I)IS from an infeasible instance.
+ * The callback receives the IIS object, which contains the infeasible subscip that should be reduced in size,
+ * as well as multiple parameters that limit how the IIS finder procedure should be performed.
+ * The contained subscip should be transformed such that it remains infeasible and decreases in size,
+ * and information about the current state of the subscip, e.g., is it still infeasible, should be recorded.
+ *
+ * Additional documentation for this callback can be found in type_iisfinder.h.
+ *
+ * @section IISFINDER_ADDITIONALCALLBACKS Additional Callback Methods of an IIS Finder
+ *
+ * The additional callback methods do not need to be implemented in every case. However, some of them have to be
+ * implemented for most applications. They can be used, for example, to initialize and free private data.
+ * Additional callbacks can either be passed directly with SCIPincludeIISfinder() to SCIP or via specific
+ * <b>setter functions</b> after a call of SCIPincludeIISfinderBasic(), see also @ref IISFINDER_INTERFACE.
+ *
+ * @subsection IISFINDERFREE
+ *
+ * If you are using iis finder data, you have to implement this method in order to free the iis finder data.
+ * This can be done by the following procedure:
+ *
+ * @refsnippet{src/scip/iisfinder_greedy.c,SnippetIISfinderFreeGreedy}
+ *
+ * If you have allocated memory for fields in your iis finder data, remember to free this memory
+ * before freeing the iis finder data itself.
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection IISFINDERCOPY
+ *
+ * The IISFINDERCOPY callback is executed when a SCIP instance is copied, e.g., to solve a sub-SCIP. By defining this
+ * callback as `NULL` the user disables the execution of the specified iis finder for all copied SCIP
+ * instances
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page EXPRHDLR How to add expression handlers
  *
  * Expression handlers define basic expression types and provide additional functionality to work with expressions,
@@ -7203,6 +7350,51 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page MINUCIIS How to deduce reasons for infeasibility in SCIP
+ *
+ * It is a common problem for integer programming practitioners to (unexpectedly) encounter infeasible instances.
+ * Often it desirable to better understand exactly why the instance is infeasible. Was it an error in the
+ * input data, was the underlying formulation incorrect, or is my model simply infeasible by construction?
+ * There are two main ways to analyse infeasible instances using SCIP:
+ *
+ * Firstly, there is IIS (irreducible infeasible subsystem) functionality in SCIP.
+ * This produces an infeasible problem, which contains a subset of constraints and variable bounds from
+ * the original problem. The infeasible problem is also irreducible, in that removing any additional
+ * constraints results in the problem becoming feasible. This is a fantastic method for debugging
+ * problems, and for determining what needs to be changed in the formulation. To use this functionality
+ * in the SCIP shell do the following
+ * \code
+ * SCIP> read path_to_instance
+ * SCIP> iis
+ * \endcode
+ * This will read in your instance and then compute an IIS of your infeasible instance.
+ * To display or print the subscip that contains the modified instance that is still
+ * infeasible, and hopefully substantially smaller, do the following
+ * \code
+ * SCIP> display/iis
+ * SCIP> write/iis path_to_where_iis_should_be_printed
+ * \endcode
+ *
+ * Secondly there is the MinUC (minimize number of unsatisfied constraints) functionality in SCIP.
+ * This produces a minimum set of constraints, such that if those constraints were relaxed, the original
+ * problem would be feasible. To use this functionality in the SCIP shell do the following
+ * \code
+ * SCIP> read path_to_instance
+ * SCIP> change/minuc
+ * SCIP> optimize
+ * \endcode
+ * The second command changes the loaded problem to now minimize the number of
+ * unsatisfied constraints. The primal bound during solving corresponds to current best solution,
+ * i.e., a set of constraints which when removed or relaxed will induce feasibility.
+ * One can view the constraints that art part of the MinUC by seeing which of the variables
+ * have value 1. The variables in the new problem have naming conventions `originalconsname_master`.
+ * The solution can be displayed in the shell with the command
+ * \code
+ * SCIP> display/solution
+ * \endcode
+ *
+ */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 

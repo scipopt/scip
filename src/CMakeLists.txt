@@ -171,6 +171,7 @@ set(scipsources
     scip/heur_zeroobj.c
     scip/heur_zirounding.c
     scip/hypergraph.c
+    scip/iisfinder_greedy.c
     scip/message_default.c
     scip/network.c
     scip/nlhdlr_bilinear.c
@@ -303,6 +304,7 @@ set(scipsources
     scip/heuristics.c
     scip/compr.c
     scip/history.c
+    scip/iisfinder.c
     scip/implics.c
     scip/interrupt.c
     scip/intervalarith.c
@@ -352,6 +354,7 @@ set(scipsources
     scip/scip_expr.c
     scip/scip_general.c
     scip/scip_heur.c
+    scip/scip_iisfinder.c
     scip/scip_lp.c
     scip/scip_lpexact.c
     scip/scip_mem.c
@@ -419,6 +422,7 @@ set(objscipsources
     objscip/objdisp.cpp
     objscip/objeventhdlr.cpp
     objscip/objheur.cpp
+    objscip/objiisfinder.cpp
     objscip/objmessagehdlr.cpp
     objscip/objnodesel.cpp
     objscip/objpresol.cpp
@@ -485,6 +489,7 @@ set(objscipheaders
     objscip/objdisp.h
     objscip/objeventhdlr.h
     objscip/objheur.h
+    objscip/objiisfinder.h
     objscip/objmessagehdlr.h
     objscip/objnodesel.h
     objscip/objpresol.h
@@ -685,6 +690,8 @@ set(scipheaders
     scip/heur_zirounding.h
     scip/history.h
     scip/hypergraph.h
+    scip/iisfinder.h
+    scip/iisfinder_greedy.h
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
@@ -778,6 +785,7 @@ set(scipheaders
     scip/pub_fileio.h
     scip/pub_heur.h
     scip/pub_history.h
+    scip/pub_iisfinder.h
     scip/pub_implics.h
     scip/pub_lp.h
     scip/pub_matrix.h
@@ -861,6 +869,7 @@ set(scipheaders
     scip/scip_expr.h
     scip/scip_general.h
     scip/scip_heur.h
+    scip/scip_iisfinder.h
     scip/scip_lp.h
     scip/scip_lpexact.h
     scip/scip_mem.h
@@ -939,6 +948,7 @@ set(scipheaders
     scip/struct_heur.h
     scip/struct_history.h
     scip/struct_hypergraph.h
+    scip/struct_iisfinder.h
     scip/struct_implics.h
     scip/struct_lp.h
     scip/struct_lpexact.h
@@ -1006,6 +1016,7 @@ set(scipheaders
     scip/type_heur.h
     scip/type_history.h
     scip/type_hypergraph.h
+    scip/type_iisfinder.h
     scip/type_implics.h
     scip/type_interrupt.h
     scip/type_lp.h
