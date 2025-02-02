@@ -497,10 +497,12 @@ Test(more_vars, test1)
    int basinds[3];
    int basicvarpos;
 
+#ifdef SCIP_DEBUG
    SCIP* scip;
    SCIP_CALL( SCIPcreate(&scip) );
    SCIPprintVersion(scip, 0);
    SCIP_CALL( SCIPfree(&scip) );
+#endif
 
    /* ------------------------------------- */
    /* first solve problem */
