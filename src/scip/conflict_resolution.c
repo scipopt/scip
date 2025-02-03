@@ -4124,7 +4124,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIP_BOUNDCHGTYPE bdchgtype;
 
          bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
-         if (bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING)
 #ifdef SCIP_DEBUG
          printNonResolvableReasonType(set, bdchginfo);
 #endif

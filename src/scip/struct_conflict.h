@@ -152,7 +152,6 @@ struct SCIP_Conflict
    SCIP_Longint          nintreductionsuccess;/**< number of calls to reduction in resolution conflict analysis that succeeded */
    SCIP_Longint          nintreductionsuccessmbred;/**< number of calls to reduction in resolution conflict analysis that succeeded after mb reduction */
    SCIP_Longint          nintreductionfails; /**< number of calls to reduction in resolution conflict analysis that failed */
-   SCIP_Longint          nreductioncalls;    /**< number of calls to reduction in resolution conflict analysis */
    SCIP_Longint          nressuccess;        /**< number of calls yielding at least one conflict constraint */
    SCIP_Longint          nreslargecoefs;     /**< number of calls terminating because of large coefficients */
    SCIP_Longint          nreslongconfs;      /**< number of calls terminating because of long conflict rows */

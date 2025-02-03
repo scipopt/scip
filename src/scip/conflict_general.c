@@ -363,7 +363,6 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->ndualproofsbndsuccess = 0;
    (*conflict)->dualproofsbndnnonzeros = 0;
    (*conflict)->nrescalls = 0;
-   (*conflict)->nreductioncalls = 0;
    (*conflict)->nintreductioncalls = 0;
    (*conflict)->nintreductionsuccess = 0;
    (*conflict)->nintreductionsuccessmbred = 0;
