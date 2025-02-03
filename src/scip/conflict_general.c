@@ -376,10 +376,6 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->conflictrowssize = 0;
    (*conflict)->nknownaborts = 0;
    (*conflict)->nunresolvable = 0;
-   (*conflict)->nnonlinearreason = 0;
-   (*conflict)->nnonlinearreasonbranching = 0;
-   (*conflict)->nalliterations = 0;
-   (*conflict)->weakeningsumperc = 0.0;
    (*conflict)->bdchgonlyresqueue = FALSE;
    (*conflict)->bdchgonlyconfqueue = FALSE;
    (*conflict)->haslargecoef = FALSE;

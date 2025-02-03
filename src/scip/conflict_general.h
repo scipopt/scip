@@ -227,16 +227,6 @@ SCIP_Real SCIPconflictGetResTime(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets time in seconds used for applying c-MIR during generalized resolution conflict analysis*/
-SCIP_Real SCIPconflictGetResCMIRTime(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets time in seconds used for applying flow cover during generalized resolution conflict analysis*/
-SCIP_Real SCIPconflictGetResFlowCoverTime(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
 /** gets number of calls to propagation conflict analysis */
 SCIP_Longint SCIPconflictGetNPropCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -301,16 +291,6 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
 
 /** gets time in seconds used for analyzing infeasible LP conflicts */
 SCIP_Real SCIPconflictGetInfeasibleLPTime(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets time in seconds used for applying c-MIR during infeasible LP conflict analysis */
-SCIP_Real SCIPconflictGetInfLPCMIRTime(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets time in seconds used for applying flow cover during infeasible LP conflict analysis */
-SCIP_Real SCIPconflictGetInfLPFlowCoverTime(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

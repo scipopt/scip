@@ -105,11 +105,6 @@ SCIP_Longint SCIPconflictGetNIntReductionFails(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets the percentage of weeakening candidates that was actually weakened */
-SCIP_Real SCIPconflictGetWeakeningPercentage(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
 /** gets the percentage of length growth compared to the initial conflict */
 SCIP_Real SCIPconflictResGetLengthGrowthPerc(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -122,17 +117,6 @@ SCIP_Longint SCIPconflictGetNResUnkTerm(
 
 /** gets the number of unresolvable bound changes */
 SCIP_Longint SCIPconflictGetNUnresolvable(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-SCIP_Longint SCIPconflictGetNNonLinearReason(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-SCIP_Longint SCIPconflictGetNNonLinearReasonBranching(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-SCIP_Longint SCIPconflictGetNAllIterations(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

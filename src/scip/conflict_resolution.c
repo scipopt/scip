@@ -306,18 +306,6 @@ SCIP_Longint SCIPconflictGetNIntReductionFails(
    return conflict->nintreductionfails;
 }
 
-/** gets the percentage of weeakening candidates that was actually weakened */
-SCIP_Real SCIPconflictGetWeakeningPercentage(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-   if ( conflict->nreductioncalls == 0 )
-      return 0.0;
-   else
-      return 100.0 * conflict->weakeningsumperc / conflict->nreductioncalls;
-}
-
 /** gets number of calls that resolution conflict analysis stopped for an unknown reason */
 SCIP_Longint SCIPconflictGetNResUnkTerm(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -336,32 +324,6 @@ SCIP_Longint SCIPconflictGetNUnresolvable(
    assert(conflict != NULL);
 
    return conflict->nunresolvable;
-}
-
-SCIP_Longint SCIPconflictGetNNonLinearReason(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nnonlinearreason;
-}
-SCIP_Longint SCIPconflictGetNNonLinearReasonBranching(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nnonlinearreasonbranching;
-}
-
-SCIP_Longint SCIPconflictGetNAllIterations(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nalliterations;
 }
 
 #ifdef SCIP_DEBUG
@@ -4070,7 +4032,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
 #endif
       conflict->nknownaborts++;
       SCIPsetDebugMsgPrint(set, "Conflict analysis not applicable since no resolvable bounds exist \n");
-      conflict->nnonlinearreason++;
       return SCIP_OKAY;
    }
 
@@ -4147,7 +4108,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
     */
    while( TRUE )  /*lint !e716*/
    {
-      conflict->nalliterations++;
 #ifdef SCIP_DEBUG
       {
          SCIPsetDebugMsgPrint(set, "\nResolution Iteration: %d \n", nressteps);
@@ -4165,11 +4125,9 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
          if (bdchgtype == SCIP_BOUNDCHGTYPE_BRANCHING)
-            conflict->nnonlinearreasonbranching++;
 #ifdef SCIP_DEBUG
          printNonResolvableReasonType(set, bdchginfo);
 #endif
-         conflict->nnonlinearreason++;
          SCIP_CALL( fixBoundChangeWithoutResolving(conflict, set, vars, &bdchginfo, &bdchgdepth, nressteps,
                         fixbounds, fixinds, &successfixing) );
          if( !successfixing )

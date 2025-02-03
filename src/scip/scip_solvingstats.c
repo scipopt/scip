@@ -2526,7 +2526,7 @@ void SCIPprintStatusStatistics(
 
 /** collects status statistics in a SCIP_DATATREE object
  *
- *  This function sets: 
+ *  This function sets:
  *   - status: the current status of the solver
  *   - info: info about the keys and values stored in the datatree
  *
@@ -3341,15 +3341,14 @@ void SCIPprintConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0,
       SCIPconflictGetNDualproofsInfLocal(scip->conflict) + SCIPconflictGetNDualproofsBndLocal(scip->conflict));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Gen. Resolution CA :       Time      Calls    Success  Conflicts  LargeCoef  LongConfs   WeakPer    Length     Fails Unresolvab \n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.1f" "%10.1f" " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Gen. Resolution CA :       Time      Calls    Success  Conflicts  LargeCoef  LongConfs    Length     Fails Unresolvab \n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.1f" " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPconflictGetResTime(scip->conflict),
       SCIPconflictGetNResCalls(scip->conflict),
       SCIPconflictGetNResSuccess(scip->conflict),
       SCIPconflictGetNResConflictConss(scip->conflict),
       SCIPconflictGetNResLargeCoefs(scip->conflict),
       SCIPconflictGetNResLongConflicts(scip->conflict),
-      SCIPconflictGetWeakeningPercentage(scip->conflict),
       SCIPconflictGetNResConflictConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNResConflictVars(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNResConflictConss(scip->conflict) : 0,

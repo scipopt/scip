@@ -159,9 +159,6 @@ struct SCIP_Conflict
    SCIP_Longint          nknownaborts;       /**< count the number of calls that we terminate unsucessfully for a known reason */
    SCIP_Longint          nunresolvable;      /**< count the number of calls that we terminate because we cannot resolve a continuous
                                               *   or general integer bound change */
-   SCIP_Longint          nnonlinearreason;   /**< count the number of calls that we terminate because of a nonlinear reason */
-   SCIP_Longint          nnonlinearreasonbranching;   /**< count the number of calls that we terminate because of a nonlinear reason */
-   SCIP_Longint          nalliterations;     /**< total number of iterations used in resolution conflict analysis */
    SCIP_Longint          nresconfconss;      /**< number of valid conflict constraints detected in resolution conflict analysis */
    SCIP_Longint          nresconfvariables;  /**< total number of variables in valid resolution conflict constraints */
    SCIP_Longint          ninflpcalls;        /**< number of calls to infeasible LP conflict analysis */
@@ -242,7 +239,6 @@ struct SCIP_Conflict
    int                   count;              /**< conflict set counter to label binary conflict variables with */
    int                   nconflictrows;      /**< number of available resolution sets */
    int                   conflictrowssize;   /**< size of conflictrows array */
-   SCIP_Real             weakeningsumperc;   /**< sum of percentages of variables weakened in resolution sets */
    SCIP_Bool             bdchgonlyconfqueue; /**< if true we add bound changes only in graph conflict queues */
    SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only in generalized resolution queues */
    SCIP_Bool             haslargecoef;       /**< if true we have a large coefficient in the conflict constraint */
