@@ -27,6 +27,7 @@
  * @brief  methods for cut-based conflict analysis
  * @author Gioni Mexi
  *
+ * TODO fix memory issue in mixed binary reduction
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3083,7 +3084,7 @@ SCIP_RETCODE reduceReason(
          SCIP_CALL( computeSlack(set, vars, rowtoreduce, currbdchginfo, fixbounds, fixinds) );
          assert(SCIPsetIsLE(set, rowtoreduce->slack, EPS));
       }
-      else
+      else if (set->conf_mbreduction)
       {
          /* todo: check that if the slack is always zero if general integers and continuous variables are not at local bounds */
          /* in this case there is no guarrantee that after MIR we get a reason with zero slack */
