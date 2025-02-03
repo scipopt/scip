@@ -2154,9 +2154,9 @@ SCIP_RETCODE generateGMICuts(
        */
 
       /* try to create GMI cut out of the aggregation row */
-      SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, FALSE, NULL,
-               NULL, minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank,
-               &cutislocal, &success) );
+      SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, FIXINTEGRALRHS, NULL,
+            NULL, minfrac, maxfrac, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank,
+            &cutislocal, &success) );
 
       if( success )
       {

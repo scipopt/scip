@@ -305,7 +305,6 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
-   SCIP_Bool             aggrrowcustom,      /**< is the aggrrow a custom row not in the LP? */
    int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
                                               *   -1 for global lb/ub, -2 for local lb/ub, or -3 for using closest bound;
                                               *   NULL for using closest bound for all variables */

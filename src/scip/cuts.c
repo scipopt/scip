@@ -1804,14 +1804,7 @@ void SCIPaggrRowPrint(
 
       QUAD_ARRAY_LOAD(val, aggrrow->vals, aggrrow->inds[i]);
       assert(SCIPvarGetProbindex(vars[aggrrow->inds[i]]) == aggrrow->inds[i]);
-      if( SCIPvarGetType(vars[aggrrow->inds[i]]) == SCIP_VARTYPE_BINARY )
-         SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s>[B] ", QUAD_TO_DBL(val), SCIPvarGetName(vars[aggrrow->inds[i]]));
-      else if( SCIPvarGetType(vars[aggrrow->inds[i]]) == SCIP_VARTYPE_INTEGER )
-         SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s>[I] ", QUAD_TO_DBL(val), SCIPvarGetName(vars[aggrrow->inds[i]]));
-      else
-         SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s>[C] ", QUAD_TO_DBL(val), SCIPvarGetName(vars[aggrrow->inds[i]]));
-
-
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s> ", QUAD_TO_DBL(val), SCIPvarGetName(vars[aggrrow->inds[i]]));
    }
 
    /* print right hand side */
@@ -3887,7 +3880,6 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
-   SCIP_Bool             aggrrowcustom,      /**< is the aggrrow a custom row not in the LP? */
    int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
                                               *   -1 for global lb/ub, -2 for local lb/ub, or -3 for using closest bound;
                                               *   NULL for using closest bound for all variables */
@@ -4057,14 +4049,11 @@ SCIP_RETCODE SCIPcalcMIR(
     *
     * Substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
     */
-   if(!aggrrowcustom)
-   {
-      SCIP_CALL( cutsSubstituteMIR(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
-      aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, QUAD(f0)) );
+   SCIP_CALL( cutsSubstituteMIR(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
+   aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, QUAD(f0)) );
 
-      SCIPdebugMsg(scip, "After slack substitution:\n");
-      SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE) );
-   }
+   SCIPdebugMsg(scip, "After slack substitution:\n");
+   SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE) );
    if( postprocess )
    {
       /* remove all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
@@ -4080,7 +4069,7 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIPdebugMsg(scip, "After post processing:\n");
    SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE) );
 
-   if( *success  && !aggrrowcustom)
+   if( *success )
    {
       SCIP_Real mirefficacy = calcEfficacyDenseStorageQuad(scip, sol, tmpcoefs, QUAD_TO_DBL(rhs), tmpinds, tmpnnz);
 
@@ -4113,26 +4102,6 @@ SCIP_RETCODE SCIPcalcMIR(
       else
       {
          *success = FALSE;
-      }
-   }
-   else if( *success  && aggrrowcustom)
-   {
-      BMScopyMemoryArray(cutinds, tmpinds, tmpnnz);
-      *cutnnz = tmpnnz;
-      *cutrhs = QUAD_TO_DBL(rhs);
-      *cutislocal = tmpislocal;
-
-      /* clean tmpcoefs and go back to double precision */
-      for( i = 0; i < *cutnnz; ++i )
-      {
-         SCIP_Real QUAD(coef);
-         int j = cutinds[i];
-
-         QUAD_ARRAY_LOAD(coef, tmpcoefs, j);
-
-         cutcoefs[i] = QUAD_TO_DBL(coef);
-         QUAD_ASSIGN(coef, 0.0);
-         QUAD_ARRAY_STORE(tmpcoefs, j, coef);
       }
    }
 

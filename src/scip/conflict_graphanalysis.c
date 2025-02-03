@@ -122,8 +122,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-// #define SCIP_DEBUG
-
 
 #include "lpi/lpi.h"
 #include "scip/conflict_graphanalysis.h"
@@ -174,6 +172,7 @@
 
 /* #define SCIP_CONFGRAPH */
 /* #define SCIP_CONFGRAPH_DOT */
+
 
 #if defined(SCIP_CONFGRAPH) || defined(SCIP_CONFGRAPH_DOT)
 /*

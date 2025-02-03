@@ -6398,7 +6398,7 @@ SCIP_RETCODE generateClusterCuts(
                assert( !SCIPisZero(scip, 1.0/deltas[d]) );
 
                SCIPdebugMsg(scip, "applying MIR with delta = %g\n", deltas[d]);
-               SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, FALSE, NULL, NULL, MINFRAC, MAXFRAC,
+               SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
                      1.0/deltas[d], aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
                assert(allowlocal || !cutislocal);
 
@@ -6586,7 +6586,7 @@ SCIP_RETCODE generateClusterCuts(
 
                   if( success )
                   {
-                     SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, FALSE, NULL, NULL, MINFRAC, MAXFRAC,
+                     SCIP_CALL( SCIPcalcMIR(scip, sol, POSTPROCESS, BOUNDSWITCH, USEVBDS, allowlocal, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
                                             1.0/bestdelta, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
                      assert(allowlocal || !cutislocal);

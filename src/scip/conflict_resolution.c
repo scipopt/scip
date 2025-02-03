@@ -3,33 +3,30 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2022 Konrad-Zuse-Zentrum                            */
-/*                            fuer Informationstechnik Berlin                */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*  Licensed under the Apache License, Version 2.0 (the "License");          */
+/*  you may not use this file except in compliance with the License.         */
+/*  You may obtain a copy of the License at                                  */
 /*                                                                           */
-/*  You should have received a copy of the ZIB Academic License              */
-/*  along with SCIP; see the file COPYING. If not visit scipopt.org.         */
+/*      http://www.apache.org/licenses/LICENSE-2.0                           */
+/*                                                                           */
+/*  Unless required by applicable law or agreed to in writing, software      */
+/*  distributed under the License is distributed on an "AS IS" BASIS,        */
+/*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. */
+/*  See the License for the specific language governing permissions and      */
+/*  limitations under the License.                                           */
+/*                                                                           */
+/*  You should have received a copy of the Apache-2.0 license                */
+/*  along with SCIP; see the file LICENSE. If not visit scipopt.org.         */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   conflict_resolution.c
  * @ingroup OTHER_CFILES
- * @brief  methods and datastructures for generalized resolution-based conflict
- * analysis
+ * @brief  methods for cut-based conflict analysis
  * @author Gioni Mexi
  *
- * @todo carefully check that the mixed binary reduction does not take too long
- * @todo repropagate node for long conflicts
- * @todo avoid copying the array of values in conflictRowCopy() and conflictRowReplace() by using the indices of the nonzero entries
- * @todo slack update during coefficient tightening/MIR
- * @todo vsids and branching statistics updates
- * @todo insert depth / repropagation depth
- * @todo apply cmir after each iteration to strengthen the conflict constraint (choose this constraint if it is violated more)
- * @todo applying generalized resolution to the dual proof does not seem to be a good idea. But we can use generalized resolution
- *       for pseudo objective cutoffs.
- * @refactortodo write a method that creates a constraint out of a conflictrow
- * @refactortodo move debugging solution methods in debug.c
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1819,7 +1816,7 @@ SCIP_RETCODE MirReduction(
    SCIPdebug(printAggrrow(aggrrow, set, vars));
 
    /* apply MIR */
-   SCIP_CALL( SCIPcalcMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, FALSE, FIXINTEGRALRHS, TRUE, NULL,
+   SCIP_CALL( SCIPcalcMIR(set->scip, refsol, POSTPROCESS, BOUNDSWITCH, USEVBDS, FALSE, FIXINTEGRALRHS, NULL,
    NULL, MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy,
    &cutrank, &cutislocal, &success) );
 

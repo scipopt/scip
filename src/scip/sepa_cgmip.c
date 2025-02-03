@@ -3646,7 +3646,7 @@ SCIP_RETCODE createCGCutCMIR(
    if ( ! success )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, FALSE, boundsfortrans,
+   SCIP_CALL( SCIPcalcMIR(scip, NULL, POSTPROCESS, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, boundsfortrans,
          boundtypesfortrans, MINFRAC, MAXFRAC, 1.0, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy,
          &cutrank, &cutislocal, &success) );
 
