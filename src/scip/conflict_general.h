@@ -324,46 +324,6 @@ SCIP_Longint SCIPconflictGetNInfeasibleLPSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-/** gets number of calls of c-MIR in dual proof analysis */
-SCIP_Longint SCIPconflictGetNInfeasLPCMIRCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets number of successful calls of c-MIR in dual proof analysis */
-SCIP_Longint SCIPconflictGetNInfeasLPCMIRSuccess(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets number of calls of flow cover in dual proof analysis */
-SCIP_Longint SCIPconflictGetNInfeasLPFlowCoverCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets number of successful calls of flow cover in dual proof analysis */
-SCIP_Longint SCIPconflictGetNInfeasLPFlowCoverSuccess(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets number of calls of c-MIR in generalized resolution conflict analysis */
-SCIP_Longint SCIPconflictGetNResCMIRCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets number of successful calls of c-MIR in generalized resolution conflict analysis */
-SCIP_Longint SCIPconflictGetNResCMIRSuccess(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets number of calls of flow cover in generalized resolution conflict analysis */
-SCIP_Longint SCIPconflictGetNResFlowCoverCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets number of successful calls of flow cover in generalized resolution conflict analysis */
-SCIP_Longint SCIPconflictGetNResFlowCoverSuccess(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
 /** gets number of conflict constraints detected in infeasible LP conflict analysis */
 SCIP_Longint SCIPconflictGetNInfeasibleLPConflictConss(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */

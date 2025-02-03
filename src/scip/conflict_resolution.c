@@ -2308,114 +2308,6 @@ SCIP_RETCODE createAndAddConflictCon(
    return SCIP_OKAY;
 }/*lint !e715*/
 
-/** postprocess conflict constraint */
-static
-SCIP_RETCODE postprocessConflictCon(
-   SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_VAR**            vars,               /**< array of variables */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_CONFLICTROW*     conflictrow,        /**< conflict row to add to the tree */
-   int                   insertdepth,        /**< depth level at which the conflict set should be added */
-   SCIP_Bool*            infeasible          /**< pointer to store whether the addition was successful */
-   )
-{
-
-   SCIP_VAR** consvars;
-   SCIP_CONS* cons;
-
-   char consname[SCIP_MAXSTRLEN];
-
-   SCIP_Real* vals;
-   SCIP_Real lhs;
-   int i;
-   int arraysize;
-
-   assert(vars != NULL);
-
-   arraysize = conflictrow->nnz;
-   SCIP_CALL( SCIPallocBufferArray(set->scip, &consvars, arraysize) );
-   SCIP_CALL( SCIPallocBufferArray(set->scip, &vals, arraysize) );
-
-   lhs = conflictrow->lhs;
-
-   for( i = 0; i < conflictrow->nnz; ++i )
-   {
-      int idx;
-      idx = conflictrow->inds[i];
-      assert(conflictrow->vals[idx]);
-      consvars[i] = vars[idx];
-      vals[i] = conflictrow->vals[idx];
-   }
-
-   /* create a constraint out of the conflict set */
-   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "confres_%" SCIP_LONGINT_FORMAT, conflict->nresconfconss);
-   SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, consname, conflictrow->nnz, consvars, vals,
-              lhs, SCIPsetInfinity(set), FALSE, set->conf_separate, FALSE, FALSE, TRUE, (SCIPnodeGetDepth(tree->path[conflictrow->validdepth]) > 0 ),
-              FALSE, set->conf_dynamic, set->conf_removable, FALSE) );
-
-   int nchgcoefs;
-   int nchgsides;
-   nchgcoefs = 0;
-   nchgsides = 0;
-   *infeasible = FALSE;
-
-   SCIP_CALL(SCIPsimplifyConsLinear(set->scip, cons, &nchgcoefs, &nchgsides, infeasible));
-   if((nchgcoefs != 0 || nchgsides != 0) && !(*infeasible))
-   {
-      SCIP_ROW* postprocessedrow;
-      SCIP_COL** colspostprocessed;
-      SCIP_Real* valspostprocessed;
-
-      postprocessedrow = SCIPconsCreateRow(set->scip, cons);
-
-      assert(SCIProwGetNNonz(postprocessedrow) <= conflictrow->nnz);
-
-      for(i = 0; i < conflictrow->nnz; ++i)
-         conflictrow->vals[conflictrow->inds[i]] = 0.0;
-
-      conflictrow->nnz = SCIProwGetNNonz(postprocessedrow);
-      assert(conflictrow->nnz > 0);
-
-      valspostprocessed = SCIProwGetVals(postprocessedrow);
-      colspostprocessed = SCIProwGetCols(postprocessedrow);
-
-      conflictrow->lhs = SCIProwGetLhs(postprocessedrow) - SCIProwGetConstant(postprocessedrow);
-
-      SCIP_Bool swapside = FALSE;
-      if(SCIPsetIsInfinity(set, -conflictrow->lhs))
-      {
-         conflictrow->lhs = -(SCIProwGetRhs(postprocessedrow) - SCIProwGetConstant(postprocessedrow));
-         assert(!SCIPsetIsInfinity(set, conflictrow->lhs));
-         swapside = TRUE;
-      }
-      for(i = 0; i < conflictrow->nnz; ++i)
-      {
-         conflictrow->inds[i] = SCIPvarGetProbindex(SCIPcolGetVar(colspostprocessed[i]));
-         if(swapside)
-            conflictrow->vals[conflictrow->inds[i]] = -valspostprocessed[i];
-         else
-            conflictrow->vals[conflictrow->inds[i]] = valspostprocessed[i];
-      }
-
-      SCIPdebug(printConflictRow(conflictrow, set, vars, POSTPROCESSED_CONFLICT_ROWTYPE));
-   }
-
-   SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
-
-   /* free temporary memory */
-   SCIPfreeBufferArray(set->scip, &consvars);
-   SCIPfreeBufferArray(set->scip, &vals);
-
-   return SCIP_OKAY;
-}/*lint !e715*/
-
-
 /** create conflict constraints out of conflict rows and add them to the problem */
 SCIP_RETCODE SCIPconflictAddConflictCon(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -2436,7 +2328,6 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    )
 {
    SCIP_VAR** vars;
-   SCIP_Bool infeasible;
    int focusdepth;
    int maxsize;
 
@@ -2459,20 +2350,6 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    /* calculate the maximal size of each accepted conflict set */
    maxsize = 2 * conflictCalcResMaxsize(set, transprob);
 
-   if(set->conf_postprocessconflicts)
-   {
-      infeasible = FALSE;
-      SCIP_CALL(postprocessConflictCon(conflict, blkmem, set, stat, vars, tree, reopt, lp, cliquetable, conflictrow, focusdepth, &infeasible));
-      if(infeasible)
-      {
-         SCIPsetDebugMsgPrint(set, "postprocessing proves global infeasibility \n");
-         /* increase the number of aborts since no conflict constraint is added */
-         conflict->nknownaborts++;
-         SCIP_CALL( SCIPnodeCutoff(tree->path[conflictrow->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
-         return SCIP_OKAY;
-
-      }
-   }
    /* todo compute insert depth (if we start doing local conflict analysis) */
    SCIPsetDebugMsgPrint(set, "flushing %d conflict constraint at focus depth %d (id: %d, vd: %d, cd: %d, rd: %d, maxsize: %d)\n",
       1, focusdepth, conflictrow->insertdepth, conflictrow->validdepth, conflictrow->conflictdepth, conflictrow->repropdepth, maxsize);
@@ -4130,7 +4007,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    SCIP_Bool successresolution;
    SCIP_Bool successgetconflict;
    SCIP_Bool successgetreason;
-   SCIP_Bool usescutoffbound;
    int nvars;
    int i;
 
@@ -4170,11 +4046,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    vars = SCIPprobGetVars(transprob);
    nvars = transprob->nvars;
 
-   /* todo update this for bound exceeding LPs (till now it works only for pseudoobj) */
-   usescutoffbound = conflict->conflictrow->usescutoffbound;
-
    conflictrow = conflict->conflictrow;
-   conflictrow->usescutoffbound = usescutoffbound;
    resolvedconflictrow = conflict->resolvedconflictrow;
    reasonrow = conflict->reasonrow;
 

@@ -260,12 +260,8 @@ void SCIPconflictEnableOrDisableClocks(
    SCIPclockEnableOrDisable(conflict->boundlpanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->dIBclock, enable);
    SCIPclockEnableOrDisable(conflict->inflpanalyzetime, enable);
-   SCIPclockEnableOrDisable(conflict->inflpmirtime, enable);
-   SCIPclockEnableOrDisable(conflict->inflpflowcovertime, enable);
    SCIPclockEnableOrDisable(conflict->propanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->resanalyzetime, enable);
-   SCIPclockEnableOrDisable(conflict->resmirtime, enable);
-   SCIPclockEnableOrDisable(conflict->resflowcovertime, enable);
    SCIPclockEnableOrDisable(conflict->pseudoanalyzetime, enable);
    SCIPclockEnableOrDisable(conflict->sbanalyzetime, enable);
 }
@@ -284,11 +280,7 @@ SCIP_RETCODE SCIPconflictCreate(
    SCIP_CALL( SCIPclockCreate(&(*conflict)->dIBclock, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->propanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->resanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*conflict)->resmirtime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*conflict)->resflowcovertime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->inflpanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*conflict)->inflpmirtime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPclockCreate(&(*conflict)->inflpflowcovertime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->boundlpanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->sbanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->pseudoanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -337,10 +329,6 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->npropreconvliterals = 0;
    (*conflict)->ninflpcalls = 0;
    (*conflict)->ninflpsuccess = 0;
-   (*conflict)->ninflpmircalls = 0;
-   (*conflict)->ninflpflowcovercalls = 0;
-   (*conflict)->ninflpmir = 0;
-   (*conflict)->ninflpflowcover = 0;
    (*conflict)->ninflpconfconss = 0;
    (*conflict)->ninflpconfliterals = 0;
    (*conflict)->ninflpreconvconss = 0;
@@ -383,10 +371,6 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->nressuccess = 0;
    (*conflict)->nreslargecoefs = 0;
    (*conflict)->nreslongconfs = 0;
-   (*conflict)->nresmircalls = 0;
-   (*conflict)->nresflowcovercalls = 0;
-   (*conflict)->nresmir = 0;
-   (*conflict)->nresflowcover = 0;
    (*conflict)->nresconfconss = 0;
    (*conflict)->nresconfvariables = 0;
    (*conflict)->conflictrowssize = 0;
@@ -426,11 +410,7 @@ SCIP_RETCODE SCIPconflictFree(
    SCIPclockFree(&(*conflict)->dIBclock);
    SCIPclockFree(&(*conflict)->propanalyzetime);
    SCIPclockFree(&(*conflict)->resanalyzetime);
-   SCIPclockFree(&(*conflict)->resmirtime);
-   SCIPclockFree(&(*conflict)->resflowcovertime);
    SCIPclockFree(&(*conflict)->inflpanalyzetime);
-   SCIPclockFree(&(*conflict)->inflpmirtime);
-   SCIPclockFree(&(*conflict)->inflpflowcovertime);
    SCIPclockFree(&(*conflict)->boundlpanalyzetime);
    SCIPclockFree(&(*conflict)->sbanalyzetime);
    SCIPclockFree(&(*conflict)->pseudoanalyzetime);
@@ -534,26 +514,6 @@ SCIP_Real SCIPconflictGetResTime(
    return SCIPclockGetTime(conflict->resanalyzetime);
 }
 
-/** gets time in seconds used for applying c-MIR during generalized resolution conflict analysis*/
-SCIP_Real SCIPconflictGetResCMIRTime(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return SCIPclockGetTime(conflict->resmirtime);
-}
-
-/** gets time in seconds used for applying flow cover during generalized resolution conflict analysis*/
-SCIP_Real SCIPconflictGetResFlowCoverTime(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return SCIPclockGetTime(conflict->resflowcovertime);
-}
-
 /** gets number of calls to propagation conflict analysis */
 SCIP_Longint SCIPconflictGetNPropCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -634,26 +594,6 @@ SCIP_Real SCIPconflictGetInfeasibleLPTime(
    return SCIPclockGetTime(conflict->inflpanalyzetime);
 }
 
-/** gets time in seconds used for applying c-MIR during infeasible LP conflict analysis */
-SCIP_Real SCIPconflictGetInfLPCMIRTime(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return SCIPclockGetTime(conflict->inflpmirtime);
-}
-
-/** gets time in seconds used for applying flow cover during infeasible LP conflict analysis */
-SCIP_Real SCIPconflictGetInfLPFlowCoverTime(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return SCIPclockGetTime(conflict->inflpflowcovertime);
-}
-
 /** gets number of calls to infeasible LP conflict analysis */
 SCIP_Longint SCIPconflictGetNInfeasibleLPCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
@@ -672,86 +612,6 @@ SCIP_Longint SCIPconflictGetNInfeasibleLPSuccess(
    assert(conflict != NULL);
 
    return conflict->ninflpsuccess;
-}
-
-/** gets number of calls of c-MIR in dual proof analysis */
-SCIP_Longint SCIPconflictGetNInfeasLPCMIRCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->ninflpmircalls;
-}
-
-/** gets number of successful calls of c-MIR in dual proof analysis */
-SCIP_Longint SCIPconflictGetNInfeasLPCMIRSuccess(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->ninflpmir;
-}
-
-/** gets number of calls of flow cover in dual proof analysis */
-SCIP_Longint SCIPconflictGetNInfeasLPFlowCoverCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->ninflpflowcovercalls;
-}
-
-/** gets number of successful calls of flow cover in dual proof analysis */
-SCIP_Longint SCIPconflictGetNInfeasLPFlowCoverSuccess(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->ninflpflowcover;
-}
-
-/** gets number of calls of c-MIR in generalized resolution conflict analysis */
-SCIP_Longint SCIPconflictGetNResCMIRCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nresmircalls;
-}
-
-/** gets number of successful calls of c-MIR in generalized resolution conflict analysis */
-SCIP_Longint SCIPconflictGetNResCMIRSuccess(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nresmir;
-}
-
-/** gets number of calls of flow cover in generalized resolution conflict analysis */
-SCIP_Longint SCIPconflictGetNResFlowCoverCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nresflowcovercalls;
-}
-
-/** gets number of successful calls of flow cover in generalized resolution conflict analysis */
-SCIP_Longint SCIPconflictGetNResFlowCoverSuccess(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nresflowcover;
 }
 
 /** gets number of conflict constraints detected in infeasible LP conflict analysis */
@@ -1820,7 +1680,6 @@ SCIP_RETCODE SCIPgetDualProof(
  *  a conflict constraint out of the resulting conflict set;
  *  updates statistics for pseudo solution conflict analysis
  */
-/* refactortodo update this part since we use semi-sparse data structures for resolution */
 SCIP_RETCODE SCIPconflictAnalyzePseudo(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    BMS_BLKMEM*           blkmem,             /**< block memory of transformed problem */
@@ -1874,7 +1733,6 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
 
    conflict->conflictset->conflicttype = SCIP_CONFTYPE_BNDEXCEEDING;
    conflict->conflictset->usescutoffbound = TRUE;
-   conflict->conflictrow->usescutoffbound = TRUE;
 
    /* start timing */
    SCIPclockStart(conflict->pseudoanalyzetime, set);
@@ -2699,7 +2557,6 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
  *  a conflict constraint out of the resulting conflict set;
  *  updates statistics for bound exceeding LP conflict analysis
  */
-/* refactortodo update this part since we use semi-sparse data structures for resolution */
 static
 SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
@@ -2752,7 +2609,6 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    /* mark the conflict to depend on the cutoff bound */
    conflict->conflictset->conflicttype = SCIP_CONFTYPE_BNDEXCEEDING;
    conflict->conflictset->usescutoffbound = TRUE;
-   conflict->conflictrow->usescutoffbound = TRUE;
 
    oldnsuccess = conflict->ndualproofsbndsuccess + conflict->ndualproofsinfsuccess;
 

@@ -162,18 +162,10 @@ struct SCIP_Conflict
    SCIP_Longint          nnonlinearreason;   /**< count the number of calls that we terminate because of a nonlinear reason */
    SCIP_Longint          nnonlinearreasonbranching;   /**< count the number of calls that we terminate because of a nonlinear reason */
    SCIP_Longint          nalliterations;     /**< total number of iterations used in resolution conflict analysis */
-   SCIP_Longint          nresmircalls;       /**< number of calls of c-MIR in resolution conflict analysis */
-   SCIP_Longint          nresflowcovercalls; /**< number of calls of flow cover in resolution conflict analysis */
-   SCIP_Longint          nresmir;            /**< number of successful calls of c-MIR in resolution conflict analysis */
-   SCIP_Longint          nresflowcover;      /**< number of successful calls of flow cover in resolution conflict analysis */
    SCIP_Longint          nresconfconss;      /**< number of valid conflict constraints detected in resolution conflict analysis */
    SCIP_Longint          nresconfvariables;  /**< total number of variables in valid resolution conflict constraints */
    SCIP_Longint          ninflpcalls;        /**< number of calls to infeasible LP conflict analysis */
    SCIP_Longint          ninflpsuccess;      /**< number of calls yielding at least one conflict constraint */
-   SCIP_Longint          ninflpmircalls;     /**< number of calls of c-MIR in dual proof analysis */
-   SCIP_Longint          ninflpflowcovercalls;/**< number of calls of flow cover in dual proof analysis */
-   SCIP_Longint          ninflpmir;          /**< number of successful calls of c-MIR in dual proof analysis */
-   SCIP_Longint          ninflpflowcover;    /**< number of successful calls of flow cover in dual proof analysis */
    SCIP_Longint          ninflpconfconss;    /**< number of valid conflict constraints detected in infeasible LP conflict
                                               *   analysis */
    SCIP_Longint          ninflpconfliterals; /**< total number of literals in valid infeasible LP conflict constraints */
@@ -220,11 +212,7 @@ struct SCIP_Conflict
 
    SCIP_CLOCK*           propanalyzetime;    /**< time used for propagation conflict analysis */
    SCIP_CLOCK*           resanalyzetime;     /**< time used for resolution conflict analysis */
-   SCIP_CLOCK*           resmirtime;         /**< time used for c-MIR cuts in dual proof analysis */
-   SCIP_CLOCK*           resflowcovertime;   /**< time used for flow cover cuts in dual proof analysis */
    SCIP_CLOCK*           inflpanalyzetime;   /**< time used for infeasible LP conflict analysis */
-   SCIP_CLOCK*           inflpmirtime;       /**< time used for c-MIR cuts in dual proof analysis */
-   SCIP_CLOCK*           inflpflowcovertime; /**< time used for flow cover cuts in dual proof analysis */
    SCIP_CLOCK*           boundlpanalyzetime; /**< time used for bound exceeding LP conflict analysis */
    SCIP_CLOCK*           sbanalyzetime;      /**< time used for strong branching LP conflict analysis */
    SCIP_CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
