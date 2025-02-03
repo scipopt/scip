@@ -4121,9 +4121,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
       {
          SCIP_Bool successfixing;
 
-         SCIP_BOUNDCHGTYPE bdchgtype;
-
-         bdchgtype = SCIPbdchginfoGetChgtype(bdchginfo);
 #ifdef SCIP_DEBUG
          printNonResolvableReasonType(set, bdchginfo);
 #endif
