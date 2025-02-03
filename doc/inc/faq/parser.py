@@ -149,7 +149,7 @@ def write_faqinc(f, sections, sectiontimes):
          f.write('      <a class="reveal_faq" href="#%s">%s</a>\n\n' % (label, question))
          f.write('      <a href="#" class="pull-right"><span class="fa fa-caret-up" title="go to top"></span></a>\n')
          f.write('    </h4>\n')
-         f.write('    <div id="%s_ans" class="answer">\n' % label)
+         f.write('    <div id="%s_ans">\n' % label)
          f.write('      %s' % answer)
          f.write('    </div>\n')
          f.write('  </li>\n  ')

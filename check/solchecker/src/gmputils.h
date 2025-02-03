@@ -1,6 +1,6 @@
 /**
  * @file gmputils.h
- * @brief Basic classes to for rational arithmetic
+ * @brief Basic classes for rational arithmetic
  *
  * @author Domenico Salvagnin
  */
@@ -10,6 +10,7 @@
 
 #include <gmp.h>
 #include <string>
+
 
 /**
  * @brief Simple wrapper class around GMP mpq_t.
@@ -155,8 +156,9 @@ public:
     * This functions essentially parses a number of the form
     * [+|-]?[0-9]*.[0-9]+[[e|E][+|-][0-9]+]?
     * and generates the corresponding fraction.
+    * Returns true if reading successful.
     */
-   void fromString(const char* str);
+   bool fromString(const char* str);
 
    /**
     * Convert a rational number to a string representation.

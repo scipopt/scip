@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -26,6 +26,7 @@
  * @ingroup INTERNALAPI
  * @brief  data structures for displaying statistics tables
  * @author Tristan Gally
+ * @author Mohammed Ghannam
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -53,6 +54,7 @@ struct SCIP_Table
    SCIP_DECL_TABLEINITSOL ((*tableinitsol)); /**< solving process initialization method of statistics table */
    SCIP_DECL_TABLEEXITSOL ((*tableexitsol)); /**< solving process deinitialization method of statistics table */
    SCIP_DECL_TABLEOUTPUT ((*tableoutput));   /**< output method */
+   SCIP_DECL_TABLECOLLECT ((*tablecollect)); /**< data collection method */
    SCIP_TABLEDATA*       tabledata;          /**< statistics table data */
    int                   position;           /**< relative position of statistics table */
    SCIP_STAGE            earlieststage;      /**< output of the statistics table is only printed from this stage onwards */

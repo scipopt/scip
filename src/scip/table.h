@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -70,6 +70,7 @@ SCIP_RETCODE SCIPtableCreate(
    SCIP_DECL_TABLEINITSOL ((*tableinitsol)), /**< solving process initialization method of statistics table */
    SCIP_DECL_TABLEEXITSOL ((*tableexitsol)), /**< solving process deinitialization method of statistics table */
    SCIP_DECL_TABLEOUTPUT ((*tableoutput)),   /**< output method */
+   SCIP_DECL_TABLECOLLECT((*tablecollect)),  /**< report table data as SCIP_DATATREE */
    SCIP_TABLEDATA*       tabledata,          /**< statistics table data */
    int                   position,           /**< position of statistics table */
    SCIP_STAGE            earlieststage       /**< output of the statistics table is only printed from this stage onwards */
@@ -108,8 +109,16 @@ SCIP_RETCODE SCIPtableExitsol(
 /** output statistics table to screen */
 SCIP_RETCODE SCIPtableOutput(
    SCIP_TABLE*           table,              /**< statistics table */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** collects statistics table data */
+SCIP_RETCODE SCIPtableCollect(
+   SCIP_TABLE*           table,              /**< statistics table */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DATATREE*        datatree            /**< data tree where to add table data */
    );
 
 #ifdef __cplusplus

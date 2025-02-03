@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -70,7 +70,9 @@ struct SCIP_TableData
  * Callback methods of statistics table
  */
 
-/* TODO: Implement all necessary statistics table methods. The methods with an #if 0 ... #else #define ... are optional */
+/* TODO: Implement all necessary statistics table methods. The methods with an #if 0 ... #else #define ... are optional,
+ * except that at least one of tableOutputXyz and tableCollectXyz needs to be implemented.
+ */
 
 /** copy method for statistics table plugins (called when SCIP copies plugins) */
 #if 0
@@ -163,6 +165,7 @@ SCIP_DECL_TABLEEXITSOL(tableExitsolXyz)
 
 
 /** output method of statistics table to output file stream 'file' */
+#if 0
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputXyz)
 {  /*lint --e{715}*/
@@ -171,8 +174,23 @@ SCIP_DECL_TABLEOUTPUT(tableOutputXyz)
 
    return SCIP_OKAY;
 }
+#else
+#define tableOutputXyz NULL
+#endif
 
+/** data collection method of table */
+#if 0
+static 
+SCIP_DECL_TABLECOLLECT(tableCollectXyz)
+{ /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz statistics table not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
 
+   return SCIP_OKAY;
+}
+#else
+#define tableCollectXyz NULL
+#endif
 
 
 
@@ -194,7 +212,7 @@ SCIP_RETCODE SCIPincludeTableXyz(
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME, TABLE_DESC, TRUE,
          tableCopyXyz, tableFreeXyz, tableInitXyz, tableExitXyz,
-         tableInitsolXyz, tableExitsolXyz, tableOutputXyz,
+         tableInitsolXyz, tableExitsolXyz, tableOutputXyz, tableCollectXyz,
          tabledata, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
 
    /* add xyz statistics table parameters */

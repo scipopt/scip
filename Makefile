@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *#
 #*         SCIP --- Solving Constraint Integer Programs                      *#
 #*                                                                           *#
-#*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      *#
+#*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      *#
 #*                                                                           *#
 #*  Licensed under the Apache License, Version 2.0 (the "License");          *#
 #*  you may not use this file except in compliance with the License.         *#
@@ -85,6 +85,7 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		EXPRINT=$(EXPRINT)\\n\
 		GMP=$(GMP)\\n\
 		IPOPTOPT=$(IPOPTOPT)\\n\
+		LAPACK=$(LAPACK)\\n\
 		LPSCHECK=$(LPSCHECK)\\n\
 		LPSOPT=$(LPSOPT)\\n\
 		NOBLKBUFMEM=$(NOBLKBUFMEM)\\n\
@@ -697,6 +698,7 @@ SCIPPLUGINLIBOBJ=	scip/benders_default.o \
 			scip/heur_zeroobj.o \
 			scip/heur_zirounding.o \
 			scip/hypergraph.o \
+			scip/iisfinder_greedy.o \
 			scip/message_default.o \
 			scip/nlhdlr_bilinear.o \
 			scip/nlhdlr_convex.o \
@@ -844,6 +846,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/cutpool.o \
 			scip/cuts.o \
 			scip/cutsel.o \
+			scip/datatree.o \
 			scip/debug.o \
 			scip/dcmp.o \
 			scip/dialog.o \
@@ -857,6 +860,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/heuristics.o \
 			scip/compr.o \
 			scip/history.o \
+			scip/iisfinder.o \
 			scip/implics.o \
 			scip/interrupt.o \
 			scip/intervalarith.o \
@@ -895,6 +899,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_cut.o \
 			scip/scip_cutsel.o \
 			scip/scip_datastructures.o\
+			scip/scip_datatree.o\
 			scip/scip_debug.o \
 			scip/scip_dcmp.o \
 			scip/scip_dialog.o \
@@ -903,6 +908,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/scip_expr.o \
 			scip/scip_general.o \
 			scip/scip_heur.o \
+			scip/scip_iisfinder.o \
 			scip/scip_lp.o \
 			scip/scip_mem.o \
 			scip/scip_message.o \

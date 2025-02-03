@@ -3,7 +3,7 @@ Solution Checker
 
 This code implements a solution checker for MIP models.
 It reads a MIP model from a (gzipped) MPS file and a
-solution from a SOL file and checks the feasibility of this
+solution from a non-gzipped SOL file and checks the feasibility of this
 solution. All input is internally stored as arbitrary precision
 numbers (thanks to GNU GMP) and all calculations are done
 in arbitrary precision. The code checks the integrality, the

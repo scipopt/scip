@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -36,6 +36,7 @@
  * @author Marc Pfetsch
  * @author Michael Winkler
  * @author Kati Wolter
+ * @author Mohammed Ghannam
  *
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
  */
@@ -83,6 +84,7 @@
 #include "scip/reader.h"
 #include "scip/reopt.h"
 #include "scip/scip_benders.h"
+#include "scip/scip_datatree.h"
 #include "scip/scip_general.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"
@@ -2494,7 +2496,7 @@ SCIP_RETCODE SCIPprintTransProblem(
 /** outputs status statistics
  *
  *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
- *        thus may to correspond to the original status.
+ *        thus may correspond to the original status.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
@@ -2520,6 +2522,40 @@ void SCIPprintStatusStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Status        : ");
    SCIP_CALL_ABORT( SCIPprintStage(scip, file) );
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+}
+
+/** collects status statistics in a SCIP_DATATREE object
+ *
+ *  This function sets: 
+ *   - status: the current status of the solver
+ *   - info: info about the keys and values stored in the datatree
+ *
+ *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
+ *        thus may correspond to the original status.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPcollectStatusStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectStatusStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPinsertDatatreeString(scip, datatree, "status", SCIPstatusName(SCIPgetStatus(scip))) );
+
+   return SCIP_OKAY;
 }
 
 /** outputs statistics for original problem
@@ -2548,6 +2584,33 @@ void SCIPprintOrigProblemStatistics(
    SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
 }
 
+/** collects statistics for original problem in a SCIP_DATATREE object
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPcollectOrigProblemStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectOrigProblemStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPprobCollectStatistics(scip->origprob, scip->mem->setmem, scip->set, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** outputs statistics for transformed problem
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2574,6 +2637,27 @@ void SCIPprintTransProblemStatistics(
    SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Nonzeros         : %" SCIP_LONGINT_FORMAT " constraint, %" SCIP_LONGINT_FORMAT " clique table\n",
          scip->stat->nnz, SCIPcliquetableGetNEntries(scip->cliquetable));
+}
+
+/** collects statistics for transformed problem in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectTransProblemStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectTransProblemStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Collect problem statistics */
+   SCIP_CALL( SCIPprobCollectStatistics(scip->transprob, scip->mem->setmem, scip->set, datatree) );
+
+   /* Collect additional statistics */
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "constraint_nonzeros", scip->stat->nnz) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "clique_table_nonzeros", SCIPcliquetableGetNEntries(scip->cliquetable)) );
+
+   return SCIP_OKAY;
 }
 
 /** outputs presolver statistics
@@ -2694,6 +2778,112 @@ void SCIPprintPresolverStatistics(
       scip->stat->nrootintfixings, scip->stat->nrootboundchgs);
 }
 
+/** collects presolver statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectPresolverStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* plugins;
+   SCIP_DATATREE* rootdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectPresolverStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Sort presolvers by name */
+   SCIPsetSortPresolsName(scip->set);
+
+   SCIP_CALL( SCIPcreateDatatreeInTree( scip, datatree, &plugins, "plugins", scip->set->npresols + scip->set->nprops + scip->set->nconshdlrs) );
+
+   /* Collect presolver statistics */
+   for( i = 0; i < scip->set->npresols; ++i )
+   {
+      SCIP_PRESOL* presol = scip->set->presols[i];
+      SCIP_DATATREE* presoldata;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, plugins, &presoldata, SCIPpresolGetName(presol), 13) );
+
+      SCIP_CALL( SCIPinsertDatatreeString(scip, presoldata, "description", SCIPpresolGetDesc(presol)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, presoldata, "exec_time", SCIPpresolGetTime(presol)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, presoldata, "setup_time", SCIPpresolGetSetupTime(presol)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, presoldata, "calls", SCIPpresolGetNCalls(presol)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, presoldata, "fixed_vars", SCIPpresolGetNFixedVars(presol)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, presoldata, "aggregated_vars", SCIPpresolGetNAggrVars(presol)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, presoldata, "changed_var_types", SCIPpresolGetNChgVarTypes(presol)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, presoldata, "changed_bounds", SCIPpresolGetNChgBds(presol)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, presoldata, "added_holes", SCIPpresolGetNAddHoles(presol)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, presoldata, "deleted_constraints", SCIPpresolGetNDelConss(presol)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, presoldata, "added_constraints", SCIPpresolGetNAddConss(presol)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, presoldata, "changed_sides", SCIPpresolGetNChgSides(presol)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, presoldata, "changed_coefficients", SCIPpresolGetNChgCoefs(presol)) );
+   }
+
+   /* Sort propagators by name */
+   SCIPsetSortPropsName(scip->set);
+
+   /* Collect propagator statistics */
+   for( i = 0; i < scip->set->nprops; ++i )
+   {
+      SCIP_PROP* prop = scip->set->props[i];
+      SCIP_DATATREE* propdata;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, plugins, &propdata, SCIPpropGetName(prop), 15) );
+
+      SCIP_CALL( SCIPinsertDatatreeString(scip, propdata, "description", SCIPpropGetDesc(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, propdata, "exec_time", SCIPpropGetTime(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, propdata, "setup_time", SCIPpropGetSetupTime(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, propdata, "calls", SCIPpropGetNCalls(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, propdata, "cutoffs", SCIPpropGetNCutoffs(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, propdata, "domain_reductions", SCIPpropGetNDomredsFound(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, propdata, "fixed_vars", SCIPpropGetNFixedVars(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, propdata, "aggregated_vars", SCIPpropGetNAggrVars(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, propdata, "changed_var_types", SCIPpropGetNChgVarTypes(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, propdata, "changed_bounds", SCIPpropGetNChgBds(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, propdata, "added_holes", SCIPpropGetNAddHoles(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, propdata, "deleted_constraints", SCIPpropGetNDelConss(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, propdata, "added_constraints", SCIPpropGetNAddConss(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, propdata, "changed_sides", SCIPpropGetNChgSides(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, propdata, "changed_coefficients", SCIPpropGetNChgCoefs(prop)) );
+   }
+
+   /* Collect constraint handler presolving methods statistics */
+   for( i = 0; i < scip->set->nconshdlrs; ++i )
+   {
+      SCIP_CONSHDLR* conshdlr = scip->set->conshdlrs[i];
+      if( SCIPconshdlrDoesPresolve(conshdlr) )
+      {
+         SCIP_DATATREE* conshdlrdata;
+
+         SCIP_CALL( SCIPcreateDatatreeInTree( scip, plugins, &conshdlrdata, SCIPconshdlrGetName(conshdlr), 13) );
+
+         SCIP_CALL( SCIPinsertDatatreeString(scip, conshdlrdata, "description", SCIPconshdlrGetDesc(conshdlr)) );
+         SCIP_CALL( SCIPinsertDatatreeReal(scip, conshdlrdata, "presol_time", SCIPconshdlrGetPresolTime(conshdlr)) );
+         SCIP_CALL( SCIPinsertDatatreeReal(scip, conshdlrdata, "setup_time", SCIPconshdlrGetSetupTime(conshdlr)) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, conshdlrdata, "presol_calls", SCIPconshdlrGetNPresolCalls(conshdlr)) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, conshdlrdata, "fixed_vars", SCIPconshdlrGetNFixedVars(conshdlr)) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, conshdlrdata, "aggregated_vars", SCIPconshdlrGetNAggrVars(conshdlr)) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, conshdlrdata, "changed_var_types", SCIPconshdlrGetNChgVarTypes(conshdlr)) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, conshdlrdata, "changed_bounds", SCIPconshdlrGetNChgBds(conshdlr)) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, conshdlrdata, "added_holes", SCIPconshdlrGetNAddHoles(conshdlr)) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, conshdlrdata, "deleted_constraints", SCIPconshdlrGetNDelConss(conshdlr)) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, conshdlrdata, "added_constraints", SCIPconshdlrGetNAddConss(conshdlr)) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, conshdlrdata, "changed_sides", SCIPconshdlrGetNChgSides(conshdlr)) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, conshdlrdata, "changed_coefficients", SCIPconshdlrGetNChgCoefs(conshdlr)) );
+      }
+   }
+
+   /* Collect root node fixings statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &rootdata, "root", 2) );
+
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, rootdata, "int_fixings", scip->stat->nrootintfixings ) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, rootdata, "bound_changes", scip->stat->nrootboundchgs ) );
+
+   return SCIP_OKAY;
+}
+
 /** outputs constraint statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2751,6 +2941,51 @@ void SCIPprintConstraintStatistics(
             SCIPconshdlrGetNChildren(conshdlr));
       }
    }
+}
+
+/** collects constraint statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectConstraintStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* constraints;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectConstraintStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Create a subtree for constraints */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &constraints, "plugins", scip->set->nconshdlrs) );
+
+   for( i = 0; i < scip->set->nconshdlrs; ++i )
+   {
+      SCIP_CONSHDLR* conshdlr = scip->set->conshdlrs[i];
+      SCIP_DATATREE* conshdlrdata;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, constraints, &conshdlrdata, SCIPconshdlrGetName(conshdlr), 16) );
+
+      SCIP_CALL( SCIPinsertDatatreeString(scip, conshdlrdata, "description", SCIPconshdlrGetDesc(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, conshdlrdata, "start_active_constraints", SCIPconshdlrGetStartNActiveConss(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, conshdlrdata, "max_active_constraints", SCIPconshdlrGetMaxNActiveConss(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "separation_calls", SCIPconshdlrGetNSepaCalls(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "propagation_calls", SCIPconshdlrGetNPropCalls(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "enforcement_lp_calls", SCIPconshdlrGetNEnfoLPCalls(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "enforcement_relax_calls", SCIPconshdlrGetNEnfoRelaxCalls(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "enforcement_ps_calls", SCIPconshdlrGetNEnfoPSCalls(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "check_calls", SCIPconshdlrGetNCheckCalls(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "response_propagation_calls", SCIPconshdlrGetNRespropCalls(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "cutoffs", SCIPconshdlrGetNCutoffs(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "domain_reductions", SCIPconshdlrGetNDomredsFound(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "cuts_found", SCIPconshdlrGetNCutsFound(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "cuts_applied", SCIPconshdlrGetNCutsApplied(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "constraints_found", SCIPconshdlrGetNConssFound(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, conshdlrdata, "children_created", SCIPconshdlrGetNChildren(conshdlr)) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** outputs constraint timing statistics
@@ -2814,6 +3049,52 @@ void SCIPprintConstraintTimingStatistics(
    }
 }
 
+/** collects constraint timing statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectConstraintTimingStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* constrainttimings;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectConstraintTimingStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Create a subtree for constraint timings */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &constrainttimings, "plugins", scip->set->nconshdlrs) );
+
+   for( i = 0; i < scip->set->nconshdlrs; ++i )
+   {
+      SCIP_CONSHDLR* conshdlr = scip->set->conshdlrs[i];
+      SCIP_DATATREE* conshdlrtimingdata;
+      SCIP_Real totaltime;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree( scip, constrainttimings, &conshdlrtimingdata, SCIPconshdlrGetName(conshdlr), 10) );
+
+      totaltime = SCIPconshdlrGetSepaTime(conshdlr) + SCIPconshdlrGetPropTime(conshdlr)
+         + SCIPconshdlrGetStrongBranchPropTime(conshdlr) + SCIPconshdlrGetEnfoLPTime(conshdlr)
+         + SCIPconshdlrGetEnfoPSTime(conshdlr) + SCIPconshdlrGetEnfoRelaxTime(conshdlr)
+         + SCIPconshdlrGetCheckTime(conshdlr) + SCIPconshdlrGetRespropTime(conshdlr)
+         + SCIPconshdlrGetSetupTime(conshdlr);
+
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, conshdlrtimingdata, "total_time", totaltime) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, conshdlrtimingdata, "setup_time", SCIPconshdlrGetSetupTime(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, conshdlrtimingdata, "separation_time", SCIPconshdlrGetSepaTime(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, conshdlrtimingdata, "propagation_time", SCIPconshdlrGetPropTime(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, conshdlrtimingdata, "enforcement_lp_time", SCIPconshdlrGetEnfoLPTime(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, conshdlrtimingdata, "enforcement_ps_time", SCIPconshdlrGetEnfoPSTime(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, conshdlrtimingdata, "enforcement_relax_time", SCIPconshdlrGetEnfoRelaxTime(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, conshdlrtimingdata, "check_time", SCIPconshdlrGetCheckTime(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, conshdlrtimingdata, "response_propagation_time", SCIPconshdlrGetRespropTime(conshdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, conshdlrtimingdata, "strong_branch_propagation_time", SCIPconshdlrGetStrongBranchPropTime(conshdlr)) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** outputs propagator statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -2875,6 +3156,54 @@ void SCIPprintPropagatorStatistics(
 	 SCIPpropGetRespropTime(prop),
 	 SCIPpropGetStrongBranchPropTime(prop));
    }
+}
+
+/** collects propagator statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectPropagatorStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* propagators;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectPropagatorStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Create a subtree for propagators */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &propagators, "plugins", scip->set->nprops) );
+
+   /* Collect propagator statistics */
+   SCIPsetSortPropsName(scip->set);
+
+   for( i = 0; i < scip->set->nprops; ++i )
+   {
+      SCIP_PROP* prop = scip->set->props[i];
+      SCIP_DATATREE* propdata;
+      SCIP_Real totaltime;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree( scip, propagators, &propdata, SCIPpropGetName(prop), 11) );
+
+      SCIP_CALL( SCIPinsertDatatreeString(scip, propdata, "description", SCIPpropGetDesc(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, propdata, "calls", SCIPpropGetNCalls(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, propdata, "resprop_calls", SCIPpropGetNRespropCalls(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, propdata, "cutoffs", SCIPpropGetNCutoffs(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, propdata, "domreds_found", SCIPpropGetNDomredsFound(prop)) );
+
+      totaltime = SCIPpropGetPresolTime(prop) + SCIPpropGetTime(prop) + SCIPpropGetRespropTime(prop)
+         + SCIPpropGetStrongBranchPropTime(prop) + SCIPpropGetSetupTime(prop);
+
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, propdata, "total_time", totaltime) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, propdata, "setup_time", SCIPpropGetSetupTime(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, propdata, "presolve_time", SCIPpropGetPresolTime(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, propdata, "propagation_time", SCIPpropGetTime(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, propdata, "response_propagation_time", SCIPpropGetRespropTime(prop)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, propdata, "strong_branch_propagation_time", SCIPpropGetStrongBranchPropTime(prop)) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** outputs conflict statistics
@@ -3029,6 +3358,58 @@ void SCIPprintConflictStatistics(
       );
 }
 
+/** collects conflict statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectConflictStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   int initstoresize;
+   int maxstoresize;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectConflictStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Collect pool size information */
+   if( scip->set->conf_maxstoresize == 0 )
+   {
+      initstoresize = INT_MAX;
+      maxstoresize = INT_MAX;
+   }
+   else
+   {
+      initstoresize = SCIPconflictstoreGetInitPoolSize(scip->conflictstore);
+      maxstoresize = SCIPconflictstoreGetMaxPoolSize(scip->conflictstore);
+   }
+
+   /* if maxstoresize is -1, then we have no sizes to report */
+   if( maxstoresize >= 0 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "pool_size", initstoresize) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "max_pool_size", maxstoresize) );
+   }
+
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "propagation_time", SCIPconflictGetPropTime(scip->conflict)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "propagation_calls", SCIPconflictGetNPropCalls(scip->conflict)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "propagation_success", SCIPconflictGetNPropSuccess(scip->conflict)) );
+
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "infeasible_lp_time", SCIPconflictGetInfeasibleLPTime(scip->conflict)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "infeasible_lp_calls", SCIPconflictGetNInfeasibleLPCalls(scip->conflict)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "infeasible_lp_success", SCIPconflictGetNInfeasibleLPSuccess(scip->conflict)) );
+
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "bound_exceeding_lp_time", SCIPconflictGetBoundexceedingLPTime(scip->conflict)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "bound_exceeding_lp_calls", SCIPconflictGetNBoundexceedingLPCalls(scip->conflict)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "bound_exceeding_lp_success", SCIPconflictGetNBoundexceedingLPSuccess(scip->conflict)) );
+
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "strong_branching_time", SCIPconflictGetStrongbranchTime(scip->conflict)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "strong_branching_calls", SCIPconflictGetNStrongbranchCalls(scip->conflict)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "strong_branching_success", SCIPconflictGetNStrongbranchSuccess(scip->conflict)) );
+
+   return SCIP_OKAY;
+}
+
 /** outputs separator statistics
  *
  *  Columns:
@@ -3130,6 +3511,103 @@ void SCIPprintSeparatorStatistics(
    }
 }
 
+/** collects separator statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectSeparatorStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* separators;
+   SCIP_DATATREE* cutpool;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectSeparatorStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Create a subtree for separators */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &separators, "plugins", scip->set->nsepas + 1) );
+
+   /* Collect statistics for the cut pool */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, separators, &cutpool, "cut_pool", 7) );
+
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, cutpool, "exec_time", SCIPcutpoolGetTime(scip->cutpool)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, cutpool, "calls", SCIPcutpoolGetNCalls(scip->cutpool)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, cutpool, "root_calls", SCIPcutpoolGetNRootCalls(scip->cutpool)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, cutpool, "cuts_found", SCIPcutpoolGetNCutsFound(scip->cutpool)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, cutpool, "cuts_added", SCIPcutpoolGetNCutsAdded(scip->cutpool)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, cutpool, "max_cuts", SCIPcutpoolGetMaxNCuts(scip->cutpool)) );
+
+   /* Sort separators by name */
+   SCIPsetSortSepasName(scip->set);
+
+   /* Collect statistics for each separator */
+   for( i = 0; i < scip->set->nsepas; ++i )
+   {
+      SCIP_SEPA* sepa = scip->set->sepas[i];
+
+      /* Only collect data for separators without parent separators */
+      if( SCIPsepaGetParentsepa(sepa) == NULL )
+      {
+         SCIP_DATATREE* sepadata;
+         SCIP_CALL( SCIPcreateDatatreeInTree( scip, separators, &sepadata, SCIPsepaGetName(sepa), 14) );
+
+         SCIP_CALL( SCIPinsertDatatreeString(scip, sepadata, "description", SCIPsepaGetDesc(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeReal(scip, sepadata, "exec_time", SCIPsepaGetTime(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeReal(scip, sepadata, "setup_time", SCIPsepaGetSetupTime(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, sepadata, "calls", SCIPsepaGetNCalls(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, sepadata, "root_calls", SCIPsepaGetNRootCalls(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, sepadata, "cutoffs", SCIPsepaGetNCutoffs(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, sepadata, "domreds_found", SCIPsepaGetNDomredsFound(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, sepadata, "cuts_found", SCIPsepaGetNCutsFound(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, sepadata, "cuts_added_via_pool", SCIPsepaGetNCutsAddedViaPool(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, sepadata, "cuts_added_direct", SCIPsepaGetNCutsAddedDirect(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, sepadata, "cuts_applied", SCIPsepaGetNCutsApplied(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, sepadata, "cuts_applied_via_pool", SCIPsepaGetNCutsAppliedViaPool(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, sepadata, "cuts_applied_direct", SCIPsepaGetNCutsAppliedDirect(sepa)) );
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, sepadata, "constraints_found", SCIPsepaGetNConssFound(sepa)) );
+
+         /* for parent separators search for dependent separators */
+         if( SCIPsepaIsParentsepa(sepa) )
+         {
+            SCIP_SEPA* parentsepa;
+            int k;
+
+            for( k = 0; k < scip->set->nsepas; ++k )
+            {
+               if( k == i )
+                  continue;
+
+               parentsepa = SCIPsepaGetParentsepa(scip->set->sepas[k]);
+               if( parentsepa != sepa )
+                  continue;
+
+               SCIP_DATATREE* subsepadata;
+               SCIP_CALL( SCIPcreateDatatreeInTree(scip, sepadata, &subsepadata, SCIPsepaGetName(scip->set->sepas[k]), 14) );
+
+               SCIP_CALL( SCIPinsertDatatreeString(scip, subsepadata, "description", SCIPsepaGetDesc(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, subsepadata, "exec_time", SCIPsepaGetTime(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, subsepadata, "setup_time", SCIPsepaGetSetupTime(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, subsepadata, "calls", SCIPsepaGetNCalls(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, subsepadata, "root_calls", SCIPsepaGetNRootCalls(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, subsepadata, "cutoffs", SCIPsepaGetNCutoffs(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, subsepadata, "domreds_found", SCIPsepaGetNDomredsFound(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, subsepadata, "cuts_found", SCIPsepaGetNCutsFound(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, subsepadata, "cuts_added_via_pool", SCIPsepaGetNCutsAddedViaPool(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, subsepadata, "cuts_added_direct", SCIPsepaGetNCutsAddedDirect(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, subsepadata, "cuts_applied", SCIPsepaGetNCutsApplied(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, subsepadata, "cuts_applied_via_pool", SCIPsepaGetNCutsAppliedViaPool(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, subsepadata, "cuts_applied_direct", SCIPsepaGetNCutsAppliedDirect(scip->set->sepas[k])) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, subsepadata, "constraints_found", SCIPsepaGetNConssFound(scip->set->sepas[k])) );
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** outputs cutselector statistics
  *
  *       Filtered = ViaPoolAdd(Separators) + DirectAdd(Separators) - Selected - Cuts(Constraints)
@@ -3174,6 +3652,50 @@ void SCIPprintCutselectorStatistics(
    }
 }
 
+/** collects cutselector statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectCutselectorStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* cutselectors;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectCutselectorStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Create a subtree for cutselectors */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &cutselectors, "plugins", scip->set->ncutsels) );
+
+   /* Sort cutselectors by priority */
+   SCIPsetSortCutsels(scip->set);
+
+   /* Collect statistics for each cutselector */
+   for( i = 0; i < scip->set->ncutsels; ++i )
+   {
+      SCIP_CUTSEL* cutsel = scip->set->cutsels[i];
+      SCIP_DATATREE* cutseldata;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, cutselectors, &cutseldata, SCIPcutselGetName(cutsel), 11) );
+
+      SCIP_CALL( SCIPinsertDatatreeString(scip, cutseldata, "description", SCIPcutselGetDesc(cutsel)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, cutseldata, "exec_time", SCIPcutselGetTime(cutsel)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, cutseldata, "setup_time", SCIPcutselGetSetupTime(cutsel)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, cutseldata, "calls", SCIPcutselGetNCalls(cutsel)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, cutseldata, "root_calls", SCIPcutselGetNRootCalls(cutsel)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, cutseldata, "selected", SCIPcutselGetNRootCuts(cutsel) + SCIPcutselGetNLocalCuts(cutsel)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, cutseldata, "forced", SCIPcutselGetNRootForcedCuts(cutsel) + SCIPcutselGetNLocalForcedCuts(cutsel)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, cutseldata, "filtered", SCIPcutselGetNRootCutsFiltered(cutsel) + SCIPcutselGetNLocalCutsFiltered(cutsel)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, cutseldata, "root_selected", SCIPcutselGetNRootCuts(cutsel)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, cutseldata, "root_forced", SCIPcutselGetNRootForcedCuts(cutsel)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, cutseldata, "root_filtered", SCIPcutselGetNRootCutsFiltered(cutsel)) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** outputs pricer statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -3210,6 +3732,51 @@ void SCIPprintPricerStatistics(
          SCIPpricerGetNCalls(scip->set->pricers[i]),
          SCIPpricerGetNVarsFound(scip->set->pricers[i]));
    }
+}
+
+/** collects pricer statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectPricerStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* pricers;
+   SCIP_DATATREE* probvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectPricerStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Create a subtree for pricers */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &pricers, "pricers", 1 + scip->set->nactivepricers) );
+
+   /* Collect statistics for problem variables */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, pricers, &probvars, "problem_variables", 3) );
+
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, probvars, "exec_time", SCIPpricestoreGetProbPricingTime(scip->pricestore)) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, probvars, "calls", SCIPpricestoreGetNProbPricings(scip->pricestore)) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, probvars, "vars_found", SCIPpricestoreGetNProbvarsFound(scip->pricestore)) );
+
+   /* Sort pricers by name */
+   SCIPsetSortPricersName(scip->set);
+
+   /* Collect statistics for each active pricer */
+   for( i = 0; i < scip->set->nactivepricers; ++i )
+   {
+      SCIP_PRICER* pricer = scip->set->pricers[i];
+      SCIP_DATATREE* pricerdata;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree( scip, pricers, &pricerdata, SCIPpricerGetName(pricer), 4) );
+
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, pricerdata, "exec_time", SCIPpricerGetTime(pricer)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, pricerdata, "setup_time", SCIPpricerGetSetupTime(pricer)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, pricerdata, "calls", SCIPpricerGetNCalls(pricer)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, pricerdata, "vars_found", SCIPpricerGetNVarsFound(pricer)) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** outputs branching rule statistics
@@ -3250,6 +3817,48 @@ void SCIPprintBranchruleStatistics(
          SCIPbranchruleGetNConssFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNChildren(scip->set->branchrules[i]));
    }
+}
+
+/** collects branching rule statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectBranchruleStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* branchruletree;
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPcollectBranchruleStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &branchruletree, "plugins", scip->set->nbranchrules) );
+
+   /* sort branching rules  w.r.t. their name */
+   SCIPsetSortBranchrulesName(scip->set);
+
+   for( i = 0; i < scip->set->nbranchrules; ++i )
+   {
+      SCIP_DATATREE* branchrule = NULL;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, branchruletree, &branchrule, SCIPbranchruleGetName(scip->set->branchrules[i]), 11) );
+
+      SCIP_CALL( SCIPinsertDatatreeString(scip, branchrule, "description", SCIPbranchruleGetDesc(scip->set->branchrules[i])) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, branchrule, "time", SCIPbranchruleGetTime(scip->set->branchrules[i])) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, branchrule, "setuptime", SCIPbranchruleGetSetupTime(scip->set->branchrules[i])) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, branchrule, "nlpcalls", SCIPbranchruleGetNLPCalls(scip->set->branchrules[i])) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, branchrule, "nexterncalls", SCIPbranchruleGetNExternCalls(scip->set->branchrules[i])) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, branchrule, "npscalls", SCIPbranchruleGetNPseudoCalls(scip->set->branchrules[i])) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, branchrule, "ncutoffs", SCIPbranchruleGetNCutoffs(scip->set->branchrules[i])) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, branchrule, "ndomreds", SCIPbranchruleGetNDomredsFound(scip->set->branchrules[i])) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, branchrule, "ncutsfound", SCIPbranchruleGetNCutsFound(scip->set->branchrules[i])) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, branchrule, "nconssfound", SCIPbranchruleGetNConssFound(scip->set->branchrules[i])) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, branchrule, "nchildren", SCIPbranchruleGetNChildren(scip->set->branchrules[i])) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** outputs heuristics statistics
@@ -3372,6 +3981,120 @@ void SCIPprintHeuristicStatistics(
    }
 }
 
+/** collects heuristics statistics into SCIP_DATATREE
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPcollectHeuristicStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   )
+{
+   SCIP_DATATREE* heursstore;
+   SCIP_DATATREE* lpstore;
+   SCIP_DATATREE* relaxstore;
+   SCIP_DATATREE* pseudostore;
+   SCIP_DATATREE* sbstore;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(scip->tree != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectHeuristicStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* create the heuristics datatree */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &heursstore, "plugins", scip->set->nheurs + 5) );
+
+   /* add LP solutions statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, heursstore, &lpstore, "lp_solutions", 4) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, lpstore, "time", SCIPclockGetTime(scip->stat->lpsoltime)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, lpstore, "solutions_found", scip->stat->nlpsolsfound) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, lpstore, "best_solutions_found", scip->stat->nlpbestsolsfound) );
+
+   /* add relaxation solutions statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, heursstore, &relaxstore, "relax_solutions", 4) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, relaxstore, "time", SCIPclockGetTime(scip->stat->relaxsoltime)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, relaxstore, "solutions_found", scip->stat->nrelaxsolsfound) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, relaxstore, "best_solutions_found", scip->stat->nrelaxbestsolsfound) );
+
+   /* add pseudo solutions statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, heursstore, &pseudostore, "pseudo_solutions", 4) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, pseudostore, "time", SCIPclockGetTime(scip->stat->pseudosoltime)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, pseudostore, "solutions_found", scip->stat->npssolsfound) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, pseudostore, "best_solutions_found", scip->stat->npsbestsolsfound) );
+
+   /* add strong branching statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, heursstore, &sbstore, "strong_branching", 4) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, sbstore, "time", SCIPclockGetTime(scip->stat->sbsoltime)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, sbstore, "solutions_found", scip->stat->nsbsolsfound) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, sbstore, "best_solutions_found", scip->stat->nsbbestsolsfound) );
+
+   /* Sort heuristics by name */
+   SCIPsetSortHeursName(scip->set);
+
+   for( int i = 0; i < scip->set->nheurs; ++i )
+   {
+      SCIP_DATATREE* heurstore;
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, heursstore, &heurstore, SCIPheurGetName(scip->set->heurs[i]), 6) );
+
+      SCIP_CALL( SCIPinsertDatatreeString(scip, heurstore, "description", SCIPheurGetDesc(scip->set->heurs[i])) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, heurstore, "time", SCIPheurGetTime(scip->set->heurs[i])) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, heurstore, "setup_time", SCIPheurGetSetupTime(scip->set->heurs[i])) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, heurstore, "calls", SCIPheurGetNCalls(scip->set->heurs[i])) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, heurstore, "solutions_found", SCIPheurGetNSolsFound(scip->set->heurs[i])) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, heurstore, "best_solutions_found", SCIPheurGetNBestSolsFound(scip->set->heurs[i])) );
+   }
+
+   SCIP_DATATREE* othersolutions;
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, heursstore, &othersolutions, "other_solutions", 1) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, othersolutions, "solutions_found",  scip->stat->nexternalsolsfound) );
+
+   /* collect diving statistics if applicable */
+   if( scip->set->misc_showdivingstats )
+   {
+      SCIP_DATATREE* divingstore;
+      SCIP_DIVECONTEXT divecontexts[] = { SCIP_DIVECONTEXT_SINGLE, SCIP_DIVECONTEXT_ADAPTIVE, SCIP_DIVECONTEXT_SCHEDULER };
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &divingstore, "diving_statistics", 3) );
+
+      for( int c = 0; c < 3; ++c )
+      {
+         SCIP_DIVECONTEXT divecontext = divecontexts[c];
+         SCIP_DATATREE* contextstore;
+
+         SCIP_CALL( SCIPcreateDatatreeInTree(scip, divingstore, &contextstore,
+            divecontext == SCIP_DIVECONTEXT_SINGLE ? "single" : divecontext == SCIP_DIVECONTEXT_ADAPTIVE ? "adaptive" : "scheduler",
+            scip->set->nheurs) );
+
+         for( int i = 0; i < scip->set->nheurs; ++i )
+         {
+            int ndivesets = SCIPheurGetNDivesets(scip->set->heurs[i]);
+            for( int s = 0; s < ndivesets; ++s )
+            {
+               SCIP_DATATREE* divesetstore;
+               SCIP_DIVESET* diveset = SCIPheurGetDivesets(scip->set->heurs[i])[s];
+
+               SCIP_CALL( SCIPcreateDatatreeInTree(scip, contextstore, &divesetstore, SCIPdivesetGetName(diveset), 5) );
+
+               SCIP_CALL( SCIPinsertDatatreeInt(scip, divesetstore, "calls", SCIPdivesetGetNCalls(diveset, divecontext)) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, divesetstore, "nodes", SCIPdivesetGetNProbingNodes(diveset, divecontext)) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, divesetstore, "lp_iters", SCIPdivesetGetNLPIterations(diveset, divecontext)) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, divesetstore, "backtracks", SCIPdivesetGetNBacktracks(diveset, divecontext)) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, divesetstore, "conflicts", SCIPdivesetGetNConflicts(diveset, divecontext)) );
+            }
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** outputs compression statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -3410,6 +4133,48 @@ void SCIPprintCompressionStatistics(
          SCIPcomprGetNCalls(scip->set->comprs[i]),
          SCIPcomprGetNFound(scip->set->comprs[i]));
    }
+}
+
+/** collects compression statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectCompressionStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* compressions;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectCompressionStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Check if tree reoptimization is enabled */
+   if( !scip->set->reopt_enable )
+      return SCIP_OKAY;
+
+   /* Create a subtree for tree compressions */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &compressions, "tree_compressions", scip->set->ncomprs) );
+
+   /* Sort compressions by name */
+   SCIPsetSortComprsName(scip->set);
+
+   /* Collect statistics for each compression method */
+   for( i = 0; i < scip->set->ncomprs; ++i )
+   {
+      SCIP_COMPR* compr = scip->set->comprs[i];
+      SCIP_DATATREE* comprdata;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, compressions, &comprdata, SCIPcomprGetName(compr), 5) );
+
+      SCIP_CALL( SCIPinsertDatatreeString(scip, comprdata, "description", SCIPcomprGetDesc(compr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, comprdata, "exec_time", SCIPcomprGetTime(compr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, comprdata, "setup_time", SCIPcomprGetSetupTime(compr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, comprdata, "n_calls", SCIPcomprGetNCalls(compr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, comprdata, "n_found", SCIPcomprGetNFound(compr)) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** outputs LP statistics
@@ -3528,6 +4293,125 @@ void SCIPprintLPStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -\n");
 }
 
+/** collects LP statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectLPStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* primal;
+   SCIP_DATATREE* dual;
+   SCIP_DATATREE* barrier;
+   SCIP_DATATREE* lexdual;
+   SCIP_DATATREE* resolve;
+   SCIP_DATATREE* strongbranch;
+   SCIP_DATATREE* strongbranchroot;
+   SCIP_DATATREE* conflict;
+
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->lp != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectLPStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Primal LP statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &primal, "primal_lp", 4) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, primal, "time", SCIPclockGetTime(scip->stat->primallptime)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, primal, "calls", scip->stat->nprimallps + scip->stat->nprimalzeroitlps) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, primal, "iterations", scip->stat->nprimallpiterations) );
+   if( scip->stat->nprimallps > 0 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, primal, "iter_per_call", (SCIP_Real)scip->stat->nprimallpiterations / scip->stat->nprimallps) );
+   }
+
+   /* Dual LP statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &dual, "dual_lp", 4) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, dual, "time", SCIPclockGetTime(scip->stat->duallptime)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, dual, "calls", scip->stat->nduallps + scip->stat->ndualzeroitlps) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, dual, "iterations", scip->stat->nduallpiterations) );
+   if( scip->stat->nduallps > 0 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, dual, "iter_per_call", (SCIP_Real)scip->stat->nduallpiterations / scip->stat->nduallps) );
+   }
+
+   /* Barrier LP statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &barrier, "barrier_lp", 4) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, barrier, "time", SCIPclockGetTime(scip->stat->barrierlptime)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, barrier, "calls", scip->stat->nbarrierlps) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, barrier, "iterations", scip->stat->nbarrierlpiterations) );
+   if( scip->stat->nbarrierlps > 0 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, barrier, "iter_per_call", (SCIP_Real)scip->stat->nbarrierlpiterations / scip->stat->nbarrierlps) );
+   }
+
+   /* Lex dual LP statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &lexdual, "lex_dual_lp", 5) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, lexdual, "time", SCIPclockGetTime(scip->stat->lexduallptime)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, lexdual, "calls", scip->stat->nlexduallps) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, lexdual, "iterations", scip->stat->nlexduallpiterations) );
+   if( scip->stat->nlexduallps > 0 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, lexdual, "iter_per_call", (SCIP_Real)scip->stat->nlexduallpiterations / scip->stat->nlexduallps) );
+   }
+   if( SCIPclockGetTime(scip->stat->lexduallptime) >= 0.01 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, lexdual, "iter_per_time", (SCIP_Real)scip->stat->nlexduallpiterations / SCIPclockGetTime(scip->stat->lexduallptime)) );
+   }
+
+   /* Resolving LP statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &resolve, "resolve_lp", 5) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, resolve, "time", SCIPclockGetTime(scip->stat->resolveinstablelptime)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, resolve, "calls", scip->stat->nresolveinstablelps) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, resolve, "iterations", scip->stat->nresolveinstablelpiters) );
+   if( scip->stat->nresolveinstablelps > 0 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, resolve, "iter_per_call", (SCIP_Real)scip->stat->nresolveinstablelpiters / scip->stat->nresolveinstablelps) );
+   }
+   if( SCIPclockGetTime(scip->stat->resolveinstablelptime) >= 0.01 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, resolve, "iter_per_time", (SCIP_Real)scip->stat->nresolveinstablelpiters / SCIPclockGetTime(scip->stat->resolveinstablelptime)) );
+   }
+
+   /* Strong branching LP statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &strongbranch, "strongbranch_lp", 5) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, strongbranch, "time", SCIPclockGetTime(scip->stat->strongbranchtime)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, strongbranch, "calls", scip->stat->nstrongbranchs) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, strongbranch, "iterations", scip->stat->nsblpiterations) );
+   if( scip->stat->nstrongbranchs > 0 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, strongbranch, "iter_per_call", (SCIP_Real)scip->stat->nsblpiterations / scip->stat->nstrongbranchs) );
+   }
+   if( SCIPclockGetTime(scip->stat->strongbranchtime) >= 0.01 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, strongbranch, "iter_per_time", (SCIP_Real)scip->stat->nsblpiterations / SCIPclockGetTime(scip->stat->strongbranchtime)) );
+   }
+
+   /* Strong branching at root node statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &strongbranchroot, "strongbranch_root_lp", 3) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, strongbranchroot, "calls", scip->stat->nrootstrongbranchs) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, strongbranchroot, "iterations", scip->stat->nrootsblpiterations) );
+   if( scip->stat->nrootstrongbranchs > 0 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, strongbranchroot, "iter_per_call", (SCIP_Real)scip->stat->nrootsblpiterations / scip->stat->nrootstrongbranchs) );
+   }
+
+   /* Conflict analysis LP statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &conflict, "conflict_lp", 5) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, conflict, "time", SCIPclockGetTime(scip->stat->conflictlptime)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, conflict, "calls", scip->stat->nconflictlps) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, conflict, "iterations", scip->stat->nconflictlpiterations) );
+   if( scip->stat->nconflictlps > 0 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, conflict, "iter_per_call", (SCIP_Real)scip->stat->nconflictlpiterations / scip->stat->nconflictlps) );
+   }
+   if( SCIPclockGetTime(scip->stat->conflictlptime) >= 0.01 )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, conflict, "iter_per_time", (SCIP_Real)scip->stat->nconflictlpiterations / SCIPclockGetTime(scip->stat->conflictlptime)) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** outputs NLP statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -3562,6 +4446,42 @@ void SCIPprintNLPStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  convexity        : %10s (%d linear rows, %d convex ineq., %d nonconvex ineq., %d nonlinear eq. or two-sided ineq.)\n",
       (nnlrownonconvexineq == 0 && nnlrownonlineareq == 0) ? "convex" : "nonconvex",
       nnlrowlinear, nnlrowconvexineq, nnlrownonconvexineq, nnlrownonlineareq);
+}
+
+/** collects NLP statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectNLPStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   int nnlrowlinear;
+   int nnlrowconvexineq;
+   int nnlrownonconvexineq;
+   int nnlrownonlineareq;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+   assert(scip->stat != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectNLPStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->nlp == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "solve_time", SCIPclockGetTime(scip->stat->nlpsoltime)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "calls", scip->stat->nnlps) );
+
+   /* Get convexity and row statistics */
+   SCIP_CALL( SCIPgetNLPNlRowsStat(scip, &nnlrowlinear, &nnlrowconvexineq, &nnlrownonconvexineq, &nnlrownonlineareq) );
+
+   SCIP_CALL( SCIPinsertDatatreeString(scip, datatree, "convexity",
+      (nnlrownonconvexineq == 0 && nnlrownonlineareq == 0) ? "convex" : "nonconvex") );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "linear_rows", nnlrowlinear) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "convex_ineq", nnlrowconvexineq) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "nonconvex_ineq", nnlrownonconvexineq) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "nonlinear_eq", nnlrownonlineareq) );
+
+   return SCIP_OKAY;
 }
 
 /** outputs relaxator statistics
@@ -3604,6 +4524,50 @@ void SCIPprintRelaxatorStatistics(
          SCIPrelaxGetNAddedConss(scip->set->relaxs[i])
          );
    }
+}
+
+/** collects relaxator statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectRelaxatorStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* relaxators;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectRelaxatorStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( scip->set->nrelaxs == 0 )
+      return SCIP_OKAY;
+
+   /* Create a subtree for relaxators */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &relaxators, "relaxators", scip->set->nrelaxs) );
+
+   /* Sort relaxators by name */
+   SCIPsetSortRelaxsName(scip->set);
+
+   /* Collect statistics for each relaxator */
+   for( i = 0; i < scip->set->nrelaxs; ++i )
+   {
+      SCIP_RELAX* relax = scip->set->relaxs[i];
+      SCIP_DATATREE* relaxdata;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, relaxators, &relaxdata, SCIPrelaxGetName(relax), 8) );
+
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, relaxdata, "time", SCIPrelaxGetTime(relax)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, relaxdata, "calls", SCIPrelaxGetNCalls(relax)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, relaxdata, "cutoffs", SCIPrelaxGetNCutoffs(relax)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, relaxdata, "improved_lowerbound", SCIPrelaxGetNImprovedLowerbound(relax)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, relaxdata, "improved_lowerbound_time", SCIPrelaxGetImprovedLowerboundTime(relax)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, relaxdata, "reduced_domains", SCIPrelaxGetNReducedDomains(relax)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, relaxdata, "separated_cuts", SCIPrelaxGetNSeparatedCuts(relax)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, relaxdata, "added_constraints", SCIPrelaxGetNAddedConss(relax)) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** outputs tree statistics
@@ -3651,6 +4615,70 @@ void SCIPprintTreeStatistics(
       scip->stat->nnodes > 0
       ? (SCIP_Real)(scip->stat->nactivatednodes + scip->stat->ndeactivatednodes) / (SCIP_Real)scip->stat->nnodes : 0.0);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  switching time   : %10.2f\n", SCIPclockGetTime(scip->stat->nodeactivationtime));
+}
+
+/** collects tree statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectTreeStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* nodes;
+   SCIP_DATATREE* totalnodes;
+   SCIP_DATATREE* depth;
+   SCIP_DATATREE* backtracks;
+   SCIP_DATATREE* reprop;
+
+   assert(scip != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->tree != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectTreeStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* General node statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &nodes, "nodes", 6) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, nodes, "total", scip->stat->nnodes) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, nodes, "internal", scip->stat->ninternalnodes) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, nodes, "leaves", scip->stat->nnodes - scip->stat->ninternalnodes) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, nodes, "feasible_leaves", scip->stat->nfeasleaves) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, nodes, "infeasible_leaves", scip->stat->ninfeasleaves) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, nodes, "objective_leaves", scip->stat->nobjleaves) );
+
+   /* Total node statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &totalnodes, "total_nodes", 3) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, totalnodes, "total", scip->stat->ntotalnodes) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, totalnodes, "internal", scip->stat->ntotalinternalnodes) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, totalnodes, "leaves", scip->stat->ntotalnodes - scip->stat->ntotalinternalnodes) );
+
+   /* Depth statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &depth, "depth", 2) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, depth, "max_depth", scip->stat->maxdepth) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, depth, "max_depth_total", scip->stat->maxtotaldepth) );
+
+   /* Backtracks statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &backtracks, "backtracks", 4) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, backtracks, "total", scip->stat->nbacktracks) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, backtracks, "percent",
+      scip->stat->nnodes > 0 ? 100.0 * (SCIP_Real)scip->stat->nbacktracks / (SCIP_Real)scip->stat->nnodes : 0.0) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, backtracks, "early", scip->stat->nearlybacktracks) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, backtracks, "early_percent",
+      scip->stat->nbacktracks > 0 ? 100.0 * (SCIP_Real)scip->stat->nearlybacktracks / (SCIP_Real)scip->stat->nbacktracks : 0.0) );
+
+   /* Repropagations statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &reprop, "repropagations", 3) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, reprop, "total", scip->stat->nreprops) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, reprop, "domain_reductions", scip->stat->nrepropboundchgs) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, reprop, "cutoffs", scip->stat->nrepropcutoffs) );
+
+   /* Additional statistics */
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "nodes_left", SCIPtreeGetNNodes(scip->tree)) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "delayed_cutoffs", scip->stat->ndelayedcutoffs) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "average_switch_length",
+      scip->stat->nnodes > 0 ? (SCIP_Real)(scip->stat->nactivatednodes + scip->stat->ndeactivatednodes) / (SCIP_Real)scip->stat->nnodes : 0.0) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "switching_time", SCIPclockGetTime(scip->stat->nodeactivationtime)) );
+
+   return SCIP_OKAY;
 }
 
 /** outputs solution statistics
@@ -3853,6 +4881,50 @@ void SCIPprintSolutionStatistics(
    }
 }
 
+/** collects solution statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectSolutionStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_Real firstprimalbound;
+   SCIP_Real primalbound;
+   SCIP_Real dualbound;
+   SCIP_Real gap;
+   SCIP_Bool objlimitreached;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->primal != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectSolutionStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Basic statistics */
+   primalbound = SCIPgetPrimalbound(scip);
+   dualbound = SCIPgetDualbound(scip);
+   gap = SCIPgetGap(scip);
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "solutions_found", scip->primal->nsolsfound) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "improvements", scip->primal->nbestsolsfound) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "primal_bound", primalbound) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "dual_bound", dualbound) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "gap", gap) );
+
+   /* Objective limit reached */
+   objlimitreached = (SCIPgetStage(scip) == SCIP_STAGE_SOLVED) && (scip->primal->nlimsolsfound == 0) &&
+      !SCIPisInfinity(scip, primalbound) && (SCIPgetStatus(scip) != SCIP_STATUS_INFORUNBD);
+   SCIP_CALL( SCIPinsertDatatreeBool(scip, datatree, "objective_limit_reached", objlimitreached) );
+
+   /* First solution statistics */
+   firstprimalbound = scip->stat->firstprimalbound;
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "first_primal_bound", firstprimalbound) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "first_solution_time", scip->stat->firstprimaltime) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "first_solution_nodes", scip->stat->nnodesbeforefirst) );
+   SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "first_solution_depth", scip->stat->firstprimaldepth) );
+
+   return SCIP_OKAY;
+}
+
 /** outputs concurrent solver statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -3905,6 +4977,58 @@ void SCIPprintConcsolverStatistics(
             );
       }
    }
+}
+
+/** collects concurrent solver statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectConcsolverStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* concsolverstree;
+   SCIP_CONCSOLVER** concsolvers;
+   int nconcsolvers;
+   int winner;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectConcsolverStatistics", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPsyncstoreIsInitialized(scip->syncstore) )
+      return SCIP_OKAY;
+
+   nconcsolvers = SCIPgetNConcurrentSolvers(scip);
+   concsolvers = SCIPgetConcurrentSolvers(scip);
+   winner = SCIPsyncstoreGetWinner(scip->syncstore);
+
+   if( nconcsolvers == 0 )
+      return SCIP_OKAY;
+
+   /* Create a subtree for concurrent solvers */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &concsolverstree, "concurrent_solvers", nconcsolvers) );
+
+   for( i = 0; i < nconcsolvers; ++i )
+   {
+      SCIP_CONCSOLVER* solver = concsolvers[i];
+      SCIP_DATATREE* solverdata;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, concsolverstree, &solverdata, SCIPconcsolverGetName(solver), 9) );
+
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, solverdata, "is_winner", winner == i) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, solverdata, "solving_time", SCIPconcsolverGetSolvingTime(solver)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, solverdata, "sync_time", SCIPconcsolverGetSyncTime(solver)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, solverdata, "nodes", SCIPconcsolverGetNNodes(solver)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, solverdata, "lp_iterations", SCIPconcsolverGetNLPIterations(solver)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, solverdata, "solutions_shared", SCIPconcsolverGetNSolsShared(solver)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, solverdata, "solutions_received", SCIPconcsolverGetNSolsRecvd(solver)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, solverdata, "tighter_bounds", SCIPconcsolverGetNTighterBnds(solver)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, solverdata, "tighter_integer_bounds", SCIPconcsolverGetNTighterIntBnds(solver)) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** display Benders' decomposition statistics */
@@ -3964,6 +5088,70 @@ void SCIPprintBendersStatistics(
    }
 }
 
+/** collects Benders' decomposition statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectBendersStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* benderstree;
+   SCIP_BENDERS** benders;
+   int nbenders;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectBendersStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( SCIPgetNActiveBenders(scip) == 0 )
+      return SCIP_OKAY;
+
+   nbenders = SCIPgetNBenders(scip);
+   benders = SCIPgetBenders(scip);
+
+   /* Create a subtree for Benders statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &benderstree, "plugins", nbenders) );
+
+   for( i = 0; i < nbenders; ++i )
+   {
+      if( SCIPbendersIsActive(benders[i]) )
+      {
+         SCIP_BENDERSCUT** benderscuts = SCIPbendersGetBenderscuts(benders[i]);
+         int nbenderscuts = SCIPbendersGetNBenderscuts(benders[i]);
+         SCIP_DATATREE* bendersdata;
+
+         SCIP_CALL( SCIPcreateDatatreeInTree(scip, benderstree, &bendersdata, SCIPbendersGetName(benders[i]), 9 + nbenderscuts) );
+
+         SCIP_CALL( SCIPinsertDatatreeString(scip, bendersdata, "description", SCIPbendersGetDesc(benders[i])) );
+         SCIP_CALL( SCIPinsertDatatreeReal(scip, bendersdata, "exec_time", SCIPbendersGetTime(benders[i])) );
+         SCIP_CALL( SCIPinsertDatatreeReal(scip, bendersdata, "setup_time", SCIPbendersGetSetupTime(benders[i])) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, bendersdata, "calls", SCIPbendersGetNCalls(benders[i])) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, bendersdata, "cuts_found", SCIPbendersGetNCutsFound(benders[i])) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, bendersdata, "cuts_transferred", SCIPbendersGetNTransferredCuts(benders[i])) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, bendersdata, "strength_calls", SCIPbendersGetNStrengthenCalls(benders[i])) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, bendersdata, "strength_failures", SCIPbendersGetNStrengthenFails(benders[i])) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, bendersdata, "strength_cuts_found", SCIPbendersGetNStrengthenCutsFound(benders[i])) );
+
+         /* Collect statistics for Benders' cuts */
+         for( int j = 0; j < nbenderscuts; ++j )
+         {
+            SCIP_DATATREE* benderscutdata;
+
+            SCIP_CALL( SCIPcreateDatatreeInTree(scip, bendersdata, &benderscutdata, SCIPbenderscutGetName(benderscuts[j]), 5) );
+
+            SCIP_CALL( SCIPinsertDatatreeString(scip, benderscutdata, "description", SCIPbenderscutGetDesc(benderscuts[j])) );
+            SCIP_CALL( SCIPinsertDatatreeReal(scip, benderscutdata, "exec_time", SCIPbenderscutGetTime(benderscuts[j])) );
+            SCIP_CALL( SCIPinsertDatatreeReal(scip, benderscutdata, "setup_time", SCIPbenderscutGetSetupTime(benderscuts[j])) );
+            SCIP_CALL( SCIPinsertDatatreeLong(scip, benderscutdata, "calls", SCIPbenderscutGetNCalls(benderscuts[j])) );
+            SCIP_CALL( SCIPinsertDatatreeLong(scip, benderscutdata, "cuts_found", SCIPbenderscutGetNFound(benderscuts[j])) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** outputs root statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -4021,6 +5209,48 @@ void SCIPprintRootStatistics(
    }
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "%21s\n","-");
+}
+
+/** collects root node statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectRootStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_Real dualboundroot;
+   SCIP_Real firstdualboundroot;
+   SCIP_Real firstlptime;
+   SCIP_Real firstlpspeed;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+   assert(scip->stat != NULL);
+   assert(scip->primal != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectRootStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   dualboundroot = SCIPgetDualboundRoot(scip);
+   firstdualboundroot = SCIPgetFirstLPDualboundRoot(scip);
+   firstlptime = SCIPgetFirstLPTime(scip);
+
+   if( firstlptime > 0.0 )
+      firstlpspeed = (SCIP_Real)scip->stat->nrootfirstlpiterations / firstlptime;
+   else
+      firstlpspeed = 0.0;
+
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "first_lp_value", firstdualboundroot) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "first_lp_iterations", scip->stat->nrootfirstlpiterations) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "first_lp_speed", firstlpspeed) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "first_lp_time", firstlptime) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "final_dual_bound", dualboundroot) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "final_root_iterations", scip->stat->nrootlpiterations) );
+
+   if( scip->stat->rootlpbestestimate != SCIP_INVALID ) /*lint !e777*/
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "root_lp_estimate", SCIPretransformObj(scip, scip->stat->rootlpbestestimate)) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** outputs timing statistics
@@ -4085,6 +5315,66 @@ void SCIPprintTimingStatistics(
    }
 }
 
+/** collects timing statistics in SCIP_DATATREE
+ *
+ *  The following keys are set:
+ *  - "total_time": Total time spent in SCIP.
+ *  - "solving_time": Time spent solving the problem.
+ *  - "presolving_time": Time spent in presolving.
+ *  - "reading_time": Time spent reading the problem.
+ *  - "copy_time": Time spent copying the problem (if applicable).
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPcollectTimingStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   )
+{
+   SCIP_Real readingtime;
+
+   readingtime = SCIPgetReadingTime(scip);
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
+   {
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "total_time", readingtime) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "reading_time", readingtime) );
+   }
+   else
+   {
+      SCIP_Real totaltime;
+      SCIP_Real solvingtime;
+
+      solvingtime = SCIPclockGetTime(scip->stat->solvingtime);
+
+      if( scip->set->time_reading )
+         totaltime = solvingtime;
+      else
+         totaltime = solvingtime + readingtime;
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "total_time", totaltime) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "solving_time", solvingtime) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "presolving_time", SCIPclockGetTime(scip->stat->presolvingtime)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "reading_time", readingtime) );
+
+      if( scip->stat->ncopies > 0 )
+      {
+         SCIP_Real copytime;
+
+         copytime = SCIPclockGetTime(scip->stat->copyclock);
+         SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "copy_time", copytime) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** outputs expression handler statistics
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
@@ -4142,6 +5432,53 @@ void SCIPprintExpressionHandlerStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10lld", SCIPexprhdlrGetNSimplifications(exprhdlr));
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
    }
+}
+
+/** collects expression handler statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectExpressionHandlerStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* exprhdlrstree;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectExpressionHandlerStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Create a subtree for expression handler statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &exprhdlrstree, "expression_handlers", scip->set->nexprhdlrs) );
+
+   for( i = 0; i < scip->set->nexprhdlrs; ++i )
+   {
+      SCIP_DATATREE* exprhdlrdata;
+      SCIP_EXPRHDLR* exprhdlr = scip->set->exprhdlrs[i];
+      assert(exprhdlr != NULL);
+
+      /* Skip unused expression handlers */
+      if( SCIPexprhdlrGetNCreated(exprhdlr) == 0 )
+         continue;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree( scip, exprhdlrstree, &exprhdlrdata, SCIPexprhdlrGetName(exprhdlr), 13) );
+
+      SCIP_CALL( SCIPinsertDatatreeString(scip, exprhdlrdata, "description", SCIPexprhdlrGetDescription(exprhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, exprhdlrdata, "inteval_calls", SCIPexprhdlrGetNIntevalCalls(exprhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, exprhdlrdata, "inteval_time", SCIPexprhdlrGetIntevalTime(exprhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, exprhdlrdata, "reverseprop_calls", SCIPexprhdlrGetNReversepropCalls(exprhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, exprhdlrdata, "reverseprop_time", SCIPexprhdlrGetReversepropTime(exprhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, exprhdlrdata, "domain_reductions", SCIPexprhdlrGetNDomainReductions(exprhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, exprhdlrdata, "cutoffs", SCIPexprhdlrGetNCutoffs(exprhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, exprhdlrdata, "estimate_calls", SCIPexprhdlrGetNEstimateCalls(exprhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, exprhdlrdata, "estimate_time", SCIPexprhdlrGetEstimateTime(exprhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, exprhdlrdata, "branchings", SCIPexprhdlrGetNBranchings(exprhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, exprhdlrdata, "simplify_calls", SCIPexprhdlrGetNSimplifyCalls(exprhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, exprhdlrdata, "simplify_time", SCIPexprhdlrGetSimplifyTime(exprhdlr)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, exprhdlrdata, "simplifications", SCIPexprhdlrGetNSimplifications(exprhdlr)) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** outputs NLPI statistics
@@ -4224,11 +5561,179 @@ void SCIPprintNLPIStatistics(
    }
 }
 
+/** give name of NLP termination status as string */
+static
+const char* nlptermstatToString(
+   SCIP_NLPTERMSTAT      termstat            /**< NLP termination status */
+   )
+{
+   switch(termstat)
+   {
+      case SCIP_NLPTERMSTAT_OKAY:         return "okay";
+      case SCIP_NLPTERMSTAT_TIMELIMIT:    return "time_limit";
+      case SCIP_NLPTERMSTAT_ITERLIMIT:    return "iter_limit";
+      case SCIP_NLPTERMSTAT_LOBJLIMIT:    return "lower_obj_limit";
+      case SCIP_NLPTERMSTAT_INTERRUPT:    return "interrupt";
+      case SCIP_NLPTERMSTAT_NUMERICERROR: return "numeric_error";
+      case SCIP_NLPTERMSTAT_EVALERROR:    return "eval_error";
+      case SCIP_NLPTERMSTAT_OUTOFMEMORY:  return "out_of_memory";
+      case SCIP_NLPTERMSTAT_LICENSEERROR: return "license_error";
+      case SCIP_NLPTERMSTAT_OTHER:        return "other";
+      default:                            return "unknown";
+   }
+}
+
+/** give name of NLP solution status as string */
+static
+const char* nlpsolstatToString(
+   SCIP_NLPSOLSTAT       solstat             /**< NLP solution status */
+   )
+{
+   switch(solstat)
+   {
+      case SCIP_NLPSOLSTAT_GLOBOPT:         return "global_optimum";
+      case SCIP_NLPSOLSTAT_LOCOPT:          return "local_optimum";
+      case SCIP_NLPSOLSTAT_FEASIBLE:        return "feasible";
+      case SCIP_NLPSOLSTAT_LOCINFEASIBLE:   return "locally_infeasible";
+      case SCIP_NLPSOLSTAT_GLOBINFEASIBLE:  return "globally_infeasible";
+      case SCIP_NLPSOLSTAT_UNBOUNDED:       return "unbounded";
+      case SCIP_NLPSOLSTAT_UNKNOWN:         return "unknown";
+      default:                              return "invalid";
+   }
+}
+
+/** collects NLPI statistics in a SCIP_DATATREE object */
+SCIP_RETCODE SCIPcollectNLPIStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* nlpistree;
+   int i;
+
+   assert(scip != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectNLPIStatistics", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* Create a subtree for NLPI statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &nlpistree, "nlp_solvers", scip->set->nnlpis) );
+
+   for( i = 0; i < scip->set->nnlpis; ++i )
+   {
+      SCIP_DATATREE* nlpidata;
+      SCIP_Real solvetime;
+      SCIP_Real evaltime;
+      SCIP_Longint niter;
+
+      SCIP_NLPI* nlpi = scip->set->nlpis[i];
+      assert(nlpi != NULL);
+
+      /* Skip unused NLP solvers */
+      if( SCIPnlpiGetNProblems(nlpi) == 0 )
+         continue;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, nlpistree, &nlpidata, SCIPnlpiGetName(nlpi), 8 + (int)SCIP_NLPTERMSTAT_OTHER + 1 + (int)SCIP_NLPSOLSTAT_UNKNOWN + 1) );
+
+      solvetime = SCIPnlpiGetSolveTime(nlpi);
+      evaltime = scip->set->time_nlpieval ? SCIPnlpiGetEvalTime(nlpi) : 0.0;
+      niter = SCIPnlpiGetNIterations(nlpi);
+
+      SCIP_CALL( SCIPinsertDatatreeString(scip, nlpidata, "description", SCIPnlpiGetDesc(nlpi)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, nlpidata, "problems", SCIPnlpiGetNProblems(nlpi)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, nlpidata, "problem_time", SCIPnlpiGetProblemTime(nlpi)) );
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, nlpidata, "solves", SCIPnlpiGetNSolves(nlpi)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, nlpidata, "solve_time", solvetime) );
+      if( scip->set->time_nlpieval )
+      {
+         SCIP_CALL( SCIPinsertDatatreeReal(scip, nlpidata, "eval_time_percentage", solvetime > 0.0 ? 100.0 * evaltime / solvetime : 0.0) );
+      }
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, nlpidata, "iterations", niter) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, nlpidata, "time_per_iteration", niter > 0 ? solvetime / niter : 0.0) );
+
+      for( int j = (int)SCIP_NLPTERMSTAT_OKAY; j <= (int)SCIP_NLPTERMSTAT_OTHER; ++j )
+      {
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, nlpidata, nlptermstatToString((SCIP_NLPTERMSTAT)j), SCIPnlpiGetNTermStat(nlpi, (SCIP_NLPTERMSTAT)j)) );
+      }
+
+      for( int j = (int)SCIP_NLPSOLSTAT_GLOBOPT; j <= (int)SCIP_NLPSOLSTAT_UNKNOWN; ++j )
+      {
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, nlpidata, nlpsolstatToString((SCIP_NLPSOLSTAT)j), SCIPnlpiGetNSolStat(nlpi, (SCIP_NLPSOLSTAT)j)) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** comparison method for statistics tables */
 static
 SCIP_DECL_SORTPTRCOMP(tablePosComp)
 {  /*lint --e{715}*/
    return (SCIPtableGetPosition((SCIP_TABLE*)elem1) - (SCIPtableGetPosition((SCIP_TABLE*)elem2)));
+}
+
+/** outputs solving statistics in JSON format
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @note If limits have been changed between the solution and the call to this function, the status is recomputed and
+ *        thus may correspond to the original status.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_RETCODE SCIPprintStatisticsJson(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   SCIP_DATATREE* datatree;
+   SCIP_DATATREE* tabledatatree;
+   SCIP_TABLE** tables;
+   int ntables;
+   int i;
+
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPprintStatisticsJson", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   ntables = SCIPgetNTables(scip);
+   tables = SCIPgetTables(scip);
+
+   /* sort all tables by position unless this has already been done */
+   if( !scip->set->tablessorted )
+   {
+      SCIPsortPtr((void**)tables, tablePosComp, ntables);
+      scip->set->tablessorted = TRUE;
+   }
+
+   SCIP_CALL( SCIPcreateDatatree(scip, &datatree, ntables) );
+
+   for( i = 0; i < ntables; ++i )
+   {
+      /* Skip inactive tables or those not relevant to the current stage */
+      if( !SCIPtableIsActive(tables[i]) || (SCIPtableGetEarliestStage(tables[i]) > SCIPgetStage(scip)) )
+         continue;
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &tabledatatree, SCIPtableGetName(tables[i]), -1) );
+      SCIP_CALL( SCIPtableCollect(tables[i], scip->set, tabledatatree) );
+   }
+
+   SCIP_CALL( SCIPwriteDatatreeJson(scip, file, datatree) );
+
+   SCIPfreeDatatree(scip, &datatree);
+
+   return SCIP_OKAY;
 }
 
 /** outputs solving statistics
@@ -4281,7 +5786,7 @@ SCIP_RETCODE SCIPprintStatistics(
       if( ( ! SCIPtableIsActive(tables[i]) ) || SCIPtableGetEarliestStage(tables[i]) > SCIPgetStage(scip) )
          continue;
 
-      SCIP_CALL( SCIPtableOutput(tables[i], scip->set, file) );
+      SCIP_CALL( SCIPtableOutput(tables[i], scip->mem->probmem, scip->set, file) );
    }
 
    return SCIP_OKAY;
@@ -4490,6 +5995,169 @@ SCIP_RETCODE SCIPprintBranchingStatistics(
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
 }
+
+/** collects branching statistics about variables in a SCIP_DATATREE
+ *
+ * This function collects detailed branching statistics for all variables in the SCIP instance and organizes them into
+ * a hierarchical structure in the provided `SCIP_DATATREE`. The statistics include locks, branchings, inferences,
+ * cutoffs, pseudocosts, and strong branching information.
+ *
+ * The `datatree` will contain the following keys:
+ * - `variables`: A nested table keyed by variable names, containing:
+ *   - `name`: Name of the variable.
+ *   - `priority`: Branching priority of the variable.
+ *   - `factor`: Branching factor of the variable.
+ *   - `locks_down`: Number of locks in the down direction.
+ *   - `locks_up`: Number of locks in the up direction.
+ *   - `avg_depth`: Average branching depth for the variable.
+ *   - `branchings_down`: Number of branchings in the down direction.
+ *   - `branchings_up`: Number of branchings in the up direction.
+ *   - `strong_branchings`: Number of strong branchings performed on the variable.
+ *   - `avg_inferences_down`: Average number of inferences per branching in the down direction.
+ *   - `avg_inferences_up`: Average number of inferences per branching in the up direction.
+ *   - `cutoff_rate_down`: Percentage of branchings in the down direction that led to cutoffs.
+ *   - `cutoff_rate_up`: Percentage of branchings in the up direction that led to cutoffs.
+ *   - `pseudocost_down`: Pseudocost in the down direction.
+ *   - `pseudocost_up`: Pseudocost in the up direction.
+ *   - `pseudocost_count_down`: Number of pseudocost updates in the down direction.
+ *   - `pseudocost_count_up`: Number of pseudocost updates in the up direction.
+ *   - `pseudocost_variance_down`: Variance of pseudocost in the down direction.
+ *   - `pseudocost_variance_up`: Variance of pseudocost in the up direction.
+ * - `total_branchings_down`: Total number of branchings in the down direction across all variables.
+ * - `total_branchings_up`: Total number of branchings in the up direction across all variables.
+ * - `total_strong_branchings`: Total number of strong branchings across all variables.
+ * - `avg_inferences_down`: Average inferences per branching in the down direction across all variables.
+ * - `avg_inferences_up`: Average inferences per branching in the up direction across all variables.
+ * - `avg_cutoff_rate_down`: Average cutoff rate for branchings in the down direction across all variables.
+ * - `avg_cutoff_rate_up`: Average cutoff rate for branchings in the up direction across all variables.
+ * - `status`: If the problem is not solved, a string indicating that statistics are not available.
+ *
+ * @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ * @return \ref SCIP_OKAY if everything worked. Otherwise, a suitable error code is returned.
+ */
+SCIP_RETCODE SCIPcollectBranchingStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DATATREE*        datatree            /**< data tree */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcollectBranchingStatistics", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   switch( scip->set->stage )
+   {
+      case SCIP_STAGE_INIT:
+      case SCIP_STAGE_PROBLEM:
+         SCIP_CALL( SCIPinsertDatatreeString(scip, datatree, "status", "problem not yet solved. branching statistics not available.") );
+         return SCIP_OKAY;
+
+      case SCIP_STAGE_TRANSFORMED:
+      case SCIP_STAGE_INITPRESOLVE:
+      case SCIP_STAGE_PRESOLVING:
+      case SCIP_STAGE_EXITPRESOLVE:
+      case SCIP_STAGE_PRESOLVED:
+      case SCIP_STAGE_SOLVING:
+      case SCIP_STAGE_SOLVED:
+      {
+         SCIP_DATATREE* varsdtree;
+         SCIP_VAR** vars;
+         int totalnstrongbranchs = 0;
+         int v;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars, scip->transprob->nvars) );
+
+         /* Sort variables by name */
+         for( v = 0; v < scip->transprob->nvars; ++v )
+         {
+            SCIP_VAR* var = scip->transprob->vars[v];
+            int i;
+
+            for( i = v; i > 0 && strcmp(SCIPvarGetName(var), SCIPvarGetName(vars[i-1])) < 0; i-- )
+               vars[i] = vars[i-1];
+            vars[i] = var;
+         }
+
+         SCIP_CALL( SCIPcreateDatatreeInTree( scip, datatree, &varsdtree, "variables", scip->transprob->nvars + 7 ) );
+
+         /* Collect statistics for each variable */
+         for( v = 0; v < scip->transprob->nvars; ++v )
+         {
+            if( SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS) > 0 ||
+               SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS) > 0 ||
+               SCIPgetVarNStrongbranchs(scip, vars[v]) > 0 )
+            {
+               SCIP_DATATREE* vardtree;
+               int nstrongbranchs = SCIPgetVarNStrongbranchs(scip, vars[v]);
+
+               totalnstrongbranchs += nstrongbranchs;
+
+               SCIP_CALL( SCIPcreateDatatreeInTree( scip, varsdtree, &vardtree, SCIPvarGetName( vars[v] ), 19 ) );
+
+               SCIP_CALL( SCIPinsertDatatreeString(scip, vardtree, "name", SCIPvarGetName(vars[v])) );
+               SCIP_CALL( SCIPinsertDatatreeInt(scip, vardtree, "priority", SCIPvarGetBranchPriority(vars[v])) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, vardtree, "factor", SCIPvarGetBranchFactor(vars[v])) );
+               SCIP_CALL( SCIPinsertDatatreeInt(scip, vardtree, "locks_down", SCIPvarGetNLocksDownType(vars[v], SCIP_LOCKTYPE_MODEL)) );
+               SCIP_CALL( SCIPinsertDatatreeInt(scip, vardtree, "locks_up", SCIPvarGetNLocksUpType(vars[v], SCIP_LOCKTYPE_MODEL)) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, vardtree, "avg_depth",
+                  (SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_DOWNWARDS) +
+                     SCIPvarGetAvgBranchdepth(vars[v], SCIP_BRANCHDIR_UPWARDS)) / 2.0 - 1.0) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, vardtree, "branchings_down", SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_DOWNWARDS)) );
+               SCIP_CALL( SCIPinsertDatatreeLong(scip, vardtree, "branchings_up", SCIPvarGetNBranchings(vars[v], SCIP_BRANCHDIR_UPWARDS)) );
+               SCIP_CALL( SCIPinsertDatatreeInt(scip, vardtree, "strong_branchings", nstrongbranchs) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, vardtree, "avg_inferences_down", SCIPvarGetAvgInferences(vars[v], scip->stat, SCIP_BRANCHDIR_DOWNWARDS)) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, vardtree, "avg_inferences_up", SCIPvarGetAvgInferences(vars[v], scip->stat, SCIP_BRANCHDIR_UPWARDS)) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, vardtree, "cutoff_rate_down", 100.0 * SCIPvarGetAvgCutoffs(vars[v], scip->stat, SCIP_BRANCHDIR_DOWNWARDS)) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, vardtree, "cutoff_rate_up", 100.0 * SCIPvarGetAvgCutoffs(vars[v], scip->stat, SCIP_BRANCHDIR_UPWARDS)) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, vardtree, "pseudocost_down", SCIPvarGetPseudocost(vars[v], scip->stat, -1.0)) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, vardtree, "pseudocost_up", SCIPvarGetPseudocost(vars[v], scip->stat, +1.0)) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, vardtree, "pseudocost_count_down", SCIPvarGetPseudocostCount(vars[v], SCIP_BRANCHDIR_DOWNWARDS)) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, vardtree, "pseudocost_count_up", SCIPvarGetPseudocostCount(vars[v], SCIP_BRANCHDIR_UPWARDS)) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, vardtree, "pseudocost_variance_down", SCIPvarGetPseudocostVariance(vars[v], SCIP_BRANCHDIR_DOWNWARDS, FALSE)) );
+               SCIP_CALL( SCIPinsertDatatreeReal(scip, vardtree, "pseudocost_variance_up", SCIPvarGetPseudocostVariance(vars[v], SCIP_BRANCHDIR_UPWARDS, FALSE)) );
+            }
+         }
+
+         /* add total statistics */
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "total_branchings_down", SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS)) );
+         SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "total_branchings_up", SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS)) );
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, datatree, "total_strong_branchings", totalnstrongbranchs));
+         SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "avg_inferences_down",
+            SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) > 0 ?
+            SCIPhistoryGetInferenceSum(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) /
+            (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) : 0.0) );
+         SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "avg_inferences_up",
+            SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) > 0 ?
+            SCIPhistoryGetInferenceSum(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) /
+            (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) : 0.0) );
+         SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "avg_cutoff_rate_down",
+            SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) > 0 ?
+            SCIPhistoryGetCutoffSum(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) /
+            (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS) : 0.0) );
+         SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "avg_cutoff_rate_up",
+            SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) > 0 ?
+            SCIPhistoryGetCutoffSum(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) /
+            (SCIP_Real)SCIPhistoryGetNBranchings(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS) : 0.0) );
+
+         SCIPfreeBufferArray(scip, &vars);
+         break;
+      }
+
+      default:
+         SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+         return SCIP_INVALIDCALL;
+   } /*lint !e788*/
+
+   return SCIP_OKAY;
+}
+
 
 /** outputs node information display line
  *

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -13986,7 +13986,8 @@ SCIP_ROW* SCIPcreateRowKnapsack(
 SCIP_RETCODE SCIPcleanupConssKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             onlychecked,        /**< should only checked constraints be cleaned up? */
-   SCIP_Bool*            infeasible          /**< pointer to return whether the problem was detected to be infeasible */
+   SCIP_Bool*            infeasible,         /**< pointer to return whether the problem was detected to be infeasible */
+   int*                  ndelconss           /**< pointer to count number of deleted constraints */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -14004,12 +14005,19 @@ SCIP_RETCODE SCIPcleanupConssKnapsack(
    nconss = onlychecked ? SCIPconshdlrGetNCheckConss(conshdlr) : SCIPconshdlrGetNActiveConss(conshdlr);
    conss = onlychecked ? SCIPconshdlrGetCheckConss(conshdlr) : SCIPconshdlrGetConss(conshdlr);
 
-   for( i = 0; i < nconss; ++i )
+   /* loop backwards since then deleted constraints do not interfere with the loop */
+   for( i = nconss - 1; i >= 0; --i )
    {
       SCIP_CALL( applyFixings(scip, conss[i], infeasible) );
 
       if( *infeasible )
          break;
+
+      if( SCIPconsGetData(conss[i])->nvars >= 1 )
+         continue;
+
+      SCIP_CALL( SCIPdelCons(scip, conss[i]) );
+      ++(*ndelconss);
    }
 
    return SCIP_OKAY;

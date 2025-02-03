@@ -3,7 +3,7 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+//*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 //*                                                                           */
 //*  Licensed under the Apache License, Version 2.0 (the "License");          */
 //*  you may not use this file except in compliance with the License.         */
@@ -122,6 +122,7 @@
 -emacro(530,va_*)
 -ecall(530,vsnprintf)
 -emacro(530,SCIPalloc*)
+-emacro(530,SCIPduplicate*)
 
 // ignoring return value of function
 -esym(534,printf,fprintf,fclose,fputs,fputc,fseek,fflush,strcat,strcpy,SCIPfclose,SCIPfseek,memset,memcpy,memmove)

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -61,6 +61,7 @@
 #include "scip/type_nlpi.h"
 #include "scip/type_concsolver.h"
 #include "scip/type_benders.h"
+#include "scip/type_iisfinder.h"
 #include "scip/type_expr.h"
 #include "scip/type_message.h"
 #include "scip/debug.h"
@@ -96,6 +97,7 @@ struct SCIP_Set
    SCIP_NODESEL**        nodesels;           /**< node selectors */
    SCIP_NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
    SCIP_BRANCHRULE**     branchrules;        /**< branching rules */
+   SCIP_IISFINDER**      iisfinders;         /**< irreducible infeasible subsystem (IIS) rules */
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_TABLE**          tables;             /**< statistics tables */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
@@ -142,6 +144,8 @@ struct SCIP_Set
    int                   nodeselssize;       /**< size of nodesels array */
    int                   nbranchrules;       /**< number of branching rules */
    int                   branchrulessize;    /**< size of branchrules array */
+   int                   niisfinders;        /**< number of IIS rules */
+   int                   iisfinderssize;     /**< size of IIS finders array */
    int                   ndisps;             /**< number of display columns */
    int                   dispssize;          /**< size of disps array */
    int                   ntables;            /**< number of statistics tables */
@@ -183,6 +187,7 @@ struct SCIP_Set
    SCIP_Bool             comprsnamesorted;   /**< are the compressions sorted by name? */
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
+   SCIP_Bool             iisfinderssorted;   /**< are the IIS rules sorted by priority */
    SCIP_Bool             tablessorted;       /**< are the tables sorted by position? */
    SCIP_Bool             exprhdlrssorted;    /**< are the expression handlers sorted by name? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
@@ -322,6 +327,16 @@ struct SCIP_Set
    SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
    SCIP_Bool             history_allowmerge; /**< should variable histories be merged from sub-SCIPs whenever possible? */
    SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
+
+   /* IIS settings */
+   SCIP_Bool             iisfinder_minimal;       /**< should the resultant infeasible set be irreducible, i.e., an IIS not an IS */
+   SCIP_Bool             iisfinder_removebounds;  /**< should bounds of the problem be considered for removal */
+   SCIP_Bool             iisfinder_silent;        /**< should the IIS finders be run silently */
+   SCIP_Bool             iisfinder_stopafterone;  /**< should the IIS search stop after a single IIS finder is run (excluding post processing) */
+   SCIP_Bool             iisfinder_removeunusedvars; /**< should vars that do not feature in any constraints be removed at the end of the IIS process */
+   SCIP_Real             iisfinder_time;          /**< maximal time in seconds for all IIS finders to run */
+   SCIP_Longint          iisfinder_nodes;         /**< maximal number of nodes to process for all IIS finders (-1: no limit) */
+
 
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -103,7 +103,6 @@
 #define LPLIMFAC                 4.0
 #define DEFAULT_INITDURINGROOT FALSE
 #define DEFAULT_MAXCALLSSAMESOL  -1   /**< number of allowed executions of the heuristic on the same incumbent solution */
-#define DEFAULT_HEURTIMELIMIT    60.0 /**< time limit for a single heuristic run */
 
 /*
  * bandit algorithm parameters
@@ -467,7 +466,6 @@ struct SCIP_HeurData
    SCIP_Bool             initduringroot;     /**< should the heuristic be executed multiple times during the root node? */
    int                   maxnconflicts;      /**< maximum number of conflicts detected by diving heur so far */
    SCIP_Bool             defaultroot;        /**< should the default priorities be used at the root node */
-   SCIP_Real             heurtimelimit;      /**< time limit for a single heuristic run */
    /* bandit algorithm parameters */
    SCIP_Real             exp3_gamma;         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
    SCIP_Real             exp3_beta;          /**< reward offset between 0 and 1 at every observation for exp3 */
@@ -635,15 +633,14 @@ void updateFixingRate(
    case SCIP_STATUS_STALLNODELIMIT:
    case SCIP_STATUS_USERINTERRUPT:
    case SCIP_STATUS_TERMINATE:
-   case SCIP_STATUS_TIMELIMIT:
    case SCIP_STATUS_NODELIMIT:
       /* increase the fixing rate (make the subproblem easier) only if no solution was found */
       if( runstats->nbestsolsfound <= 0 )
          increaseFixingRate(fx);
       break;
-      /* fall through cases to please lint */
    case SCIP_STATUS_UNKNOWN:
    case SCIP_STATUS_TOTALNODELIMIT:
+   case SCIP_STATUS_TIMELIMIT:
    case SCIP_STATUS_MEMLIMIT:
    case SCIP_STATUS_GAPLIMIT:
    case SCIP_STATUS_PRIMALLIMIT:
@@ -1092,6 +1089,92 @@ void printNeighborhoodStatistics(
    }
 }
 
+/** collects neighborhood statistics into a SCIP_DATATREE object */
+static
+SCIP_RETCODE collectNeighborhoodStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   int i;
+   int j;
+   HISTINDEX statusses[] = {HIDX_OPT, HIDX_INFEAS, HIDX_NODELIM, HIDX_STALLNODE, HIDX_SOLLIM, HIDX_USR, HIDX_OTHER};
+   const char* statusnames[] = {"optimal", "infeasible", "nodelimit", "stallnodelimit", "sollimit", "userinterrupt", "other"};
+   SCIP_DATATREE* lnsstats;
+
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(datatree != NULL);
+
+   /* Create a subtree for LNS statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &lnsstats, "plugins", -1) );
+
+   /* Loop over neighborhoods and collect statistics */
+   for( i = 0; i < heurdata->nneighborhoods; ++i )
+   {
+      SCIP_DATATREE* neighborhoodtree;
+      SCIP_DATATREE* statushist;
+      const char* statusname;
+      NH* neighborhood = heurdata->neighborhoods[i];
+      assert(neighborhood != NULL);
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, lnsstats, &neighborhoodtree, neighborhood->name, -1) );
+
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, neighborhoodtree, "calls", neighborhood->stats.nruns) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "setup_time", SCIPgetClockTime(scip, neighborhood->stats.setupclock)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "solve_time", SCIPgetClockTime(scip, neighborhood->stats.execclock)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, neighborhoodtree, "solve_nodes", neighborhood->stats.usednodes) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, neighborhoodtree, "solutions_found", neighborhood->stats.nsolsfound) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, neighborhoodtree, "best_solutions_found", neighborhood->stats.nbestsolsfound) );
+
+      SCIP_Real proba = 0.0;
+      SCIP_Real probaix = 0.0;
+      SCIP_Real ucb = 1.0;
+      SCIP_Real epsgreedyweight = -1.0;
+
+      if( heurdata->bandit != NULL && i < heurdata->nactiveneighborhoods )
+      {
+         switch( heurdata->banditalgo )
+         {
+            case 'u':
+               ucb = SCIPgetConfidenceBoundUcb(heurdata->bandit, i + heurdata->ndiving);
+               break;
+            case 'g':
+               epsgreedyweight = SCIPgetWeightsEpsgreedy(heurdata->bandit)[i + heurdata->ndiving];
+               break;
+            case 'e':
+               proba = SCIPgetProbabilityExp3(heurdata->bandit, i + heurdata->ndiving);
+               break;
+            case 'i':
+               probaix = SCIPgetProbabilityExp3IX(heurdata->bandit, i + heurdata->ndiving);
+               break;
+            default:
+               break;
+         }
+      }
+
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "exp3_probability", proba) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "exp3_ix_probability", probaix) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "eps_greedy_weight", epsgreedyweight) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "ucb", ucb) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, neighborhoodtree, "target_fixing_rate", neighborhood->fixingrate.targetfixingrate) );
+
+      /* Status histogram */
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, neighborhoodtree, &statushist, "status_histogram", -1) );
+      for( j = 0; j < NHISTENTRIES; ++j )
+      {
+         statusname = statusnames[j];
+         SCIP_CALL( SCIPinsertDatatreeInt(scip, statushist, statusname, neighborhood->stats.statushist[statusses[j]]) );
+      }
+
+      /* Active flag */
+      SCIP_CALL( SCIPinsertDatatreeBool(scip, neighborhoodtree, "active", i < heurdata->nactiveneighborhoods ? 1 : 0) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** print diving heuristic statistics */
 static
 void printDivingHeurStatistics(
@@ -1160,6 +1243,77 @@ void printDivingHeurStatistics(
    }
 }
 
+/** collects diving heuristic statistics into a SCIP_DATATREE object */
+static
+SCIP_RETCODE collectDivingHeurStatistics(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_DATATREE*        datatree            /**< data tree */
+)
+{
+   SCIP_DATATREE* divingstats;
+   int i;
+
+   assert(scip != NULL);
+   assert(heurdata != NULL);
+   assert(datatree != NULL);
+
+   /* Create a subtree for diving heuristic statistics */
+   SCIP_CALL( SCIPcreateDatatreeInTree(scip, datatree, &divingstats, "diving_statistics", -1) );
+
+   /* Loop over diving heuristics and collect statistics */
+   for( i = 0; i < heurdata->ndiving; ++i )
+   {
+      DIVING_HEUR* divingheur = heurdata->divingheurs[i];
+      SCIP_DATATREE* divingtree;
+      assert(divingheur != NULL);
+
+      SCIP_CALL( SCIPcreateDatatreeInTree(scip, divingstats, &divingtree, SCIPdivesetGetName(divingheur->diveset), -1) );
+
+      SCIP_CALL( SCIPinsertDatatreeInt(scip, divingtree, "calls", divingheur->stats->nruns) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "setup_time", SCIPgetClockTime(scip, divingheur->stats->setupclock)) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "solve_time", SCIPgetClockTime(scip, divingheur->stats->execclock)) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, divingtree, "solve_nodes", divingheur->stats->nprobnodes) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, divingtree, "solutions_found", divingheur->stats->nsolsfound) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, divingtree, "best_solutions_found", divingheur->stats->nbestsolsfound) );
+
+      SCIP_Real proba = 0.0;
+      SCIP_Real probaix = 0.0;
+      SCIP_Real ucb = 1.0;
+      SCIP_Real epsgreedyweight = -1.0;
+
+      if( heurdata->bandit != NULL )
+      {
+         switch( heurdata->banditalgo )
+         {
+            case 'u':
+               ucb = SCIPgetConfidenceBoundUcb(heurdata->bandit, i);
+               break;
+            case 'g':
+               epsgreedyweight = SCIPgetWeightsEpsgreedy(heurdata->bandit)[i];
+               break;
+            case 'e':
+               proba = SCIPgetProbabilityExp3(heurdata->bandit, i);
+               break;
+            case 'i':
+               probaix = SCIPgetProbabilityExp3IX(heurdata->bandit, i);
+               break;
+            default:
+               break;
+         }
+      }
+
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "exp3_probability", proba) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "exp3_ix_probability", probaix) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "eps_greedy_weight", epsgreedyweight) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "ucb", ucb) );
+      SCIP_CALL( SCIPinsertDatatreeReal(scip, divingtree, "lp_resolve_quotient", divingheur->solvefreqdata->currentsolvefreq) );
+      SCIP_CALL( SCIPinsertDatatreeLong(scip, divingtree, "max_dive_depth", divingheur->nodelimit) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** update the statistics of the diving heuristic based on the heuristic run */
 static
 void updateHeurStatsDiving(
@@ -1193,17 +1347,18 @@ void updateHeurStatsDiving(
 static
 void updateHeurStatsLNS(
    HEUR_STATS*           runstats,           /**< run statistics */
-   NH*                   neighborhood,       /**< the selected neighborhood or NULL if diving was used */
-   SCIP_STATUS*          subscipstatus       /**< status of the sub-SCIP solve or NULL if diving was used */
+   NH*                   neighborhood,       /**< the selected neighborhood */
+   SCIP_STATUS*          subscipstatus       /**< status of the sub-SCIP solve */
    )
-{  /*lint --e{715}*/
+{
    HEUR_STATS* stats;
 
-   assert( subscipstatus != NULL );
-
-   stats = &neighborhood->stats;
+   assert(runstats != NULL);
+   assert(neighborhood != NULL);
+   assert(subscipstatus != NULL);
 
    /* update LNS specific statistics */
+   stats = &neighborhood->stats;
    stats->usednodes += runstats->usednodes;
    ++stats->statushist[getHistIndex(*subscipstatus)]; /* update the counter for the subscip status */
 
@@ -2002,10 +2157,12 @@ SCIP_RETCODE determineLimits(
 
    heurdata = SCIPheurGetData(heur);
 
-   /* set time and memory */
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &solvelimits->timelimit) );
+   if( ! SCIPisInfinity(scip, solvelimits->timelimit) )
+      solvelimits->timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &solvelimits->memorylimit) );
    SCIP_CALL( SCIPgetBoolParam(scip, "misc/avoidmemout", &avoidmemout) );
-   solvelimits->timelimit = heurdata->heurtimelimit;
 
    /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    if( ! SCIPisInfinity(scip, solvelimits->memorylimit) )
@@ -2016,13 +2173,14 @@ SCIP_RETCODE determineLimits(
 
    /* abort if no time is left or not enough memory (we don't abort in this case if misc_avoidmemout == FALSE)
    * to create a copy of SCIP, including external memory usage */
-   if( avoidmemout && solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+   if( solvelimits->timelimit <= 0.0 || (avoidmemout && solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0) )
    {
       SCIPdebugMsg(scip, "Aborting LNS heuristic call: Not enough memory or time left.\n");
       *runagain = FALSE;
       return SCIP_OKAY;
    }
 
+   /* TODO: set stalling limit */
    solvelimits->stallnodes = -1;
    solvelimits->nodelimit = (SCIP_Longint) heurdata->neighborhoods[selection]->nodelimit;
 
@@ -2035,8 +2193,7 @@ SCIP_Real getReward(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data of the scheduler neighborhood */
    int                   selection,          /**< index of selected heuristic */
-   HEUR_STATS*           runstats,           /**< run statistics */
-   SCIP_STATUS           subscipstatus       /**< status of the sub-SCIP if LNS was used */
+   HEUR_STATS*           runstats            /**< run statistics */
    )
 {
    SCIP_Real totalreward;
@@ -2051,11 +2208,6 @@ SCIP_Real getReward(
    else
       effortsaved = MIN(1.0, (SCIP_Real) runstats->usednodes / (SCIP_Real)heurdata->maxlnsnodelimit);
    effortsaved = (1.0 - effortsaved);
-
-   /* if LNS heuristic terminated because of the time limit, punish it */
-   if( selection > heurdata->ndiving && subscipstatus == SCIP_STATUS_TIMELIMIT )
-      effortsaved = 0.0;
-
    assert(effortsaved >= 0.0 && effortsaved <= 1.0);
    assert(heurdata->maxlnsnodelimit > 0);
    assert(heurdata->maxdivingnodelimit > 0);
@@ -2944,7 +3096,7 @@ SCIP_DECL_HEUREXEC(heurExecScheduler)
          updateHeurStatsLNS(stats, heurdata->neighborhoods[selection - heurdata->ndiving], &subscipstatus);
 
       /* observe reward */
-      reward = getReward(scip, heurdata, selection, stats, subscipstatus);
+      reward = getReward(scip, heurdata, selection, stats);
 
       /* call was successfull if solution was found */
       if( stats->nbestsolsfound > 0 )
@@ -4281,10 +4433,32 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNeighborhood)
    /* print only diving statistics if scheduler got executed at least once (because we only then
     * initialize the diving heuristics)
     * Note: More Diving statistics will be printed in scip_solvingstats.c with all other stats about
-    * diving since adaptive diving and the scheudler use the same diving context
+    * diving since adaptive diving and the scheduler use the same diving context
     */
    if( heurdata->divingheurs != NULL )
       printDivingHeurStatistics(scip, heurdata, file);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_TABLECOLLECT(tableCollectNeighborhood)
+{
+   assert(table != NULL);
+
+   SCIP_HEURDATA* heurdata;
+
+   assert(SCIPfindHeur(scip, HEUR_NAME) != NULL);
+   heurdata = SCIPheurGetData(SCIPfindHeur(scip, HEUR_NAME));
+   assert(heurdata != NULL);
+
+   /* print neighborhood statistics */
+   SCIP_CALL( collectNeighborhoodStatistics(scip, heurdata, datatree) );
+
+   if( heurdata->divingheurs != NULL )
+   {
+      SCIP_CALL( collectDivingHeurStatistics(scip, heurdata, datatree) );
+   }
 
    return SCIP_OKAY;
 }
@@ -4467,10 +4641,6 @@ SCIP_RETCODE SCIPincludeHeurScheduler(
          "tolerance by which the fixing rate may be exceeded without generic unfixing",
          &heurdata->unfixtol, TRUE, DEFAULT_UNFIXTOL, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/heurtimelimit",
-         "time limit for a single heuristic run",
-         &heurdata->heurtimelimit, TRUE, DEFAULT_HEURTIMELIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/initduringroot",
          "should the heuristic be executed multiple times during the root node?",
          &heurdata->initduringroot, TRUE, DEFAULT_INITDURINGROOT, NULL, NULL) );
@@ -4485,7 +4655,7 @@ SCIP_RETCODE SCIPincludeHeurScheduler(
 
    assert(SCIPfindTable(scip, TABLE_NAME_NEIGHBORHOOD) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NEIGHBORHOOD, TABLE_DESC_NEIGHBORHOOD, TRUE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNeighborhood,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNeighborhood, tableCollectNeighborhood,
          NULL, TABLE_POSITION_NEIGHBORHOOD, TABLE_EARLIEST_STAGE_NEIGHBORHOOD) );
 
    return SCIP_OKAY;

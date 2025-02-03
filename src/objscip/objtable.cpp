@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -48,6 +48,24 @@ struct SCIP_TableData
 };
 
 
+namespace scip
+{
+
+SCIP_DECL_TABLEOUTPUT(ObjTable::scip_output)
+{
+   SCIP_DATATREE* datatree;
+
+   SCIP_CALL( SCIPcreateDatatree(scip, &datatree, -1) );
+   SCIP_CALL( scip_collect(scip, table, datatree) );
+
+   SCIP_CALL( SCIPprintDatatreeAsTable(scip, datatree, file, scip_name_, scip_name_) );
+
+   SCIPfreeDatatree(scip, &datatree);
+
+   return SCIP_OKAY;
+}
+
+}
 
 
 /*
@@ -192,6 +210,23 @@ SCIP_DECL_TABLEOUTPUT(tableOutputObj)
 
    return SCIP_OKAY;
 }
+
+/** data collection method */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectObj)
+{  /*lint --e{715}*/
+   SCIP_TABLEDATA* tabledata;
+
+   tabledata = SCIPtableGetData(table);
+   assert(tabledata != NULL);
+   assert(tabledata->objtable != NULL);
+
+   /* call virtual method of statistics table object */
+   SCIP_CALL( tabledata->objtable->scip_collect(scip, table, datatree) );
+
+   return SCIP_OKAY;
+}
+
 }
 
 
@@ -220,7 +255,7 @@ SCIP_RETCODE SCIPincludeObjTable(
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, objtable->scip_name_, objtable->scip_desc_, TRUE,
          tableCopyObj, tableFreeObj, tableInitObj, tableExitObj, tableInitsolObj,
-         tableExitsolObj, tableOutputObj, tabledata, objtable->scip_position_, objtable->scip_earlieststage_) ); /*lint !e429*/
+         tableExitsolObj, tableOutputObj, tableCollectObj, tabledata, objtable->scip_position_, objtable->scip_earlieststage_) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

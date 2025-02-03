@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -204,7 +204,7 @@ SCIP_RETCODE SCIPincludeMytable(
    /* include statistics table */
    SCIP_CALL( SCIPincludeTable(scip, "my statistics table", "an example of a statistics table", TRUE,
           NULL, tableFreeMystatisticstable, NULL, NULL,
-          NULL, NULL, tableOutputMystatisticstable,
+          NULL, NULL, tableOutputMystatisticstable, NULL,
           tabledata, TABLE_POSITION, TABLE_EARLIEST_STAGE) );
 
    return SCIP_OKAY;

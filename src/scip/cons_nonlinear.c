@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -77,6 +77,7 @@
 #include "scip/prop_symmetry.h"
 #include "symmetry/struct_symmetry.h"
 #include "scip/pub_misc_sort.h"
+#include "scip/scip_datatree.h"
 
 
 /* fundamental constraint handler properties */
@@ -12256,7 +12257,7 @@ SCIP_DECL_CONSGETSIGNEDPERMSYMGRAPH(consGetSignedPermsymGraphNonlinear)
    return SCIP_OKAY;
 }
 
-/** output method of statistics table to output file stream 'file' */
+/** output method of cons_nonlinear statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
 { /*lint --e{715}*/
@@ -12286,7 +12287,37 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNonlinear)
    return SCIP_OKAY;
 }
 
-/** output method of statistics table to output file stream 'file' */
+/** collect method of cons_nonlinear statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectNonlinear)
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(table != NULL);
+   assert(datatree != NULL);
+
+   /* Find the constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* Insert statistics */
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "nweakseparation", conshdlrdata->nweaksepa) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "ntightenlp", conshdlrdata->ntightenlp) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "ndesperatetightenlp", conshdlrdata->ndesperatetightenlp) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "ndesperatebranch", conshdlrdata->ndesperatebranch) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "ndesperatecutoff", conshdlrdata->ndesperatecutoff) );
+   SCIP_CALL( SCIPinsertDatatreeLong(scip, datatree, "nforcelp", conshdlrdata->nforcelp) );
+   SCIP_CALL( SCIPinsertDatatreeReal(scip, datatree, "canonicalizationtime", SCIPgetClockTime(scip, conshdlrdata->canonicalizetime)) );
+
+   return SCIP_OKAY;
+}
+
+/** output method of nlhdlr statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputNlhdlr)
 { /*lint --e{715}*/
@@ -12305,6 +12336,29 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNlhdlr)
 
    /* print statistics for nonlinear handlers */
    SCIPnlhdlrPrintStatistics(scip, conshdlrdata->nlhdlrs, conshdlrdata->nnlhdlrs, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of nlhdlr statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectNlhdlr)
+{ /*lint --e{715}*/
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   /* skip nlhdlr table if there never were active nonlinear constraints */
+   if( SCIPconshdlrGetMaxNActiveConss(conshdlr) == 0 )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* collect statistics for nonlinear handlers */
+   SCIP_CALL( SCIPnlhdlrCollectStatistics(scip, conshdlrdata->nlhdlrs, conshdlrdata->nnlhdlrs, datatree) );
 
    return SCIP_OKAY;
 }
@@ -12561,12 +12615,12 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    /* include tables for statistics */
    assert(SCIPfindTable(scip, TABLE_NAME_NONLINEAR) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NONLINEAR, TABLE_DESC_NONLINEAR, FALSE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNonlinear,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNonlinear, tableCollectNonlinear,
          NULL, TABLE_POSITION_NONLINEAR, TABLE_EARLIEST_STAGE_NONLINEAR) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_NLHDLR) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLHDLR, TABLE_DESC_NLHDLR, TRUE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNlhdlr,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputNlhdlr, tableCollectNlhdlr,
          NULL, TABLE_POSITION_NLHDLR, TABLE_EARLIEST_STAGE_NLHDLR) );
 
    /* create, include, and release display nlhdlrs dialog */
