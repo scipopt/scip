@@ -272,22 +272,7 @@ SCIP_Longint SCIPconflictGetNResCalls(
    return conflict->nrescalls;
 }
 
-SCIP_Longint SCIPconflictGetNIntReductionCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nintreductioncalls;
-}
-SCIP_Longint SCIPconflictGetNIntReductionSuccess(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nintreductionsuccess;
-}
+/** gets number of calls the mixed binary reduction was successful in conflict analysis */
 SCIP_Longint SCIPconflictGetNIntReductionSuccessMbred(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    )
@@ -295,35 +280,6 @@ SCIP_Longint SCIPconflictGetNIntReductionSuccessMbred(
    assert(conflict != NULL);
 
    return conflict->nintreductionsuccessmbred;
-}
-
-SCIP_Longint SCIPconflictGetNIntReductionFails(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nintreductionfails;
-}
-
-/** gets number of calls that resolution conflict analysis stopped for an unknown reason */
-SCIP_Longint SCIPconflictGetNResUnkTerm(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nrescalls - conflict->nressuccess - conflict->nknownaborts;
-}
-
-/** gets the number of unresolvable bound changes */
-SCIP_Longint SCIPconflictGetNUnresolvable(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   )
-{
-   assert(conflict != NULL);
-
-   return conflict->nunresolvable;
 }
 
 #ifdef SCIP_DEBUG
@@ -2321,7 +2277,6 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    /* do not add long conflicts */
    if( conflictrow->nnz > maxsize )
    {
-      conflict->nknownaborts++;
       conflict->nreslongconfs++;
       SCIPsetDebugMsgPrint(set, " \t -> conflict row is too long: %d > %d nnzs\n", conflictrow->nnz, maxsize);
    }
@@ -2407,7 +2362,6 @@ SCIP_RETCODE SCIPconflictAddConflictCon(
    }
    else
    {
-      conflict->nknownaborts++;
       SCIPsetDebugMsgPrint(set, " \t -> conflict row has relaxation only variable \n");
       return SCIP_OKAY;
    }
@@ -2963,11 +2917,7 @@ SCIP_RETCODE rescaleAndResolve(
    if ( SCIPsetIsGE(set, scale, set->conf_generalresminmaxquot) )
    {
       SCIPsetDebugMsgPrint(set, "Scale %f exceeds max allowed scale %f \n", scale, set->conf_generalresminmaxquot);
-      if( !conflict->haslargecoef )
-      {
-         conflict->haslargecoef = TRUE;
-         conflict->nreslargecoefs++;
-      }
+      conflict->nreslargecoefs++;
       return SCIP_OKAY;
    }
 
@@ -3011,11 +2961,7 @@ SCIP_RETCODE rescaleAndResolve(
    resolvedrow->coefquotient = (resolvedrow->nnz > 0) ? fabs(largestcoef / smallestcoef) : 0.0;
    if ( SCIPsetIsGT(set, resolvedrow->coefquotient, set->conf_generalresminmaxquot) )
    {
-      if( !conflict->haslargecoef )
-      {
-         conflict->haslargecoef = TRUE;
-         conflict->nreslargecoefs++;
-      }
+      conflict->nreslargecoefs++;
       SCIPsetDebugMsgPrint(set, "Quotient %f exceeds max allowed quotient", (resolvedrow->nnz > 0) ? fabs(largestcoef / smallestcoef) : 0.0);
       return SCIP_OKAY;
    }
@@ -3619,20 +3565,14 @@ SCIP_RETCODE executeResolutionStep(
 
    SCIP_CALL( computeSlack(set, vars, resolvedconflictrow, currbdchginfo, fixbounds, fixinds) );
 
-   SCIP_Bool globalcontribution;
-   SCIP_CALL( globalContribution(set, vars, reasonrow, currbdchginfo, fixbounds, fixinds, &globalcontribution) );
-   if (!(globalcontribution))
-   {
-      conflict->nintreductioncalls++;
-      if( SCIPsetIsLT(set, resolvedconflictrow->slack, 0.0) )
-         conflict->nintreductionsuccess++;
-      else
-         conflict->nintreductionfails++;
-   }
 
    /* if the resolvent is not infeasible under the local domain, try to reduce the reason row */
    if( SCIPsetIsGE(set, resolvedconflictrow->slack, 0.0) )
    {
+      SCIP_Bool globalcontribution;
+
+      SCIP_CALL( globalContribution(set, vars, reasonrow, currbdchginfo, fixbounds, fixinds, &globalcontribution) );
+
       /* if we do not want to apply any reduction to the reason we just abort */
       if( set->conf_reductiontechnique == 'o' )
          return SCIP_OKAY;
@@ -3949,7 +3889,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
 {
    SCIP_CONFLICTROW *conflictrow;
    SCIP_CONFLICTROW *resolvedconflictrow;
-   SCIP_CONFLICTROW *reasonrow;
 
    SCIP_BDCHGINFO* bdchginfo;
    SCIP_BDCHGINFO* nextbdchginfo;
@@ -4000,17 +3939,13 @@ SCIP_RETCODE conflictAnalyzeResolution(
     */
    maxvaliddepth = (set->conf_resallowlocal ? MIN(currentdepth-1, focusdepth) : 0);
    if( validdepth > maxvaliddepth )
-   {
-      conflict->nknownaborts++;
       return SCIP_OKAY;
-   }
 
    vars = SCIPprobGetVars(transprob);
    nvars = transprob->nvars;
 
    conflictrow = conflict->conflictrow;
    resolvedconflictrow = conflict->resolvedconflictrow;
-   reasonrow = conflict->reasonrow;
 
    /* clear the conflict, reason, resolved conflict rows */
    conflictRowClear(blkmem, conflict->conflictrow, nvars);
@@ -4030,7 +3965,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
       if(bdchginfo != NULL)
          printAllBoundChanges(conflict, set, FALSE);
 #endif
-      conflict->nknownaborts++;
       SCIPsetDebugMsgPrint(set, "Conflict analysis not applicable since no resolvable bounds exist \n");
       return SCIP_OKAY;
    }
@@ -4048,13 +3982,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
    /* calculate the maximal size of each accepted conflict set */
    maxsize = 2 * conflictCalcResMaxsize(set, transprob);
 
-   /* sets the initial conflict row for the bound change directly in conflict->conflictrow */
+   /* sets the initial conflictrow */
    SCIP_CALL( getConflictRow(conflict, blkmem, set, transprob, initialconflictrow, bdchginfo, maxsize, &successgetconflict) );
    /* if we could not get the conflict row, then we abort */
    if( !successgetconflict )
    {
       SCIPsetDebugMsgPrint(set, "Conflict analysis not applicable since no conflict row could be created \n");
-      conflict->nknownaborts++;
       return SCIP_OKAY;
    }
 
@@ -4087,7 +4020,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
    for( i = 0; i < nvars; ++i )
       fixinds[i] = 0;
 
-   /** main loop: All-FUIP RESOLUTION
+   /** main loop:
     * --------------------------------
     * - we start with the initial conflict row and the first bound change to
     *   resolve
@@ -4098,12 +4031,12 @@ SCIP_RETCODE conflictAnalyzeResolution(
     *   this variable (resolve with no-good)
     * - if the bound change is resolvable:
     *    - get the reason row for the bound change
-    *    - apply CG/MIR/Coef.Tightening reduction to the reason
+    *    - if needed apply the MIR reduction to the reason
     *    - take the linear combination of the conflict row and the reason row
-    *    - apply coefficient tightening to the resolved row (maybe also cMIR?)
+    *    - apply coefficient tightening to the resolved row
     * - if there is no other bound change in the queue from the same depth level
     *   then we are at a UIP
-    *    - keep this constraint and either terminate 1-FUIP resolution or continue
+    * - keep this constraint and either terminate 1-FUIP resolution or continue
     *      with the next bound change
     */
    while( TRUE )  /*lint !e716*/
@@ -4127,10 +4060,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          SCIP_CALL( fixBoundChangeWithoutResolving(conflict, set, vars, &bdchginfo, &bdchgdepth, nressteps,
                         fixbounds, fixinds, &successfixing) );
          if( !successfixing )
-         {
-            conflict->nknownaborts++;
             goto TERMINATE_RESOLUTION_LOOP;
-         }
 
          assert(bdchginfo != NULL);
 
@@ -4140,7 +4070,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
          vartoresolve = SCIPbdchginfoGetVar(bdchginfo);
          /* check if the variable we are resolving is active */
          assert(SCIPvarIsActive(vartoresolve));
-
       }
 
       /* here is the generalized resolution iteration */
@@ -4156,12 +4085,11 @@ SCIP_RETCODE conflictAnalyzeResolution(
          if( !successgetreason )
          {
             SCIPsetDebugMsgPrint(set, "Could not obtain reason row for bound change \n");
-            conflict->nknownaborts++;
             goto TERMINATE_RESOLUTION_LOOP;
          }
 
-         SCIPdebug(printConflictRow(conflict->conflictrow, set, vars, CONFLICT_ROWTYPE));
-         SCIPdebug(printConflictRow(reasonrow, set, vars, REASON_ROWTYPE));
+         SCIPdebug(printConflictRow(conflictrow, set, vars, CONFLICT_ROWTYPE));
+         SCIPdebug(printConflictRow(conflict->reasonrow, set, vars, REASON_ROWTYPE));
 
          successresolution = FALSE;
 
@@ -4179,10 +4107,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
          {
             SCIP_CALL( resolveClauses(set, conflict, vars, bdchginfo, blkmem, residx, nvars, fixbounds, fixinds, &successresolution) );
             if (!successresolution)
-            {
-               conflict->nknownaborts++;
                goto TERMINATE_RESOLUTION_LOOP;
-            }
          }
 
          /* we must reset the conflict lower and upper bound to be able to add weaker bounds later */
@@ -4204,7 +4129,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
             if(conflictrow->nnz > maxsize)
             {
                conflict->nreslongconfs++;
-               conflict->nknownaborts++;
                goto TERMINATE_RESOLUTION_LOOP;
             }
 #ifdef SCIP_DEBUG
@@ -4217,47 +4141,24 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          SCIPsetDebugMsgPrint(set, "Slack of resolved row: %f \n", conflictrow->slack);
 
-         SCIPdebug(printConflictRow(conflict->conflictrow, set, vars, RESOLVED_CONFLICT_ROWTYPE));
+         SCIPdebug(printConflictRow(conflictrow, set, vars, RESOLVED_CONFLICT_ROWTYPE));
 
-         /** Unfortunately we cannot guarrante that the slack becomes zero after reducing the reason (even if we have only binary variables)
+         /** The slack is positive -> No conflict. Unfortunately we cannot guarrante that the slack
+          *  becomes zero after reducing the reason (even if we have only binary variables)
           *  Till now there are two major problems:
           *    - Knapsack constraints that use negated cliques in the propagation
           *    - Ranged row propagation (gcd argument)
           */
-
-         /* check that we fail for a valid reason */
          if (SCIPsetIsGE(set, conflictrow->slack, 0.0))
          {
-            if(isBinaryConflictRow(set, vars, conflictrow) && isBinaryConflictRow(set, vars, reasonrow))
+            if(isBinaryConflictRow(set, vars, conflictrow) && isBinaryConflictRow(set, vars, conflict->reasonrow) && set->conf_clausefallback)
             {
-               /* we can use clausal conflict analysis as a last resort */
-               if( set->conf_clausefallback )
-               {
                   SCIP_CALL( resolveClauses(set, conflict, vars, bdchginfo, blkmem, residx, nvars, fixbounds, fixinds, &successresolution) );
                   if (!successresolution)
-                  {
-                     conflict->nknownaborts++;
                      goto TERMINATE_RESOLUTION_LOOP;
-                  }
-               }
-               else if ( set->conf_reductiontechnique != 'o' )
-               {
-                  SCIPsetDebugMsgPrint(set, "Terminate for an unknown reason\n");
-                  conflict->nunresolvable++;
-                  goto TERMINATE_RESOLUTION_LOOP;
-               }
-               else
-               {
-                  conflict->nknownaborts++;
-                  goto TERMINATE_RESOLUTION_LOOP;
-               }
             }
             else
-            {
-               conflict->nknownaborts++;
-               conflict->nunresolvable++;
                goto TERMINATE_RESOLUTION_LOOP;
-            }
          }
 
          nressteps++;
@@ -4280,14 +4181,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
 
          /* if we reached this point the conflict constraint must have negative slack */
          assert(SCIPsetIsLT(set, conflictrow->slack, 0.0));
-
-         /* terminate after at most nressteps resolution iterations */
-         /* By default conf_maxnumressteps is -1 and hence no limit is set on the number of resolution steps */
-         if( set->conf_maxnumressteps > 0 && nressteps >= set->conf_maxnumressteps )
-         {
-            conflict->nknownaborts++;
-            goto TERMINATE_RESOLUTION_LOOP;
-         }
 
          SCIP_CALL( updateBdchgQueue(set, vars, conflictrow, bdchgidx) );
 
@@ -4343,7 +4236,7 @@ SCIP_RETCODE conflictAnalyzeResolution(
             SCIP_CALL( conflictRowCopy(&tmpconflictrow, blkmem, conflictrow) );
             SCIP_CALL( conflictInsertConflictRow(conflict, set, &tmpconflictrow) );
             lastuipdepth = bdchgdepth;
-            nfuips ++;
+            nfuips++;
             /* stop after conf_resfuiplevels UIPs */
             if (set->conf_resfuiplevels > 0 && nfuips >= set->conf_resfuiplevels)
                goto TERMINATE_RESOLUTION_LOOP;
@@ -4352,9 +4245,6 @@ SCIP_RETCODE conflictAnalyzeResolution(
    }
 
   TERMINATE_RESOLUTION_LOOP:
-
-   SCIPsetDebugMsgPrint(set, "Total number of conflict rows found %d\n", conflict->nconflictrows);
-   SCIPsetDebugMsgPrint(set, "Total number of FUIPS found %d\n", nfuips);
 
    if(conflict->nconflictrows > 0)
    {
@@ -4435,7 +4325,6 @@ SCIP_RETCODE SCIPconflictAnalyzeResolution(
 
    conflict->nconflictrows = 0;
    conflict->bdchgonlyresqueue = FALSE;
-   conflict->haslargecoef = FALSE;
 
    /* clear the bound change queues */
    SCIPpqueueClear(conflict->resbdchgqueue);

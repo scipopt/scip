@@ -176,7 +176,6 @@
 
 #define SCIP_DEFAULT_CONF_MAXVARSFRACRES   0.15 /**< maximal fraction of variables involved in a resolution conflict constraint */
 #define SCIP_DEFAULT_CONF_RESOLUTIONCONS     1  /**< number of resolution constraints to add (-1: add every conflict constraint) */
-#define SCIP_DEFAULT_CONF_MAXNUMRESSTEPS    -1  /**< maximal number of resolution steps in generalized resolution (-1: unlimited) */
 #define SCIP_DEFAULT_CONF_RESFUIPLEVELS      1  /**< number of depth levels up to which first UIP's are used in resolution conflict
                                                  *   analysis (-1: use All-FirstUIP rule) */
 #define SCIP_DEFAULT_CONF_CLAUSEFALLBACK   TRUE /**< should the clause version of generalized resolution conflict analysis be used as a fallback? */
@@ -1487,11 +1486,6 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/reconvlevels",
          "number of depth levels up to which UIP reconvergence constraints are generated (-1: generate reconvergence constraints in all depth levels)",
          &(*set)->conf_reconvlevels, TRUE, SCIP_DEFAULT_CONF_RECONVLEVELS, -1, INT_MAX,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "conflict/maxnumressteps",
-         "maximal number of resolution steps in generalized resolution (-1: resolve till (All) FirstUIP)",
-         &(*set)->conf_maxnumressteps, TRUE, SCIP_DEFAULT_CONF_MAXNUMRESSTEPS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "conflict/maxconss",

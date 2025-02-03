@@ -148,16 +148,10 @@ struct SCIP_Conflict
    SCIP_Longint          npropreconvconss;   /**< number of reconvergence constraints detected in propagation conflict analysis */
    SCIP_Longint          npropreconvliterals;/**< total number of literals in valid propagation reconvergence constraints */
    SCIP_Longint          nrescalls;          /**< number of calls to resolution conflict analysis */
-   SCIP_Longint          nintreductioncalls; /**< number of calls to reduction in resolution conflict analysis */
-   SCIP_Longint          nintreductionsuccess;/**< number of calls to reduction in resolution conflict analysis that succeeded */
    SCIP_Longint          nintreductionsuccessmbred;/**< number of calls to reduction in resolution conflict analysis that succeeded after mb reduction */
-   SCIP_Longint          nintreductionfails; /**< number of calls to reduction in resolution conflict analysis that failed */
    SCIP_Longint          nressuccess;        /**< number of calls yielding at least one conflict constraint */
    SCIP_Longint          nreslargecoefs;     /**< number of calls terminating because of large coefficients */
    SCIP_Longint          nreslongconfs;      /**< number of calls terminating because of long conflict rows */
-   SCIP_Longint          nknownaborts;       /**< count the number of calls that we terminate unsucessfully for a known reason */
-   SCIP_Longint          nunresolvable;      /**< count the number of calls that we terminate because we cannot resolve a continuous
-                                              *   or general integer bound change */
    SCIP_Longint          nresconfconss;      /**< number of valid conflict constraints detected in resolution conflict analysis */
    SCIP_Longint          nresconfvariables;  /**< total number of variables in valid resolution conflict constraints */
    SCIP_Longint          ninflpcalls;        /**< number of calls to infeasible LP conflict analysis */
@@ -240,7 +234,6 @@ struct SCIP_Conflict
    int                   conflictrowssize;   /**< size of conflictrows array */
    SCIP_Bool             bdchgonlyconfqueue; /**< if true we add bound changes only in graph conflict queues */
    SCIP_Bool             bdchgonlyresqueue;  /**< if true we add bound changes only in generalized resolution queues */
-   SCIP_Bool             haslargecoef;       /**< if true we have a large coefficient in the conflict constraint */
    SCIP_Bool             reasonclauseres;    /**< if true we have a reason clause resolution */
 
 };

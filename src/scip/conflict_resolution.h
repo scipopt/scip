@@ -90,33 +90,8 @@ SCIP_Longint SCIPconflictGetNResCalls(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
-SCIP_Longint SCIPconflictGetNIntReductionCalls(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-SCIP_Longint SCIPconflictGetNIntReductionSuccess(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
+/** gets number of calls the mixed binary reduction was successful in conflict analysis */
 SCIP_Longint SCIPconflictGetNIntReductionSuccessMbred(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-SCIP_Longint SCIPconflictGetNIntReductionFails(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets the percentage of length growth compared to the initial conflict */
-SCIP_Real SCIPconflictResGetLengthGrowthPerc(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets number of calls that resolution conflict analysis stopped for an unknown reason*/
-SCIP_Longint SCIPconflictGetNResUnkTerm(
-   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
-   );
-
-/** gets the number of unresolvable bound changes */
-SCIP_Longint SCIPconflictGetNUnresolvable(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

@@ -363,21 +363,15 @@ SCIP_RETCODE SCIPconflictCreate(
    (*conflict)->ndualproofsbndsuccess = 0;
    (*conflict)->dualproofsbndnnonzeros = 0;
    (*conflict)->nrescalls = 0;
-   (*conflict)->nintreductioncalls = 0;
-   (*conflict)->nintreductionsuccess = 0;
    (*conflict)->nintreductionsuccessmbred = 0;
-   (*conflict)->nintreductionfails = 0;
    (*conflict)->nressuccess = 0;
    (*conflict)->nreslargecoefs = 0;
    (*conflict)->nreslongconfs = 0;
    (*conflict)->nresconfconss = 0;
    (*conflict)->nresconfvariables = 0;
    (*conflict)->conflictrowssize = 0;
-   (*conflict)->nknownaborts = 0;
-   (*conflict)->nunresolvable = 0;
    (*conflict)->bdchgonlyresqueue = FALSE;
    (*conflict)->bdchgonlyconfqueue = FALSE;
-   (*conflict)->haslargecoef = FALSE;
    (*conflict)->reasonclauseres = FALSE;
 
    SCIP_CALL( SCIPconflictInitRows((*conflict), blkmem) );

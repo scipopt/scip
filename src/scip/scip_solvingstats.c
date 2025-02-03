@@ -3341,8 +3341,8 @@ void SCIPprintConflictStatistics(
       ? (SCIP_Real)SCIPconflictGetNAppliedLocalLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNAppliedLocalConss(scip->conflict) : 0,
       SCIPconflictGetNDualproofsInfLocal(scip->conflict) + SCIPconflictGetNDualproofsBndLocal(scip->conflict));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Gen. Resolution CA :       Time      Calls    Success  Conflicts  LargeCoef  LongConfs    Length     Fails Unresolvab \n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.1f" " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Gen. Resolution CA :       Time      Calls    Success  Conflicts  LargeCoef  LongConfs    Length\n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  propagation      : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "%10.1f\n",
       SCIPconflictGetResTime(scip->conflict),
       SCIPconflictGetNResCalls(scip->conflict),
       SCIPconflictGetNResSuccess(scip->conflict),
@@ -3351,9 +3351,7 @@ void SCIPprintConflictStatistics(
       SCIPconflictGetNResLongConflicts(scip->conflict),
       SCIPconflictGetNResConflictConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNResConflictVars(scip->conflict)
-      / (SCIP_Real)SCIPconflictGetNResConflictConss(scip->conflict) : 0,
-      SCIPconflictGetNResUnkTerm(scip->conflict),
-      SCIPconflictGetNUnresolvable(scip->conflict)
+      / (SCIP_Real)SCIPconflictGetNResConflictConss(scip->conflict) : 0
       );
 }
 
