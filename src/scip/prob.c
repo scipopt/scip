@@ -767,14 +767,16 @@ void SCIPprobSetData(
    prob->probdata = probdata;
 }
 
+/** moves the first behind the last variable for each extended variable type in reverse order until the given one and
+ *  returns the cleared variable position in the given problem
+ */
 static
-int provideInsertPos(
+int probProvidePos(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_VARTYPE          vartype,            /**< type of the variable to be inserted */
-   SCIP_VARIMPLTYPE      impltype            /**< implied integer type of the variable to be inserted */
+   SCIP_VARIMPLTYPE      impltype            /**< implied type of the variable to be inserted */
    )
 {
-   /* insert variable in array */
    int insertpos = prob->nvars;
    int intstart = prob->nbinvars;
    int binimplstart = intstart + prob->nintvars;
@@ -782,12 +784,12 @@ int provideInsertPos(
    int contimplstart = intimplstart + prob->nintimplvars;
    int contstart = contimplstart + prob->ncontimplvars;
 
+   /* non-implied continuous variable */
    if( vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_NONE )
    {
       ++prob->ncontvars;
       return insertpos;
    }
-
    if( insertpos > contstart )
    {
       prob->vars[insertpos] = prob->vars[contstart];
@@ -796,13 +798,13 @@ int provideInsertPos(
    }
    assert(insertpos == contstart);
 
+   /* implied continuous variable */
    if( vartype == SCIP_VARTYPE_CONTINUOUS )
    {
       assert(impltype != SCIP_VARIMPLTYPE_NONE);
       ++prob->ncontimplvars;
       return insertpos;
    }
-
    if( insertpos > contimplstart )
    {
       prob->vars[insertpos] = prob->vars[contimplstart];
@@ -811,12 +813,12 @@ int provideInsertPos(
    }
    assert(insertpos == contimplstart);
 
+   /* implied integer variable */
    if( vartype == SCIP_VARTYPE_INTEGER && impltype != SCIP_VARIMPLTYPE_NONE )
    {
       ++prob->nintimplvars;
       return insertpos;
    }
-
    if( insertpos > intimplstart )
    {
       prob->vars[insertpos] = prob->vars[intimplstart];
@@ -825,12 +827,12 @@ int provideInsertPos(
    }
    assert(insertpos == intimplstart);
 
+   /* implied binary variable */
    if( vartype == SCIP_VARTYPE_BINARY && impltype != SCIP_VARIMPLTYPE_NONE )
    {
       ++prob->nbinimplvars;
       return insertpos;
    }
-
    if( insertpos > binimplstart )
    {
       prob->vars[insertpos] = prob->vars[binimplstart];
@@ -839,13 +841,13 @@ int provideInsertPos(
    }
    assert(insertpos == binimplstart);
 
+   /* non-implied integer variable */
    if( vartype == SCIP_VARTYPE_INTEGER )
    {
       assert(impltype == SCIP_VARIMPLTYPE_NONE);
       ++prob->nintvars;
       return insertpos;
    }
-
    if( insertpos > intstart )
    {
       prob->vars[insertpos] = prob->vars[intstart];
@@ -854,6 +856,7 @@ int provideInsertPos(
    }
    assert(insertpos == intstart);
 
+   /* non-implied binary variable */
    assert(vartype == SCIP_VARTYPE_BINARY);
    assert(impltype == SCIP_VARIMPLTYPE_NONE);
    ++prob->nbinvars;
@@ -861,7 +864,7 @@ int provideInsertPos(
    return insertpos;
 }
 
-/** inserts variable at the correct position in vars array, depending on its type */
+/** inserts variable at the correct position in vars array, depending on its extended variable type */
 static
 void probInsertVar(
    SCIP_PROB*            prob,               /**< problem data */
@@ -879,14 +882,10 @@ void probInsertVar(
    /* original variables cannot go into transformed problem and transformed variables cannot go into original problem */
    assert((SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL) == prob->transformed);
 
+   /* get insert position */
    SCIP_VARTYPE vartype = SCIPvarGetType(var);
    SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
-   int insertpos = provideInsertPos(prob, vartype, impltype);
-
-   ++prob->nvars;
-
-
-   assert(prob->nvars == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars + prob->ncontvars);
+   int insertpos = probProvidePos(prob, vartype, impltype);
    assert((vartype == SCIP_VARTYPE_BINARY && impltype == SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars - 1)
       || (vartype == SCIP_VARTYPE_INTEGER && impltype == SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars - 1)
       || (vartype == SCIP_VARTYPE_BINARY && impltype != SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars - 1)
@@ -894,13 +893,17 @@ void probInsertVar(
       || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype != SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars - 1)
       || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars + prob->ncontvars - 1));
 
+   /* fill insert position */
    prob->vars[insertpos] = var;
    SCIPvarSetProbindex(var, insertpos);
+   ++prob->nvars;
+   assert(prob->nvars == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars + prob->ncontvars);
 
    /* update number of column variables in problem */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-      prob->ncolvars++;
-   assert(0 <= prob->ncolvars && prob->ncolvars <= prob->nvars);
+      ++prob->ncolvars;
+   assert(prob->ncolvars >= 0);
+   assert(prob->ncolvars <= prob->nvars);
 }
 
 /** removes variable from vars array */
