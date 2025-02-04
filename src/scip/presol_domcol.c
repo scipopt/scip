@@ -1224,20 +1224,20 @@ SCIP_RETCODE predBndStr(
    /* TODO; This was refactored to be equivalent to original code, but probably this can handle more cases / be simplified */
    SCIP_Bool dominatingimplied = SCIPvarIsImpliedIntegral(dominatingvar);
    SCIP_Bool dominatedimplied = SCIPvarIsImpliedIntegral(dominatedvar);
-   /* Refactored to be equivalent to original code, but this seems like it should be AND... */
    SCIP_Bool good = SCIPvarIsBinary(dominatingvar) == SCIPvarIsBinary(dominatedvar);
-   if( !good ){
+   if( !good )
+   {
       if( !dominatingimplied && !dominatedimplied )
       {
          good = SCIPvarGetType(dominatingvar) == SCIPvarGetType(dominatedvar);
       }
-      else if ( dominatingimplied )
+      else if( dominatingimplied )
       {
          good = dominatedimplied || SCIPvarGetType(dominatedvar) == SCIP_VARTYPE_INTEGER;
       }
       else
       {
-         good = SCIPvarGetType(dominatedvar) == SCIP_VARTYPE_INTEGER;
+         good = SCIPvarGetType(dominatingvar) == SCIP_VARTYPE_INTEGER;
       }
    }
    /* we compare only variables from the same type */
@@ -1439,20 +1439,20 @@ SCIP_RETCODE findFixings(
    /* TODO; This was refactored to be equivalent to original code, but probably this can handle more cases / be simplified */
    SCIP_Bool dominatingimplied = SCIPvarIsImpliedIntegral(dominatingvar);
    SCIP_Bool dominatedimplied = SCIPvarIsImpliedIntegral(dominatedvar);
-   /* Refactored to be equivalent to original code, but this seems like it should be AND... */
    SCIP_Bool good = SCIPvarIsBinary(dominatingvar) == SCIPvarIsBinary(dominatedvar);
-   if( !good ){
+   if( !good )
+   {
       if( !dominatingimplied && !dominatedimplied )
       {
          good = SCIPvarGetType(dominatingvar) == SCIPvarGetType(dominatedvar);
       }
-      else if ( dominatingimplied )
+      else if( dominatingimplied )
       {
          good = dominatedimplied || SCIPvarGetType(dominatedvar) == SCIP_VARTYPE_INTEGER;
       }
       else
       {
-         good = SCIPvarGetType(dominatedvar) == SCIP_VARTYPE_INTEGER;
+         good = SCIPvarGetType(dominatingvar) == SCIP_VARTYPE_INTEGER;
       }
    }
    /* we compare only variables from the same type */
