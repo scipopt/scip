@@ -931,18 +931,12 @@ SCIP_RETCODE consdataCreate(
                valsbuffer[nvars] = val;
                ++nvars;
 
-               /* update hascontvar and hasnonbinvar flags */
-               if( !(*consdata)->hascontvar )
+               if( !(*consdata)->hascontvar && !SCIPvarIsBinary(var) )
                {
-                  SCIP_VARTYPE vartype = SCIPvarGetType(var);
+                  (*consdata)->hasnonbinvar = TRUE;
 
-                  if( vartype != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) )
-                  {
-                     (*consdata)->hasnonbinvar = TRUE;
-
-                     if( vartype == SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(var) )
-                        (*consdata)->hascontvar = TRUE;
-                  }
+                  if( !SCIPvarIsIntegral(var) )
+                     (*consdata)->hascontvar = TRUE;
                }
             }
          }
@@ -1483,14 +1477,11 @@ void consdataCheckNonbinvar(
 
    for( v = consdata->nvars - 1; v >= 0; --v )
    {
-      SCIP_VARTYPE vartype = SCIPvarGetType(consdata->vars[v]);
-      SCIP_Bool implied = SCIPvarIsImpliedIntegral(consdata->vars[v]);
-
-      if( vartype != SCIP_VARTYPE_BINARY || implied )
+      if( !SCIPvarIsBinary(consdata->vars[v]) )
       {
          consdata->hasnonbinvar = TRUE;
 
-         if( vartype == SCIP_VARTYPE_CONTINUOUS && !implied )
+         if( !SCIPvarIsIntegral(consdata->vars[v]) )
          {
             consdata->hascontvar = TRUE;
             break;
@@ -3783,14 +3774,11 @@ SCIP_RETCODE addCoef(
    /* update hascontvar and hasnonbinvar flags */
    if( consdata->hasnonbinvalid && !consdata->hascontvar )
    {
-      SCIP_VARTYPE vartype = SCIPvarGetType(var);
-      SCIP_Bool implied = SCIPvarIsImpliedIntegral(var);
-
-      if( vartype != SCIP_VARTYPE_BINARY || implied )
+      if( !SCIPvarIsBinary(var) )
       {
          consdata->hasnonbinvar = TRUE;
 
-         if( vartype == SCIP_VARTYPE_CONTINUOUS && !implied )
+         if( !SCIPvarIsIntegral(var) )
             consdata->hascontvar = TRUE;
       }
    }
@@ -3900,7 +3888,7 @@ SCIP_RETCODE delCoefPos(
    consdata->rangedrowpropagated = 0;
 
    /* check if hasnonbinvar flag might be incorrect now */
-   if( consdata->hasnonbinvar && (SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarIsImpliedIntegral(var) ) )
+   if( consdata->hasnonbinvar && !SCIPvarIsBinary(var) )
    {
       consdata->hasnonbinvalid = FALSE;
    }
