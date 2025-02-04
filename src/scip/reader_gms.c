@@ -1403,8 +1403,7 @@ SCIP_RETCODE SCIPwriteGms(
             /* first variable with nonzero obj coefficient
              * if not active or having coefficient != 1.0, or being binary/integer, then give up
              */
-            if( !SCIPvarIsActive(vars[v]) || SCIPvarGetObj(vars[v]) != 1.0 ||
-               (SCIPvarIsIntegral(vars[v]) && !SCIPvarIsImpliedIntegral(vars[v])) ) /*lint !e613*/
+            if( !SCIPvarIsActive(vars[v]) || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || SCIPvarGetObj(vars[v]) != 1.0 ) /*lint !e613*/
                break;
 
             objvar = vars[v]; /*lint !e613*/
@@ -1487,7 +1486,7 @@ SCIP_RETCODE SCIPwriteGms(
          var = vars[v]; /*lint !e613*/
 
          SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nactualbinvars - 1) ? "," : ";");
+         (void)SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, v < nactualbinvars - 1 ? "," : ";");
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
@@ -1500,7 +1499,7 @@ SCIP_RETCODE SCIPwriteGms(
             continue;
 
          SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (counter < nactualbinvars - 1) ? "," : ";");
+         (void)SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, counter < nactualbinvars - 1 ? "," : ";");
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
          ++counter;
@@ -1522,7 +1521,7 @@ SCIP_RETCODE SCIPwriteGms(
          var = vars[nbinvars + v]; /*lint !e613*/
 
          SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nactualintvars - 1) ? "," : ";");
+         (void)SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, v < nactualintvars - 1 ? "," : ";");
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
@@ -1534,7 +1533,7 @@ SCIP_RETCODE SCIPwriteGms(
             continue;
 
          SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (counter < nactualintvars - 1) ? "," : ";");
+         (void)SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, counter < nactualintvars - 1 ? "," : ";");
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
          ++counter;
