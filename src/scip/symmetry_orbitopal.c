@@ -166,14 +166,14 @@ SCIP_Bool vartypeIsBranchRowType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
    SCIP_VARTYPE          vartype,            /**< var type */
-   SCIP_Bool             varimpliedinteger   /**< is the variable implied integer? */
+   SCIP_VARIMPLTYPE      impltype,           /**< is the variable implied integer? */
 )
 {
    assert( scip != NULL );
    assert( orbireddata != NULL );
    assert( orbireddata->conshdlr_nonlinear_checked );
 
-   if( varimpliedinteger || vartype == SCIP_VARTYPE_CONTINUOUS )
+   if( impltype != SCIP_VARIMPLTYPE_NONE || vartype == SCIP_VARTYPE_CONTINUOUS )
    {
       /* potential branching variables if nonlinear constraints exist */
       assert( orbireddata->conshdlr_nonlinear_checked );
@@ -1011,13 +1011,13 @@ SCIP_Bool rowIsBranchRow(
       /* the actual vartypes can be different,
        * for example when an INTEGER vartype turns into BINARY due to bound changes
        */
-      assert( vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var), SCIPvarIsImpliedIntegral(var)) ==
+      assert( vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var), SCIPvarGetImplType(var)) ==
          vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(orbidata->vars[rowid * orbidata->ncols + c]),
-                                SCIPvarIsImpliedIntegral(orbidata->vars[rowid * orbidata->ncols + c])) );
+                                SCIPvarGetImplType(orbidata->vars[rowid * orbidata->ncols + c])) );
    }
 #endif
 
-   return vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var), SCIPvarIsImpliedIntegral(var));
+   return vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var), SCIPvarGetImplType(var));
 }
 
 
