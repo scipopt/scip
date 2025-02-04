@@ -63,8 +63,8 @@ enum SCIP_Vartype
 {
    SCIP_VARTYPE_BINARY     = 0,              /**< binary variable: \f$ x \in \{0,1\} \f$ */
    SCIP_VARTYPE_INTEGER    = 1,              /**< integer variable: \f$ x in \{lb, \dots, ub\} \f$ */
-   SCIP_VARTYPE_IMPLINT SCIP_DEPRECATED = 2, /**< Deprecated, use `SCIPvarChgImplType` to control implied integrality of
-                                                < a variable instead. */
+   SCIP_VARTYPE_IMPLINT SCIP_DEPRECATED = 2, /**< Deprecated, use `SCIPcreateVarImpl` to create an implied integer or
+                                                < use `SCIPvarChgImplType` to control implied integrality of a variable. */
    SCIP_VARTYPE_CONTINUOUS = 3               /**< continuous variable: \f$ lb \leq x \leq ub \f$ */
 };
 typedef enum SCIP_Vartype SCIP_VARTYPE;
@@ -73,12 +73,26 @@ typedef enum SCIP_Vartype SCIP_VARTYPE;
 enum SCIP_VarImplType
 {
   SCIP_VARIMPLTYPE_NONE   = 0,               /**< The variable is not implied integer by other variables */
-  SCIP_VARIMPLTYPE_WEAK   = 1,               /**< After fixing a set of other implying variables to integers, there
-                                               *  exists a solution in the optimal face where this variable is integral. */
-  SCIP_VARIMPLTYPE_STRONG = 2                /**< After fixing a set of other implying variables to integers,
-                                                * every feasible solution of the relaxation has this variable as an
-                                                * integer value. For example, this occurs for z if we have the constraint
-                                                * 4x + 3y + z = 10 */
+  SCIP_VARIMPLTYPE_WEAK   = 1,               /**< The constraints of the problem enforce that for the relaxed problem,
+                                                * that only has integrality constraints for the non-implied integer
+                                                * variables, there exists an optimal solution to the relaxed problem
+                                                * where all weakly and strongly implied integer variables have integer
+                                                * solutions.
+                                                * @note This notion of implied integrality is fragile and may break
+                                                * if extra constraints are added.
+                                                * @example The variable z is a weakly implied integer if it only occurs
+                                                * in the constraint 4x + 3y + z \leq 10, where x and y are integer and
+                                                * z has objective 0. */
+  SCIP_VARIMPLTYPE_STRONG = 2                /**< The constraints of the problem enforce that after fixing every integer
+                                                * or binary variable that is not weakly or strongly implied integer to
+                                                * any feasible integer value, that this variable has a unique integer
+                                                * solution in the remaining problem without integrality constraints.
+                                                *
+                                                * @note This notion of implied integrality remains intact under the
+                                                * addition of additional constraints to the problem.
+                                                *
+                                                * @example The variable z is a strong implied integer if we have the
+                                                * constraint: 4x + 3y + z = 10, where x and y are integer variables. */
 };
 typedef enum SCIP_VarImplType SCIP_VARIMPLTYPE;
 
