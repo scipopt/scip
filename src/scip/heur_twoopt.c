@@ -1068,8 +1068,8 @@ SCIP_RETCODE optimize(
             slavesolval = SCIPgetSolVal(scip, worksol, slave);
             changedobj = 0.0;
 
-            assert( (SCIPvarIsImpliedIntegral(master) && SCIPvarIsImpliedIntegral(slave)) ||
-                    (SCIPvarGetType(master) == SCIPvarGetType(slave)) );
+            assert(SCIPvarIsImpliedIntegral(master) == SCIPvarIsImpliedIntegral(slave)
+                  && (SCIPvarIsImpliedIntegral(master) || SCIPvarGetType(master) == SCIPvarGetType(slave)));
             assert(SCIPisFeasIntegral(scip, slavesolval));
             assert(opttype == OPTTYPE_INTEGER || (SCIPisFeasLE(scip, mastersolval, 1.0) || SCIPisFeasGE(scip, mastersolval, 0.0)));
 
