@@ -166,7 +166,7 @@ SCIP_Bool vartypeIsBranchRowType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
    SCIP_VARTYPE          vartype,            /**< var type */
-   SCIP_VARIMPLTYPE      impltype,           /**< is the variable implied integer? */
+   SCIP_VARIMPLTYPE      impltype            /**< is the variable implied integer? */
 )
 {
    assert( scip != NULL );
