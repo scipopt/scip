@@ -198,6 +198,11 @@ SCIP_RETCODE SCIPcreateVarImpl(
       SCIPerrorMessage("invalid objective function value: value is infinite\n");
       return SCIP_INVALIDDATA;
    }
+   if( vartype == SCIP_IMPLINT_PLACEHOLDER )
+   {
+      SCIPerrorMessage("SCIP_VARTYPE_IMPLINT is deprecated, please use the impltype field instead.\n");
+      return SCIP_INVALIDDATA;
+   }
 
    switch( scip->set->stage )
    {
