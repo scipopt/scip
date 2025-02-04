@@ -6,6 +6,8 @@
 Fixed bugs
 ----------
 
+- fixed definition of slack variables of >= constraints and ranged rows in LP interface to Gurobi (lpi_grb.c)
+
 Build system
 ------------
 
