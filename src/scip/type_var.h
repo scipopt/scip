@@ -73,11 +73,10 @@ typedef enum SCIP_Vartype SCIP_VARTYPE;
 enum SCIP_VarImplType
 {
   SCIP_VARIMPLTYPE_NONE   = 0,               /**< The variable is not implied integer by other variables */
-  SCIP_VARIMPLTYPE_WEAK   = 1,               /**< The constraints of the problem enforce that for the relaxed problem,
-                                                * that only has integrality constraints for the non-implied integer
-                                                * variables, there exists an optimal solution to the relaxed problem
-                                                * where all weakly and strongly implied integer variables have integer
-                                                * solution values.
+  SCIP_VARIMPLTYPE_WEAK   = 1,               /**< The constraints of the problem enforce that if the problem is relaxed
+                                                * to have integrality constraints for the non-implied integer variables
+                                                * only, there exists an optimal solution where all weakly and strongly
+                                                * implied integer variables have integer solutions.
                                                 *
                                                 * @note This notion of implied integrality is fragile and may break
                                                 * if extra constraints are added.
@@ -85,10 +84,10 @@ enum SCIP_VarImplType
                                                 * @example The variable z is a weakly implied integer if it only occurs
                                                 * in the constraint 4x + 3y + z \leq 10, where x and y are integer and
                                                 * z has objective 0. */
-  SCIP_VARIMPLTYPE_STRONG = 2                /**< The constraints of the problem enforce that after fixing every integer
-                                                * or binary variable that is not weakly or strongly implied integer to
-                                                * any feasible integer value, that this variable has a unique integer
-                                                * solution in the remaining problem without integrality constraints.
+  SCIP_VARIMPLTYPE_STRONG = 2                /**< The constraints of the problem enforce that after fixing every
+                                                * non-implied integer variable to any feasible integer value,
+                                                * the strongly implied integer variables have a unique integer solution
+                                                * in the remaining problem.
                                                 *
                                                 * @note This notion of implied integrality remains intact under the
                                                 * addition of additional constraints to the problem.
