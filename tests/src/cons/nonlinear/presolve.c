@@ -159,6 +159,19 @@ void checkTypes(
    cr_expect(SCIPvarGetType(SCIPvarGetTransVar(z)) == vartypez);
 }
 
+/* helper method to check implied integer variable types */
+static
+void checkImplTypes(
+   SCIP_VARIMPLTYPE      impltypex,          /**< target implied integer type of x */
+   SCIP_VARIMPLTYPE      impltypey,          /**< target implied integer type of y */
+   SCIP_VARIMPLTYPE      impltypez           /**< target implied integer type of z */
+   )
+{
+   cr_expect(SCIPvarGetImplType(SCIPvarGetTransVar(x)) == impltypex);
+   cr_expect(SCIPvarGetImplType(SCIPvarGetTransVar(y)) == impltypey);
+   cr_expect(SCIPvarGetImplType(SCIPvarGetTransVar(z)) == impltypez);
+}
+
 /* test for presolSingleLockedVars() */
 Test(presolve, singlelockedvars1)
 {
@@ -171,6 +184,7 @@ Test(presolve, singlelockedvars1)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_BINARY, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
+   checkImplTypes(SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE);
 }
 
 /* test for presolSingleLockedVars() */
@@ -186,6 +200,8 @@ Test(presolve, singlelockedvars2)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
+   checkImplTypes(SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE);
+
 }
 
 /* test for presolSingleLockedVars() */
@@ -204,6 +220,8 @@ Test(presolve, singlelockedvars3)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_BINARY, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_CONTINUOUS);
+   checkImplTypes(SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE);
+
 }
 
 /* test for presolveImplint()
@@ -230,8 +248,8 @@ Test(presolve, implint)
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
 
    /* check variable types */
-   assert(SCIPvarIsImpliedIntegral(SCIPvarGetTransVar(x)));
    checkTypes(SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_BINARY);
+   checkImplTypes(SCIP_VARIMPLTYPE_STRONG,SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE);
 }
 
 /* test for presolveImplint()
@@ -262,8 +280,8 @@ Test(presolve, implint2)
    SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_PRESOLVED, FALSE) );
 
    /* check variable types */
-   assert(SCIPvarIsImpliedIntegral(SCIPvarGetTransVar(x)));
    checkTypes(SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY, SCIP_VARTYPE_BINARY);
+   checkImplTypes(SCIP_VARIMPLTYPE_STRONG,SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE);
 }
 
 /* test for presolveImplint()
@@ -291,6 +309,7 @@ Test(presolve, implint3)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
+   checkImplTypes(SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE);
 }
 
 /* tests setppc upgrade */
