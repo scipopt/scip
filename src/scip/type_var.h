@@ -77,9 +77,11 @@ enum SCIP_VarImplType
                                                 * that only has integrality constraints for the non-implied integer
                                                 * variables, there exists an optimal solution to the relaxed problem
                                                 * where all weakly and strongly implied integer variables have integer
-                                                * solutions.
+                                                * solution values.
+                                                *
                                                 * @note This notion of implied integrality is fragile and may break
                                                 * if extra constraints are added.
+                                                *
                                                 * @example The variable z is a weakly implied integer if it only occurs
                                                 * in the constraint 4x + 3y + z \leq 10, where x and y are integer and
                                                 * z has objective 0. */
