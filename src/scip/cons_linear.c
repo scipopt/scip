@@ -5300,7 +5300,7 @@ SCIP_RETCODE tightenVarUb(
          (*nchgbds)++;
 
          /* if variable type was changed we might be able to upgrade the constraint */
-         if( vartype != SCIPvarGetType(var) || impltype != SCIPvarGetImplType(var) )
+         if( SCIPvarGetType(var) != vartype || SCIPvarGetImplType(var) != impltype )
             consdata->upgradetried = FALSE;
       }
    }
