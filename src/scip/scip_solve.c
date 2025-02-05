@@ -2184,7 +2184,7 @@ SCIP_RETCODE compressReoptTree(
       return SCIP_OKAY;
 
    /* do not run a tree compression if the problem contains (implicit) integer variables */
-   if( scip->transprob->nintvars > 0 || SCIPprobGetNImplVars(scip->transprob) > 0 )
+   if( scip->transprob->nintvars > 0 || scip->transprob->nintimplvars > 0 || scip->transprob->ncontimplvars > 0 )
       return SCIP_OKAY;
 
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
