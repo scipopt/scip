@@ -2190,31 +2190,6 @@ SCIP_RETCODE SCIPprobSetName(
    return SCIP_OKAY;
 }
 
-//TODO: fix
-/** returns the number of implicit binary variables, meaning variable of vartype != SCIP_VARTYPE_BINARY and !=
- *  SCIP_VARTYPE_CONTINUOUS but with global bounds [0,1]
- *
- *  @note this number needs to be computed, because it cannot be updated like the other counters for binary and integer
- *        variables, each time the variable type changes(, we would need to update this counter each time a global bound
- *        changes), even at the end of presolving this cannot be computed, because some variable can change to an
- *        implicit binary status
- */
-int SCIPprobGetNImplBinVars(
-   SCIP_PROB*            prob                /**< problem data */
-   )
-{
-   int v;
-   int nimplbinvars = 0;
-
-   for( v = prob->nbinvars + prob->nintvars + SCIPprobGetNImplVars(prob) - 1; v >= prob->nbinvars; --v )
-   {
-      if( SCIPvarIsBinary(prob->vars[v]) )
-         ++nimplbinvars;
-   }
-
-   return nimplbinvars;
-}
-
 /** returns the number of variables with non-zero objective coefficient */
 int SCIPprobGetNObjVars(
    SCIP_PROB*            prob,               /**< problem data */
