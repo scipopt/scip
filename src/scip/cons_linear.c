@@ -10026,7 +10026,7 @@ SCIP_RETCODE convertLongEquality(
             /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
             SCIPdebugMsg(scip, "linear constraint <%s>: converting continuous variable <%s> to implicit integer variable\n",
                SCIPconsGetName(cons), SCIPvarGetName(var));
-            SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_VARIMPLTYPE_STRONG, &infeasible) );
+            SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_VARIMPLTYPE_WEAK, &infeasible) );
             (*nchgvartypes)++;
             if( infeasible )
             {
@@ -11010,21 +11010,23 @@ SCIP_RETCODE dualPresolve(
          /* if the multi-aggregate bestvar is integer, we need to convert implicit integers to integers because
           *  the implicitness might rely on the constraint and the integrality of bestvar
           */
-         if( !infeasible && aggregated && SCIPvarGetType(bestvar) == SCIP_VARTYPE_INTEGER && !SCIPvarIsImpliedIntegral(bestvar) )
+         if( !infeasible && aggregated && SCIPvarGetType(bestvar) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetImplType(bestvar) != SCIP_VARIMPLTYPE_STRONG )
          {
             SCIP_Bool infeasiblevartypechg = FALSE;
 
             for( j = 0; j < naggrs; ++j)
             {
+               /* @TODO: how to handle this case properly with new implied integrality? */
                /* If the multi-aggregation was not infeasible, then setting implicit integers to integers should not
-                *  lead to infeasibility. @TODO; how to handle this case properly with new implied integrality?
+                * lead to infeasibility. 
                 */
-               if( SCIPvarIsImpliedIntegral(aggrvars[j]) )
+               if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(aggrvars[j]) != SCIP_VARIMPLTYPE_NONE )
                {
-                  if( SCIPvarGetType(aggrvars[j]) != SCIP_VARTYPE_INTEGER ){
+                  if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS )
+                  {
                      SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasiblevartypechg) );
+                     assert(!infeasiblevartypechg);
                   }
-                  assert(!infeasiblevartypechg);
                   SCIP_CALL( SCIPchgVarImplType(scip, aggrvars[j], SCIP_VARIMPLTYPE_NONE, &infeasiblevartypechg) );
                   assert(!infeasiblevartypechg);
 
