@@ -4544,30 +4544,30 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    {
    case SCIP_LPPAR_FEASTOL:
       assert( dval > 0.0 );
-      /* 1e-09 <= dval <= 1e-04 */
+      /* 1e-09 <= dval <= 1e-01 */
       if( dval < 1e-09 )
          dval = 1e-09;
-      else if( dval > 1e-04 )
-         dval = 1e-04;
+      else if( dval > 1e-01 )
+         dval = 1e-01;
 
       setDblParam(lpi, CPX_PARAM_EPRHS, dval);
       lpi->feastol = dval;
       break;
    case SCIP_LPPAR_DUALFEASTOL:
       assert( dval > 0.0 );
-      /* 1e-09 <= dval <= 1e-04 */
+      /* 1e-09 <= dval <= 1e-01 */
       if( dval < 1e-09 )
          dval = 1e-09;
-      else if( dval > 1e-04 )
-         dval = 1e-04;
+      else if( dval > 1e-01 )
+         dval = 1e-01;
 
       setDblParam(lpi, CPX_PARAM_EPOPT, dval);
       break;
    case SCIP_LPPAR_BARRIERCONVTOL:
-      /* 1e-10 <= dval */
+      /* 1e-12 <= dval */
       assert( dval >= 0.0 );
-      if( dval < 1e-10 )
-         dval = 1e-10;
+      if( dval < 1e-12 )
+         dval = 1e-12;
 
       setDblParam(lpi, CPX_PARAM_BAREPCOMP, dval);
       break;
