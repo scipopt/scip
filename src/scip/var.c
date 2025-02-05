@@ -2488,14 +2488,37 @@ SCIP_RETCODE varParse(
       }
    }
 
+   /* check bounds for binary variables */
+   if ( (*vartype) == SCIP_VARTYPE_BINARY )
+   {
+      if ( SCIPsetIsLT(set, *lb, 0.0) || SCIPsetIsGT(set, *ub, 1.0) )
+      {
+         SCIPerrorMessage("Parsed invalid bounds for binary variable <%s>: [%f, %f].
+", name, *lb, *ub);
+         return SCIP_READERROR;
+      }
+      if ( !SCIPsetIsInfinity(set, -(*lazylb)) && !SCIPsetIsInfinity(set, *lazyub) && 
+           ( SCIPsetIsLT(set, *lazylb, 0.0) || SCIPsetIsGT(set, *lazyub, 1.0) ) )
+      {
+         SCIPerrorMessage("Parsed invalid lazy bounds for binary variable <%s>: [%f, %f].
+", name, *lazylb, *lazyub);
+         return SCIP_READERROR;
+      }
+   }
+
    /* update string pointer */
    if( *endptr != NULL )
       strptr = *endptr;
 
-   /* get implied type */
+   /* detect implied declaration */
    SCIPstrCopySection(strptr, ' ', ':', token, SCIP_MAXSTRLEN, endptr);
 
-   if( *endptr != strptr && strncmp(token, "implied", 7) == 0 )
+   /* no further declaration */
+   if( *endptr == strptr )
+      return SCIP_OKAY;
+
+   /* get implied type */
+   if( strncmp(token, "implied", 7) == 0 )
    {
       strptr = *endptr;
       SCIP_CALL( SCIPskipSpace(&strptr) );
@@ -2521,24 +2544,9 @@ SCIP_RETCODE varParse(
          return SCIP_READERROR;
       }
    }
+   /* keep other declarations */
    else
-      *endptr = strptr; /* The token may also be 'fixed' instead of `implied`, which this function does not handle. */
-
-   /* check bounds for binary variables */
-   if ( (*vartype) == SCIP_VARTYPE_BINARY )
-   {
-      if ( SCIPsetIsLT(set, *lb, 0.0) || SCIPsetIsGT(set, *ub, 1.0) )
-      {
-         SCIPerrorMessage("Parsed invalid bounds for binary variable <%s>: [%f, %f].\n", name, *lb, *ub);
-         return SCIP_READERROR;
-      }
-      if ( !SCIPsetIsInfinity(set, -(*lazylb)) && !SCIPsetIsInfinity(set, *lazyub) && 
-           ( SCIPsetIsLT(set, *lazylb, 0.0) || SCIPsetIsGT(set, *lazyub, 1.0) ) )
-      {
-         SCIPerrorMessage("Parsed invalid lazy bounds for binary variable <%s>: [%f, %f].\n", name, *lazylb, *lazyub);
-         return SCIP_READERROR;
-      }
-   }
+      *endptr = strptr;
 
    return SCIP_OKAY;
 }
