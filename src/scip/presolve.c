@@ -1100,9 +1100,9 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    implbinvarsexist = FALSE;
    SCIP_VAR ** probvars = SCIPprobGetVars(scip->transprob);
    int nbinvars = SCIPprobGetNBinVars(scip->transprob);
-   int nintvars = SCIPprobGetNIntVars(scip->transprob);
-   int nimplvars = SCIPprobGetNImplVars(scip->transprob);
-   for( v = nbinvars + nintvars + nimplvars - 1; v >= nbinvars; --v )
+   int nintegers = SCIPprobGetNVars(scip->transprob) - SCIPprobGetNContVars(scip->transprob);
+   assert(nintegers >= 0);
+   for( v = nintegers - 1; v >= nbinvars; --v )
    {
       if( SCIPvarIsBinary(probvars[v]) )
       {
