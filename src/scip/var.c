@@ -2521,6 +2521,8 @@ SCIP_RETCODE varParse(
          return SCIP_READERROR;
       }
    }
+   else
+      *endptr = strptr; /* The token may also be 'fixed' instead of `implied`, which this function does not handle. */
 
    /* check bounds for binary variables */
    if ( (*vartype) == SCIP_VARTYPE_BINARY )
