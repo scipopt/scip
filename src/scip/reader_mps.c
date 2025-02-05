@@ -3239,6 +3239,23 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/* Returns whether to print an integrality constraint for the given variable */
+static
+SCIP_Bool writeVarIntegral(
+   SCIP_VAR*             var,                /**< The variable to check */
+   int                   implintlevel        /**< The implintlevel setting value. See the parameter 'write/implintlevel'
+                                                < for more information */
+   )
+{
+   assert(implintlevel >= -2 && implintlevel <= 2);
+   SCIP_VARTYPE type = SCIPvarGetType(var);
+   SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
+   return ( implintlevel == 0 && type != SCIP_VARTYPE_CONTINUOUS )
+          || ( implintlevel == 1 && ( type != SCIP_VARTYPE_CONTINUOUS || impltype == SCIP_VARIMPLTYPE_STRONG ) )
+          || ( implintlevel == 2 && ( type != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_VARIMPLTYPE_NONE ) )
+          || ( implintlevel == -1 && type != SCIP_VARTYPE_CONTINUOUS && impltype != SCIP_VARIMPLTYPE_STRONG )
+          || ( implintlevel == -2 && type != SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_NONE );
+}
 
 /** outputs the COLUMNS section of the MPS format */
 static
@@ -3248,7 +3265,9 @@ void printColumnSection(
    SPARSEMATRIX*         matrix,             /**< sparse matrix containing the entries */
    SCIP_HASHMAP*         varnameHashmap,     /**< map from SCIP_VAR* to variable name */
    SCIP_HASHTABLE*       indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
-   unsigned int          maxnamelen          /**< maximum name length */
+   unsigned int          maxnamelen,         /**< maximum name length */
+   int                   implintlevel        /**< indicates whether or not to add integrality constraints to implied
+                                                < integer variables. See the parameter 'write/implintlevel' for more info.*/
    )
 {
    SCIP_Bool intSection;
@@ -3278,7 +3297,9 @@ void printColumnSection(
          continue;
       }
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && intSection )
+      SCIP_Bool isIntegral = writeVarIntegral(var, implintlevel);
+
+      if( !isIntegral && intSection )
       {
          /* end integer section in MPS format */
          printStart(scip, file, "", "INTEND", (int) maxnamelen);
@@ -3287,7 +3308,7 @@ void printColumnSection(
          SCIPinfoMessage(scip, file, "\n");
          intSection = FALSE;
       }
-      else if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !intSection )
+      else if( isIntegral && !intSection )
       {
          /* start integer section in MPS format */
          printStart(scip, file, "", "INTSTART", (int) maxnamelen);
@@ -3928,6 +3949,8 @@ SCIP_RETCODE SCIPwriteMps(
 
    SCIP_Bool error;
 
+   int implintlevel;
+
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
@@ -3939,6 +3962,10 @@ SCIP_RETCODE SCIPwriteMps(
    nConsSOS2 = 0;
    nConsQuadratic = 0;
    nConsIndicator = 0;
+
+   /* Get the parameter to check if we need to write out implied integers as integrality constraints */
+   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
+   assert(implintlevel >= -2 && implintlevel <= 2);
 
    /* check if the constraint names are too long and build the constraint names */
    SCIP_CALL( checkConsnames(scip, conss, nconss, transformed, &maxnamelen, &consnames, &error) );
@@ -4067,7 +4094,7 @@ SCIP_RETCODE SCIPwriteMps(
        * might happen that they only exist in non-linear constraints, which leads to no other line in the column section
        * and therefore do not mark the variable as an integer
        */
-      if( !SCIPisZero(scip, value) || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS
+      if( !SCIPisZero(scip, value) || writeVarIntegral(var, implintlevel)
          || ( SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0 && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0 ) )
       {
          assert( matrix->nentries < matrix->sentries );
@@ -4672,7 +4699,7 @@ SCIP_RETCODE SCIPwriteMps(
    }
 
    /* output COLUMNS section */
-   printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen);
+   printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen, implintlevel);
 
    /* output RHS section */
    printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen, objscale * objoffset);

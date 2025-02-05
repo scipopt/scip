@@ -1376,6 +1376,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Bool indicatorsosdef;
    SCIP_Bool signpowerallowed;
    SCIP_Bool needcomma;
+   int implintlevel;
 
    assert( scip != NULL );
    assert( vars != NULL || nvars == 0 );
@@ -1386,6 +1387,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_CALL( checkConsnames(scip, conss, nconss, transformed) );
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/signpower", &signpowerallowed) );
+   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
 
    /* check if the objective is a single continuous variable, so we would not have to introduce an auxiliary variable
     * for GAMS
@@ -1459,90 +1461,76 @@ SCIP_RETCODE SCIPwriteGms(
 
    SCIPinfoMessage(scip, file, "\n");
 
-   int nactualbinvars = 0;
-   int nactualintvars = 0;
-   for( v = 0; v < nvars; ++v )
-   {
-      var = vars[v]; /*lint !e613*/
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-      {
-         ++nactualbinvars;
-      }
-      else if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
-      {
-         ++nactualintvars;
-      }
-   }
-   assert(nactualbinvars >= nbinvars);
-   assert(nactualintvars >= nintvars);
    /* declare binary variables if present */
-   if( nactualbinvars > 0 )
    {
-      SCIPinfoMessage(scip, file, "Binary variables\n");
-      clearLine(linebuffer, &linecnt);
+      SCIP_Bool firstIteration = TRUE;
 
-      for( v = 0; v < nbinvars; ++v )
+      for( v = 0; v < nvars; ++v )
       {
-         var = vars[v]; /*lint !e613*/
+         var = vars[v]; /*lint !e613 */
+         assert(var != NULL);
 
-         SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-         (void)SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, v < nactualbinvars - 1 ? "," : ";");
-
-         appendLine(scip, file, linebuffer, &linecnt, buffer);
-      }
-
-      int counter = nbinvars;
-      for( v = 0; v < nimplvars; ++v )
-      {
-         var = vars[nbinvars+nintvars+v];
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
+             || ( implintlevel == -1 && SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_STRONG )
+             || ( implintlevel == -2 && SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE ) )
             continue;
 
+         if( firstIteration )
+         {
+            SCIPinfoMessage(scip, file, "Binary variables\n");
+            clearLine(linebuffer, &linecnt);
+         }
+
          SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-         (void)SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, counter < nactualbinvars - 1 ? "," : ";");
+         (void)SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s", firstIteration ? "" : ", ", varname);
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
-         ++counter;
+         firstIteration = FALSE;
       }
-      assert(counter == nactualbinvars);
-
-      endLine(scip, file, linebuffer, &linecnt);
-      SCIPinfoMessage(scip, file, "\n");
+      if( !firstIteration )
+      {
+         endLine(scip, file, linebuffer, &linecnt);
+         SCIPinfoMessage(scip, file, ";\n");
+         discrete = TRUE;
+      }
    }
 
    /* declare integer variables if present */
-   if( nactualintvars > 0 )
    {
-      SCIPinfoMessage(scip, file, "Integer variables\n");
-      clearLine(linebuffer, &linecnt);
+      SCIP_Bool firstIteration = TRUE;
 
-      for( v = 0; v < nintvars; ++v )
+      for( v = 0; v < nvars; ++v )
       {
-         var = vars[nbinvars + v]; /*lint !e613*/
+         var = vars[v]; /*lint !e613 */
+         assert(var != NULL);
 
-         SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-         (void)SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, v < nactualintvars - 1 ? "," : ";");
+         SCIP_VARTYPE vartype = SCIPvarGetType(var);
+         SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
+         if( ( implintlevel >= 0 && vartype == SCIP_VARTYPE_INTEGER )
+             || ( implintlevel == 1 && vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_STRONG )
+             || ( implintlevel == 2 && vartype == SCIP_VARTYPE_CONTINUOUS && impltype != SCIP_VARIMPLTYPE_NONE )
+             || ( implintlevel == -1 && impltype != SCIP_VARIMPLTYPE_STRONG )
+             || ( implintlevel == -2 && impltype == SCIP_VARIMPLTYPE_NONE ) )
+         {
+            if( firstIteration )
+            {
+               SCIPinfoMessage(scip, file, "Integer variables\n");
+               clearLine(linebuffer, &linecnt);
+            }
 
-         appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIP_CALL(printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)));
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s", firstIteration ? "" : ", ", varname);
+
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            firstIteration = FALSE;
+         }
       }
-      int counter = nintvars;
-      for( v = 0; v < nimplvars; ++v )
+      if( !firstIteration )
       {
-         var = vars[nbinvars+nintvars+v];
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER )
-            continue;
-
-         SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-         (void)SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, counter < nactualintvars - 1 ? "," : ";");
-
-         appendLine(scip, file, linebuffer, &linecnt, buffer);
-         ++counter;
+         endLine(scip, file, linebuffer, &linecnt);
+         SCIPinfoMessage(scip, file, ";\n");
+         discrete = TRUE;
       }
-
-      assert(counter == nactualintvars);
-
-      endLine(scip, file, linebuffer, &linecnt);
-      SCIPinfoMessage(scip, file, "\n");
    }
 
    /* print variable bounds */
@@ -1742,7 +1730,6 @@ SCIP_RETCODE SCIPwriteGms(
    }
 
    /* print constraints */
-   discrete = nactualbinvars > 0 || nactualintvars > 0;
    indicatorsosdef = FALSE;
    for( c = 0; c < nconss; ++c )
    {

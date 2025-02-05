@@ -3070,8 +3070,36 @@ SCIP_RETCODE SCIPvarPrint(
    assert(var != NULL);
    assert(var->scip == set->scip);
 
+   /** We change the integrality constraints type of implied integers based on the writing settings. */
+   SCIP_VARTYPE type = SCIPvarGetType(var);
+   SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
+   assert(set->write_implintlevel >= -2 && set->write_implintlevel <= 2);
+   /** Remove integrality constraint if less than zero, add if greater than zero.
+    * For 1 and -1, we only apply changes to strong implied integers */
+   switch( set->write_implintlevel )
+   {
+      case -2:
+         if( impltype != SCIP_VARIMPLTYPE_NONE )
+            type = SCIP_VARTYPE_CONTINUOUS;
+         break;
+      case -1:
+         if( impltype == SCIP_VARIMPLTYPE_STRONG )
+            type = SCIP_VARTYPE_CONTINUOUS;
+         break;
+      case 1:
+         if( impltype == SCIP_VARIMPLTYPE_STRONG && type == SCIP_VARTYPE_CONTINUOUS )
+            type = SCIP_VARTYPE_INTEGER;
+         break;
+      case 2:
+         if( impltype != SCIP_VARIMPLTYPE_NONE && type == SCIP_VARTYPE_CONTINUOUS )
+            type = SCIP_VARTYPE_INTEGER;
+         break;
+      case 0:
+      default:
+         break;
+   }
    /* type of variable */
-   switch( SCIPvarGetType(var) )
+   switch( type )
    {
       case SCIP_VARTYPE_BINARY:
          SCIPmessageFPrintInfo(messagehdlr, file, "  [binary]");
@@ -3184,7 +3212,7 @@ SCIP_RETCODE SCIPvarPrint(
       return SCIP_INVALIDDATA;
    }
 
-   switch( SCIPvarGetImplType(var) )
+   switch( impltype )
    {
       case SCIP_VARIMPLTYPE_NONE:
          break;
