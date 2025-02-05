@@ -17346,7 +17346,66 @@ SCIP_Bool SCIPvarWasFixedEarlier(
    return SCIPbdchgidxIsEarlier(bdchgidx1, bdchgidx2);
 }
 
+/** for a given array of variables, this function counts the numbers of variables for each variable and implied type
+ *  combination.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
 
+SCIP_RETCODE SCIPvarArrayCountTypes(
+   SCIP_VAR**            vars,               /**< array of variables to count the types for */
+   int                   nvars,              /**< number of variables in the array */
+   int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
+   int*                  nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
+   int*                  nbinimplvars,       /**< pointer to store number of binary implicit integral vars or NULL if not needed */
+   int*                  nintimplvars,       /**< pointer to store number of integer implicit integral vars or NULL if not needed */
+   int*                  ncontimplvars,      /**< pointer to store number of continuous implicit integral vars or NULL if not needed */
+   int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
+   )
+{
+   assert(vars != NULL);
+   int v;
+   int binvars = 0;
+   int binimplvars = 0;
+   int intvars = 0;
+   int intimplvars = 0;
+   int contvars = 0;
+   int contimplvars = 0;
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_Bool implied = SCIPvarIsImpliedIntegral(vars[v]);
+      switch( SCIPvarGetType(vars[v]) )
+      {
+         case SCIP_VARTYPE_BINARY:
+            implied ? ++binimplvars : ++binvars;
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            implied ? ++intimplvars : ++intvars;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
+            implied ? ++contimplvars : ++contvars;
+            break;
+         default:
+            SCIPerrorMessage("Unknown variable type\n");
+            return SCIP_INVALIDDATA;
+      }
+
+   }
+   if( nbinvars != NULL )
+      *nbinvars = binvars;
+   if( nintvars != NULL )
+      *nintvars = intvars;
+   if( nbinimplvars != NULL )
+      *nbinimplvars = binimplvars;
+   if( nintimplvars != NULL )
+      *nintimplvars = intimplvars;
+   if( ncontimplvars != NULL )
+      *ncontimplvars = contimplvars;
+   if( ncontvars != NULL )
+      *ncontvars = contvars;
+   return SCIP_OKAY;
+}
 
 /*
  * Hash functions

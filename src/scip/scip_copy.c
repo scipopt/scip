@@ -1085,40 +1085,19 @@ SCIP_RETCODE copyVars(
       int nsourcefixedvars;
       int nfixedbinvars;
       int nfixedintvars;
-      int nfixedimplvars;
+      int nfixedbinimplvars;
+      int nfixedintimplvars;
+      int nfixedcontimplvars;
       int nfixedcontvars;
-
+      int nfixedimplvars;
       sourcefixedvars = SCIPgetFixedVars(sourcescip);
       nsourcefixedvars = SCIPgetNFixedVars(sourcescip);
-      nfixedbinvars = 0;
-      nfixedintvars = 0;
-      nfixedimplvars = 0;
-      nfixedcontvars = 0;
+
 
       /* count number of fixed variables for all variable types */
-      for( i = 0; i < nsourcefixedvars; ++i )
-      {
-         if( SCIPvarIsImpliedIntegral(sourcefixedvars[i]) )
-            ++nfixedimplvars;
-         else
-         {
-            switch( SCIPvarGetType(sourcefixedvars[i]) )
-            {
-               case SCIP_VARTYPE_BINARY:
-                  ++nfixedbinvars;
-                  break;
-               case SCIP_VARTYPE_INTEGER:
-                  ++nfixedintvars;
-                  break;
-               case SCIP_VARTYPE_CONTINUOUS:
-                  ++nfixedcontvars;
-                  break;
-               default:
-                  SCIPerrorMessage("unknown variable type\n");
-                  return SCIP_INVALIDDATA;
-            }
-         }
-      }
+      SCIP_CALL( SCIPvarArrayCountTypes(sourcefixedvars, nsourcefixedvars, &nfixedbinvars, &nfixedintvars,
+                                        &nfixedbinimplvars,&nfixedintimplvars,&nfixedcontimplvars, &nfixedcontvars) );
+      nfixedimplvars = nfixedbinimplvars + nfixedintimplvars + nfixedcontimplvars;
       assert(nsourcefixedvars == nfixedbinvars + nfixedintvars + nfixedimplvars + nfixedcontvars);
       assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip) + nrelaxonlybinvars);
       assert(SCIPgetNIntVars(sourcescip) + SCIPgetNBinVars(sourcescip) <= SCIPgetNIntVars(targetscip) + nrelaxonlyintvars + SCIPgetNBinVars(targetscip) + nrelaxonlybinvars);
