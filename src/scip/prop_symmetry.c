@@ -2222,7 +2222,6 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
                   case SCIP_VARTYPE_CONTINUOUS:
                      ++propdata->nmovedcontpermvars;
                      break;
-                  case SCIP_VARTYPE_IMPLINT:
                   default:
                      SCIPerrorMessage("Variable provided with unknown vartype\n");
                      return SCIP_ERROR;

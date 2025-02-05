@@ -967,7 +967,6 @@ SCIP_RETCODE extractFlowRows(
                case SCIP_VARTYPE_CONTINUOUS:
                   ++ncontvars;
                   break;
-               case SCIP_VARTYPE_IMPLINT:
                default:
                   SCIPerrorMessage("unknown variable type\n");
                   return SCIP_INVALIDDATA;
@@ -4614,24 +4613,26 @@ SCIP_RETCODE printFlowSystemInfo(
             nflowvars++;
             col = cols[c];
             colvisited[c] = TRUE;
-            switch( SCIPvarGetType(SCIPcolGetVar(col)) )
+            if( SCIPcolIsImpliedIntegral(col) )
+               ++nintflowvars;
+            else
             {
-            case SCIP_VARTYPE_BINARY:
-               nbinflowvars++;
-               break;
-            case SCIP_VARTYPE_INTEGER:
-               nintflowvars++;
-               break;
-            case SCIP_VARTYPE_IMPLINT:
-               nintflowvars++;
-               break;
-               case SCIP_VARTYPE_CONTINUOUS:
-                  ncontflowvars++;
-                  break;
-            default:
-               SCIPerrorMessage("unknown variable type\n");
-               SCIPABORT();
-               return SCIP_INVALIDDATA;  /*lint !e527*/
+               switch( SCIPvarGetType(SCIPcolGetVar(col)))
+               {
+                  case SCIP_VARTYPE_BINARY:
+                     nbinflowvars++;
+                     break;
+                  case SCIP_VARTYPE_INTEGER:
+                     nintflowvars++;
+                     break;
+                  case SCIP_VARTYPE_CONTINUOUS:
+                     ncontflowvars++;
+                     break;
+                  default:
+                     SCIPerrorMessage("unknown variable type\n");
+                     SCIPABORT();
+                     return SCIP_INVALIDDATA;  /*lint !e527*/
+               }
             }
          }
       }
@@ -4660,24 +4661,26 @@ SCIP_RETCODE printFlowSystemInfo(
                {
                   ncapvars++;
                   colvisited[c] = TRUE;
-                  switch( SCIPvarGetType(SCIPcolGetVar(rowcols[i]) ) )
+                  if( SCIPcolIsImpliedIntegral(rowcols[i]) )
+                     nintcapvars++;
+                  else
                   {
-                  case SCIP_VARTYPE_BINARY:
-                     nbincapvars++;
-                     break;
-                  case SCIP_VARTYPE_INTEGER:
-                     nintcapvars++;
-                     break;
-                  case SCIP_VARTYPE_IMPLINT:
-                     nintcapvars++;
-                     break;
-                  case SCIP_VARTYPE_CONTINUOUS:
-                     ncontcapvars++;
-                     break;
-                  default:
-                     SCIPerrorMessage("unknown variable type\n");
-                     SCIPABORT();
-                     return SCIP_INVALIDDATA;  /*lint !e527*/
+                     switch( SCIPvarGetType(SCIPcolGetVar(rowcols[i])))
+                     {
+                        case SCIP_VARTYPE_BINARY:
+                           nbincapvars++;
+                           break;
+                        case SCIP_VARTYPE_INTEGER:
+                           nintcapvars++;
+                           break;
+                        case SCIP_VARTYPE_CONTINUOUS:
+                           ncontcapvars++;
+                           break;
+                        default:
+                           SCIPerrorMessage("unknown variable type\n");
+                           SCIPABORT();
+                           return SCIP_INVALIDDATA;  /*lint !e527*/
+                     }
                   }
                }
             }

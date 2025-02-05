@@ -228,7 +228,6 @@ SCIP_RETCODE printDomRelInfo(
    case SCIP_VARTYPE_INTEGER:
       type='I';
       break;
-   case SCIP_VARTYPE_IMPLINT:
    default:
       SCIPerrorMessage("unknown variable type\n");
       SCIPABORT();
