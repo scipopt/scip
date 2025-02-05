@@ -200,7 +200,7 @@ SCIP_RETCODE SCIPcreateVarImpl(
    }
    if( vartype == SCIP_IMPLINT_PLACEHOLDER )
    {
-      SCIPerrorMessage("SCIP_VARTYPE_IMPLINT is deprecated, please use the impltype field instead.\n");
+      SCIPerrorMessage("using SCIP_VARTYPE_IMPLINT deprecated, define impltype instead\n");
       return SCIP_INVALIDDATA;
    }
 
