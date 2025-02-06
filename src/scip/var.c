@@ -17363,33 +17363,42 @@ SCIP_RETCODE SCIPvarArrayCountTypes(
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
-   assert(vars != NULL);
-   int v;
+   assert(vars != NULL || nvars == 0);
    int binvars = 0;
    int binimplvars = 0;
    int intvars = 0;
    int intimplvars = 0;
    int contvars = 0;
    int contimplvars = 0;
+   int v;
+
    for( v = 0; v < nvars; ++v )
    {
       SCIP_Bool implied = SCIPvarIsImpliedIntegral(vars[v]);
       switch( SCIPvarGetType(vars[v]) )
       {
          case SCIP_VARTYPE_BINARY:
-            implied ? ++binimplvars : ++binvars;
+            if( implied )
+               ++binimplvars;
+            else
+               ++binvars;
             break;
          case SCIP_VARTYPE_INTEGER:
-            implied ? ++intimplvars : ++intvars;
+            if( implied )
+               ++intimplvars;
+            else
+               ++intvars;
             break;
          case SCIP_VARTYPE_CONTINUOUS:
-            implied ? ++contimplvars : ++contvars;
+            if( implied )
+               ++contimplvars;
+            else
+               ++contvars;
             break;
          default:
-            SCIPerrorMessage("Unknown variable type\n");
+            SCIPerrorMessage("unknown variable type\n");
             return SCIP_INVALIDDATA;
       }
-
    }
    if( nbinvars != NULL )
       *nbinvars = binvars;
@@ -17403,6 +17412,7 @@ SCIP_RETCODE SCIPvarArrayCountTypes(
       *ncontimplvars = contimplvars;
    if( ncontvars != NULL )
       *ncontvars = contvars;
+
    return SCIP_OKAY;
 }
 
