@@ -63,8 +63,7 @@ enum SCIP_Vartype
 {
    SCIP_VARTYPE_BINARY     = 0,              /**< binary variable: \f$ x \in \{0,1\} \f$ */
    SCIP_VARTYPE_INTEGER    = 1,              /**< integer variable: \f$ x in \{lb, \dots, ub\} \f$ */
-   SCIP_VARTYPE_IMPLINT SCIP_DEPRECATED = 2, /**< Deprecated, use `SCIPcreateVarImpl` to create an implied integer or
-                                                < use `SCIPvarChgImplType` to control implied integrality of a variable. */
+   SCIP_VARTYPE_IMPLINT SCIP_DEPRECATED = 2, /**< Deprecated, use `SCIPcreateVarImpl` or `SCIPvarChgImplType` to control implied integrality. */
    SCIP_VARTYPE_CONTINUOUS = 3               /**< continuous variable: \f$ lb \leq x \leq ub \f$ */
 };
 typedef enum SCIP_Vartype SCIP_VARTYPE;
