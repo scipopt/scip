@@ -38,11 +38,22 @@ Examples and applications
 
 Interface changes
 -----------------
+### Deprecations
+- The variable type of SCIP_VARTYPE_IMPLINT is deprecated in favor of a new enum SCIP_VARIMPLTYPE that indicates if a
+  variable is implied integer, independent of the variable type.
+  The problem variable arrays is still sorted as:
+   (0) | binary | integer | implied integer | continuous | (nvars),
+  where the implied integer subsection is now subdivided into 3 parts (left to right):
+  | binary implied integer | integer implied integer | continuous implied integer |
+  Until the release of SCIP 11, SCIP will still support usage of SCIP_VARTYPE_IMPLINT; see SCIPcreateVar() and SCIPchgVarType() for more details.
 
 ### New and changed callbacks
+
 - added a new callback TABLE_COLLECT for the table plugin that collects the data for the specific statistics table in a SCIP_DATATREE object
 - for a table plugin, only one of the callbacks TABLE_COLLECT or TABLE_OUTPUT needs to be implemented, but implementing both is preferred;
   if TABLE_OUTPUT is omitted, then SCIP tries to print a table from the data given by TABLE_COLLECT
+- new event SCIP_EVENTTYPE_IMPLTYPECHANGED, which is generated if a variable its implied integer type changes. This event is also included in the set of events that trigger SCIP_EVENTTYPE_VARCHANGED
+- the event SCIP_EVENTTYPE_TYPECHANGED is no longer generated if a variable becomes implied integer
 
 ### Deleted and changed API methods
 
@@ -54,6 +65,9 @@ Interface changes
 - copyiisfinders added to arguments for SCIPcopyPlugins() (16th position)
 - SCIPcreateConsOrbitope() deleted two arguments and changed position of another argument
 - deprecated SCIPsubversion(), will be removed
+- (Temporarily supported until SCIP 11): SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_VARIMPLTYPE_WEAK.
+- (Temporarily supported until SCIP 11): Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integer type SCIP_VARIMPLTYPE_WEAK instead.
+- SCIPvarCalcDistributionParameters(): the parameter vartype was replaced with a new boolean parameter varintegral
 
 ### New API functions
 
@@ -85,6 +99,12 @@ Interface changes
 - SCIPbendersGetObjectiveType() for returning the objective type for the aggregation of the Benders' decomposition
   subproblems
 - SCIPbenderGetMasterAuxiliaryVar() returns the master auxiliary variable
+- added SCIPcreateObjVarImpl() and SCIPcreateVarImpl(), which behave identically to SCIPcreateObjVar() and SCIPcreateVar() but have an additional argument for the new implied integer type flag (8th position)
+- added SCIPchgVarImplType(), SCIPvarGetImplType(), SCIPvarIsImpliedIntegral() to control and query implied integrality
+- added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integer variables of every type. Note that SCIPgetNBinVars(), SCIPgetNIntVars() and SCIPgetNContVars() do not include the implied integer variables in their counts, as before
+- added SCIPcolIsImpliedIntegral()
+- added SCIPvarArrayCountTypes() to determine the variable type count distribution for an array of variables
+- added SCIPeventGetOldImplType(), SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
 
 ### Changes in preprocessor macros
 
@@ -92,6 +112,7 @@ Interface changes
   use SCIPstr(n)casecmp() (scip/pub_misc.h) instead
 - SCIPincludeConshdlrOrbitopePP(), SCIPcreateConsOrbitopePP(), SCIPcreateConsBasicOrbitopePP(), SCIPincludeConshdlrOrbitopeFull(), SCIPcreateConsOrbitopeFull(), SCIPcreateConsBasicOrbitopeFull()
 - SCIP_VERSION_SUB and SCIP_SUBVERSION are deprecated
+- removed the SCIP_VARTYPE_IMPLINT_CHAR macro in scip/def.h
 
 ### Command line interface
 
@@ -120,6 +141,7 @@ Interface changes
 - new parameter "presolving/implint/numericslimit" determines the limit for absolute integral coefficients beyond which the corresponding rows and variables are excluded from implied integer detection
 - iis/minimal, iis/nodes, iis/removedbounds, iis/removeunusedvars, iis/silent, iis/stopafterone, iis/time, iis/greedy/additive, iis/greedy/conservative, iis/greedy/delafteradd, iis/greedy/dynamicreordering, iis/greedy/maxbatchsize, iis/greedy/maxrelbatchsize, iis/greedy/nodelimperiter, iis/greedy/priority, iis/greedy/timelimperiter
 - new parameters "constraints/orbitope_full/forceconscopy" and "constraints/orbitope_pp/forceconscopy" to control whether non-model constraints of type full orbitope and packing/partitioning orbitope are copied to sub-SCIPs, respectively
+- new parameter "write/implintlevel" to control if integrality constraints should be written for implied integer variables (works for .cip, .fzn, .gms, .lp, .rlp, .mps and .pip extensions)
 
 ### Data structures
 
