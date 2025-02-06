@@ -17419,7 +17419,8 @@ int SCIProwGetRank(
    return row->rank;
 }
 
-/** returns TRUE iff the activity of the row (without the row's constant) is always integral in a feasible solution */
+/** returns TRUE iff there exists an optimal solution such that the activity of the row (without the row's constant)
+ * is integral */
 SCIP_Bool SCIProwIsIntegral(
    SCIP_ROW*             row                 /**< LP row */
    )
