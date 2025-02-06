@@ -1081,8 +1081,8 @@ SCIP_RETCODE copyVars(
    }
    else
    {
-      SCIP_VAR** sourcefixedvars;
-      int nsourcefixedvars;
+      SCIP_VAR** sourcefixedvars = SCIPgetFixedVars(sourcescip);
+      int nsourcefixedvars = SCIPgetNFixedVars(sourcescip);
       int nfixedbinvars;
       int nfixedintvars;
       int nfixedbinimplvars;
@@ -1090,13 +1090,10 @@ SCIP_RETCODE copyVars(
       int nfixedcontimplvars;
       int nfixedcontvars;
       int nfixedimplvars;
-      sourcefixedvars = SCIPgetFixedVars(sourcescip);
-      nsourcefixedvars = SCIPgetNFixedVars(sourcescip);
-
 
       /* count number of fixed variables for all variable types */
       SCIP_CALL( SCIPvarArrayCountTypes(sourcefixedvars, nsourcefixedvars, &nfixedbinvars, &nfixedintvars,
-                                        &nfixedbinimplvars,&nfixedintimplvars,&nfixedcontimplvars, &nfixedcontvars) );
+                                        &nfixedbinimplvars, &nfixedintimplvars, &nfixedcontimplvars, &nfixedcontvars) );
       nfixedimplvars = nfixedbinimplvars + nfixedintimplvars + nfixedcontimplvars;
       assert(nsourcefixedvars == nfixedbinvars + nfixedintvars + nfixedimplvars + nfixedcontvars);
       assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip) + nrelaxonlybinvars);

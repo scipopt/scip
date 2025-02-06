@@ -1243,7 +1243,7 @@ SCIP_Bool SCIPvarWasFixedEarlier(
    );
 
 /** for a given array of variables, this function counts the numbers of variables for each variable and implied type
- *  combination.
+ *  combination
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
