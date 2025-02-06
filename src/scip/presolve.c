@@ -1051,6 +1051,9 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    int maxcountnonzeros;
    int w;
    int v;
+   SCIP_VAR** probvars;
+   int nbinvars;
+   int nintegers;
 
    if( nvars == 0 )
       return SCIP_OKAY;
@@ -1098,9 +1101,9 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
     * variable bounds instead of the 'normal' implications
     */
    implbinvarsexist = FALSE;
-   SCIP_VAR ** probvars = SCIPprobGetVars(scip->transprob);
-   int nbinvars = SCIPprobGetNBinVars(scip->transprob);
-   int nintegers = SCIPprobGetNVars(scip->transprob) - SCIPprobGetNContVars(scip->transprob);
+   probvars = SCIPprobGetVars(scip->transprob);
+   nbinvars = SCIPprobGetNBinVars(scip->transprob);
+   nintegers = SCIPprobGetNVars(scip->transprob) - SCIPprobGetNContVars(scip->transprob);
    assert(nintegers >= nbinvars);
    for( v = nintegers - 1; v >= nbinvars; --v )
    {
