@@ -5186,7 +5186,7 @@ SCIP_RETCODE addSSTConss(
    int tiebreakrule;
    int leadervartype;
    SCIP_VARTYPE selectedtype = SCIP_VARTYPE_CONTINUOUS;
-   SCIP_VARIMPLTYPE selectedimplinttype = SCIP_VARIMPLTYPE_NONE;
+   SCIP_VARIMPLTYPE selectedimpltype = SCIP_VARIMPLTYPE_NONE;
    int nvarsselectedtype;
    SCIP_Bool conflictgraphcreated = FALSE;
    SCIP_Bool mixedcomponents;
@@ -5269,14 +5269,14 @@ SCIP_RETCODE addSSTConss(
    if ( ISSSTIMPLINTACTIVE(leadervartype) && nmovedimplintpermvars > nvarsselectedtype )
    {
       selectedtype = SCIP_VARTYPE_CONTINUOUS;
-      selectedimplinttype = SCIP_VARIMPLTYPE_WEAK;
+      selectedimpltype = SCIP_VARIMPLTYPE_WEAK;
       nvarsselectedtype = nmovedimplintpermvars;
    }
 
    if ( ISSSTCONTACTIVE(leadervartype) && nmovedcontpermvars > nvarsselectedtype )
    {
       selectedtype = SCIP_VARTYPE_CONTINUOUS;
-      selectedimplinttype = SCIP_VARIMPLTYPE_NONE;
+      selectedimpltype = SCIP_VARIMPLTYPE_NONE;
       nvarsselectedtype = nmovedcontpermvars;
    }
 
@@ -5371,8 +5371,8 @@ SCIP_RETCODE addSSTConss(
          for (p = 0; p < norbits; ++p)
          {
             /* stop if the first element of an orbits has the wrong vartype */
-            if ( SCIPvarIsImpliedIntegral(permvars[orbits[orbitbegins[p]]]) != ( selectedimplinttype != SCIP_VARIMPLTYPE_NONE )
-               || ( selectedimplinttype == SCIP_VARIMPLTYPE_NONE && SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype ) )
+            if ( SCIPvarIsImpliedIntegral(permvars[orbits[orbitbegins[p]]]) != ( selectedimpltype != SCIP_VARIMPLTYPE_NONE )
+               || ( selectedimpltype == SCIP_VARIMPLTYPE_NONE && SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype ) )
             {
                success = FALSE;
                break;
@@ -5402,8 +5402,8 @@ SCIP_RETCODE addSSTConss(
 
       /* select orbit and leader */
       SCIP_CALL( selectOrbitLeaderSSTConss(scip, varconflicts, permvars, npermvars, orbits, orbitbegins,
-            norbits, propdata->sstleaderrule, propdata->ssttiebreakrule, selectedtype, selectedimplinttype,
-            &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, &success) );
+                                           norbits, propdata->sstleaderrule, propdata->ssttiebreakrule, selectedtype, selectedimpltype,
+                                           &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, &success) );
 
       if ( ! success )
          break;
