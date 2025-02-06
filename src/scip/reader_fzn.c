@@ -3868,7 +3868,8 @@ SCIP_Bool writeVarIntegral(
                                                 < for more information */
 )
 {
-   assert(implintlevel >= -2 && implintlevel <= 2);
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
    SCIP_VARTYPE type = SCIPvarGetType(var);
    SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
    return ( implintlevel == 0 && type != SCIP_VARTYPE_CONTINUOUS )

@@ -3113,7 +3113,6 @@ SCIP_RETCODE SCIPwritePip(
       for (v = 0; v < nvars; ++v)
       {
          var = vars[v];
-         assert( var != NULL );
 
          if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
              || ( implintlevel == -1 && SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_STRONG )
@@ -3142,27 +3141,26 @@ SCIP_RETCODE SCIPwritePip(
 
       for (v = 0; v < nvars; ++v)
       {
+         SCIP_VARTYPE vartype;
+         int impltype;
+
          var = vars[v];
-         assert( var != NULL );
-         SCIP_VARTYPE vartype = SCIPvarGetType(var);
-         SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
+         vartype = SCIPvarGetType(var);
+         impltype = SCIPvarGetImplType(var);
+         if( vartype == SCIP_VARTYPE_BINARY
+             || ( vartype == SCIP_VARTYPE_INTEGER && impltype > 2 + implintlevel )
+             || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype <= 2 - implintlevel ) )
+            continue;
 
-         if( ( implintlevel >= 0 && vartype == SCIP_VARTYPE_INTEGER )
-             || ( implintlevel == 1 && vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_STRONG )
-             || ( implintlevel == 2 && vartype == SCIP_VARTYPE_CONTINUOUS && impltype != SCIP_VARIMPLTYPE_NONE )
-             || ( implintlevel == -1 && impltype != SCIP_VARIMPLTYPE_STRONG )
-             || ( implintlevel == -2 && impltype == SCIP_VARIMPLTYPE_NONE ) )
+         if( printHeader )
          {
-            if ( printHeader )
-            {
-               SCIPinfoMessage(scip, file, "Generals\n");
-               printHeader = FALSE;
-            }
-
-            (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s", varname);
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
+            SCIPinfoMessage(scip, file, "Generals\n");
+            printHeader = FALSE;
          }
+
+         (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s", varname);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
       endLine(scip, file, linebuffer, &linecnt);
    }

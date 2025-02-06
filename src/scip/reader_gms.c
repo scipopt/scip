@@ -1463,31 +1463,30 @@ SCIP_RETCODE SCIPwriteGms(
 
    /* declare binary variables if present */
    {
-      SCIP_Bool firstIteration = TRUE;
+      SCIP_Bool initial = TRUE;
 
       for( v = 0; v < nvars; ++v )
       {
          var = vars[v]; /*lint !e613 */
-         assert(var != NULL);
 
          if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
              || ( implintlevel == -1 && SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_STRONG )
              || ( implintlevel == -2 && SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE ) )
             continue;
 
-         if( firstIteration )
+         if( initial )
          {
             SCIPinfoMessage(scip, file, "Binary variables\n");
             clearLine(linebuffer, &linecnt);
          }
 
          SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
-         (void)SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s", firstIteration ? "" : ", ", varname);
+         (void)SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s", initial ? "" : ", ", varname);
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
-         firstIteration = FALSE;
+         initial = FALSE;
       }
-      if( !firstIteration )
+      if( !initial )
       {
          endLine(scip, file, linebuffer, &linecnt);
          SCIPinfoMessage(scip, file, ";\n");
@@ -1497,35 +1496,34 @@ SCIP_RETCODE SCIPwriteGms(
 
    /* declare integer variables if present */
    {
-      SCIP_Bool firstIteration = TRUE;
+      SCIP_Bool initial = TRUE;
 
       for( v = 0; v < nvars; ++v )
       {
+         SCIP_VARTYPE vartype;
+         int impltype;
          var = vars[v]; /*lint !e613 */
-         assert(var != NULL);
 
-         SCIP_VARTYPE vartype = SCIPvarGetType(var);
-         SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
-         if( ( implintlevel >= 0 && vartype == SCIP_VARTYPE_INTEGER )
-             || ( implintlevel == 1 && vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_STRONG )
-             || ( implintlevel == 2 && vartype == SCIP_VARTYPE_CONTINUOUS && impltype != SCIP_VARIMPLTYPE_NONE )
-             || ( implintlevel == -1 && impltype != SCIP_VARIMPLTYPE_STRONG )
-             || ( implintlevel == -2 && impltype == SCIP_VARIMPLTYPE_NONE ) )
+         vartype = SCIPvarGetType(var);
+         impltype = SCIPvarGetImplType(var);
+         if( vartype == SCIP_VARTYPE_BINARY
+             || ( vartype == SCIP_VARTYPE_INTEGER && impltype > 2 + implintlevel )
+             || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype <= 2 - implintlevel ) )
+            continue;
+
+         if( initial )
          {
-            if( firstIteration )
-            {
-               SCIPinfoMessage(scip, file, "Integer variables\n");
-               clearLine(linebuffer, &linecnt);
-            }
-
-            SCIP_CALL(printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)));
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s", firstIteration ? "" : ", ", varname);
-
-            appendLine(scip, file, linebuffer, &linecnt, buffer);
-            firstIteration = FALSE;
+            SCIPinfoMessage(scip, file, "Integer variables\n");
+            clearLine(linebuffer, &linecnt);
          }
+
+         SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s", initial ? "" : ", ", varname);
+
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
+         initial = FALSE;
       }
-      if( !firstIteration )
+      if( !initial )
       {
          endLine(scip, file, linebuffer, &linecnt);
          SCIPinfoMessage(scip, file, ";\n");
