@@ -101,8 +101,8 @@ Interface changes
 - SCIPbenderGetMasterAuxiliaryVar() returns the master auxiliary variable
 - added SCIPcreateObjVarImpl() and SCIPcreateVarImpl(), which behave identically to SCIPcreateObjVar() and SCIPcreateVar() but have an additional argument for the new implied integer type flag (8th position)
 - added SCIPchgVarImplType(), SCIPvarGetImplType(), SCIPvarIsImpliedIntegral() to control and query implied integrality
-- added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integer variables of every type. Note that SCIPgetNBinVars(), SCIPgetNIntVars() and SCIPgetNContVars() do not include the implied integer variables in their counts, as before
-- added SCIPcolIsImpliedIntegral()
+- added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integer variables of every type, note that SCIPgetNBinVars(), SCIPgetNIntVars() and SCIPgetNContVars() do not include the implied integer variables in their counts, as before
+- added SCIPcolIsImpliedIntegral() and SCIPgetRowNumImplIntCols() to query implied integrality information in the LP
 - added SCIPvarArrayCountTypes() to determine the variable type count distribution for an array of variables
 - added SCIPeventGetOldImplType(), SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
 
