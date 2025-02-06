@@ -17352,7 +17352,6 @@ SCIP_Bool SCIPvarWasFixedEarlier(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  */
-
 SCIP_RETCODE SCIPvarArrayCountTypes(
    SCIP_VAR**            vars,               /**< array of variables to count the types for */
    int                   nvars,              /**< number of variables in the array */
