@@ -4081,10 +4081,11 @@ SCIP_RETCODE SCIPwriteLp(
       SCIPinfoMessage(scip, file, " %s free\n", varname);
    }
 
-   /* We adjust the output of integrality constraints for implied integers based on this parameter */
+   /* adjust written integrality constraints on implied integers based on the implintlevel */
    int implintlevel;
-   SCIP_CALL(SCIPgetIntParam(scip,"write/implintlevel",&implintlevel));
-   assert(implintlevel >= -2 && implintlevel <= 2);
+   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
 
    /* print binaries section */
    {
@@ -4094,7 +4095,6 @@ SCIP_RETCODE SCIPwriteLp(
       for( v = 0; v < nvars; ++v )
       {
          var = vars[v];
-         assert( var != NULL );
          if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
             || ( implintlevel == -1 && SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_STRONG )
             || ( implintlevel == -2 && SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE ) )
@@ -4115,7 +4115,6 @@ SCIP_RETCODE SCIPwriteLp(
       for( v = 0; v < naggvars; ++v )
       {
          var = aggvars[v];
-         assert( var != NULL );
          if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
           || ( implintlevel == -1 && SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_STRONG )
           || ( implintlevel == -2 && SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE ) )
