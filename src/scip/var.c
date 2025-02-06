@@ -17357,9 +17357,9 @@ SCIP_RETCODE SCIPvarArrayCountTypes(
    int                   nvars,              /**< number of variables in the array */
    int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
    int*                  nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
-   int*                  nbinimplvars,       /**< pointer to store number of binary implicit integral vars or NULL if not needed */
-   int*                  nintimplvars,       /**< pointer to store number of integer implicit integral vars or NULL if not needed */
-   int*                  ncontimplvars,      /**< pointer to store number of continuous implicit integral vars or NULL if not needed */
+   int*                  nbinimplvars,       /**< pointer to store number of binary implied integral vars or NULL if not needed */
+   int*                  nintimplvars,       /**< pointer to store number of integer implied integral vars or NULL if not needed */
+   int*                  ncontimplvars,      /**< pointer to store number of continuous implied integral vars or NULL if not needed */
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
