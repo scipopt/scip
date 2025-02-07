@@ -990,8 +990,8 @@ SCIP_Real expectedTreeSize(
       SCIP_Real p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, logmeangain, logstdevgain, distributioncdf);
       SCIPdebugMsg(scip, " -> Probability of finding a better variable that would reduce the depth: %g\n", p);
       /* Size of the improved tree. */
-      improvedtree =  strongBranchingTreeSize(depth - 1);
-      nexttreesize = improvedtree * p + strongBranchingTreeSize(depth) * (1.0 - p) + 2.0;
+      improvedtree =  strongBranchingTreeSize((double) depth - 1);
+      nexttreesize = improvedtree * p + strongBranchingTreeSize((double) depth) * (1.0 - p) + 2.0;
       if( p < 1e-5 )
          return SCIPinfinity(scip);
    }
@@ -1129,10 +1129,10 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    {
       assert(minmeangain > 0.0);
       assert(branchruledata->currndualgains > 0);
-      SCIP_Real sum_for_lambda = branchruledata->sumlogmeangains - branchruledata->currndualgains * log(minmeangain);
-      if(SCIPisZero(scip, sum_for_lambda))
+      SCIP_Real sumlambda = branchruledata->sumlogmeangains - branchruledata->currndualgains * log(minmeangain);
+      if(SCIPisZero(scip, sumlambda))
          return TRUE;
-      lambda = branchruledata->currndualgains / sum_for_lambda;
+      lambda = branchruledata->currndualgains / sumlambda;
    }
    else if (branchruledata->dynamiclookdistribution == EXPONENTIALDISTRIBUTION)
    {
@@ -1147,9 +1147,8 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
       lambda = -1.0;
    }
 
-   /* TodoSB too large depth can cause overflow. Set limit of 50 */
    /* Continue strong branching since we do not have good enough gains in this case */
-   currentdepth = strongBranchingDepth(gaptoclose, maxmeangain);
+   currentdepth = (int) strongBranchingDepth(gaptoclose, maxmeangain);
 
    if (currentdepth >= 50)
    {
@@ -1160,7 +1159,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    (*dynamiclookaheadused) = TRUE;
 
    /* Compute the tree size if we branch on the best variable so far, including the strong branching already done. */
-   currenttreesize = strongBranchingTreeSize(currentdepth);
+   currenttreesize = strongBranchingTreeSize((double) currentdepth);
 
    /* Compute the expected size of the tree with one more strong branching */
    nexttreesize =  expectedTreeSize(scip, gaptoclose, zeroprob, (double) currentdepth, lambda, minmeangain, logmeangain, logstdevgain, branchruledata->dynamiclookdistribution);
