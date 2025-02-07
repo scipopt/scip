@@ -184,7 +184,7 @@ struct SCIP_Col
    unsigned int          ubchanged:1;        /**< has upper bound changed, and has data of LP solver to be updated? */
    unsigned int          coefchanged:1;      /**< has the coefficient vector changed, and has LP solver to be updated? */
    unsigned int          integral:1;         /**< is associated variable of integral type? */
-   unsigned int          impliedintegral:1;  /**< is the associated variable implied integer? */
+   unsigned int          impliedintegral:1;  /**< is associated variable implied integral? */
    unsigned int          removable:1;        /**< is column removable from the LP (due to aging or cleanup)? */
    unsigned int          sbdownvalid:1;      /**< stores whether the stored strong branching down value is a valid dual bound;
                                               *   otherwise, it can only be used as an estimate value */
