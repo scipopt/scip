@@ -1133,10 +1133,10 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    {
       assert(minmeangain > 0.0);
       assert(branchruledata->currndualgains > 0);
-      SCIP_Real sum_for_lambda = branchruledata->sumlogmeangains - branchruledata->currndualgains * log(minmeangain);
-      if(SCIPisZero(scip, sum_for_lambda))
+      SCIP_Real sumlambda = branchruledata->sumlogmeangains - branchruledata->currndualgains * log(minmeangain);
+      if(SCIPisZero(scip, sumlambda))
          return TRUE;
-      lambda = branchruledata->currndualgains / sum_for_lambda;
+      lambda = branchruledata->currndualgains / sumlambda;
    }
    else if (branchruledata->dynamiclookdistribution == EXPONENTIALDISTRIBUTION)
    {
@@ -1151,7 +1151,6 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
       lambda = -1.0;
    }
 
-   /* TodoSB too large depth can cause overflow. Set limit of 50 */
    /* Continue strong branching since we do not have good enough gains in this case */
    currentdepth = strongBranchingDepth(gaptoclose, maxmeangain);
 
