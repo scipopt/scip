@@ -3112,9 +3112,12 @@ SCIP_RETCODE SCIPwritePip(
 
       for (v = 0; v < nvars; ++v)
       {
-         var = vars[v];
+         int impltype;
 
-         if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetImplType(var) > 2 + implintlevel )
+         var = vars[v];
+         impltype = SCIPvarGetImplType(var);
+
+         if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || impltype > 2 + implintlevel )
             continue;
 
          if ( printHeader )
