@@ -4117,8 +4117,7 @@ SCIP_RETCODE SCIPwriteLp(
       {
          var = aggvars[v];
          if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
-          || ( implintlevel == -1 && SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_STRONG )
-          || ( implintlevel == -2 && SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE ) )
+            || SCIPvarGetImplType(var) > 2 + implintlevel )
             continue;
 
          if( initial )
@@ -4149,9 +4148,10 @@ SCIP_RETCODE SCIPwriteLp(
          var = vars[v];
          vartype = SCIPvarGetType(var);
          impltype = SCIPvarGetImplType(var);
+
          if( vartype == SCIP_VARTYPE_BINARY
             || ( vartype == SCIP_VARTYPE_INTEGER && impltype > 2 + implintlevel )
-            || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype <= 2 - implintlevel ) )
+            || ( vartype == SCIP_VARTYPE_CONTINUOUS && impltype <= 2 - implintlevel ) )
             continue;
 
          if( initial )
@@ -4170,13 +4170,14 @@ SCIP_RETCODE SCIPwriteLp(
       {
          SCIP_VARTYPE vartype;
          int impltype;
-         var = aggvars[v];
 
+         var = aggvars[v];
          vartype = SCIPvarGetType(var);
          impltype = SCIPvarGetImplType(var);
+
          if( vartype == SCIP_VARTYPE_BINARY
              || ( vartype == SCIP_VARTYPE_INTEGER && impltype > 2 + implintlevel )
-             || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype <= 2 - implintlevel ) )
+             || ( vartype == SCIP_VARTYPE_CONTINUOUS && impltype <= 2 - implintlevel ) )
             continue;
 
          if( initial )
