@@ -658,12 +658,6 @@ int SCIProwGetNumIntCols(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
-/** gets number of implied integer columns in row */
-int SCIProwGetNumImplIntCols(
-   SCIP_ROW*             row,                /**< LP row */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   );
-
 /** returns row's cutoff distance in the direction of the given primal solution */
 SCIP_Real SCIProwGetLPSolCutoffDistance(
    SCIP_ROW*             row,                /**< LP row */
