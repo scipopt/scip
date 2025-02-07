@@ -4957,8 +4957,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
          /* skip orbits containing vars different to the leader's vartype */
          /* Conflictvars is permvars! */
          if ( ( leadervarimpltype != SCIP_VARIMPLTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[orbits[orbitbegins[i]]]) )
-            continue;
-         if ( leadervarimpltype == SCIP_VARIMPLTYPE_NONE && SCIPvarGetType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype )
+            || ( leadervarimpltype == SCIP_VARIMPLTYPE_NONE && SCIPvarGetType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype ) )
             continue;
 
          if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MINORBIT )
@@ -5077,10 +5076,9 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       /* iterate over variables and select the first one that meets the tiebreak rule */
       for (i = 0; i < nconflictvars; ++i)
       {
-         if ( ( leadervarimpltype != SCIP_VARIMPLTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[i]) )
-            continue;
          /* skip vars different to the leader's vartype */
-         if ( leadervarimpltype == SCIP_VARIMPLTYPE_NONE && SCIPvarGetType(conflictvars[i]) != leadervartype )
+         if ( ( leadervarimpltype != SCIP_VARIMPLTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[i]) )
+            || ( leadervarimpltype == SCIP_VARIMPLTYPE_NONE && SCIPvarGetType(conflictvars[i]) != leadervartype ) )
             continue;
 
          /* skip variables not affected by symmetry */
@@ -5401,9 +5399,9 @@ SCIP_RETCODE addSSTConss(
          tiebreakrule = SCIP_LEADERTIEBREAKRULE_MAXORBIT;
 
       /* select orbit and leader */
-      SCIP_CALL( selectOrbitLeaderSSTConss(scip, varconflicts, permvars, npermvars, orbits, orbitbegins,
-                                           norbits, propdata->sstleaderrule, propdata->ssttiebreakrule, selectedtype, selectedimpltype,
-                                           &orbitidx, &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, &success) );
+      SCIP_CALL( selectOrbitLeaderSSTConss(scip, varconflicts, permvars, npermvars, orbits, orbitbegins, norbits,
+            propdata->sstleaderrule, propdata->ssttiebreakrule, selectedtype, selectedimpltype, &orbitidx,
+            &orbitleaderidx, orbitvarinconflict, &norbitvarinconflict, &success) );
 
       if ( ! success )
          break;
