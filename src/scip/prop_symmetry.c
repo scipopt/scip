@@ -4956,7 +4956,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       {
          /* skip orbits containing vars different to the leader's vartype */
          /* Conflictvars is permvars! */
-         if ( ( leadervarimpltype != SCIP_VARIMPLTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[orbits[orbitbegins[i]]]) )
+         if ( ( leadervarimpltype != SCIP_VARIMPLTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[orbits[orbitbegins[i]]])
             || ( leadervarimpltype == SCIP_VARIMPLTYPE_NONE && SCIPvarGetType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype ) )
             continue;
 
@@ -5077,7 +5077,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       for (i = 0; i < nconflictvars; ++i)
       {
          /* skip vars different to the leader's vartype */
-         if ( ( leadervarimpltype != SCIP_VARIMPLTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[i]) )
+         if ( ( leadervarimpltype != SCIP_VARIMPLTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[i])
             || ( leadervarimpltype == SCIP_VARIMPLTYPE_NONE && SCIPvarGetType(conflictvars[i]) != leadervartype ) )
             continue;
 
