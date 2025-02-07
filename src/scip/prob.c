@@ -1123,8 +1123,9 @@ SCIP_RETCODE SCIPprobAddVar(
       SCIP_CALL( SCIPlpUpdateAddVar(lp, set, var) );
    }
 
-   SCIPsetDebugMsg(set, "added variable <%s> to problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
-      SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, SCIPprobGetNImplVars(prob), prob->ncontvars);
+   SCIPsetDebugMsg(set, "added variable <%s> to problem (%d variables: %d binary, %d integer, %d continuous; %d implied)\n",
+      SCIPvarGetName(var), prob->nvars, prob->nbinvars + prob->nbinimplvars, prob->nintvars + prob->nintimplvars,
+      prob->ncontvars+ prob->ncontimplvars, SCIPprobGetNImplVars(prob));
 
    if( prob->transformed )
    {
@@ -1180,8 +1181,9 @@ SCIP_RETCODE SCIPprobDelVar(
 
    assert(SCIPvarGetNegatedVar(var) == NULL);
 
-   SCIPsetDebugMsg(set, "deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d implicit, %d continuous)\n",
-      SCIPvarGetName(var), prob->nvars, prob->nbinvars, prob->nintvars, SCIPprobGetNImplVars(prob), prob->ncontvars);
+   SCIPsetDebugMsg(set, "deleting variable <%s> from problem (%d variables: %d binary, %d integer, %d continuous; %d implied)\n",
+                   SCIPvarGetName(var), prob->nvars, prob->nbinvars + prob->nbinimplvars, prob->nintvars + prob->nintimplvars,
+                   prob->ncontvars+ prob->ncontimplvars, SCIPprobGetNImplVars(prob));
 
    /* mark variable to be deleted from the problem */
    SCIPvarMarkDeleted(var);
@@ -2400,8 +2402,11 @@ void SCIPprobPrintStatistics(
    assert(prob != NULL);
 
    SCIPmessageFPrintInfo(messagehdlr, file, "  Problem name     : %s\n", prob->name);
-   SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
-      prob->nvars, prob->nbinvars, prob->nintvars, SCIPprobGetNImplVars(prob), prob->ncontvars);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d continuous; %d implied)\n",
+      prob->nvars, prob->nbinvars + prob->nbinimplvars, prob->nintvars + prob->nintimplvars, prob->ncontvars + prob->ncontimplvars,
+      SCIPprobGetNImplVars(prob));
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Implied integers : %d (%d binary, %d integer, %d continuous)\n",
+                         SCIPprobGetNImplVars(prob), prob->nbinimplvars, prob->nintimplvars, prob->ncontimplvars);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Objective        : %s, %d non-zeros (abs.min = %g, abs.max = %g)\n",
          !prob->transformed ? (prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize") : "minimize",

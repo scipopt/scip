@@ -346,6 +346,7 @@ BEGIN {
    bestsolfeas = 1;
    infeasobjlimit = 0;
    reoptimization = 0;
+   implintsseparate = 0;
    niter = 0;
 }
 
@@ -533,15 +534,31 @@ BEGIN {
    inoriginalprob = 0;
 }
 /^  Variables        :/ {
+   #With SCIP 10, the print changed to reflect the new variable types.
+   #We support both logs from before and after
+   if( $9 == "continuous;" )
+      implintsseparate = 1
+#   printf("separate:%d \n",implintsseparate)
+
    if( inoriginalprob )
       origvars = $3;
    else
    {
-      vars = $3;
-      intvars = $6;
-      implvars = $8;
-      contvars = $11;
-      binvars = vars - intvars - implvars - contvars;
+      if( implintsseparate ) {
+         vars = $3;
+         intvars = $6;
+         contvars = $8;
+         implvars = $10;
+         binvars = vars - intvars - contvars;
+      }
+      else
+      {
+         vars = $3;
+         intvars = $6;
+         implvars = $8;
+         contvars = $11;
+         binvars = vars - intvars - implvars - contvars;
+      }
    }
 }
 /^  Constraints      :/ {
@@ -993,7 +1010,7 @@ BEGIN {
       else if( binvars == 0 && intvars == 0 )
          probtype = "   LP";
       else if( contvars == 0 ) {
-         if( intvars == 0 && implvars == 0 )
+         if( intvars == 0 && ( implvars == 0 || implintsseparate ) )
             probtype = "   BP";
          else
             probtype = "   IP";
