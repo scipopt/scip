@@ -160,24 +160,6 @@ SCIP_Longint SCIPbranchruleGetNChildren(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
-/** gets the total number of times the lookahead is reached */
-SCIP_EXPORT
-SCIP_Longint SCIPbranchruleGetNReachedLookahead(
-   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
-   );
-
-/** gets the total number of times number of times we stop calling strong branching before lookahead is reached */
-SCIP_EXPORT
-SCIP_Longint SCIPbranchruleGetNBeforeLookahead(
-   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
-   );
-
-/** number of times we stop calling strong branching between min and max lookahead allowed */
-SCIP_EXPORT
-SCIP_Longint SCIPbranchruleGetNBetweenLookahead(
-   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
-   );
-
 /** is branching rule initialized? */
 SCIP_EXPORT
 SCIP_Bool SCIPbranchruleIsInitialized(

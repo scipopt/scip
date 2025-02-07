@@ -3191,14 +3191,14 @@ void SCIPprintBranchruleStatistics(
 
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPprintBranchruleStatistics", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Branching Rules    :   ExecTime  SetupTime   BranchLP  BranchExt   BranchPS    Cutoffs    DomReds       Cuts      Conss   Children BefLookahe BetLookahe AftLookahe \n");
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Branching Rules    :   ExecTime  SetupTime   BranchLP  BranchExt   BranchPS    Cutoffs    DomReds       Cuts      Conss   Children\n");
 
    /* sort branching rules  w.r.t. their name */
    SCIPsetSortBranchrulesName(scip->set);
 
    for( i = 0; i < scip->set->nbranchrules; ++i )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT" %10" SCIP_LONGINT_FORMAT" %10" SCIP_LONGINT_FORMAT" %10" SCIP_LONGINT_FORMAT "\n",
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10.2f %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
          SCIPbranchruleGetName(scip->set->branchrules[i]),
          SCIPbranchruleGetTime(scip->set->branchrules[i]),
          SCIPbranchruleGetSetupTime(scip->set->branchrules[i]),
@@ -3209,10 +3209,7 @@ void SCIPprintBranchruleStatistics(
          SCIPbranchruleGetNDomredsFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNCutsFound(scip->set->branchrules[i]),
          SCIPbranchruleGetNConssFound(scip->set->branchrules[i]),
-         SCIPbranchruleGetNChildren(scip->set->branchrules[i]),
-         SCIPbranchruleGetNBeforeLookahead(scip->set->branchrules[i]),
-         SCIPbranchruleGetNBetweenLookahead(scip->set->branchrules[i]),
-         SCIPbranchruleGetNReachedLookahead(scip->set->branchrules[i]));
+         SCIPbranchruleGetNChildren(scip->set->branchrules[i]));
    }
 }
 

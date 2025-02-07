@@ -1323,10 +1323,6 @@ SCIP_RETCODE doBranchruleCreate(
    (*branchrule)->nconssfound = 0;
    (*branchrule)->ndomredsfound = 0;
    (*branchrule)->nchildren = 0;
-   (*branchrule)->nreachedlookahead = 0;
-   (*branchrule)->nbeforelookahead = 0;
-   (*branchrule)->nbetweenlookahead = 0;
-
    (*branchrule)->initialized = FALSE;
 
    /* add parameters */
@@ -1439,9 +1435,6 @@ SCIP_RETCODE SCIPbranchruleInit(
       branchrule->nconssfound = 0;
       branchrule->ndomredsfound = 0;
       branchrule->nchildren = 0;
-      branchrule->nreachedlookahead = 0;
-      branchrule->nbeforelookahead = 0;
-      branchrule->nbetweenlookahead = 0;
    }
 
    if( branchrule->branchinit != NULL )
@@ -2174,37 +2167,6 @@ SCIP_Longint SCIPbranchruleGetNChildren(
    assert(branchrule != NULL);
 
    return branchrule->nchildren;
-}
-
-/** gets the total number of times the lookahead is reached */
-SCIP_Longint SCIPbranchruleGetNReachedLookahead(
-   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
-   )
-{
-   assert(branchrule != NULL);
-
-   return branchrule->nreachedlookahead;
-}
-
-/** gets the total number of times number of times we stop calling strong branching before lookahead is reached */
-SCIP_Longint SCIPbranchruleGetNBeforeLookahead(
-   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
-   )
-{
-   assert(branchrule != NULL);
-
-   return branchrule->nbeforelookahead;
-}
-
-/** number of times we stop calling strong branching between min and max lookahead allowed */
-SCIP_EXPORT
-SCIP_Longint SCIPbranchruleGetNBetweenLookahead(
-   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
-   )
-{
-   assert(branchrule != NULL);
-
-   return branchrule->nbetweenlookahead;
 }
 
 /** is branching rule initialized? */

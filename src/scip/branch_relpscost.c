@@ -1056,18 +1056,14 @@ SCIP_Bool continueStrongBranchingLookahead(
    )
 {
    if (lookahead >= maxlookahead && dynamiclookaheadatleastonce)
-   {
-      branchrule->nreachedlookahead++;
       return FALSE;
-   }
-   /* TodoSB split the termination to get statistics for each termination criterion */
    return candidx < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs
                && (candidx < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations);
 }
 
 /** Decide if we continue strong branching based on the estimation of the tree size
  * Use only when:
- * 1. We have a good enough candidate, ie we reached lookahead >= branchruledata->dynamiclookaheadquot * maxlookaheaddefault
+ * 1. We have a good enough candidate, ie we reached lookahead >= branchruledata->dynamiclookaheadquot * maxlookahead
  * 2. If we have both a dual and primal bound
  * 3. The gains are not infinite? ToDoSB we should rethink this condition.
  *
@@ -1077,7 +1073,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    SCIP*                 scip,
    SCIP_BRANCHRULE*      branchrule,          /**< branching rule */
    SCIP_Real             lookahead,
-   SCIP_Real             maxlookaheaddefault,
+   SCIP_Real             maxlookahead,
    SCIP_Bool*            dynamiclookaheadused,
    SCIP_Bool*            dynamiclookaheadatleastonce,
    int*                  dynamiclookaheaddecision
@@ -1105,10 +1101,10 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
 
    (*dynamiclookaheadused) = FALSE;
    /* compute the expected tree size after reaching a min lookahaead */
-   if( lookahead < branchruledata->dynamiclookaheadquot * maxlookaheaddefault)
+   if( lookahead < branchruledata->dynamiclookaheadquot * maxlookahead)
       return TRUE;
 
-   /* TodoSB: if we do not have a large enough sample to estimate the rate of the exponential distribution we continue with strong branching */
+   /* if we do not have a large enough sample to estimate the tree size we continue with strong branching */
    if ( branchruledata->currndualgains < branchruledata->minsamplesize )
       return TRUE;
 
@@ -1175,11 +1171,6 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
       *dynamiclookaheaddecision = 1;
       return TRUE;
    }
-
-   if((*dynamiclookaheadatleastonce) == FALSE)
-         branchrule->nbeforelookahead++;
-   else
-         branchrule->nbetweenlookahead++;
 
    *dynamiclookaheaddecision = 0;
 
@@ -1367,7 +1358,6 @@ SCIP_RETCODE execRelpscost(
       SCIP_Real prio;
       SCIP_Real reliable;
       SCIP_Real maxlookahead;
-      SCIP_Real maxlookaheaddefault;
       SCIP_Real lookahead;
       SCIP_Real relerrorthreshold;
       SCIP_Bool initstrongbranching;
@@ -1698,7 +1688,6 @@ SCIP_RETCODE execRelpscost(
 
             mingains[c] = MIN(downgain, upgain);
             maxgains[c] = MAX(downgain, upgain);
-            // /* TodoSB: do we want to keep the gains from previous strong branching on this node? */
             SCIP_CALL( updateMinMaxMeanGain(scip, branchrule, downgain, upgain) );
             SCIPdebugMsg(scip, " -> strong branching on variable <%s> already performed (down=%g (%+g), up=%g (%+g), pscostscore=%g)\n",
                SCIPvarGetName(branchcands[c]), down, downgain, up, upgain, pscostscore);
@@ -1795,13 +1784,7 @@ SCIP_RETCODE execRelpscost(
        * search best strong branching candidate,
        * Given the dynamiclookaheadquot we allow dynamiclookaheadquot percent more and less lookahead
        */
-      // maxlookahead = (SCIP_Real)(2.0 - branchruledata->dynamiclookaheadquot) * branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
-      // /* actual lookahead */
-      // maxlookaheaddefault = branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
-
       maxlookahead = (SCIP_Real)branchruledata->maxlookahead * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
-      /* reference lookahead for the statistics. TodoSB this should be a parameter */
-      maxlookaheaddefault = 9.0 * (1.0 + (SCIP_Real)nuninitcands/(SCIP_Real)nbranchcands);
 
       inititer = branchruledata->inititer;
       if( inititer == 0 )
@@ -1848,7 +1831,7 @@ SCIP_RETCODE execRelpscost(
       SCIP_Bool dynamiclookaheadatleastonce = FALSE;
       int dynamiclookaheaddecision = -1; /* -1: no decision, 0 stop SB, 1 continue SB*/
       for( i = 0; continueStrongBranchingLookahead(scip, branchrule, i, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations, dynamiclookaheadatleastonce)
-               && continueStrongBranchingTreeSizeEstimation(scip, branchrule, lookahead, maxlookaheaddefault, &dynamiclookaheadused, &dynamiclookaheadatleastonce, &dynamiclookaheaddecision); ++i )
+               && continueStrongBranchingTreeSizeEstimation(scip, branchrule, lookahead, maxlookahead, &dynamiclookaheadused, &dynamiclookaheadatleastonce, &dynamiclookaheaddecision); ++i )
       {
 
          SCIP_Real down;

@@ -105,9 +105,6 @@ struct SCIP_Branchrule
    SCIP_CLOCK*           branchclock;        /**< branching rule execution time */
    int                   priority;           /**< priority of the branching rule */
    int                   maxdepth;           /**< maximal depth level, up to which this branching rule should be used (or -1) */
-   int                   nreachedlookahead;  /**< number of times the lookahead is reached */
-   int                   nbeforelookahead;   /**< number of times we stop calling strong branching before lookahead is reached */
-   int                   nbetweenlookahead;  /**< number of times we stop calling strong branching between min and max lookahead allowed */
    SCIP_Bool             initialized;        /**< is branching rule initialized? */
    SCIP_Bool             isobjbranchrule;    /**< is branching rule an obj branching rule? */
 };
