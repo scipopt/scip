@@ -1152,7 +1152,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    }
 
    /* Continue strong branching since we do not have good enough gains in this case */
-   currentdepth = strongBranchingDepth(gaptoclose, maxmeangain);
+   currentdepth = (int) strongBranchingDepth(gaptoclose, maxmeangain);
 
    if (currentdepth >= 50)
    {
