@@ -1469,9 +1469,7 @@ SCIP_RETCODE SCIPwriteGms(
       {
          var = vars[v]; /*lint !e613 */
 
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
-             || ( implintlevel == -1 && SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_STRONG )
-             || ( implintlevel == -2 && SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE ) )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetImplType(var) > 2 + implintlevel )
             continue;
 
          if( initial )

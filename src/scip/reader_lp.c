@@ -3565,6 +3565,7 @@ SCIP_RETCODE SCIPwriteLp(
 
    SCIP_Bool zeroobj;
    int implintlevel;
+   int nintegers;
 
    assert(scip != NULL);
 
@@ -4092,12 +4093,11 @@ SCIP_RETCODE SCIPwriteLp(
       SCIP_Bool initial = TRUE;
 
       /* output active variables */
-      for( v = 0; v < nbinvars + nintvars + nimplvars; ++v )
+      nintegers = nbinvars + nintvars + nimplvars;
+      for( v = 0; v < nintegers; ++v )
       {
          var = vars[v];
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
-            || ( implintlevel == -1 && SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_STRONG )
-            || ( implintlevel == -2 && SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE ) )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetImplType(var) > 2 + implintlevel )
             continue;
 
          if( initial )
@@ -4116,8 +4116,7 @@ SCIP_RETCODE SCIPwriteLp(
       for( v = 0; v < naggvars; ++v )
       {
          var = aggvars[v];
-         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
-            || SCIPvarGetImplType(var) > 2 + implintlevel )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetImplType(var) > 2 + implintlevel )
             continue;
 
          if( initial )
@@ -4139,8 +4138,9 @@ SCIP_RETCODE SCIPwriteLp(
    {
       SCIP_Bool initial = TRUE;
 
+      nintegers = nbinvars + nintvars + nimplvars;
       /* output active variables */
-      for( v = nbinvars; v < nbinvars + nintvars + nimplvars; ++v )
+      for( v = nbinvars; v < nintegers; ++v )
       {
          SCIP_VARTYPE vartype;
          int impltype;

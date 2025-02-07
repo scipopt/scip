@@ -3114,9 +3114,7 @@ SCIP_RETCODE SCIPwritePip(
       {
          var = vars[v];
 
-         if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY
-             || ( implintlevel == -1 && SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_STRONG )
-             || ( implintlevel == -2 && SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE ) )
+         if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || SCIPvarGetImplType(var) > 2 + implintlevel )
             continue;
 
          if ( printHeader )
