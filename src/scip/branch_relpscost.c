@@ -990,8 +990,8 @@ SCIP_Real expectedTreeSize(
       SCIP_Real p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, logmeangain, logstdevgain, distributioncdf);
       SCIPdebugMsg(scip, " -> Probability of finding a better variable that would reduce the depth: %g\n", p);
       /* Size of the improved tree. */
-      improvedtree =  strongBranchingTreeSize(depth - 1);
-      nexttreesize = improvedtree * p + strongBranchingTreeSize(depth) * (1.0 - p) + 2.0;
+      improvedtree =  strongBranchingTreeSize((double) depth - 1);
+      nexttreesize = improvedtree * p + strongBranchingTreeSize((double) depth) * (1.0 - p) + 2.0;
       if( p < 1e-5 )
          return SCIPinfinity(scip);
    }
@@ -1164,7 +1164,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    (*dynamiclookaheadused) = TRUE;
 
    /* Compute the tree size if we branch on the best variable so far, including the strong branching already done. */
-   currenttreesize = strongBranchingTreeSize(currentdepth);
+   currenttreesize = strongBranchingTreeSize((double) currentdepth);
 
    /* Compute the expected size of the tree with one more strong branching */
    nexttreesize =  expectedTreeSize(scip, gaptoclose, zeroprob, (double) currentdepth, lambda, minmeangain, logmeangain, logstdevgain, branchruledata->dynamiclookdistribution);
