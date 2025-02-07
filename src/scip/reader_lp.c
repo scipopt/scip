@@ -4107,7 +4107,6 @@ SCIP_RETCODE SCIPwriteLp(
          if( initial )
          {
             SCIPinfoMessage(scip, file, "Binaries\n");
-            clearLine(linebuffer, &linecnt);
             initial = FALSE;
          }
 
@@ -4130,7 +4129,6 @@ SCIP_RETCODE SCIPwriteLp(
          if( initial )
          {
             SCIPinfoMessage(scip, file, "Binaries\n");
-            clearLine(linebuffer, &linecnt);
             initial = FALSE;
          }
 
