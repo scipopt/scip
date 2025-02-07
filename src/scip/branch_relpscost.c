@@ -1043,7 +1043,6 @@ SCIP_Real expectedTreeSize(
 static
 SCIP_Bool continueStrongBranchingLookahead(
    SCIP*                 scip,
-   SCIP_BRANCHRULE*      branchrule,          /**< branching rule */
    int                   candidx,
    int                   ninitcands,
    SCIP_Real             lookahead,
@@ -1071,7 +1070,7 @@ SCIP_Bool continueStrongBranchingLookahead(
 static
 SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    SCIP*                 scip,
-   SCIP_BRANCHRULE*      branchrule,          /**< branching rule */
+   SCIP_BRANCHRULEDATA* branchruledata,
    SCIP_Real             lookahead,
    SCIP_Real             maxlookahead,
    SCIP_Bool*            dynamiclookaheadused,
@@ -1079,7 +1078,6 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    int*                  dynamiclookaheaddecision
    )
 {
-   SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_Real lambda;
    SCIP_Real maxmeangain;
    SCIP_Real minmeangain;
@@ -1092,8 +1090,6 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    /* default values never used */
    SCIP_Real logmeangain = 0.0;
    SCIP_Real logstdevgain = -1.0;
-
-   branchruledata = SCIPbranchruleGetData(branchrule);
 
    *dynamiclookaheaddecision = -1;
    if (!branchruledata->dynamiclookahead)
@@ -1829,8 +1825,8 @@ SCIP_RETCODE execRelpscost(
       SCIP_Bool dynamiclookaheadused = FALSE;
       SCIP_Bool dynamiclookaheadatleastonce = FALSE;
       int dynamiclookaheaddecision = -1; /* -1: no decision, 0 stop SB, 1 continue SB*/
-      for( i = 0; continueStrongBranchingLookahead(scip, branchrule, i, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations, dynamiclookaheadatleastonce)
-               && continueStrongBranchingTreeSizeEstimation(scip, branchrule, lookahead, maxlookahead, &dynamiclookaheadused, &dynamiclookaheadatleastonce, &dynamiclookaheaddecision); ++i )
+      for( i = 0; continueStrongBranchingLookahead(scip, i, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations, dynamiclookaheadatleastonce)
+               && continueStrongBranchingTreeSizeEstimation(scip, branchruledata, lookahead, maxlookahead, &dynamiclookaheadused, &dynamiclookaheadatleastonce, &dynamiclookaheaddecision); ++i )
       {
 
          SCIP_Real down;
