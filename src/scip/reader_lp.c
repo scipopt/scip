@@ -3565,7 +3565,8 @@ SCIP_RETCODE SCIPwriteLp(
 
    SCIP_Bool zeroobj;
    int implintlevel;
-   int nintegers;
+   int nintegers = nvars - ncontvars;
+   assert(nintegers >= 0);
 
    /* find indicator constraint handler */
    conshdlrInd = SCIPfindConshdlr(scip, "indicator");
@@ -3628,6 +3629,11 @@ SCIP_RETCODE SCIPwriteLp(
    checkVarnames(scip, vars, nvars);
    /* check if the constraint names are to long */
    checkConsnames(scip, conss, nconss, transformed);
+
+   /* adjust written integrality constraints on implied integers based on the implied integer level */
+   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
 
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "\\ SCIP STATISTICS\n");
@@ -4081,17 +4087,11 @@ SCIP_RETCODE SCIPwriteLp(
       SCIPinfoMessage(scip, file, " %s free\n", varname);
    }
 
-   /* adjust written integrality constraints on implied integers based on the implintlevel */
-   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
-   assert(implintlevel >= -2);
-   assert(implintlevel <= 2);
-
    /* print binaries section */
    {
       SCIP_Bool initial = TRUE;
 
       /* output active variables */
-      nintegers = nbinvars + nintvars + nimplvars;
       for( v = 0; v < nintegers; ++v )
       {
          var = vars[v];
@@ -4136,7 +4136,6 @@ SCIP_RETCODE SCIPwriteLp(
    {
       SCIP_Bool initial = TRUE;
 
-      nintegers = nbinvars + nintvars + nimplvars;
       /* output active variables */
       for( v = nbinvars; v < nintegers; ++v )
       {

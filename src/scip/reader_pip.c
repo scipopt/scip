@@ -2776,21 +2776,25 @@ SCIP_RETCODE SCIPwritePip(
    SCIP_VAR* var;
    SCIP_Real lb;
    SCIP_Real ub;
-   int implintlevel;
 
-   assert( scip != NULL );
+   int implintlevel;
+   int nintegers = nvars - ncontvars;
+   assert(nintegers >= 0);
 
    nAggregatedVars = 0;
    nConsNonlinear = 0;
    nConsAnd = 0;
-
-   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
 
    /* check if the variable names are not to long */
    checkVarnames(scip, vars, nvars);
 
    /* check if the constraint names are to long */
    checkConsnames(scip, conss, nconss, transformed);
+
+   /* adjust written integrality constraints on implied integers based on the implied integer level */
+   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
 
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "\\ SCIP STATISTICS\n");
@@ -3108,23 +3112,20 @@ SCIP_RETCODE SCIPwritePip(
 
    /* print binaries section */
    {
-      SCIP_Bool printHeader = TRUE;
+      SCIP_Bool initial = TRUE;
 
-      for (v = 0; v < nvars; ++v)
+      /* output active variables */
+      for( v = 0; v < nintegers; ++v )
       {
-         int impltype;
-
          var = vars[v];
-         impltype = SCIPvarGetImplType(var);
 
-         if ( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || impltype > 2 + implintlevel )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || (int)SCIPvarGetImplType(var) > 2 + implintlevel )
             continue;
 
-         if ( printHeader )
+         if( initial )
          {
             SCIPinfoMessage(scip, file, "Binaries\n");
-            clearLine(linebuffer, &linecnt);
-            printHeader = FALSE;
+            initial = FALSE;
          }
 
          (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
@@ -3136,33 +3137,42 @@ SCIP_RETCODE SCIPwritePip(
    }
 
    /* print generals section */
-   if ( nintvars > 0 )
    {
-      SCIP_Bool printHeader = TRUE;
+      SCIP_Bool initial = TRUE;
 
-      for (v = 0; v < nvars; ++v)
+      /* output active variables */
+      for( v = nbinvars; v < nintegers; ++v )
       {
-         SCIP_VARTYPE vartype;
-         int impltype;
-
          var = vars[v];
-         vartype = SCIPvarGetType(var);
-         impltype = SCIPvarGetImplType(var);
-         if( vartype == SCIP_VARTYPE_BINARY
-             || ( vartype == SCIP_VARTYPE_INTEGER && impltype > 2 + implintlevel )
-             || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype <= 2 - implintlevel ) )
-            continue;
 
-         if( printHeader )
+         switch( SCIPvarGetType(var) )
+         {
+            case SCIP_VARTYPE_BINARY:
+               continue;
+            case SCIP_VARTYPE_INTEGER:
+               if( (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+                  continue;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               if( (int)SCIPvarGetImplType(var) <= 2 - implintlevel )
+                  continue;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type");
+               return SCIP_INVALIDDATA;
+         }
+
+         if( initial )
          {
             SCIPinfoMessage(scip, file, "Generals\n");
-            printHeader = FALSE;
+            initial = FALSE;
          }
 
          (void) SCIPsnprintf(varname, PIP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
          (void) SCIPsnprintf(buffer, PIP_MAX_PRINTLEN, " %s", varname);
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
+
       endLine(scip, file, linebuffer, &linecnt);
    }
 
