@@ -2723,8 +2723,10 @@ SCIP_RETCODE SCIPcreateConsOrbitopePP(
    return SCIP_OKAY;
 }
 
-/** creates and captures a packing/partitioning orbitope constraint
- *  in its most basic variant, i. e., with all constraint flags set to their default values
+/** creates and captures a packing/partitioning orbitope constraint in its most basic variant, i. e., with all
+ *  constraint flags set to their default values, which can be set afterwards using SCIPsetConsFLAGNAME()
+ *
+ *  @see SCIPcreateConsOrbitopePP() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
