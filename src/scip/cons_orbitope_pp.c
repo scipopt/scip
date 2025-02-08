@@ -959,6 +959,7 @@ SCIP_RETCODE propagateCons(
                i, firstnonzeroinrow, lastoneinrow);
          }
 #endif
+
          /* check if conflict analysis is applicable */
          if ( SCIPisConflictAnalysisApplicable(scip) )
          {
@@ -1117,17 +1118,14 @@ SCIP_RETCODE propagateCons(
 
             if ( firstnonzeros[i] > beta )
             {
-               SCIP_Bool tightened;
+               SCIP_Bool tightened = FALSE;
                int inferInfo;
 
-               /* can fix (s,lastoneinrow) (a.k.a (s,alpha)) to 1
-                * (do not need to fix other entries to 0, since they will be
-                * automatically fixed by SCIPtightenVarLb.)
+               /* can fix (s,lastoneinrow) (a.k.a (s,alpha)) to 1 (do not need to fix other entries to 0, since they
+                * will be automatically fixed by SCIPtightenVarLb.)
                 */
                assert( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 );
                SCIPdebugMsg(scip, " -> Fixing entry (%d,%d) to 1.\n", s, lastoneinrow);
-
-               tightened = FALSE;
 
                /* store position (i,firstnonzeros[i]) */
                inferInfo = nblocks * nspcons + i * nblocks + firstnonzeros[i];
@@ -1462,16 +1460,15 @@ SCIP_RETCODE enfopsPackingPartitioningOrbitopeSolution(
    int i;
    int j;
 
+   assert( scip != NULL );
    assert( cons != NULL );
-
    consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
 
    /* do not enforce non-model constraints if strong dual reductions are not permitted */
    if ( !consdata->ismodelcons && !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
-   assert( scip != NULL );
-   assert( consdata != NULL );
    assert( consdata->nspcons > 0 );
    assert( consdata->nblocks > 0 );
    assert( consdata->vals != NULL );
@@ -1566,7 +1563,6 @@ SCIP_RETCODE checkPackingPartitioningOrbitopeSolution(
    /* get data of constraint */
    assert( cons != 0 );
    consdata = SCIPconsGetData(cons);
-
    assert( consdata != NULL );
    assert( consdata->nspcons > 0 );
    assert( consdata->nblocks > 0 );
@@ -1827,6 +1823,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOrbitopePP)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(valid != NULL);
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrOrbitopePP(scip) );
@@ -2051,6 +2048,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbitopePP)
 
       SCIP_CALL( checkPackingPartitioningOrbitopeSolution(scip, conss[c], sol, result, printreason) );
    }
+
    if( *result == SCIP_FEASIBLE )
    {
       SCIPdebugMsg(scip, "Solution is feasible.\n");
@@ -2468,7 +2466,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitopePP)
       /* determine number of columns */
       if( nspcons == 1 )
       {
-         nblocks = j+1;
+         nblocks = j + 1;
 
          if( *s == '.' || *s == ')' )
             SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons-1]), nblocks) ); /*lint !e866*/
@@ -2527,7 +2525,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsOrbitopePP)
    assert( consdata != NULL );
 
    if ( varssize < consdata->nblocks * consdata->nspcons )
-      (*success) = FALSE;
+      *success = FALSE;
    else
    {
       int cnt = 0;
@@ -2539,7 +2537,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsOrbitopePP)
          for (j = 0; j < consdata->nblocks; ++j)
             vars[cnt++] = consdata->vars[i][j];
       }
-      (*success) = TRUE;
+      *success = TRUE;
    }
 
    return SCIP_OKAY;
@@ -2557,8 +2555,8 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsOrbitopePP)
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   (*nvars) = consdata->nblocks * consdata->nspcons;
-   (*success) = TRUE;
+   *nvars = consdata->nblocks * consdata->nspcons;
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
