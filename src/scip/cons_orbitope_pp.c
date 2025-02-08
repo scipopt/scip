@@ -2080,12 +2080,15 @@ SCIP_DECL_CONSPROP(consPropOrbitopePP)
    /* propagate all useful constraints */
    for (c = 0; c < nusefulconss && !infeasible; ++c)
    {
+      int nfixed;
+
       assert( conss[c] != 0 );
 
       SCIPdebugMsg(scip, "Propagation of packing/partitioning orbitope constraint <%s> ...\n",
          SCIPconsGetName(conss[c]));
 
-      SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixedvars) );
+      SCIP_CALL( propagateCons(scip, conss[c], &infeasible, &nfixed) );
+      nfixedvars += nfixed;
    }
 
    /* return the correct result */
