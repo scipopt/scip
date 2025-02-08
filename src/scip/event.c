@@ -1125,7 +1125,7 @@ SCIP_VAR* SCIPeventGetVar(
       assert(event->data.eventtypechg.var != NULL);
       return event->data.eventtypechg.var;
 
-   case SCIP_EVENTTYPE_IMPLTYPECHANGED: /*lint !e30*/
+   case SCIP_EVENTTYPE_IMPLTYPECHANGED:
       assert(event->data.eventimpltypechg.var != NULL);
       return event->data.eventimpltypechg.var;
 
@@ -1199,7 +1199,7 @@ SCIP_RETCODE SCIPeventChgVar(
       event->data.eventtypechg.var = var;
       break;
 
-   case SCIP_EVENTTYPE_IMPLTYPECHANGED: /*lint !e30*/
+   case SCIP_EVENTTYPE_IMPLTYPECHANGED:
       assert(event->data.eventimpltypechg.var != NULL);
       event->data.eventimpltypechg.var = var;
       break;
@@ -1487,7 +1487,7 @@ SCIP_ROW* SCIPeventGetRow(
          return event->data.eventrowaddedlp.row;
       case SCIP_EVENTTYPE_ROWDELETEDLP:
          return event->data.eventrowdeletedlp.row;
-      case SCIP_EVENTTYPE_ROWCOEFCHANGED:
+      case SCIP_EVENTTYPE_ROWCOEFCHANGED: /*lint !e30 !e142*/
          return event->data.eventrowcoefchanged.row;
       case SCIP_EVENTTYPE_ROWCONSTCHANGED: /*lint !e30 !e142*/
          return event->data.eventrowconstchanged.row;
@@ -1675,7 +1675,7 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_ROWDELETEDSEPA:
    case SCIP_EVENTTYPE_ROWADDEDLP:
    case SCIP_EVENTTYPE_ROWDELETEDLP:
-   case SCIP_EVENTTYPE_ROWCOEFCHANGED:
+   case SCIP_EVENTTYPE_ROWCOEFCHANGED: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_ROWCONSTCHANGED: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_ROWSIDECHANGED: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/
@@ -1840,7 +1840,7 @@ SCIP_RETCODE SCIPeventProcess(
       SCIP_CALL( SCIPeventfilterProcess(var->eventfilter, set, event) );
       break;
 
-   case SCIP_EVENTTYPE_IMPLTYPECHANGED: /*lint !e30 !e142*/
+   case SCIP_EVENTTYPE_IMPLTYPECHANGED:
       var = event->data.eventimpltypechg.var;
       assert(var != NULL);
 
@@ -2378,7 +2378,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_ROWDELETEDSEPA: /* @todo remove previous ADDEDSEPA event */
       case SCIP_EVENTTYPE_ROWADDEDLP: /* @todo remove previous DELETEDLP event */
       case SCIP_EVENTTYPE_ROWDELETEDLP: /* @todo remove previous ADDEDLP event */
-      case SCIP_EVENTTYPE_ROWCOEFCHANGED: /* @todo merge? */
+      case SCIP_EVENTTYPE_ROWCOEFCHANGED: /* @todo merge? */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_ROWCONSTCHANGED: /* @todo merge with previous constchanged event */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_ROWSIDECHANGED: /* @todo merge with previous sidechanged event */ /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/

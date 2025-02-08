@@ -1480,7 +1480,7 @@ SCIP_RETCODE rowEventCoefChanged(
    /* check, if the row is being tracked for coefficient changes
     * if so, issue ROWCOEFCHANGED event
     */
-   if( (row->eventfilter->len > 0 && (row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWCOEFCHANGED) != 0) )
+   if( (row->eventfilter->len > 0 && (row->eventfilter->eventmask & SCIP_EVENTTYPE_ROWCOEFCHANGED) != 0) ) /*lint !e587*/
    {
       SCIP_EVENT* event;
 
