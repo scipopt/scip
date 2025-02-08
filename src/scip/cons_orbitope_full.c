@@ -534,12 +534,12 @@ SCIP_RETCODE propagateCons(
    }
 
  FREELEXMAX:
-   for (i = 0; i < m; ++i)
+   for (i = m - 1; i >= 0; --i)
       SCIPfreeBufferArray(scip, &lexmaxfixes[i]);
    SCIPfreeBufferArray(scip, &lexmaxfixes);
 
  FREELEXMIN:
-   for (i = 0; i < m; ++i)
+   for (i = m - 1; i >= 0; --i)
       SCIPfreeBufferArray(scip, &lexminfixes[i]);
    SCIPfreeBufferArray(scip, &lexminfixes);
 
@@ -682,13 +682,13 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
 
  FREELEXMAX:
    SCIPfreeBufferArray(scip, &minfixedrowlexmax);
-   for (i = 0; i < m; ++i)
+   for (i = m - 1; i >= 0; --i)
       SCIPfreeBufferArray(scip, &lexmaxfixes[i]);
    SCIPfreeBufferArray(scip, &lexmaxfixes);
 
  FREELEXMIN:
    SCIPfreeBufferArray(scip, &minfixedrowlexmin);
-   for (i = 0; i < m; ++i)
+   for (i = m - 1; i >= 0; --i)
       SCIPfreeBufferArray(scip, &lexminfixes[i]);
    SCIPfreeBufferArray(scip, &lexminfixes);
 
