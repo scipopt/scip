@@ -981,8 +981,8 @@ SCIP_Real expectedTreeSize(
       SCIP_Real p = 1.0 - cdfProbability(lambda, zeroprob, gap, mingain, logmeangain, logstdevgain, distributioncdf);
       SCIPdebugMsg(scip, " -> Probability of finding a better variable that would reduce the depth: %g\n", p);
       /* Size of the improved tree. */
-      improvedtree =  strongBranchingTreeSize((double) depth - 1);
-      nexttreesize = improvedtree * p + strongBranchingTreeSize((double) depth) * (1.0 - p) + 2.0;
+      improvedtree =  strongBranchingTreeSize(currentdepth - 1);
+      nexttreesize = improvedtree * p + strongBranchingTreeSize(currentdepth) * (1.0 - p) + 2.0;
       if( p < 1e-5 )
          return SCIPinfinity(scip);
    }
@@ -1017,7 +1017,7 @@ SCIP_Real expectedTreeSize(
          if (ptotal + pnotbetter <= 1.0)
          {
             /* Compute expected size of the improved tree based on improved depth, considering the probability of this improvement. */
-            improvedtree = strongBranchingTreeSize(depth - 1) * p;
+            improvedtree = strongBranchingTreeSize(currentdepth - 1) * p;
          }
          else
             improvedtree = 0.0;
