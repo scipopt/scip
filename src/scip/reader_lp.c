@@ -3564,12 +3564,8 @@ SCIP_RETCODE SCIPwriteLp(
    SCIP_Real ub;
 
    SCIP_Bool zeroobj;
-   SCIP_VARTYPE vartype;
-   int impltype;
    int implintlevel;
    int nintegers;
-
-   assert(scip != NULL);
 
    /* find indicator constraint handler */
    conshdlrInd = SCIPfindConshdlr(scip, "indicator");
@@ -4099,10 +4095,8 @@ SCIP_RETCODE SCIPwriteLp(
       for( v = 0; v < nintegers; ++v )
       {
          var = vars[v];
-         vartype = SCIPvarGetType(var);
-         impltype = SCIPvarGetImplType(var);
 
-         if( vartype != SCIP_VARTYPE_BINARY || impltype > 2 + implintlevel )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || (int)SCIPvarGetImplType(var) > 2 + implintlevel )
             continue;
 
          if( initial )
@@ -4120,10 +4114,8 @@ SCIP_RETCODE SCIPwriteLp(
       for( v = 0; v < naggvars; ++v )
       {
          var = aggvars[v];
-         vartype = SCIPvarGetType(var);
-         impltype = SCIPvarGetImplType(var);
 
-         if( vartype != SCIP_VARTYPE_BINARY || impltype > 2 + implintlevel )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY || (int)SCIPvarGetImplType(var) > 2 + implintlevel )
             continue;
 
          if( initial )
@@ -4149,13 +4141,23 @@ SCIP_RETCODE SCIPwriteLp(
       for( v = nbinvars; v < nintegers; ++v )
       {
          var = vars[v];
-         vartype = SCIPvarGetType(var);
-         impltype = SCIPvarGetImplType(var);
 
-         if( vartype == SCIP_VARTYPE_BINARY
-            || ( vartype == SCIP_VARTYPE_INTEGER && impltype > 2 + implintlevel )
-            || ( vartype == SCIP_VARTYPE_CONTINUOUS && impltype <= 2 - implintlevel ) )
-            continue;
+         switch( SCIPvarGetType(var) )
+         {
+            case SCIP_VARTYPE_BINARY:
+               continue;
+            case SCIP_VARTYPE_INTEGER:
+               if( (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+                  continue;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               if( (int)SCIPvarGetImplType(var) <= 2 - implintlevel )
+                  continue;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type");
+               return SCIP_INVALIDDATA;
+         }
 
          if( initial )
          {
@@ -4172,13 +4174,23 @@ SCIP_RETCODE SCIPwriteLp(
       for( v = 0; v < naggvars; ++v )
       {
          var = aggvars[v];
-         vartype = SCIPvarGetType(var);
-         impltype = SCIPvarGetImplType(var);
 
-         if( vartype == SCIP_VARTYPE_BINARY
-             || ( vartype == SCIP_VARTYPE_INTEGER && impltype > 2 + implintlevel )
-             || ( vartype == SCIP_VARTYPE_CONTINUOUS && impltype <= 2 - implintlevel ) )
-            continue;
+         switch( SCIPvarGetType(var) )
+         {
+            case SCIP_VARTYPE_BINARY:
+               continue;
+            case SCIP_VARTYPE_INTEGER:
+               if( (int)SCIPvarGetImplType(var) > 2 + implintlevel )
+                  continue;
+               break;
+            case SCIP_VARTYPE_CONTINUOUS:
+               if( (int)SCIPvarGetImplType(var) <= 2 - implintlevel )
+                  continue;
+               break;
+            default:
+               SCIPerrorMessage("unknown variable type");
+               return SCIP_INVALIDDATA;
+         }
 
          if( initial )
          {
