@@ -1189,9 +1189,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitopeFull)
       SCIP_Bool feasible;
 
       /* get data of constraint */
-      cons = conss[c];
-      assert( cons != 0 );
-      consdata = SCIPconsGetData(cons);
+      assert( conss[c] != NULL );
+      consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
 
       /* do not enforce non-model constraints */
@@ -1200,7 +1199,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitopeFull)
 
       SCIP_CALL( checkFullOrbitopeSolution(scip, cons, NULL, FALSE, &feasible) );
 
-      *result = SCIP_INFEASIBLE;
+      if ( ! feasible )
+         *result = SCIP_INFEASIBLE;
    }
 
    return SCIP_OKAY;
@@ -1212,8 +1212,6 @@ static
 SCIP_DECL_CONSCHECK(consCheckOrbitopeFull)
 {  /*lint --e{715}*/
    int c;
-   SCIP_CONSDATA* consdata;
-   SCIP_Bool feasible;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -1225,9 +1223,11 @@ SCIP_DECL_CONSCHECK(consCheckOrbitopeFull)
    /* loop through constraints */
    for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
+      SCIP_CONSDATA* consdata;
+      SCIP_Bool feasible;
+
       assert( conss[c] != 0 );
       consdata = SCIPconsGetData(conss[c]);
-
       assert( consdata != NULL );
 
       /* do not check non-model constraints */
@@ -1240,7 +1240,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbitopeFull)
          *result = SCIP_INFEASIBLE;
    }
 
-   if( feasible )
+   if( *result == SCIP_FEASIBLE )
    {
       SCIPdebugMsg(scip, "Solution is feasible.\n");
    }
