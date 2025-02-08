@@ -3078,44 +3078,33 @@ SCIP_RETCODE SCIPvarPrint(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
+   assert(var != NULL);
+   assert(var->scip == set->scip);
+   assert(set != NULL);
+   assert(set->write_implintlevel >= -2);
+   assert(set->write_implintlevel <= 2);
+
    SCIP_HOLELIST* holelist;
    SCIP_Real lb;
    SCIP_Real ub;
+   SCIP_VARTYPE vartype = SCIPvarGetType(var);
+   SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
    int i;
 
-   assert(var != NULL);
-   assert(var->scip == set->scip);
-
-   /** We change the integrality constraints type of implied integers based on the writing settings. */
-   SCIP_VARTYPE type = SCIPvarGetType(var);
-   SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
-   assert(set->write_implintlevel >= -2 && set->write_implintlevel <= 2);
-   /** Remove integrality constraint if less than zero, add if greater than zero.
-    * For 1 and -1, we only apply changes to strong implied integers */
-   switch( set->write_implintlevel )
+   /* change integrality constraints of implied integers based on the writing settings */
+   if( vartype == SCIP_VARTYPE_CONTINUOUS )
    {
-      case -2:
-         if( impltype != SCIP_VARIMPLTYPE_NONE )
-            type = SCIP_VARTYPE_CONTINUOUS;
-         break;
-      case -1:
-         if( impltype == SCIP_VARIMPLTYPE_STRONG )
-            type = SCIP_VARTYPE_CONTINUOUS;
-         break;
-      case 1:
-         if( impltype == SCIP_VARIMPLTYPE_STRONG && type == SCIP_VARTYPE_CONTINUOUS )
-            type = SCIP_VARTYPE_INTEGER;
-         break;
-      case 2:
-         if( impltype != SCIP_VARIMPLTYPE_NONE && type == SCIP_VARTYPE_CONTINUOUS )
-            type = SCIP_VARTYPE_INTEGER;
-         break;
-      case 0:
-      default:
-         break;
+      if( (int)impltype > 2 - set->write_implintlevel )
+         vartype = SCIP_VARTYPE_INTEGER;
    }
+   else
+   {
+      if( (int)impltype > 2 + set->write_implintlevel )
+         vartype = SCIP_VARTYPE_CONTINUOUS;
+   }
+
    /* type of variable */
-   switch( type )
+   switch( vartype )
    {
       case SCIP_VARTYPE_BINARY:
          SCIPmessageFPrintInfo(messagehdlr, file, "  [binary]");
@@ -3185,6 +3174,22 @@ SCIP_RETCODE SCIPvarPrint(
       printHolelist(messagehdlr, file, holelist, "local holes");
    }
 
+   /* implication of variable */
+   switch( impltype )
+   {
+      case SCIP_VARIMPLTYPE_NONE:
+         break;
+      case SCIP_VARIMPLTYPE_WEAK:
+         SCIPmessageFPrintInfo(messagehdlr, file, ", implied: weak");
+         break;
+      case SCIP_VARIMPLTYPE_STRONG:
+         SCIPmessageFPrintInfo(messagehdlr, file, ", implied: strong");
+         break;
+      default:
+         SCIPerrorMessage("unknown implied type\n");
+         return SCIP_INVALIDDATA;
+   }
+
    /* fixings and aggregations */
    switch( SCIPvarGetStatus(var) )
    {
@@ -3225,21 +3230,6 @@ SCIP_RETCODE SCIPvarPrint(
    default:
       SCIPerrorMessage("unknown variable status\n");
       return SCIP_INVALIDDATA;
-   }
-
-   switch( impltype )
-   {
-      case SCIP_VARIMPLTYPE_NONE:
-         break;
-      case SCIP_VARIMPLTYPE_WEAK:
-         SCIPmessageFPrintInfo(messagehdlr, file, ", implied: weak");
-         break;
-      case SCIP_VARIMPLTYPE_STRONG:
-         SCIPmessageFPrintInfo(messagehdlr, file, ", implied: strong");
-         break;
-      default:
-         SCIPerrorMessage("unknown implied type\n");
-         return SCIP_INVALIDDATA;
    }
 
    SCIPmessageFPrintInfo(messagehdlr, file, "\n");
