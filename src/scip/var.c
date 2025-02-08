@@ -5016,6 +5016,8 @@ SCIP_RETCODE tryAggregateIntVars(
    SCIP_Longint ysol;
    SCIP_Bool success;
    SCIP_VARTYPE vartype;
+   SCIP_VARIMPLTYPE impltypex;
+   SCIP_VARIMPLTYPE impltypey;
    SCIP_VARIMPLTYPE impltype;
 
 #define MAXDNOM 1000000LL
@@ -5170,7 +5172,9 @@ SCIP_RETCODE tryAggregateIntVars(
     */
    vartype = (SCIPvarGetType(varx) == SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vary) == SCIP_VARTYPE_CONTINUOUS
          ? SCIP_VARTYPE_CONTINUOUS : SCIP_VARTYPE_INTEGER);
-   impltype = MIN(SCIPvarGetImplType(varx), SCIPvarGetImplType(vary));
+   impltypex = SCIPvarGetImplType(varx);
+   impltypey = SCIPvarGetImplType(vary);
+   impltype = MIN(impltypex, impltypey);
 
    /* feasible solutions are (x,y) = (x',y') + z * (-b,a)
     * - create new integer variable z with infinite bounds

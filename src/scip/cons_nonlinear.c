@@ -1023,7 +1023,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
     * usually, a change to implicit-integer would result in a boundchange on the variable as well, but not if the bound was already almost integral
     */
    if( (eventtype & SCIP_EVENTTYPE_IMPLTYPECHANGED) && SCIPeventGetNewImpltype(event) != SCIP_VARIMPLTYPE_NONE
-      && ( !EPSISINT(SCIPvarGetLbGlobal(SCIPeventGetVar(event)), 0.0)
+      && ( !EPSISINT(SCIPvarGetLbGlobal(SCIPeventGetVar(event)), 0.0) /*lint !e835*/
       || !EPSISINT(SCIPvarGetUbGlobal(SCIPeventGetVar(event)), 0.0) ) ) /*lint !e835*/
       boundtightened = TRUE;
 

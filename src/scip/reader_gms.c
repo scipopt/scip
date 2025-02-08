@@ -1394,7 +1394,9 @@ SCIP_RETCODE SCIPwriteGms(
    {
       for( v = 0; v < nvars; ++v )
       {
-         if( SCIPvarGetObj(vars[v]) == 0.0 ) /*lint !e613*/
+         var = vars[v];
+
+         if( SCIPvarGetObj(var) == 0.0 ) /*lint !e613*/
             continue;
 
          if( objvar == NULL )
@@ -1402,10 +1404,10 @@ SCIP_RETCODE SCIPwriteGms(
             /* first variable with nonzero obj coefficient
              * if not active or having coefficient != 1.0, or being binary/integer, then give up
              */
-            if( !SCIPvarIsActive(vars[v]) || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || SCIPvarGetObj(vars[v]) != 1.0 ) /*lint !e613*/
+            if( !SCIPvarIsActive(var) || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || SCIPvarGetObj(var) != 1.0 ) /*lint !e613*/
                break;
 
-            objvar = vars[v]; /*lint !e613*/
+            objvar = var; /*lint !e613*/
          }
          else
          {
@@ -1446,8 +1448,7 @@ SCIP_RETCODE SCIPwriteGms(
    /* "model" variables */
    for( v = 0; v < nvars; ++v )
    {
-      var = vars[v]; /*lint !e613*/
-      assert( var != NULL );
+      var = vars[v];
 
       SCIP_CALL( printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var)) );
       (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%c", varname, (v < nvars - 1) ? ',' : ';');
@@ -1725,8 +1726,7 @@ SCIP_RETCODE SCIPwriteGms(
 
       for( v = 0; v < nvars; ++v )
       {
-         var = vars[v]; /*lint !e613*/
-         assert( var != NULL );
+         var = vars[v];
 
          /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
          assert( transformed || SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );

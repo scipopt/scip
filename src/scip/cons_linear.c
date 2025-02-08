@@ -14390,8 +14390,8 @@ SCIP_RETCODE presolStuffing(
           * @todo use some tolerance
           * @todo check size of domain and updated ratio for integer variables already?
           */
-         if( ratio > bestratio || ( downlocks == 0 && ratio == bestratio && ( bestdownlocks > 0
-            || ( !SCIPvarIsIntegral(var) && SCIPvarIsIntegral(vars[bestindex]) ) ) ) ) /*lint !e777*/
+         if( ratio > bestratio || ( downlocks == 0 && ratio == bestratio && ( bestdownlocks > 0 /*lint !e777*/
+            || ( !SCIPvarIsIntegral(var) && SCIPvarIsIntegral(vars[bestindex]) ) ) ) )
          {
             /* best index becomes second-best*/
             if( bestindex != -1 )
