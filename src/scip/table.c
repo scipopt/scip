@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -26,6 +26,7 @@
  * @ingroup OTHER_CFILES
  * @brief  methods and datastructures for displaying statistics tables
  * @author Tristan Gally
+ * @author Mohammed Ghannam
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -39,12 +40,9 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/scip.h"
+#include "scip/datatree.h"
 #include "scip/table.h"
-#include "scip/pub_message.h"
-#include "scip/pub_misc.h"
-#include "scip/syncstore.h"
 #include "scip/struct_table.h"
-
 
 
 /*
@@ -86,6 +84,7 @@ SCIP_RETCODE doTableCreate(
    SCIP_DECL_TABLEINITSOL ((*tableinitsol)), /**< solving process initialization method of statistics table */
    SCIP_DECL_TABLEEXITSOL ((*tableexitsol)), /**< solving process deinitialization method of statistics table */
    SCIP_DECL_TABLEOUTPUT ((*tableoutput)),   /**< output method */
+   SCIP_DECL_TABLECOLLECT((*tablecollect)),  /**< data collection method */
    SCIP_TABLEDATA*       tabledata,          /**< display statistics table */
    int                   position,           /**< position of statistics table */
    SCIP_STAGE            earlieststage       /**< output of the statistics table is only printed from this stage onwards */
@@ -97,7 +96,7 @@ SCIP_RETCODE doTableCreate(
    assert(table != NULL);
    assert(name != NULL);
    assert(desc != NULL);
-   assert(tableoutput != NULL);
+   assert(tablecollect != NULL || tableoutput != NULL);
 
    SCIP_ALLOC( BMSallocMemory(table) );
    BMSclearMemory(*table);
@@ -111,6 +110,7 @@ SCIP_RETCODE doTableCreate(
    (*table)->tableinitsol = tableinitsol;
    (*table)->tableexitsol = tableexitsol;
    (*table)->tableoutput = tableoutput;
+   (*table)->tablecollect = tablecollect;
    (*table)->tabledata = tabledata;
    (*table)->position = position;
    (*table)->earlieststage = earlieststage;
@@ -142,6 +142,7 @@ SCIP_RETCODE SCIPtableCreate(
    SCIP_DECL_TABLEINITSOL ((*tableinitsol)), /**< solving process initialization method of statistics table */
    SCIP_DECL_TABLEEXITSOL ((*tableexitsol)), /**< solving process deinitialization method of statistics table */
    SCIP_DECL_TABLEOUTPUT ((*tableoutput)),   /**< output method */
+   SCIP_DECL_TABLECOLLECT((*tablecollect)),  /**< report table data as SCIP_DATATREE */
    SCIP_TABLEDATA*       tabledata,          /**< display statistics table */
    int                   position,           /**< position of statistics table */
    SCIP_STAGE            earlieststage       /**< output of the statistics table is only printed from this stage onwards */
@@ -153,7 +154,7 @@ SCIP_RETCODE SCIPtableCreate(
    assert(tableoutput != NULL);
 
    SCIP_CALL_FINALLY( doTableCreate(table, set, messagehdlr, blkmem, name, desc, active, tablecopy, tablefree,
-      tableinit, tableexit, tableinitsol, tableexitsol, tableoutput, tabledata, position, earlieststage),
+      tableinit, tableexit, tableinitsol, tableexitsol, tableoutput, tablecollect, tabledata, position, earlieststage),
       (void) SCIPtableFree(table, set) );
 
    return SCIP_OKAY;
@@ -271,15 +272,52 @@ SCIP_RETCODE SCIPtableExitsol(
 /** output statistics table to screen */
 SCIP_RETCODE SCIPtableOutput(
    SCIP_TABLE*           table,              /**< statistics table */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
    assert(table != NULL);
-   assert(table->tableoutput != NULL);
+   assert(table->tableoutput != NULL || table->tablecollect != NULL);
    assert(set != NULL);
 
-   SCIP_CALL( table->tableoutput(set->scip, table, file) );
+   if( table->tableoutput != NULL )
+   {
+      SCIP_CALL( table->tableoutput(set->scip, table, file) );
+   }
+   else
+   {
+      SCIP_DATATREE* datatree;
+
+      SCIP_CALL( SCIPdatatreeCreate(&datatree, blkmem, -1) );
+
+      SCIP_CALL( SCIPtableCollect(table, set, datatree) );
+
+      SCIP_CALL( SCIPprintDatatreeAsTable(set->scip, datatree, file, table->name, table->name) );
+
+      SCIPdatatreeFree(&datatree, blkmem);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** collects statistics table data */
+SCIP_RETCODE SCIPtableCollect(
+   SCIP_TABLE*           table,              /**< statistics table */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DATATREE*        datatree            /**< data tree where to add table data */
+   )
+{
+   assert(table != NULL);
+   assert(set != NULL);
+   assert(datatree != NULL);
+
+   SCIP_CALL( SCIPinsertDatatreeString(set->scip, datatree, "description", table->desc) );
+
+   if( table->tablecollect != NULL )
+   {
+      SCIP_CALL( table->tablecollect(set->scip, table, datatree) );
+   }
 
    return SCIP_OKAY;
 }

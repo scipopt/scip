@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -5693,7 +5693,7 @@ SCIP_RETCODE SCIPbendersApplyDecomposition(
 
       /* copying the plugins from the original SCIP instance to the subproblem SCIP */
       SCIP_CALL( SCIPcopyPlugins(set->scip, subproblems[i], TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+            TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
 
       (void) SCIPsnprintf(subprobname, SCIP_MAXSTRLEN, "sub_%s_%d", SCIPgetProbName(set->scip), i);
       SCIP_CALL( SCIPcreateProbBasic(subproblems[i], subprobname) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -467,7 +467,6 @@ SCIP_RETCODE SCIPmatrixCreate(
 {
    SCIP_MATRIX* matrix;
    SCIP_CONSHDLR** conshdlrs;
-   SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
    SCIP_Bool stopped;
    SCIP_VAR** vars;
@@ -518,9 +517,9 @@ SCIP_RETCODE SCIPmatrixCreate(
       {
          conshdlrname = SCIPconshdlrGetName(conshdlrs[i]);
 
-         if( (strcmp(conshdlrname, "linear") == 0) || (strcmp(conshdlrname, "setppc") == 0)
-            || (strcmp(conshdlrname, "logicor") == 0) || (strcmp(conshdlrname, "knapsack") == 0)
-            || (strcmp(conshdlrname, "varbound") == 0) )
+         if( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "knapsack") == 0
+            || strcmp(conshdlrname, "setppc") == 0 || strcmp(conshdlrname, "logicor") == 0
+            || strcmp(conshdlrname, "varbound") == 0 )
          {
             /* increment number of supported constraints */
             nconss += nconshdlrconss;
@@ -583,45 +582,13 @@ SCIP_RETCODE SCIPmatrixCreate(
     * can come up due to downgrading and the remaining cleanup methods cannot fix any more variables
     */
 
-   SCIP_CALL( SCIPcleanupConssKnapsack(scip, TRUE, infeasible) );
+   SCIP_CALL( SCIPcleanupConssKnapsack(scip, TRUE, infeasible, ndelconss) );
    if( *infeasible )
       return SCIP_OKAY;
 
-   /* delete empty redundant knapsack constraints */
-   conshdlr = SCIPfindConshdlr(scip, "knapsack");
-   if( conshdlr != NULL )
-   {
-      nconshdlrconss = SCIPconshdlrGetNCheckConss(conshdlr);
-      conshdlrconss = SCIPconshdlrGetCheckConss(conshdlr);
-      for( i = nconshdlrconss - 1; i >= 0; --i )
-      {
-         if( SCIPgetNVarsKnapsack(scip, conshdlrconss[i]) == 0 )
-         {
-            SCIP_CALL( SCIPdelCons(scip, conshdlrconss[i]) );
-            ++(*ndelconss);
-         }
-      }
-   }
-
-   SCIP_CALL( SCIPcleanupConssLinear(scip, TRUE, infeasible) );
+   SCIP_CALL( SCIPcleanupConssLinear(scip, TRUE, infeasible, ndelconss) );
    if( *infeasible )
       return SCIP_OKAY;
-
-   /* delete empty redundant linear constraints */
-   conshdlr = SCIPfindConshdlr(scip, "linear");
-   if( conshdlr != NULL )
-   {
-      nconshdlrconss = SCIPconshdlrGetNCheckConss(conshdlr);
-      conshdlrconss = SCIPconshdlrGetCheckConss(conshdlr);
-      for( i = nconshdlrconss - 1; i >= 0; --i )
-      {
-         if( SCIPgetNVarsLinear(scip, conshdlrconss[i]) == 0 )
-         {
-            SCIP_CALL( SCIPdelCons(scip, conshdlrconss[i]) );
-            ++(*ndelconss);
-         }
-      }
-   }
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
@@ -736,6 +703,61 @@ SCIP_RETCODE SCIPmatrixCreate(
             }
          }
       }
+      else if( strcmp(conshdlrname, "knapsack") == 0 )
+      {
+         if( nconshdlrconss > 0 )
+         {
+            SCIP_Real* consvals;
+            int valssize;
+
+            valssize = 100;
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, valssize) );
+
+            for( c = 0; c < nconshdlrconss && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
+            {
+               SCIP_Longint* weights;
+
+               cons = conshdlrconss[c];
+               assert(SCIPconsIsTransformed(cons));
+
+               /* do not include constraints that can be altered due to column generation */
+               if( SCIPconsIsModifiable(cons) )
+               {
+                  *complete = FALSE;
+
+                  if( onlyifcomplete )
+                     break;
+
+                  continue;
+               }
+
+               weights = SCIPgetWeightsKnapsack(scip, cons);
+               nvars = SCIPgetNVarsKnapsack(scip, cons);
+
+               if( nvars > valssize )
+               {
+                  valssize = (int) (1.5 * nvars);
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, valssize) );
+               }
+
+               for( v = 0; v < nvars; v++ )
+                  consvals[v] = (SCIP_Real)weights[v];
+
+               SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsKnapsack(scip, cons), consvals,
+                     SCIPgetNVarsKnapsack(scip, cons), -SCIPinfinity(scip),
+                     (SCIP_Real)SCIPgetCapacityKnapsack(scip, cons), nnonzstmp, &rowadded) );
+
+               if(rowadded)
+               {
+                  assert(cnt < nconss);
+                  matrix->cons[cnt] = cons;
+                  cnt++;
+               }
+            }
+
+            SCIPfreeBufferArray(scip, &consvals);
+         }
+      }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
          for( c = 0; c < nconshdlrconss && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
@@ -813,61 +835,6 @@ SCIP_RETCODE SCIPmatrixCreate(
                matrix->cons[cnt] = cons;
                cnt++;
             }
-         }
-      }
-      else if( strcmp(conshdlrname, "knapsack") == 0 )
-      {
-         if( nconshdlrconss > 0 )
-         {
-            SCIP_Real* consvals;
-            int valssize;
-
-            valssize = 100;
-            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, valssize) );
-
-            for( c = 0; c < nconshdlrconss && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
-            {
-               SCIP_Longint* weights;
-
-               cons = conshdlrconss[c];
-               assert(SCIPconsIsTransformed(cons));
-
-               /* do not include constraints that can be altered due to column generation */
-               if( SCIPconsIsModifiable(cons) )
-               {
-                  *complete = FALSE;
-
-                  if( onlyifcomplete )
-                     break;
-
-                  continue;
-               }
-
-               weights = SCIPgetWeightsKnapsack(scip, cons);
-               nvars = SCIPgetNVarsKnapsack(scip, cons);
-
-               if( nvars > valssize )
-               {
-                  valssize = (int) (1.5 * nvars);
-                  SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, valssize) );
-               }
-
-               for( v = 0; v < nvars; v++ )
-                  consvals[v] = (SCIP_Real)weights[v];
-
-               SCIP_CALL( addConstraint(scip, matrix, SCIPgetVarsKnapsack(scip, cons), consvals,
-                     SCIPgetNVarsKnapsack(scip, cons), -SCIPinfinity(scip),
-                     (SCIP_Real)SCIPgetCapacityKnapsack(scip, cons), nnonzstmp, &rowadded) );
-
-               if(rowadded)
-               {
-                  assert(cnt < nconss);
-                  matrix->cons[cnt] = cons;
-                  cnt++;
-               }
-            }
-
-            SCIPfreeBufferArray(scip, &consvals);
          }
       }
       else if( strcmp(conshdlrname, "varbound") == 0 )

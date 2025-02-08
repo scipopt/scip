@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -194,6 +194,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputStatus)
    return SCIP_OKAY;
 }
 
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectStatus)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectStatusStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputTiming)
@@ -202,6 +214,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputTiming)
    assert(table != NULL);
 
    SCIPprintTimingStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectTiming)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectTimingStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -218,6 +242,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputOrigProb)
    return SCIP_OKAY;
 }
 
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectOrigProb)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectOrigProblemStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputTransProb)
@@ -226,6 +262,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputTransProb)
    assert(table != NULL);
 
    SCIPprintTransProblemStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectTransProb)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectTransProblemStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -242,6 +290,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputPresol)
    return SCIP_OKAY;
 }
 
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectPresol)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectPresolverStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputCons)
@@ -250,6 +310,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputCons)
    assert(table != NULL);
 
    SCIPprintConstraintStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectCons)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectConstraintStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -266,6 +338,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputConstiming)
    return SCIP_OKAY;
 }
 
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectConstiming)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectConstraintTimingStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputProp)
@@ -274,6 +358,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputProp)
    assert(table != NULL);
 
    SCIPprintPropagatorStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectProp)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectPropagatorStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -290,6 +386,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputConflict)
    return SCIP_OKAY;
 }
 
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectConflict)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectConflictStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputSepa)
@@ -298,6 +406,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSepa)
    assert(table != NULL);
 
    SCIPprintSeparatorStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectSepa)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectSeparatorStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -314,6 +434,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputCutsel)
    return SCIP_OKAY;
 }
 
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectCutsel)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectCutselectorStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputPricer)
@@ -322,6 +454,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputPricer)
    assert(table != NULL);
 
    SCIPprintPricerStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectPricer)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectPricerStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -338,6 +482,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBranch)
    return SCIP_OKAY;
 }
 
+/** collect method of branching rules statistics to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectBranch)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectBranchruleStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputHeur)
@@ -346,6 +502,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputHeur)
    assert(table != NULL);
 
    SCIPprintHeuristicStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectHeur)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectHeuristicStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -362,6 +530,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputCompression)
    return SCIP_OKAY;
 }
 
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectCompression)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectCompressionStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputLP)
@@ -370,6 +550,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputLP)
    assert(table != NULL);
 
    SCIPprintLPStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectLP)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectLPStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -386,6 +578,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNLP)
    return SCIP_OKAY;
 }
 
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectNLP)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectNLPStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputRelax)
@@ -394,6 +598,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRelax)
    assert(table != NULL);
 
    SCIPprintRelaxatorStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectRelax)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectRelaxatorStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -410,6 +626,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputTree)
    return SCIP_OKAY;
 }
 
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectTree)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectTreeStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputRoot)
@@ -418,6 +646,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputRoot)
    assert(table != NULL);
 
    SCIPprintRootStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectRoot)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectRootStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -434,6 +674,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputSol)
    return SCIP_OKAY;
 }
 
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectSol)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectSolutionStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputConc)
@@ -442,6 +694,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputConc)
    assert(table != NULL);
 
    SCIPprintConcsolverStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectConc)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectConcsolverStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -458,6 +722,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputBenders)
    return SCIP_OKAY;
 }
 
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectBenders)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectBendersStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputExprhdlrs)
@@ -470,6 +746,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputExprhdlrs)
    return SCIP_OKAY;
 }
 
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectExprhdlrs)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectExpressionHandlerStatistics(scip, datatree) );
+
+   return SCIP_OKAY;
+}
+
 /** output method of statistics table to output file stream 'file' */
 static
 SCIP_DECL_TABLEOUTPUT(tableOutputNlpis)
@@ -478,6 +766,18 @@ SCIP_DECL_TABLEOUTPUT(tableOutputNlpis)
    assert(table != NULL);
 
    SCIPprintNLPIStatistics(scip, file);
+
+   return SCIP_OKAY;
+}
+
+/** collect method of statistics table to SCIP_DATATREE */
+static
+SCIP_DECL_TABLECOLLECT(tableCollectNlpis)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(table != NULL);
+
+   SCIP_CALL( SCIPcollectNLPIStatistics(scip, datatree) );
 
    return SCIP_OKAY;
 }
@@ -528,127 +828,127 @@ SCIP_RETCODE SCIPincludeTableDefault(
    }
 
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_STATUS, TABLE_DESC_STATUS, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputStatus,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputStatus, tableCollectStatus,
          NULL, TABLE_POSITION_STATUS, TABLE_EARLIEST_STAGE_STATUS) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_TIMING) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TIMING, TABLE_DESC_TIMING, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTiming,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTiming, tableCollectTiming,
          NULL, TABLE_POSITION_TIMING, TABLE_EARLIEST_STAGE_TIMING) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_ORIGPROB) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ORIGPROB, TABLE_DESC_ORIGPROB, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputOrigProb,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputOrigProb, tableCollectOrigProb,
          NULL, TABLE_POSITION_ORIGPROB, TABLE_EARLIEST_STAGE_ORIGPROB) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_TRANSPROB) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TRANSPROB, TABLE_DESC_TRANSPROB, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTransProb,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTransProb, tableCollectTransProb,
          NULL, TABLE_POSITION_TRANSPROB, TABLE_EARLIEST_STAGE_TRANSPROB) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_PRESOL) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PRESOL, TABLE_DESC_PRESOL, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputPresol,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputPresol, tableCollectPresol,
          NULL, TABLE_POSITION_PRESOL, TABLE_EARLIEST_STAGE_PRESOL) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_CONS) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONS, TABLE_DESC_CONS, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCons,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCons, tableCollectCons,
          NULL, TABLE_POSITION_CONS, TABLE_EARLIEST_STAGE_CONS) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_CONSTIMING) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONSTIMING, TABLE_DESC_CONSTIMING, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConstiming,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConstiming, tableCollectConstiming,
          NULL, TABLE_POSITION_CONSTIMING, TABLE_EARLIEST_STAGE_CONSTIMING) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_PROP) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PROP, TABLE_DESC_PROP, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputProp,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputProp,tableCollectProp,
          NULL, TABLE_POSITION_PROP, TABLE_EARLIEST_STAGE_PROP) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_CONFLICT) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONFLICT, TABLE_DESC_CONFLICT, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConflict,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConflict, tableCollectConflict,
          NULL, TABLE_POSITION_CONFLICT, TABLE_EARLIEST_STAGE_CONFLICT) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_SEPA) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SEPA, TABLE_DESC_SEPA, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSepa,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSepa, tableCollectSepa,
          NULL, TABLE_POSITION_SEPA, TABLE_EARLIEST_STAGE_SEPA) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_CUTSEL) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CUTSEL, TABLE_DESC_CUTSEL, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCutsel,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCutsel, tableCollectCutsel,
          NULL, TABLE_POSITION_CUTSEL, TABLE_EARLIEST_STAGE_CUTSEL) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_PRICER) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_PRICER, TABLE_DESC_PRICER, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputPricer,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputPricer, tableCollectPricer,
          NULL, TABLE_POSITION_PRICER, TABLE_EARLIEST_STAGE_PRICER) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_BRANCH) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BRANCH, TABLE_DESC_BRANCH, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputBranch,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputBranch, tableCollectBranch,
          NULL, TABLE_POSITION_BRANCH, TABLE_EARLIEST_STAGE_BRANCH) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_HEUR) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_HEUR, TABLE_DESC_HEUR, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputHeur,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputHeur, tableCollectHeur,
          NULL, TABLE_POSITION_HEUR, TABLE_EARLIEST_STAGE_HEUR) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_COMPRESSION) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_COMPRESSION, TABLE_DESC_COMPRESSION, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCompression,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputCompression, tableCollectCompression,
          NULL, TABLE_POSITION_COMPRESSION, TABLE_EARLIEST_STAGE_COMPRESSION) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_BENDERS) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_BENDERS, TABLE_DESC_BENDERS, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputBenders,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputBenders, tableCollectBenders,
          NULL, TABLE_POSITION_BENDERS, TABLE_EARLIEST_STAGE_BENDERS) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_EXPRHDLRS) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_EXPRHDLRS, TABLE_DESC_EXPRHDLRS, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputExprhdlrs,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputExprhdlrs, tableCollectExprhdlrs,
          NULL, TABLE_POSITION_EXPRHDLRS, TABLE_EARLIEST_STAGE_EXPRHDLRS) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_LP) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_LP, TABLE_DESC_LP, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputLP,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputLP, tableCollectLP,
          NULL, TABLE_POSITION_LP, TABLE_EARLIEST_STAGE_LP) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_NLP) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLP, TABLE_DESC_NLP, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputNLP,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputNLP, tableCollectNLP,
          NULL, TABLE_POSITION_NLP, TABLE_EARLIEST_STAGE_NLP) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_NLPIS) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_NLPIS, TABLE_DESC_NLPIS, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputNlpis,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputNlpis, tableCollectNlpis,
          NULL, TABLE_POSITION_NLPIS, TABLE_EARLIEST_STAGE_NLPIS) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_RELAX) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_RELAX, TABLE_DESC_RELAX, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputRelax,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputRelax, tableCollectRelax,
          NULL, TABLE_POSITION_RELAX, TABLE_EARLIEST_STAGE_RELAX) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_TREE) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_TREE, TABLE_DESC_TREE, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTree,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputTree, tableCollectTree,
          NULL, TABLE_POSITION_TREE, TABLE_EARLIEST_STAGE_TREE) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_ROOT) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_ROOT, TABLE_DESC_ROOT, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputRoot,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputRoot, tableCollectRoot,
          NULL, TABLE_POSITION_ROOT, TABLE_EARLIEST_STAGE_ROOT) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_SOL) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_SOL, TABLE_DESC_SOL, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSol,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputSol, tableCollectSol,
          NULL, TABLE_POSITION_SOL, TABLE_EARLIEST_STAGE_SOL) );
 
    assert(SCIPfindTable(scip, TABLE_NAME_CONC) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_CONC, TABLE_DESC_CONC, TRUE,
-         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConc,
+         tableCopyDefault, NULL, NULL, NULL, NULL, NULL, tableOutputConc, tableCollectConc,
          NULL, TABLE_POSITION_CONC, TABLE_EARLIEST_STAGE_CONC) );
 
    return SCIP_OKAY;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -61,12 +61,14 @@
 #include "scip/type_branch.h"
 #include "scip/type_conflict.h"
 #include "scip/type_cons.h"
+#include "scip/type_datatree.h"
 #include "scip/type_dialog.h"
 #include "scip/type_disp.h"
 #include "scip/type_expr.h"
 #include "scip/type_heur.h"
 #include "scip/type_compr.h"
 #include "scip/type_history.h"
+#include "scip/type_iisfinder.h"
 #include "scip/type_nodesel.h"
 #include "scip/type_presol.h"
 #include "scip/type_pricer.h"
@@ -102,6 +104,7 @@
 #include "scip/pub_heur.h"
 #include "scip/pub_compr.h"
 #include "scip/pub_history.h"
+#include "scip/pub_iisfinder.h"
 #include "scip/pub_implics.h"
 #include "scip/pub_lp.h"
 #include "scip/pub_nlp.h"
@@ -122,6 +125,7 @@
 #include "scip/pub_table.h"
 #include "scip/pub_tree.h"
 #include "scip/pub_var.h"
+#include "scip/pub_datatree.h"
 #include "lpi/lpi.h"
 
 /* include global presolving, cuts, and heuristics methods */
@@ -132,6 +136,7 @@
 #include "scip/scip_bandit.h"
 #include "scip/scip_benders.h"
 #include "scip/scip_branch.h"
+#include "scip/scip_datatree.h"
 #include "scip/scip_compr.h"
 #include "scip/scip_concurrent.h"
 #include "scip/scip_conflict.h"
@@ -147,6 +152,7 @@
 #include "scip/scip_expr.h"
 #include "scip/scip_general.h"
 #include "scip/scip_heur.h"
+#include "scip/scip_iisfinder.h"
 #include "scip/scip_lp.h"
 #include "scip/scip_mem.h"
 #include "scip/scip_message.h"

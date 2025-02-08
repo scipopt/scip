@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -961,7 +961,7 @@ SCIP_RETCODE createSubSCIP(
    /* create sub-SCIP copy of CIP, copy interesting plugins */
    success = TRUE;
    SCIP_CALL( SCIPcopyPlugins(scip, heurdata->subscip, TRUE, FALSE, TRUE, FALSE, TRUE,
-         FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, &success) );
+         FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, &success) );
 
    if( success == FALSE )
    {
@@ -2400,24 +2400,30 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       }
       else
       {
+         /* ignore fixed vars in input */
+         if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(v), SCIPvarGetUbGlobal(v)) )
+         {
+            SCIPfreeBlockMemoryArray(heurdata->subscip, &newval, 1);
+            continue;
+         }
+
          if( ranks[i] > 0 )
          {
             if( SCIPvarIsBinary(v) && SCIPisEQ(scip, 1.0, SCIPgetSolVal(scip, transsol, v)) )
+            {
+               SCIPfreeBlockMemoryArray(heurdata->subscip, &newval, 1);
                continue;
-
-            /* ignore fixed vars in input */
-            if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(v), SCIPvarGetUbGlobal(v)) )
-               continue;
+            }
 
             *newval = SCIPgetSolVal(scip, transsol, v) + 1;
          }
          else
          {
             if( SCIPvarIsBinary(v) && SCIPisEQ(scip, 0.0, SCIPgetSolVal(scip, transsol, v)) )
+            {
+               SCIPfreeBlockMemoryArray(heurdata->subscip, &newval, 1);
                continue;
-
-            if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(v), SCIPvarGetUbGlobal(v)) )
-               continue;
+            }
 
             *newval = SCIPgetSolVal(scip, transsol, v) - 1;
          }

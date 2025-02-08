@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1433,7 +1433,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* add table output */
    assert(SCIPfindTable(scip, TABLE_NAME_RPA) == NULL);
    SCIP_CALL( SCIPincludeTable(scip, TABLE_NAME_RPA, TABLE_DESC_RPA, TRUE,
-         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputRpa,
+         NULL, NULL, NULL, NULL, NULL, NULL, tableOutputRpa, NULL,
          NULL, TABLE_POSITION_RPA, TABLE_EARLIEST_STAGE_RPA) );
 
    return SCIP_OKAY;

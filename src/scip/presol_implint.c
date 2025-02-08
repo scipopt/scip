@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -724,6 +724,20 @@ SCIP_RETCODE findImpliedIntegers(
  * Callback methods of presolver
  */
 
+/** copy method for presolver plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyImplint)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolImplint(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRESOLFREE(presolFreeImplint)
@@ -855,6 +869,7 @@ SCIP_RETCODE SCIPincludePresolImplint(
    assert(presol != NULL);
 
    /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyImplint) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeImplint) );
 
    SCIP_CALL( SCIPaddRealParam(scip,

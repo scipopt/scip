@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -170,7 +170,16 @@ public:
     *
     *  @see SCIP_DECL_TABLEOUTPUT(x) in @ref type_table.h
     */
-   virtual SCIP_DECL_TABLEOUTPUT(scip_output) = 0;
+   virtual SCIP_DECL_TABLEOUTPUT(scip_output);
+
+   /** data collection method
+    *
+    *  @see SCIP_DECL_TABLECOLLECT(x) in @ref type_table.h
+    */
+   virtual SCIP_DECL_TABLECOLLECT(scip_collect)
+   {  /*lint --e{715}*/
+      return SCIP_OKAY;
+   }
 };
 
 } /* namespace scip */

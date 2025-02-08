@@ -167,6 +167,7 @@ set(scipsources
     scip/heur_zeroobj.c
     scip/heur_zirounding.c
     scip/hypergraph.c
+    scip/iisfinder_greedy.c
     scip/message_default.c
     scip/network.c
     scip/nlhdlr_bilinear.c
@@ -298,6 +299,7 @@ set(scipsources
     scip/heuristics.c
     scip/compr.c
     scip/history.c
+    scip/iisfinder.c
     scip/implics.c
     scip/interrupt.c
     scip/intervalarith.c
@@ -336,6 +338,7 @@ set(scipsources
     scip/scip_cut.c
     scip/scip_cutsel.c
     scip/scip_datastructures.c
+    scip/scip_datatree.c
     scip/scip_debug.c
     scip/scip_dcmp.c
     scip/scip_dialog.c
@@ -344,6 +347,7 @@ set(scipsources
     scip/scip_expr.c
     scip/scip_general.c
     scip/scip_heur.c
+    scip/scip_iisfinder.c
     scip/scip_lp.c
     scip/scip_mem.c
     scip/scip_message.c
@@ -370,6 +374,7 @@ set(scipsources
     scip/scip_tree.c
     scip/scip_validation.c
     scip/scip_var.c
+    scip/datatree.c
     scip/scipdefplugins.c
     scip/scipcoreplugins.c
     scip/scipgithash.c
@@ -409,6 +414,7 @@ set(objscipsources
     objscip/objdisp.cpp
     objscip/objeventhdlr.cpp
     objscip/objheur.cpp
+    objscip/objiisfinder.cpp
     objscip/objmessagehdlr.cpp
     objscip/objnodesel.cpp
     objscip/objpresol.cpp
@@ -454,6 +460,7 @@ set(objscipheaders
     objscip/objdisp.h
     objscip/objeventhdlr.h
     objscip/objheur.h
+    objscip/objiisfinder.h
     objscip/objmessagehdlr.h
     objscip/objnodesel.h
     objscip/objpresol.h
@@ -649,6 +656,8 @@ set(scipheaders
     scip/heur_zirounding.h
     scip/history.h
     scip/hypergraph.h
+    scip/iisfinder.h
+    scip/iisfinder_greedy.h
     scip/implics.h
     scip/interrupt.h
     scip/intervalarith.h
@@ -732,6 +741,7 @@ set(scipheaders
     scip/pub_cons.h
     scip/pub_cutpool.h
     scip/pub_cutsel.h
+    scip/pub_datatree.h
     scip/pub_dcmp.h
     scip/pub_dialog.h
     scip/pub_disp.h
@@ -740,6 +750,7 @@ set(scipheaders
     scip/pub_fileio.h
     scip/pub_heur.h
     scip/pub_history.h
+    scip/pub_iisfinder.h
     scip/pub_implics.h
     scip/pub_lp.h
     scip/pub_matrix.h
@@ -813,6 +824,7 @@ set(scipheaders
     scip/scip_cut.h
     scip/scip_cutsel.h
     scip/scip_datastructures.h
+    scip/scip_datatree.h
     scip/scip_debug.h
     scip/scip_dcmp.h
     scip/scip_dialog.h
@@ -821,6 +833,7 @@ set(scipheaders
     scip/scip_expr.h
     scip/scip_general.h
     scip/scip_heur.h
+    scip/scip_iisfinder.h
     scip/scip_lp.h
     scip/scip_mem.h
     scip/scip_message.h
@@ -889,6 +902,7 @@ set(scipheaders
     scip/struct_cutpool.h
     scip/struct_cuts.h
     scip/struct_cutsel.h
+    scip/struct_datatree.h
     scip/struct_dcmp.h
     scip/struct_dialog.h
     scip/struct_disp.h
@@ -897,6 +911,7 @@ set(scipheaders
     scip/struct_heur.h
     scip/struct_history.h
     scip/struct_hypergraph.h
+    scip/struct_iisfinder.h
     scip/struct_implics.h
     scip/struct_lp.h
     scip/struct_matrix.h
@@ -928,6 +943,7 @@ set(scipheaders
     scip/struct_tree.h
     scip/struct_var.h
     scip/struct_visual.h
+    scip/datatree.h
     scip/symmetry.h
     scip/symmetry_graph.h
     scip/symmetry_orbitopal.h
@@ -952,6 +968,7 @@ set(scipheaders
     scip/type_cutpool.h
     scip/type_cuts.h
     scip/type_cutsel.h
+    scip/type_datatree.h
     scip/type_dcmp.h
     scip/type_dialog.h
     scip/type_disp.h
@@ -961,6 +978,7 @@ set(scipheaders
     scip/type_heur.h
     scip/type_history.h
     scip/type_hypergraph.h
+    scip/type_iisfinder.h
     scip/type_implics.h
     scip/type_interrupt.h
     scip/type_lp.h

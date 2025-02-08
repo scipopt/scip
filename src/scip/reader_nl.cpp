@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -1831,7 +1831,7 @@ SCIP_RETCODE SCIPincludeReaderNl(
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyNl) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadNl) );
 
-   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 690e9e7", "AMPL .nl file reader library (github.com/ampl/mp)") );
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "AMPL/MP 4.0.0", "AMPL .nl file reader library (github.com/ampl/mp)") );
 
    return SCIP_OKAY;
 }
