@@ -1061,7 +1061,7 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    SCIP_Real maxmeangain;
    SCIP_Real minmeangain;
    SCIP_Real nexttreesize;
-   int currentdepth;
+   SCIP_Real currentdepth;
    SCIP_Real currenttreesize;
    SCIP_Real absdualgap;
    SCIP_Real gaptoclose;
