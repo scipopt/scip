@@ -37,7 +37,6 @@
 
 #include "blockmemshell/memory.h"
 #include "scip/branch_relpscost.h"
-#include "scip/def.h"
 #include "scip/treemodel.h"
 #include "scip/cons_and.h"
 #include "scip/pub_branch.h"
@@ -64,8 +63,6 @@
 #include "scip/scip_var.h"
 #include "scip/prop_symmetry.h"
 #include "scip/symmetry.h"
-#include "scip/struct_branch.h"
-#include "scip/type_result.h"
 #include <string.h>
 
 #define BRANCHRULE_NAME          "relpscost"
@@ -106,11 +103,9 @@
 #define DEFAULT_SKIPBADINITCANDS TRUE        /**< should branching rule skip candidates that have a low probability to be
                                               *  better than the best strong-branching or pseudo-candidate? */
 #define DEFAULT_STARTRANDSEED    5           /**< start random seed for random number generation */
-#define DEFAULT_MINSAMPLESIZE    20          /**< minimum sample size to estimate the tree size for dynamic lookahead */
 #define DEFAULT_DYNAMICLOOKAHEAD TRUE        /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
-#define DEFAULT_GEOMETRICMEANGAINS TRUE      /**< should the geometric mean be used instead of the arithmetic mean for min and max gain? */
-#define DEFAULT_LOOKAHEAD_USEBAYESIAN FALSE  /**< should the update of the parameter estimation use the Bayesian rule or a simple weighted combination? */
-#define DEFAULT_DYNAMICLOOKDISTRIBUTION LOGNORMALDISTRIBUTION   /**< which distribution should be used for dynamic lookahead? 0=exponential, 1=Pareto, 2=log-normal */
+#define DEFAULT_MINSAMPLESIZE    20          /**< minimum sample size to estimate the tree size for dynamic lookahead */
+#define DEFAULT_DYNAMICLOOKDISTRIBUTION 2    /**< which distribution should be used for dynamic lookahead? 0=exponential, 1=Pareto, 2=log-normal */
 #define DEFAULT_RANDINITORDER    FALSE       /**< should slight perturbation of scores be used to break ties in the prior scores? */
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE   /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 #define DEFAULT_DYNAMICWEIGHTS   TRUE        /**< should the weights of the branching rule be adjusted dynamically during solving based
@@ -174,8 +169,6 @@ struct SCIP_BranchruleData
                                               *   solving based on objective and infeasible leaf counters? */
    SCIP_Real             dynamiclookaheadquot; /**< apply dynamic lookahead after this fraction maxlookahead is reached */
    SCIP_Bool             dynamiclookahead;   /**< should we use a dynamic lookahead based on a tree size estimation of further strong branchings? */
-   SCIP_Bool             geometricmeangains; /**< should the geometric mean be used instead of the arithmetic mean for min and max gain? */
-   SCIP_Bool             lookaheadbayesian;  /**< should the update of the parameter estimation use the Bayesian rule or a simple convex combination */
    int                   dynamiclookdistribution; /**< which distribution should be used for dynamic lookahead? 0=exponential, 1=Pareto, 2=log-normal */
    int                   minsamplesize;      /**< minimum sample size to estimate the tree size for dynamic lookahead */
    int                   degeneracyaware;    /**< should degeneracy be taken into account to update weights and skip strong branching? (0: off, 1: after root, 2: always) */
@@ -862,12 +855,10 @@ SCIP_RETCODE updateMinMaxMeanGain(
       return SCIP_OKAY;
 
    SCIP_Real meangain;
-   /* TodoSB shift by 0.01? */
-   if(branchruledata->geometricmeangains)
-      meangain = sqrt((downgain + 0.01) * (upgain + 0.01)) - 0.01;
-   else
-      meangain = (downgain + upgain) / 2.0;
+   /* shift by 0.01 */
+   meangain = sqrt((downgain + 0.01) * (upgain + 0.01)) - 0.01;
    assert(SCIPisGE(scip, meangain, 0.0));
+
    if(meangain < 1e-5)
    {
       branchruledata->nzerogains++;
@@ -904,14 +895,14 @@ SCIP_RETCODE updateMinMaxMeanGain(
 
 /* Compute the depth of the tree with the assumption that left and right dual gains are equal */
 static
-long int strongBranchingDepth(
+SCIP_Real strongBranchingDepth(
    SCIP_Real             gap,
    SCIP_Real             maxmeangain
    )
 {
    assert(maxmeangain >= 0.0);
    /* using an epsilon value if maxmeangain is zero */
-   long int depth = (long int) ceil(gap / MAX(maxmeangain, 1e-5));
+   SCIP_Real depth = ceil(gap / MAX(maxmeangain, 1e-5));
    assert(depth > 0);
    return depth;
 }
@@ -1050,32 +1041,20 @@ SCIP_Bool continueStrongBranchingLookahead(
    int                   nbdchgs,
    int                   nbdconflicts,
    int                   maxbdchgs,
-   SCIP_Longint          maxnsblpiterations,
-   SCIP_Bool             dynamiclookaheadatleastonce
+   SCIP_Longint          maxnsblpiterations
    )
 {
-   if (lookahead >= maxlookahead && dynamiclookaheadatleastonce)
-      return FALSE;
    return candidx < ninitcands && lookahead < maxlookahead && nbdchgs + nbdconflicts < maxbdchgs
                && (candidx < (int) maxlookahead || SCIPgetNStrongbranchLPIterations(scip) < maxnsblpiterations);
 }
 
-/** Decide if we continue strong branching based on the estimation of the tree size
- * Use only when:
- * 1. We have a good enough candidate, ie we reached lookahead >= branchruledata->dynamiclookaheadquot * maxlookahead
- * 2. If we have both a dual and primal bound
- * 3. The gains are not infinite? ToDoSB we should rethink this condition.
- *
- */
+/** Decide if we continue strong branching based on the estimation of the tree size given the current gains. */
 static
 SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    SCIP*                 scip,
-   SCIP_BRANCHRULEDATA* branchruledata,
+   SCIP_BRANCHRULEDATA*  branchruledata,
    SCIP_Real             lookahead,
-   SCIP_Real             maxlookahead,
-   SCIP_Bool*            dynamiclookaheadused,
-   SCIP_Bool*            dynamiclookaheadatleastonce,
-   int*                  dynamiclookaheaddecision
+   SCIP_Real             maxlookahead
    )
 {
    SCIP_Real lambda;
@@ -1091,11 +1070,9 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    SCIP_Real logmeangain = 0.0;
    SCIP_Real logstdevgain = -1.0;
 
-   *dynamiclookaheaddecision = -1;
    if (!branchruledata->dynamiclookahead)
       return TRUE;
 
-   (*dynamiclookaheadused) = FALSE;
    /* compute the expected tree size after reaching a min lookahaead */
    if( lookahead < branchruledata->dynamiclookaheadquot * maxlookahead)
       return TRUE;
@@ -1144,30 +1121,19 @@ SCIP_Bool continueStrongBranchingTreeSizeEstimation(
    }
 
    /* Continue strong branching since we do not have good enough gains in this case */
-   currentdepth = (int) strongBranchingDepth(gaptoclose, maxmeangain);
+   currentdepth = strongBranchingDepth(gaptoclose, maxmeangain);
 
    if (currentdepth >= 50)
-   {
-      *dynamiclookaheaddecision = 1;
       return TRUE;
-   }
-
-   (*dynamiclookaheadused) = TRUE;
 
    /* Compute the tree size if we branch on the best variable so far, including the strong branching already done. */
-   currenttreesize = strongBranchingTreeSize((double) currentdepth);
+   currenttreesize = strongBranchingTreeSize(currentdepth);
 
    /* Compute the expected size of the tree with one more strong branching */
-   nexttreesize =  expectedTreeSize(scip, gaptoclose, zeroprob, (double) currentdepth, lambda, minmeangain, logmeangain, logstdevgain, branchruledata->dynamiclookdistribution);
+   nexttreesize =  expectedTreeSize(scip, gaptoclose, zeroprob, currentdepth, lambda, minmeangain, logmeangain, logstdevgain, branchruledata->dynamiclookdistribution);
 
    if(SCIPisLE(scip, nexttreesize, currenttreesize - 1.0))
-   {
-      (*dynamiclookaheadatleastonce) = TRUE;
-      *dynamiclookaheaddecision = 1;
       return TRUE;
-   }
-
-   *dynamiclookaheaddecision = 0;
 
    SCIPdebugMsg(scip," -> Stopped at lookahead %g, current tree size %g, next tree size %g\n", lookahead, currenttreesize, nexttreesize);
    return FALSE;
@@ -1822,11 +1788,7 @@ SCIP_RETCODE execRelpscost(
       bestuninitsbcand = -1;
       lookahead = 0.0;
 
-      SCIP_Bool dynamiclookaheadused = FALSE;
-      SCIP_Bool dynamiclookaheadatleastonce = FALSE;
-      int dynamiclookaheaddecision = -1; /* -1: no decision, 0 stop SB, 1 continue SB*/
-      for( i = 0; continueStrongBranchingLookahead(scip, i, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations, dynamiclookaheadatleastonce)
-               && continueStrongBranchingTreeSizeEstimation(scip, branchruledata, lookahead, maxlookahead, &dynamiclookaheadused, &dynamiclookaheadatleastonce, &dynamiclookaheaddecision); ++i )
+      for( i = 0; continueStrongBranchingLookahead(scip, i, ninitcands, lookahead, maxlookahead, nbdchgs, nbdconflicts, maxbdchgs, maxnsblpiterations) && continueStrongBranchingTreeSizeEstimation(scip, branchruledata, lookahead, maxlookahead); ++i )
       {
 
          SCIP_Real down;
@@ -2694,13 +2656,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/dynamiclookahead",
          "should we use a dynamic lookahead based on a tree size estimation of further strong branchings?",
          &branchruledata->dynamiclookahead, TRUE, DEFAULT_DYNAMICLOOKAHEAD, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/geometricmeangains",
-         "should the geometric mean be used instead of the arithmetic mean for min and max gain?",
-         &branchruledata->geometricmeangains, TRUE, DEFAULT_GEOMETRICMEANGAINS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/lookaheadbayesian",
-         "should the update of the parameter estimation use the Bayesian rule or a simple convex combination?",
-         &branchruledata->lookaheadbayesian, TRUE, DEFAULT_LOOKAHEAD_USEBAYESIAN, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
+  SCIP_CALL( SCIPaddIntParam(scip,
          "branching/relpscost/initcand",
          "maximal number of candidates initialized with strong branching per node",
          &branchruledata->initcand, FALSE, DEFAULT_INITCAND, 0, INT_MAX, NULL, NULL) );
