@@ -3289,7 +3289,8 @@ void printColumnSection(
    int v;
    int recordcnt;
 
-   /* sort sparse matrix w.r.t. the variable indices */
+   /* @todo: create column matrix instead of sort sparse entries */
+   /* sort sparse matrix w.r.t. the written integralities and variable indices */
    SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, mpsIntComp, matrix->nentries);
 
    /* print COLUMNS section */
@@ -4099,6 +4100,7 @@ SCIP_RETCODE SCIPwriteMps(
       var = vars[v];
       value = SCIPvarGetObj(var);
 
+      /* @todo: only add entry for empty column */
       /* we also want to add integer variables to the columns section, even if the objective value is 0, because it
        * might happen that they only exist in non-linear constraints, which leads to no other line in the column section
        * and therefore do not mark the variable as an integer
