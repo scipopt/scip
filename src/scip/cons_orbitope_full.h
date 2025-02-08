@@ -117,9 +117,8 @@ SCIP_RETCODE SCIPcreateConsOrbitopeFull(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** creates and captures a full orbitope constraint
- *  in its most basic variant, i. e., with all constraint flags set to their default values, which can be set
- *  afterwards using SCIPsetConsFLAGNAME() in scip.h
+/** creates and captures a full orbitope constraint in its most basic variant, i. e., with all constraint flags set to
+ *  their default values, which can be set afterwards using SCIPsetConsFLAGNAME()
  *
  *  @see SCIPcreateConsOrbitopeFull() for the default constraint flag configuration
  *

@@ -1894,8 +1894,10 @@ SCIP_RETCODE SCIPcreateConsOrbitopeFull(
    return SCIP_OKAY;
 }
 
-/** creates and captures a full orbitope constraint
- *  in its most basic variant, i. e., with all constraint flags set to their default values
+/** creates and captures a full orbitope constraint in its most basic variant, i. e., with all constraint flags set to
+ *  their default values, which can be set afterwards using SCIPsetConsFLAGNAME()
+ *
+ *  @see SCIPcreateConsOrbitopeFull() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
