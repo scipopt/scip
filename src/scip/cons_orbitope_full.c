@@ -226,15 +226,13 @@ SCIP_RETCODE consdataCreate(
 }
 
 
-/* Compute lexicographically minimal face of the hypercube w.r.t. some coordinate fixing */
+/** Compute lexicographically minimal face of the hypercube w.r.t. some coordinate fixing */
 static
 SCIP_RETCODE findLexMinFace(
    SCIP_VAR***           vars,               /**< variable matrix */
    int**                 lexminfixes,        /**< fixings characterzing lex-min face */
-   int*                  minfixedrowlexmin,  /**< index of minimum fixed row for each column or
-                                              *   NULL (if in prop) */
-   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility has been
-                                              *   detected or NULL (if in resprop) */
+   int*                  minfixedrowlexmin,  /**< index of minimum fixed row for each column or NULL (if in prop) */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility has been detected or NULL (if in resprop) */
    int                   m,                  /**< number of rows in vars */
    int                   n,                  /**< number of columns in vars */
    SCIP_Bool             resprop             /**< whether we are in resprop (TRUE) or prop (FALSE) */
@@ -323,15 +321,13 @@ SCIP_RETCODE findLexMinFace(
 }
 
 
-/* Compute lexicographically maximal face of the hypercube w.r.t. some coordinate fixing */
+/** Compute lexicographically maximal face of the hypercube w.r.t. some coordinate fixing */
 static
 SCIP_RETCODE findLexMaxFace(
    SCIP_VAR***           vars,               /**< variable matrix */
    int**                 lexmaxfixes,        /**< fixings characterzing lex-max face */
-   int*                  minfixedrowlexmax,  /**< index of minimum fixed row for each column or
-                                              *   NULL (if in prop) */
-   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility has been
-                                              *   detected or NULL (if in resprop) */
+   int*                  minfixedrowlexmax,  /**< index of minimum fixed row for each column or NULL (if in prop) */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility has been detected or NULL (if in resprop) */
    int                   m,                  /**< number of rows in vars */
    int                   n,                  /**< number of columns in vars */
    SCIP_Bool             resprop             /**< whether we are in resprop (TRUE) or prop (FALSE) */
