@@ -85,12 +85,12 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
          {
             for (i = r; i < *nrows - 1; ++i)
             {
-               SCIP_VAR** row;
-               row = vars[i];
+               SCIP_VAR** varrow;
+               varrow = vars[i];
                vars[i] = vars[i+1];
-               vars[i+1] = row;
+               vars[i+1] = varrow;
             }
-            *nrows -= 1;
+            --(*nrows);
          }
          --r;
       }
