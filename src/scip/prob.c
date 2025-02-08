@@ -2425,21 +2425,23 @@ SCIP_RETCODE SCIPprobCollectStatistics(
    assert(prob != NULL);
    assert(datatree != NULL);
 
-   /* Collect problem name */
+   /* collect problem name */
    SCIP_CALL( SCIPdatatreeInsertString(datatree, set, blkmem, "problem_name", prob->name) );
 
-   /* Collect variables information */
+   /* collect variables information */
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_variables", (SCIP_Longint)prob->nvars) );
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_binary_variables", (SCIP_Longint)prob->nbinvars) );
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_integer_variables", (SCIP_Longint)prob->nintvars) );
-   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_implicit_integer_variables", (SCIP_Longint)prob->nimplvars) );
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_implied_binary_variables", (SCIP_Longint)prob->nbinimplvars) );
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_implied_integer_variables", (SCIP_Longint)prob->nintimplvars) );
+   SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_implied_continuous_variables", (SCIP_Longint)prob->ncontimplvars) );
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_continuous_variables", (SCIP_Longint)prob->ncontvars) );
 
-   /* Collect constraints information */
+   /* collect constraints information */
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_initial_constraints", (SCIP_Longint)prob->startnconss) );
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "num_maximal_constraints", (SCIP_Longint)prob->maxnconss) );
 
-   /* Collect objective information */
+   /* collect objective information */
    SCIP_CALL( SCIPdatatreeInsertString(datatree, set, blkmem, "objective_sense",
       !prob->transformed ? (prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize") : "minimize") );
    SCIP_CALL( SCIPdatatreeInsertLong(datatree, set, blkmem, "objective_non_zeros", (SCIP_Longint)SCIPprobGetNObjVars(prob, set)) );
