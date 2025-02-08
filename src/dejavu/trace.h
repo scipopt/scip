@@ -36,7 +36,7 @@ namespace dejavu {
             std::vector<int> data; /**< keeps all the data of the trace */
 
             trace *compare_trace = nullptr; /**< link to a stored trace to compare to */
-            unsigned long hash = 0; /**< hash value to summarize all operations performed on this trace */
+            uint64_t hash = 0; /**< hash value to summarize all operations performed on this trace */
 
             // mode
             bool compare = false; /**< whether to compare operations to a stored trace*/
@@ -53,7 +53,7 @@ namespace dejavu {
             bool comp = true;
 
             void inline add_to_hash(int d) {
-                unsigned long ho = hash & 0xff00000000000000; // extract high-order 8 bits from hash
+                uint64_t ho = hash & 0xff00000000000000; // extract high-order 8 bits from hash
                 hash    = hash << 8;                    // shift hash left by 5 bits
                 hash    = hash ^ (ho >> 56);            // move the highorder 5 bits to the low-order
                 hash    = hash ^ d;                     // XOR into hash
@@ -254,7 +254,7 @@ namespace dejavu {
             /**
              * @return A hash value summarizing the operations recorded in this trace.
              */
-            dej_nodiscard unsigned long get_hash() const {
+            dej_nodiscard uint64_t get_hash() const {
                 return hash;
             }
 
@@ -262,7 +262,7 @@ namespace dejavu {
              * Sets the hash value to a pre-determined value.
              * @param hash The hash value.
              */
-            void set_hash(unsigned long new_hash) {
+            void set_hash(uint64_t new_hash) {
                 this->hash = new_hash;
             }
 

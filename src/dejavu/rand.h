@@ -7,6 +7,7 @@
 
 #include "ir.h"
 #include "groups.h"
+#include <cstdint>
 
 namespace dejavu {namespace search_strategy {
     // (need to nest namespaces due to C++ 14)
@@ -68,7 +69,7 @@ namespace dejavu {namespace search_strategy {
                 if(hash_offset == 2) local_state.write_strong_invariant(g);
 
                 // first, test whether leaf with same hash has already been stored
-                const unsigned long hash_c = local_state.T->get_hash() + hash_offset; // '+hash_offset' is for hash
+                const uint64_t hash_c = local_state.T->get_hash() + hash_offset; // '+hash_offset' is for hash
                                                                                       // collisions
                 auto other_leaf = leaf_storage.lookup_leaf(hash_c);
 

@@ -35,7 +35,7 @@ namespace dejavu { namespace search_strategy {
          * @param depth depth of trace to look at
          * @param lower_depth whether to try to lower the depth, if a smaller distinguishing depth is found
          */
-        static void shallow_bfs_invariant(sgraph* g, ir::controller &local_state, worklist_t<unsigned long>& inv,
+        static void shallow_bfs_invariant(sgraph* g, ir::controller &local_state, worklist_t<uint64_t>& inv,
                                           groups::orbit& orbit_partition,
                                           int depth = 8, bool lower_depth = true) {
             constexpr int test_frac = 100; // (1 / test_frac) elements used to find a better depth
@@ -91,12 +91,12 @@ namespace dejavu { namespace search_strategy {
 
         worklist hash;
 
-        void sort_nodes_map(std::vector<unsigned long>* map, int* colmap) {
+        void sort_nodes_map(std::vector<uint64_t>* map, int* colmap) {
             struct comparator_map {
-                std::vector<unsigned long> *map;
+                std::vector<uint64_t> *map;
                 int* colmap;
 
-                explicit comparator_map(std::vector<unsigned long> *m, int* vertex_to_col) {
+                explicit comparator_map(std::vector<uint64_t> *m, int* vertex_to_col) {
                     this->map = m;
                     this->colmap = vertex_to_col;
                 }
@@ -116,17 +116,17 @@ namespace dejavu { namespace search_strategy {
          * @param local_state the IR state
          * @param inv the node invariant
          */
-        void split_with_invariant(sgraph* g, ir::controller &local_state, worklist_t<unsigned long>& inv) {
+        void split_with_invariant(sgraph* g, ir::controller &local_state, worklist_t<uint64_t>& inv) {
             hash.allocate(g->v_size);
 
             int num_of_hashs = 0;
             for(int i = 0; i < g->v_size; ++i) nodes.push_back(i);
             sort_nodes_map(inv.get_array(), local_state.c->vertex_to_col);
-            unsigned long last_inv = -1;
+            uint64_t last_inv = -1;
             int last_col  = local_state.c->vertex_to_col[0];
             for(int i = 0; i < g->v_size; ++i) {
                 const int v      = nodes[i];
-                const unsigned long v_inv = inv[v];
+                const uint64_t v_inv = inv[v];
                 const int  v_col = local_state.c->vertex_to_col[v];
                 if(last_col != v_col) {
                     last_col = v_col;
@@ -143,12 +143,12 @@ namespace dejavu { namespace search_strategy {
             g->initialize_coloring(local_state.c, hash.get_array());
         }
 
-        void sort_nodes_map(unsigned long* map, int* colmap) {
+        void sort_nodes_map(uint64_t* map, int* colmap) {
             struct comparator_map {
-                unsigned long *map;
+                uint64_t *map;
                 int* colmap;
 
-                explicit comparator_map(unsigned long *m, int* vertex_to_col) {
+                explicit comparator_map(uint64_t *m, int* vertex_to_col) {
                     this->map = m;
                     this->colmap = vertex_to_col;
                 }
@@ -168,7 +168,7 @@ namespace dejavu { namespace search_strategy {
          * @param local_state state used to perform IR computations
          * @param inv place to store the invariant
          */
-        static void shallow_bfs_invariant2(sgraph* g, ir::controller &local_state, worklist_t<unsigned long>& inv) {
+        static void shallow_bfs_invariant2(sgraph* g, ir::controller &local_state, worklist_t<uint64_t>& inv) {
             constexpr int col_sz_upper_bound = 16;
             constexpr int fixed_split_limit  = 8;
 
@@ -281,7 +281,7 @@ namespace dejavu { namespace search_strategy {
                 //int depth = h_splits_hint;
                 do {
                     const int cell_last = local_state.c->cells;
-                    worklist_t<unsigned long> inv(g->v_size);
+                    worklist_t<uint64_t> inv(g->v_size);
 
                     nodes.reserve(g->v_size);
                     nodes.clear();
@@ -300,7 +300,7 @@ namespace dejavu { namespace search_strategy {
 
             // computes a shallow breadth-first invariant for 2 levels
             if (use_shallow_quadratic_inprocess) {
-                worklist_t<unsigned long> inv(g->v_size);
+                worklist_t<uint64_t> inv(g->v_size);
 
                 nodes.reserve(g->v_size);
                 nodes.clear();
@@ -329,12 +329,12 @@ namespace dejavu { namespace search_strategy {
 
                 for(int i = 0; i < g->v_size; ++i) nodes.push_back(i);
                 sort_nodes_map(tree.get_node_invariant(), local_state.c->vertex_to_col);
-                unsigned long last_inv = (*tree.get_node_invariant())[0];
-                int last_col           = local_state.c->vertex_to_col[0];
+                uint64_t last_inv = (*tree.get_node_invariant())[0];
+                int last_col      = local_state.c->vertex_to_col[0];
                 for(int i = 0; i < g->v_size; ++i) {
-                    const int v               = nodes[i];
-                    const unsigned long v_inv = (*tree.get_node_invariant())[v];
-                    const int  v_col = local_state.c->vertex_to_col[v];
+                    const int v          = nodes[i];
+                    const uint64_t v_inv = (*tree.get_node_invariant())[v];
+                    const int v_col      = local_state.c->vertex_to_col[v];
                     if(last_col != v_col) {
                         last_col = v_col;
                         last_inv = v_inv;

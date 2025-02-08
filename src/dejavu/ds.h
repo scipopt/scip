@@ -460,7 +460,8 @@ namespace dejavu {
          * \brief Set with counting
          *
          * Set on a statically specified domain of elements 1, ..., size, where each element holds an additional
-         * counter. Time complexity is O(1) for \a set, \a inc, \a get, and amortized O(1) for \a reset.
+         * counter. Time complexity is O(1) for \a set, \a inc, \a inc_nr, \a get. 
+         * Amortized O(1) for \a reset if only \a inc and \a get were used.
          */
         template<class T>
         class workset_t {
@@ -480,7 +481,44 @@ namespace dejavu {
                 initialize(size);
             }
 
+            workset_t(const workset_t<T>& other) {
+                copy(other);
+            }
+
+            workset_t(const workset_t<T>&& other) {
+                swap(other);
+            }
+
+            workset_t<T>& operator=(const workset_t<T>& other) {
+                if(other.s == s) return *this;
+                copy(other);
+                return *this;
+            }
+
+            workset_t<T>& operator=(workset_t<T>&& other) {
+                swap(other);
+                return *this;
+            }
+
+            void swap(workset_t<T>& other) {
+                auto swap_arr = s;
+                auto swap_arr_sz = sz;
+                s = other.s;
+                sz = other.sz;
+                other.s = swap_arr;
+                other.sz = swap_arr_sz;
+                reset_queue.swap(other.reset_queue);
+            }
+
+            void copy(const workset_t<T>& other) {
+                initialize(other.sz);
+                memcpy(s, other.s, other.sz  * sizeof(T));
+                sz  = other.sz;
+                reset_queue.copy(&other.reset_queue);
+            }
+
             void initialize(int size) {
+                if(init) delete[] s;
                 s = new T[size];
                 reset_queue.allocate(size);
 
@@ -490,27 +528,52 @@ namespace dejavu {
                 sz = size;
             }
 
+            /** 
+             * Set entry at position \p index to given \p value. Will not be reset using \a reset method.
+             *
+             * @param index the position of entry 
+             * @param value value to set the entry to
+             *
+             */
             void set(int index, T value) {
                 dej_assert(index >= 0);
                 dej_assert(index < sz);
                 s[index] = value;
             }
 
+            /** 
+             * Get value at position \p index.
+             *
+             * @param index the position of entry 
+             *
+             */
             T get(int index) {
                 dej_assert(index >= 0);
                 dej_assert(index < sz);
                 return s[index];
             }
 
+            /**
+             * Reset all entries that were manipulated using \a inc method.
+             */
             void reset() {
                 while (!reset_queue.empty()) s[reset_queue.pop_back()] = -1;
             }
 
+            /**
+             * Reset all entries.
+             */
             void reset_hard() {
                 memset(s, -1, sz * sizeof(T));
                 reset_queue.reset();
             }
 
+            /**
+             * Increment entry at position \p index by 1.
+             *
+             * @param index the position of entry that will be manipulated
+             *
+             */
             T inc(int index) {
                 dej_assert(index >= 0);
                 dej_assert(index < sz);
@@ -519,6 +582,12 @@ namespace dejavu {
                 return s[index];
             }
 
+            /**
+             * Increment entry at position \p index by 1, but do not keep track of reset information.
+             *
+             * @param index the position of entry that will be manipulated
+             *
+             */
             void inline inc_nr(int index) {
                 dej_assert(index >= 0 && index < sz);
                 ++s[index];
@@ -529,8 +598,8 @@ namespace dejavu {
                     delete[] s;
             }
 
-            worklist reset_queue;
         private:
+            worklist reset_queue;
             bool init = false;
             T   *s = nullptr;
             int sz = 0;

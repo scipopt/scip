@@ -15,6 +15,7 @@
 #include <chrono>
 #include <iomanip>
 #include <functional>
+#include <cstdint>
 
 #ifndef DEJAVU_UTILITY_H
 #define DEJAVU_UTILITY_H
@@ -71,8 +72,8 @@ static inline unsigned int hash(unsigned int x) {
  * @param d integer to accumulate to \p hash
  * @return the new hash
  */
-static inline unsigned long add_to_hash(unsigned long hash, const int d) {
-    const unsigned long ho = hash & 0xff00000000000000; // extract high-order 8 bits from hash
+static inline uint64_t add_to_hash(uint64_t hash, const int d) {
+    const uint64_t ho = hash & 0xff00000000000000; // extract high-order 8 bits from hash
     hash    = hash << 8;                    // shift hash left by 5 bits
     hash    = hash ^ (ho >> 56);            // move the highorder 5 bits to the low-order
     hash    = hash ^ d;                     // XOR into hash

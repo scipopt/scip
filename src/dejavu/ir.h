@@ -5,6 +5,7 @@
 #ifndef DEJAVU_IR_H
 #define DEJAVU_IR_H
 
+#include <cstdint>
 #include <unordered_map>
 #include "refinement.h"
 #include "coloring.h"
@@ -50,11 +51,11 @@ namespace dejavu {
 
             std::vector<int> base_vertex; /**< base of vertices of this IR node  */
             coloring c;                   /**< vertex coloring of this IR node   */
-            unsigned long invariant = 0;  /**< hash of invariant of this IR node */
+            uint64_t invariant = 0;       /**< hash of invariant of this IR node */
             int trace_position = 0;       /**< position of trace of this IR node */
             int base_position  = 0;       /**< length of base of this IR node    */
         public:
-            void save(std::vector<int>& s_base_vertex, coloring &s_c, unsigned long s_invariant, int s_trace_position,
+            void save(std::vector<int>& s_base_vertex, coloring &s_c, uint64_t s_invariant, int s_trace_position,
                       int s_base_position) {
                 this->base_vertex = s_base_vertex;
                 this->c.copy_any(&s_c);
@@ -73,7 +74,7 @@ namespace dejavu {
             /**
              * @return hash of invariant of this IR node
              */
-            dej_nodiscard unsigned long get_invariant_hash() const {
+            dej_nodiscard uint64_t get_invariant_hash() const {
                 return invariant;
             }
 
@@ -110,10 +111,10 @@ namespace dejavu {
             int singleton_pt; /**< position of the singleton list */
 
             int  trace_pos; /**< position of the trace */
-            unsigned long trace_hash; /**< hash of the trace */
+            uint64_t trace_hash; /**< hash of the trace */
 
             base_info(int selColor, int colorSz, int cellNum, int touchedColorListPt, int singletonPt, int tracePos,
-                      unsigned long traceHash) :
+                      uint64_t traceHash) :
                       color(selColor), color_sz(colorSz), cells(cellNum), touched_color_list_pt(touchedColorListPt),
                       singleton_pt(singletonPt), trace_pos(tracePos), trace_hash(traceHash) {}
         };
@@ -998,7 +999,7 @@ namespace dejavu {
                 const int singleton_pt     = (int) singletons.size();
                 const int touched_color_pt = touched_color_list.cur_pos;
                 const int trace_pos        = T->get_position();
-                const unsigned long trace_hash      = T->get_hash();
+                const uint64_t trace_hash  = T->get_hash();
 
                 // determine color
                 const int prev_col    = c->vertex_to_col[v];
@@ -1754,7 +1755,7 @@ namespace dejavu {
          */
         class deviation_map {
         private:
-            std::unordered_set<unsigned long> map;
+            std::unordered_set<uint64_t> map;
             int computed_for_base = 0;
             int expected_for_base = 0;
             bool deviation_done = false;
@@ -1773,7 +1774,7 @@ namespace dejavu {
                 deviation_done = false;
             }
 
-            void record_deviation(unsigned long deviation) {
+            void record_deviation(uint64_t deviation) {
                 map.insert(deviation);
                 ++computed_for_base;
                 dej_assert(computed_for_base <= expected_for_base);
@@ -1786,7 +1787,7 @@ namespace dejavu {
                 check_finished();
             }
 
-            bool check_deviation(unsigned long deviation) {
+            bool check_deviation(uint64_t deviation) {
                 return !deviation_done || map.find(deviation) != map.end();
             }
         };
@@ -1839,7 +1840,7 @@ namespace dejavu {
          *
          */
         class shared_leaves {
-            std::unordered_multimap<unsigned long, stored_leaf*> leaf_store;
+            std::unordered_multimap<uint64_t, stored_leaf*> leaf_store;
             std::vector<stored_leaf*> garbage_collector;
 
         public:
@@ -1865,7 +1866,7 @@ namespace dejavu {
              * @param hash
              * @return
              */
-            stored_leaf* lookup_leaf(unsigned long hash) {
+            stored_leaf* lookup_leaf(uint64_t hash) {
                 auto find = leaf_store.find(hash);
                 if(find != leaf_store.end()) {
                     return find->second;
@@ -1880,7 +1881,7 @@ namespace dejavu {
              * @param hash
              * @param ptr
              */
-            void add_leaf(unsigned long hash, coloring& c, std::vector<int>& base) {
+            void add_leaf(uint64_t hash, coloring& c, std::vector<int>& base) {
                 // check whether hash already exists
                 //if(leaf_store.contains(hash)) return;
                 if(leaf_store.find(hash) != leaf_store.end()) return;
@@ -1891,7 +1892,7 @@ namespace dejavu {
                        = full_save?stored_leaf::stored_leaf_type::STORE_LAB:stored_leaf::stored_leaf_type::STORE_BASE;
                 auto new_leaf
                        = full_save?new stored_leaf(c.lab,c.domain_size, type):new stored_leaf(base, type);
-                leaf_store.insert(std::pair<unsigned long, stored_leaf*>(hash, new_leaf));
+                leaf_store.insert(std::pair<uint64_t, stored_leaf*>(hash, new_leaf));
                 garbage_collector.push_back(new_leaf);
                 ++s_leaves;
             }
@@ -1916,7 +1917,7 @@ namespace dejavu {
             tree_node*    parent;
             bool          is_base = false;
             bool          is_pruned = false;
-            unsigned long hash = 0;
+            uint64_t hash = 0;
         public:
 
             int           nodes_below  = 0;
@@ -1948,11 +1949,11 @@ namespace dejavu {
             dej_nodiscard bool get_prune() const {
                 return is_pruned;
             }
-            void add_hash(unsigned long add) {
+            void add_hash(uint64_t add) {
                 this->hash += add;
             }
 
-            dej_nodiscard unsigned long get_hash() const {
+            dej_nodiscard uint64_t get_hash() const {
                 return hash;
             }
 
@@ -1989,7 +1990,7 @@ namespace dejavu {
 
             std::vector<int> current_base;
 
-            std::vector<unsigned long> node_invariant; // TODO: move this to inprocessor?
+            std::vector<uint64_t> node_invariant; // TODO: move this to inprocessor?
 
             bool init = false;
         public:
@@ -2009,7 +2010,7 @@ namespace dejavu {
                         finish_level(j);
                         for(auto node : tree_data_jump_map[j]) {
                             const int v = node->get_save()->get_base()[0];
-                            unsigned long add_hash = 1;
+                            uint64_t add_hash = 1;
                             add_hash = add_to_hash(add_hash, node->get_hash());
                             add_hash = add_to_hash(add_hash, hash(j));
 
@@ -2060,7 +2061,7 @@ namespace dejavu {
                 }*/
             }
 
-            std::vector<unsigned long>* get_node_invariant() {
+            std::vector<uint64_t>* get_node_invariant() {
                 return &node_invariant;
             }
 
@@ -2168,11 +2169,11 @@ namespace dejavu {
                 } while (next != first);
             }
 
-            void record_invariant(int v, unsigned long inv) {
+            void record_invariant(int v, uint64_t inv) {
                 node_invariant[v] = inv;
             }
 
-            void record_add_invariant(int v, unsigned long inv) {
+            void record_add_invariant(int v, uint64_t inv) {
                 node_invariant[v] += inv;
             }
 
