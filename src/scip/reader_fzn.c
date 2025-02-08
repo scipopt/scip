@@ -3860,25 +3860,6 @@ SCIP_RETCODE readFZNFile(
  * Local methods (for writing)
  */
 
-/* Returns whether to print an integrality constraint for the given variable */
-static
-SCIP_Bool writeVarIntegral(
-   SCIP_VAR*             var,                /**< The variable to check */
-   int                   implintlevel        /**< The implintlevel setting value. See the parameter 'write/implintlevel'
-                                                < for more information */
-)
-{
-   assert(implintlevel >= -2);
-   assert(implintlevel <= 2);
-   SCIP_VARTYPE type = SCIPvarGetType(var);
-   SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
-   return ( implintlevel == 0 && type != SCIP_VARTYPE_CONTINUOUS )
-          || ( implintlevel == 1 && ( type != SCIP_VARTYPE_CONTINUOUS || impltype == SCIP_VARIMPLTYPE_STRONG ) )
-          || ( implintlevel == 2 && ( type != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_VARIMPLTYPE_NONE ) )
-          || ( implintlevel == -1 && type != SCIP_VARTYPE_CONTINUOUS && impltype != SCIP_VARIMPLTYPE_STRONG )
-          || ( implintlevel == -2 && type != SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_NONE );
-}
-
 /** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
 static
 SCIP_RETCODE getActiveVariables(
@@ -4264,7 +4245,6 @@ SCIP_RETCODE writeFzn(
    int                   ncontvars,          /**< number of continuous variables */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
-   int                   implintlevel,       /**< should continuous implied integers be converted into integers? */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
@@ -4285,19 +4265,22 @@ SCIP_RETCODE writeFzn(
    SCIP_Real lb;                          /* lower bound of some variable */
    SCIP_Real ub;                          /* upper bound of some variable */
 
+   int implintlevel;                      /* implied integer level */
+   int ndiscretevars;                     /* number of discrete variables */
    int nboundedvars;                      /* number of variables which are bounded to exactly one side */
    int nconsvars;                         /* number of variables appearing in a specific constraint */
    int nfloatobjvars;                     /* number of discrete variables which have a fractional objective coefficient */
    int nintobjvars;                       /* number of discrete variables which have an integral objective coefficient */
    int c;                                 /* counter for the constraints */
    int v;                                 /* counter for the variables */
-   int ndiscretevars;                     /* number of discrete variables */
 
    char varname[SCIP_MAXSTRLEN];          /* buffer for storing variable names */
    char buffer[FZN_BUFFERLEN];            /* buffer for storing auxiliary variables and constraints */
    char buffy[FZN_BUFFERLEN];
 
-   assert( scip != NULL );
+   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
 
    /* print problem statistics as comment to file */
    SCIPinfoMessage(scip, file, "%% SCIP STATISTICS\n");
@@ -4335,13 +4318,16 @@ SCIP_RETCODE writeFzn(
          ub = SCIPvarGetUbOriginal(var);
       }
 
-      /* Save if a variable is written as integer or float */
-      SCIP_Bool integral = writeVarIntegral(var, implintlevel);
-      fznoutput.vardiscrete[v] = integral;
-      if( integral )
+      /* save whether variable is written as integer */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         fznoutput.vardiscrete[v] = (int)SCIPvarGetImplType(var) > 2 - implintlevel;
+      else
+         fznoutput.vardiscrete[v] = (int)SCIPvarGetImplType(var) <= 2 + implintlevel;
+
+      if( fznoutput.vardiscrete[v] )
          ++ndiscretevars;
 
-      /* If a variable is bounded to both sides, the bounds are added to the declaration,
+      /* if a variable is bounded to both sides, the bounds are added to the declaration,
        * for variables bounded to exactly one side, an auxiliary constraint will be added later-on.
        */
       if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
@@ -4352,7 +4338,7 @@ SCIP_RETCODE writeFzn(
          if( SCIPisEQ(scip, lb, ub) )
             fixed = TRUE;
 
-         if( integral )
+         if( fznoutput.vardiscrete[v] )
          {
             assert( SCIPisFeasIntegral(scip, lb) && SCIPisFeasIntegral(scip, ub) );
 
@@ -4382,9 +4368,10 @@ SCIP_RETCODE writeFzn(
       else
       {
          assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
+         assert(v >= nbinvars);
 
          /* declare the variable without any bound */
-         if( integral )
+         if( fznoutput.vardiscrete[v] )
             SCIPinfoMessage(scip, file, "var int: %s;\n", varname);
          else
             SCIPinfoMessage(scip, file, "var float: %s;\n", varname);
@@ -4587,6 +4574,8 @@ SCIP_RETCODE writeFzn(
          /* only discrete variables with integral objective coefficient will be put to the int part of the objective */
          if( fznoutput.vardiscrete[v] && SCIPisIntegral(scip, objscale*obj) )
          {
+            assert(SCIPvarIsIntegral(var));
+
             intobjvars[nintobjvars] = v;
             SCIPdebugMsg(scip, "variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n",
                SCIPvarGetName(var), nintobjvars, v, obj, objscale, SCIPvarGetObj(var));
@@ -4890,16 +4879,10 @@ SCIP_DECL_READERREAD(readerReadFzn)
 static
 SCIP_DECL_READERWRITE(readerWriteFzn)
 {  /*lint --e{715}*/
-   SCIP_READERDATA* readerdata = SCIPreaderGetData(reader);
-   assert(readerdata != NULL);
-
-   int implintlevel;
-   SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
-
    if( genericnames )
    {
       SCIP_CALL( writeFzn(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-            nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, implintlevel, result ) );
+            nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
    }
    else
    {
@@ -4936,7 +4919,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
       if( legal )
       {
          SCIP_CALL( writeFzn(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-               nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, implintlevel, result) );
+               nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
       }
       else if( transformed )
       {
