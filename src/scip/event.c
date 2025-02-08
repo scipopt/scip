@@ -1507,7 +1507,7 @@ SCIP_COL* SCIPeventGetRowCol(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & SCIP_EVENTTYPE_ROWCOEFCHANGED) == 0 )
+   if( (event->eventtype & SCIP_EVENTTYPE_ROWCOEFCHANGED) == 0 ) /*lint !e587*/
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();
@@ -1524,7 +1524,7 @@ SCIP_Real SCIPeventGetRowOldCoefVal(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & SCIP_EVENTTYPE_ROWCOEFCHANGED) == 0 )
+   if( (event->eventtype & SCIP_EVENTTYPE_ROWCOEFCHANGED) == 0 ) /*lint !e587*/
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();
@@ -1541,7 +1541,7 @@ SCIP_Real SCIPeventGetRowNewCoefVal(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & SCIP_EVENTTYPE_ROWCOEFCHANGED) == 0 )
+   if( (event->eventtype & SCIP_EVENTTYPE_ROWCOEFCHANGED) == 0 ) /*lint !e587*/
    {
       SCIPerrorMessage("event is not a row coefficient changed event\n");
       SCIPABORT();

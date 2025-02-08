@@ -17294,11 +17294,11 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       if( SCIPconsIsActive(cons) )
       {
          /* update the activity values */
-         if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != 0 )
+         if( (eventtype & SCIP_EVENTTYPE_LBCHANGED) != SCIP_EVENTTYPE_DISABLED )
             consdataUpdateActivitiesLb(scip, consdata, var, oldbound, newbound, val, TRUE);
          else
          {
-            assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != 0);
+            assert((eventtype & SCIP_EVENTTYPE_UBCHANGED) != SCIP_EVENTTYPE_DISABLED);
             consdataUpdateActivitiesUb(scip, consdata, var, oldbound, newbound, val, TRUE);
          }
       }
@@ -17347,7 +17347,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
          SCIP_Real domain;
          SCIP_Real delta;
 
-         assert((eventtype & SCIP_EVENTTYPE_BOUNDRELAXED) != 0);
+         assert((eventtype & SCIP_EVENTTYPE_BOUNDRELAXED) != SCIP_EVENTTYPE_DISABLED);
 
          lb = SCIPvarGetLbLocal(var);
          ub = SCIPvarGetUbLocal(var);
