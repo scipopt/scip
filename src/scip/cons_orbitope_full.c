@@ -771,8 +771,8 @@ SCIP_RETCODE separateCoversOrbisack(
    int ncols;
    int i;
    int j;
-   SCIP_Real rhs;
-   SCIP_Real lhs;
+   SCIP_Real rhs = 0.0;
+   SCIP_Real lhs = 0.0;
    SCIP_Real* coeffs1;
    SCIP_Real* coeffs2;
 
@@ -795,9 +795,6 @@ SCIP_RETCODE separateCoversOrbisack(
    /* allocate memory for cover inequalities */
    SCIP_CALL( SCIPallocBufferArray(scip, &coeffs1, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coeffs2, nrows) );
-
-   lhs = 0.0;
-   rhs = 0.0;
 
    /* separate orbisack cover inequalities for adjacent columns */
    for (j = 0; j < ncols - 1 && ! *infeasible; ++j)
@@ -836,7 +833,7 @@ SCIP_RETCODE separateCoversOrbisack(
 #endif
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
-            *ngen += 1;
+            ++(*ngen);
             if ( *infeasible )
                break;
 
@@ -1018,6 +1015,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOrbitopeFull)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(valid != NULL);
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrOrbitopeFull(scip) );
@@ -1129,7 +1127,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbitopeFull)
    return SCIP_OKAY;
 }
 
-
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpOrbitopeFull)
@@ -1151,7 +1148,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbitopeFull)
    return SCIP_OKAY;
 }
 
-
 /** constraint enforcing method of constraint handler for relaxation solutions */
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxOrbitopeFull)
@@ -1169,7 +1165,6 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxOrbitopeFull)
 
    return SCIP_OKAY;
 }
-
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
@@ -1197,7 +1192,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitopeFull)
       cons = conss[c];
       assert( cons != 0 );
       consdata = SCIPconsGetData(cons);
-
       assert( consdata != NULL );
 
       /* do not enforce non-model constraints */
@@ -1422,7 +1416,9 @@ SCIP_DECL_CONSLOCK(consLockOrbitopeFull)
    for (i = 0; i < nrows; ++i)
    {
       for (j = 0; j < ncols; ++j)
+      {
          SCIP_CALL( SCIPaddVarLocksType(scip, vars[i][j], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1467,7 +1463,7 @@ SCIP_DECL_CONSPRINT(consPrintOrbitopeFull)
             SCIPinfoMessage(scip, file, ",");
          SCIP_CALL( SCIPwriteVarName(scip, file, vars[i][j], TRUE) );
       }
-      if ( i < nrows-1 )
+      if ( i < nrows - 1 )
          SCIPinfoMessage(scip, file, ".");
    }
    SCIPinfoMessage(scip, file, ")");
@@ -1640,7 +1636,7 @@ SCIP_DECL_CONSPARSE(consParseOrbitopeFull)
       /* determine number of columns */
       if( nrows == 1 )
       {
-         ncols = j+1;
+         ncols = j + 1;
 
          if( *s == '.' || *s == ')' )
             SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nrows-1]), ncols) ); /*lint !e866*/
@@ -1672,8 +1668,10 @@ SCIP_DECL_CONSPARSE(consParseOrbitopeFull)
    while( *s != ')' );
 
    if( *success )
+   {
       SCIP_CALL( SCIPcreateConsOrbitopeFull(scip, cons, name, vars, nrows, ncols, TRUE, TRUE,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
 
    for( k = nrows - 1; k >= 0; --k )
       SCIPfreeBufferArray(scip, &vars[k]);
@@ -1697,7 +1695,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsOrbitopeFull)
    assert( consdata != NULL );
 
    if ( varssize < consdata->ncols * consdata->nrows )
-      (*success) = FALSE;
+      *success = FALSE;
    else
    {
       int cnt = 0;
@@ -1709,7 +1707,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsOrbitopeFull)
          for (j = 0; j < consdata->ncols; ++j)
             vars[cnt++] = consdata->vars[i][j];
       }
-      (*success) = TRUE;
+      *success = TRUE;
    }
 
    return SCIP_OKAY;
@@ -1727,8 +1725,8 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsOrbitopeFull)
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   (*nvars) = consdata->ncols * consdata->nrows;
-   (*success) = TRUE;
+   *nvars = consdata->ncols * consdata->nrows;
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
