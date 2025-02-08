@@ -1654,7 +1654,7 @@ SCIP_RETCODE readOPBFile(
    if( readerdata->maxintsize >= 0 && intsize > readerdata->maxintsize )
    {
       SCIPinfoMessage(scip, NULL, "Intsize %d exceeds %d maximum.\n", intsize, readerdata->maxintsize);
-      return SCIP_BIGINT;
+      return SCIP_INVALIDDATA;
    }
 
    /* create problem */
@@ -3982,7 +3982,7 @@ SCIP_RETCODE SCIPreadOpb(
    SCIPfreeBlockMemoryArray(scip, &opbinput.token, OPB_MAX_LINELEN);
    SCIPfreeBlockMemoryArray(scip, &opbinput.linebuf, opbinput.linebufsize);
 
-   if( retcode == SCIP_BIGINT )
+   if( retcode == SCIP_INVALIDDATA )
    {
       *result = SCIP_SUSPENDED;
       return SCIP_OKAY;

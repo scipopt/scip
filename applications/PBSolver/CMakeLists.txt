@@ -11,16 +11,16 @@ endif()
 
 include_directories(${SCIP_INCLUDE_DIRS})
 
-add_executable(pbscip
+add_executable(pbsolver
     src/main.cpp
-    src/message_pbscip.c
+    src/message_pb.c
     src/event_bestsol.c
 )
 
-target_link_libraries(pbscip ${SCIP_LIBRARIES})
+target_link_libraries(pbsolver ${SCIP_LIBRARIES})
 
 if( TARGET applications )
-    add_dependencies( applications pbscip )
+    add_dependencies( applications pbsolver )
 endif()
 
 enable_testing()

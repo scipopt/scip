@@ -17,7 +17,7 @@ Applications
 | `Coloring`        | `coloring`        | `coloring`        |
 | `CycleClustering` | `cycleclustering` | `cycleclustering` |
 | `MinIISC`         | `miniisc`         | `miniisc`         |
-| `PBSolver`        | `pbscip`          | `pbscip`          |
+| `PBSolver`        | `pbsolver`        | `pbsolver`        |
 | `Ringpacking`     | `ringpacking`     | `ringpacking`     |
 | `Scheduler`       | `scheduler`       | `scheduler`       |
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -22,6 +22,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/**@file   message_pb.h
+ * @brief  messagehdlr for the Pseudo-Boolean output format
+ * @author Alexander Hoen
+ * @author Gioni Mexi
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 #ifndef __SCIP_PB_MESSAGE_PB_H__
 #define __SCIP_PB_MESSAGE_PB_H__
 
@@ -37,9 +45,9 @@ struct SCIP_MessagehdlrData
    SCIP_Bool             comment;            /**< should output be printed as PB comments */
 };
 
-/** creates default PBSCIP message handler */
+/** creates default pbsolver message handler */
 extern
-SCIP_RETCODE SCIPcreateMessagehdlrPbscip(
+SCIP_RETCODE SCIPcreateMessagehdlrPbSolver(
    SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to message handler */
    SCIP_Bool             buffered,           /**< should the output be buffered */
    const char*           filename,           /**< name of log file, or NULL (stdout) */

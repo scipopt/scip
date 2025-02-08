@@ -103,9 +103,6 @@ void SCIPretcodePrint(
    case SCIP_NOTIMPLEMENTED:
       SCIPmessageFPrintInfo(messagehdlr, file, "function not implemented");
       break;
-   case SCIP_BIGINT:
-      SCIPmessageFPrintInfo(messagehdlr, file, "big integers rejected");
-      break;
    default:
       SCIPmessageFPrintInfo(messagehdlr, file, "unknown error code");
       break;
@@ -178,9 +175,6 @@ void SCIPretcodePrintError(
       break;
    case SCIP_NOTIMPLEMENTED:
       SCIPmessagePrintError("function not implemented");
-      break;
-   case SCIP_BIGINT:
-      SCIPmessagePrintError("big integers rejected");
       break;
    default:
       SCIPmessagePrintError("unknown error code");

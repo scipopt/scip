@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -22,13 +22,21 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/**@file   message_pb.c
+ * @brief  messagehdlr for the Pseudo-Boolean output format
+ * @author Alexander Hoen
+ * @author Gioni Mexi
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 #define PBSOLVER
 
 #include <stdio.h>
 #include <string.h>
 
 #include "scip/scip.h"
-#include "message_pbscip.h"
+#include "message_pb.h"
 
 
 static
@@ -57,7 +65,7 @@ void printMessage(
 
 /** default error printing method which is used to print all occurring errors */
 static
-SCIP_DECL_ERRORPRINTING(messageErrorPbscip) {  /*lint --e{715}*/
+SCIP_DECL_ERRORPRINTING(messageErrorPbSolver) {  /*lint --e{715}*/
 
 #ifdef PBSOLVER
    fputs("c ", stderr);
@@ -68,24 +76,24 @@ SCIP_DECL_ERRORPRINTING(messageErrorPbscip) {  /*lint --e{715}*/
 
 /** warning message print method of default message handler */
 static
-SCIP_DECL_MESSAGEWARNING(messageWarningPbscip) {  /*lint --e{715}*/
+SCIP_DECL_MESSAGEWARNING(messageWarningPbSolver) {  /*lint --e{715}*/
    printMessage(messagehdlr, file, msg);
 }
 
 /** dialog message print method of default message handler */
 static
-SCIP_DECL_MESSAGEDIALOG(messageDialogPbscip) {  /*lint --e{715}*/
+SCIP_DECL_MESSAGEDIALOG(messageDialogPbSolver) {  /*lint --e{715}*/
    printMessage(messagehdlr, file, msg);
 }
 
 /** info message print method of default message handler */
 static
-SCIP_DECL_MESSAGEINFO(messageInfoPbscip) {  /*lint --e{715}*/
+SCIP_DECL_MESSAGEINFO(messageInfoPbSolver) {  /*lint --e{715}*/
    printMessage(messagehdlr, file, msg);
 }
 
 static
-SCIP_DECL_MESSAGEHDLRFREE(messagehdlrFreePbscip) {  /*lint --e{715}*/
+SCIP_DECL_MESSAGEHDLRFREE(messagehdlrFreePbSolver) {  /*lint --e{715}*/
    SCIP_MESSAGEHDLRDATA *messagehdlrdata;
 
    assert(messagehdlr != NULL);
@@ -99,8 +107,8 @@ SCIP_DECL_MESSAGEHDLRFREE(messagehdlrFreePbscip) {  /*lint --e{715}*/
 }
 
 
-/** creates default PBSCIP message handler */
-SCIP_RETCODE SCIPcreateMessagehdlrPbscip(
+/** creates default pbsolver message handler */
+SCIP_RETCODE SCIPcreateMessagehdlrPbSolver(
       SCIP_MESSAGEHDLR **messagehdlr,        /**< pointer to message handler */
       SCIP_Bool buffered,           /**< should the output be buffered */
       const char *filename,           /**< name of log file, or NULL (stdout) */
@@ -116,10 +124,10 @@ SCIP_RETCODE SCIPcreateMessagehdlrPbscip(
    messagehdlrdata->comment = FALSE;
 #endif
    SCIP_CALL(SCIPmessagehdlrCreate(messagehdlr, buffered, filename, quiet,
-                                   messageWarningPbscip, messageDialogPbscip, messageInfoPbscip, messagehdlrFreePbscip,
+                                   messageWarningPbSolver, messageDialogPbSolver, messageInfoPbSolver, messagehdlrFreePbSolver,
                                    messagehdlrdata));
 
-   SCIPmessageSetErrorPrinting(messageErrorPbscip, NULL);
+   SCIPmessageSetErrorPrinting(messageErrorPbSolver, NULL);
 
    return SCIP_OKAY;
 }

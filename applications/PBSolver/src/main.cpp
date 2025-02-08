@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -22,6 +22,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/**@file   main.cpp
+ * @brief  main file for the Pseudo-Boolean solver application
+ * @author Alexander Hoen
+ * @author Gioni Mexi
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+
 #define PBSOLVER
 
 #include <cstdio>
@@ -30,7 +39,7 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
-#include "message_pbscip.h"
+#include "message_pb.h"
 #include "event_bestsol.h"
 
 #define SETOBJ FALSE
@@ -277,7 +286,7 @@ SCIP_RETCODE fromCommandLine(
    {
       /* try to read the problem as opb format */
       SCIP_RETCODE scipRetcode = SCIPreadProb(scip, filename, "opb");
-      if( scipRetcode == SCIP_BIGINT)
+      if( scipRetcode == SCIP_INVALIDRESULT)
       {
          printUnsupportedSolution(scip);
          return SCIP_OKAY;
@@ -286,7 +295,7 @@ SCIP_RETCODE fromCommandLine(
    }
    else
    {
-      if( retcode == SCIP_BIGINT)
+      if( retcode == SCIP_INVALIDRESULT)
       {
          printUnsupportedSolution(scip);
          return SCIP_OKAY;
@@ -715,7 +724,7 @@ SCIP_RETCODE runShell(
    SCIPmessagehdlrCapture(defaultmessagehdlr);
 
    /* create own buffered message handler for PB output and overrides default scip message handler */
-   SCIP_CALL( SCIPcreateMessagehdlrPbscip(&messagehdlr, TRUE, NULL, FALSE) );
+   SCIP_CALL( SCIPcreateMessagehdlrPbSolver(&messagehdlr, TRUE, NULL, FALSE) );
 
    /* if we are running the PB competition we use this message handler to produce the required output */
    SCIP_CALL( SCIPsetMessagehdlr(scip, messagehdlr) );
