@@ -3115,10 +3115,11 @@ SCIP_RETCODE SCIPvarPrint(
       case SCIP_VARTYPE_CONTINUOUS:
          SCIPmessageFPrintInfo(messagehdlr, file, "  [continuous]");
          break;
+      case SCIP_IMPLINT_PLACEHOLDER:
       default:
          SCIPerrorMessage("unknown variable type\n");
          return SCIP_INVALIDDATA;
-   }
+   } /*lint !e788*/
 
    /* name */
    SCIPmessageFPrintInfo(messagehdlr, file, " <%s>:", var->name);
@@ -17389,10 +17390,11 @@ SCIP_RETCODE SCIPvarArrayCountTypes(
             else
                ++contvars;
             break;
+         case SCIP_IMPLINT_PLACEHOLDER:
          default:
             SCIPerrorMessage("unknown variable type\n");
             return SCIP_INVALIDDATA;
-      }
+      } /*lint !e788*/
    }
    if( nbinvars != NULL )
       *nbinvars = binvars;

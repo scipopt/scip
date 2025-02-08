@@ -80,7 +80,6 @@
 #include "scip/scip_datatree.h"
 #include "scip/var.h"
 
-
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
 #define CONSHDLR_DESC          "handler for nonlinear constraints specified by algebraic expressions"
@@ -7155,11 +7154,14 @@ void scoreBranchingCandidates(
                   cands[c].vartype = 0.1;
                   break;
                case SCIP_VARTYPE_CONTINUOUS:
-               case SCIP_IMPLINT_PLACEHOLDER:
-               default:
                   cands[c].vartype = 0.0;
                   break;
-            }
+               case SCIP_IMPLINT_PLACEHOLDER:
+               default:
+                  SCIPerrorMessage("invalid variable type\n");
+                  SCIPABORT();
+                  return; /*lint !e527*/
+            } /*lint !e788*/
          }
 
          maxscore.vartype = MAX(cands[c].vartype, maxscore.vartype);

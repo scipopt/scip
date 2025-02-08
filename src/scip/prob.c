@@ -55,7 +55,6 @@
 #include "scip/var.h"
 #include <string.h>
 
-
 #define OBJSCALE_MAXDNOM          1000000LL  /**< maximal denominator in objective integral scaling */
 #define OBJSCALE_MAXSCALE         1000000.0  /**< maximal scalar to reach objective integrality */
 #define OBJSCALE_MAXFINALSCALE       1000.0  /**< maximal final value to apply as scaling */
@@ -955,10 +954,11 @@ SCIP_RETCODE probRemoveVar(
             assert(contimplstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < contstart);
             --prob->ncontimplvars;
             break;
+         case SCIP_IMPLINT_PLACEHOLDER:
          default:
             SCIPerrorMessage("unknown variable type\n");
             return SCIP_INVALIDDATA;
-      }
+      } /*lint !e788*/
    }
    else
    {
@@ -976,10 +976,11 @@ SCIP_RETCODE probRemoveVar(
             assert(contstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < prob->nvars);
             --prob->ncontvars;
             break;
+         case SCIP_IMPLINT_PLACEHOLDER:
          default:
             SCIPerrorMessage("unknown variable type\n");
             return SCIP_INVALIDDATA;
-      }
+      } /*lint !e788*/
    }
 
    /* move last binary, last integer, last implicit, and last continuous variable forward to fill the free slot */

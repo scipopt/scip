@@ -11083,19 +11083,21 @@ int getVarWeight(
 {
    if( SCIPvarIsImpliedIntegral(var) )
       return INTWEIGHT;
+
    switch( SCIPvarGetType(var) )
    {
-   case SCIP_VARTYPE_BINARY:
-      return BINWEIGHT;
-   case SCIP_VARTYPE_INTEGER:
-      return INTWEIGHT;
-   case SCIP_VARTYPE_CONTINUOUS:
-      return CONTWEIGHT;
-   default:
-      SCIPerrorMessage("invalid variable type\n");
-      SCIPABORT();
-      return 0; /*lint !e527*/
-   }
+      case SCIP_VARTYPE_BINARY:
+         return BINWEIGHT;
+      case SCIP_VARTYPE_INTEGER:
+         return INTWEIGHT;
+      case SCIP_VARTYPE_CONTINUOUS:
+         return CONTWEIGHT;
+      case SCIP_IMPLINT_PLACEHOLDER:
+      default:
+         SCIPerrorMessage("unknown variable type\n");
+         SCIPABORT();
+         return 0; /*lint !e527*/
+   } /*lint !e788*/
 }
 
 /** tries to aggregate variables in equations a^Tx = lhs
@@ -18923,10 +18925,11 @@ SCIP_RETCODE SCIPupgradeConsLinear(
                else
                   ++nnegcont;
                break;
+            case SCIP_IMPLINT_PLACEHOLDER:
             default:
                SCIPerrorMessage("unknown variable type\n");
                return SCIP_INVALIDDATA;
-         }
+         } /*lint !e788*/
       }
 
       if( SCIPisEQ(scip, val, 1.0) )

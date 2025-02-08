@@ -1031,10 +1031,11 @@ SCIP_RETCODE copyVars(
                case SCIP_VARTYPE_CONTINUOUS:
                   ++nrelaxonlycontvars;
                   break;
+               case SCIP_IMPLINT_PLACEHOLDER:
                default:
                   SCIPerrorMessage("unknown variable type\n");
                   return SCIP_INVALIDDATA;
-            }
+            } /*lint !e788*/
          }
 #endif
          continue;

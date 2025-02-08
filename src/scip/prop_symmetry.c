@@ -133,6 +133,7 @@
 #include "scip/symmetry_orbitopal.h"
 #include "scip/symmetry_orbital.h"
 #include "scip/symmetry_lexred.h"
+#include "scip/var.h"
 
 #include <math.h>
 #include <string.h>
@@ -2222,10 +2223,11 @@ SCIP_RETCODE ensureSymmetryMovedPermvarsCountsComputed(
                   case SCIP_VARTYPE_CONTINUOUS:
                      ++propdata->nmovedcontpermvars;
                      break;
+                  case SCIP_IMPLINT_PLACEHOLDER:
                   default:
-                     SCIPerrorMessage("Variable provided with unknown vartype\n");
-                     return SCIP_ERROR;
-               }
+                     SCIPerrorMessage("unknown variable type\n");
+                     return SCIP_INVALIDDATA;
+               } /*lint !e788*/
             }
          }
       }
