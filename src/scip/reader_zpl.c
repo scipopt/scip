@@ -878,10 +878,6 @@ SCIP_RETCODE addVar(
 
    switch( usevarclass )
    {
-   case VAR_CON:
-      vartype = SCIP_VARTYPE_CONTINUOUS;
-      varimpltype = SCIP_VARIMPLTYPE_NONE;
-      break;
    case VAR_INT:
       vartype = SCIP_VARTYPE_INTEGER;
       varimpltype = SCIP_VARIMPLTYPE_NONE;
@@ -889,6 +885,10 @@ SCIP_RETCODE addVar(
    case VAR_IMP:
       vartype = SCIP_VARTYPE_CONTINUOUS;
       varimpltype = SCIP_VARIMPLTYPE_WEAK;
+      break;
+   case VAR_CON:
+      vartype = SCIP_VARTYPE_CONTINUOUS;
+      varimpltype = SCIP_VARIMPLTYPE_NONE;
       break;
    default:
       SCIPwarningMessage(scip, "invalid variable class <%d> in ZIMPL callback xlp_addvar()\n", usevarclass);
@@ -1119,21 +1119,25 @@ VarClass xlp_getclass(
    const Var*            var                 /**< variable */
    )
 {
-   SCIP_READERDATA* readerdata;
-   SCIP_VAR* scipvar;
+   SCIP_READERDATA* readerdata = (SCIP_READERDATA*)data;
+   SCIP_VAR* scipvar = (SCIP_VAR*)var;
+   int implintlevel;
 
-   readerdata = (SCIP_READERDATA*)data;
+   /* adjust border between int and imp based on the implied integer level */
    assert(readerdata != NULL);
-
-   scipvar = (SCIP_VAR*)var;
+   SCIPgetIntParam(readerdata->scip, "write/implintlevel", &implintlevel);
+   assert(implintlevel >= -2);
+   assert(implintlevel <= 2);
 
    switch( SCIPvarGetType(scipvar) )
    {
    case SCIP_VARTYPE_BINARY:
    case SCIP_VARTYPE_INTEGER:
-      return VAR_INT;
+      return (int)SCIPvarGetImplType(scipvar) <= 2 + implintlevel ? VAR_INT : VAR_IMP;
    case SCIP_VARTYPE_CONTINUOUS:
-      return SCIPvarIsImpliedIntegral(scipvar) ? VAR_IMP : VAR_CON;
+      if( SCIPvarIsImpliedIntegral(scipvar) )
+         return (int)SCIPvarGetImplType(scipvar) > 2 - implintlevel ? VAR_INT : VAR_IMP;
+      break;
    default:
       SCIPerrorMessage("invalid SCIP variable type <%d> in ZIMPL callback xlp_getclass()\n", SCIPvarGetType(scipvar));
       readerdata->readerror = TRUE;
