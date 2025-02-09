@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_orbitope.h
+/**@file   cons_orbitope_full.h
  * @ingroup CONSHDLRS
  * @brief  constraint handler for full orbitope constraints w.r.t. the full symmetric group
  * @author Timo Berthold

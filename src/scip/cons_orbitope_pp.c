@@ -22,7 +22,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_orbitope.c
+/**@file   cons_orbitope_pp.c
  * @ingroup DEFPLUGINS_CONS
  * @brief  constraint handler for partitioning/packing orbitope constraints w.r.t. the full symmetric group
  * @author Timo Berthold
