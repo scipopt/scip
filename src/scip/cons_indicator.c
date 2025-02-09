@@ -924,23 +924,19 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
 
       var = SCIPbdchginfoGetVar(bdchginfos[i]);
 
-      /* quick check for slack variable that is implicitly integral or continuous */
-      if ( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      /* check string for slack variable */
+      if ( strstr(SCIPvarGetName(var), "indslack") != NULL )
       {
-         /* check string */
-         if ( strstr(SCIPvarGetName(var), "indslack") != NULL )
-         {
-            /* make sure that the slack variable occurs with its lower bound */
-            if ( SCIPboundtypeOpposite(SCIPbdchginfoGetBoundtype(bdchginfos[i])) != SCIP_BOUNDTYPE_LOWER )
-               break;
+         /* make sure that the slack variable occurs with its lower bound */
+         if ( SCIPboundtypeOpposite(SCIPbdchginfoGetBoundtype(bdchginfos[i])) != SCIP_BOUNDTYPE_LOWER )
+            break;
 
-            /* make sure that the lower bound is 0 */
-            if ( ! SCIPisFeasZero(scip, SCIPbdchginfoGetNewbound(bdchginfos[i])) )
-               break;
+         /* make sure that the lower bound is 0 */
+         if ( ! SCIPisFeasZero(scip, SCIPbdchginfoGetNewbound(bdchginfos[i])) )
+            break;
 
-            haveslack = TRUE;
-            continue;
-         }
+         haveslack = TRUE;
+         continue;
       }
 
       /* we only treat binary variables (other than slack variables) */
@@ -976,8 +972,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
          SCIPdebugMsg(scip, " <%s> %s %g\n", SCIPvarGetName(var), SCIPbdchginfoGetBoundtype(bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             SCIPbdchginfoGetNewbound(bdchginfos[i]));
 
-         /* quick check for slack variable that is implicitly integral or continuous */
-         if ( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && strstr(SCIPvarGetName(var), "indslack") != NULL )
+         /* check string for slack variable */
+         if ( strstr(SCIPvarGetName(var), "indslack") != NULL )
          {
             SCIP_VAR* slackvar;
 
@@ -4217,9 +4213,8 @@ SCIP_RETCODE propIndicator(
             /* divide by coeff of slackvar */
             newub = newub / (-1.0 * coeffslack);
 
-            /* round if slackvar is (implicit) integer */
-            assert( SCIPvarGetType(consdata->slackvar) == SCIP_VARTYPE_CONTINUOUS );
-            if ( SCIPvarIsImpliedIntegral(consdata->slackvar) )
+            /* round if slackvar is integral */
+            if ( SCIPvarIsIntegral(consdata->slackvar) )
             {
                if ( !SCIPisIntegral(scip, newub) )
                   newub = SCIPceil(scip, newub);
@@ -6278,12 +6273,10 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
             }
          }
 
-         /* check type of slack variable if not yet done */
-         if ( ! consdata->slacktypechecked )
+         /* determine integrality of slack variable if not yet done */
+         if ( !consdata->slacktypechecked )
          {
             consdata->slacktypechecked = TRUE;
-            /* check if slack variable can be made implicit integer. */
-            assert( SCIPvarGetType(consdata->slackvar) == SCIP_VARTYPE_CONTINUOUS );
             if ( !SCIPvarIsImpliedIntegral(consdata->slackvar) )
             {
                SCIP_Real* vals;
@@ -6313,7 +6306,6 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
                /* something is strange if the slack variable does not appear in the linear constraint (possibly because it is an artificial constraint) */
                if ( j == nvars && foundslackvar )
                {
-                  SCIP_Bool infeasible;
                   SCIP_Real lb;
                   SCIP_Real ub;
 
@@ -6321,16 +6313,17 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
                   ub = SCIPvarGetUbGlobal(consdata->slackvar);
                   if ( (SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb)) && (SCIPisInfinity(scip, ub) || SCIPisIntegral(scip, ub)) )
                   {
-                     assert(SCIPvarGetType(consdata->slackvar) == SCIP_VARTYPE_CONTINUOUS);
+                     SCIP_Bool infeasible;
+
                      SCIP_CALL( SCIPchgVarImplType(scip, consdata->slackvar, SCIP_VARIMPLTYPE_WEAK, &infeasible) );
                      /* don't assert feasibility here because the presolver should detect infeasibility */
                   }
                   else
                   {
-                     /* It can happen that the bounds of the slack variable have been changed to be non-integral in
+                     /* it can happen that the bounds of the slack variable have been changed to be non-integral in
                       * previous presolving steps. We then might get a problem with tightening the bounds. In this case,
-                      * we just leave the slack variable to be continuous. */
-                     SCIPdebugMsg(scip, "Cannot change type of slack variable (<%s>) to IMPLINT, since global bound is non-integral: (%g, %g).\n",
+                      * we just leave the slack variable to be continuous */
+                     SCIPdebugMsg(scip, "Cannot declare slack variable (<%s>) weakly implied integral, since global bound is non-integral: (%g, %g).\n",
                         SCIPvarGetName(consdata->slackvar), SCIPvarGetLbGlobal(consdata->slackvar), SCIPvarGetUbGlobal(consdata->slackvar));
                   }
                }
@@ -7981,12 +7974,12 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    SCIP_VAR* slackvar = NULL;
    SCIP_VAR* binvarinternal;
    SCIP_Bool modifiable = FALSE;
-   SCIP_Bool linconsactive = TRUE;
-   SCIP_VARIMPLTYPE slackvarimpltype;
+   SCIP_Bool linconsactive;
+   SCIP_Bool integral = TRUE;
+   SCIP_Real* valscopy;
    SCIP_Real absvalsum = 0.0;
    char s[SCIP_MAXSTRLEN];
-   SCIP_Real* valscopy;
-   int j;
+   int v;
 
    if ( nvars < 0 )
    {
@@ -8024,22 +8017,34 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    {
       /* flip coefficients and RHS of indicator */
       SCIP_CALL( SCIPallocBufferArray(scip, &valscopy, nvars) );
-      for (j = 0; j < nvars; ++j)
-         valscopy[j] = -vals[j];
+      for ( v = 0; v < nvars; ++v )
+         valscopy[v] = -vals[v];
       rhs = -rhs;
    }
    assert( nvars == 0 || valscopy != NULL );
 
-   /* check if slack variable can be made implicit integer */
-   slackvarimpltype = SCIP_VARIMPLTYPE_WEAK;
-   for (j = 0; j < nvars; ++j)
+   /* determine integrality of slack variable and whether problem is decomposed if no variables are integral */
+   linconsactive = !conshdlrdata->nolinconscont;
+   for ( v = 0; v < nvars; ++v )
    {
       if ( conshdlrdata->scaleslackvar )
-         absvalsum += REALABS(valscopy[j]);
-      if ( !SCIPvarIsIntegral(vars[j]) || !SCIPisIntegral(scip, valscopy[j]) )
+         absvalsum += REALABS(valscopy[v]);
+      if ( SCIPvarIsIntegral(vars[v]) )
       {
-         slackvarimpltype = SCIP_VARIMPLTYPE_NONE;
-         if ( ! conshdlrdata->scaleslackvar )
+         linconsactive = TRUE;
+         if ( !conshdlrdata->scaleslackvar && !integral )
+            break;
+         if ( !SCIPisIntegral(scip, valscopy[v]) )
+         {
+            integral = FALSE;
+            if ( !conshdlrdata->scaleslackvar )
+               break;
+         }
+      }
+      else
+      {
+         integral = FALSE;
+         if ( !conshdlrdata->scaleslackvar && linconsactive )
             break;
       }
    }
@@ -8064,15 +8069,16 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
 
       if ( conshdlrdata->binslackvarhash != NULL && SCIPhashmapExists(conshdlrdata->binslackvarhash, (void*) binvarinternal) )
       {
-         SCIP_Bool infeasible;
-
          slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
 
-         /* make sure that the type of the slackvariable is as general as possible */
-         assert( SCIPvarGetType(slackvar) == SCIP_VARTYPE_CONTINUOUS );
-         if ( slackvarimpltype < SCIPvarGetImplType(slackvar) )
+         /* make sure that the type of the slack is as general as necessary */
+         if ( !integral && SCIPvarIsIntegral(slackvar) )
          {
-            SCIP_CALL( SCIPchgVarImplType(scip, slackvar, slackvarimpltype, &infeasible) );
+            SCIP_Bool infeasible;
+
+            SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+            assert( !infeasible );
+            SCIP_CALL( SCIPchgVarImplType(scip, slackvar, SCIP_VARIMPLTYPE_NONE, &infeasible) );
             assert( !infeasible );
          }
 
@@ -8083,7 +8089,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
          /* create slack variable */
          (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
          SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0,
-               SCIP_VARTYPE_CONTINUOUS, slackvarimpltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE,
+               TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          SCIP_CALL( SCIPaddVar(scip, slackvar) );
 
@@ -8101,7 +8108,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       /* create slack variable */
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
       SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0,
-            SCIP_VARTYPE_CONTINUOUS, slackvarimpltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE,
+            TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, slackvar) );
 
@@ -8109,27 +8117,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
    }
    assert( slackvar != NULL );
-
-   /* if the problem should be decomposed if only non-integer variables are present */
-   if ( conshdlrdata->nolinconscont )
-   {
-      SCIP_Bool onlyCont = TRUE;
-
-      assert( ! conshdlrdata->generatebilinear );
-
-      /* check whether call variables are non-integer */
-      for (j = 0; j < nvars; ++j)
-      {
-         if ( SCIPvarIsIntegral(vars[j]) && !SCIPvarIsImpliedIntegral(vars[j]) )
-         {
-            onlyCont = FALSE;
-            break;
-         }
-      }
-
-      if ( onlyCont )
-         linconsactive = FALSE;
-   }
 
    /* create linear constraint */
    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indlin_%s", name);
@@ -8159,7 +8146,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    if ( conshdlrdata->scaleslackvar && nvars > 0 )
    {
       absvalsum = absvalsum/((SCIP_Real) nvars);
-      if ( slackvarimpltype != SCIP_VARIMPLTYPE_NONE )
+      if ( integral )
          absvalsum = SCIPceil(scip, absvalsum);
       if ( SCIPisZero(scip, absvalsum) )
          absvalsum = 1.0;
@@ -8174,6 +8161,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
    /* check whether we should generate a bilinear constraint instead of an indicator constraint */
    if ( conshdlrdata->generatebilinear )
    {
+      assert( linconsactive );
+
       SCIP_Real val = 1.0;
 
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
@@ -8295,8 +8284,13 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata = NULL;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
    SCIP_Bool modifiable = FALSE;
-   SCIP_Bool linconsactive = TRUE;
+   SCIP_Bool linconsactive;
+   SCIP_Bool integral = TRUE;
+   int nvars;
+   int v;
 
    assert( scip != NULL );
    assert( lincons != NULL );
@@ -8328,39 +8322,48 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
       return SCIP_INVALIDDATA;
    }
 
-   if( SCIPvarGetType(slackvar) != SCIP_VARTYPE_CONTINUOUS )
+   /* determine integrality of slack variable and whether problem is decomposed if no variables are integral */
+   nvars = SCIPgetNVarsLinear(scip, lincons);
+   vars = SCIPgetVarsLinear(scip, lincons);
+   vals = SCIPgetValsLinear(scip, lincons);
+   linconsactive = !conshdlrdata->nolinconscont;
+   for ( v = 0; v < nvars; ++v )
    {
-      SCIPerrorMessage("slack variable <%s> enforced integral\n", SCIPvarGetName(slackvar));
-      return SCIP_INVALIDDATA;
+      if ( vars[v] == slackvar )
+         continue;
+
+      if ( SCIPvarIsIntegral(vars[v]) )
+      {
+         linconsactive = TRUE;
+         if ( !integral )
+            break;
+         if ( !SCIPisIntegral(scip, vals[v]) )
+         {
+            integral = FALSE;
+            break;
+         }
+      }
+      else
+      {
+         integral = FALSE;
+         if ( linconsactive )
+            break;
+      }
+   }
+
+   /* make sure that the type of the slack is as general as necessary */
+   if ( !integral && SCIPvarIsIntegral(slackvar) )
+   {
+      SCIP_Bool infeasible;
+
+      SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+      assert( !infeasible );
+      SCIP_CALL( SCIPchgVarImplType(scip, slackvar, SCIP_VARIMPLTYPE_NONE, &infeasible) );
+      assert( !infeasible );
    }
 
    /* mark slack variable not to be multi-aggregated */
    SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
-
-   /* if the problem should be decomposed (only if all variables are continuous) */
-   if ( conshdlrdata->nolinconscont )
-   {
-      SCIP_Bool onlyCont = TRUE;
-      int v;
-      int nvars;
-      SCIP_VAR** vars;
-
-      nvars = SCIPgetNVarsLinear(scip, lincons);
-      vars = SCIPgetVarsLinear(scip, lincons);
-
-      /* check whether call variables are non-integer */
-      for (v = 0; v < nvars; ++v)
-      {
-         if ( SCIPvarIsIntegral(vars[v]) && !SCIPvarIsImpliedIntegral(vars[v]) )
-         {
-            onlyCont = FALSE;
-            break;
-         }
-      }
-
-      if ( onlyCont )
-         linconsactive = FALSE;
-   }
 
    /* mark linear constraint not to be upgraded - otherwise we loose control over it */
    SCIPconsAddUpgradeLocks(lincons, 1);
@@ -8369,6 +8372,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
    /* check whether we should generate a bilinear constraint instead of an indicator constraint */
    if ( conshdlrdata->generatebilinear )
    {
+      assert( linconsactive );
+
       SCIP_Real val = 1.0;
 
       /* if active on 0, the binary variable is reversed */
@@ -8534,18 +8539,18 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata = NULL;
-   SCIP_Bool modifiable = FALSE;
-   SCIP_Bool linconsactive = TRUE;
+   SCIP_VAR** vars;
    SCIP_VAR* binvarinternal;
    SCIP_VAR* slackvar = NULL;
-   SCIP_VARIMPLTYPE slackvarimpltype;
-   SCIP_VAR** vars;
+   SCIP_Bool modifiable = FALSE;
+   SCIP_Bool linconsactive;
+   SCIP_Bool integral = TRUE;
    SCIP_Real* vals;
    SCIP_Real sign;
    SCIP_Real lhs;
    SCIP_Real rhs;
    int nvars;
-   int j;
+   int v;
 
    assert( scip != NULL );
    assert( lincons != NULL );
@@ -8584,22 +8589,28 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       return SCIP_INVALIDDATA;
    }
 
-   /* determine type of slack variable */
-   slackvarimpltype = SCIP_VARIMPLTYPE_WEAK;
+   /* determine integrality of slack variable and whether problem is decomposed if no variables are integral */
    nvars = SCIPgetNVarsLinear(scip, lincons);
    vars = SCIPgetVarsLinear(scip, lincons);
    vals = SCIPgetValsLinear(scip, lincons);
-   for (j = 0; j < nvars; ++j)
+   linconsactive = !conshdlrdata->nolinconscont;
+   for ( v = 0; v < nvars; ++v )
    {
-      if ( !SCIPvarIsIntegral(vars[j]) || !SCIPisIntegral(scip, vals[j]) )
-         slackvarimpltype = SCIP_VARIMPLTYPE_NONE;
+      if ( SCIPvarIsIntegral(vars[v]) )
+      {
+         linconsactive = TRUE;
+         if ( !SCIPisIntegral(scip, vals[v]) )
+            integral = FALSE;
+      }
+      else
+         integral = FALSE;
 
-      /* Check whether variable is marked to not be multi-aggregated: this should only be the case for slack variables
-       * added by the indicator constraint handler. */
-      if ( SCIPdoNotMultaggrVar(scip, vars[j]) )
+      /* check whether variable is marked to not be multi-aggregated: this should only be the case for slack variables
+       * added by the indicator constraint handler */
+      if ( SCIPdoNotMultaggrVar(scip, vars[v]) )
       {
          /* double check name */
-         if ( strncmp(SCIPvarGetName(vars[j]), "indslack", 8) == 0 )
+         if ( strncmp(SCIPvarGetName(vars[v]), "indslack", 8) == 0 )
          {
             SCIPerrorMessage("Linear constraint <%s> already used in an indicator constraint.\n", SCIPconsGetName(lincons));
             return SCIP_INVALIDDATA;
@@ -8627,15 +8638,17 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       /* determine slack variable */
       slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
 
-      /* make sure that the type of the slackvariable is as general as possible */
-      assert( SCIPvarGetType(slackvar) == SCIP_VARTYPE_CONTINUOUS );
-      if ( slackvarimpltype < SCIPvarGetImplType(slackvar) )
+      /* make sure that the type of the slack is as general as necessary */
+      if ( !integral && SCIPvarIsIntegral(slackvar) )
       {
          SCIP_Bool infeasible;
 
-         SCIP_CALL( SCIPchgVarImplType(scip, slackvar, slackvarimpltype, &infeasible) );
+         SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+         assert( !infeasible );
+         SCIP_CALL( SCIPchgVarImplType(scip, slackvar, SCIP_VARIMPLTYPE_NONE, &infeasible) );
          assert( !infeasible );
       }
+
       SCIP_CALL( SCIPcaptureVar(scip, slackvar) );
    }
    else
@@ -8643,7 +8656,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       /* create slack variable */
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
       SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0,
-            SCIP_VARTYPE_CONTINUOUS, slackvarimpltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+            SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE,
+            TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, slackvar) );
 
@@ -8656,28 +8670,6 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       }
    }
    assert( slackvar != NULL );
-
-   /* if the problem should be decomposed (only if all variables are continuous) */
-   if ( conshdlrdata->nolinconscont )
-   {
-      SCIP_Bool onlyCont = TRUE;
-
-      nvars = SCIPgetNVarsLinear(scip, lincons);
-      vars = SCIPgetVarsLinear(scip, lincons);
-
-      /* check whether call variables are non-integer */
-      for (j = 0; j < nvars; ++j)
-      {
-         if ( SCIPvarIsIntegral(vars[j]) && !SCIPvarIsImpliedIntegral(vars[j]) )
-         {
-            onlyCont = FALSE;
-            break;
-         }
-      }
-
-      if ( onlyCont )
-         linconsactive = FALSE;
-   }
 
    /* determine sign of slack variable */
    sign = -1.0;
@@ -8694,6 +8686,8 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
    /* check whether we should generate a bilinear constraint instead of an indicator constraint */
    if ( conshdlrdata->generatebilinear )
    {
+      assert( linconsactive );
+
       SCIP_Real val = 1.0;
 
       /* create a quadratic constraint with a single bilinear term - note that cons is used */
@@ -8789,13 +8783,13 @@ SCIP_RETCODE SCIPaddVarIndicator(
 
    SCIP_CALL( SCIPaddCoefLinear(scip, consdata->lincons, var, val) );
 
-   /* possibly adapt variable type */
-   assert( SCIPvarGetType(consdata->slackvar) == SCIP_VARTYPE_CONTINUOUS );
-   if ( SCIPvarIsImpliedIntegral(consdata->slackvar) && ( !SCIPvarIsIntegral(var) || !SCIPisIntegral(scip, val) ) )
+   /* make sure that the type of the slack is as general as necessary */
+   if ( ( !SCIPvarIsIntegral(var) || !SCIPisIntegral(scip, val) ) && SCIPvarIsIntegral(consdata->slackvar) )
    {
       SCIP_Bool infeasible;
 
-      assert( SCIPvarGetType(consdata->slackvar) == SCIP_VARTYPE_CONTINUOUS );
+      SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
+      assert( !infeasible );
       SCIP_CALL( SCIPchgVarImplType(scip, consdata->slackvar, SCIP_VARIMPLTYPE_NONE, &infeasible) );
       assert( !infeasible );
    }
@@ -8855,34 +8849,24 @@ SCIP_RETCODE SCIPsetLinearConsIndicator(
 
    assert( lincons != NULL );
    consdata->lincons = lincons;
-   consdata->linconsactive = TRUE;
+   consdata->linconsactive = !conshdlrdata->nolinconscont;
    SCIP_CALL( SCIPcaptureCons(scip, lincons) );
 
-   /* if the problem should be decomposed if only non-integer variables are present */
-   if ( conshdlrdata->nolinconscont )
+   /* determine whether problem is decomposed if no variables are integral */
+   if ( !consdata->linconsactive )
    {
-      SCIP_Bool onlyCont;
+      SCIP_VAR** vars = SCIPgetVarsLinear(scip, lincons);
+      int nvars = SCIPgetNVarsLinear(scip, lincons);
       int v;
-      int nvars;
-      SCIP_VAR** vars;
 
-      onlyCont = TRUE;
-      nvars = SCIPgetNVarsLinear(scip, lincons);
-      vars = SCIPgetVarsLinear(scip, lincons);
-      assert( vars != NULL );
-
-      /* check whether call variables are non-integer */
-      for (v = 0; v < nvars; ++v)
+      for ( v = 0; v < nvars; ++v )
       {
-         if ( SCIPvarIsIntegral(vars[v]) && !SCIPvarIsImpliedIntegral(vars[v]) )
+         if ( SCIPvarIsIntegral(vars[v]) )
          {
-            onlyCont = FALSE;
+            consdata->linconsactive = TRUE;
             break;
          }
       }
-
-      if ( onlyCont )
-         consdata->linconsactive = FALSE;
    }
 
    return SCIP_OKAY;
