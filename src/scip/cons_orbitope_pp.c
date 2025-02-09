@@ -2282,7 +2282,7 @@ SCIP_DECL_CONSPRINT(consPrintOrbitopePP)
       break;
    default:
       SCIPABORT();
-   }
+   } /*lint !e788*/
 
    for (i = 0; i < nrows; ++i)
    {
