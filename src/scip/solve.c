@@ -5269,13 +5269,11 @@ SCIP_RETCODE SCIPsolveCIP(
                SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
                SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
-
                /* update the cutoff pointer if the new solution made the cutoff bound equal to the lower bound */
                SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, conflict, cliquetable, &cutoff) );
 
                /* increment number of feasible leaf nodes */
                stat->nfeasleaves++;
-
 
                if( set->reopt_enable )
                {

@@ -878,7 +878,6 @@ void estimateHyperbolaPositive(
       computeSecant(scip, FALSE, exponent, xlb, xub, constant, slope, success);
       *islocal = TRUE;
    }
-
 }
 
 /** Separation for mixed-sign hyperbola
@@ -1618,7 +1617,6 @@ SCIP_DECL_EXPRSIMPLIFY(simplifyPow)
 
          return SCIP_OKAY;
       }
-
    }
    else
    {
