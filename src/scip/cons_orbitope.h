@@ -104,8 +104,8 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
-   int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
-   int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
+   int                   nrows,              /**< number of rows of variable matrix */
+   int                   ncols,              /**< number of columns of variable matrix */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
    SCIP_Bool             checkpporbitope     /**< Check if full orbitope constraints can be upgraded to pp-orbitopes? */

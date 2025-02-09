@@ -137,27 +137,27 @@ SCIP_RETCODE consdataFree(
 {
    int i;
    int j;
-   int p;
-   int q;
+   int nrows;
+   int ncols;
 
    assert( consdata != NULL );
    assert( *consdata != NULL );
 
-   p = (*consdata)->nrows;
-   q = (*consdata)->ncols;
-   for (i = 0; i < p; ++i)
+   nrows = (*consdata)->nrows;
+   ncols = (*consdata)->ncols;
+   for (i = 0; i < nrows; ++i)
    {
       /* release variables in vars array */
-      for (j = 0; j < q; ++j)
+      for (j = 0; j < ncols; ++j)
       {
          assert( (*consdata)->vars[i] != NULL );
          SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vars[i][j]) );
       }
 
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars[i]), q);     /*lint !e866*/
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars[i]), ncols);     /*lint !e866*/
    }
 
-   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars), p);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars), nrows);
 
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -233,8 +233,8 @@ SCIP_RETCODE findLexMinFace(
    int**                 lexminfixes,        /**< fixings characterzing lex-min face */
    int*                  minfixedrowlexmin,  /**< index of minimum fixed row for each column or NULL (if in prop) */
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility has been detected or NULL (if in resprop) */
-   int                   m,                  /**< number of rows in vars */
-   int                   n,                  /**< number of columns in vars */
+   int                   nrows,              /**< number of rows in vars */
+   int                   ncols,              /**< number of columns in vars */
    SCIP_Bool             resprop             /**< whether we are in resprop (TRUE) or prop (FALSE) */
    )
 {
@@ -246,20 +246,22 @@ SCIP_RETCODE findLexMinFace(
    assert( vars != NULL );
    assert( lexminfixes != NULL );
    assert( !resprop || minfixedrowlexmin != NULL );
-   assert( m > 0 );
-   assert( n > 0 );
+   assert( nrows > 0 );
+   assert( ncols > 0 );
    assert( infeasible != NULL );
 
    /* iterate over columns in reverse order and find the lexicographically minimal face
     * of the hypercube containing lexminfixes
     */
-   for (j = n - 2; j >= 0; --j)
+   for (j = ncols - 2; j >= 0; --j)
    {
-      int maxdiscriminating = m;
+      int maxdiscriminating;
       int minfixed = -1;
 
+      maxdiscriminating = nrows;
+
       /* fix free entries in column j to the corresponding value in column j + 1 and collect some information */
-      for (i = 0; i < m; ++i)
+      for (i = 0; i < nrows; ++i)
       {
          /* is row i j-discriminating? */
          if ( minfixed == -1 && lexminfixes[i][j] != 0 && lexminfixes[i][j + 1] != 1 )
@@ -287,7 +289,7 @@ SCIP_RETCODE findLexMinFace(
       }
 
       /* ensure that column j is lexicographically not smaller than column j + 1 */
-      for (i = 0; i < m; ++i)
+      for (i = 0; i < nrows; ++i)
       {
          if ( lexminfixes[i][j] == 2 )
          {
@@ -306,7 +308,7 @@ SCIP_RETCODE findLexMinFace(
 
          /* store minimum fixed row */
          if ( minfixed == -1 )
-            minfixedrowlexmin[j] = m - 1;
+            minfixedrowlexmin[j] = nrows - 1;
          else
             minfixedrowlexmin[j] = minfixed;
 
@@ -328,8 +330,8 @@ SCIP_RETCODE findLexMaxFace(
    int**                 lexmaxfixes,        /**< fixings characterzing lex-max face */
    int*                  minfixedrowlexmax,  /**< index of minimum fixed row for each column or NULL (if in prop) */
    SCIP_Bool*            infeasible,         /**< pointer to store whether infeasibility has been detected or NULL (if in resprop) */
-   int                   m,                  /**< number of rows in vars */
-   int                   n,                  /**< number of columns in vars */
+   int                   nrows,              /**< number of rows in vars */
+   int                   ncols,              /**< number of columns in vars */
    SCIP_Bool             resprop             /**< whether we are in resprop (TRUE) or prop (FALSE) */
    )
 {
@@ -341,17 +343,19 @@ SCIP_RETCODE findLexMaxFace(
    assert( vars != NULL );
    assert( lexmaxfixes != NULL );
    assert( !resprop || minfixedrowlexmax != NULL );
-   assert( m > 0 );
-   assert( n > 0 );
+   assert( nrows > 0 );
+   assert( ncols > 0 );
    assert( infeasible != NULL );
 
-   for (j = 1; j < n; ++j)
+   for (j = 1; j < ncols; ++j)
    {
-      int maxdiscriminating = m;
+      int maxdiscriminating;
       int minfixed = -1;
 
+      maxdiscriminating = nrows;
+
       /* fix free entries in column j to the corresponding value in column j - 1 and collect some information */
-      for (i = 0; i < m; ++i)
+      for (i = 0; i < nrows; ++i)
       {
          /* is row i j-discriminating? */
          if ( minfixed == -1 && lexmaxfixes[i][j - 1] != 0 && lexmaxfixes[i][j] != 1 )
@@ -379,7 +383,7 @@ SCIP_RETCODE findLexMaxFace(
       }
 
       /* ensure that column j is lexicographically not greater than column j - 1 */
-      for (i = 0; i < m; ++i)
+      for (i = 0; i < nrows; ++i)
       {
          if ( lexmaxfixes[i][j] == 2 )
          {
@@ -398,7 +402,7 @@ SCIP_RETCODE findLexMaxFace(
 
          /* store minimum fixed row */
          if ( minfixed == -1 )
-            minfixedrowlexmax[j] = m - 1;
+            minfixedrowlexmax[j] = nrows - 1;
          else
             minfixedrowlexmax[j] = minfixed;
 
@@ -428,8 +432,8 @@ SCIP_RETCODE propagateCons(
    int** lexmaxfixes;
    int i;
    int j;
-   int m;
-   int n;
+   int nrows;
+   int ncols;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -450,26 +454,26 @@ SCIP_RETCODE propagateCons(
    assert( consdata->ncols > 0 );
    assert( consdata->vars != NULL );
 
-   m = consdata->nrows;
-   n = consdata->ncols;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
    vars = consdata->vars;
 
    /* Initialize lexicographically minimal matrix by fixed entries at the current node.
     * Free entries in the last column are set to 0.
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, m) );
-   for (i = 0; i < m; ++i)
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, nrows) );
+   for (i = 0; i < nrows; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], ncols) ); /*lint !e866*/
    }
 
-   for (i = 0; i < m; ++i)
+   for (i = 0; i < nrows; ++i)
    {
-      for (j = 0; j < n; ++j)
+      for (j = 0; j < ncols; ++j)
       {
          if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
             lexminfixes[i][j] = 1;
-         else if ( SCIPvarGetUbLocal(vars[i][j]) < 0.5 || j == n - 1 )
+         else if ( SCIPvarGetUbLocal(vars[i][j]) < 0.5 || j == ncols - 1 )
             lexminfixes[i][j] = 0;
          else
             lexminfixes[i][j] = 2;
@@ -477,7 +481,7 @@ SCIP_RETCODE propagateCons(
    }
 
    /* find lexicographically minimal face of hypercube containing lexmin fixes */
-   SCIP_CALL( findLexMinFace(vars, lexminfixes, NULL, infeasible, m, n, FALSE) );
+   SCIP_CALL( findLexMinFace(vars, lexminfixes, NULL, infeasible, nrows, ncols, FALSE) );
 
    if ( *infeasible == TRUE )
       goto FREELEXMIN;
@@ -485,15 +489,15 @@ SCIP_RETCODE propagateCons(
    /* Initialize lexicographically maximal matrix by fixed entries at the current node.
     * Free entries in the first column are set to 1.
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, m) );
-   for (i = 0; i < m; ++i)
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, nrows) );
+   for (i = 0; i < nrows; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], ncols) ); /*lint !e866*/
    }
 
-   for (i = 0; i < m; ++i)
+   for (i = 0; i < nrows; ++i)
    {
-      for (j = 0; j < n; ++j)
+      for (j = 0; j < ncols; ++j)
       {
          if ( SCIPvarGetUbLocal(vars[i][j]) < 0.5 )
             lexmaxfixes[i][j] = 0;
@@ -505,7 +509,7 @@ SCIP_RETCODE propagateCons(
    }
 
    /* find lexicographically maximal face of hypercube containing lexmax fixes */
-   SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, NULL, infeasible, m, n, FALSE) );
+   SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, NULL, infeasible, nrows, ncols, FALSE) );
 
    if ( *infeasible )
       goto FREELEXMAX;
@@ -513,9 +517,9 @@ SCIP_RETCODE propagateCons(
    /* Find for each column j the minimal row in which lexminfixes and lexmaxfixes differ. Fix all entries above this
     * row to the corresponding value in lexminfixes (or lexmaxfixes).
     */
-   for (j = 0; j < n; ++j)
+   for (j = 0; j < ncols; ++j)
    {
-      for (i = 0; i < m; ++i)
+      for (i = 0; i < nrows; ++i)
       {
          if ( lexminfixes[i][j] != lexmaxfixes[i][j] )
             break;
@@ -534,12 +538,12 @@ SCIP_RETCODE propagateCons(
    }
 
  FREELEXMAX:
-   for (i = m - 1; i >= 0; --i)
+   for (i = nrows - 1; i >= 0; --i)
       SCIPfreeBufferArray(scip, &lexmaxfixes[i]);
    SCIPfreeBufferArray(scip, &lexmaxfixes);
 
  FREELEXMIN:
-   for (i = m - 1; i >= 0; --i)
+   for (i = nrows - 1; i >= 0; --i)
       SCIPfreeBufferArray(scip, &lexminfixes[i]);
    SCIPfreeBufferArray(scip, &lexminfixes);
 
@@ -575,8 +579,8 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    int* minfixedrowlexmax;
    int i;
    int j;
-   int m;
-   int n;
+   int nrows;
+   int ncols;
    SCIP_Bool terminate;
 
    *result = SCIP_DIDNOTFIND;
@@ -592,8 +596,8 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    assert( consdata->ncols > 0 );
    assert( consdata->vars != NULL );
 
-   m = consdata->nrows;
-   n = consdata->ncols;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
    vars = consdata->vars;
 
    assert( inferinfo <= consdata->nrows );
@@ -601,23 +605,23 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    /* Initialize lexicographically minimal matrix by fixed entries at the current node.
     * Free entries in the last column are set to 0.
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, m) );
-   for (i = 0; i < m; ++i)
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes, nrows) );
+   for (i = 0; i < nrows; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], n) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexminfixes[i], ncols) ); /*lint !e866*/
    }
 
    /* store minimum fixed row for each column */
-   SCIP_CALL( SCIPallocBufferArray(scip, &minfixedrowlexmin, n) );
-   minfixedrowlexmin[n - 1] = -1;
+   SCIP_CALL( SCIPallocBufferArray(scip, &minfixedrowlexmin, ncols) );
+   minfixedrowlexmin[ncols - 1] = -1;
 
-   for (i = 0; i < m; ++i)
+   for (i = 0; i < nrows; ++i)
    {
-      for (j = 0; j < n; ++j)
+      for (j = 0; j < ncols; ++j)
       {
          if ( SCIPvarGetLbAtIndex(vars[i][j], bdchgidx, FALSE) > 0.5 )
             lexminfixes[i][j] = 1;
-         else if ( SCIPvarGetUbAtIndex(vars[i][j], bdchgidx, FALSE) < 0.5 || j == n - 1 )
+         else if ( SCIPvarGetUbAtIndex(vars[i][j], bdchgidx, FALSE) < 0.5 || j == ncols - 1 )
             lexminfixes[i][j] = 0;
          else
             lexminfixes[i][j] = 2;
@@ -625,7 +629,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    }
 
    /* find lexicographically minimal face of hypercube containing lexmin fixes */
-   SCIP_CALL( findLexMinFace(vars, lexminfixes, minfixedrowlexmin, &terminate, m, n, TRUE) );
+   SCIP_CALL( findLexMinFace(vars, lexminfixes, minfixedrowlexmin, &terminate, nrows, ncols, TRUE) );
 
    if ( terminate )
       goto FREELEXMIN;
@@ -633,19 +637,19 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    /* Initialize lexicographically maximal matrix by fixed entries at the current node.
     * Free entries in the first column are set to 1.
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, m) );
-   for (i = 0; i < m; ++i)
+   SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes, nrows) );
+   for (i = 0; i < nrows; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], n) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &lexmaxfixes[i], ncols) ); /*lint !e866*/
    }
 
    /* store minimum fixed row for each column */
-   SCIP_CALL( SCIPallocBufferArray(scip, &minfixedrowlexmax, n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &minfixedrowlexmax, ncols) );
    minfixedrowlexmax[0] = -1;
 
-   for (i = 0; i < m; ++i)
+   for (i = 0; i < nrows; ++i)
    {
-      for (j = 0; j < n; ++j)
+      for (j = 0; j < ncols; ++j)
       {
          if ( SCIPvarGetUbAtIndex(vars[i][j], bdchgidx, FALSE) < 0.5 )
             lexmaxfixes[i][j] = 0;
@@ -657,7 +661,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    }
 
    /* find lexicographically maximal face of hypercube containing lexmax fixes */
-   SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, minfixedrowlexmax, &terminate, m, n, TRUE) );
+   SCIP_CALL( findLexMaxFace(vars, lexmaxfixes, minfixedrowlexmax, &terminate, nrows, ncols, TRUE) );
 
    if ( terminate )
       goto FREELEXMAX;
@@ -665,7 +669,7 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
    /* Find for each column j the minimal row in which lexminfixes and lexmaxfixes differ. Fix all entries above this
     * row to the corresponding value in lexminfixes (or lexmaxfixes).
     */
-   for (j = 0; j < n; ++j)
+   for (j = 0; j < ncols; ++j)
    {
       int ub = MAX(minfixedrowlexmin[j], minfixedrowlexmax[j]);
 
@@ -682,13 +686,13 @@ SCIP_RETCODE resolvePropagationFullOrbitope(
 
  FREELEXMAX:
    SCIPfreeBufferArray(scip, &minfixedrowlexmax);
-   for (i = m - 1; i >= 0; --i)
+   for (i = nrows - 1; i >= 0; --i)
       SCIPfreeBufferArray(scip, &lexmaxfixes[i]);
    SCIPfreeBufferArray(scip, &lexmaxfixes);
 
  FREELEXMIN:
    SCIPfreeBufferArray(scip, &minfixedrowlexmin);
-   for (i = m - 1; i >= 0; --i)
+   for (i = nrows - 1; i >= 0; --i)
       SCIPfreeBufferArray(scip, &lexminfixes[i]);
    SCIPfreeBufferArray(scip, &lexminfixes);
 
