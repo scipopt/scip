@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_orbitope.c
+ * @ingroup DEFPLUGINS_CONS
  * @brief  interface for constraint handlers of type partitioning, packing, and full to ensure backwards compatibility
  * @author Christopher Hojny
  *

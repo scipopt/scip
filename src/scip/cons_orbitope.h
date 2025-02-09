@@ -23,6 +23,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_orbitope.h
+ * @ingroup CONSHDLRS
  * @brief  interface for constraint handlers of type partitioning, packing, and full
  * @author Christopher Hojny
  */
@@ -43,7 +44,11 @@
 extern "C" {
 #endif
 
-/** includes the orbitope constraint handlers used by this interface */
+/** includes orbitope constraint handlers
+ *
+ *  cons_orbitope serves as an interface for the constraint handlers cons_orbitope_full and cons_orbitope_pp;
+ *  this function includes their respective constraint handlers
+ */
 SCIP_EXPORT
 SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP*                 scip                /**< SCIP data structure */
