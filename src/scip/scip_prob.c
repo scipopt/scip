@@ -2767,7 +2767,9 @@ SCIP_RETCODE SCIPgetSolVarsData(
    int*                  nvars,              /**< pointer to store number of variables or NULL if not needed */
    int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
    int*                  nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
-   int*                  nimplvars,          /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*                  nbinimplvars,       /**< pointer to store number of implied binary vars or NULL if not needed */
+   int*                  nintimplvars,       /**< pointer to store number of implied integer vars or NULL if not needed */
+   int*                  ncontimplvars,      /**< pointer to store number of implied continuous vars or NULL if not needed */
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )
 {
@@ -2783,8 +2785,12 @@ SCIP_RETCODE SCIPgetSolVarsData(
          *nbinvars = scip->origprob->nbinvars;
       if( nintvars != NULL )
          *nintvars = scip->origprob->nintvars;
-      if( nimplvars != NULL )
-         *nimplvars = SCIPprobGetNImplVars(scip->origprob);
+      if( nbinimplvars != NULL )
+         *nbinimplvars = scip->origprob->nbinimplvars;
+      if( nintimplvars != NULL )
+         *nintimplvars = scip->origprob->nintimplvars;
+      if( ncontimplvars != NULL )
+         *ncontimplvars = scip->origprob->ncontimplvars;
       if( ncontvars != NULL )
          *ncontvars = scip->origprob->ncontvars;
    }
@@ -2798,8 +2804,12 @@ SCIP_RETCODE SCIPgetSolVarsData(
          *nbinvars = scip->transprob->nbinvars;
       if( nintvars != NULL )
          *nintvars = scip->transprob->nintvars;
-      if( nimplvars != NULL )
-         *nimplvars = SCIPprobGetNImplVars(scip->transprob);
+      if( nbinimplvars != NULL )
+         *nbinimplvars = scip->transprob->nbinimplvars;
+      if( nintimplvars != NULL )
+         *nintimplvars = scip->transprob->nintimplvars;
+      if( ncontimplvars != NULL )
+         *ncontimplvars = scip->transprob->ncontimplvars;
       if( ncontvars != NULL )
          *ncontvars = scip->transprob->ncontvars;
    }

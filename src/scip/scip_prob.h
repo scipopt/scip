@@ -1284,7 +1284,9 @@ SCIP_RETCODE SCIPgetSolVarsData(
    int*                  nvars,              /**< pointer to store number of variables or NULL if not needed */
    int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
    int*                  nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
-   int*                  nimplvars,          /**< pointer to store number of implicit integral vars or NULL if not needed */
+   int*                  nbinimplvars,       /**< pointer to store number of implied binary vars or NULL if not needed */
+   int*                  nintimplvars,       /**< pointer to store number of implied integer vars or NULL if not needed */
+   int*                  ncontimplvars,      /**< pointer to store number of implied continuous vars or NULL if not needed */
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    );
 

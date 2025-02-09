@@ -1080,7 +1080,8 @@ SCIP_RETCODE SCIPsetSolVal(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPsetSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   assert( var->scip == scip );
+   assert(var != NULL);
+   assert(var->scip == scip);
 
    if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
@@ -1177,7 +1178,8 @@ SCIP_RETCODE SCIPincSolVal(
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPincSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   assert( var->scip == scip );
+   assert(var != NULL);
+   assert(var->scip == scip);
 
    if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
@@ -1219,7 +1221,8 @@ SCIP_Real SCIPgetSolVal(
 {
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetSolVal", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   assert( var->scip == scip );
+   assert(var != NULL);
+   assert(var->scip == scip);
 
    if( sol != NULL )
       return SCIPsolGetVal(sol, scip->set, scip->stat, var);
@@ -3368,8 +3371,9 @@ SCIP_Real SCIPgetPrimalRayVal(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetPrimalRayVal", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    assert(var != NULL);
-   assert(scip->primal->primalray != NULL);
    assert(var->scip == scip);
+   assert(scip->primal != NULL);
+   assert(scip->primal->primalray != NULL);
 
    return SCIPsolGetRayVal(scip->primal->primalray, scip->set, scip->stat, var);
 }
