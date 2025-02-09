@@ -3328,7 +3328,7 @@ SCIP_RETCODE extendToCover(
             /* add cuts to pool if they are globally valid */
             if ( ! isLocal )
                SCIP_CALL( SCIPaddPoolCut(scip, row) );
-            SCIP_CALL( SCIPreleaseRow(scip, &row));
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
             ++(*nGen);
          }
          nnonviolated = 0;
@@ -4941,7 +4941,7 @@ SCIP_RETCODE separatePerspective(
 #endif
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
             assert( ! infeasible );
-            SCIP_CALL( SCIPreleaseRow(scip, &row));
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
             ++(*nGen);
          }
@@ -5061,7 +5061,7 @@ SCIP_RETCODE separateIndicators(
 #endif
                SCIP_CALL( SCIPaddRow(scip, row, FALSE, &infeasible) );
                assert( ! infeasible );
-               SCIP_CALL( SCIPreleaseRow(scip, &row));
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
                SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
                *result = SCIP_SEPARATED;
@@ -6468,7 +6468,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
             SCIP_CALL( SCIPaddRow(scip, row, FALSE, infeasible) );
-            SCIP_CALL( SCIPreleaseRow(scip, &row));
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
       }
    }

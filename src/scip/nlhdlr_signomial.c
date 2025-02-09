@@ -819,7 +819,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateSignomial)
    SCIP_Real targetover = 1.0;
 
    /* print information on estimators */
-   SCIP_CALL( printSignomial(scip, expr, nlhdlrexprdata));
+   SCIP_CALL( printSignomial(scip, expr, nlhdlrexprdata) );
    SCIPinfoMessage(scip, NULL, " Auxvalue: %f, targetvalue: %f, %sestimate.", auxvalue, targetvalue, overestimate ? "over" : "under");
 
    targetunder = 1.0;
@@ -1113,7 +1113,7 @@ SCIPincludeNlhdlrSignomial(
    assert(scip != NULL);
 
    /* create nonlinear handler specific data */
-   SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata));
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nlhdlrdata) );
    BMSclearMemory(nlhdlrdata);
 
    SCIP_CALL( SCIPincludeNlhdlrNonlinear(scip, &nlhdlr, NLHDLR_NAME, NLHDLR_DESC, NLHDLR_DETECTPRIORITY,

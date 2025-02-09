@@ -127,7 +127,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolReopt)
    {
       if( SCIPvarGetType(vars[varnr]) != SCIP_VARTYPE_CONTINUOUS )
       {
-         SCIP_CALL(SCIPcatchVarEvent(scip, vars[varnr], SCIP_EVENTTYPE_GBDCHANGED, eventhdlr, NULL, NULL));
+         SCIP_CALL( SCIPcatchVarEvent(scip, vars[varnr], SCIP_EVENTTYPE_GBDCHANGED, eventhdlr, NULL, NULL) );
       }
    }
 
@@ -154,7 +154,7 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolReopt)
    {
       if( SCIPvarGetType(vars[varnr]) == SCIP_VARTYPE_BINARY )
       {
-         SCIP_CALL(SCIPdropVarEvent(scip, vars[varnr], SCIP_EVENTTYPE_GBDCHANGED , eventhdlr, NULL, -1));
+         SCIP_CALL( SCIPdropVarEvent(scip, vars[varnr], SCIP_EVENTTYPE_GBDCHANGED , eventhdlr, NULL, -1) );
       }
    }
    return SCIP_OKAY;
@@ -4048,7 +4048,7 @@ SCIP_RETCODE fixBounds(
       val = reoptnode->dualredscur->vals[v];
       boundtype = reoptnode->dualredscur->boundtypes[v];
 
-      SCIP_CALL(SCIPvarGetProbvarBound(&var, &val, &boundtype));
+      SCIP_CALL( SCIPvarGetProbvarBound(&var, &val, &boundtype) );
       assert(SCIPvarIsTransformedOrigvar(var));
 
       bndchgd = FALSE;
@@ -4182,7 +4182,7 @@ SCIP_RETCODE fixInterdiction(
       val = vals[perm[v]];
       boundtype = boundtypes[perm[v]];
 
-      SCIP_CALL(SCIPvarGetProbvarBound(&var, &val, &boundtype));
+      SCIP_CALL( SCIPvarGetProbvarBound(&var, &val, &boundtype) );
       assert(SCIPvarIsTransformedOrigvar(var));
 
       /* negate the last bound change */
@@ -6305,7 +6305,7 @@ SCIP_RETCODE SCIPreoptAddDualBndchg(
       reopt->currentnode = SCIPnodeGetNumber(node);
 
       /* transform into the original space and then save the bound change */
-      SCIP_CALL(SCIPvarGetOrigvarSum(&var, &scalar, &constant));
+      SCIP_CALL( SCIPvarGetOrigvarSum(&var, &scalar, &constant) );
       newval = (newval - constant) / scalar;
       oldval = (oldval - constant) / scalar;
 

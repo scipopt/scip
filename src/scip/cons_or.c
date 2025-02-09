@@ -692,7 +692,7 @@ SCIP_RETCODE applyFixings(
    }
 
    SCIPdebugMsg(scip, "after fixings: ");
-   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL)) );
+   SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL) ) );
    SCIPdebugMsgPrint(scip, "\n");
 
    return SCIP_OKAY;
@@ -2003,7 +2003,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
    *success = FALSE;
 
    /* copy string for truncating it */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)));
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &strcopy, str, (int)(strlen(str)+1)) );
 
    /* cutoff "or" form the constraint string */
    token = SCIPstrtok(strcopy, "=", &saveptr );

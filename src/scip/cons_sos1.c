@@ -9271,14 +9271,14 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       assert( eventhdlr != NULL );
 
       /* initialize conflict graph */
-      SCIP_CALL( initConflictgraph(scip, conshdlrdata, conss, nconss));
+      SCIP_CALL( initConflictgraph(scip, conshdlrdata, conss, nconss) );
 
       /* get conflict graph and number of SOS1 variables */
       conflictgraph = conshdlrdata->conflictgraph;
       nsos1vars = conshdlrdata->nsos1vars;
       if ( nsos1vars < 2 )
       {
-         SCIP_CALL( freeConflictgraph(scip, conshdlrdata));
+         SCIP_CALL( freeConflictgraph(scip, conshdlrdata) );
          return SCIP_OKAY;
       }
 
@@ -9336,7 +9336,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       }
 
       /* free memory allocated in function initConflictgraph() */
-      SCIP_CALL( freeConflictgraph(scip, conshdlrdata));
+      SCIP_CALL( freeConflictgraph(scip, conshdlrdata) );
    }
    (*nchgcoefs) += nremovedvars;
 

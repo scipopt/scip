@@ -2749,10 +2749,10 @@ SCIP_RETCODE separateMcCormickImplicit(
 
          /* create an empty row */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "mccormick_%sestimate_implicit_%s*%s_%" SCIP_LONGINT_FORMAT,
-                             underestimate ? "under" : "over", SCIPvarGetName(terms[i].x), SCIPvarGetName(terms[i].y),
-                             SCIPgetNLPs(scip));
+            underestimate ? "under" : "over", SCIPvarGetName(terms[i].x), SCIPvarGetName(terms[i].y),
+            SCIPgetNLPs(scip));
 
-         SCIP_CALL(SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), SCIPinfinity(scip), TRUE,
+         SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, name, -SCIPinfinity(scip), SCIPinfinity(scip), TRUE,
                FALSE, FALSE) );
 
          xcoef = 0.0;

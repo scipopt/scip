@@ -3592,7 +3592,7 @@ SCIP_RETCODE parseSolveItem(
 
       if( var != NULL )
       {
-         SCIP_CALL(SCIPchgVarObj(scip, var, 1.0) );
+         SCIP_CALL( SCIPchgVarObj(scip, var, 1.0) );
       }
       else if( constant != NULL )
       {
@@ -3676,7 +3676,7 @@ SCIP_RETCODE parseSolveItem(
 
          for( v = 0; v < nvars; ++v )
          {
-            SCIP_CALL(SCIPchgVarObj(scip, vars[v], vals[v]) );
+            SCIP_CALL( SCIPchgVarObj(scip, vars[v], vals[v]) );
          }
 
       TERMINATE:
@@ -3967,7 +3967,7 @@ SCIP_RETCODE appendBuffer(
    {
       *bufferlen = MAX( newpos, 2 * (*bufferlen) );
 
-      SCIP_CALL( SCIPreallocBufferArray(scip, buffer, (*bufferlen)));
+      SCIP_CALL( SCIPreallocBufferArray(scip, buffer, (*bufferlen)) );
    }
 
    /* append extension to linebuffer (+1 because of '\0') */

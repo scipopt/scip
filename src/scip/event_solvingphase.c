@@ -1139,7 +1139,7 @@ SCIP_RETCODE updateDataStructures(
       case SCIP_EVENTTYPE_NODEFOCUSED:
          assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
-         SCIP_CALL( releaseNodeInformation(scip, eventhdlrdata, SCIPgetCurrentNode(scip)));
+         SCIP_CALL( releaseNodeInformation(scip, eventhdlrdata, SCIPgetCurrentNode(scip)) );
          assert(eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
 
          break;
@@ -1587,7 +1587,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
          "should a restart be applied between the improvement and the proof phase?",
          &eventhdlrdata->userestart2to3, FALSE, DEFAULT_USERESTART2TO3, NULL, NULL) );
 
-   SCIP_CALL(SCIPaddRealParam(scip, EVENTHDLR_NAME "s/optimalvalue", "optimal solution value for problem",
+   SCIP_CALL( SCIPaddRealParam(scip, EVENTHDLR_NAME "s/optimalvalue", "optimal solution value for problem",
          &eventhdlrdata->optimalvalue, FALSE, SCIP_INVALID, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
 
    /* add parameter for logarithmic regression */
