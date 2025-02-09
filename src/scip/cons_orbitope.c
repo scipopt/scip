@@ -69,8 +69,8 @@ SCIP_RETCODE strengthenOrbitopeConstraint(
 
    /* If only some rows are contained in set packing/partitioning constraints, it may still be worth it
     * to exploit the packing/partitioning structure on these rows, because packing/partitioning orbitopes
-    * or more restrictive than full orbitopes. If at least three rows have this property, we discard
-    * all rows not contained in set packing/partitioning constraints and add the smaller sub packing orbitope.
+    * are more restrictive than full orbitopes. If at least three rows have this property, we discard
+    * all rows not contained in set packing/partitioning constraints and add the smaller packing sub-orbitope.
     */
    if ( npprows >= 3 )
    {
