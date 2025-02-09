@@ -165,58 +165,58 @@ for (my $i = 0; $i < $narg; ++$i)
       # check for empty lines in functions
       if ( $depth > $foundexternc && $checkemptylines == 1 )
       {
-	 # check for empty lines
-	 if ( length($str) == 0 )
-	 {
-	    ++$emptyline;
-	    $lastemptyline = $line;
+         # check for empty lines
+         if ( length($str) == 0 )
+         {
+            ++$emptyline;
+            $lastemptyline = $line;
 
-	    # check for empty lines following an opening block
-	    if ( $openbraceprev > 0 )
-	    {
-	       # directly warn within a function
-	       if ( $depth > $foundexternc + 1 )
-	       {
-		  printf("%d: empty line following an opening block.\n", $line);
-	       }
-	       else
-	       {
-		  # we do not want to warn if the first line after the
-		  # empty line is a SCIP_CALL at the beginning of a
-		  # function. Thus, we read the next line and check.
-		  $str = <FILE>;
-		  chomp($str);
-		  ++$line;
+            # check for empty lines following an opening block
+            if ( $openbraceprev > 0 )
+            {
+               # directly warn within a function
+               if ( $depth > $foundexternc + 1 )
+               {
+                  printf("%d: empty line following an opening block.\n", $line);
+               }
+               else
+               {
+                  # we do not want to warn if the first line after the
+                  # empty line is a SCIP_CALL at the beginning of a
+                  # function. Thus, we read the next line and check.
+                  $str = <FILE>;
+                  chomp($str);
+                  ++$line;
 
-		  # do not warn if we directly call another function
-		  if ( $str !~ /SCIP\_CALL\(/ )
-		  {
-		     printf("%d: empty line following an opening block.\n", $line);
-		  }
-		  else
-		  {
-		     # we now have to update the empty line status
-		     if ( length($str) == 0 )
-		     {
-			++$emptyline;
-			$lastemptyline = $line;
-		     }
-		     else
-		     {
-			$emptyline = 0;
-		     }
-		  }
-	       }
-	    }
-	 }
-	 else
-	 {
-	    if ( $emptyline >= 2 )
-	    {
-	       printf("%d: %d consecutive empty lines in code.\n", $line - 1, $emptyline);
-	    }
-	    $emptyline = 0;
-	 }
+                  # do not warn if we directly call another function
+                  if ( $str !~ /SCIP\_CALL\(/ )
+                  {
+                     printf("%d: empty line following an opening block.\n", $line);
+                  }
+                  else
+                  {
+                     # we now have to update the empty line status
+                     if ( length($str) == 0 )
+                     {
+                        ++$emptyline;
+                        $lastemptyline = $line;
+                     }
+                     else
+                     {
+                        $emptyline = 0;
+                     }
+                  }
+               }
+            }
+         }
+         else
+         {
+            if ( $emptyline >= 2 )
+            {
+               printf("%d: %d consecutive empty lines in code.\n", $line - 1, $emptyline);
+            }
+            $emptyline = 0;
+         }
       }
       $openbraceprev = 0;
 
@@ -224,53 +224,53 @@ for (my $i = 0; $i < $narg; ++$i)
       # check for SCIPdebugMessage without "\n"
       if ( $checkdebug == 1 && $str =~ /SCIPdebugMessage/ )
       {
-	 my $s = $str;
+         my $s = $str;
 
-	 # remove "SCIP_LONGINT_FORMAT"
-	 $s =~ s/\"SCIP_LONGINT_FORMAT\"//g;
+         # remove "SCIP_LONGINT_FORMAT"
+         $s =~ s/\"SCIP_LONGINT_FORMAT\"//g;
 
-	 my $debpos = index($s, "SCIPdebugMessage");
-	 my $enddebpos = index($s, "\",", $debpos + 18);
-	 if ( $enddebpos >= 0 )
-	 {
-	    if ( substr($s, $enddebpos-2, 2) ne "\\n" )
-	    {
-	       printf("%d: possible SCIPdebugMessage() without finializing '\\n':\n%s\n\n", $line, $_);
-	    }
-	 }
+         my $debpos = index($s, "SCIPdebugMessage");
+         my $enddebpos = index($s, "\",", $debpos + 18);
+         if ( $enddebpos >= 0 )
+         {
+            if ( substr($s, $enddebpos-2, 2) ne "\\n" )
+            {
+               printf("%d: possible SCIPdebugMessage() without finializing '\\n':\n%s\n\n", $line, $_);
+            }
+         }
       }
 
       # ----------------------------------------
       # check for "SCIP_CALL(...)" without whitespace
       if ( $checkscipcall == 1 )
       {
-	 if ( $str =~ /SCIP_CALL\([^\s]/ )
-	 {
-	    printf("%d: found SCIP_CALL( without following whitespace:\n%s\n\n", $line, $_);
-	 }
-	 elsif ( $str =~ /SCIP_CALL\(.*[^\s]\);/ )
-	 {
-	    printf("%d: found SCIP_CALL( without final whitespace:\n%s\n\n", $line, $_);
-	 }
+         if ( $str =~ /SCIP_CALL\([^\s]/ )
+         {
+            printf("%d: found SCIP_CALL( without following whitespace:\n%s\n\n", $line, $_);
+         }
+         elsif ( $str =~ /SCIP_CALL\(.*[^\s]\);/ )
+         {
+            printf("%d: found SCIP_CALL( without final whitespace:\n%s\n\n", $line, $_);
+         }
       }
 
       # ----------------------------------------
       # check checkStage function (only for scip_*.c)
       if ( $checkstage == 1 && $str =~ /checkStage\(scip/ )
       {
-	 my @str1 = split(/checkStage/, $str);
-	 my @str2 = split(/,/, $str1[1]);
-	 my $s = $str2[1];
+         my @str1 = split(/checkStage/, $str);
+         my @str2 = split(/,/, $str1[1]);
+         my $s = $str2[1];
 
-	 # strip quotes
-	 $s =~ s/\"//g;
-	 # strip spaces
-	 $s =~ s/\s//g;
+         # strip quotes
+         $s =~ s/\"//g;
+         # strip spaces
+         $s =~ s/\s//g;
 
-	 if ( $s ne $functionname )
-	 {
-	    printf("%d: possible wrong checkstage name: <%s> <%s>\n", $line, $s, $functionname);
-	 }
+         if ( $s ne $functionname )
+         {
+            printf("%d: possible wrong checkstage name: <%s> <%s>\n", $line, $s, $functionname);
+         }
       }
 
       # ---------------------------------------------------------
@@ -279,8 +279,8 @@ for (my $i = 0; $i < $narg; ++$i)
       # remove everything within a string
       if ( $str =~ /\".*\"/ && $str !~ /(extern \"C\" \{)/ )
       {
-	 # remove minimal occurence of string
-	 $str =~ s/\".*?\"//g;
+         # remove minimal occurence of string
+         $str =~ s/\".*?\"//g;
       }
 
       # ---------------------------------------------------------
@@ -289,125 +289,125 @@ for (my $i = 0; $i < $narg; ++$i)
       # check for the presence of "/**>"
       if ( $str =~ /\/\*\*>/ )
       {
-	 printf("%d: found \"/**>\", likely to be an error.\n%s\n", $line, $_);
+         printf("%d: found \"/**>\", likely to be an error.\n%s\n", $line, $_);
       }
 
       # make sure that no comment ends and afterwards starts on the same line
       if ( $checkcomments == 1 && $str =~ /\*\/(.*)\/\*/ )
       {
-	 if ( $str !~ /\*lint/ )
-	 {
-	    # simply warn, but continue (parsing might not be correct, however)
-	    printf("%d: line contains two comments - merge into one?\n%s\n\n", $line, $_);
-	 }
+         if ( $str !~ /\*lint/ )
+         {
+            # simply warn, but continue (parsing might not be correct, however)
+            printf("%d: line contains two comments - merge into one?\n%s\n\n", $line, $_);
+         }
       }
 
       # if we are in a comment that started in previous lines, we search for the end of the comment
       if ( $incomment == 1 || $indocumentation == 1 )
       {
          # if we want to check separate documentation lines
-	 if ( $checksepdoclines == 1 )
-	 {
-	    # if the line does not contain the start of a comment and there is nothing before
-	    if ( $documentationpos < 0 && $inenumstruct == 0 && $depth == 0 )
-	    {
-	       if ( $_ =~ /[\w\*]/ )
-	       {
-		  my $startpos = $-[0];
-		  if ( $startpos >= 45 )
-		  {
-		     if ( $_ !~ /\*/ )
-		     {
-			printf("%d: line contains separate comment without '*'\n%s\n\n", $line, $_);
-		     }
-		     elsif ( $startpos != 46 )
-		     {
-			printf("%d: line contains separate comment that does not start at position 45:\n%s\n\n", $line, $_);
-		     }
-		  }
-	       }
-	    }
-	 }
+         if ( $checksepdoclines == 1 )
+         {
+            # if the line does not contain the start of a comment and there is nothing before
+            if ( $documentationpos < 0 && $inenumstruct == 0 && $depth == 0 )
+            {
+               if ( $_ =~ /[\w\*]/ )
+               {
+                  my $startpos = $-[0];
+                  if ( $startpos >= 45 )
+                  {
+                     if ( $_ !~ /\*/ )
+                     {
+                        printf("%d: line contains separate comment without '*'\n%s\n\n", $line, $_);
+                     }
+                     elsif ( $startpos != 46 )
+                     {
+                        printf("%d: line contains separate comment that does not start at position 45:\n%s\n\n", $line, $_);
+                     }
+                  }
+               }
+            }
+         }
 
-	 $afterdocumentation = 0;
-	 if ( $str =~ /\*\// )
-	 {
-	    # remove comment from current line
-	    $str =~ s/(.*)\*\///g;
+         $afterdocumentation = 0;
+         if ( $str =~ /\*\// )
+         {
+            # remove comment from current line
+            $str =~ s/(.*)\*\///g;
 
-	    if ( $indocumentation == 1 )
-	    {
-	       $afterdocumentation = 1;
-	    }
-	    $incomment = 0;
-	    $indocumentation = 0;
-	 }
-	 else
-	 {
-	    # skip line (comment continues)
-	    next;
-	 }
+            if ( $indocumentation == 1 )
+            {
+               $afterdocumentation = 1;
+            }
+            $incomment = 0;
+            $indocumentation = 0;
+         }
+         else
+         {
+            # skip line (comment continues)
+            next;
+         }
       }
       else
       {
-	 # if a comment starts or ends in current line
-	 if ( $str =~ /\/\*/ || $str =~ /\*\// )
-	 {
+         # if a comment starts or ends in current line
+         if ( $str =~ /\/\*/ || $str =~ /\*\// )
+         {
             # determine position of documentation string (-1 otherwise); needed for indentation checking
-	    if ( $checkindent == 1 && index($str, "\#define") < 0 && index($str, "typedef") < 0 )
+            if ( $checkindent == 1 && index($str, "\#define") < 0 && index($str, "typedef") < 0 )
             {
-	       $documentationpos = index($_, "/**<");
-	    }
+               $documentationpos = index($_, "/**<");
+            }
 
-	    # check whether we have a doxygen documentation within the code
-	    if ( $checkdocinbody == 1 && $str =~ /\/\*\*/ && ($depth - $foundexternc - $inenumstruct) > 0 )
-	    {
-	       if ( $str !~ /\/\*\*(\s*)\@/ && $str !~ /\/\*\*\*\*/ && $str !~ /\[Snippet/ )
-	       {
-		  printf("%d: possible doxygen documentation within function (depth: %d, enumstruct: %d):\n%s\n\n", $line, $depth, $inenumstruct, $_);
-	       }
-	    }
+            # check whether we have a doxygen documentation within the code
+            if ( $checkdocinbody == 1 && $str =~ /\/\*\*/ && ($depth - $foundexternc - $inenumstruct) > 0 )
+            {
+               if ( $str !~ /\/\*\*(\s*)\@/ && $str !~ /\/\*\*\*\*/ && $str !~ /\[Snippet/ )
+               {
+                  printf("%d: possible doxygen documentation within function (depth: %d, enumstruct: %d):\n%s\n\n", $line, $depth, $inenumstruct, $_);
+               }
+            }
 
-	    # handle one-line documentation
-	    if ( $str =~ /\/\*\*(.*)\*\// )
-	    {
-	       # remove documentation comments that are within the current line
-	       $str =~ s/\/\*\*(.*)\*\///g;
-	       $afterdocumentation = 1;
-	    }
-	    else
-	    {
-	       # handle one-line comments
-	       if ( $str =~ /\/\*(.*)\*\// )
-	       {
-		  # remove comments that are within the current line
-		  $str =~ s/\/\*(.*)\*\///g;
-	       }
-	    }
+            # handle one-line documentation
+            if ( $str =~ /\/\*\*(.*)\*\// )
+            {
+               # remove documentation comments that are within the current line
+               $str =~ s/\/\*\*(.*)\*\///g;
+               $afterdocumentation = 1;
+            }
+            else
+            {
+               # handle one-line comments
+               if ( $str =~ /\/\*(.*)\*\// )
+               {
+                  # remove comments that are within the current line
+                  $str =~ s/\/\*(.*)\*\///g;
+               }
+            }
 
-	    # check for comment without start that ends
-	    if ( $str =~ /\*\// )
-	    {
-	       printf("%d: there is not comment to end here:\n%s\n\n", $line, $_);
-	    }
+            # check for comment without start that ends
+            if ( $str =~ /\*\// )
+            {
+               printf("%d: there is not comment to end here:\n%s\n\n", $line, $_);
+            }
 
-	    # check whether documentation starts
-	    if ( $str =~ /\/\*\*/ )
-	    {
-	       $indocumentation = 1;
-	       $incomment = 1;
-	       $afterdocumentation = 0;
-	       next;
-	    }
+            # check whether documentation starts
+            if ( $str =~ /\/\*\*/ )
+            {
+               $indocumentation = 1;
+               $incomment = 1;
+               $afterdocumentation = 0;
+               next;
+            }
 
-	    # check whether comment starts
-	    if ( $str =~ /\/\*/ )
-	    {
-	       $incomment = 1;
-	       $afterdocumentation = 0;
-	       next;
-	    }
-	 }
+            # check whether comment starts
+            if ( $str =~ /\/\*/ )
+            {
+               $incomment = 1;
+               $afterdocumentation = 0;
+               next;
+            }
+         }
       }
 
       # -----------------------------------------------------------------------------
@@ -416,81 +416,81 @@ for (my $i = 0; $i < $narg; ++$i)
       # determine whether we are in an enum or struct (assume it is at the beginning of the line)
       if ( $str =~ /^enum/ || $str =~ /^struct/ || $str =~ /^typedef struct/ || $str =~ /^typedef enum/ || $str =~ /\s*union/ )
       {
-	 ++($inenumstruct);
+         ++($inenumstruct);
       }
 
       # check for opening blocks
       if ( $str =~ /\{/ && $str !~ /'\{'/ && $incomment == 0 )
       {
-	 # mark beginning of block if block is not closing on same line
-	 if ( $str !~ /\{(.*)\}/ )
-	 {
-	    $openbraceprev = 1;
-	 }
+         # mark beginning of block if block is not closing on same line
+         if ( $str !~ /\{(.*)\}/ )
+         {
+            $openbraceprev = 1;
+         }
 
-	 if ( $str =~ /\@\{/ )
-	 {
-	    printf("%d: '\@{' within non-comment line:\n%s\n\n", $line, $_);
-	 }
-	 else
-	 {
-	    if ( $str =~ /(extern \"C\" \{)/ )
-	    {
-	       $foundexternc = 1;
-	    }
+         if ( $str =~ /\@\{/ )
+         {
+            printf("%d: '\@{' within non-comment line:\n%s\n\n", $line, $_);
+         }
+         else
+         {
+            if ( $str =~ /(extern \"C\" \{)/ )
+            {
+               $foundexternc = 1;
+            }
 
-	    # loop through all occurences in current row
-	    my $pos = -1;
-	    do
-	    {
-	       $pos = index($str, "{", $pos + 1);
-	       if ( $pos >= 0 )
-	       {
-		  ++$depth;
-	       }
-	    }
-	    while ( $pos >= 0 );
-	 }
+            # loop through all occurences in current row
+            my $pos = -1;
+            do
+            {
+               $pos = index($str, "{", $pos + 1);
+               if ( $pos >= 0 )
+               {
+                  ++$depth;
+               }
+            }
+            while ( $pos >= 0 );
+         }
       }
 
       # check for closing blocks
       if ( $str =~ /\}/ && $str !~ /'\}'/ && $incomment == 0 )
       {
-	 # check for empty lines preceeding a closeing block
-	 if ( $lastemptyline == $line - 1 && $depth > $foundexternc && $checkemptylines == 1 && $str !~ /\{(.*)\}/ )
-	 {
-	    printf("%d: empty line preceeding closing block.\n", $line);
-	 }
+         # check for empty lines preceeding a closeing block
+         if ( $lastemptyline == $line - 1 && $depth > $foundexternc && $checkemptylines == 1 && $str !~ /\{(.*)\}/ )
+         {
+            printf("%d: empty line preceeding closing block.\n", $line);
+         }
 
-	 --($inenumstruct);
-	 if ( $inenumstruct < 0 )
-	 {
-	    $inenumstruct = 0;
-	 }
+         --($inenumstruct);
+         if ( $inenumstruct < 0 )
+         {
+            $inenumstruct = 0;
+         }
 
-	 if ( $str =~ /\@\}/ )
-	 {
-	    printf("%d: '\@}' within non-comment line:\n%s\n\n", $line, $_);
-	 }
-	 else
-	 {
-	    # loop through all occurences in current row
-	    my $pos = -1;
-	    do
-	    {
-	       $pos = index($str, "}", $pos + 1);
-	       if ( $pos >= 0 )
-	       {
-		  --$depth;
-		  if ( $depth + $foundexternc < 0 )
-		  {
-		     printf("Warning: brace count wrong!\n");
-		     $depth = 0;
-		  }
-	       }
-	    }
-	    while ( $pos >= 0 );
-	 }
+         if ( $str =~ /\@\}/ )
+         {
+            printf("%d: '\@}' within non-comment line:\n%s\n\n", $line, $_);
+         }
+         else
+         {
+            # loop through all occurences in current row
+            my $pos = -1;
+            do
+            {
+               $pos = index($str, "}", $pos + 1);
+               if ( $pos >= 0 )
+               {
+                  --$depth;
+                  if ( $depth + $foundexternc < 0 )
+                  {
+                     printf("Warning: brace count wrong!\n");
+                     $depth = 0;
+                  }
+               }
+            }
+            while ( $pos >= 0 );
+         }
       }
 
       # printf("%d: %d (%d %d): %s\n", $line, $depth, $foundexternc, $inenumstruct, $str);
@@ -499,20 +499,20 @@ for (my $i = 0; $i < $narg; ++$i)
       # try to determine function names (needed for checking stage)
       if ( $checkstage == 1 )
       {
-	 # try to determine function name
-	 if ( $afterdocumentation == 1 )
-	 {
-	    # check for parenthesis
-	    if ( $depth == 0 && $str =~ /\S\(/ && $str !~ /\)\)/ )
-	    {
-	       my @mystr = split(/\(/, $str);
-	       my @s = split(/\s+/, $mystr[0]);
+         # try to determine function name
+         if ( $afterdocumentation == 1 )
+         {
+            # check for parenthesis
+            if ( $depth == 0 && $str =~ /\S\(/ && $str !~ /\)\)/ )
+            {
+               my @mystr = split(/\(/, $str);
+               my @s = split(/\s+/, $mystr[0]);
 
-	       # guess function name
-	       $functionname = $s[$#s];
-	       $afterdocumentation = 0;
-	    }
-	 }
+               # guess function name
+               $functionname = $s[$#s];
+               $afterdocumentation = 0;
+            }
+         }
       }
 
       # -----------------------------------------------------------
@@ -546,23 +546,23 @@ for (my $i = 0; $i < $narg; ++$i)
       # check braces
       if ( $checkbraces && $incomment == 0 )
       {
-	 # ignore 'extern "C"{'
-	 my $s = $str;
-	 $s =~ s/(extern \"C\" \{)//g;
+         # ignore 'extern "C"{'
+         my $s = $str;
+         $s =~ s/(extern \"C\" \{)//g;
 
-	 # check for braces
-	 if ( $s =~ /\{/ || $s =~ /\}/ )
-	 {
-	    # strip spaces:
-	    $s =~ s/\s+//g;
+         # check for braces
+         if ( $s =~ /\{/ || $s =~ /\}/ )
+         {
+            # strip spaces:
+            $s =~ s/\s+//g;
 
-	    # strip trailing ';';
-	    $s =~ s/;$//g;
+            # strip trailing ';';
+            $s =~ s/;$//g;
 
-	    if ( length($s) > 1 )
-	    {
-	       printf("%d: brace: %s\n\n", $line, $_);
-	    }
+            if ( length($s) > 1 )
+            {
+               printf("%d: brace: %s\n\n", $line, $_);
+            }
          }
       }
 
@@ -570,140 +570,140 @@ for (my $i = 0; $i < $narg; ++$i)
       # check indentation of function parameters closing parenthesis
       if ( $checkindent == 1 && $documentationpos <= 0 && $depth == 0 && $inenumstruct == 0 )
       {
-	 if ( ! (($str =~ /SCIP_DECL_/) || ($str =~ /DECL_/) || ($str =~ /TCLIQUE_/) || ($str =~ /SORTTPL\_/) || ($str =~ /define/) ) )
-	 {
-	    # check for ")"
-	    my $pos = index($str, ")");
+         if ( ! (($str =~ /SCIP_DECL_/) || ($str =~ /DECL_/) || ($str =~ /TCLIQUE_/) || ($str =~ /SORTTPL\_/) || ($str =~ /define/) ) )
+         {
+            # check for ")"
+            my $pos = index($str, ")");
 
-	    if ( $pos >= 0 && $pos != 3 )
-	    {
-	       printf("%d: wrong indentation of function closing parenthesis: <%s>\n", $line, $str);
-	    }
-	 }
+            if ( $pos >= 0 && $pos != 3 )
+            {
+               printf("%d: wrong indentation of function closing parenthesis: <%s>\n", $line, $str);
+            }
+         }
       }
 
       # ----------------------------------------
       # check indentation of function parameters
       if ( $checkindent == 1 && $documentationpos >= 0 && $inenumstruct == 0 )
       {
-	 if ( ! ($str =~ /SORTTPL\_/) )
-	 {
-	    # make sure that there is a space before "/**<" (needed below)
-	    my $s = $_;
-	    $s =~ s/\/\*\*</ \/\*\*</g;
+         if ( ! ($str =~ /SORTTPL\_/) )
+         {
+            # make sure that there is a space before "/**<" (needed below)
+            my $s = $_;
+            $s =~ s/\/\*\*</ \/\*\*</g;
 
-	    # split into components
-	    @array = split(/\s+/, $s);
+            # split into components
+            @array = split(/\s+/, $s);
 
-	    # check for first component
-	    my $pos = index($_, $array[1]);
+            # check for first component
+            my $pos = index($_, $array[1]);
 
-	    # first component should always start at column 3
-	    if ( $pos != 3 )
-	    {
-	       printf("%s\n", $_);
-	       for (my $j = 0; $j < $pos; ++$j)
-	       {
-		  printf(" ");
-	       }
-	       printf("^  (pos: %d, line: %d)\n\n", $pos, $line);
-	       next;
-	    }
+            # first component should always start at column 3
+            if ( $pos != 3 )
+            {
+               printf("%s\n", $_);
+               for (my $j = 0; $j < $pos; ++$j)
+               {
+                  printf(" ");
+               }
+               printf("^  (pos: %d, line: %d)\n\n", $pos, $line);
+               next;
+            }
 
-	    # try to find variable name = last component before comment (may not exist)
-	    my $ind = 1;
-	    while ( $ind < $#array && $array[$ind] !~ /\/\*\*</ )
-	    {
-	       ++$ind;
-	       $pos = index($_, $array[$ind], $pos+1);
-	    }
+            # try to find variable name = last component before comment (may not exist)
+            my $ind = 1;
+            while ( $ind < $#array && $array[$ind] !~ /\/\*\*</ )
+            {
+               ++$ind;
+               $pos = index($_, $array[$ind], $pos+1);
+            }
 
-	    # check whether variable name is aligned
-	    if ( $ind >= 2 )
-	    {
-	       $pos = index($_, $array[$ind-1], 22);
-	       # make sure previous names are not too long
-	       my $l = 3;
-	       for (my $k = 1; $k < $ind-1; ++$k)
-	       {
-		  $l = $l + length($array[$k]) + 1;
-	       }
-	       if ( $l == $pos )
-	       {
-		  next;
-	       }
+            # check whether variable name is aligned
+            if ( $ind >= 2 )
+            {
+               $pos = index($_, $array[$ind-1], 22);
+               # make sure previous names are not too long
+               my $l = 3;
+               for (my $k = 1; $k < $ind-1; ++$k)
+               {
+                  $l = $l + length($array[$k]) + 1;
+               }
+               if ( $l == $pos )
+               {
+                  next;
+               }
 
-	       if ( $pos != 25 && $pos > 3 )
-	       {
-		  printf("%d %s %s\n", $ind, $array[1], $array[2]);
-		  printf("%s\n", $_);
-		  printf("%-5d: pos: %2d", $line, $pos);
-		  for (my $j = 14; $j < $pos; ++$j)
-		  {
-		     printf(" ");
-		  }
-		  printf("^\n\n");
-		  next;
-	       }
-	    }
+               if ( $pos != 25 && $pos > 3 )
+               {
+                  printf("%d %s %s\n", $ind, $array[1], $array[2]);
+                  printf("%s\n", $_);
+                  printf("%-5d: pos: %2d", $line, $pos);
+                  for (my $j = 14; $j < $pos; ++$j)
+                  {
+                     printf(" ");
+                  }
+                  printf("^\n\n");
+                  next;
+               }
+            }
 
-	    # check for comment
-	    if ( $documentationpos != 45 )
-	    {
-	       # skip too long variable types
-	       if ( 25 + length($array[$ind-1]) <= 42 )
-	       {
-		  printf("%s\n", $_);
-		  printf("%-5d: pos: %2d", $line, $documentationpos);
-		  for (my $j = 14; $j < $documentationpos; ++$j)
-		  {
-		     printf(" ");
-		  }
-		  printf("^\n\n");
-	       }
-	    }
-	 }
+            # check for comment
+            if ( $documentationpos != 45 )
+            {
+               # skip too long variable types
+               if ( 25 + length($array[$ind-1]) <= 42 )
+               {
+                  printf("%s\n", $_);
+                  printf("%-5d: pos: %2d", $line, $documentationpos);
+                  for (my $j = 14; $j < $documentationpos; ++$j)
+                  {
+                     printf(" ");
+                  }
+                  printf("^\n\n");
+               }
+            }
+         }
       }
 
       # ----------------------------------------
       # check spaces around operators
       if ( $checkoperspaces == 1 )
       {
-	 if ( $checkoperstrict == 1 )
-	 {
-	    if ( $str =~ /\w[\+\*\%\-]\w/ )
-	    {
-	       printf("%d: operator without surrounding spaces: %s\n\n", $line, $_);
-	    }
-	 }
-	 else
-	 {
-	    if ( $str =~ /[a-zA-Z][\+\*\%\-][a-zA-Z]/ )
-	    {
-	       printf("%d: operator without surrounding spaces: %s\n\n", $line, $_);
-	    }
-	 }
+         if ( $checkoperstrict == 1 )
+         {
+            if ( $str =~ /\w[\+\*\%\-]\w/ )
+            {
+               printf("%d: operator without surrounding spaces: %s\n\n", $line, $_);
+            }
+         }
+         else
+         {
+            if ( $str =~ /[a-zA-Z][\+\*\%\-][a-zA-Z]/ )
+            {
+               printf("%d: operator without surrounding spaces: %s\n\n", $line, $_);
+            }
+         }
       }
 
       # ----------------------------------------
       # check other stuff
       if ( $checkothers )
       {
-	 # check for printfs
-	 if ( $str =~ / printf\(/ )
-	 {
-	    printf("%d: printf found: %s\n\n", $line, $_);
-	 }
+         # check for printfs
+         if ( $str =~ / printf\(/ )
+         {
+            printf("%d: printf found: %s\n\n", $line, $_);
+         }
 
-	 # check for SCIP_CALL_ABORT
-	 if ( $str =~ /SCIP\_CALL\_ABORT\(/ )
-	 {
-	    # SCIP_CALL_ABORT allowed for checkStage in scip.c
-	    if ( ! ($_ =~ /SCIP\_CALL\_ABORT\( checkStage/) )
-	    {
-	       printf("%d: SCIP_CALL_ABORT found: %s\n\n", $line, $_);
-	    }
-	 }
+         # check for SCIP_CALL_ABORT
+         if ( $str =~ /SCIP\_CALL\_ABORT\(/ )
+         {
+            # SCIP_CALL_ABORT allowed for checkStage in scip.c
+            if ( ! ($_ =~ /SCIP\_CALL\_ABORT\( checkStage/) )
+            {
+               printf("%d: SCIP_CALL_ABORT found: %s\n\n", $line, $_);
+            }
+         }
       }
    }
 }
