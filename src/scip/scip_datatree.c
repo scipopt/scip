@@ -47,7 +47,7 @@ SCIP_RETCODE SCIPcreateDatatree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE**       datatree,           /**< buffer to store created data tree */
    int                   capacity            /**< desired capacity, or -1 for default */
-)
+   )
 {
    assert(scip != NULL);
    assert(datatree != NULL);
@@ -64,7 +64,7 @@ SCIP_RETCODE SCIPcreateDatatreeInTree(
    SCIP_DATATREE**       newtree,            /**< buffer to store pointer to created data tree */
    const char*           name,               /**< name of entry to add */
    int                   capacity            /**< capacity of new tree, or -1 for default */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -84,7 +84,7 @@ SCIP_RETCODE SCIPinsertDatatreeBool(
    SCIP_DATATREE*        datatree,           /**< data tree */
    const char*           name,               /**< name of entry to add */
    SCIP_Bool             value               /**< value to add */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -104,7 +104,7 @@ SCIP_RETCODE SCIPinsertDatatreeInt(
    SCIP_DATATREE*        datatree,           /**< data tree */
    const char*           name,               /**< name of entry to add */
    int                   value               /**< value to add */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -121,7 +121,7 @@ SCIP_RETCODE SCIPinsertDatatreeLong(
    SCIP_DATATREE*        datatree,           /**< data tree */
    const char*           name,               /**< name of entry to add */
    SCIP_Longint          value               /**< value to add */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -138,7 +138,7 @@ SCIP_RETCODE SCIPinsertDatatreeReal(
    SCIP_DATATREE*        datatree,           /**< data tree */
    const char*           name,               /**< name of entry to add */
    SCIP_Real             value               /**< value to add */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -158,7 +158,7 @@ SCIP_RETCODE SCIPinsertDatatreeString(
    SCIP_DATATREE*        datatree,           /**< data tree */
    const char*           name,               /**< name of entry to add */
    const char*           value               /**< value to add */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -177,7 +177,7 @@ SCIP_RETCODE SCIPinsertDatatreeBoolArray(
    const char*           name,               /**< name of entry to add */
    const SCIP_Bool*      values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -200,7 +200,7 @@ SCIP_RETCODE SCIPinsertDatatreeIntArray(
    const char*           name,               /**< name of entry to add */
    const int*            values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-)
+   )
 {
    SCIP_Longint* longvalues = NULL;
 
@@ -229,7 +229,7 @@ SCIP_RETCODE SCIPinsertDatatreeRealArray(
    const char*           name,               /**< name of entry to add */
    const SCIP_Real*      values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -249,7 +249,7 @@ SCIP_RETCODE SCIPinsertDatatreeLongArray(
    const char*           name,               /**< name of entry to add */
    const SCIP_Longint*   values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -269,7 +269,7 @@ SCIP_RETCODE SCIPinsertDatatreeStringArray(
    const char*           name,               /**< name of entry to add */
    const char* const*    values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -291,7 +291,7 @@ SCIP_RETCODE SCIPinsertDatatreeTree(
    SCIP_DATATREE*        datatree,           /**< data tree */
    const char*           name,               /**< name of entry to add */
    SCIP_DATATREE*        value               /**< value to add */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -307,7 +307,7 @@ SCIP_RETCODE SCIPinsertDatatreeTree(
 void SCIPfreeDatatree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DATATREE**       datatree            /**< pointer to data tree to free */
-)
+   )
 {
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -320,7 +320,7 @@ SCIP_RETCODE SCIPwriteDatatreeJson(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< file to write to, or NULL for stdout */
    SCIP_DATATREE*        datatree            /**< data tree to write */
-)
+   )
 {
    assert(scip != NULL);
 
@@ -336,7 +336,7 @@ SCIP_RETCODE SCIPprintDatatreeAsTable(
    FILE*                 file,               /**< output file */
    const char*           sectionname,        /**< section name to process, e.g., "plugins" */
    const char*           tablename           /**< table name to process, e.g., "heuristics" */
-)
+   )
 {
    SCIP_DATATREE* section;
    SCIP_DATATREE* firstsectionitem = NULL;

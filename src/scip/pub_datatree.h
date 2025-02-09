@@ -58,7 +58,7 @@ SCIP_RETCODE SCIPdatatreeGetBool(
 /** gets a long value from a SCIP_DATATREE object */
 SCIP_EXPORT
 SCIP_RETCODE SCIPdatatreeGetLong(
-   SCIP_DATATREE*        datatree,         /**< data tree */
+   SCIP_DATATREE*        datatree,           /**< data tree */
    const char*           name,               /**< name to look up */
    SCIP_Longint*         value               /**< buffer to store value */
    );

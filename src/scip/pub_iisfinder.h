@@ -87,8 +87,8 @@ SCIP_Real SCIPiisfinderGetTime(
 /** prints output line during IIS calculations */
 SCIP_EXPORT
 void SCIPiisfinderInfoMessage(
-   SCIP_IIS*            iis,                 /**< pointer to the IIS */
-   SCIP_Bool            printheaders         /**< whether the headers should be printed instead of the info */
+   SCIP_IIS*             iis,                /**< pointer to the IIS */
+   SCIP_Bool             printheaders        /**< whether the headers should be printed instead of the info */
    );
 
 /** gets time in seconds used in the IIS calculations */
@@ -138,13 +138,13 @@ void SCIPiisAddNNodes(
 
 /** get the randnumgen of the IIS */
 SCIP_RANDNUMGEN* SCIPiisGetRandnumgen(
-   SCIP_IIS*            iis                  /**< pointer to the IIS */
+   SCIP_IIS*             iis                 /**< pointer to the IIS */
    );
 
 /** get the subscip of an IIS */
 SCIP_EXPORT
 SCIP* SCIPiisGetSubscip(
-   SCIP_IIS*            iis                  /**< pointer to the IIS */
+   SCIP_IIS*             iis                 /**< pointer to the IIS */
    );
 
 /** compares two IIS finders w. r. to their priority */

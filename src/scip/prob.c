@@ -2284,7 +2284,7 @@ SCIP_RETCODE SCIPprobCollectStatistics(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    assert(prob != NULL);
    assert(datatree != NULL);
