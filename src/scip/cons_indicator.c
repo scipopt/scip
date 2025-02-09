@@ -8069,6 +8069,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
          slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
 
          /* make sure that the type of the slackvariable is as general as possible */
+         assert( SCIPvarGetType(slackvar) == SCIP_VARTYPE_CONTINUOUS );
          if ( slackvarimpltype < SCIPvarGetImplType(slackvar) )
          {
             SCIP_CALL( SCIPchgVarImplType(scip, slackvar, slackvarimpltype, &infeasible) );
@@ -8324,6 +8325,12 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
    if ( conshdlrdata->nolinconscont && ! conshdlrdata->sepaalternativelp )
    {
       SCIPerrorMessage("constraint handler <%s>: need parameter <sepaalternativelp> to be true if parameter <nolinconscont> is true.\n", CONSHDLR_NAME);
+      return SCIP_INVALIDDATA;
+   }
+
+   if( SCIPvarGetType(slackvar) != SCIP_VARTYPE_CONTINUOUS )
+   {
+      SCIPerrorMessage("slack variable <%s> enforced integral\n", SCIPvarGetName(slackvar));
       return SCIP_INVALIDDATA;
    }
 
@@ -8621,6 +8628,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       slackvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->binslackvarhash, (void*) binvarinternal);
 
       /* make sure that the type of the slackvariable is as general as possible */
+      assert( SCIPvarGetType(slackvar) == SCIP_VARTYPE_CONTINUOUS );
       if ( slackvarimpltype < SCIPvarGetImplType(slackvar) )
       {
          SCIP_Bool infeasible;
