@@ -957,7 +957,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayExprhdlrs)
    int nexprhdlrs;
    int i;
 
-   SCIP_CALL(SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE));
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    exprhdlrs = SCIPgetExprhdlrs(scip);
    nexprhdlrs = SCIPgetNExprhdlrs(scip);
@@ -4377,7 +4377,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultBasic(
 
    /* display cut selectors */
    if( !SCIPdialogHasEntry(submenu, "cutselectors") ) {
-      SCIP_CALL(SCIPincludeDialog(scip, &dialog,
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecDisplayCutselectors, NULL, NULL,
             "cutselectors", "display cut selectors", FALSE, NULL));

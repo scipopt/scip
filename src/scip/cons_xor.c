@@ -895,7 +895,7 @@ SCIP_RETCODE applyFixings(
    assert(nchgcoefs != NULL);
 
    SCIPdebugMsg(scip, "before fixings: ");
-   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
+   SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL, TRUE) ) );
 
    v = 0;
    while( v < consdata->nvars )
@@ -957,7 +957,7 @@ SCIP_RETCODE applyFixings(
    assert(consdata->sorted);
 
    SCIPdebugMsg(scip, "after sort    : ");
-   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
+   SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL, TRUE) ) );
 
    /* delete pairs of equal or negated variables; scan from back to front because deletion doesn't affect the
     * order of the front variables
@@ -1132,7 +1132,7 @@ SCIP_RETCODE applyFixings(
    }
 
    SCIPdebugMsg(scip, "after fixings : ");
-   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL, TRUE)) );
+   SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL, TRUE) ) );
 
    return SCIP_OKAY;
 }

@@ -637,7 +637,7 @@ SCIP_RETCODE separateOneFlowerOld(
       SCIP_HYPERGRAPH_EDGEDATA* basedata;
       SCIP_HYPERGRAPH_VERTEX* basevertices;
       int nbasevertices;
-      int nbaseseparated = 0;  /**< Number of cuts separated for this base edge. */
+      int nbaseseparated = 0;  /* Number of cuts separated for this base edge. */
 
       basedata = SCIPhypergraphEdgeData(hypergraph, base);
 
@@ -1358,7 +1358,6 @@ SCIP_DECL_SEPAFREE(sepaFreeMultilinear)
 static
 SCIP_DECL_SEPAINIT(sepaInitMultilinear)
 {  /*lint --e{715}*/
-
    SCIP_SEPADATA* sepadata;
 
    sepadata = SCIPsepaGetData(sepa);

@@ -618,7 +618,7 @@ CUTOFF_CONSTRAINT(addIntegerCons)
          /* in the case the bound is zero we have use the negated variable */
          if( bounds[v] == 0)
          {
-            SCIP_CALL( SCIPgetNegatedVar(scip, consvars[v], &consvars[v]));
+            SCIP_CALL( SCIPgetNegatedVar(scip, consvars[v], &consvars[v]) );
          }
       }
 

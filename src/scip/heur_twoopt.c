@@ -682,7 +682,7 @@ SCIP_RETCODE innerPresolve(
    assert(heurdata != NULL);
 
    /* allocate the heuristic specific variables */
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, varspointer, vars, nvars));
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, varspointer, vars, nvars) );
 
    /* sort the variables with respect to their columns */
    SCIPsortPtr((void**)(*varspointer), SCIPvarcolComp, nvars);

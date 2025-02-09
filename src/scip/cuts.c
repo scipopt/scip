@@ -6499,14 +6499,14 @@ SCIP_RETCODE getFlowCover(
          SCIP_Bool success;
 
          /* solve KP^SNF_int by dynamic programming */
-         SCIP_CALL(SCIPsolveKnapsackExactly(scip, nitems, transweightsint, transprofitsint, transcapacityint,
-               itemsint, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL, &success));
+         SCIP_CALL( SCIPsolveKnapsackExactly(scip, nitems, transweightsint, transprofitsint, transcapacityint,
+               itemsint, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL, &success) );
 
          if( !success )
          {
             /* solve KP^SNF_rat approximately */
-            SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal,
-                  transcapacityreal, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
+            SCIP_CALL( SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal,
+                  transcapacityreal, items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL) );
          }
 #if !defined(NDEBUG) || defined(SCIP_DEBUG)
          else
@@ -6516,16 +6516,16 @@ SCIP_RETCODE getFlowCover(
       else
       {
          /* solve KP^SNF_rat approximately */
-         SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal,
-               items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
+         SCIP_CALL( SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal,
+               items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL) );
          assert(!kpexact);
       }
    }
    else
    {
       /* solve KP^SNF_rat approximately */
-      SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal,
-            items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
+      SCIP_CALL( SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal,
+            items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL) );
       assert(!kpexact);
    }
 
@@ -6544,8 +6544,8 @@ SCIP_RETCODE getFlowCover(
       assert(kpexact);
 
       /* solve KP^SNF_rat approximately */
-      SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal,
-            items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
+      SCIP_CALL( SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal,
+            items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL) );
 #ifdef SCIP_DEBUG /* this time only for SCIP_DEBUG, because only then, the variable is used again  */
       kpexact = FALSE;
 #endif
@@ -6818,8 +6818,8 @@ SCIP_RETCODE getFlowCover(
 
    /* suitable factor C was found*/
    /* solve KP^SNF_rat approximately */
-   SCIP_CALL(SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal,
-                                              items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL));
+   SCIP_CALL( SCIPsolveKnapsackApproximatelyLT(scip, nitems, transweightsreal, transprofitsreal, transcapacityreal,
+         items, solitems, nonsolitems, &nsolitems, &nnonsolitems, NULL) );
 
    assert(nsolitems != -1);
    assert(nnonsolitems != -1);

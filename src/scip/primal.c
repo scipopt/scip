@@ -808,7 +808,6 @@ SCIP_RETCODE primalAddSol(
       SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
    }
 
-
    /* display node information line */
    if( insertpos == 0 && !replace && set->stage >= SCIP_STAGE_SOLVING )
    {

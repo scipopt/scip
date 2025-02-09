@@ -1095,7 +1095,7 @@ SCIP_RETCODE collectNeighborhoodStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    int i;
    int j;
@@ -1249,7 +1249,7 @@ SCIP_RETCODE collectDivingHeurStatistics(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    SCIP_DATATREE*        datatree            /**< data tree */
-)
+   )
 {
    SCIP_DATATREE* divingstats;
    int i;
@@ -2130,7 +2130,7 @@ SCIP_RETCODE setLimits(
    assert(solvelimits->nodelimit >= solvelimits->stallnodes);
 
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", solvelimits->nodelimit) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", solvelimits->stallnodes));
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", solvelimits->stallnodes) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", solvelimits->timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", solvelimits->memorylimit) );
 
@@ -2344,7 +2344,7 @@ SCIP_RETCODE setupSubScip(
       /* if the objective changed between the source and the target SCIP, encode the cutoff as a constraint */
       if( ! objchgd )
       {
-         SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
+         SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
       }
       else
       {

@@ -856,7 +856,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    if( currentlpcands == 0 )
    {
       SCIP_Bool stored;
-      SCIP_CALL(SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, FALSE, &stored));
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, FALSE, &stored) );
       if( stored )
       {
 #ifdef SCIP_DEBUG

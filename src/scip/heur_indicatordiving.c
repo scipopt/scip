@@ -738,7 +738,7 @@ SCIP_DECL_HEURINIT(heurInitIndicatordiving)
 
    /* create working data */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
-   SCIP_CALL( SCIPhashmapCreate( &heurdata->scvars, SCIPblkmem( scip ), SCIPgetNVars(scip) ));
+   SCIP_CALL( SCIPhashmapCreate( &heurdata->scvars, SCIPblkmem( scip ), SCIPgetNVars(scip)) );
 
    heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
    heurdata->varboundconshdlr = SCIPfindConshdlr(scip, "varbound");

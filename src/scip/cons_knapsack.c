@@ -920,7 +920,7 @@ SCIP_RETCODE addRelaxation(
    {
       SCIPdebugMsg(scip, "adding relaxation of knapsack constraint <%s> (capacity %" SCIP_LONGINT_FORMAT "): ",
          SCIPconsGetName(cons), consdata->capacity);
-      SCIPdebug( SCIP_CALL(SCIPprintRow(scip, consdata->row, NULL)) );
+      SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL) ) );
       SCIP_CALL( SCIPaddRow(scip, consdata->row, FALSE, cutoff) );
    }
 
@@ -7306,7 +7306,7 @@ SCIP_RETCODE applyFixings(
                /* if the new coefficient is smaller than zero, we need to add the negated variable instead and adjust the capacity */
                if( SCIPisNegative(scip, weight * aggrscalars[i]) )
                {
-                  SCIP_CALL( SCIPgetNegatedVar(scip, aggrvars[i], &negvar));
+                  SCIP_CALL( SCIPgetNegatedVar(scip, aggrvars[i], &negvar) );
                   assert(negvar != NULL);
                   SCIP_CALL( addCoef(scip, cons, negvar, (SCIP_Longint)(SCIPfloor(scip, -weight * aggrscalars[i] + 0.5))) );
                   consdata->capacity -= (SCIP_Longint)(SCIPfloor(scip, weight * aggrscalars[i] + 0.5));
@@ -12729,7 +12729,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
             /* remove again all fixed variables, if further fixings were found */
             if( *nfixedvars > thisnfixedvars )
             {
-               SCIP_CALL(applyFixings(scip, cons, &cutoff));
+               SCIP_CALL( applyFixings(scip, cons, &cutoff) );
                if( cutoff )
                   break;
             }

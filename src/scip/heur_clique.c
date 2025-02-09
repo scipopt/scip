@@ -674,8 +674,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 #endif
 
    /* allocate memory for all variables which will be fixed to one during probing */
-   SCIP_CALL(SCIPallocBufferArray(scip, &onefixvars, nbinvars) );
-   SCIP_CALL(SCIPallocBufferArray(scip, &onefixvals, nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &onefixvars, nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &onefixvals, nbinvars) );
    nonefixvars = 0;
 
    /* apply fixings due to clique information */
