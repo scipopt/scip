@@ -159,12 +159,12 @@ void checkTypes(
    cr_expect(SCIPvarGetType(SCIPvarGetTransVar(z)) == vartypez);
 }
 
-/* helper method to check implied integer variable types */
+/* helper method to check implied variable types */
 static
 void checkImplTypes(
-   SCIP_VARIMPLTYPE      impltypex,          /**< target implied integer type of x */
-   SCIP_VARIMPLTYPE      impltypey,          /**< target implied integer type of y */
-   SCIP_VARIMPLTYPE      impltypez           /**< target implied integer type of z */
+   SCIP_VARIMPLTYPE      impltypex,          /**< target implied type of x */
+   SCIP_VARIMPLTYPE      impltypey,          /**< target implied type of y */
+   SCIP_VARIMPLTYPE      impltypez           /**< target implied type of z */
    )
 {
    cr_expect(SCIPvarGetImplType(SCIPvarGetTransVar(x)) == impltypex);
@@ -184,7 +184,7 @@ Test(presolve, singlelockedvars1)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_BINARY, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
-   checkImplTypes(SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE);
+   checkImplTypes(SCIP_VARIMPLTYPE_NONE, SCIP_VARIMPLTYPE_NONE, SCIP_VARIMPLTYPE_NONE);
 }
 
 /* test for presolSingleLockedVars() */
@@ -200,8 +200,7 @@ Test(presolve, singlelockedvars2)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
-   checkImplTypes(SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE);
-
+   checkImplTypes(SCIP_VARIMPLTYPE_NONE, SCIP_VARIMPLTYPE_NONE, SCIP_VARIMPLTYPE_NONE);
 }
 
 /* test for presolSingleLockedVars() */
@@ -220,8 +219,7 @@ Test(presolve, singlelockedvars3)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_BINARY, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_CONTINUOUS);
-   checkImplTypes(SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE);
-
+   checkImplTypes(SCIP_VARIMPLTYPE_NONE, SCIP_VARIMPLTYPE_NONE, SCIP_VARIMPLTYPE_NONE);
 }
 
 /* test for presolveImplint()
@@ -249,7 +247,7 @@ Test(presolve, implint)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_BINARY);
-   checkImplTypes(SCIP_VARIMPLTYPE_STRONG,SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE);
+   checkImplTypes(SCIP_VARIMPLTYPE_STRONG, SCIP_VARIMPLTYPE_NONE, SCIP_VARIMPLTYPE_NONE);
 }
 
 /* test for presolveImplint()
@@ -281,7 +279,7 @@ Test(presolve, implint2)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY, SCIP_VARTYPE_BINARY);
-   checkImplTypes(SCIP_VARIMPLTYPE_STRONG,SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE);
+   checkImplTypes(SCIP_VARIMPLTYPE_STRONG, SCIP_VARIMPLTYPE_NONE, SCIP_VARIMPLTYPE_NONE);
 }
 
 /* test for presolveImplint()
@@ -309,7 +307,7 @@ Test(presolve, implint3)
 
    /* check variable types */
    checkTypes(SCIP_VARTYPE_INTEGER, SCIP_VARTYPE_CONTINUOUS, SCIP_VARTYPE_BINARY);
-   checkImplTypes(SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE,SCIP_VARIMPLTYPE_NONE);
+   checkImplTypes(SCIP_VARIMPLTYPE_NONE, SCIP_VARIMPLTYPE_NONE, SCIP_VARIMPLTYPE_NONE);
 }
 
 /* tests setppc upgrade */
