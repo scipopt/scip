@@ -822,7 +822,6 @@ SCIP_RETCODE propagateCons(
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   orbitopetype = consdata->orbitopetype;
    *nfixedvars = 0;
 
    /* if the constraint is not a model constraint, check whether symmetry reductions are permitted */

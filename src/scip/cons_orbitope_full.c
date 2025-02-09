@@ -901,7 +901,6 @@ SCIP_RETCODE separateConstraints(
    )
 {
    SCIP_Bool infeasible = FALSE;
-   int nfixedvars = 0;
    int ncuts = 0;
    int c;
 
@@ -933,8 +932,8 @@ SCIP_RETCODE separateConstraints(
       SCIP_CALL( separateCoversOrbisack(scip, conss[c], sol, &nconscuts, &infeasible) );
       ncuts += nconscuts;
 
-      /* stop after the useful constraints if we found cuts of fixed variables */
-      if ( c >= nusefulconss && (ncuts > 0 || nfixedvars > 0) )
+      /* stop after the useful constraints if we found cuts */
+      if ( c >= nusefulconss && ncuts > 0 )
          break;
    }
 
@@ -942,11 +941,6 @@ SCIP_RETCODE separateConstraints(
    {
       SCIPdebugMsg(scip, "Infeasible node.\n");
       *result = SCIP_CUTOFF;
-   }
-   else if ( nfixedvars > 0 )
-   {
-      SCIPdebugMsg(scip, "Fixed %d variables.\n", nfixedvars);
-      *result = SCIP_REDUCEDDOM;
    }
    else if ( ncuts > 0 )
    {
@@ -1188,7 +1182,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitopeFull)
    /* loop through constraints */
    for (c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c)
    {
-      SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
       SCIP_Bool feasible;
 
@@ -1201,7 +1194,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsOrbitopeFull)
       if ( !consdata->ismodelcons )
          continue;
 
-      SCIP_CALL( checkFullOrbitopeSolution(scip, cons, NULL, FALSE, &feasible) );
+      SCIP_CALL( checkFullOrbitopeSolution(scip, conss[c], NULL, FALSE, &feasible) );
 
       if ( ! feasible )
          *result = SCIP_INFEASIBLE;
