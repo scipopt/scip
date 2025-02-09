@@ -67,7 +67,8 @@ Interface changes
 - deprecated SCIPsubversion(), will be removed
 - (Temporarily supported until SCIP 11): SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_VARIMPLTYPE_WEAK.
 - (Temporarily supported until SCIP 11): Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integer type SCIP_VARIMPLTYPE_WEAK instead.
-- SCIPvarCalcDistributionParameters(): the parameter vartype was replaced with a new boolean parameter varintegral
+- SCIPvarCalcDistributionParameters(): enum argument vartype is replaced with boolean argument varintegral
+- SCIPgetSolVarsData(): argument nimplvars is subdivided into nbinimplvars, nintimplvars, and ncontimplvars
 
 ### New API functions
 
