@@ -96,8 +96,8 @@ SCIP_RETCODE SCIPcreateConsOrbitopePP(
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
-   int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
-   int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
+   int                   nrows,              /**< number of rows in orbitope matrix               <=> p   */
+   int                   ncols,              /**< number of columns in orbitope matrix            <=> q   */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -139,8 +139,8 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitopePP(
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
-   int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
-   int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
+   int                   nrows,              /**< number of rows in orbitope matrix               <=> p   */
+   int                   ncols,              /**< number of columns in orbitope matrix            <=> q   */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
    );

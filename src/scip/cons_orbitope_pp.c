@@ -57,8 +57,8 @@
  *   <caption>translation table</caption>
  *   <tr><td>here</td><td>paper</td></tr>
  *   <tr><td></td><td></td></tr>
- *   <tr><td>nspcons      </td><td>p       </td></tr>
- *   <tr><td>nblocks      </td><td>q       </td></tr>
+ *   <tr><td>nrows        </td><td>p       </td></tr>
+ *   <tr><td>ncols        </td><td>q       </td></tr>
  *   <tr><td>vars         </td><td>x       </td></tr>
  *   <tr><td>vals         </td><td>A^\\star</td></tr>
  *   <tr><td>weights      </td><td>\\omega </td></tr>
@@ -138,8 +138,8 @@ struct SCIP_ConsData
    SCIP_Real*            tmpvals;            /**< temporary storage for values                                       */
    SCIP_Real**           weights;            /**< SC weight table                                                    */
    int**                 cases;              /**< indicator of the SC cases                                          */
-   int                   nspcons;            /**< number of set partitioning/packing constraints  <=> p              */
-   int                   nblocks;            /**< number of symmetric variable blocks             <=> q              */
+   int                   nrows;              /**< number of rows in orbitope matrix               <=> p              */
+   int                   ncols;              /**< number of columns in orbitope matrix            <=> q              */
    SCIP_ORBITOPETYPE     orbitopetype;       /**< type of orbitope constraint                                        */
    SCIP_Bool             resolveprop;        /**< should propagation be resolved?                                    */
    SCIP_Bool             istrianglefixed;    /**< has the upper right triangle already globally been fixed to zero?  */
@@ -160,36 +160,36 @@ SCIP_RETCODE consdataFree(
 {
    int i;
    int j;
-   int p;
-   int q;
+   int nrows;
+   int ncols;
 
    assert( consdata != NULL );
    assert( *consdata != NULL );
 
-   p = (*consdata)->nspcons;
-   q = (*consdata)->nblocks;
-   for (i = 0; i < p; ++i)
+   nrows = (*consdata)->nrows;
+   ncols = (*consdata)->ncols;
+   for (i = 0; i < nrows; ++i)
    {
       /* release variables in vars array */
-      for (j = 0; j < q; ++j)
+      for (j = 0; j < ncols; ++j)
       {
          assert( (*consdata)->vars[i] != NULL );
          SCIP_CALL( SCIPreleaseVar(scip, &(*consdata)->vars[i][j]) );
       }
 
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases[i]), q);    /*lint !e866*/
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars[i]), q);     /*lint !e866*/
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights[i]), q);  /*lint !e866*/
-      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals[i]), q);     /*lint !e866*/
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases[i]), ncols);    /*lint !e866*/
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars[i]), ncols);     /*lint !e866*/
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights[i]), ncols);  /*lint !e866*/
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals[i]), ncols);     /*lint !e866*/
    }
 
-   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases), p);
-   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars), p);
-   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights), p);
-   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals), p);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases), nrows);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars), nrows);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights), nrows);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals), nrows);
 
-   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->tmpvals), p + q);
-   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->tmpvars), p + q);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->tmpvals), nrows + ncols);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->tmpvars), nrows + ncols);
 
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -203,8 +203,8 @@ SCIP_RETCODE consdataCreate(
    SCIP*                 scip,               /**< SCIP data structure                                     */
    SCIP_CONSDATA**       consdata,           /**< pointer to store constraint data                        */
    SCIP_VAR***           vars,               /**< variables array, must have size nspcons x nblocks       */
-   int                   nspcons,            /**< number of set partitioning (packing) constraints  <=> p */
-   int                   nblocks,            /**< number of symmetric variable blocks               <=> q */
+   int                   nrows,              /**< number of rows in orbitope matrix               <=> p   */
+   int                   ncols,              /**< number of columns in orbitope matrix            <=> q   */
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint                             */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved?                         */
    SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint              */
@@ -217,22 +217,22 @@ SCIP_RETCODE consdataCreate(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals, nspcons) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights, nspcons) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, nspcons) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases, nspcons) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals, nrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights, nrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vars, nrows) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases, nrows) );
 
-   for (i = 0; i < nspcons; ++i)
+   for (i = 0; i < nrows; ++i)
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals[i], nblocks) );                 /*lint !e866*/
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights[i], nblocks) );              /*lint !e866*/
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars[i], vars[i], nblocks) );    /*lint !e866*/
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases[i], nblocks) );                /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->vals[i], ncols) );                 /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->weights[i], ncols) );              /*lint !e866*/
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars[i], vars[i], ncols) );    /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cases[i], ncols) );                /*lint !e866*/
    }
    (*consdata)->tmpvals = NULL;
    (*consdata)->tmpvars = NULL;
-   (*consdata)->nspcons = nspcons;
-   (*consdata)->nblocks = nblocks;
+   (*consdata)->nrows = nrows;
+   (*consdata)->ncols = ncols;
    (*consdata)->orbitopetype = orbitopetype;
    (*consdata)->resolveprop = resolveprop;
    (*consdata)->istrianglefixed = FALSE;
@@ -241,15 +241,15 @@ SCIP_RETCODE consdataCreate(
    /* get transformed variables, if we are in the transformed problem */
    if ( SCIPisTransformed(scip) )
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->tmpvals, nspcons + nblocks) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->tmpvars, nspcons + nblocks) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->tmpvals, nrows + ncols) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->tmpvars, nrows + ncols) );
 
-      for (i = 0; i < nspcons; ++i)
+      for (i = 0; i < nrows; ++i)
       {
          /* make sure that no variable gets multiaggregated (cannot be handled by cons_orbitope, since one cannot easily
           * eliminate single variables from an orbitope constraint).
           */
-         for (j = 0; j < nblocks; ++j)
+         for (j = 0; j < ncols; ++j)
          {
             SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vars[i][j], &(*consdata)->vars[i][j]) );
             SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[i][j]) );
@@ -258,9 +258,9 @@ SCIP_RETCODE consdataCreate(
    }
 
    /* capture vars contained in vars array */
-   for (i = 0; i < nspcons; ++i)
+   for (i = 0; i < nrows; ++i)
    {
-      for (j = 0; j < nblocks; ++j)
+      for (j = 0; j < ncols; ++j)
       {
          assert( (*consdata)->vars[i][j] != NULL );
          SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->vars[i][j]) );
@@ -283,17 +283,17 @@ void printMatrix(
    int j;
 
    assert( consdata != NULL );
-   assert( consdata->nspcons > 0 );
-   assert( consdata->nblocks > 0 );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
    assert( consdata->vars != NULL );
 
-   for (j = 0; j < consdata->nblocks; ++j)
+   for (j = 0; j < consdata->ncols; ++j)
       SCIPinfoMessage(scip, NULL, "-");
 
    SCIPinfoMessage(scip, NULL, "\n");
-   for (i = 0; i < consdata->nspcons; ++i)
+   for (i = 0; i < consdata->nrows; ++i)
    {
-      for (j = 0; j < consdata->nblocks; ++j)
+      for (j = 0; j < consdata->ncols; ++j)
       {
          if ( SCIPvarGetUbLocal(consdata->vars[i][j]) - SCIPvarGetLbLocal(consdata->vars[i][j]) < 0.5 )
             SCIPinfoMessage(scip, NULL, "%1.0f", REALABS(SCIPvarGetUbLocal(consdata->vars[i][j])));
@@ -302,7 +302,7 @@ void printMatrix(
       }
       SCIPinfoMessage(scip, NULL, "|\n");
    }
-   for (j = 0; j < consdata->nblocks; ++j)
+   for (j = 0; j < consdata->ncols; ++j)
       SCIPinfoMessage(scip, NULL, "-");
    SCIPinfoMessage(scip, NULL, "\n");
 }
@@ -314,8 +314,8 @@ void printMatrix(
 static
 SCIP_RETCODE printSCI(
    SCIP*                 scip,               /**< SCIP pointer */
-   int                   p,                  /**< number of rows */
-   int                   q,                  /**< number of columns */
+   int                   nrows,              /**< number of rows */
+   int                   ncols,              /**< number of columns */
    int**                 cases,              /**< SCI dynamic programming table */
    int                   i,                  /**< row position of bar */
    int                   j                   /**< column position of bar */
@@ -327,16 +327,16 @@ SCIP_RETCODE printSCI(
    int p1;
    int p2;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &M, p) );
-   for (k = 0; k < p; ++k)
+   SCIP_CALL( SCIPallocBufferArray(scip, &M, nrows) );
+   for (k = 0; k < nrows; ++k)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &M[k], q) ); /*lint !e866*/
-      for (l = 0; l < q; ++l)
+      SCIP_CALL( SCIPallocBufferArray(scip, &M[k], ncols) ); /*lint !e866*/
+      for (l = 0; l < ncols; ++l)
          M[k][l] = 0;
    }
 
    /* first add bar */
-   for (l = j; l < q; ++l)
+   for (l = j; l < ncols; ++l)
    {
       assert( M[i][l] == 0 );
       M[i][l] = 1;
@@ -369,13 +369,13 @@ SCIP_RETCODE printSCI(
    assert( cases[p1][p2] == 3 );
 
    /* now output matrix M */
-   for (l = 0; l < q; ++l)
+   for (l = 0; l < ncols; ++l)
       SCIPinfoMessage(scip, NULL, "-");
    SCIPinfoMessage(scip, NULL, "\n");
 
-   for (k = 0; k < p; ++k)
+   for (k = 0; k < nrows; ++k)
    {
-      for (l = 0; l < q; ++l)
+      for (l = 0; l < ncols; ++l)
       {
          if ( l > k )
             SCIPinfoMessage(scip, NULL, "*");
@@ -401,11 +401,11 @@ SCIP_RETCODE printSCI(
       SCIPinfoMessage(scip, NULL, "\n");
    }
 
-   for (l = 0; l < q; ++l)
+   for (l = 0; l < ncols; ++l)
       SCIPinfoMessage(scip, NULL, "-");
    SCIPinfoMessage(scip, NULL, "\n");
 
-   for (k = 0; k < p; ++k)
+   for (k = 0; k < nrows; ++k)
       SCIPfreeBufferArray(scip, &M[k]);
    SCIPfreeBufferArray(scip, &M);
 
@@ -427,14 +427,14 @@ void copyValues(
 
    assert( scip != NULL );
    assert( consdata != NULL );
-   assert( consdata->nspcons > 0 );
-   assert( consdata->nblocks > 0 );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
    assert( consdata->vars != NULL );
    assert( consdata->vals != NULL );
 
-   for (i = 0; i < consdata->nspcons; ++i)
+   for (i = 0; i < consdata->nrows; ++i)
    {
-      for (j = 0; j < consdata->nblocks; ++j)
+      for (j = 0; j < consdata->ncols; ++j)
          consdata->vals[i][j] = SCIPgetSolVal(scip, sol, consdata->vars[i][j]);
    }
 }
@@ -454,8 +454,8 @@ void copyValues(
 static
 void computeSCTable(
    SCIP*                 scip,               /**< SCIP pointer                                              */
-   int                   nspcons,            /**< number of set partitioning (packing) constraints  <=> p   */
-   int                   nblocks,            /**< number of symmetric variable blocks               <=> q   */
+   int                   nrows,              /**< number of rows in orbitope matrix                 <=> p   */
+   int                   ncols,              /**< number of columns in orbitope matrix              <=> q   */
    SCIP_Real**           weights,            /**< SC weight table                                           */
    int**                 cases,              /**< indicator of the SC cases                                 */
    SCIP_Real**           vals                /**< current solution                                          */
@@ -472,9 +472,9 @@ void computeSCTable(
 
 #ifndef NDEBUG
    /* for debugging */
-   for (i = 0; i < nspcons; ++i)
+   for (i = 0; i < nrows; ++i)
    {
-      for (j = 0; j < nblocks; ++j)
+      for (j = 0; j < ncols; ++j)
       {
          if ( i >= j )
          {
@@ -491,9 +491,9 @@ void computeSCTable(
    cases[0][0] = 3;
 
    /* get last row of triangle */
-   diagsize = nblocks;
-   if ( nspcons < nblocks )
-      diagsize = nspcons;
+   diagsize = ncols;
+   if ( nrows < ncols )
+      diagsize = nrows;
 
    for (j = 1; j < diagsize; ++j)
    {
@@ -509,16 +509,16 @@ void computeSCTable(
    }
 
    /* initialize first column */
-   for (i = 1; i < nspcons; ++i)
+   for (i = 1; i < nrows; ++i)
    {
       weights[i][0] = weights[i-1][0] + vals[i][0];
       cases[i][0] = 2;  /* second case */
    }
 
    /* build the table */
-   for (i = 2; i < nspcons; ++i)
+   for (i = 2; i < nrows; ++i)
    {
-      for (j = 1; j < nblocks && j < i; ++j)
+      for (j = 1; j < ncols && j < i; ++j)
       {
          SCIP_Real weightleft;
          SCIP_Real weightright;
@@ -559,8 +559,8 @@ SCIP_RETCODE fixTriangle(
    SCIP_Bool fixedglobal;
    SCIP_Bool fixed;
    int diagsize;
-   int nspcons;
-   int nblocks;
+   int nrows;
+   int ncols;
    int i;
    int j;
 
@@ -571,8 +571,8 @@ SCIP_RETCODE fixTriangle(
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->nspcons > 0 );
-   assert( consdata->nblocks > 0 );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
    assert( consdata->vars != NULL );
 
    *infeasible = FALSE;
@@ -581,20 +581,20 @@ SCIP_RETCODE fixTriangle(
    if ( consdata->istrianglefixed )
       return SCIP_OKAY;
 
-   nspcons = consdata->nspcons;
-   nblocks = consdata->nblocks;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
    vars = consdata->vars;
    fixedglobal = TRUE;
 
    /* get last row of triangle */
-   diagsize = nblocks;
-   if ( nspcons < nblocks )
-      diagsize = nspcons;
+   diagsize = ncols;
+   if ( nrows < ncols )
+      diagsize = nrows;
 
    /* fix variables to 0 */
    for (i = 0; i < diagsize; ++i)
    {
-      for (j = i+1; j < nblocks; ++j)
+      for (j = i+1; j < ncols; ++j)
       {
          /* fix variable, if not in the root the fixation is local */
          SCIP_CALL( SCIPfixVar(scip, vars[i][j], 0.0, infeasible, &fixed) );
@@ -614,7 +614,8 @@ SCIP_RETCODE fixTriangle(
    }
    if ( *nfixedvars > 0 )
    {
-      SCIPdebugMsg(scip, "<%s>: %s fixed upper right triangle to 0 (fixed vars: %d).\n", SCIPconsGetName(cons), fixedglobal ? "globally" : "locally", *nfixedvars);
+      SCIPdebugMsg(scip, "<%s>: %s fixed upper right triangle to 0 (fixed vars: %d).\n",
+         SCIPconsGetName(cons), fixedglobal ? "globally" : "locally", *nfixedvars);
    }
    else
    {
@@ -646,8 +647,8 @@ SCIP_RETCODE separateSCIs(
    SCIP_VAR*** vars;
    SCIP_VAR** tmpvars;
    int** cases;
-   int nspcons;
-   int nblocks;
+   int nrows;
+   int ncols;
    int i;
    int j;
    int l;
@@ -660,8 +661,8 @@ SCIP_RETCODE separateSCIs(
    assert( ncuts != NULL );
 
    assert( consdata != NULL );
-   assert( consdata->nspcons > 0 );
-   assert( consdata->nblocks > 0 );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
    assert( consdata->vars != NULL );
    assert( consdata->vals != NULL );
    assert( consdata->tmpvars != NULL );
@@ -673,8 +674,8 @@ SCIP_RETCODE separateSCIs(
    *nfixedvars = 0;
    *ncuts = 0;
 
-   nspcons = consdata->nspcons;
-   nblocks = consdata->nblocks;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
    vars = consdata->vars;
    vals = consdata->vals;
    tmpvars = consdata->tmpvars;
@@ -693,16 +694,16 @@ SCIP_RETCODE separateSCIs(
    }
 
    /* compute table if necessary (i.e., not computed before) */
-   computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
+   computeSCTable(scip, nrows, ncols, weights, cases, vals);
 
    /* loop through rows */
-   for (i = 1; i < nspcons && ! (*infeasible); ++i)
+   for (i = 1; i < nrows && ! (*infeasible); ++i)
    {
       SCIP_Real bar;       /* value of bar: */
       int lastcolumn;      /* last column considered as part of the bar */
 
       bar = 0.0;
-      lastcolumn = nblocks - 1;
+      lastcolumn = ncols - 1;
       if ( lastcolumn > i )
          lastcolumn = i;
 
@@ -780,7 +781,7 @@ SCIP_RETCODE separateSCIs(
             ++(*ncuts);
 
 #ifdef SHOW_SCI
-            SCIP_CALL( printSCI(scip, nspcons, nblocks, cases, i, j) );
+            SCIP_CALL( printSCI(scip, nrows, ncols, cases, i, j) );
 #endif
 
             assert( SCIPisSumEQ(scip, weights[i-1][j-1], weight) );
@@ -807,8 +808,8 @@ SCIP_RETCODE propagateCons(
    int* lastones;
    int* frontiersteps;
    int lastoneprevrow;
-   int nspcons;
-   int nblocks;
+   int nrows;
+   int ncols;
    int nsteps;
    int i;
    int j;
@@ -830,12 +831,12 @@ SCIP_RETCODE propagateCons(
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->nspcons > 0 );
-   assert( consdata->nblocks > 0 );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
    assert( consdata->vars != NULL );
 
-   nspcons = consdata->nspcons;
-   nblocks = consdata->nblocks;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
    vars = consdata->vars;
    orbitopetype = consdata->orbitopetype;
 
@@ -850,9 +851,9 @@ SCIP_RETCODE propagateCons(
    }
 
    /* prepare further propagation */
-   SCIP_CALL( SCIPallocBufferArray(scip, &firstnonzeros, nspcons) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lastones, nspcons) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &frontiersteps, nblocks) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &firstnonzeros, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lastones, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &frontiersteps, ncols) );
 
 #ifdef PRINT_MATRIX
    SCIPdebugMsg(scip, "Matrix:\n");
@@ -874,7 +875,7 @@ SCIP_RETCODE propagateCons(
    }
    nsteps = 0;
 
-   for (i = 1; i < nspcons; ++i)
+   for (i = 1; i < nrows; ++i)
    {
       int lastcolumn;
       int firstnonzeroinrow;
@@ -882,7 +883,7 @@ SCIP_RETCODE propagateCons(
       SCIP_Bool infrontier;
 
       /* last column considered as part of the bar: */
-      lastcolumn = nblocks - 1;
+      lastcolumn = ncols - 1;
       if ( lastcolumn > i )
          lastcolumn = i;
 
@@ -928,7 +929,7 @@ SCIP_RETCODE propagateCons(
       /* if we are at right border or if entry in column lastoneprevrow+1 is fixed to 0 */
       infrontier = FALSE;
       assert( lastoneprevrow + 1 >= 0 );
-      if ( lastoneprevrow == nblocks-1 || SCIPvarGetUbLocal(vars[i][lastoneprevrow+1]) < 0.5 ) /*lint !e679*/
+      if ( lastoneprevrow == ncols-1 || SCIPvarGetUbLocal(vars[i][lastoneprevrow+1]) < 0.5 ) /*lint !e679*/
          lastoneinrow = lastoneprevrow;
       else
       {
@@ -1003,7 +1004,7 @@ SCIP_RETCODE propagateCons(
                l = lastones[k] + 1;
 
                /* if the frontier has not moved and we are not beyond the matrix boundaries */
-               if ( l <= nblocks-1 && l <= k && lastones[k-1] == lastones[k] )
+               if ( l <= ncols-1 && l <= k && lastones[k-1] == lastones[k] )
                {
                   assert( SCIPvarGetUbLocal(vars[k][l]) < 0.5 );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
@@ -1030,7 +1031,7 @@ SCIP_RETCODE propagateCons(
             tightened = FALSE;
 
             /* fix variable to 0 and store position of (i,lastoneinrow+1) for conflict resolution */
-            inferInfo = i * nblocks + lastoneinrow + 1;
+            inferInfo = i * ncols + lastoneinrow + 1;
             /* correction according to Lemma 1 in the paper (second part): store (i,lastoneinrow+2) */
             if ( !infrontier )
                ++inferInfo;
@@ -1068,7 +1069,7 @@ SCIP_RETCODE propagateCons(
                      l = lastones[k] + 1;
 
                      /* if the frontier has not moved and we are not beyond the matrix boundaries */
-                     if ( l <= nblocks-1 && l <= k && lastones[k-1] == lastones[k] )
+                     if ( l <= ncols-1 && l <= k && lastones[k-1] == lastones[k] )
                      {
                         assert( SCIPvarGetUbLocal(vars[k][l]) < 0.5 );
                         SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][l]) );
@@ -1096,7 +1097,7 @@ SCIP_RETCODE propagateCons(
       s = frontiersteps[j];
       lastoneinrow = lastones[s];
       /* note for packing case: if we are in a frontier step then lastoneinrow >= 0 */
-      assert( 0 <= lastoneinrow && lastoneinrow < nblocks );
+      assert( 0 <= lastoneinrow && lastoneinrow < ncols );
 
       /* if entry is not fixed */
       if ( SCIPvarGetLbLocal(vars[s][lastoneinrow]) < 0.5 && SCIPvarGetUbLocal(vars[s][lastoneinrow]) > 0.5 )
@@ -1105,16 +1106,16 @@ SCIP_RETCODE propagateCons(
          betaprev = lastoneinrow - 1;
 
          /* loop through rows below s */
-         for (i = s+1; i < nspcons; ++i)
+         for (i = s+1; i < nrows; ++i)
          {
             int beta;
 
             assert( betaprev + 1 >= 0 );
-            if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 ) /*lint !e679*/
+            if ( betaprev == ncols-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 ) /*lint !e679*/
                beta = betaprev;
             else
                beta = betaprev + 1;
-            assert( -1 <= beta && beta < nblocks );
+            assert( -1 <= beta && beta < ncols );
 
             if ( firstnonzeros[i] > beta )
             {
@@ -1128,7 +1129,7 @@ SCIP_RETCODE propagateCons(
                SCIPdebugMsg(scip, " -> Fixing entry (%d,%d) to 1.\n", s, lastoneinrow);
 
                /* store position (i,firstnonzeros[i]) */
-               inferInfo = nblocks * nspcons + i * nblocks + firstnonzeros[i];
+               inferInfo = ncols * nrows + i * ncols + firstnonzeros[i];
                SCIP_CALL( SCIPinferBinvarCons(scip, vars[s][lastoneinrow], TRUE, cons, inferInfo, infeasible, &tightened) );
 
                assert( !(*infeasible) );
@@ -1161,12 +1162,12 @@ SCIP_RETCODE propagateCons(
  *  The inferinfo integer is set as follows:
  *
  *  - If a shifted column is fixed to 0 and the corresponding bar does not necessarily has value 1
- *    then we fix these entries to 0 and inferinfo is i * nblocks + j, where (i,j) is the leader of the
+ *    then we fix these entries to 0 and inferinfo is i * ncols + j, where (i,j) is the leader of the
  *    bar. The SCI depends on whether i is in Gamma or not (see Lemma 1 in the paper and the comments
  *    above).
  *
  *  - If a bar has value 1 and the shifted column has one entry that is not fixed, it can be fixed to
- *    1 and inferinfo is (nspcons*nblocks) + i * nblocks + j, where (i,j) is the leader of the bar; see
+ *    1 and inferinfo is (nrows*ncols) + i * ncols + j, where (i,j) is the leader of the bar; see
  *    Proposition 1 (2c).
  */
 static
@@ -1187,8 +1188,8 @@ SCIP_RETCODE resolvePropagation(
 
    int i;
    int j;
-   int nspcons;
-   int nblocks;
+   int nrows;
+   int ncols;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -1196,8 +1197,8 @@ SCIP_RETCODE resolvePropagation(
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->nspcons > 0 );
-   assert( consdata->nblocks > 0 );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
    assert( consdata->vars != NULL );
    assert( consdata->vals != NULL );
    assert( consdata->weights != NULL );
@@ -1208,8 +1209,8 @@ SCIP_RETCODE resolvePropagation(
    if ( ! consdata->resolveprop )
       return SCIP_OKAY;
 
-   nspcons = consdata->nspcons;
-   nblocks = consdata->nblocks;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
    vars = consdata->vars;
    vals = consdata->vals;
    weights = consdata->weights;
@@ -1219,12 +1220,12 @@ SCIP_RETCODE resolvePropagation(
    SCIPdebugMsg(scip, "Propagation resolution method of orbitope constraint using orbitopal fixing\n");
 
    /* fill table */
-   for (i = 0; i < nspcons; ++i)
+   for (i = 0; i < nrows; ++i)
    {
       int lastcolumn;
 
       /* last column considered as part of the bar: */
-      lastcolumn = nblocks - 1;
+      lastcolumn = ncols - 1;
       if ( lastcolumn > i )
          lastcolumn = i;
       for (j = 0; j <= lastcolumn; ++j)
@@ -1250,11 +1251,11 @@ SCIP_RETCODE resolvePropagation(
 
    /* computation of table: this now minimizes the value of the shifted column */
    assert( consdata->istrianglefixed );
-   computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
+   computeSCTable(scip, nrows, ncols, weights, cases, vals);
 
    /* if we fixed variables in the bar to zero */
-   assert( inferinfo >= 0 && inferinfo < 2 * nspcons * nblocks );
-   if ( inferinfo < nspcons * nblocks )
+   assert( inferinfo >= 0 && inferinfo < 2 * nrows * ncols );
+   if ( inferinfo < nrows * ncols )
    {
       int p1;
       int p2;
@@ -1263,15 +1264,15 @@ SCIP_RETCODE resolvePropagation(
       char tmpstr[SCIP_MAXSTRLEN];
 #endif
 
-      i = (int) (inferinfo / nblocks);
-      j = inferinfo % nblocks;
-      assert( 0 <= i && i < nspcons );
-      assert( 0 <= j && j < nblocks );
+      i = (int) (inferinfo / ncols);
+      j = inferinfo % ncols;
+      assert( 0 <= i && i < nrows );
+      assert( 0 <= j && j < ncols );
 
       /* find SCI with value 0 */
       assert( weights[i-1][j-1] < 0.5 );
 
-      SCIPdebugMsg(scip, " -> reason for x[%d][%d] = ... = x[%d][%d] = 0 was the following SC:\n", i, j, i, MIN(i,nblocks));
+      SCIPdebugMsg(scip, " -> reason for x[%d][%d] = ... = x[%d][%d] = 0 was the following SC:\n", i, j, i, MIN(i,ncols));
 #ifdef SCIP_DEBUG
       str[0] = '\0';
 #endif
@@ -1327,11 +1328,11 @@ SCIP_RETCODE resolvePropagation(
 #endif
 
       /* if we fixed a variable in the SC to 1 */
-      inferinfo -= nspcons * nblocks;
-      i = (int) inferinfo / nblocks;
-      j = inferinfo % nblocks;
-      assert( 0 <= i && i < nspcons );
-      assert( 0 <= j && j < nblocks );
+      inferinfo -= nrows * ncols;
+      i = (int) inferinfo / ncols;
+      j = inferinfo % ncols;
+      assert( 0 <= i && i < nrows );
+      assert( 0 <= j && j < ncols );
 
       /* In rare cases it might happen that we fixed a variable to 1, but the node later becomes infeasible by globally
        * fixing variables to 0. In this case, it might happen that we find a SC with value 0 instead of 1. We then
@@ -1420,7 +1421,7 @@ SCIP_RETCODE resolvePropagation(
             int lastcolumn;
 
             /* last column considered as part of the bar: */
-            lastcolumn = nblocks - 1;
+            lastcolumn = ncols - 1;
             if ( lastcolumn > i )
                lastcolumn = i;
 
@@ -1455,8 +1456,8 @@ SCIP_RETCODE enfopsPackingPartitioningOrbitopeSolution(
    SCIP_Real** weights;
    SCIP_Real** vals;
    int** cases;
-   int nspcons;
-   int nblocks;
+   int nrows;
+   int ncols;
    int i;
    int j;
 
@@ -1469,8 +1470,8 @@ SCIP_RETCODE enfopsPackingPartitioningOrbitopeSolution(
    if ( !consdata->ismodelcons && !SCIPallowStrongDualReds(scip) )
       return SCIP_OKAY;
 
-   assert( consdata->nspcons > 0 );
-   assert( consdata->nblocks > 0 );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
    assert( consdata->vals != NULL );
    assert( consdata->weights != NULL );
    assert( consdata->cases != NULL );
@@ -1494,8 +1495,8 @@ SCIP_RETCODE enfopsPackingPartitioningOrbitopeSolution(
       }
    }
 
-   nspcons = consdata->nspcons;
-   nblocks = consdata->nblocks;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
    vals = consdata->vals;
    weights = consdata->weights;
    cases = consdata->cases;
@@ -1506,15 +1507,15 @@ SCIP_RETCODE enfopsPackingPartitioningOrbitopeSolution(
 
    /* compute table */
    assert( consdata->istrianglefixed );
-   computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
+   computeSCTable(scip, nrows, ncols, weights, cases, vals);
 
    /* loop through rows */
-   for (i = 1; i < nspcons; ++i)
+   for (i = 1; i < nrows; ++i)
    {
       SCIP_Real bar = 0.0;
       int lastcolumn;
 
-      lastcolumn = nblocks - 1;
+      lastcolumn = ncols - 1;
 
       /* last column considered as part of the bar: */
       if ( lastcolumn > i )
@@ -1555,8 +1556,8 @@ SCIP_RETCODE checkPackingPartitioningOrbitopeSolution(
    SCIP_Real** vals;
    SCIP_Real** weights;
    int** cases;
-   int nspcons;
-   int nblocks;
+   int nrows;
+   int ncols;
    int i;
    int j;
 
@@ -1564,15 +1565,15 @@ SCIP_RETCODE checkPackingPartitioningOrbitopeSolution(
    assert( cons != 0 );
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->nspcons > 0 );
-   assert( consdata->nblocks > 0 );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
    assert( consdata->vars != NULL );
    assert( consdata->vals != NULL );
    assert( consdata->weights != NULL );
    assert( consdata->cases != NULL );
 
-   nspcons = consdata->nspcons;
-   nblocks = consdata->nblocks;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
    vars = consdata->vars;
    vals = consdata->vals;
    weights  = consdata->weights;
@@ -1590,14 +1591,14 @@ SCIP_RETCODE checkPackingPartitioningOrbitopeSolution(
       int diagsize;
 
       /* get last row of triangle */
-      diagsize = nblocks;
-      if ( nspcons < nblocks )
-         diagsize = nspcons;
+      diagsize = ncols;
+      if ( nrows < ncols )
+         diagsize = nrows;
 
       /* check variables */
       for (i = 0; i < diagsize; ++i)
       {
-         for (j = i+1; j < nblocks; ++j)
+         for (j = i+1; j < ncols; ++j)
          {
             if ( ! SCIPisFeasZero(scip, vals[i][j]) )
             {
@@ -1612,15 +1613,15 @@ SCIP_RETCODE checkPackingPartitioningOrbitopeSolution(
    }
 
    /* compute table */
-   computeSCTable(scip, nspcons, nblocks, weights, cases, vals);
+   computeSCTable(scip, nrows, ncols, weights, cases, vals);
 
    /* loop through rows */
-   for (i = 1; i < nspcons; ++i)
+   for (i = 1; i < nrows; ++i)
    {
       SCIP_Real bar;
       int lastcolumn;
 
-      lastcolumn = nblocks - 1;
+      lastcolumn = ncols - 1;
       bar = 0.0;
       /* last column considered as part of the bar: */
       if ( lastcolumn > i )
@@ -1647,7 +1648,7 @@ SCIP_RETCODE checkPackingPartitioningOrbitopeSolution(
                SCIPinfoMessage(scip, NULL, "violated SCI: bar(");
 
                /* first output bar */
-               for (l = j; l < nblocks; ++l)
+               for (l = j; l < ncols; ++l)
                   SCIPinfoMessage(scip, NULL, "<%s> (%f)", SCIPvarGetName(vars[i][l]), consdata->vals[i][l]);
 
                SCIPinfoMessage(scip, NULL, ")  SC(");
@@ -1794,12 +1795,12 @@ SCIP_RETCODE checkRedundantCons(
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
    assert( consdata->vars != NULL );
-   assert( consdata->nspcons > 0 );
-   assert( consdata->nblocks > 0 );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
 
    vars = consdata->vars;
-   nrows = consdata->nspcons;
-   ncols = consdata->nblocks;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
 
    /* check whether there exists an active variable in the orbitope */
    for (i = 0; i < nrows; ++i)
@@ -1884,7 +1885,7 @@ SCIP_DECL_CONSTRANS(consTransOrbitopePP)
    assert(sourcedata != NULL);
 
    /* create linear constraint data for target constraint */
-   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->vars, sourcedata->nspcons, sourcedata->nblocks,
+   SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->vars, sourcedata->nrows, sourcedata->ncols,
          sourcedata->orbitopetype, sourcedata->resolveprop, sourcedata->ismodelcons) );
 
    /* create target constraint */
@@ -2210,8 +2211,8 @@ SCIP_DECL_CONSLOCK(consLockOrbitopePP)
    SCIP_VAR*** vars;
    int i;
    int j;
-   int nspcons;
-   int nblocks;
+   int nrows;
+   int ncols;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -2221,20 +2222,20 @@ SCIP_DECL_CONSLOCK(consLockOrbitopePP)
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->nspcons > 0 );
-   assert( consdata->nblocks > 0 );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
    assert( consdata->vars != NULL );
 
    SCIPdebugMsg(scip, "Locking method for packing/partitioning orbitope constraint handler\n");
 
-   nspcons = consdata->nspcons;
-   nblocks = consdata->nblocks;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
    vars = consdata->vars;
 
    /* add up locks and down locks on each variable */
-   for (i = 0; i < nspcons; ++i)
+   for (i = 0; i < nrows; ++i)
    {
-      for (j = 0; j < nblocks; ++j)
+      for (j = 0; j < ncols; ++j)
          SCIP_CALL( SCIPaddVarLocksType(scip, vars[i][j], locktype, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
 
@@ -2250,8 +2251,8 @@ SCIP_DECL_CONSPRINT(consPrintOrbitopePP)
    SCIP_VAR*** vars;
    int i;
    int j;
-   int nspcons;
-   int nblocks;
+   int nrows;
+   int ncols;
    SCIP_ORBITOPETYPE orbitopetype;
 
    assert( scip != NULL );
@@ -2261,12 +2262,12 @@ SCIP_DECL_CONSPRINT(consPrintOrbitopePP)
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( consdata->nspcons > 0 );
-   assert( consdata->nblocks > 0 );
+   assert( consdata->nrows > 0 );
+   assert( consdata->ncols > 0 );
    assert( consdata->vars != NULL );
 
-   nspcons = consdata->nspcons;
-   nblocks = consdata->nblocks;
+   nrows = consdata->nrows;
+   ncols = consdata->ncols;
    vars = consdata->vars;
    orbitopetype = consdata->orbitopetype;
 
@@ -2284,15 +2285,15 @@ SCIP_DECL_CONSPRINT(consPrintOrbitopePP)
       SCIPABORT();
    }
 
-   for (i = 0; i < nspcons; ++i)
+   for (i = 0; i < nrows; ++i)
    {
-      for (j = 0; j < nblocks; ++j)
+      for (j = 0; j < ncols; ++j)
       {
          if ( j > 0 )
             SCIPinfoMessage(scip, file, ",");
          SCIP_CALL( SCIPwriteVarName(scip, file, vars[i][j], TRUE) );
       }
-      if ( i < nspcons-1 )
+      if ( i < nrows-1 )
          SCIPinfoMessage(scip, file, ".");
    }
    SCIPinfoMessage(scip, file, ")");
@@ -2309,8 +2310,8 @@ SCIP_DECL_CONSCOPY(consCopyOrbitopePP)
    SCIP_CONSDATA* sourcedata;
    SCIP_VAR*** sourcevars;
    SCIP_VAR*** vars;
-   int nspcons;
-   int nblocks;
+   int nrows;
+   int ncols;
    int i;
    int k;
    int j;
@@ -2330,8 +2331,8 @@ SCIP_DECL_CONSCOPY(consCopyOrbitopePP)
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert( sourcedata != NULL );
-   assert( sourcedata->nspcons > 0 );
-   assert( sourcedata->nblocks > 0 );
+   assert( sourcedata->nrows > 0 );
+   assert( sourcedata->ncols > 0 );
    assert( sourcedata->vars != NULL );
 
    conshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
@@ -2345,16 +2346,16 @@ SCIP_DECL_CONSCOPY(consCopyOrbitopePP)
       return SCIP_OKAY;
    }
 
-   nspcons = sourcedata->nspcons;
-   nblocks = sourcedata->nblocks;
+   nrows = sourcedata->nrows;
+   ncols = sourcedata->ncols;
    sourcevars = sourcedata->vars;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nspcons) );
-   for (i = 0; i < nspcons && *valid; ++i)
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nrows) );
+   for (i = 0; i < nrows && *valid; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), nblocks) );  /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), ncols) );  /*lint !e866*/
 
-      for (j = 0; j < nblocks && *valid; ++j)
+      for (j = 0; j < ncols && *valid; ++j)
       {
          SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &(vars[i][j]), varmap, consmap, global, valid) );
          assert( !(*valid) || vars[i][j] != NULL );
@@ -2369,13 +2370,13 @@ SCIP_DECL_CONSCOPY(consCopyOrbitopePP)
          name = SCIPconsGetName(sourcecons);
 
       SCIP_CALL( SCIPcreateConsOrbitopePP(scip, cons, name, vars,
-            sourcedata->orbitopetype, nspcons, nblocks, sourcedata->resolveprop, sourcedata->ismodelcons,
+            sourcedata->orbitopetype, nrows, ncols, sourcedata->resolveprop, sourcedata->ismodelcons,
             initial, separate, enforce, check, propagate,
             local, modifiable, dynamic, removable, stickingatnode) );
    }
 
    /* free space; only up to row i if copying failed */
-   assert( 0 <= i && i <= nspcons );
+   assert( 0 <= i && i <= nrows );
    for (k = i - 1; k >= 0; --k)
       SCIPfreeBufferArray(scip, &vars[k]);
    SCIPfreeBufferArray(scip, &vars);
@@ -2393,10 +2394,10 @@ SCIP_DECL_CONSPARSE(consParseOrbitopePP)
    SCIP_ORBITOPETYPE orbitopetype;
    SCIP_VAR*** vars;
    SCIP_VAR* var;
-   int nspcons;
-   int maxnspcons;
-   int nblocks;
-   int maxnblocks;
+   int nrows;
+   int maxnrows;
+   int ncols;
+   int maxncols;
    int k;
    int j;
 
@@ -2423,12 +2424,12 @@ SCIP_DECL_CONSPARSE(consParseOrbitopePP)
    s += 13;
 
    /* loop through string */
-   nspcons = 0;
-   nblocks = 0;
-   maxnspcons = 10;
-   maxnblocks = 10;
+   nrows = 0;
+   ncols = 0;
+   maxnrows = 10;
+   maxncols = 10;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, maxnspcons) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, maxnrows) );
 
    j = 0;
    do
@@ -2458,40 +2459,40 @@ SCIP_DECL_CONSPARSE(consParseOrbitopePP)
       /* begin new row if required */
       if( j == 0 )
       {
-         ++nspcons;
+         ++nrows;
 
-         if( nspcons > maxnspcons )
+         if( nrows > maxnrows )
          {
-            maxnspcons = SCIPcalcMemGrowSize(scip, nspcons);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, maxnspcons) );
-            assert( nspcons <= maxnspcons );
+            maxnrows = SCIPcalcMemGrowSize(scip, nrows);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, maxnrows) );
+            assert( nrows <= maxnrows );
          }
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &(vars[nspcons-1]), nspcons == 1 ? maxnblocks : nblocks) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBufferArray(scip, &(vars[nrows-1]), nrows == 1 ? maxncols : ncols) ); /*lint !e866*/
       }
 
       /* determine number of columns */
-      if( nspcons == 1 )
+      if( nrows == 1 )
       {
-         nblocks = j + 1;
+         ncols = j + 1;
 
          if( *s == '.' || *s == ')' )
-            SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons-1]), nblocks) ); /*lint !e866*/
-         else if( nblocks > maxnblocks )
+            SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nrows-1]), ncols) ); /*lint !e866*/
+         else if( ncols > maxncols )
          {
-            maxnblocks = SCIPcalcMemGrowSize(scip, nblocks);
-            SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nspcons-1]), maxnblocks) ); /*lint !e866*/
-            assert( nblocks <= maxnblocks );
+            maxncols = SCIPcalcMemGrowSize(scip, ncols);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &(vars[nrows-1]), maxncols) ); /*lint !e866*/
+            assert( ncols <= maxncols );
          }
       }
-      else if( ( j < nblocks-1 ) == ( *s == '.' || *s == ')' ) )
+      else if( ( j < ncols-1 ) == ( *s == '.' || *s == ')' ) )
       {
          SCIPerrorMessage("variables per row do not match.\n");
          *success = FALSE;
          break;
       }
 
-      vars[nspcons-1][j] = var;
+      vars[nrows-1][j] = var;
 
       if( *s == '.' )
          j = 0;
@@ -2506,11 +2507,11 @@ SCIP_DECL_CONSPARSE(consParseOrbitopePP)
 
    if( *success )
    {
-      SCIP_CALL( SCIPcreateConsOrbitopePP(scip, cons, name, vars, orbitopetype, nspcons, nblocks, TRUE, TRUE,
+      SCIP_CALL( SCIPcreateConsOrbitopePP(scip, cons, name, vars, orbitopetype, nrows, ncols, TRUE, TRUE,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
-   for( k = nspcons - 1; k >= 0; --k )
+   for( k = nrows - 1; k >= 0; --k )
       SCIPfreeBufferArray(scip, &vars[k]);
    SCIPfreeBufferArray(scip, &vars);
 
@@ -2531,7 +2532,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsOrbitopePP)
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   if ( varssize < consdata->nblocks * consdata->nspcons )
+   if ( varssize < consdata->ncols * consdata->nrows )
       *success = FALSE;
    else
    {
@@ -2539,9 +2540,9 @@ SCIP_DECL_CONSGETVARS(consGetVarsOrbitopePP)
       int i;
       int j;
 
-      for (i = 0; i < consdata->nspcons; ++i)
+      for (i = 0; i < consdata->nrows; ++i)
       {
-         for (j = 0; j < consdata->nblocks; ++j)
+         for (j = 0; j < consdata->ncols; ++j)
             vars[cnt++] = consdata->vars[i][j];
       }
       *success = TRUE;
@@ -2562,7 +2563,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsOrbitopePP)
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   *nvars = consdata->nblocks * consdata->nspcons;
+   *nvars = consdata->ncols * consdata->nrows;
    *success = TRUE;
 
    return SCIP_OKAY;
@@ -2631,8 +2632,8 @@ SCIP_RETCODE SCIPcreateConsOrbitopePP(
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
-   int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
-   int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
+   int                   nrows,              /**< number of rows in orbitope matrix               <=> p   */
+   int                   ncols,              /**< number of columns in orbitope matrix            <=> q   */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -2670,8 +2671,8 @@ SCIP_RETCODE SCIPcreateConsOrbitopePP(
       SCIPerrorMessage("packing/partitioning orbitope constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-   assert( nspcons > 0 );
-   assert( nblocks > 0 );
+   assert( nrows > 0 );
+   assert( ncols > 0 );
 
    /* run some checks */
 #ifndef NDEBUG
@@ -2679,11 +2680,11 @@ SCIP_RETCODE SCIPcreateConsOrbitopePP(
       SCIP_Real obj;
       int i;
       int j;
-      for (i = 0; i < nspcons; ++i)
+      for (i = 0; i < nrows; ++i)
       {
          /* initialize obj to infinity */
          obj = SCIPinfinity(scip);
-         for (j = 0; j < nblocks; ++j)
+         for (j = 0; j < ncols; ++j)
          {
             SCIP_Bool fixedZero;
             SCIP_VAR* var;
@@ -2719,7 +2720,7 @@ SCIP_RETCODE SCIPcreateConsOrbitopePP(
 #endif
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, vars, nspcons, nblocks, orbitopetype, resolveprop, ismodelcons) );
+   SCIP_CALL( consdataCreate(scip, &consdata, vars, nrows, ncols, orbitopetype, resolveprop, ismodelcons) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -2741,13 +2742,13 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitopePP(
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
    SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
-   int                   nspcons,            /**< number of set partitioning/packing constraints  <=> p */
-   int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
+   int                   nrows,              /**< number of rows in orbitope matrix               <=> p   */
+   int                   ncols,              /**< number of columns in orbitope matrix            <=> q   */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
    )
 {
-   SCIP_CALL( SCIPcreateConsOrbitopePP(scip, cons, name, vars, orbitopetype, nspcons, nblocks,
+   SCIP_CALL( SCIPcreateConsOrbitopePP(scip, cons, name, vars, orbitopetype, nrows, ncols,
          resolveprop, ismodelcons, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
