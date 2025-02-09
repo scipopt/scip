@@ -123,6 +123,10 @@
 
 /* shift for geometric mean of left and right gains */
 #define GEOMMEANSHIFT 0.01
+/* maximum gain with which we update the estimated left and right dual gains */
+#define MAXGAINTHRESHOLD 1e15
+/* minimum considered expected dual gain and probability for lookahead strong branching */
+#define MINGAINTHRESHOLD 1e-5
 
 /* discounted pseudo cost */
 #define BRANCHRULE_DISCOUNTFACTOR        0.2 /**< default discount factor for discounted pseudo costs.*/
@@ -854,16 +858,14 @@ SCIP_RETCODE updateMinMaxMeanGain(
 
    assert(branchruledata != NULL);
 
-   /* TodoSB think about large/infinite gains */
-   if (SCIPisRelGE(scip, downgain, 1.0e15) || SCIPisRelGE(scip, upgain, 1.0e15))
+   /* in the case of very large gains, SCIP will already prioritize this variable */
+   if (SCIPisRelGE(scip, downgain, MAXGAINTHRESHOLD) || SCIPisRelGE(scip, upgain, MAXGAINTHRESHOLD))
       return SCIP_OKAY;
 
-   SCIP_Real meangain;
-   /* shift by 0.01 */
-   meangain = sqrt((downgain + GEOMMEANSHIFT) * (upgain + GEOMMEANSHIFT)) - GEOMMEANSHIFT;
+   SCIP_Real meangain = sqrt((downgain + GEOMMEANSHIFT) * (upgain + GEOMMEANSHIFT)) - GEOMMEANSHIFT;
    assert(SCIPisGE(scip, meangain, 0.0));
 
-   if(meangain < 1e-5)
+   if(meangain < MINGAINTHRESHOLD)
    {
       branchruledata->nzerogains++;
       return SCIP_OKAY;
@@ -906,7 +908,7 @@ SCIP_Real strongBranchingDepth(
 {
    assert(maxmeangain >= 0.0);
    /* using an epsilon value if maxmeangain is zero */
-   SCIP_Real depth = ceil(gap / MAX(maxmeangain, 1e-5));
+   SCIP_Real depth = ceil(gap / MAX(maxmeangain, MINGAINTHRESHOLD));
    assert(depth > 0);
    return depth;
 }
@@ -987,7 +989,7 @@ SCIP_Real expectedTreeSize(
       /* Size of the improved tree. */
       improvedtree =  strongBranchingTreeSize(currentdepth - 1);
       nexttreesize = improvedtree * p + strongBranchingTreeSize(currentdepth) * (1.0 - p) + 2.0;
-      if( p < 1e-5 )
+      if( p < MINGAINTHRESHOLD )
          return SCIPinfinity(scip);
    }
    else
@@ -998,12 +1000,12 @@ SCIP_Real expectedTreeSize(
       SCIP_Real pbetter = 1.0 - cdfProbability(lambda, zeroprob, gap / (depth - 1), mingain, logmeangain, logstdevgain, distributioncdf);
       SCIPdebugMsg(scip, " -> Probability of finding a better variable that would reduce the depth: %g\n", pbetter);
 
-      if( pbetter < 1e-5 )
+      if( pbetter < MINGAINTHRESHOLD )
          return SCIPinfinity(scip);
 
       SCIP_Real p;
       p = 0.0;
-      while (pbetter >= 1e-5 && ptotal + pnotbetter < 1.0)
+      while (pbetter >= MINGAINTHRESHOLD && ptotal + pnotbetter < 1.0)
       {
          if (depth > 2)
          {
