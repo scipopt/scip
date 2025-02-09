@@ -1604,6 +1604,8 @@ SCIP_RETCODE checkPackingPartitioningOrbitopeSolution(
                if ( printreason )
                   SCIPinfoMessage(scip, NULL, "variable x[%d][%d] = %f on upper right nonzero.\n", i, j, vals[i][j]);
                *result = SCIP_INFEASIBLE;
+
+               return SCIP_OKAY;
             }
          }
       }
@@ -1677,6 +1679,8 @@ SCIP_RETCODE checkPackingPartitioningOrbitopeSolution(
 
                SCIPinfoMessage(scip, NULL, ")");
             }
+
+            return SCIP_OKAY;
          }
       }
    }
