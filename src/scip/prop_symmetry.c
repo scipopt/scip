@@ -3020,7 +3020,6 @@ SCIP_RETCODE addOrbitopeSubgroup(
    int**                 lexorder,           /**< pointer to array storing lexicographic order defined by sub orbitopes */
    int*                  nvarslexorder,      /**< number of variables in lexicographic order */
    int*                  maxnvarslexorder,   /**< maximum number of variables in lexicographic order */
-   SCIP_Bool             mayinteract,        /**< whether orbitope's symmetries might interact with other symmetries */
    SCIP_Bool*            success             /**< whether the orbitope could be added */
    )
 {  /*lint --e{571}*/
@@ -3766,7 +3765,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
    int nvarslexorder = 0;
    int maxnvarslexorder = 0;
    SCIP_Shortbool* permused;
-   SCIP_Bool allpermsused = FALSE;
    SCIP_Bool handlednonbinarysymmetry = FALSE;
    int norbitopesincomp;
 
@@ -3882,9 +3880,6 @@ SCIP_RETCODE detectAndHandleSubgroups(
          &ncompcolors, &usedperms, &nusedperms, usedpermssize, permused) );
 
    SCIPdebugMsg(scip, "  created subgroup detection graph using %d of the permutations\n", nusedperms);
-
-   if ( nusedperms == npermsincomp )
-      allpermsused = TRUE;
 
    assert( graphcomponents != NULL );
    assert( graphcompbegins != NULL );
@@ -4070,7 +4065,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
           */
          SCIP_CALL( addOrbitopeSubgroup(scip, propdata, usedperms, nusedperms, compcolorbegins,
                graphcompbegins, graphcomponents, j, nbinarycomps, largestcompsize, &firstvaridx, &chosencomp,
-               &lexorder, &nvarslexorder, &maxnvarslexorder, allpermsused, &orbitopeadded) );
+               &lexorder, &nvarslexorder, &maxnvarslexorder, &orbitopeadded) );
 
          if ( orbitopeadded )
          {
