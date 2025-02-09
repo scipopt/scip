@@ -78,6 +78,7 @@ my $checktabsparam = 1;  # check whether tabs in parameter lists are present
 my $checkstage = 1;      # check whether names of functions for checkstage are correct in scip.c
 my $checkdocinbody = 1;  # check whether doxygen documentation appears within code
 my $checkemptylines = 1; # check for empty lines after "{" in the next line or before "}"
+my $checkscipcall = 1;   # check whether spaces are correct for SCIP_CALL(_ ... _)
 
 my $nfiles = 0;
 
@@ -236,6 +237,20 @@ for (my $i = 0; $i < $narg; ++$i)
 	    {
 	       printf("%d: possible SCIPdebugMessage() without finializing '\\n':\n%s\n\n", $line, $_);
 	    }
+	 }
+      }
+
+      # ----------------------------------------
+      # check for "SCIP_CALL(...)" without whitespace
+      if ( $checkscipcall == 1 )
+      {
+	 if ( $str =~ /SCIP_CALL\([^\s]/ )
+	 {
+	    printf("%d: found SCIP_CALL( without following whitespace:\n%s\n\n", $line, $_);
+	 }
+	 elsif ( $str =~ /SCIP_CALL\(.*[^\s]\);/ )
+	 {
+	    printf("%d: found SCIP_CALL( without final whitespace:\n%s\n\n", $line, $_);
 	 }
       }
 
