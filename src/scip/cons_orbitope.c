@@ -23,10 +23,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_orbitope.c
- * @brief  interface for constraint handlers of type partitioning, packing, and full
+ * @brief  interface for constraint handlers of type partitioning, packing, and full to ensure backwards compatibility
  * @author Christopher Hojny
  *
- * This interface ensures backwards compatability to be able to add packing, partitioning, and full
+ * This interface ensures backwards compatibility to be able to add packing, partitioning, and full
  * orbitopes via the same function call.
  */
 
