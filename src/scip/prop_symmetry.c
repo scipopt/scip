@@ -3948,7 +3948,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
                propdata->perms[propdata->components[propdata->componentbegins[cidx] + k]],
                propdata->permvars, propdata->npermvars, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         SCIP_CALL( SCIPaddCons(scip, cons));
+         SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
          SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
@@ -4210,7 +4210,7 @@ SCIP_RETCODE detectAndHandleSubgroups(
          SCIP_CALL( SCIPcreateSymbreakCons(scip, &cons, name,
                symresackperm, modifiedpermvars, propdata->npermvars, FALSE,
                propdata->conssaddlp, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         SCIP_CALL( SCIPaddCons(scip, cons));
+         SCIP_CALL( SCIPaddCons(scip, cons) );
 
          /* do not release constraint here - will be done later */
          SCIP_CALL( ensureDynamicConsArrayAllocatedAndSufficientlyLarge(scip, &propdata->genorbconss,
@@ -6015,7 +6015,6 @@ SCIP_RETCODE tryAddOrbitalRedLexRed(
 
       if ( propdata->dispsyminfo )
          SCIPinfoMessage(scip, NULL, "  use lexicographic reduction for %d permutations\n", componentsize);
-
    }
    else if ( propdata->usesimplesgncomp && ! propdata->componentblocked[cidx] )
    {
@@ -6653,7 +6652,6 @@ SCIP_RETCODE handleDoubleLexOrbitope(
             SCIP_CALL( SCIPorbitopalReductionAddOrbitope(scip, propdata->orbitopalreddata,
                   SCIP_ROWORDERING_NONE, SCIP_COLUMNORDERING_NONE,
                   orbitopevarmatrix, ncols, nactiverows, success) );
-
          }
          assert( propdata->ngenlinconss <= propdata->genlinconsssize );
       }
@@ -7434,7 +7432,6 @@ SCIP_RETCODE tryAddSymmetryHandlingMethods(
    {
       SCIP_CALL( printSyminfoFooter(scip) );
    }
-
 
 #ifdef SYMMETRY_STATISTICS
    SCIP_CALL( SCIPdisplaySymmetryStatistics(scip, propdata) );

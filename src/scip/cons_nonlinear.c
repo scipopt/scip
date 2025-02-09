@@ -3173,16 +3173,16 @@ SCIP_RETCODE addLocks(
    /* compute locks for lock propagation */
    if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisInfinity(scip, -consdata->lhs) )
    {
-      SCIP_CALL( propagateLocks(scip, consdata->expr, nlockspos + nlocksneg, nlockspos + nlocksneg));
+      SCIP_CALL( propagateLocks(scip, consdata->expr, nlockspos + nlocksneg, nlockspos + nlocksneg) );
    }
    else if( !SCIPisInfinity(scip, consdata->rhs) )
    {
-      SCIP_CALL( propagateLocks(scip, consdata->expr, nlockspos, nlocksneg));
+      SCIP_CALL( propagateLocks(scip, consdata->expr, nlockspos, nlocksneg) );
    }
    else
    {
       assert(!SCIPisInfinity(scip, -consdata->lhs));
-      SCIP_CALL( propagateLocks(scip, consdata->expr, nlocksneg, nlockspos));
+      SCIP_CALL( propagateLocks(scip, consdata->expr, nlocksneg, nlockspos) );
    }
 
    return SCIP_OKAY;
@@ -7255,7 +7255,7 @@ SCIP_RETCODE selectBranchingCandidate(
    SCIP_Bool             considerfracnl,     /**< whether to consider fractionality for spatial branching candidates */
    SCIP_SOL*             sol,                /**< relaxation solution, NULL for LP */
    BRANCHCAND**          selected            /**< buffer to store selected branching candidates */
-)
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    int* perm;
@@ -8112,7 +8112,7 @@ SCIP_Bool branchingIntegralFirst(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SOL*             sol                 /**< solution to be enforced */
-)
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 

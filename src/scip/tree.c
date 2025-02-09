@@ -4007,7 +4007,7 @@ SCIP_RETCODE focusnodeToLeaf(
    SCIPsetDebugMsg(set, "focusnode #%" SCIP_LONGINT_FORMAT " to leaf at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
-   SCIP_CALL( nodeToLeaf(&tree->focusnode, blkmem, set, stat, eventfilter, eventqueue, tree, reopt, lp, lpstatefork, cutoffbound));
+   SCIP_CALL( nodeToLeaf(&tree->focusnode, blkmem, set, stat, eventfilter, eventqueue, tree, reopt, lp, lpstatefork, cutoffbound) );
 
    return SCIP_OKAY;
 }
@@ -8048,8 +8048,8 @@ void SCIPnodeGetPropsAfterDual(
    SCIP_Real*            varbounds,          /**< array where to store changed bounds */
    SCIP_BOUNDTYPE*       varboundtypes,      /**< array where to store type of changed bound*/
    int*                  nvars,              /**< buffer to store number of bound changes;
-                                               *   if this is larger than varssize, arrays should be reallocated and method
-                                               *   should be called again */
+                                              *   if this is larger than varssize, arrays should be reallocated and method
+                                              *   should be called again */
    int                   varssize            /**< available slots in provided arrays */
    )
 {  /*lint --e{641}*/
