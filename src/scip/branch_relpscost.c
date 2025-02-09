@@ -116,9 +116,13 @@
 #define DEFAULT_FILTERCANDSSYM   FALSE       /**< Use symmetry to filter branching candidates? */
 #define DEFAULT_TRANSSYMPSCOST   FALSE       /**< Transfer pscost information to symmetric variables if filtering is performed? */
 
+/* distribution to use for lookahead strong branching */
 #define EXPONENTIALDISTRIBUTION 0
 #define PARETODISTRIBUTION 1
 #define LOGNORMALDISTRIBUTION 2
+
+/* shift for geometric mean of left and right gains */
+#define GEOMMEANSHIFT 0.01
 
 /* discounted pseudo cost */
 #define BRANCHRULE_DISCOUNTFACTOR        0.2 /**< default discount factor for discounted pseudo costs.*/
@@ -856,7 +860,7 @@ SCIP_RETCODE updateMinMaxMeanGain(
 
    SCIP_Real meangain;
    /* shift by 0.01 */
-   meangain = sqrt((downgain + 0.01) * (upgain + 0.01)) - 0.01;
+   meangain = sqrt((downgain + GEOMMEANSHIFT) * (upgain + GEOMMEANSHIFT)) - GEOMMEANSHIFT;
    assert(SCIPisGE(scip, meangain, 0.0));
 
    if(meangain < 1e-5)
