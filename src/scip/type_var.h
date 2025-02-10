@@ -85,7 +85,7 @@ enum SCIP_VarImplType
                                               *   does not make the problem feasible.
                                               *   For unbounded problems, weak implied integrality means that there
                                               *   exists an unbounded sequence of solutions to the relaxed problem,
-                                              *   where each  solution has integer solution values for the weakly and
+                                              *   where each solution has integer solution values for the weakly and
                                               *   strongly implied integer variables.
                                               *
                                               *   @note This notion of implied integrality is fragile and may break
