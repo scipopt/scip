@@ -172,6 +172,7 @@ struct SCIP_LPi
    MSKrescodee           termcode;           /**< termination code of last optimization run */
    int                   itercount;          /**< iteration count of last optimization run */
    SCIP_PRICING          pricing;            /**< SCIP pricing setting */
+   int                   scaling;            /**< SCIP scaling setting */
    int                   lpid;               /**< id for LP within same task */
    MSKoptimizertype      lastalgo;           /**< algorithm type of last solving call */
    MSKstakeye*           skx;                /**< basis status for columns */
@@ -901,6 +902,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->termcode = MSK_RES_OK;
    (*lpi)->itercount = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
+   (*lpi)->scaling = 1;
    (*lpi)->lastalgo = MSK_OPTIMIZER_FREE;
    (*lpi)->skx = NULL;
    (*lpi)->skc = NULL;
@@ -5172,17 +5174,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return  SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
-      MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_SCALING, ival) );
-      if( *ival == MSK_SCALING_NONE )
-         *ival = 0;
-      else if( *ival == MSK_SCALING_FREE )
-         *ival = 1;
-#if MSK_VERSION_MAJOR < 10
-      else if( *ival == MSK_SCALING_AGGRESSIVE )
-         *ival = 2;
-#endif
-      else /* MSK_SCALING_MODERATE should not be used by the interface */
-         return SCIP_PARAMETERWRONGVAL;
+      *ival = lpi->scaling;
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, ival) );
@@ -5251,11 +5243,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
-#if MSK_VERSION_MAJOR < 10
       assert( ival >= 0 && ival <= 2 );
-#else
-      assert( ival >= 0 && ival <= 1 );
-#endif
+      lpi->scaling = ival;
       if( ival == 0 )
       {
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_NONE) );
