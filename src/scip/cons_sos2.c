@@ -1091,7 +1091,7 @@ SCIP_RETCODE enforceSOS2(
 
       /* do nothing if there are not enough variables - this is usually eliminated by preprocessing */
       if ( nvars <= 2 )
-         return SCIP_OKAY;
+         continue;
 
       ngen = 0;
 
