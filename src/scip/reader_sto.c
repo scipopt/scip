@@ -1994,7 +1994,7 @@ SCIP_RETCODE addScenarioVarsToProb(
       SCIP_VAR* var;
       SCIP_Real obj;
 
-      SCIPdebugMessage("Original problem variable <%s> is being duplicated for scenario %d", SCIPvarGetName(vars[i]),
+      SCIPdebugMessage("Original problem variable <%s> is being duplicated for scenario %d\n", SCIPvarGetName(vars[i]),
          getScenarioNum(scip, scenario));
 
       if( SCIPvarIsDeleted(vars[i]) )
