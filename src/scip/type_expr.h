@@ -77,11 +77,11 @@ typedef enum
 /** integrality */
 typedef enum
 {
-   SCIP_EXPRINT_NONE     = 0,                /**< The expression is not integral. */
-   SCIP_EXPRINT_WEAK     = 1,                /**< The expression is weakly implied integral, i.e. it is integral but it
+   SCIP_EXPR_INTEGRALITY_NONE     = 0,       /**< The expression is not integral. */
+   SCIP_EXPR_INTEGRALITY_WEAK     = 1,       /**< The expression is weakly implied integral, i.e. it is integral but it
                                                *< contains weakly implied integers */
-   SCIP_EXPRINT_STRONG   = 2                 /**< The expression is integral and contains no weakly implied integers. */
-} SCIP_EXPRINT;
+   SCIP_EXPR_INTEGRALITY_STRONG   = 2        /**< The expression is integral and contains no weakly implied integers. */
+} SCIP_EXPR_INTEGRALITY;
 
 /**@name Expression Owner */
 /**@{ */
@@ -384,7 +384,7 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 #define SCIP_DECL_EXPRINTEGRALITY(x) SCIP_RETCODE x (\
    SCIP*      scip, \
    SCIP_EXPR* expr, \
-   SCIP_EXPRINT* integralitylevel)
+   SCIP_EXPR_INTEGRALITY* integralitylevel)
 
 /** expression hash callback
  *

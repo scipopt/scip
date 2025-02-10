@@ -644,7 +644,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityEntropy)
    /* TODO it is possible to check for the special case that the child is integral and its bounds are [0,1]; in
     * this case the entropy expression can only achieve 0 and is thus integral
     */
-   *integralitylevel = SCIP_EXPRINT_NONE;
+   *integralitylevel = SCIP_EXPR_INTEGRALITY_NONE;
 
    return SCIP_OKAY;
 }

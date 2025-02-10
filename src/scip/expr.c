@@ -1084,7 +1084,7 @@ SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to check integrality for */
-   SCIP_EXPRINT*         integralitylevel    /**< buffer to store the integrality level of the expression */
+   SCIP_EXPR_INTEGRALITY* integralitylevel   /**< buffer to store the integrality level of the expression */
    )
 {
    assert(exprhdlr != NULL);
@@ -3034,7 +3034,7 @@ SCIP_RETCODE SCIPexprEvalActivity(
              * use SCIPceil and SCIPfloor for now the default intevalVar does not relax variables, so can omit
              * expressions without children (constants should be ok, too)
              */
-            if( expr->integralitylevel != SCIP_EXPRINT_NONE && expr->nchildren > 0 )
+            if( expr->integralitylevel != SCIP_EXPR_INTEGRALITY_NONE && expr->nchildren > 0 )
             {
                if( expr->activity.inf > -SCIP_INTERVAL_INFINITY )
                   expr->activity.inf = SCIPsetCeil(set, expr->activity.inf);
@@ -4076,7 +4076,7 @@ void SCIPexprSetCurvature(
 }
 
 /** returns whether an expression is integral */
-SCIP_EXPRINT SCIPexprGetIntegrality(
+SCIP_EXPR_INTEGRALITY SCIPexprGetIntegrality(
    SCIP_EXPR*            expr                /**< expression */
    )
 {
@@ -4088,7 +4088,7 @@ SCIP_EXPRINT SCIPexprGetIntegrality(
 /** sets the integrality flag of an expression */
 void SCIPexprSetIntegrality(
    SCIP_EXPR*            expr,               /**< expression */
-   SCIP_EXPRINT          integrality         /**< integrality level of the expression */
+   SCIP_EXPR_INTEGRALITY integrality         /**< integrality level of the expression */
    )
 {
    assert(expr != NULL);

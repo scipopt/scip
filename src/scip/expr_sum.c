@@ -1054,9 +1054,9 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicitySum)
 }
 
 static
-SCIP_EXPRINT valueIntegrality(double value)
+SCIP_EXPR_INTEGRALITY valueIntegrality(double value)
 {
-   return EPSISINT(value, 0.0) ? SCIP_EXPRINT_STRONG : SCIP_EXPRINT_NONE;
+   return EPSISINT(value, 0.0) ? SCIP_EXPR_INTEGRALITY_STRONG : SCIP_EXPR_INTEGRALITY_NONE;
 }
 /** expression integrality detection callback */
 static

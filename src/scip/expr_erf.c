@@ -244,7 +244,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityErf)
    assert(expr != NULL);
    assert(integralitylevel != NULL);
 
-   *integralitylevel = SCIP_EXPRINT_NONE;
+   *integralitylevel = SCIP_EXPR_INTEGRALITY_NONE;
 
    return SCIP_OKAY;
 }

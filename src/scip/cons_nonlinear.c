@@ -2394,7 +2394,7 @@ SCIP_RETCODE forwardPropExpr(
              * boundtightening-inteval does not relax integer variables, so can omit expressions without children
              * (constants should be ok, too)
              */
-            if( SCIPexprGetIntegrality(expr) != SCIP_EXPRINT_NONE &&
+            if( SCIPexprGetIntegrality(expr) != SCIP_EXPR_INTEGRALITY_NONE &&
                 conshdlrdata->intevalvar == intEvalVarBoundTightening && SCIPexprGetNChildren(expr) > 0 )
             {
                if( activity.inf > -SCIP_INTERVAL_INFINITY )
@@ -5817,7 +5817,7 @@ SCIP_RETCODE presolveImplint(
       SCIP_EXPR* cand = NULL;
       SCIP_Real candcoef = 0.0;
       int i;
-      int integralitylevel;
+      SCIP_EXPR_INTEGRALITY integralitylevel;
       SCIP_VARIMPLTYPE impltype;
 
       assert(conss != NULL && conss[c] != NULL);
@@ -5967,13 +5967,13 @@ SCIP_RETCODE createAuxVar(
    /* type of auxiliary variable depends on integrality information of the expression */
    switch( SCIPexprGetIntegrality(expr) )
    {
-      case SCIP_EXPRINT_NONE:
+      case SCIP_EXPR_INTEGRALITY_NONE:
          impltype = SCIP_VARIMPLTYPE_NONE;
          break;
-      case SCIP_EXPRINT_WEAK:
+      case SCIP_EXPR_INTEGRALITY_WEAK:
          impltype = SCIP_VARIMPLTYPE_WEAK;
          break;
-      case SCIP_EXPRINT_STRONG:
+      case SCIP_EXPR_INTEGRALITY_STRONG:
          impltype = SCIP_VARIMPLTYPE_STRONG;
          break;
       default:
@@ -14853,7 +14853,7 @@ SCIP_RETCODE SCIPtightenExprIntervalNonlinear(
    SCIPdebugMsgPrint(scip, " with activity [%.15g,%.15g] to [%.15g,%.15g] (force=%d)\n", SCIPexprGetActivity(expr).inf, SCIPexprGetActivity(expr).sup, newbounds.inf, newbounds.sup, conshdlrdata->forceboundtightening);
 #endif
 
-   if( SCIPexprGetIntegrality(expr) != SCIP_EXPRINT_NONE )
+   if( SCIPexprGetIntegrality(expr) != SCIP_EXPR_INTEGRALITY_NONE )
    {
       /* apply integrality to new bounds
        * it should be ok to use normal ceil() and floor(), but for safety, we use SCIPceil and SCIPfloor for now

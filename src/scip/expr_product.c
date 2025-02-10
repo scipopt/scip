@@ -2203,7 +2203,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityProduct)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
-   *integralitylevel = EPSISINT(exprdata->coefficient, 0.0) ? SCIP_EXPRINT_STRONG : SCIP_EXPRINT_NONE; /*lint !e835*/
+   *integralitylevel = EPSISINT(exprdata->coefficient, 0.0) ? SCIP_EXPR_INTEGRALITY_STRONG : SCIP_EXPR_INTEGRALITY_NONE; /*lint !e835*/
 
    for( i = 0; i < SCIPexprGetNChildren(expr) && *integralitylevel > 0; ++i )
    {

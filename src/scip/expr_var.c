@@ -360,11 +360,11 @@ SCIP_DECL_EXPRINTEGRALITY(integralityVar)
    SCIP_VAR * var = SCIPgetVarExprVar(expr);
 
    if( !SCIPvarIsIntegral(var) )
-      *integralitylevel = SCIP_EXPRINT_NONE;
+      *integralitylevel = SCIP_EXPR_INTEGRALITY_NONE;
    else if( SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_WEAK )
-      *integralitylevel = SCIP_EXPRINT_WEAK;
+      *integralitylevel = SCIP_EXPR_INTEGRALITY_WEAK;
    else
-      *integralitylevel = SCIP_EXPRINT_STRONG;
+      *integralitylevel = SCIP_EXPR_INTEGRALITY_STRONG;
 
    return SCIP_OKAY;
 }
