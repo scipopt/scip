@@ -342,7 +342,8 @@ void rowCalculateGauss(
                ++(*rowinfinitiesup);
          }
       }
-      SCIPvarCalcDistributionParameters(scip, colvarlb, colvarub, SCIPvarIsIntegral(colvar), &varmean, &varvariance);
+      SCIPvarCalcDistributionParameters(scip, colvarlb, colvarub, SCIPvarGetType(colvar), SCIPvarGetImplType(colvar),
+                                        &varmean, &varvariance);
 
       /* actual values are updated; the contribution of the variable to mu is the arithmetic mean of its bounds */
       *mu += colval * varmean;
@@ -383,7 +384,8 @@ SCIP_RETCODE calcBranchScore(
    SCIP_Real currentmean;      /* current mean value of variable uniform distribution */
    SCIP_Real meanup;           /* mean value of variable uniform distribution after branching up */
    SCIP_Real meandown;         /* mean value of variable uniform distribution after branching down*/
-   SCIP_Bool varintegral;
+   SCIP_VARTYPE vartype;
+   SCIP_VARIMPLTYPE impltype;
    int ncolrows;
    int i;
 
@@ -405,12 +407,13 @@ SCIP_RETCODE calcBranchScore(
    varlb = SCIPvarGetLbLocal(var);
    varub = SCIPvarGetUbLocal(var);
    assert(varub - varlb > 0.5);
-   varintegral = SCIPvarIsIntegral(var);
+   vartype = SCIPvarGetType(var);
+   impltype = SCIPvarGetImplType(var);
 
    /* calculate mean and variance of variable uniform distribution before and after branching */
    currentmean = 0.0;
    squaredbounddiff = 0.0;
-   SCIPvarCalcDistributionParameters(scip, varlb, varub, varintegral, &currentmean, &squaredbounddiff);
+   SCIPvarCalcDistributionParameters(scip, varlb, varub, vartype, impltype, &currentmean, &squaredbounddiff);
 
    /* unfixed binary variables may have an integer solution value in the LP solution, eg, at the presence of indicator constraints */
    if( !SCIPvarIsBinary(var) )
@@ -427,12 +430,12 @@ SCIP_RETCODE calcBranchScore(
    /* calculate the variable's uniform distribution after branching up and down, respectively. */
    squaredbounddiffup = 0.0;
    meanup = 0.0;
-   SCIPvarCalcDistributionParameters(scip, newlb, varub, varintegral, &meanup, &squaredbounddiffup);
+   SCIPvarCalcDistributionParameters(scip, newlb, varub, vartype, impltype, &meanup, &squaredbounddiffup);
 
    /* calculate the distribution mean and variance for a variable with finite lower bound */
    squaredbounddiffdown = 0.0;
    meandown = 0.0;
-   SCIPvarCalcDistributionParameters(scip, varlb, newub, varintegral, &meandown, &squaredbounddiffdown);
+   SCIPvarCalcDistributionParameters(scip, varlb, newub, vartype, impltype, &meandown, &squaredbounddiffdown);
 
    /* initialize the variable's up and down score */
    *upscore = 0.0;
@@ -705,7 +708,8 @@ SCIP_RETCODE varProcessBoundChanges(
    SCIP_Real newlb;
    SCIP_Real oldub;
    SCIP_Real newub;
-   SCIP_Bool varintegral;
+   SCIP_VARTYPE vartype;
+   SCIP_VARIMPLTYPE impltype;
    int ncolrows;
    int r;
    int varindex;
@@ -742,9 +746,10 @@ SCIP_RETCODE varProcessBoundChanges(
    newvariance = 0.0;
    oldmean = 0.0;
    newmean = 0.0;
-   varintegral = SCIPvarIsIntegral(var);
-   SCIPvarCalcDistributionParameters(scip, oldlb, oldub, varintegral, &oldmean, &oldvariance);
-   SCIPvarCalcDistributionParameters(scip, newlb, newub, varintegral, &newmean, &newvariance);
+   vartype = SCIPvarGetType(var);
+   impltype = SCIPvarGetImplType(var);
+   SCIPvarCalcDistributionParameters(scip, oldlb, oldub, vartype, impltype, &oldmean, &oldvariance);
+   SCIPvarCalcDistributionParameters(scip, newlb, newub, vartype, impltype, &newmean, &newvariance);
 
    /* loop over all rows of this variable and update activity distribution */
    for( r = 0; r < ncolrows; ++r )
