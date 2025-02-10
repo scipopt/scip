@@ -4463,6 +4463,8 @@
  * This callback is called when an expression is checked for integrality, that is,
  * whether the expression evaluates always to an integral value in a feasible solution.
  * An implementation usually uses SCIPexprGetIntegrality() to check whether children evaluate to an integral value.
+ * The callback distinguishes between three types of integrality, none, weak and strong. Weak integrality occurs if one
+ * of the variables in the expression is weakly implied integer.
  *
  * For example, a sum expression is returned to be integral if all coefficients and all children are integral:
  * @refsnippet{src/scip/expr_sum.c,SnippetExprIntegralitySum}
