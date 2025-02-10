@@ -1832,7 +1832,9 @@ SCIP_RETCODE getASlice(
 
    if( nnonz != 0 )
    {
+#if MSK_VERSION_MAJOR <= 9
       int surplus;
+#endif
 
       assert(beg != NULL);
       assert(ind != NULL);
@@ -1844,32 +1846,31 @@ SCIP_RETCODE getASlice(
       MOSEK_CALL( MSK_getaslicenumnz(lpi->task, iscon ? MSK_ACC_CON : MSK_ACC_VAR, first, last+1, nnonz) );
       surplus = *nnonz;
       MOSEK_CALL( MSK_getaslice(lpi->task, iscon ? MSK_ACC_CON : MSK_ACC_VAR, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+      assert(surplus == 0);
 #else
       if( iscon )
       {
          MOSEK_CALL( MSK_getarowslicenumnz(lpi->task, first, last+1, nnonz) );
-         surplus = *nnonz;
 #if MSK_VERSION_MAJOR == 9
+         surplus = *nnonz;
          MOSEK_CALL( MSK_getarowslice(lpi->task, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+         assert(surplus == 0);
 #else
          MOSEK_CALL( MSK_getarowslice(lpi->task, first, last+1, *nnonz, beg, lpi->aptre, ind, val) );
-         (void)surplus;
 #endif
       }
       else
       {
          MOSEK_CALL( MSK_getacolslicenumnz(lpi->task, first, last+1, nnonz) );
-         surplus = *nnonz;
 #if MSK_VERSION_MAJOR == 9
+         surplus = *nnonz;
          MOSEK_CALL( MSK_getacolslice(lpi->task, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+         assert(surplus == 0);
 #else
          MOSEK_CALL( MSK_getacolslice(lpi->task, first, last+1, *nnonz, beg, lpi->aptre, ind, val) );
-         (void)surplus;
 #endif
       }
 #endif
-
-      assert(surplus == 0);
    }
 
 #if DEBUG_CHECK_DATA > 0
