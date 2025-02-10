@@ -6331,7 +6331,6 @@ SCIP_Bool SCIPsetIsInfinity(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return (val >= set->num_infinity);
 }
@@ -6343,7 +6342,6 @@ SCIP_Bool SCIPsetIsHugeValue(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return (val >= set->num_hugeval);
 }
@@ -6455,7 +6453,6 @@ SCIP_Bool SCIPsetIsZero(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return EPSZ(val, set->num_epsilon);
 }
@@ -6467,7 +6464,6 @@ SCIP_Bool SCIPsetIsPositive(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return EPSP(val, set->num_epsilon);
 }
@@ -6479,7 +6475,6 @@ SCIP_Bool SCIPsetIsNegative(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return EPSN(val, set->num_epsilon);
 }
@@ -6685,7 +6680,6 @@ SCIP_Bool SCIPsetIsSumZero(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return EPSZ(val, set->num_sumepsilon);
 }
@@ -6697,7 +6691,6 @@ SCIP_Bool SCIPsetIsSumPositive(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return EPSP(val, set->num_sumepsilon);
 }
@@ -6709,7 +6702,6 @@ SCIP_Bool SCIPsetIsSumNegative(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return EPSN(val, set->num_sumepsilon);
 }
@@ -6889,7 +6881,6 @@ SCIP_Bool SCIPsetIsFeasZero(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return EPSZ(val, set->num_feastol);
 }
@@ -6901,7 +6892,6 @@ SCIP_Bool SCIPsetIsFeasPositive(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return EPSP(val, set->num_feastol);
 }
@@ -6913,7 +6903,6 @@ SCIP_Bool SCIPsetIsFeasNegative(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return EPSN(val, set->num_feastol);
 }
@@ -7119,7 +7108,6 @@ SCIP_Bool SCIPsetIsDualfeasZero(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return EPSZ(val, set->num_dualfeastol);
 }
@@ -7131,7 +7119,6 @@ SCIP_Bool SCIPsetIsDualfeasPositive(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return EPSP(val, set->num_dualfeastol);
 }
@@ -7143,7 +7130,6 @@ SCIP_Bool SCIPsetIsDualfeasNegative(
    )
 {
    assert(set != NULL);
-   assert(SCIPisFinite(val));
 
    return EPSN(val, set->num_dualfeastol);
 }
