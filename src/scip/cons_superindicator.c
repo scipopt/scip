@@ -2460,10 +2460,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUC)
       }
 
       SCIPdialogMessage(scip, NULL, "\n");
-      SCIPdialogMessage(scip, NULL, "changed problem has %d variables (%d bin, %d int, %d cont; %d impl) and %d constraints\n",
+      SCIPdialogMessage(scip, NULL, "changed problem has %d variables (%d bin, %d int, %d cont) and %d constraints\n",
          SCIPgetNVars(scip), SCIPgetNBinVars(scip) + SCIPgetNBinImplVars(scip), SCIPgetNIntVars(scip) +
                            SCIPgetNIntImplVars(scip), SCIPgetNContVars(scip) + SCIPgetNContImplVars(scip),
-                           SCIPgetNImplVars(scip), SCIPgetNConss(scip));
+                           SCIPgetNConss(scip));
 
       SCIPdialogMessage(scip, NULL, "increased branching priority of new binary variables");
 

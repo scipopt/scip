@@ -548,7 +548,7 @@ BEGIN {
          vars = $3;
          intvars = $6;
          contvars = $8;
-         implvars = $10;
+         implvars = 0;
          binvars = vars - intvars - contvars;
       }
       else

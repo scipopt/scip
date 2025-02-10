@@ -400,10 +400,10 @@ SCIP_RETCODE SCIPreadProb(
          SCIP_Real readingtime;
 
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-            "original problem has %d variables (%d bin, %d int, %d cont; %d impl) and %d constraints\n",
+            "original problem has %d variables (%d bin, %d int, %d cont) and %d constraints\n",
             scip->origprob->nvars, scip->origprob->nbinvars + scip->origprob->nbinimplvars, scip->origprob->nintvars +
             scip->origprob->nintimplvars, scip->origprob->ncontvars + scip->origprob->ncontimplvars,
-            SCIPprobGetNImplVars(scip->origprob), scip->origprob->nconss);
+            scip->origprob->nconss);
 
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
                                   "original problem has %d implied integers: (%d bin, %d int, %d cont)\n",

@@ -366,12 +366,12 @@ SCIP_RETCODE SCIPtransformProb(
 
    /* print transformed problem statistics */
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-      "transformed problem has %d variables (%d bin, %d int, %d cont; %d impl) and %d constraints\n",
+      "transformed problem has %d variables (%d bin, %d int, %d cont) and %d constraints\n",
       scip->transprob->nvars, scip->transprob->nbinvars + scip->transprob->nbinimplvars,
       scip->transprob->nintvars + scip->transprob->nintimplvars, scip->transprob->ncontvars +
-      scip->transprob->ncontimplvars, SCIPprobGetNImplVars(scip->transprob), scip->transprob->nconss);
+      scip->transprob->ncontimplvars, scip->transprob->nconss);
 
-   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                             "transformed problem has %d implied integers: (%d bin, %d int, %d cont)\n",
                             SCIPprobGetNImplVars(scip->transprob), scip->transprob->nbinimplvars,
                             scip->transprob->nintimplvars, scip->transprob->ncontimplvars);
@@ -2425,10 +2425,10 @@ SCIP_RETCODE SCIPpresolve(
 
          /* print presolved problem statistics */
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-            "presolved problem has %d variables (%d bin, %d int, %d cont; %d impl) and %d constraints\n",
+            "presolved problem has %d variables (%d bin, %d int, %d cont) and %d constraints\n",
             scip->transprob->nvars, scip->transprob->nbinvars + scip->transprob->nbinimplvars,
             scip->transprob->nintvars + scip->transprob->nintimplvars, scip->transprob->ncontvars +
-            scip->transprob->ncontimplvars, SCIPprobGetNImplVars(scip->transprob), scip->transprob->nconss);
+            scip->transprob->ncontimplvars, scip->transprob->nconss);
 
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
                                   "presolved problem has %d implied integers: (%d bin, %d int, %d cont)\n",
