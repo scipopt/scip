@@ -2544,6 +2544,8 @@ SCIP_RETCODE SCIPvarParseOriginal(
             varcopy, vardelorig, vartrans, vardeltrans, vardata) );
 
       /* set variable status and data */
+      SCIPvarAdjustLb(*var, set, &lb);
+      SCIPvarAdjustUb(*var, set, &ub);
       (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL; /*lint !e641*/
       (*var)->data.original.origdom.holelist = NULL;
       (*var)->data.original.origdom.lb = lb;
