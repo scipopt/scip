@@ -277,7 +277,10 @@ void MSKAPI printstr(
       return;
 #endif
 
-   SCIPmessagePrintInfo((SCIP_MESSAGEHDLR *) handle, "MOSEK: %s", str);
+   if ( handle == NULL )
+      printf("MOSEK: %s", str);
+   else
+      SCIPmessagePrintInfo((SCIP_MESSAGEHDLR *) handle, "MOSEK: %s", str);
 }
 
 #if DEBUG_CHECK_DATA > 0
