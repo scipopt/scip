@@ -77,26 +77,26 @@ enum SCIP_VarImplType
 {
   SCIP_VARIMPLTYPE_NONE   = 0,               /**< The variable is not implied integer by other variables */
   SCIP_VARIMPLTYPE_WEAK   = 1,               /**< The constraints handlers enforce that if the problem is relaxed
-                                                * to have integrality constraints for the non-implied integer variables
-                                                * only, there exists an optimal solution where all weakly and strongly
-                                                * implied integer variables have integer solution values.
-                                                *
-                                                * @note This notion of implied integrality is fragile and may break
-                                                * if extra constraints are added.
-                                                *
-                                                * @example The variable z is a weakly implied integer if it only occurs
-                                                * in the constraint 4x + 3y + z \leq 10, where x and y are integer and
-                                                * z has objective 0. */
+                                              *   to have integrality constraints for the non-implied integer variables
+                                              *   only, there exists an optimal solution where all weakly and strongly
+                                              *   implied integer variables have integer solution values.
+                                              *
+                                              *   @note This notion of implied integrality is fragile and may break
+                                              *   if extra constraints are added.
+                                              *
+                                              *   @example The variable z is a weakly implied integer if it only occurs
+                                              *   in the constraint 4x + 3y + z \leq 10, where x and y are integer and
+                                              *   z has objective 0. */
   SCIP_VARIMPLTYPE_STRONG = 2                /**< The constraints handlers enforce that if the problem is relaxed
-                                                * to have integrality constraints for the non-implied integer variables
-                                                * only, in every feasible solution all strongly implied integer
-                                                * variables have integer solution values.
-                                                *
-                                                * @note This notion of implied integrality remains intact under the
-                                                * addition of additional constraints to the problem.
-                                                *
-                                                * @example The variable z is a strong implied integer if we have the
-                                                * constraint: 4x + 3y + z = 10, where x and y are integer variables. */
+                                              *   to have integrality constraints for the non-implied integer variables
+                                              *   only, in every feasible solution all strongly implied integer
+                                              *   variables have integer solution values.
+                                              *
+                                              *   @note This notion of implied integrality remains intact under the
+                                              *   addition of additional constraints to the problem.
+                                              *
+                                              *   @example The variable z is a strong implied integer if we have the
+                                              *   constraint: 4x + 3y + z = 10, where x and y are integer variables. */
 };
 typedef enum SCIP_VarImplType SCIP_VARIMPLTYPE;
 
