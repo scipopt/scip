@@ -33,6 +33,7 @@ Fixed bugs
 - added copy callbacks for presolvers dualagg and redvub, branching rules lookahead and cloud, primal heuristics dualval and repair, propagator nlobbt, and separators gauge and convexproj
 - respect maximal separation rounds setting by running remaining delayed separators in last round
 - replace terms consistently in applyFixings() of cons_linear to handle infinite aggregations
+- fixed bug with SOS2 constraints of size that avoided a correct enforcing
 
 Build system
 ------------
