@@ -3841,7 +3841,7 @@ CLEANUP:
 #undef SCIPexprSetActivity
 #undef SCIPexprGetCurvature
 #undef SCIPexprSetCurvature
-#undef SCIPexprIsIntegral
+#undef SCIPexprGetIntegrality
 #undef SCIPexprSetIntegrality
 #undef SCIPexprAreQuadraticExprsVariables
 #endif
