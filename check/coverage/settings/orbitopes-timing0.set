@@ -3,4 +3,3 @@ propagating/symmetry/detectorbitopes = TRUE
 propagating/symmetry/symtiming = 0
 constraints/symresack/ppsymresack = FALSE
 constraints/orbisack/checkpporbisack = FALSE
-constraints/orbitope/checkpporbitope = FALSE
