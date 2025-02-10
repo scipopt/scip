@@ -2553,6 +2553,8 @@ SCIP_RETCODE SCIPvarParseOriginal(
       (*var)->data.original.transvar = NULL;
 
       /* set lazy status of variable bounds */
+      SCIPvarAdjustLb(*var, set, &lazylb);
+      SCIPvarAdjustUb(*var, set, &lazyub);
       (*var)->lazylb = lazylb;
       (*var)->lazyub = lazyub;
 
