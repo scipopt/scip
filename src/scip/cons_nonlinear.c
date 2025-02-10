@@ -5901,6 +5901,7 @@ SCIP_RETCODE presolveImplint(
       impltype = integralitylevel == 1 ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_STRONG;
 
       SCIP_CALL( SCIPchgVarImplType(scip, SCIPgetVarExprVar(cand), impltype, infeasible) );
+      ++(*nchgvartypes);
 
       if( *infeasible )
          return SCIP_OKAY;
