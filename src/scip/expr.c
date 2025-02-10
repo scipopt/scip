@@ -1093,7 +1093,7 @@ SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
    assert(expr->exprhdlr == exprhdlr);
    assert(integralitylevel != NULL);
 
-   *integralitylevel = 0;
+   *integralitylevel = SCIP_EXPR_INTEGRALITY_NONE;
 
    /* check whether the expression handler implements the monotonicity callback */
    if( exprhdlr->integrality != NULL )

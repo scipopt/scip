@@ -2087,6 +2087,7 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    SCIP_Real childub;
    SCIP_Real exponent;
    SCIP_Bool isinteger;
+   SCIP_Bool childintegral;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -2146,8 +2147,9 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    }
    assert(isinteger || childlb >= 0.0);
 
+   childintegral = SCIPexprGetIntegrality(child) > 0;
    SCIP_CALL( buildPowEstimator(scip, exprdata, overestimate, childlb, childub, globalbounds[0].inf,
-         globalbounds[0].sup, SCIPexprGetIntegrality(child) > 0, MAX(childlb, *refpoint), exponent, coefs,
+         globalbounds[0].sup, childintegral, MAX(childlb, *refpoint), exponent, coefs,
          constant, success, islocal, branchcand) );
 
    return SCIP_OKAY;
@@ -2305,6 +2307,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
    for( i = 0; i < 6 && *nreturned < SCIP_EXPR_MAXINITESTIMATES; ++i )
    {
       SCIP_Real refpoint;
+      SCIP_Bool childintegral;
 
       if( (overest[i] && !overestimate) || (!overest[i] && overestimate) )
          continue;
@@ -2318,8 +2321,9 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
 
       branchcand = TRUE;
-      SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childlb, childub, childlb, childub,
-            SCIPexprGetIntegrality(child) > 0, refpoint, exponent, coefs[*nreturned], &constant[*nreturned],
+      childintegral = SCIPexprGetIntegrality(child) > 0;
+      SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childlb, childub, childlb, childub, childintegral,
+            refpoint, exponent, coefs[*nreturned], &constant[*nreturned],
             &success, &islocal, &branchcand) );
 
       if( success )
@@ -2466,7 +2470,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityPow)
    SCIP_EXPR_INTEGRALITY exponentintegrality = expisint && exponent >= 0.0 ? SCIP_EXPR_INTEGRALITY_STRONG : SCIP_EXPR_INTEGRALITY_NONE;
 
    /* expression can not be integral if child is not */
-   *integralitylevel = MIN(exponentintegrality, SCIPexprGetIntegrality(child));
+   *integralitylevel = MIN(exponentintegrality, SCIPexprGetIntegrality(child)); /*lint !e666*/
 
    return SCIP_OKAY;
 }

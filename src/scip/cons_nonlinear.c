@@ -5866,7 +5866,7 @@ SCIP_RETCODE presolveImplint(
       if( cand == NULL )
          continue;
 
-      integralitylevel = 2;
+      integralitylevel = SCIP_EXPR_INTEGRALITY_STRONG;
 
       /* check whether all other coefficients are integral when diving by candcoef and all other children are integral */
       for( i = 0; i < nchildren; ++i )
@@ -5876,7 +5876,7 @@ SCIP_RETCODE presolveImplint(
 
          integralitylevel = MIN(integralitylevel, SCIPexprGetIntegrality(children[i]));
          /* child i must be integral */
-         if( integralitylevel == 0 )
+         if( integralitylevel == SCIP_EXPR_INTEGRALITY_NONE )
          {
             cand = NULL;
             break;
@@ -5897,8 +5897,8 @@ SCIP_RETCODE presolveImplint(
          SCIPvarGetName(SCIPgetVarExprVar(cand)), SCIPconsGetName(conss[c]));
 
       /* change variable type */
-      assert(integralitylevel > 0);
-      impltype = integralitylevel == 1 ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_STRONG;
+      assert(integralitylevel != SCIP_EXPR_INTEGRALITY_NONE);
+      impltype = integralitylevel == SCIP_EXPR_INTEGRALITY_WEAK ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_STRONG;
 
       SCIP_CALL( SCIPchgVarImplType(scip, SCIPgetVarExprVar(cand), impltype, infeasible) );
       ++(*nchgvartypes);
