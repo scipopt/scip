@@ -890,6 +890,7 @@ SCIP_RETCODE SCIPlpiCreate(
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_DEGEN, DEGEN_LEVEL) );
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_SWITCH_OPTIMIZER, MSK_ON) );
    MOSEK_CALL( MSK_puttaskname((*lpi)->task, (char*) name) );
+   MOSEK_CALL( MSK_putobjname((*lpi)->task, "obj") );
 
    /* disable errors for huge values */
    MOSEK_CALL( MSK_putdouparam((*lpi)->task, MSK_DPAR_DATA_TOL_AIJ_HUGE, MSK_INFINITY * 2)); /* not clear why the *2 is needed */
