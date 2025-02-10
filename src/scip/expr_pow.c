@@ -2147,7 +2147,7 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    }
    assert(isinteger || childlb >= 0.0);
 
-   childintegral = SCIPexprGetIntegrality(child) > 0;
+   childintegral = SCIPexprGetIntegrality(child) != SCIP_EXPR_INTEGRALITY_NONE;
    SCIP_CALL( buildPowEstimator(scip, exprdata, overestimate, childlb, childub, globalbounds[0].inf,
          globalbounds[0].sup, childintegral, MAX(childlb, *refpoint), exponent, coefs,
          constant, success, islocal, branchcand) );
@@ -2321,7 +2321,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
 
       branchcand = TRUE;
-      childintegral = SCIPexprGetIntegrality(child) > 0;
+      childintegral = SCIPexprGetIntegrality(child) != SCIP_EXPR_INTEGRALITY_NONE;
       SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childlb, childub, childlb, childub, childintegral,
             refpoint, exponent, coefs[*nreturned], &constant[*nreturned],
             &success, &islocal, &branchcand) );
