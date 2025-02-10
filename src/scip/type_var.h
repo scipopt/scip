@@ -80,6 +80,13 @@ enum SCIP_VarImplType
                                               *   to have integrality constraints for the non-implied integer variables
                                               *   only, there exists an optimal solution where all weakly and strongly
                                               *   implied integer variables have integer solution values.
+                                              *   For infeasible problems, weak implied integrality holds if relaxing
+                                              *   the integrality constraints for the non-implied integer variables
+                                              *   does not make the problem feasible.
+                                              *   For unbounded problems, weak implied integrality means that there
+                                              *   exists an unbounded sequence of solutions to the relaxed problem,
+                                              *   where each  solution has integer solution values for the weakly and
+                                              *   strongly implied integer variables.
                                               *
                                               *   @note This notion of implied integrality is fragile and may break
                                               *   if extra constraints are added.
