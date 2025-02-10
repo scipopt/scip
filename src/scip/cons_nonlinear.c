@@ -3911,7 +3911,7 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    /* create and add auxiliary variable */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(facvar));
    SCIP_CALL( SCIPcreateVarImpl(scip, &auxvar, name, minact, maxact, 0.0,
-         SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE,
+         SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_VARIMPLTYPE_STRONG : SCIP_VARIMPLTYPE_NONE,
          TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
