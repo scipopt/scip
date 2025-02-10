@@ -2018,7 +2018,7 @@ SCIP_RETCODE SCIPcomputeExprIntegrality(
    )
 {
    SCIP_EXPRITER* it;
-   SCIP_Bool isintegral;
+   SCIP_EXPRINT integralitylevel;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -2028,8 +2028,8 @@ SCIP_RETCODE SCIPcomputeExprIntegrality(
    if( SCIPexprGetNChildren(expr) == 0 )
    {
       /* compute integrality information */
-      SCIP_CALL( SCIPexprhdlrIntegralityExpr(SCIPexprGetHdlr(expr), scip->set, expr, &isintegral) );
-      SCIPexprSetIntegrality(expr, isintegral);
+      SCIP_CALL( SCIPexprhdlrIntegralityExpr(SCIPexprGetHdlr(expr), scip->set, expr, &integralitylevel) );
+      SCIPexprSetIntegrality(expr, integralitylevel);
 
       return SCIP_OKAY;
    }
@@ -2041,8 +2041,8 @@ SCIP_RETCODE SCIPcomputeExprIntegrality(
    for( expr = SCIPexpriterGetCurrent(it); !SCIPexpriterIsEnd(it); expr = SCIPexpriterGetNext(it) )
    {
       /* compute integrality information */
-      SCIP_CALL( SCIPexprhdlrIntegralityExpr(SCIPexprGetHdlr(expr), scip->set, expr, &isintegral) );
-      SCIPexprSetIntegrality(expr, isintegral);
+      SCIP_CALL( SCIPexprhdlrIntegralityExpr(SCIPexprGetHdlr(expr), scip->set, expr, &integralitylevel) );
+      SCIPexprSetIntegrality(expr, integralitylevel);
    }
 
    SCIPexpriterFree(&it);

@@ -355,9 +355,16 @@ SCIP_DECL_EXPRINTEGRALITY(integralityVar)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(isintegral != NULL);
+   assert(integralitylevel != NULL);
 
-   *isintegral = SCIPvarIsIntegral(SCIPgetVarExprVar(expr));
+   SCIP_VAR * var = SCIPgetVarExprVar(expr);
+
+   if( !SCIPvarIsIntegral(var) )
+      *integralitylevel = SCIP_EXPRINT_NONE;
+   else if( SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_WEAK )
+      *integralitylevel = SCIP_EXPRINT_WEAK;
+   else
+      *integralitylevel = SCIP_EXPRINT_STRONG;
 
    return SCIP_OKAY;
 }

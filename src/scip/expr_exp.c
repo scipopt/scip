@@ -329,7 +329,8 @@ SCIP_DECL_EXPRESTIMATE(estimateExp)
    }
    else
    {
-      addExpLinearization(scip, refpoint[0], SCIPexprIsIntegral(SCIPexprGetChildren(expr)[0]), coefs, constant, success);
+      addExpLinearization(scip, refpoint[0], SCIPexprGetIntegrality(SCIPexprGetChildren(expr)[0]) != SCIP_EXPRINT_NONE,
+                          coefs, constant, success);
       *islocal = FALSE; /* linearization are globally valid */
       *branchcand = FALSE;
    }
@@ -395,7 +396,8 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesExp)
       {
          assert(i < 3);
          /* coverity[overrun] */
-         addExpLinearization(scip, refpointsunder[i], SCIPexprIsIntegral(child), coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
+         addExpLinearization(scip, refpointsunder[i], SCIPexprGetIntegrality(child) != SCIP_EXPRINT_NONE,
+                             coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
       }
       else
          addExpSecant(scip, lb, ub, coefs[*nreturned], &constant[*nreturned], &success);

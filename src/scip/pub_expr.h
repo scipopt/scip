@@ -574,7 +574,7 @@ void SCIPexprSetCurvature(
 
 /** returns whether an expression is integral */
 SCIP_EXPORT
-SCIP_Bool SCIPexprIsIntegral(
+SCIP_EXPRINT SCIPexprGetIntegrality(
    SCIP_EXPR*            expr                /**< expression */
    );
 
@@ -582,7 +582,7 @@ SCIP_Bool SCIPexprIsIntegral(
 SCIP_EXPORT
 void SCIPexprSetIntegrality(
    SCIP_EXPR*            expr,               /**< expression */
-   SCIP_Bool             isintegral          /**< integrality of the expression */
+   SCIP_EXPRINT          integrality         /**< integrality level of the expression */
    );
 
 /** @} */

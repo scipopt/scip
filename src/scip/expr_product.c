@@ -2198,19 +2198,19 @@ SCIP_DECL_EXPRINTEGRALITY(integralityProduct)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(isintegral != NULL);
+   assert(integralitylevel != NULL);
 
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
-   *isintegral = EPSISINT(exprdata->coefficient, 0.0); /*lint !e835*/
+   *integralitylevel = EPSISINT(exprdata->coefficient, 0.0) ? SCIP_EXPRINT_STRONG : SCIP_EXPRINT_NONE; /*lint !e835*/
 
-   for( i = 0; i < SCIPexprGetNChildren(expr) && *isintegral; ++i )
+   for( i = 0; i < SCIPexprGetNChildren(expr) && *integralitylevel > 0; ++i )
    {
       SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
       assert(child != NULL);
 
-      *isintegral = SCIPexprIsIntegral(child);
+      *integralitylevel = MIN(*integralitylevel, SCIPexprGetIntegrality(child));
    }
 
    return SCIP_OKAY;

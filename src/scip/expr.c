@@ -1084,21 +1084,21 @@ SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to check integrality for */
-   SCIP_Bool*            isintegral          /**< buffer to store whether expression is integral */
+   SCIP_EXPRINT*         integralitylevel    /**< buffer to store the integrality level of the expression */
    )
 {
    assert(exprhdlr != NULL);
    assert(set != NULL);
    assert(expr != NULL);
    assert(expr->exprhdlr == exprhdlr);
-   assert(isintegral != NULL);
+   assert(integralitylevel != NULL);
 
-   *isintegral = FALSE;
+   *integralitylevel = 0;
 
    /* check whether the expression handler implements the monotonicity callback */
    if( exprhdlr->integrality != NULL )
    {
-      SCIP_CALL( exprhdlr->integrality(set->scip, expr, isintegral) );
+      SCIP_CALL( exprhdlr->integrality(set->scip, expr, integralitylevel) );
    }
 
    return SCIP_OKAY;
@@ -3034,7 +3034,7 @@ SCIP_RETCODE SCIPexprEvalActivity(
              * use SCIPceil and SCIPfloor for now the default intevalVar does not relax variables, so can omit
              * expressions without children (constants should be ok, too)
              */
-            if( expr->isintegral && expr->nchildren > 0 )
+            if( expr->integralitylevel != SCIP_EXPRINT_NONE && expr->nchildren > 0 )
             {
                if( expr->activity.inf > -SCIP_INTERVAL_INFINITY )
                   expr->activity.inf = SCIPsetCeil(set, expr->activity.inf);
@@ -4076,24 +4076,24 @@ void SCIPexprSetCurvature(
 }
 
 /** returns whether an expression is integral */
-SCIP_Bool SCIPexprIsIntegral(
+SCIP_EXPRINT SCIPexprGetIntegrality(
    SCIP_EXPR*            expr                /**< expression */
    )
 {
    assert(expr != NULL);
 
-   return expr->isintegral;
+   return expr->integralitylevel;
 }
 
 /** sets the integrality flag of an expression */
 void SCIPexprSetIntegrality(
    SCIP_EXPR*            expr,               /**< expression */
-   SCIP_Bool             isintegral          /**< integrality of the expression */
+   SCIP_EXPRINT          integrality         /**< integrality level of the expression */
    )
 {
    assert(expr != NULL);
 
-   expr->isintegral = isintegral;
+   expr->integralitylevel = integrality;
 }
 
 /** gives the coefficients and expressions that define a quadratic expression

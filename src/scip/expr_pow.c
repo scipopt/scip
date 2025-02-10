@@ -2147,7 +2147,7 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    assert(isinteger || childlb >= 0.0);
 
    SCIP_CALL( buildPowEstimator(scip, exprdata, overestimate, childlb, childub, globalbounds[0].inf,
-         globalbounds[0].sup, SCIPexprIsIntegral(child), MAX(childlb, *refpoint), exponent, coefs,
+         globalbounds[0].sup, SCIPexprGetIntegrality(child) > 0, MAX(childlb, *refpoint), exponent, coefs,
          constant, success, islocal, branchcand) );
 
    return SCIP_OKAY;
@@ -2319,7 +2319,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
 
       branchcand = TRUE;
       SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childlb, childub, childlb, childub,
-            SCIPexprIsIntegral(child), refpoint, exponent, coefs[*nreturned], &constant[*nreturned],
+            SCIPexprGetIntegrality(child) > 0, refpoint, exponent, coefs[*nreturned], &constant[*nreturned],
             &success, &islocal, &branchcand) );
 
       if( success )
@@ -2452,24 +2452,21 @@ SCIP_DECL_EXPRINTEGRALITY(integralityPow)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(isintegral != NULL);
+   assert(integralitylevel != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
-
-   *isintegral = FALSE;
 
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
-
-   /* expression can not be integral if child is not */
-   if( !SCIPexprIsIntegral(child) )
-      return SCIP_OKAY;
 
    exponent = SCIPgetExponentExprPow(expr);
    assert(exponent != 0.0);
    expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
 
    /* expression is integral if and only if exponent non-negative and integral */
-   *isintegral = expisint && exponent >= 0.0;
+   SCIP_EXPRINT exponentintegrality = expisint && exponent >= 0.0 ? SCIP_EXPRINT_STRONG : SCIP_EXPRINT_NONE;
+
+   /* expression can not be integral if child is not */
+   *integralitylevel = MIN(exponentintegrality, SCIPexprGetIntegrality(child));
 
    return SCIP_OKAY;
 }

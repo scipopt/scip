@@ -233,10 +233,10 @@ SCIP_DECL_EXPRINTEGRALITY(integralityValue)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(isintegral != NULL);
+   assert(integralitylevel != NULL);
    assert(SCIPexprGetData(expr) != NULL);
 
-   *isintegral = EPSISINT(SCIPexprGetData(expr)->value, 0.0); /*lint !e835 !e666*/
+   *integralitylevel = EPSISINT(SCIPexprGetData(expr)->value, 0.0) ? SCIP_EXPRINT_STRONG : SCIP_EXPRINT_NONE; /*lint !e835 !e666*/
 
    return SCIP_OKAY;
 }

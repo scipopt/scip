@@ -639,12 +639,12 @@ SCIP_DECL_EXPRINTEGRALITY(integralityEntropy)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(isintegral != NULL);
+   assert(integralitylevel != NULL);
 
    /* TODO it is possible to check for the special case that the child is integral and its bounds are [0,1]; in
     * this case the entropy expression can only achieve 0 and is thus integral
     */
-   *isintegral = FALSE;
+   *integralitylevel = SCIP_EXPRINT_NONE;
 
    return SCIP_OKAY;
 }
