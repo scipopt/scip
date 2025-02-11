@@ -134,7 +134,7 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateVar", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_VARIMPLTYPE impltype = SCIP_VARIMPLTYPE_NONE;
-   /* For now, we help users and automatically convert the variable to an implied integer one if they are using the
+   /* For now, we help users and automatically convert the variable to an implied integral one if they are using the
     * deprecated variable type. This feature will be deprecated in a future version */
    if( vartype == SCIP_IMPLINT_PLACEHOLDER )
    {
@@ -146,7 +146,7 @@ SCIP_RETCODE SCIPcreateVar(
    return SCIP_OKAY;
 }
 
-/** creates and captures problem variable that may be implied integer; if variable is of integral type, fractional
+/** creates and captures problem variable that may be implied integral; if variable is of integral type, fractional
  *  bounds are automatically rounded; an integer variable with bounds zero and one is automatically converted into
  *  a binary variable;
  *
@@ -177,7 +177,7 @@ SCIP_RETCODE SCIPcreateVarImpl(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< Implied integer type of the variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -8447,7 +8447,7 @@ SCIP_RETCODE SCIPchgVarType(
    return SCIP_OKAY;
 }
 
-/** changes implied integer type of variable in the problem;
+/** changes implied integral type of variable in the problem;
  *
  *  @warning This type change might change the variable array returned from SCIPgetVars() and SCIPgetVarsData();
  *
@@ -8459,10 +8459,10 @@ SCIP_RETCODE SCIPchgVarType(
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_PRESOLVING
  *
- *  @note If SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed, the implied integer type of the
+ *  @note If SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed, the implied integral type of the
  *        corresponding transformed variable is changed; the type of the original variable does not change
  *
- *  @note If the implied integer type is adjusted to weak or strong for a continuous variable, the bounds of the variable get
+ *  @note If the implied integral type is adjusted to weak or strong for a continuous variable, the bounds of the variable get
  *        adjusted w.r.t. to integrality information
  */
 SCIP_RETCODE SCIPchgVarImplType(
@@ -8480,7 +8480,7 @@ SCIP_RETCODE SCIPchgVarImplType(
 
    if( SCIPvarIsNegated(var) )
    {
-      SCIPdebugMsg(scip, "changing implied integer type of negated variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetImplType(var), impltype);
+      SCIPdebugMsg(scip, "changing implied integral type of negated variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetImplType(var), impltype);
       var = SCIPvarGetNegationVar(var);
    }
 #ifndef NDEBUG
@@ -8488,7 +8488,7 @@ SCIP_RETCODE SCIPchgVarImplType(
    {
       if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
       {
-         SCIPdebugMsg(scip, "changing implied integer type of variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetImplType(var), impltype);
+         SCIPdebugMsg(scip, "changing implied integral type of variable <%s> from %d to %d\n", SCIPvarGetName(var), SCIPvarGetImplType(var), impltype);
       }
    }
 #endif

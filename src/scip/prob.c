@@ -812,7 +812,7 @@ int probProvidePos(
    }
    assert(insertpos == contimplstart);
 
-   /* implied integer variable */
+   /* implied integral variable */
    if( vartype == SCIP_VARTYPE_INTEGER && impltype != SCIP_VARIMPLTYPE_NONE )
    {
       ++prob->nintimplvars;
@@ -840,7 +840,7 @@ int probProvidePos(
    }
    assert(insertpos == binimplstart);
 
-   /* non-implied integer variable */
+   /* non-implied integral variable */
    if( vartype == SCIP_VARTYPE_INTEGER )
    {
       assert(impltype == SCIP_VARIMPLTYPE_NONE);
@@ -1001,14 +1001,14 @@ SCIP_RETCODE probRemoveVar(
    }
    if( freepos < intimplstart-1 )
    {
-      /* move last binary implied integer variable to free slot */
+      /* move last binary implied integral variable to free slot */
       prob->vars[freepos] = prob->vars[intimplstart-1];
       SCIPvarSetProbindex(prob->vars[freepos], freepos);
       freepos = intimplstart-1;
    }
    if( freepos < contimplstart-1 )
    {
-      /* move last integer implied integer variable to free slot */
+      /* move last integer implied integral variable to free slot */
       prob->vars[freepos] = prob->vars[contimplstart-1];
       SCIPvarSetProbindex(prob->vars[freepos], freepos);
       freepos = contimplstart-1;
@@ -1330,7 +1330,7 @@ SCIP_RETCODE SCIPprobChgVarType(
    return SCIP_OKAY;
 }
 
-/** changes the implied integer type of a variable in the problem */
+/** changes the implied integral type of a variable in the problem */
 SCIP_RETCODE SCIPprobChgVarImplType(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1340,8 +1340,8 @@ SCIP_RETCODE SCIPprobChgVarImplType(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_VAR*             var,                /**< variable to change implied integer type of */
-   SCIP_VARIMPLTYPE      impltype            /**< new implied integer type of variable */
+   SCIP_VAR*             var,                /**< variable to change implied integral type of */
+   SCIP_VARIMPLTYPE      impltype            /**< new implied integral type of variable */
    )
 {
    assert(prob != NULL);
@@ -2405,7 +2405,7 @@ void SCIPprobPrintStatistics(
    SCIPmessageFPrintInfo(messagehdlr, file, "  Problem name     : %s\n", prob->name);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d continuous)\n",
          prob->nvars, prob->nbinvars + prob->nbinimplvars, prob->nintvars + prob->nintimplvars, prob->ncontvars + prob->ncontimplvars);
-   SCIPmessageFPrintInfo(messagehdlr, file, "  Implied integers : %d (%d binary, %d integer, %d continuous)\n",
+   SCIPmessageFPrintInfo(messagehdlr, file, "  implied integrals : %d (%d binary, %d integer, %d continuous)\n",
          SCIPprobGetNImplVars(prob), prob->nbinimplvars, prob->nintimplvars, prob->ncontimplvars);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Objective        : %s, %d non-zeros (abs.min = %g, abs.max = %g)\n",

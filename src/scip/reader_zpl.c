@@ -1123,7 +1123,7 @@ VarClass xlp_getclass(
    SCIP_VAR* scipvar = (SCIP_VAR*)var;
    int implintlevel;
 
-   /* adjust border between int and imp based on the implied integer level */
+   /* adjust border between int and imp based on the implied integral level */
    assert(readerdata != NULL);
    SCIPgetIntParam(readerdata->scip, "write/implintlevel", &implintlevel);
    assert(implintlevel >= -2);

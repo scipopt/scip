@@ -369,21 +369,21 @@ SECTION: General Questions about SCIP
         </ul>
     </p>
 
-    QUESTION: What are implied integers, and what is the difference between weak and strong implied integers?
+    QUESTION: What are implied integral variables, and what is the difference between weak and strong implied integrality?
     LABEL:impliedinteger
     ANSWER:
     <p>
-        A variable is said to be an implied integer if its integrality is implied by enforcing a set of constraints and the integrality.
+        A variable is said to be an implied integral if its integrality is implied by enforcing a set of constraints and the integrality constraints of other variables.
         SCIP distinguishes between two types of implied integrality: strong implied integrality and weak implied integrality,
         which are encoded by the flag <code>SCIP_VARIMPLTYPE</code>.
     </p>
     <p>
-        A variable is a strong implied integer if, it has an integer solution value in the problem that remains after
-        fixing all non-implied integer variables to feasible integer values.
+        A variable is strongly implied integral if it has a fixed integer solution value in the problem that remains after
+        fixing all non-implied integral variables to feasible integer values.
         For example, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b, the variable y
-        could be declared strongly implied integer if the variables x<sub>i</sub> are of type integer or binary and the
+        could be declared strongly implied integral if the variables x<sub>i</sub> are of type integer or binary and the
         coefficients a<sub>i</sub> and the right hand side b are integral.
-        Algorithms within SCIP can exploit the fact that a variable is implied integer.
+        Algorithms within SCIP can exploit the fact that a variable is implied integral.
         If the type of y is <code>SCIP_VARTYPE_CONTINUOUS</code>, and some domain propagation algorithm deduces that
         y &ge; 0.5 holds, then the lower bound of y can be automatically tightened to 1 by using integrality.
         Further, cuts may be tightened by using the integrality of y, and new classes of cuts may become available.
@@ -393,27 +393,27 @@ SECTION: General Questions about SCIP
     </p>
     <p>
         Weak implied integrality is a less restrictive form of implied integrality than strong implied integrality.
-        A variable is said to be weakly implied integer, if there exists an optimal solution to the relaxed problem,
-        where only the non-implied integer variables have integrality constraints,
-        such that all weakly implied integer variables have integer solution values.
+        A variable is said to be weakly implied integral, if there exists an optimal solution to the relaxed problem,
+        where only the non-implied integral variables have integrality constraints,
+        such that all weakly implied integral variables have integer solution values.
         For example, weak implied integrality may occur if a  variable y occurs only in a linear constraint of the form
         &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y &le; b, where x<sub>i</sub>, a<sub>i</sub> and b are all integer, and y is not part of the objective.
-        In contrast with the strong implied integer case, the variable y is not forced to take an integer solution value after the x-variables are fixed.
+        In contrast with strong implied integrality, the variable y is not forced to take an integer solution value after the x-variables are fixed.
         However, there always <b>exists</b> a feasible optimal solution where y is integer, which can be derived by using the
         equality &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b in this case.
     </p>
     <p>
         Originally, the variable type <code>SCIP_VARTYPE_IMPLINT</code> was used for continuous variables for which
-        it is known that there exists at least one optimal solution such that all implied integers are integral.
+        it is known that there exists at least one optimal solution such that all implied integral variables are integral.
         With SCIP 10.0.0, this variable type is deprecated in favor of the new flag <code>SCIP_VARIMPLTYPE</code>
         which can take the values <code>NONE</code>, <code>WEAK</code> and <code>STRONG</code>.
-        The primary motivation for this change is to allow users to model implied integer variables of non-continuous
-        variables, which was previously impossible.
+        The primary motivation for this change is to allow users to model implied integrality of variables of integer
+        and binary type, which was previously impossible.
         In all versions before SCIP 10, <code>SCIP_VARTYPE_IMPLINT</code> was interpreted by SCIP to not have an
         integrality constraint, which means that SCIP does not explicitly enforce the integrality of these variables
         in primal solutions.
         In SCIP 10 and all versions after, variables of type <code>SCIP_VARTYPE_IMPLINT</code> can be equivalently
-        modelled with variable type <code>SCIP_VARTYPE_CONTINUOUS</code> and implied integer type <code>SCIP_VARIMPLTYPE_WEAK</code>.
+        modelled with variable type <code>SCIP_VARTYPE_CONTINUOUS</code> and implied integral type <code>SCIP_VARIMPLTYPE_WEAK</code>.
         With the new flag <code>SCIP_VARIMPLTYPE</code>, SCIP and its users can now take advantage of implied integrality
         for variables that also have integrality constraints, which can be important for performance.
     </p>

@@ -211,7 +211,7 @@ SCIP_RETCODE SCIPcreateObjVarImpl(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    scip::ObjVardata*     objvardata,         /**< user variable data object */

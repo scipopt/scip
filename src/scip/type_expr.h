@@ -79,8 +79,8 @@ typedef enum
 {
    SCIP_EXPR_INTEGRALITY_NONE     = 0,       /**< The expression is not integral. */
    SCIP_EXPR_INTEGRALITY_WEAK     = 1,       /**< The expression is weakly implied integral, i.e. it is integral but it
-                                               *< contains weakly implied integers */
-   SCIP_EXPR_INTEGRALITY_STRONG   = 2        /**< The expression is integral and contains no weakly implied integers. */
+                                               *< contains weakly implied integrals */
+   SCIP_EXPR_INTEGRALITY_STRONG   = 2        /**< The expression is integral and contains no weakly implied integrals. */
 } SCIP_EXPR_INTEGRALITY;
 
 /**@name Expression Owner */

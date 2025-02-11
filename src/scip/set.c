@@ -533,10 +533,10 @@
 
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
 #define SCIP_DEFAULT_PRINTZEROS           FALSE /**< should variables set to zero be printed? */
-#define SCIP_DEFAULT_WRITE_IMPLINTLEVEL      0  /**< Should integrality constraints (i.c.) be written for implied integer variables?
-                                                  * ( -2: remove i.c. for all implied integers, -1: remove i.c. for all strong implied integers,
-                                                  *    0: use original i.c. , 1: add i.c. for strong implied integers,
-                                                  *    2: add i.c. for all implied integers ) */
+#define SCIP_DEFAULT_WRITE_IMPLINTLEVEL      0  /**< Should integrality constraints (i.c.) be written for implied integral variables?
+                                                  * ( -2: remove i.c. for all implied integrals, -1: remove i.c. for all strong implied integrals,
+                                                  *    0: use original i.c. , 1: add i.c. for strong implied integrals,
+                                                  *    2: add i.c. for all implied integrals ) */
 
 
 
@@ -2820,7 +2820,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
                                  "write/implintlevel",
-                                 "Should integrality constraints (i.c.) be written for implied integer variables? (0: use original i.c. , 1: add i.c. for strong implied integers, 2: add i.c. for all implied integers, -1: remove i.c. for all strong implied integers, -2: remove i.c. for all implied integers)",
+                                 "Should integrality constraints (i.c.) be written for implied integral variables? (0: use original i.c. , 1: add i.c. for strong implied integrals, 2: add i.c. for all implied integrals, -1: remove i.c. for all strong implied integrals, -2: remove i.c. for all implied integrals)",
                                  &(*set)->write_implintlevel, FALSE, SCIP_DEFAULT_WRITE_IMPLINTLEVEL, -2, 2,
                                  NULL, NULL) );
 

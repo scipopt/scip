@@ -4265,7 +4265,7 @@ SCIP_RETCODE writeFzn(
    SCIP_Real lb;                          /* lower bound of some variable */
    SCIP_Real ub;                          /* upper bound of some variable */
 
-   int implintlevel;                      /* implied integer level */
+   int implintlevel;                      /* implied integral level */
    int ndiscretevars;                     /* number of discrete variables */
    int nboundedvars;                      /* number of variables which are bounded to exactly one side */
    int nconsvars;                         /* number of variables appearing in a specific constraint */

@@ -852,7 +852,7 @@ SCIP_RETCODE SCIPeventCreateTypeChanged(
    return SCIP_OKAY;
 }
 
-/** creates an event for changing the implied integer type of a variable */
+/** creates an event for changing the implied integral type of a variable */
 SCIP_RETCODE SCIPeventCreateImplTypeChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1328,7 +1328,7 @@ SCIP_VARTYPE SCIPeventGetNewtype(
    return event->data.eventtypechg.newtype;
 }
 
-/** gets old implied integer type for an implied integer type change event */
+/** gets old implied integral type for an implied integral type change event */
 SCIP_VARIMPLTYPE SCIPeventGetOldImpltype(
    SCIP_EVENT*           event               /**< event */
    )
@@ -1337,7 +1337,7 @@ SCIP_VARIMPLTYPE SCIPeventGetOldImpltype(
 
    if( event->eventtype != SCIP_EVENTTYPE_IMPLTYPECHANGED )
    {
-      SCIPerrorMessage("event is not an implied integer type change event\n");
+      SCIPerrorMessage("event is not an implied integral type change event\n");
       SCIPABORT();
       return SCIP_VARIMPLTYPE_NONE;  /*lint !e527*/
    }
@@ -1345,7 +1345,7 @@ SCIP_VARIMPLTYPE SCIPeventGetOldImpltype(
    return event->data.eventimpltypechg.oldtype;
 }
 
-/** gets new implied integer type for an implied integer type change event */
+/** gets new implied integral type for an implied integral type change event */
 SCIP_VARIMPLTYPE SCIPeventGetNewImpltype(
    SCIP_EVENT*           event               /**< event */
    )
@@ -1354,7 +1354,7 @@ SCIP_VARIMPLTYPE SCIPeventGetNewImpltype(
 
    if( event->eventtype != SCIP_EVENTTYPE_IMPLTYPECHANGED )
    {
-      SCIPerrorMessage("event is not an implied integer type change event\n");
+      SCIPerrorMessage("event is not an implied integral type change event\n");
       SCIPABORT();
       return SCIP_VARIMPLTYPE_NONE;  /*lint !e527*/
    }

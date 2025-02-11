@@ -1418,7 +1418,7 @@ SCIP_RETCODE SCIPwriteGms(
       }
    }
 
-   /* adjust written integrality constraints on implied integers based on the implied integer level */
+   /* adjust written integrality constraints on implied integrals based on the implied integral level */
    SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
    assert(implintlevel >= -2);
    assert(implintlevel <= 2);

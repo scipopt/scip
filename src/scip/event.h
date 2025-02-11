@@ -307,7 +307,7 @@ SCIP_RETCODE SCIPeventCreateTypeChanged(
    SCIP_VARTYPE          newtype             /**< new variable type */
    );
 
-/** creates an event for changing the implied integer type of a variable */
+/** creates an event for changing the implied integral type of a variable */
 SCIP_RETCODE SCIPeventCreateImplTypeChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */

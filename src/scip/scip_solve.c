@@ -372,7 +372,7 @@ SCIP_RETCODE SCIPtransformProb(
       scip->transprob->ncontimplvars, scip->transprob->nconss);
 
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "transformed problem has %d implied integers: (%d bin, %d int, %d cont)\n", SCIPprobGetNImplVars(scip->transprob),
+         "transformed problem has %d implied integrals: (%d bin, %d int, %d cont)\n", SCIPprobGetNImplVars(scip->transprob),
          scip->transprob->nbinimplvars, scip->transprob->nintimplvars, scip->transprob->ncontimplvars);
 
    for( h = 0; h < scip->set->nconshdlrs; ++h )
@@ -2430,7 +2430,7 @@ SCIP_RETCODE SCIPpresolve(
             scip->transprob->ncontimplvars, scip->transprob->nconss);
 
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-                                  "presolved problem has %d implied integers: (%d bin, %d int, %d cont)\n",
+                                  "presolved problem has %d implied integrals: (%d bin, %d int, %d cont)\n",
                                   SCIPprobGetNImplVars(scip->transprob), scip->transprob->nbinimplvars,
                                   scip->transprob->nintimplvars, scip->transprob->ncontimplvars);
 

@@ -1937,7 +1937,7 @@ SCIP_RETCODE varCreate(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
@@ -2088,7 +2088,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -2132,7 +2132,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -2372,7 +2372,7 @@ SCIP_RETCODE varParse(
    SCIP_Real*            ub,                 /**< pointer to store the upper bound */
    SCIP_Real*            obj,                /**< pointer to store the objective coefficient */
    SCIP_VARTYPE*         vartype,            /**< pointer to store the variable type */
-   SCIP_VARIMPLTYPE*     impltype,           /**< pointer to store the implied integer type */
+   SCIP_VARIMPLTYPE*     impltype,           /**< pointer to store the implied integral type */
    SCIP_Real*            lazylb,             /**< pointer to store if the lower bound is lazy */
    SCIP_Real*            lazyub,             /**< pointer to store if the upper bound is lazy */
    SCIP_Bool             local,              /**< should the local bound be applied */
@@ -2538,7 +2538,7 @@ SCIP_RETCODE varParse(
       }
       else
       {
-         SCIPerrorMessage("Expected implied integer type 'none', 'weak', or 'strong', got: '%s'.\n", strptr);
+         SCIPerrorMessage("Expected implied integral type 'none', 'weak', or 'strong', got: '%s'.\n", strptr);
          return SCIP_READERROR;
       }
    }
@@ -3091,7 +3091,7 @@ SCIP_RETCODE SCIPvarPrint(
    SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
    int i;
 
-   /* change integrality constraints of implied integers based on the writing settings */
+   /* change integrality constraints of implied integrals based on the writing settings */
    if( vartype == SCIP_VARTYPE_CONTINUOUS )
    {
       if( (int)impltype > 2 - set->write_implintlevel )
@@ -6174,7 +6174,7 @@ SCIP_RETCODE SCIPvarChgType(
    return SCIP_OKAY;
 }
 
-/** changes implied integer type of variable; cannot be called, if var belongs to a problem */
+/** changes implied integral type of variable; cannot be called, if var belongs to a problem */
 SCIP_RETCODE SCIPvarChgImplType(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -6182,7 +6182,7 @@ SCIP_RETCODE SCIPvarChgImplType(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_VARIMPLTYPE      impltype            /**< new implied integer type of variable */
+   SCIP_VARIMPLTYPE      impltype            /**< new implied integral type of variable */
    )
 {
    SCIP_EVENT* event;
@@ -6190,7 +6190,7 @@ SCIP_RETCODE SCIPvarChgImplType(
 
    assert(var != NULL);
 
-   SCIPdebugMessage("change implied integer type of <%s> from %d to %d\n", var->name, SCIPvarGetImplType(var), impltype);
+   SCIPdebugMessage("change implied integral type of <%s> from %d to %d\n", var->name, SCIPvarGetImplType(var), impltype);
 
    if( var->probindex >= 0 )
    {
@@ -17845,7 +17845,7 @@ SCIP_VARTYPE SCIPvarGetType(
    return (SCIP_VARTYPE)(var->vartype);
 }
 
-/** gets the implied integer type of the variable */
+/** gets the implied integral type of the variable */
 SCIP_VARIMPLTYPE SCIPvarGetImplType(
    SCIP_VAR*             var                 /**< problem variable */
    )

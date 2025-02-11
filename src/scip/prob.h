@@ -261,7 +261,7 @@ SCIP_RETCODE SCIPprobChgVarType(
    SCIP_VARTYPE          vartype             /**< new type of variable */
    );
 
-/** changes the implied integer type of a variable in the problem */
+/** changes the implied integral type of a variable in the problem */
 SCIP_RETCODE SCIPprobChgVarImplType(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -271,8 +271,8 @@ SCIP_RETCODE SCIPprobChgVarImplType(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_VAR*             var,                /**< variable to change implied integer type of */
-   SCIP_VARIMPLTYPE      impltype            /**< new implied integer type of variable */
+   SCIP_VAR*             var,                /**< variable to change implied integral type of */
+   SCIP_VARIMPLTYPE      impltype            /**< new implied integral type of variable */
    );
 
 /** informs problem, that the given loose problem variable changed its status */

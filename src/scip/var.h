@@ -218,7 +218,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -241,7 +241,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integer type of the variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -630,7 +630,7 @@ SCIP_RETCODE SCIPvarChgType(
    SCIP_VARTYPE          vartype             /**< new type of variable */
    );
 
-/** changes implied integer type of variable; cannot be called, if var belongs to a problem */
+/** changes implied integral type of variable; cannot be called, if var belongs to a problem */
 SCIP_RETCODE SCIPvarChgImplType(
    SCIP_VAR*             var,                /**< variable to change */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -638,7 +638,7 @@ SCIP_RETCODE SCIPvarChgImplType(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_VARIMPLTYPE      impltype            /**< new implied integer type of variable */
+   SCIP_VARIMPLTYPE      impltype            /**< new implied integral type of variable */
 );
 
 /** changes objective value of variable */

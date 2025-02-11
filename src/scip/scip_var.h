@@ -153,7 +153,7 @@ SCIP_RETCODE SCIPcreateVarBasic(
    SCIP_VARTYPE          vartype             /**< type of variable */
    );
 
-/** creates and captures problem variable that may be implied integer; if variable is of integral type, fractional
+/** creates and captures problem variable that may be implied integral; if variable is of integral type, fractional
  *  bounds are automatically rounded; an integer variable with bounds zero and one is automatically converted into
  *  a binary variable;
  *
@@ -185,7 +185,7 @@ SCIP_RETCODE SCIPcreateVarImpl(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< Implied integer type of the variable (none, weak or strong) */
+   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable (none, weak or strong) */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -2926,7 +2926,7 @@ SCIP_RETCODE SCIPchgVarType(
                                               *   integrality condition of the new variable type) */
    );
 
-/** changes implied integer type of variable in the problem;
+/** changes implied integral type of variable in the problem;
  *
  *  @warning This type change might change the variable array returned from SCIPgetVars() and SCIPgetVarsData();
  *
@@ -2938,17 +2938,17 @@ SCIP_RETCODE SCIPchgVarType(
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_PRESOLVING
  *
- *  @note If SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed, the implied integer type of the
+ *  @note If SCIP is already beyond the SCIP_STAGE_PROBLEM and a original variable is passed, the implied integral type of the
  *        corresponding transformed variable is changed; the type of the original variable does not change
  *
- *  @note If the implied integer type is adjusted to weak or strong for a continuous variable, the bounds of the variable get
+ *  @note If the implied integral type is adjusted to weak or strong for a continuous variable, the bounds of the variable get
  *        adjusted w.r.t. to integrality information
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarImplType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the type for */
-   SCIP_VARIMPLTYPE      impltype,           /**< New implied integer type of the variable */
+   SCIP_VARIMPLTYPE      impltype,           /**< New implied integral type of the variable */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected (due to
                                               *   integrality condition for the new variable type) */
    );

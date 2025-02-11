@@ -458,7 +458,7 @@ SCIP_VARTYPE SCIPvarGetType(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets the implied integer type of the variable */
+/** gets the implied integral type of the variable */
 SCIP_EXPORT
 SCIP_VARIMPLTYPE SCIPvarGetImplType(
    SCIP_VAR*             var                 /**< problem variable */

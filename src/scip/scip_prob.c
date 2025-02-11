@@ -406,7 +406,7 @@ SCIP_RETCODE SCIPreadProb(
                scip->origprob->nconss);
 
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-               "original problem has %d implied integers: (%d bin, %d int, %d cont)\n",
+               "original problem has %d implied integrals: (%d bin, %d int, %d cont)\n",
                SCIPprobGetNImplVars(scip->origprob), scip->origprob->nbinimplvars, scip->origprob->nintimplvars,
                scip->origprob->ncontimplvars);
 
@@ -2768,7 +2768,7 @@ SCIP_RETCODE SCIPgetSolVarsData(
    int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
    int*                  nintvars,           /**< pointer to store number of integer variables or NULL if not needed */
    int*                  nbinimplvars,       /**< pointer to store number of implied binary vars or NULL if not needed */
-   int*                  nintimplvars,       /**< pointer to store number of implied integer vars or NULL if not needed */
+   int*                  nintimplvars,       /**< pointer to store number of implied integral vars or NULL if not needed */
    int*                  ncontimplvars,      /**< pointer to store number of implied continuous vars or NULL if not needed */
    int*                  ncontvars           /**< pointer to store number of continuous variables or NULL if not needed */
    )

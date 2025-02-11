@@ -3239,7 +3239,7 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** implied integer level */
+/** implied integral level */
 static
 int implintlevel = 0;
 
@@ -3967,7 +3967,7 @@ SCIP_RETCODE SCIPwriteMps(
    assert(scip != NULL);
    assert(result != NULL);
 
-   /* get implied integer level for writeVarIsIntegral() and printColumnSection() */
+   /* get implied integral level for writeVarIsIntegral() and printColumnSection() */
    SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
 
    needRANGES = FALSE;

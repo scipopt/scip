@@ -158,13 +158,13 @@ SCIP_VARTYPE SCIPeventGetNewtype(
    SCIP_EVENT*           event               /**< event */
    );
 
-/** gets old implied integer type for an implied integer type change event */
+/** gets old implied integral type for an implied integral type change event */
 SCIP_EXPORT
 SCIP_VARIMPLTYPE SCIPeventGetOldImpltype(
    SCIP_EVENT*           event               /**< event */
    );
 
-/** gets new implied integer type for an implied integer type change event */
+/** gets new implied integral type for an implied integral type change event */
 SCIP_EXPORT
 SCIP_VARIMPLTYPE SCIPeventGetNewImpltype(
    SCIP_EVENT*           event               /**< event */
