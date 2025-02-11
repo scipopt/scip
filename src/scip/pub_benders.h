@@ -214,6 +214,12 @@ SCIP_Bool SCIPbendersSubproblemIsSetup(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** returns the main auxiliary variable that is used the master objective function. */
+SCIP_EXPORT
+SCIP_VAR* SCIPbenderGetMasterAuxiliaryVar(
+   SCIP_BENDERS*         benders            /**< Benders' decomposition */
+   );
+
 /** returns the auxiliary variable for the given subproblem */
 SCIP_EXPORT
 SCIP_VAR* SCIPbendersGetAuxiliaryVar(

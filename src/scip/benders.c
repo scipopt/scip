@@ -6372,6 +6372,16 @@ void SCIPbendersRemoveSubproblems(
    benders->naddedsubprobs = 0;
 }
 
+/** returns the main auxiliary variable that is used the subproblem objective function. */
+SCIP_VAR* SCIPbenderGetMasterAuxiliaryVar(
+   SCIP_BENDERS*         benders            /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->masterauxvar;
+}
+
 /** returns the auxiliary variable for the given subproblem */
 SCIP_VAR* SCIPbendersGetAuxiliaryVar(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
