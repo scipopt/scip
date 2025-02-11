@@ -44,6 +44,7 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/benders.h"
+#include "scip/pub_benders.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/cons_linear.h"
@@ -79,6 +80,7 @@
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                   *  merge candidates */
+#define SCIP_DEFAULT_OBJECTIVETYPE          's'  /** the objective type for the aggregation of the subproblems, either sum or minimax */
 
 #define BENDERS_ARRAYSIZE        1000    /**< the initial size of the added constraints/cuts arrays */
 
@@ -680,8 +682,10 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
 {
    SCIP_BENDERS* topbenders;        /* the highest priority Benders' decomposition */
    SCIP_VAR* auxiliaryvar;
+   SCIP_CONS* cons;
    SCIP_VARDATA* vardata;
    char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
+   char consname[SCIP_MAXSTRLEN];   /* the name of the auxiliary variable constraint */
    SCIP_Bool shareauxvars;
    int i;
 
@@ -699,15 +703,68 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
    if( topbenders != benders && SCIPbendersShareAuxVars(benders) )
       shareauxvars = TRUE;
 
+   /* creating the auxiliary variable objective sum constraint. If the auxiliary variables are shared, then the constraint
+    * is only added to the top Benders. Otherwise, it is created for each Benders implementation. */
+   if( benders->objectivetype == 's' )
+   {
+      if( shareauxvars )
+      {
+         benders->auxiliaryvarcons = topbenders->auxiliaryvarcons;
+      }
+      else
+      {
+         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_%s", AUXILIARYVAR_NAME, SCIPbendersGetName(benders) );
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, consname, 0, NULL, NULL, 0.0, 0.0) );
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+
+         benders->auxiliaryvarcons[0] = cons;
+      }
+   }
+
+   /* sharing or creating the master auxiliary variable */
+   if( shareauxvars )
+   {
+      benders->masterauxvar = topbenders->masterauxvar;
+
+      SCIP_CALL( SCIPcaptureVar(scip, topbenders->masterauxvar) );
+   }
+   else
+   {
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "master_%s_%s", AUXILIARYVAR_NAME, SCIPbendersGetName(benders) );
+      SCIP_CALL( SCIPcreateVarBasic(scip, &benders->masterauxvar, varname, -SCIPinfinity(scip), SCIPinfinity(scip),
+            1.0, SCIP_VARTYPE_CONTINUOUS) );
+
+      SCIPvarSetData(benders->masterauxvar, vardata);
+
+      SCIP_CALL( SCIPaddVar(scip, benders->masterauxvar) );
+
+      /* adding the down lock for the Benders' decomposition constraint handler */
+      SCIP_CALL( SCIPaddVarLocksType(scip, benders->masterauxvar, SCIP_LOCKTYPE_MODEL, 1, 0) );
+
+      /* adding the master auxiliary variable to the summation constraint */
+      if( benders->objectivetype == 's' )
+      {
+         SCIP_CALL( SCIPaddCoefLinear(scip, benders->auxiliaryvarcons[0], benders->masterauxvar, 1.0) );
+      }
+   }
+
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
    {
       /* if the auxiliary variables are shared, then a pointer to the variable is retrieved from topbenders,
-       * otherwise the auxiliaryvariable is created. */
+       * otherwise the auxiliaryvariable is created. The auxiliary variable constraint is also copied from the
+       * topbenders if the auxiliary variables are shared. */
       if( shareauxvars )
       {
          auxiliaryvar = SCIPbendersGetAuxiliaryVar(topbenders, i);
 
          SCIP_CALL( SCIPcaptureVar(scip, auxiliaryvar) );
+
+         if( benders->objectivetype == 'm' )
+         {
+            benders->auxiliaryvarcons[i] = topbenders->auxiliaryvarcons[i];
+
+            SCIP_CALL( SCIPcaptureCons(scip, topbenders->auxiliaryvarcons[i]) );
+         }
       }
       else
       {
@@ -726,7 +783,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
 
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
          SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip),
-               1.0, vartype) );
+               0.0, vartype) );
 
          SCIPvarSetData(auxiliaryvar, vardata);
 
@@ -734,6 +791,29 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
 
          /* adding the down lock for the Benders' decomposition constraint handler */
          SCIP_CALL( SCIPaddVarLocksType(scip, auxiliaryvar, SCIP_LOCKTYPE_MODEL, 1, 0) );
+
+         /* if the objective type is minimax, then we need to create the auxiliary variable constraints and add the
+          * auxiliary variable to them. If the objective type is sum, then the auxiliary variables are added to the
+          * objective constraint.
+          */
+         if( benders->objectivetype == 'm' )
+         {
+            (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
+            SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, consname, 0, NULL, NULL, 0.0, SCIPinfinity(scip)) );
+            SCIP_CALL( SCIPaddCons(scip, cons) );
+
+            /* adding the coefficients to the constraint */
+            SCIP_CALL( SCIPaddCoefLinear(scip, cons, benders->masterauxvar, 1.0) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, cons, auxiliaryvar, -1.0) );
+
+            benders->auxiliaryvarcons[i] = cons;
+         }
+         else
+         {
+            assert(benders->objectivetype == 's');
+
+            SCIP_CALL( SCIPaddCoefLinear(scip, benders->auxiliaryvarcons[0], auxiliaryvar, -1.0) );
+         }
       }
 
       benders->auxiliaryvars[i] = auxiliaryvar;
@@ -742,6 +822,54 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
    SCIPfreeBlockMemory(scip, &vardata);
 
    return SCIP_OKAY;
+}
+
+
+/** finds the Benders' auxiliary variable for a given sub-SCIP. If probnumber is -1, then the master auxiliary variable
+ * is returned.
+ */
+static
+void findAuxiliaryVar(
+   SCIP*                 scip,               /**< SCIP data structure, the target scip */
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition that the variable belongs to */
+   SCIP_VAR**            targetvar,          /**< the variable that will be returned */
+   int                   subscipdepth,       /**< the depth of the current sub-SCIP */
+   int                   probnumber          /**< the number of the subproblem, or -1 for the master auxiliary variable */
+   )
+{
+   char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
+   char prefix[SCIP_MAXSTRLEN];
+   char tmpprefix[SCIP_MAXSTRLEN];
+   int len = 1;
+   int i;
+
+   i = 0;
+   (*targetvar) = NULL;
+
+   /* the prefix for the variable names is required for UG, since we don't know how many copies have been made. To
+    * find the target variable, we start with an empty prefix. Then t_ is prepended until the target variable is
+    * found
+    */
+   prefix[0] = '\0';
+   while( (*targetvar) == NULL && i <= subscipdepth )
+   {
+      /* when probnumber == -1, we are searching for the master auxiliary variable. Otherwise, we are searching for the
+       * subproblem auxiliary variable.
+       */
+      if( probnumber == -1 )
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%smaster_%s_%s", prefix, AUXILIARYVAR_NAME, SCIPbendersGetName(benders));
+      else
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s%s_%d_%s", prefix, AUXILIARYVAR_NAME, probnumber, SCIPbendersGetName(benders));
+
+      /* finding the variable in the copied problem that has the same name as the auxiliary variable */
+      (*targetvar) = SCIPfindVar(scip, varname);
+
+      (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
+      len += 2;
+      (void) strncpy(prefix, tmpprefix, len); /*lint !e732*/
+
+      i++;
+   }
 }
 
 /** assigns the copied auxiliary variables in the target SCIP to the target Benders' decomposition data */
@@ -754,11 +882,9 @@ SCIP_RETCODE assignAuxiliaryVariables(
    SCIP_BENDERS* topbenders;        /* the highest priority Benders' decomposition */
    SCIP_VAR* targetvar;
    SCIP_VARDATA* vardata;
-   char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
    SCIP_Bool shareauxvars;
    int subscipdepth;
    int i;
-   int j;
 
    assert(scip != NULL);
    assert(benders != NULL);
@@ -778,36 +904,26 @@ SCIP_RETCODE assignAuxiliaryVariables(
 
    subscipdepth = SCIPgetSubscipDepth(scip);
 
+   /* storing the master auxiliary variable in the target Benders' implementation */
+   findAuxiliaryVar(scip, shareauxvars ? topbenders : benders, &targetvar, subscipdepth, -1);
+
+   if( targetvar != NULL )
+   {
+      SCIPvarSetData(targetvar, vardata);
+
+      benders->masterauxvar = SCIPvarGetTransVar(targetvar);
+
+      SCIP_CALL( SCIPcaptureVar(scip, benders->masterauxvar) );
+   }
+   else
+   {
+      SCIPABORT();
+   }
+
+   /* storing the auxiliary variable in the target Benders' implementation */
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
    {
-      char prefix[SCIP_MAXSTRLEN];
-      char tmpprefix[SCIP_MAXSTRLEN];
-      int len = 1;
-
-      j = 0;
-      targetvar = NULL;
-
-      /* the prefix for the variable names is required for UG, since we don't know how many copies have been made. To
-       * find the target variable, we start with an empty prefix. Then t_ is prepended until the target variable is
-       * found
-       */
-      prefix[0] = '\0';
-      while( targetvar == NULL && j <= subscipdepth )
-      {
-         if( shareauxvars )
-            (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s%s_%d_%s", prefix, AUXILIARYVAR_NAME, i, SCIPbendersGetName(topbenders));
-         else
-            (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s%s_%d_%s", prefix, AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders));
-
-         /* finding the variable in the copied problem that has the same name as the auxiliary variable */
-         targetvar = SCIPfindVar(scip, varname);
-
-         (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
-         len += 2;
-         (void) strncpy(prefix, tmpprefix, len); /*lint !e732*/
-
-         j++;
-      }
+      findAuxiliaryVar(scip, shareauxvars ? topbenders : benders, &targetvar, subscipdepth, i);
 
       if( targetvar != NULL )
       {
@@ -1197,6 +1313,11 @@ SCIP_RETCODE doBendersCreate(
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "iteration limit for NLP solver", &(*benders)->nlpparam.iterlimit, FALSE,
          SCIP_DEFAULT_NLPITERLIMIT, 0, INT_MAX, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/objectivetype", name);
+   SCIP_CALL( SCIPsetAddCharParam(set, messagehdlr, blkmem, paramname,
+         "the objective type for the aggregation of the subproblems: 's'um the auxiliary variables (default), 'm'inimax of the auxiliary variables",
+         &(*benders)->objectivetype, FALSE, SCIP_DEFAULT_OBJECTIVETYPE, "sm", NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -2281,13 +2402,18 @@ SCIP_RETCODE SCIPbendersExit(
    benders->storedcutssize = 0;
    benders->nstoredcuts = 0;
 
-   /* releasing all of the auxiliary variables */
+   /* releasing all of the auxiliary variables and constraints */
    nsubproblems = SCIPbendersGetNSubproblems(benders);
    for( i = 0; i < nsubproblems; i++ )
    {
       /* it is possible that the master problem is not solved. As such, the auxiliary variables will not be created. So
-       * we don't need to release the variables
+       * we don't need to release the variables or the constraints
        */
+      if( benders->objectivetype == 'm' && benders->auxiliaryvarcons[i] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseCons(set->scip, &benders->auxiliaryvarcons[i]) );
+      }
+
       if( benders->auxiliaryvars[i] != NULL )
       {
          /* we need to remove the locks from the auxiliary variables. This will be called always for the highest priority
@@ -2298,6 +2424,22 @@ SCIP_RETCODE SCIPbendersExit(
 
          SCIP_CALL( SCIPreleaseVar(set->scip, &benders->auxiliaryvars[i]) );
       }
+   }
+
+   if( benders->objectivetype == 's' && benders->auxiliaryvarcons[0] != NULL )
+   {
+      SCIP_CALL( SCIPreleaseCons(set->scip, &benders->auxiliaryvarcons[0]) );
+   }
+
+   if( benders->masterauxvar != NULL )
+   {
+      /* we need to remove the locks from the auxiliary variables. This will be called always for the highest priority
+       * Benders' plugin and others if the auxiliary variables are not shared
+       */
+      if( !benders->iscopy && SCIPvarGetNLocksDown(benders->masterauxvar) > 0 )
+         SCIP_CALL( SCIPaddVarLocksType(set->scip, benders->masterauxvar, SCIP_LOCKTYPE_MODEL, -1, 0) );
+
+      SCIP_CALL( SCIPreleaseVar(set->scip, &benders->masterauxvar) );
    }
 
    /* if a corepoint has been used for cut strengthening, then this needs to be freed */
@@ -2546,6 +2688,7 @@ SCIP_RETCODE SCIPbendersActivate(
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    int i;
+   char paramname[SCIP_MAXSTRLEN];
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -2565,6 +2708,14 @@ SCIP_RETCODE SCIPbendersActivate(
       /* allocating memory for the subproblems arrays */
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subproblems, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvars, benders->nsubproblems) );
+      if (benders->objectivetype == 's')
+      {
+         SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvarcons, 1) );
+      }
+      else
+      {
+         SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvarcons, benders->nsubproblems) );
+      }
       SCIP_ALLOC( BMSallocMemoryArray(&benders->solvestat, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subprobobjval, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->bestsubprobobjval, benders->nsubproblems) );
@@ -2587,6 +2738,8 @@ SCIP_RETCODE SCIPbendersActivate(
 
          benders->subproblems[i] = NULL;
          benders->auxiliaryvars[i] = NULL;
+         if (benders->objectivetype == 'm')
+            benders->auxiliaryvarcons[i] = NULL;
          benders->subprobobjval[i] = SCIPsetInfinity(set);
          benders->bestsubprobobjval[i] = SCIPsetInfinity(set);
          benders->subproblowerbound[i] = -SCIPsetInfinity(set);
@@ -2609,6 +2762,9 @@ SCIP_RETCODE SCIPbendersActivate(
          SCIP_CALL( SCIPpqueueInsert(benders->subprobqueue, benders->solvestat[i]) );
       }
 
+      if (benders->objectivetype == 's')
+         benders->auxiliaryvarcons[0] = NULL;
+
       if( SCIPsetFindEventhdlr(set, NODESOLVED_EVENTHDLR_NAME) == NULL )
       {
          /* adding an eventhandler for updating the lower bound when the root node is solved. */
@@ -2620,6 +2776,12 @@ SCIP_RETCODE SCIPbendersActivate(
          SCIP_CALL( SCIPsetEventhdlrInitsol(set->scip, eventhdlr, eventInitsolBendersNodesolved) );
          assert(eventhdlr != NULL);
       }
+
+      /* the objective type parameter is fixed. This is to prevent the user changing the type after the data fro the
+       * objective constraint and variables is allocated
+       */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/objectivetype", SCIPbendersGetName(benders));
+      SCIP_CALL( SCIPfixParam(set->scip, paramname) );
    }
 
    return SCIP_OKAY;
@@ -2681,6 +2843,7 @@ SCIP_RETCODE SCIPbendersDeactivate(
       BMSfreeMemoryArray(&benders->subproblowerbound);
       BMSfreeMemoryArray(&benders->bestsubprobobjval);
       BMSfreeMemoryArray(&benders->subprobobjval);
+      BMSfreeMemoryArray(&benders->auxiliaryvarcons);
       BMSfreeMemoryArray(&benders->auxiliaryvars);
       BMSfreeMemoryArray(&benders->solvestat);
       BMSfreeMemoryArray(&benders->subproblems);

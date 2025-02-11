@@ -108,6 +108,7 @@ struct SCIP_Benders
    SCIP_Real             maxslackvarcoef;    /**< the maximal objective coefficient of the slack variables in the subproblem */
    SCIP_Bool             checkconsconvexity; /**< should the constraints of the subproblems be checked for convexity? */
    SCIP_NLPPARAM         nlpparam;           /**< parameters for NLP solves */
+   char                  objectivetype;      /**< the objective type for the aggregation of the subproblems. */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
@@ -116,7 +117,12 @@ struct SCIP_Benders
 
    /* the subproblem information */
    SCIP**                subproblems;        /**< the Benders' decomposition subproblems */
+   SCIP_VAR*             masterauxvar;       /**< the master auxiliary variable to control the objective type */
    SCIP_VAR**            auxiliaryvars;      /**< the auxiliary variables for the Benders' optimality cuts */
+   SCIP_CONS**           auxiliaryvarcons;   /**< the constraint(s) for the auxiliary variable objective.
+                                                  For the sum objective, this is a single constraint.
+                                                  For the max objective, there is a constraint per subproblem
+                                             */
    SCIP_PQUEUE*          subprobqueue;       /**< the priority queue for the subproblems */
    SCIP_SUBPROBLEMSOLVESTAT** solvestat;     /**< storing the solving statistics of all the subproblems */
    SCIP_Real*            subprobobjval;      /**< the objective value of the subproblem in the current iteration */
