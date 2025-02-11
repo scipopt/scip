@@ -172,6 +172,7 @@ struct SCIP_LPi
    MSKrescodee           termcode;           /**< termination code of last optimization run */
    int                   itercount;          /**< iteration count of last optimization run */
    SCIP_PRICING          pricing;            /**< SCIP pricing setting */
+   int                   scaling;            /**< SCIP scaling setting */
    int                   lpid;               /**< id for LP within same task */
    MSKoptimizertype      lastalgo;           /**< algorithm type of last solving call */
    MSKstakeye*           skx;                /**< basis status for columns */
@@ -276,7 +277,10 @@ void MSKAPI printstr(
       return;
 #endif
 
-   SCIPmessagePrintInfo((SCIP_MESSAGEHDLR *) handle, "MOSEK: %s", str);
+   if ( handle == NULL )
+      printf("MOSEK: %s", str);
+   else
+      SCIPmessagePrintInfo((SCIP_MESSAGEHDLR *) handle, "MOSEK: %s", str);
 }
 
 #if DEBUG_CHECK_DATA > 0
@@ -886,6 +890,7 @@ SCIP_RETCODE SCIPlpiCreate(
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_DEGEN, DEGEN_LEVEL) );
    MOSEK_CALL( MSK_putintparam((*lpi)->task, MSK_IPAR_SIM_SWITCH_OPTIMIZER, MSK_ON) );
    MOSEK_CALL( MSK_puttaskname((*lpi)->task, (char*) name) );
+   MOSEK_CALL( MSK_putobjname((*lpi)->task, "obj") );
 
    /* disable errors for huge values */
    MOSEK_CALL( MSK_putdouparam((*lpi)->task, MSK_DPAR_DATA_TOL_AIJ_HUGE, MSK_INFINITY * 2)); /* not clear why the *2 is needed */
@@ -901,6 +906,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->termcode = MSK_RES_OK;
    (*lpi)->itercount = 0;
    (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
+   (*lpi)->scaling = 1;
    (*lpi)->lastalgo = MSK_OPTIMIZER_FREE;
    (*lpi)->skx = NULL;
    (*lpi)->skc = NULL;
@@ -1832,7 +1838,9 @@ SCIP_RETCODE getASlice(
 
    if( nnonz != 0 )
    {
+#if MSK_VERSION_MAJOR <= 9
       int surplus;
+#endif
 
       assert(beg != NULL);
       assert(ind != NULL);
@@ -1844,32 +1852,31 @@ SCIP_RETCODE getASlice(
       MOSEK_CALL( MSK_getaslicenumnz(lpi->task, iscon ? MSK_ACC_CON : MSK_ACC_VAR, first, last+1, nnonz) );
       surplus = *nnonz;
       MOSEK_CALL( MSK_getaslice(lpi->task, iscon ? MSK_ACC_CON : MSK_ACC_VAR, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+      assert(surplus == 0);
 #else
       if( iscon )
       {
          MOSEK_CALL( MSK_getarowslicenumnz(lpi->task, first, last+1, nnonz) );
-         surplus = *nnonz;
 #if MSK_VERSION_MAJOR == 9
+         surplus = *nnonz;
          MOSEK_CALL( MSK_getarowslice(lpi->task, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+         assert(surplus == 0);
 #else
          MOSEK_CALL( MSK_getarowslice(lpi->task, first, last+1, *nnonz, beg, lpi->aptre, ind, val) );
-         (void)surplus;
 #endif
       }
       else
       {
          MOSEK_CALL( MSK_getacolslicenumnz(lpi->task, first, last+1, nnonz) );
-         surplus = *nnonz;
 #if MSK_VERSION_MAJOR == 9
+         surplus = *nnonz;
          MOSEK_CALL( MSK_getacolslice(lpi->task, first, last+1, *nnonz, &surplus, beg, lpi->aptre, ind, val) );
+         assert(surplus == 0);
 #else
          MOSEK_CALL( MSK_getacolslice(lpi->task, first, last+1, *nnonz, beg, lpi->aptre, ind, val) );
-         (void)surplus;
 #endif
       }
 #endif
-
-      assert(surplus == 0);
    }
 
 #if DEBUG_CHECK_DATA > 0
@@ -5171,17 +5178,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return  SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
-      MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_SCALING, ival) );
-      if( *ival == MSK_SCALING_NONE )
-         *ival = 0;
-      else if( *ival == MSK_SCALING_FREE )
-         *ival = 1;
-#if MSK_VERSION_MAJOR < 10
-      else if( *ival == MSK_SCALING_AGGRESSIVE )
-         *ival = 2;
-#endif
-      else /* MSK_SCALING_MODERATE should not be used by the interface */
-         return SCIP_PARAMETERWRONGVAL;
+      *ival = lpi->scaling;
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, ival) );
@@ -5250,11 +5247,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
-#if MSK_VERSION_MAJOR < 10
       assert( ival >= 0 && ival <= 2 );
-#else
-      assert( ival >= 0 && ival <= 1 );
-#endif
+      lpi->scaling = ival;
       if( ival == 0 )
       {
          MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, MSK_SCALING_NONE) );
