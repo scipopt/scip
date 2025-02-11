@@ -534,10 +534,10 @@
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
 #define SCIP_DEFAULT_PRINTZEROS           FALSE /**< should variables set to zero be printed? */
 #define SCIP_DEFAULT_WRITE_IMPLINTLEVEL      0  /**< should integrality constraints (i.c.) be written for implied integral
-                                                 * variables? (0: use original i.c., 1: add i.c. to strongly implied integral
-                                                 * vars, 2: add i.c. to all implied integral vars, -1: remove i.c. from
-                                                 * strongly implied integral vars, -2: remove i.c. from all implied integral
-                                                 * vars)" */
+                                                 *   variables? (0: use original i.c., 1: add i.c. to strongly implied integral
+                                                 *   vars, 2: add i.c. to all implied integral vars, -1: remove i.c. from
+                                                 *   strongly implied integral vars, -2: remove i.c. from all implied integral
+                                                 *   vars)" */
 
 
 
