@@ -346,7 +346,6 @@ BEGIN {
    bestsolfeas = 1;
    infeasobjlimit = 0;
    reoptimization = 0;
-   implintsseparate = 0;
    niter = 0;
 }
 
@@ -540,7 +539,7 @@ BEGIN {
       origvars = $3;
    else
    {
-      if( $9 == "continuous;" )
+      if( $9 == "continuous)" )
       {
          vars = $3;
          intvars = $6;
