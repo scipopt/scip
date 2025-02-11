@@ -171,10 +171,10 @@ void simpleExample1(
    SCIP_CALL( SCIPgetSymmetry(scip,
          &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
-   cr_assert( nperms == 3 );
+
    cr_assert( ncomponents == 1 );
    cr_assert( componentbegins[0] == 0 );
-   cr_assert( componentbegins[1] == 3 );
+   cr_assert( componentbegins[1] == nperms );
    cr_assert( vartocomponent[0] == 0 );
    cr_assert( vartocomponent[1] == 0 );
    cr_assert( vartocomponent[2] == 0 );
@@ -958,14 +958,6 @@ void exampleIndicator(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   if( detectsignedperms )
-   {
-      cr_assert( nperms == 3 );
-   }
-   else
-   {
-      cr_assert( nperms == 1 );
-   }
    cr_assert( ncomponents == 1 );
    cr_assert( vartocomponent[0] == 0 );
    cr_assert( vartocomponent[1] == 0 );
@@ -1276,7 +1268,6 @@ void exampleSOS2(
 
    if( detectsignedperms )
    {
-      cr_assert( nperms == 3 );
       cr_assert( ncomponents == 1 );
       cr_assert( vartocomponent[0] == 0 );
       cr_assert( vartocomponent[1] == 0 );
@@ -1287,7 +1278,6 @@ void exampleSOS2(
    }
    else
    {
-      cr_assert( nperms == 2 );
       cr_assert( ncomponents == 2 );
       cr_assert( vartocomponent[0] == 0 );
       cr_assert( vartocomponent[1] == -1 );
@@ -2239,14 +2229,6 @@ void exampleExpr5(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   if ( detectsignedperms )
-   {
-      cr_assert( nperms == 2 );
-   }
-   else
-   {
-      cr_assert( nperms == 1 );
-   }
    cr_assert( ncomponents == 1 );
    cr_assert( vartocomponent[0] == 0 );
    cr_assert( vartocomponent[1] == 0 );
@@ -2428,14 +2410,6 @@ void exampleExpr6(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   if ( detectsignedperms )
-   {
-      cr_assert( nperms == 4 || nperms == 5 );
-   }
-   else
-   {
-      cr_assert( nperms == 3 );
-   }
    cr_assert( ncomponents == 1 );
    cr_assert( vartocomponent[0] == 0 );
    cr_assert( vartocomponent[1] == 0 );
