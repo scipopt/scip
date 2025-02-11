@@ -343,7 +343,7 @@ void rowCalculateGauss(
          }
       }
       SCIPvarCalcDistributionParameters(scip, colvarlb, colvarub, SCIPvarGetType(colvar), SCIPvarGetImplType(colvar),
-                                        &varmean, &varvariance);
+            &varmean, &varvariance);
 
       /* actual values are updated; the contribution of the variable to mu is the arithmetic mean of its bounds */
       *mu += colval * varmean;

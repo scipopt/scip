@@ -2404,9 +2404,9 @@ void SCIPprobPrintStatistics(
 
    SCIPmessageFPrintInfo(messagehdlr, file, "  Problem name     : %s\n", prob->name);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d continuous)\n",
-      prob->nvars, prob->nbinvars + prob->nbinimplvars, prob->nintvars + prob->nintimplvars, prob->ncontvars + prob->ncontimplvars);
+         prob->nvars, prob->nbinvars + prob->nbinimplvars, prob->nintvars + prob->nintimplvars, prob->ncontvars + prob->ncontimplvars);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Implied integers : %d (%d binary, %d integer, %d continuous)\n",
-                         SCIPprobGetNImplVars(prob), prob->nbinimplvars, prob->nintimplvars, prob->ncontimplvars);
+         SCIPprobGetNImplVars(prob), prob->nbinimplvars, prob->nintimplvars, prob->ncontimplvars);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Objective        : %s, %d non-zeros (abs.min = %g, abs.max = %g)\n",
          !prob->transformed ? (prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize") : "minimize",
