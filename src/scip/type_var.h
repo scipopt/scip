@@ -99,7 +99,7 @@ enum SCIP_VarImplType
                                               *   @note This notion of implied integrality remains intact under the
                                               *   addition of additional constraints to the problem.
                                               *
-                                              *   @example The variable z is a strong implied integral if we have the
+                                              *   @example The variable z is strongly implied integral if we have the
                                               *   constraint: 4x + 3y + z = 10, where x and y are integer variables. */
 };
 typedef enum SCIP_VarImplType SCIP_VARIMPLTYPE;

@@ -139,8 +139,8 @@ struct SCIP_Expr
 
    /* integrality information */
    SCIP_EXPR_INTEGRALITY integralitylevel;   /**< indicates whether the expression is integral. 0: not integral,
-                                               *< 1: integral but contains weak implied integrals. 2: integral without
-                                               *< weak implied integral variabless */
+                                               *< 1: integral but contains weakly implied integral vars. 2: integral without
+                                               *< weakly implied integral variables */
 
    /* view expression as quadratic */
    SCIP_QUADEXPR*        quaddata;           /**< representation of expression as a quadratic, if checked and being quadratic */

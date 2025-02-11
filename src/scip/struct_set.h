@@ -643,9 +643,11 @@ struct SCIP_Set
    int                   write_genoffset;    /**< when writing the problem with generic names, we start with index
                                               *   0; using this parameter we can change the starting index to be
                                               *   different */
-   int                   write_implintlevel; /**< Should integrality constraints (i.c.) be written for implied integral variables?
-                                              *  0: use original i.c., 1: add i.c. for strong implied integrals, 2: add i.c. for all implied integrals
-                                              *  -1: remove i.c. for strong implied integrals. -2: remove i.c. for all implied integrals. */
+   int                   write_implintlevel; /**< Should integrality constraints (i.c.) be written for implied
+                                              * integral variables? ( -2: remove i.c. for all implied integral vars,
+                                              * -1: remove i.c. for all strongly implied integral vars, 0: use
+                                              * original i.c. , 1: add i.c. for all strongly implied integral vars,
+                                              * 2: add i.c. for all implied integral vars ) */
 };
 
 #ifdef __cplusplus
