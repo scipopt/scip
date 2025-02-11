@@ -78,6 +78,7 @@ Interface changes
 - removed `#define` of `strcasecmp` and `strncasecmp` (in case of Windows builds) in scip/def.h;
   use SCIPstr(n)casecmp() (scip/pub_misc.h) instead
 - SCIPincludeConshdlrOrbitopePP(), SCIPcreateConsOrbitopePP(), SCIPcreateConsBasicOrbitopePP(), SCIPincludeConshdlrOrbitopeFull(), SCIPcreateConsOrbitopeFull(), SCIPcreateConsBasicOrbitopeFull()
+- SCIP_VERSION_SUB and SCIP_SUBVERSION are deprecated
 
 ### Command line interface
 
@@ -143,6 +144,7 @@ Miscellaneous
 
 - add objective offset instead of objective offset variable in cip reader
 - updated ampl/mp to v4.0.0
+- removed 4th number in SCIP version; new format is major.minor.patch
 
 Known bugs
 ----------

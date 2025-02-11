@@ -123,7 +123,8 @@
 
 
 #define SCIP_VERSION     (100*SCIP_VERSION_MAJOR + 10*SCIP_VERSION_MINOR + SCIP_VERSION_PATCH) /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION  SCIP_VERSION_SUB  /**< SCIP sub version number */
+#define SCIP_VERSION_SUB 0                 /**< @deprecated SCIP sub version number. Always 0. */
+#define SCIP_SUBVERSION  SCIP_VERSION_SUB  /**< @deprecated SCIP sub version number. Always 0. */
 #define SCIP_APIVERSION  SCIP_VERSION_API  /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)"
 

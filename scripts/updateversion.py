@@ -12,7 +12,7 @@ Invokation via
 
 where -a signals that an API change was done and the API version
 number should be increased (this is the default when providing no arguments)
-and -v <VERSION> set the SCIP version number to VERSION, e.g., 4.0.0, or 4.0.0.1.
+and -v <VERSION> set the SCIP version number to VERSION, e.g., 4.0.0.
 
 '''
 
@@ -30,13 +30,12 @@ if vpos == -1:
 
 # check correct usage
 if len(sys.argv) == 1 or len(sys.argv) > 4 or vpos == len(sys.argv)-1 or vpos == apos -1:
-    print("usage: scripts/updateversion.py [-a] [-v <MAJOR>.<MINOR>.<PATCH>[.<SUB>]]")
+    print("usage: scripts/updateversion.py [-a] [-v <MAJOR>.<MINOR>.<PATCH>]")
 else:
     # old version numbers
     oldmajor = newmajor = commands.getoutput("grep 'SCIP_VERSION_MAJOR =' make/make.project").split()[2]
     oldminor = newminor = commands.getoutput("grep 'SCIP_VERSION_MINOR =' make/make.project").split()[2]
     oldpatch = newpatch = commands.getoutput("grep 'SCIP_VERSION_PATCH =' make/make.project").split()[2]
-    oldsubversion = newsubversion = commands.getoutput("grep 'SCIP_VERSION_SUB =' make/make.project").split()[2]
     oldapiversion = newapiversion = commands.getoutput("grep 'SCIP_VERSION_API =' make/make.project").split()[2]
 
     if apos != -1:
@@ -51,20 +50,11 @@ else:
         newmajor = tokens[0]
         newminor = tokens[1]
         newpatch = tokens[2]
-        if len(tokens) == 4:
-            newsubversion = tokens[3]
-        else:
-            newsubversion = "0"
 
     newversion = newmajor+newminor+newpatch
 
     oldversionstring = oldmajor + "." + oldminor + "." + oldpatch
-    if oldsubversion != "0":
-        oldversionstring += "." + oldsubversion
-
     newversionstring = newmajor + "." + newminor + "." + newpatch
-    if newsubversion != "0":
-        newversionstring += "." + newsubversion
 
     if newversionstring != oldversionstring:
         print("update SCIP version from %s to %s" %(oldversionstring, newversionstring))
@@ -75,11 +65,9 @@ else:
     commands.getoutput('sed -i "s/^SCIP_VERSION_MAJOR.*/SCIP_VERSION_MAJOR = %-s/" make/make.project' % newmajor)
     commands.getoutput('sed -i "s/^SCIP_VERSION_MINOR.*/SCIP_VERSION_MINOR = %-s/" make/make.project' % newminor)
     commands.getoutput('sed -i "s/^SCIP_VERSION_PATCH.*/SCIP_VERSION_PATCH = %-s/" make/make.project' % newpatch)
-    commands.getoutput('sed -i "s/^SCIP_VERSION_SUB.*/SCIP_VERSION_SUB = %-s/" make/make.project' % newsubversion)
     commands.getoutput('sed -i "s/set(SCIP_VERSION_MAJOR %s)/set(SCIP_VERSION_MAJOR %s)/" CMakeLists.txt' %(oldmajor, newmajor))
     commands.getoutput('sed -i "s/set(SCIP_VERSION_MINOR %s)/set(SCIP_VERSION_MINOR %s)/" CMakeLists.txt' %(oldminor, newminor))
     commands.getoutput('sed -i "s/set(SCIP_VERSION_PATCH %s)/set(SCIP_VERSION_PATCH %s)/" CMakeLists.txt' %(oldpatch, newpatch))
-    commands.getoutput('sed -i "s/set(SCIP_VERSION_SUB %s)/set(SCIP_VERSION_SUB %s)/" CMakeLists.txt' %(oldsubversion, newsubversion))
 
     if newapiversion != oldapiversion:
         print("\nAPI versions before the change:")

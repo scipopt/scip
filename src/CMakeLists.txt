@@ -1144,7 +1144,7 @@ add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)
 
 set_target_properties(libscip PROPERTIES
-    VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
+    VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
     SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}
     INSTALL_RPATH_USE_LINK_PATH TRUE
     CXX_VISIBILITY_PRESET hidden
