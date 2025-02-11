@@ -5817,7 +5817,6 @@ SCIP_RETCODE presolveImplint(
       SCIP_EXPR* cand = NULL;
       SCIP_Real candcoef = 0.0;
       int i;
-      SCIP_IMPLINTTYPE integralitylevel;
       SCIP_IMPLINTTYPE impltype;
 
       assert(conss != NULL && conss[c] != NULL);
@@ -5866,7 +5865,7 @@ SCIP_RETCODE presolveImplint(
       if( cand == NULL )
          continue;
 
-      integralitylevel = SCIP_IMPLINTTYPE_STRONG;
+      impltype = SCIP_IMPLINTTYPE_STRONG;
 
       /* check whether all other coefficients are integral when diving by candcoef and all other children are integral */
       for( i = 0; i < nchildren; ++i )
@@ -5874,9 +5873,9 @@ SCIP_RETCODE presolveImplint(
          if( children[i] == cand )
             continue;
 
-         integralitylevel = MIN(integralitylevel, SCIPexprGetIntegrality(children[i]));
+         impltype = MIN(impltype, SCIPexprGetIntegrality(children[i]));
          /* child i must be integral */
-         if( integralitylevel == SCIP_IMPLINTTYPE_NONE )
+         if( impltype == SCIP_IMPLINTTYPE_NONE )
          {
             cand = NULL;
             break;
@@ -5897,8 +5896,7 @@ SCIP_RETCODE presolveImplint(
          SCIPvarGetName(SCIPgetVarExprVar(cand)), SCIPconsGetName(conss[c]));
 
       /* change variable type */
-      assert(integralitylevel != SCIP_IMPLINTTYPE_NONE);
-      impltype = integralitylevel == SCIP_IMPLINTTYPE_WEAK ? SCIP_IMPLINTTYPE_WEAK : SCIP_IMPLINTTYPE_STRONG;
+      assert(impltype != SCIP_IMPLINTTYPE_NONE);
 
       SCIP_CALL( SCIPchgVarImplType(scip, SCIPgetVarExprVar(cand), impltype, infeasible) );
       ++(*nchgvartypes);
@@ -5907,7 +5905,7 @@ SCIP_RETCODE presolveImplint(
          return SCIP_OKAY;
 
       /* mark expression as being integral (as would be done by expr_var.c in the next round of updating integrality info) */
-      SCIPexprSetIntegrality(cand, integralitylevel);
+      SCIPexprSetIntegrality(cand, impltype);
    }
 
    return SCIP_OKAY;
@@ -5966,21 +5964,7 @@ SCIP_RETCODE createAuxVar(
    ++conshdlrdata->auxvarid;
 
    /* type of auxiliary variable depends on integrality information of the expression */
-   switch( SCIPexprGetIntegrality(expr) )
-   {
-      case SCIP_IMPLINTTYPE_NONE:
-         impltype = SCIP_IMPLINTTYPE_NONE;
-         break;
-      case SCIP_IMPLINTTYPE_WEAK:
-         impltype = SCIP_IMPLINTTYPE_WEAK;
-         break;
-      case SCIP_IMPLINTTYPE_STRONG:
-         impltype = SCIP_IMPLINTTYPE_STRONG;
-         break;
-      default:
-         SCIPerrorMessage("unknown expression integrality status <%d>\n", SCIPexprGetIntegrality(expr));
-         return SCIP_INVALIDDATA;
-   }
+   impltype = SCIPexprGetIntegrality(expr);
 
    /* get activity of expression to initialize variable bounds, if something valid is available (evalActivity was called in initSepa) */
    if( SCIPexprGetActivityTag(expr) >= conshdlrdata->lastboundrelax )
