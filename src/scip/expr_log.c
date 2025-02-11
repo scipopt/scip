@@ -406,7 +406,7 @@ SCIP_DECL_EXPRESTIMATE(estimateLog)
             refpoint[0] = 0.1;
       }
 
-      addLogLinearization(scip, refpoint[0], SCIPexprGetIntegrality(SCIPexprGetChildren(expr)[0]) != SCIP_EXPR_INTEGRALITY_NONE,
+      addLogLinearization(scip, refpoint[0], SCIPexprGetIntegrality(SCIPexprGetChildren(expr)[0]) != SCIP_IMPLINTTYPE_NONE,
                           coefs, constant, success);
       *islocal = FALSE; /* linearization is globally valid */
       *branchcand = FALSE;
@@ -474,7 +474,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesLog)
       {
          assert(i < 3);
          /* coverity[overrun] */
-         addLogLinearization(scip, refpointsover[i], SCIPexprGetIntegrality(child) != SCIP_EXPR_INTEGRALITY_NONE,
+         addLogLinearization(scip, refpointsover[i], SCIPexprGetIntegrality(child) != SCIP_IMPLINTTYPE_NONE,
                              coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
          if( success )
          {

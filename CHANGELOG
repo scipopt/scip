@@ -54,7 +54,7 @@ Interface changes
   if TABLE_OUTPUT is omitted, then SCIP tries to print a table from the data given by TABLE_COLLECT
 - new event SCIP_EVENTTYPE_IMPLTYPECHANGED, which is generated if a variable its implied integral type changes, this event is also included in the set of events that trigger SCIP_EVENTTYPE_VARCHANGED
 - the event SCIP_EVENTTYPE_TYPECHANGED is no longer generated if a variable becomes implied integral
-- the callback SCIP_DECL_EXPRINTEGRALITY, which returns the integrality of an expression, had its fourth argument change to a pointer to the new enum SCIP_EXPR_INTEGRALITY, to accommodate different types of implied integrality in nonlinear constraints.
+- the callback SCIP_DECL_EXPRINTEGRALITY, which returns the integrality of an expression, had its fourth argument change to a pointer to a bool to a pointer to SCIP_IMPLINTTYPE, to accommodate different types of implied integrality in nonlinear constraints. The implied integer type can be thought of as indicating the implied integer type of an auxilliary continuous variable x that models the expression.
 
 ### Deleted and changed API methods
 
@@ -71,7 +71,7 @@ Interface changes
 - impltype added to arguments for SCIPvarCalcDistributionParameters() (5th position)
 - SCIPgetSolVarsData(): argument nimplvars is subdivided into nbinimplvars, nintimplvars, and ncontimplvars
 - SCIPexprIsIntegral() was deleted, it is replaced by SCIPexprGetIntegrality(), which also provides information about the presence of weakly implied integral variables.
-- SCIPexprSetIntegrality(): the fourth argument was changed from a boolean to the new enum SCIP_EXPR_INTEGRALITY
+- SCIPexprSetIntegrality(): the fourth argument was changed from a boolean to SCIP_IMPLINTTYPE
 
 ### New API functions
 

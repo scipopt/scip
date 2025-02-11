@@ -74,15 +74,6 @@ typedef enum
    SCIP_MONOTONE_CONST        = SCIP_MONOTONE_INC | SCIP_MONOTONE_DEC /**< constant = increasing and decreasing */
 } SCIP_MONOTONE;
 
-/** integrality */
-typedef enum
-{
-   SCIP_EXPR_INTEGRALITY_NONE     = 0,       /**< The expression is not integral. */
-   SCIP_EXPR_INTEGRALITY_WEAK     = 1,       /**< The expression is weakly implied integral, i.e. it is integral but it
-                                               *< contains weakly implied integrals */
-   SCIP_EXPR_INTEGRALITY_STRONG   = 2        /**< The expression is integral and contains no weakly implied integrals. */
-} SCIP_EXPR_INTEGRALITY;
-
 /**@name Expression Owner */
 /**@{ */
 
@@ -372,19 +363,21 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 
 /** expression integrality detection callback
  *
- * The method computes whether the integrality level of an expression.
- * Usually uses SCIPexprGetIntegrality() to check whether children evaluate to an integral value.
+ * The method computes whether the integrality of an expression.
+ * The integrality of an expression f(y) is defined as the implied integer type of an auxilliary continuous variable x
+ * that is introduced such that x = f(y) holds. Usually uses SCIPexprGetIntegrality() to get the integrality of children
+ * expressions.
  *
  *  \param[in] scip        SCIP main data structure
  *  \param[in] expr        expression to check the integrality for
- *  \param[out] integralitylevel buffer to store the integrality level of the expression
+ *  \param[out] integrality buffer to store the integrality of the expression
  *
  * See also \ref EXPRINTEGRALITY.
  */
 #define SCIP_DECL_EXPRINTEGRALITY(x) SCIP_RETCODE x (\
    SCIP*      scip, \
    SCIP_EXPR* expr, \
-   SCIP_EXPR_INTEGRALITY* integralitylevel)
+   SCIP_IMPLINTTYPE* integrality)
 
 /** expression hash callback
  *

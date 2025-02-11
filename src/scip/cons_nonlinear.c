@@ -2394,7 +2394,7 @@ SCIP_RETCODE forwardPropExpr(
              * boundtightening-inteval does not relax integer variables, so can omit expressions without children
              * (constants should be ok, too)
              */
-            if( SCIPexprGetIntegrality(expr) != SCIP_EXPR_INTEGRALITY_NONE &&
+            if( SCIPexprGetIntegrality(expr) != SCIP_IMPLINTTYPE_NONE &&
                 conshdlrdata->intevalvar == intEvalVarBoundTightening && SCIPexprGetNChildren(expr) > 0 )
             {
                if( activity.inf > -SCIP_INTERVAL_INFINITY )
@@ -5817,7 +5817,7 @@ SCIP_RETCODE presolveImplint(
       SCIP_EXPR* cand = NULL;
       SCIP_Real candcoef = 0.0;
       int i;
-      SCIP_EXPR_INTEGRALITY integralitylevel;
+      SCIP_IMPLINTTYPE integralitylevel;
       SCIP_IMPLINTTYPE impltype;
 
       assert(conss != NULL && conss[c] != NULL);
@@ -5866,7 +5866,7 @@ SCIP_RETCODE presolveImplint(
       if( cand == NULL )
          continue;
 
-      integralitylevel = SCIP_EXPR_INTEGRALITY_STRONG;
+      integralitylevel = SCIP_IMPLINTTYPE_STRONG;
 
       /* check whether all other coefficients are integral when diving by candcoef and all other children are integral */
       for( i = 0; i < nchildren; ++i )
@@ -5876,7 +5876,7 @@ SCIP_RETCODE presolveImplint(
 
          integralitylevel = MIN(integralitylevel, SCIPexprGetIntegrality(children[i]));
          /* child i must be integral */
-         if( integralitylevel == SCIP_EXPR_INTEGRALITY_NONE )
+         if( integralitylevel == SCIP_IMPLINTTYPE_NONE )
          {
             cand = NULL;
             break;
@@ -5897,8 +5897,8 @@ SCIP_RETCODE presolveImplint(
          SCIPvarGetName(SCIPgetVarExprVar(cand)), SCIPconsGetName(conss[c]));
 
       /* change variable type */
-      assert(integralitylevel != SCIP_EXPR_INTEGRALITY_NONE);
-      impltype = integralitylevel == SCIP_EXPR_INTEGRALITY_WEAK ? SCIP_IMPLINTTYPE_WEAK : SCIP_IMPLINTTYPE_STRONG;
+      assert(integralitylevel != SCIP_IMPLINTTYPE_NONE);
+      impltype = integralitylevel == SCIP_IMPLINTTYPE_WEAK ? SCIP_IMPLINTTYPE_WEAK : SCIP_IMPLINTTYPE_STRONG;
 
       SCIP_CALL( SCIPchgVarImplType(scip, SCIPgetVarExprVar(cand), impltype, infeasible) );
       ++(*nchgvartypes);
@@ -5968,13 +5968,13 @@ SCIP_RETCODE createAuxVar(
    /* type of auxiliary variable depends on integrality information of the expression */
    switch( SCIPexprGetIntegrality(expr) )
    {
-      case SCIP_EXPR_INTEGRALITY_NONE:
+      case SCIP_IMPLINTTYPE_NONE:
          impltype = SCIP_IMPLINTTYPE_NONE;
          break;
-      case SCIP_EXPR_INTEGRALITY_WEAK:
+      case SCIP_IMPLINTTYPE_WEAK:
          impltype = SCIP_IMPLINTTYPE_WEAK;
          break;
-      case SCIP_EXPR_INTEGRALITY_STRONG:
+      case SCIP_IMPLINTTYPE_STRONG:
          impltype = SCIP_IMPLINTTYPE_STRONG;
          break;
       default:
@@ -14854,7 +14854,7 @@ SCIP_RETCODE SCIPtightenExprIntervalNonlinear(
    SCIPdebugMsgPrint(scip, " with activity [%.15g,%.15g] to [%.15g,%.15g] (force=%d)\n", SCIPexprGetActivity(expr).inf, SCIPexprGetActivity(expr).sup, newbounds.inf, newbounds.sup, conshdlrdata->forceboundtightening);
 #endif
 
-   if( SCIPexprGetIntegrality(expr) != SCIP_EXPR_INTEGRALITY_NONE )
+   if( SCIPexprGetIntegrality(expr) != SCIP_IMPLINTTYPE_NONE )
    {
       /* apply integrality to new bounds
        * it should be ok to use normal ceil() and floor(), but for safety, we use SCIPceil and SCIPfloor for now

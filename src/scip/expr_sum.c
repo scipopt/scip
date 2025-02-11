@@ -1054,9 +1054,9 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicitySum)
 }
 
 static
-SCIP_EXPR_INTEGRALITY valueIntegrality(double value)
+SCIP_IMPLINTTYPE valueIntegrality(double value)
 {
-   return EPSISINT(value, 0.0) ? SCIP_EXPR_INTEGRALITY_STRONG : SCIP_EXPR_INTEGRALITY_NONE; /*lint !e835*/
+   return EPSISINT(value, 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE; /*lint !e835*/
 }
 /** expression integrality detection callback */
 static
@@ -1067,20 +1067,20 @@ SCIP_DECL_EXPRINTEGRALITY(integralitySum)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(integralitylevel != NULL);
+   assert(integrality != NULL);
 
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
    /**! [SnippetExprIntegralitySum] */
-   *integralitylevel = valueIntegrality(exprdata->constant);
+   *integrality = valueIntegrality(exprdata->constant);
 
-   for( i = 0; i < SCIPexprGetNChildren(expr) && *integralitylevel > SCIP_EXPR_INTEGRALITY_NONE; ++i )
+   for( i = 0; i < SCIPexprGetNChildren(expr) && *integrality > SCIP_IMPLINTTYPE_NONE; ++i )
    {
       SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
       assert(child != NULL);
-      SCIP_EXPR_INTEGRALITY valintegrality = valueIntegrality(exprdata->coefficients[i]);
-      *integralitylevel = MIN3(*integralitylevel, valintegrality, SCIPexprGetIntegrality(child)); /*lint !e666 */
+      SCIP_IMPLINTTYPE valintegrality = valueIntegrality(exprdata->coefficients[i]);
+      *integrality = MIN3(*integrality, valintegrality, SCIPexprGetIntegrality(child)); /*lint !e666 */
    }
    /**! [SnippetExprIntegralitySum] */
 

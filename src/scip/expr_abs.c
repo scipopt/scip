@@ -486,13 +486,13 @@ SCIP_DECL_EXPRINTEGRALITY(integralityAbs)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(integralitylevel != NULL);
+   assert(integrality != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
 
    child = SCIPexprGetChildren(expr)[0];
    assert(child != NULL);
 
-   *integralitylevel = SCIPexprGetIntegrality(child);
+   *integrality = SCIPexprGetIntegrality(child);
 
    return SCIP_OKAY;
 }

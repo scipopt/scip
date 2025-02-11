@@ -2018,7 +2018,7 @@ SCIP_RETCODE SCIPcomputeExprIntegrality(
    )
 {
    SCIP_EXPRITER* it;
-   SCIP_EXPR_INTEGRALITY integralitylevel;
+   SCIP_IMPLINTTYPE integralitylevel;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);

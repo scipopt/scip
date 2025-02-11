@@ -2147,7 +2147,7 @@ SCIP_DECL_EXPRESTIMATE(estimatePow)
    }
    assert(isinteger || childlb >= 0.0);
 
-   childintegral = SCIPexprGetIntegrality(child) != SCIP_EXPR_INTEGRALITY_NONE;
+   childintegral = SCIPexprGetIntegrality(child) != SCIP_IMPLINTTYPE_NONE;
    SCIP_CALL( buildPowEstimator(scip, exprdata, overestimate, childlb, childub, globalbounds[0].inf,
          globalbounds[0].sup, childintegral, MAX(childlb, *refpoint), exponent, coefs,
          constant, success, islocal, branchcand) );
@@ -2321,7 +2321,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesPow)
       assert(SCIPisLE(scip, refpoint, childub) && SCIPisGE(scip, refpoint, childlb));
 
       branchcand = TRUE;
-      childintegral = SCIPexprGetIntegrality(child) != SCIP_EXPR_INTEGRALITY_NONE;
+      childintegral = SCIPexprGetIntegrality(child) != SCIP_IMPLINTTYPE_NONE;
       SCIP_CALL( buildPowEstimator(scip, exprdata, overest[i], childlb, childub, childlb, childub, childintegral,
             refpoint, exponent, coefs[*nreturned], &constant[*nreturned],
             &success, &islocal, &branchcand) );
@@ -2456,7 +2456,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityPow)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(integralitylevel != NULL);
+   assert(integrality != NULL);
    assert(SCIPexprGetNChildren(expr) == 1);
 
    child = SCIPexprGetChildren(expr)[0];
@@ -2467,10 +2467,10 @@ SCIP_DECL_EXPRINTEGRALITY(integralityPow)
    expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
 
    /* expression is integral if and only if exponent non-negative and integral */
-   SCIP_EXPR_INTEGRALITY exponentintegrality = expisint && exponent >= 0.0 ? SCIP_EXPR_INTEGRALITY_STRONG : SCIP_EXPR_INTEGRALITY_NONE;
+   SCIP_IMPLINTTYPE exponentintegrality = expisint && exponent >= 0.0 ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE;
 
    /* expression can not be integral if child is not */
-   *integralitylevel = MIN(exponentintegrality, SCIPexprGetIntegrality(child)); /*lint !e666*/
+   *integrality = MIN(exponentintegrality, SCIPexprGetIntegrality(child)); /*lint !e666*/
 
    return SCIP_OKAY;
 }

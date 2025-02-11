@@ -70,7 +70,7 @@ void teardown(void)
 static
 SCIP_RETCODE checkIntegrality(
    const char*           input,              /**< input string to create an expression */
-   SCIP_EXPR_INTEGRALITY integrality         /**< target integrality information */
+   SCIP_IMPLINTTYPE integrality         /**< target integrality information */
    )
 {
    SCIP_EXPR* expr;
@@ -111,74 +111,74 @@ TestSuite(integrality, .init = setup, .fini = teardown);
 
 Test(integrality, abs)
 {
-   SCIP_CALL( checkIntegrality("abs(<x>)", SCIP_EXPR_INTEGRALITY_STRONG) );
-   SCIP_CALL( checkIntegrality("abs(<y>)", SCIP_EXPR_INTEGRALITY_STRONG) );
-   SCIP_CALL( checkIntegrality("abs(<z>)", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("abs(<x>)", SCIP_IMPLINTTYPE_STRONG) );
+   SCIP_CALL( checkIntegrality("abs(<y>)", SCIP_IMPLINTTYPE_STRONG) );
+   SCIP_CALL( checkIntegrality("abs(<z>)", SCIP_IMPLINTTYPE_NONE) );
 }
 
 Test(integrality, cos)
 {
-   SCIP_CALL( checkIntegrality("cos(<x>)", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("cos(<x>)", SCIP_IMPLINTTYPE_NONE) );
 }
 
 Test(integrality, entropy)
 {
-   SCIP_CALL( checkIntegrality("entropy(<y>)", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("entropy(<y>)", SCIP_IMPLINTTYPE_NONE) );
 }
 
 Test(integrality, exp)
 {
-   SCIP_CALL( checkIntegrality("exp(<x>)", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("exp(<x>)", SCIP_IMPLINTTYPE_NONE) );
 }
 
 Test(integrality, log)
 {
-   SCIP_CALL( checkIntegrality("log(<x>)", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("log(<x>)", SCIP_IMPLINTTYPE_NONE) );
 }
 
 Test(integrality, pow)
 {
-   SCIP_CALL( checkIntegrality("<x>^2", SCIP_EXPR_INTEGRALITY_STRONG) );
-   SCIP_CALL( checkIntegrality("<y>^2.2", SCIP_EXPR_INTEGRALITY_NONE) );
-   SCIP_CALL( checkIntegrality("<y>^(-2)", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("<x>^2", SCIP_IMPLINTTYPE_STRONG) );
+   SCIP_CALL( checkIntegrality("<y>^2.2", SCIP_IMPLINTTYPE_NONE) );
+   SCIP_CALL( checkIntegrality("<y>^(-2)", SCIP_IMPLINTTYPE_NONE) );
 }
 
 Test(integrality, signpower)
 {
-   SCIP_CALL( checkIntegrality("signpower(<x>,2)", SCIP_EXPR_INTEGRALITY_STRONG) );
-   SCIP_CALL( checkIntegrality("signpower(<y>,2.2)", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("signpower(<x>,2)", SCIP_IMPLINTTYPE_STRONG) );
+   SCIP_CALL( checkIntegrality("signpower(<y>,2.2)", SCIP_IMPLINTTYPE_NONE) );
 }
 
 Test(integrality, product)
 {
-   SCIP_CALL( checkIntegrality("<x> * <y>", SCIP_EXPR_INTEGRALITY_STRONG) );
-   SCIP_CALL( checkIntegrality("-1.1 * <x> * <y>", SCIP_EXPR_INTEGRALITY_NONE) );
-   SCIP_CALL( checkIntegrality("<x> * <y> * <z>", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("<x> * <y>", SCIP_IMPLINTTYPE_STRONG) );
+   SCIP_CALL( checkIntegrality("-1.1 * <x> * <y>", SCIP_IMPLINTTYPE_NONE) );
+   SCIP_CALL( checkIntegrality("<x> * <y> * <z>", SCIP_IMPLINTTYPE_NONE) );
 }
 
 Test(integrality, sin)
 {
-   SCIP_CALL( checkIntegrality("sin(<x>)", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("sin(<x>)", SCIP_IMPLINTTYPE_NONE) );
 }
 
 Test(integrality, sum)
 {
-   SCIP_CALL( checkIntegrality("<x> + <y>", SCIP_EXPR_INTEGRALITY_STRONG) );
-   SCIP_CALL( checkIntegrality("<x> -2.2*<y>", SCIP_EXPR_INTEGRALITY_NONE) );
-   SCIP_CALL( checkIntegrality("<x> + <y> + <z>", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("<x> + <y>", SCIP_IMPLINTTYPE_STRONG) );
+   SCIP_CALL( checkIntegrality("<x> -2.2*<y>", SCIP_IMPLINTTYPE_NONE) );
+   SCIP_CALL( checkIntegrality("<x> + <y> + <z>", SCIP_IMPLINTTYPE_NONE) );
 }
 
 Test(integrality, value)
 {
-   SCIP_CALL( checkIntegrality("-2.0", SCIP_EXPR_INTEGRALITY_STRONG) );
-   SCIP_CALL( checkIntegrality("3.1", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("-2.0", SCIP_IMPLINTTYPE_STRONG) );
+   SCIP_CALL( checkIntegrality("3.1", SCIP_IMPLINTTYPE_NONE) );
 }
 
 Test(integrality, var)
 {
-   SCIP_CALL( checkIntegrality("<x>", SCIP_EXPR_INTEGRALITY_STRONG) );
-   SCIP_CALL( checkIntegrality("<y>", SCIP_EXPR_INTEGRALITY_STRONG) );
-   SCIP_CALL( checkIntegrality("<z>", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("<x>", SCIP_IMPLINTTYPE_STRONG) );
+   SCIP_CALL( checkIntegrality("<y>", SCIP_IMPLINTTYPE_STRONG) );
+   SCIP_CALL( checkIntegrality("<z>", SCIP_IMPLINTTYPE_NONE) );
 }
 
 /*
@@ -187,10 +187,10 @@ Test(integrality, var)
 
 Test(integrality, quadratic)
 {
-   SCIP_CALL( checkIntegrality("3*<x>^2 -2 * <x>*<y> + 5 * <y> + 2", SCIP_EXPR_INTEGRALITY_STRONG) );
+   SCIP_CALL( checkIntegrality("3*<x>^2 -2 * <x>*<y> + 5 * <y> + 2", SCIP_IMPLINTTYPE_STRONG) );
 }
 
 Test(integrality, polynomial)
 {
-   SCIP_CALL( checkIntegrality("<x>^2 * <y>^3 + <y>^2.5", SCIP_EXPR_INTEGRALITY_NONE) );
+   SCIP_CALL( checkIntegrality("<x>^2 * <y>^3 + <y>^2.5", SCIP_IMPLINTTYPE_NONE) );
 }

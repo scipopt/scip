@@ -242,9 +242,9 @@ SCIP_DECL_EXPRINTEGRALITY(integralityErf)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(integralitylevel != NULL);
+   assert(integrality != NULL);
 
-   *integralitylevel = SCIP_EXPR_INTEGRALITY_NONE;
+   *integrality = SCIP_IMPLINTTYPE_NONE;
 
    return SCIP_OKAY;
 }
