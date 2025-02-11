@@ -361,7 +361,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityVar)
 
    if( !SCIPvarIsIntegral(var) )
       *integralitylevel = SCIP_EXPR_INTEGRALITY_NONE;
-   else if( SCIPvarGetImplType(var) == SCIP_VARIMPLTYPE_WEAK )
+   else if( SCIPvarGetImplType(var) == SCIP_IMPLINTTYPE_WEAK )
       *integralitylevel = SCIP_EXPR_INTEGRALITY_WEAK;
    else
       *integralitylevel = SCIP_EXPR_INTEGRALITY_STRONG;

@@ -4911,7 +4911,7 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
    int                   leaderrule,         /**< rule to select leader */
    int                   tiebreakrule,       /**< tie break rule to select leader */
    SCIP_VARTYPE          leadervartype,      /**< variable type of leader */
-   SCIP_VARIMPLTYPE      leadervarimpltype,  /**< implied integral type of the leader */
+   SCIP_IMPLINTTYPE      leadervarimpltype,  /**< implied integral type of the leader */
    int*                  orbitidx,           /**< pointer to index of selected orbit */
    int*                  leaderidx,          /**< pointer to leader in orbit */
    SCIP_Shortbool*       orbitvarinconflict, /**< array to store whether a var in the orbit is conflicting with leader */
@@ -4958,8 +4958,8 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       {
          /* skip orbits containing vars different to the leader's vartype */
          /* Conflictvars is permvars! */
-         if ( ( leadervarimpltype != SCIP_VARIMPLTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[orbits[orbitbegins[i]]])
-            || ( leadervarimpltype == SCIP_VARIMPLTYPE_NONE && SCIPvarGetType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype ) )
+         if ( ( leadervarimpltype != SCIP_IMPLINTTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[orbits[orbitbegins[i]]])
+            || ( leadervarimpltype == SCIP_IMPLINTTYPE_NONE && SCIPvarGetType(conflictvars[orbits[orbitbegins[i]]]) != leadervartype ) )
             continue;
 
          if ( tiebreakrule == (int) SCIP_LEADERTIEBREAKRULE_MINORBIT )
@@ -5079,8 +5079,8 @@ SCIP_RETCODE selectOrbitLeaderSSTConss(
       for (i = 0; i < nconflictvars; ++i)
       {
          /* skip vars different to the leader's vartype */
-         if ( ( leadervarimpltype != SCIP_VARIMPLTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[i])
-            || ( leadervarimpltype == SCIP_VARIMPLTYPE_NONE && SCIPvarGetType(conflictvars[i]) != leadervartype ) )
+         if ( ( leadervarimpltype != SCIP_IMPLINTTYPE_NONE ) != SCIPvarIsImpliedIntegral(conflictvars[i])
+            || ( leadervarimpltype == SCIP_IMPLINTTYPE_NONE && SCIPvarGetType(conflictvars[i]) != leadervartype ) )
             continue;
 
          /* skip variables not affected by symmetry */
@@ -5186,7 +5186,7 @@ SCIP_RETCODE addSSTConss(
    int tiebreakrule;
    int leadervartype;
    SCIP_VARTYPE selectedtype = SCIP_VARTYPE_CONTINUOUS;
-   SCIP_VARIMPLTYPE selectedimpltype = SCIP_VARIMPLTYPE_NONE;
+   SCIP_IMPLINTTYPE selectedimpltype = SCIP_IMPLINTTYPE_NONE;
    int nvarsselectedtype;
    SCIP_Bool conflictgraphcreated = FALSE;
    SCIP_Bool mixedcomponents;
@@ -5269,14 +5269,14 @@ SCIP_RETCODE addSSTConss(
    if ( ISSSTIMPLINTACTIVE(leadervartype) && nmovedimplintpermvars > nvarsselectedtype )
    {
       selectedtype = SCIP_VARTYPE_CONTINUOUS;
-      selectedimpltype = SCIP_VARIMPLTYPE_WEAK;
+      selectedimpltype = SCIP_IMPLINTTYPE_WEAK;
       nvarsselectedtype = nmovedimplintpermvars;
    }
 
    if ( ISSSTCONTACTIVE(leadervartype) && nmovedcontpermvars > nvarsselectedtype )
    {
       selectedtype = SCIP_VARTYPE_CONTINUOUS;
-      selectedimpltype = SCIP_VARIMPLTYPE_NONE;
+      selectedimpltype = SCIP_IMPLINTTYPE_NONE;
       nvarsselectedtype = nmovedcontpermvars;
    }
 
@@ -5371,8 +5371,8 @@ SCIP_RETCODE addSSTConss(
          for (p = 0; p < norbits; ++p)
          {
             /* stop if the first element of an orbits has the wrong vartype */
-            if ( SCIPvarIsImpliedIntegral(permvars[orbits[orbitbegins[p]]]) != ( selectedimpltype != SCIP_VARIMPLTYPE_NONE )
-               || ( selectedimpltype == SCIP_VARIMPLTYPE_NONE && SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype ) )
+            if ( SCIPvarIsImpliedIntegral(permvars[orbits[orbitbegins[p]]]) != ( selectedimpltype != SCIP_IMPLINTTYPE_NONE )
+               || ( selectedimpltype == SCIP_IMPLINTTYPE_NONE && SCIPvarGetType(permvars[orbits[orbitbegins[p]]]) != selectedtype ) )
             {
                success = FALSE;
                break;

@@ -767,7 +767,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       }
       else
       {
-         SCIP_VARIMPLTYPE impltype;
+         SCIP_IMPLINTTYPE impltype;
 
          /* set the variable type of the auxiliary variables to implicit integer if the objective function of the
           * subproblem is guaranteed to be integer. This behaviour is controlled through a user parameter.
@@ -776,9 +776,9 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
           */
          if( benders->auxvarsimplint && SCIPbendersSubproblem(benders, i) != NULL
             && SCIPisObjIntegral(SCIPbendersSubproblem(benders, i)) )
-            impltype = SCIP_VARIMPLTYPE_WEAK;
+            impltype = SCIP_IMPLINTTYPE_WEAK;
          else
-            impltype = SCIP_VARIMPLTYPE_NONE;
+            impltype = SCIP_IMPLINTTYPE_NONE;
 
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
          SCIP_CALL( SCIPcreateVarImpl(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip), 1.0,
@@ -6899,7 +6899,7 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
             /* changing the type of the subproblem variable corresponding to mastervar to CONTINUOUS */
             SCIP_CALL( SCIPchgVarType(subproblem, vars[i], SCIP_VARTYPE_CONTINUOUS, &infeasible) );
             assert(!infeasible);
-            SCIP_CALL( SCIPchgVarImplType(subproblem, vars[i], SCIP_VARIMPLTYPE_NONE, &infeasible) );
+            SCIP_CALL( SCIPchgVarImplType(subproblem, vars[i], SCIP_IMPLINTTYPE_NONE, &infeasible) );
             assert(!infeasible);
 
             chgvarscount++;

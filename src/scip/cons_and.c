@@ -5154,7 +5154,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
          /* upgrade the type of the resultant */
          if( v < 0 )
          {
-            SCIP_CALL( SCIPchgVarImplType(scip, resvar, SCIP_VARIMPLTYPE_WEAK, &infeasible) );
+            SCIP_CALL( SCIPchgVarImplType(scip, resvar, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
             assert(!infeasible);
          }
       }

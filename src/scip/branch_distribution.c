@@ -263,7 +263,7 @@ void SCIPvarCalcDistributionParameters(
    SCIP_Real             varlb,              /**< variable lower bound */
    SCIP_Real             varub,              /**< variable upper bound */
    SCIP_VARTYPE          vartype,            /**< type of the variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable */
+   SCIP_IMPLINTTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Real*            mean,               /**< pointer to store mean value */
    SCIP_Real*            variance            /**< pointer to store the variance of the variable uniform distribution */
    )
@@ -287,7 +287,7 @@ void SCIPvarCalcDistributionParameters(
    else
    {
       /* if the variable is continuous, we assume a continuous uniform distribution, otherwise a discrete one */
-      if( vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_NONE )
+      if( vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_IMPLINTTYPE_NONE )
          *variance = SQR(varub - varlb);
       else
          *variance = SQR(varub - varlb + 1.0) - 1.0;
@@ -643,7 +643,7 @@ SCIP_RETCODE calcBranchScore(
    SCIP_Real meanup;           /* mean value of variable uniform distribution after branching up */
    SCIP_Real meandown;         /* mean value of variable uniform distribution after branching down*/
    SCIP_VARTYPE vartype;
-   SCIP_VARIMPLTYPE impltype;
+   SCIP_IMPLINTTYPE impltype;
    int ncolrows;
    int i;
 
@@ -932,7 +932,7 @@ SCIP_RETCODE varProcessBoundChanges(
    SCIP_Real oldub;
    SCIP_Real newub;
    SCIP_VARTYPE vartype;
-   SCIP_VARIMPLTYPE impltype;
+   SCIP_IMPLINTTYPE impltype;
    int ncolrows;
    int r;
    int varindex;

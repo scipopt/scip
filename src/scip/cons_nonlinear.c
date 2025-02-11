@@ -1021,7 +1021,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
     * (mainly to avoid a failing assert, see github issue #70)
     * usually, a change to implicit-integer would result in a boundchange on the variable as well, but not if the bound was already almost integral
     */
-   if( (eventtype & SCIP_EVENTTYPE_IMPLTYPECHANGED) && SCIPeventGetNewImpltype(event) != SCIP_VARIMPLTYPE_NONE
+   if( (eventtype & SCIP_EVENTTYPE_IMPLTYPECHANGED) && SCIPeventGetNewImpltype(event) != SCIP_IMPLINTTYPE_NONE
       && ( !EPSISINT(SCIPvarGetLbGlobal(SCIPeventGetVar(event)), 0.0) /*lint !e835*/
       || !EPSISINT(SCIPvarGetUbGlobal(SCIPeventGetVar(event)), 0.0) ) ) /*lint !e835*/
       boundtightened = TRUE;
@@ -3911,7 +3911,7 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    /* create and add auxiliary variable */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(facvar));
    SCIP_CALL( SCIPcreateVarImpl(scip, &auxvar, name, minact, maxact, 0.0,
-         SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_VARIMPLTYPE_STRONG : SCIP_VARIMPLTYPE_NONE,
+         SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE,
          TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
@@ -4240,7 +4240,7 @@ SCIP_RETCODE getBinaryProductExprDo(
 
    /* create and add variable */
    SCIP_CALL( SCIPcreateVarImpl(scip, &w, name, 0.0, 1.0, 0.0,
-         SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_WEAK,
+         SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK,
          TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIPdebugMsg(scip, "  created auxiliary variable %s\n", name);
@@ -5818,7 +5818,7 @@ SCIP_RETCODE presolveImplint(
       SCIP_Real candcoef = 0.0;
       int i;
       SCIP_EXPR_INTEGRALITY integralitylevel;
-      SCIP_VARIMPLTYPE impltype;
+      SCIP_IMPLINTTYPE impltype;
 
       assert(conss != NULL && conss[c] != NULL);
 
@@ -5898,7 +5898,7 @@ SCIP_RETCODE presolveImplint(
 
       /* change variable type */
       assert(integralitylevel != SCIP_EXPR_INTEGRALITY_NONE);
-      impltype = integralitylevel == SCIP_EXPR_INTEGRALITY_WEAK ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_STRONG;
+      impltype = integralitylevel == SCIP_EXPR_INTEGRALITY_WEAK ? SCIP_IMPLINTTYPE_WEAK : SCIP_IMPLINTTYPE_STRONG;
 
       SCIP_CALL( SCIPchgVarImplType(scip, SCIPgetVarExprVar(cand), impltype, infeasible) );
       ++(*nchgvartypes);
@@ -5926,7 +5926,7 @@ SCIP_RETCODE createAuxVar(
 {
    SCIP_EXPR_OWNERDATA* ownerdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_VARIMPLTYPE impltype;
+   SCIP_IMPLINTTYPE impltype;
    SCIP_INTERVAL activity;
    char name[SCIP_MAXSTRLEN];
 
@@ -5969,13 +5969,13 @@ SCIP_RETCODE createAuxVar(
    switch( SCIPexprGetIntegrality(expr) )
    {
       case SCIP_EXPR_INTEGRALITY_NONE:
-         impltype = SCIP_VARIMPLTYPE_NONE;
+         impltype = SCIP_IMPLINTTYPE_NONE;
          break;
       case SCIP_EXPR_INTEGRALITY_WEAK:
-         impltype = SCIP_VARIMPLTYPE_WEAK;
+         impltype = SCIP_IMPLINTTYPE_WEAK;
          break;
       case SCIP_EXPR_INTEGRALITY_STRONG:
-         impltype = SCIP_VARIMPLTYPE_STRONG;
+         impltype = SCIP_IMPLINTTYPE_STRONG;
          break;
       default:
          SCIPerrorMessage("unknown expression integrality status <%d>\n", SCIPexprGetIntegrality(expr));

@@ -73,10 +73,10 @@ enum SCIP_Vartype
 typedef enum SCIP_Vartype SCIP_VARTYPE;
 
 /** implied integral type */
-enum SCIP_VarImplType
+enum SCIP_ImplintType
 {
-  SCIP_VARIMPLTYPE_NONE   = 0,               /**< The variable is not implied integral by other variables */
-  SCIP_VARIMPLTYPE_WEAK   = 1,               /**< The constraint handlers enforce that if the problem is relaxed
+  SCIP_IMPLINTTYPE_NONE   = 0,               /**< The variable is not implied integral by other variables */
+  SCIP_IMPLINTTYPE_WEAK   = 1,               /**< The constraint handlers enforce that if the problem is relaxed
                                               *   to have integrality constraints for the non-implied integral variables
                                               *   only, there exists an optimal solution where all weakly and strongly
                                               *   implied integral variables have integer solution values.
@@ -91,7 +91,7 @@ enum SCIP_VarImplType
                                               *   @example The variable z is a weakly implied integral if it only occurs
                                               *   in the constraint 4x + 3y + z \leq 10, where x and y are integer and
                                               *   z has objective 0. */
-  SCIP_VARIMPLTYPE_STRONG = 2                /**< The constraint handlers enforce that if the problem is relaxed
+  SCIP_IMPLINTTYPE_STRONG = 2                /**< The constraint handlers enforce that if the problem is relaxed
                                               *   to have integrality constraints for the non-implied integral variables
                                               *   only, in every feasible solution all strongly implied integral
                                               *   variables have integer solution values.
@@ -102,7 +102,7 @@ enum SCIP_VarImplType
                                               *   @example The variable z is strongly implied integral if we have the
                                               *   constraint: 4x + 3y + z = 10, where x and y are integer variables. */
 };
-typedef enum SCIP_VarImplType SCIP_VARIMPLTYPE;
+typedef enum SCIP_ImplintType SCIP_IMPLINTTYPE;
 
 /** domain change data type */
 enum SCIP_DomchgType

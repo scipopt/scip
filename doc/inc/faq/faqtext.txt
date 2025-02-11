@@ -375,7 +375,7 @@ SECTION: General Questions about SCIP
     <p>
         A variable is said to be an implied integral if its integrality is implied by enforcing a set of constraints and the integrality constraints of other variables.
         SCIP distinguishes between two types of implied integrality: strong implied integrality and weak implied integrality,
-        which are encoded by the flag <code>SCIP_VARIMPLTYPE</code>.
+        which are encoded by the flag <code>SCIP_IMPLINTTYPE</code>.
     </p>
     <p>
         A variable is strongly implied integral if it has a fixed integer solution value in the problem that remains after
@@ -405,7 +405,7 @@ SECTION: General Questions about SCIP
     <p>
         Originally, the variable type <code>SCIP_VARTYPE_IMPLINT</code> was used for continuous variables for which
         it is known that there exists at least one optimal solution such that all implied integral variables are integral.
-        With SCIP 10.0.0, this variable type is deprecated in favor of the new flag <code>SCIP_VARIMPLTYPE</code>
+        With SCIP 10.0.0, this variable type is deprecated in favor of the new flag <code>SCIP_IMPLINTTYPE</code>
         which can take the values <code>NONE</code>, <code>WEAK</code> and <code>STRONG</code>.
         The primary motivation for this change is to allow users to model implied integrality of variables of integer
         and binary type, which was previously impossible.
@@ -413,8 +413,8 @@ SECTION: General Questions about SCIP
         integrality constraint, which means that SCIP does not explicitly enforce the integrality of these variables
         in primal solutions.
         In SCIP 10 and all versions after, variables of type <code>SCIP_VARTYPE_IMPLINT</code> can be equivalently
-        modelled with variable type <code>SCIP_VARTYPE_CONTINUOUS</code> and implied integral type <code>SCIP_VARIMPLTYPE_WEAK</code>.
-        With the new flag <code>SCIP_VARIMPLTYPE</code>, SCIP and its users can now take advantage of implied integrality
+        modelled with variable type <code>SCIP_VARTYPE_CONTINUOUS</code> and implied integral type <code>SCIP_IMPLINTTYPE_WEAK</code>.
+        With the new flag <code>SCIP_IMPLINTTYPE</code>, SCIP and its users can now take advantage of implied integrality
         for variables that also have integrality constraints, which can be important for performance.
     </p>
 

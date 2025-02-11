@@ -39,7 +39,7 @@ Examples and applications
 Interface changes
 -----------------
 ### Deprecations
-- The variable type of SCIP_VARTYPE_IMPLINT is deprecated in favor of a new enum SCIP_VARIMPLTYPE that indicates if a
+- The variable type of SCIP_VARTYPE_IMPLINT is deprecated in favor of a new enum SCIP_IMPLINTTYPE that indicates if a
   variable is implied integral, independent of the variable type.
   The problem variable arrays is still sorted as:
    (0) | binary | integer | implied integral | continuous | (nvars),
@@ -66,8 +66,8 @@ Interface changes
 - copyiisfinders added to arguments for SCIPcopyPlugins() (16th position)
 - SCIPcreateConsOrbitope() deleted two arguments and changed position of another argument
 - deprecated SCIPsubversion(), will be removed
-- (Temporarily supported until SCIP 11): SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_VARIMPLTYPE_WEAK.
-- (Temporarily supported until SCIP 11): Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integral type SCIP_VARIMPLTYPE_WEAK instead.
+- (Temporarily supported until SCIP 11): SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_IMPLINTTYPE_WEAK.
+- (Temporarily supported until SCIP 11): Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integral type SCIP_IMPLINTTYPE_WEAK instead.
 - impltype added to arguments for SCIPvarCalcDistributionParameters() (5th position)
 - SCIPgetSolVarsData(): argument nimplvars is subdivided into nbinimplvars, nintimplvars, and ncontimplvars
 - SCIPexprIsIntegral() was deleted, it is replaced by SCIPexprGetIntegrality(), which also provides information about the presence of weakly implied integral variables.

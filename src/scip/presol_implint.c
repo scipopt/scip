@@ -693,7 +693,7 @@ SCIP_RETCODE findImpliedIntegers(
          int col = comp->componentcols[i];
          SCIP_VAR* var = SCIPmatrixGetVar(matrix, col);
          SCIP_Bool infeasible = FALSE;
-         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_VARIMPLTYPE_WEAK, &infeasible) );
+         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
          (*nchgvartypes)++;
          assert(!infeasible);
       }

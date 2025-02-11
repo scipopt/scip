@@ -272,7 +272,7 @@ SCIP_RETCODE SCIPprobChgVarImplType(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to change implied integral type of */
-   SCIP_VARIMPLTYPE      impltype            /**< new implied integral type of variable */
+   SCIP_IMPLINTTYPE      impltype            /**< new implied integral type of variable */
    );
 
 /** informs problem, that the given loose problem variable changed its status */

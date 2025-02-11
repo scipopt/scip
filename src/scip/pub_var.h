@@ -460,7 +460,7 @@ SCIP_VARTYPE SCIPvarGetType(
 
 /** gets the implied integral type of the variable */
 SCIP_EXPORT
-SCIP_VARIMPLTYPE SCIPvarGetImplType(
+SCIP_IMPLINTTYPE SCIPvarGetImplType(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -979,10 +979,10 @@ void SCIPvarMarkRelaxationOnly(
 #define SCIPvarIsNegated(var)           ((var)->varstatus == SCIP_VARSTATUS_NEGATED)
 #define SCIPvarGetType(var)             ((SCIP_VARTYPE)((var)->vartype))
 #define SCIPvarIsBinary(var)            ((var)->vartype == SCIP_VARTYPE_BINARY || \
-      (((var)->vartype != SCIP_VARTYPE_CONTINUOUS || (var)->varimpltype != SCIP_VARIMPLTYPE_NONE) \
+      (((var)->vartype != SCIP_VARTYPE_CONTINUOUS || (var)->varimpltype != SCIP_IMPLINTTYPE_NONE) \
       && (var)->glbdom.lb >= 0.0 && (var)->glbdom.ub <= 1.0))
-#define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS || (var)->varimpltype != SCIP_VARIMPLTYPE_NONE)
-#define SCIPvarIsImpliedIntegral(var)   ((var)->varimpltype != SCIP_VARIMPLTYPE_NONE)
+#define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS || (var)->varimpltype != SCIP_IMPLINTTYPE_NONE)
+#define SCIPvarIsImpliedIntegral(var)   ((var)->varimpltype != SCIP_IMPLINTTYPE_NONE)
 #define SCIPvarIsInitial(var)           (var)->initial
 #define SCIPvarIsRemovable(var)         (var)->removable
 #define SCIPvarIsDeleted(var)           (var)->deleted

@@ -569,7 +569,7 @@ SCIP_RETCODE aggregation(
    SCIP_VAR* aggregatedvar;
    SCIP_VAR* newvar;
    SCIP_VARTYPE newvartype;
-   SCIP_VARIMPLTYPE newvarimpltype;
+   SCIP_IMPLINTTYPE newvarimpltype;
    SCIP_Real constant;
    SCIP_Real newlb;
    SCIP_Real newub;
@@ -639,7 +639,7 @@ SCIP_RETCODE aggregation(
    }
 
    newvartype = SCIPvarIsIntegral(aggregatedvar) ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_CONTINUOUS;
-   newvarimpltype = SCIPvarIsImpliedIntegral(aggregatedvar) ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE;
+   newvarimpltype = SCIPvarIsImpliedIntegral(aggregatedvar) ? SCIP_IMPLINTTYPE_WEAK : SCIP_IMPLINTTYPE_NONE;
 
    lhs = SCIPvarGetLbGlobal(vars[colidx2]);
    rhs = SCIPvarGetUbGlobal(vars[colidx2]);

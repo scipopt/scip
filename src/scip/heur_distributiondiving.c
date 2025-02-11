@@ -385,7 +385,7 @@ SCIP_RETCODE calcBranchScore(
    SCIP_Real meanup;           /* mean value of variable uniform distribution after branching up */
    SCIP_Real meandown;         /* mean value of variable uniform distribution after branching down*/
    SCIP_VARTYPE vartype;
-   SCIP_VARIMPLTYPE impltype;
+   SCIP_IMPLINTTYPE impltype;
    int ncolrows;
    int i;
 
@@ -709,7 +709,7 @@ SCIP_RETCODE varProcessBoundChanges(
    SCIP_Real oldub;
    SCIP_Real newub;
    SCIP_VARTYPE vartype;
-   SCIP_VARIMPLTYPE impltype;
+   SCIP_IMPLINTTYPE impltype;
    int ncolrows;
    int r;
    int varindex;

@@ -249,7 +249,7 @@ SCIP_RETCODE setupAndSolveSubscipRapidlearning(
       assert(SCIPvarIsImpliedIntegral(subvars[i]));
       SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
       assert(!infeasible);
-      SCIP_CALL( SCIPchgVarImplType(subscip, subvars[i], SCIP_VARIMPLTYPE_NONE, &infeasible) );
+      SCIP_CALL( SCIPchgVarImplType(subscip, subvars[i], SCIP_IMPLINTTYPE_NONE, &infeasible) );
       assert(!infeasible);
    }
 

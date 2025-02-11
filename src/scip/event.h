@@ -312,8 +312,8 @@ SCIP_RETCODE SCIPeventCreateImplTypeChanged(
    SCIP_EVENT**          event,              /**< pointer to store the event */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             var,                /**< variable whose implied type changed */
-   SCIP_VARIMPLTYPE      oldtype,            /**< old variable implied type */
-   SCIP_VARIMPLTYPE      newtype             /**< new variable implied type */
+   SCIP_IMPLINTTYPE      oldtype,            /**< old variable implied type */
+   SCIP_IMPLINTTYPE      newtype             /**< new variable implied type */
 );
 
 /** creates an event for the addition of a linear row to the separation storage */

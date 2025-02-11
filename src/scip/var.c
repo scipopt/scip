@@ -1937,7 +1937,7 @@ SCIP_RETCODE varCreate(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable */
+   SCIP_IMPLINTTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
@@ -1956,7 +1956,7 @@ SCIP_RETCODE varCreate(
    assert(vartype != SCIP_IMPLINT_PLACEHOLDER);
 
    /* adjust bounds of variable */
-   integral = vartype != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_VARIMPLTYPE_NONE;
+   integral = vartype != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_IMPLINTTYPE_NONE;
    lb = adjustedLb(set, integral, lb);
    ub = adjustedUb(set, integral, ub);
 
@@ -2088,7 +2088,7 @@ SCIP_RETCODE SCIPvarCreateOriginal(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable */
+   SCIP_IMPLINTTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -2132,7 +2132,7 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable */
+   SCIP_IMPLINTTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -2372,7 +2372,7 @@ SCIP_RETCODE varParse(
    SCIP_Real*            ub,                 /**< pointer to store the upper bound */
    SCIP_Real*            obj,                /**< pointer to store the objective coefficient */
    SCIP_VARTYPE*         vartype,            /**< pointer to store the variable type */
-   SCIP_VARIMPLTYPE*     impltype,           /**< pointer to store the implied integral type */
+   SCIP_IMPLINTTYPE*     impltype,           /**< pointer to store the implied integral type */
    SCIP_Real*            lazylb,             /**< pointer to store if the lower bound is lazy */
    SCIP_Real*            lazyub,             /**< pointer to store if the upper bound is lazy */
    SCIP_Bool             local,              /**< should the local bound be applied */
@@ -2401,7 +2401,7 @@ SCIP_RETCODE varParse(
    assert(*endptr != str);
    SCIPsetDebugMsg(set, "parsed variable type <%s>\n", token);
 
-   (*impltype) = SCIP_VARIMPLTYPE_NONE;
+   (*impltype) = SCIP_IMPLINTTYPE_NONE;
    /* get variable type */
    if( strncmp(token, "binary", 3) == 0 )
       (*vartype) = SCIP_VARTYPE_BINARY;
@@ -2410,7 +2410,7 @@ SCIP_RETCODE varParse(
    else if( strncmp(token, "implicit", 3) == 0 )
    {
       (*vartype) = SCIP_VARTYPE_CONTINUOUS;
-      (*impltype) = SCIP_VARIMPLTYPE_WEAK;
+      (*impltype) = SCIP_IMPLINTTYPE_WEAK;
    }
    else if( strncmp(token, "continuous", 3) == 0 )
       (*vartype) = SCIP_VARTYPE_CONTINUOUS;
@@ -2523,17 +2523,17 @@ SCIP_RETCODE varParse(
 
       if( strncmp(strptr, "strong", 6) == 0 )
       {
-         (*impltype) = SCIP_VARIMPLTYPE_STRONG;
+         (*impltype) = SCIP_IMPLINTTYPE_STRONG;
          *endptr = strptr + 6;
       }
       else if( strncmp(strptr, "weak", 4) == 0 )
       {
-         (*impltype) = SCIP_VARIMPLTYPE_WEAK;
+         (*impltype) = SCIP_IMPLINTTYPE_WEAK;
          *endptr = strptr + 4;
       }
       else if( strncmp(strptr, "none", 4) == 0 )
       {
-         (*impltype) = SCIP_VARIMPLTYPE_NONE;
+         (*impltype) = SCIP_IMPLINTTYPE_NONE;
          *endptr = strptr + 4;
       }
       else
@@ -2576,7 +2576,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_Real ub;
    SCIP_Real obj;
    SCIP_VARTYPE vartype;
-   SCIP_VARIMPLTYPE impltype;
+   SCIP_IMPLINTTYPE impltype;
    SCIP_Real lazylb;
    SCIP_Real lazyub;
 
@@ -2646,7 +2646,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_Real ub;
    SCIP_Real obj;
    SCIP_VARTYPE vartype;
-   SCIP_VARIMPLTYPE impltype;
+   SCIP_IMPLINTTYPE impltype;
    SCIP_Real lazylb;
    SCIP_Real lazyub;
 
@@ -3088,7 +3088,7 @@ SCIP_RETCODE SCIPvarPrint(
    SCIP_Real lb;
    SCIP_Real ub;
    SCIP_VARTYPE vartype = SCIPvarGetType(var);
-   SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
+   SCIP_IMPLINTTYPE impltype = SCIPvarGetImplType(var);
    int i;
 
    /* change integrality constraints of implied integrals based on the writing settings */
@@ -3178,12 +3178,12 @@ SCIP_RETCODE SCIPvarPrint(
    /* implication of variable */
    switch( impltype )
    {
-      case SCIP_VARIMPLTYPE_NONE:
+      case SCIP_IMPLINTTYPE_NONE:
          break;
-      case SCIP_VARIMPLTYPE_WEAK:
+      case SCIP_IMPLINTTYPE_WEAK:
          SCIPmessageFPrintInfo(messagehdlr, file, ", implied: weak");
          break;
-      case SCIP_VARIMPLTYPE_STRONG:
+      case SCIP_IMPLINTTYPE_STRONG:
          SCIPmessageFPrintInfo(messagehdlr, file, ", implied: strong");
          break;
       default:
@@ -5017,9 +5017,9 @@ SCIP_RETCODE tryAggregateIntVars(
    SCIP_Longint ysol;
    SCIP_Bool success;
    SCIP_VARTYPE vartype;
-   SCIP_VARIMPLTYPE impltypex;
-   SCIP_VARIMPLTYPE impltypey;
-   SCIP_VARIMPLTYPE impltype;
+   SCIP_IMPLINTTYPE impltypex;
+   SCIP_IMPLINTTYPE impltypey;
+   SCIP_IMPLINTTYPE impltype;
 
 #define MAXDNOM 1000000LL
 
@@ -6141,9 +6141,9 @@ SCIP_RETCODE SCIPvarChgType(
 
    if( vartype == SCIP_IMPLINT_PLACEHOLDER )
    {
-      if( SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_WEAK )
+      if( SCIPvarGetImplType(var) != SCIP_IMPLINTTYPE_WEAK )
       {
-         SCIP_CALL(SCIPvarChgImplType(var,blkmem,set,primal,lp,eventqueue,SCIP_VARIMPLTYPE_WEAK));
+         SCIP_CALL(SCIPvarChgImplType(var,blkmem,set,primal,lp,eventqueue,SCIP_IMPLINTTYPE_WEAK));
       }
       return SCIP_OKAY;
    }
@@ -6182,11 +6182,11 @@ SCIP_RETCODE SCIPvarChgImplType(
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_VARIMPLTYPE      impltype            /**< new implied integral type of variable */
+   SCIP_IMPLINTTYPE      impltype            /**< new implied integral type of variable */
    )
 {
    SCIP_EVENT* event;
-   SCIP_VARIMPLTYPE oldtype;
+   SCIP_IMPLINTTYPE oldtype;
 
    assert(var != NULL);
 
@@ -6198,7 +6198,7 @@ SCIP_RETCODE SCIPvarChgImplType(
       return SCIP_INVALIDDATA;
    }
 
-   oldtype = (SCIP_VARIMPLTYPE) var->varimpltype;
+   oldtype = (SCIP_IMPLINTTYPE) var->varimpltype;
    var->varimpltype = impltype; /*lint !e641*/
 
    if( SCIPsetGetStage(set) > SCIP_STAGE_TRANSFORMING )
@@ -17846,13 +17846,13 @@ SCIP_VARTYPE SCIPvarGetType(
 }
 
 /** gets the implied integral type of the variable */
-SCIP_VARIMPLTYPE SCIPvarGetImplType(
+SCIP_IMPLINTTYPE SCIPvarGetImplType(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
    assert(var != NULL);
 
-   return (SCIP_VARIMPLTYPE)(var->varimpltype);
+   return (SCIP_IMPLINTTYPE)(var->varimpltype);
 }
 
 /** returns TRUE if the variable is of binary type; this is the case if:
@@ -17868,7 +17868,7 @@ SCIP_Bool SCIPvarIsBinary(
    assert(var != NULL);
 
    return (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || 
-      ((SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE)
+      ((SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(var) != SCIP_IMPLINTTYPE_NONE)
       && var->glbdom.lb >= 0.0 && var->glbdom.ub <= 1.0));
 }
 
@@ -17877,7 +17877,7 @@ SCIP_Bool SCIPvarIsIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   return (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE);
+   return (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(var) != SCIP_IMPLINTTYPE_NONE);
 }
 
 /** returns whether variable is implied integral (weakly or strongly) */
@@ -17885,7 +17885,7 @@ SCIP_Bool SCIPvarIsImpliedIntegral(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
-   return (SCIPvarGetImplType(var) != SCIP_VARIMPLTYPE_NONE);
+   return (SCIPvarGetImplType(var) != SCIP_IMPLINTTYPE_NONE);
 }
 
 /** returns whether variable's column should be present in the initial root LP */

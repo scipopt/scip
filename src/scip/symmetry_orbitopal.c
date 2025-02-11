@@ -166,14 +166,14 @@ SCIP_Bool vartypeIsBranchRowType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
    SCIP_VARTYPE          vartype,            /**< var type */
-   SCIP_VARIMPLTYPE      impltype            /**< is the variable implied integral? */
+   SCIP_IMPLINTTYPE      impltype            /**< is the variable implied integral? */
 )
 {
    assert( scip != NULL );
    assert( orbireddata != NULL );
    assert( orbireddata->conshdlr_nonlinear_checked );
 
-   if( impltype != SCIP_VARIMPLTYPE_NONE || vartype == SCIP_VARTYPE_CONTINUOUS )
+   if( impltype != SCIP_IMPLINTTYPE_NONE || vartype == SCIP_VARTYPE_CONTINUOUS )
    {
       /* potential branching variables if nonlinear constraints exist */
       assert( orbireddata->conshdlr_nonlinear_checked );

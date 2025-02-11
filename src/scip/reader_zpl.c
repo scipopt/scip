@@ -835,7 +835,7 @@ SCIP_RETCODE addVar(
    SCIP_Real lb;
    SCIP_Real ub;
    SCIP_VARTYPE vartype;
-   SCIP_VARIMPLTYPE varimpltype;
+   SCIP_IMPLINTTYPE varimpltype;
    SCIP_Bool initial;
    SCIP_Bool removable;
    int branchpriority;
@@ -880,15 +880,15 @@ SCIP_RETCODE addVar(
    {
    case VAR_INT:
       vartype = SCIP_VARTYPE_INTEGER;
-      varimpltype = SCIP_VARIMPLTYPE_NONE;
+      varimpltype = SCIP_IMPLINTTYPE_NONE;
       break;
    case VAR_IMP:
       vartype = SCIP_VARTYPE_CONTINUOUS;
-      varimpltype = SCIP_VARIMPLTYPE_WEAK;
+      varimpltype = SCIP_IMPLINTTYPE_WEAK;
       break;
    case VAR_CON:
       vartype = SCIP_VARTYPE_CONTINUOUS;
-      varimpltype = SCIP_VARIMPLTYPE_NONE;
+      varimpltype = SCIP_IMPLINTTYPE_NONE;
       break;
    default:
       SCIPwarningMessage(scip, "invalid variable class <%d> in ZIMPL callback xlp_addvar()\n", usevarclass);

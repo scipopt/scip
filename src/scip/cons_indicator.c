@@ -6315,7 +6315,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
                   {
                      SCIP_Bool infeasible;
 
-                     SCIP_CALL( SCIPchgVarImplType(scip, consdata->slackvar, SCIP_VARIMPLTYPE_WEAK, &infeasible) );
+                     SCIP_CALL( SCIPchgVarImplType(scip, consdata->slackvar, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
                      /* don't assert feasibility here because the presolver should detect infeasibility */
                   }
                   else
@@ -8078,7 +8078,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
 
             SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
             assert( !infeasible );
-            SCIP_CALL( SCIPchgVarImplType(scip, slackvar, SCIP_VARIMPLTYPE_NONE, &infeasible) );
+            SCIP_CALL( SCIPchgVarImplType(scip, slackvar, SCIP_IMPLINTTYPE_NONE, &infeasible) );
             assert( !infeasible );
          }
 
@@ -8089,7 +8089,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
          /* create slack variable */
          (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
          SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0,
-               SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE,
+               SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_IMPLINTTYPE_WEAK : SCIP_IMPLINTTYPE_NONE,
                TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          SCIP_CALL( SCIPaddVar(scip, slackvar) );
@@ -8108,7 +8108,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGeneric(
       /* create slack variable */
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
       SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0,
-            SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE,
+            SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_IMPLINTTYPE_WEAK : SCIP_IMPLINTTYPE_NONE,
             TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, slackvar) );
@@ -8358,7 +8358,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinCons(
 
       SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
       assert( !infeasible );
-      SCIP_CALL( SCIPchgVarImplType(scip, slackvar, SCIP_VARIMPLTYPE_NONE, &infeasible) );
+      SCIP_CALL( SCIPchgVarImplType(scip, slackvar, SCIP_IMPLINTTYPE_NONE, &infeasible) );
       assert( !infeasible );
    }
 
@@ -8645,7 +8645,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
 
          SCIP_CALL( SCIPchgVarType(scip, slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
          assert( !infeasible );
-         SCIP_CALL( SCIPchgVarImplType(scip, slackvar, SCIP_VARIMPLTYPE_NONE, &infeasible) );
+         SCIP_CALL( SCIPchgVarImplType(scip, slackvar, SCIP_IMPLINTTYPE_NONE, &infeasible) );
          assert( !infeasible );
       }
 
@@ -8656,7 +8656,7 @@ SCIP_RETCODE SCIPcreateConsIndicatorGenericLinConsPure(
       /* create slack variable */
       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
       SCIP_CALL( SCIPcreateVarImpl(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0,
-            SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_VARIMPLTYPE_WEAK : SCIP_VARIMPLTYPE_NONE,
+            SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_IMPLINTTYPE_WEAK : SCIP_IMPLINTTYPE_NONE,
             TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, slackvar) );
@@ -8790,7 +8790,7 @@ SCIP_RETCODE SCIPaddVarIndicator(
 
       SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_CONTINUOUS, &infeasible) );
       assert( !infeasible );
-      SCIP_CALL( SCIPchgVarImplType(scip, consdata->slackvar, SCIP_VARIMPLTYPE_NONE, &infeasible) );
+      SCIP_CALL( SCIPchgVarImplType(scip, consdata->slackvar, SCIP_IMPLINTTYPE_NONE, &infeasible) );
       assert( !infeasible );
    }
 

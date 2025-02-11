@@ -773,7 +773,7 @@ static
 int probProvidePos(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_VARTYPE          vartype,            /**< type of the variable to be inserted */
-   SCIP_VARIMPLTYPE      impltype            /**< implied type of the variable to be inserted */
+   SCIP_IMPLINTTYPE      impltype            /**< implied type of the variable to be inserted */
    )
 {
    int insertpos = prob->nvars;
@@ -784,7 +784,7 @@ int probProvidePos(
    int contstart = contimplstart + prob->ncontimplvars;
 
    /* non-implied continuous variable */
-   if( vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_NONE )
+   if( vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_IMPLINTTYPE_NONE )
    {
       ++prob->ncontvars;
       return insertpos;
@@ -800,7 +800,7 @@ int probProvidePos(
    /* implied continuous variable */
    if( vartype == SCIP_VARTYPE_CONTINUOUS )
    {
-      assert(impltype != SCIP_VARIMPLTYPE_NONE);
+      assert(impltype != SCIP_IMPLINTTYPE_NONE);
       ++prob->ncontimplvars;
       return insertpos;
    }
@@ -813,7 +813,7 @@ int probProvidePos(
    assert(insertpos == contimplstart);
 
    /* implied integral variable */
-   if( vartype == SCIP_VARTYPE_INTEGER && impltype != SCIP_VARIMPLTYPE_NONE )
+   if( vartype == SCIP_VARTYPE_INTEGER && impltype != SCIP_IMPLINTTYPE_NONE )
    {
       ++prob->nintimplvars;
       return insertpos;
@@ -827,7 +827,7 @@ int probProvidePos(
    assert(insertpos == intimplstart);
 
    /* implied binary variable */
-   if( vartype == SCIP_VARTYPE_BINARY && impltype != SCIP_VARIMPLTYPE_NONE )
+   if( vartype == SCIP_VARTYPE_BINARY && impltype != SCIP_IMPLINTTYPE_NONE )
    {
       ++prob->nbinimplvars;
       return insertpos;
@@ -843,7 +843,7 @@ int probProvidePos(
    /* non-implied integral variable */
    if( vartype == SCIP_VARTYPE_INTEGER )
    {
-      assert(impltype == SCIP_VARIMPLTYPE_NONE);
+      assert(impltype == SCIP_IMPLINTTYPE_NONE);
       ++prob->nintvars;
       return insertpos;
    }
@@ -857,7 +857,7 @@ int probProvidePos(
 
    /* non-implied binary variable */
    assert(vartype == SCIP_VARTYPE_BINARY);
-   assert(impltype == SCIP_VARIMPLTYPE_NONE);
+   assert(impltype == SCIP_IMPLINTTYPE_NONE);
    ++prob->nbinvars;
 
    return insertpos;
@@ -883,14 +883,14 @@ void probInsertVar(
 
    /* get insert position */
    SCIP_VARTYPE vartype = SCIPvarGetType(var);
-   SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
+   SCIP_IMPLINTTYPE impltype = SCIPvarGetImplType(var);
    int insertpos = probProvidePos(prob, vartype, impltype);
-   assert((vartype == SCIP_VARTYPE_BINARY && impltype == SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars - 1)
-      || (vartype == SCIP_VARTYPE_INTEGER && impltype == SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars - 1)
-      || (vartype == SCIP_VARTYPE_BINARY && impltype != SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars - 1)
-      || (vartype == SCIP_VARTYPE_INTEGER && impltype != SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars - 1)
-      || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype != SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars - 1)
-      || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_VARIMPLTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars + prob->ncontvars - 1));
+   assert((vartype == SCIP_VARTYPE_BINARY && impltype == SCIP_IMPLINTTYPE_NONE && insertpos == prob->nbinvars - 1)
+      || (vartype == SCIP_VARTYPE_INTEGER && impltype == SCIP_IMPLINTTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars - 1)
+      || (vartype == SCIP_VARTYPE_BINARY && impltype != SCIP_IMPLINTTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars - 1)
+      || (vartype == SCIP_VARTYPE_INTEGER && impltype != SCIP_IMPLINTTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars - 1)
+      || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype != SCIP_IMPLINTTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars - 1)
+      || (vartype == SCIP_VARTYPE_CONTINUOUS && impltype == SCIP_IMPLINTTYPE_NONE && insertpos == prob->nbinvars + prob->nintvars + prob->nbinimplvars + prob->nintimplvars + prob->ncontimplvars + prob->ncontvars - 1));
 
    /* fill insert position */
    prob->vars[insertpos] = var;
@@ -922,7 +922,7 @@ SCIP_RETCODE probRemoveVar(
    int contimplstart;
    int contstart;
    SCIP_VARTYPE vartype;
-   SCIP_VARIMPLTYPE impltype;
+   SCIP_IMPLINTTYPE impltype;
 
    assert(prob != NULL);
    assert(var != NULL);
@@ -938,7 +938,7 @@ SCIP_RETCODE probRemoveVar(
    vartype = SCIPvarGetType(var);
    impltype = SCIPvarGetImplType(var);
 
-   if( impltype != SCIP_VARIMPLTYPE_NONE )
+   if( impltype != SCIP_IMPLINTTYPE_NONE )
    {
       switch( vartype )
       {
@@ -1341,7 +1341,7 @@ SCIP_RETCODE SCIPprobChgVarImplType(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to change implied integral type of */
-   SCIP_VARIMPLTYPE      impltype            /**< new implied integral type of variable */
+   SCIP_IMPLINTTYPE      impltype            /**< new implied integral type of variable */
    )
 {
    assert(prob != NULL);

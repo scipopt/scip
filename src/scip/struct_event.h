@@ -110,8 +110,8 @@ struct SCIP_EventTypeChg
 /** data for variable implied type change events */
 struct SCIP_EventImplTypeChg
 {
-   SCIP_VARIMPLTYPE      oldtype;            /**< old variable implied type */
-   SCIP_VARIMPLTYPE      newtype;            /**< new variable implied type */
+   SCIP_IMPLINTTYPE      oldtype;            /**< old variable implied type */
+   SCIP_IMPLINTTYPE      newtype;            /**< new variable implied type */
    SCIP_VAR*             var;                /**< variable whose type changed */
 };
 

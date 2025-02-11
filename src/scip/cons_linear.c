@@ -5272,7 +5272,7 @@ SCIP_RETCODE tightenVarUb(
    if( force || SCIPisUbBetter(scip, newub, lb, oldub) )
    {
       SCIP_VARTYPE vartype = SCIPvarGetType(var);
-      SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
+      SCIP_IMPLINTTYPE impltype = SCIPvarGetImplType(var);
 
       SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g",
          SCIPconsGetName(cons), SCIPvarGetName(var), lb, oldub, consdata->vals[pos],
@@ -5341,7 +5341,7 @@ SCIP_RETCODE tightenVarLb(
    if( force || SCIPisLbBetter(scip, newlb, oldlb, ub) )
    {
       SCIP_VARTYPE vartype = SCIPvarGetType(var);
-      SCIP_VARIMPLTYPE impltype = SCIPvarGetImplType(var);
+      SCIP_IMPLINTTYPE impltype = SCIPvarGetImplType(var);
 
       SCIPdebugMsg(scip, "linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, activity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g",
          SCIPconsGetName(cons), SCIPvarGetName(var), oldlb, ub, consdata->vals[pos],
@@ -10026,7 +10026,7 @@ SCIP_RETCODE convertLongEquality(
             /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
             SCIPdebugMsg(scip, "linear constraint <%s>: converting continuous variable <%s> to implicit integer variable\n",
                SCIPconsGetName(cons), SCIPvarGetName(var));
-            SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_VARIMPLTYPE_WEAK, &infeasible) );
+            SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
             (*nchgvartypes)++;
             if( infeasible )
             {
@@ -10052,7 +10052,7 @@ SCIP_RETCODE convertLongEquality(
 
             /* create new implicit variable for aggregation */
             SCIP_CALL( SCIPcreateVarImpl(scip, &newvar, newvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
-                  SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_WEAK,
+                  SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK,
                   SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
 
             /* add new variable to problem */
@@ -10122,7 +10122,7 @@ SCIP_RETCODE convertLongEquality(
          /* convert the integer variable with coefficient 1.0 into an implicit integer variable */
          SCIPdebugMsg(scip, "linear constraint <%s>: converting integer variable <%s> to implicit integer variable\n",
             SCIPconsGetName(cons), SCIPvarGetName(var));
-         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_VARIMPLTYPE_STRONG, &infeasible) );
+         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_STRONG, &infeasible) );
          (*nchgvartypes)++;
          if( infeasible )
          {
@@ -11010,7 +11010,7 @@ SCIP_RETCODE dualPresolve(
          /* if the multi-aggregate bestvar is integer, we need to convert implicit integers to integers because
           *  the implicitness might rely on the constraint and the integrality of bestvar
           */
-         if( !infeasible && aggregated && SCIPvarGetType(bestvar) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetImplType(bestvar) != SCIP_VARIMPLTYPE_STRONG )
+         if( !infeasible && aggregated && SCIPvarGetType(bestvar) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetImplType(bestvar) != SCIP_IMPLINTTYPE_STRONG )
          {
             SCIP_Bool infeasiblevartypechg = FALSE;
 
@@ -11020,14 +11020,14 @@ SCIP_RETCODE dualPresolve(
                /* If the multi-aggregation was not infeasible, then setting implicit integers to integers should not
                 * lead to infeasibility. 
                 */
-               if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(aggrvars[j]) != SCIP_VARIMPLTYPE_NONE )
+               if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(aggrvars[j]) != SCIP_IMPLINTTYPE_NONE )
                {
                   if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS )
                   {
                      SCIP_CALL( SCIPchgVarType(scip, aggrvars[j], SCIP_VARTYPE_INTEGER, &infeasiblevartypechg) );
                      assert(!infeasiblevartypechg);
                   }
-                  SCIP_CALL( SCIPchgVarImplType(scip, aggrvars[j], SCIP_VARIMPLTYPE_NONE, &infeasiblevartypechg) );
+                  SCIP_CALL( SCIPchgVarImplType(scip, aggrvars[j], SCIP_IMPLINTTYPE_NONE, &infeasiblevartypechg) );
                   assert(!infeasiblevartypechg);
 
                   (*nchgvartypes)++;
@@ -15025,7 +15025,7 @@ SCIP_RETCODE fullDualPresolve(
       {
          /* since we locally copied the variable array we can change the variable type immediately */
          assert(!SCIPvarIsIntegral(var));
-         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_VARIMPLTYPE_WEAK, &infeasible) );
+         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
          (*nchgvartypes)++;
          if( infeasible )
          {
@@ -17433,10 +17433,10 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       assert(SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED);
 
       /* for presolving it only matters if a variable becomes integral */
-      consdata->presolved = (consdata->presolved && (SCIPeventGetOldImpltype(event) != SCIP_VARIMPLTYPE_NONE || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS));
+      consdata->presolved = (consdata->presolved && (SCIPeventGetOldImpltype(event) != SCIP_IMPLINTTYPE_NONE || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS));
 
       /* the ordering is preserved if the variable remains binary */
-      consdata->indexsorted = (consdata->indexsorted && SCIPvarIsBinary(var) && (SCIPeventGetOldImpltype(event) != SCIP_VARIMPLTYPE_NONE || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS));
+      consdata->indexsorted = (consdata->indexsorted && SCIPvarIsBinary(var) && (SCIPeventGetOldImpltype(event) != SCIP_IMPLINTTYPE_NONE || SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS));
    }
    else
    {

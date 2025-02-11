@@ -133,13 +133,13 @@ SCIP_RETCODE SCIPcreateVar(
 
    SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateVar", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_VARIMPLTYPE impltype = SCIP_VARIMPLTYPE_NONE;
+   SCIP_IMPLINTTYPE impltype = SCIP_IMPLINTTYPE_NONE;
    /* For now, we help users and automatically convert the variable to an implied integral one if they are using the
     * deprecated variable type. This feature will be deprecated in a future version */
    if( vartype == SCIP_IMPLINT_PLACEHOLDER )
    {
       vartype = SCIP_VARTYPE_CONTINUOUS;
-      impltype = SCIP_VARIMPLTYPE_WEAK;
+      impltype = SCIP_IMPLINTTYPE_WEAK;
    }
    SCIP_CALL( SCIPcreateVarImpl(scip, var, name, lb, ub, obj, vartype, impltype,
                                 initial, removable, vardelorig, vartrans, vardeltrans, varcopy, vardata) );
@@ -177,7 +177,7 @@ SCIP_RETCODE SCIPcreateVarImpl(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable */
+   SCIP_IMPLINTTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -8468,7 +8468,7 @@ SCIP_RETCODE SCIPchgVarType(
 SCIP_RETCODE SCIPchgVarImplType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the type for */
-   SCIP_VARIMPLTYPE      impltype,           /**< new type of variable */
+   SCIP_IMPLINTTYPE      impltype,           /**< new type of variable */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected (, due to
                                               *   integrality condition of the new variable type) */
 )
@@ -8500,7 +8500,7 @@ SCIP_RETCODE SCIPchgVarImplType(
          assert(!SCIPvarIsTransformed(var));
 
          /* first adjust the variable due to new integrality information */
-         SCIP_CALL( tightenBounds(scip, var, impltype != SCIP_VARIMPLTYPE_NONE, infeasible) );
+         SCIP_CALL( tightenBounds(scip, var, impltype != SCIP_IMPLINTTYPE_NONE, infeasible) );
 
          /* second change variable type */
          if( SCIPvarGetProbindex(var) >= 0 )
@@ -8529,7 +8529,7 @@ SCIP_RETCODE SCIPchgVarImplType(
          }
 
          /* first adjust the variable due to new integrality information */
-         SCIP_CALL( tightenBounds(scip, var, impltype != SCIP_VARIMPLTYPE_NONE, infeasible) );
+         SCIP_CALL( tightenBounds(scip, var, impltype != SCIP_IMPLINTTYPE_NONE, infeasible) );
 
          /* second change variable type */
          if( SCIPvarGetProbindex(var) >= 0 )

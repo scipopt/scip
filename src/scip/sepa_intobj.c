@@ -139,7 +139,7 @@ SCIP_RETCODE createObjRow(
       if( sepadata->objvar == NULL )
       {
          SCIP_CALL( SCIPcreateVarImpl(scip, &sepadata->objvar, "objvar", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
-               SCIP_VARTYPE_CONTINUOUS, SCIP_VARIMPLTYPE_WEAK, FALSE, TRUE, NULL, NULL, NULL, NULL, NULL) );
+               SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK, FALSE, TRUE, NULL, NULL, NULL, NULL, NULL) );
          SCIPvarMarkRelaxationOnly(sepadata->objvar);
          SCIP_CALL( SCIPaddVar(scip, sepadata->objvar) );
          SCIP_CALL( SCIPaddVarLocksType(scip, sepadata->objvar, SCIP_LOCKTYPE_MODEL, +1, +1) );

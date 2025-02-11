@@ -185,7 +185,7 @@ SCIP_RETCODE SCIPcreateVarImpl(
    SCIP_Real             ub,                 /**< upper bound of variable */
    SCIP_Real             obj,                /**< objective function value */
    SCIP_VARTYPE          vartype,            /**< type of variable */
-   SCIP_VARIMPLTYPE      impltype,           /**< implied integral type of the variable (none, weak or strong) */
+   SCIP_IMPLINTTYPE      impltype,           /**< implied integral type of the variable (none, weak or strong) */
    SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
    SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
    SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
@@ -2948,7 +2948,7 @@ SCIP_EXPORT
 SCIP_RETCODE SCIPchgVarImplType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the type for */
-   SCIP_VARIMPLTYPE      impltype,           /**< New implied integral type of the variable */
+   SCIP_IMPLINTTYPE      impltype,           /**< New implied integral type of the variable */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected (due to
                                               *   integrality condition for the new variable type) */
    );
