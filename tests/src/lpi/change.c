@@ -875,7 +875,7 @@ Test(change, testcolmethods)
    SCIP_Real lbvals[6] = { -SCIPlpiInfinity(lpi), -1.0, -3e-10, 0.0, 1.0, 3e10 };
    SCIP_Real ubvals[6] = { -1.0, -3e-10, 0.0, 1.0, 3e10, SCIPlpiInfinity(lpi) };
    SCIP_Real vals[10] = { 1.0, 5.0, -1.0, 3e5, 2.0, 1.0, 20, 10, -1.9, 1e-2 };
-   int nnonzs[6]  = { 1, 10, -1, 6, -1 };
+   int nnonzs[5]  = { 1, 10, -1, 6, -1 };
    int begvals[6]  = { 0, 2, 3, 5, 8, 9 };
    int indvals[10] = { 0, 1, 3, 2, 1, 1, 2, 4, 0, 3 };
 
