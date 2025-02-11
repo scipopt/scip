@@ -2821,9 +2821,9 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "write/implintlevel",
-         "Should integrality constraints (i.c.) be written for implied integral variables? (0: use original i.c. , "
-         "1: add i.c. for strongly implied integral vars, 2: add i.c. for all implied integral vars, "
-         "-1: remove i.c. for all strongly implied integral vars, -2: remove i.c. for all implied integral vars)",
+         "should integrality constraints (i.c.) be written for implied integral variables? (0: use original i.c., "
+         "1: add i.c. to strongly implied integral vars, 2: add i.c. to all implied integral vars, "
+         "-1: remove i.c. from strongly implied integral vars, -2: remove i.c. from all implied integral vars)",
          &(*set)->write_implintlevel, FALSE, SCIP_DEFAULT_WRITE_IMPLINTLEVEL, -2, 2,
          NULL, NULL) );
 
