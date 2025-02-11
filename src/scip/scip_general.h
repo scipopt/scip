@@ -97,7 +97,7 @@ int SCIPminorVersion(
    void
    );
 
-/** returns SCIP technical version
+/** returns SCIP technical (or patch) version
  *
  *  @return technical SCIP version
  */
