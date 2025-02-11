@@ -109,8 +109,11 @@ int SCIPtechVersion(
 /** returns SCIP sub version number
  *
  *  @return subversion SCIP version
+ *
+ *  @deprecated SCIPsubversion() always returns 0 and will be removed in a future release.
  */
 SCIP_EXPORT
+SCIP_DEPRECATED
 int SCIPsubversion(
    void
    );
