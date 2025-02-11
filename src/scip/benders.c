@@ -6507,6 +6507,56 @@ SCIP_VAR** SCIPbendersGetAuxiliaryVars(
    return benders->auxiliaryvars;
 }
 
+/** returns the subproblem master variables for the given subproblem */
+SCIP_VAR** SCIPbendersGetSubproblemMasterVars(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   return benders->submastervars[probnumber];
+}
+
+/** returns the number of subproblem master variables for the given subproblem */
+int SCIPbendersGetNSubproblemMasterVars(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   return benders->nsubmastervars[probnumber];
+}
+
+/** returns the subproblem master variable data for the given subproblem */
+void SCIPbendersGetSubproblemMasterVarsData(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_VAR***           vars,               /**< pointer to store the master variables, or NULL */
+   int*                  nvars,              /**< the number of master problem variables, or NULL */
+   int*                  nbinvars,           /**< the number of binary master problem variables, or NULL */
+   int*                  nintvars            /**< the number of integer master problem variables, or NULL */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   if( vars != NULL )
+      (*vars) = benders->submastervars[probnumber];
+
+   if( nvars != NULL )
+      (*nvars) = benders->nsubmastervars[probnumber];
+
+   if( nbinvars != NULL )
+      (*nbinvars) = benders->nsubmasterbinvars[probnumber];
+
+   if( nintvars != NULL )
+      (*nintvars) = benders->nsubmasterintvars[probnumber];
+}
+
 /** stores the objective function value of the subproblem for use in cut generation */
 void SCIPbendersSetSubproblemObjval(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
