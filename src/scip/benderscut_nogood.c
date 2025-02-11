@@ -71,12 +71,49 @@ struct SCIP_BenderscutData
    int                   curriter;           /**< the current Benders' decomposition subproblem solve iteration */
    SCIP_Bool             addcuts;            /**< should cuts be generated instead of constraints */
    SCIP_Bool             cutadded;           /**< has a cut been added in the current iteration. Only one cut per round */
+   SCIP_Bool             subprobsvalid;      /**< is it valid to apply nogood cuts for this problem */
 };
 
 
 /*
  * Local methods
  */
+
+/** determines if the subproblems are valid for generating nogood cuts */
+static
+void checkSubproblemValidity(
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_BENDERSCUT*      benderscut          /**< the benders' decomposition cut method */
+)
+{
+   SCIP_BENDERSCUTDATA* benderscutdata;
+   int nmastervars;
+   int nmasterbinvars;
+   int i;
+
+   assert( benders != NULL );
+   assert( benderscut != NULL );
+   assert( strcmp(SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME) == 0 );
+
+   /* getting the Benders' cut data */
+   benderscutdata = SCIPbenderscutGetData(benderscut);
+   assert( benderscutdata != NULL );
+   assert(benderscutdata->benders == benders);
+
+   /* checking whether the nogood cut is valid for this subproblem */
+   for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
+   {
+      /* it is only possible to generate the no-good cut for subproblems that only include binary master variables */
+      SCIPbendersGetSubproblemMasterVarsData(benders, i, NULL, &nmastervars, &nmasterbinvars, NULL);
+
+      if( nmastervars != nmasterbinvars )
+      {
+         benderscutdata->subprobsvalid = FALSE;
+         break;
+      }
+   }
+}
+
 
 /** compute no good cut */
 static
@@ -319,6 +356,10 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecNogood)
    benderscutdata = SCIPbenderscutGetData(benderscut);
    assert(benderscutdata != NULL);
 
+   /* at the first iteration we check the validity of the subproblem for generating nogood cuts */
+   if( benderscutdata->curriter == -1 )
+      checkSubproblemValidity(benders, benderscut);
+
    /* if the curriter is less than the number of Benders' decomposition calls, then we are in a new round.
     * So the cutadded flag must be set to FALSE
     */
@@ -332,13 +373,11 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecNogood)
    if( benderscutdata->cutadded )
       return SCIP_OKAY;
 
-   /* it is only possible to generate the no-good cut for pure binary master problems */
-   if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders) - 1)
-      && (!SCIPbendersMasterIsNonlinear(benders)
-         || SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders) - 2)) )
+   /* it is only possible to generate nogood cuts for if all linking variables are binary */
+   if( !benderscutdata->subprobsvalid )
    {
-      SCIPinfoMessage(scip, NULL, "The no-good cuts can only be applied to problems with a pure binary master problem. "
-         "The no-good Benders' decomposition cuts will be disabled.\n");
+      SCIPinfoMessage(scip, NULL, "The nogood cuts can only be applied to problems "
+         "where all linking variables are binary. The nogood cuts will be disabled.\n");
 
       SCIPbenderscutSetEnabled(benderscut, FALSE);
 
@@ -379,6 +418,7 @@ SCIP_RETCODE SCIPincludeBenderscutNogood(
    benderscutdata->benders = benders;
    benderscutdata->curriter = -1;
    benderscutdata->cutadded = FALSE;
+   benderscutdata->subprobsvalid = TRUE;
 
    benderscut = NULL;
 
