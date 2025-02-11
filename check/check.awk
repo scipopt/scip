@@ -535,16 +535,13 @@ BEGIN {
 }
 /^  Variables        :/ {
    #With SCIP 10, the print changed to reflect the new variable types.
-   #We support both logs from before and after
-   if( $9 == "continuous;" )
-      implintsseparate = 1
-#   printf("separate:%d \n",implintsseparate)
-
+   #We accept both logs from before and after
    if( inoriginalprob )
       origvars = $3;
    else
    {
-      if( implintsseparate ) {
+      if( $9 == "continuous;" )
+      {
          vars = $3;
          intvars = $6;
          contvars = $8;
@@ -1010,7 +1007,7 @@ BEGIN {
       else if( binvars == 0 && intvars == 0 )
          probtype = "   LP";
       else if( contvars == 0 ) {
-         if( intvars == 0 && ( implvars == 0 || implintsseparate ) )
+         if( intvars == 0 && implvars == 0 )
             probtype = "   BP";
          else
             probtype = "   IP";
