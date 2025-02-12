@@ -214,6 +214,12 @@ SCIP_Bool SCIPbendersSubproblemIsSetup(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** returns the master auxiliary variable that represents an underestimation of the subproblem objective value. */
+SCIP_EXPORT
+SCIP_VAR* SCIPbenderGetMasterAuxiliaryVar(
+   SCIP_BENDERS*         benders            /**< Benders' decomposition */
+   );
+
 /** returns the auxiliary variable for the given subproblem */
 SCIP_EXPORT
 SCIP_VAR* SCIPbendersGetAuxiliaryVar(
@@ -404,6 +410,12 @@ void SCIPbendersSetMasterIsNonlinear(
 /** returns whether the master problem contains non-linear constraints. */
 SCIP_EXPORT
 SCIP_Bool SCIPbendersMasterIsNonlinear(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/** returns the objective type for the aggregation of the Benders' decomposition subproblem objectives */
+SCIP_EXPORT
+SCIP_BENDERSOBJTYPE SCIPbendersGetObjectiveType(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 

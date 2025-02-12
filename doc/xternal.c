@@ -7734,6 +7734,19 @@
  * detection schemes of GCG and applies Benders' decomposition. Using GCG it is possible to apply Benders' decomposition
  * to general problem without having to manually construct the decompositions.
  *
+ * @section BENDERSOBJTYPE Objective type options for the Benders' decomposition
+ *
+ * Classically, the application of Benders' decomposition results in the inclusion of an auxiliary variable to provide an
+ * underestimation of the subproblem objective value. If the subproblem can be separated into disjoint problems, then
+ * this auxiliary variable can be substituted with the sum of auxiliary variables (one for each subproblem).
+ *
+ * While the summation of auxiliary variables is theoretically possible for all applications of Benders' decomposition,
+ * there are problems where an alternative objective may be beneficial. An example is a multiple machine scheduling
+ * problem with a makespan objective. To accommodate different objective types, the Benders' decomposition framework
+ * allows for the objective types of summation (the classical method) or the minimum of the maximum subproblem auxiliary
+ * variables. The objective type can be set using the method SCIPsetBendersObjectiveType(). Note that the different
+ * objective types only have an impact if more than one subproblem is used in the Benders' decomposition.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
