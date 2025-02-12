@@ -3630,7 +3630,7 @@ SCIP_RETCODE SCIPwriteLp(
    /* check if the constraint names are to long */
    checkConsnames(scip, conss, nconss, transformed);
 
-   /* adjust written integrality constraints on implied integrals based on the implied integral level */
+   /* adjust written integrality constraints on implied integral variables based on the implied integral level */
    SCIP_CALL( SCIPgetIntParam(scip, "write/implintlevel", &implintlevel) );
    assert(implintlevel >= -2);
    assert(implintlevel <= 2);

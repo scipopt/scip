@@ -3091,7 +3091,7 @@ SCIP_RETCODE SCIPvarPrint(
    SCIP_IMPLINTTYPE impltype = SCIPvarGetImplType(var);
    int i;
 
-   /* change integrality constraints of implied integrals based on the writing settings */
+   /* change integrality constraints of implied integral variables based on the writing settings */
    if( vartype == SCIP_VARTYPE_CONTINUOUS )
    {
       if( (int)impltype > 2 - set->write_implintlevel )
