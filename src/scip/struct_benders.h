@@ -108,7 +108,6 @@ struct SCIP_Benders
    SCIP_Real             maxslackvarcoef;    /**< the maximal objective coefficient of the slack variables in the subproblem */
    SCIP_Bool             checkconsconvexity; /**< should the constraints of the subproblems be checked for convexity? */
    SCIP_NLPPARAM         nlpparam;           /**< parameters for NLP solves */
-   char                  objectivetype;      /**< the objective type for the aggregation of the subproblems. */
 
    /* information for heuristics */
    SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
@@ -147,6 +146,7 @@ struct SCIP_Benders
    int                   nactivesubprobs;    /**< the number of active subproblems */
    SCIP_Bool             freesubprobs;       /**< do the subproblems need to be freed by the Benders' decomposition core? */
    SCIP_Bool             masterisnonlinear;  /**< flag to indicate whether the master problem contains non-linear constraints */
+   SCIP_BENDERSOBJTYPE   objectivetype;      /**< the objective type for the aggregation of the subproblems. */
 
    /* cut strengthening details */
    SCIP_SOL*             corepoint;          /**< the point that is separated for stabilisation */

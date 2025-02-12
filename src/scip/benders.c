@@ -80,8 +80,6 @@
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                   *  merge candidates */
-#define SCIP_DEFAULT_OBJECTIVETYPE          's'  /** the objective type for the aggregation of the subproblems, either sum or minimax */
-
 #define BENDERS_ARRAYSIZE        1000    /**< the initial size of the added constraints/cuts arrays */
 
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar" /** the name for the Benders' auxiliary variables in the master problem */
@@ -705,7 +703,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
 
    /* creating the auxiliary variable objective sum constraint. If the auxiliary variables are shared, then the constraint
     * is only added to the top Benders. Otherwise, it is created for each Benders implementation. */
-   if( benders->objectivetype == 's' )
+   if( benders->objectivetype == SCIP_BENDERSOBJTYPE_SUM )
    {
       if( shareauxvars )
       {
@@ -742,7 +740,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       SCIP_CALL( SCIPaddVarLocksType(scip, benders->masterauxvar, SCIP_LOCKTYPE_MODEL, 1, 0) );
 
       /* adding the master auxiliary variable to the summation constraint */
-      if( benders->objectivetype == 's' )
+      if( benders->objectivetype == SCIP_BENDERSOBJTYPE_SUM )
       {
          SCIP_CALL( SCIPaddCoefLinear(scip, benders->auxiliaryvarcons[0], benders->masterauxvar, 1.0) );
       }
@@ -759,7 +757,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
 
          SCIP_CALL( SCIPcaptureVar(scip, auxiliaryvar) );
 
-         if( benders->objectivetype == 'm' )
+         if( benders->objectivetype == SCIP_BENDERSOBJTYPE_MAX )
          {
             benders->auxiliaryvarcons[i] = topbenders->auxiliaryvarcons[i];
 
@@ -796,7 +794,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
           * auxiliary variable to them. If the objective type is sum, then the auxiliary variables are added to the
           * objective constraint.
           */
-         if( benders->objectivetype == 'm' )
+         if( benders->objectivetype == SCIP_BENDERSOBJTYPE_MAX )
          {
             (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
             SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, consname, 0, NULL, NULL, 0.0, SCIPinfinity(scip)) );
@@ -810,7 +808,7 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
          }
          else
          {
-            assert(benders->objectivetype == 's');
+            assert(benders->objectivetype == SCIP_BENDERSOBJTYPE_SUM);
 
             SCIP_CALL( SCIPaddCoefLinear(scip, benders->auxiliaryvarcons[0], auxiliaryvar, -1.0) );
          }
@@ -1186,6 +1184,7 @@ SCIP_RETCODE doBendersCreate(
    (*benders)->benderssolvesub = benderssolvesub;
    (*benders)->benderspostsolve = benderspostsolve;
    (*benders)->bendersfreesub = bendersfreesub;
+   (*benders)->objectivetype = SCIP_BENDERSOBJTYPE_SUM;
    (*benders)->bendersdata = bendersdata;
    SCIP_CALL( SCIPclockCreate(&(*benders)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*benders)->bendersclock, SCIP_CLOCKTYPE_DEFAULT) );
@@ -1317,11 +1316,6 @@ SCIP_RETCODE doBendersCreate(
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "iteration limit for NLP solver", &(*benders)->nlpparam.iterlimit, FALSE,
          SCIP_DEFAULT_NLPITERLIMIT, 0, INT_MAX, NULL, NULL) ); /*lint !e740*/
-
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/objectivetype", name);
-   SCIP_CALL( SCIPsetAddCharParam(set, messagehdlr, blkmem, paramname,
-         "the objective type for the aggregation of the subproblems: 's'um the auxiliary variables (default), 'm'inimax of the auxiliary variables",
-         &(*benders)->objectivetype, FALSE, SCIP_DEFAULT_OBJECTIVETYPE, "sm", NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
@@ -2413,7 +2407,7 @@ SCIP_RETCODE SCIPbendersExit(
       /* it is possible that the master problem is not solved. As such, the auxiliary variables will not be created. So
        * we don't need to release the variables or the constraints
        */
-      if( benders->objectivetype == 'm' && benders->auxiliaryvarcons[i] != NULL )
+      if( benders->objectivetype == SCIP_BENDERSOBJTYPE_MAX && benders->auxiliaryvarcons[i] != NULL )
       {
          SCIP_CALL( SCIPreleaseCons(set->scip, &benders->auxiliaryvarcons[i]) );
       }
@@ -2430,7 +2424,7 @@ SCIP_RETCODE SCIPbendersExit(
       }
    }
 
-   if( benders->objectivetype == 's' && benders->auxiliaryvarcons[0] != NULL )
+   if( benders->objectivetype == SCIP_BENDERSOBJTYPE_SUM && benders->auxiliaryvarcons[0] != NULL )
    {
       SCIP_CALL( SCIPreleaseCons(set->scip, &benders->auxiliaryvarcons[0]) );
    }
@@ -2694,7 +2688,6 @@ SCIP_RETCODE SCIPbendersActivate(
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    int i;
-   char paramname[SCIP_MAXSTRLEN];
 
    assert(benders != NULL);
    assert(set != NULL);
@@ -2714,7 +2707,7 @@ SCIP_RETCODE SCIPbendersActivate(
       /* allocating memory for the subproblems arrays */
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subproblems, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvars, benders->nsubproblems) );
-      if( benders->objectivetype == 's' )
+      if( benders->objectivetype == SCIP_BENDERSOBJTYPE_SUM )
       {
          SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvarcons, 1) );
       }
@@ -2744,7 +2737,7 @@ SCIP_RETCODE SCIPbendersActivate(
 
          benders->subproblems[i] = NULL;
          benders->auxiliaryvars[i] = NULL;
-         if( benders->objectivetype == 'm' )
+         if( benders->objectivetype == SCIP_BENDERSOBJTYPE_MAX )
             benders->auxiliaryvarcons[i] = NULL;
          benders->subprobobjval[i] = SCIPsetInfinity(set);
          benders->bestsubprobobjval[i] = SCIPsetInfinity(set);
@@ -2768,7 +2761,7 @@ SCIP_RETCODE SCIPbendersActivate(
          SCIP_CALL( SCIPpqueueInsert(benders->subprobqueue, benders->solvestat[i]) );
       }
 
-      if( benders->objectivetype == 's' )
+      if( benders->objectivetype == SCIP_BENDERSOBJTYPE_SUM )
          benders->auxiliaryvarcons[0] = NULL;
 
       if( SCIPsetFindEventhdlr(set, NODESOLVED_EVENTHDLR_NAME) == NULL )
@@ -2782,12 +2775,6 @@ SCIP_RETCODE SCIPbendersActivate(
          SCIP_CALL( SCIPsetEventhdlrInitsol(set->scip, eventhdlr, eventInitsolBendersNodesolved) );
          assert(eventhdlr != NULL);
       }
-
-      /* the objective type parameter is fixed. This is to prevent the user changing the type after the data for the
-       * objective constraint and variables is allocated
-       */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/objectivetype", SCIPbendersGetName(benders));
-      SCIP_CALL( SCIPfixParam(set->scip, paramname) );
    }
 
    return SCIP_OKAY;
@@ -6961,6 +6948,29 @@ SCIP_Bool SCIPbendersGetMastervarsCont(
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    return benders->mastervarscont[probnumber];
+}
+
+/** sets the objective type for the aggregation of the Benders' decomposition subproblem objectives. This is either the
+ * summation of the objective values or a minimax of the objective values (such as for a makespan objective)
+ */
+void SCIPbendersSetObjectiveType(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_BENDERSOBJTYPE   objectivetype       /**< the objective type */
+   )
+{
+   assert(benders != NULL);
+
+   benders->objectivetype = objectivetype;
+}
+
+/** returns the objective type for the aggregation of the Benders' decomposition subproblem objectives */
+SCIP_BENDERSOBJTYPE SCIPbendersGetObjectiveType(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->objectivetype;
 }
 
 /** returns the number of cuts that have been transferred from sub SCIPs to the master SCIP */

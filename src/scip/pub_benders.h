@@ -413,6 +413,12 @@ SCIP_Bool SCIPbendersMasterIsNonlinear(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
+/** returns the objective type for the aggregation of the Benders' decomposition subproblem objectives */
+SCIP_EXPORT
+SCIP_BENDERSOBJTYPE SCIPbendersGetObjectiveType(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
 /** returns the flag indicating that Benders' decomposition is in a cut strengthening round */
 SCIP_EXPORT
 SCIP_Bool SCIPbendersInStrengthenRound(
