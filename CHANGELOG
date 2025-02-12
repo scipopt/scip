@@ -21,7 +21,8 @@ Features
 - added ability to collect statistics from tables in a SCIP_DATATREE and write out as JSON file;
   dialog write statistics now writes a JSON file if name of file to write ends with .json
 - improve memory usage by introducing different constraint handlers for full orbitopes and packing/partitioning orbitopes
-- adds objective types for Benders' decomposition. The choice is for summation of subproblem objectives (classical
+- the linking master variables for each Benders' decomposition subproblem are now stored. These can be accessed for the
+  generation of cut and setting up the subproblems.
 - adds objective types for Benders' decomposition; the choice is to sum the subproblems objectives (classical
   approach) or to use the maximum of the subproblems objectives
 
@@ -77,6 +78,8 @@ Interface changes
 - SCIPcollect*Statistics() for every SCIPprint*Statistics() in scip_solvingstats.h
 - SCIPprintStatisticsJson() to output a JSON string of the table statistics data
 - SCIPstatusName() to get a string representation of SCIP_STATUS
+- SCIPbendersGetSubproblemMasterVars(), SCIPbendersGetNSubproblemMasterVars(), SCIPbendersGetSubproblemMasterVarsData()
+  are available to get the linking master variables for each subproblem and details about the number of binary and integer.
 - SCIPsetBendersObjectiveType() for setting the objective type for the aggregation of the Benders' decompostion
   subproblems
 - SCIPbendersGetObjectiveType() for returning the objective type for the aggregation of the Benders' decomposition
