@@ -1518,6 +1518,14 @@ SCIP_RETCODE SCIPexprhdlrBwFwDiffExpr(
    return SCIP_OKAY;
 }
 
+/**< Computes the integrality of a value expression, STRONG if value is integral, NONE otherwise. */
+SCIP_IMPLINTTYPE SCIPvalueIntegrality(
+   SCIP_Real             value               /**< The value to get the integrality for */
+   )
+{
+   return EPSISINT(value, 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE;
+}
+
 /** calls the interval evaluation callback of an expression handler
  *
  * @see SCIP_DECL_EXPRINTEVAL

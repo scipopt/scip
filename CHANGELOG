@@ -109,6 +109,7 @@ Interface changes
 - added SCIPvarArrayCountTypes() to determine the variable type count distribution for an array of variables
 - added SCIPeventGetOldImplType(), SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
 - added SCIPexprGetIntegrality(), which in addition to the existing function SCIPexprIsIntegral() provides information about the presence of weakly implied integral variables.
+- added SCIPvalueIntegrality(), which returns the integrality belonging to the expression consisting of a single real number.
 
 ### Changes in preprocessor macros
 

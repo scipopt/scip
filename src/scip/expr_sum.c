@@ -40,6 +40,7 @@
 #include "scip/expr_product.h"
 #include "scip/expr_exp.h"
 #include "scip/expr_pow.h"
+#include "scip/expr.h"
 #include "symmetry/struct_symmetry.h"
 
 #define EXPRHDLR_NAME         "sum"
@@ -1053,11 +1054,7 @@ SCIP_DECL_EXPRMONOTONICITY(monotonicitySum)
    return SCIP_OKAY;
 }
 
-static
-SCIP_IMPLINTTYPE valueIntegrality(double value)
-{
-   return EPSISINT(value, 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE; /*lint !e835*/
-}
+
 /** expression integrality detection callback */
 static
 SCIP_DECL_EXPRINTEGRALITY(integralitySum)
@@ -1073,14 +1070,14 @@ SCIP_DECL_EXPRINTEGRALITY(integralitySum)
    assert(exprdata != NULL);
 
    /**! [SnippetExprIntegralitySum] */
-   *integrality = valueIntegrality(exprdata->constant);
+   *integrality = SCIPvalueIntegrality(exprdata->constant);
 
    for( i = 0; i < SCIPexprGetNChildren(expr) && *integrality != SCIP_IMPLINTTYPE_NONE; ++i )
    {
       SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
       assert(child != NULL);
 
-      SCIP_IMPLINTTYPE valintegrality = valueIntegrality(exprdata->coefficients[i]);
+      SCIP_IMPLINTTYPE valintegrality = SCIPvalueIntegrality(exprdata->coefficients[i]);
       SCIP_IMPLINTTYPE childintegrality = SCIPexprGetIntegrality(child);
 
       *integrality = MIN3(*integrality, valintegrality, childintegrality); /*lint !e666 */

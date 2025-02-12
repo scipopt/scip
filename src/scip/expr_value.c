@@ -33,6 +33,7 @@
 
 #include <string.h>
 
+#include "scip/expr.h"
 #include "scip/expr_value.h"
 
 #define EXPRHDLR_NAME            "val"
@@ -236,7 +237,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityValue)
    assert(integrality != NULL);
    assert(SCIPexprGetData(expr) != NULL);
 
-   *integrality = EPSISINT(SCIPexprGetData(expr)->value, 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE; /*lint !e835 !e666*/
+   *integrality = SCIPvalueIntegrality(SCIPexprGetData(expr)->value);
 
    return SCIP_OKAY;
 }
