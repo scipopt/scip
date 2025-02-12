@@ -22,48 +22,20 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   build_sassy_graph.h
- * @brief  methods to build sassy graph for symmetry detection
+/**@file   build_dejavu_graph.h
+ * @brief  methods to build dejavu graph for symmetry detection
  * @author Christopher Hojny
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_BUILD_SASSY_GRAPH_H_
-#define __SCIP_BUILD_SASSY_GRAPH_H_
+#ifndef __SCIP_BUILD_DEJAVU_GRAPH_H_
+#define __SCIP_BUILD_DEJAVU_GRAPH_H_
 
 #include "scip/scip.h"
 
-/* include sassy */
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wsign-compare"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#endif
-
-#ifdef _MSC_VER
-# pragma warning(push)
-# pragma warning(disable: 4189)  // local variable is initialized but not referenced
-# pragma warning(disable: 4388)  // compare signed and unsigned expression
-# pragma warning(disable: 4456)  // shadowed variable
-# pragma warning(disable: 4430)  // missing type specifier
-#endif
-
-/* the actual include */
-#include <sassy/graph.h>
-
-#ifdef __GNUC__
-#pragma GCC diagnostic warning "-Wunused-but-set-variable"
-#pragma GCC diagnostic warning "-Wsign-compare"
-#pragma GCC diagnostic warning "-Wunused-variable"
-#pragma GCC diagnostic warning "-Wshadow"
-#endif
-
-#ifdef _MSC_VER
-# pragma warning(pop)
-#endif
-
+#include <dejavu/dejavu.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,24 +46,24 @@ extern "C" {
 
 /** compute generators of symmetry group */
 SCIP_EXPORT
-SCIP_RETCODE SYMbuildSassyGraph(
+SCIP_RETCODE SYMbuildDejavuGraph(
    SCIP*                 scip,               /**< SCIP pointer */
-   sassy::static_graph*  sassygraph,         /**< pointer to hold sassy graph being created */
+   dejavu::static_graph* dejavugraph,        /**< pointer to hold dejavu graph being created */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
-   SCIP_Bool*            success             /**< pointer to store whether sassygraph could be built */
+   SCIP_Bool*            success             /**< pointer to store whether dejavugraph could be built */
    );
 
 
 /** returns whether two given graphs are identical */
 SCIP_EXPORT
-SCIP_RETCODE SYMbuildSassyGraphCheck(
+SCIP_RETCODE SYMbuildDejavuGraphCheck(
    SCIP*                 scip,               /**< SCIP pointer */
-   sassy::static_graph*  sassygraph,         /**< pointer to hold sassy graph being created */
+   dejavu::static_graph* dejavugraph,        /**< pointer to hold dejavu graph being created */
    SYM_GRAPH*            G1,                 /**< first graph */
    SYM_GRAPH*            G2,                 /**< second graph */
-   int*                  nnodes,             /**< pointer to store number of nodes in sassy graph */
-   int*                  nnodesfromG1,       /**< pointer to store number of nodes in sassy graph arising from G1 */
-   SCIP_Bool*            success             /**< pointer to store whether sassygraph could be built */
+   int*                  nnodes,             /**< pointer to store number of nodes in dejavu graph */
+   int*                  nnodesfromG1,       /**< pointer to store number of nodes in dejavu graph arising from G1 */
+   SCIP_Bool*            success             /**< pointer to store whether dejavugraph could be built */
    );
 
 

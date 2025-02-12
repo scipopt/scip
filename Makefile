@@ -361,7 +361,7 @@ endif
 
 SYMOPTIONS	+=	sbliss
 ifeq ($(SYM),sbliss)
-SYMOBJ		=	symmetry/build_sassy_graph.o
+SYMOBJ		=	symmetry/build_dejavu_graph.o
 SYMOBJ		+=	symmetry/compute_symmetry_sassy_bliss.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC		=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
@@ -412,7 +412,7 @@ endif
 
 SYMOPTIONS	+=	snauty
 ifeq ($(SYM),snauty)
-SYMOBJ		=	symmetry/build_sassy_graph.o
+SYMOBJ		=	symmetry/build_dejavu_graph.o
 SYMOBJ		+=	symmetry/compute_symmetry_sassy_nauty.o
 SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
 SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
@@ -440,6 +440,22 @@ LPIINSTMSG	+=	" -> \"libnauty.*.a\" is the path to the Nauty library, e.g., \"<N
 endif
 ALLSRC		+=	$(SYMSRC)
 CXXFLAGS	+=	$(CXX17FLAG)
+endif
+
+SYMOPTIONS	+=	dejavu
+ifeq ($(SYM),dejavu)
+SYMOBJ		=	symmetry/build_dejavu_graph.o
+SYMOBJ		+=	symmetry/compute_symmetry_dejavu.o
+SYMOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SYMOBJ))
+SYMSRC  	=	$(addprefix $(SRCDIR)/,$(SYMOBJ:.o=.cpp))
+ifeq ($(DEJAVUEXTERNAL),false)
+FLAGS		+=	-I$(SRCDIR)/dejavu
+else
+FLAGS		+=	-I$(LIBDIR)/include/dejavuinc
+SOFTLINKS	+=	$(LIBDIR)/include/dejavuinc
+LPIINSTMSG	+=	"\n  -> \"dejavuinc\" is the path to the dejavu source directory, e.g., \"<DEJAVU-path>\".\n"
+endif
+ALLSRC		+=	$(SYMSRC)
 endif
 
 #-----------------------------------------------------------------------------
@@ -1700,8 +1716,10 @@ ifneq ($(SYM),bliss)
 ifneq ($(SYM),sbliss)
 ifneq ($(SYM),nauty)
 ifneq ($(SYM),snauty)
+ifneq ($(SYM),dejavu)
 ifneq ($(SYM),none)
 		$(error invalid SYM flag selected: SYM=$(SYM). Possible options are: $(SYMOPTIONS))
+endif
 endif
 endif
 endif
@@ -1765,7 +1783,7 @@ help:
 		@echo "  - IPOPT=<true|false>: Turns support of IPOPT on or off (default)."
 		@echo "  - LAPACK=<true|false>: Link with Lapack (must be installed on the system)."
 		@echo "  - EXPRINT=<cppad|none>: Use CppAD as expressions interpreter (default) or no expressions interpreter."
-		@echo "  - SYM=<none|bliss|nauty|sbliss|snauty>: To choose type of symmetry handling."
+		@echo "  - SYM=<none|bliss|nauty|sbliss|snauty|dejavu>: To choose type of symmetry handling."
 		@echo "  - PARASCIP=<true|false>: Build for ParaSCIP (deprecated, use THREADSAFE)."
 		@echo "  - THREADSAFE=<true|false>: Build thread safe."
 		@echo "  - NOBLKMEM=<true|false>: Turn off block memory or on (default)."

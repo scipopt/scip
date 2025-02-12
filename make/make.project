@@ -117,6 +117,7 @@ NOBLKMEM	=	false
 NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
 NAUTYEXTERNAL	=	false
+DEJAVUEXTERNAL	=	false
 
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
 LIBEXTFORCESTATIC =	false
@@ -546,6 +547,10 @@ endif
 ifeq ($(SYM)-$(NAUTYEXTERNAL),snauty-true)
 LDFLAGS		+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)nauty.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
 endif
+endif
+
+ifeq ($(SYM),dejavu)
+CXXFLAGS	+=	$(CXX14FLAG)
 endif
 
 #-----------------------------------------------------------------------------

@@ -9,6 +9,7 @@ Features
 - added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
 - copy variable data pointer if no copy routine was supplied.
 - added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
+- Dejavu can be used to compute symmetries; the source code is shipped with SCIP and incorporates sassy.
 - implemented symmetry detection callbacks for cons_disjunction and cons_superindicator
 - detailed information about applied symmetry handling techniques can be printed to the terminal
 - added a new separator sepa_multilinear to generate flower cuts from AND constraints nonlinear product expressions.
@@ -142,6 +143,7 @@ Fixed bugs
 
 Miscellaneous
 -------------
+- We now use sassy as shipped with dejavu.
 
 - add objective offset instead of objective offset variable in cip reader
 - updated ampl/mp to v4.0.0
@@ -256,6 +258,7 @@ Features
   note that if the concurrent solve is stopped due to a gap limit, the "winner" solver will have an interrupted solution status and
   its primal and dual bounds may not be the best possible ones (use SCIPgetConcurrentPrimalbound() and SCIPgetConcurrentDualbound() instead)
 - parse pseudoboolean constraint from CIP format (and add linear-"and"-reformulation)
+
 
 Performance improvements
 ------------------------
@@ -438,7 +441,7 @@ Interface changes
 
 Build system
 ------------
-
+- new option SYM=dejavu to choose Dejavu for computing symmetries
 - changed the default symmetry computation package from sassy+bliss to sassy+nauty
 - bliss source is no longer included in the source tree, but can be linked as external library (https://github.com/ds4dm/Bliss)
 - cmake now automatically downloads and installs the latest release version of SoPlex from GitHub if it is not found directly

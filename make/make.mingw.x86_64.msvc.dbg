@@ -14,7 +14,7 @@ LINK_shared		=	-dll
 FLAGS	+=	-DSCIP_NO_SIGACTION -DNO_RAND_R -DSCIP_NO_STRTOK_R -DNDEBUG -DNO_STRERROR_R -DSCIP_ROUNDING_MS -D_CRT_SECURE_NO_WARNINGS -wd4274 -D_WIN64
 OFLAGS		+=	-Od -fp:precise
 CFLAGS		+=	-Zi
-CXXFLAGS	+=	-Zi -EHsc -GR
+CXXFLAGS	+=	-Zi -EHsc -GR -Zc:__cplusplus
 CXX11FLAG	=
 CXX14FLAG	=	-std:c++14
 # C++-17 may not be available:

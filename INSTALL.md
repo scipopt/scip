@@ -34,7 +34,8 @@ Note: For a full ctest run `ctest` instead of `make check` after compilation.
 
 CMake checks for available dependencies like PaPILO, SoPlex, or ZLIB and sets up the configuration accordingly.
 Currently, it is necessary to either explicitly disable dependencies that should not be used, or use `-DAUTOBUILD=ON` as parameter to the cmake call to automatically disable dependencies that cannot be found.
-Note that the symmetry codes [Nauty](https://pallini.di.uniroma1.it/) and [Sassy](https://github.com/markusa4/sassy) are shipped with SCIP.
+Note that the symmetry codes [Nauty](https://pallini.di.uniroma1.it/), [Sassy](https://github.com/markusa4/sassy), and
+[Dejavu](https://github.com/markusa4/dejavu) are shipped with SCIP.
 A version of Bliss that is compatible with SCIP is available at https://github.com/scipopt/bliss.
 
 Predefined presets for different use cases are also included in the `CMakePresets.json` file.
@@ -340,7 +341,7 @@ In your SCIP main directory, enter `make [options]` with the following options:
 | `PAPILO=false`        | `[false, true]`      | to disable or disable the MILP presolver based on the presolving library PaPILO                  |
 | `READLINE=true`       | `[true, false]`      | to enable or disable readline library for interactive shell                                      |
 | `SHARED=false`        | `[false, true]`      | to suppress or create shared libraries (only Gnu compiler)                                       |
-| `SYM=none`            | `[none, nauty, snauty, bliss, sbliss]` | to choose method for computing symmetries in mixed nonlinear integer programs                  |
+| `SYM=none`            | `[none, nauty, snauty, bliss, sbliss, dejavu]` | to choose method for computing symmetries in mixed nonlinear integer programs                  |
 | `TPI=none`            | `[none, omp, tny]`   | to disable the task processing interface or use it with the openmp or tinycthreads interface for concurrent solves |
 | `VERBOSE=false`       | `[false, true]`      | to suppress or display of compiler and linker invocations                                        |
 | `WORHP=false`         | `[false, true]`      | to disable or enable WORHP interface (needs WORHP >= 2.00)                                       |

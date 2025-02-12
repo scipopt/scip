@@ -105,7 +105,7 @@ set(LPS spx CACHE STRING "options for LP solver")  #create the variable
 set_property(CACHE LPS PROPERTY STRINGS spx cpx grb xprs clp glop msk qso highs none )  #define list of values GUI will offer for the variable
 
 set(SYM snauty CACHE STRING "options for symmetry computation")  #create the variable
-set_property(CACHE SYM PROPERTY STRINGS bliss sbliss nauty snauty none )  #define list of values GUI will offer for the variable
+set_property(CACHE SYM PROPERTY STRINGS bliss sbliss nauty snauty dejavu none )  #define list of values GUI will offer for the variable
 
 if(NOT (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
     message(FATAL_ERROR "You have not selected a valid CMAKE_BUILD_TYPE. Please select 'Release' or 'Debug'.")
@@ -129,8 +129,9 @@ if(SYM STREQUAL "bliss" OR SYM STREQUAL "sbliss")
         set(sym symmetry/compute_symmetry_bliss.cpp)
     else()
         message(STATUS "Support SYM: sassy+bliss")
-        set(sym symmetry/compute_symmetry_sassy_bliss.cpp symmetry/build_sassy_graph.cpp)
-        set(CMAKE_CXX_STANDARD 17)
+        set(sym symmetry/compute_symmetry_sassy_bliss.cpp symmetry/build_dejavu_graph.cpp)
+        # sassy needs C++-14
+        set(CMAKE_CXX_STANDARD 14)
     endif()
 
     find_package(Bliss CONFIG HINTS ${BLISS_DIR})
@@ -155,10 +156,16 @@ elseif(SYM STREQUAL "nauty" OR SYM STREQUAL "snauty")
         set(sym ${sym} symmetry/compute_symmetry_nauty.c)
     elseif(SYM STREQUAL "snauty")
         message(STATUS "Support SYM: sassy+nauty")
-        set(sym ${sym} symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_sassy_graph.cpp)
-        # sassy needs C++-17
-        set(CMAKE_CXX_STANDARD 17)
+        set(sym ${sym} symmetry/compute_symmetry_sassy_nauty.cpp symmetry/build_dejavu_graph.cpp)
+        # sassy needs C++-14
+        set(CMAKE_CXX_STANDARD 14)
     endif()
+elseif(SYM STREQUAL "dejavu")
+    include_directories(src/dejavu)
+    message(STATUS "Support SYM: dejavu")
+    set(sym ${sym} symmetry/compute_symmetry_dejavu.cpp symmetry/build_dejavu_graph.cpp)
+    # dejavu needs C++-14
+    set(CMAKE_CXX_STANDARD 14)
 elseif(SYM STREQUAL "none")
     message(STATUS "Support SYM: OFF")
     set(sym symmetry/compute_symmetry_none.cpp)
@@ -227,6 +234,8 @@ if(MSVC)
     add_definitions(/wd4100)
     add_definitions(/wd4244)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    add_definitions(/Zc:__cplusplus)
+    add_definitions(/EHsc)
 endif()
 
 # Visual Studio compiler with static runtime libraries

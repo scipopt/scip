@@ -22,14 +22,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   build_sassy_graph.cpp
- * @brief  methods to build sassy graph for symmetry detection
+/**@file   build_dejavu_graph.c
+ * @brief  methods to build dejavu graph for symmetry detection
  * @author Christopher Hojny
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "build_sassy_graph.h"
+#include <string>                 /* for dejvu */
+#include "build_dejavu_graph.h"
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
 #include "scip/expr_pow.h"
@@ -107,7 +109,7 @@ SCIP_Bool isEdgeGroupable(
 static
 SCIP_RETCODE addOrDetermineEffectOfGroupedEdges(
    SCIP*                 scip,               /**< SCIP pointer */
-   sassy::static_graph*  G,                  /**< graph which gets extended */
+   dejavu::static_graph* G,                  /**< graph which gets extended */
    SCIP_Bool             determinesize,      /**< whether only the effect of grouping on the graph shall be checked */
    int*                  internodeid,        /**< (initialized) pointer to store the ID of the next intermediate node */
    int**                 degrees,            /**< pointer to array of degrees for nodes in G */
@@ -221,7 +223,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
    SCIP*                 scip,               /**< SCIP instance */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
    SCIP_Bool             determinesize,      /**< whether only the size of the graph shall be determined */
-   sassy::static_graph*  G,                  /**< graph to be constructed */
+   dejavu::static_graph* G,                  /**< graph to be constructed */
    int*                  nnodes,             /**< pointer to store the total number of nodes in graph */
    int*                  nedges,             /**< pointer to store the total number of edges in graph */
    int**                 degrees,            /**< pointer to store the degrees of the nodes */
@@ -270,7 +272,7 @@ SCIP_RETCODE createOrDetermineSizeGraph(
       nvarnodestoadd = 2 * nsymvars;
    }
 
-   /* possibly find number of nodes in sassy graph */
+   /* possibly find number of nodes in dejavu graph */
    if ( determinesize )
    {
       /* initialize counters */
@@ -490,12 +492,12 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
    SYM_GRAPH*            graph1,             /**< first symmetry detection graph */
    SYM_GRAPH*            graph2,             /**< second symmetry detection graph */
    SCIP_Bool             determinesize,      /**< whether only the size of the graph shall be determined */
-   sassy::static_graph*  G,                  /**< graph to be constructed */
+   dejavu::static_graph* G,                  /**< graph to be constructed */
    int*                  nnodes,             /**< pointer to store the total number of nodes in graph */
    int*                  nedges,             /**< pointer to store the total number of edges in graph */
    int**                 degrees,            /**< pointer to store the degrees of the nodes */
    int*                  maxdegrees,         /**< pointer to store the maximal size of the degree array */
-   int*                  nnodesfromG1,       /**< pointer to store number of nodes in sassy graph arising from G1 (or NULL) */
+   int*                  nnodesfromG1,       /**< pointer to store number of nodes in dejavu graph arising from G1 (or NULL) */
    SCIP_Bool*            success             /**< pointer to store whether the graph could be built */
    )
 {
@@ -596,7 +598,7 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
          varlabel[j] = -1;
    }
 
-   /* possibly find number of nodes in sassy graph and allocate memory for dynamic array */
+   /* possibly find number of nodes in dejavu graph and allocate memory for dynamic array */
    if ( determinesize )
    {
       *degrees = NULL;
@@ -846,11 +848,11 @@ SCIP_RETCODE createOrDetermineSizeGraphCheck(
 
 
 /** compute generators of symmetry group */
-SCIP_RETCODE SYMbuildSassyGraph(
+SCIP_RETCODE SYMbuildDejavuGraph(
    SCIP*                 scip,               /**< SCIP pointer */
-   sassy::static_graph*  sassygraph,         /**< pointer to hold sassy graph being created */
+   dejavu::static_graph* dejavugraph,        /**< pointer to hold dejavu graph being created */
    SYM_GRAPH*            graph,              /**< symmetry detection graph */
-   SCIP_Bool*            success             /**< pointer to store whether sassygraph could be built */
+   SCIP_Bool*            success             /**< pointer to store whether dejavugraph could be built */
    )
 {
    int* degrees;
@@ -859,7 +861,7 @@ SCIP_RETCODE SYMbuildSassyGraph(
    int nedges;
 
    assert( scip != NULL );
-   assert( sassygraph != NULL );
+   assert( dejavugraph != NULL );
    assert( graph != NULL );
 
    *success = FALSE;
@@ -875,10 +877,10 @@ SCIP_RETCODE SYMbuildSassyGraph(
    }
 
    /* init graph */
-   (*sassygraph).initialize_graph((unsigned) nnodes, (unsigned) nedges);
+   (*dejavugraph).initialize_graph((unsigned) nnodes, (unsigned) nedges);
 
    /* add the nodes for linear and nonlinear constraints to the graph */
-   SCIP_CALL( createOrDetermineSizeGraph(scip, graph, FALSE, sassygraph,
+   SCIP_CALL( createOrDetermineSizeGraph(scip, graph, FALSE, dejavugraph,
          &nnodes, &nedges, &degrees, &maxdegrees, success) );
 
    SCIPfreeBlockMemoryArray(scip, &degrees, maxdegrees);
@@ -889,14 +891,14 @@ SCIP_RETCODE SYMbuildSassyGraph(
 }
 
 /** returns whether two given graphs are identical */
-SCIP_RETCODE SYMbuildSassyGraphCheck(
+SCIP_RETCODE SYMbuildDejavuGraphCheck(
    SCIP*                 scip,               /**< SCIP pointer */
-   sassy::static_graph*  sassygraph,         /**< pointer to hold sassy graph being created */
+   dejavu::static_graph* dejavugraph,        /**< pointer to hold dejavu graph being created */
    SYM_GRAPH*            G1,                 /**< first graph */
    SYM_GRAPH*            G2,                 /**< second graph */
-   int*                  nnodes,             /**< pointer to store number of nodes in sassy graph */
-   int*                  nnodesfromG1,       /**< pointer to store number of nodes in sassy graph arising from G1 */
-   SCIP_Bool*            success             /**< pointer to store whether sassygraph could be built */
+   int*                  nnodes,             /**< pointer to store number of nodes in dejavu graph */
+   int*                  nnodesfromG1,       /**< pointer to store number of nodes in dejavu graph arising from G1 */
+   SCIP_Bool*            success             /**< pointer to store whether dejavugraph could be built */
    )
 {
    int* degrees = NULL;
@@ -904,7 +906,7 @@ SCIP_RETCODE SYMbuildSassyGraphCheck(
    int nedges;
 
    assert( scip != NULL );
-   assert( sassygraph != NULL );
+   assert( dejavugraph != NULL );
    assert( G1 != NULL );
    assert( G2 != NULL );
    assert( nnodes != NULL );
@@ -940,10 +942,10 @@ SCIP_RETCODE SYMbuildSassyGraphCheck(
    }
 
    /* init graph */
-   (*sassygraph).initialize_graph((unsigned) *nnodes, (unsigned) nedges);
+   (*dejavugraph).initialize_graph((unsigned) *nnodes, (unsigned) nedges);
 
    /* add the nodes for linear and nonlinear constraints to the graph */
-   SCIP_CALL_ABORT( createOrDetermineSizeGraphCheck(scip, G1, G2, FALSE, sassygraph,
+   SCIP_CALL_ABORT( createOrDetermineSizeGraphCheck(scip, G1, G2, FALSE, dejavugraph,
          nnodes, &nedges, &degrees, &maxdegrees, NULL, success) );
    assert( *success );
 
