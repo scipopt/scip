@@ -357,7 +357,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityVar)
    assert(expr != NULL);
    assert(integrality != NULL);
 
-   SCIP_VAR * var = SCIPgetVarExprVar(expr);
+   SCIP_VAR* var = SCIPgetVarExprVar(expr);
 
    if( !SCIPvarIsIntegral(var) )
       *integrality = SCIP_IMPLINTTYPE_NONE;
