@@ -2466,11 +2466,8 @@ SCIP_DECL_EXPRINTEGRALITY(integralityPow)
    assert(exponent != 0.0);
    expisint = EPSISINT(exponent, 0.0); /*lint !e835*/
 
-   /* expression is integral if and only if exponent non-negative and integral */
-   SCIP_IMPLINTTYPE exponentintegrality = expisint && exponent >= 0.0 ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE;
-
-   /* expression can not be integral if child is not */
-   *integrality = MIN(exponentintegrality, SCIPexprGetIntegrality(child)); /*lint !e666*/
+   /* maintain child integrality if exponent non-negative and integral */
+   *integrality = (expisint && exponent >= 0.0 ? SCIPexprGetIntegrality(child) : SCIP_IMPLINTTYPE_NONE);
 
    return SCIP_OKAY;
 }
