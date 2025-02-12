@@ -120,9 +120,9 @@ struct SCIP_Benders
    SCIP_VAR*             masterauxvar;       /**< the master auxiliary variable to control the objective type */
    SCIP_VAR**            auxiliaryvars;      /**< the auxiliary variables for the Benders' optimality cuts */
    SCIP_CONS**           auxiliaryvarcons;   /**< the constraint(s) for the auxiliary variable objective.
-                                                  For the sum objective, this is a single constraint.
-                                                  For the max objective, there is a constraint per subproblem
-                                             */
+                                              *   For the sum objective, this is a single constraint.
+                                              *   For the max objective, there is a constraint per subproblem.
+                                              */
    SCIP_PQUEUE*          subprobqueue;       /**< the priority queue for the subproblems */
    SCIP_SUBPROBLEMSOLVESTAT** solvestat;     /**< storing the solving statistics of all the subproblems */
    SCIP_Real*            subprobobjval;      /**< the objective value of the subproblem in the current iteration */

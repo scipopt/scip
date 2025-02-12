@@ -2437,7 +2437,9 @@ SCIP_RETCODE SCIPbendersExit(
        * Benders' plugin and others if the auxiliary variables are not shared
        */
       if( !benders->iscopy && SCIPvarGetNLocksDown(benders->masterauxvar) > 0 )
+      {
          SCIP_CALL( SCIPaddVarLocksType(set->scip, benders->masterauxvar, SCIP_LOCKTYPE_MODEL, -1, 0) );
+      }
 
       SCIP_CALL( SCIPreleaseVar(set->scip, &benders->masterauxvar) );
    }
@@ -2708,7 +2710,7 @@ SCIP_RETCODE SCIPbendersActivate(
       /* allocating memory for the subproblems arrays */
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subproblems, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvars, benders->nsubproblems) );
-      if (benders->objectivetype == 's')
+      if( benders->objectivetype == 's' )
       {
          SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvarcons, 1) );
       }
@@ -2738,7 +2740,7 @@ SCIP_RETCODE SCIPbendersActivate(
 
          benders->subproblems[i] = NULL;
          benders->auxiliaryvars[i] = NULL;
-         if (benders->objectivetype == 'm')
+         if( benders->objectivetype == 'm' )
             benders->auxiliaryvarcons[i] = NULL;
          benders->subprobobjval[i] = SCIPsetInfinity(set);
          benders->bestsubprobobjval[i] = SCIPsetInfinity(set);
@@ -2762,7 +2764,7 @@ SCIP_RETCODE SCIPbendersActivate(
          SCIP_CALL( SCIPpqueueInsert(benders->subprobqueue, benders->solvestat[i]) );
       }
 
-      if (benders->objectivetype == 's')
+      if( benders->objectivetype == 's' )
          benders->auxiliaryvarcons[0] = NULL;
 
       if( SCIPsetFindEventhdlr(set, NODESOLVED_EVENTHDLR_NAME) == NULL )
@@ -2777,7 +2779,7 @@ SCIP_RETCODE SCIPbendersActivate(
          assert(eventhdlr != NULL);
       }
 
-      /* the objective type parameter is fixed. This is to prevent the user changing the type after the data fro the
+      /* the objective type parameter is fixed. This is to prevent the user changing the type after the data for the
        * objective constraint and variables is allocated
        */
       (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/objectivetype", SCIPbendersGetName(benders));

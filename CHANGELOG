@@ -22,7 +22,8 @@ Features
   dialog write statistics now writes a JSON file if name of file to write ends with .json
 - improve memory usage by introducing different constraint handlers for full orbitopes and packing/partitioning orbitopes
 - adds objective types for Benders' decomposition. The choice is for summation of subproblem objectives (classical
-  approach) or the minimum of the maximum subproblem objective.
+- adds objective types for Benders' decomposition; the choice is to sum the subproblems objectives (classical
+  approach) or to use the maximum of the subproblems objectives
 
 Performance improvements
 ------------------------
