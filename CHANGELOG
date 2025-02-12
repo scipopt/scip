@@ -48,6 +48,7 @@ Interface changes
 - ndelconss added to arguments for SCIPcleanupConssLinear() and SCIPcleanupConssKnapsack() to directly delete empty redundant constraints before creating problem matrix
 - copyiisfinders added to arguments for SCIPcopyPlugins() (16th position)
 - SCIPcreateConsOrbitope() deleted two arguments and changed position of another argument
+- deprecated SCIPsubversion(), will be removed
 
 ### New API functions
 
@@ -78,6 +79,7 @@ Interface changes
 - removed `#define` of `strcasecmp` and `strncasecmp` (in case of Windows builds) in scip/def.h;
   use SCIPstr(n)casecmp() (scip/pub_misc.h) instead
 - SCIPincludeConshdlrOrbitopePP(), SCIPcreateConsOrbitopePP(), SCIPcreateConsBasicOrbitopePP(), SCIPincludeConshdlrOrbitopeFull(), SCIPcreateConsOrbitopeFull(), SCIPcreateConsBasicOrbitopeFull()
+- SCIP_VERSION_SUB and SCIP_SUBVERSION are deprecated
 
 ### Command line interface
 
@@ -143,6 +145,7 @@ Miscellaneous
 
 - add objective offset instead of objective offset variable in cip reader
 - updated ampl/mp to v4.0.0
+- removed 4th number in SCIP version; new format is major.minor.patch
 
 Known bugs
 ----------
