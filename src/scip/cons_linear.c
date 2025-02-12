@@ -9631,7 +9631,6 @@ SCIP_RETCODE convertLongEquality(
    int contvarpos;
    int nintvars;
    int nweakimplvars;
-   int nstrongimplvars;
    int nimplvars;
    int intvarpos;
    int v;
@@ -9706,7 +9705,6 @@ SCIP_RETCODE convertLongEquality(
    contvarpos = -1;
    nintvars = 0;
    nweakimplvars = 0;
-   nstrongimplvars = 0;
    nimplvars = 0;
    intvarpos = -1;
    minabsval = SCIPinfinity(scip);
@@ -9764,8 +9762,6 @@ SCIP_RETCODE convertLongEquality(
          assert(impltype != SCIP_IMPLINTTYPE_NONE);
          if( impltype == SCIP_IMPLINTTYPE_WEAK )
             ++nweakimplvars;
-         else
-            ++nstrongimplvars;
       }
       else if( slacktype == SCIP_VARTYPE_INTEGER )
       {
