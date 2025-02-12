@@ -77,6 +77,10 @@ Interface changes
 - SCIPcollect*Statistics() for every SCIPprint*Statistics() in scip_solvingstats.h
 - SCIPprintStatisticsJson() to output a JSON string of the table statistics data
 - SCIPstatusName() to get a string representation of SCIP_STATUS
+- SCIPsetBendersObjectiveType() for setting the objective type for the aggregation of the Benders' decompostion
+  subproblems
+- SCIPbendersGetObjectiveType() for returning the objective type for the aggregation of the Benders' decomposition
+  subproblems
 - SCIPbenderGetMasterAuxiliaryVar() returns the master auxiliary variable
 
 ### Changes in preprocessor macros
@@ -113,8 +117,6 @@ Interface changes
 - new parameter "presolving/implint/numericslimit" determines the limit for absolute integral coefficients beyond which the corresponding rows and variables are excluded from implied integer detection
 - iis/minimal, iis/nodes, iis/removedbounds, iis/removeunusedvars, iis/silent, iis/stopafterone, iis/time, iis/greedy/additive, iis/greedy/conservative, iis/greedy/delafteradd, iis/greedy/dynamicreordering, iis/greedy/maxbatchsize, iis/greedy/maxrelbatchsize, iis/greedy/nodelimperiter, iis/greedy/priority, iis/greedy/timelimperiter
 - new parameters "constraints/orbitope_full/forceconscopy" and "constraints/orbitope_pp/forceconscopy" to control whether non-model constraints of type full orbitope and packing/partitioning orbitope are copied to sub-SCIPs, respectively
-- benders/<bendersname>/objectivetype selects the objective type for aggregating the subproblem objectives in Benders'
-  decomposition. Choices are 's' for summation (default) and 'm' for minimax.
 
 ### Data structures
 
