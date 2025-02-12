@@ -851,7 +851,7 @@ void findAuxiliaryVar(
     * found
     */
    prefix[0] = '\0';
-   while( (*targetvar) == NULL && i <= subscipdepth )
+   while( i <= subscipdepth )
    {
       /* when probnumber == -1, we are searching for the master auxiliary variable. Otherwise, we are searching for the
        * subproblem auxiliary variable.
@@ -863,6 +863,10 @@ void findAuxiliaryVar(
 
       /* finding the variable in the copied problem that has the same name as the auxiliary variable */
       (*targetvar) = SCIPfindVar(scip, varname);
+
+      /* if the target variable is found, then we can exit the method */
+      if( (*targetvar) != NULL )
+         return;
 
       (void) SCIPsnprintf(tmpprefix, len, "t_%s", prefix);
       len += 2;
