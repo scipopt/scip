@@ -582,7 +582,7 @@ SCIP_IMPLINTTYPE SCIPexprGetIntegrality(
 SCIP_EXPORT
 void SCIPexprSetIntegrality(
    SCIP_EXPR*            expr,               /**< expression */
-   SCIP_IMPLINTTYPE integrality         /**< integrality level of the expression */
+   SCIP_IMPLINTTYPE      integrality         /**< integrality level of the expression */
    );
 
 /** @} */

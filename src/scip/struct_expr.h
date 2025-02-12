@@ -138,7 +138,7 @@ struct SCIP_Expr
    SCIP_EXPRCURV         curvature;          /**< curvature of the expression w.r.t. bounds that have been used in the last curvature detection */
 
    /* integrality information */
-   SCIP_IMPLINTTYPE integrality;   /**< indicates whether the expression is integral. 0: not integral,
+   SCIP_IMPLINTTYPE      integrality;        /**< indicates whether the expression is integral. 0: not integral,
                                                *< 1: integral but contains weakly implied integral vars. 2: integral without
                                                *< weakly implied integral variables */
 
