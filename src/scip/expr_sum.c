@@ -40,7 +40,6 @@
 #include "scip/expr_product.h"
 #include "scip/expr_exp.h"
 #include "scip/expr_pow.h"
-#include "scip/expr.h"
 #include "symmetry/struct_symmetry.h"
 
 #define EXPRHDLR_NAME         "sum"

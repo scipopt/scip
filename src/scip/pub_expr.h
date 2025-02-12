@@ -591,6 +591,12 @@ void SCIPexprSetIntegrality(
    SCIP_IMPLINTTYPE      integrality         /**< integrality level of the expression */
    );
 
+/**< Computes the integrality of a value expression, STRONG if value is integral, NONE otherwise. */
+SCIP_EXPORT
+SCIP_IMPLINTTYPE SCIPvalueIntegrality(
+   SCIP_Real             value               /**< The value to get the integrality for */
+   );
+
 /** @} */
 
 /**@name Quadratic Expressions */
@@ -698,6 +704,7 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
 #define SCIPexprGetIntegrality(expr)              (expr)->integrality
 #define SCIPexprIsIntegral(expr)                  ((expr)->integrality != SCIP_IMPLINTTYPE_NONE)
 #define SCIPexprSetIntegrality(expr, integrality_)   (expr)->integrality = integrality_
+#define SCIPvalueIntegrality(value)               (EPSISINT(value, 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE)
 #define SCIPexprAreQuadraticExprsVariables(expr)  (expr)->quaddata->allexprsarevars
 #endif
 

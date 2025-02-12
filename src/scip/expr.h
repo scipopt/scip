@@ -279,12 +279,6 @@ SCIP_RETCODE SCIPexprhdlrBwFwDiffExpr(
    SCIP_SOL*             direction           /**< direction of the derivative (useful only for var expressions) */
    );
 
-/**< Computes the integrality of a value expression, STRONG if value is integral, NONE otherwise. */
-SCIP_EXPORT
-SCIP_IMPLINTTYPE SCIPvalueIntegrality(
-   SCIP_Real             value               /**< The value to get the integrality for */
-   );
-
 /** calls the interval evaluation callback of an expression handler
  *
  * @see SCIP_DECL_EXPRINTEVAL

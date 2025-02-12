@@ -35,7 +35,6 @@
 
 #include <string.h>
 
-#include "scip/expr.h"
 #include "scip/pub_expr.h"
 #include "scip/expr_product.h"
 #include "scip/expr_sum.h"
