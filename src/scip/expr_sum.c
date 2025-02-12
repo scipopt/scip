@@ -1076,10 +1076,10 @@ SCIP_DECL_EXPRINTEGRALITY(integralitySum)
       SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
       assert(child != NULL);
 
-      SCIP_IMPLINTTYPE valintegrality = EPSISINT(exprdata->coefficients[i], 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE;
-      SCIP_IMPLINTTYPE childintegrality = SCIPexprGetIntegrality(child);
-
-      *integrality = MIN3(*integrality, valintegrality, childintegrality); /*lint !e666 */
+      if( EPSISINT(exprdata->coefficients[i], 0.0) ) /*lint !e835*/
+         *integrality = MIN(*integrality, SCIPexprGetIntegrality(child)); /*lint !e666*/
+      else
+         *integrality = SCIP_IMPLINTTYPE_NONE;
    }
    /**! [SnippetExprIntegralitySum] */
 
