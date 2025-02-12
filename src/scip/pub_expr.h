@@ -689,8 +689,8 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
 #define SCIPexprSetActivity(expr, activity_, activitytag_) do { (expr)->activity = activity_; (expr)->activitytag = activitytag_; } while (FALSE)
 #define SCIPexprGetCurvature(expr)                (expr)->curvature
 #define SCIPexprSetCurvature(expr, curvature_)    (expr)->curvature = curvature_
-#define SCIPexprGetIntegrality(expr)              (expr)->integralitylevel
-#define SCIPexprSetIntegrality(expr, intlevel_)   (expr)->integralitylevel = intlevel_
+#define SCIPexprGetIntegrality(expr)              (expr)->integrality
+#define SCIPexprSetIntegrality(expr, integrality_)   (expr)->integrality = integrality_
 #define SCIPexprAreQuadraticExprsVariables(expr)  (expr)->quaddata->allexprsarevars
 #endif
 

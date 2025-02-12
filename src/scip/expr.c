@@ -1084,21 +1084,21 @@ SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to check integrality for */
-   SCIP_IMPLINTTYPE* integralitylevel   /**< buffer to store the integrality level of the expression */
+   SCIP_IMPLINTTYPE* integrality   /**< buffer to store the integrality level of the expression */
    )
 {
    assert(exprhdlr != NULL);
    assert(set != NULL);
    assert(expr != NULL);
    assert(expr->exprhdlr == exprhdlr);
-   assert(integralitylevel != NULL);
+   assert(integrality != NULL);
 
-   *integralitylevel = SCIP_IMPLINTTYPE_NONE;
+   *integrality = SCIP_IMPLINTTYPE_NONE;
 
    /* check whether the expression handler implements the monotonicity callback */
    if( exprhdlr->integrality != NULL )
    {
-      SCIP_CALL( exprhdlr->integrality(set->scip, expr, integralitylevel) );
+      SCIP_CALL( exprhdlr->integrality(set->scip, expr, integrality) );
    }
 
    return SCIP_OKAY;
@@ -3034,7 +3034,7 @@ SCIP_RETCODE SCIPexprEvalActivity(
              * use SCIPceil and SCIPfloor for now the default intevalVar does not relax variables, so can omit
              * expressions without children (constants should be ok, too)
              */
-            if( expr->integralitylevel != SCIP_IMPLINTTYPE_NONE && expr->nchildren > 0 )
+            if( expr->integrality != SCIP_IMPLINTTYPE_NONE && expr->nchildren > 0 )
             {
                if( expr->activity.inf > -SCIP_INTERVAL_INFINITY )
                   expr->activity.inf = SCIPsetCeil(set, expr->activity.inf);
@@ -4082,7 +4082,7 @@ SCIP_IMPLINTTYPE SCIPexprGetIntegrality(
 {
    assert(expr != NULL);
 
-   return expr->integralitylevel;
+   return expr->integrality;
 }
 
 /** sets the integrality flag of an expression */
@@ -4093,7 +4093,7 @@ void SCIPexprSetIntegrality(
 {
    assert(expr != NULL);
 
-   expr->integralitylevel = integrality;
+   expr->integrality = integrality;
 }
 
 /** gives the coefficients and expressions that define a quadratic expression
