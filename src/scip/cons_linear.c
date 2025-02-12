@@ -9605,6 +9605,7 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Real* vals;
    SCIP_VARTYPE bestslacktype;
    SCIP_VARTYPE slacktype;
+   SCIP_IMPLINTTYPE impltype;
    SCIP_Real lhs;
    SCIP_Real rhs;
    SCIP_Real bestslackdomrng;
@@ -9629,6 +9630,8 @@ SCIP_RETCODE convertLongEquality(
    int ncontvars;
    int contvarpos;
    int nintvars;
+   int nweakimplvars;
+   int nstrongimplvars;
    int nimplvars;
    int intvarpos;
    int v;
@@ -9702,6 +9705,8 @@ SCIP_RETCODE convertLongEquality(
    ncontvars = 0;
    contvarpos = -1;
    nintvars = 0;
+   nweakimplvars = 0;
+   nstrongimplvars = 0;
    nimplvars = 0;
    intvarpos = -1;
    minabsval = SCIPinfinity(scip);
@@ -9740,7 +9745,8 @@ SCIP_RETCODE convertLongEquality(
       if( maxabsval / minabsval > conshdlrdata->maxmultaggrquot )
          return SCIP_OKAY;
 
-      slacktype = SCIPvarIsImpliedIntegral(var) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var);
+      impltype = SCIPvarGetImplType(var);
+      slacktype = impltype != SCIP_IMPLINTTYPE_NONE ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var);
       coefszeroone = coefszeroone && SCIPisEQ(scip, absval, 1.0);
       coefsintegral = coefsintegral && SCIPisIntegral(scip, val);
       varsintegral = varsintegral && (slacktype != SCIP_VARTYPE_CONTINUOUS);
@@ -9755,6 +9761,11 @@ SCIP_RETCODE convertLongEquality(
       else if( slacktype == SCIP_IMPLINT_PLACEHOLDER )
       {
          ++nimplvars;
+         assert(impltype != SCIP_IMPLINTTYPE_NONE);
+         if( impltype == SCIP_IMPLINTTYPE_WEAK )
+            ++nweakimplvars;
+         else
+            ++nstrongimplvars;
       }
       else if( slacktype == SCIP_VARTYPE_INTEGER )
       {
@@ -10020,13 +10031,15 @@ SCIP_RETCODE convertLongEquality(
 
       if( coefsintegral && SCIPisFeasIntegral(scip, consdata->rhs) )
       {
-         /* upgrade continuous variable to an implicit one, if the absolute value of the coefficient is one */
+         /* upgrade continuous variable to an implied integral one, if the absolute value of the coefficient is one */
          if( SCIPisEQ(scip, REALABS(vals[contvarpos]), 1.0) )
          {
-            /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
-            SCIPdebugMsg(scip, "linear constraint <%s>: converting continuous variable <%s> to implicit integer variable\n",
+            /* convert the continuous variable with coefficient 1.0 into an implied integral variable */
+            SCIPdebugMsg(scip, "linear constraint <%s>: converting continuous variable <%s> to implied integral variable\n",
                SCIPconsGetName(cons), SCIPvarGetName(var));
-            SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
+            /* If the integrality does not depend on weak implied integrality, the variable becomes strongly implied integral. */
+            impltype = nweakimplvars == 0 ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_WEAK;
+            SCIP_CALL( SCIPchgVarImplType(scip, var, impltype, &infeasible) );
             (*nchgvartypes)++;
             if( infeasible )
             {
