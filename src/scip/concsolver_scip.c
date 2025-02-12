@@ -263,7 +263,8 @@ SCIP_RETCODE initConcsolver(
 
    /* we force the copying of symmetry constraints that may have been detected during a central presolving step;
     * otherwise, the copy may become invalid */
-   if( SCIPsetBoolParam(scip, "constraints/orbitope/forceconscopy", TRUE) != SCIP_OKAY
+   if( SCIPsetBoolParam(scip, "constraints/orbitope_full/forceconscopy", TRUE) != SCIP_OKAY
+      || SCIPsetBoolParam(scip, "constraints/orbitope_pp/forceconscopy", TRUE) != SCIP_OKAY
       || SCIPsetBoolParam(scip, "constraints/orbisack/forceconscopy", TRUE) != SCIP_OKAY
       || SCIPsetBoolParam(scip, "constraints/symresack/forceconscopy", TRUE) != SCIP_OKAY )
    {

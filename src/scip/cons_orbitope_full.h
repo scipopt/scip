@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*  Copyright (c) 2002-2025 Zuse Institute Berlin (ZIB)                      */
+/*  Copyright (c) 2002-2024 Zuse Institute Berlin (ZIB)                      */
 /*                                                                           */
 /*  Licensed under the Apache License, Version 2.0 (the "License");          */
 /*  you may not use this file except in compliance with the License.         */
@@ -22,16 +22,18 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_orbitope.h
+/**@file   cons_orbitope_full.h
  * @ingroup CONSHDLRS
- * @brief  interface for constraint handlers of type partitioning, packing, and full
+ * @brief  constraint handler for full orbitope constraints w.r.t. the full symmetric group
+ * @author Timo Berthold
+ * @author Marc Pfetsch
  * @author Christopher Hojny
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_ORBITOPE_H__
-#define __SCIP_CONS_ORBITOPE_H__
+#ifndef __SCIP_CONS_ORBITOPE_FULL_H__
+#define __SCIP_CONS_ORBITOPE_FULL_H__
 
 #include "scip/def.h"
 #include "scip/type_cons.h"
@@ -44,32 +46,52 @@
 extern "C" {
 #endif
 
-/** includes orbitope constraint handlers
+/** creates the handler for full orbitope constraints and includes it in SCIP
  *
- *  cons_orbitope serves as an interface for the constraint handlers cons_orbitope_full and cons_orbitope_pp;
- *  this function includes their respective constraint handlers
+ * @ingroup ConshdlrIncludes
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPincludeConshdlrOrbitope(
+SCIP_RETCODE SCIPincludeConshdlrOrbitopeFull(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a orbitope constraint
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Full Orbitope Constraints
+ *
+ * @{
+ *
+ * This constraint handler can be used to handle symmetries in certain 0/1-programs. The principle
+ * structure is that some variables can be ordered in matrix form, such that permuting columns does
+ * not change the validity and objective function value of a solution. That is, the symmetry group
+ * of the program contains the full symmetric group obtained by permuting the columns of this
+ * matrix. These symmetries can be handled by so-called full orbitopes.
+ *
+ * In more mathematical terms the structure has to be as follows: There are 0/1-variables
+ * \f$x_{ij}\f$, \f$i \in \{1, \dots, p\}\f$, \f$j \in \{1, \dots, q\}\f$.
+ * Permuting columns of \f$x\f$ does not change the validity and objective function value of any feasible solution.
+ *
+ * We distinguish whether an orbitope is a model constraint or not. If it is a model constraint, then
+ * its information are copied to subSCIPs. Otherwise, the constraint was added just for the purpose of
+ * symmetry handling and we do not copy its information to subSCIPs.
+ */
+
+/** creates and captures a full orbitope constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsOrbitope(
+SCIP_RETCODE SCIPcreateConsOrbitopeFull(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
-   SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
-   int                   nrows,              /**< number of rows of variable matrix */
-   int                   ncols,              /**< number of columns of variable matrix */
+   int                   nrows,              /**< number of rows */
+   int                   ncols,              /**< number of columns */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
    SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
-   SCIP_Bool             checkpporbitope,    /**< Check if full orbitope constraints can be upgraded to pp-orbitopes? */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -95,26 +117,28 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** creates and captures an orbitope constraint in its most basic variant, i. e., with all constraint flags set to their
- *  default values, which can be set afterwards using SCIPsetConsFLAGNAME()
+/** creates and captures a full orbitope constraint in its most basic variant, i. e., with all constraint flags set to
+ *  their default values, which can be set afterwards using SCIPsetConsFLAGNAME()
  *
- *  @see SCIPcreateConsOrbitope() for the default constraint flag configuration
+ *  @see SCIPcreateConsOrbitopeFull() for the default constraint flag configuration
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 SCIP_EXPORT
-SCIP_RETCODE SCIPcreateConsBasicOrbitope(
+SCIP_RETCODE SCIPcreateConsBasicOrbitopeFull(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    SCIP_VAR***           vars,               /**< matrix of variables on which the symmetry acts */
-   SCIP_ORBITOPETYPE     orbitopetype,       /**< type of orbitope constraint */
-   int                   nrows,              /**< number of rows of variable matrix */
-   int                   ncols,              /**< number of columns of variable matrix */
+   int                   nrows,              /**< number of rows */
+   int                   ncols,              /**< number of columns */
    SCIP_Bool             resolveprop,        /**< should propagation be resolved? */
-   SCIP_Bool             ismodelcons,        /**< whether the orbitope is a model constraint */
-   SCIP_Bool             checkpporbitope     /**< Check if full orbitope constraints can be upgraded to pp-orbitopes? */
+   SCIP_Bool             ismodelcons         /**< whether the orbitope is a model constraint */
    );
+
+/** @} */
+
+/** @} */
 
 #ifdef __cplusplus
 }
