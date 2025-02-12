@@ -2094,7 +2094,7 @@ SCIP_DECL_NLHDLRESTIMATE(nlhdlrEstimateConvex)
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
-   if( nlhdlrexprdata->nleafs == 1 && SCIPexprGetIntegrality(nlhdlrexprdata->leafexprs[0]) != SCIP_IMPLINTTYPE_NONE )
+   if( nlhdlrexprdata->nleafs == 1 && SCIPexprIsIntegral(nlhdlrexprdata->leafexprs[0]) )
    {
       SCIP_CALL( estimateConvexSecant(scip, nlhdlr, nlhdlrexprdata, sol, rowprep, success) );
 
@@ -2155,7 +2155,7 @@ SCIP_DECL_NLHDLRSOLLINEARIZE(nlhdlrSollinearizeConvex)
 
    SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, overestimate ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT, TRUE) );
 
-   if( nlhdlrexprdata->nleafs == 1 && SCIPexprGetIntegrality(nlhdlrexprdata->leafexprs[0]) != SCIP_IMPLINTTYPE_NONE )
+   if( nlhdlrexprdata->nleafs == 1 && SCIPexprIsIntegral(nlhdlrexprdata->leafexprs[0]) )
    {
       SCIP_CALL( estimateConvexSecant(scip, nlhdlr, nlhdlrexprdata, sol, rowprep, &success) );
 

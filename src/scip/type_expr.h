@@ -365,8 +365,8 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
  *
  * The method computes whether the integrality of an expression.
  * The integrality of an expression f(y) is defined as the implied integer type of an auxilliary continuous variable x
- * that is introduced such that x = f(y) holds. Usually uses SCIPexprGetIntegrality() to get the integrality of children
- * expressions.
+ * that is introduced such that x = f(y) holds. Usually uses SCIPexprGetIntegrality() or SCIPexprIsIntegral() to get the
+ * integrality of children expressions.
  *
  *  \param[in] scip        SCIP main data structure
  *  \param[in] expr        expression to check the integrality for

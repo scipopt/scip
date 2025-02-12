@@ -329,8 +329,7 @@ SCIP_DECL_EXPRESTIMATE(estimateExp)
    }
    else
    {
-      addExpLinearization(scip, refpoint[0], SCIPexprGetIntegrality(SCIPexprGetChildren(expr)[0]) != SCIP_IMPLINTTYPE_NONE,
-                          coefs, constant, success);
+      addExpLinearization(scip, refpoint[0], SCIPexprIsIntegral(SCIPexprGetChildren(expr)[0]), coefs, constant, success);
       *islocal = FALSE; /* linearization are globally valid */
       *branchcand = FALSE;
    }
@@ -396,7 +395,7 @@ SCIP_DECL_EXPRINITESTIMATES(initestimatesExp)
       {
          assert(i < 3);
          /* coverity[overrun] */
-         addExpLinearization(scip, refpointsunder[i], SCIPexprGetIntegrality(child) != SCIP_IMPLINTTYPE_NONE,
+         addExpLinearization(scip, refpointsunder[i], SCIPexprIsIntegral(child),
                              coefs[*nreturned], &constant[*nreturned], &success); /*lint !e661*/
       }
       else

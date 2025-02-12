@@ -3842,6 +3842,7 @@ CLEANUP:
 #undef SCIPexprGetCurvature
 #undef SCIPexprSetCurvature
 #undef SCIPexprGetIntegrality
+#undef SCIPexprIsIntegral
 #undef SCIPexprSetIntegrality
 #undef SCIPexprAreQuadraticExprsVariables
 #endif
@@ -4083,6 +4084,16 @@ SCIP_IMPLINTTYPE SCIPexprGetIntegrality(
    assert(expr != NULL);
 
    return expr->integrality;
+}
+
+/** returns whether an expression is integral, i.e. whether the integrality flag is not equal to SCIP_IMPLINTTYPE_NONE */
+SCIP_Bool SCIPexprIsIntegral(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->integrality != SCIP_IMPLINTTYPE_NONE;
 }
 
 /** sets the integrality flag of an expression */

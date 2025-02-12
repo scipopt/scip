@@ -70,7 +70,6 @@ Interface changes
 - (Temporarily supported until SCIP 11): Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integral type SCIP_IMPLINTTYPE_WEAK instead.
 - impltype added to arguments for SCIPvarCalcDistributionParameters() (5th position)
 - SCIPgetSolVarsData(): argument nimplvars is subdivided into nbinimplvars, nintimplvars, and ncontimplvars
-- SCIPexprIsIntegral() was deleted, it is replaced by SCIPexprGetIntegrality(), which also provides information about the presence of weakly implied integral variables.
 - SCIPexprSetIntegrality(): the fourth argument was changed from a boolean to SCIP_IMPLINTTYPE
 
 ### New API functions
@@ -109,6 +108,7 @@ Interface changes
 - added SCIPcolIsImpliedIntegral()
 - added SCIPvarArrayCountTypes() to determine the variable type count distribution for an array of variables
 - added SCIPeventGetOldImplType(), SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
+- added SCIPexprGetIntegrality(), which in addition to the existing function SCIPexprIsIntegral() provides information about the presence of weakly implied integral variables.
 
 ### Changes in preprocessor macros
 

@@ -2394,7 +2394,7 @@ SCIP_RETCODE forwardPropExpr(
              * boundtightening-inteval does not relax integer variables, so can omit expressions without children
              * (constants should be ok, too)
              */
-            if( SCIPexprGetIntegrality(expr) != SCIP_IMPLINTTYPE_NONE &&
+            if( SCIPexprIsIntegral(expr) &&
                 conshdlrdata->intevalvar == intEvalVarBoundTightening && SCIPexprGetNChildren(expr) > 0 )
             {
                if( activity.inf > -SCIP_INTERVAL_INFINITY )
@@ -14838,7 +14838,7 @@ SCIP_RETCODE SCIPtightenExprIntervalNonlinear(
    SCIPdebugMsgPrint(scip, " with activity [%.15g,%.15g] to [%.15g,%.15g] (force=%d)\n", SCIPexprGetActivity(expr).inf, SCIPexprGetActivity(expr).sup, newbounds.inf, newbounds.sup, conshdlrdata->forceboundtightening);
 #endif
 
-   if( SCIPexprGetIntegrality(expr) != SCIP_IMPLINTTYPE_NONE )
+   if( SCIPexprIsIntegral(expr) )
    {
       /* apply integrality to new bounds
        * it should be ok to use normal ceil() and floor(), but for safety, we use SCIPceil and SCIPfloor for now

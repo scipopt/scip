@@ -800,7 +800,7 @@ SCIP_RETCODE SCIPcomputeExprCurvature(
 
 /** computes integrality information of a given expression and all its subexpressions
  *
- * The integrality information can be accessed via SCIPexprGetIntegrality().
+ * The integrality information can be accessed via SCIPexprGetIntegrality() and SCIPexprIsIntegral().
  */
 SCIP_EXPORT
 SCIP_RETCODE SCIPcomputeExprIntegrality(

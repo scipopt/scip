@@ -572,9 +572,15 @@ void SCIPexprSetCurvature(
    SCIP_EXPRCURV         curvature           /**< curvature of the expression */
    );
 
-/** returns whether an expression is integral */
+/** returns the integrality flag of an expression */
 SCIP_EXPORT
 SCIP_IMPLINTTYPE SCIPexprGetIntegrality(
+   SCIP_EXPR*            expr                /**< expression */
+   );
+
+/** returns whether an expression is integral, i.e. whether the integrality flag is not equal to SCIP_IMPLINTTYPE_NONE */
+SCIP_EXPORT
+SCIP_Bool SCIPexprIsIntegral(
    SCIP_EXPR*            expr                /**< expression */
    );
 
@@ -690,6 +696,7 @@ SCIP_Bool SCIPexprAreQuadraticExprsVariables(
 #define SCIPexprGetCurvature(expr)                (expr)->curvature
 #define SCIPexprSetCurvature(expr, curvature_)    (expr)->curvature = curvature_
 #define SCIPexprGetIntegrality(expr)              (expr)->integrality
+#define SCIPexprIsIntegral(expr)                  ((expr)->integrality != SCIP_IMPLINTTYPE_NONE)
 #define SCIPexprSetIntegrality(expr, integrality_)   (expr)->integrality = integrality_
 #define SCIPexprAreQuadraticExprsVariables(expr)  (expr)->quaddata->allexprsarevars
 #endif
