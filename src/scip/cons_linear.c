@@ -10033,7 +10033,7 @@ SCIP_RETCODE convertLongEquality(
             /* convert the continuous variable with coefficient 1.0 into an implied integral variable */
             SCIPdebugMsg(scip, "linear constraint <%s>: converting continuous variable <%s> to implied integral variable\n",
                SCIPconsGetName(cons), SCIPvarGetName(var));
-            /* If the integrality does not depend on weak implied integrality, the variable becomes strongly implied integral. */
+            /* if the integrality does not depend on weak implied integrality, the variable becomes strongly implied integral */
             impltype = nweakimplvars == 0 ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_WEAK;
             SCIP_CALL( SCIPchgVarImplType(scip, var, impltype, &infeasible) );
             (*nchgvartypes)++;
