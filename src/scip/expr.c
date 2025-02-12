@@ -3844,7 +3844,6 @@ CLEANUP:
 #undef SCIPexprGetIntegrality
 #undef SCIPexprIsIntegral
 #undef SCIPexprSetIntegrality
-#undef SCIPvalueIntegrality
 #undef SCIPexprAreQuadraticExprsVariables
 #endif
 
@@ -4106,14 +4105,6 @@ void SCIPexprSetIntegrality(
    assert(expr != NULL);
 
    expr->integrality = integrality;
-}
-
-/**< Computes the integrality of a value expression, STRONG if value is integral, NONE otherwise. */
-SCIP_IMPLINTTYPE SCIPvalueIntegrality(
-   SCIP_Real             value               /**< The value to get the integrality for */
-)
-{
-   return EPSISINT(value, 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE;
 }
 
 /** gives the coefficients and expressions that define a quadratic expression

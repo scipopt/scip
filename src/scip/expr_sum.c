@@ -1069,14 +1069,14 @@ SCIP_DECL_EXPRINTEGRALITY(integralitySum)
    assert(exprdata != NULL);
 
    /**! [SnippetExprIntegralitySum] */
-   *integrality = SCIPvalueIntegrality(exprdata->constant);
+   *integrality = EPSISINT(exprdata->constant, 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE;
 
    for( i = 0; i < SCIPexprGetNChildren(expr) && *integrality != SCIP_IMPLINTTYPE_NONE; ++i )
    {
       SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
       assert(child != NULL);
 
-      SCIP_IMPLINTTYPE valintegrality = SCIPvalueIntegrality(exprdata->coefficients[i]);
+      SCIP_IMPLINTTYPE valintegrality = EPSISINT(exprdata->coefficients[i], 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE;
       SCIP_IMPLINTTYPE childintegrality = SCIPexprGetIntegrality(child);
 
       *integrality = MIN3(*integrality, valintegrality, childintegrality); /*lint !e666 */

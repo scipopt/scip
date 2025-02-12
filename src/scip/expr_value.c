@@ -237,7 +237,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityValue)
    assert(integrality != NULL);
    assert(SCIPexprGetData(expr) != NULL);
 
-   *integrality = SCIPvalueIntegrality(SCIPexprGetData(expr)->value);
+   *integrality = EPSISINT(SCIPexprGetData(expr)->value, 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE;
 
    return SCIP_OKAY;
 }

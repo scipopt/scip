@@ -2203,7 +2203,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityProduct)
    exprdata = SCIPexprGetData(expr);
    assert(exprdata != NULL);
 
-   *integrality = SCIPvalueIntegrality(exprdata->coefficient);
+   *integrality =  EPSISINT(exprdata->coefficient, 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE;
 
    for( i = 0; i < SCIPexprGetNChildren(expr) && *integrality != SCIP_IMPLINTTYPE_NONE; ++i )
    {
