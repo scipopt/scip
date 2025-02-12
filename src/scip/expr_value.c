@@ -236,7 +236,6 @@ SCIP_DECL_EXPRINTEGRALITY(integralityValue)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(isintegral != NULL);
    assert(integrality != NULL);
 
    exprdata = SCIPexprGetData(expr);
