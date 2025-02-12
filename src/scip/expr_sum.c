@@ -1075,7 +1075,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralitySum)
    /**! [SnippetExprIntegralitySum] */
    *integrality = valueIntegrality(exprdata->constant);
 
-   for( i = 0; i < SCIPexprGetNChildren(expr) && *integrality > SCIP_IMPLINTTYPE_NONE; ++i )
+   for( i = 0; i < SCIPexprGetNChildren(expr) && *integrality != SCIP_IMPLINTTYPE_NONE; ++i )
    {
       SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
       assert(child != NULL);

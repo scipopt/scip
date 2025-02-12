@@ -2205,7 +2205,7 @@ SCIP_DECL_EXPRINTEGRALITY(integralityProduct)
 
    *integrality = EPSISINT(exprdata->coefficient, 0.0) ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE; /*lint !e835*/
 
-   for( i = 0; i < SCIPexprGetNChildren(expr) && *integrality > SCIP_IMPLINTTYPE_NONE; ++i )
+   for( i = 0; i < SCIPexprGetNChildren(expr) && *integrality != SCIP_IMPLINTTYPE_NONE; ++i )
    {
       SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
       assert(child != NULL);
