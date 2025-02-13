@@ -2789,7 +2789,7 @@ SCIP_RETCODE SCIPbendersActivate(
       /* allocating memory for the subproblems arrays */
       SCIP_ALLOC( BMSallocMemoryArray(&benders->subproblems, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->auxiliaryvars, benders->nsubproblems) );
-      SCIP_ALLOC( BMSallocMemoryArray(&benders->submastervars, benders->nsubproblems) );
+      SCIP_ALLOC( BMSallocClearMemoryArray(&benders->submastervars, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->submastervarssize, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->nsubmastervars, benders->nsubproblems) );
       SCIP_ALLOC( BMSallocMemoryArray(&benders->nsubmasterbinvars, benders->nsubproblems) );
@@ -2920,15 +2920,7 @@ SCIP_RETCODE SCIPbendersDeactivate(
 
       /* freeing the master variable storage if it exists */
       for( i = nsubproblems - 1; i >= 0; i-- )
-      {
-         if( benders->submastervarssize[i] > 0 )
-            BMSfreeMemoryArray(&benders->submastervars[i]);
-
-         benders->submastervarssize[i] = 0;
-         benders->nsubmastervars[i] = 0;
-         benders->nsubmasterbinvars[i] = 0;
-         benders->nsubmasterintvars[i] = 0;
-      }
+         BMSfreeMemoryArrayNull(&benders->submastervars[i]);
 
       /* freeing the memory allocated during the activation of the Benders' decomposition */
       BMSfreeMemoryArray(&benders->mastervarscont);
