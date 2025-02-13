@@ -381,13 +381,13 @@ SECTION: General Questions about SCIP
         A variable is strongly implied integral if it can only have an integer solution value in the problem that remains after relaxing all integrality constraints and
         fixing all non-implied integral variables to feasible integer values.
         For example, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b, the variable y
-        could be declared strongly implied integral if the variables x<sub>i</sub> are of type integer or binary and the
+        can be declared strongly implied integral if the variables x<sub>i</sub> are non-implied integral and the
         coefficients a<sub>i</sub> and the right hand side b are integral.
         Algorithms within SCIP can exploit the fact that a variable is implied integral.
         If the variable type of y is continuous and some domain propagation algorithm deduces that
         y &ge; 0.5 holds, then the lower bound of y can be automatically tightened to 1 by using integrality.
         Further, cuts may be tightened by using the integrality of y, and new classes of cuts may become available.
-        Even if y was marked as an integer variable type by the user, then its implied integrality may still be useful in improving runtime.
+        Even if y has variable type binary or integer, its implied integrality may still be useful.
         For example, implied integrality of y indicates that it is unnecessary to branch on y, since branching on
         all x-variables will automatically enforce the integrality constraint on y.
     </p>
@@ -411,10 +411,8 @@ SECTION: General Questions about SCIP
         In versions before SCIP 10, <code>SCIP_VARTYPE_IMPLINT</code> was interpreted to not have an
         integrality constraint, which means that integrality of these variables is not guaranteed
         in primal solutions.
-        In SCIP 10 and above, variables of type <code>SCIP_VARTYPE_IMPLINT</code> can be equivalently
-        modelled with variable type <code>SCIP_VARTYPE_CONTINUOUS</code> and implied integral type <code>SCIP_IMPLINTTYPE_WEAK</code>.
-        Using the flag <code>SCIP_IMPLINTTYPE</code> to declare implied integrality of variables
-        for variables that also have integrality constraints, which can be important for performance.
+        In SCIP 10 and above, variables that were previously of type <code>SCIP_VARTYPE_IMPLINT</code> are equivalent
+        to variables with variable type <code>SCIP_VARTYPE_CONTINUOUS</code> and implied integral type <code>SCIP_IMPLINTTYPE_WEAK</code>.
     </p>
 
     QUESTION: How can I analyse an infeasible problem?
