@@ -105,6 +105,12 @@ Test(copy, MIP, .description="tests MIP copy")
    /* check copy dimension */
    /* TODO: complete the copy */
    cr_expect(ntargetparams <= nsourceparams);
+   cr_expect(SCIPgetNBinVars(targetscip) == SCIPgetNBinVars(sourcescip));
+   cr_expect(SCIPgetNIntVars(targetscip) == SCIPgetNIntVars(sourcescip));
+   cr_expect(SCIPgetNBinImplVars(targetscip) == SCIPgetNBinImplVars(sourcescip));
+   cr_expect(SCIPgetNIntImplVars(targetscip) == SCIPgetNIntImplVars(sourcescip));
+   cr_expect(SCIPgetNContImplVars(targetscip) == SCIPgetNContImplVars(sourcescip));
+   cr_expect(SCIPgetNContVars(targetscip) == SCIPgetNContVars(sourcescip));
    cr_expect(SCIPgetNVars(targetscip) == SCIPgetNVars(sourcescip));
    cr_expect(SCIPgetNConss(targetscip) == SCIPgetNConss(sourcescip));
 
@@ -176,6 +182,16 @@ Test(copy, MIP, .description="tests MIP copy")
    /* solve both scips */
    SCIP_CALL( SCIPsolve(sourcescip) );
    SCIP_CALL( SCIPsolve(targetscip) );
+
+   /* compare solved dimensions */
+   cr_expect(SCIPgetNBinVars(targetscip) == SCIPgetNBinVars(sourcescip));
+   cr_expect(SCIPgetNIntVars(targetscip) == SCIPgetNIntVars(sourcescip));
+   cr_expect(SCIPgetNBinImplVars(targetscip) == SCIPgetNBinImplVars(sourcescip));
+   cr_expect(SCIPgetNIntImplVars(targetscip) == SCIPgetNIntImplVars(sourcescip));
+   cr_expect(SCIPgetNContImplVars(targetscip) == SCIPgetNContImplVars(sourcescip));
+   cr_expect(SCIPgetNContVars(targetscip) == SCIPgetNContVars(sourcescip));
+   cr_expect(SCIPgetNVars(targetscip) == SCIPgetNVars(sourcescip));
+   cr_expect(SCIPgetNConss(targetscip) == SCIPgetNConss(sourcescip));
 
    /* compare optimal bounds */
    cr_expect(SCIPgetDualbound(targetscip) == SCIPgetPrimalbound(targetscip));
