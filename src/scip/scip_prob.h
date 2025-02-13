@@ -916,6 +916,8 @@ int SCIPgetNImplVars(
  *
  *  @return the number of enforced binary implicit integer active problem variables
  *
+ *  @note This function does not count the binary variables that are implied integral
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -937,6 +939,8 @@ int SCIPgetNBinImplVars(
  *
  *  @return the number of enforced integer implicit integer active problem variables
  *
+ *  @note This function does not count the integer variables that are implied integral
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -957,6 +961,8 @@ int SCIPgetNIntImplVars(
 /** gets number of continuous implicit integer active problem variables
  *
  *  @return the number of continuous implicit integer active problem variables
+ *
+ *  @note This function does not count the continuous variables that are implied integral
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
@@ -993,6 +999,70 @@ int SCIPgetNContImplVars(
  */
 SCIP_EXPORT
 int SCIPgetNContVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of binary active problem variables, including binary variables that are implied integral, but excluding
+ *  any variables that do not have vartype SCIP_VARTYPE_BINARY
+ *
+ *  @return the number of binary active problem variables
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+int SCIPgetNTotalBinVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of integer active problem variables, including integer variables that are implied integral
+ *
+ *  @return the number of integer active problem variables
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+int SCIPgetNTotalIntVars(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of continuous active problem variables, including continuous variables that are implied integral
+ *
+ *  @return the number of continuous active problem variables
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_EXPORT
+int SCIPgetNTotalContVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
