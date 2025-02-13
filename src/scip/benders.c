@@ -80,7 +80,7 @@
 
 #define BENDERS_MAXPSEUDOSOLS                 5  /** the maximum number of pseudo solutions checked before suggesting
                                                   *  merge candidates */
-#define BENDERS_MASTERVARARRAY   100     /**< the initial size of the submastervars arrays */
+#define BENDERS_MASTERVARARRAYSIZE 100     /**< the initial size of the submastervars arrays */
 #define BENDERS_ARRAYSIZE        1000    /**< the initial size of the added constraints/cuts arrays */
 
 #define AUXILIARYVAR_NAME     "##bendersauxiliaryvar" /** the name for the Benders' auxiliary variables in the master problem */
@@ -2822,13 +2822,13 @@ SCIP_RETCODE SCIPbendersActivate(
       {
          SCIP_SUBPROBLEMSOLVESTAT* solvestat;
 
-         SCIP_ALLOC( BMSallocMemoryArray(&benders->submastervars[i], BENDERS_MASTERVARARRAY) );
+         SCIP_ALLOC( BMSallocMemoryArray(&benders->submastervars[i], BENDERS_MASTERVARARRAYSIZE) );
 
          benders->subproblems[i] = NULL;
          benders->auxiliaryvars[i] = NULL;
          if( benders->objectivetype == SCIP_BENDERSOBJTYPE_MAX )
             benders->auxiliaryvarcons[i] = NULL;
-         benders->submastervarssize[i] = BENDERS_MASTERVARARRAY;
+         benders->submastervarssize[i] = BENDERS_MASTERVARARRAYSIZE;
          benders->nsubmastervars[i] = 0;
          benders->nsubmasterbinvars[i] = 0;
          benders->nsubmasterintvars[i] = 0;
