@@ -408,7 +408,7 @@ SECTION: General Questions about SCIP
         which can take the values <code>SCIP_IMPLINTTYPE_NONE</code>, <code>SCIP_IMPLINTTYPE_WEAK</code>, and <code>SCIP_IMPLINTTYPE_STRONG</code>.
         The primary motivation for this change is to allow users to declare implied integrality of variables of binary
         and integer type, which was previously impossible.
-        In all versions before SCIP 10, <code>SCIP_VARTYPE_IMPLINT</code> was interpreted by SCIP to not have an
+        In versions before SCIP 10, <code>SCIP_VARTYPE_IMPLINT</code> was interpreted to not have an
         integrality constraint, which means that integrality of these variables is not guaranteed
         in primal solutions.
         In SCIP 10 and above, variables of type <code>SCIP_VARTYPE_IMPLINT</code> can be equivalently
