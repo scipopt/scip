@@ -2822,7 +2822,7 @@ SCIP_RETCODE SCIPbendersActivate(
       {
          SCIP_SUBPROBLEMSOLVESTAT* solvestat;
 
-         SCIP_ALLOC( BMSallocMemoryArray(&benders->submastervars[i], BENDERS_MASTERVARARRAYSIZE) );
+         SCIP_ALLOC( BMSallocMemoryArray(&benders->submastervars[i], BENDERS_MASTERVARARRAYSIZE) ); /*lint !e866*/
 
          benders->subproblems[i] = NULL;
          benders->auxiliaryvars[i] = NULL;
