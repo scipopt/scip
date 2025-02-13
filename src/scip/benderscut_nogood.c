@@ -373,7 +373,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecNogood)
    if( benderscutdata->cutadded )
       return SCIP_OKAY;
 
-   /* it is only possible to generate nogood cuts for if all linking variables are binary */
+   /* it is only possible to generate nogood cuts if all linking variables are binary */
    if( !benderscutdata->subprobsvalid )
    {
       SCIPinfoMessage(scip, NULL, "The nogood cuts can only be applied to problems "

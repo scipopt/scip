@@ -640,7 +640,6 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
    SCIP_CALL( SCIPallocBlockMemory(scip, &benderscutdata) );
    BMSclearMemory(benderscutdata);
    benderscutdata->benders = benders;
-   benderscutdata->created = FALSE;
 
    benderscut = NULL;
 
