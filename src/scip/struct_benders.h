@@ -122,6 +122,11 @@ struct SCIP_Benders
                                               *   For the sum objective, this is a single constraint.
                                               *   For the max objective, there is a constraint per subproblem.
                                               */
+   SCIP_VAR***           submastervars;      /**< the master problem variables that are used in the subproblem */
+   int*                  submastervarssize;  /**< the size of the master problem variables array for each subproblem */
+   int*                  nsubmastervars;     /**< the number of master problem variables for each subproblem */
+   int*                  nsubmasterbinvars;  /**< the number of binary master problem variables in each subproblem */
+   int*                  nsubmasterintvars;  /**< the number of integer master problem variables in each subproblem */
    SCIP_PQUEUE*          subprobqueue;       /**< the priority queue for the subproblems */
    SCIP_SUBPROBLEMSOLVESTAT** solvestat;     /**< storing the solving statistics of all the subproblems */
    SCIP_Real*            subprobobjval;      /**< the objective value of the subproblem in the current iteration */
