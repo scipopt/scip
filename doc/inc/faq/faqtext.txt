@@ -403,8 +403,8 @@ SECTION: General Questions about SCIP
         However, there is an optimal solution where y takes the integer solution value b - &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub>.
     </p>
     <p>
-        Originally, the variable type <code>SCIP_VARTYPE_IMPLINT</code> was used for continuous variables for which
-        it is known that there exists at least one optimal solution such that all implied integral variables are integral.
+        Originally, the variable type <code>SCIP_VARTYPE_IMPLINT</code> was used for continuous variables which are
+        all known to simultaneously take integer solution values in an optimal solution.
         With SCIP 10.0.0, this variable type is deprecated in favor of the new flag <code>SCIP_IMPLINTTYPE</code>
         which can take the values <code>SCIP_IMPLINTTYPE_NONE</code>, <code>SCIP_IMPLINTTYPE_WEAK</code>, and <code>SCIP_IMPLINTTYPE_STRONG</code>.
         The primary motivation for this change is to allow users to declare implied integrality of variables of binary
