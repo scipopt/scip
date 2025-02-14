@@ -2180,6 +2180,7 @@ void chooseSemiconvLong(
    }
 }
 
+#ifdef SCIP_WITH_BOOST
 /** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions;
  *  this version only uses long and is faster
  */
@@ -2341,6 +2342,7 @@ void RatComputeApproximationLong(
    res->isinf = FALSE;
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
+#endif
 
 /** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
 void RatComputeApproximation(
