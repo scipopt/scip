@@ -3247,7 +3247,6 @@ SCIP_RETCODE cutsTransformMIR(
    smallestprobvar = nvars;
 
    i = 0;
-   usevbds = 1;
    int sectionSize[2] = { SCIPgetNContVars(scip), SCIPgetNVars(scip) - SCIPgetNContVars(scip) };
 
    for( int j = 0; j < 2; ++j )
