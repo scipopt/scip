@@ -6460,7 +6460,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarObj(
    if( !RatIsEqual(oldobj, newobj) )
    {
       SCIP_Rational* deltaval;
-      int deltainf;
+      int deltainf = 0;
 
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
       assert(SCIPvarGetProbindex(var) >= 0);
