@@ -1084,7 +1084,7 @@ SCIP_RETCODE SCIPexprhdlrIntegralityExpr(
    SCIP_EXPRHDLR*        exprhdlr,           /**< expression handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_EXPR*            expr,               /**< expression to check integrality for */
-   SCIP_IMPLINTTYPE* integrality   /**< buffer to store the integrality level of the expression */
+   SCIP_IMPLINTTYPE*     integrality         /**< buffer to store the integrality level of the expression */
    )
 {
    assert(exprhdlr != NULL);
@@ -4099,7 +4099,7 @@ SCIP_Bool SCIPexprIsIntegral(
 /** sets the integrality flag of an expression */
 void SCIPexprSetIntegrality(
    SCIP_EXPR*            expr,               /**< expression */
-   SCIP_IMPLINTTYPE integrality         /**< integrality level of the expression */
+   SCIP_IMPLINTTYPE      integrality         /**< integrality level of the expression */
    )
 {
    assert(expr != NULL);

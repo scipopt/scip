@@ -6143,7 +6143,7 @@ SCIP_RETCODE SCIPvarChgType(
    {
       if( SCIPvarGetImplType(var) != SCIP_IMPLINTTYPE_WEAK )
       {
-         SCIP_CALL(SCIPvarChgImplType(var,blkmem,set,primal,lp,eventqueue,SCIP_IMPLINTTYPE_WEAK));
+         SCIP_CALL( SCIPvarChgImplType(var, blkmem, set, primal, lp, eventqueue, SCIP_IMPLINTTYPE_WEAK) );
       }
       return SCIP_OKAY;
    }

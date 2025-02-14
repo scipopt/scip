@@ -2697,7 +2697,6 @@ unsigned int getScore(
       } /*lint !e788*/
    }
 
-
    score *= OBBT_SCOREBASE;
    if( bound->boundtype == SCIP_BOUNDTYPE_UPPER )
       score += 1;

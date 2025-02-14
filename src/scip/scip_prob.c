@@ -2185,7 +2185,7 @@ int SCIPgetNBinImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNBinImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -2231,7 +2231,7 @@ int SCIPgetNIntImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNIntImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -2277,7 +2277,7 @@ int SCIPgetNContImplVars(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetNContImplVars", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {

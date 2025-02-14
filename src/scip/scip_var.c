@@ -126,7 +126,7 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
    SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable, or NULL */
-)
+   )
 {
    assert(var != NULL);
    assert(lb <= ub);
@@ -8471,7 +8471,7 @@ SCIP_RETCODE SCIPchgVarImplType(
    SCIP_IMPLINTTYPE      impltype,           /**< new type of variable */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected (, due to
                                               *   integrality condition of the new variable type) */
-)
+   )
 {
    SCIP_CALL( SCIPcheckStage(scip, "SCIPchgVarImplType", FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
