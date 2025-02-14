@@ -6473,15 +6473,15 @@ SCIP_RETCODE SCIPlpExactUpdateVarObj(
       SCIP_CALL( RatCreateBuffer(set->buffer, &deltaval) );
 
       /* compute the pseudo objective delta due the new objective coefficient */
-      getObjvalDeltaObjExact(set, oldobj, newobj, SCIPvarGetLbLocalExact(var),
-          SCIPvarGetUbLocalExact(var), deltaval, &deltainf);
+      SCIP_CALL( getObjvalDeltaObjExact(set, oldobj, newobj, SCIPvarGetLbLocalExact(var),
+            SCIPvarGetUbLocalExact(var), deltaval, &deltainf) );
 
       /* update the local pseudo objective value */
       lpExactUpdateObjval(lp, var, deltaval, deltainf, TRUE, FALSE, FALSE);
 
       /* compute the pseudo objective delta due the new objective coefficient */
-      getObjvalDeltaObjExact(set, oldobj, newobj, SCIPvarGetLbGlobalExact(var),
-          SCIPvarGetUbGlobalExact(var), deltaval, &deltainf);
+      SCIP_CALL( getObjvalDeltaObjExact(set, oldobj, newobj, SCIPvarGetLbGlobalExact(var),
+            SCIPvarGetUbGlobalExact(var), deltaval, &deltainf) );
 
       /* update the global pseudo objective value */
       lpExactUpdateObjval(lp, var, deltaval, deltainf, FALSE, FALSE, TRUE);
