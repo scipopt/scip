@@ -236,7 +236,7 @@ SCIP_RETCODE SCIPreaderRead(
       return retcode;
 
    /* check if the result code is valid in case no reader error occurred */
-   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS || *result == SCIP_SUSPENDED);
+   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS);
 
    SCIP_CALL( retcode );
 

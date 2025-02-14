@@ -478,9 +478,6 @@ SCIP_RETCODE SCIPreadProb(
       }
       retcode = SCIP_OKAY;
       break;
-   case SCIP_SUSPENDED:
-      retcode = SCIP_INVALIDDATA;
-      break;
    default:
       assert(i < scip->set->nreaders);
       SCIPerrorMessage("invalid result code <%d> from reader <%s> reading file <%s>\n",

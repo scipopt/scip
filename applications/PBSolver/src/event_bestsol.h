@@ -41,7 +41,6 @@ extern "C" {
 #endif
 
 /** creates event handler for best solution found */
-extern
 SCIP_RETCODE SCIPcreateEventHdlrBestsol(
    SCIP*                 scip                /**< SCIP data structure */
    );

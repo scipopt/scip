@@ -1494,7 +1494,7 @@ SCIP_RETCODE readConstraints(
 
 /** read the first comment line which usually contains information about (1) the max size of "and" products and (2) the
  *  "intsize" which represents the number of bits required to represent the sum of the absolute values of all integers
- *  that appear in any constraint or the objective. */
+ *  that appear in any constraint or the objective */
 static
 SCIP_RETCODE getCommentLineData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1585,7 +1585,7 @@ SCIP_RETCODE getCommentLineData(
          if( pos != NULL )
          {
             *intsize = atoi(pos);
-            SCIPdebugMsg(scip, "number of bits required to represent sum of the absolute values of all integers appearing in a constraint or objective function = %d.\n", *intsize);
+            SCIPdebugMsg(scip, "number of bits required to represent sum of the absolute values of all integers appearing in a constraint or objective function = %d\n", *intsize);
          }
       }
 
@@ -1645,10 +1645,7 @@ SCIP_RETCODE readOPBFile(
     * "opbinput.andconss"
     */
 
-   /* read the first comment line which usually contains information about (1) the max size of "and" products and (2)
-    * "intsize" which represents the number of bits required to represent, for any constraint, the sum of the absolute
-    * value of all integers that appear in the constraint. This also considers the objective function by re-writing it as a
-    * pseudo-constraint. */
+   /* read the first comment line which contains information about size of products and coefficients */
    SCIP_CALL( getCommentLineData(scip, opbinput, &objscale, &objoffset, &intsize) );
 
    if( readerdata->maxintsize >= 0 && intsize > readerdata->maxintsize )
@@ -3981,12 +3978,6 @@ SCIP_RETCODE SCIPreadOpb(
    SCIPfreeBlockMemoryArray(scip, &opbinput.tokenbuf, OPB_MAX_LINELEN);
    SCIPfreeBlockMemoryArray(scip, &opbinput.token, OPB_MAX_LINELEN);
    SCIPfreeBlockMemoryArray(scip, &opbinput.linebuf, opbinput.linebufsize);
-
-   if( retcode == SCIP_INVALIDDATA )
-   {
-      *result = SCIP_SUSPENDED;
-      return SCIP_OKAY;
-   }
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;

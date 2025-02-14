@@ -46,12 +46,11 @@ struct SCIP_MessagehdlrData
 };
 
 /** creates default pbsolver message handler */
-extern
 SCIP_RETCODE SCIPcreateMessagehdlrPbSolver(
-   SCIP_MESSAGEHDLR**    messagehdlr,        /**< pointer to message handler */
-   SCIP_Bool             buffered,           /**< should the output be buffered */
-   const char*           filename,           /**< name of log file, or NULL (stdout) */
-   SCIP_Bool             quiet               /**< should screen messages be suppressed? */
+   SCIP_MESSAGEHDLR** messagehdlr,           /**< pointer to message handler */
+   SCIP_Bool buffered,                       /**< should the output be buffered */
+   const char* filename,                     /**< name of log file or NULL for stdout */
+   SCIP_Bool quiet                           /**< should screen messages be suppressed? */
    );
 
 #ifdef __cplusplus

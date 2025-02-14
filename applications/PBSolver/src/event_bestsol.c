@@ -55,7 +55,7 @@ SCIP_DECL_EVENTINIT(eventInitBestsol)
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
-   SCIP_CALL( SCIPcatchEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -68,7 +68,7 @@ SCIP_DECL_EVENTEXIT(eventExitBestsol)
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
-   SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
    return SCIP_OKAY;
 }
 
@@ -76,6 +76,7 @@ SCIP_DECL_EVENTEXIT(eventExitBestsol)
 static
 SCIP_DECL_EVENTDELETE(eventDeleteBestsol)
 {  /*lint --e{715}*/
+   assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(eventdata != NULL);
@@ -98,13 +99,13 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    SCIP_Bool comment;
    int solval;
 
+   assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
-   assert(scip != NULL);
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND);
 
-   SCIPdebugMessage("exec method of event handler for pbsolver\n");
+   SCIPdebugMessage("exec method of best solution event of pbsolver\n");
 
    bestsol = SCIPgetBestSol(scip);
    assert(bestsol != NULL);
@@ -139,14 +140,11 @@ SCIP_RETCODE SCIPcreateEventHdlrBestsol(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
-   eventhdlrdata = NULL;
-
-   /* create event handler for events on watched variables */
+   /* create event handler for events on best solutions */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
          NULL,
          eventFreeBestsol, eventInitBestsol, eventExitBestsol,
-         eventInitsolBestsol, eventExitsolBestsol, eventDeleteBestsol, eventExecBestsol,
-         eventhdlrdata) );
+         eventInitsolBestsol, eventExitsolBestsol, eventDeleteBestsol, eventExecBestsol, NULL) );
+
    return SCIP_OKAY;
 }
