@@ -4840,6 +4840,7 @@ void rowCalcIdxsAndVals(
    row->maxval = 0.0;
    row->nummaxval = 1;
    row->numintcols = 0;
+   row->numimplintcols = 0;
    row->minval = SCIPsetInfinity(set);
    row->numminval = 1;
    row->minidx = INT_MAX;
@@ -4859,6 +4860,12 @@ void rowCalcIdxsAndVals(
       /* update min/maxidx */
       row->minidx = MIN(row->minidx, col->index);
       row->maxidx = MAX(row->maxidx, col->index);
+      if( SCIPcolIsIntegral(col) )
+      {
+         ++row->numintcols;
+         if( SCIPcolIsImpliedIntegral(col) )
+            ++row->numimplintcols;
+      }
       row->numintcols += SCIPcolIsIntegral(col); /*lint !e713*/
 
       /* update maximal and minimal non-zero value */
@@ -5208,6 +5215,7 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->nummaxval = 0;
    (*row)->numminval = 0;
    (*row)->numintcols = -1;
+   (*row)->numimplintcols = -1;
    (*row)->validactivitylp = -1;
    (*row)->validpsactivitydomchg = -1;
    (*row)->validactivitybdsdomchg = -1;
@@ -6743,6 +6751,22 @@ int SCIProwGetNumIntCols(
    assert(row->numintcols <= row->len && row->numintcols >= 0);
 
    return row->numintcols;
+}
+
+/** gets number of implied integral columns in row */
+int SCIProwGetNumImpliedIntCols(
+   SCIP_ROW*             row,                /**< LP row */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(row != NULL);
+
+   if( row->numimplintcols == -1 )
+      rowCalcIdxsAndVals(row, set);
+
+   assert(row->numimplintcols <= row->len && row->numimplintcols >= 0);
+
+   return row->numimplintcols;
 }
 
 /** returns row's cutoff distance in the direction of the given primal solution */
