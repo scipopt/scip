@@ -105,11 +105,12 @@ Interface changes
 - added SCIPcreateObjVarImpl() and SCIPcreateVarImpl(), which behave identically to SCIPcreateObjVar() and SCIPcreateVar() but have an additional argument for the new implied integral type flag (8th position)
 - added SCIPchgVarImplType(), SCIPvarGetImplType(), SCIPvarIsImpliedIntegral() to control and query implied integrality
 - added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integral variables of every type, note that SCIPgetNBinVars(), SCIPgetNIntVars() and SCIPgetNContVars() do not include the implied integral variables in their counts, as before
-- added SCIPgetNTotalBinVars(), SCIPgetNTotalIntVars() and SCIPgetNTotalContvVars() to get the numbers of variables of a single type ignoring implied integrality
+- added SCIPgetNTotalBinVars(), SCIPgetNTotalIntVars() and SCIPgetNTotalContVars() to get the numbers of variables of a type independent of implied integrality
 - added SCIPcolIsImpliedIntegral()
 - added SCIPvarArrayCountTypes() to determine the variable type count distribution for an array of variables
 - added SCIPeventGetOldImplType(), SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
 - added SCIPexprGetIntegrality(), which in addition to the existing function SCIPexprIsIntegral() provides information about the presence of weakly implied integral variables.
+
 ### Changes in preprocessor macros
 
 - removed `#define` of `strcasecmp` and `strncasecmp` (in case of Windows builds) in scip/def.h;
