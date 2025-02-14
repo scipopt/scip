@@ -2347,8 +2347,8 @@ int SCIPgetNContVars(
    }  /*lint !e788*/
 }
 
-/** gets number of binary active problem variables, including binary variables that are implied integral, but excluding
- *  any variables that do not have vartype SCIP_VARTYPE_BINARY
+/** gets number of binary active problem variables including binary variables that are implied integral with
+ *  variable type SCIP_VARTYPE_BINARY
  *
  *  @return the number of binary active problem variables
  *
@@ -2391,10 +2391,11 @@ int SCIPgetNTotalBinVars(
          SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
          SCIPABORT();
          return 0; /*lint !e527*/
-   }  /*lint !e788*/
+   } /*lint !e788*/
 }
 
-/** gets number of integer active problem variables, including integer variables that are implied integral
+/** gets number of integer active problem variables including integer variables that are implied integral with
+ *  variable type SCIP_VARTYPE_INTEGER
  *
  *  @return the number of integer active problem variables
  *
@@ -2437,10 +2438,11 @@ int SCIPgetNTotalIntVars(
          SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
          SCIPABORT();
          return 0; /*lint !e527*/
-   }  /*lint !e788*/
+   } /*lint !e788*/
 }
 
-/** gets number of continuous active problem variables, including continuous variables that are implied integral
+/** gets number of continuous active problem variables including continuous variables that are implied integral of
+ *  variable type SCIP_VARTYPE_CONTINUOUS
  *
  *  @return the number of continuous active problem variables
  *
@@ -2483,7 +2485,7 @@ int SCIPgetNTotalContVars(
          SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
          SCIPABORT();
          return 0; /*lint !e527*/
-   }  /*lint !e788*/
+   } /*lint !e788*/
 }
 
 /** gets number of active problem variables with a non-zero objective coefficient

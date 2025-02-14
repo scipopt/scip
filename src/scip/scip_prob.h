@@ -1002,8 +1002,8 @@ int SCIPgetNContVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of binary active problem variables, including binary variables that are implied integral, but excluding
- *  any variables that do not have vartype SCIP_VARTYPE_BINARY
+/** gets number of binary active problem variables including binary variables that are implied integral with
+ *  variable type SCIP_VARTYPE_BINARY
  *
  *  @return the number of binary active problem variables
  *
@@ -1024,7 +1024,8 @@ int SCIPgetNTotalBinVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of integer active problem variables, including integer variables that are implied integral
+/** gets number of integer active problem variables including integer variables that are implied integral with
+ *  variable type SCIP_VARTYPE_INTEGER
  *
  *  @return the number of integer active problem variables
  *
@@ -1045,7 +1046,8 @@ int SCIPgetNTotalIntVars(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of continuous active problem variables, including continuous variables that are implied integral
+/** gets number of continuous active problem variables including continuous variables that are implied integral with
+ *  variable type SCIP_VARTYPE_CONTINUOUS
  *
  *  @return the number of continuous active problem variables
  *
