@@ -769,8 +769,8 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       {
          SCIP_IMPLINTTYPE impltype;
 
-         /* set the variable type of the auxiliary variables to implicit integer if the objective function of the
-          * subproblem is guaranteed to be integer. This behaviour is controlled through a user parameter.
+         /* declare an auxiliary variable implied integral if the objective function of the
+          * subproblem is guaranteed to be integral and this is desired
           * NOTE: It is only possible to determine if the objective function is integral if the subproblem is defined as
           * a SCIP instance, i.e. not NULL.
           */
@@ -6896,7 +6896,7 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
 
          if( SCIPvarIsIntegral(vars[i]) && mastervar != NULL )
          {
-            /* changing the type of the subproblem variable corresponding to mastervar to CONTINUOUS */
+            /* remove integrality of the subproblem variable corresponding to mastervar */
             SCIP_CALL( SCIPchgVarType(subproblem, vars[i], SCIP_VARTYPE_CONTINUOUS, &infeasible) );
             assert(!infeasible);
             SCIP_CALL( SCIPchgVarImplType(subproblem, vars[i], SCIP_IMPLINTTYPE_NONE, &infeasible) );
