@@ -4866,7 +4866,6 @@ void rowCalcIdxsAndVals(
          if( SCIPcolIsImpliedIntegral(col) )
             ++row->numimplintcols;
       }
-      row->numintcols += SCIPcolIsIntegral(col); /*lint !e713*/
 
       /* update maximal and minimal non-zero value */
       if( row->nummaxval > 0 )

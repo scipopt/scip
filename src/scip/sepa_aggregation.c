@@ -113,7 +113,7 @@
 
 #define BOUNDSWITCH                 0.5
 #define POSTPROCESS                TRUE
-#define USEVBDS                    TRUE
+#define USEVBDS                    1
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
 #define MAKECONTINTEGRAL          FALSE

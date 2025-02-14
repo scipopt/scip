@@ -229,7 +229,7 @@
 #define MAKECONTINTEGRAL                             FALSE /**< convert continuous variable to integral variables in SCIPmakeRowIntegral()? */
 #define POSTPROCESS                                   TRUE /**< apply postprocessing after MIR calculation? - see SCIPcalcMIR() */
 #define BOUNDSWITCH                                 0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
-#define USEVBDS                                       TRUE /**< use variable bounds? - see SCIPcalcMIR() */
+#define USEVBDS                                       1    /**< use variable bounds? - see SCIPcalcMIR() */
 #define FIXINTEGRALRHS                               FALSE /**< try to generate an integral rhs? - see SCIPcalcMIR() */
 #define MAXAGGRLEN(ncols)               (0.1*(ncols)+1000) /**< maximal length of base inequality */
 

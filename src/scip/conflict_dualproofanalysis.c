@@ -82,7 +82,7 @@
 
 #define BOUNDSWITCH                0.51 /**< threshold for bound switching - see cuts.c */
 #define POSTPROCESS               FALSE /**< apply postprocessing to the cut - see cuts.c */
-#define USEVBDS                   FALSE /**< use variable bounds - see cuts.c */
+#define USEVBDS                      0  /**< use variable bounds - see cuts.c */
 #define ALLOWLOCAL                FALSE /**< allow to generate local cuts - see cuts. */
 #define MINFRAC                   0.05  /**< minimal fractionality of floor(rhs) - see cuts.c */
 #define MAXFRAC                   0.999 /**< maximal fractionality of floor(rhs) - see cuts.c */
