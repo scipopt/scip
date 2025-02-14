@@ -149,6 +149,8 @@ SCIP_DECL_EXPRPARSE(parseXyz)
 {  /*lint --e{715}*/
    assert(expr != NULL);
 
+   /* check values for nan and infinity if needed */
+
    SCIPerrorMessage("method of xyz expression handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 

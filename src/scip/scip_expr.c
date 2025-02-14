@@ -241,6 +241,11 @@ SCIP_RETCODE parseBase(
          return SCIP_READERROR;
       }
       debugParse("Parsed value %g, creating a value-expression.\n", value);
+      if( !SCIPisFinite(value) || SCIPisInfinity(scip, value) )
+      {
+         SCIPerrorMessage("Infinite or nan term value expression within nonlinear expression %s\n", expr);
+         return SCIP_INVALIDDATA;
+      }
       SCIP_CALL( SCIPcreateExprValue(scip, basetree, value, ownercreate, ownercreatedata) );
    }
    else if( isalpha(*expr) )
@@ -401,6 +406,13 @@ SCIP_RETCODE parseFactor(
             SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
             return SCIP_READERROR;
          }
+      }
+
+      if( !SCIPisFinite(exponent) || SCIPisInfinity(scip, exponent) )
+      {
+         SCIPerrorMessage("Infinite or nan term exponent in nonlinear expression %s\n", expr);
+         SCIP_CALL( SCIPreleaseExpr(scip, &basetree) );
+         return SCIP_INVALIDDATA;
       }
 
       debugParse("parsed the exponent %g\n", exponent); /*lint !e506 !e681*/
@@ -572,6 +584,13 @@ SCIP_RETCODE parseExpr(
          /* check if we have a "coef * <term>" */
          if( SCIPstrToRealValue(expr, &coef, (char**)newpos) )
          {
+            if( !SCIPisFinite(coef) || SCIPisInfinity(scip, coef) )
+            {
+               SCIPerrorMessage("Infinite or nan term coefficient in nonlinear expression %s\n", expr);
+               SCIP_CALL( SCIPreleaseExpr(scip, exprtree) );
+               return SCIP_INVALIDDATA;
+            }
+
             SCIP_CALL( SCIPskipSpace((char**)newpos) );
 
             if( **newpos == '<' )
