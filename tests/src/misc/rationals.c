@@ -63,7 +63,7 @@ static void setup(void)
 
    (void) RatCreateBuffer(buffmem, &rbuf);
    (void) RatCreateBlock(blkmem, &r1);
-   RatCopy(blkmem, &r2, r1);
+   RatCopyBlock(blkmem, &r2, r1);
 
    (void) RatCreateBlockArray(blkmem, &ratpt, 10);
    SCIPrationalarrayCreate(&ratar, blkmem);
@@ -113,7 +113,7 @@ Test(rationals, setting, .description = "tests all the different methods to set/
 
    /* create some rationals with different methods*/
 
-   (void) RatCreateGMP(blkmem, &testr, gmpr);
+   (void) RatCreateBlockGMP(blkmem, &testr, gmpr);
 #endif
 
    /* test setter methods */
