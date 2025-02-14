@@ -126,6 +126,7 @@ SCIP_RETCODE SCIPstatFree(
    assert(stat != NULL);
    assert(*stat != NULL);
 
+   SCIPclockFree(&(*stat)->solvingtime);
    SCIPclockFree(&(*stat)->solvingtimeoverall);
    SCIPclockFree(&(*stat)->presolvingtime);
    SCIPclockFree(&(*stat)->presolvingtimeoverall);
