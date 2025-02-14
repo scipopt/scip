@@ -5055,9 +5055,11 @@ SCIP_DECL_CONSPRINT(consPrintVarbound)
 
    /* print coefficients and variables */
    SCIPinfoMessage(scip, file, "<%s>[%c] %+.15g<%s>[%c]", SCIPvarGetName(consdata->var),
+      SCIPvarIsImpliedIntegral(consdata->var) ? SCIP_IMPLINT_PLACEHOLDER_CHAR :
       SCIPvarGetType(consdata->var) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
       SCIPvarGetType(consdata->var) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR,
       consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar),
+      SCIPvarIsImpliedIntegral(consdata->vbdvar) ? SCIP_IMPLINT_PLACEHOLDER_CHAR :
       SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
       SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR);
 

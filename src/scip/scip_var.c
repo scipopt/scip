@@ -320,8 +320,9 @@ SCIP_RETCODE SCIPwriteVarName(
    {
       /* print variable type */
       SCIPinfoMessage(scip, file, "[%c]",
-            SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR
-            : SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR);
+            SCIPvarIsImpliedIntegral(var) ? SCIP_IMPLINT_PLACEHOLDER_CHAR :
+            SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
+            SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR);
    }
 
    return SCIP_OKAY;
