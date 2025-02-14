@@ -382,24 +382,25 @@ SECTION: General Questions about SCIP
         fixing all non-implied integral variables to feasible integer values.
         For example, for a linear constraint &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y = b, the variable y
         can be declared strongly implied integral if the variables x<sub>i</sub> are non-implied integral and the
-        coefficients a<sub>i</sub> and the right hand side b are integral.
+        coefficients a<sub>i</sub> and the right hand side b are integral, because then y = b - &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub>
+        is also integral any feasible solution.
         Algorithms within SCIP can exploit the fact that a variable is implied integral.
         If the variable type of y is continuous and some domain propagation algorithm deduces that
         y &ge; 0.5 holds, then the lower bound of y can be automatically tightened to 1 by using integrality.
         Further, cuts may be tightened by using the integrality of y, and new classes of cuts may become available.
         Even if y has variable type binary or integer, its implied integrality may still be useful.
-        For example, implied integrality of y indicates that it is unnecessary to branch on y, since branching on
+        For example, strong implied integrality of y indicates that it is unnecessary to branch on y, since branching on
         all x-variables will automatically enforce the integrality constraint on y.
     </p>
     <p>
-        Weakly implied integrality is less restrictive than strongly implied integrality.
+        Weak implied integrality is less restrictive than strong implied integrality.
         A variable is said to be weakly implied integral if there exists an optimal solution to the relaxed problem
         where only the non-implied integral variables have integrality constraints,
         so that all weakly implied integral variables have integer solution values.
-        For example, weak implied integrality may occur if a  variable y occurs only in a linear constraint of the form
-        &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y &le; b, where x<sub>i</sub>, a<sub>i</sub> and b are all integer, and y is not part of the objective.
-        In contrast to strongly implied integrality, the weakly implied integral variable y might not be forced to take an integer solution value after the x-variables are fixed.
-        However, there is an optimal solution in which y takes the integer solution value b - &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub>.
+        For example, a free variable y is weakly implied integral if it occurs only in a linear constraint of the form
+        &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub> + y &le; b, where x<sub>i</sub>, a<sub>i</sub> and b are all integer.
+        In contrast to strong implied integrality, the weakly implied integral variable y might not be forced to take an integer solution value after the x-variables are fixed.
+        However, there is an optimal solution where y takes the integer solution value b - &Sigma;<sub>i</sub> a<sub>i</sub> x<sub>i</sub>.
     </p>
     <p>
         Originally, the variable type <code>SCIP_VARTYPE_IMPLINT</code> was used for continuous variables for which
