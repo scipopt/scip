@@ -408,11 +408,6 @@ void SCIPbranchruleEnableOrDisableClocks(
    SCIP_Bool             enable              /**< should the clocks of the branching rule be enabled? */
    );
 
-/** flags this branching rule to be safe for use in exact solving mode */
-void SCIPbranchruleSetExact(
-   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
-   );
-
 /*
  * branching methods
  */

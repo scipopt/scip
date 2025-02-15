@@ -849,7 +849,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
          sepadata) );
 
    /* gomory is safe to use in exact solving mode */
-   SCIPsepaSetExact(sepa);
+   SCIPsepaMarkExact(sepa);
 
    assert(sepa != NULL);
 

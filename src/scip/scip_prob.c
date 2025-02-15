@@ -3036,7 +3036,7 @@ SCIP_RETCODE SCIPaddCons(
    SCIP_CALL( SCIPcheckStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
    /* exact constraints should be added if and only if exact solving is turned on */
-   /**@todo Add constraint handler flag "isexact" and provide method SCIPconshdlrIsExact() to avoid string comparison */
+   /**@todo Add constraint handler flag "isexact" and use here to avoid string comparison */
    isconsexact = strncmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "exactlinear", 11) == 0;
    if( SCIPisExact(scip) && !isconsexact )
    {

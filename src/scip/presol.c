@@ -600,6 +600,16 @@ void SCIPpresolSetExitpre(
    presol->presolexitpre = presolexitpre;
 }
 
+/** marks the presolver as safe to use in exact solving mode */
+void SCIPpresolMarkExact(
+   SCIP_PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   presol->isexact = TRUE;
+}
+
 /** gets name of presolver */
 const char* SCIPpresolGetName(
    SCIP_PRESOL*          presol              /**< presolver */
@@ -673,16 +683,6 @@ void SCIPpresolSetTiming(
    assert(presol != NULL);
 
    presol->timing = timing;
-}
-
-/** mark that the presolver is safe to use in exact solving mode */
-void SCIPpresolSetExact(
-   SCIP_PRESOL*          presol              /**< presolver */
-   )
-{
-   assert(presol != NULL);
-
-   presol->isexact = TRUE;
 }
 
 /** is presolver initialized? */

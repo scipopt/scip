@@ -885,8 +885,6 @@ void SCIPpropSetInitpre(
    prop->propinitpre = propinitpre;
 }
 
-
-
 /** sets preprocessing deinitialization method of propagator */
 void SCIPpropSetExitpre(
    SCIP_PROP*            prop,               /**< propagator */
@@ -937,6 +935,17 @@ void SCIPpropSetResprop(
    assert(prop != NULL);
 
    prop->propresprop = propresprop;
+}
+
+/** marks the propagator as safe to use in exact solving mode */
+SCIP_EXPORT
+void SCIPpropMarkExact(
+   SCIP_PROP*            prop                /**< propagator */
+   )
+{
+   assert(prop != NULL);
+
+   prop->isexact = TRUE;
 }
 
 /** gets name of propagator */

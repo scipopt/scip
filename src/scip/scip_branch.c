@@ -375,17 +375,6 @@ SCIP_RETCODE SCIPsetBranchruleMaxbounddist(
    return SCIP_OKAY;
 }
 
-/** flags this branching rule to be safe for use in exact solving mode */
-void SCIPsetBranchruleExact(
-   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
-   )
-{
-   assert(branchrule != NULL);
-
-   SCIPbranchruleSetExact(branchrule);
-}
-
-
 /** gets branching candidates for LP solution branching (fractional variables) along with solution values,
  *  fractionalities, and number of branching candidates; The number of branching candidates does NOT
  *  account for fractional implicit integer variables which should not be used for branching decisions.

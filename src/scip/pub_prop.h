@@ -72,6 +72,12 @@ void SCIPpropSetData(
    SCIP_PROPDATA*        propdata            /**< new propagator user data */
    );
 
+/** marks the propagator as safe to use in exact solving mode */
+SCIP_EXPORT
+void SCIPpropMarkExact(
+   SCIP_PROP*            prop                /**< propagator */
+   );
+
 /** gets name of propagator */
 SCIP_EXPORT
 const char* SCIPpropGetName(

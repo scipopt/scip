@@ -68,6 +68,12 @@ void SCIPbranchruleSetData(
    SCIP_BRANCHRULEDATA*  branchruledata      /**< new branching rule user data */
    );
 
+/** marks this branching rule as safe to use in exact solving mode */
+SCIP_EXPORT
+void SCIPbranchruleMarkExact(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
+   );
+
 /** gets name of branching rule */
 SCIP_EXPORT
 const char* SCIPbranchruleGetName(

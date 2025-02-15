@@ -544,7 +544,8 @@ SCIP_RETCODE SCIPsepaExecSol(
        ( (depth == 0 && sepa->freq != -1) ||
          (sepa->freq > 0 && depth % sepa->freq == 0 &&
             (sepa->expbackoff == 1 || SCIPsetIsIntegral(set, LOG2(depth * (1.0 / sepa->freq) / LOG2((SCIP_Real)sepa->expbackoff))))) ||
-         sepa->solwasdelayed )
+         sepa->solwasdelayed ) &&
+         (!set->exact_enabled || sepa->isexact)
      )
    {
       if( (!sepa->delay && !sepa->solwasdelayed) || execdelayed )
@@ -806,8 +807,8 @@ void SCIPsepaSetFreq(
    sepa->freq = freq;
 }
 
-/** marks the separator as exact (i.e. safe to use in exact solving mode) */
-void SCIPsepaSetExact(
+/** marks the separator as safe to use in exact solving mode */
+void SCIPsepaMarkExact(
    SCIP_SEPA*            sepa                /**< separator */
    )
 {

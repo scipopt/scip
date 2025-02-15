@@ -1887,6 +1887,16 @@ void SCIPbranchruleSetData(
    branchrule->branchruledata = branchruledata;
 }
 
+/** marks this branching rule as safe to use in exact solving mode */
+void SCIPbranchruleMarkExact(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   branchrule->isexact = TRUE;
+}
+
 /** sets copy method of branching rule */
 void SCIPbranchruleSetCopy(
    SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
@@ -2199,18 +2209,6 @@ SCIP_Bool SCIPbranchruleIsInitialized(
 
    return branchrule->initialized;
 }
-
-/** flags this branching rule to be safe for use in exact solving mode */
-void SCIPbranchruleSetExact(
-   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
-   )
-{
-   assert(branchrule != NULL);
-
-   branchrule->isexact = TRUE;
-}
-
-
 
 
 
