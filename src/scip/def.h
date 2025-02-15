@@ -130,14 +130,6 @@
 
 
 /*
- * CIP format variable characters
- */
-
-#define SCIP_VARTYPE_BINARY_CHAR 'B'
-#define SCIP_VARTYPE_INTEGER_CHAR 'I'
-#define SCIP_VARTYPE_CONTINUOUS_CHAR 'C'
-
-/*
  * Long Integer values
  */
 

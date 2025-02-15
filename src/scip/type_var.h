@@ -76,6 +76,11 @@ typedef enum SCIP_Vartype SCIP_VARTYPE;
  * @deprecated still, the use of an implicit integral variable type is deprecated
  */
 #define SCIP_DEPRECATED_VARTYPE_IMPLINT ((SCIP_VARTYPE) 2)
+
+/* CIP format variable characters */
+#define SCIP_VARTYPE_BINARY_CHAR 'B'
+#define SCIP_VARTYPE_INTEGER_CHAR 'I'
+#define SCIP_VARTYPE_CONTINUOUS_CHAR 'C'
 #define SCIP_DEPRECATED_VARTYPE_IMPLINT_CHAR 'M'
 
 /** implied integral type */
