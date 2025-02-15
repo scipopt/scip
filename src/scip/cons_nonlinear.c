@@ -3809,6 +3809,9 @@ SCIP_Bool isBinaryProduct(
       var = SCIPgetVarExprVar(child);
 
       /* check whether variable is binary, in any feasible solution */
+      /* TODO allow for weak implicit binary vars, but then auxiliary variables created in
+       * reformulateFactorizedBinaryQuadratic() and getBinaryProductExprDo() need to be weakly implied integral
+       */
       if( !SCIPvarIsBinary(var) || SCIPvarGetImplType(var) == SCIP_IMPLINTTYPE_WEAK )
          return FALSE;
    }
