@@ -3799,8 +3799,6 @@ SCIP_Bool isBinaryProduct(
    {
       SCIP_EXPR* child;
       SCIP_VAR* var;
-      SCIP_Real ub;
-      SCIP_Real lb;
 
       child = SCIPexprGetChildren(expr)[i];
       assert(child != NULL);
@@ -3809,11 +3807,9 @@ SCIP_Bool isBinaryProduct(
          return FALSE;
 
       var = SCIPgetVarExprVar(child);
-      lb = SCIPvarGetLbLocal(var);
-      ub = SCIPvarGetUbLocal(var);
 
-      /* check whether variable is integer and has [0,1] as variable bounds */
-      if( !SCIPvarIsIntegral(var) || !SCIPisEQ(scip, lb, 0.0) || !SCIPisEQ(scip, ub, 1.0) )
+      /* check whether variable is binary, in any feasible solution */
+      if( !SCIPvarIsBinary(var) || SCIPvarGetImplType(var) == SCIP_IMPLINTTYPE_WEAK )
          return FALSE;
    }
 
@@ -4239,7 +4235,7 @@ SCIP_RETCODE getBinaryProductExprDo(
 
    /* create and add variable */
    SCIP_CALL( SCIPcreateVarImpl(scip, &w, name, 0.0, 1.0, 0.0,
-         SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK,
+         SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_STRONG,
          TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, w) );
    SCIPdebugMsg(scip, "  created auxiliary variable %s\n", name);
