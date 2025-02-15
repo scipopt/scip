@@ -423,7 +423,8 @@ SCIP_RETCODE SCIPtransformProb(
       permutevars = scip->set->random_permutevars;
       permutationseed = scip->set->random_permutationseed;
 
-      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
+      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss,
+            permutevars, permutevars, permutevars, permutevars, permutevars, permutevars) );
    }
 
    if( scip->set->misc_estimexternmem )

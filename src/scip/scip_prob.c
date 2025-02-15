@@ -460,7 +460,8 @@ SCIP_RETCODE SCIPreadProb(
             permutevars = scip->set->random_permutevars;
             permutationseed = scip->set->random_permutationseed;
 
-            SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
+            SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss,
+                  permutevars, permutevars, permutevars, permutevars, permutevars, permutevars) );
          }
 
          /* get reading time */
@@ -789,8 +790,10 @@ SCIP_RETCODE SCIPpermuteProb(
    SCIP_Bool             permuteconss,       /**< should the list of constraints in each constraint handler be permuted? */
    SCIP_Bool             permutebinvars,     /**< should the list of binary variables be permuted? */
    SCIP_Bool             permuteintvars,     /**< should the list of integer variables be permuted? */
-   SCIP_Bool             permuteimplvars,    /**< should the list of implicit integer variables be permuted? */
-   SCIP_Bool             permutecontvars     /**< should the list of continuous integer variables be permuted? */
+   SCIP_Bool             permutebinimplvars, /**< should the list of binary implied integral vars be permuted? */
+   SCIP_Bool             permuteintimplvars, /**< should the list of integer implied integral vars be permuted? */
+   SCIP_Bool             permutecontimplvars, /**< should the list of continuous implied integral vars be permuted? */
+   SCIP_Bool             permutecontvars     /**< should the list of continuous variables be permuted? */
    )
 {
    SCIP_VAR** vars;
@@ -798,23 +801,31 @@ SCIP_RETCODE SCIPpermuteProb(
    SCIP_RANDNUMGEN* randnumgen;
    SCIP_Bool permuted;
    int nconshdlrs;
-   int nbinvars;
-   int nintvars;
-   int nimplvars;
    int nvars;
+   int intstart;
+   int binimplstart;
+   int intimplstart;
+   int contimplstart;
+   int contstart;
    int j;
 
    assert(scip != NULL);
    SCIP_CALL( SCIPcheckStage(scip, "SCIPpermuteProb", FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, &nimplvars, NULL) );
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   assert(vars != NULL || nvars == 0);
 
-   assert(nvars == 0 || vars != NULL);
-   assert(nvars == nbinvars+nintvars+nimplvars+SCIPgetNContVars(scip));
+   intstart = SCIPgetNBinVars(scip);
+   binimplstart = intstart + SCIPgetNIntVars(scip);
+   intimplstart = binimplstart + SCIPgetNBinImplVars(scip);
+   contimplstart = intimplstart + SCIPgetNIntImplVars(scip);
+   contstart = contimplstart + SCIPgetNContImplVars(scip);
+   assert(nvars == contstart + SCIPgetNContVars(scip));
 
    conshdlrs = SCIPgetConshdlrs(scip);
    nconshdlrs = SCIPgetNConshdlrs(scip);
-   assert(nconshdlrs == 0 || conshdlrs != NULL);
+   assert(conshdlrs != NULL || nconshdlrs == 0);
 
    /* create a random number generator */
    SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, randseed, TRUE) );
@@ -876,46 +887,70 @@ SCIP_RETCODE SCIPpermuteProb(
    /* permute binary variables */
    if( permutebinvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPrandomPermuteArray(randnumgen, (void**)vars, 0, nbinvars);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, 0, intstart);
 
       /* readjust the mapping of variables to array positions */
-      for( j = 0; j < nbinvars; ++j )
+      for( j = 0; j < intstart; ++j )
          vars[j]->probindex = j;
 
       permuted = TRUE;
    }
 
-   /* permute general integer variables */
+   /* permute integer variables */
    if( permuteintvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPrandomPermuteArray(randnumgen, (void**)vars, nbinvars, nbinvars+nintvars);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, intstart, binimplstart);
 
       /* readjust the mapping of variables to array positions */
-      for( j = nbinvars; j < nbinvars+nintvars; ++j )
+      for( j = intstart; j < binimplstart; ++j )
          vars[j]->probindex = j;
 
       permuted = TRUE;
    }
 
-   /* permute general integer variables */
-   if( permuteimplvars && !SCIPprobIsPermuted(scip->origprob) )
+   /* permute binary implied integral variables */
+   if( permutebinimplvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPrandomPermuteArray(randnumgen, (void**)vars, nbinvars+nintvars, nbinvars+nintvars+nimplvars);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, binimplstart, intimplstart);
 
       /* readjust the mapping of variables to array positions */
-      for( j = nbinvars+nintvars; j < nbinvars+nintvars+nimplvars; ++j )
+      for( j = binimplstart; j < intimplstart; ++j )
          vars[j]->probindex = j;
 
       permuted = TRUE;
    }
 
-   /* permute general integer variables */
+   /* permute integer implied integral variables */
+   if( permuteintimplvars && !SCIPprobIsPermuted(scip->origprob) )
+   {
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, intimplstart, contimplstart);
+
+      /* readjust the mapping of variables to array positions */
+      for( j = intimplstart; j < contimplstart; ++j )
+         vars[j]->probindex = j;
+
+      permuted = TRUE;
+   }
+
+   /* permute continuous implied integral variables */
+   if( permutecontimplvars && !SCIPprobIsPermuted(scip->origprob) )
+   {
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, contimplstart, contstart);
+
+      /* readjust the mapping of variables to array positions */
+      for( j = contimplstart; j < contstart; ++j )
+         vars[j]->probindex = j;
+
+      permuted = TRUE;
+   }
+
+   /* permute continuous variables */
    if( permutecontvars && !SCIPprobIsPermuted(scip->origprob) )
    {
-      SCIPrandomPermuteArray(randnumgen, (void**)vars, nbinvars+nintvars+nimplvars, nvars);
+      SCIPrandomPermuteArray(randnumgen, (void**)vars, contstart, nvars);
 
       /* readjust the mapping of variables to array positions */
-      for( j = nbinvars+nintvars+nimplvars; j < nvars; ++j )
+      for( j = contstart; j < nvars; ++j )
          vars[j]->probindex = j;
 
       permuted = TRUE;

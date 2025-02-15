@@ -332,8 +332,10 @@ SCIP_RETCODE SCIPpermuteProb(
    SCIP_Bool             permuteconss,       /**< should the list of constraints in each constraint handler be permuted? */
    SCIP_Bool             permutebinvars,     /**< should the list of binary variables be permuted? */
    SCIP_Bool             permuteintvars,     /**< should the list of integer variables be permuted? */
-   SCIP_Bool             permuteimplvars,    /**< should the list of implicit integer variables be permuted? */
-   SCIP_Bool             permutecontvars     /**< should the list of continuous integer variables be permuted? */
+   SCIP_Bool             permutebinimplvars, /**< should the list of binary implied integral vars be permuted? */
+   SCIP_Bool             permuteintimplvars, /**< should the list of integer implied integral vars be permuted? */
+   SCIP_Bool             permutecontimplvars, /**< should the list of continuous implied integral vars be permuted? */
+   SCIP_Bool             permutecontvars     /**< should the list of continuous variables be permuted? */
    );
 
 /** gets user problem data
