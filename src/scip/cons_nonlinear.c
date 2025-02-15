@@ -3887,7 +3887,7 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    SCIP_CONS* newcons;
    SCIP_Real minact = 0.0;
    SCIP_Real maxact = 0.0;
-   SCIP_Bool integral = TRUE;
+   SCIP_IMPLINTTYPE impltype = SCIP_IMPLINTTYPE_STRONG;
    char name [SCIP_MAXSTRLEN];
    int i;
 
@@ -3902,14 +3902,20 @@ SCIP_RETCODE reformulateFactorizedBinaryQuadratic(
    {
       minact += MIN(coefs[i], 0.0);
       maxact += MAX(coefs[i], 0.0);
-      integral = integral && SCIPisIntegral(scip, coefs[i]);
+      assert(SCIPvarIsIntegral(vars[i]));
+      if( impltype != SCIP_IMPLINTTYPE_NONE )
+      {
+         if( !SCIPisIntegral(scip, coefs[i]) )
+            impltype = SCIP_IMPLINTTYPE_NONE;
+         else if( SCIPvarGetImplType(vars[i]) == SCIP_IMPLINTTYPE_WEAK )
+            impltype = SCIP_IMPLINTTYPE_WEAK;
+      }
    }
    assert(minact <= maxact);
 
    /* create and add auxiliary variable */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "binreform_%s_%s", SCIPconsGetName(cons), SCIPvarGetName(facvar));
-   SCIP_CALL( SCIPcreateVarImpl(scip, &auxvar, name, minact, maxact, 0.0,
-         SCIP_VARTYPE_CONTINUOUS, integral ? SCIP_IMPLINTTYPE_STRONG : SCIP_IMPLINTTYPE_NONE,
+   SCIP_CALL( SCIPcreateVarImpl(scip, &auxvar, name, minact, maxact, 0.0, SCIP_VARTYPE_CONTINUOUS, impltype,
          TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
