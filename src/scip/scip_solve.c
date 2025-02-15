@@ -2562,7 +2562,7 @@ SCIP_RETCODE SCIPpresolve(
       SCIP_CALL( displayRelevantStats(scip) );
    }
 
-   if( SCIPisCertificateActive(scip) && hasPresolveModifiedProblem(scip) )
+   if( scip->set->exact_enabled && !(scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0') && hasPresolveModifiedProblem(scip) )
    {
       SCIPwarningMessage(scip, "Certificate is printed for presolved problem. "
          "Disable presolving for rigorous certificate of the original problem.\n");
