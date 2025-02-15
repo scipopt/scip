@@ -5799,6 +5799,10 @@ SCIP_RETCODE presolveImplint(
 
    *infeasible = FALSE;
 
+   /* nothing can be done on purley continuous problem */
+   if( SCIPgetNVars(scip) == SCIPgetNContVars(scip) )
+      return SCIP_OKAY;
+
    /* no continuous var can be made implicit-integer if there are no continuous variables */
    if( SCIPgetNContVars(scip) == 0 )
       return SCIP_OKAY;
