@@ -136,7 +136,7 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_IMPLINTTYPE impltype = SCIP_IMPLINTTYPE_NONE;
    /* For now, we help users and automatically convert the variable to an implied integral one if they are using the
     * deprecated variable type. This feature will be deprecated in a future version */
-   if( vartype == SCIP_IMPLINT_PLACEHOLDER )
+   if( vartype == SCIP_DEPRECATED_VARTYPE_IMPLINT )
    {
       vartype = SCIP_VARTYPE_CONTINUOUS;
       impltype = SCIP_IMPLINTTYPE_WEAK;
@@ -198,7 +198,7 @@ SCIP_RETCODE SCIPcreateVarImpl(
       SCIPerrorMessage("invalid objective function value: value is infinite\n");
       return SCIP_INVALIDDATA;
    }
-   if( vartype == SCIP_IMPLINT_PLACEHOLDER )
+   if( vartype == SCIP_DEPRECATED_VARTYPE_IMPLINT )
    {
       SCIPerrorMessage("using SCIP_VARTYPE_IMPLINT deprecated, define impltype instead\n");
       return SCIP_INVALIDDATA;
@@ -320,7 +320,7 @@ SCIP_RETCODE SCIPwriteVarName(
    {
       /* print variable type */
       SCIPinfoMessage(scip, file, "[%c]",
-            SCIPvarIsImpliedIntegral(var) ? SCIP_IMPLINT_PLACEHOLDER_CHAR :
+            SCIPvarIsImpliedIntegral(var) ? SCIP_DEPRECATED_VARTYPE_IMPLINT_CHAR :
             SCIPvarGetType(var) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
             SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR);
    }
@@ -643,7 +643,7 @@ SCIP_RETCODE SCIPparseVarName(
 
    /* skip additional variable type marker */
    if( *str == '[' && ( str[1] == SCIP_VARTYPE_BINARY_CHAR || str[1] == SCIP_VARTYPE_INTEGER_CHAR
-      || str[1] == SCIP_IMPLINT_PLACEHOLDER_CHAR || str[1] == SCIP_VARTYPE_CONTINUOUS_CHAR )  && str[2] == ']' )
+      || str[1] == SCIP_DEPRECATED_VARTYPE_IMPLINT_CHAR || str[1] == SCIP_VARTYPE_CONTINUOUS_CHAR )  && str[2] == ']' )
       (*endptr) += 3;
 
    return SCIP_OKAY;

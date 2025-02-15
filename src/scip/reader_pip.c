@@ -60,7 +60,6 @@
 #include "scip/scip_prob.h"
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
-#include "scip/var.h"
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -3157,7 +3156,6 @@ SCIP_RETCODE SCIPwritePip(
                if( (int)SCIPvarGetImplType(var) <= 2 - implintlevel )
                   continue;
                break;
-            case SCIP_IMPLINT_PLACEHOLDER:
             default:
                SCIPerrorMessage("unknown variable type\n");
                return SCIP_INVALIDDATA;

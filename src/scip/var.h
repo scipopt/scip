@@ -1649,10 +1649,6 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
 /** gets the key (i.e. the name) of the given variable */
 SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar);
 
-/** Define an alternative for `SCIP_VARTYPE_IMPLINT` for internal use as a placeholder. */
-#define SCIP_IMPLINT_PLACEHOLDER ((SCIP_VARTYPE) 2)
-#define SCIP_IMPLINT_PLACEHOLDER_CHAR 'M'
-
 #ifdef __cplusplus
 }
 #endif

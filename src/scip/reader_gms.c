@@ -58,7 +58,6 @@
 #include "scip/scip_reader.h"
 #include "scip/scip_var.h"
 #include "scip/expr_abs.h"
-#include "scip/var.h"
 #include <string.h>
 
 #define READER_NAME             "gmsreader"
@@ -1512,7 +1511,6 @@ SCIP_RETCODE SCIPwriteGms(
                if( (int)SCIPvarGetImplType(var) <= 2 - implintlevel )
                   continue;
                break;
-            case SCIP_IMPLINT_PLACEHOLDER:
             default:
                SCIPerrorMessage("unknown variable type\n");
                return SCIP_INVALIDDATA;

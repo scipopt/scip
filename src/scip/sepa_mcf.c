@@ -78,7 +78,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/sepa_mcf.h"
-#include "scip/var.h"
 #include <string.h>
 
 #define SEPA_NAME                        "mcf"
@@ -967,7 +966,6 @@ SCIP_RETCODE extractFlowRows(
                case SCIP_VARTYPE_CONTINUOUS:
                   ++ncontvars;
                   break;
-               case SCIP_IMPLINT_PLACEHOLDER:
                default:
                   SCIPerrorMessage("unknown variable type\n");
                   return SCIP_INVALIDDATA;

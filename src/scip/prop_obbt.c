@@ -79,7 +79,6 @@
 #include "scip/scip_solvingstats.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/var.h"
 
 #define PROP_NAME                       "obbt"
 #define PROP_DESC                       "optimization-based bound tightening propagator"
@@ -2689,7 +2688,6 @@ unsigned int getScore(
          case SCIP_VARTYPE_CONTINUOUS:
             score += 3;
             break;
-         case SCIP_IMPLINT_PLACEHOLDER:
          default:
             SCIPerrorMessage("invalid variable type\n");
             SCIPABORT();

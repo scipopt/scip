@@ -91,7 +91,6 @@
 #include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
 #include "scip/dbldblarith.h"
-#include "scip/var.h"
 
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"
@@ -3176,8 +3175,8 @@ SCIP_DECL_SORTINDCOMP(consdataCompVar)
    }
    else
    {
-      SCIP_VARTYPE vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var1);
-      SCIP_VARTYPE vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var2);
+      SCIP_VARTYPE vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var1);
+      SCIP_VARTYPE vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var2);
 
       if( vartype1 < vartype2 )
          return -1;
@@ -3223,8 +3222,8 @@ SCIP_DECL_SORTINDCOMP(consdataCompVarProp)
    }
    else
    {
-      SCIP_VARTYPE vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var1);
-      SCIP_VARTYPE vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var2);
+      SCIP_VARTYPE vartype1 = SCIPvarIsImpliedIntegral(var1) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var1);
+      SCIP_VARTYPE vartype2 = SCIPvarIsImpliedIntegral(var2) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var2);
 
       if( vartype1 < vartype2 )
       {
@@ -9744,11 +9743,11 @@ SCIP_RETCODE convertLongEquality(
          return SCIP_OKAY;
 
       impltype = SCIPvarGetImplType(var);
-      slacktype = impltype != SCIP_IMPLINTTYPE_NONE ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(var);
+      slacktype = impltype != SCIP_IMPLINTTYPE_NONE ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(var);
       coefszeroone = coefszeroone && SCIPisEQ(scip, absval, 1.0);
       coefsintegral = coefsintegral && SCIPisIntegral(scip, val);
       varsintegral = varsintegral && (slacktype != SCIP_VARTYPE_CONTINUOUS);
-      iscont = (slacktype == SCIP_VARTYPE_CONTINUOUS || slacktype == SCIP_IMPLINT_PLACEHOLDER);
+      iscont = (slacktype == SCIP_VARTYPE_CONTINUOUS || slacktype == SCIP_DEPRECATED_VARTYPE_IMPLINT);
 
       /* update candidates for continuous -> implint and integer -> implint conversion */
       if( slacktype == SCIP_VARTYPE_CONTINUOUS )
@@ -9756,7 +9755,7 @@ SCIP_RETCODE convertLongEquality(
          ncontvars++;
          contvarpos = v;
       }
-      else if( slacktype == SCIP_IMPLINT_PLACEHOLDER )
+      else if( slacktype == SCIP_DEPRECATED_VARTYPE_IMPLINT )
       {
          ++nimplvars;
          assert(impltype != SCIP_IMPLINTTYPE_NONE);
@@ -9941,7 +9940,7 @@ SCIP_RETCODE convertLongEquality(
     * loose the integrality condition for this variable.
     */
    if( bestslackpos >= 0
-      && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_IMPLINT_PLACEHOLDER
+      && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_DEPRECATED_VARTYPE_IMPLINT
          || (coefsintegral && varsintegral && nimplvars == 0)) )
    {
       SCIP_VAR* slackvar;
@@ -11101,7 +11100,6 @@ int getVarWeight(
          return INTWEIGHT;
       case SCIP_VARTYPE_CONTINUOUS:
          return CONTWEIGHT;
-      case SCIP_IMPLINT_PLACEHOLDER:
       default:
          SCIPerrorMessage("unknown variable type\n");
          SCIPABORT();
@@ -18934,7 +18932,6 @@ SCIP_RETCODE SCIPupgradeConsLinear(
                else
                   ++nnegcont;
                break;
-            case SCIP_IMPLINT_PLACEHOLDER:
             default:
                SCIPerrorMessage("unknown variable type\n");
                return SCIP_INVALIDDATA;

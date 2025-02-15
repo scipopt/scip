@@ -954,7 +954,6 @@ SCIP_RETCODE probRemoveVar(
             assert(contimplstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < contstart);
             --prob->ncontimplvars;
             break;
-         case SCIP_IMPLINT_PLACEHOLDER:
          default:
             SCIPerrorMessage("unknown variable type\n");
             return SCIP_INVALIDDATA;
@@ -976,7 +975,6 @@ SCIP_RETCODE probRemoveVar(
             assert(contstart <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < prob->nvars);
             --prob->ncontvars;
             break;
-         case SCIP_IMPLINT_PLACEHOLDER:
          default:
             SCIPerrorMessage("unknown variable type\n");
             return SCIP_INVALIDDATA;

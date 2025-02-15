@@ -78,7 +78,6 @@
 #include "symmetry/struct_symmetry.h"
 #include "scip/pub_misc_sort.h"
 #include "scip/scip_datatree.h"
-#include "scip/var.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "nonlinear"
@@ -7160,7 +7159,6 @@ void scoreBranchingCandidates(
                case SCIP_VARTYPE_CONTINUOUS:
                   cands[c].vartype = 0.0;
                   break;
-               case SCIP_IMPLINT_PLACEHOLDER:
                default:
                   SCIPerrorMessage("invalid variable type\n");
                   SCIPABORT();

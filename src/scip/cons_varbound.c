@@ -72,7 +72,6 @@
 #include "scip/scip_sol.h"
 #include "scip/scip_tree.h"
 #include "scip/scip_var.h"
-#include "scip/var.h"
 #include "scip/dbldblarith.h"
 #include "scip/symmetry_graph.h"
 #include "symmetry/struct_symmetry.h"
@@ -4278,8 +4277,8 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
       SCIP_Real vbdcoef;
       SCIP_Real vbdlhs;
       SCIP_Real vbdrhs;
-      SCIP_VARTYPE zerotype = SCIPvarIsImpliedIntegral(vars[0]) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(vars[0]);
-      SCIP_VARTYPE onetype = SCIPvarIsImpliedIntegral(vars[1]) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(vars[1]);
+      SCIP_VARTYPE zerotype = SCIPvarIsImpliedIntegral(vars[0]) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(vars[0]);
+      SCIP_VARTYPE onetype = SCIPvarIsImpliedIntegral(vars[1]) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(vars[1]);
       int vbdind;
 
       /* decide which variable we want to use as bounding variable y */

@@ -1953,7 +1953,7 @@ SCIP_RETCODE varCreate(
    assert(var != NULL);
    assert(blkmem != NULL);
    assert(stat != NULL);
-   assert(vartype != SCIP_IMPLINT_PLACEHOLDER);
+   assert(vartype != SCIP_DEPRECATED_VARTYPE_IMPLINT);
 
    /* adjust bounds of variable */
    integral = vartype != SCIP_VARTYPE_CONTINUOUS || impltype != SCIP_IMPLINTTYPE_NONE;
@@ -1978,7 +1978,7 @@ SCIP_RETCODE varCreate(
 
    assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, lb, 0.0) || SCIPsetIsEQ(set, lb, 1.0));
    assert(vartype != SCIP_VARTYPE_BINARY || SCIPsetIsEQ(set, ub, 0.0) || SCIPsetIsEQ(set, ub, 1.0));
-   assert(vartype != SCIP_IMPLINT_PLACEHOLDER);
+   assert(vartype != SCIP_DEPRECATED_VARTYPE_IMPLINT);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, var) );
 
@@ -3115,7 +3115,7 @@ SCIP_RETCODE SCIPvarPrint(
       case SCIP_VARTYPE_CONTINUOUS:
          SCIPmessageFPrintInfo(messagehdlr, file, "  [continuous]");
          break;
-      case SCIP_IMPLINT_PLACEHOLDER:
+      case SCIP_DEPRECATED_VARTYPE_IMPLINT:
       default:
          SCIPerrorMessage("unknown variable type\n");
          return SCIP_INVALIDDATA;
@@ -5276,8 +5276,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       return SCIP_OKAY;
 
    /* TODO: A bit strange, but this was introduced to stay compatible with legacy code */
-   typex = SCIPvarIsImpliedIntegral(varx) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(varx);
-   typey = SCIPvarIsImpliedIntegral(vary) ? SCIP_IMPLINT_PLACEHOLDER : SCIPvarGetType(vary);
+   typex = SCIPvarIsImpliedIntegral(varx) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(varx);
+   typey = SCIPvarIsImpliedIntegral(vary) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(vary);
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
    if( typex < typey ||
@@ -5365,15 +5365,15 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       /* if the aggregation scalar is fractional, we cannot (for technical reasons) and do not want to aggregate implicit integer variables,
        * since then we would loose the corresponding divisibility property
        */
-      assert(typex != SCIP_IMPLINT_PLACEHOLDER || SCIPsetIsFeasIntegral(set, scalar));
+      assert(typex != SCIP_DEPRECATED_VARTYPE_IMPLINT || SCIPsetIsFeasIntegral(set, scalar));
 
       /* aggregate the variable */
       SCIP_CALL( SCIPvarAggregate(varx, blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
             branchcand, eventfilter, eventqueue, vary, scalar, constant, infeasible, aggregated) );
       assert(*aggregated || *infeasible || SCIPvarDoNotAggr(varx));
    }
-   else if( ( typex == SCIP_VARTYPE_INTEGER || typex == SCIP_IMPLINT_PLACEHOLDER )
-      && ( typey == SCIP_VARTYPE_INTEGER || typey == SCIP_IMPLINT_PLACEHOLDER ) )
+   else if( ( typex == SCIP_VARTYPE_INTEGER || typex == SCIP_DEPRECATED_VARTYPE_IMPLINT )
+      && ( typey == SCIP_VARTYPE_INTEGER || typey == SCIP_DEPRECATED_VARTYPE_IMPLINT ) )
    {
       /* the variables are both integral: we have to try to find an integer aggregation */
       SCIP_CALL( tryAggregateIntVars(set, blkmem, stat, transprob, origprob, primal, tree, reopt, lp, cliquetable,
@@ -6139,7 +6139,7 @@ SCIP_RETCODE SCIPvarChgType(
       return SCIP_INVALIDDATA;
    }
 
-   if( vartype == SCIP_IMPLINT_PLACEHOLDER )
+   if( vartype == SCIP_DEPRECATED_VARTYPE_IMPLINT )
    {
       if( SCIPvarGetImplType(var) != SCIP_IMPLINTTYPE_WEAK )
       {
@@ -17390,7 +17390,6 @@ SCIP_RETCODE SCIPvarArrayCountTypes(
             else
                ++contvars;
             break;
-         case SCIP_IMPLINT_PLACEHOLDER:
          default:
             SCIPerrorMessage("unknown variable type\n");
             return SCIP_INVALIDDATA;
