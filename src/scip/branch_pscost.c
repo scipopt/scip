@@ -404,6 +404,7 @@ SCIP_RETCODE updateBestCandidate(
       /* both are equally good */
    }
 
+   /* @TODO: handle implied integrality like in relpscost */
    besttype = SCIPvarIsImpliedIntegral(*bestvar) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(*bestvar);
    candtype = SCIPvarIsImpliedIntegral(cand) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(cand);
 
