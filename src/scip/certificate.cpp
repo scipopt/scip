@@ -2433,7 +2433,7 @@ SCIP_Longint SCIPcertificatePrintDualbound(
 {
    /* check whether certificate output should be created */
    if( !SCIPcertificateIsEnabled(certificate) )
-      return 0L;
+      return -1;
 
    certificate->indexcounter++;
    certificate->lastinfo->isbound = FALSE;

@@ -6460,7 +6460,7 @@ SCIP_RETCODE SCIPlpExactUpdateVarObj(
    if( !RatIsEqual(oldobj, newobj) )
    {
       SCIP_Rational* deltaval;
-      int deltainf;
+      int deltainf = 0;
 
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
       assert(SCIPvarGetProbindex(var) >= 0);
@@ -6473,15 +6473,15 @@ SCIP_RETCODE SCIPlpExactUpdateVarObj(
       SCIP_CALL( RatCreateBuffer(set->buffer, &deltaval) );
 
       /* compute the pseudo objective delta due the new objective coefficient */
-      getObjvalDeltaObjExact(set, oldobj, newobj, SCIPvarGetLbLocalExact(var),
-          SCIPvarGetUbLocalExact(var), deltaval, &deltainf);
+      SCIP_CALL( getObjvalDeltaObjExact(set, oldobj, newobj, SCIPvarGetLbLocalExact(var),
+            SCIPvarGetUbLocalExact(var), deltaval, &deltainf) );
 
       /* update the local pseudo objective value */
       lpExactUpdateObjval(lp, var, deltaval, deltainf, TRUE, FALSE, FALSE);
 
       /* compute the pseudo objective delta due the new objective coefficient */
-      getObjvalDeltaObjExact(set, oldobj, newobj, SCIPvarGetLbGlobalExact(var),
-          SCIPvarGetUbGlobalExact(var), deltaval, &deltainf);
+      SCIP_CALL( getObjvalDeltaObjExact(set, oldobj, newobj, SCIPvarGetLbGlobalExact(var),
+            SCIPvarGetUbGlobalExact(var), deltaval, &deltainf) );
 
       /* update the global pseudo objective value */
       lpExactUpdateObjval(lp, var, deltaval, deltainf, FALSE, FALSE, TRUE);
@@ -7218,16 +7218,15 @@ SCIP_RETCODE SCIPlpExactGetPrimalRay(
 }
 
 
-/** stores the dual Farkas multipliers for infeasibility proof in rows. besides, the proof is checked for validity if
- *  lp/checkfarkas = TRUE.
+/** stores the dual Farkas multipliers for infeasibility proof in rows. besides
  *
- *  @note the check will not be performed if @p valid is NULL.
+ *  @note The Farkas proof is checked for validity if lp/checkfarkas = TRUE and @p valid is not NULL.
  */
 SCIP_RETCODE SCIPlpExactGetDualfarkas(
    SCIP_LPEXACT*         lp,                 /**< current LP data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_Bool*            valid,              /**< pointer to store whether the Farkas proof is valid  or NULL */
+   SCIP_Bool*            valid,              /**< pointer to store whether the Farkas proof is valid or NULL */
    SCIP_Bool             overwritefplp       /**< should the floating point values be overwritten, e.g. if fp lp was infeasible */
    )
 {

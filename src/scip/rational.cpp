@@ -2151,7 +2151,6 @@ void chooseSemiconv(
       resden = q[1];
    }
 }
-#endif
 
 /* choose the best semi-convergent with denominator <= maxdenom between p1/q1 and p2/q2 */
 static
@@ -2341,6 +2340,7 @@ void RatComputeApproximationLong(
    res->isinf = FALSE;
    res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
 }
+#endif
 
 /** compute an approximate number with denominator <= maxdenom, closest to src and save it in res using continued fractions */
 void RatComputeApproximation(

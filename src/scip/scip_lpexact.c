@@ -339,7 +339,7 @@ SCIP_RETCODE SCIPgetRowSolFeasibilityExact(
 
    if( sol != NULL )
    {
-      SCIProwExactGetSolFeasibility(row, scip->set, scip->stat, sol, result);
+      SCIP_CALL( SCIProwExactGetSolFeasibility(row, scip->set, scip->stat, sol, result) );
    }
    else if( SCIPtreeHasCurrentNodeLP(scip->tree) )
    {

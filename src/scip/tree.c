@@ -7596,10 +7596,10 @@ SCIP_RETCODE SCIPtreeEndProbing(
             lp->resolvelperror = TRUE;
             tree->focusnodehaslp = FALSE;
          }
-         else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp) )
+         else if( tree->focuslpconstructed && SCIPlpIsRelax(lp) && SCIPprobAllColsInLP(transprob, set, lp)
+            && (!set->exact_enabled || lp->hasprovedbound) )
          {
-            if( !set->exact_enabled || lp->hasprovedbound )
-               SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, transprob, origprob, lp) );
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, tree, transprob, origprob, lp) );
          }
       }
    }

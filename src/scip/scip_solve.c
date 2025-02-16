@@ -1212,7 +1212,8 @@ SCIP_RETCODE presolve(
       }
    }
 
-   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
+   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving%s:\n",
+      SCIPisExactSolve(scip) ? " (for exact solving mode)" : "");
 
    *infeasible = FALSE;
    *unbounded = (*unbounded) || (SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip))));
@@ -2562,8 +2563,9 @@ SCIP_RETCODE SCIPpresolve(
       SCIP_CALL( displayRelevantStats(scip) );
    }
 
-   if( SCIPisCertificateActive(scip) && hasPresolveModifiedProblem(scip) )
+   if( scip->set->exact_enabled && !(scip->set->certificate_filename[0] == '-' && scip->set->certificate_filename[1] == '\0') && hasPresolveModifiedProblem(scip) )
    {
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_DIALOG, "\n");
       SCIPwarningMessage(scip, "Certificate is printed for presolved problem. "
          "Disable presolving for rigorous certificate of the original problem.\n");
    }
@@ -2659,9 +2661,6 @@ SCIP_RETCODE SCIPsolve(
    /* automatic restarting loop */
    restart = scip->stat->userrestart;
 
-   if(SCIPisExactSolve(scip))
-      SCIPinfoMessage(scip, NULL, "solving problem using exact solving mode \n\n");
-
    do
    {
       if( restart )
@@ -2754,6 +2753,9 @@ SCIP_RETCODE SCIPsolve(
          }
 
          /* continue solution process */
+         if( SCIPisExactSolve(scip) )
+            SCIPinfoMessage(scip, NULL, "solving problem in exact solving mode\n\n");
+
          SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->mem, scip->origprob, scip->transprob,
                scip->primal, scip->tree, scip->reopt, scip->lp, scip->relaxation, scip->pricestore, scip->sepastore,
                scip->cutpool, scip->delayedcutpool, scip->branchcand, scip->conflict, scip->conflictstore,
