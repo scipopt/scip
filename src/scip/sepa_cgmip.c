@@ -165,7 +165,7 @@
 
 /* parameters used for CMIR-generation (taken from sepa_gomory) */
 #define BOUNDSWITCH              0.9999
-#define USEVBDS                       1
+#define USEVBDS                       4
 #define POSTPROCESS                TRUE
 #define MINFRAC                  0.0009 /**< to allow a deviation of the same size as EPSILONVALUE */
 #define MAXFRAC                  0.9991 /**< to allow a deviation of the same size as EPSILONVALUE */

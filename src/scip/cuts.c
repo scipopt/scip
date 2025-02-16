@@ -3983,7 +3983,8 @@ SCIP_RETCODE createMIRData(
    SCIP * scip,
    MIR_DATA ** pdata,
    SCIP_AGGRROW * aggrrow,
-   SCIP_Real scale
+   SCIP_Real scale,
+   int usevbds
 )
 {
    assert(pdata != NULL);
@@ -3998,7 +3999,7 @@ SCIP_RETCODE createMIRData(
       //TODO: tune and/or rename
       data->isenfint[i] = i >= 2 ? TRUE : FALSE;
       data->isimplint[i] = i >= 1 && i <= 3 ? TRUE : FALSE;
-      data->usevbds[i] = i <= 1 ? 2 : 0;
+      data->usevbds[i] = i < usevbds ? 2 : 0;
    }
 
    /* Problem data needs to be initialized before cut data as it is used to partition the variables into the sections */
@@ -4735,7 +4736,7 @@ SCIP_RETCODE SCIPcalcMIR(
    *success = FALSE;
 
    /* Setup data to track cut and initialize the cut with aggregation */
-   SCIP_CALL( createMIRData(scip, &data, aggrrow, scale) );
+   SCIP_CALL( createMIRData(scip, &data, aggrrow, scale, usevbds) );
    tmpislocal = aggrrow->local;
 
    /* allocate temporary memory */

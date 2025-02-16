@@ -109,7 +109,7 @@
 
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define POSTPROCESS                TRUE /**< apply postprocessing after MIR calculation - see SCIPcalcMIR() */
-#define USEVBDS                    1    /**< use variable bounds - see SCIPcalcMIR() */
+#define USEVBDS                    4    /**< use variable bounds - see SCIPcalcMIR() */
 #define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcalcMIR() */
 #define MAKECONTINTEGRAL          FALSE /**< convert continuous variable to integral variables in SCIPmakeRowIntegral() */
 
