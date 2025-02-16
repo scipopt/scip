@@ -2626,7 +2626,7 @@ SCIP_RETCODE findBestLb(
 
    *simplebound = *bestlb;
 
-   if( usevbds && !SCIPvarIsIntegral(var) )
+   if( usevbds && (!SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var)) )
    {
       SCIP_Real bestvlb;
       int bestvlbidx;
@@ -2688,7 +2688,7 @@ SCIP_RETCODE findBestUb(
 
    *simplebound = *bestub;
 
-   if( usevbds && !SCIPvarIsIntegral(var) )
+   if( usevbds && (!SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var)) )
    {
       SCIP_Real bestvub;
       int bestvubidx;
@@ -3101,6 +3101,16 @@ SCIP_RETCODE cutsTransformSection(
        * variable bounds at the end of the nonzero array. TODO: record if array is enlarged in separate boolean*/
       SCIPsortDownInt(&cutinds[cutindsend], *nnz - cutindsend);
       *sorted = TRUE;
+#ifndef NDEBUG
+      for( int j = 0; j < cutindsend; ++j )
+      {
+         assert(cutinds[j] >= smallestprobindex);
+      }
+      for( int j = cutindsend; j < *nnz; ++j )
+      {
+         assert(cutinds[j] < smallestprobindex);
+      }
+#endif
    }
    /* determine the best bounds for the variable array */
    for(i = *cutindsstart; i < *nnz && cutinds[i] >= smallestprobindex; ++i )
@@ -3591,7 +3601,7 @@ SCIP_RETCODE cutsRoundMIR(
       }
    }
 
-   /* now process the continuous variables; postpone deletion of zeros untill all continuous variables have been processed */
+   /* now process the continuous variables; postpone deletion of zeros until all continuous variables have been processed */
    ndelcontvars = 0;
    while( i >= ndelcontvars )
    {
@@ -3905,6 +3915,770 @@ SCIP_RETCODE cutsSubstituteMIR(
    return SCIP_OKAY;
 }
 
+
+/** In order to derive cuts, we partition the variable array up in (not necessarily contiguous) sections.
+ * The only requirement we place on these sections is that section i can only have variable bounds variables whose section
+ * is strictly greater than i. This way, we can process the variable array in a 'linear' manner. */
+
+
+#define NSECTIONS 6
+
+typedef struct MIR_Data
+{
+   int totalnnz;
+   int* indices[NSECTIONS];
+   int nnz[NSECTIONS];
+
+   SCIP_Bool isenfint[NSECTIONS];            /** Does the section have an integrality constraint? */
+   SCIP_Bool isimplint[NSECTIONS];           /** Is the section implied integer variables ? */
+
+   /* Settings for cut derivation, per section */
+   int usevbds[NSECTIONS];                   /** Should variable bound substitution be done for this section? */
+
+   /* Problem data that we reuse often */
+   SCIP_VAR** vars;
+   int nvars;
+   int nbinvars;
+   int nintvars;
+   int nbinimplvars;
+   int nintimplvars;
+   int ncontimplvars;
+   int ncontvars;
+
+   SCIP_Real* cutcoefs;                      /**< Working cut indices value array */
+   SCIP_Real QUAD(cutrhs);
+
+   int* cutinds;                             /**< Working cut variable problem index array */
+   int ncutinds;
+} MIR_DATA;
+
+static int varSection(MIR_DATA* data, int v)
+{
+   int limit = data->nvars - data->ncontvars;
+   if( v >= limit )
+      return 0;
+
+   limit -= data->ncontimplvars;
+   if( v >= limit )
+      return 1;
+
+   limit -= data->nintimplvars;
+   if( v >= limit )
+      return 2;
+
+   limit -= data->nbinimplvars;
+   if( v >= limit )
+      return 3;
+
+   limit -= data->nintvars;
+   if( v >= limit )
+      return 4;
+
+   assert(limit == data->nbinvars);
+   return 5;
+}
+
+static
+SCIP_RETCODE createMIRData(
+   SCIP * scip,
+   MIR_DATA ** pdata,
+   SCIP_AGGRROW * aggrrow,
+   SCIP_Real scale
+)
+{
+   assert(pdata != NULL);
+   SCIP_CALL( SCIPallocBuffer(scip, pdata) );
+   MIR_DATA* data = *pdata;
+   int nnz = aggrrow->nnz;
+   data->totalnnz = nnz;
+   for( int i = 0; i < NSECTIONS; ++i )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &data->indices[i], nnz) );
+      data->nnz[i] = 0;
+      //TODO: tune and/or rename
+      data->isenfint[i] = i >= 2 ? TRUE : FALSE;
+      data->isimplint[i] = i >= 1 && i <= 3 ? TRUE : FALSE;
+      data->usevbds[i] = i <= 1 ? 2 : 0;
+   }
+
+   /* Problem data needs to be initialized before cut data as it is used to partition the variables into the sections */
+   data->vars = SCIPgetVars(scip);
+   data->nvars = SCIPgetNVars(scip);
+   data->nbinvars = SCIPgetNBinVars(scip);
+   data->nintvars = SCIPgetNIntVars(scip);
+   data->nbinimplvars = SCIPgetNBinImplVars(scip);
+   data->nintimplvars = SCIPgetNIntImplVars(scip);
+   data->ncontimplvars = SCIPgetNContImplVars(scip);
+   data->ncontvars = SCIPgetNContVars(scip);
+
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &(data->cutcoefs), QUAD_ARRAY_SIZE(data->nvars)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &data->cutinds, data->nvars) );
+
+   SCIPquadprecProdQD(data->cutrhs, aggrrow->rhs, scale);
+
+   if( nnz > 0 )
+   {
+      /* Initalize cut with the aggregation */
+      BMScopyMemoryArray(data->cutinds, aggrrow->inds, nnz);
+
+      for( int i = 0; i < nnz; ++i )
+      {
+         SCIP_Real QUAD(coef);
+         int k = aggrrow->inds[i];
+
+         QUAD_ARRAY_LOAD(coef, aggrrow->vals, k);
+
+         SCIPquadprecProdQD(coef, coef, scale);
+
+         QUAD_ARRAY_STORE(data->cutcoefs, k, coef);
+
+         assert(QUAD_HI(coef) != 0.0);
+      }
+
+      /* Sort the array by problem index and add the variables to their sections */
+      SCIPsortDownInt(data->cutinds, nnz);
+      for( int i = 0; i < nnz; ++i )
+      {
+         int section = varSection(data, data->cutinds[i]);
+         data->indices[section][data->nnz[section]] = data->cutinds[i];
+         ++data->nnz[section];
+      }
+   }
+
+   data->ncutinds = 0;
+
+   return SCIP_OKAY;
+}
+
+static
+void freeMIRData(
+   SCIP * scip,
+   MIR_DATA ** pdata
+)
+{
+   assert(pdata != NULL);
+   MIR_DATA* data = *pdata;
+
+   if( data->cutinds != NULL )
+      SCIPfreeBufferArray(scip, &data->cutinds);
+
+   if( data->cutcoefs != NULL )
+      SCIPfreeCleanBufferArray(scip, &data->cutcoefs);
+
+   for( int i = NSECTIONS - 1; i >= 0; --i )
+   {
+      SCIPfreeBufferArray(scip, &data->indices[i]);
+   }
+
+   SCIPfreeBuffer(scip, pdata);
+}
+
+static
+void doBoundSubstitution(
+   SCIP*                 scip,               /**< SCIP datastructure */
+   MIR_DATA*             data,
+   int                   varsign,            /**< stores the sign of the transformed variable in summation */
+   int                   boundtype,          /**< stores the bound used for transformed variable:
+                                                 *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
+   SCIP_Real             boundval,           /**< array of best bound to be used for the substitution for each nonzero index */
+   int                   probindex,          /**< problem index of variable to perform the substitution step for */
+   SCIP_Bool*            localbdsused        /**< pointer to updated whether a local bound was used for substitution */
+)
+{
+   SCIP_Real QUAD(coef);
+   SCIP_Real QUAD(tmp);
+
+   assert(!SCIPisInfinity(scip, -varsign * boundval));
+
+   QUAD_ARRAY_LOAD(coef, data->cutcoefs, probindex);
+
+   /* standard (bestlbtype < 0) or variable (bestlbtype >= 0) lower bound? */
+   if( boundtype < 0 )
+   {
+      SCIPquadprecProdQD(tmp, coef, boundval);
+      SCIPquadprecSumQQ(data->cutrhs, data->cutrhs, -tmp);
+      *localbdsused = *localbdsused || ( boundtype == -2 );
+   }
+   else
+   {
+      SCIP_VAR** vbdvars;
+      SCIP_Real* vbdcoefs;
+      SCIP_Real* vbdconsts;
+      SCIP_Real QUAD(zcoef);
+      int zidx;
+      SCIP_VAR* var = SCIPgetVars(scip)[probindex];
+
+      if( varsign == +1 )
+      {
+         vbdvars = SCIPvarGetVlbVars(var);
+         vbdcoefs = SCIPvarGetVlbCoefs(var);
+         vbdconsts = SCIPvarGetVlbConstants(var);
+         assert(0 <= boundtype && boundtype < SCIPvarGetNVlbs(var));
+      }
+      else
+      {
+         vbdvars = SCIPvarGetVubVars(var);
+         vbdcoefs = SCIPvarGetVubCoefs(var);
+         vbdconsts = SCIPvarGetVubConstants(var);
+         assert(0 <= boundtype && boundtype < SCIPvarGetNVubs(var));
+      }
+
+      assert(vbdvars != NULL);
+      assert(vbdcoefs != NULL);
+      assert(vbdconsts != NULL);
+      assert(SCIPvarIsActive(vbdvars[boundtype]));
+
+      zidx = SCIPvarGetProbindex(vbdvars[boundtype]);
+
+      SCIPquadprecProdQD(tmp, coef, vbdconsts[boundtype]);
+      SCIPquadprecSumQQ(data->cutrhs, data->cutrhs, -tmp);
+
+      /* check if integral variable already exists in the row */
+      QUAD_ARRAY_LOAD(zcoef, data->cutcoefs, zidx);
+
+      /* If it is new, add it to the indices */
+      if( QUAD_HI(zcoef) == 0.0 )
+      {
+         int section = varSection(data, zidx);
+         assert(section > varSection(data, probindex));
+
+         data->indices[section][data->nnz[section]] = zidx;
+         ++data->nnz[section];
+         ++data->totalnnz;
+      }
+
+
+      SCIPquadprecProdQD(tmp, coef, vbdcoefs[boundtype]);
+      SCIPquadprecSumQQ(zcoef, zcoef, tmp);
+
+      QUAD_HI(zcoef) = NONZERO(QUAD_HI(zcoef));
+      assert(QUAD_HI(zcoef) != 0.0);
+
+      QUAD_ARRAY_STORE(data->cutcoefs, zidx, zcoef);
+   }
+}
+
+static
+SCIP_RETCODE cutsTransformMIR2(
+   SCIP * scip,
+   MIR_DATA * data,
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_Bool             fixintegralrhs,     /**< should complementation tried to be adjusted such that rhs gets fractional? */
+   SCIP_Bool             ignoresol,          /**< should the LP solution be ignored? (eg, apply MIR to dualray) */
+   int*                  boundsfortrans,     /**< bounds that should be used for transformed variables: vlb_idx/vub_idx,
+                                              *   -1 for global lb/ub, -2 for local lb/ub, or -3 for using closest bound;
+                                              *   NULL for using closest bound for all variables */
+   SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables;
+                                              *   NULL for using closest bound for all variables */
+   SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
+   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
+   int*                  varsign,            /**< stores the sign of the transformed variable in summation */
+   int*                  boundtype,          /**< stores the bound used for transformed variable:
+                                              *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
+   SCIP_Bool*            freevariable,       /**< stores whether a free variable was found in MIR row -> invalid summation */
+   SCIP_Bool*            localbdsused        /**< pointer to store whether local bounds were used in transformation */
+)
+{
+   SCIP_Real* bestlbs;
+   SCIP_Real* bestubs;
+   int* bestlbtypes;
+   int* bestubtypes;
+   SCIP_BOUNDTYPE* selectedbounds;
+   SCIP_Real QUAD(coef);
+
+   int totalnnz = data->totalnnz;
+
+   assert(data != NULL);
+   assert(varsign != NULL);
+   assert(boundtype != NULL);
+   assert(freevariable != NULL);
+   assert(localbdsused != NULL);
+
+   *freevariable = FALSE;
+   *localbdsused = FALSE;
+
+   /* allocate temporary memory to store best bounds and bound types */
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestlbs, 2*totalnnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestubs, 2*totalnnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestlbtypes, 2*totalnnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestubtypes, 2*totalnnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &selectedbounds, 2*totalnnz) );
+
+   /* Transform the cut one variable section at a time */
+   for( int s = 0; s < NSECTIONS; ++s )
+   {
+      int* indices = data->indices[s];
+
+      int cutindsstart = data->ncutinds;
+      int usevbds = data->usevbds[s];
+
+      int i = 0;
+      while( i < data->nnz[s] )
+      {
+         int index = data->ncutinds;
+         int v = indices[i];
+
+         /* due to variable bound usage, cancellation may have occurred */
+         QUAD_ARRAY_LOAD(coef, data->cutcoefs, v);
+         if( EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON) )
+         {
+            QUAD_ASSIGN(coef, 0.0);
+            QUAD_ARRAY_STORE(data->cutcoefs, v, coef);
+            --data->nnz[s];
+            --data->totalnnz;
+            indices[i] = indices[data->nnz[s]];
+            /* do not increase the index */
+            continue;
+         }
+
+         SCIP_CALL( determineBestBounds(scip, data->vars[v], sol, boundswitch, usevbds, allowlocal, fixintegralrhs,
+                                        ignoresol, boundsfortrans, boundtypesfortrans,
+                                        bestlbs + index, bestubs + index, bestlbtypes + index, bestubtypes + index,
+                                        selectedbounds + index, freevariable) );
+
+         data->cutinds[index] = v;
+         ++data->ncutinds;
+
+         ++i;
+
+         if( *freevariable )
+            goto TERMINATE;
+      }
+
+      /* perform bound substitution for variables */
+      for( i = cutindsstart; i < data->ncutinds; ++i )
+      {
+         int v = data->cutinds[i];
+
+         if( selectedbounds[i] == SCIP_BOUNDTYPE_LOWER )
+         {
+            assert(!SCIPisInfinity(scip, -bestlbs[i]));
+
+            /* use lower bound as transformation bound: x'_j := x_j - lb_j */
+            boundtype[i] = bestlbtypes[i];
+            varsign[i] = +1;
+
+            doBoundSubstitution(scip, data, varsign[i], boundtype[i], bestlbs[i], v, localbdsused);
+         }
+         else
+         {
+            assert(!SCIPisInfinity(scip, bestubs[i]));
+
+            /* use upper bound as transformation bound: x'_j := ub_j - x_j */
+            boundtype[i] = bestubtypes[i];
+            varsign[i] = -1;
+
+            doBoundSubstitution(scip, data, varsign[i], boundtype[i], bestubs[i], v, localbdsused);
+         }
+
+      }
+
+   }
+   if( fixintegralrhs )
+   {
+      SCIP_Real f0;
+
+      /* check if rhs is fractional */
+      f0 = EPSFRAC(QUAD_TO_DBL(data->cutrhs), SCIPsumepsilon(scip));
+      if( f0 < minfrac || f0 > maxfrac )
+      {
+         SCIP_Real bestviolgain;
+         SCIP_Real bestnewf0;
+         int besti;
+
+         /* choose complementation of one variable differently such that f0 is in correct range */
+         besti = -1;
+         bestviolgain = -1e+100;
+         bestnewf0 = 1.0;
+         for(int i = 0; i < data->ncutinds; i++ )
+         {
+            int v;
+            SCIP_Real QUAD(coef);
+
+            v = data->cutinds[i];
+            assert(0 <= v && v < data->nvars);
+
+            QUAD_ARRAY_LOAD(coef, data->cutcoefs, v);
+            assert(!EPSZ(QUAD_TO_DBL(coef), QUAD_EPSILON));
+
+            if( boundtype[i] < 0
+                && ((varsign[i] == +1 && !SCIPisInfinity(scip, bestubs[i]) && bestubtypes[i] < 0)
+                    || (varsign[i] == -1 && !SCIPisInfinity(scip, -bestlbs[i]) && bestlbtypes[i] < 0)) )
+            {
+               SCIP_Real fj;
+               SCIP_Real newfj;
+               SCIP_Real newrhs;
+               SCIP_Real newf0;
+               SCIP_Real solval;
+               SCIP_Real viol;
+               SCIP_Real newviol;
+               SCIP_Real violgain;
+
+               /* currently:              a'_j =  varsign * a_j  ->  f'_j =  a'_j - floor(a'_j)
+                * after complementation: a''_j = -varsign * a_j  -> f''_j = a''_j - floor(a''_j) = 1 - f'_j
+                *                        rhs'' = rhs' + varsign * a_j * (lb_j - ub_j)
+                * cut violation from f0 and fj:   f'_0 -  f'_j *  x'_j
+                * after complementation:         f''_0 - f''_j * x''_j
+                *
+                * for continuous variables, we just set f'_j = f''_j = |a'_j|
+                */
+               newrhs = QUAD_TO_DBL(data->cutrhs) + varsign[i] * QUAD_TO_DBL(coef) * (bestlbs[i] - bestubs[i]);
+               newf0 = EPSFRAC(newrhs, SCIPsumepsilon(scip));
+
+               if( newf0 < minfrac || newf0 > maxfrac )
+                  continue;
+               if( v >= data->nvars - data->ncontvars ) //TODO what condition to use here?
+               {
+                  fj = REALABS(QUAD_TO_DBL(coef));
+                  newfj = fj;
+               }
+               else
+               {
+                  fj = SCIPfrac(scip, varsign[i] * QUAD_TO_DBL(coef));
+                  newfj = SCIPfrac(scip, -varsign[i] * QUAD_TO_DBL(coef));
+               }
+
+               if( !ignoresol )
+               {
+                  solval = (sol == NULL ? SCIPvarGetLPSol(data->vars[v]) : SCIPgetSolVal(scip, sol, data->vars[v]));
+                  viol = f0 - fj * (varsign[i] == +1 ? solval - bestlbs[i] : bestubs[i] - solval);
+                  newviol = newf0 - newfj * (varsign[i] == -1 ? solval - bestlbs[i] : bestubs[i] - solval);
+                  violgain = newviol - viol;
+               }
+               else
+               {
+                  /* todo: this should be done, this can improve the dualray significantly */
+                  SCIPerrorMessage("Cannot handle closest bounds with ignoring the LP solution.\n");
+                  return SCIP_INVALIDCALL;
+               }
+
+               /* prefer larger violations; for equal violations, prefer smaller f0 values since then the possibility that
+                * we f_j > f_0 is larger and we may improve some coefficients in rounding
+                */
+               if( SCIPisGT(scip, violgain, bestviolgain) || (SCIPisGE(scip, violgain, bestviolgain) && newf0 < bestnewf0) )
+               {
+                  besti = i;
+                  bestviolgain = violgain;
+                  bestnewf0 = newf0;
+               }
+            }
+         }
+
+         if( besti >= 0 )
+         {
+            SCIP_Real QUAD(coef);
+            SCIP_Real QUAD(tmp);
+
+            assert(besti < data->ncutinds);
+            assert(boundtype[besti] < 0);
+            assert(!SCIPisInfinity(scip, -bestlbs[besti]));
+            assert(!SCIPisInfinity(scip, bestubs[besti]));
+
+            QUAD_ARRAY_LOAD(coef, data->cutcoefs, data->cutinds[besti]);
+            QUAD_SCALE(coef, varsign[besti]);
+
+            /* switch the complementation of this variable */
+            SCIPquadprecSumDD(tmp, bestlbs[besti], - bestubs[besti]);
+            SCIPquadprecProdQQ(tmp, tmp, coef);
+            SCIPquadprecSumQQ(data->cutrhs, data->cutrhs, tmp);
+
+            if( varsign[besti] == +1 )
+            {
+               /* switch to upper bound */
+               assert(bestubtypes[besti] < 0); /* cannot switch to a variable bound (would lead to further coef updates) */
+               boundtype[besti] = bestubtypes[besti];
+               varsign[besti] = -1;
+            }
+            else
+            {
+               /* switch to lower bound */
+               assert(bestlbtypes[besti] < 0); /* cannot switch to a variable bound (would lead to further coef updates) */
+               boundtype[besti] = bestlbtypes[besti];
+               varsign[besti] = +1;
+            }
+            *localbdsused = *localbdsused || (boundtype[besti] == -2);
+         }
+      }
+   }
+
+   TERMINATE:
+
+   /*free temporary memory */
+   SCIPfreeBufferArray(scip, &selectedbounds);
+   SCIPfreeBufferArray(scip, &bestubtypes);
+   SCIPfreeBufferArray(scip, &bestlbtypes);
+   SCIPfreeBufferArray(scip, &bestubs);
+   SCIPfreeBufferArray(scip, &bestlbs);
+
+   return SCIP_OKAY;
+}
+
+/** Calculate fractionalities \f$ f_0 := b - down(b), f_j := a^\prime_j - down(a^\prime_j) \f$, and derive MIR cut \f$ \tilde{a} \cdot x' \leq down(b) \f$
+ * \f[
+ * \begin{array}{rll}
+ *  integers :&  \tilde{a}_j = down(a^\prime_j),                        & if \qquad f_j \leq f_0 \\
+ *            &  \tilde{a}_j = down(a^\prime_j) + (f_j - f_0)/(1 - f_0),& if \qquad f_j >  f_0 \\
+ *  continuous:& \tilde{a}_j = 0,                                       & if \qquad a^\prime_j \geq 0 \\
+ *             & \tilde{a}_j = a^\prime_j/(1 - f_0),                    & if \qquad a^\prime_j <  0
+ * \end{array}
+ * \f]
+ *
+ *  Transform inequality back to \f$ \hat{a} \cdot x \leq rhs \f$:
+ *
+ *  (lb or ub):
+ * \f[
+ * \begin{array}{lllll}
+ *    x^\prime_j := x_j - lb_j,&   x_j = x^\prime_j + lb_j,&   a^\prime_j =  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{if lb was used in transformation}, \\
+ *    x^\prime_j := ub_j - x_j,&   x_j = ub_j - x^\prime_j,&   a^\prime_j = -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{if ub was used in transformation},
+ * \end{array}
+ * \f]
+ *  and move the constant terms
+ * \f[
+ * \begin{array}{cl}
+ *    -\tilde{a}_j \cdot lb_j = -\hat{a}_j \cdot lb_j,& \mbox{or} \\
+ *     \tilde{a}_j \cdot ub_j = -\hat{a}_j \cdot ub_j &
+ * \end{array}
+ * \f]
+ *  to the rhs.
+ *
+ *  (vlb or vub):
+ * \f[
+ * \begin{array}{lllll}
+ *    x^\prime_j := x_j - (bl_j \cdot zl_j + dl_j),&   x_j = x^\prime_j + (bl_j\, zl_j + dl_j),&   a^\prime_j =  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{(vlb)} \\
+ *    x^\prime_j := (bu_j\, zu_j + du_j) - x_j,&   x_j = (bu_j\, zu_j + du_j) - x^\prime_j,&   a^\prime_j = -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{(vub)}
+ * \end{array}
+ * \f]
+ *  move the constant terms
+ * \f[
+ * \begin{array}{cl}
+ *    -\tilde{a}_j\, dl_j = -\hat{a}_j\, dl_j,& \mbox{or} \\
+ *     \tilde{a}_j\, du_j = -\hat{a}_j\, du_j &
+ * \end{array}
+ * \f]
+ *  to the rhs, and update the VB variable coefficients:
+ * \f[
+ * \begin{array}{ll}
+ *    \hat{a}_{zl_j} := \hat{a}_{zl_j} - \tilde{a}_j\, bl_j = \hat{a}_{zl_j} - \hat{a}_j\, bl_j,& \mbox{or} \\
+ *    \hat{a}_{zu_j} := \hat{a}_{zu_j} + \tilde{a}_j\, bu_j = \hat{a}_{zu_j} - \hat{a}_j\, bu_j &
+ * \end{array}
+ * \f]
+ */
+static
+SCIP_RETCODE cutsRoundMIR2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   MIR_DATA*             data,
+   int*RESTRICT          varsign,            /**< stores the sign of the transformed variable in summation */
+   int*RESTRICT          boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub) */
+   QUAD(SCIP_Real        f0)                 /**< fractional value of rhs */
+)
+{
+   SCIP_Real QUAD(tmp);
+   SCIP_Real QUAD(onedivoneminusf0);
+
+   assert(data != NULL);
+   assert(boundtype != NULL);
+   assert(varsign != NULL);
+   assert(0.0 < QUAD_TO_DBL(f0) && QUAD_TO_DBL(f0) < 1.0);
+
+   SCIPquadprecSumQD(onedivoneminusf0, -f0, 1.0);
+   SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);
+
+   /* Loop backwards through the sections, so that the reversing of varbound substitutions does not prematurely effect
+    * the coefficients of variables in other sections, because the section index of a variable bound must always be
+    * higher than that of the bounded variable. */
+   int cutindex = data->ncutinds - 1;
+   for( int s = NSECTIONS - 1; s >= 0; --s )
+   {
+      int* indices = data->indices[s];
+      int nnz = data->nnz[s];
+
+      SCIP_Bool enfintegral = data->isenfint[s];
+      SCIP_Bool implintegral = data->isimplint[s];
+      /* iterate backwards over indices in section, so we can easily shrink the section if we find zeros */
+      for( int i = nnz - 1; i >= 0 ; --i )
+      {
+         int v = indices[i];
+         assert(0 <= v && v < data->nvars);
+         assert(data->cutinds[cutindex] == v);
+         int sign = varsign[cutindex];
+         assert(sign == +1 || sign == -1);
+         int type = boundtype[cutindex];
+
+         --cutindex;
+
+         SCIP_VAR* var = data->vars[v];
+         assert(var != NULL);
+         assert(SCIPvarGetProbindex(var) == v );
+
+
+         SCIP_Real QUAD(cutaj);
+         SCIP_Real QUAD(aj);
+
+         QUAD_ARRAY_LOAD(aj, data->cutcoefs, v);
+
+         if( enfintegral || implintegral )
+         {
+            /* Variable is integral */
+            SCIP_Real QUAD(downaj);
+            SCIP_Real QUAD(fj);
+
+            QUAD_SCALE(aj, sign);
+
+            SCIPquadprecEpsFloorQ(downaj, aj, SCIPepsilon(scip)); /*lint !e666*/
+            SCIPquadprecSumQQ(fj, aj, -downaj);
+            assert(QUAD_TO_DBL(fj) >= -SCIPepsilon(scip) && QUAD_TO_DBL(fj) < 1.0);
+
+            if( SCIPisLE(scip, QUAD_TO_DBL(fj), QUAD_TO_DBL(f0)) )
+            {
+               QUAD_ASSIGN_Q(cutaj, downaj); /* a^_j */
+            }
+            else
+            {
+               SCIPquadprecSumQQ(tmp, fj, -f0);
+               SCIPquadprecProdQQ(tmp, tmp, onedivoneminusf0);
+               SCIPquadprecSumQQ(cutaj, tmp, downaj);
+            }
+            QUAD_SCALE(cutaj, sign);
+         }
+         else
+         {
+            /* Variable is continuous */
+            if( QUAD_TO_DBL(aj) * sign >= 0.0 )
+               QUAD_ASSIGN(cutaj, 0.0);
+            else
+               SCIPquadprecProdQQ(cutaj, onedivoneminusf0, aj); /* cutaj = aj * onedivoneminusf0 */
+         }
+
+         /* remove coefficient from cut if it becomes zero */
+         if( EPSZ(QUAD_TO_DBL(cutaj), QUAD_EPSILON) )
+         {
+            QUAD_ASSIGN(cutaj, 0.0);
+            QUAD_ARRAY_STORE(data->cutcoefs, v, cutaj);
+            --data->totalnnz;
+            --data->nnz[s];
+            indices[i] = indices[data->nnz[s]];
+            continue;
+         }
+
+         /* store the updated coefficient */
+         QUAD_ARRAY_STORE(data->cutcoefs, v, cutaj);
+
+         /* undo bound transformations. */
+         if( type < 0 )
+         {
+            /* standard bound */
+            /* move the constant term  -a~_j * lb_j == -a^_j * lb_j , or  a~_j * ub_j == -a^_j * ub_j  to the rhs */
+            if( sign == +1 )
+            {
+               /* lower bound was used */
+               if( type == -1 )
+               {
+                  assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
+                  SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbGlobal(var));
+                  SCIPquadprecSumQQ(data->cutrhs, data->cutrhs, tmp);
+               }
+               else
+               {
+                  assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
+                  SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbLocal(var));
+                  SCIPquadprecSumQQ(data->cutrhs, data->cutrhs, tmp);
+               }
+            }
+            else
+            {
+               /* upper bound was used */
+               if( type == -1 )
+               {
+                  assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
+                  SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbGlobal(var));
+                  SCIPquadprecSumQQ(data->cutrhs, data->cutrhs, tmp);
+               }
+               else
+               {
+                  assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
+                  SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbLocal(var));
+                  SCIPquadprecSumQQ(data->cutrhs, data->cutrhs, tmp);
+               }
+            }
+         }
+         else
+         {
+            /* variable bound */
+            SCIP_VAR** vbz;
+            SCIP_Real* vbb;
+            SCIP_Real* vbd;
+            SCIP_Real QUAD(zcoef);
+            int vbidx;
+            int zidx;
+
+            /* variable bound */
+            vbidx = type;
+
+            /* change mirrhs and cutaj of integer variable z_j of variable bound */
+            if( sign == +1 )
+            {
+               /* variable lower bound was used */
+               assert(0 <= vbidx && vbidx < SCIPvarGetNVlbs(var));
+               vbz = SCIPvarGetVlbVars(var);
+               vbb = SCIPvarGetVlbCoefs(var);
+               vbd = SCIPvarGetVlbConstants(var);
+            }
+            else
+            {
+               /* variable upper bound was used */
+               assert(0 <= vbidx && vbidx < SCIPvarGetNVubs(var));
+               vbz = SCIPvarGetVubVars(var);
+               vbb = SCIPvarGetVubCoefs(var);
+               vbd = SCIPvarGetVubConstants(var);
+            }
+            assert(SCIPvarIsActive(vbz[vbidx]));
+            zidx = SCIPvarGetProbindex(vbz[vbidx]);
+            assert(varSection(data, zidx) > s);
+
+            SCIPquadprecProdQD(tmp, cutaj, vbd[vbidx]);
+            SCIPquadprecSumQQ(data->cutrhs, data->cutrhs, tmp);
+
+            SCIPquadprecProdQD(tmp, cutaj, vbb[vbidx]);
+            QUAD_ARRAY_LOAD(zcoef, data->cutcoefs, zidx);
+
+            /* update sparsity pattern */
+            if( QUAD_HI(zcoef) == 0.0 )
+            {
+               int zsection = varSection(data, zidx);
+               data->indices[zsection][data->nnz[zsection]] = zidx;
+               ++data->nnz[zsection];
+               ++data->totalnnz;
+            }
+
+            SCIPquadprecSumQQ(zcoef, zcoef, -tmp);
+            QUAD_HI(zcoef) = NONZERO(QUAD_HI(zcoef));
+            QUAD_ARRAY_STORE(data->cutcoefs, zidx, zcoef);
+            assert(QUAD_HI(zcoef) != 0.0);
+            /* TODO: Do we not need to check if the nonzero can be removed here? Why does original code not do this? */
+         }
+
+      }
+
+   }
+
+   /* Finally, store the relevant data in cutinds which is the array used by the other functions */
+   data->ncutinds = 0;
+   for( int s = 0; s < NSECTIONS; ++s )
+   {
+      int* indices = data->indices[s];
+      int nnz = data->nnz[s];
+      for( int i = 0; i < nnz; ++i )
+      {
+         int probindex = indices[i];
+         data->cutinds[data->ncutinds] = probindex;
+         ++data->ncutinds;
+      }
+   }
+   return SCIP_OKAY;
+}
+
 /** calculates an MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because
  *  these rows cannot participate in an MIR cut.
  *
@@ -3943,15 +4717,9 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut and it improves cutefficacy */
    )
 {
-   int i;
-   int nvars;
-   int tmpnnz;
+   MIR_DATA * data;
    int* varsign;
    int* boundtype;
-   int* tmpinds;
-   SCIP_Real* tmpcoefs;
-
-   SCIP_Real QUAD(rhs);
    SCIP_Real QUAD(downrhs);
    SCIP_Real QUAD(f0);
    SCIP_Bool freevariable;
@@ -3966,54 +4734,34 @@ SCIP_RETCODE SCIPcalcMIR(
 
    *success = FALSE;
 
-   /* allocate temporary memory */
-   nvars = SCIPgetNVars(scip);
-   SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpinds, nvars) );
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &tmpcoefs, QUAD_ARRAY_SIZE(nvars)) );
-
-   /* initialize cut with aggregation */
-   tmpnnz = aggrrow->nnz;
+   /* Setup data to track cut and initialize the cut with aggregation */
+   SCIP_CALL( createMIRData(scip, &data, aggrrow, scale) );
    tmpislocal = aggrrow->local;
 
-   SCIPquadprecProdQD(rhs, aggrrow->rhs, scale);
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsign, data->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, data->nvars) );
 
-   if( tmpnnz > 0 )
+   /* Transform equation  a*x == b, lb <= x <= ub  into standard form
+    *   a'*x' == b, 0 <= x' <= ub'.
+    *
+    * Transform variables (lb or ub):
+    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
+    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
+    * and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
+    *
+    * Transform variables (vlb or vub):
+    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
+    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
+    * move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
+    *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
+    *   a_{zu_j} := a_{zu_j} + a_j * bu_j
+    */
+   if( data->totalnnz > 0 )
    {
-      BMScopyMemoryArray(tmpinds, aggrrow->inds, tmpnnz);
-
-      for( i = 0; i < tmpnnz; ++i )
-      {
-         SCIP_Real QUAD(coef);
-         int k = aggrrow->inds[i];
-
-         QUAD_ARRAY_LOAD(coef, aggrrow->vals, k);
-
-         SCIPquadprecProdQD(coef, coef, scale);
-
-         QUAD_ARRAY_STORE(tmpcoefs, k, coef);
-
-         assert(QUAD_HI(coef) != 0.0);
-      }
-
-      /* Transform equation  a*x == b, lb <= x <= ub  into standard form
-       *   a'*x' == b, 0 <= x' <= ub'.
-       *
-       * Transform variables (lb or ub):
-       *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
-       *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
-       * and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
-       *
-       * Transform variables (vlb or vub):
-       *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
-       *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
-       * move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
-       *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
-       *   a_{zu_j} := a_{zu_j} + a_j * bu_j
-       */
-      SCIP_CALL( cutsTransformMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, FALSE,
-            boundsfortrans, boundtypesfortrans, minfrac, maxfrac, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, &freevariable, &localbdsused) );
+      SCIP_CALL( cutsTransformMIR2(scip, data, sol, boundswitch, allowlocal, fixintegralrhs, FALSE,
+                                   boundsfortrans, boundtypesfortrans, minfrac, maxfrac,
+                                   varsign, boundtype, &freevariable, &localbdsused) );
       assert(allowlocal || !localbdsused);
       tmpislocal = tmpislocal || localbdsused;
 
@@ -4051,8 +4799,9 @@ SCIP_RETCODE SCIPcalcMIR(
     *   a^_{zl_j} := a^_{zl_j} - a~_j * bl_j == a^_{zl_j} - a^_j * bl_j, or
     *   a^_{zu_j} := a^_{zu_j} + a~_j * bu_j == a^_{zu_j} - a^_j * bu_j
     */
-   SCIPquadprecEpsFloorQ(downrhs, rhs, SCIPepsilon(scip)); /*lint !e666*/
-   SCIPquadprecSumQQ(f0, rhs, -downrhs);
+
+   SCIPquadprecEpsFloorQ(downrhs, data->cutrhs, SCIPepsilon(scip)); /*lint !e666*/
+   SCIPquadprecSumQQ(f0, data->cutrhs, -downrhs);
    assert(QUAD_TO_DBL(f0) >= -SCIPepsilon(scip) && QUAD_TO_DBL(f0) < 1.0);
 
    if( QUAD_TO_DBL(f0) < minfrac || QUAD_TO_DBL(f0) > maxfrac )
@@ -4067,11 +4816,11 @@ SCIP_RETCODE SCIPcalcMIR(
    /* renormalize f0 value */
    SCIPquadprecSumDD(f0, QUAD_HI(f0), QUAD_LO(f0));
 
-   QUAD_ASSIGN_Q(rhs, downrhs);
+   QUAD_ASSIGN_Q(data->cutrhs, downrhs);
 
-   if( tmpnnz > 0 )
+   if( data->totalnnz > 0 )
    {
-      SCIP_CALL( cutsRoundMIR(scip, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, varsign, boundtype, QUAD(f0)) );
+      SCIP_CALL( cutsRoundMIR2(scip, data, varsign, boundtype, QUAD(f0)) );
 
       SCIPdebugMsg(scip, "After MIR rounding:\n");
       SCIPdebug(printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE));
@@ -4092,48 +4841,43 @@ SCIP_RETCODE SCIPcalcMIR(
     * Substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
     */
    SCIP_CALL( cutsSubstituteMIR(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
-         aggrrow->nrows, scale, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz, QUAD(f0)) );
-
-   SCIPdebugMsg(scip, "After slack substitution:\n");
-   SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE) );
+                                aggrrow->nrows, scale,
+                                data->cutcoefs, QUAD(&data->cutrhs), data->cutinds, &data->ncutinds, QUAD(f0)) );
 
    if( postprocess )
    {
       /* remove all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
        * prevent numerical rounding errors
        */
-      SCIP_CALL( postprocessCutQuad(scip, tmpislocal, tmpinds, tmpcoefs, &tmpnnz, QUAD(&rhs), success) );
+      SCIP_CALL( postprocessCutQuad(scip, tmpislocal, data->cutinds, data->cutcoefs, &data->ncutinds, QUAD(&data->cutrhs), success) );
    }
    else
    {
-      *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), tmpislocal, tmpcoefs, QUAD(&rhs), tmpinds, &tmpnnz);
+      *success = ! removeZerosQuad(scip, SCIPsumepsilon(scip), tmpislocal, data->cutcoefs, QUAD(&data->cutrhs), data->cutinds, &data->ncutinds);
    }
-
-   SCIPdebugMsg(scip, "After post processing:\n");
-   SCIPdebug( printCutQuad(scip, sol, tmpcoefs, QUAD(rhs), tmpinds, tmpnnz, FALSE, FALSE) );
 
    if( *success )
    {
-      SCIP_Real mirefficacy = calcEfficacyDenseStorageQuad(scip, sol, tmpcoefs, QUAD_TO_DBL(rhs), tmpinds, tmpnnz);
+      SCIP_Real mirefficacy = calcEfficacyDenseStorageQuad(scip, sol, data->cutcoefs, QUAD_TO_DBL(data->cutrhs), data->cutinds, data->ncutinds);
 
       if( SCIPisEfficacious(scip, mirefficacy) && (cutefficacy == NULL || mirefficacy > *cutefficacy) )
       {
-         BMScopyMemoryArray(cutinds, tmpinds, tmpnnz);
-         *cutnnz = tmpnnz;
-         *cutrhs = QUAD_TO_DBL(rhs);
+         BMScopyMemoryArray(cutinds, data->cutinds, data->ncutinds);
+         *cutnnz = data->ncutinds;
+         *cutrhs = QUAD_TO_DBL(data->cutrhs);
          *cutislocal = tmpislocal;
 
          /* clean tmpcoefs and go back to double precision */
-         for( i = 0; i < *cutnnz; ++i )
+         for(int i = 0; i < *cutnnz; ++i )
          {
             SCIP_Real QUAD(coef);
             int j = cutinds[i];
 
-            QUAD_ARRAY_LOAD(coef, tmpcoefs, j);
+            QUAD_ARRAY_LOAD(coef, data->cutcoefs, j);
 
             cutcoefs[i] = QUAD_TO_DBL(coef);
             QUAD_ASSIGN(coef, 0.0);
-            QUAD_ARRAY_STORE(tmpcoefs, j, coef);
+            QUAD_ARRAY_STORE(data->cutcoefs, j, coef);
          }
 
          if( cutefficacy != NULL )
@@ -4154,17 +4898,16 @@ SCIP_RETCODE SCIPcalcMIR(
       SCIP_Real QUAD(tmp);
 
       QUAD_ASSIGN(tmp, 0.0);
-      for( i = 0; i < tmpnnz; ++i )
+      for(int i = 0; i < data->ncutinds; ++i )
       {
-         QUAD_ARRAY_STORE(tmpcoefs, tmpinds[i], tmp);
+         QUAD_ARRAY_STORE(data->cutcoefs, data->cutinds[i], tmp);
       }
    }
 
-   /* free temporary memory */
-   SCIPfreeCleanBufferArray(scip, &tmpcoefs);
-   SCIPfreeBufferArray(scip, &tmpinds);
    SCIPfreeBufferArray(scip, &boundtype);
    SCIPfreeBufferArray(scip, &varsign);
+
+   freeMIRData(scip, &data);
 
    return SCIP_OKAY;
 }
@@ -4315,7 +5058,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    *success = FALSE;
    nvars = SCIPgetNVars(scip);
-   firstcontvar = nvars - SCIPgetNContVars(scip);
+   firstcontvar = nvars - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
    vars = SCIPgetVars(scip);
 
    /* allocate temporary memory */
@@ -5342,7 +6085,7 @@ SCIP_RETCODE determineBoundForSNF(
       bestlb[varposinrow] = bestslb[varposinrow];
       bestlbtype[varposinrow] = bestslbtype[varposinrow];
 
-      if( !SCIPvarIsIntegral(var) )
+      if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
       {
          SCIP_Real bestvlb;
          int bestvlbidx;
@@ -5364,7 +6107,7 @@ SCIP_RETCODE determineBoundForSNF(
       bestub[varposinrow] = bestsub[varposinrow];
       bestubtype[varposinrow] = bestsubtype[varposinrow];
 
-      if( !SCIPvarIsIntegral(var) )
+      if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
       {
          SCIP_Real bestvub;
          int bestvubidx;
