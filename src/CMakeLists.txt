@@ -71,6 +71,8 @@ set(scipsources
     scip/cons_or.c
     scip/cons_orbisack.c
     scip/cons_orbitope.c
+    scip/cons_orbitope_full.c
+    scip/cons_orbitope_pp.c
     scip/cons_pseudoboolean.c
     scip/cons_quadratic.c
     scip/cons_setppc.c
@@ -546,6 +548,8 @@ set(scipheaders
     scip/cons_nonlinear.h
     scip/cons_orbisack.h
     scip/cons_orbitope.h
+    scip/cons_orbitope_full.h
+    scip/cons_orbitope_pp.h
     scip/cons_or.h
     scip/cons_pseudoboolean.h
     scip/cons_quadratic.h
@@ -1019,7 +1023,7 @@ set(scipheaders
 )
 
 set(symheaders
-  symmetry/build_sassy_graph.h
+  symmetry/build_dejavu_graph.h
   symmetry/compute_symmetry.h
   symmetry/struct_symmetry.h
   symmetry/type_symmetry.h
@@ -1140,7 +1144,7 @@ add_dependencies(libscip scip_update_githash)
 add_dependencies(scip scip_update_githash)
 
 set_target_properties(libscip PROPERTIES
-    VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUB}
+    VERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}
     SOVERSION ${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}
     INSTALL_RPATH_USE_LINK_PATH TRUE
     CXX_VISIBILITY_PRESET hidden

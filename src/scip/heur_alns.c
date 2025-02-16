@@ -1958,7 +1958,7 @@ SCIP_RETCODE setLimits(
    assert(solvelimits->nodelimit >= solvelimits->stallnodes);
 
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", solvelimits->nodelimit) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", solvelimits->stallnodes));
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", solvelimits->stallnodes) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", solvelimits->timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", solvelimits->memorylimit) );
 
@@ -2275,7 +2275,7 @@ SCIP_RETCODE setupSubScip(
       /* if the objective changed between the source and the target SCIP, encode the cutoff as a constraint */
       if( ! objchgd )
       {
-         SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
+         SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
          SCIPdebugMsg(scip, "Cutoff added as Objective Limit\n");
       }

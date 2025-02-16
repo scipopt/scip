@@ -35,38 +35,9 @@
 #include <bliss/defs.hh>
 #include <bliss/graph.hh>
 
-/* include sassy */
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wsign-compare"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-#endif
-
-#ifdef _MSC_VER
-# pragma warning(push)
-# pragma warning(disable: 4189)  // local variable is initialized but not referenced
-# pragma warning(disable: 4267)  // conversion of size_t to int (at sassy/preprocessor.h:2897)
-# pragma warning(disable: 4388)  // compare signed and unsigned expression
-# pragma warning(disable: 4456)  // shadowed variable
-# pragma warning(disable: 4430)  // missing type specifier
-#endif
-
-#include <sassy/preprocessor.h>
-#include <sassy/tools/bliss_converter.h>
-
-#ifdef __GNUC__
-#pragma GCC diagnostic warning "-Wunused-but-set-variable"
-#pragma GCC diagnostic warning "-Wsign-compare"
-#pragma GCC diagnostic warning "-Wunused-variable"
-#pragma GCC diagnostic warning "-Wshadow"
-#endif
-
-#ifdef _MSC_VER
-# pragma warning(pop)
-#endif
-
-#include "build_sassy_graph.h"
+/* include sassy (as part of dejavu) */
+#include "build_dejavu_graph.h"
+#include <dejavu/tools/bliss_converter.h>
 
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
@@ -221,7 +192,7 @@ static
 SCIP_RETCODE computeAutomorphisms(
    SCIP*                 scip,               /**< SCIP pointer */
    SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be computed */
-   sassy::static_graph*  G,                  /**< pointer to graph for that automorphisms are computed */
+   dejavu::static_graph* G,                  /**< pointer to graph for that automorphisms are computed */
    int                   nsymvars,           /**< number of variables encoded in graph */
    int                   maxgenerators,      /**< maximum number of generators to be constructed (=0 if unlimited) */
    int***                perms,              /**< pointer to store generators as (nperms x npermvars) matrix */
@@ -265,15 +236,10 @@ SCIP_RETCODE computeAutomorphisms(
    oldtime = SCIPgetSolvingTime(scip);
 
    /* set up sassy preprocessor */
-   sassy::preprocessor sassy;
-
-   /* turn off some preprocessing that generates redudant permutations */
-   sassy::configstruct sconfig;
-   sconfig.CONFIG_PREP_DEACT_PROBE = true;
-   sassy.configure(&sconfig);
+   dejavu::preprocessor sassy;
 
    /* lambda function to have access to data and pass it to sassyhook above */
-   sassy::sassy_hook sassyglue = [&](int n, const int* p, int nsupp, const int* suppa) {
+   dejavu_hook sassyglue = [&](int n, const int* p, int nsupp, const int* suppa) {
       sassyhook((void*)&data, n, p, nsupp, suppa);
    };
 
@@ -284,7 +250,7 @@ SCIP_RETCODE computeAutomorphisms(
    bliss::Graph blissgraph(0);
 
    /* convert sassy to bliss graph */
-   convert_sassy_to_bliss(G, &blissgraph);
+   convert_dejavu_to_bliss(G, &blissgraph);
 
 #ifdef SCIP_OUTPUT
    blissgraph.write_dot("debug.dot");
@@ -335,7 +301,7 @@ SCIP_RETCODE computeAutomorphisms(
 #endif
 
    /* start search */
-   blissgraph.find_automorphisms(stats, sassy::preprocessor::bliss_hook, (void*) &sassy);
+   blissgraph.find_automorphisms(stats, dejavu::preprocessor::bliss_hook, (void*) &sassy);
 #endif
    *symcodetime = SCIPgetSolvingTime(scip) - oldtime;
 
@@ -397,9 +363,14 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    *symcodetime = 0.0;
 
    /* create sassy graph */
-   sassy::static_graph sassygraph;
+   dejavu::static_graph sassygraph;
 
-   SCIP_CALL( SYMbuildSassyGraph(scip, &sassygraph, graph, &success) );
+   SCIP_CALL( SYMbuildDejavuGraph(scip, &sassygraph, graph, &success) );
+
+#ifdef WRITE_GRAPH
+   std::string filename = std::string(SCIPgetProbName(scip)) + std::string(".dimacs");
+   sassygraph.dump_dimacs(filename);
+#endif
 
    /* compute symmetries */
    SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(graph), &sassygraph, SCIPgetSymgraphNVars(graph),
@@ -426,9 +397,9 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    SCIP_Bool success;
 
    /* create sassy graph */
-   sassy::static_graph sassygraph;
+   dejavu::static_graph sassygraph;
 
-   SCIP_CALL( SYMbuildSassyGraphCheck(scip, &sassygraph, G1, G2, &nnodes, &nnodesfromG1, &success) );
+   SCIP_CALL( SYMbuildDejavuGraphCheck(scip, &sassygraph, G1, G2, &nnodes, &nnodesfromG1, &success) );
 
    if ( ! success )
       return FALSE;

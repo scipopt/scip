@@ -78,6 +78,13 @@ enum SCIP_BendersSubType
 };
 typedef enum SCIP_BendersSubType SCIP_BENDERSSUBTYPE;
 
+enum SCIP_BendersObjectiveType
+{
+   SCIP_BENDERSOBJTYPE_SUM    = 0,           /**< the individual subproblem objectives are summed in the master problem */
+   SCIP_BENDERSOBJTYPE_MAX    = 1,           /**< the minimum of the maximum subproblem objectives is computed in the master problem */
+};
+typedef enum SCIP_BendersObjectiveType SCIP_BENDERSOBJTYPE;
+
 typedef struct SCIP_Benders SCIP_BENDERS;           /**< Benders' decomposition data */
 typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined Benders' decomposition data */
 typedef struct SCIP_SubproblemSolveStat SCIP_SUBPROBLEMSOLVESTAT; /**< the solving statistics of the subproblems */

@@ -564,8 +564,8 @@ SCIP_RETCODE applyOrbitalReductionPart(
          continue;
 
       /* get upper and lower bounds in orbit */
-      orbitlb = -INFINITY;
-      orbitub = INFINITY;
+      orbitlb = -SCIPinfinity(scip);
+      orbitub = SCIPinfinity(scip);
       for (i = orbitbegin; i < orbitend; ++i)
       {
          varid = varorbitidssort[i];

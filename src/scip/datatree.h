@@ -53,13 +53,13 @@ SCIP_RETCODE SCIPdatatreeCreate(
    SCIP_DATATREE**       datatree,           /**< buffer to store pointer to created data tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   capacity            /**< initial capacity */
-);
+   );
 
 /** frees a SCIP_DATATREE object */
 void SCIPdatatreeFree(
    SCIP_DATATREE**       datatree,           /**< pointer to datatree to free */
    BMS_BLKMEM*           blkmem              /**< block memory */
-);
+   );
 
 /** inserts a SCIP_Bool value into a SCIP_DATATREE object */
 SCIP_RETCODE SCIPdatatreeInsertBool(
@@ -68,7 +68,7 @@ SCIP_RETCODE SCIPdatatreeInsertBool(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of entry */
    SCIP_Bool             value               /**< value of entry */
-);
+   );
 
 /** inserts a long value into a SCIP_DATATREE object */
 SCIP_RETCODE SCIPdatatreeInsertLong(
@@ -77,7 +77,7 @@ SCIP_RETCODE SCIPdatatreeInsertLong(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of entry */
    SCIP_Longint          value               /**< value of entry */
-);
+   );
 
 /** inserts a SCIP_Real value into a SCIP_DATATREE object */
 SCIP_RETCODE SCIPdatatreeInsertReal(
@@ -86,7 +86,7 @@ SCIP_RETCODE SCIPdatatreeInsertReal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of entry */
    SCIP_Real             value               /**< value of entry */
-);
+   );
 
 /** inserts a string value into a SCIP_DATATREE object */
 SCIP_RETCODE SCIPdatatreeInsertString(
@@ -95,7 +95,7 @@ SCIP_RETCODE SCIPdatatreeInsertString(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of entry */
    const char*           value               /**< value of entry */
-);
+   );
 
 /** inserts a SCIP_Bool array into a SCIP_DATATREE object */
 SCIP_RETCODE SCIPdatatreeInsertBoolArray(
@@ -105,7 +105,7 @@ SCIP_RETCODE SCIPdatatreeInsertBoolArray(
    const char*           name,               /**< name of entry */
    const SCIP_Bool*      values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-);
+   );
 
 /** inserts a SCIP_Real array into a SCIP_DATATREE object */
 SCIP_RETCODE SCIPdatatreeInsertRealArray(
@@ -115,7 +115,7 @@ SCIP_RETCODE SCIPdatatreeInsertRealArray(
    const char*           name,               /**< name of entry */
    const SCIP_Real*      values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-);
+   );
 
 /** inserts a SCIP_Longint array into a SCIP_DATATREE object */
 SCIP_RETCODE SCIPdatatreeInsertLongArray(
@@ -125,7 +125,7 @@ SCIP_RETCODE SCIPdatatreeInsertLongArray(
    const char*           name,               /**< name of entry */
    const SCIP_Longint*   values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-);
+   );
 
 /** inserts a string array into a SCIP_DATATREE object */
 SCIP_RETCODE SCIPdatatreeInsertStringArray(
@@ -135,7 +135,7 @@ SCIP_RETCODE SCIPdatatreeInsertStringArray(
    const char*           name,               /**< name of entry */
    const char* const*    values,             /**< values of entry */
    int                   nvalues             /**< number of values */
-);
+   );
 
 /** inserts a store value into a SCIP_DATATREE object */
 SCIP_RETCODE SCIPdatatreeInsertTree(
@@ -144,14 +144,14 @@ SCIP_RETCODE SCIPdatatreeInsertTree(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const char*           name,               /**< name of entry */
    SCIP_DATATREE*        value               /**< value of entry */
-);
+   );
 
 /** writes a SCIP_DATATREE object as JSON to file */
 SCIP_RETCODE SCIPdatatreeWriteJson(
    SCIP_DATATREE*        datatree,           /**< data tree */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< file to write to, or NULL for stdout */
-);
+   );
 
 #ifdef __cplusplus
 }

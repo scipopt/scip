@@ -2327,7 +2327,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                SCIP_Bool success;
                success = FALSE;
 
-               SCIP_CALL( solveSubMIP(scip, heur, covervars, ncovervars, &success));
+               SCIP_CALL( solveSubMIP(scip, heur, covervars, ncovervars, &success) );
                if( success )
                   *result = SCIP_FOUNDSOL;
                backtracked = TRUE; /* to avoid backtracking */

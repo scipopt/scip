@@ -1091,7 +1091,7 @@ SCIP_RETCODE enforceSOS2(
 
       /* do nothing if there are not enough variables - this is usually eliminated by preprocessing */
       if ( nvars <= 2 )
-         return SCIP_OKAY;
+         continue;
 
       ngen = 0;
 
@@ -2618,6 +2618,16 @@ SCIP_RETCODE SCIPcreateConsSOS2(
       return SCIP_PLUGINNOTFOUND;
    }
 
+#ifndef NDEBUG
+   /* Check that the weights are sensible (not nan or inf); although not strictly needed, such values are likely a mistake. */
+   if ( nvars > 0 && weights != NULL )
+   {
+      int v;
+      for (v = 0; v < nvars; ++v)
+         assert( SCIPisFinite(weights[v]) );
+   }
+#endif
+
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
    consdata->vars = NULL;
@@ -2684,6 +2694,8 @@ SCIP_RETCODE SCIPaddVarSOS2(
    assert( scip != NULL );
    assert( var != NULL );
    assert( cons != NULL );
+   /* Check weight is sensible (not nan or inf); although not strictly needed, such values are likely a mistake. */
+   assert( SCIPisFinite(weight) );
 
    SCIPdebugMsg(scip, "adding variable <%s> to constraint <%s> with weight %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), weight);
 

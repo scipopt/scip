@@ -31,7 +31,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "build_sassy_graph.h"
 #include "compute_symmetry.h"
 
 /* the following determines whether nauty or traces is used: */
@@ -44,41 +43,30 @@
 #include "nauty/traces.h"
 #endif
 
-/* include sassy */
+/* include sassy (as part of dejavu) */
+#include "build_dejavu_graph.h"
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wshadow"
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wsign-compare"
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #endif
 
 #ifdef _MSC_VER
 # pragma warning(push)
-# pragma warning(disable: 4189)  // local variable is initialized but not referenced
-# pragma warning(disable: 4388)  // compare signed and unsigned expression
 # pragma warning(disable: 4456)  // shadowed variable
-# pragma warning(disable: 4430)  // missing type specifier
 #endif
 
-#include <sassy/preprocessor.h>
 #ifdef NAUTY
-#include "sassy/tools/nauty_converter.h"
+#include "dejavu/tools/nauty_converter.h"
 #else
-#include "sassy/tools/traces_converter.h"
+#include "dejavu/tools/traces_converter.h"
 #endif
 
 #ifdef __GNUC__
-#pragma GCC diagnostic warning "-Wunused-but-set-variable"
-#pragma GCC diagnostic warning "-Wsign-compare"
-#pragma GCC diagnostic warning "-Wunused-variable"
 #pragma GCC diagnostic warning "-Wshadow"
 #endif
 
 #ifdef _MSC_VER
 # pragma warning(pop)
 #endif
-
-#include "build_sassy_graph.h"
 
 #include "scip/expr_var.h"
 #include "scip/expr_sum.h"
@@ -304,7 +292,7 @@ static
 SCIP_RETCODE computeAutomorphisms(
    SCIP*                 scip,               /**< SCIP pointer */
    SYM_SYMTYPE           symtype,            /**< type of symmetries that need to be computed */
-   sassy::static_graph*  G,                  /**< pointer to graph for that automorphisms are computed */
+   dejavu::static_graph* G,                  /**< pointer to graph for that automorphisms are computed */
    int                   nsymvars,           /**< number of variables encoded in graph */
    int                   maxgenerators,      /**< maximum number of generators to be constructed (=0 if unlimited) */
    int***                perms,              /**< pointer to store generators as (nperms x npermvars) matrix */
@@ -357,15 +345,10 @@ SCIP_RETCODE computeAutomorphisms(
    oldtime = SCIPgetSolvingTime(scip);
 
    /* set up sassy preprocessor */
-   sassy::preprocessor sassy;
-
-   /* turn off some preprocessing that generates redudant permutations */
-   sassy::configstruct sconfig;
-   sconfig.CONFIG_PREP_DEACT_PROBE = true;
-   sassy.configure(&sconfig);
+   dejavu::preprocessor sassy;
 
    /* lambda function to have access to data and pass it to sassyhook above */
-   sassy::sassy_hook sassyglue = [&](int n, const int* p, int nsupp, const int* suppa) {
+   dejavu_hook sassyglue = [&](int n, const int* p, int nsupp, const int* suppa) {
       sassyhook((void*)&data, n, p, nsupp, suppa);
    };
 
@@ -378,14 +361,14 @@ SCIP_RETCODE computeAutomorphisms(
    DYNALLSTAT(int, ptn, ptn_sz);
 
 #ifdef NAUTY
-   convert_sassy_to_nauty(G, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
+   convert_dejavu_to_nauty(G, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
    statsblk stats;
    DYNALLSTAT(int, orbits, orbits_sz);
    DYNALLOC1(int, orbits, orbits_sz, sg.nv, "malloc");
    DEFAULTOPTIONS_SPARSEGRAPH(options);
    /* init callback functions for nauty (accumulate the group generators found by nauty) */
    options.writeautoms = FALSE;
-   options.userautomproc = sassy::preprocessor::nauty_hook;
+   options.userautomproc = dejavu::preprocessor::nauty_hook;
    options.defaultptn = FALSE; /* use color classes */
    if ( canterminateearly )
       options.usernodeproc = nautyterminationhook;
@@ -395,14 +378,14 @@ SCIP_RETCODE computeAutomorphisms(
       *log10groupsize = (SCIP_Real) stats.grpsize2;
    }
 #else
-   convert_sassy_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
+   convert_dejavu_to_traces(&sassygraph, &sg, &lab, &lab_sz, &ptn, &ptn_sz);
    TracesStats stats;
    DYNALLSTAT(int, orbits, orbits_sz);
    DYNALLOC1(int, orbits, orbits_sz, sg.nv, "malloc");
    DEFAULTOPTIONS_TRACES(options);
    /* init callback functions for traces (accumulate the group generators found by traces) */
    options.writeautoms = FALSE;
-   options.userautomproc = sassy::preprocessor::traces_hook;
+   options.userautomproc = dejavu::preprocessor::traces_hook;
    options.defaultptn = FALSE; /* use color classes */
    if(sg.nv > 0) {
       Traces(&sg, lab, ptn, orbits, &options, &stats, NULL);
@@ -467,9 +450,9 @@ SCIP_RETCODE SYMcomputeSymmetryGenerators(
    *symcodetime = 0.0;
 
    /* create sassy graph */
-   sassy::static_graph sassygraph;
+   dejavu::static_graph sassygraph;
 
-   SCIP_CALL( SYMbuildSassyGraph(scip, &sassygraph, symgraph, &success) );
+   SCIP_CALL( SYMbuildDejavuGraph(scip, &sassygraph, symgraph, &success) );
 
    /* compute symmetries */
    SCIP_CALL( computeAutomorphisms(scip, SCIPgetSymgraphSymtype(symgraph), &sassygraph, SCIPgetSymgraphNVars(symgraph),
@@ -496,9 +479,9 @@ SCIP_Bool SYMcheckGraphsAreIdentical(
    SCIP_Bool success;
 
    /* create sassy graph */
-   sassy::static_graph sassygraph;
+   dejavu::static_graph sassygraph;
 
-   SCIP_CALL( SYMbuildSassyGraphCheck(scip, &sassygraph, G1, G2, &nnodes, &nnodesfromG1, &success) );
+   SCIP_CALL( SYMbuildDejavuGraphCheck(scip, &sassygraph, G1, G2, &nnodes, &nnodesfromG1, &success) );
 
    if ( ! success )
       return FALSE;

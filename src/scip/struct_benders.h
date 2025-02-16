@@ -116,7 +116,17 @@ struct SCIP_Benders
 
    /* the subproblem information */
    SCIP**                subproblems;        /**< the Benders' decomposition subproblems */
+   SCIP_VAR*             masterauxvar;       /**< the master auxiliary variable to control the objective type */
    SCIP_VAR**            auxiliaryvars;      /**< the auxiliary variables for the Benders' optimality cuts */
+   SCIP_CONS**           auxiliaryvarcons;   /**< the constraint(s) for the auxiliary variable objective.
+                                              *   For the sum objective, this is a single constraint.
+                                              *   For the max objective, there is a constraint per subproblem.
+                                              */
+   SCIP_VAR***           submastervars;      /**< the master problem variables that are used in the subproblem */
+   int*                  submastervarssize;  /**< the size of the master problem variables array for each subproblem */
+   int*                  nsubmastervars;     /**< the number of master problem variables for each subproblem */
+   int*                  nsubmasterbinvars;  /**< the number of binary master problem variables in each subproblem */
+   int*                  nsubmasterintvars;  /**< the number of integer master problem variables in each subproblem */
    SCIP_PQUEUE*          subprobqueue;       /**< the priority queue for the subproblems */
    SCIP_SUBPROBLEMSOLVESTAT** solvestat;     /**< storing the solving statistics of all the subproblems */
    SCIP_Real*            subprobobjval;      /**< the objective value of the subproblem in the current iteration */
@@ -141,6 +151,7 @@ struct SCIP_Benders
    int                   nactivesubprobs;    /**< the number of active subproblems */
    SCIP_Bool             freesubprobs;       /**< do the subproblems need to be freed by the Benders' decomposition core? */
    SCIP_Bool             masterisnonlinear;  /**< flag to indicate whether the master problem contains non-linear constraints */
+   SCIP_BENDERSOBJTYPE   objectivetype;      /**< the objective type for the aggregation of the subproblems. */
 
    /* cut strengthening details */
    SCIP_SOL*             corepoint;          /**< the point that is separated for stabilisation */

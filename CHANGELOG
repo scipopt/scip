@@ -9,6 +9,7 @@ Features
 - added new fields in history to store ancestral pseudo cost updates, used in the pseudo costs branching rule to compute discounted pseudo costs.
 - copy variable data pointer if no copy routine was supplied.
 - added more techniques to handle reflection symmetries, in particular, for orbitopes with column reflections and matrices whose rows and columns can be permuted by a symmetry
+- Dejavu can be used to compute symmetries; the source code is shipped with SCIP and incorporates sassy.
 - implemented symmetry detection callbacks for cons_disjunction and cons_superindicator
 - detailed information about applied symmetry handling techniques can be printed to the terminal
 - added a new separator sepa_multilinear to generate flower cuts from AND constraints nonlinear product expressions.
@@ -19,6 +20,11 @@ Features
 - added a new data structure SCIP_DATATREE that holds serializable data and a method to export to a JSON file
 - added ability to collect statistics from tables in a SCIP_DATATREE and write out as JSON file;
   dialog write statistics now writes a JSON file if name of file to write ends with .json
+- improve memory usage by introducing different constraint handlers for full orbitopes and packing/partitioning orbitopes
+- the linking master variables for each Benders' decomposition subproblem are now stored. These can be accessed for the
+  generation of cut and setting up the subproblems.
+- adds objective types for Benders' decomposition; the choice is to sum the subproblems objectives (classical
+  approach) or to use the maximum of the subproblems objectives
 
 Performance improvements
 ------------------------
@@ -46,6 +52,8 @@ Interface changes
 - intvar removed from arguments for SCIPcreateConsPseudobooleanWithConss(), SCIPcreateConsPseudoboolean(), and SCIPcreateConsBasicPseudoboolean() due to dysfunctionality of non-linear objective reformulation with pseudoboolean constraint
 - ndelconss added to arguments for SCIPcleanupConssLinear() and SCIPcleanupConssKnapsack() to directly delete empty redundant constraints before creating problem matrix
 - copyiisfinders added to arguments for SCIPcopyPlugins() (16th position)
+- SCIPcreateConsOrbitope() deleted two arguments and changed position of another argument
+- deprecated SCIPsubversion(), will be removed
 
 ### New API functions
 
@@ -70,11 +78,20 @@ Interface changes
 - SCIPcollect*Statistics() for every SCIPprint*Statistics() in scip_solvingstats.h
 - SCIPprintStatisticsJson() to output a JSON string of the table statistics data
 - SCIPstatusName() to get a string representation of SCIP_STATUS
+- SCIPbendersGetSubproblemMasterVars(), SCIPbendersGetNSubproblemMasterVars(), SCIPbendersGetSubproblemMasterVarsData()
+  are available to get the linking master variables for each subproblem and details about the number of binary and integer.
+- SCIPsetBendersObjectiveType() for setting the objective type for the aggregation of the Benders' decompostion
+  subproblems
+- SCIPbendersGetObjectiveType() for returning the objective type for the aggregation of the Benders' decomposition
+  subproblems
+- SCIPbenderGetMasterAuxiliaryVar() returns the master auxiliary variable
 
 ### Changes in preprocessor macros
 
 - removed `#define` of `strcasecmp` and `strncasecmp` (in case of Windows builds) in scip/def.h;
   use SCIPstr(n)casecmp() (scip/pub_misc.h) instead
+- SCIPincludeConshdlrOrbitopePP(), SCIPcreateConsOrbitopePP(), SCIPcreateConsBasicOrbitopePP(), SCIPincludeConshdlrOrbitopeFull(), SCIPcreateConsOrbitopeFull(), SCIPcreateConsBasicOrbitopeFull()
+- SCIP_VERSION_SUB and SCIP_SUBVERSION are deprecated
 
 ### Command line interface
 
@@ -90,6 +107,7 @@ Interface changes
 ### Changed parameters
 
 - heuristics/scheduler/heurtimelimit removed to avoid indeterministic behavior of scheduler heuristic, uses main time limit instead
+- removed parameters "constraints/orbitope/checkpporbitope", "constraints/orbitope/sepafullorbitope", "constraints/orbitope/forceconscopy", which became superfluous
 
 ### New parameters
 
@@ -101,6 +119,7 @@ Interface changes
 - new parameter "presolving/implint/columnrowratio" indicates the ratio of rows/columns where the row-wise network matrix detection algorithm is used instead of the column-wise network matrix detection algorithm
 - new parameter "presolving/implint/numericslimit" determines the limit for absolute integral coefficients beyond which the corresponding rows and variables are excluded from implied integer detection
 - iis/minimal, iis/nodes, iis/removedbounds, iis/removeunusedvars, iis/silent, iis/stopafterone, iis/time, iis/greedy/additive, iis/greedy/conservative, iis/greedy/delafteradd, iis/greedy/dynamicreordering, iis/greedy/maxbatchsize, iis/greedy/maxrelbatchsize, iis/greedy/nodelimperiter, iis/greedy/priority, iis/greedy/timelimperiter
+- new parameters "constraints/orbitope_full/forceconscopy" and "constraints/orbitope_pp/forceconscopy" to control whether non-model constraints of type full orbitope and packing/partitioning orbitope are copied to sub-SCIPs, respectively
 
 ### Data structures
 
@@ -135,9 +154,11 @@ Fixed bugs
 
 Miscellaneous
 -------------
+- We now use sassy as shipped with dejavu.
 
 - add objective offset instead of objective offset variable in cip reader
 - updated ampl/mp to v4.0.0
+- removed 4th number in SCIP version; new format is major.minor.patch
 
 Known bugs
 ----------
@@ -217,6 +238,7 @@ Fixed bugs
 - added copy callbacks for presolvers dualagg and redvub, branching rules lookahead and cloud, primal heuristics dualval and repair, propagator nlobbt, and separators gauge and convexproj
 - respect maximal separation rounds setting by running remaining delayed separators in last round
 - replace terms consistently in applyFixings() of cons_linear to handle infinite aggregations
+- fixed bug with SOS2 constraints of size that avoided a correct enforcing
 
 Build system
 ------------
@@ -247,6 +269,7 @@ Features
   note that if the concurrent solve is stopped due to a gap limit, the "winner" solver will have an interrupted solution status and
   its primal and dual bounds may not be the best possible ones (use SCIPgetConcurrentPrimalbound() and SCIPgetConcurrentDualbound() instead)
 - parse pseudoboolean constraint from CIP format (and add linear-"and"-reformulation)
+
 
 Performance improvements
 ------------------------
@@ -429,7 +452,7 @@ Interface changes
 
 Build system
 ------------
-
+- new option SYM=dejavu to choose Dejavu for computing symmetries
 - changed the default symmetry computation package from sassy+bliss to sassy+nauty
 - bliss source is no longer included in the source tree, but can be linked as external library (https://github.com/ds4dm/Bliss)
 - cmake now automatically downloads and installs the latest release version of SoPlex from GitHub if it is not found directly

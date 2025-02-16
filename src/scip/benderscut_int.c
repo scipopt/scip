@@ -73,6 +73,8 @@ struct SCIP_BenderscutData
    SCIP_Bool             addcuts;            /**< should cuts be generated instead of constraints */
    SCIP_Bool*            firstcut;           /**< flag to indicate that the first cut needs to be generated. */
    int                   nsubproblems;       /**< the number of subproblems for the Benders' decomposition */
+   SCIP_Bool             subprobsvalid;      /**< is it valid to apply integer cuts for this problem */
+   SCIP_Bool             created;            /**< has the Benders cut data been created */
 };
 
 /** method to call, when the priority of a Benders' decomposition was changed */
@@ -99,20 +101,36 @@ SCIP_RETCODE createBenderscutData(
    SCIP_BENDERSCUTDATA*  benderscutdata      /**< the Benders' cut data */
    )
 {
+   int nmastervars;
+   int nmasterbinvars;
    int i;
 
    assert(scip != NULL);
    assert(benderscutdata != NULL);
 
+   benderscutdata->nsubproblems = SCIPbendersGetNSubproblems(benderscutdata->benders);
+   benderscutdata->subprobsvalid = TRUE;
+
    /* allocating the memory for the subproblem constants */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &benderscutdata->subprobconstant, benderscutdata->nsubproblems) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &benderscutdata->firstcut, benderscutdata->nsubproblems) );
+
 
    for( i = 0; i < benderscutdata->nsubproblems; i++ )
    {
       benderscutdata->subprobconstant[i] = benderscutdata->cutconstant;
       benderscutdata->firstcut[i] = TRUE;
+
+      /* it is only possible to generate the no-good cut for subproblems that only include binary master variables */
+      SCIPbendersGetSubproblemMasterVarsData(benderscutdata->benders, i, NULL, &nmastervars, &nmasterbinvars, NULL);
+
+      if( nmastervars != nmasterbinvars )
+      {
+         benderscutdata->subprobsvalid = FALSE;
+      }
    }
+
+   benderscutdata->created = TRUE;
 
    return SCIP_OKAY;
 }
@@ -524,25 +542,6 @@ SCIP_DECL_BENDERSCUTFREE(benderscutFreeInt)
 }
 
 
-/** initialization method of Benders' decomposition cuts (called after problem was transformed) */
-static
-SCIP_DECL_BENDERSCUTINIT(benderscutInitInt)
-{  /*lint --e{715}*/
-   SCIP_BENDERSCUTDATA* benderscutdata;
-
-   assert( benderscut != NULL );
-   assert( strcmp(SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME) == 0 );
-
-   /* free Benders' cut data */
-   benderscutdata = SCIPbenderscutGetData(benderscut);
-   assert( benderscutdata != NULL );
-
-   benderscutdata->nsubproblems = SCIPbendersGetNSubproblems(benderscutdata->benders);
-   SCIP_CALL( createBenderscutData(scip, benderscutdata) );
-
-   return SCIP_OKAY;
-}
-
 /** deinitialization method of Benders' decomposition cuts (called before transformed problem is freed) */
 static
 SCIP_DECL_BENDERSCUTEXIT(benderscutExitInt)
@@ -556,8 +555,11 @@ SCIP_DECL_BENDERSCUTEXIT(benderscutExitInt)
    benderscutdata = SCIPbenderscutGetData(benderscut);
    assert( benderscutdata != NULL );
 
-   SCIPfreeBlockMemoryArray(scip, &benderscutdata->firstcut, benderscutdata->nsubproblems);
-   SCIPfreeBlockMemoryArray(scip, &benderscutdata->subprobconstant, benderscutdata->nsubproblems);
+   if( benderscutdata->firstcut != NULL )
+      SCIPfreeBlockMemoryArray(scip, &benderscutdata->firstcut, benderscutdata->nsubproblems);
+
+   if( benderscutdata->subprobconstant != NULL)
+      SCIPfreeBlockMemoryArray(scip, &benderscutdata->subprobconstant, benderscutdata->nsubproblems);
 
    return SCIP_OKAY;
 }
@@ -567,6 +569,7 @@ static
 SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
 {  /*lint --e{715}*/
    SCIP* subproblem;
+   SCIP_BENDERSCUTDATA* benderscutdata;
 
    assert(scip != NULL);
    assert(benders != NULL);
@@ -584,13 +587,21 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecInt)
       return SCIP_OKAY;
    }
 
-   /* it is only possible to generate the Laporte and Louveaux cuts for pure binary master problems */
-   if( SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders))
-      && (!SCIPbendersMasterIsNonlinear(benders)
-         || SCIPgetNBinVars(scip) != (SCIPgetNVars(scip) - SCIPbendersGetNSubproblems(benders) - 1)) )
+   /* retrieving the Benders' cut data */
+   benderscutdata = SCIPbenderscutGetData(benderscut);
+   assert(benderscutdata != NULL);
+
+   /* if the Benders' cut data has not been created, then it is created now */
+   if( !benderscutdata->created )
    {
-      SCIPinfoMessage(scip, NULL, "The integer optimality cuts can only be applied to problems with a "
-         "pure binary master problem. The integer optimality cuts will be disabled.\n");
+      SCIP_CALL( createBenderscutData(scip, benderscutdata) );
+   }
+
+   /* it is only possible to generate the Laporte and Louveaux cuts when the linking variables are all binary */
+   if( !benderscutdata->subprobsvalid )
+   {
+      SCIPinfoMessage(scip, NULL, "The integer optimality cuts can only be applied to problems "
+         "where all linking variables are binary. The integer optimality cuts will be disabled.\n");
 
       SCIPbenderscutSetEnabled(benderscut, FALSE);
 
@@ -627,6 +638,7 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
 
    /* create int Benders' decomposition cuts data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &benderscutdata) );
+   BMSclearMemory(benderscutdata);
    benderscutdata->benders = benders;
 
    benderscut = NULL;
@@ -639,7 +651,6 @@ SCIP_RETCODE SCIPincludeBenderscutInt(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetBenderscutFree(scip, benderscut, benderscutFreeInt) );
-   SCIP_CALL( SCIPsetBenderscutInit(scip, benderscut, benderscutInitInt) );
    SCIP_CALL( SCIPsetBenderscutExit(scip, benderscut, benderscutExitInt) );
 
    /* add int Benders' decomposition cuts parameters */

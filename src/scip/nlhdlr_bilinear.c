@@ -1739,48 +1739,46 @@ SCIP_RETCODE SCIPaddIneqBilinear(
       }
    }
 
+   /* compute violations of existing inequalities */
+   for( i = 0; i < nineqs; ++i )
    {
-      SCIP_Real viols1[2] = {0.0, 0.0};
-      SCIP_Real viols2[2] = {0.0, 0.0};
+      SCIP_Real ineqviol1;
+      SCIP_Real ineqviol2;
 
-      /* compute violations of existing inequalities */
-      for( i = 0; i < nineqs; ++i )
+      getIneqViol(x, y, ineqs[3*i], ineqs[3*i+1], ineqs[3*i+2], &ineqviol1, &ineqviol2);
+
+      /* check whether an existing inequality is dominating the candidate */
+      if( SCIPisGE(scip, ineqviol1, viol1) && SCIPisGE(scip, ineqviol2, viol2) )
       {
-         getIneqViol(x, y, ineqs[3*i], ineqs[3*i+1], ineqs[3*i+2], &viols1[i], &viols2[i]); /*lint !e661*/
-
-         /* check whether an existing inequality is dominating the candidate */
-         if( SCIPisGE(scip, viols1[i], viol1) && SCIPisGE(scip, viols2[i], viol2) ) /*lint !e661*/
-         {
-            SCIPdebugMsg(scip, "inequality is dominated by %d -> skip\n", i);
-            return SCIP_OKAY;
-         }
-
-         /* replace inequality if candidate is dominating it */
-         if( SCIPisLT(scip, viols1[i], viol1) && SCIPisLT(scip, viols2[i], viol2) ) /*lint !e661*/
-         {
-            SCIPdebugMsg(scip, "inequality dominates %d -> replace\n", i);
-            ineqs[3*i] = xcoef; /*lint !e661*/
-            ineqs[3*i+1] = ycoef; /*lint !e661*/
-            ineqs[3*i+2] = constant; /*lint !e661*/
-            *success = TRUE;
-         }
+         SCIPdebugMsg(scip, "inequality is dominated by %d -> skip\n", i);
+         return SCIP_OKAY;
       }
 
-      /* inequality is not dominated by other inequalities -> add if we have less than 2 inequalities */
-      if( nineqs < 2 )
+      /* replace inequality if candidate is dominating it */
+      if( SCIPisLT(scip, ineqviol1, viol1) && SCIPisLT(scip, ineqviol2, viol2) )
       {
-         ineqs[3*nineqs] = xcoef;
-         ineqs[3*nineqs + 1] = ycoef;
-         ineqs[3*nineqs + 2] = constant;
+         SCIPdebugMsg(scip, "inequality dominates %d -> replace\n", i);
+         ineqs[3*i] = xcoef; /*lint !e661*/
+         ineqs[3*i+1] = ycoef; /*lint !e661*/
+         ineqs[3*i+2] = constant; /*lint !e661*/
          *success = TRUE;
-         SCIPdebugMsg(scip, "add inequality\n");
-
-         /* increase number of inequalities */
-         if( underestimate )
-            ++(nlhdlrexprdata->nunderineqs);
-         else
-            ++(nlhdlrexprdata->noverineqs);
       }
+   }
+
+   /* inequality is not dominated by other inequalities -> add if we have less than 2 inequalities */
+   if( nineqs < 2 )
+   {
+      ineqs[3*nineqs] = xcoef;
+      ineqs[3*nineqs + 1] = ycoef;
+      ineqs[3*nineqs + 2] = constant;
+      *success = TRUE;
+      SCIPdebugMsg(scip, "add inequality\n");
+
+      /* increase number of inequalities */
+      if( underestimate )
+         ++(nlhdlrexprdata->nunderineqs);
+      else
+         ++(nlhdlrexprdata->noverineqs);
    }
 
    if( *success )

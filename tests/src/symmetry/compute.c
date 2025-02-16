@@ -55,6 +55,23 @@ void checkIntArraysEqual(
       cr_expect(expected[i] == candidate[i], "%s[%d]: expected %d, but got %d\n", name, i, expected[i], candidate[i]);
 }
 
+/** sort orbits to compare */
+static
+void sortOrbits(
+   int                   norbits,            /**< number of orbits */
+   int*                  orbits,             /**< array that stores the orbits */
+   int*                  orbitbegins         /**< array that marks the beginning of the orbits */
+   )
+{
+   int i;
+
+   for (i = 0; i < norbits; ++i)
+   {
+      SCIPsortInt(&orbits[orbitbegins[i]], orbitbegins[i+1] - orbitbegins[i]);
+   }
+
+}
+
 /** setup: create SCIP */
 static
 void setup(void)
@@ -171,10 +188,10 @@ void simpleExample1(
    SCIP_CALL( SCIPgetSymmetry(scip,
          &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
-   cr_assert( nperms == 3 );
+
    cr_assert( ncomponents == 1 );
    cr_assert( componentbegins[0] == 0 );
-   cr_assert( componentbegins[1] == 3 );
+   cr_assert( componentbegins[1] == nperms );
    cr_assert( vartocomponent[0] == 0 );
    cr_assert( vartocomponent[1] == 0 );
    cr_assert( vartocomponent[2] == 0 );
@@ -185,9 +202,12 @@ void simpleExample1(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
+
    if ( detectsignedperms )
    {
-      printf("norbits: %d\n\n", norbits);
       cr_assert( norbits == 2 );
       cr_assert( orbitbegins[0] == 0 );
       cr_assert( orbitbegins[1] == 4 );
@@ -343,6 +363,10 @@ void simpleExample2(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
+
    if ( detectsignedperms )
    {
       cr_assert( norbits == 4 );
@@ -491,6 +515,10 @@ void simpleExample3(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
+
    if ( detectsignedperms )
    {
       cr_assert( norbits == 4 );
@@ -658,6 +686,10 @@ void exampleBounddisjunction(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
+
    if ( detectsignedperms )
    {
       cr_assert( norbits == 2 );
@@ -822,6 +854,10 @@ void exampleCardinality(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
+
    if ( detectsignedperms )
    {
       cr_assert( norbits == 4 );
@@ -958,14 +994,6 @@ void exampleIndicator(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   if( detectsignedperms )
-   {
-      cr_assert( nperms == 3 );
-   }
-   else
-   {
-      cr_assert( nperms == 1 );
-   }
    cr_assert( ncomponents == 1 );
    cr_assert( vartocomponent[0] == 0 );
    cr_assert( vartocomponent[1] == 0 );
@@ -981,6 +1009,10 @@ void exampleIndicator(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
+
    if ( detectsignedperms )
    {
       int orbitlens[6];
@@ -1139,6 +1171,10 @@ void exampleSOS1(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
+
    if ( detectsignedperms )
    {
       cr_assert( norbits == 2 );
@@ -1276,7 +1312,6 @@ void exampleSOS2(
 
    if( detectsignedperms )
    {
-      cr_assert( nperms == 3 );
       cr_assert( ncomponents == 1 );
       cr_assert( vartocomponent[0] == 0 );
       cr_assert( vartocomponent[1] == 0 );
@@ -1287,7 +1322,6 @@ void exampleSOS2(
    }
    else
    {
-      cr_assert( nperms == 2 );
       cr_assert( ncomponents == 2 );
       cr_assert( vartocomponent[0] == 0 );
       cr_assert( vartocomponent[1] == -1 );
@@ -1302,6 +1336,10 @@ void exampleSOS2(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
+
    if ( detectsignedperms )
    {
       int orbitlens[4];
@@ -1446,6 +1484,10 @@ void examplePB(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
+
    if ( detectsignedperms )
    {
       cr_assert( norbits == 4 );
@@ -1590,6 +1632,9 @@ void exampleExpr1(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
 
    if ( detectsignedperms )
    {
@@ -1769,6 +1814,9 @@ void exampleExpr2(
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
 
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
+
    if ( detectsignedperms )
    {
       cr_assert( norbits == 4 );
@@ -1933,6 +1981,9 @@ void exampleExpr3(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
 
    if ( detectsignedperms )
    {
@@ -2100,6 +2151,9 @@ void exampleExpr4(
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
 
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
+
    if ( detectsignedperms )
    {
       cr_assert( norbits == 1 );
@@ -2239,14 +2293,6 @@ void exampleExpr5(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   if ( detectsignedperms )
-   {
-      cr_assert( nperms == 2 );
-   }
-   else
-   {
-      cr_assert( nperms == 1 );
-   }
    cr_assert( ncomponents == 1 );
    cr_assert( vartocomponent[0] == 0 );
    cr_assert( vartocomponent[1] == 0 );
@@ -2256,6 +2302,9 @@ void exampleExpr5(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
 
    if ( detectsignedperms )
    {
@@ -2428,14 +2477,6 @@ void exampleExpr6(
          &npermvars, &permvars, NULL, &nperms, &perms, NULL, NULL, NULL,
          &components, &componentbegins, &vartocomponent, &ncomponents) );
 
-   if ( detectsignedperms )
-   {
-      cr_assert( nperms == 4 || nperms == 5 );
-   }
-   else
-   {
-      cr_assert( nperms == 3 );
-   }
    cr_assert( ncomponents == 1 );
    cr_assert( vartocomponent[0] == 0 );
    cr_assert( vartocomponent[1] == 0 );
@@ -2448,6 +2489,9 @@ void exampleExpr6(
    SCIP_CALL( SCIPallocBufferArray(scip, &orbitbegins, permlen) );
    SCIP_CALL( SCIPcomputeOrbitsSym(scip, detectsignedperms, permvars, npermvars,
          perms, nperms, orbits, orbitbegins, &norbits) );
+
+   /* make sure orbits are sorted for comparison below */
+   sortOrbits(norbits, orbits, orbitbegins);
 
    if ( detectsignedperms )
    {

@@ -9271,14 +9271,14 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       assert( eventhdlr != NULL );
 
       /* initialize conflict graph */
-      SCIP_CALL( initConflictgraph(scip, conshdlrdata, conss, nconss));
+      SCIP_CALL( initConflictgraph(scip, conshdlrdata, conss, nconss) );
 
       /* get conflict graph and number of SOS1 variables */
       conflictgraph = conshdlrdata->conflictgraph;
       nsos1vars = conshdlrdata->nsos1vars;
       if ( nsos1vars < 2 )
       {
-         SCIP_CALL( freeConflictgraph(scip, conshdlrdata));
+         SCIP_CALL( freeConflictgraph(scip, conshdlrdata) );
          return SCIP_OKAY;
       }
 
@@ -9336,7 +9336,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       }
 
       /* free memory allocated in function initConflictgraph() */
-      SCIP_CALL( freeConflictgraph(scip, conshdlrdata));
+      SCIP_CALL( freeConflictgraph(scip, conshdlrdata) );
    }
    (*nchgcoefs) += nremovedvars;
 
@@ -10624,6 +10624,15 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    /* are we in the transformed problem? */
    transformed = SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED;
 
+#ifndef NDEBUG
+   /* Check that the weights are sensible (not nan or inf); although not strictly needed, such values are likely a mistake. */
+   if ( nvars > 0 && weights != NULL )
+   {
+      for (v = 0; v < nvars; ++v)
+         assert( SCIPisFinite(weights[v]) );
+   }
+#endif
+
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
    consdata->vars = NULL;
@@ -10726,6 +10735,8 @@ SCIP_RETCODE SCIPaddVarSOS1(
    assert( scip != NULL );
    assert( var != NULL );
    assert( cons != NULL );
+   /* Check weight is sensible (not nan or inf); although not strictly needed, such values are likely a mistake. */
+   assert( SCIPisFinite(weight) );
 
    SCIPdebugMsg(scip, "adding variable <%s> to constraint <%s> with weight %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), weight);
 

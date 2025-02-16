@@ -544,27 +544,27 @@ SCIP_Real computeSVTS(
          treesize += binomcoeff;
       }
 
-      treesize = 2.0 * treesize - 1.0;
-
-      assert(SCIPisGE(scip, treesize, 3.0));
-
-      if( !SCIPisEQ(scip, scaledgap, gaptoreach) )
+      if( !SCIPisInfinity(scip,treesize) )
       {
-         /* If we have not computed the treesize for the scaled gap but for max gap instead,
-          * we use the ratio between two iterations to come up with an estimate of the treesize
-          * for the scaled gap */
-         if( !SCIPisInfinity(scip,treesize) )
+         treesize = 2.0 * treesize - 1.0;
+
+         assert( SCIPisGE(scip, treesize, 3.0));
+
+         if( !SCIPisEQ(scip, scaledgap, gaptoreach) )
          {
+            /* If we have not computed the treesize for the scaled gap but for max gap instead,
+             * we use the ratio between two iterations to come up with an estimate of the treesize
+             * for the scaled gap */
             SCIP_RATIO branchratio;
             computeVarRatio(scip, treemodel, var, mingain, maxgain, &branchratio);
 
             if( branchratio.valid ) /*lint !e644*/
                prediction = treesize * pow(branchratio.upratio, (scaledgap - gaptoreach) * branchratio.invleft); /*lint !e644*/
          }
-      }
-      else
-      {
-         prediction = treesize;
+         else
+         {
+            prediction = treesize;
+         }
       }
    }
 

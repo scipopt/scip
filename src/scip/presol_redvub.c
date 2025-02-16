@@ -300,7 +300,7 @@ SCIP_RETCODE detectDominatingVubs(
 #ifdef SCIP_DEBUG
                SCIPdebugMsg(scip, "Aggregate variable %s by %s\n", SCIPvarGetName(var2), SCIPvarGetName(var1));
                SCIPdebugMsg(scip, "Delete variable upper bound constraint:\n");
-               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[j]), NULL));
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[j]), NULL) );
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
@@ -317,7 +317,7 @@ SCIP_RETCODE detectDominatingVubs(
 #ifdef SCIP_DEBUG
                SCIPdebugMsg(scip, "Aggregate variable %s by %s\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
                SCIPdebugMsg(scip, "Delete variable upper bound constraint:\n");
-               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[i]), NULL));
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vubs[i]), NULL) );
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
@@ -407,7 +407,7 @@ SCIP_RETCODE detectDominatingVlbs(
 #ifdef SCIP_DEBUG
                SCIPdebugMsg(scip, "Aggregate variable %s by %s\n", SCIPvarGetName(var2), SCIPvarGetName(var1));
                SCIPdebugMsg(scip, "Delete variable lower bound constraint:\n");
-               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[j]), NULL));
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[j]), NULL) );
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
@@ -424,7 +424,7 @@ SCIP_RETCODE detectDominatingVlbs(
 #ifdef SCIP_DEBUG
                SCIPdebugMsg(scip, "Aggregate variable %s by %s\n", SCIPvarGetName(var1), SCIPvarGetName(var2));
                SCIPdebugMsg(scip, "Delete variable lower bound constraint:\n");
-               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[i]), NULL));
+               SCIP_CALL( SCIPprintCons(scip, SCIPmatrixGetCons(matrix, vlbs[i]), NULL) );
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
 

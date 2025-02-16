@@ -1,5 +1,5 @@
-#ifndef SASSY_NAUTY_CONVERTER_H
-#define SASSY_NAUTY_CONVERTER_H
+#ifndef DEJAVU_NAUTY_CONVERTER_H
+#define DEJAVU_NAUTY_CONVERTER_H
 
 #include <algorithm>
 
@@ -34,7 +34,7 @@ static void make_lab_ptn_from_colmap(int* lab, int* ptn, const int* colmap, int 
     }
 }
 
-static void convert_sassy_to_nauty(sassy::sgraph *g, int* colmap, sparsegraph* sg, int** lab, size_t* lab_sz, int** ptn, size_t* ptn_sz) {
+static void convert_dejavu_to_nauty(dejavu::sgraph *g, int* colmap, sparsegraph* sg, int** lab, size_t* lab_sz, int** ptn, size_t* ptn_sz) {
     SG_INIT(*sg);
     SG_ALLOC(*sg, g->v_size, g->e_size, "malloc");
     sg->nv = g->v_size;
@@ -44,10 +44,8 @@ static void convert_sassy_to_nauty(sassy::sgraph *g, int* colmap, sparsegraph* s
     DYNALLOC1(int, *ptn, (*ptn_sz), (g->v_size), "malloc");
 
     for (int i = 0; i < g->v_size; ++i) {
-/*TODO: warning: Array access results in a null pointer dereference*/
         (*lab)[i] = i;
-/*TODO: warning: Array access results in a null pointer dereference*/
-       (*ptn)[i] = 1;
+        (*ptn)[i] = 1;
         sg->v[i] = g->v[i];
         sg->d[i] = g->d[i];
     }
@@ -62,9 +60,9 @@ static void convert_sassy_to_nauty(sassy::sgraph *g, int* colmap, sparsegraph* s
     }
 }
 
-static void convert_sassy_to_nauty(sassy::static_graph *sassy_graph, sparsegraph* sg, int** lab, size_t* lab_sz, int** ptn, size_t* ptn_sz) {
-    convert_sassy_to_nauty(sassy_graph->get_sgraph(), sassy_graph->get_coloring(), sg, lab, lab_sz, ptn, ptn_sz);
+static void convert_dejavu_to_nauty(dejavu::static_graph *dejavu_graph, sparsegraph* sg, int** lab, size_t* lab_sz, int** ptn, size_t* ptn_sz) {
+    convert_dejavu_to_nauty(dejavu_graph->get_sgraph(), dejavu_graph->get_coloring(), sg, lab, lab_sz, ptn, ptn_sz);
 }
 
 
-#endif //SASSY_NAUTY_CONVERTER_H
+#endif //DEJAVU_NAUTY_CONVERTER_H

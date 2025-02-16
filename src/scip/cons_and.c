@@ -914,7 +914,7 @@ SCIP_RETCODE applyFixings(
 #endif
 
    SCIPdebugMsg(scip, "after fixings: ");
-   SCIPdebug( SCIP_CALL(consdataPrint(scip, consdata, NULL)) );
+   SCIPdebug( SCIP_CALL( consdataPrint(scip, consdata, NULL)) );
    SCIPdebugMsgPrint(scip, "\n");
 
    return SCIP_OKAY;

@@ -3826,7 +3826,7 @@ SCIP_RETCODE tightenCoefs(
             if( !SCIPisFeasIntegral(scip, oldrhs) && SCIPisFeasIntegral(scip, newrhs))
             {
                consdata->tightened = FALSE;
-               SCIP_CALL(tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds));
+               SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds) );
                assert(consdata->tightened);
             }
             else
@@ -3883,7 +3883,7 @@ SCIP_RETCODE tightenCoefs(
             if( !SCIPisFeasIntegral(scip, oldlhs) && SCIPisFeasIntegral(scip, newlhs))
             {
                consdata->tightened = FALSE;
-               SCIP_CALL(tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds));
+               SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss, cutoff, nchgbds) );
                assert(consdata->tightened);
             }
             else

@@ -7734,6 +7734,19 @@
  * detection schemes of GCG and applies Benders' decomposition. Using GCG it is possible to apply Benders' decomposition
  * to general problem without having to manually construct the decompositions.
  *
+ * @section BENDERSOBJTYPE Objective type options for the Benders' decomposition
+ *
+ * Classically, the application of Benders' decomposition results in the inclusion of an auxiliary variable to provide an
+ * underestimation of the subproblem objective value. If the subproblem can be separated into disjoint problems, then
+ * this auxiliary variable can be substituted with the sum of auxiliary variables (one for each subproblem).
+ *
+ * While the summation of auxiliary variables is theoretically possible for all applications of Benders' decomposition,
+ * there are problems where an alternative objective may be beneficial. An example is a multiple machine scheduling
+ * problem with a makespan objective. To accommodate different objective types, the Benders' decomposition framework
+ * allows for the objective types of summation (the classical method) or the minimum of the maximum subproblem auxiliary
+ * variables. The objective type can be set using the method SCIPsetBendersObjectiveType(). Note that the different
+ * objective types only have an impact if more than one subproblem is used in the Benders' decomposition.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -8640,9 +8653,9 @@
  * invariant. To detect such formulation symmetries, SCIP builds an auxiliary colored graph whose
  * color-preserving automorphisms correspond to symmetries of the integer program. The symmetries of
  * the graph, and thus of the integer program, are then computed by an external graph automorphism
- * library that needs to be linked to SCIP. Currently, SCIP can use two such libraries: The graph
- * automorphism libraries bliss or nauty/traces are the basic workhorses to detect symmetries. Moreover, one can use
- * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss or nauty/traces.
+ * library that needs to be linked to SCIP. Currently, SCIP can use three such libraries: The graph
+ * automorphism libraries bliss, nauty/traces, and dejavu. They are the basic workhorses to detect symmetries. Moreover, one can use
+ * sassy, a graph symmetry preprocessor which passes the preprocessed graphs to bliss or nauty/traces; sassy is automatically included in dejavu.
  * The current default is to use nauty in combination with sassy for symmetry detection.
  * To use other symmetry packages, options <code>SYM</code> and <code>-DSYM</code> in the Makefile and CMake
  * system, respectively, need to be set.
