@@ -374,12 +374,6 @@ SCIP_RETCODE solUnlinkVarExact(
       return SCIP_OKAY;
 
    case SCIP_SOLORIGIN_LPSOL:
-      /* MP@LE Can the follwing be done more elegantly as follows?
-         LE@MP Unfortunately not, I guess I really should add some buffer for rationals
-         SCIP_Rational solval;
-         SCIPvarGetLPSolExact(var, &solval);
-         return SCIP_OKAY;
-      */
       SCIP_CALL( RatCreateBuffer(set->buffer, &solval) );
       SCIPvarGetLPSolExact(var, solval);
       SCIP_CALL( solSetArrayValExact(sol, set, var, solval) );

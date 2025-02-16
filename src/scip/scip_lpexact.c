@@ -62,6 +62,7 @@
 #include "scip/solve.h"
 #include "scip/struct_primal.h"
 #include "scip/struct_prob.h"
+#include "scip/struct_mem.h"
 #include "scip/tree.h"
 #include "scip/var.h"
 
@@ -270,6 +271,39 @@ SCIP_RETCODE SCIPcreateEmptyRowExactSepa(
    return SCIP_OKAY;
 }
 
+/** creates and captures an exact LP row
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @deprecated Please use SCIPcreateRowConshdlr() or SCIPcreateRowSepa() when calling from a constraint handler or separator in order
+ *              to facilitate correct statistics. If the call is from neither a constraint handler or separator, use SCIPcreateRowUnspec().
+ */
+SCIP_RETCODE SCIPcreateRowExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT**       row,                /**< pointer to row */
+   SCIP_ROW*             fprow,              /**< corresponding fp approximation/relaxation */
+   const char*           name,               /**< name of row */
+   int                   len,                /**< number of nonzeros in the row */
+   SCIP_COLEXACT**       cols,               /**< array with columns of row entries */
+   SCIP_Rational**       vals,               /**< array with coefficients of row entries */
+   SCIP_Rational*        lhs,                /**< left hand side of row */
+   SCIP_Rational*        rhs,                /**< right hand side of row */
+   SCIP_Bool             local,              /**< is row only valid locally? */
+   SCIP_Bool             isfprelaxable       /**< is it possible to make fp-relaxation of this row */
+   )
+{
+   /* Note: Rows can only be created in the solving stage, since otherwise the LP does not exist and, e.g., the norms cannot be computed correctly. */
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateRowExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIProwExactCreate(row, fprow, NULL, scip->mem->probmem, scip->set, scip->stat, scip->lpexact, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_UNSPEC, isfprelaxable, NULL) );
+
+   return SCIP_OKAY;
+}
+
 /** creates and captures an exact LP row from an existing fp row
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -382,6 +416,25 @@ SCIP_RETCODE SCIPgetRowSolActivityExact(
    return SCIP_OKAY;
 }
 
+/** returns the activity of a row for the given primal solution with running error analysis
+ *
+ *  @return the activitiy of a row for the given primal solution and the error bound of the activity; returns true on success
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_Bool SCIPgetRowSolActivityWithErrorboundExact(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWEXACT*        row,                /**< LP row */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real*            activity,           /**< the approximate activity */
+   SCIP_Real*            errorbound          /**< the error bound */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPgetRowSolActivityWithErrorboundExact", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIProwExactGetSolActivityWithErrorbound(row, scip->set, scip->stat, sol, activity, errorbound);
+}
 
 /** output exact row to file stream via the message handler system
  *

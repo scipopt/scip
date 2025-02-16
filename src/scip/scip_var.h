@@ -1806,6 +1806,32 @@ SCIP_Real SCIPadjustedVarLb(
    SCIP_Real             lb                  /**< lower bound value to adjust */
    );
 
+/** returns the adjusted (i.e. rounded, if the given variable is of integral type) lower bound value;
+ *  does not change the bounds of the variable
+ *
+ *  @return adjusted lower bound for the given variable; the bound of the variable is not changed
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+SCIP_Real SCIPadjustedVarLbExactFloat(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to adjust the bound for */
+   SCIP_Real             lb                  /**< lower bound value to adjust */
+   );
+
 /** returns the adjusted (i.e. rounded, if the given variable is of integral type) upper bound value;
  *  does not change the bounds of the variable
  *
@@ -1827,6 +1853,32 @@ SCIP_Real SCIPadjustedVarLb(
  */
 SCIP_EXPORT
 SCIP_Real SCIPadjustedVarUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to adjust the bound for */
+   SCIP_Real             ub                  /**< upper bound value to adjust */
+   );
+
+/** returns the adjusted (i.e. rounded, if the given variable is of integral type) upper bound value;
+ *  does not change the bounds of the variable
+ *
+ *  @return adjusted upper bound for the given variable; the bound of the variable is not changed
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_EXPORT
+SCIP_Real SCIPadjustedVarUbExactFloat(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to adjust the bound for */
    SCIP_Real             ub                  /**< upper bound value to adjust */
@@ -2556,7 +2608,7 @@ SCIP_Real SCIPcomputeVarLbLocal(
  *  @return the local lower bound computed by adding the global bounds from all aggregation variables
  */
 SCIP_EXPORT
-void SCIPcomputeVarLbLocalExact(
+SCIP_RETCODE SCIPcomputeVarLbLocalExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to compute the bound for */
    SCIP_Rational*        result              /**< rational to store the resulting bound */
@@ -2583,7 +2635,7 @@ SCIP_Real SCIPcomputeVarUbLocal(
  *  @return the local upper bound computed by adding the global bounds from all aggregation variables
  */
 SCIP_EXPORT
-void SCIPcomputeVarUbLocalExact(
+SCIP_RETCODE SCIPcomputeVarUbLocalExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to compute the bound for */
    SCIP_Rational*        result              /**< rational to store the resulting bound */

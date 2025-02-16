@@ -631,9 +631,6 @@ struct SCIP_Set
    SCIP_Bool             visual_objextern;   /**< should be output the external value of the objective? */
 
    /* exact SCIP settings */
-   /* MP@LE Can we use shorter names for the parameters, e.g., exact_ileavestrat? */
-   /* LE@MP I agree is is a bit ugly, but I don't like abbreviated names when it is not clear what they mean, makes the code much harder to read for
-      other people*/
    SCIP_Bool             exact_enabled;      /**< should the problem be solved exactly (without numerical tolerances)? */
    SCIP_Bool             exact_improvingsols; /**< should only exact solutions be checked which improve the primal bound? */
    int                   exact_interleavestrategy; /**< strategy to interleave safe dual bounding with exact LP

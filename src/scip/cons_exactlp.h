@@ -411,12 +411,6 @@ SCIP_RETCODE SCIPclassifyConstraintTypesExactLinear(
    SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint type classification */
    );
 
-SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
-   SCIP*                 scip,
-   SCIP_CONSHDLR*        conshdlr,
-   SCIP_CONS*            cons
-   );
-
 SCIP_RETCODE SCIPconsPrintCertificateOrigExactLinear(
    SCIP*                 scip,
    SCIP_CONSHDLR*        conshdlr,

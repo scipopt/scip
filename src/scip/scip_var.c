@@ -5517,6 +5517,38 @@ SCIP_Real SCIPadjustedVarLb(
    return lb;
 }
 
+/** returns the adjusted (i.e. rounded, if the given variable is of integral type) lower bound value;
+ *  does not change the bounds of the variable
+ *
+ *  @return adjusted lower bound for the given variable; the bound of the variable is not changed
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_Real SCIPadjustedVarLbExactFloat(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to adjust the bound for */
+   SCIP_Real             lb                  /**< lower bound value to adjust */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPadjustedVarLbExactFloat", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIPvarAdjustLbExactFloat(var, scip->set, &lb);
+
+   return lb;
+}
+
 /** returns the adjusted (i.e. rounded, if the given variable is of integral type) upper bound value;
  *  does not change the bounds of the variable
  *
@@ -5545,6 +5577,38 @@ SCIP_Real SCIPadjustedVarUb(
    SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPadjustedVarUb", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    SCIPvarAdjustUb(var, scip->set, &ub);
+
+   return ub;
+}
+
+/** returns the adjusted (i.e. rounded, if the given variable is of integral type) upper bound value;
+ *  does not change the bounds of the variable
+ *
+ *  @return adjusted upper bound for the given variable; the bound of the variable is not changed
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_Real SCIPadjustedVarUbExactFloat(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to adjust the bound for */
+   SCIP_Real             ub                  /**< upper bound value to adjust */
+   )
+{
+   SCIP_CALL_ABORT( SCIPcheckStage(scip, "SCIPadjustedVarUb", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIPvarAdjustUbExactFloat(var, scip->set, &ub);
 
    return ub;
 }
@@ -6428,8 +6492,8 @@ SCIP_RETCODE SCIPtightenVarLbExact(
    SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lb) );
 
    /* get current bounds */
-   SCIPcomputeVarLbLocalExact(scip, var, lb);
-   SCIPcomputeVarUbLocalExact(scip, var, ub);
+   SCIP_CALL( SCIPcomputeVarLbLocalExact(scip, var, lb) );
+   SCIP_CALL( SCIPcomputeVarUbLocalExact(scip, var, ub) );
 
    assert(RatIsLE(lb, ub));
 
@@ -6495,7 +6559,7 @@ SCIP_RETCODE SCIPtightenVarLbExact(
    }  /*lint !e788*/
 
    /* check whether the lower bound improved */
-   SCIPcomputeVarLbLocalExact(scip, var, newbound);
+   SCIP_CALL( SCIPcomputeVarLbLocalExact(scip, var, newbound) );
    if( tightened != NULL && RatIsLT(lb, newbound) )
       *tightened = TRUE;
 
@@ -6678,8 +6742,8 @@ SCIP_RETCODE SCIPtightenVarUbExact(
    SCIP_CALL( RatCreateBuffer(SCIPbuffer(scip), &lb) );
 
    /* get current bounds */
-   SCIPcomputeVarLbLocalExact(scip, var, lb);
-   SCIPcomputeVarUbLocalExact(scip, var, ub);
+   SCIP_CALL( SCIPcomputeVarLbLocalExact(scip, var, lb) );
+   SCIP_CALL( SCIPcomputeVarUbLocalExact(scip, var, ub) );
 
    assert(RatIsLE(lb, ub));
 
@@ -8323,7 +8387,7 @@ SCIP_Real SCIPcomputeVarLbLocal(
  *
  *  @return the local lower bound computed by adding the global bounds from all aggregation variables
  */
-void SCIPcomputeVarLbLocalExact(
+SCIP_RETCODE SCIPcomputeVarLbLocalExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to compute the bound for */
    SCIP_Rational*        result              /**< rational to store the resulting bound */
@@ -8333,9 +8397,11 @@ void SCIPcomputeVarLbLocalExact(
    assert(var != NULL);
 
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_MULTAGGR )
-      SCIPvarGetMultaggrLbLocalExact(var, scip->set, result);
+      SCIP_CALL( SCIPvarGetMultaggrLbLocalExact(var, scip->set, result) );
    else
       RatSet(result, SCIPvarGetLbLocalExact(var));
+
+   return SCIP_OKAY;
 }
 
 /** for a multi-aggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
@@ -8366,7 +8432,7 @@ SCIP_Real SCIPcomputeVarUbLocal(
  *
  *  @return the local upper bound computed by adding the global bounds from all aggregation variables
  */
-void SCIPcomputeVarUbLocalExact(
+SCIP_RETCODE SCIPcomputeVarUbLocalExact(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to compute the bound for */
    SCIP_Rational*        result              /**< rational to store the resulting bound */
@@ -8376,9 +8442,11 @@ void SCIPcomputeVarUbLocalExact(
    assert(var != NULL);
 
    if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_MULTAGGR )
-      SCIPvarGetMultaggrUbLocalExact(var, scip->set, result);
+      SCIP_CALL( SCIPvarGetMultaggrUbLocalExact(var, scip->set, result) );
    else
       RatSet(result, SCIPvarGetUbLocalExact(var));
+
+   return SCIP_OKAY;
 }
 
 /** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all

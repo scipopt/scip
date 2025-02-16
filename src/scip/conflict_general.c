@@ -76,6 +76,7 @@
 #include "scip/scip_var.h"
 #include "scip/scip_prob.h"
 #include "scip/scip_lp.h"
+#include "scip/scip_lpexact.h"
 #include "scip/set.h"
 #include "scip/sol.h"
 #include "scip/struct_conflict.h"
@@ -1615,9 +1616,7 @@ SCIP_RETCODE getObjectiveRow(
    {
       SCIP_CALL( SCIPcreateRowUnspec(scip, row, "objective", nvals, cols, vals, -SCIPinfinity(scip), rhs,
          FALSE, FALSE, TRUE) );
-      SCIP_CALL( SCIProwExactCreate(&rowexact, *row, NULL, scip->mem->probmem, scip->set, scip->stat,
-			 scip->lpexact, nvals, colsexact, valsexact,
-			 lhsexact, rhsexact, SCIP_ROWORIGINTYPE_UNSPEC,   TRUE, NULL) );
+      SCIP_CALL( SCIPcreateRowExact(scip, &rowexact, *row, NULL , nvals, colsexact, valsexact, lhsexact, rhsexact, FALSE, TRUE) );
       SCIPdebugMessage("%d == %d", SCIPgetNLPCols(scip), SCIProwGetNNonz(*row));
    }
 
@@ -1915,7 +1914,7 @@ SCIP_RETCODE SCIPgetDualProof(
 
    if( objectiverow != NULL )
    {
-      SCIP_CALL( SCIProwExactRelease(&objectiverow->rowexact, set->scip->mem->probmem, set->scip->set, set->scip->lpexact) );
+      SCIP_CALL( SCIPreleaseRowExact(set->scip, &objectiverow->rowexact) );
       SCIP_CALL( SCIPreleaseRow(set->scip, &objectiverow) );
    }
    SCIPfreeBufferArrayNull(set->scip, &localrowdepth);

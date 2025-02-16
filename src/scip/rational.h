@@ -33,21 +33,11 @@
 #ifndef __SCIP_RATIONAL_H__
 #define __SCIP_RATIONAL_H__
 
-/* MP@LE Please reduce the dependencies on other files as much as possible. In particular, please think about getting
- * rid of the dependency on "set.h". For instance, this can be done by depending on "scip" and by outsourcing the
- * function to a file "scip_rational.h".
- *
- * We do not need "intervalarith" in this file. Moreover, instead of "mem.h", I
- * suggest to include "blockmemory/memory.h". I think that we also do not need "type_misc.h" here.
- */
-
 #include <stdbool.h>
 #include <stdlib.h>
+#include "scip.h"
 #include "scip/def.h"
-#include "scip/intervalarith.h"
-#include "scip/mem.h"
-#include "scip/type_misc.h"
-#include "scip/set.h"
+#include "blockmemshell/memory.h"
 #ifdef SCIP_WITH_GMP
 #include <gmp.h>
 #endif
@@ -692,7 +682,6 @@ void RatPrint(
 SCIP_EXPORT
 void RatPrintf(const char *format, ...);
 
-/* MP@LE Maybe think about a version that also prints the subscipdepth like sCIPdebugMsg()? */
 /** rational extension for the SCIPdebugMsg */
 /*lint -emacro(681,RatDebugMessage) */
 /*lint -emacro(506,RatDebugMessage) */

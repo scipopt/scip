@@ -11954,7 +11954,6 @@ SCIP_RETCODE varProcessChgLbLocalExact(
 
       case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  ->  y = (x-c)/a */
          assert(parentvar->data.aggregate.var == var);
-         /* MP@LE Can this code be replaced by a local instance of parentnewbound that stores the information? */
          SCIP_CALL( RatCreateBuffer(set->buffer, &parentnewbound) );
          if( RatIsPositive(parentvar->exactdata->aggregate.scalar) )
          {
@@ -11989,7 +11988,6 @@ SCIP_RETCODE varProcessChgLbLocalExact(
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(parentvar->negatedvar->negatedvar == parentvar);
-         /* MP@LE Can this code be replaced by a local instance of parentnewbound that stores the information? */
          SCIP_CALL( RatCreateBuffer(set->buffer, &parentnewbound) );
          RatDiffReal(parentnewbound, newbound, parentvar->data.negate.constant);
          RatNegate(parentnewbound, parentnewbound);
@@ -12036,7 +12034,6 @@ SCIP_RETCODE varProcessChgUbLocalExact(
             || RatIsEqual(newbound, var->exactdata->locdom.ub)))
       || SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
-   /* MP@LE Can this code be replaced by a local instance of oldbound that stores the information? */
    SCIP_CALL( RatCreateBuffer(set->buffer, &oldbound) );
 
    /* check that the bound is feasible */
@@ -12135,7 +12132,6 @@ SCIP_RETCODE varProcessChgUbLocalExact(
          assert(parentvar->negatedvar != NULL);
          assert(SCIPvarGetStatus(parentvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
          assert(parentvar->negatedvar->negatedvar == parentvar);
-         /* MP@LE Can this code be replaced by a local instance of parentnewbound that stores the information? */
          SCIP_CALL( RatCreateBuffer(set->buffer, &parentnewbound) );
          RatDiffReal(parentnewbound, newbound, parentvar->data.negate.constant);
          RatNegate(parentnewbound, parentnewbound);
@@ -12378,7 +12374,6 @@ SCIP_RETCODE SCIPvarChgLbLocalExact(
       {
          SCIP_Rational* childnewbound;
 
-         /* MP@LE Can this code be replaced by a local instance of childnewbound that stores the information? */
          SCIP_CALL( RatCreateBuffer(set->buffer, &childnewbound) );
 
          /* a < 0 -> change upper bound of y */
@@ -13274,7 +13269,7 @@ SCIP_RETCODE SCIPvarGetMultaggrUbLocalExact(
       else
       {
          if( SCIPvarGetStatusExact(aggrvar) == SCIP_VARSTATUS_MULTAGGR )
-            SCIPvarGetMultaggrLbLocalExact(aggrvar, set, bnd);
+            SCIP_CALL( SCIPvarGetMultaggrLbLocalExact(aggrvar, set, bnd) );
          else
             RatSet(bnd, SCIPvarGetLbLocalExact(aggrvar));
 

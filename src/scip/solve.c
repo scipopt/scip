@@ -3263,8 +3263,6 @@ SCIP_RETCODE solveNodeLP(
          {
             SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
 
-            /* MP@LE Why is this test not needed in the exact code in the first part of the if-block. */
-            /* LE@MP the unbounded case is not really properly supported for exact, so I think it should also be added at the top */
             if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
                checklprows = FALSE;
             else

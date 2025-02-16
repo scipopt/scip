@@ -402,7 +402,7 @@ SCIP_RETCODE lpStoreSolVals(
    storedsolvals->dualchecked = lp->dualchecked;
    storedsolvals->solisbasic = lp->solisbasic;
    storedsolvals->lpissolved = lp->solved;
-   storedsolvals->hasprovedbound = lp->hasprovedbound;
+   storedsolvals->hasprovedboundexact = lp->hasprovedbound;
 
    return SCIP_OKAY;
 }
@@ -434,7 +434,7 @@ SCIP_RETCODE lpRestoreSolVals(
       lp->dualfeasible = storedsolvals->dualfeasible;
       lp->dualchecked = storedsolvals->dualchecked;
       lp->solisbasic = storedsolvals->solisbasic;
-      lp->hasprovedbound = storedsolvals->hasprovedbound;
+      lp->hasprovedbound = storedsolvals->hasprovedboundexact;
 
       /* solution values are stored only for LPs solved without error */
       assert(lp->lpsolstat == SCIP_LPSOLSTAT_OPTIMAL ||

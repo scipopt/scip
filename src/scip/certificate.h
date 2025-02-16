@@ -476,6 +476,73 @@ SCIP_Bool SCIPcertificateShouldTrackBounds(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** prints activity bound to proof section */
+SCIP_RETCODE SCIPcertificatePrintActivityVarBoundEx(
+   SCIP*                 scip,
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   const char*           linename,           /**< name of the unsplitting line */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound (upper/lower) */
+   SCIP_Rational*        newbound,           /**< pointer to lower bound on the objective, NULL indicating infeasibility */
+   SCIP_Bool             ismaxactivity,      /**< TRUE for maxactivity, FALSE for minactivity */
+   SCIP_CONS*            constraint,         /**< the constraint */
+   SCIP_VAR*             variable,           /**< the variable */
+   SCIP_ROWEXACT* row,
+   SCIP_Rational** vals,
+   SCIP_Rational* lhs,
+   SCIP_Rational* rhs,
+   SCIP_VAR** vars,
+   int nvars
+   );
+
+/** prints activity bound to proof section */
+SCIP_RETCODE SCIPcertificatePrintActivityVarBound(
+   SCIP*                 scip,
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   const char*           linename,           /**< name of the unsplitting line */
+   SCIP_BOUNDTYPE        boundtype,
+   SCIP_Real             newbound,           /**< pointer to lower bound on the objective, NULL indicating infeasibility */
+   SCIP_Bool             ismaxactivity,
+   SCIP_CONS*            constraint,
+   SCIP_VAR*             variable,
+   SCIP_ROWEXACT* row,
+   SCIP_Rational** vals,
+   SCIP_Rational* lhs,
+   SCIP_Rational* rhs,
+   SCIP_VAR** vars,
+   int nvars
+   );
+
+SCIP_RETCODE SCIPconsPrintCertificateExactLinear(
+   SCIP*                 scip,
+   SCIP_CONSHDLR*        conshdlr,
+   SCIP_CONS*            cons
+   );
+
+
+/** prints activity conflict to  certificate file */
+SCIP_RETCODE SCIPcertificatePrintActivityConflict(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_ROWEXACT*        row,                /**< row */
+   SCIP_Rational*        lhs,                /**< lhs of the constraint */
+   SCIP_Rational*        rhs,                /**< rhs of the constraint */
+   int                   nvals,              /**< number of values */
+   SCIP_Rational**       vals,               /**< values */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_Rational*        diff,               /**< difference */
+   SCIP_Bool userhs                          /**< is rhs */
+   );
+
+/** returns the index of the given constraint in the certificate */
+SCIP_Longint SCIPcertificateGetConsIndex(
+   SCIP_CERTIFICATE*     certificate,        /**< certificate data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Rational*        lhs,                /**< lhs of the constraint */
+   SCIP_Rational*        rhs,                /**< rhs of the constraint */
+   SCIP_Bool             useRhs              /**< whether to return the index of the rhs or lhs */
+   );
+
+
 #ifdef __cplusplus
 }
 #endif
