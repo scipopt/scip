@@ -11024,9 +11024,9 @@ SCIP_RETCODE dualPresolve(
 
             for( j = 0; j < naggrs; ++j)
             {
-               /* @TODO: how to handle this case properly with new implied integrality? */
-               /* If the multi-aggregation was not infeasible, then setting implicit integers to integers should not
-                * lead to infeasibility. 
+               /* @TODO: handle this case properly with new implied integrality */
+               /* if the multi-aggregation was not infeasible, then setting implicit integers to integers should not
+                * lead to infeasibility
                 */
                if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(aggrvars[j]) != SCIP_IMPLINTTYPE_NONE )
                {
@@ -11037,7 +11037,6 @@ SCIP_RETCODE dualPresolve(
                   }
                   SCIP_CALL( SCIPchgVarImplType(scip, aggrvars[j], SCIP_IMPLINTTYPE_NONE, &infeasiblevartypechg) );
                   assert(!infeasiblevartypechg);
-
                   (*nchgvartypes)++;
                }
             }
