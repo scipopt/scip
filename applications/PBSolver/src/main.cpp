@@ -45,16 +45,14 @@
 #define SETOBJ FALSE
 #define HEURISTICS_OFF FALSE
 
-#define MAXMEMUSAGE 0.9
-#define POSTTIME    3.0                           /**< time saved in the end to free every thing and display the solutions */
+#define MAXMEMUSAGE 0.9                      /**< maximal memory usage in percent of the available memory */
+#define POSTTIME    3.0                      /**< time saved in the end to free every thing and display the solutions */
 
-
-static void printUnsupportedSolution(SCIP *scip);
 
 /** sets parameter for satisfiability problems */
 static
 SCIP_RETCODE loadSettingsNoObjPrePresolve(
-      SCIP*                      scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
 )
 {
    /* TODO set parameters */
@@ -64,8 +62,8 @@ SCIP_RETCODE loadSettingsNoObjPrePresolve(
 /** sets parameter for pure satisfiability problems */
 static
 SCIP_RETCODE loadSettingsPureSat(
-      SCIP*                      scip,               /**< SCIP data structure */
-      SCIP_Bool                  hasnoobj            /**< is the problem a satisfiability problem */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             hasnoobj            /**< is the problem a satisfiability problem */
 )
 {
    /* TODO set parameters */
@@ -75,7 +73,7 @@ SCIP_RETCODE loadSettingsPureSat(
 /** sets parameter for wbo instances */
 static
 SCIP_RETCODE loadSettingsWBO(
-      SCIP*                      scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
 )
 {
    /* TODO set parameters */
@@ -85,8 +83,8 @@ SCIP_RETCODE loadSettingsWBO(
 
 static
 SCIP_RETCODE readParams(
-      SCIP*                      scip,               /**< SCIP data structure */
-      const char*                filename            /**< parameter file name */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< parameter file name */
 )
 {
    if( SCIPfileExists(filename) )
@@ -104,12 +102,13 @@ SCIP_RETCODE readParams(
 }
 
 #ifdef PBSOLVER
+
 static
 SCIP_RETCODE printSolution(
-   SCIP*                      scip,               /**< SCIP data structure */
-   SCIP_VAR**                 vars,               /**< SCIP problem variables */
-   int                        nvars,              /**< number of problem variables */
-   SCIP_Bool                  hasnoobj            /**< has the problem no original objective function? */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< SCIP problem variables */
+   int                   nvars,              /**< number of problem variables */
+   SCIP_Bool             hasnoobj            /**< has the problem no original objective function? */
    )
 {
    SCIP_MESSAGEHDLR* messagehdlr;
@@ -164,13 +163,9 @@ SCIP_RETCODE printSolution(
          else
          {
             if( hasnoobj || status != SCIP_STATUS_OPTIMAL )
-	    {
                SCIPinfoMessage(scip, NULL, "s SATISFIABLE\n");
-	    }
             else
-	    {
                SCIPinfoMessage(scip, NULL, "s OPTIMUM FOUND\n");
-	    }
 
             v = 0;
             n = 0;
@@ -218,9 +213,7 @@ SCIP_RETCODE printSolution(
          }
       }
       else
-      {
          SCIPinfoMessage(scip, NULL, "s UNKNOWN\n");
-      }
    }
 
    /* reset old values of message handler data */
@@ -231,15 +224,34 @@ SCIP_RETCODE printSolution(
 }
 #endif
 
+/** prints that the input format is unsupported */
+static
+void printUnsupported(
+   SCIP*                 scip                /**< SCIP data structure */
+)
+{
+   SCIP_MESSAGEHDLR* messagehdlr;
+   SCIP_MESSAGEHDLRDATA* messagehdlrdata;
+
+   messagehdlr = SCIPgetMessagehdlr(scip);
+   assert(messagehdlr != NULL);
+   messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
+   assert(messagehdlrdata != NULL);
+
+   /* turn on message handler */
+   SCIPmessagehdlrSetQuiet(messagehdlr, FALSE);
+   messagehdlrdata->comment = FALSE;
+   SCIPinfoMessage(scip, NULL, "s UNSUPPORTED\n");
+}
 
 /** run SCIP from command line */
 static
 SCIP_RETCODE fromCommandLine(
-      SCIP*                      scip,               /**< SCIP data structure */
-      const char*                filename,           /**< input file name */
-      const char*                settingsfilename,   /**< settings file name */
-      SCIP_Real                  timelimit,          /**< required time limit */
-      clock_t                    starttime           /**< time the process started */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< input file name */
+   const char*           settingsfilename,   /**< settings file name */
+   SCIP_Real             timelimit,          /**< required time limit */
+   clock_t               starttime           /**< time the process started */
 
 )
 {
@@ -252,9 +264,6 @@ SCIP_RETCODE fromCommandLine(
    SCIP_Bool puresat;
    int nconss;
    int nvars;
-   int v;
-   int h;
-   int c;
 
    /********************
     * Problem Creation *
@@ -288,7 +297,7 @@ SCIP_RETCODE fromCommandLine(
       SCIP_RETCODE scipRetcode = SCIPreadProb(scip, filename, "opb");
       if( scipRetcode == SCIP_INVALIDRESULT)
       {
-         printUnsupportedSolution(scip);
+         printUnsupported(scip);
          return SCIP_OKAY;
       }
       SCIP_CALL(scipRetcode);
@@ -297,7 +306,7 @@ SCIP_RETCODE fromCommandLine(
    {
       if( retcode == SCIP_INVALIDRESULT)
       {
-         printUnsupportedSolution(scip);
+         printUnsupported(scip);
          return SCIP_OKAY;
       }
       SCIP_CALL( retcode );
@@ -313,7 +322,7 @@ SCIP_RETCODE fromCommandLine(
    nvars = SCIPgetNOrigVars(scip);
    assert(vars != NULL || nvars == 0);
    hasnoobj = TRUE;
-   for( v = nvars - 1; v >= 0 && hasnoobj; --v )
+   for( int v = nvars - 1; v >= 0 && hasnoobj; --v )
    {
       assert(vars != NULL);
 
@@ -327,7 +336,7 @@ SCIP_RETCODE fromCommandLine(
    conss = SCIPgetOrigConss(scip);
    nconss = SCIPgetNOrigConss(scip);
    hasindicator = FALSE;
-   for (c = 0; c < nconss; ++c)
+   for (int c = 0; c < nconss; ++c)
    {
       conshdlr = SCIPconsGetHdlr(conss[c]);
       if ( strcmp(SCIPconshdlrGetName(conshdlr), "pseudoboolean") == 0 )
@@ -362,7 +371,7 @@ SCIP_RETCODE fromCommandLine(
       /*  insert objective function if no exists */
       if( SETOBJ ) /*lint !e774 !e506*/
       {
-         for( v = nvars - 1; v >= 0; --v )
+         for( int v = nvars - 1; v >= 0; --v )
          {
             assert(vars != NULL);
 
@@ -389,17 +398,8 @@ SCIP_RETCODE fromCommandLine(
 #endif
 
    /* determine problem typ */
-   puresat = FALSE;
    conshdlr = SCIPfindConshdlr(scip, "logicor");
-   if( conshdlr != NULL && SCIPconshdlrGetNActiveConss(conshdlr) == SCIPgetNConss(scip) )
-      puresat = TRUE;
-
-#ifdef PBSOLVER
-   // nonlinear = FALSE;
-   conshdlr = SCIPfindConshdlr(scip, "and");
-   // if( conshdlr != NULL && SCIPconshdlrGetNActiveConss(conshdlr) > 0 )
-   //    nonlinear = TRUE;
-#endif
+   puresat = (conshdlr != NULL && SCIPconshdlrGetNActiveConss(conshdlr) == SCIPgetNConss(scip));
 
    /* set setting for the branch-and-bound process */
    if( settingsfilename == NULL )
@@ -423,7 +423,7 @@ SCIP_RETCODE fromCommandLine(
             nheuristics = SCIPgetNHeurs(scip);
             heuristics = SCIPgetHeurs(scip);
 
-            for( h = 0; h < nheuristics; ++h )
+            for( int h = 0; h < nheuristics; ++h )
             {
                (void)SCIPsnprintf(parametername, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
 
@@ -465,32 +465,15 @@ SCIP_RETCODE fromCommandLine(
    return SCIP_OKAY;
 }
 
-static void printUnsupportedSolution(SCIP *scip) {
-   SCIP_MESSAGEHDLR* messagehdlr;
-   SCIP_MESSAGEHDLRDATA* messagehdlrdata;
-
-   messagehdlr = SCIPgetMessagehdlr(scip);
-   assert(messagehdlr != NULL);
-   messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
-   assert(messagehdlrdata != NULL);
-
-   /* turn on message handler */
-   SCIPmessagehdlrSetQuiet(messagehdlr, FALSE);
-   messagehdlrdata->comment = FALSE;
-   SCIPinfoMessage(scip, NULL, "s UNSUPPORTED\n");
-}
-
-
-
 /** evaluates command line parameters and runs SCIP appropriately in the given SCIP instance */
 static
 SCIP_RETCODE processShellArguments(
-      SCIP*                      scip,               /**< SCIP data structure */
-      SCIP_MESSAGEHDLR*          defaultmessagehdlr, /**< standard message handler */
-      int                        argc,               /**< number of shell parameters */
-      char**                     argv,               /**< array with shell parameters */
-      clock_t                    starttime,          /**< time the process started */
-      const char*                defaultsetname      /**< name of default settings file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     defaultmessagehdlr, /**< standard message handler */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv,               /**< array with shell parameters */
+   clock_t               starttime,          /**< time the process started */
+   const char*           defaultsetname      /**< name of default settings file */
 )
 {
    char* probname = NULL;
@@ -669,9 +652,6 @@ SCIP_RETCODE processShellArguments(
    else
    {
       SCIPinfoMessage(scip, NULL, "syntax: %s [-l <logfile>] [-q] [-s <settings>] [-f <problem>] [-b <batchfile>]", argv[0]);
-#ifndef PBSOLVER
-      SCIPinfoMessage(scip, NULL, " [-c \"command\"]");
-#endif
       SCIPinfoMessage(scip, NULL, " [-t <timelimit>] [-m <memlimit>] [-d <dispfreq>]\n");
 
       SCIPinfoMessage(scip, NULL, "  -l <logfile>   : copy output into log file\n");
@@ -691,15 +671,15 @@ SCIP_RETCODE processShellArguments(
 }
 
 
-/** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
- *  and frees the SCIP instance
+/** creates a SCIP instance with default plugins, evaluates command line parameters,
+ *  runs SCIP appropriately, and frees the SCIP instance
  */
 static
 SCIP_RETCODE runShell(
-      int                        argc,               /**< number of shell parameters */
-      char**                     argv,               /**< array with shell parameters */
-      clock_t                    starttime,          /**< time the process started */
-      const char*                defaultsetname      /**< name of default settings file */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv,               /**< array with shell parameters */
+   clock_t               starttime,          /**< time the process started */
+   const char*           defaultsetname      /**< name of default settings file */
 )
 {
    SCIP_MESSAGEHDLR* messagehdlr;
@@ -750,10 +730,10 @@ SCIP_RETCODE runShell(
 }
 
 
-
+/** main method starting the PBSolver */
 int main(
-   int                   argc,          /**< number of arguments */
-   char**                argv           /**< string array with arguments */
+   int                   argc,               /**< number of arguments */
+   char**                argv                /**< string array with arguments */
    )
 {
    SCIP_RETCODE retcode;
