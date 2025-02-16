@@ -3324,11 +3324,11 @@ void permSortConsdata(
 
 /** sorts linear constraint's variables depending on the stage of the solving process:
  * - during PRESOLVING
- *       sorts variables by binaries, integers, implicit integers, and continuous variables,
+ *       sorts variables by binary, integer, implied integral, and continuous variables,
  *       and the variables of the same type by non-decreasing variable index
  *
  * - during SOLVING
- *       sorts variables of the remaining problem by binaries, integers, implicit integers, and continuous variables,
+ *       sorts variables of the remaining problem by binary, integer, implied integral, and continuous variables,
  *       and binary and integer variables by their global max activity delta (within each group),
  *       ties within a group are broken by problem index of the variable.
  *
@@ -8967,7 +8967,7 @@ SCIP_RETCODE tightenSides(
    return SCIP_OKAY;
 }
 
-/** tightens coefficients of binary, integer, and implicit integer variables due to activity bounds in presolving:
+/** tightens coefficients of binary, integer, and implied integral variables due to activity bounds in presolving:
  *  given an inequality  lhs <= a*x + ai*xi <= rhs, with a non-continuous variable  li <= xi <= ui
  *  let minact := min{a*x + ai*xi}, maxact := max{a*x + ai*xi}
  *  (i) ai >= 0:
@@ -9583,9 +9583,9 @@ void getNewSidesAfterAggregation(
 
 /** processes equality with more than two variables by multi-aggregating one of the variables and converting the equality
  *  into an inequality; if multi-aggregation is not possible, tries to identify one continuous or integer variable that
- *  is implicitly integral by this constraint
+ *  is implied integral by this constraint
  *
- *  @todo Check whether a more clever way of avoiding aggregation of variables containing implicitly integer variables
+ *  @todo Check whether a more clever way of avoiding aggregation of variables containing implied integral variables
  *       can help.
  */
 static
@@ -9925,7 +9925,7 @@ SCIP_RETCODE convertLongEquality(
    }
    assert(!samevar || (supinf > 0 && infinf > 0));
 
-   /*TODO: implint detection again terminates early here*/
+   /* @TODO: implint detection again terminates early here */
    /* If the infimum and the supremum of a multi-aggregation are both infinite, then the multi-aggregation might not be resolvable.
     * E.g., consider the equality z = x-y. If x and y are both fixed to +infinity, the value for z is not determined */
    if( (samevar && (supinf > 1 || infinf > 1)) || (!samevar && supinf > 0 && infinf > 0) )
@@ -9936,7 +9936,7 @@ SCIP_RETCODE convertLongEquality(
 
    /* if the slack variable is of integer type, and the constraint itself may take fractional values,
     * we cannot aggregate the variable, because the integrality condition would get lost
-    * Similarly, if there are implicitly integral variables we cannot aggregate, since we might
+    * Similarly, if there are implied integral variables, we cannot aggregate since we might
     * loose the integrality condition for this variable.
     */
    if( bestslackpos >= 0
@@ -10044,7 +10044,7 @@ SCIP_RETCODE convertLongEquality(
                return SCIP_OKAY;
             }
          }
-         /* aggregate continuous variable to an implicit one, if the absolute value of the coefficient is unequal to one */
+         /* aggregate continuous variable to an implied integral one if the absolute coefficient is unequal to one */
          /* @todo check if the aggregation coefficient should be in some range(, which is not too big) */
          else if( !SCIPdoNotAggr(scip) )
          {
@@ -10058,7 +10058,7 @@ SCIP_RETCODE convertLongEquality(
 
             (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_impl", SCIPvarGetName(var));
 
-            /* create new implicit variable for aggregation */
+            /* create new implied integral variable for aggregation */
             SCIP_CALL( SCIPcreateVarImpl(scip, &newvar, newvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
                   SCIP_VARTYPE_CONTINUOUS, SCIP_IMPLINTTYPE_WEAK,
                   SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL, NULL) );
@@ -10075,26 +10075,26 @@ SCIP_RETCODE convertLongEquality(
             }
 #endif
 
-            /* convert the continuous variable with coefficient 1.0 into an implicit integer variable */
-            SCIPdebugMsg(scip, "linear constraint <%s>: aggregating continuous variable <%s> to newly created implicit integer variable <%s>, aggregation factor = %g\n",
+            /* convert the continuous variable with coefficient 1.0 into an implied integral variable */
+            SCIPdebugMsg(scip, "linear constraint <%s>: aggregating continuous variable <%s> to newly created implied integral variable <%s>, aggregation factor = %g\n",
                SCIPconsGetName(cons), SCIPvarGetName(var), SCIPvarGetName(newvar), absval);
 
-            /* aggregate continuous and implicit variable */
+            /* aggregate continuous and implied integral variable */
             SCIP_CALL( SCIPaggregateVars(scip, var, newvar, absval, -1.0, 0.0, &infeasible, &redundant, &aggregated) );
 
             if( infeasible )
             {
-               SCIPdebugMsg(scip, "infeasible aggregation of variable <%s> to implicit variable <%s>, domain is empty\n",
+               SCIPdebugMsg(scip, "infeasible aggregation of variable <%s> to implied integral variable <%s>, domain is empty\n",
                   SCIPvarGetName(var), SCIPvarGetName(newvar));
                *cutoff = TRUE;
 
-               /* release implicit variable */
+               /* release implied integral variable */
                SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
 
                return SCIP_OKAY;
             }
 
-            /* release implicit variable */
+            /* release implied integral variable */
             SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
 
             if( aggregated )
@@ -10127,8 +10127,8 @@ SCIP_RETCODE convertLongEquality(
          && SCIPisEQ(scip, REALABS(vals[intvarpos]), 1.0)
          && SCIPisFeasIntegral(scip, consdata->rhs) )
       {
-         /* convert the integer variable with coefficient 1.0 into an implicit integer variable */
-         SCIPdebugMsg(scip, "linear constraint <%s>: converting integer variable <%s> to implicit integer variable\n",
+         /* convert the integer variable with coefficient 1.0 into an implied integral variable */
+         SCIPdebugMsg(scip, "linear constraint <%s>: converting integer variable <%s> to implied integral variable\n",
             SCIPconsGetName(cons), SCIPvarGetName(var));
          SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_STRONG, &infeasible) );
          (*nchgvartypes)++;
@@ -11015,8 +11015,9 @@ SCIP_RETCODE dualPresolve(
           */
          SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
 
-         /* if the multi-aggregate bestvar is integer, we need to convert implicit integers to integers because
-          *  the implicitness might rely on the constraint and the integrality of bestvar
+         /* @TODO: handle this case properly with extended implied integrality */
+         /* if the multi-aggregated bestvar is enforced but not strongly implied integral, we need to convert implied
+          * integral to integer variables because integrality of the multi-aggregated variable must hold
           */
          if( !infeasible && aggregated && SCIPvarGetType(bestvar) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetImplType(bestvar) != SCIP_IMPLINTTYPE_STRONG )
          {
@@ -11024,8 +11025,7 @@ SCIP_RETCODE dualPresolve(
 
             for( j = 0; j < naggrs; ++j)
             {
-               /* @TODO: handle this case properly with new implied integrality */
-               /* if the multi-aggregation was not infeasible, then setting implicit integers to integers should not
+               /* if the multi-aggregation was not infeasible, then setting implied integral to integer should not
                 * lead to infeasibility
                 */
                if( SCIPvarGetType(aggrvars[j]) == SCIP_VARTYPE_CONTINUOUS || SCIPvarGetImplType(aggrvars[j]) != SCIP_IMPLINTTYPE_NONE )
@@ -12672,7 +12672,7 @@ SCIP_RETCODE simplifyInequalities(
  *  where a = val1[v] and b = -val0[v] for common variable v which removes most variable weight;
  *  for numerical stability, we will only accept integral a and b;
  *  the variable weight is a weighted sum over all included variables, where each binary variable weighs BINWEIGHT,
- *  each integer or implicit integer variable weighs INTWEIGHT and each continuous variable weighs CONTWEIGHT
+ *  each integer or implied integral variable weighs INTWEIGHT and each continuous variable weighs CONTWEIGHT
  */
 static
 SCIP_RETCODE aggregateConstraints(
@@ -14620,8 +14620,8 @@ SCIP_RETCODE fullDualPresolve(
     *   c_v <= 0 : x_v >= redub[v] is feasible due to optimality
     */
 
-   /* Additionally, we detect continuous variables that are implicitly integral.
-    * A continuous variable j is implicit integral if it only has only +/-1 coefficients,
+   /* Additionally, we detect continuous variables that are implied integral.
+    * A continuous variable j is implied integral if it only has only +/-1 coefficients,
     * and all constraints (including the bounds as trivial constraints) in which:
     *   c_j > 0: the variable is down-locked,
     *   c_j < 0: the variable is up-locked,
@@ -14671,8 +14671,8 @@ SCIP_RETCODE fullDualPresolve(
    BMSclearMemoryArray(nlocksdown, nvars);
    BMSclearMemoryArray(nlocksup, nvars);
 
-   /* Initialize isimplint array: variable may be implicit integer if rounded to their best bound they are integral.
-    * We better not use SCIPisFeasIntegral() in these checks.
+   /* Initialize isimplint array: variable may be implied integral if rounded to their best bound they are integral
+    * we better not use SCIPisFeasIntegral() in these checks.
     */
    for( v = 0; v < ncontvars; v++ )
    {
@@ -14729,7 +14729,7 @@ SCIP_RETCODE fullDualPresolve(
          /* we do not want to include constraints with locked negation (this would be too weird) */
          if( SCIPconsGetNLocksNeg(conss[c]) > 0 )
          {
-            /* mark all continuous variables as not being implicit integral */
+            /* mark all non-implied continuous variables */
             for( i = 0; i < consdata->nvars; ++i )
             {
                SCIP_VAR* var;
@@ -14877,13 +14877,13 @@ SCIP_RETCODE fullDualPresolve(
             }
          }
 
-         /* update implicit integer status of continuous variables */
+         /* update implied integrality status of continuous variables */
          if( hasimpliedpotential )
          {
             if( nconscontvars > 1 || !integralcoefs )
             {
                /* there is more than one continuous variable or the integer variables have fractional coefficients:
-                * none of the continuous variables is implicit integer
+                * none of the continuous variables is implied integral
                 */
                for( i = 0; i < nconscontvars; i++ )
                {
@@ -15010,7 +15010,8 @@ SCIP_RETCODE fullDualPresolve(
       }
    }
 
-   /* upgrade continuous variables to implicit integers */
+   /* @TODO: improve range names */
+   /* declare continuous variables implied integral */
    for( v = nintvars - nbinvars; v < nvars; ++v )
    {
       SCIP_VAR* var;
@@ -15024,7 +15025,8 @@ SCIP_RETCODE fullDualPresolve(
       assert(SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) >= nlocksup[v]);
       assert(0 <= v - nintvars + nbinvars && v - nintvars + nbinvars < ncontvars);
 
-      /* we can only conclude implicit integrality if the variable appears in no other constraint */
+      /* @TODO: relax lock conditions */
+      /* we can only conclude implied integrality if the variable appears in no other constraint */
       if( isimplint[v - nintvars + nbinvars]
          && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == nlocksdown[v]
          && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == nlocksup[v] )
@@ -15041,7 +15043,7 @@ SCIP_RETCODE fullDualPresolve(
             break;
          }
 
-         SCIPdebugMsg(scip, "dual presolve: converting continuous variable <%s>[%g,%g] to implicit integer\n",
+         SCIPdebugMsg(scip, "dual presolve: declare continuous variable <%s>[%g,%g] implied integral\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
       }
    }
