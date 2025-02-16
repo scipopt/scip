@@ -122,6 +122,9 @@ SCIP_RETCODE updateBestCandidate(
    SCIP_Real pscostdown;
    SCIP_Real pscostup;
 
+   SCIP_VARTYPE besttype;
+   SCIP_VARTYPE candtype;
+
    char strategy;
 
    assert(scip != NULL);
@@ -401,8 +404,9 @@ SCIP_RETCODE updateBestCandidate(
       /* both are equally good */
    }
 
-   SCIP_VARTYPE besttype = SCIPvarIsImpliedIntegral(*bestvar) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(*bestvar);
-   SCIP_VARTYPE candtype = SCIPvarIsImpliedIntegral(cand) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(cand);
+   besttype = SCIPvarIsImpliedIntegral(*bestvar) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(*bestvar);
+   candtype = SCIPvarIsImpliedIntegral(cand) ? SCIP_DEPRECATED_VARTYPE_IMPLINT : SCIPvarGetType(cand);
+
    if( besttype == candtype )
    {
       /* if both have the same type, take the one with larger relative diameter */
