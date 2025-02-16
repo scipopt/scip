@@ -13082,7 +13082,7 @@ SCIP_Real SCIPvarGetMultaggrLbLocal(
  *  this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
  *  calling this function for a non-multi-aggregated variable is not allowed
  */
-void SCIPvarGetMultaggrLbLocalExact(
+SCIP_RETCODE SCIPvarGetMultaggrLbLocalExact(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Rational*        result              /**< the resulting bound */
@@ -13100,9 +13100,8 @@ void SCIPvarGetMultaggrLbLocalExact(
    assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
-   /* MP@LE Return SCIP_RETCODE and catch possible memory problems in the following lines? */
-   (void) RatCreateBuffer(set->buffer, &lb);
-   (void) RatCreateBuffer(set->buffer, &bnd);
+   SCIP_CALL( RatCreateBuffer(set->buffer, &lb) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &bnd) );
 
    posinf = FALSE;
    neginf = FALSE;
@@ -13113,7 +13112,7 @@ void SCIPvarGetMultaggrLbLocalExact(
       if( RatIsPositive(var->exactdata->multaggr.scalars[i]) )
       {
          if( SCIPvarGetStatusExact(aggrvar) == SCIP_VARSTATUS_MULTAGGR )
-            SCIPvarGetMultaggrLbLocalExact(aggrvar, set, bnd);
+            SCIP_CALL( SCIPvarGetMultaggrLbLocalExact(aggrvar, set, bnd) );
          else
             RatSet(bnd, SCIPvarGetLbLocalExact(aggrvar));
 
@@ -13127,7 +13126,7 @@ void SCIPvarGetMultaggrLbLocalExact(
       else
       {
          if( SCIPvarGetStatusExact(aggrvar) == SCIP_VARSTATUS_MULTAGGR )
-            SCIPvarGetMultaggrUbLocalExact(aggrvar, set, bnd);
+            SCIP_CALL( SCIPvarGetMultaggrUbLocalExact(aggrvar, set, bnd) );
          else
             RatSet(bnd, SCIPvarGetUbLocalExact(aggrvar));
 
@@ -13157,6 +13156,8 @@ void SCIPvarGetMultaggrLbLocalExact(
 
    RatFreeBuffer(set->buffer, &bnd);
    RatFreeBuffer(set->buffer, &lb);
+
+   return SCIP_OKAY;
 }
 
 /** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all
@@ -13229,7 +13230,7 @@ SCIP_Real SCIPvarGetMultaggrUbLocal(
  *  this upper bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
  *  calling this function for a non-multi-aggregated variable is not allowed
  */
-void SCIPvarGetMultaggrUbLocalExact(
+SCIP_RETCODE SCIPvarGetMultaggrUbLocalExact(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Rational*        result              /**< the resulting bound */
@@ -13247,9 +13248,8 @@ void SCIPvarGetMultaggrUbLocalExact(
    assert(var->scip == set->scip);
    assert((SCIP_VARSTATUS) var->varstatus == SCIP_VARSTATUS_MULTAGGR);
 
-   /* MP@LE Return SCIP_RETCODE and catch possible memory problems in the following lines? */
-   (void) RatCreateBuffer(set->buffer, &ub);
-   (void) RatCreateBuffer(set->buffer, &bnd);
+   SCIP_CALL( RatCreateBuffer(set->buffer, &ub) );
+   SCIP_CALL( RatCreateBuffer(set->buffer, &bnd) );
 
    posinf = FALSE;
    neginf = FALSE;
@@ -13260,7 +13260,7 @@ void SCIPvarGetMultaggrUbLocalExact(
       if( RatIsPositive(var->exactdata->multaggr.scalars[i]) )
       {
          if( SCIPvarGetStatusExact(aggrvar) == SCIP_VARSTATUS_MULTAGGR )
-            SCIPvarGetMultaggrUbLocalExact(aggrvar, set, bnd);
+            SCIP_CALL( SCIPvarGetMultaggrUbLocalExact(aggrvar, set, bnd) );
          else
             RatSet(bnd, SCIPvarGetUbLocalExact(aggrvar));
 
@@ -13304,6 +13304,8 @@ void SCIPvarGetMultaggrUbLocalExact(
 
    RatFreeBuffer(set->buffer, &bnd);
    RatFreeBuffer(set->buffer, &ub);
+
+   return SCIP_OKAY;
 }
 
 /** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all
@@ -19635,7 +19637,6 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       assert(RatIsEqual(var->exactdata->locdom.lb, var->exactdata->glbdom.lb)); /*lint !e777*/
       assert(!RatIsAbsInfinity(var->exactdata->locdom.lb));
 
-      /* MP@LE Use local instance of tmp? */
       SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
       RatMult(tmp, val, var->exactdata->locdom.lb);
@@ -19648,7 +19649,6 @@ SCIP_RETCODE SCIPvarAddToRowExact(
    case SCIP_VARSTATUS_AGGREGATED:
       assert(var->data.aggregate.var != NULL);
 
-      /* MP@LE Use local instance of tmp? */
       SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
       RatMult(tmp, var->exactdata->aggregate.scalar, val);
       SCIP_CALL( SCIPvarAddToRowExact(var->data.aggregate.var, blkmem, set, stat, eventqueue, prob, lpexact,
@@ -19663,13 +19663,8 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
 
-      /* MP@LE Use local instance of tmp? */
       SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
-      /* MP@LE What about the following comment. Should this be removed? */
-      /* Due to method SCIPvarFlattenAggregationGraph(), this assert is no longer correct
-       * assert(var->data.multaggr.nvars >= 2);
-       */
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
          RatMult(tmp, var->exactdata->multaggr.scalars[i], val);
@@ -19687,7 +19682,6 @@ SCIP_RETCODE SCIPvarAddToRowExact(
       assert(SCIPvarGetStatusExact(var->negatedvar) != SCIP_VARSTATUS_NEGATED);
       assert(var->negatedvar->negatedvar == var);
 
-      /* MP@LE Use local instance of tmp? */
       SCIP_CALL( RatCreateBuffer(set->buffer, &tmp) );
 
       RatNegate(tmp, val);
