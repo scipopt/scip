@@ -919,9 +919,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
       SCIP_CALL( SCIPcaptureVar(scip, benders->masterauxvar) );
    }
    else
-   {
-      SCIPABORT();
-   }
+      benders->masterauxvar = NULL;
 
    /* storing the auxiliary variable in the target Benders' implementation */
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
