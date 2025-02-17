@@ -31,8 +31,6 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
-#define PBSOLVER
-
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -41,27 +39,16 @@
 #include "message_pb.h"
 #include "event_bestsol.h"
 
-#define SETOBJ         0
-#define HEURISTICS_OFF 0
+#define SETOBJ         0                     /**< insert objective function if no exists */
+#define HEURISTICS_OFF 0                     /**< turn off heuristics */
 #define MAXMEMUSAGE    0.9                   /**< maximal memory usage relative to available memory */
 #define POSTTIME       3.0                   /**< time in seconds saved in the end to display solution and free everything */
 
 
-/** sets parameters for satisfiability problems */
-static
-SCIP_RETCODE loadSettingsNoObjPrePresolve(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   /* TODO: set parameters */
-   return SCIP_OKAY;
-}
-
 /** sets parameters for pure satisfiability problems */
 static
 SCIP_RETCODE loadSettingsPureSat(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             hasnoobj            /**< is the problem a satisfiability problem */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    /* TODO: set parameters */
@@ -104,7 +91,7 @@ SCIP_RETCODE printSolution(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< SCIP problem variables */
    int                   nvars,              /**< number of problem variables */
-   SCIP_Bool             hasnoobj            /**< has the problem no original objective function? */
+   SCIP_Bool             hasobj              /**< does the problem have an objective function? */
    )
 {
    SCIP_MESSAGEHDLR* messagehdlr;
@@ -154,7 +141,7 @@ SCIP_RETCODE printSolution(
          }
          else
          {
-            if( hasnoobj || status != SCIP_STATUS_OPTIMAL )
+            if( !hasobj || status != SCIP_STATUS_OPTIMAL )
                SCIPinfoMessage(scip, NULL, "s SATISFIABLE\n");
             else
                SCIPinfoMessage(scip, NULL, "s OPTIMUM FOUND\n");
@@ -264,7 +251,7 @@ SCIP_RETCODE fromCommandLine(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONS** conss;
    SCIP_VAR** vars;
-   SCIP_Bool hasnoobj;
+   SCIP_Bool hasobj;
    SCIP_Bool hasindicator;
    SCIP_Bool puresat;
    int nconss;
@@ -324,12 +311,12 @@ SCIP_RETCODE fromCommandLine(
    vars = SCIPgetOrigVars(scip);
    nvars = SCIPgetNOrigVars(scip);
    assert(vars != NULL || nvars == 0);
-   hasnoobj = TRUE;
+   hasobj = FALSE;
    for( v = 0; v < nvars; ++v )
    {
       if( !SCIPisZero(scip, SCIPvarGetObj(vars[v])) )
       {
-         hasnoobj = FALSE;
+         hasobj = TRUE;
          break;
       }
    }
@@ -350,22 +337,15 @@ SCIP_RETCODE fromCommandLine(
 
 #ifdef PBSOLVER
    /* create event handler for best solution found if an objective exists */
-   if( !hasnoobj )
+   if( hasobj )
    {
       SCIP_CALL( SCIPcreateEventHdlrBestsol(scip) );
    }
 #endif
 
-   if( hasnoobj )
+   if( !hasobj )
    {
       SCIPinfoMessage(scip, NULL, "No objective function, only one solution is needed.\n");
-
-      if( settingsfilename == NULL )
-      {
-         /* load settings for all SATUNSAT problems */
-         SCIP_CALL( loadSettingsNoObjPrePresolve(scip) );
-      }
-
 #if SETOBJ
       /* insert objective function if no exists */
       for( v = 0; v < nvars; ++v )
@@ -402,7 +382,7 @@ SCIP_RETCODE fromCommandLine(
       if( puresat )
       {
          /* load settings for pure SAT */
-         SCIP_CALL( loadSettingsPureSat(scip, hasnoobj) );
+         SCIP_CALL( loadSettingsPureSat(scip) );
       }
       else
       {
@@ -437,7 +417,7 @@ SCIP_RETCODE fromCommandLine(
 
    /* print resulting solution */
 #ifdef PBSOLVER
-   SCIP_CALL( printSolution(scip, vars, nvars, hasnoobj) );
+   SCIP_CALL( printSolution(scip, vars, nvars, hasobj) );
 #else
    SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
 #endif
@@ -451,7 +431,6 @@ SCIP_RETCODE fromCommandLine(
 static
 SCIP_RETCODE processShellArguments(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_MESSAGEHDLR*     defaultmessagehdlr, /**< standard message handler */
    int                   argc,               /**< number of shell parameters */
    char**                argv,               /**< array with shell parameters */
    clock_t               starttime,          /**< time the process started */
@@ -473,101 +452,105 @@ SCIP_RETCODE processShellArguments(
 
    for( i = 1; i < argc; ++i )
    {
-      if( strcmp(argv[i], "-l") == 0 )
+      /* check for a valid flag */
+      if( argv[i][0] == '-' && strlen(argv[i]) == 2 )
       {
-         /* get log filename */
-         if( ++i < argc )
-            logname = argv[i];
-         else
+         switch( argv[i][1] )
          {
-            SCIPerrorMessage("missing log filename after parameter '-l'\n");
-            paramerror = TRUE;
-         }
-      }
-      else if( strcmp(argv[i], "-q") == 0 )
-         quiet = TRUE;
-      else if( strcmp(argv[i], "-s") == 0 )
-      {
-         /* get settings filename */
-         if( ++i < argc )
-            settingsname = argv[i];
-         else
-         {
-            SCIPerrorMessage("missing settings filename after parameter '-s'\n");
-            paramerror = TRUE;
-         }
-      }
-      else if( strcmp(argv[i], "-f") == 0 )
-      {
-         /* get problem filename */
-         if( ++i < argc )
-            probname = argv[i];
-         else
-         {
-            SCIPerrorMessage("missing problem filename after parameter '-f'\n");
-            paramerror = TRUE;
-         }
-      }
-      else if( strcmp(argv[i], "-t") == 0 )
-      {
-         /* get time limit */
-         if( ++i < argc )
-            timelimit = atof(argv[i]);
-         else
-         {
-            SCIPerrorMessage("missing time limit after parameter '-t'\n");
-            paramerror = TRUE;
-         }
-      }
-      else if( strcmp(argv[i], "-m") == 0 )
-      {
-         /* set memory limit */
-         if( ++i < argc )
-         {
-            SCIP_CALL( SCIPsetRealParam(scip, "limits/memory", atof(argv[i]) * MAXMEMUSAGE) );
-         }
-         else
-         {
-            SCIPerrorMessage("missing memory limit after parameter '-m'\n");
-            paramerror = TRUE;
-         }
-      }
-      else if( strcmp(argv[i], "-d") == 0 )
-      {
-         /* set display frequency */
-         if( ++i < argc )
-         {
-            SCIP_CALL( SCIPsetIntParam(scip, "display/freq", atoi(argv[i])) );
-         }
-         else
-         {
-            SCIPerrorMessage("missing display frequency after parameter '-d'\n");
-            paramerror = TRUE;
-         }
-      }
+            /* get log filename */
+            case 'l': 
+               if( ++i < argc )
+                  logname = argv[i];
+               else
+               {
+                  SCIPerrorMessage("missing log filename after parameter '-l'\n");
+                  paramerror = TRUE;
+               }
+               break;
+            /* set quiet flag */
+            case 'q': 
+               quiet = TRUE;
+               break;
+            /* get settings filename */
+            case 's':
+               if( ++i < argc )
+                  settingsname = argv[i];
+               else
+               {
+                  SCIPerrorMessage("missing settings filename after parameter '-s'\n");
+                  paramerror = TRUE;
+               }
+               break;
+            case 'f': /* get problem filename */
+               if( ++i < argc )
+                  probname = argv[i];
+               else
+               {
+                  SCIPerrorMessage("missing problem filename after parameter '-f'\n");
+                  paramerror = TRUE;
+               }
+               break;
+            /* get time limit */
+            case 't':
+               if( ++i < argc )
+                  timelimit = atof(argv[i]);
+               else
+               {
+                  SCIPerrorMessage("missing time limit after parameter '-t'\n");
+                  paramerror = TRUE;
+               }
+               break;
+            /* set memory limit */
+            case 'm': 
+               if( ++i < argc )
+               {
+                  SCIP_CALL( SCIPsetRealParam(scip, "limits/memory", atof(argv[i]) * MAXMEMUSAGE) );
+               }
+               else
+               {
+                  SCIPerrorMessage("missing memory limit after parameter '-m'\n");
+                  paramerror = TRUE;
+               }
+               break;
+            /* set display frequency */
+            case 'd': 
+               if( ++i < argc )
+               {
+                  SCIP_CALL( SCIPsetIntParam(scip, "display/freq", atoi(argv[i])) );
+               }
+               else
+               {
+                  SCIPerrorMessage("missing display frequency after parameter '-d'\n");
+                  paramerror = TRUE;
+               }
+               break;
 #ifndef PBSOLVER
-      else if( strcmp(argv[i], "-c") == 0 )
-      {
-         /* add command line */
-         if( ++i < argc )
-         {
-            SCIP_CALL( SCIPaddDialogInputLine(scip, argv[i]) );
-            interactive = TRUE;
-         }
-         else
-         {
-            SCIPerrorMessage("missing command line after parameter '-c'\n");
-            paramerror = TRUE;
+            /* command line input */
+            case 'c': 
+               if( ++i < argc )
+               {
+                  SCIP_CALL( SCIPaddDialogInputLine(scip, argv[i]) );
+                  interactive = TRUE;
+               }
+               else
+               {
+                  SCIPerrorMessage("missing command line after parameter '-c'\n");
+                  paramerror = TRUE;
+               }
+               break;
+#endif
+            default:
+               SCIPerrorMessage("invalid parameter '%s'\n", argv[i]);
+               paramerror = TRUE;
+               break;
          }
       }
-#endif
       else
       {
          SCIPerrorMessage("invalid parameter '%s'\n", argv[i]);
          paramerror = TRUE;
       }
    }
-
    if( !paramerror )
    {
       /***********************
@@ -639,7 +622,6 @@ SCIP_RETCODE runShell(
    )
 {
    SCIP_MESSAGEHDLR* messagehdlr = NULL;
-   SCIP_MESSAGEHDLR* defaultmessagehdlr;
    SCIP* scip = NULL;
 
    /*********
@@ -652,10 +634,6 @@ SCIP_RETCODE runShell(
    /* include default plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
-   defaultmessagehdlr = SCIPgetMessagehdlr(scip);
-   /* capture default message handler */
-   SCIPmessagehdlrCapture(defaultmessagehdlr);
-
    /* create own buffered message handler for PB console log */
    SCIP_CALL( SCIPcreateMessagehdlrPbSolver(&messagehdlr, TRUE, NULL, FALSE) );
 
@@ -666,11 +644,10 @@ SCIP_RETCODE runShell(
     * Process command line arguments *
     **********************************/
 
-   SCIP_CALL( processShellArguments(scip, defaultmessagehdlr, argc, argv, starttime, defaultsetname) );
+   SCIP_CALL( processShellArguments(scip, argc, argv, starttime, defaultsetname) );
 
    /* release captured and own message handler */
    SCIP_CALL( SCIPmessagehdlrRelease(&messagehdlr) );
-   SCIP_CALL( SCIPmessagehdlrRelease(&defaultmessagehdlr) );
 
    /********************
     * Deinitialization *
