@@ -36,17 +36,15 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
 #include "message_pb.h"
 #include "event_bestsol.h"
 
-#define SETOBJ FALSE
-#define HEURISTICS_OFF FALSE
-
-#define MAXMEMUSAGE 0.9                      /**< maximal memory usage in percent of the available memory */
-#define POSTTIME    3.0                      /**< time saved in the end to free every thing and display the solutions */
+#define SETOBJ         0
+#define HEURISTICS_OFF 0
+#define MAXMEMUSAGE    0.9                   /**< maximal memory usage relative to available memory */
+#define POSTTIME       3.0                   /**< time in seconds saved in the end to display solution and free everything */
 
 
 /** sets parameters for satisfiability problems */
@@ -140,10 +138,7 @@ SCIP_RETCODE printSolution(
       SCIPinfoMessage(scip, NULL, "s UNSATISFIABLE\n");
    else
    {
-      SCIP_Bool feasible;
-
       feasible = FALSE;
-
       bestsol = SCIPgetBestSol(scip);
 
       if( bestsol != NULL )
@@ -245,7 +240,14 @@ SCIP_RETCODE printUnsupported(
    /* turn on message handler and remove comment declaration */
    SCIPmessagehdlrSetQuiet(messagehdlr, FALSE);
    messagehdlrdata->comment = FALSE;
+
    SCIPinfoMessage(scip, NULL, "s UNSUPPORTED\n");
+
+   /* reset old values of message handler data */
+   SCIPmessagehdlrSetQuiet(messagehdlr, quiet);
+   messagehdlrdata->comment = comment;
+
+   return SCIP_OKAY;
 }
 
 /** run SCIP from command line */
