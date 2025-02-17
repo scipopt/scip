@@ -140,9 +140,6 @@
                         }                                                                                      \
                         while( FALSE )
 
-/**@todo make thread-safe */
-int nsolvecalls = 0;
-
 /** SCIP's HiGHS class */
 class HighsSCIP : public Highs
 {
@@ -437,12 +434,6 @@ SCIP_RETCODE lpiSolve(
 {
    std::string presolvestring;
 
-   nsolvecalls++;
-   int ck_ca_n = -99999;
-   const bool check_lp = nsolvecalls == ck_ca_n;
-
-   SCIPdebugMessage("HiGHS LP solve is called for the %d time\n", nsolvecalls);
-
    assert(lpi != NULL);
    assert(lpi->highs != NULL);
 
@@ -523,14 +514,13 @@ SCIP_RETCODE lpiSolve(
       SCIP_CALL( retcode );
    }
 
-   if( check_lp )
-   {
-      int highs_iterations;
-      HIGHS_CALL( lpi->highs->getInfoValue("simplex_iteration_count", highs_iterations) );
-      SCIPdebugMessage("After call %d o solve() f=%15g; Iter = %d; Status = %s\n", nsolvecalls,
-         lpi->highs->getObjectiveValue(), highs_iterations,
-         lpi->highs->modelStatusToString(lpi->highs->getModelStatus()).c_str());
-   }
+#if SCIP_DISABLED_CODE
+   int highs_iterations;
+   HIGHS_CALL( lpi->highs->getInfoValue("simplex_iteration_count", highs_iterations) );
+   SCIPdebugMessage("After call of solve() f=%15g; Iter = %d; Status = %s\n",
+      lpi->highs->getObjectiveValue(), highs_iterations,
+      lpi->highs->modelStatusToString(lpi->highs->getModelStatus()).c_str());
+#endif
 
    lpi->solved = TRUE;
    return SCIP_OKAY;
