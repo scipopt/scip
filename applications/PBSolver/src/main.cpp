@@ -49,37 +49,36 @@
 #define POSTTIME    3.0                      /**< time saved in the end to free every thing and display the solutions */
 
 
-/** sets parameter for satisfiability problems */
+/** sets parameters for satisfiability problems */
 static
 SCIP_RETCODE loadSettingsNoObjPrePresolve(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
-   /* TODO set parameters */
+   /* TODO: set parameters */
    return SCIP_OKAY;
 }
 
-/** sets parameter for pure satisfiability problems */
+/** sets parameters for pure satisfiability problems */
 static
 SCIP_RETCODE loadSettingsPureSat(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             hasnoobj            /**< is the problem a satisfiability problem */
-)
+   )
 {
-   /* TODO set parameters */
+   /* TODO: set parameters */
    return SCIP_OKAY;
 }
 
-/** sets parameter for wbo instances */
+/** sets parameters for wbo instances */
 static
 SCIP_RETCODE loadSettingsWBO(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
-   /* TODO set parameters */
+   /* TODO: set parameters */
    return SCIP_OKAY;
 }
-
 
 static
 SCIP_RETCODE readParams(
@@ -102,7 +101,6 @@ SCIP_RETCODE readParams(
 }
 
 #ifdef PBSOLVER
-
 static
 SCIP_RETCODE printSolution(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -115,9 +113,10 @@ SCIP_RETCODE printSolution(
    SCIP_MESSAGEHDLRDATA* messagehdlrdata;
    SCIP_SOL* bestsol;
    SCIP_STATUS status;
-   char* solutiontext;
    SCIP_Bool quiet;
    SCIP_Bool comment;
+   SCIP_Bool feasible;
+   char* solutiontext;
    int printlength = SCIP_MAXSTRLEN / 8;
    int strlength;
    int n;
@@ -128,19 +127,17 @@ SCIP_RETCODE printSolution(
    messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
    assert(messagehdlrdata != NULL);
 
-   /* store old quiet and comment value of message handler */
+   /* store old quiet and comment values of message handler */
    quiet = SCIPmessagehdlrIsQuiet(messagehdlr);
    comment = messagehdlrdata->comment;
 
-   /* turn on message handler */
+   /* turn on message handler and remove comment declaration */
    SCIPmessagehdlrSetQuiet(messagehdlr, FALSE);
    messagehdlrdata->comment = FALSE;
 
    status = SCIPgetStatus(scip);
    if( status == SCIP_STATUS_INFEASIBLE )
-   {
       SCIPinfoMessage(scip, NULL, "s UNSATISFIABLE\n");
-   }
    else
    {
       SCIP_Bool feasible;
@@ -178,8 +175,9 @@ SCIP_RETCODE printSolution(
 
                assert(SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_ORIGINAL);
 
-               if( strstr(SCIPvarGetName(vars[v]), "andresultant") == NULL && strstr(SCIPvarGetName(vars[v]),
-                     "indslack_") == NULL && strstr(SCIPvarGetName(vars[v]), "indicatorvar") == NULL )
+               if( strstr(SCIPvarGetName(vars[v]), "andresultant_") == NULL
+                  && strstr(SCIPvarGetName(vars[v]), "indslack_") == NULL
+                  && strstr(SCIPvarGetName(vars[v]), "indicatorvar_") == NULL )
                {
                   printed = SCIPsnprintf(solutiontext + n, strlength,
                         SCIPgetSolVal(scip, bestsol, vars[v]) > 0.5 ? " %s" : " -%s", SCIPvarGetName(vars[v]));
@@ -224,21 +222,27 @@ SCIP_RETCODE printSolution(
 }
 #endif
 
-/** prints that the input format is unsupported */
+/** prints that the problem instance is unsupported */
 static
-void printUnsupported(
+SCIP_RETCODE printUnsupported(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_MESSAGEHDLR* messagehdlr;
    SCIP_MESSAGEHDLRDATA* messagehdlrdata;
+   SCIP_Bool quiet;
+   SCIP_Bool comment;
 
    messagehdlr = SCIPgetMessagehdlr(scip);
    assert(messagehdlr != NULL);
    messagehdlrdata = SCIPmessagehdlrGetData(messagehdlr);
    assert(messagehdlrdata != NULL);
 
-   /* turn on message handler */
+   /* store old quiet and comment values of message handler */
+   quiet = SCIPmessagehdlrIsQuiet(messagehdlr);
+   comment = messagehdlrdata->comment;
+
+   /* turn on message handler and remove comment declaration */
    SCIPmessagehdlrSetQuiet(messagehdlr, FALSE);
    messagehdlrdata->comment = FALSE;
    SCIPinfoMessage(scip, NULL, "s UNSUPPORTED\n");
@@ -248,12 +252,11 @@ void printUnsupported(
 static
 SCIP_RETCODE fromCommandLine(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename,           /**< input file name */
+   const char*           filename,           /**< problem file name */
    const char*           settingsfilename,   /**< settings file name */
    SCIP_Real             timelimit,          /**< required time limit */
    clock_t               starttime           /**< time the process started */
-
-)
+   )
 {
    SCIP_RETCODE retcode;
    SCIP_CONSHDLR* conshdlr;
@@ -264,55 +267,53 @@ SCIP_RETCODE fromCommandLine(
    SCIP_Bool puresat;
    int nconss;
    int nvars;
+   int v;
+   int c;
 
    /********************
     * Problem Creation *
     ********************/
 
-   /* set time limit */
-   if( timelimit > 0.0 )
+   /* define time limit */
+   if( timelimit >= 0.0 )
    {
-      clock_t currtime;
+      /* get starting time and reserve finishing time */
+      timelimit -= (SCIP_Real)(clock() - starttime) / (SCIP_Real)CLOCKS_PER_SEC + POSTTIME;
 
-      /* add reading time to solving time */
-      SCIP_CALL( SCIPsetBoolParam(scip, "timing/reading", TRUE) );
+      /* stop immediately if time exceeded */
+      if( timelimit < 0.0 )
+         return SCIP_INVALIDCALL;
 
       /* set time limit */
-      currtime = clock();
-      timelimit -= POSTTIME;   /* 3 seconds bonus, to finish solving and not get interrupted */
-      timelimit -= (SCIP_Real) (currtime-starttime)/(SCIP_Real)CLOCKS_PER_SEC;
       SCIP_CALL( SCIPsetRealParam(scip, "limits/time", timelimit) );
    }
 
-   /* use wall clock time */
+   /* add reading time */
+   SCIP_CALL( SCIPsetBoolParam(scip, "timing/reading", TRUE) );
+
+   /* use wall clock */
    SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", 2) );
 
    SCIPinfoMessage(scip, NULL, "reading problem <%s>\n", filename);
 
-   retcode = SCIPreadProb(scip, filename, NULL);
+   /* try OPB reader */
+   retcode = SCIPreadProb(scip, filename, "opb");
 
+   /* try WBO reader */
    if( retcode == SCIP_PLUGINNOTFOUND )
+      retcode = SCIPreadProb(scip, filename, "wbo");
+
+   /* declare unsupported problem */
+   if( retcode == SCIP_INVALIDDATA )
    {
-      /* try to read the problem as opb format */
-      SCIP_RETCODE scipRetcode = SCIPreadProb(scip, filename, "opb");
-      if( scipRetcode == SCIP_INVALIDRESULT)
-      {
-         printUnsupported(scip);
-         return SCIP_OKAY;
-      }
-      SCIP_CALL(scipRetcode);
-   }
-   else
-   {
-      if( retcode == SCIP_INVALIDRESULT)
-      {
-         printUnsupported(scip);
-         return SCIP_OKAY;
-      }
-      SCIP_CALL( retcode );
+      SCIP_CALL( printUnsupported(scip) );
+      return SCIP_OKAY;
    }
 
-   SCIPinfoMessage(scip, NULL, "problem read in %.2f\n", SCIPgetReadingTime(scip));
+   /* detect unexpected error */
+   SCIP_CALL( retcode );
+
+   SCIPinfoMessage(scip, NULL, "problem read in %.3lf seconds\n", SCIPgetReadingTime(scip));
 
    /*******************
     * Problem Solving *
@@ -322,10 +323,8 @@ SCIP_RETCODE fromCommandLine(
    nvars = SCIPgetNOrigVars(scip);
    assert(vars != NULL || nvars == 0);
    hasnoobj = TRUE;
-   for( int v = nvars - 1; v >= 0 && hasnoobj; --v )
+   for( v = 0; v < nvars; ++v )
    {
-      assert(vars != NULL);
-
       if( !SCIPisZero(scip, SCIPvarGetObj(vars[v])) )
       {
          hasnoobj = FALSE;
@@ -335,22 +334,20 @@ SCIP_RETCODE fromCommandLine(
 
    conss = SCIPgetOrigConss(scip);
    nconss = SCIPgetNOrigConss(scip);
+   assert(conss != NULL || nconss == 0);
    hasindicator = FALSE;
-   for (int c = 0; c < nconss; ++c)
+   for( c = 0; c < nconss; ++c )
    {
-      conshdlr = SCIPconsGetHdlr(conss[c]);
-      if ( strcmp(SCIPconshdlrGetName(conshdlr), "pseudoboolean") == 0 )
+      if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])), "pseudoboolean") == 0
+         && SCIPgetIndVarPseudoboolean(scip, conss[c]) != NULL )
       {
-         if ( SCIPgetIndVarPseudoboolean(scip, conss[c]) != NULL )
-         {
-            hasindicator = TRUE;
-            break;
-         }
+         hasindicator = TRUE;
+         break;
       }
    }
 
 #ifdef PBSOLVER
-   /* create event handler for best solution found if an objective exists  */
+   /* create event handler for best solution found if an objective exists */
    if( !hasnoobj )
    {
       SCIP_CALL( SCIPcreateEventHdlrBestsol(scip) );
@@ -365,39 +362,35 @@ SCIP_RETCODE fromCommandLine(
       {
          /* load settings for all SATUNSAT problems */
          SCIP_CALL( loadSettingsNoObjPrePresolve(scip) );
-         SCIPinfoMessage(scip, NULL, "presolving settings loaded\n");
       }
 
-      /*  insert objective function if no exists */
-      if( SETOBJ ) /*lint !e774 !e506*/
+#if SETOBJ
+      /* insert objective function if no exists */
+      for( v = 0; v < nvars; ++v )
       {
-         for( int v = nvars - 1; v >= 0; --v )
+         /* add objective coefficient if variable will not be fixed up by dual presolver */
+         if( SCIPvarGetNLocksUp(vars[v]) >= 1 )
          {
-            assert(vars != NULL);
-
-            /* only change objective value of variable which wouldn't be fix by dual presolver */
-            if( SCIPvarGetNLocksUp(vars[v]) > 0 )
-            {
-               SCIP_CALL( SCIPchgVarObj(scip, vars[v], 1.0) );
-            }
+            SCIP_CALL( SCIPchgVarObj(scip, vars[v], 1.0) );
          }
       }
+#endif
    }
 
-   if ( hasindicator )
+   if( hasindicator && settingsfilename == NULL )
    {
       /* load settings for WBO instances */
       SCIP_CALL( loadSettingsWBO(scip) );
    }
+
    /* start presolving */
    SCIP_CALL( SCIPpresolve(scip) );
 
 #ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPwriteTransProblem(scip, "debug.lp", "lp", FALSE) );
-   SCIP_CALL( SCIPwriteTransProblem(scip, "debug.cip", "cip", FALSE) );
+   SCIP_CALL( SCIPwriteTransProblem(scip, "debug.cip", NULL, FALSE) );
 #endif
 
-   /* determine problem typ */
+   /* determine problem type */
    conshdlr = SCIPfindConshdlr(scip, "logicor");
    puresat = (conshdlr != NULL && SCIPconshdlrGetNActiveConss(conshdlr) == SCIPgetNConss(scip));
 
@@ -405,59 +398,46 @@ SCIP_RETCODE fromCommandLine(
    if( settingsfilename == NULL )
    {
       if( puresat )
+      {
+         /* load settings for pure SAT */
          SCIP_CALL( loadSettingsPureSat(scip, hasnoobj) );
+      }
       else
+      {
          /* activate rapidlearning */
          SCIP_CALL( SCIPsetIntParam(scip, "separating/rapidlearning/freq", 0) );
-
-      if( hasnoobj )
-      {
-         /* turn all heuristics off if desired */
-         if( HEURISTICS_OFF ) /*lint !e774 !e506*/
-         {
-            SCIP_HEUR** heuristics;
-            char parametername[SCIP_MAXSTRLEN];
-            int nheuristics;
-
-            /* turn off all heuristics */
-            nheuristics = SCIPgetNHeurs(scip);
-            heuristics = SCIPgetHeurs(scip);
-
-            for( int h = 0; h < nheuristics; ++h )
-            {
-               (void)SCIPsnprintf(parametername, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
-
-               if( SCIPheurGetFreq(heuristics[h]) != -1 )
-               {
-                  SCIP_CALL( SCIPsetIntParam(scip, parametername, -1) );
-               }
-               assert( SCIPheurGetFreq(heuristics[h]) == -1 );
-            }
-         }
       }
+
+#if HEURISTICS_OFF
+      /* turn off heuristics */
+      char parametername[SCIP_MAXSTRLEN];
+      SCIP_HEUR** heuristics = SCIPgetHeurs(scip);
+      int nheuristics = SCIPgetNHeurs(scip);
+      int h;
+      assert(heuristics != NULL);
+
+      for( h = 0; h < nheuristics; ++h )
+      {
+         (void)SCIPsnprintf(parametername, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
+         SCIP_CALL( SCIPsetIntParam(scip, parametername, -1) );
+         assert(SCIPheurGetFreq(heuristics[h]) == -1);
+      }
+#endif
    }
 
-   /* in case no LP solver is available turn off the LP relaxation */
-   if( strcmp(SCIPlpiGetSolverName(), "NONE") == 0 )
-   {
-      SCIP_CALL( SCIPsetIntParam(scip, "lp/solvefreq", -1) );
-      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/indicator/sepaAlternativeLP", FALSE) );
-   }
-
-   /* write all non-default parameters in file */
+   /* write non-default parameters to console */
    SCIPinfoMessage(scip, NULL, "- non default parameters ----------------------------------------------------------------------\n");
    SCIP_CALL( SCIPwriteParams( scip, NULL, TRUE, TRUE) );
    SCIPinfoMessage(scip, NULL, "-----------------------------------------------------------------------------------------------\n");
 
    /* start solving */
-   SCIPinfoMessage(scip, NULL, "start solving\n");
    SCIP_CALL( SCIPsolve(scip) );
 
-   /* printing solution */
+   /* print resulting solution */
 #ifdef PBSOLVER
-   SCIP_CALL( printSolution(scip, vars, nvars, hasnoobj));
+   SCIP_CALL( printSolution(scip, vars, nvars, hasnoobj) );
 #else
-   SCIP_CALL( SCIPprintBestSol( scip, NULL, FALSE) );
+   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
 #endif
 
    SCIP_CALL( SCIPprintStatistics(scip, NULL) );
@@ -474,33 +454,27 @@ SCIP_RETCODE processShellArguments(
    char**                argv,               /**< array with shell parameters */
    clock_t               starttime,          /**< time the process started */
    const char*           defaultsetname      /**< name of default settings file */
-)
+   )
 {
-   char* probname = NULL;
-   char* settingsname = NULL;
    char* logname = NULL;
-   SCIP_Bool quiet;
-   SCIP_Bool paramerror;
-   SCIP_Bool interactive;
-   SCIP_Real timelimit;
+   char* settingsname = NULL;
+   char* probname = NULL;
+   SCIP_Real timelimit = -1.0;
+   SCIP_Bool quiet = FALSE;
+   SCIP_Bool paramerror = FALSE;
+   SCIP_Bool interactive = FALSE;
    int i;
 
    /********************
     * Parse parameters *
     ********************/
 
-   quiet = FALSE;
-   paramerror = FALSE;
-   timelimit = 0.0;
-
-   interactive = FALSE;
-
    for( i = 1; i < argc; ++i )
    {
       if( strcmp(argv[i], "-l") == 0 )
       {
-         i++;
-         if( i < argc )
+         /* get log filename */
+         if( ++i < argc )
             logname = argv[i];
          else
          {
@@ -512,8 +486,8 @@ SCIP_RETCODE processShellArguments(
          quiet = TRUE;
       else if( strcmp(argv[i], "-s") == 0 )
       {
-         i++;
-         if( i < argc )
+         /* get settings filename */
+         if( ++i < argc )
             settingsname = argv[i];
          else
          {
@@ -523,8 +497,8 @@ SCIP_RETCODE processShellArguments(
       }
       else if( strcmp(argv[i], "-f") == 0 )
       {
-         i++;
-         if( i < argc )
+         /* get problem filename */
+         if( ++i < argc )
             probname = argv[i];
          else
          {
@@ -534,49 +508,46 @@ SCIP_RETCODE processShellArguments(
       }
       else if( strcmp(argv[i], "-t") == 0 )
       {
-         i++;
-         if( i < argc )
-            /* get time limit */
+         /* get time limit */
+         if( ++i < argc )
             timelimit = atof(argv[i]);
          else
          {
-            SCIPerrorMessage("missing amout of time '-t'\n");
+            SCIPerrorMessage("missing time limit after parameter '-t'\n");
             paramerror = TRUE;
          }
       }
       else if( strcmp(argv[i], "-m") == 0 )
       {
-         i++;
-         if( i < argc )
+         /* set memory limit */
+         if( ++i < argc )
          {
-            /* set time limit */
             SCIP_CALL( SCIPsetRealParam(scip, "limits/memory", atof(argv[i]) * MAXMEMUSAGE) );
          }
          else
          {
-            SCIPerrorMessage("missing amout of memory '-m'\n");
+            SCIPerrorMessage("missing memory limit after parameter '-m'\n");
             paramerror = TRUE;
          }
       }
       else if( strcmp(argv[i], "-d") == 0 )
       {
-         i++;
-         if( i < argc )
+         /* set display frequency */
+         if( ++i < argc )
          {
-            /* set display frequency limit */
             SCIP_CALL( SCIPsetIntParam(scip, "display/freq", atoi(argv[i])) );
          }
          else
          {
-            SCIPerrorMessage("missing display frequency '-d'\n");
+            SCIPerrorMessage("missing display frequency after parameter '-d'\n");
             paramerror = TRUE;
          }
       }
 #ifndef PBSOLVER
       else if( strcmp(argv[i], "-c") == 0 )
       {
-         i++;
-         if( i < argc )
+         /* add command line */
+         if( ++i < argc )
          {
             SCIP_CALL( SCIPaddDialogInputLine(scip, argv[i]) );
             interactive = TRUE;
@@ -590,86 +561,69 @@ SCIP_RETCODE processShellArguments(
 #endif
       else
       {
-         SCIPerrorMessage("invalid parameter <%s>\n", argv[i]);
+         SCIPerrorMessage("invalid parameter '%s'\n", argv[i]);
          paramerror = TRUE;
       }
    }
 
    if( !paramerror )
    {
-      /* change necessary flags of message handler */
+      /***********************
+       * Version information *
+       ***********************/
+
+      /* set quite flag and log file of message handler */
       SCIPsetMessagehdlrQuiet(scip, quiet);
       SCIPsetMessagehdlrLogfile(scip, logname);
 
-      if( !interactive )
+      /* print version information */
+      SCIPprintVersion(scip, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /*****************
+       * Load settings *
+       *****************/
+
+      if( settingsname != NULL )
       {
-         /***********************
-          * Version information *
-          ***********************/
-         if( probname == NULL )
-         {
-            SCIP_CALL( SCIPsetMessagehdlr(scip, defaultmessagehdlr) );
-            SCIPmessageSetErrorPrintingDefault();
-         }
+         SCIP_CALL( readParams(scip, settingsname) );
+      }
+      else if( defaultsetname != NULL )
+      {
+         SCIP_CALL( readParams(scip, defaultsetname) );
+      }
 
-         SCIPprintVersion(scip, NULL);
-         SCIPinfoMessage(scip, NULL, "\n");
-
-         /*****************
-          * Load settings *
-          *****************/
-
-         if( settingsname != NULL )
-         {
-            SCIP_CALL( readParams(scip, settingsname) );
-         }
-         else if( defaultsetname != NULL )
-         {
-            SCIP_CALL( readParams(scip, defaultsetname) );
-         }
-
+      if( !interactive && probname != NULL )
+      {
          /**************
           * Start SCIP *
           **************/
 
-         if( probname != NULL )
-         {
-            SCIP_CALL( fromCommandLine(scip, probname, settingsname, timelimit, starttime) );
-         }
-         else
-         {
-            SCIP_CALL( SCIPstartInteraction(scip) );
-         }
+         SCIP_CALL( fromCommandLine(scip, probname, settingsname, timelimit, starttime) );
       }
       else
       {
-         SCIPprintVersion(scip, NULL);
-         SCIPinfoMessage(scip, NULL, "\n");
-
          SCIP_CALL( SCIPstartInteraction(scip) );
       }
    }
    else
    {
-      SCIPinfoMessage(scip, NULL, "syntax: %s [-l <logfile>] [-q] [-s <settings>] [-f <problem>] [-b <batchfile>]", argv[0]);
-      SCIPinfoMessage(scip, NULL, " [-t <timelimit>] [-m <memlimit>] [-d <dispfreq>]\n");
+      SCIPinfoMessage(scip, NULL, "syntax: %s [-q] [-l <logfile>] [-s <settings>] [-f <problem>] [-d <dispfreq>] [-t <timelimit>] [-m <memlimit>]\n", argv[0]);
 
-      SCIPinfoMessage(scip, NULL, "  -l <logfile>   : copy output into log file\n");
       SCIPinfoMessage(scip, NULL, "  -q             : suppress screen messages\n");
+      SCIPinfoMessage(scip, NULL, "  -l <logfile>   : copy output into log file\n");
       SCIPinfoMessage(scip, NULL, "  -s <settings>  : load parameter settings (.set) file\n");
       SCIPinfoMessage(scip, NULL, "  -f <problem>   : load and solve problem file\n");
-      SCIPinfoMessage(scip, NULL, "  -d <batchfile> : load batchfile\n");
+      SCIPinfoMessage(scip, NULL, "  -d <dispfreq>  : log display frequency\n");
+      SCIPinfoMessage(scip, NULL, "  -t <timelimit> : enforce time limit\n");
+      SCIPinfoMessage(scip, NULL, "  -m <memlimit>  : enforce memory limit\n");
 #ifndef PBSOLVER
-      SCIPinfoMessage(scip, NULL, "  -c <command>   : execute command on command line\n");
+      SCIPinfoMessage(scip, NULL, "  -c <command>   : execute command line\n");
 #endif
-      SCIPinfoMessage(scip, NULL, "  -t <timelimit> : sets the time limit\n");
-      SCIPinfoMessage(scip, NULL, "  -m <memlimit>  : sets the memory limit\n");
-      SCIPinfoMessage(scip, NULL, "  -d <dispfreq>  : sets display frequency\n");
    }
 
    return SCIP_OKAY;
 }
-
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters,
  *  runs SCIP appropriately, and frees the SCIP instance
@@ -680,14 +634,11 @@ SCIP_RETCODE runShell(
    char**                argv,               /**< array with shell parameters */
    clock_t               starttime,          /**< time the process started */
    const char*           defaultsetname      /**< name of default settings file */
-)
+   )
 {
-   SCIP_MESSAGEHDLR* messagehdlr;
+   SCIP_MESSAGEHDLR* messagehdlr = NULL;
    SCIP_MESSAGEHDLR* defaultmessagehdlr;
-   SCIP* scip;
-
-   messagehdlr = NULL;
-   scip = NULL;
+   SCIP* scip = NULL;
 
    /*********
     * Setup *
@@ -696,17 +647,17 @@ SCIP_RETCODE runShell(
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* include default SCIP plugins */
+   /* include default plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
    defaultmessagehdlr = SCIPgetMessagehdlr(scip);
    /* capture default message handler */
    SCIPmessagehdlrCapture(defaultmessagehdlr);
 
-   /* create own buffered message handler for PB output and overrides default scip message handler */
+   /* create own buffered message handler for PB console log */
    SCIP_CALL( SCIPcreateMessagehdlrPbSolver(&messagehdlr, TRUE, NULL, FALSE) );
 
-   /* if we are running the PB competition we use this message handler to produce the required output */
+   /* set PB competition message handler */
    SCIP_CALL( SCIPsetMessagehdlr(scip, messagehdlr) );
 
    /**********************************
@@ -722,13 +673,12 @@ SCIP_RETCODE runShell(
    /********************
     * Deinitialization *
     ********************/
-   SCIP_CALL( SCIPfree(&scip) );
 
+   SCIP_CALL( SCIPfree(&scip) );
    BMScheckEmptyMemory();
 
    return SCIP_OKAY;
 }
-
 
 /** main method starting the PBSolver */
 int main(
@@ -737,7 +687,6 @@ int main(
    )
 {
    SCIP_RETCODE retcode;
-
    clock_t starttime, endtime;
 
    starttime = clock();
@@ -746,9 +695,10 @@ int main(
 
    endtime = clock();
 
-   printf("c Time complete: %g.\n",(double) (endtime-starttime)/(double)CLOCKS_PER_SEC);
-
    if( retcode != SCIP_OKAY )
-      printf("s UNKNOWN \n");
+      printf("s UNKNOWN\n");
+
+   printf("c Time complete (sec): %9.3lf\n", (double)(endtime - starttime) / (double)CLOCKS_PER_SEC);
+
   return 0;
 }
