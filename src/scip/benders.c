@@ -920,7 +920,7 @@ SCIP_RETCODE assignAuxiliaryVariables(
    }
    else
    {
-      SCIPABORT();
+      benders->masterauxvar = NULL;
    }
 
    /* storing the auxiliary variable in the target Benders' implementation */
