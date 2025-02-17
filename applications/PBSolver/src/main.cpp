@@ -26,6 +26,8 @@
  * @brief  main file for the Pseudo-Boolean solver application
  * @author Alexander Hoen
  * @author Gioni Mexi
+ * 
+ * @todo Add separate integrality tolerance parameter to enforce exact integrality.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -65,25 +67,6 @@ SCIP_RETCODE loadSettingsWBO(
    return SCIP_OKAY;
 }
 
-static
-SCIP_RETCODE readParams(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< parameter file name */
-)
-{
-   if( SCIPfileExists(filename) )
-   {
-      SCIPinfoMessage(scip, NULL, "reading user parameter file <%s>\n\n", filename);
-      SCIP_CALL( SCIPreadParams(scip, filename) );
-      return SCIP_OKAY;
-   }
-   else
-   {
-      SCIPinfoMessage(scip, NULL, "user parameter file <%s> not found - using default parameters\n", filename);
-   }
-
-   return SCIP_OKAY;
-}
 
 #ifdef PBSOLVER
 static
@@ -571,11 +554,11 @@ SCIP_RETCODE processShellArguments(
 
       if( settingsname != NULL )
       {
-         SCIP_CALL( readParams(scip, settingsname) );
+         SCIP_CALL( SCIPreadParams(scip, settingsname) );
       }
-      else if( defaultsetname != NULL )
+      else if( defaultsetname != NULL && SCIPfileExists(defaultsetname) )
       {
-         SCIP_CALL( readParams(scip, defaultsetname) );
+         SCIP_CALL( SCIPreadParams(scip, defaultsetname) );
       }
 
       if( !interactive && probname != NULL )
