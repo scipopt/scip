@@ -76,8 +76,10 @@ extern "C" {
  *@{
  */
 
-/** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded;
- *  an integer variable with bounds zero and one is automatically converted into a binary variable;
+/** creates and captures problem variable
+ *
+ *  If variable is of integral type, fractional bounds are automatically rounded.
+ *  An integer variable with bounds zero and one is automatically converted into a binary variable.
  *
  *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
  *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
@@ -116,12 +118,15 @@ SCIP_RETCODE SCIPcreateVar(
    SCIP_VARDATA*         vardata             /**< user data for this specific variable, or NULL */
    );
 
-/** creates and captures problem variable with optional callbacks and variable data set to NULL, which can be set
- *  afterwards using SCIPvarSetDelorigData(), SCIPvarSetTransData(),
- *  SCIPvarSetDeltransData(), SCIPvarSetCopy(), and SCIPvarSetData(); sets variable flags initial=TRUE
- *  and removable = FALSE, which can be adjusted by using SCIPvarSetInitial() and SCIPvarSetRemovable(), resp.;
- *  if variable is of integral type, fractional bounds are automatically rounded;
- *  an integer variable with bounds zero and one is automatically converted into a binary variable;
+/** creates and captures problem variable without setting optional callbacks and variable data.
+ *
+ *  Callbacks and variable data can be set in the following using SCIPvarSetDelorigData(), SCIPvarSetTransData(),
+ *  SCIPvarSetDeltransData(), SCIPvarSetCopy(), and SCIPvarSetData().
+ *
+ *  Variable flags are set as initial = TRUE and removable = FALSE, and can be adjusted by using SCIPvarSetInitial() and SCIPvarSetRemovable(), resp.
+ *
+ *  If variable is of integral type, fractional bounds are automatically rounded.
+ *  An integer variable with bounds zero and one is automatically converted into a binary variable.
  *
  *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
  *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
@@ -153,9 +158,10 @@ SCIP_RETCODE SCIPcreateVarBasic(
    SCIP_VARTYPE          vartype             /**< type of variable */
    );
 
-/** creates and captures problem variable that may be implied integral; if variable is of integral type, fractional
- *  bounds are automatically rounded; an integer variable with bounds zero and one is automatically converted into
- *  a binary variable;
+/** creates and captures problem variable that may be implied integral
+ *
+ *  If variable is of integral type, fractional bounds are automatically rounded.
+ *  An integer variable with bounds zero and one is automatically converted into a binary variable.
  *
  *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
  *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
@@ -2926,7 +2932,7 @@ SCIP_RETCODE SCIPchgVarType(
                                               *   integrality condition of the new variable type) */
    );
 
-/** changes implied integral type of variable in the problem;
+/** changes implied integral type of variable in the problem
  *
  *  @warning This type change might change the variable array returned from SCIPgetVars() and SCIPgetVarsData();
  *

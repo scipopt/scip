@@ -71,7 +71,6 @@
 #define GMS_PRINTLEN         100
 #define GMS_DEFAULT_BIGM     1e+6
 #define GMS_DEFAULT_INDICATORREFORM 's'
-#define GMS_DEFAULT_SIGNPOWER FALSE
 
 /*
  * Local methods (for writing)
@@ -1312,10 +1311,6 @@ SCIP_RETCODE SCIPincludeReaderGms(
    SCIP_CALL( SCIPaddCharParam(scip,
          "reading/gmsreader/indicatorreform", "which reformulation to use for indicator constraints: 'b'ig-M, 's'os1",
          NULL, FALSE, GMS_DEFAULT_INDICATORREFORM, "bs", NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/gmsreader/signpower", "is it allowed to use the gams function signpower(x,a)?",
-         NULL, FALSE, GMS_DEFAULT_SIGNPOWER, NULL, NULL) );
 
    return SCIP_OKAY;
 }

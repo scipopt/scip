@@ -41,13 +41,18 @@ Interface changes
 
 ### Deprecations
 
-- The variable type of SCIP_VARTYPE_IMPLINT is deprecated in favor of a new enum SCIP_IMPLINTTYPE that indicates if a
+- The variable type \ref SCIP_VARTYPE_IMPLINT is deprecated in favor of a new enum \ref SCIP_IMPLINTTYPE that indicates if a
   variable is implied integral, independent of the variable type.
   The problem variable arrays is still sorted as:
+  ```
    (0) | binary | integer | implied integral | continuous | (nvars),
+  ```
   where the implied integral subsection is now subdivided into 3 parts (left to right):
+  ```
   | binary implied integral | integer implied integral | continuous implied integral |
-  Until the release of SCIP 11, SCIP will still support usage of SCIP_VARTYPE_IMPLINT, see SCIPcreateVar() and SCIPchgVarType() for more details.
+  ```
+  SCIP 10 still supports using SCIP_VARTYPE_IMPLINT for backward compatibility, see SCIPcreateVar() and SCIPchgVarType() for more details.
+  SCIP 11 will remove SCIP_VARTYPE_IMPLINT.
 
 ### New and changed callbacks
 
@@ -55,8 +60,8 @@ Interface changes
 - for a table plugin, only one of the callbacks TABLE_COLLECT or TABLE_OUTPUT needs to be implemented, but implementing both is preferred;
   if TABLE_OUTPUT is omitted, then SCIP tries to print a table from the data given by TABLE_COLLECT
 - the event SCIP_EVENTTYPE_TYPECHANGED is no longer generated if a variable becomes implied integral
-- new event SCIP_EVENTTYPE_IMPLTYPECHANGED is generated if a variable is declared implied integral, included in the set SCIP_EVENTTYPE_VARCHANGED
-- the callback SCIP_DECL_EXPRINTEGRALITY, which returns the integrality of an expression, had its fourth argument change from a pointer to SCIP_Bool to a pointer to SCIP_IMPLINTTYPE, to represent implied integrality in nonlinear expressions, that is an implied integral type of an auxiliary variable if the expression were assigned to it
+- new event SCIP_EVENTTYPE_IMPLTYPECHANGED is generated if a variable is declared implied integral, this event is included in the set SCIP_EVENTTYPE_VARCHANGED
+- the callback SCIP_DECL_EXPRINTEGRALITY, which returns the integrality of an expression, had its fourth argument change from SCIP_Bool* to SCIP_IMPLINTTYPE*, to represent implied integrality in nonlinear expressions, that is an implied integral type of an auxiliary variable if the expression were assigned to it
 
 ### Deleted and changed API methods
 
@@ -69,11 +74,11 @@ Interface changes
 - SCIPcreateConsOrbitope() deleted two arguments and changed position of another argument
 - deprecated SCIPsubversion(), will be removed
 - SCIPvarCalcDistributionParameters(): argument impltype added (5th position)
-- SCIPpermuteProb(): argument permuteimplvars is subdivided into permutebinimplvars, permuteintimplvars, and permutecontimplvars
-- SCIPgetSolVarsData(): argument nimplvars is subdivided into nbinimplvars, nintimplvars, and ncontimplvars
+- SCIPpermuteProb(): argument permuteimplvars has been replaced by new arguments permutebinimplvars, permuteintimplvars, and permutecontimplvars
+- SCIPgetSolVarsData(): argument nimplvars has been replaced by new arguments nbinimplvars, nintimplvars, and ncontimplvars
 - SCIPexprSetIntegrality(): set argument generalized from SCIP_Bool integral to SCIP_IMPLINTTYPE integrality (4th position)
-- (Temporarily supported until SCIP 11): Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integral type SCIP_IMPLINTTYPE_WEAK instead
-- (Temporarily supported until SCIP 11): SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_IMPLINTTYPE_WEAK
+- Temporarily for SCIP 10 only: Creating a variable SCIPcreateVar() with type SCIP_VARTYPE_IMPLINT creates a variable of type SCIP_VARTYPE_CONTINUOUS and implied integral type SCIP_IMPLINTTYPE_WEAK instead
+- Temporarily for SCIP 10 only: SCIPchgVarType() converts a call with type SCIP_VARTYPE_IMPLINT into a call of SCIPchgVarImplType() with type SCIP_IMPLINTTYPE_WEAK
 
 ### New API functions
 
@@ -105,12 +110,12 @@ Interface changes
 - SCIPbendersGetObjectiveType() for returning the objective type for the aggregation of the Benders' decomposition
   subproblems
 - SCIPbenderGetMasterAuxiliaryVar() returns the master auxiliary variable
-- added SCIPcreateObjVarImpl() and SCIPcreateVarImpl(), which behave identically to SCIPcreateObjVar() and SCIPcreateVar() but have an additional argument for the new implied integral type flag (8th position)
+- added SCIPcreateVarImpl() and SCIPcreateObjVarImpl(), which behave identically to SCIPcreateVar() and SCIPcreateObjVar(), respectively, but have an additional argument for the new implied integral type flag (8th position)
 - added SCIPchgVarImplType(), SCIPvarGetImplType(), SCIPvarIsImpliedIntegral() to control and query implied integrality
-- added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integral variables of every type, note that SCIPgetNBinVars(), SCIPgetNIntVars() and SCIPgetNContVars() do not include the implied integral variables in their counts, as before
+- added SCIPgetNBinImplVars(), SCIPgetNIntImplVars(), SCIPgetNContImplVars() to query the number of implied integral variables of every type; note that SCIPgetNBinVars(), SCIPgetNIntVars(), and SCIPgetNContVars() no longer include the implied integral variables in their counts
 - added SCIPcolIsImpliedIntegral()
-- added SCIPvarArrayCountTypes() to determine the variable type count distribution for an array of variables
-- added SCIPeventGetOldImplType(), SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
+- added SCIPvarsCountTypes() to determine the variable type count distribution for an array of variables
+- added SCIPeventGetOldImplType() and SCIPeventGetNewImplType() to query the new event SCIP_EVENTTYPE_IMPLTYPECHANGED
 - added SCIPexprGetIntegrality(), which in addition to the existing function SCIPexprIsIntegral() provides information about the presence of weakly implied integral variables
 
 ### Changes in preprocessor macros
@@ -136,6 +141,7 @@ Interface changes
 
 - heuristics/scheduler/heurtimelimit removed to avoid indeterministic behavior of scheduler heuristic, uses main time limit instead
 - removed parameters "constraints/orbitope/checkpporbitope", "constraints/orbitope/sepafullorbitope", "constraints/orbitope/forceconscopy", which became superfluous
+- removed reading/gmsreader/signpower
 
 ### New parameters
 
@@ -148,7 +154,7 @@ Interface changes
 - new parameter "presolving/implint/numericslimit" determines the limit for absolute integral coefficients beyond which the corresponding rows and variables are excluded from implied integrality detection
 - iis/minimal, iis/nodes, iis/removedbounds, iis/removeunusedvars, iis/silent, iis/stopafterone, iis/time, iis/greedy/additive, iis/greedy/conservative, iis/greedy/delafteradd, iis/greedy/dynamicreordering, iis/greedy/maxbatchsize, iis/greedy/maxrelbatchsize, iis/greedy/nodelimperiter, iis/greedy/priority, iis/greedy/timelimperiter
 - new parameters "constraints/orbitope_full/forceconscopy" and "constraints/orbitope_pp/forceconscopy" to control whether non-model constraints of type full orbitope and packing/partitioning orbitope are copied to sub-SCIPs, respectively
-- new parameter "write/implintlevel" to control if integrality constraints should be written for implied integral variables (works for cip, mps, lp, rlp, pip, fzn, and gms extensions)
+- new parameter "write/implintlevel" to control if integrality constraints should be written for implied integral variables (regarded by cip, mps, lp, rlp, pip, fzn, and gms writers)
 
 ### Data structures
 

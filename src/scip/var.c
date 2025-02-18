@@ -1568,7 +1568,7 @@ SCIP_RETCODE SCIPdomchgAddHolechg(
 static
 SCIP_Real adjustedLb(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isIntegral,         /**< is variable integral? */
+   SCIP_Bool             isintegral,         /**< is variable integral? */
    SCIP_Real             lb                  /**< lower bound to adjust */
    )
 {
@@ -1576,7 +1576,7 @@ SCIP_Real adjustedLb(
       return -SCIPsetInfinity(set);
    else if( lb > 0.0 && SCIPsetIsInfinity(set, lb) )
       return SCIPsetInfinity(set);
-   else if( isIntegral )
+   else if( isintegral )
       return SCIPsetFeasCeil(set, lb);
    else if( lb > 0.0 && lb < SCIPsetEpsilon(set) )
       return 0.0;
@@ -1588,7 +1588,7 @@ SCIP_Real adjustedLb(
 static
 SCIP_Real adjustedUb(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             isIntegral,         /**< is variable integral? */
+   SCIP_Bool             isintegral,         /**< is variable integral? */
    SCIP_Real             ub                  /**< upper bound to adjust */
    )
 {
@@ -1596,7 +1596,7 @@ SCIP_Real adjustedUb(
       return SCIPsetInfinity(set);
    else if( ub < 0.0 && SCIPsetIsInfinity(set, -ub) )
       return -SCIPsetInfinity(set);
-   else if( isIntegral )
+   else if( isintegral )
       return SCIPsetFeasFloor(set, ub);
    else if( ub < 0.0 && ub > -SCIPsetEpsilon(set) )
       return 0.0;
@@ -17341,13 +17341,8 @@ SCIP_Bool SCIPvarWasFixedEarlier(
    return SCIPbdchgidxIsEarlier(bdchgidx1, bdchgidx2);
 }
 
-/** for a given array of variables, this function counts the numbers of variables for each variable and implied type
- *  combination
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_RETCODE SCIPvarArrayCountTypes(
+/** for a given array of variables, this function counts the numbers of variables for each variable and implied type combination */
+void SCIPvarsCountTypes(
    SCIP_VAR**            vars,               /**< array of variables to count the types for */
    int                   nvars,              /**< number of variables in the array */
    int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */
@@ -17392,7 +17387,7 @@ SCIP_RETCODE SCIPvarArrayCountTypes(
             break;
          default:
             SCIPerrorMessage("unknown variable type\n");
-            return SCIP_INVALIDDATA;
+            SCIPABORT();
       } /*lint !e788*/
    }
    if( nbinvars != NULL )
@@ -17407,8 +17402,6 @@ SCIP_RETCODE SCIPvarArrayCountTypes(
       *ncontimplvars = contimplvars;
    if( ncontvars != NULL )
       *ncontvars = contvars;
-
-   return SCIP_OKAY;
 }
 
 /*

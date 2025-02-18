@@ -3239,14 +3239,11 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** implied integral level */
-static
-int implintlevel = 0;
-
 /** returns whether to print an integrality constraint for the given variable */
 static
 SCIP_Bool writeVarIsIntegral(
-   SCIP_VAR*             var                 /**< variable to check */
+   SCIP_VAR*             var,                /**< variable to check */
+   int                   implintlevel        /**< implied integral level */
    )
 {
    assert(implintlevel >= -2);
@@ -3258,18 +3255,24 @@ SCIP_Bool writeVarIsIntegral(
       return (int)SCIPvarGetImplType(var) <= 2 + implintlevel;
 }
 
-/** comparison method for sorting variables along their original indices grouping integer variables at the front */
-static
-SCIP_DECL_SORTPTRCOMP(mpsIntComp)
-{
-   SCIP_Bool integral1 = writeVarIsIntegral((SCIP_VAR*)elem1);
-   SCIP_Bool integral2 = writeVarIsIntegral((SCIP_VAR*)elem2);
-
-   if( integral1 != integral2 )
-      return integral1 ? -1 : +1;
-
-   return SCIPvarComp(elem1, elem2);
+/** template implementation of mpsIntComp for given implied integral level */
+#define MPSINTCOMP_LEVEL(IMPLINTLEVEL) \
+{ \
+   SCIP_Bool integral1 = writeVarIsIntegral((SCIP_VAR*)elem1, IMPLINTLEVEL); \
+   SCIP_Bool integral2 = writeVarIsIntegral((SCIP_VAR*)elem2, IMPLINTLEVEL); \
+   \
+   if( integral1 != integral2 ) \
+      return integral1 ? -1 : +1; \
+   \
+   return SCIPvarComp(elem1, elem2); \
 }
+
+/* comparison methods for sorting variables along their original indices grouping integer variables at the front */
+static SCIP_DECL_SORTPTRCOMP(mpsIntCompM2) MPSINTCOMP_LEVEL(-2)
+static SCIP_DECL_SORTPTRCOMP(mpsIntCompM1) MPSINTCOMP_LEVEL(-1)
+static SCIP_DECL_SORTPTRCOMP(mpsIntCompZ)  MPSINTCOMP_LEVEL(0)
+static SCIP_DECL_SORTPTRCOMP(mpsIntCompP1) MPSINTCOMP_LEVEL(1)
+static SCIP_DECL_SORTPTRCOMP(mpsIntCompP2) MPSINTCOMP_LEVEL(2)
 
 /** outputs the COLUMNS section of the MPS format */
 static
@@ -3279,7 +3282,8 @@ void printColumnSection(
    SPARSEMATRIX*         matrix,             /**< sparse matrix containing the entries */
    SCIP_HASHMAP*         varnameHashmap,     /**< map from SCIP_VAR* to variable name */
    SCIP_HASHTABLE*       indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
-   unsigned int          maxnamelen          /**< maximum name length */
+   unsigned int          maxnamelen,         /**< maximum name length */
+   int                   implintlevel        /**< implied integral level */
    )
 {
    SCIP_Bool intSection;
@@ -3291,7 +3295,27 @@ void printColumnSection(
 
    /* @todo: create column matrix instead of sort sparse entries */
    /* sort sparse matrix w.r.t. the written integralities and variable indices */
-   SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, mpsIntComp, matrix->nentries);
+   switch( implintlevel )
+   {
+      case -2:
+         SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, mpsIntCompM2, matrix->nentries);
+         break;
+      case -1:
+         SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, mpsIntCompM1, matrix->nentries);
+         break;
+      case 0:
+         SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, mpsIntCompZ, matrix->nentries);
+         break;
+      case 1:
+         SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, mpsIntCompP1, matrix->nentries);
+         break;
+      case 2:
+         SCIPsortPtrPtrReal((void**) matrix->columns, (void**) matrix->rows, matrix->values, mpsIntCompP2, matrix->nentries);
+         break;
+      default:
+         SCIPerrorMessage("invalid implintlevel\n");
+         SCIPABORT();
+   }
 
    /* print COLUMNS section */
    SCIPinfoMessage(scip, file, "COLUMNS\n");
@@ -3311,7 +3335,7 @@ void printColumnSection(
       }
 
       /* section integer variables */
-      if( writeVarIsIntegral(var) != intSection )
+      if( writeVarIsIntegral(var, implintlevel) != intSection )
       {
          /* end integer section in MPS format */
          if( intSection )
@@ -3959,6 +3983,7 @@ SCIP_RETCODE SCIPwriteMps(
 
    SCIP_Bool needRANGES;
    unsigned int maxnamelen;
+   int implintlevel;
 
    SCIP_Bool error;
 
@@ -4105,7 +4130,7 @@ SCIP_RETCODE SCIPwriteMps(
        * might happen that they only exist in non-linear constraints, which leads to no other line in the column section
        * and therefore do not mark the variable as an integer
        */
-      if( !SCIPisZero(scip, value) || writeVarIsIntegral(var)
+      if( !SCIPisZero(scip, value) || writeVarIsIntegral(var, implintlevel)
          || ((SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == 0)
             && (SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == 0)) )
       {
@@ -4711,7 +4736,7 @@ SCIP_RETCODE SCIPwriteMps(
    }
 
    /* output COLUMNS section */
-   printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen);
+   printColumnSection(scip, file, matrix, varnameHashmap, indicatorSlackHash, maxnamelen, implintlevel);
 
    /* output RHS section */
    printRhsSection(scip, file, nconss + naddrows +naggvars, consnames, rhss, maxnamelen, objscale * objoffset);

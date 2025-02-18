@@ -1242,14 +1242,9 @@ SCIP_Bool SCIPvarWasFixedEarlier(
    SCIP_VAR*             var2                /**< second binary variable */
    );
 
-/** for a given array of variables, this function counts the numbers of variables for each variable and implied type
- *  combination
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
+/** for a given array of variables, this function counts the numbers of variables for each variable and implied type combination */
 SCIP_EXPORT
-SCIP_RETCODE SCIPvarArrayCountTypes(
+void SCIPvarsCountTypes(
    SCIP_VAR**            vars,               /**< array of variables to count the types for */
    int                   nvars,              /**< number of variables in the array */
    int*                  nbinvars,           /**< pointer to store number of binary variables or NULL if not needed */

@@ -572,7 +572,7 @@ void SCIPexprSetCurvature(
    SCIP_EXPRCURV         curvature           /**< curvature of the expression */
    );
 
-/** returns the integrality flag of an expression */
+/** returns implied integrality of an expression */
 SCIP_EXPORT
 SCIP_IMPLINTTYPE SCIPexprGetIntegrality(
    SCIP_EXPR*            expr                /**< expression */

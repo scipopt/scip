@@ -4076,7 +4076,7 @@ void SCIPexprSetCurvature(
    expr->curvature = curvature;
 }
 
-/** returns whether an expression is integral */
+/** returns implied integrality of an expression */
 SCIP_IMPLINTTYPE SCIPexprGetIntegrality(
    SCIP_EXPR*            expr                /**< expression */
    )

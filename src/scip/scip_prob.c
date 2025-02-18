@@ -405,8 +405,9 @@ SCIP_RETCODE SCIPreadProb(
                + scip->origprob->nintimplvars, scip->origprob->ncontvars + scip->origprob->ncontimplvars,
                scip->origprob->nconss);
 
-         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-               "original problem has %d implied integral variables: (%d bin, %d int, %d cont)\n",
+         if( scip->origprob->nbinimplvars > 0 || scip->origprob->nintimplvars > 0 || scip->origprob->ncontimplvars > 0 )
+            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+               "original problem has %d implied integral variables (%d bin, %d int, %d cont)\n",
                SCIPprobGetNImplVars(scip->origprob), scip->origprob->nbinimplvars, scip->origprob->nintimplvars,
                scip->origprob->ncontimplvars);
 

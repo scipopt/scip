@@ -1092,8 +1092,8 @@ SCIP_RETCODE copyVars(
       int nfixedimplvars;
 
       /* count number of fixed variables for all variable types */
-      SCIP_CALL( SCIPvarArrayCountTypes(sourcefixedvars, nsourcefixedvars, &nfixedbinvars, &nfixedintvars,
-                                        &nfixedbinimplvars, &nfixedintimplvars, &nfixedcontimplvars, &nfixedcontvars) );
+      SCIPvarsCountTypes(sourcefixedvars, nsourcefixedvars, &nfixedbinvars, &nfixedintvars,
+         &nfixedbinimplvars, &nfixedintimplvars, &nfixedcontimplvars, &nfixedcontvars);
       nfixedimplvars = nfixedbinimplvars + nfixedintimplvars + nfixedcontimplvars;
       assert(nsourcefixedvars == nfixedbinvars + nfixedintvars + nfixedimplvars + nfixedcontvars);
       assert(SCIPgetNBinVars(sourcescip) <= SCIPgetNBinVars(targetscip) + nrelaxonlybinvars);

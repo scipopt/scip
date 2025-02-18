@@ -89,8 +89,15 @@
 #include "scip/tree.h"
 #include "scip/var.h"
 
+<<<<<<< HEAD
 /** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded;
  *  an integer variable with bounds zero and one is automatically converted into a binary variable;
+=======
+/** creates and captures problem variable
+ *
+ *  If variable is of integral type, fractional bounds are automatically rounded.
+ *  An integer variable with bounds zero and one is automatically converted into a binary variable.
+>>>>>>> 368169305d (remove SCIP_VARTYPE_IMPLINT in favor of new enum SCIP_IMPLINTTYPE)
  *
  *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
  *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
@@ -137,6 +144,7 @@ SCIP_RETCODE SCIPcreateVar(
    /* For now, we help users and automatically convert the variable to an implied integral one if they are using the
     * deprecated variable type. This feature will be deprecated in a future version */
    if( vartype == SCIP_DEPRECATED_VARTYPE_IMPLINT )
+<<<<<<< HEAD
    {
       vartype = SCIP_VARTYPE_CONTINUOUS;
       impltype = SCIP_IMPLINTTYPE_WEAK;
@@ -149,6 +157,143 @@ SCIP_RETCODE SCIPcreateVar(
 /** creates and captures problem variable that may be implied integral; if variable is of integral type, fractional
  *  bounds are automatically rounded; an integer variable with bounds zero and one is automatically converted into
  *  a binary variable;
+ *
+ *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
+ *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
+ *           original objective function value of variables created during the solving process has to be multiplied by
+ *           -1, too.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note the variable gets captured, hence at one point you have to release it using the method SCIPreleaseVar()
+ */
+SCIP_RETCODE SCIPcreateVarImpl(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to variable object */
+   const char*           name,               /**< name of variable, or NULL for automatic name creation */
+   SCIP_Real             lb,                 /**< lower bound of variable */
+   SCIP_Real             ub,                 /**< upper bound of variable */
+   SCIP_Real             obj,                /**< objective function value */
+   SCIP_VARTYPE          vartype,            /**< type of variable */
+   SCIP_IMPLINTTYPE      impltype,           /**< implied integral type of the variable */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
+   SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable, or NULL */
+   SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data, or NULL */
+   SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable, or NULL */
+   SCIP_DECL_VARCOPY     ((*varcopy)),       /**< copies variable data if wanted to subscip, or NULL */
+   SCIP_VARDATA*         vardata             /**< user data for this specific variable */
+   )
+{
+   assert(var != NULL);
+   assert(lb <= ub);
+
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateVarImpl", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* forbid infinite objective function values */
+   if( SCIPisInfinity(scip, REALABS(obj)) )
+=======
+>>>>>>> 368169305d (remove SCIP_VARTYPE_IMPLINT in favor of new enum SCIP_IMPLINTTYPE)
+   {
+      vartype = SCIP_VARTYPE_CONTINUOUS;
+      impltype = SCIP_IMPLINTTYPE_WEAK;
+   }
+<<<<<<< HEAD
+   if( vartype == SCIP_DEPRECATED_VARTYPE_IMPLINT )
+   {
+      SCIPerrorMessage("using SCIP_VARTYPE_IMPLINT deprecated, define impltype instead\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   switch( scip->set->stage )
+   {
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPvarCreateOriginal(var, scip->mem->probmem, scip->set, scip->stat,
+            name, lb, ub, obj, vartype, impltype, initial, removable, vardelorig, vartrans, vardeltrans, varcopy, vardata) );
+      break;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPvarCreateTransformed(var, scip->mem->probmem, scip->set, scip->stat,
+            name, lb, ub, obj, vartype, impltype, initial, removable, vardelorig, vartrans, vardeltrans, varcopy, vardata) );
+      break;
+
+   default:
+      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
+      return SCIP_INVALIDCALL;
+   }  /*lint !e788*/
+
+=======
+   SCIP_CALL( SCIPcreateVarImpl(scip, var, name, lb, ub, obj, vartype, impltype,
+                                initial, removable, vardelorig, vartrans, vardeltrans, varcopy, vardata) );
+>>>>>>> 368169305d (remove SCIP_VARTYPE_IMPLINT in favor of new enum SCIP_IMPLINTTYPE)
+   return SCIP_OKAY;
+}
+
+/** creates and captures problem variable without setting optional callbacks and variable data.
+ *
+ *  Callbacks and variable data can be set in the following using SCIPvarSetDelorigData(), SCIPvarSetTransData(),
+ *  SCIPvarSetDeltransData(), SCIPvarSetCopy(), and SCIPvarSetData().
+ *
+ *  Variable flags are set as initial = TRUE and removable = FALSE, and can be adjusted by using SCIPvarSetInitial() and SCIPvarSetRemovable(), resp.
+ *
+ *  If variable is of integral type, fractional bounds are automatically rounded.
+ *  An integer variable with bounds zero and one is automatically converted into a binary variable.
+ *
+ *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
+ *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
+ *           original objective function value of variables created during the solving process has to be multiplied by
+ *           -1, too.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note the variable gets captured, hence at one point you have to release it using the method SCIPreleaseVar()
+ */
+SCIP_RETCODE SCIPcreateVarBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            var,                /**< pointer to variable object */
+   const char*           name,               /**< name of variable, or NULL for automatic name creation */
+   SCIP_Real             lb,                 /**< lower bound of variable */
+   SCIP_Real             ub,                 /**< upper bound of variable */
+   SCIP_Real             obj,                /**< objective function value */
+   SCIP_VARTYPE          vartype             /**< type of variable */
+   )
+{
+   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateVarBasic", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures problem variable that may be implied integral
+ *
+ *  If variable is of integral type, fractional bounds are automatically rounded.
+ *  An integer variable with bounds zero and one is automatically converted into a binary variable.
  *
  *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
  *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
@@ -225,49 +370,6 @@ SCIP_RETCODE SCIPcreateVarImpl(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
-
-   return SCIP_OKAY;
-}
-
-/** creates and captures problem variable with optional callbacks and variable data set to NULL, which can be set
- *  afterwards using SCIPvarSetDelorigData(), SCIPvarSetTransData(),
- *  SCIPvarSetDeltransData(), SCIPvarSetCopy(), and SCIPvarSetData(); sets variable flags initial=TRUE
- *  and removable = FALSE, which can be adjusted by using SCIPvarSetInitial() and SCIPvarSetRemovable(), resp.;
- *  if variable is of integral type, fractional bounds are automatically rounded;
- *  an integer variable with bounds zero and one is automatically converted into a binary variable;
- *
- *  @warning When doing column generation and the original problem is a maximization problem, notice that SCIP will
- *           transform the problem into a minimization problem by multiplying the objective function by -1.  Thus, the
- *           original objective function value of variables created during the solving process has to be multiplied by
- *           -1, too.
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMING
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  @note the variable gets captured, hence at one point you have to release it using the method SCIPreleaseVar()
- */
-SCIP_RETCODE SCIPcreateVarBasic(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            var,                /**< pointer to variable object */
-   const char*           name,               /**< name of variable, or NULL for automatic name creation */
-   SCIP_Real             lb,                 /**< lower bound of variable */
-   SCIP_Real             ub,                 /**< upper bound of variable */
-   SCIP_Real             obj,                /**< objective function value */
-   SCIP_VARTYPE          vartype             /**< type of variable */
-   )
-{
-   SCIP_CALL( SCIPcheckStage(scip, "SCIPcreateVarBasic", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, obj, vartype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -8448,7 +8550,11 @@ SCIP_RETCODE SCIPchgVarType(
    return SCIP_OKAY;
 }
 
+<<<<<<< HEAD
 /** changes implied integral type of variable in the problem;
+=======
+/** changes implied integral type of variable in the problem
+>>>>>>> 368169305d (remove SCIP_VARTYPE_IMPLINT in favor of new enum SCIP_IMPLINTTYPE)
  *
  *  @warning This type change might change the variable array returned from SCIPgetVars() and SCIPgetVarsData();
  *
