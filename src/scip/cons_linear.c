@@ -10777,8 +10777,8 @@ SCIP_RETCODE dualPresolve(
             calculateMinvalAndMaxval(scip, consdata->lhs, val, minresactivity, maxresactivity, &minval, &maxval);
 
             assert(SCIPisLE(scip, minval, maxval));
-            if( (!SCIPisInfinity(scip, -minval) && SCIPisFeasGE(scip, minval, lb)) &&
-               (!SCIPisInfinity(scip, maxval) && SCIPisFeasLE(scip, maxval, ub)) )
+            if( !SCIPisInfinity(scip, -minval) && SCIPisGE(scip, minval, lb)
+               && !SCIPisInfinity(scip, maxval) && SCIPisLE(scip, maxval, ub) )
             {
                SCIP_Real oldmaxresactivity;
                SCIP_Real oldminresactivity;
@@ -10837,8 +10837,8 @@ SCIP_RETCODE dualPresolve(
             calculateMinvalAndMaxval(scip, consdata->rhs, val, minresactivity, maxresactivity, &minval, &maxval);
 
             assert(SCIPisLE(scip,minval,maxval));
-            if( (!SCIPisInfinity(scip, -minval) && SCIPisFeasGE(scip, minval, lb)) &&
-               (!SCIPisInfinity(scip, maxval) && SCIPisFeasLE(scip, maxval, ub)) )
+            if( !SCIPisInfinity(scip, -minval) && SCIPisGE(scip, minval, lb)
+               && !SCIPisInfinity(scip, maxval) && SCIPisLE(scip, maxval, ub) )
             {
                SCIP_Real oldmaxresactivity;
                SCIP_Real oldminresactivity;
@@ -10894,7 +10894,6 @@ SCIP_RETCODE dualPresolve(
       SCIP_Real aggrconst;
       SCIP_VAR* bestvar;
       SCIP_Real bestval;
-      SCIP_Real epsilon;
       int naggrs;
       int j;
       SCIP_Bool infeasible;
@@ -10925,22 +10924,18 @@ SCIP_RETCODE dualPresolve(
       supinf = 0;
       infinf = 0;
       samevar = FALSE;
-      epsilon = SCIPepsilon(scip);
 
       for( j = 0; j < consdata->nvars; ++j )
       {
          if( j != bestpos )
          {
-            SCIP_Real absaggrcoef;
-
             aggrvars[naggrs] = consdata->vars[j];
             aggrcoefs[naggrs] = -consdata->vals[j]/consdata->vals[bestpos];
+
             SCIPdebugMsgPrint(scip, " %+.15g<%s>", aggrcoefs[naggrs], SCIPvarGetName(aggrvars[naggrs]));
 
-            absaggrcoef = REALABS(aggrcoefs[naggrs]);
-
             /* do not try to multi aggregate, when numerical bad */
-            if( absaggrcoef < epsilon )
+            if( SCIPisZero(scip, aggrcoefs[naggrs]) )
             {
                SCIPdebugMsg(scip, "do not perform multi-aggregation: too large aggregation coefficients\n");
 
@@ -11010,9 +11005,6 @@ SCIP_RETCODE dualPresolve(
       /* perform the multi-aggregation */
       if( (samevar && supinf == 1 && infinf == 1) || (!samevar && (supinf == 0 || infinf == 0)) )
       {
-         /* @todo if multi-aggregate makes them numerical trouble, avoid them if the coefficients differ to much, see
-          * also convertLongEquality() early termination due to coefficients
-          */
          SCIP_CALL( SCIPmultiaggregateVar(scip, bestvar, naggrs, aggrvars, aggrcoefs, aggrconst, &infeasible, &aggregated) );
 
          /* @TODO: handle this case properly with extended implied integrality */
