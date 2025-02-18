@@ -1,0 +1,16 @@
+STATISTICS
+  Problem name     : problem
+  Variables        : 3 (0 binary, 0 integer, 0 implicit integer, 3 continuous)
+  Constraints      : 0 initial, 4 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [continuous] <x10809>: obj=0, original bounds=[0,1]
+  [continuous] <x10815>: obj=0, original bounds=[0,1]
+  [continuous] <x6347>: obj=0, original bounds=[0,999999999]
+CONSTRAINTS
+  [linear] <c10576>:  +400<x10809>[C] -<x6347>[C] <= 0;
+  [linear] <c10939>:  -1000<x10809>[C] +<x6347>[C] <= 0.25;
+  [linear] <c10945>:  -1000000<x10815>[C] == -625;
+  [linear] <c1639>:  +72<x6347>[C] == 0;
+END
