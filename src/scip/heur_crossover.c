@@ -721,7 +721,8 @@ SCIP_RETCODE setupAndSolveSubscipCrossover(
    /* permute the subproblem to increase diversification */
    if( heurdata->permute )
    {
-      SCIP_CALL( SCIPpermuteProb(subscip, SCIPinitializeRandomSeed(scip, (unsigned) SCIPheurGetNCalls(heur)), TRUE, TRUE, TRUE, TRUE, TRUE) );
+      SCIP_CALL( SCIPpermuteProb(subscip, SCIPinitializeRandomSeed(scip, (unsigned) SCIPheurGetNCalls(heur)), TRUE,
+            TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    }
 
    /* catch LP events of sub-SCIP */

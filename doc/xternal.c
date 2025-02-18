@@ -4462,7 +4462,9 @@
  *
  * This callback is called when an expression is checked for integrality, that is,
  * whether the expression evaluates always to an integral value in a feasible solution.
- * An implementation usually uses SCIPexprIsIntegral() to check whether children evaluate to an integral value.
+ * An implementation usually uses SCIPexprGetIntegrality() or SCIPexprIsIntegral() to evaluate the integrality of a
+ * feasible child expression. The function SCIPexprGetIntegrality() distinguishes the integrality types none, weak, and strong. Weak
+ * integrality occurs if one of the variables in the expression is weakly implied integral.
  *
  * For example, a sum expression is returned to be integral if all coefficients and all children are integral:
  * @refsnippet{src/scip/expr_sum.c,SnippetExprIntegralitySum}
@@ -8779,7 +8781,7 @@
  * SST cuts via several parameters. For instance,
  *
  * - <code>sstleadervartype</code> is a bitset encoding the variable types of leaders: the 1-bit models binary,
- *   the 2-bit integer, the 4-bit implicit integer, and the 8-bit continuous variables. That is, a value
+ *   the 2-bit integer, the 4-bit implied integral of any type, and the 8-bit continuous variables. That is, a value
  *   of 9 models that the leader can be a binary or continuous variable.
  * - <code>sstleaderrule</code> ranges from 0 to 2 and models whether a leader is the first variable in
  *   its orbit, the last variable in its orbit, or a variable with most conflicts with other variables in

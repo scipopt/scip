@@ -363,19 +363,21 @@ typedef struct SCIP_ExprhdlrData SCIP_EXPRHDLRDATA; /**< expression handler data
 
 /** expression integrality detection callback
  *
- * The method checks whether an expression evaluates always to an integral value in a feasible solution.
- * Usually uses SCIPexprIsIntegral() to check whether children evaluate to an integral value.
+ * The method computes the integrality of an expression.
+ * The integrality of an expression f(y) is defined as the implied integer type of an auxiliary continuous variable x
+ * that is introduced such that x = f(y) holds. Usually uses SCIPexprGetIntegrality() or SCIPexprIsIntegral() to get the
+ * integrality of children expressions.
  *
- *  \param[in] scip        SCIP main data structure
- *  \param[in] expr        expression to check the integrality for
- *  \param[out] isintegral buffer to store whether expr is integral
+ *  \param[in] scip         SCIP main data structure
+ *  \param[in] expr         expression to check the integrality for
+ *  \param[out] integrality buffer to store the integrality of the expression
  *
  * See also \ref EXPRINTEGRALITY.
  */
 #define SCIP_DECL_EXPRINTEGRALITY(x) SCIP_RETCODE x (\
    SCIP*      scip, \
    SCIP_EXPR* expr, \
-   SCIP_Bool* isintegral)
+   SCIP_IMPLINTTYPE* integrality)
 
 /** expression hash callback
  *

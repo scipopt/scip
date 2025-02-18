@@ -533,15 +533,28 @@ BEGIN {
    inoriginalprob = 0;
 }
 /^  Variables        :/ {
+   #With SCIP 10, the print changed to reflect the new variable types.
+   #We accept both logs from before and after
    if( inoriginalprob )
       origvars = $3;
    else
    {
-      vars = $3;
-      intvars = $6;
-      implvars = $8;
-      contvars = $11;
-      binvars = vars - intvars - implvars - contvars;
+      if( $9 == "continuous)" )
+      {
+         vars = $3;
+         intvars = $6;
+         contvars = $8;
+         implvars = 0;
+         binvars = vars - intvars - contvars;
+      }
+      else
+      {
+         vars = $3;
+         intvars = $6;
+         implvars = $8;
+         contvars = $11;
+         binvars = vars - intvars - implvars - contvars;
+      }
    }
 }
 /^  Constraints      :/ {

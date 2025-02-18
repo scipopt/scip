@@ -141,7 +141,7 @@ SCIP_RETCODE compensateVarLock(
    assert(nfixings != NULL);
 
    /* the variable for compensation should not be a compensation variable itself */
-   assert(!(SCIPmatrixGetColNNonzs(matrix,col) == 1 && SCIPvarGetType(SCIPmatrixGetVar(matrix,col)) == SCIP_VARTYPE_CONTINUOUS));
+   assert(SCIPmatrixGetColNNonzs(matrix, col) != 1 || SCIPvarIsIntegral(SCIPmatrixGetVar(matrix, col)));
 
    /* try lock compensation only if minimum one singleton continuous variable is present */
    singleton = FALSE;
@@ -151,11 +151,9 @@ SCIP_RETCODE compensateVarLock(
    {
       var = SCIPmatrixGetVar(matrix, *rowpnt);
 
-      if( SCIPmatrixGetColNNonzs(matrix, *rowpnt) == 1 &&
-         SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS &&
-         SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNUplocks(matrix, *rowpnt) &&
-         SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, *rowpnt)
-         )
+      if( SCIPmatrixGetColNNonzs(matrix, *rowpnt) == 1 && !SCIPvarIsIntegral(var)
+         && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNUplocks(matrix, *rowpnt)
+         && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, *rowpnt) )
       {
          /* minimal one valid compensation variable is present in this row */
          singleton = TRUE;
@@ -268,10 +266,9 @@ SCIP_RETCODE compensateVarLock(
             }
          }
       }
-      else if( SCIPmatrixGetColNNonzs(matrix, colidx) == 1 &&
-         SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNUplocks(matrix, colidx) &&
-         SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, colidx) &&
-         SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      else if( SCIPmatrixGetColNNonzs(matrix, colidx) == 1 && !SCIPvarIsIntegral(var)
+         && SCIPvarGetNLocksUpType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNUplocks(matrix, colidx)
+         && SCIPvarGetNLocksDownType(var, SCIP_LOCKTYPE_MODEL) == SCIPmatrixGetColNDownlocks(matrix, colidx) )
       {
          /* this is singleton continuous variable and
           * thus a valid compensation candidate
@@ -598,12 +595,11 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
          var = SCIPmatrixGetVar(matrix, i);
 
          /* exclude compensation variables itself for compensation */
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS &&
-            SCIPmatrixGetColNNonzs(matrix, i) == 1 )
+         if( !SCIPvarIsIntegral(var) && SCIPmatrixGetColNNonzs(matrix, i) == 1 )
             continue;
 
          /* if requested exclude continuous variables for compensation */
-         if( presoldata->componlydisvars && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         if( presoldata->componlydisvars && !SCIPvarIsIntegral(var) )
             continue;
 
          /* verifiy that this variable has one uplock and that the uplocks are consistent */
@@ -770,7 +766,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
                (*nfixedvars)++;
                numlowerboundfixings++;
 
-               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               if( !SCIPvarIsIntegral(var) )
                   numcontinuousfixings++;
                else
                   numdiscretefixings++;
@@ -799,7 +795,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
                (*nfixedvars)++;
                numupperboundfixings++;
 
-               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               if( !SCIPvarIsIntegral(var) )
                   numcontinuousfixings++;
                else
                   numdiscretefixings++;

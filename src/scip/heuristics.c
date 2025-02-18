@@ -1082,7 +1082,7 @@ SCIP_RETCODE SCIPaddTrustregionNeighborhoodConstraint(
       else
          consvals[nconsvars] = 1.0;
       consvars[nconsvars] = subvars[i];
-      assert(SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(consvars[nconsvars]) == SCIP_VARTYPE_BINARY && !SCIPvarIsImpliedIntegral(consvars[nconsvars]));
       ++nconsvars;
    }
 

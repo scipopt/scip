@@ -204,13 +204,9 @@ Problem<SCIP_Real> buildProblem(
       builder.setColUb(i, ub);
       builder.setColLbInf(i, SCIPisInfinity(scip, -lb));
       builder.setColUbInf(i, SCIPisInfinity(scip, ub));
+      builder.setColIntegral(i, SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
 #if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
-      if ( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT )
-         builder.setColImplInt(i, TRUE);
-      else
-         builder.setColIntegral(i, SCIPvarIsIntegral(var));
-#else
-      builder.setColIntegral(i, SCIPvarIsIntegral(var));
+      builder.setColImplInt(i, SCIPvarIsImpliedIntegral(var));
 #endif
       builder.setObj(i, SCIPvarGetObj(var));
    }

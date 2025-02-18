@@ -1068,7 +1068,8 @@ SCIP_RETCODE optimize(
             slavesolval = SCIPgetSolVal(scip, worksol, slave);
             changedobj = 0.0;
 
-            assert(SCIPvarGetType(master) == SCIPvarGetType(slave));
+            assert(SCIPvarIsImpliedIntegral(master) == SCIPvarIsImpliedIntegral(slave)
+                  && (SCIPvarIsImpliedIntegral(master) || SCIPvarGetType(master) == SCIPvarGetType(slave)));
             assert(SCIPisFeasIntegral(scip, slavesolval));
             assert(opttype == OPTTYPE_INTEGER || (SCIPisFeasLE(scip, mastersolval, 1.0) || SCIPisFeasGE(scip, mastersolval, 0.0)));
 
@@ -1708,7 +1709,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
             solval = SCIPgetSolVal(scip, worksol, allvars[i]);
 
-            assert(SCIPvarGetType(allvars[i]) != SCIP_VARTYPE_CONTINUOUS && SCIPisFeasIntegral(scip, solval));
+            assert(SCIPvarIsIntegral(allvars[i]) && SCIPisFeasIntegral(scip, solval));
 
             SCIP_CALL( SCIPchgVarLbDive(scip, allvars[i], solval) );
             SCIP_CALL( SCIPchgVarUbDive(scip, allvars[i], solval) );

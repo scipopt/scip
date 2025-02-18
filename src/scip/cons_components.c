@@ -1543,6 +1543,8 @@ SCIP_RETCODE sortComponents(
 
       for( v = 0; v < ncvars; ++v )
       {
+         if( SCIPvarIsImpliedIntegral(vars[cvars[v]]) )
+            continue;
          /* check whether variable is of binary or integer type */
          if( SCIPvarGetType(vars[cvars[v]]) == SCIP_VARTYPE_BINARY )
             nbinvars++;

@@ -366,9 +366,15 @@ SCIP_RETCODE SCIPtransformProb(
 
    /* print transformed problem statistics */
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-      "transformed problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
-      scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars, scip->transprob->nimplvars,
-      scip->transprob->ncontvars, scip->transprob->nconss);
+      "transformed problem has %d variables (%d bin, %d int, %d cont) and %d constraints\n",
+      scip->transprob->nvars, scip->transprob->nbinvars + scip->transprob->nbinimplvars,
+      scip->transprob->nintvars + scip->transprob->nintimplvars, scip->transprob->ncontvars +
+      scip->transprob->ncontimplvars, scip->transprob->nconss);
+
+   if( scip->transprob->nbinimplvars > 0 || scip->transprob->nintimplvars > 0 || scip->transprob->ncontimplvars > 0 )
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "transformed problem has %d implied integral variables (%d bin, %d int, %d cont)\n", SCIPprobGetNImplVars(scip->transprob),
+         scip->transprob->nbinimplvars, scip->transprob->nintimplvars, scip->transprob->ncontimplvars);
 
    for( h = 0; h < scip->set->nconshdlrs; ++h )
    {
@@ -418,7 +424,8 @@ SCIP_RETCODE SCIPtransformProb(
       permutevars = scip->set->random_permutevars;
       permutationseed = scip->set->random_permutationseed;
 
-      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
+      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss,
+            permutevars, permutevars, permutevars, permutevars, permutevars, permutevars) );
    }
 
    if( scip->set->misc_estimexternmem )
@@ -2184,7 +2191,7 @@ SCIP_RETCODE compressReoptTree(
       return SCIP_OKAY;
 
    /* do not run a tree compression if the problem contains (implicit) integer variables */
-   if( scip->transprob->nintvars > 0 || scip->transprob->nimplvars > 0 )
+   if( scip->transprob->nintvars > 0 || scip->transprob->nintimplvars > 0 || scip->transprob->ncontimplvars > 0 )
       return SCIP_OKAY;
 
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
@@ -2419,9 +2426,15 @@ SCIP_RETCODE SCIPpresolve(
 
          /* print presolved problem statistics */
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-            "presolved problem has %d variables (%d bin, %d int, %d impl, %d cont) and %d constraints\n",
-            scip->transprob->nvars, scip->transprob->nbinvars, scip->transprob->nintvars, scip->transprob->nimplvars,
-            scip->transprob->ncontvars, scip->transprob->nconss);
+            "presolved problem has %d variables (%d bin, %d int, %d cont) and %d constraints\n",
+            scip->transprob->nvars, scip->transprob->nbinvars + scip->transprob->nbinimplvars,
+            scip->transprob->nintvars + scip->transprob->nintimplvars, scip->transprob->ncontvars +
+            scip->transprob->ncontimplvars, scip->transprob->nconss);
+
+         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+                                  "presolved problem has %d implied integral variables (%d bin, %d int, %d cont)\n",
+                                  SCIPprobGetNImplVars(scip->transprob), scip->transprob->nbinimplvars,
+                                  scip->transprob->nintimplvars, scip->transprob->ncontimplvars);
 
          for( h = 0; h < scip->set->nconshdlrs; ++h )
          {

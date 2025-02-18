@@ -100,7 +100,7 @@ typedef struct MatrixComponents MATRIX_COMPONENTS;
 
 /** A temporary data structure that stores some statistics/data on the rows and columns.
  *
- * This is freed again after implied integer detection is finished.
+ * This is freed again after implied integral detection is finished.
  */
 struct MatrixStatistics
 {
@@ -503,20 +503,20 @@ void freeMatrixStatistics(
    SCIPfreeBuffer(scip, pstats);
 }
 
-/** Given the continuous components and statistics on the matrix, detect components that have implied integer variables
+/** Given the continuous components and statistics on the matrix, detect components that have implied integral variables
  * by checking if the component is a (transposed) network matrix and if all the bounds/sides/coefficients are integral.
  *
  * For every component, we detect if the associated matrix is either a network matrix or a transposed network matrix
  * (or both, in which case it represents a planar graph).
  * We choose to check if it is a (transposed) network matrix either in a row-wise or in a column-wise fashion,
- * depending on the size of the component.
- * Finally, every variable that is in a network matrix or transposed network matrix is changed to an implied integer.
+ * depending on the size of the component. Finally, every variable that is in a network matrix or transposed network
+ * matrix is derived to be weakly implied integral.
  */
 static
 SCIP_RETCODE findImpliedIntegers(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOLDATA*      presoldata,         /**< The data belonging to the presolver */
-   SCIP_MATRIX*          matrix,             /**< The constraint matrix to compute implied integers for */
+   SCIP_MATRIX*          matrix,             /**< The constraint matrix to compute implied integral variables for */
    MATRIX_COMPONENTS*    comp,               /**< The continuous connected components of the matrix */
    MATRIX_STATISTICS*    stats,              /**< Statistics of the matrix */
    int*                  nchgvartypes        /**< Pointer to count the number of changed variable types */
@@ -693,19 +693,19 @@ SCIP_RETCODE findImpliedIntegers(
          int col = comp->componentcols[i];
          SCIP_VAR* var = SCIPmatrixGetVar(matrix, col);
          SCIP_Bool infeasible = FALSE;
-         SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_IMPLINT, &infeasible) );
+         SCIP_CALL( SCIPchgVarImplType(scip, var, SCIP_IMPLINTTYPE_WEAK, &infeasible) );
          (*nchgvartypes)++;
          assert(!infeasible);
       }
    }
    if( *nchgvartypes == 0 )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No implied integers detected \n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No implied integral variables detected \n");
    }
    else
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-                      "%d implied integers in %d / %d components (disqualified: %d by integrality, %d by numerics, %d not network) \n",
+                      "%d implied integral variables in %d / %d components (disqualified: %d by integrality, %d by numerics, %d not network) \n",
                       *nchgvartypes, ngoodcomponents, comp->ncomponents, nbadintegrality, nbadnumerics, nnonnetwork);
    }
 
@@ -764,7 +764,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    {
       return SCIP_OKAY;
    }
-   /* Since implied integer detection relies on rows being static, we disable it for branch-and-price applications*/
+   /* Since implied integrality detection relies on rows being static, we disable it for branch-and-price applications*/
    if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
    {
       return SCIP_OKAY;
@@ -781,7 +781,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
 
    SCIP_Real starttime = SCIPgetSolvingTime(scip);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                   "   (%.1fs) implied integer detection started\n", starttime);
+                   "   (%.1fs) implied integrality detection started\n", starttime);
 
    SCIP_Bool initialized;
    SCIP_Bool complete;
@@ -809,7 +809,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
          SCIPmatrixFree(scip, &matrix);
       }
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-                      "   (%.1fs) implied integer detection stopped because problem is not an MILP\n",
+                      "   (%.1fs) implied integrality detection stopped because problem is not an MILP\n",
                       SCIPgetSolvingTime(scip));
       return SCIP_OKAY;
    }
@@ -827,13 +827,13 @@ SCIP_DECL_PRESOLEXEC(presolExecImplint)
    if( afterchanged == beforechanged )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                      "   (%.1fs) no implied integers detected (time: %.2fs)\n", endtime, endtime - starttime);
+                      "   (%.1fs) no implied integral variables detected (time: %.2fs)\n", endtime, endtime - starttime);
       *result = SCIP_DIDNOTFIND;
    }
    else
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                      "   (%.1fs) %d implied integers detected (time: %.2fs)\n",endtime,*nchgvartypes,endtime-starttime);
+                      "   (%.1fs) %d implied integral variables detected (time: %.2fs)\n",endtime,*nchgvartypes,endtime-starttime);
 
       *result = SCIP_SUCCESS;
    }
