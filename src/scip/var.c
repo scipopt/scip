@@ -5951,9 +5951,6 @@ void varSetProbindex(
    )
 {
    assert(var != NULL);
-   assert(probindex >= 0 || var->vlbs == NULL);
-   assert(probindex >= 0 || var->vubs == NULL);
-   assert(probindex >= 0 || var->implics == NULL);
 
    var->probindex = probindex;
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
