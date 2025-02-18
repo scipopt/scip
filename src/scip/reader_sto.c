@@ -1993,7 +1993,6 @@ SCIP_RETCODE addScenarioVarsToProb(
    {
       SCIP_VAR* var;
       SCIP_Real obj;
-      SCIP_VARTYPE vartype;
 
       SCIPdebugMessage("Original problem variable <%s> is being duplicated for scenario %d\n", SCIPvarGetName(vars[i]),
          getScenarioNum(scip, scenario));
@@ -2003,13 +2002,11 @@ SCIP_RETCODE addScenarioVarsToProb(
 
       obj = SCIPvarGetObj(vars[i])*probability;
 
-      vartype = SCIPvarGetType(vars[i]);
-
       /* creating a variable as a copy of the original variable. */
       getScenarioEntityName(name, SCIPvarGetName(vars[i]), getScenarioStageNum(scip, scenario), getScenarioNum(scip, scenario));
-      SCIP_CALL( SCIPcreateVar(scip, &var, name, SCIPvarGetLbOriginal(vars[i]), SCIPvarGetUbOriginal(vars[i]),
-            obj, vartype, SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL,
-            NULL, NULL) );
+      SCIP_CALL( SCIPcreateVarImpl(scip, &var, name, SCIPvarGetLbOriginal(vars[i]), SCIPvarGetUbOriginal(vars[i]),
+            obj, SCIPvarGetType(vars[i]), SCIPvarGetImplType(vars[i]), SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]),
+            NULL, NULL, NULL, NULL, NULL) );
 
       SCIPdebugMessage("Adding variable <%s>\n", name);
 
@@ -2125,9 +2122,9 @@ SCIP_RETCODE getScenarioDecompVar(
    {
       SCIP_VAR* var;
       /* creating a variable as a copy of the original variable. */
-      SCIP_CALL( SCIPcreateVar(scip, &var, varname, SCIPvarGetLbOriginal(searchvar), SCIPvarGetUbOriginal(searchvar),
-            0.0, SCIPvarGetType(searchvar), SCIPvarIsInitial(searchvar), SCIPvarIsRemovable(searchvar), NULL, NULL,
-            NULL, NULL, NULL) );
+      SCIP_CALL( SCIPcreateVarImpl(scip, &var, varname, SCIPvarGetLbOriginal(searchvar), SCIPvarGetUbOriginal(searchvar),
+            0.0, SCIPvarGetType(searchvar), SCIPvarGetImplType(searchvar), SCIPvarIsInitial(searchvar), SCIPvarIsRemovable(searchvar),
+            NULL, NULL, NULL, NULL, NULL) );
 
       SCIP_CALL( SCIPaddVar(scip, var) );
 

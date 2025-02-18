@@ -1,0 +1,131 @@
+STATISTICS
+  Problem name     : piperout-impl
+  Variables        : 87 (77 binary, 6 integer, 3 implicit integer, 1 continuous)
+  Constraints      : 0 initial, 35 maximal
+OBJECTIVE
+  Sense            : minimize
+VARIABLES
+  [binary] <X_INTRODUCED_53628_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54015_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54494_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54495_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54496_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54497_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54500_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54501_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54502_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54504_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54528_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54558_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54559_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54586_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_54843_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_44080_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_44128_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_44182_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_44192_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_44202_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_44211_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_44219_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_44621_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51215_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51216_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51217_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51218_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51219_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51220_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51308_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51615_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51626_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51627_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51630_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51631_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51632_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51633_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51634_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51635_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51636_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51638_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51639_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51640_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51641_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51643_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51644_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51645_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51646_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51647_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51648_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51649_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51650_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51651_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51652_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51655_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51656_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51657_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51658_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51659_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51660_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51661_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_51662_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_52382_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_52385_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_52386_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_52387_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_52388_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_52389_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_52390_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_52391_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_52392_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_52771_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_53223_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_53263_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_53264_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_53265_>: obj=0, original bounds=[0,1]
+  [binary] <X_INTRODUCED_53270_>: obj=0, original bounds=[0,1]
+  [integer] <X_INTRODUCED_75_>: obj=0, original bounds=[0,380]
+  [integer] <X_INTRODUCED_72_>: obj=0, original bounds=[0,380]
+  [integer] <nXNd__1_7_Z>: obj=0, original bounds=[0,215]
+  [integer] <nXNd__1_6_Z>: obj=0, original bounds=[0,215]
+  [integer] <nXNd__1_5_Z>: obj=0, original bounds=[0,215]
+  [integer] <nXNd__1_5_X>: obj=0, original bounds=[-15,365]
+  [binary] <X_INTRODUCED_44137_>: obj=0, original bounds=[0,1], implied: weak
+  [integer] <nXNd__1_7_X>: obj=0, original bounds=[-15,365], implied: strong
+  [continuous] <nXNd__1_6_Y>: obj=0, original bounds=[5,194], implied: strong
+  [continuous] <nXNd__1_6_X>: obj=0, original bounds=[-15,365]
+CONSTRAINTS
+  [linear] <p_lin_12234>: <nXNd__1_6_Y>[M] <= 113;
+  [linear] <p_lin_12250>:  +249<X_INTRODUCED_44080_>[B] +<nXNd__1_6_X>[C] >= 234;
+  [linear] <p_lin_12252>: <nXNd__1_6_X>[C] <= 365;
+  [linear] <p_lin_12254>: <nXNd__1_6_Y>[M] >= 5;
+  [linear] <p_lin_12256>: <nXNd__1_6_Y>[M] <= 194;
+  [linear] <p_lin_12261>: <X_INTRODUCED_44080_>[B] +<X_INTRODUCED_44128_>[B] -<X_INTRODUCED_44137_>[M] <= 1;
+  [linear] <p_lin_12262>:  -<X_INTRODUCED_44128_>[B] +<X_INTRODUCED_44137_>[M] <= 0;
+  [linear] <p_lin_12263>: <X_INTRODUCED_44137_>[M] <= 1;
+  [linear] <p_lin_12264>: <X_INTRODUCED_44137_>[M] <= 1;
+  [linear] <p_lin_12267>:  -<X_INTRODUCED_44080_>[B] +<X_INTRODUCED_44137_>[M] <= 0;
+  [linear] <p_lin_12281>:  +282<X_INTRODUCED_44182_>[B] +<nXNd__1_6_X>[C] >= 267;
+  [linear] <p_lin_12283>:  -141<X_INTRODUCED_44192_>[B] +<nXNd__1_6_X>[C] <= 224;
+  [linear] <p_lin_12285>:  -130<X_INTRODUCED_44202_>[B] +<nXNd__1_6_Y>[M] <= 64;
+  [linear] <p_lin_12286>: <X_INTRODUCED_44128_>[B] +<X_INTRODUCED_44182_>[B] +<X_INTRODUCED_44192_>[B] +<X_INTRODUCED_44202_>[B] -<X_INTRODUCED_44211_>[B] <= 3;
+  [linear] <p_lin_12287>:  -<X_INTRODUCED_44202_>[B] +<X_INTRODUCED_44211_>[B] <= 0;
+  [linear] <p_lin_12288>:  -<X_INTRODUCED_44192_>[B] +<X_INTRODUCED_44211_>[B] <= 0;
+  [linear] <p_lin_12289>:  -<X_INTRODUCED_44182_>[B] +<X_INTRODUCED_44211_>[B] <= 0;
+  [linear] <p_lin_12290>:  -<X_INTRODUCED_44128_>[B] +<X_INTRODUCED_44211_>[B] <= 0;
+  [linear] <p_lin_12292>:  +40<X_INTRODUCED_44219_>[B] +<nXNd__1_6_X>[C] <= 365;
+  [linear] <p_lin_12293>:  +341<X_INTRODUCED_44219_>[B] +<nXNd__1_6_X>[C] >= 326;
+  [linear] <p_lin_13517>: <X_INTRODUCED_53223_>[B] -<X_INTRODUCED_54843_>[B] == 0;
+  [linear] <p_lin_13232>: <X_INTRODUCED_72_>[I] -<nXNd__1_6_X>[C] +<nXNd__1_5_X>[I] == 24;
+  [linear] <p_lin_13233>: <X_INTRODUCED_72_>[I] -<nXNd__1_6_X>[C] +<nXNd__1_5_X>[I] == 24;
+  [linear] <p_lin_13262>:  -<nXNd__1_6_Z>[I] +<nXNd__1_5_Z>[I] == 0;
+  [linear] <p_lin_13280>: <X_INTRODUCED_75_>[I] -<nXNd__1_7_X>[M] +<nXNd__1_6_X>[C] == 0;
+  [linear] <p_lin_13311>:  -<nXNd__1_7_Z>[I] +<nXNd__1_6_Z>[I] == 11;
+  [linear] <p_lin_13480>:  +74<X_INTRODUCED_51215_>[B] +75<X_INTRODUCED_51216_>[B] +76<X_INTRODUCED_51217_>[B] +77<X_INTRODUCED_51218_>[B] +78<X_INTRODUCED_51219_>[B] +79<X_INTRODUCED_51220_>[B] +167<X_INTRODUCED_51308_>[B] -<nXNd__1_5_Z>[I] == -16;
+  [linear] <p_lin_13491>: <X_INTRODUCED_51615_>[B] +<X_INTRODUCED_51626_>[B] +<X_INTRODUCED_51627_>[B] +<X_INTRODUCED_51630_>[B] +<X_INTRODUCED_51631_>[B] +<X_INTRODUCED_51632_>[B] +<X_INTRODUCED_51633_>[B] +<X_INTRODUCED_51634_>[B] +<X_INTRODUCED_51635_>[B] +<X_INTRODUCED_51636_>[B] +<X_INTRODUCED_51638_>[B] +<X_INTRODUCED_51639_>[B] +<X_INTRODUCED_51640_>[B] +<X_INTRODUCED_51641_>[B] +<X_INTRODUCED_51643_>[B] +<X_INTRODUCED_51644_>[B] +<X_INTRODUCED_51645_>[B] +<X_INTRODUCED_51646_>[B] +<X_INTRODUCED_51647_>[B] +<X_INTRODUCED_51648_>[B] +<X_INTRODUCED_51649_>[B] +<X_INTRODUCED_51650_>[B] +<X_INTRODUCED_51651_>[B] +<X_INTRODUCED_51652_>[B] +<X_INTRODUCED_51655_>[B] +<X_INTRODUCED_51656_>[B] +<X_INTRODUCED_51657_>[B] +<X_INTRODUCED_51659_>[B] +<X_INTRODUCED_51660_>[B] +<X_INTRODUCED_51661_>[B] +<X_INTRODUCED_51662_>[B] +<X_INTRODUCED_52382_>[B] == 1;
+  [linear] <p_lin_13492>:  -15<X_INTRODUCED_51615_>[B] -4<X_INTRODUCED_51626_>[B] -3<X_INTRODUCED_51627_>[B] +<X_INTRODUCED_51631_>[B] +2<X_INTRODUCED_51632_>[B] +3<X_INTRODUCED_51633_>[B] +4<X_INTRODUCED_51634_>[B] +5<X_INTRODUCED_51635_>[B] +6<X_INTRODUCED_51636_>[B] +8<X_INTRODUCED_51638_>[B] +9<X_INTRODUCED_51639_>[B] +10<X_INTRODUCED_51640_>[B] +11<X_INTRODUCED_51641_>[B] +13<X_INTRODUCED_51643_>[B] +14<X_INTRODUCED_51644_>[B] +15<X_INTRODUCED_51645_>[B] +16<X_INTRODUCED_51646_>[B] +17<X_INTRODUCED_51647_>[B] +18<X_INTRODUCED_51648_>[B] +19<X_INTRODUCED_51649_>[B] +20<X_INTRODUCED_51650_>[B] +21<X_INTRODUCED_51651_>[B] +22<X_INTRODUCED_51652_>[B] +25<X_INTRODUCED_51655_>[B] +26<X_INTRODUCED_51656_>[B] +27<X_INTRODUCED_51657_>[B] +29<X_INTRODUCED_51659_>[B] +30<X_INTRODUCED_51660_>[B] +31<X_INTRODUCED_51661_>[B] +32<X_INTRODUCED_51662_>[B] +211<X_INTRODUCED_52382_>[B] -<nXNd__1_6_X>[C] == 0;
+  [linear] <p_lin_13494>: <X_INTRODUCED_52385_>[B] +<X_INTRODUCED_52386_>[B] +<X_INTRODUCED_52387_>[B] +<X_INTRODUCED_52388_>[B] +<X_INTRODUCED_52389_>[B] +<X_INTRODUCED_52390_>[B] +<X_INTRODUCED_52391_>[B] +<X_INTRODUCED_52392_>[B] +<X_INTRODUCED_52771_>[B] == 1;
+  [linear] <p_lin_13495>:  +5<X_INTRODUCED_52385_>[B] +6<X_INTRODUCED_52386_>[B] +7<X_INTRODUCED_52387_>[B] +8<X_INTRODUCED_52388_>[B] +9<X_INTRODUCED_52389_>[B] +10<X_INTRODUCED_52390_>[B] +11<X_INTRODUCED_52391_>[B] +12<X_INTRODUCED_52392_>[B] +53<X_INTRODUCED_52771_>[B] -<nXNd__1_6_Y>[M] == 0;
+  [linear] <p_lin_13509>: <X_INTRODUCED_53263_>[B] +<X_INTRODUCED_53264_>[B] +<X_INTRODUCED_53265_>[B] +<X_INTRODUCED_53270_>[B] +<X_INTRODUCED_53628_>[B] +<X_INTRODUCED_54015_>[B] == 1;
+  [linear] <p_lin_13510>: <X_INTRODUCED_53264_>[B] +2<X_INTRODUCED_53265_>[B] +7<X_INTRODUCED_53270_>[B] +365<X_INTRODUCED_53628_>[B] +211<X_INTRODUCED_54015_>[B] -<nXNd__1_7_X>[M] == 0;
+  [linear] <p_lin_13511>: <X_INTRODUCED_53223_>[B] -<X_INTRODUCED_54015_>[B] == 0;
+  [linear] <p_lin_13516>:  +87<X_INTRODUCED_54494_>[B] +88<X_INTRODUCED_54495_>[B] +89<X_INTRODUCED_54496_>[B] +90<X_INTRODUCED_54497_>[B] +93<X_INTRODUCED_54500_>[B] +94<X_INTRODUCED_54501_>[B] +95<X_INTRODUCED_54502_>[B] +97<X_INTRODUCED_54504_>[B] +121<X_INTRODUCED_54528_>[B] +151<X_INTRODUCED_54558_>[B] +152<X_INTRODUCED_54559_>[B] +179<X_INTRODUCED_54586_>[B] +5<X_INTRODUCED_54843_>[B] -<nXNd__1_7_Z>[I] == 0;
+END

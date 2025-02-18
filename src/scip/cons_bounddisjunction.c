@@ -1692,7 +1692,7 @@ SCIP_RETCODE registerBranchingCandidates(
       violation = SCIPgetSolVal(scip, sol, var) - bounds[v];
 
       /* if variable is continuous, then we cannot branch on one of the variable bounds */
-      if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_CONTINUOUS ||
+      if( SCIPvarIsIntegral(vars[v]) ||
          ((SCIPisInfinity(scip, -varlb) || !SCIPisFeasEQ(scip, bounds[v], varlb)) &&
           (SCIPisInfinity(scip,  varub) || !SCIPisFeasEQ(scip, bounds[v], varub))) )
       {

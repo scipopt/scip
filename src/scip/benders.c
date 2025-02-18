@@ -767,22 +767,22 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       }
       else
       {
-         SCIP_VARTYPE vartype;
+         SCIP_IMPLINTTYPE impltype;
 
-         /* set the variable type of the auxiliary variables to implicit integer if the objective function of the
-          * subproblem is guaranteed to be integer. This behaviour is controlled through a user parameter.
+         /* declare an auxiliary variable implied integral if the objective function of the
+          * subproblem is guaranteed to be integral and this is desired
           * NOTE: It is only possible to determine if the objective function is integral if the subproblem is defined as
           * a SCIP instance, i.e. not NULL.
           */
          if( benders->auxvarsimplint && SCIPbendersSubproblem(benders, i) != NULL
             && SCIPisObjIntegral(SCIPbendersSubproblem(benders, i)) )
-            vartype = SCIP_VARTYPE_IMPLINT;
+            impltype = SCIP_IMPLINTTYPE_WEAK;
          else
-            vartype = SCIP_VARTYPE_CONTINUOUS;
+            impltype = SCIP_IMPLINTTYPE_NONE;
 
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_%d_%s", AUXILIARYVAR_NAME, i, SCIPbendersGetName(benders) );
-         SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip),
-               0.0, vartype) );
+         SCIP_CALL( SCIPcreateVarImpl(scip, &auxiliaryvar, varname, benders->subproblowerbound[i], SCIPinfinity(scip), 0.0,
+               SCIP_VARTYPE_CONTINUOUS, impltype, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
 
          SCIPvarSetData(auxiliaryvar, vardata);
 
@@ -5823,9 +5823,10 @@ SCIP_RETCODE addConstraintToBendersSubproblem(
          SCIP_VAR* var;
 
          /* creating a variable as a copy of the original variable. */
-         SCIP_CALL( SCIPcreateVar(subproblem, &var, SCIPvarGetName(consvars[i]), SCIPvarGetLbGlobal(consvars[i]),
+         SCIP_CALL( SCIPcreateVarImpl(subproblem, &var, SCIPvarGetName(consvars[i]), SCIPvarGetLbGlobal(consvars[i]),
                SCIPvarGetUbGlobal(consvars[i]), SCIPvarGetObj(consvars[i]), SCIPvarGetType(consvars[i]),
-               SCIPvarIsInitial(consvars[i]), SCIPvarIsRemovable(consvars[i]), NULL, NULL, NULL, NULL, NULL) );
+               SCIPvarGetImplType(consvars[i]), SCIPvarIsInitial(consvars[i]), SCIPvarIsRemovable(consvars[i]),
+               NULL, NULL, NULL, NULL, NULL) );
 
          /* adding the variable to the subproblem */
          SCIP_CALL( SCIPaddVar(subproblem, var) );
@@ -6891,11 +6892,12 @@ SCIP_RETCODE SCIPbendersChgMastervarsToCont(
       {
          SCIP_CALL( SCIPbendersGetVar(benders, set, vars[i], &mastervar, -1) );
 
-         if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS && mastervar != NULL )
+         if( SCIPvarIsIntegral(vars[i]) && mastervar != NULL )
          {
-            /* changing the type of the subproblem variable corresponding to mastervar to CONTINUOUS */
+            /* remove integrality of the subproblem variable corresponding to mastervar */
             SCIP_CALL( SCIPchgVarType(subproblem, vars[i], SCIP_VARTYPE_CONTINUOUS, &infeasible) );
-
+            assert(!infeasible);
+            SCIP_CALL( SCIPchgVarImplType(subproblem, vars[i], SCIP_IMPLINTTYPE_NONE, &infeasible) );
             assert(!infeasible);
 
             chgvarscount++;

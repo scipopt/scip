@@ -1447,7 +1447,7 @@ static SCIP_DECL_HEUREXEC(heurExecPADM)
                   SCIP_Real initval;
 
                   initval = SCIPvarGetLPSol(linkvars[linkvaridx]);
-                  if( SCIPvarGetType(binfo->linkvar) != SCIP_VARTYPE_CONTINUOUS )
+                  if( SCIPvarIsIntegral(binfo->linkvar) )
                      initval = SCIPround(scip, initval);
 
                   SCIP_CALL( SCIPcreateConsBasicLinear((problem->blocks[b]).subscip, &((problem->blocks[b]).couplingcons[j]),

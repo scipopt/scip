@@ -165,30 +165,23 @@ static
 SCIP_Bool vartypeIsBranchRowType(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ORBITOPALREDDATA* orbireddata,       /**< pointer to the dynamic orbitopal reduction data */
-   SCIP_VARTYPE          vartype             /**< var type */
+   SCIP_VARTYPE          vartype,            /**< var type */
+   SCIP_IMPLINTTYPE      impltype            /**< is the variable implied integral? */
 )
 {
    assert( scip != NULL );
    assert( orbireddata != NULL );
    assert( orbireddata->conshdlr_nonlinear_checked );
 
-   switch (vartype)
+   if( impltype != SCIP_IMPLINTTYPE_NONE || vartype == SCIP_VARTYPE_CONTINUOUS )
    {
-   case SCIP_VARTYPE_BINARY:
-   case SCIP_VARTYPE_INTEGER:
-      return TRUE;
-   case SCIP_VARTYPE_CONTINUOUS:
-   case SCIP_VARTYPE_IMPLINT:
       /* potential branching variables if nonlinear constraints exist */
       assert( orbireddata->conshdlr_nonlinear_checked );
       return orbireddata->conshdlr_nonlinear == NULL ? FALSE :
-         SCIPconshdlrGetNActiveConss(orbireddata->conshdlr_nonlinear) > 0;
-   default:
-      SCIPerrorMessage("unknown vartype\n");
-      SCIPABORT();
-      /* resolve compiler warning: no asserts in optimized mode */
-      return FALSE;
+             SCIPconshdlrGetNActiveConss(orbireddata->conshdlr_nonlinear) > 0;
    }
+   assert(vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER);
+   return TRUE;
 }
 
 
@@ -1018,12 +1011,13 @@ SCIP_Bool rowIsBranchRow(
       /* the actual vartypes can be different,
        * for example when an INTEGER vartype turns into BINARY due to bound changes
        */
-      assert( vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var)) ==
-         vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(orbidata->vars[rowid * orbidata->ncols + c])) );
+      assert( vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var), SCIPvarGetImplType(var)) ==
+         vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(orbidata->vars[rowid * orbidata->ncols + c]),
+                                SCIPvarGetImplType(orbidata->vars[rowid * orbidata->ncols + c])) );
    }
 #endif
 
-   return vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var));
+   return vartypeIsBranchRowType(scip, orbireddata, SCIPvarGetType(var), SCIPvarGetImplType(var));
 }
 
 
@@ -1635,26 +1629,21 @@ SCIP_RETCODE propagateStaticOrbitope(
                   assert( SCIPsymEQ(scip, lexminface[lastunfixed * ncols + colid],
                      lexminface[lastunfixed * ncols + colid + 1]) );
                   othervar = orbidata->vars[getArrayEntryOrIndex(roworder, lastunfixed) * ncols + origcolid];
-                  switch (SCIPvarGetType(othervar))
+                  if( SCIPvarIsIntegral(othervar) )
                   {
-                  case SCIP_VARTYPE_BINARY:
-                  case SCIP_VARTYPE_IMPLINT:
-                  case SCIP_VARTYPE_INTEGER:
                      /* discrete type with unit steps: Add one to the bound. */
                      /* @todo @question Are variable bounds for SCIP_VARTYPE_IMPLINT always integral? */
                      assert( SCIPisIntegral(scip, lexminface[lastunfixed * ncols + colid]) );
                      lexminface[lastunfixed * ncols + colid] += 1.0;
                      assert( SCIPisIntegral(scip, lexminface[lastunfixed * ncols + colid]) );
                      assert( SCIPsymLE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
-                     break;
-                  case SCIP_VARTYPE_CONTINUOUS:
+                  }
+                  else
+                  {
                      /* continuous type, so add an infinitesimal value to the bound */
                      assert( SCIPsymLE(scip, lexminface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      assert( lexminepsrow[colid] == -1 );
                      lexminepsrow[colid] = lastunfixed;
-                     break;
-                  default:
-                     return SCIP_ERROR;
                   }
                   /* now row "lastunfixed" is greater. Restart from here. */
                   iseq = FALSE;
@@ -1684,9 +1673,8 @@ SCIP_RETCODE propagateStaticOrbitope(
                else if ( lexminepsrow[colid + 1] == rowid )
                {
                   assert( SCIPsymEQ(scip, lexminface[i], lexminface[i + 1]) );
-                  assert( SCIPvarGetType(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid])
-                     == SCIP_VARTYPE_CONTINUOUS );
-                  assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
+                  assert( !SCIPvarIsIntegral(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid]) );
+                  assert( !SCIPvarIsIntegral(var) );
                   /* right column (colid+1) has value x + epsilon, left column (colid) has value x, now
                    * must also become  x + epsilon in order to be larger or equal
                    * by axioms, we can squeeze infinitesimals between one other; epsilon > epsilon.
@@ -1697,27 +1685,22 @@ SCIP_RETCODE propagateStaticOrbitope(
                }
 
                /* is there room left to increase this variable further? */
-               switch (SCIPvarGetType(var))
+               if( SCIPvarIsIntegral(var) )
                {
-               case SCIP_VARTYPE_BINARY:
-               case SCIP_VARTYPE_IMPLINT:
-               case SCIP_VARTYPE_INTEGER:
                   /* discrete type with unit steps: Add one to the bound. */
                   /* @todo @question Are variable bounds for SCIP_VARTYPE_IMPLINT always integral? */
                   /* @todo in principle, this can be made more tight using the hole-lists... */
                   assert( SCIPisIntegral(scip, lexminface[i]) );
                   if ( SCIPsymLE(scip, lexminface[i] + 1.0, ub) )
                      lastunfixed = rowid;
-                  break;
-               case SCIP_VARTYPE_CONTINUOUS:
+               }
+               else
+               {
                   /* continuous type: if we can add an infinitesimal value to the current lexminface[i] value,
                    * mark row as 'lastunfixed'
                    */
                   if ( SCIPsymLT(scip, lexminface[i], ub) )
                      lastunfixed = rowid;
-                  break;
-               default:
-                  return SCIP_ERROR;
                }
             }
          }
@@ -1803,11 +1786,8 @@ SCIP_RETCODE propagateStaticOrbitope(
                   assert( SCIPsymEQ(scip, lexmaxface[lastunfixed * ncols + colid],
                      lexmaxface[lastunfixed * ncols + colid - 1]) );
                   othervar = orbidata->vars[getArrayEntryOrIndex(roworder, lastunfixed) * ncols + origcolid];
-                  switch (SCIPvarGetType(othervar))
+                  if( SCIPvarIsIntegral(othervar) )
                   {
-                  case SCIP_VARTYPE_BINARY:
-                  case SCIP_VARTYPE_IMPLINT:
-                  case SCIP_VARTYPE_INTEGER:
                      /* discrete type with unit steps: Remove one from the lexmax-value. */
                      /* @todo @question Are variable bounds for SCIP_VARTYPE_IMPLINT always integral? */
                      assert( SCIPisIntegral(scip, lexmaxface[lastunfixed * ncols + colid]) );
@@ -1815,16 +1795,14 @@ SCIP_RETCODE propagateStaticOrbitope(
                      assert( SCIPisIntegral(scip, lexmaxface[lastunfixed * ncols + colid]) );
                      assert( SCIPsymGE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
                      assert( SCIPsymLE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
-                     break;
-                  case SCIP_VARTYPE_CONTINUOUS:
+                  }
+                  else
+                  {
                      /* continuous type, so subtract an infinitesimal value to the bound */
                      assert( SCIPsymGE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetLbLocal(othervar)) );
                      assert( SCIPsymLE(scip, lexmaxface[lastunfixed * ncols + colid], SCIPvarGetUbLocal(othervar)) );
                      assert( lexmaxepsrow[colid] == -1 );
                      lexmaxepsrow[colid] = lastunfixed;
-                     break;
-                  default:
-                     return SCIP_ERROR;
                   }
                   /* now row "lastunfixed" is greater. Restart from here. */
                   iseq = FALSE;
@@ -1854,9 +1832,8 @@ SCIP_RETCODE propagateStaticOrbitope(
                else if ( lexmaxepsrow[colid - 1] == rowid )
                {
                   assert( SCIPsymEQ(scip, lexmaxface[i - 1], lexmaxface[i]) );
-                  assert( SCIPvarGetType(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid])
-                     == SCIP_VARTYPE_CONTINUOUS );
-                  assert( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS );
+                  assert( !SCIPvarIsIntegral(orbidata->vars[getArrayEntryOrIndex(roworder, rowid) * ncols + origcolid]) );
+                  assert( !SCIPvarIsIntegral(var) );
                   /* left column (colid-1) has value x - epsilon, right column (colid) has value x, now
                    * must also become  x - epsilon in order to be larger or equal
                    * by axioms, we can squeeze infinitesimals between one other; epsilon > epsilon.
@@ -1867,27 +1844,22 @@ SCIP_RETCODE propagateStaticOrbitope(
                }
 
                /* is there room left to decrease this variable further? */
-               switch (SCIPvarGetType(var))
+               if( SCIPvarIsIntegral(var) )
                {
-               case SCIP_VARTYPE_BINARY:
-               case SCIP_VARTYPE_IMPLINT:
-               case SCIP_VARTYPE_INTEGER:
                   /* discrete type with unit steps: Remove one from the lexmax-value. */
                   /* @todo @question Are variable bounds for SCIP_VARTYPE_IMPLINT always integral? */
                   /* @todo in principle, this can be made more tight using the hole-lists... */
                   assert( SCIPisIntegral(scip, lexmaxface[i]) );
                   if ( SCIPsymGE(scip, lexmaxface[i] - 1.0, lb) )
                      lastunfixed = rowid;
-                  break;
-               case SCIP_VARTYPE_CONTINUOUS:
+               }
+               else
+               {
                   /* continuous type: if we can subtract an infinitesimal value to the current lexmaxface[i] value,
                    * mark row as 'lastunfixed'
                    */
                   if ( SCIPsymGT(scip, lexmaxface[i], lb) )
                      lastunfixed = rowid;
-                  break;
-               default:
-                  return SCIP_ERROR;
                }
             }
          }

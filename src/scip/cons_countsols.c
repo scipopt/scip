@@ -313,7 +313,7 @@ SCIP_Bool varIsUnfixedLocal(
    )
 {
    assert( var != NULL );
-   assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
+   assert( SCIPvarIsIntegral(var) );
    assert( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) >= 0.0 );
 
    return ( SCIPvarGetUbLocal(var) - SCIPvarGetLbLocal(var) > 0.5 );
@@ -550,7 +550,7 @@ CUTOFF_CONSTRAINT(addIntegerCons)
    {
       var = vars[v];
 
-      assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
+      assert( SCIPvarIsIntegral(var) );
 
       if( SCIPvarIsBinary(var) )
       {
@@ -790,14 +790,14 @@ SCIP_RETCODE countSparseSol(
             /* get original variable to decide if we will count the domain; continuous variables aren't counted */
             SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
-            if( origvar != NULL && SCIPvarGetType(origvar) != SCIP_VARTYPE_CONTINUOUS )
+            if( origvar != NULL && SCIPvarIsIntegral(origvar) )
             {
                lb = SCIPvarGetLbLocal(var);
                ub = SCIPvarGetUbLocal(var);
 
                SCIPdebugMsg(scip, "variable <%s> Local Bounds are [%g,%g]\n", SCIPvarGetName(var), lb, ub);
 
-               assert( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS );
+               assert( SCIPvarIsIntegral(var) );
                assert( SCIPisFeasIntegral(scip, lb) );
                assert( SCIPisFeasIntegral(scip, ub) );
                assert( SCIPisFeasIntegral(scip, ub - lb) );
@@ -1132,7 +1132,7 @@ SCIP_RETCODE checkVarbound(
       var = SCIPgetVarVarbound(scip, conss[c]);
       vbdvar = SCIPgetVbdvarVarbound(scip, conss[c]);
 
-      assert (SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarIsIntegral(vbdvar));
 
       coef = SCIPgetVbdcoefVarbound(scip, conss[c]);
       lhs = SCIPgetLhsVarbound(scip, conss[c]);
@@ -1474,7 +1474,7 @@ SCIP_DECL_CONSINIT(consInitCountsols)
       /* capture and lock all variables */
       for( v = 0; v < norigvars; ++v )
       {
-         if( SCIPvarGetType(origvars[v]) != SCIP_VARTYPE_CONTINUOUS )
+         if( SCIPvarIsIntegral(origvars[v]) )
          {
             assert(nallvars < conshdlrdata->nallvars);
 
@@ -1612,7 +1612,7 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
          /* get original variable to decide if we will count the domain; continuous variables aren't counted */
          SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
-         if( origvar != NULL && SCIPvarGetType(origvar) != SCIP_VARTYPE_CONTINUOUS )
+         if( origvar != NULL && SCIPvarIsIntegral(origvar) )
             break;
       }
       conshdlrdata->nvars = v + 1;
@@ -1632,7 +1632,7 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
          /* get original variable to decide if we will count the domain; continuous variables aren't counted */
          SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
-         assert(origvar != NULL && SCIPvarGetType(origvar) != SCIP_VARTYPE_CONTINUOUS);
+         assert(origvar != NULL && SCIPvarIsIntegral(origvar));
       }
 #endif
 
@@ -2408,7 +2408,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
 
                for( v = 0; v < SCIPgetNOrigVars(scip); ++v )
                {
-                  if( SCIPvarGetType(SCIPgetOrigVars(scip)[v]) != SCIP_VARTYPE_CONTINUOUS )
+                  if( SCIPvarIsIntegral(SCIPgetOrigVars(scip)[v]) )
                   {
                      origvars[norigvars] = SCIPgetOrigVars(scip)[v];
                      norigvars++;

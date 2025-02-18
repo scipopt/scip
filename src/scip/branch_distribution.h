@@ -101,6 +101,7 @@ void SCIPvarCalcDistributionParameters(
    SCIP_Real             varlb,              /**< variable lower bound */
    SCIP_Real             varub,              /**< variable upper bound */
    SCIP_VARTYPE          vartype,            /**< type of the variable */
+   SCIP_IMPLINTTYPE      impltype,           /**< implied integral type of the variable */
    SCIP_Real*            mean,               /**< pointer to store mean value */
    SCIP_Real*            variance            /**< pointer to store the variance of the variable uniform distribution */
    );

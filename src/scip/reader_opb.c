@@ -3357,7 +3357,7 @@ SCIP_RETCODE writeOpbConstraints(
             /* find non-binary variable */
             for( v = 0; v < nconsvars; ++v )
             {
-               if( SCIPvarGetType(consvars[v]) != SCIP_VARTYPE_BINARY )
+               if( SCIPvarGetType(consvars[v]) == SCIP_VARTYPE_CONTINUOUS )
                {
                   if( consvars[v] == slackvar )
                   {
@@ -4005,22 +4005,20 @@ SCIP_RETCODE SCIPwriteOpb(
 {  /*lint --e{715}*/
    SCIP_VAR*** andvars;
    SCIP_VAR** resvars;
+   SCIP_CONSHDLR* indicatorhdlr = SCIPfindConshdlr(scip, "indicator");
    SCIP_Bool existands;
    SCIP_Bool existandconshdlr;
    SCIP_RETCODE retcode = SCIP_OKAY;
    int* nandvars;
    int nresvars;
-   int v;
-   SCIP_CONSHDLR* indicatorhdlr = SCIPfindConshdlr(scip, "indicator");
    int nindicatorconss = indicatorhdlr != NULL ? SCIPconshdlrGetNConss(indicatorhdlr) : 0;
-
-   assert( nbinvars >= 0 );
+   int v;
 
    /* computes all and-resultants and their corresponding constraint variables */
    /* coverity[leaked_storage] */
    SCIP_CALL( computeAndConstraintInfos(scip, transformed, &resvars, &nresvars, &andvars, &nandvars, &existandconshdlr, &existands) );
 
-   if( nintvars > 0 || ncontvars + nimplvars > nindicatorconss + nresvars )
+   if( nintvars > 0 || ncontvars > nindicatorconss )
    {
       SCIPwarningMessage(scip, "only binary problems can be written in OPB format.\n");
       *result = SCIP_DIDNOTRUN;
