@@ -57,7 +57,7 @@
 #define PRESOL_NAME             "implint"
 #define PRESOL_DESC             "detects implicit integer variables"
 #define PRESOL_PRIORITY         100 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
-#define PRESOL_MAXROUNDS        0 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS        1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_COLUMNROWRATIO  50.0
