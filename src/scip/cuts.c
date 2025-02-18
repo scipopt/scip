@@ -3679,7 +3679,20 @@ SCIP_RETCODE cutsTransformMIR2(
          ++i;
 
          if( *freevariable )
+         {
+            data->ncutinds = 0;
+            /* If we terminate early, we need to make sure all the zeros in the cut coefficient array are cancelled */
+            for( int j = 0; j < NSECTIONS; ++j )
+            {
+               int* indexlist = data->indices[j];
+               for( int k = 0; k < data->nnz[j]; ++k )
+               {
+                  data->cutinds[data->ncutinds] = indexlist[k];
+                  ++data->ncutinds;
+               }
+            }
             goto TERMINATE;
+         }
       }
 
       /* perform bound substitution for added  variables */
@@ -4339,6 +4352,17 @@ SCIP_RETCODE SCIPcalcMIR(
       }
    }
 
+#ifndef NDEBUG
+   for( int i = 0; i < QUAD_ARRAY_SIZE(data->nvars); ++i )
+   {
+      if(data->cutcoefs[i] != 0.0)
+      {
+         SCIPdebugMsg(scip, "coefs have not been reset\n");
+         SCIPABORT();
+      }
+   }
+#endif
+
    SCIPfreeBufferArray(scip, &boundtype);
    SCIPfreeBufferArray(scip, &varsign);
 
@@ -4536,15 +4560,17 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          boundsfortrans, boundtypesfortrans, minfrac, maxfrac, varsign, boundtype, &freevariable, &localbdsused) );
    assert(allowlocal || !localbdsused);
 
-   if( freevariable )
-      goto TERMINATE;
-
    /* Use aliases to stay more consistent with the old code. mksetrhs needs to synchronize its values data->cutrhs
     * again before calling SCIProundMIR()! */
    mksetinds = data->cutinds;
    mksetcoefs = data->cutcoefs;
    mksetnnz = data->ncutinds;
    QUAD_ASSIGN_Q(mksetrhs, data->cutrhs);
+
+   if( freevariable )
+      goto TERMINATE;
+
+
 
    SCIPdebugMsg(scip, "transformed aggrrow row:\n");
    SCIPdebug( printCutQuad(scip, sol, mksetcoefs, QUAD(mksetrhs), mksetinds, mksetnnz, FALSE, FALSE) );
@@ -5114,6 +5140,17 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          QUAD_ARRAY_STORE(mksetcoefs, mksetinds[i], tmp);
       }
    }
+
+#ifndef NDEBUG
+   for( i = 0; i < QUAD_ARRAY_SIZE(nvars); ++i )
+   {
+      if(mksetcoefs[i] != 0.0)
+      {
+         SCIPdebugMsg(scip, "mksetcoefs have not been reset\n");
+         SCIPABORT();
+      }
+   }
+#endif
 
    freeMIRData(scip, &data);
    /* free temporary memory */
