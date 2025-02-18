@@ -1011,6 +1011,7 @@ SCIPGITHASHFILE	= 	$(SRCDIR)/scip/githash.c
 SCIPBUILDFLAGSFILE = 	$(OBJDIR)/include/scip/buildflags.h
 SCIPCONFIGHFILE	= 	$(OBJDIR)/include/scip/config.h
 SCIPEXPORTHFILE	= 	$(OBJDIR)/include/scip/scip_export.h
+SCIPCONFIGINCLUDE =	$(LIBDIR)/$(LIBTYPE)/include
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
@@ -1277,6 +1278,13 @@ $(MAINLINK) $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(MAINFILE)) $(notdir $@)
 
+# update link to config files; (the cd $(@D) is for windows, where LN_s is cp)
+.PHONY: $(SCIPCONFIGINCLUDE)
+$(SCIPCONFIGINCLUDE): $(SCIPCONFIGHFILE)
+		@rm -rf $@
+		@mkdir -p $(@D)
+		cd $(@D) && $(LN_s) ../../$(OBJDIR)/include $(@F)
+
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
 
@@ -1334,6 +1342,8 @@ cleanlibs:      | $(LIBDIR)/$(LIBTYPE)
 		@-rm -f $(TPILIBFILE) $(TPILIBLINK) $(TPILIBSHORTLINK)
 		@echo "-> remove library $(SCIPLIBFILE)"
 		@-rm -f $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(SCIPLIBSOLVERLINK) $(SCIPLIBSOLVERSHORTLINK)
+		@echo "-> remove headers directory $(SCIPCONFIGINCLUDE)"
+		@-rm -rf $(SCIPCONFIGINCLUDE)
 
 .PHONY: cleanbin
 cleanbin:       | $(BINDIR)
@@ -1369,7 +1379,7 @@ endif
 
 .PHONY: libscipbase
 libscipbase:	preprocess
-		@$(MAKE) $(SCIPLIBBASEFILE) $(SCIPLIBBASELINK) $(SCIPLIBBASESHORTLINK)
+		@$(MAKE) $(SCIPLIBBASEFILE) $(SCIPLIBBASELINK) $(SCIPLIBBASESHORTLINK) $(SCIPCONFIGINCLUDE)
 
 $(SCIPLIBBASEFILE):	$(SCIPLIBBASEOBJFILES) $(SYMOBJFILES) | $(LIBDIR)/$(LIBTYPE) $(LIBOBJSUBDIRS)
 		@echo "-> generating library $@"
