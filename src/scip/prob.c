@@ -491,7 +491,7 @@ SCIP_RETCODE SCIPprobFree(
 #endif
       }
 
-      SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, NULL, set, TRUE) );
+      SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, NULL, set, TRUE, FALSE) );
       SCIP_CALL( SCIPvarRelease(&(*prob)->vars[v], blkmem, set, eventqueue, lp) );
    }
    BMSfreeMemoryArrayNull(&(*prob)->vars);
@@ -912,7 +912,9 @@ SCIP_RETCODE probRemoveVar(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_VAR*             var                 /**< variable to remove */
+   SCIP_VAR*             var,                /**< variable to remove */
+   SCIP_Bool             isupgraded          /**< is the variable removed so that it's type can be upgraded to one that
+                                              *   is better? */
    )
 {
    int freepos;
@@ -1036,7 +1038,7 @@ SCIP_RETCODE probRemoveVar(
    assert(0 <= prob->ncolvars && prob->ncolvars <= prob->nvars);
 
    /* inform the variable that it is no longer in the problem; if necessary, delete it from the implication graph */
-   SCIP_CALL( SCIPvarRemove(var, blkmem, cliquetable, set, FALSE) );
+   SCIP_CALL( SCIPvarRemove(var, blkmem, cliquetable, set, FALSE, isupgraded) );
 
    return SCIP_OKAY;
 }
@@ -1264,7 +1266,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          SCIP_CALL( SCIPprobRemoveVarName(prob, var) );
 
          /* remove variable from vars array and mark it to be not in problem */
-         SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var) );
+         SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var, FALSE) );
 
          /* update the number of variables with non-zero objective coefficient */
          if( prob->transformed )
@@ -1310,8 +1312,11 @@ SCIP_RETCODE SCIPprobChgVarType(
       SCIP_CALL( SCIPbranchcandRemoveVar(branchcand, var) );
    }
 
+   /* Do not remove cliques, varbounds and implications if we upgrade the type */
+   SCIP_Bool upgraded = vartype > SCIPvarGetType(var);
+
    /* temporarily remove variable from problem */
-   SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var) );
+   SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var, upgraded) );
 
    /* change the type of the variable */
    SCIP_CALL( SCIPvarChgType(var, blkmem, set, primal, lp, eventqueue, vartype) );
@@ -1359,8 +1364,10 @@ SCIP_RETCODE SCIPprobChgVarImplType(
       SCIP_CALL( SCIPbranchcandRemoveVar(branchcand, var) );
    }
 
+   /* Do not remove cliques, varbounds and implications unless type becomes non-implied */
+   SCIP_Bool upgraded = impltype != SCIP_IMPLINTTYPE_NONE;
    /* temporarily remove variable from problem */
-   SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var) );
+   SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var, upgraded) );
 
    /* change the type of the variable */
    SCIP_CALL( SCIPvarChgImplType(var, blkmem, set, primal, lp, eventqueue, impltype) );
@@ -1415,7 +1422,7 @@ SCIP_RETCODE SCIPprobVarChangedStatus(
       /* variable switched from unfixed to fixed (if it was fixed before, probindex would have been -1) */
 
       /* remove variable from problem */
-      SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var) );
+      SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var, FALSE) );
 
       /* insert variable in fixedvars array */
       SCIP_CALL( probEnsureFixedvarsMem(prob, set, prob->nfixedvars+1) );

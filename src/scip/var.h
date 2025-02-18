@@ -584,13 +584,16 @@ void SCIPvarSetNamePointer(
  *  variable bounds and implication data structures of the variable are freed. Since in the final removal
  *  of all variables from the transformed problem, this deletes the implication graph completely and is faster
  *  than removing the variables one by one, each time updating all lists of the other variables.
+ *  If 'keepimplics' is TRUE, the implications, variable bounds and cliques are kept. This should be used when the
+ *  variable type is upgraded, i.e. when it gains (implied) integrality, so that existing implications are not lost.
  */
 SCIP_RETCODE SCIPvarRemove(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Bool             final               /**< is this the final removal of all problem variables? */
+   SCIP_Bool             final,              /**< is this the final removal of all problem variables? */
+   SCIP_Bool             keepimplics         /**< should the implications be kept? */
    );
 
 /** marks the variable to be deleted from the problem */
