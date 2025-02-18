@@ -354,9 +354,9 @@ SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 endif
-LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/include/bliss\".\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.a\"\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.so\""
+LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/src\".\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/build/libbliss_static.a\"\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/build/libbliss.so\""
 endif
 
 SYMOPTIONS	+=	sbliss
@@ -375,9 +375,9 @@ SOFTLINKS	+=	$(LIBDIR)/shared/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 else
 SOFTLINKS	+=	$(LIBDIR)/static/libbliss.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 endif
-LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/include/bliss\".\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.a\"\n"
-LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/lib/libbliss.so\""
+LPIINSTMSG	+=	"\n  -> \"blissinc\" is the path to the BLISS header files directory, e.g., \"<BLISS-path>/src\".\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.a\" is the path to the BLISS library, e.g., \"<BLISS-path>/build/libbliss_static.a\"\n"
+LPIINSTMSG	+=	" -> \"libbliss.*.so\" is the path to the BLISS library, e.g., \"<BLISS-path>/build/libbliss.so\""
 endif
 
 SYMOPTIONS	+=	nauty
