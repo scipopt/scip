@@ -1213,7 +1213,7 @@ SCIP_RETCODE presolve(
    }
 
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving%s:\n",
-      SCIPisExactSolve(scip) ? " (for exact solving mode)" : "");
+      SCIPisExactSolve(scip) ? " (in exact solving mode)" : "");
 
    *infeasible = FALSE;
    *unbounded = (*unbounded) || (SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip))));
