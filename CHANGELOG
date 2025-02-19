@@ -155,6 +155,11 @@ Interface changes
 - iis/minimal, iis/nodes, iis/removedbounds, iis/removeunusedvars, iis/silent, iis/stopafterone, iis/time, iis/greedy/additive, iis/greedy/conservative, iis/greedy/delafteradd, iis/greedy/dynamicreordering, iis/greedy/maxbatchsize, iis/greedy/maxrelbatchsize, iis/greedy/nodelimperiter, iis/greedy/priority, iis/greedy/timelimperiter
 - new parameters "constraints/orbitope_full/forceconscopy" and "constraints/orbitope_pp/forceconscopy" to control whether non-model constraints of type full orbitope and packing/partitioning orbitope are copied to sub-SCIPs, respectively
 - new parameter "write/implintlevel" to control if integrality constraints should be written for implied integral variables (regarded by cip, mps, lp, rlp, pip, fzn, and gms writers)
+- new parameter "presolving/milp/enablecliquemerging" to enable Clique Merging in PaPILO
+- new parameter "presolving/milp/maxedgesparallel" defines the maximal amount of edges in the parallel clique merging graph
+- new parameter "presolving/milp/maxedgessequential" defines the maximal amount of edges in the sequential clique merging graph
+- new parameter "presolving/milp/maxcliquesize" defines the maximal size of clique considered for clique merging
+- new parameter "presolving/milp/maxgreedycalls" defines the maximal number of greedy max clique calls in a single thread
 
 ### Data structures
 
