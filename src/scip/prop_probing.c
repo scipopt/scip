@@ -317,6 +317,7 @@ SCIP_RETCODE sortVariables(
             - MAX(nlocksdown, nlocksup)
             + 10.0 * MIN(nimplzero, nimplone)
             + 100.0 * MIN(nclqzero, nclqone)  /*lint !e790*/
+            - ( SCIPvarIsImpliedIntegral(var) ? 1e6 : 0.0 )
             - randomoffset; /* to break ties randomly */
 #else
          scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
