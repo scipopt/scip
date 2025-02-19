@@ -41,8 +41,8 @@
 #include "message_pb.h"
 #include "event_bestsol.h"
 
-#define SETOBJ         0                     /**< insert objective function if no exists */
-#define HEURISTICS_OFF 0                     /**< turn off heuristics */
+#define SETOBJ         FALSE                 /**< insert objective function if no exists */
+#define HEURISTICS_OFF FALSE                 /**< turn off heuristics */
 #define MAXMEMUSAGE    0.9                   /**< maximal memory usage relative to available memory */
 #define POSTTIME       3.0                   /**< time in seconds saved in the end to display solution and free everything */
 
