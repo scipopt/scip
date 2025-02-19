@@ -239,6 +239,7 @@ SCIP_RETCODE fromCommandLine(
    SCIP_Bool puresat;
    int nvars;
    int nconshdlrconss;
+   int npuresatconss;
    int v;
    int c;
 
@@ -355,9 +356,40 @@ SCIP_RETCODE fromCommandLine(
    SCIP_CALL( SCIPwriteTransProblem(scip, "debug.cip", NULL, FALSE) );
 #endif
 
-   /* determine problem type */
+   /* count number of constraints represented by or conditions */
+   npuresatconss = 0;
+
+   /* add logicor constraints */
    conshdlr = SCIPfindConshdlr(scip, "logicor");
-   puresat = (conshdlr != NULL && SCIPconshdlrGetNActiveConss(conshdlr) == SCIPgetNConss(scip));
+   if( conshdlr != NULL )
+      npuresatconss += SCIPconshdlrGetNCheckConss(conshdlr);
+
+   /* add and constraints as representable by linear amount of logicor constraints */
+   conshdlr = SCIPfindConshdlr(scip, "and");
+   if( conshdlr != NULL )
+      npuresatconss += SCIPconshdlrGetNCheckConss(conshdlr);
+
+   /* add setppc constraints if all are covering */
+   conshdlr = SCIPfindConshdlr(scip, "setppc");
+   if( conshdlr != NULL )
+   {
+      nconshdlrconss = SCIPconshdlrGetNCheckConss(conshdlr);
+      if( npuresatconss + nconshdlrconss == SCIPgetNCheckConss(scip) )
+      {
+         conshdlrconss = SCIPconshdlrGetCheckConss(conshdlr);
+         assert(conshdlrconss != NULL || nconshdlrconss == 0);
+         for( c = 0; c < nconshdlrconss; ++c )
+         {
+            if( SCIPgetTypeSetppc(scip, conshdlrconss[c]) != SCIP_SETPPCTYPE_COVERING )
+               break;
+         }
+         if( c == nconshdlrconss )
+            npuresatconss += nconshdlrconss;
+      }
+   }
+
+   /* determine problem type */
+   puresat = (npuresatconss == SCIPgetNCheckConss(scip));
 
    /* set setting for the branch-and-bound process */
    if( settingsfilename == NULL )
