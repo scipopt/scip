@@ -231,14 +231,14 @@ SCIP_RETCODE fromCommandLine(
    )
 {
    SCIP_RETCODE retcode;
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONS** conss;
    SCIP_VAR** vars;
+   SCIP_CONS** conshdlrconss;
+   SCIP_CONSHDLR* conshdlr;
    SCIP_Bool hasobj;
    SCIP_Bool hasindicator;
    SCIP_Bool puresat;
-   int nconss;
    int nvars;
+   int nconshdlrconss;
    int v;
    int c;
 
@@ -304,14 +304,14 @@ SCIP_RETCODE fromCommandLine(
       }
    }
 
-   conss = SCIPgetOrigConss(scip);
-   nconss = SCIPgetNOrigConss(scip);
-   assert(conss != NULL || nconss == 0);
+   conshdlr = SCIPfindConshdlr(scip, "pseudoboolean");
+   conshdlrconss = SCIPconshdlrGetConss(conshdlr);
+   nconshdlrconss = SCIPconshdlrGetNConss(conshdlr);
+   assert(conshdlrconss != NULL || nconshdlrconss == 0);
    hasindicator = FALSE;
-   for( c = 0; c < nconss; ++c )
+   for( c = 0; c < nconshdlrconss; ++c )
    {
-      if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[c])), "pseudoboolean") == 0
-         && SCIPgetIndVarPseudoboolean(scip, conss[c]) != NULL )
+      if( SCIPgetIndVarPseudoboolean(scip, conshdlrconss[c]) != NULL )
       {
          hasindicator = TRUE;
          break;
