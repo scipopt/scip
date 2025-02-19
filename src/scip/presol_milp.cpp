@@ -137,10 +137,10 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_MAXCLIQUESIZE      100       /**< maximal size of clique considered for clique merging */
 #define DEFAULT_MAXGREEDYCALLS     10000     /**< maximal number of greedy max clique calls in a single thread */ 
                                              
-
 /** debug options for PaPILO */
 #define DEFAULT_FILENAME_PROBLEM   "-"       /**< default filename to store the instance before presolving */
 #define DEFAULT_VERBOSITY          0
+
 
 /*
  * Data structures
@@ -171,7 +171,7 @@ struct SCIP_PresolData
    SCIP_Bool enabledualinfer;                /**< should the dualinfer presolver be enabled within the presolve library? */
    SCIP_Bool enablemultiaggr;                /**< should the multi-aggregation presolver be enabled within the presolve library? */
    SCIP_Bool enableparallelrows;             /**< should the parallel rows presolver be enabled within the presolve library? */
-   SCIP_Bool enabledcliquemerging;           /**< should the clique merging presolver be enabled within the presolve library? */
+   SCIP_Bool enablecliquemerging;            /**< should the clique merging presolver be enabled within the presolve library? */
    SCIP_Real modifyconsfac;                  /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
    SCIP_Real markowitztolerance;             /**< the markowitz tolerance used for substitutions */
@@ -323,8 +323,13 @@ Presolve<SCIP_Real> setupPresolve(
    presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
 #if PAPILO_APIVERSION >= 6
-   if( data -> enabledcliquemerging )
-      presolve.addPresolveMethod( uptr( new CliqueMerging<SCIP_Real>() ) );
+   if( data->enablecliquemerging )
+   {
+      CliqueMerging<SCIP_Real>* cliquemerging = new CliqueMerging<SCIP_Real>();
+      cliquemerging->setParameters( data->maxedgesparallel, data->maxedgessequential, 
+                                    data->maxcliquesize, data->maxgreedycalls );
+      presolve.addPresolveMethod( uptr( cliquemerging ) );
+   }
 #endif
 
    /* exhaustive presolvers*/
@@ -378,13 +383,6 @@ Presolve<SCIP_Real> setupPresolve(
    presolve.getPresolveOptions().abortfac = data->abortfacexhaustive;
    presolve.getPresolveOptions().abortfacmedium = data->abortfacmedium;
    presolve.getPresolveOptions().abortfacfast = data->abortfacfast;
-#endif
-#if PAPILO_APIVERSION >= 6
-   if ( data -> enablecliquemerging )
-   {
-      cliquemerging->setParameters( data->maxedgesparallel, data->maxedgessequential, 
-                                    data->maxcliquesize, data->maxgreedycalls );
-   }
 #endif
 
    /* communicate the time limit */
@@ -1183,7 +1181,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/" PRESOL_NAME "/enablecliquemerging",
          "should the clique merging presolver be enabled within the presolve library?",
-         &presoldata->enabledcliquemerging, TRUE, DEFAULT_ENABLESPARSIFY, NULL, NULL) );
+         &presoldata->enablecliquemerging, TRUE, DEFAULT_ENABLESPARSIFY, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/" PRESOL_NAME "/maxedgesparallel",
          "maximal amount of edges in the parallel clique merging graph",
@@ -1201,6 +1199,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "maximal number of greedy max clique calls in a single thread",
          &presoldata->maxgreedycalls, FALSE, DEFAULT_MAXGREEDYCALLS, -1, INT_MAX, NULL, NULL) );
 #endif
+
    return SCIP_OKAY;
 }
             
