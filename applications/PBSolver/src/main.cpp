@@ -287,7 +287,6 @@ SCIP_RETCODE fromCommandLine(
 
    /* detect unexpected error */
    SCIP_CALL( retcode );
-
    SCIPinfoMessage(scip, NULL, "problem read in %.3lf seconds\n", SCIPgetReadingTime(scip));
 
    /*******************
@@ -332,7 +331,7 @@ SCIP_RETCODE fromCommandLine(
 
    if( !hasobj )
    {
-      SCIPinfoMessage(scip, NULL, "No objective function, only one solution is needed.\n");
+      SCIPinfoMessage(scip, NULL, "problem without objective\n");
 #if SETOBJ
       /* insert objective function if no exists */
       for( v = 0; v < nvars; ++v )
