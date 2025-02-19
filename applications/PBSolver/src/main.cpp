@@ -305,6 +305,7 @@ SCIP_RETCODE fromCommandLine(
       }
    }
 
+   /* detect soft constraints */
    conshdlr = SCIPfindConshdlr(scip, "pseudoboolean");
    conshdlrconss = SCIPconshdlrGetConss(conshdlr);
    nconshdlrconss = SCIPconshdlrGetNConss(conshdlr);
