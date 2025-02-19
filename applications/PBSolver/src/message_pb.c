@@ -67,7 +67,7 @@ void printMessage(
 static
 SCIP_DECL_ERRORPRINTING(messageErrorPbSolver)
 { /*lint --e{715}*/
-   printMessage(NULL, stderr, "ERROR: ", msg);
+   printMessage(NULL, stderr, NULL, msg);
 }
 
 /** warning message print method of default message handler */
