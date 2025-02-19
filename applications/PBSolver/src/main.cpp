@@ -223,8 +223,8 @@ SCIP_RETCODE printUnsupported(
 static
 SCIP_RETCODE fromCommandLine(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename,           /**< problem file name */
    const char*           settingsfilename,   /**< settings file name */
+   const char*           problemfilename,    /**< problem file name */
    SCIP_Real             timelimit,          /**< required time limit */
    clock_t               startclock          /**< clock at which the process started */
    )
@@ -244,9 +244,15 @@ SCIP_RETCODE fromCommandLine(
    int v;
    int c;
 
-   /********************
-    * Problem Creation *
-    ********************/
+   /***********************
+    * Settings Definition *
+    ***********************/
+
+   /* read parameter settings */
+   if( settingsfilename != NULL )
+   {
+      SCIP_CALL( SCIPreadParams(scip, settingsfilename) );
+   }
 
    /* define time limit */
    if( timelimit >= 0.0 )
@@ -268,12 +274,16 @@ SCIP_RETCODE fromCommandLine(
    /* use wall clock */
    SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", 2) );
 
+   /********************
+    * Problem Creation *
+    ********************/
+
    /* read pseudoboolean problem */
-   SCIPinfoMessage(scip, NULL, "reading problem <%s>\n", filename);
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &filenamecopy, filename, (int)strlen(filename) + 1) );
+   SCIPinfoMessage(scip, NULL, "reading problem <%s>\n", problemfilename);
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &filenamecopy, problemfilename, (int)strlen(problemfilename) + 1) );
    SCIPsplitFilename(filenamecopy, NULL, NULL, &extension, NULL);
    if( strcmp(extension, "opb") == 0 || strcmp(extension, "wbo") == 0 )
-      retcode = SCIPreadProb(scip, filename, extension);
+      retcode = SCIPreadProb(scip, problemfilename, extension);
    else
       retcode = SCIP_INVALIDDATA;
    SCIPfreeBufferArray(scip, &filenamecopy);
@@ -458,7 +468,7 @@ SCIP_RETCODE processShellArguments(
 {
    char* logname = NULL;
    char* settingsname = NULL;
-   char* probname = NULL;
+   char* problemname = NULL;
    SCIP_Real timelimit = -1.0;
    SCIP_Bool quiet = FALSE;
    SCIP_Bool paramerror = FALSE;
@@ -502,7 +512,7 @@ SCIP_RETCODE processShellArguments(
                break;
             case 'f': /* get problem filename */
                if( ++i < argc )
-                  probname = argv[i];
+                  problemname = argv[i];
                else
                {
                   SCIPerrorMessage("missing problem filename after parameter '-f'\n");
@@ -585,25 +595,21 @@ SCIP_RETCODE processShellArguments(
       SCIPinfoMessage(scip, NULL, "\n");
 
       /*****************
-       * Load settings *
+       * Load defaults *
        *****************/
 
-      if( settingsname != NULL )
-      {
-         SCIP_CALL( SCIPreadParams(scip, settingsname) );
-      }
-      else if( defaultsetname != NULL && SCIPfileExists(defaultsetname) )
+      if( defaultsetname != NULL && SCIPfileExists(defaultsetname) )
       {
          SCIP_CALL( SCIPreadParams(scip, defaultsetname) );
       }
 
-      if( !interactive && probname != NULL )
+      if( !interactive && problemname != NULL )
       {
          /**************
           * Start SCIP *
           **************/
 
-         SCIP_CALL( fromCommandLine(scip, probname, settingsname, timelimit, startclock) );
+         SCIP_CALL( fromCommandLine(scip, settingsname, problemname, timelimit, startclock) );
       }
       else
       {
