@@ -171,7 +171,7 @@ struct SCIP_PresolData
    SCIP_Bool enabledualinfer;                /**< should the dualinfer presolver be enabled within the presolve library? */
    SCIP_Bool enablemultiaggr;                /**< should the multi-aggregation presolver be enabled within the presolve library? */
    SCIP_Bool enableparallelrows;             /**< should the parallel rows presolver be enabled within the presolve library? */
-   SCIP_Bool enablecliquemerging;           /**< should the clique merging presolver be enabled within the presolve library? */
+   SCIP_Bool enablecliquemerging;            /**< should the clique merging presolver be enabled within the presolve library? */
    SCIP_Real modifyconsfac;                  /**< modify SCIP constraints when the number of nonzeros or rows is at most this
                                               *   factor times the number of nonzeros or rows before presolving */
    SCIP_Real markowitztolerance;             /**< the markowitz tolerance used for substitutions */
