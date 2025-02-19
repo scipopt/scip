@@ -43,7 +43,7 @@
 
 #define SETOBJ         FALSE                 /**< insert objective function if no exists */
 #define HEURISTICS_OFF FALSE                 /**< turn off heuristics */
-#define MAXMEMUSAGE    0.9                   /**< maximal memory usage relative to available memory */
+#define MAXMEMUSAGE    0.9                   /**< maximal memory usage relative to given memory limit */
 #define POSTTIME       3.0                   /**< time in seconds saved in the end to display solution and free everything */
 
 
