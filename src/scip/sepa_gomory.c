@@ -568,8 +568,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
          assert(0 <= -c-1 && -c-1 < nrows);
          row = rows[-c-1];
-         if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) && SCIPgetRowNumImpliedIntCols(scip, row) !=
-                                                                       SCIPgetRowNumIntCols(scip, row) )
+         if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) &&
+               SCIPgetRowNumImpliedIntCols(scip, row) != SCIPgetRowNumIntCols(scip, row) )
          {
             frac = SCIPfeasFrac(scip, SCIPgetRowActivity(scip, row));
             frac = MIN(frac, 1.0 - frac);
