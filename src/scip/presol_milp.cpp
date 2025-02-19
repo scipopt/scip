@@ -1199,6 +1199,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "maximal number of greedy max clique calls in a single thread",
          &presoldata->maxgreedycalls, FALSE, DEFAULT_MAXGREEDYCALLS, -1, INT_MAX, NULL, NULL) );
 #endif
+
    return SCIP_OKAY;
 }
             
