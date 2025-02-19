@@ -236,6 +236,8 @@ SCIP_RETCODE fromCommandLine(
    SCIP_Bool hasobj;
    SCIP_Bool hasindicator;
    SCIP_Bool puresat;
+   char* filenamecopy;
+   char* extension;
    int nvars;
    int nconshdlrconss;
    int npuresatconss;
@@ -266,14 +268,15 @@ SCIP_RETCODE fromCommandLine(
    /* use wall clock */
    SCIP_CALL( SCIPsetIntParam(scip, "timing/clocktype", 2) );
 
+   /* read pseudoboolean problem */
    SCIPinfoMessage(scip, NULL, "reading problem <%s>\n", filename);
-
-   /* try OPB reader */
-   retcode = SCIPreadProb(scip, filename, "opb");
-
-   /* try WBO reader */
-   if( retcode == SCIP_PLUGINNOTFOUND )
-      retcode = SCIPreadProb(scip, filename, "wbo");
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &filenamecopy, filename, (int)strlen(filename) + 1) );
+   SCIPsplitFilename(filenamecopy, NULL, NULL, &extension, NULL);
+   if( strcmp(extension, "opb") == 0 || strcmp(extension, "wbo") == 0 )
+      retcode = SCIPreadProb(scip, filename, extension);
+   else
+      retcode = SCIP_INVALIDDATA;
+   SCIPfreeBufferArray(scip, &filenamecopy);
 
    /* declare unsupported problem */
    if( retcode == SCIP_INVALIDDATA )
