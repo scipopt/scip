@@ -32,7 +32,6 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -227,7 +226,7 @@ SCIP_RETCODE fromCommandLine(
    const char*           filename,           /**< problem file name */
    const char*           settingsfilename,   /**< settings file name */
    SCIP_Real             timelimit,          /**< required time limit */
-   clock_t               starttime           /**< time the process started */
+   clock_t               startclock          /**< clock at which the process started */
    )
 {
    SCIP_RETCODE retcode;
@@ -251,7 +250,7 @@ SCIP_RETCODE fromCommandLine(
    if( timelimit >= 0.0 )
    {
       /* get starting time and reserve finishing time */
-      timelimit -= (SCIP_Real)(clock() - starttime) / (SCIP_Real)CLOCKS_PER_SEC + POSTTIME;
+      timelimit -= (SCIP_Real)(clock() - startclock) / (SCIP_Real)CLOCKS_PER_SEC + POSTTIME;
 
       /* stop immediately if time exceeded */
       if( timelimit < 0.0 )
@@ -449,7 +448,7 @@ SCIP_RETCODE processShellArguments(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   argc,               /**< number of shell parameters */
    char**                argv,               /**< array with shell parameters */
-   clock_t               starttime,          /**< time the process started */
+   clock_t               startclock,         /**< clock at which the process started */
    const char*           defaultsetname      /**< name of default settings file */
    )
 {
@@ -600,7 +599,7 @@ SCIP_RETCODE processShellArguments(
           * Start SCIP *
           **************/
 
-         SCIP_CALL( fromCommandLine(scip, probname, settingsname, timelimit, starttime) );
+         SCIP_CALL( fromCommandLine(scip, probname, settingsname, timelimit, startclock) );
       }
       else
       {
@@ -633,7 +632,7 @@ static
 SCIP_RETCODE runShell(
    int                   argc,               /**< number of shell parameters */
    char**                argv,               /**< array with shell parameters */
-   clock_t               starttime,          /**< time the process started */
+   clock_t               startclock,         /**< clock at which the process started */
    const char*           defaultsetname      /**< name of default settings file */
    )
 {
@@ -660,7 +659,7 @@ SCIP_RETCODE runShell(
     * Process command line arguments *
     **********************************/
 
-   SCIP_CALL( processShellArguments(scip, argc, argv, starttime, defaultsetname) );
+   SCIP_CALL( processShellArguments(scip, argc, argv, startclock, defaultsetname) );
 
    /* release captured and own message handler */
    SCIP_CALL( SCIPmessagehdlrRelease(&messagehdlr) );
@@ -682,18 +681,18 @@ int main(
    )
 {
    SCIP_RETCODE retcode;
-   clock_t starttime, endtime;
+   clock_t startclock, endclock;
 
-   starttime = clock();
+   startclock = clock();
 
-   retcode = runShell(argc, argv, starttime, "scip.set");
+   retcode = runShell(argc, argv, startclock, "scip.set");
 
-   endtime = clock();
+   endclock = clock();
 
    if( retcode != SCIP_OKAY )
       printf("s UNKNOWN\n");
 
-   printf("c Time complete (sec): %9.3lf\n", (double)(endtime - starttime) / (double)CLOCKS_PER_SEC);
+   printf("c Time complete (sec): %9.3lf\n", (double)(endclock - startclock) / (double)CLOCKS_PER_SEC);
 
   return 0;
 }
