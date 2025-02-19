@@ -137,10 +137,10 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #define DEFAULT_MAXCLIQUESIZE      100       /**< maximal size of clique considered for clique merging */
 #define DEFAULT_MAXGREEDYCALLS     10000     /**< maximal number of greedy max clique calls in a single thread */ 
                                              
-
 /** debug options for PaPILO */
 #define DEFAULT_FILENAME_PROBLEM   "-"       /**< default filename to store the instance before presolving */
 #define DEFAULT_VERBOSITY          0
+
 
 /*
  * Data structures
