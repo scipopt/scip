@@ -103,7 +103,7 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #endif
 
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && !defined(PAPILO_HAVE_GMP)
-#warning SCIP with GMP and exact solving but Papilo without GMP disables exact presolving.
+#warning SCIP with GMP and exact solving but PaPILO without GMP disables exact presolving.
 #endif
 
 #define PRESOL_NAME                "milp"
@@ -187,11 +187,88 @@ using namespace papilo;
  * Local methods
  */
 
-/** builds the presolvelib problem datastructure from the matrix */
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
+/** casts rational value from PaPILO to SCIP */
 static
-Problem<SCIP_Real> buildProblem(
+void setRational(
+   SCIP*                 scip,
+   SCIP_Rational*        res,
+   papilo::Rational      papiloval
+   )
+{
+   assert(scip != NULL);
+   assert(res != NULL);
+
+   res->val = papilo::Rational(papiloval.backend().data());
+   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
+   if( SCIPisInfinity(scip, REALABS(RatApproxReal(res))) )
+   {
+      res->val > 0 ? RatSetString(res, "inf") : RatSetString(res, "-inf");
+   }
+}
+
+/** builds PaPILO problem from SCIP matrix */
+static
+Problem<papilo::Rational> buildProblemRational(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MATRIX*          matrix              /**< initialized SCIP_MATRIX data structure */
+   )
+{
+   ProblemBuilder<papilo::Rational> builder;
+
+   /* build problem from matrix */
+   int nnz = SCIPmatrixGetNNonzs(matrix);
+   int ncols = SCIPmatrixGetNColumns(matrix);
+   int nrows = SCIPmatrixGetNRows(matrix);
+   builder.reserve(nnz, nrows, ncols);
+
+   /* set up columns */
+   builder.setNumCols(ncols);
+   for( int i = 0; i != ncols; ++i )
+   {
+      SCIP_VAR* var = SCIPmatrixGetVar(matrix, i);
+      SCIP_Rational* lb = SCIPvarGetLbGlobalExact(var);
+      SCIP_Rational* ub = SCIPvarGetUbGlobalExact(var);
+      builder.setColLb(i, lb->val);
+      builder.setColUb(i, ub->val);
+      builder.setColLbInf(i, RatIsNegInfinity(lb));
+      builder.setColUbInf(i, RatIsInfinity(ub));
+
+      builder.setColIntegral(i, SCIPvarIsIntegral(var));
+      builder.setObj(i, SCIPvarGetObjExact(var)->val);
+   }
+
+   /* set up rows */
+   builder.setNumRows(nrows);
+   for( int i = 0; i != nrows; ++i )
+   {
+      int* rowcols = SCIPmatrixGetRowIdxPtr(matrix, i);
+      SCIP_Rational** rowvalsscip = SCIPmatrixGetRowValPtrExact(matrix, i);
+      Vec<papilo::Rational> rowvals;
+      int rowlen = SCIPmatrixGetRowNNonzs(matrix, i);
+      for( int j = 0; j < rowlen; ++j )
+         rowvals.emplace_back(rowvalsscip[j]->val);
+      builder.addRowEntries(i, rowlen, rowcols, rowvals.data());
+
+      SCIP_Rational* lhs = SCIPmatrixGetRowLhsExact(matrix, i);
+      SCIP_Rational* rhs = SCIPmatrixGetRowRhsExact(matrix, i);
+      builder.setRowLhs(i, lhs->val);
+      builder.setRowRhs(i, rhs->val);
+      builder.setRowLhsInf(i, RatIsNegInfinity(lhs));
+      builder.setRowRhsInf(i, RatIsInfinity(rhs));
+   }
+
+   builder.setObjOffset(0);
+
+   return builder.build();
+}
+#endif
+
+/** builds PaPILO problem from SCIP matrix */
+static
+Problem<SCIP_Real> buildProblemReal(
+      SCIP*                 scip,               /**< SCIP data structure */
+      SCIP_MATRIX*          matrix              /**< initialized SCIP_MATRIX data structure */
    )
 {
    ProblemBuilder<SCIP_Real> builder;
@@ -204,7 +281,7 @@ Problem<SCIP_Real> buildProblem(
 
    /* set up columns */
    builder.setNumCols(ncols);
-   for(int i = 0; i != ncols; ++i)
+   for( int i = 0; i != ncols; ++i )
    {
       SCIP_VAR* var = SCIPmatrixGetVar(matrix, i);
       SCIP_Real lb = SCIPvarGetLbGlobal(var);
@@ -226,7 +303,7 @@ Problem<SCIP_Real> buildProblem(
 
    /* set up rows */
    builder.setNumRows(nrows);
-   for(int i = 0; i != nrows; ++i)
+   for( int i = 0; i != nrows; ++i )
    {
       int* rowcols = SCIPmatrixGetRowIdxPtr(matrix, i);
       SCIP_Real* rowvals = SCIPmatrixGetRowValPtr(matrix, i);
@@ -252,102 +329,150 @@ Problem<SCIP_Real> buildProblem(
    return builder.build();
 }
 
+/** sets up PaPILO's presolve object from the data */
+template <typename T>
+static
+SCIP_RETCODE setupPresolve(
+   SCIP*                 scip,               /**< SCIP data structure */
+   Presolve<T>&          presolve,           /**< PaPILO's presolve object */
+   SCIP_PRESOLDATA*      data,               /**< presolver data structure */
+   SCIP_Bool             allowconsmodification /**< whether constraint modifications are allowed */
+   )
+{
+   SCIP_Real timelimit;
+
+   /* important so that SCIP does not throw an error, e.g. when an integer variable is substituted
+    * into a knapsack constraint */
+   presolve.getPresolveOptions().substitutebinarieswithints = false;
+
+   /* currently these changes cannot be communicated to SCIP correctly since a constraint needs
+    * to be modified in the cases where slackvariables are removed from constraints but for the
+    * presolve library those look like normal substitution on the postsolve stack */
+   presolve.getPresolveOptions().removeslackvars = false;
+
+   /* communicate the SCIP parameters to the presolve library */
+   presolve.getPresolveOptions().maxfillinpersubstitution = data->maxfillinpersubstitution;
+   presolve.getPresolveOptions().markowitz_tolerance = data->markowitztolerance;
+   presolve.getPresolveOptions().maxshiftperrow = data->maxshiftperrow;
+   presolve.getPresolveOptions().hugeval = data->hugebound;
+
+   /* removal of linear dependent equations has only an effect when constraint modifications are communicated */
+   presolve.getPresolveOptions().detectlindep = allowconsmodification ? data->detectlineardependency : 0;
+
+   /* communicate the random seed */
+   presolve.getPresolveOptions().randomseed = SCIPinitializeRandomSeed(scip, (unsigned int)data->randomseed);
+
+   /* set number of threads to be used for presolve */
+   presolve.getPresolveOptions().threads = data->threads;
+
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
+   presolve.getPresolveOptions().maxrounds = data->internalmaxrounds;
+#endif
+
+   /* disable dual reductions that are not permitted */
+   if( SCIPallowStrongDualReds(scip) )
+      presolve.getPresolveOptions().dualreds = 2;
+   else if( SCIPallowWeakDualReds(scip) )
+      presolve.getPresolveOptions().dualreds = 1;
+   else
+      presolve.getPresolveOptions().dualreds = 0;
+
+   /* set up the presolvers that shall participate */
+   using uptr = std::unique_ptr<PresolveMethod<T>>;
+
+   /* fast presolvers*/
+   presolve.addPresolveMethod( uptr( new SingletonCols<T>() ) );
+   presolve.addPresolveMethod( uptr( new CoefficientStrengthening<T>() ) );
+   presolve.addPresolveMethod( uptr( new ConstraintPropagation<T>() ) );
+
+   /* medium presolver */
+   presolve.addPresolveMethod( uptr( new SimpleProbing<T>() ) );
+   if( data->enableparallelrows )
+      presolve.addPresolveMethod( uptr( new ParallelRowDetection<T>() ) );
+   /* todo: parallel cols cannot be handled by SCIP currently
+   * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
+   presolve.addPresolveMethod( uptr( new SingletonStuffing<T>() ) );
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
+   DualFix<T> *dualfix = new DualFix<T>();
+   dualfix->set_fix_to_infinity_allowed(false);
+   presolve.addPresolveMethod( uptr( dualfix ) );
+#else
+   presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
+#endif
+   presolve.addPresolveMethod( uptr( new FixContinuous<T>() ) );
+   presolve.addPresolveMethod( uptr( new SimplifyInequalities<T>() ) );
+   presolve.addPresolveMethod( uptr( new SimpleSubstitution<T>() ) );
+
+   /* exhaustive presolvers*/
+   presolve.addPresolveMethod( uptr( new ImplIntDetection<T>() ) );
+   if( data->enabledualinfer )
+      presolve.addPresolveMethod( uptr( new DualInfer<T>() ) );
+   if( data->enableprobing )
+   {
+#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
+      Probing<T> *probing = new Probing<T>();
+      if( presolve.getPresolveOptions().runs_sequential() )
+      {
+         probing->set_max_badge_size( data->maxbadgesizeseq );
+      }
+      else
+      {
+         probing->set_max_badge_size( data->maxbadgesizepar );
+      }
+      presolve.addPresolveMethod( uptr( probing ) );
+#else
+      presolve.addPresolveMethod( uptr( new Probing<T>() ) );
+      if( data->maxbadgesizeseq != DEFAULT_MAXBADGESIZE_SEQ )
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   The parameter 'presolving/milp/maxbadgesizeseq' can only be used with PaPILO 2.1.0 or later versions.\n");
+
+      if( data->maxbadgesizepar != DEFAULT_MAXBADGESIZE_PAR )
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+               "   The parameter 'presolving/milp/maxbadgesizepar' can only be used with PaPILO 2.1.0 or later versions.\n");
+#endif
+   }
+   if( data->enabledomcol )
+      presolve.addPresolveMethod( uptr( new DominatedCols<T>() ) );
+   if( data->enablemultiaggr )
+      presolve.addPresolveMethod( uptr( new Substitution<T>() ) );
+   if( data->enablesparsify )
+      presolve.addPresolveMethod( uptr( new Sparsify<T>() ) );
+
+   /* set tolerances */
+   presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
+   presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
+#if PAPILO_APIVERSION >= 3
+   presolve.getPresolveOptions().useabsfeas = false;
+#endif
+
+#ifndef SCIP_PRESOLLIB_ENABLE_OUTPUT
+   /* adjust output settings of presolve library */
+   presolve.setVerbosityLevel((VerbosityLevel) data->verbosity);
+#endif
+
+#if PAPILO_APIVERSION >= 2
+   presolve.getPresolveOptions().abortfac = data->abortfacexhaustive;
+   presolve.getPresolveOptions().abortfacmedium = data->abortfacmedium;
+   presolve.getPresolveOptions().abortfacfast = data->abortfacfast;
+#endif
+
+   /* communicate the time limit */
+   SCIPgetRealParam(scip, "limits/time", &timelimit);
+   if( !SCIPisInfinity(scip, timelimit) )
+      presolve.getPresolveOptions().tlim = timelimit - SCIPgetSolvingTime(scip);
+
+   return SCIP_OKAY;
+}
+
+
 #if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
-/** builds the presolvelib problem datastructure from the matrix */
+/** calls PaPILO presolving in rational arithmetic*/
 static
-Problem<papilo::Rational> buildProblemRational(
+SCIP_RETCODE performRationalPresolving(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_MATRIX*          matrix              /**< initialized SCIP_MATRIX data structure */
-   )
-{
-   ProblemBuilder<papilo::Rational> builder;
-
-   /* build problem from matrix */
-   int nnz = SCIPmatrixGetNNonzs(matrix);
-   int ncols = SCIPmatrixGetNColumns(matrix);
-   int nrows = SCIPmatrixGetNRows(matrix);
-   builder.reserve(nnz, nrows, ncols);
-
-   /* set up columns */
-   builder.setNumCols(ncols);
-   for(int i = 0; i != ncols; ++i)
-   {
-      SCIP_VAR* var = SCIPmatrixGetVar(matrix, i);
-      SCIP_Rational* lb = SCIPvarGetLbGlobalExact(var);
-      SCIP_Rational* ub = SCIPvarGetUbGlobalExact(var);
-      builder.setColLb(i, lb->val);
-      builder.setColUb(i, ub->val);
-      builder.setColLbInf(i, RatIsNegInfinity(lb));
-      builder.setColUbInf(i, RatIsInfinity(ub));
-
-      builder.setColIntegral(i, SCIPvarIsIntegral(var));
-      builder.setObj(i, SCIPvarGetObjExact(var)->val);
-   }
-
-   /* set up rows */
-   builder.setNumRows(nrows);
-   for(int i = 0; i != nrows; ++i)
-   {
-      int* rowcols = SCIPmatrixGetRowIdxPtr(matrix, i);
-      SCIP_Rational** rowvalsscip = SCIPmatrixGetRowValPtrExact(matrix, i);
-      std::vector<papilo::Rational> rowvals;
-      int rowlen = SCIPmatrixGetRowNNonzs(matrix, i);
-      for(int j = 0; j < rowlen; ++j)
-         rowvals.push_back(rowvalsscip[j]->val);
-      builder.addRowEntries(i, rowlen, rowcols, rowvals.data());
-
-      SCIP_Rational* lhs = SCIPmatrixGetRowLhsExact(matrix, i);
-      SCIP_Rational* rhs = SCIPmatrixGetRowRhsExact(matrix, i);
-      builder.setRowLhs(i, lhs->val);
-      builder.setRowRhs(i, rhs->val);
-      builder.setRowLhsInf(i, RatIsNegInfinity(lhs));
-      builder.setRowRhsInf(i, RatIsInfinity(rhs));
-   }
-
-   builder.setObjOffset(0);
-
-   return builder.build();
-}
-
-static
-void setRational(
-   SCIP*                 scip,
-   SCIP_Rational*        res,
-   papilo::Rational      papiloval
-   )
-{
-   assert(scip != NULL);
-   assert(res != NULL);
-
-   res->val = papilo::Rational(papiloval.backend().data());
-   res->isfprepresentable = SCIP_ISFPREPRESENTABLE_UNKNOWN;
-   if( SCIPisInfinity(scip, REALABS(RatApproxReal(res))) )
-   {
-      res->val > 0 ? RatSetString(res, "inf") : RatSetString(res, "-inf");
-   }
-}
-
-static
-SCIP_RETCODE doMilpPresolveRational(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRESOL*          presol,             /**< SCIP presol structure*/
    SCIP_MATRIX*          matrix,             /**< initialized SCIP_MATRIX data structure */
    SCIP_PRESOLDATA*      data,               /**< plugin specific presol data */
    SCIP_Bool             initialized,        /**< was the matrix initialized */
-   SCIP_Bool             complete,           /**< was it initialized completely */
-   SCIP_Bool             infeasible,         /**< was infeasibility detected */
-   int                   nrounds,            /**< number of rounds */
-   SCIP_PRESOLTIMING     presoltiming,       /**< timing for the presolver */
-   int                   nnewfixedvars,      /**<number of variables fixed since the last call to the presolver */
-   int                   nnewaggrvars,       /**< number of variables aggregated since the last call to the presolver */
-   int                   nnewchgvartypes,    /**< number of variable type changes since the last call to the presolver */
-   int                   nnewchgbds,         /**< number of variable bounds tightened since the last call to the presolver */
-   int                   nnewholes,          /**< number of domain holes added since the last call to the presolver */
-   int                   nnewdelconss,       /**< number of deleted constraints since the last call to the presolver */
-   int                   nnewaddconss,       /**< number of added constraints since the last call to the presolver */
-   int                   nnewupgdconss,      /**< number of upgraded constraints since the last call to the presolver */
-   int                   nnewchgcoefs,       /**< number of changed coefficients since the last call to the presolver */
-   int                   nnewchgsides,       /**< number of changed left or right hand sides since the last call to the presolver */
    int*                  nfixedvars,         /**< store number of fixed variables */
    int*                  naggrvars,          /**< store number of aggregated variables */
    int*                  nchgvartypes,       /**< store number of changed variable types */
@@ -361,14 +486,9 @@ SCIP_RETCODE doMilpPresolveRational(
    SCIP_RESULT*          result              /**< result pointer */
    )
 {
-   SCIP_Real timelimit;
    int nvars = SCIPgetNVars(scip);
    int nconss = SCIPgetNConss(scip);
 
-   Problem<papilo::Rational> problem = buildProblemRational(scip, matrix);
-   Presolve<papilo::Rational> presolve;
-
-   /* only allow communication of constraint modifications by deleting all constraints when they have not been upgraded yet */
    SCIP_CONSHDLR* linconshdlr = SCIPfindConshdlr(scip, "exactlinear");
    assert(linconshdlr != NULL);
    bool allowconsmodification = (SCIPconshdlrGetNCheckConss(linconshdlr) == SCIPmatrixGetNRows(matrix));
@@ -378,96 +498,15 @@ SCIP_RETCODE doMilpPresolveRational(
    int oldnfixedvars = *nfixedvars;
    int oldnchgbds = *nchgbds;
 
-   /* important so that SCIP does not throw an error, e.g. when an integer variable is substituted
-    * into a knapsack constraint */
-   presolve.getPresolveOptions().substitutebinarieswithints = false;
+   Problem<papilo::Rational> problem = buildProblemRational(scip, matrix);
+   Presolve<papilo::Rational> presolve;
+   setupPresolve(scip, presolve, data, allowconsmodification);
 
-   /* currently these changes cannot be communicated to SCIP correctly since a constraint needs
-    * to be modified in the cases where slackvariables are removed from constraints but for the
-    * presolve library those look like normal substitution on the postsolve stack */
-   presolve.getPresolveOptions().removeslackvars = false;
-
-   /* communicate the SCIP parameters to the presolve libary */
-   presolve.getPresolveOptions().maxfillinpersubstitution = data->maxfillinpersubstitution;
-   presolve.getPresolveOptions().markowitz_tolerance = data->markowitztolerance;
-   presolve.getPresolveOptions().maxshiftperrow = data->maxshiftperrow;
-   presolve.getPresolveOptions().hugeval = data->hugebound;
-   presolve.getPresolveOptions().apply_results_immediately_if_run_sequentially = false;
-
-   /* removal of linear dependent equations has only an effect when constraint modifications are communicated */
-   presolve.getPresolveOptions().detectlindep = allowconsmodification ? data->detectlineardependency : 0;
-
-   /* communicate the random seed */
-   presolve.getPresolveOptions().randomseed = SCIPinitializeRandomSeed(scip, (unsigned int)data->randomseed);
-
-   /* set number of threads to be used for presolve */
-   presolve.getPresolveOptions().threads = data->threads;
-
-   /* disable dual reductions that are not permitted */
-   if( !complete )
-      presolve.getPresolveOptions().dualreds = 0;
-   else if( SCIPallowStrongDualReds(scip) )
-      presolve.getPresolveOptions().dualreds = 2;
-   else if( SCIPallowWeakDualReds(scip) )
-      presolve.getPresolveOptions().dualreds = 1;
-   else
-      presolve.getPresolveOptions().dualreds = 0;
-
-   /* set up the presolvers that shall participate */
-   using uptr = std::unique_ptr<PresolveMethod<papilo::Rational>>;
-
-   /* fast presolvers*/
-   presolve.addPresolveMethod( uptr( new SingletonCols<papilo::Rational>()  ) );
-   presolve.addPresolveMethod( uptr( new CoefficientStrengthening<papilo::Rational>() ) );
-   presolve.addPresolveMethod( uptr( new ConstraintPropagation<papilo::Rational>() ) );
-
-   /* medium presolver */
-   presolve.addPresolveMethod( uptr( new SimpleProbing<papilo::Rational>() ) );
-   if( data->enableparallelrows )
-      presolve.addPresolveMethod( uptr( new ParallelRowDetection<papilo::Rational>() ) );
-   /* todo: parallel cols cannot be handled by SCIP currently
-   * addPresolveMethod( uptr( new ParallelColDetection<papilo::Rational>() ) ); */
-   presolve.addPresolveMethod( uptr( new SingletonStuffing<papilo::Rational>() ) );
-   presolve.addPresolveMethod( uptr( new DualFix<papilo::Rational>() ) );
-   presolve.addPresolveMethod( uptr( new FixContinuous<papilo::Rational>() ) );
-   presolve.addPresolveMethod( uptr( new SimplifyInequalities<papilo::Rational>() ) );
-   presolve.addPresolveMethod( uptr( new SimpleSubstitution<papilo::Rational>() ) );
-
-   /* exhaustive presolvers*/
-   presolve.addPresolveMethod( uptr( new ImplIntDetection<papilo::Rational>() ) );
-   if( data->enabledualinfer )
-      presolve.addPresolveMethod( uptr( new DualInfer<papilo::Rational>() ) );
-   if( data->enableprobing )
-      presolve.addPresolveMethod( uptr( new Probing<papilo::Rational>() ) );
-   if( data->enabledomcol )
-      presolve.addPresolveMethod( uptr( new DominatedCols<papilo::Rational>() ) );
-   if( data->enablemultiaggr )
-      presolve.addPresolveMethod( uptr( new Substitution<papilo::Rational>() ) );
-   if( data->enablesparsify )
-      presolve.addPresolveMethod( uptr( new Sparsify<papilo::Rational>() ) );
-
-   /* set tolerances */
-   presolve.getPresolveOptions().feastol = 0.0;
-   presolve.getPresolveOptions().epsilon = 0.0;
-
-   /* adjust output settings of presolve libary */
-#ifdef SCIP_PRESOLLIB_ENABLE_OUTPUT
-   problem.setName(SCIPgetProbName(scip));
-#else
-   presolve.setVerbosityLevel(VerbosityLevel::kQuiet);
-#endif
-
-   /* communicate the time limit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      presolve.getPresolveOptions().tlim = timelimit - SCIPgetSolvingTime(scip);
-
-   /* call the presolving */
+   /* call presolving (without storing information for dual postsolve) */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
    int oldnnz = problem.getConstraintMatrix().getNnz();
 
-   /*call presolving without storing information for dual postsolve*/
 #if (PAPILO_VERSION_MAJOR >= 2)
    PresolveResult<papilo::Rational> res = presolve.apply(problem, false);
 #else
@@ -477,7 +516,7 @@ SCIP_RETCODE doMilpPresolveRational(
    data->lastnrows = problem.getNRows();
 
    /* evaluate the result */
-   switch(res.status)
+   switch( res.status )
    {
       case PresolveStatus::kInfeasible:
          *result = SCIP_CUTOFF;
@@ -510,8 +549,8 @@ SCIP_RETCODE doMilpPresolveRational(
    }
 
    /* result indicated success, now populate the changes into the SCIP structures */
-   std::vector<SCIP_VAR*> tmpvars;
-   std::vector<SCIP_Real> tmpvalsreal;
+   Vec<SCIP_VAR*> tmpvars;
+   Vec<SCIP_Real> tmpvalsreal;
 
    /* if the number of nonzeros decreased by a sufficient factor, rather create all constraints from scratch */
    int newnnz = problem.getConstraintMatrix().getNnz();
@@ -542,7 +581,8 @@ SCIP_RETCODE doMilpPresolveRational(
       }
 
       /* now loop over rows of presolved problem and create them as new linear constraints,
-       * then release the old constraint after its name was passed to the new constraint */
+       * then release the old constraint after its name was passed to the new constraint
+       */
       const Vec<RowFlags>& rflags = problem.getRowFlags();
       const auto& consmatrix = problem.getConstraintMatrix();
       for( int i = 0; i < newnrows; ++i )
@@ -600,7 +640,8 @@ SCIP_RETCODE doMilpPresolveRational(
    /* loop over res.postsolve and add all fixed variables and aggregations to scip */
    for( std::size_t i = 0; i != res.postsolve.types.size(); ++i )
    {
-      ReductionType type = res.postsolve.types[i];
+      ReductionType type =
+            res.postsolve.types[i];
       int first = res.postsolve.start[i];
       int last = res.postsolve.start[i + 1];
 
@@ -623,7 +664,8 @@ SCIP_RETCODE doMilpPresolveRational(
          RatDebugMessage("Papilo fix var %s to %q \n", SCIPvarGetName(var), tmpval);
 
          /* SCIP has different rules for aggregation than PaPILO
-          * As a result, SCIP might have aggregated and replaced the variable that PaPILO now wants to fix*/
+          * As a result, SCIP might have aggregated and replaced the variable that PaPILO now wants to fix
+          */
          if( SCIPvarGetStatusExact(var) == SCIP_VARSTATUS_AGGREGATED )
          {
             SCIP_Rational* aggregatedScalar;
@@ -660,12 +702,12 @@ SCIP_RETCODE doMilpPresolveRational(
                       SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
          break;
       }
-/*
- * Dual-postsolving in PaPILO required introducing a postsolve-type for substitution with additional information.
- * Further, the different Substitution-postsolving types store the required postsolving data differently (in different order) in the postsolving stack.
- * Therefore, we need to distinguish how to parse the required data (rowLength, col, side, startRowCoefficients, lastRowCoefficients) from the postsolving stack.
- * If these values are accessed, the procedure is the same for both.
- */
+      /*
+       * Dual-postsolving in PaPILO required introducing a postsolve-type for substitution with additional information.
+       * Further, the different Substitution-postsolving types store the required postsolving data differently (in different order) in the postsolving stack.
+       * Therefore, we need to distinguish how to parse the required data (rowLength, col, side, startRowCoefficients, lastRowCoefficients) from the postsolving stack.
+       * If these values are accessed, the procedure is the same for both.
+       */
 #if (PAPILO_VERSION_MAJOR >= 2)
       case ReductionType::kSubstitutedColWithDual:
 #endif
@@ -968,249 +1010,33 @@ SCIP_RETCODE doMilpPresolveRational(
    /* free the matrix */
    assert(initialized);
    SCIPmatrixFree(scip, &matrix);
+
    return SCIP_OKAY;
 }
 #endif
 
-/** sets up the presolvelib presolve datastructure from the data */
+/** calls PaPILO presolving in floating-point arithmetic */
 static
-Presolve<SCIP_Real> setupPresolve(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRESOLDATA*      data,               /**< presolver data structure */
-   SCIP_Bool             allowconsmodification /**< whether constraint modifications are allowed */
+SCIP_RETCODE performRealPresolving(
+      SCIP*                 scip,               /**< SCIP data structure */
+      SCIP_MATRIX*          matrix,             /**< initialized SCIP_MATRIX data structure */
+      SCIP_PRESOLDATA*      data,               /**< plugin specific presol data */
+      SCIP_Bool             initialized,        /**< was the matrix initialized */
+      int*                  nfixedvars,         /**< store number of fixed variables */
+      int*                  naggrvars,          /**< store number of aggregated variables */
+      int*                  nchgvartypes,       /**< store number of changed variable types */
+      int*                  nchgbds,            /**< store number of changed bounds */
+      int*                  naddholes,          /**< store number of added holes */
+      int*                  ndelconss,          /**< store the number of deleted cons */
+      int*                  naddconss,          /**< store the number of added cons */
+      int*                  nupgdconss,         /**< store the number of upgraded cons */
+      int*                  nchgcoefs,          /**< store the number of changed coefficients */
+      int*                  nchgsides,          /**< store the number of changed sides */
+      SCIP_RESULT*          result              /**< result pointer */
    )
 {
-   Presolve<SCIP_Real> presolve;
-   SCIP_Real timelimit;
-
-   /* important so that SCIP does not throw an error, e.g. when an integer variable is substituted
-    * into a knapsack constraint */
-   presolve.getPresolveOptions().substitutebinarieswithints = false;
-
-   /* currently these changes cannot be communicated to SCIP correctly since a constraint needs
-    * to be modified in the cases where slackvariables are removed from constraints but for the
-    * presolve library those look like normal substitution on the postsolve stack */
-   presolve.getPresolveOptions().removeslackvars = false;
-
-   /* communicate the SCIP parameters to the presolve library */
-   presolve.getPresolveOptions().maxfillinpersubstitution = data->maxfillinpersubstitution;
-   presolve.getPresolveOptions().markowitz_tolerance = data->markowitztolerance;
-   presolve.getPresolveOptions().maxshiftperrow = data->maxshiftperrow;
-   presolve.getPresolveOptions().hugeval = data->hugebound;
-
-   /* removal of linear dependent equations has only an effect when constraint modifications are communicated */
-   presolve.getPresolveOptions().detectlindep = allowconsmodification ? data->detectlineardependency : 0;
-
-   /* communicate the random seed */
-   presolve.getPresolveOptions().randomseed = SCIPinitializeRandomSeed(scip, (unsigned int)data->randomseed);
-
-   /* set number of threads to be used for presolve */
-   presolve.getPresolveOptions().threads = data->threads;
-
-#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
-   presolve.getPresolveOptions().maxrounds = data->internalmaxrounds;
-#endif
-
-   /* disable dual reductions that are not permitted */
-   if( SCIPallowStrongDualReds(scip) )
-      presolve.getPresolveOptions().dualreds = 2;
-   else if( SCIPallowWeakDualReds(scip) )
-      presolve.getPresolveOptions().dualreds = 1;
-   else
-      presolve.getPresolveOptions().dualreds = 0;
-
-   /* set up the presolvers that shall participate */
-   using uptr = std::unique_ptr<PresolveMethod<SCIP_Real>>;
-
-   /* fast presolvers*/
-   presolve.addPresolveMethod( uptr( new SingletonCols<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new CoefficientStrengthening<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new ConstraintPropagation<SCIP_Real>() ) );
-
-   /* medium presolver */
-   presolve.addPresolveMethod( uptr( new SimpleProbing<SCIP_Real>() ) );
-   if( data->enableparallelrows )
-      presolve.addPresolveMethod( uptr( new ParallelRowDetection<SCIP_Real>() ) );
-   /* todo: parallel cols cannot be handled by SCIP currently
-   * addPresolveMethod( uptr( new ParallelColDetection<SCIP_Real>() ) ); */
-   presolve.addPresolveMethod( uptr( new SingletonStuffing<SCIP_Real>() ) );
-#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
-   DualFix<SCIP_Real> *dualfix = new DualFix<SCIP_Real>();
-   dualfix->set_fix_to_infinity_allowed(false);
-   presolve.addPresolveMethod( uptr( dualfix ) );
-#else
-   presolve.addPresolveMethod( uptr( new DualFix<SCIP_Real>() ) );
-#endif
-   presolve.addPresolveMethod( uptr( new FixContinuous<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SimplifyInequalities<SCIP_Real>() ) );
-   presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
-
-   /* exhaustive presolvers*/
-   presolve.addPresolveMethod( uptr( new ImplIntDetection<SCIP_Real>() ) );
-   if( data->enabledualinfer )
-      presolve.addPresolveMethod( uptr( new DualInfer<SCIP_Real>() ) );
-   if( data->enableprobing )
-   {
-#if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
-      Probing<SCIP_Real> *probing = new Probing<SCIP_Real>();
-      if( presolve.getPresolveOptions().runs_sequential() )
-      {
-         probing->set_max_badge_size( data->maxbadgesizeseq );
-      }
-      else
-      {
-         probing->set_max_badge_size( data->maxbadgesizepar );
-      }
-      presolve.addPresolveMethod( uptr( probing ) );
-#else
-      presolve.addPresolveMethod( uptr( new Probing<SCIP_Real>() ) );
-      if( data->maxbadgesizeseq != DEFAULT_MAXBADGESIZE_SEQ )
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   The parameter 'presolving/milp/maxbadgesizeseq' can only be used with PaPILO 2.1.0 or later versions.\n");
-
-      if( data->maxbadgesizepar != DEFAULT_MAXBADGESIZE_PAR )
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "   The parameter 'presolving/milp/maxbadgesizepar' can only be used with PaPILO 2.1.0 or later versions.\n");
-#endif
-   }
-   if( data->enabledomcol )
-      presolve.addPresolveMethod( uptr( new DominatedCols<SCIP_Real>() ) );
-   if( data->enablemultiaggr )
-      presolve.addPresolveMethod( uptr( new Substitution<SCIP_Real>() ) );
-   if( data->enablesparsify )
-      presolve.addPresolveMethod( uptr( new Sparsify<SCIP_Real>() ) );
-
-   /* set tolerances */
-   presolve.getPresolveOptions().feastol = SCIPfeastol(scip);
-   presolve.getPresolveOptions().epsilon = SCIPepsilon(scip);
-#if PAPILO_APIVERSION >= 3
-   presolve.getPresolveOptions().useabsfeas = false;
-#endif
-
-#ifndef SCIP_PRESOLLIB_ENABLE_OUTPUT
-   /* adjust output settings of presolve library */
-   presolve.setVerbosityLevel((VerbosityLevel) data->verbosity);
-#endif
-
-#if PAPILO_APIVERSION >= 2
-   presolve.getPresolveOptions().abortfac = data->abortfacexhaustive;
-   presolve.getPresolveOptions().abortfacmedium = data->abortfacmedium;
-   presolve.getPresolveOptions().abortfacfast = data->abortfacfast;
-#endif
-
-   /* communicate the time limit */
-   SCIPgetRealParam(scip, "limits/time", &timelimit);
-   if( !SCIPisInfinity(scip, timelimit) )
-      presolve.getPresolveOptions().tlim = timelimit - SCIPgetSolvingTime(scip);
-
-   return presolve;
-}
-
-/*
- * Callback methods of presolver
- */
-
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_PRESOLCOPY(presolCopyMILP)
-{  /*lint --e{715}*/
-   SCIP_CALL( SCIPincludePresolMILP(scip) );
-
-   return SCIP_OKAY;
-}
-
-/** destructor of presolver to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_PRESOLFREE(presolFreeMILP)
-{  /*lint --e{715}*/
-   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
-   assert(data != NULL);
-
-   SCIPpresolSetData(presol, NULL);
-   SCIPfreeBlockMemory(scip, &data);
-   return SCIP_OKAY;
-}
-
-/** initialization method of presolver (called after problem was transformed) */
-static
-SCIP_DECL_PRESOLINIT(presolInitMILP)
-{  /*lint --e{715}*/
-   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
-   assert(data != NULL);
-
-   data->lastncols = -1;
-   data->lastnrows = -1;
-
-   return SCIP_OKAY;
-}
-
-/** execution method of presolver */
-static
-SCIP_DECL_PRESOLEXEC(presolExecMILP)
-{  /*lint --e{715}*/
-   SCIP_MATRIX* matrix;
-   SCIP_PRESOLDATA* data;
-   SCIP_Bool initialized;
-   SCIP_Bool complete;
-   SCIP_Bool infeasible;
-
-   *result = SCIP_DIDNOTRUN;
-
-   data = SCIPpresolGetData(presol);
-
    int nvars = SCIPgetNVars(scip);
    int nconss = SCIPgetNConss(scip);
-
-   /* run only if the problem size reduced by some amount since the last call or if it is the first call */
-   if( data->lastncols != -1 && data->lastnrows != -1 &&
-       nvars > data->lastncols * 0.85 &&
-       nconss > data->lastnrows * 0.85 )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
-      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
-
-   /* if infeasibility was detected during matrix creation, return here */
-   if( infeasible )
-   {
-      if( initialized )
-         SCIPmatrixFree(scip, &matrix);
-
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-
-   /* we only work on pure MIPs, also disable to try building the matrix again if it failed once */
-   if( !initialized || !complete )
-   {
-      data->lastncols = 0;
-      data->lastnrows = 0;
-
-      if( initialized )
-         SCIPmatrixFree(scip, &matrix);
-
-      return SCIP_OKAY;
-   }
-
-   if( 0 != strncmp(data->filename, DEFAULT_FILENAME_PROBLEM, strlen(DEFAULT_FILENAME_PROBLEM)) )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-                      "   writing transformed problem to %s (only enforced constraints)\n", data->filename);
-      SCIP_CALL(SCIPwriteTransProblem(scip, data->filename, NULL, FALSE));
-   }
-
-#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
-   if( SCIPisExactSolve(scip) )
-   {
-      SCIP_Retcode retcode;
-      retcode = doMilpPresolveRational(scip, presol, matrix, data, initialized, complete,
-         infeasible, nrounds, presoltiming, nnewfixedvars, nnewaggrvars,
-         nnewchgvartypes, nnewchgbds, nnewholes, nnewdelconss, nnewaddconss, nnewupgdconss,
-         nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars, nchgvartypes, nchgbds, naddholes,
-         ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result);
-      return retcode;
-   }
-#endif
 
    /* only allow communication of constraint modifications by deleting all constraints when some already have been upgraded */
    SCIP_CONSHDLR* linconshdlr = SCIPfindConshdlr(scip, "linear");
@@ -1223,15 +1049,16 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    int oldnchgbds = *nchgbds;
 
    /* create presolving objects */
-   Problem<SCIP_Real> problem = buildProblem(scip, matrix);
+   Problem<SCIP_Real> problem = buildProblemReal(scip, matrix);
    int oldnnz = problem.getConstraintMatrix().getNnz();
-   Presolve<SCIP_Real> presolve = setupPresolve(scip, data, allowconsmodification);
+   Presolve<SCIP_Real> presolve;
+   setupPresolve(scip, presolve, data, allowconsmodification);
 
    /* call the presolving */
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
                "   (%.1fs) running MILP presolver\n", SCIPgetSolvingTime(scip));
 
-   /*call presolving without storing information for dual postsolve*/
+   /* call presolving without storing information for dual postsolve */
 #if (PAPILO_VERSION_MAJOR >= 2)
    PresolveResult<SCIP_Real> res = presolve.apply(problem, false);
 #else
@@ -1241,7 +1068,7 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    data->lastnrows = problem.getNRows();
 
    /* evaluate the result */
-   switch(res.status)
+   switch( res.status )
    {
       case PresolveStatus::kInfeasible:
          *result = SCIP_CUTOFF;
@@ -1324,8 +1151,8 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
    }
 
    /* transfer variable fixings and aggregations */
-   std::vector<SCIP_VAR*> tmpvars;
-   std::vector<SCIP_Real> tmpvals;
+   Vec<SCIP_VAR*> tmpvars;
+   Vec<SCIP_Real> tmpvals;
 
    /* if the size of the problem decreased by a sufficient factor, create all constraints from scratch if allowed */
    int newnnz = problem.getConstraintMatrix().getNnz();
@@ -1436,12 +1263,12 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
                       SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
          break;
       }
-/*
- * Dual-postsolving in PaPILO required introducing a postsolve-type for substitution with additional information.
- * Further, the different Substitution-postsolving types store the required postsolving data differently (in different order) in the postsolving stack.
- * Therefore, we need to distinguish how to parse the required data (rowLength, col, side, startRowCoefficients, lastRowCoefficients) from the postsolving stack.
- * If these values are accessed, the procedure is the same for both.
- */
+      /*
+       * Dual-postsolving in PaPILO required introducing a postsolve-type for substitution with additional information.
+       * Further, the different Substitution-postsolving types store the required postsolving data differently (in different order) in the postsolving stack.
+       * Therefore, we need to distinguish how to parse the required data (rowLength, col, side, startRowCoefficients, lastRowCoefficients) from the postsolving stack.
+       * If these values are accessed, the procedure is the same for both.
+       */
 #if (PAPILO_VERSION_MAJOR >= 2)
       case ReductionType::kSubstitutedColWithDual:
 #endif
@@ -1729,6 +1556,111 @@ SCIP_DECL_PRESOLEXEC(presolExecMILP)
 
 
 /*
+ * Callback methods of presolver
+ */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyMILP)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPincludePresolMILP(scip) );
+
+   return SCIP_OKAY;
+}
+
+/** destructor of presolver to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_PRESOLFREE(presolFreeMILP)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
+   assert(data != NULL);
+
+   SCIPpresolSetData(presol, NULL);
+   SCIPfreeBlockMemory(scip, &data);
+   return SCIP_OKAY;
+}
+
+/** initialization method of presolver (called after problem was transformed) */
+static
+SCIP_DECL_PRESOLINIT(presolInitMILP)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* data = SCIPpresolGetData(presol);
+   assert(data != NULL);
+
+   data->lastncols = -1;
+   data->lastnrows = -1;
+
+   return SCIP_OKAY;
+}
+
+
+/** execution method of presolver */
+static
+SCIP_DECL_PRESOLEXEC(presolExecMILP)
+{  /*lint --e{715}*/
+   SCIP_MATRIX* matrix;
+   SCIP_PRESOLDATA* data;
+   SCIP_Bool initialized;
+   SCIP_Bool complete;
+   SCIP_Bool infeasible;
+
+   *result = SCIP_DIDNOTRUN;
+
+   data = SCIPpresolGetData(presol);
+
+   int nvars = SCIPgetNVars(scip);
+   int nconss = SCIPgetNConss(scip);
+
+   /* run only if the problem size reduced by some amount since the last call or if it is the first call */
+   if( data->lastncols != -1 && data->lastnrows != -1 &&
+       nvars > data->lastncols * 0.85 &&
+       nconss > data->lastnrows * 0.85 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPmatrixCreate(scip, &matrix, TRUE, &initialized, &complete, &infeasible,
+      naddconss, ndelconss, nchgcoefs, nchgbds, nfixedvars) );
+
+   /* if infeasibility was detected during matrix creation, return here */
+   if( infeasible )
+   {
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      *result = SCIP_CUTOFF;
+      return SCIP_OKAY;
+   }
+
+   /* we only work on pure MIPs, also disable to try building the matrix again if it failed once */
+   if( !initialized || !complete )
+   {
+      data->lastncols = 0;
+      data->lastnrows = 0;
+
+      if( initialized )
+         SCIPmatrixFree(scip, &matrix);
+
+      return SCIP_OKAY;
+   }
+
+   if( 0 != strncmp(data->filename, DEFAULT_FILENAME_PROBLEM, strlen(DEFAULT_FILENAME_PROBLEM)) )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+                      "   writing transformed problem to %s (only enforced constraints)\n", data->filename);
+      SCIP_CALL( SCIPwriteTransProblem(scip, data->filename, NULL, FALSE) );
+   }
+
+#if defined(SCIP_WITH_GMP) && defined(SCIP_WITH_EXACTSOLVE) && defined(PAPILO_HAVE_GMP)
+   if( SCIPisExactSolve(scip) )
+      return performRationalPresolving(scip, matrix, data, initialized, nfixedvars, naggrvars, nchgvartypes, nchgbds,
+         naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result);
+   else
+#endif
+      return performRealPresolving(scip, matrix, data, initialized, nfixedvars, naggrvars, nchgvartypes, nchgbds,
+         naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result);
+}
+
+
+/*
  * presolver specific interface methods
  */
 
@@ -1849,22 +1781,22 @@ SCIP_RETCODE SCIPincludePresolMILP(
 #endif
 
 #if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 1)
-   SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/maxbadgesizeseq",
+   SCIP_CALL( SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/maxbadgesizeseq",
          "maximal badge size in Probing in PaPILO if PaPILO is executed in sequential mode",
-         &presoldata->maxbadgesizeseq, FALSE, DEFAULT_MAXBADGESIZE_SEQ, -1, INT_MAX, NULL, NULL));
+         &presoldata->maxbadgesizeseq, FALSE, DEFAULT_MAXBADGESIZE_SEQ, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/maxbadgesizepar",
+   SCIP_CALL( SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/maxbadgesizepar",
          "maximal badge size in Probing in PaPILO if PaPILO is executed in parallel mode",
-         &presoldata->maxbadgesizepar, FALSE, DEFAULT_MAXBADGESIZE_PAR, -1, INT_MAX, NULL, NULL));
+         &presoldata->maxbadgesizepar, FALSE, DEFAULT_MAXBADGESIZE_PAR, -1, INT_MAX, NULL, NULL) );
 #else
    presoldata->maxbadgesizeseq = DEFAULT_MAXBADGESIZE_SEQ;
    presoldata->maxbadgesizepar = DEFAULT_MAXBADGESIZE_PAR;
 #endif
 
 #if PAPILO_VERSION_MAJOR > 2 || (PAPILO_VERSION_MAJOR == 2 && PAPILO_VERSION_MINOR >= 3)
-   SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/internalmaxrounds",
+   SCIP_CALL( SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/internalmaxrounds",
          "internal maxrounds for each milp presolving (-1: no limit, 0: model cleanup)",
-         &presoldata->internalmaxrounds, TRUE, DEFAULT_INTERNAL_MAXROUNDS, -1, INT_MAX, NULL, NULL));
+         &presoldata->internalmaxrounds, TRUE, DEFAULT_INTERNAL_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
 #else
    presoldata->internalmaxrounds = DEFAULT_INTERNAL_MAXROUNDS;
 #endif
@@ -1903,9 +1835,9 @@ SCIP_RETCODE SCIPincludePresolMILP(
          "filename to store the problem before MILP presolving starts (only enforced constraints)",
          &presoldata->filename, TRUE, DEFAULT_FILENAME_PROBLEM, NULL, NULL) );
 
-   SCIP_CALL(SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/verbosity",
+   SCIP_CALL( SCIPaddIntParam(scip, "presolving/" PRESOL_NAME "/verbosity",
          "verbosity level of PaPILO (0: quiet, 1: errors, 2: warnings, 3: normal, 4: detailed)",
-         &presoldata->verbosity, FALSE, DEFAULT_VERBOSITY, 0, 4, NULL, NULL));
+         &presoldata->verbosity, FALSE, DEFAULT_VERBOSITY, 0, 4, NULL, NULL) );
 
    return SCIP_OKAY;
 }
