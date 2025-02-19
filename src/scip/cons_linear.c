@@ -10697,7 +10697,7 @@ SCIP_RETCODE dualPresolve(
          return SCIP_OKAY;
 
       var = consdata->vars[i];
-      isint = SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var);
+      isint = SCIPvarIsNonimpliedIntegral(var);
 
       /* if we already found a candidate, skip integers */
       if( bestpos >= 0 && isint )
@@ -10911,7 +10911,7 @@ SCIP_RETCODE dualPresolve(
 
       bestvar = consdata->vars[bestpos];
       bestval = consdata->vals[bestpos];
-      assert(bestisint == (SCIPvarIsIntegral(bestvar) && !SCIPvarIsImpliedIntegral(bestvar)));
+      assert(bestisint == SCIPvarIsNonimpliedIntegral(bestvar));
 
       /* allocate temporary memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &aggrvars, consdata->nvars-1) );

@@ -575,7 +575,7 @@ SCIP_RETCODE decompHorizonInitialize(
       /* determine the block size and the variable types */
       do
       {
-         if( SCIPvarIsIntegral(varscopy[currblockend]) && !SCIPvarIsImpliedIntegral(varscopy[currblockend]) )
+         if( SCIPvarIsNonimpliedIntegral(varscopy[currblockend]) )
             ++ndiscretevars;
 
          currblockend++;
@@ -1446,7 +1446,7 @@ SCIP_RETCODE selectInitialVariableDecomposition(
       ndiscblockvars = 0;
       for( v = currblockstart; v < currblockend; ++v )
       {
-         if( SCIPvarIsIntegral(varscopy[v]) && !SCIPvarIsImpliedIntegral(varscopy[v]) )
+         if( SCIPvarIsNonimpliedIntegral(varscopy[v]) )
             discvaridxs[ndiscblockvars++] = v;
       }
 
