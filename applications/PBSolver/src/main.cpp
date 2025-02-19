@@ -390,6 +390,8 @@ SCIP_RETCODE fromCommandLine(
 
    /* determine problem type */
    puresat = (npuresatconss == SCIPgetNCheckConss(scip));
+   if( puresat )
+      SCIPinfoMessage(scip, NULL, "Problem pure SAT.\n");
 
    /* set setting for the branch-and-bound process */
    if( settingsfilename == NULL )
