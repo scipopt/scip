@@ -4570,8 +4570,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    if( freevariable )
       goto TERMINATE;
 
-
-
    SCIPdebugMsg(scip, "transformed aggrrow row:\n");
    SCIPdebug( printCutQuad(scip, sol, mksetcoefs, QUAD(mksetrhs), mksetinds, mksetnnz, FALSE, FALSE) );
 
