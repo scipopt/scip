@@ -391,7 +391,7 @@ SCIP_RETCODE fromCommandLine(
    /* determine problem type */
    puresat = (npuresatconss == SCIPgetNCheckConss(scip));
    if( puresat )
-      SCIPinfoMessage(scip, NULL, "Problem pure SAT.\n");
+      SCIPinfoMessage(scip, NULL, "problem pure SAT\n");
 
    /* set setting for the branch-and-bound process */
    if( settingsfilename == NULL )
@@ -425,7 +425,7 @@ SCIP_RETCODE fromCommandLine(
    }
 
    /* write non-default parameters to console */
-   SCIPinfoMessage(scip, NULL, "- non default parameters ----------------------------------------------------------------------\n");
+   SCIPinfoMessage(scip, NULL, "\n- non default parameters ----------------------------------------------------------------------\n\n");
    SCIP_CALL( SCIPwriteParams( scip, NULL, TRUE, TRUE) );
    SCIPinfoMessage(scip, NULL, "-----------------------------------------------------------------------------------------------\n");
 
