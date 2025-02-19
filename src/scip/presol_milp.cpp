@@ -324,7 +324,12 @@ Presolve<SCIP_Real> setupPresolve(
    presolve.addPresolveMethod( uptr( new SimpleSubstitution<SCIP_Real>() ) );
 #if PAPILO_APIVERSION >= 6
    if( data->enablecliquemerging )
-      presolve.addPresolveMethod( uptr( new CliqueMerging<SCIP_Real>() ) );
+   {
+      CliqueMerging<SCIP_Real>* cliquemerging = new CliqueMerging<SCIP_Real>();
+      cliquemerging->setParameters( data->maxedgesparallel, data->maxedgessequential, 
+                                    data->maxcliquesize, data->maxgreedycalls );
+      presolve.addPresolveMethod( uptr( cliquemerging ) );
+   }
 #endif
 
    /* exhaustive presolvers*/
