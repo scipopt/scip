@@ -2901,7 +2901,7 @@ SCIP_RETCODE findMIRBestUb(
 
       if( nvubs > 0 )
       {
-         SCIP_Real bestvub = SCIP_REAL_MIN;
+         SCIP_Real bestvub = SCIP_REAL_MAX;
          int bestvubtype = -1;
          int boundedsection = varSection(data, SCIPvarGetProbindex(var));
 
@@ -2924,7 +2924,7 @@ SCIP_RETCODE findMIRBestUb(
                SCIP_Real vubsol;
 
                vubsol = vubcoefs[i] * (sol == NULL ? SCIPvarGetLPSol(vubvars[i]) : SCIPgetSolVal(scip, sol, vubvars[i])) + vubconsts[i];
-               if( vubsol > bestvub )
+               if( vubsol < bestvub )
                {
                   bestvub = vubsol;
                   bestvubtype = i;
@@ -2932,7 +2932,7 @@ SCIP_RETCODE findMIRBestUb(
             }
          }
 
-         if( bestvubtype >= 0 && SCIPisGE(scip, bestvub, *bestub) )
+         if( bestvubtype >= 0 && SCIPisLE(scip, bestvub, *bestub) )
          {
             *bestub = bestvub;
             *bestubtype = bestvubtype;
