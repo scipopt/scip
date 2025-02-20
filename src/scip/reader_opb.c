@@ -1416,14 +1416,14 @@ SCIP_RETCODE readConstraints(
       SCIP_Real summand = SCIPceil(scip, ABS(sidevalue));
       assert(summand <= ULLONG_MAX);
       unsigned long long presum = 0;
-      unsigned long long intsum = summand;
+      unsigned long long intsum = (unsigned long long)summand;
 
       for( t = 0; t < nlincoefs; ++t )
       {
          summand = SCIPceil(scip, ABS(lincoefs[t]));
          assert(summand <= ULLONG_MAX);
          presum = intsum;
-         intsum += summand;
+         intsum += (unsigned long long)summand;
          assert(intsum > presum);
       }
 
@@ -1432,7 +1432,7 @@ SCIP_RETCODE readConstraints(
          summand = SCIPceil(scip, ABS(termcoefs[t]));
          assert(summand <= ULLONG_MAX);
          presum = intsum;
-         intsum += summand;
+         intsum += (unsigned long long)summand;
          assert(intsum > presum);
       }
 
@@ -1741,14 +1741,14 @@ SCIP_RETCODE readOPBFile(
          SCIP_Real summand = ABS(topcostrhs);
          assert(summand <= ULLONG_MAX);
          unsigned long long presum = 0;
-         unsigned long long intsum = summand;
+         unsigned long long intsum = (unsigned long long)summand;
 
          for( i = 0; i < ntopcostvars; ++i )
          {
             summand = SCIPceil(scip, ABS(topcosts[i]));
             assert(summand <= ULLONG_MAX);
             presum = intsum;
-            intsum += summand;
+            intsum += (unsigned long long)summand;
             assert(intsum > presum);
          }
 
