@@ -17,6 +17,7 @@ Build system
 ### Cmake
 
 -  allow to set HIGHS_DIR via -D flag as well
+- reenable building and testing of SCFLP example
 
 ### Makefile
 
