@@ -1742,6 +1742,8 @@ SCIP_RETCODE readOPBFile(
          assert(summand <= (SCIP_Real)ULLONG_MAX);
          unsigned long long presum;
          unsigned long long intsum = (unsigned long long)summand;
+         intsum >>= opbinput->intsize;
+         assert(intsum == 0);
 
          for( i = 0; i < ntopcostvars; ++i )
          {
