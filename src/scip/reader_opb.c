@@ -1742,8 +1742,11 @@ SCIP_RETCODE readOPBFile(
          assert(summand <= (SCIP_Real)ULLONG_MAX);
          unsigned long long presum;
          unsigned long long intsum = (unsigned long long)summand;
+#ifdef SCIP_DISABLED_CODE
+         /* in some instances the maxcost violates the intsize limit */
          intsum >>= opbinput->intsize;
          assert(intsum == 0);
+#endif
 
          for( i = 0; i < ntopcostvars; ++i )
          {
@@ -1754,8 +1757,11 @@ SCIP_RETCODE readOPBFile(
             assert(intsum > presum);
          }
 
+#ifdef SCIP_DISABLED_CODE
+         /* in some instances the weights violate the intsize limit */
          intsum >>= opbinput->intsize;
          assert(intsum == 0);
+#endif
       }
 #endif
 
