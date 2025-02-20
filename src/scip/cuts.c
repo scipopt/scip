@@ -8674,7 +8674,7 @@ SCIP_RETCODE cutsTransformStrongCG(
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
-   firstcontvar = nvars - SCIPgetNContVars(scip);
+   firstcontvar = nvars - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
 
    /* determine best bounds for the continuous variables such that they will have a positive coefficient in the transformation */
    for( i = 0; i < *nnz && cutinds[i] >= firstcontvar; ++i )
@@ -8885,7 +8885,7 @@ SCIP_RETCODE cutsRoundStrongCG(
     * (due to sorting in cutsTransformStrongCG the ordering is continuous before integral)
     */
 
-   firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
    vars = SCIPgetVars(scip);
 #ifndef NDEBUG
    /* in debug mode check, that all continuous variables of the aggrrow come before the integral variables */
@@ -9331,7 +9331,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
       if( freevariable )
          goto TERMINATE;
 
-      firstcontvar = nvars - SCIPgetNContVars(scip);
+      firstcontvar = nvars - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
 
       /* terminate if an integral coefficient fractionality is unreliable */
       for( i = *cutnnz - 1; i >= 0 && cutinds[i] < firstcontvar; --i )
