@@ -1737,7 +1737,7 @@ SCIP_RETCODE readOPBFile(
       /* check intsize validity for small int instances */
       if( opbinput->intsize >= 0 && opbinput->intsize <= CHAR_BIT * (int)sizeof(unsigned long long) )
       {
-         assert(SCIPround(scip, topcostrhs) == topcostrhs);
+         assert(SCIPround(scip, topcostrhs) == topcostrhs); /*lint !e777*/
          SCIP_Real summand = ABS(topcostrhs);
          assert(summand <= ULLONG_MAX);
          unsigned long long presum = 0;
