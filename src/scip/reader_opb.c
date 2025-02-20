@@ -1409,6 +1409,38 @@ SCIP_RETCODE readConstraints(
       return SCIP_INVALIDDATA;
    }
 
+#ifndef NDEBUG
+   /* check intsize validity for small int instances */
+   if( opbinput->intsize >= 0 && opbinput->intsize <= CHAR_BIT * (int)sizeof(unsigned long long) )
+   {
+      SCIP_Real summand = SCIPceil(scip, ABS(sidevalue));
+      assert(summand <= ULLONG_MAX);
+      unsigned long long presum = 0;
+      unsigned long long intsum = summand;
+
+      for( t = 0; t < nlincoefs; ++t )
+      {
+         summand = SCIPceil(scip, ABS(lincoefs[t]));
+         assert(summand <= ULLONG_MAX);
+         presum = intsum;
+         intsum += summand;
+         assert(intsum > presum);
+      }
+
+      for( t = 0; t < ntermcoefs; ++t )
+      {
+         summand = SCIPceil(scip, ABS(termcoefs[t]));
+         assert(summand <= ULLONG_MAX);
+         presum = intsum;
+         intsum += summand;
+         assert(intsum > presum);
+      }
+
+      intsum >>= opbinput->intsize;
+      assert(intsum == 0);
+   }
+#endif
+
    /* create and add the linear constraint */
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &initialconss) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &dynamicrows) );
@@ -1700,6 +1732,30 @@ SCIP_RETCODE readOPBFile(
          }
       }
       topcostrhs = SCIPceil(scip, opbinput->topcost - 1.0);
+
+#ifndef NDEBUG
+      /* check intsize validity for small int instances */
+      if( opbinput->intsize >= 0 && opbinput->intsize <= CHAR_BIT * (int)sizeof(unsigned long long) )
+      {
+         assert(SCIPround(scip, topcostrhs) == topcostrhs);
+         SCIP_Real summand = ABS(topcostrhs);
+         assert(summand <= ULLONG_MAX);
+         unsigned long long presum = 0;
+         unsigned long long intsum = summand;
+
+         for( i = 0; i < ntopcostvars; ++i )
+         {
+            summand = SCIPceil(scip, ABS(topcosts[i]));
+            assert(summand <= ULLONG_MAX);
+            presum = intsum;
+            intsum += summand;
+            assert(intsum > presum);
+         }
+
+         intsum >>= opbinput->intsize;
+         assert(intsum == 0);
+      }
+#endif
 
       SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcosts,
             -SCIPinfinity(scip), topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
