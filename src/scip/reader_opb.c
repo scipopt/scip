@@ -1163,8 +1163,40 @@ SCIP_RETCODE setObjective(
    if( !hasError(opbinput) )
    {
       SCIP_VAR* var;
-      int v;
       char name[SCIP_MAXSTRLEN];
+      int v;
+
+#ifndef NDEBUG
+      /* check intsize validity for small int instances */
+      if( opbinput->intsize >= 0 && opbinput->intsize <= CHAR_BIT * (int)sizeof(unsigned long long) )
+      {
+         SCIP_Real summand = SCIPceil(scip, ABS(SCIPgetOrigObjoffset(scip)));
+         assert(summand <= (SCIP_Real)ULLONG_MAX);
+         unsigned long long presum;
+         unsigned long long intsum = (unsigned long long)summand;
+
+         for( v = 0; v < ncoefs; ++v )
+         {
+            summand = SCIPceil(scip, ABS(coefs[v]));
+            assert(summand <= (SCIP_Real)ULLONG_MAX);
+            presum = intsum;
+            intsum += (unsigned long long)summand;
+            assert(intsum > presum);
+         }
+
+         for( v = 0; v < ntermcoefs; ++v )
+         {
+            summand = SCIPceil(scip, ABS(termcoefs[v]));
+            assert(summand <= (SCIP_Real)ULLONG_MAX);
+            presum = intsum;
+            intsum += (unsigned long long)summand;
+            assert(intsum > presum);
+         }
+
+         intsum >>= opbinput->intsize;
+         assert(intsum == 0);
+      }
+#endif
 
       if( strcmp(sense, "max" ) == 0 )
          opbinput->objsense = SCIP_OBJSENSE_MAXIMIZE;
