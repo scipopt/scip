@@ -1092,7 +1092,7 @@ void branchcandRemovePseudoCand(
    if( freepos < branchcand->npriopseudobins + branchcand->npriopseudoints )
    {
       /* a binary or integer candidate of maximal priority was removed */
-      assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPvarIsImpliedIntegral(var));
+      assert(SCIPvarIsNonimpliedIntegral(var));
       if( freepos != branchcand->npriopseudobins + branchcand->npriopseudoints - 1 )
       {
          branchcand->pseudocands[freepos] =
@@ -2430,7 +2430,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    assert(SCIPsetIsInfinity(set,  ub) || SCIPsetIsLE(set, branchpoint, ub));
    assert(SCIPsetIsInfinity(set, -lb) || SCIPsetIsGE(set, branchpoint, lb));
 
-   if( !SCIPvarIsIntegral(var) || SCIPvarIsImpliedIntegral(var) )
+   if( !SCIPvarIsNonimpliedIntegral(var) )
    {
       if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
       {

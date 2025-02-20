@@ -141,7 +141,7 @@ SCIP_RETCODE applyBoundHeur(
    {
       var = vars[v];
 
-      assert(SCIPvarIsIntegral(var) && !SCIPvarIsImpliedIntegral(var));
+      assert(SCIPvarIsNonimpliedIntegral(var));
 
       /* skip variables which are already fixed */
       if( SCIPvarGetLbLocal(var) + 0.5 > SCIPvarGetUbLocal(var) )
