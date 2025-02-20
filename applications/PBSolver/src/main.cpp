@@ -26,7 +26,8 @@
  * @brief  main file for the Pseudo-Boolean solver application
  * @author Alexander Hoen
  * @author Gioni Mexi
- * 
+ *
+ * @todo Add absolute feasibility tolerance parameter to enforce exact feasibility.
  * @todo Add separate integrality tolerance parameter to enforce exact integrality.
  */
 
