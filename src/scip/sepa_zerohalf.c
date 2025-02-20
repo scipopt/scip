@@ -1045,7 +1045,7 @@ SCIP_RETCODE buildMod2Matrix(
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 
-   nintvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   nintvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
    vars = SCIPgetVars(scip);
 
    /* initialize fields */
