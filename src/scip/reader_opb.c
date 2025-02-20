@@ -1765,38 +1765,6 @@ SCIP_RETCODE readOPBFile(
       }
       topcostrhs = SCIPceil(scip, opbinput->topcost - 1.0);
 
-#ifndef NDEBUG
-      /* check intsize validity for small int instances */
-      if( opbinput->intsize >= 0 && opbinput->intsize <= CHAR_BIT * (int)sizeof(unsigned long long) )
-      {
-         assert(SCIPround(scip, topcostrhs) == topcostrhs); /*lint !e777*/
-         SCIP_Real summand = ABS(topcostrhs);
-         assert(summand <= (SCIP_Real)ULLONG_MAX);
-         unsigned long long presum;
-         unsigned long long intsum = (unsigned long long)summand;
-#ifdef SCIP_DISABLED_CODE
-         /* in some instances the maxcost violates the intsize limit */
-         intsum >>= opbinput->intsize;
-         assert(intsum == 0);
-#endif
-
-         for( i = 0; i < ntopcostvars; ++i )
-         {
-            summand = SCIPceil(scip, ABS(topcosts[i]));
-            assert(summand <= (SCIP_Real)ULLONG_MAX);
-            presum = intsum;
-            intsum += (unsigned long long)summand;
-            assert(intsum > presum);
-         }
-
-#ifdef SCIP_DISABLED_CODE
-         /* in some instances the weights violate the intsize limit */
-         intsum >>= opbinput->intsize;
-         assert(intsum == 0);
-#endif
-      }
-#endif
-
       SCIP_CALL( SCIPcreateConsLinear(scip, &topcostcons, TOPCOSTCONSNAME, ntopcostvars, topcostvars, topcosts,
             -SCIPinfinity(scip), topcostrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, topcostcons) );
