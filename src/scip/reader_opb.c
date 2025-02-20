@@ -177,6 +177,7 @@ struct OpbInput
    int                   linenumber;
    int                   linepos;
    int                   linebufsize;
+   int                   intsize;
    SCIP_OBJSENSE         objsense;
    SCIP_Bool             eof;
    SCIP_Bool             haserror;
@@ -1500,19 +1501,17 @@ SCIP_RETCODE getCommentLineData(
    SCIP*                 scip,               /**< SCIP data structure */
    OPBINPUT*             opbinput,           /**< OPB reading data */
    SCIP_Real*            objscale,           /**< pointer to store objective scale */
-   SCIP_Real*            objoffset,          /**< pointer to store objective offset */
-   int*                  intsize             /**< pointer to store intsize value */
+   SCIP_Real*            objoffset           /**< pointer to store objective offset */
    )
 {
    assert(scip != NULL);
    assert(opbinput != NULL);
    assert(objoffset != NULL);
-   assert(intsize != NULL);
 
    *objscale = 1.0;
    *objoffset = 0.0;
-   *intsize = -1;
    opbinput->linebuf[opbinput->linebufsize - 2] = '\0';
+   opbinput->intsize = -1;
 
    while( SCIPfgets(opbinput->linebuf, opbinput->linebufsize, opbinput->file) != NULL )
    {
@@ -1584,8 +1583,8 @@ SCIP_RETCODE getCommentLineData(
 
          if( pos != NULL )
          {
-            *intsize = atoi(pos);
-            SCIPdebugMsg(scip, "number of bits required to represent sum of the absolute values of all integers appearing in a constraint or objective function = %d\n", *intsize);
+            opbinput->intsize = atoi(pos);
+            SCIPdebugMsg(scip, "number of bits required to represent sum of the absolute values of all integers appearing in a constraint or objective function = %d\n", opbinput->intsize);
          }
       }
 
@@ -1624,7 +1623,6 @@ SCIP_RETCODE readOPBFile(
    SCIP_READERDATA* readerdata = SCIPreaderGetData(reader);
    SCIP_Real objscale;
    SCIP_Real objoffset;
-   int intsize = -1;
    int nNonlinearConss;
    int i;
 
@@ -1646,11 +1644,11 @@ SCIP_RETCODE readOPBFile(
     */
 
    /* read the first comment line which contains information about size of products and coefficients */
-   SCIP_CALL( getCommentLineData(scip, opbinput, &objscale, &objoffset, &intsize) );
+   SCIP_CALL( getCommentLineData(scip, opbinput, &objscale, &objoffset) );
 
-   if( readerdata->maxintsize >= 0 && intsize > readerdata->maxintsize )
+   if( readerdata->maxintsize >= 0 && opbinput->intsize > readerdata->maxintsize )
    {
-      SCIPinfoMessage(scip, NULL, "Intsize %d exceeds %d maximum.\n", intsize, readerdata->maxintsize);
+      SCIPinfoMessage(scip, NULL, "Intsize %d exceeds %d maximum.\n", opbinput->intsize, readerdata->maxintsize);
       return SCIP_INVALIDDATA;
    }
 
