@@ -1170,14 +1170,16 @@ SCIP_RETCODE setObjective(
       /* check intsize validity for small int instances */
       if( opbinput->intsize >= 0 && opbinput->intsize <= CHAR_BIT * (int)sizeof(unsigned long long) )
       {
-         SCIP_Real summand = SCIPceil(scip, ABS(SCIPgetOrigObjoffset(scip)));
+         SCIP_Real summand = SCIPgetOrigObjoffset(scip);
+         summand = SCIPceil(scip, ABS(summand));
          assert(summand <= (SCIP_Real)ULLONG_MAX);
          unsigned long long presum;
          unsigned long long intsum = (unsigned long long)summand;
 
          for( v = 0; v < ncoefs; ++v )
          {
-            summand = SCIPceil(scip, ABS(scale * coefs[v]));
+            summand = scale * coefs[v];
+            summand = SCIPceil(scip, ABS(summand));
             assert(summand <= (SCIP_Real)ULLONG_MAX);
             presum = intsum;
             intsum += (unsigned long long)summand;
@@ -1186,7 +1188,8 @@ SCIP_RETCODE setObjective(
 
          for( v = 0; v < ntermcoefs; ++v )
          {
-            summand = SCIPceil(scip, ABS(scale * termcoefs[v]));
+            summand = scale * termcoefs[v];
+            summand = SCIPceil(scip, ABS(summand));
             assert(summand <= (SCIP_Real)ULLONG_MAX);
             presum = intsum;
             intsum += (unsigned long long)summand;
