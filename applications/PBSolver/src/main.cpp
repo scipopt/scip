@@ -593,6 +593,8 @@ SCIP_RETCODE processShellArguments(
       /* print version information */
       SCIPprintVersion(scip, NULL);
       SCIPinfoMessage(scip, NULL, "\n");
+      SCIPprintExternalCodes(scip, NULL);
+      SCIPinfoMessage(scip, NULL, "\n");
 
       /*****************
        * Load defaults *
@@ -702,7 +704,7 @@ int main(
    if( retcode != SCIP_OKAY )
       printf("s UNKNOWN\n");
 
-   printf("c Time complete (sec): %9.3lf\n", (double)(endclock - startclock) / (double)CLOCKS_PER_SEC);
+   printf("c Time complete (sec): %10.3lf\n", (double)(endclock - startclock) / (double)CLOCKS_PER_SEC);
 
   return 0;
 }
