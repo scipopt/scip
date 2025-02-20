@@ -1177,7 +1177,7 @@ SCIP_RETCODE setObjective(
 
          for( v = 0; v < ncoefs; ++v )
          {
-            summand = SCIPceil(scip, ABS(coefs[v]));
+            summand = SCIPceil(scip, ABS(scale * coefs[v]));
             assert(summand <= (SCIP_Real)ULLONG_MAX);
             presum = intsum;
             intsum += (unsigned long long)summand;
@@ -1186,7 +1186,7 @@ SCIP_RETCODE setObjective(
 
          for( v = 0; v < ntermcoefs; ++v )
          {
-            summand = SCIPceil(scip, ABS(termcoefs[v]));
+            summand = SCIPceil(scip, ABS(scale * termcoefs[v]));
             assert(summand <= (SCIP_Real)ULLONG_MAX);
             presum = intsum;
             intsum += (unsigned long long)summand;
