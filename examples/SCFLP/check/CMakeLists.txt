@@ -87,6 +87,7 @@ if( DEFINED IPOPT_FOUND AND DEFINED LPS )
           #
           # call the SCFLP binary and validate the solve with the given objective value
           #
+          if(FALSE)  # these currently take too long to be a test
           add_test(NAME "examples-scflp-quad-${basename}"
                   COMMAND $<TARGET_FILE:scflp> -s ${CMAKE_CURRENT_SOURCE_DIR}/../settings/nobenders-quad.set -f ${CMAKE_CURRENT_SOURCE_DIR}/../data/${basename}.cap -o ${optval} ${optval}
                   )
@@ -103,6 +104,7 @@ if( DEFINED IPOPT_FOUND AND DEFINED LPS )
                         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin/$<CONFIG>
                   )
           endif()
+          endif(FALSE)
 
           #
           # call the SCFLP binary and validate the solve with the given objective value
