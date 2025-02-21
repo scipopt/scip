@@ -59,6 +59,7 @@
 #include "scip/struct_nlp.h"
 /* to get nlp, set, ... in event handling and mapvar2varidx */
 #include "scip/struct_scip.h"
+#include "scip/struct_mem.h"
 /* to get value of parameter "nlp/solver" and nlpis array and to get access to set->lp for releasing a variable */
 #include "scip/struct_set.h"
 #include "scip/struct_stat.h"
@@ -74,19 +75,6 @@
 /*lint -e440*/
 /*lint -e441*/
 /*lint -e777*/
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/* avoid inclusion of scip.h */ /*lint -e{2701}*/
-BMS_BLKMEM* SCIPblkmem(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-#ifdef __cplusplus
-}
-#endif
 
 /*
  * forward declarations
@@ -3472,19 +3460,19 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    if( SCIP_EVENTTYPE_VARADDED & etype )
    {
       SCIPdebugMessage("-> handling varadd event, variable <%s>\n", SCIPvarGetName(var) );
-      SCIP_CALL( SCIPnlpAddVar(scip->nlp, SCIPblkmem(scip), scip->set, var) );
+      SCIP_CALL( SCIPnlpAddVar(scip->nlp, scip->mem->probmem, scip->set, var) );
    }
    else if( SCIP_EVENTTYPE_VARDELETED & etype )
    {
       SCIPdebugMessage("-> handling vardel event, variable <%s>\n", SCIPvarGetName(var) );
-      SCIP_CALL( SCIPnlpDelVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue, scip->lp, var) );
+      SCIP_CALL( SCIPnlpDelVar(scip->nlp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, var) );
    }
    else if( SCIP_EVENTTYPE_VARFIXED & etype )
    {
       /* variable was fixed, aggregated, or multi-aggregated */
       /* TODO is this ever happening? that is, can we have changes in a variable status during solve? */
       SCIPdebugMessage("-> handling variable fixation event, variable <%s>\n", SCIPvarGetName(var) );
-      SCIP_CALL( nlpRemoveFixedVar(scip->nlp, SCIPblkmem(scip), scip->set, scip->stat, scip->eventqueue, scip->lp, var) );
+      SCIP_CALL( nlpRemoveFixedVar(scip->nlp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp, var) );
    }
    else if( SCIP_EVENTTYPE_BOUNDCHANGED & etype )
    {
