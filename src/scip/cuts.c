@@ -8735,7 +8735,7 @@ SCIP_RETCODE cutsTransformStrongCG(
                selectedbounds[index] = SCIP_BOUNDTYPE_UPPER;
             }
          }
-         else if(FALSE && data->isimplint[s] )
+         else if( data->isimplint[s] )
          {
             /* For implied integers, we still prefer to choose the bound substitution that makes them positive, but
             * if we cannot manage to do so it is not an error, because we can still treat them as integer variables */
@@ -8753,7 +8753,10 @@ SCIP_RETCODE cutsTransformStrongCG(
 
             lowerinf = SCIPisInfinity(scip, -bestlbs[index]);
             upperinf = SCIPisInfinity(scip, bestubs[index]);
-            if( lowerinf && upperinf )
+            SCIP_Bool positive = QUAD_TO_DBL(coef) > 0.0;
+
+            //TODO: test if terminating here leads to better cuts
+            if( (lowerinf && upperinf) )
             {
                /* we found a free variable in the row with non-zero coefficient
                 *  -> MIR row can't be transformed in standard form
@@ -8761,7 +8764,6 @@ SCIP_RETCODE cutsTransformStrongCG(
                *freevariable = TRUE;
                goto TERMINATE;
             }
-            SCIP_Bool positive = QUAD_TO_DBL(coef) > 0.0;
             /* Preferably, choose bound that makes value positive */
             if( (positive && lowerinf) || (!positive && !upperinf) )
             {
