@@ -35,8 +35,8 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include "scip.h"
 #include "scip/def.h"
+#include "scip/type_set.h"
 #include "blockmemshell/memory.h"
 #ifdef SCIP_WITH_GMP
 #include <gmp.h>

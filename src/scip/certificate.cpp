@@ -52,6 +52,7 @@
 #include "scip/struct_certificate.h"
 #include "scip/sol.h"
 #include "scip/struct_scip.h"
+#include "scip/struct_var.h"
 #include "scip/scip_lp.h"
 #include "scip/var.h"
 

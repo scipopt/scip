@@ -76,6 +76,7 @@
 
 
 #include "scip/def.h"
+#include "scip/intervalarith.h"
 #include "scip/scip_exact.h"
 #include "scip/type_lp.h"
 #include "scip/type_lpexact.h"

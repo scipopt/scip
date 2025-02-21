@@ -34,6 +34,7 @@
 #define __SCIP_CONS_EXACTLP_H__
 
 #include "scip/def.h"
+#include "scip/intervalarith.h"
 #include "scip/type_cons.h"
 #include "scip/type_lp.h"
 #include "scip/type_lpexact.h"
