@@ -244,6 +244,9 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
    SCIP_Bool bestroundup;
    int nintegers;
    int ncontvars;
+   int nbinimplvars;
+   int nintimplvars;
+   int ncontimplvars;
    int bestcandidx;
    int v;
 
@@ -254,8 +257,9 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
 
    SCIPdebugMsg(scip, "integral constraint handler: determine diving bound changes\n");
 
-   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nintegers, NULL, NULL, NULL, NULL, NULL, &ncontvars) );
-   nintegers -= ncontvars;
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, &nintegers, NULL, NULL,
+         &nbinimplvars, &nintimplvars, &ncontimplvars, &ncontvars) );
+   nintegers = nintegers - nbinimplvars - nintimplvars - ncontimplvars - ncontvars;
    assert(nintegers >= 0);
 
    bestscore = SCIP_REAL_MIN;
