@@ -191,9 +191,9 @@ using namespace papilo;
 /** casts rational value from PaPILO to SCIP */
 static
 void setRational(
-   SCIP*                 scip,
-   SCIP_Rational*        res,
-   papilo::Rational      papiloval
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Rational*        res,                /**< pointer to SCIP' rational to set */
+   papilo::Rational      papiloval           /**< rational value from PaPILO */
    )
 {
    assert(scip != NULL);
@@ -267,8 +267,8 @@ Problem<papilo::Rational> buildProblemRational(
 /** builds PaPILO problem from SCIP matrix */
 static
 Problem<SCIP_Real> buildProblemReal(
-      SCIP*                 scip,               /**< SCIP data structure */
-      SCIP_MATRIX*          matrix              /**< initialized SCIP_MATRIX data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_MATRIX*          matrix              /**< initialized SCIP_MATRIX data structure */
    )
 {
    ProblemBuilder<SCIP_Real> builder;
@@ -1018,21 +1018,21 @@ SCIP_RETCODE performRationalPresolving(
 /** calls PaPILO presolving in floating-point arithmetic */
 static
 SCIP_RETCODE performRealPresolving(
-      SCIP*                 scip,               /**< SCIP data structure */
-      SCIP_MATRIX*          matrix,             /**< initialized SCIP_MATRIX data structure */
-      SCIP_PRESOLDATA*      data,               /**< plugin specific presol data */
-      SCIP_Bool             initialized,        /**< was the matrix initialized */
-      int*                  nfixedvars,         /**< store number of fixed variables */
-      int*                  naggrvars,          /**< store number of aggregated variables */
-      int*                  nchgvartypes,       /**< store number of changed variable types */
-      int*                  nchgbds,            /**< store number of changed bounds */
-      int*                  naddholes,          /**< store number of added holes */
-      int*                  ndelconss,          /**< store the number of deleted cons */
-      int*                  naddconss,          /**< store the number of added cons */
-      int*                  nupgdconss,         /**< store the number of upgraded cons */
-      int*                  nchgcoefs,          /**< store the number of changed coefficients */
-      int*                  nchgsides,          /**< store the number of changed sides */
-      SCIP_RESULT*          result              /**< result pointer */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_MATRIX*          matrix,             /**< initialized SCIP_MATRIX data structure */
+   SCIP_PRESOLDATA*      data,               /**< plugin specific presol data */
+   SCIP_Bool             initialized,        /**< was the matrix initialized */
+   int*                  nfixedvars,         /**< store number of fixed variables */
+   int*                  naggrvars,          /**< store number of aggregated variables */
+   int*                  nchgvartypes,       /**< store number of changed variable types */
+   int*                  nchgbds,            /**< store number of changed bounds */
+   int*                  naddholes,          /**< store number of added holes */
+   int*                  ndelconss,          /**< store the number of deleted cons */
+   int*                  naddconss,          /**< store the number of added cons */
+   int*                  nupgdconss,         /**< store the number of upgraded cons */
+   int*                  nchgcoefs,          /**< store the number of changed coefficients */
+   int*                  nchgsides,          /**< store the number of changed sides */
+   SCIP_RESULT*          result              /**< result pointer */
    )
 {
    int nvars = SCIPgetNVars(scip);
