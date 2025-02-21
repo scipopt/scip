@@ -1045,7 +1045,7 @@ SCIP_RETCODE buildMod2Matrix(
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 
-   nintvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip) - SCIPgetNImplVars(scip);
+   nintvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
    vars = SCIPgetVars(scip);
 
    /* initialize fields */
@@ -1127,8 +1127,7 @@ SCIP_RETCODE buildMod2Matrix(
 
       /* skip non-integral rows and rows not suitable for generating cuts */
       if( SCIProwIsModifiable(rows[i]) || !SCIProwIsIntegral(rows[i]) ||
-            (SCIProwIsLocal(rows[i]) && !allowlocal) || SCIProwGetNNonz(rows[i]) > maxnonzeros ||
-            (SCIPgetRowNumImpliedIntCols(scip,rows[i]) > 1) )
+            (SCIProwIsLocal(rows[i]) && !allowlocal) || SCIProwGetNNonz(rows[i]) > maxnonzeros )
          continue;
 
       lhsmod2 = 0;
