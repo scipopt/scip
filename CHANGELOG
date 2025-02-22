@@ -63,6 +63,7 @@ Build system
 ### Makefile
 
 - fix use of SANITIZE=full for debug builds with GCC on Linux: removed -fsanitize=leak because it cannot be used together with -fsanitize=address
+- fix that make install SHARED=true missed to install libscipbase
 
 Miscellaneous
 -------------
