@@ -13,14 +13,11 @@ SANITIZE = $(word $(shell expr \( $(GCCVERSION) \>= 5 \) + 1), false, true)
 ifeq ($(SANITIZE),full)
 
 # -fsanitize=address does not work together with -fsanitize=thread
-# -fsanitize=leak is included in -fsanitize=address, but works together with -fsanitize=thread
+# -fsanitize=leak is included in -fsanitize=address, but does not work together with -fsanitize=thread
 
 ifeq ($(THREADSAFE),true)
 # enable ThreadSanitizer (https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual)
 SANITIZERFLAGS = -fsanitize=thread
-
-# enable LeakSanitizer (https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer)
-SANITIZERFLAGS += -fsanitize=leak
 
 else
 # enable AddressSanitizer (https://github.com/google/sanitizers/wiki/AddressSanitizer)
