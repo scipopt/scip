@@ -181,6 +181,9 @@ Build system
 
 ### Makefile
 
+- revised SANITIZE options: removed SANITIZE=full, added SANITIZE=thread and SANITIZE=address to enable
+  thread and address sanitizers, respectively, in addition to undefined behavior sanitizer
+
 ### Cmake
 
 - increased minimal required cmake version to 3.11
